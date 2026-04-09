@@ -25,6 +25,8 @@ import com.nextpage.presentation.viewmodel.LibraryViewModel
 import com.nextpage.presentation.viewmodel.LibraryViewModelFactory
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
+import com.nextpage.presentation.viewmodel.HighlightsViewModel
+import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
 
 @Composable
 fun NextPageNavHost(appContainer: AppContainer) {
@@ -40,6 +42,9 @@ fun NextPageNavHost(appContainer: AppContainer) {
             epubContentLoader = appContainer.epubContentLoader,
             defaultBookId = selectedBookId
         )
+    )
+    val highlightsViewModel: HighlightsViewModel = viewModel(
+        factory = HighlightsViewModelFactory(appContainer.readerRepository)
     )
 
     LaunchedEffect(selectedBookId) {
@@ -107,7 +112,10 @@ fun NextPageNavHost(appContainer: AppContainer) {
                 )
             }
             composable(NextPageDestination.Highlights.route) {
-                HighlightsScreen(contentPadding = innerPadding)
+                HighlightsScreen(
+                    contentPadding = innerPadding,
+                    viewModel = highlightsViewModel
+                )
             }
         }
     }

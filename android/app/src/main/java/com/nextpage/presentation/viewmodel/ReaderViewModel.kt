@@ -37,7 +37,7 @@ data class ReaderUiState(
 class ReaderViewModel(
     private val readerRepository: ReaderRepository,
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
-    private val epubContentLoader: EpubContentLoader,
+    private val epubContentLoader: EpubContentLoader? = null,
     defaultBookId: String?,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) : ViewModel() {
@@ -75,7 +75,18 @@ class ReaderViewModel(
         }
 
         viewModelScope.launch(mainDispatcher) {
-            val result = epubContentLoader.loadEpub(filePath)
+            val loader = epubContentLoader
+            if (loader == null) {
+                mutableUiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Reader content loader is unavailable"
+                    )
+                }
+                return@launch
+            }
+
+            val result = loader.loadEpub(filePath)
 
             result.onSuccess { book ->
                 val loadTime = System.currentTimeMillis() - startTime
@@ -116,7 +127,8 @@ class ReaderViewModel(
         val startTime = System.currentTimeMillis()
 
         viewModelScope.launch(mainDispatcher) {
-            val result = epubContentLoader.getChapterContent(filePath, chapter.href)
+            val loader = epubContentLoader ?: return@launch
+            val result = loader.getChapterContent(filePath, chapter.href)
 
             result.onSuccess { content ->
                 val loadTime = System.currentTimeMillis() - startTime

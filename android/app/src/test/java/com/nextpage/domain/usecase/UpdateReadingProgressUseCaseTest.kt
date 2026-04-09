@@ -1,6 +1,8 @@
 package com.nextpage.domain.usecase
 
 import com.nextpage.domain.model.ReadingProgress
+import com.nextpage.domain.model.Highlight
+import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.repository.ReaderRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -37,5 +39,17 @@ class UpdateReadingProgressUseCaseTest {
         override suspend fun upsertProgress(progress: ReadingProgress) {
             lastUpserted = progress
         }
+
+        override fun observeAllHighlights(): Flow<List<Highlight>> = MutableStateFlow(emptyList())
+
+        override fun observeHighlights(bookId: String): Flow<List<Highlight>> = MutableStateFlow(emptyList())
+
+        override suspend fun upsertHighlight(highlight: Highlight) = Unit
+
+        override fun observeAllBookmarks(): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
+
+        override fun observeBookmarks(bookId: String): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
+
+        override suspend fun upsertBookmark(bookmark: Bookmark) = Unit
     }
 }

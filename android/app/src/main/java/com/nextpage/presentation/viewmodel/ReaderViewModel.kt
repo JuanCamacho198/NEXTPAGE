@@ -20,7 +20,7 @@ data class ReaderUiState(
 
 class ReaderViewModel(
     private val readerRepository: ReaderRepository,
-    defaultBookId: String
+    defaultBookId: String?
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(
         ReaderUiState(selectedBookId = defaultBookId)
@@ -30,7 +30,11 @@ class ReaderViewModel(
     private var observeProgressJob: Job? = null
 
     init {
-        restoreProgressForBook(defaultBookId)
+        if (!defaultBookId.isNullOrBlank()) {
+            restoreProgressForBook(defaultBookId)
+        } else {
+            mutableUiState.update { it.copy(isLoading = false) }
+        }
     }
 
     fun restoreProgressForBook(bookId: String) {
@@ -58,7 +62,7 @@ class ReaderViewModel(
 
 class ReaderViewModelFactory(
     private val readerRepository: ReaderRepository,
-    private val defaultBookId: String
+    private val defaultBookId: String?
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

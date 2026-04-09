@@ -1,44 +1,186 @@
 package com.nextpage.presentation.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nextpage.data.epub.EpubContentLoader
+import com.nextpage.domain.model.Bookmark
+import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 data class ReaderUiState(
     val selectedBookId: String? = null,
+    val bookFilePath: String? = null,
+    val chapters: List<EpubContentLoader.Chapter> = emptyList(),
+    val currentChapterIndex: Int = 0,
+    val chapterContent: String = "",
     val readingProgress: ReadingProgress? = null,
-    val isLoading: Boolean = true
+    val highlights: List<Highlight> = emptyList(),
+    val bookmarks: List<Bookmark> = emptyList(),
+    val isLoading: Boolean = true,
+    val loadTimeMs: Long? = null,
+    val error: String? = null
 )
 
 class ReaderViewModel(
     private val readerRepository: ReaderRepository,
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
+    private val epubContentLoader: EpubContentLoader,
     defaultBookId: String?,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) : ViewModel() {
+    companion object {
+        private const val TAG = "ReaderViewModel"
+    }
+
     private val mutableUiState = MutableStateFlow(
         ReaderUiState(selectedBookId = defaultBookId)
     )
     val uiState: StateFlow<ReaderUiState> = mutableUiState.asStateFlow()
 
     private var observeProgressJob: Job? = null
+    private var observeHighlightsJob: Job? = null
+    private var observeBookmarksJob: Job? = null
 
     init {
         if (!defaultBookId.isNullOrBlank()) {
             restoreProgressForBook(defaultBookId)
         } else {
             mutableUiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    fun loadBook(bookId: String, filePath: String) {
+        val startTime = System.currentTimeMillis()
+
+        mutableUiState.update {
+            it.copy(
+                selectedBookId = bookId,
+                bookFilePath = filePath,
+                isLoading = true,
+                error = null
+            )
+        }
+
+        viewModelScope.launch(mainDispatcher) {
+            val result = epubContentLoader.loadEpub(filePath)
+
+            result.onSuccess { book ->
+                val loadTime = System.currentTimeMillis() - startTime
+                Log.d(TAG, "Book loaded in ${loadTime}ms, ${book.chapters.size} chapters")
+
+                mutableUiState.update { state ->
+                    state.copy(
+                        chapters = book.chapters,
+                        currentChapterIndex = 0,
+                        chapterContent = "",
+                        isLoading = false,
+                        loadTimeMs = loadTime
+                    )
+                }
+
+                if (book.chapters.isNotEmpty()) {
+                    loadChapterContent(0)
+                }
+
+                startObservingHighlights(bookId)
+                startObservingBookmarks(bookId)
+            }.onFailure { error ->
+                Log.e(TAG, "Failed to load book: ${error.message}")
+                mutableUiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = error.message ?: "Failed to load book"
+                    )
+                }
+            }
+        }
+    }
+
+    private fun loadChapterContent(chapterIndex: Int) {
+        val filePath = mutableUiState.value.bookFilePath ?: return
+        val chapter = mutableUiState.value.chapters.getOrNull(chapterIndex) ?: return
+
+        val startTime = System.currentTimeMillis()
+
+        viewModelScope.launch(mainDispatcher) {
+            val result = epubContentLoader.getChapterContent(filePath, chapter.href)
+
+            result.onSuccess { content ->
+                val loadTime = System.currentTimeMillis() - startTime
+                Log.d(TAG, "Chapter ${chapterIndex} loaded in ${loadTime}ms")
+
+                mutableUiState.update {
+                    it.copy(
+                        currentChapterIndex = chapterIndex,
+                        chapterContent = content
+                    )
+                }
+            }.onFailure { error ->
+                Log.e(TAG, "Failed to load chapter: ${error.message}")
+                mutableUiState.update {
+                    it.copy(error = error.message ?: "Failed to load chapter")
+                }
+            }
+        }
+    }
+
+    fun goToNextChapter() {
+        val currentIndex = mutableUiState.value.currentChapterIndex
+        val totalChapters = mutableUiState.value.chapters.size
+
+        if (currentIndex < totalChapters - 1) {
+            val newIndex = currentIndex + 1
+            loadChapterContent(newIndex)
+            updateProgressForChapter(newIndex)
+        }
+    }
+
+    fun goToPreviousChapter() {
+        val currentIndex = mutableUiState.value.currentChapterIndex
+
+        if (currentIndex > 0) {
+            val newIndex = currentIndex - 1
+            loadChapterContent(newIndex)
+            updateProgressForChapter(newIndex)
+        }
+    }
+
+    fun onTapZone(isLeftZone: Boolean) {
+        if (isLeftZone) {
+            goToPreviousChapter()
+        } else {
+            goToNextChapter()
+        }
+    }
+
+    private fun updateProgressForChapter(chapterIndex: Int) {
+        val bookId = mutableUiState.value.selectedBookId ?: return
+        val totalChapters = mutableUiState.value.chapters.size
+
+        if (totalChapters > 0) {
+            val percentage = ((chapterIndex + 1).toFloat() / totalChapters) * 100
+            val cfiLocation = "epubcfi(/6/${chapterIndex + 1})"
+
+            viewModelScope.launch(mainDispatcher) {
+                updateReadingProgressUseCase(
+                    bookId = bookId,
+                    cfiLocation = cfiLocation,
+                    percentage = percentage
+                )
+            }
         }
     }
 
@@ -73,10 +215,88 @@ class ReaderViewModel(
             )
         }
     }
+
+    fun createHighlight(
+        bookId: String,
+        cfiRange: String,
+        textContent: String,
+        note: String? = null,
+        color: String = "yellow"
+    ) {
+        viewModelScope.launch(mainDispatcher) {
+            val highlight = Highlight(
+                id = UUID.randomUUID().toString(),
+                bookId = bookId,
+                cfiRange = cfiRange,
+                textContent = textContent,
+                note = note,
+                color = color,
+                updatedAtEpochMillis = System.currentTimeMillis(),
+                deletedAtEpochMillis = null
+            )
+            readerRepository.upsertHighlight(highlight)
+            Log.d(TAG, "Highlight created: ${highlight.id}")
+        }
+    }
+
+    fun createBookmark(bookId: String, cfiLocation: String, titleOrSnippet: String) {
+        viewModelScope.launch(mainDispatcher) {
+            val bookmark = Bookmark(
+                id = UUID.randomUUID().toString(),
+                bookId = bookId,
+                cfiLocation = cfiLocation,
+                titleOrSnippet = titleOrSnippet,
+                updatedAtEpochMillis = System.currentTimeMillis(),
+                deletedAtEpochMillis = null
+            )
+            readerRepository.upsertBookmark(bookmark)
+            Log.d(TAG, "Bookmark created: ${bookmark.id}")
+        }
+    }
+
+    fun createBookmarkFromCurrentPosition() {
+        val bookId = mutableUiState.value.selectedBookId ?: return
+        val chapter = mutableUiState.value.chapters.getOrNull(mutableUiState.value.currentChapterIndex)
+            ?: return
+        val cfiLocation = "epubcfi(/6/${mutableUiState.value.currentChapterIndex + 1})"
+        val titleOrSnippet = "Chapter ${mutableUiState.value.currentChapterIndex + 1}: ${chapter.title}"
+
+        createBookmark(bookId, cfiLocation, titleOrSnippet)
+    }
+
+    private fun startObservingHighlights(bookId: String) {
+        observeHighlightsJob?.cancel()
+        observeHighlightsJob = viewModelScope.launch(mainDispatcher) {
+            readerRepository.observeHighlights(bookId).collect { highlights ->
+                mutableUiState.update {
+                    it.copy(highlights = highlights)
+                }
+            }
+        }
+    }
+
+    private fun startObservingBookmarks(bookId: String) {
+        observeBookmarksJob?.cancel()
+        observeBookmarksJob = viewModelScope.launch(mainDispatcher) {
+            readerRepository.observeBookmarks(bookId).collect { bookmarks ->
+                mutableUiState.update {
+                    it.copy(bookmarks = bookmarks)
+                }
+            }
+        }
+    }
+
+    fun goToChapter(index: Int) {
+        if (index in mutableUiState.value.chapters.indices) {
+            loadChapterContent(index)
+            updateProgressForChapter(index)
+        }
+    }
 }
 
 class ReaderViewModelFactory(
     private val readerRepository: ReaderRepository,
+    private val epubContentLoader: EpubContentLoader,
     private val defaultBookId: String?
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
@@ -85,6 +305,7 @@ class ReaderViewModelFactory(
             return ReaderViewModel(
                 readerRepository = readerRepository,
                 updateReadingProgressUseCase = UpdateReadingProgressUseCase(readerRepository),
+                epubContentLoader = epubContentLoader,
                 defaultBookId = defaultBookId
             ) as T
         }

@@ -21,4 +21,16 @@
     <string name="reader_progress_percent">Progress: %1$.1f%%</string>
     <string name="reader_mark_quarter">Mark 25%%</string>
     <string name="reader_mark_three_quarter">Mark 75%%</string>
+    <string name="reader_title">Reader</string>
+    <string name="reader_loaded_in">Opened in %1$d ms</string>
+    <string name="reader_retry">Retry</string>
+    <string name="reader_no_content">No content available</string>
+    <string name="reader_chapter_loading">Loading chapter...</string>
+    <string name="reader_add_bookmark">Add Bookmark</string>
+    <string name="reader_previous_chapter">Previous Chapter</string>
+    <string name="reader_next_chapter">Next Chapter</string>
+    <string name="reader_add_highlight">Add Highlight</string>
+    <string name="reader_highlight_note">Note (optional)</string>
+    <string name="reader_save">Save</string>
+    <string name="reader_cancel">Cancel</string>
 </resources>

@@ -5,19 +5,47 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.nextpage.di.AppContainer
 import com.nextpage.presentation.screen.HighlightsScreen
 import com.nextpage.presentation.screen.LibraryScreen
 import com.nextpage.presentation.screen.ReaderScreen
+import com.nextpage.presentation.viewmodel.LibraryViewModel
+import com.nextpage.presentation.viewmodel.LibraryViewModelFactory
+import com.nextpage.presentation.viewmodel.ReaderViewModel
+import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
 
 @Composable
-fun NextPageNavHost() {
+fun NextPageNavHost(appContainer: AppContainer) {
     val navController = rememberNavController()
+    var selectedBookId by remember { mutableStateOf("") }
+    val libraryViewModel: LibraryViewModel = viewModel(
+        factory = LibraryViewModelFactory(appContainer.libraryRepository)
+    )
+    val readerViewModel: ReaderViewModel = viewModel(
+        factory = ReaderViewModelFactory(
+            readerRepository = appContainer.readerRepository,
+            defaultBookId = selectedBookId
+        )
+    )
+
+    LaunchedEffect(selectedBookId) {
+        if (selectedBookId.isNotBlank()) {
+            readerViewModel.restoreProgressForBook(selectedBookId)
+        }
+    }
+
     val destinations = listOf(
         NextPageDestination.Library,
         NextPageDestination.Reader,
@@ -55,10 +83,23 @@ fun NextPageNavHost() {
             startDestination = NextPageDestination.Library.route
         ) {
             composable(NextPageDestination.Library.route) {
-                LibraryScreen(contentPadding = innerPadding)
+                LibraryScreen(
+                    contentPadding = innerPadding,
+                    viewModel = libraryViewModel,
+                    onBookSelected = { bookId ->
+                        selectedBookId = bookId
+                        navController.navigate(NextPageDestination.Reader.route) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
             }
             composable(NextPageDestination.Reader.route) {
-                ReaderScreen(contentPadding = innerPadding)
+                ReaderScreen(
+                    contentPadding = innerPadding,
+                    selectedBookId = selectedBookId,
+                    viewModel = readerViewModel
+                )
             }
             composable(NextPageDestination.Highlights.route) {
                 HighlightsScreen(contentPadding = innerPadding)

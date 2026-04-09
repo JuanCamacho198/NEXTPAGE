@@ -8,10 +8,13 @@ import com.nextpage.data.epub.ZipEpubParserService
 import com.nextpage.data.local.AppDatabase
 import com.nextpage.data.repository.LibraryRepositoryImpl
 import com.nextpage.data.repository.ReaderRepositoryImpl
+import com.nextpage.data.repository.SupabaseAuthRepository
+import com.nextpage.data.remote.supabase.SupabaseClientProvider
+import com.nextpage.data.remote.supabase.SupabaseConfigProvider
 import com.nextpage.data.remote.sync.SyncService
-import com.nextpage.data.remote.supabase.AuthService
-import com.nextpage.data.remote.supabase.SupabaseClientHolder
+import com.nextpage.data.remote.sync.SyncServicePlaceholder
 import com.nextpage.data.storage.AppInternalCoverStorage
+import com.nextpage.domain.repository.AuthRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 
@@ -64,24 +67,19 @@ class AppContainer(context: Context) {
         Log.d(TAG, "EpubContentLoader initialized in ${contentLoaderInitTime}ms")
     }
 
-    val supabaseClientHolder = SupabaseClientHolder(context.applicationContext)
+    private val supabaseConfigProvider = SupabaseConfigProvider()
+    private val supabaseConfig = supabaseConfigProvider.get()
+    val supabaseClientProvider = SupabaseClientProvider(supabaseConfig)
 
-    val authService: AuthService by lazy {
-        AuthService(supabaseClientHolder.client)
+    val authRepository: AuthRepository by lazy {
+        SupabaseAuthRepository(supabaseClientProvider.client)
     }
 
-    val syncService: SyncService? by lazy {
-        supabaseClientHolder.client?.let { client ->
-            SyncService(
-                client = client,
-                userId = "",
-                bookDao = appDatabase.bookDao(),
-                readingProgressDao = appDatabase.readingProgressDao(),
-                highlightDao = appDatabase.highlightDao(),
-                bookmarkDao = appDatabase.bookmarkDao(),
-                outboxDao = appDatabase.syncOutboxDao()
-            )
-        }
+    val syncService: SyncService by lazy {
+        SyncServicePlaceholder(
+            outboxDao = appDatabase.syncOutboxDao(),
+            isConfigured = supabaseClientProvider.isConfigured
+        )
     }
 
     private val totalInitTime = System.currentTimeMillis() - startTime

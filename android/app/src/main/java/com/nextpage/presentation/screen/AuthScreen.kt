@@ -7,8 +7,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nextpage.data.remote.supabase.AuthState
-import com.nextpage.presentation.viewmodel.AuthUiState
 import com.nextpage.presentation.viewmodel.AuthViewModel
 
 @Composable
@@ -22,8 +20,8 @@ fun AuthScreen(
     var password by remember { mutableStateOf("") }
     var isSignUp by remember { mutableStateOf(false) }
 
-    LaunchedEffect(uiState.authState) {
-        if (uiState.authState is AuthState.Authenticated) {
+    LaunchedEffect(uiState.currentSession) {
+        if (uiState.currentSession != null) {
             onAuthenticated()
         }
     }
@@ -48,6 +46,15 @@ fun AuthScreen(
         )
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        if (!uiState.isConfigured) {
+            Text(
+                text = "Supabase credentials are missing. Set supabase.url and supabase.anonkey in android/local.properties.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         OutlinedTextField(
             value = email,
@@ -77,7 +84,7 @@ fun AuthScreen(
                     viewModel.signIn(email, password)
                 }
             },
-            enabled = !uiState.isLoading && email.isNotBlank() && password.isNotBlank(),
+            enabled = uiState.isConfigured && !uiState.isLoading && email.isNotBlank() && password.isNotBlank(),
             modifier = Modifier.fillMaxWidth()
         ) {
             if (uiState.isLoading) {
@@ -107,39 +114,5 @@ fun AuthScreen(
                 style = MaterialTheme.typography.bodySmall
             )
         }
-
-        SyncStatusIndicator(uiState)
-    }
-}
-
-@Composable
-private fun SyncStatusIndicator(uiState: AuthUiState) {
-    when (val syncState = uiState.syncState) {
-        is com.nextpage.data.remote.sync.SyncState.Syncing -> {
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Syncing...", style = MaterialTheme.typography.bodySmall)
-            }
-        }
-        is com.nextpage.data.remote.sync.SyncState.Synced -> {
-            if (uiState.pendingSyncCount > 0) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    "${uiState.pendingSyncCount} changes pending",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
-        is com.nextpage.data.remote.sync.SyncState.Error -> {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                "Sync error: ${syncState.message}",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-        else -> {}
     }
 }

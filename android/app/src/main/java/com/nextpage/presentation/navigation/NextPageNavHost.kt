@@ -30,7 +30,6 @@ import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
-import com.nextpage.data.remote.supabase.AuthState
 
 @Composable
 fun NextPageNavHost(appContainer: AppContainer) {
@@ -53,12 +52,12 @@ fun NextPageNavHost(appContainer: AppContainer) {
 
     val authViewModel: AuthViewModel = remember {
         AuthViewModel(
-            authService = appContainer.authService,
-            syncService = appContainer.syncService
+            authRepository = appContainer.authRepository,
+            isSupabaseConfigured = appContainer.supabaseClientProvider.isConfigured
         )
     }
     val authState by authViewModel.uiState.collectAsState()
-    val isAuthenticated = authState.authState is AuthState.Authenticated
+    val isAuthenticated = authState.currentSession != null
 
     LaunchedEffect(selectedBookId) {
         if (selectedBookId.isNotBlank()) {
@@ -72,7 +71,7 @@ fun NextPageNavHost(appContainer: AppContainer) {
         NextPageDestination.Highlights
     )
 
-    val startDestination = if (appContainer.supabaseClientHolder.isConfigured && !isAuthenticated) {
+    val startDestination = if (appContainer.supabaseClientProvider.isConfigured && !isAuthenticated) {
         NextPageDestination.Auth.route
     } else {
         NextPageDestination.Library.route

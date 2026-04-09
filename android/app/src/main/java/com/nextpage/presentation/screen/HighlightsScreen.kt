@@ -13,13 +13,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Highlight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
@@ -70,14 +66,12 @@ fun HighlightsScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text(stringResource(R.string.highlights_tab, highlights.size)) },
-                    icon = { Icon(Icons.Default.Highlight, contentDescription = null) }
+                    text = { Text(stringResource(R.string.highlights_tab, highlights.size)) }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text(stringResource(R.string.bookmarks_tab, bookmarks.size)) },
-                    icon = { Icon(Icons.Default.Bookmark, contentDescription = null) }
+                    text = { Text(stringResource(R.string.bookmarks_tab, bookmarks.size)) }
                 )
             }
 

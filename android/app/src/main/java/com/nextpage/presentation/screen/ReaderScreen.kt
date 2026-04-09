@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -94,7 +93,7 @@ fun ReaderScreen(
                 actions = {
                     IconButton(onClick = { viewModel.createBookmarkFromCurrentPosition() }) {
                         Icon(
-                            imageVector = Icons.Default.BookmarkAdd,
+                            imageVector = Icons.Default.Add,
                             contentDescription = stringResource(R.string.reader_add_bookmark)
                         )
                     }
@@ -109,16 +108,17 @@ fun ReaderScreen(
         ) {
             when {
                 uiState.isLoading -> {
+                    val loadTimeMs = uiState.loadTimeMs
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         CircularProgressIndicator()
-                        if (uiState.loadTimeMs != null) {
+                        if (loadTimeMs != null) {
                             Spacer(modifier = Modifier.height(NextPageDimens.spacingMd))
                             Text(
-                                text = stringResource(R.string.reader_loaded_in, uiState.loadTimeMs),
+                                text = stringResource(R.string.reader_loaded_in, loadTimeMs),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

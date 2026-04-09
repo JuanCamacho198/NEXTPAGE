@@ -15,7 +15,7 @@ class HighlightsViewModel(
 ) : ViewModel() {
 
     val highlights: StateFlow<List<Highlight>> = readerRepository
-        .observeHighlights("")
+        .observeAllHighlights()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -23,7 +23,7 @@ class HighlightsViewModel(
         )
 
     val bookmarks: StateFlow<List<Bookmark>> = readerRepository
-        .observeBookmarks("")
+        .observeAllBookmarks()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),

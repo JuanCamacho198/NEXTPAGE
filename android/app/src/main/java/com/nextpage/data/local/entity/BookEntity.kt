@@ -10,6 +10,8 @@ data class BookEntity(
     val id: String,
     val title: String,
     val author: String?,
+    @ColumnInfo(name = "cover_path")
+    val coverPath: String?,
     @ColumnInfo(name = "file_path")
     val filePath: String,
     val format: String,

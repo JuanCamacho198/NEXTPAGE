@@ -16,4 +16,7 @@ interface BookDao {
 
     @Upsert
     suspend fun upsertAll(books: List<BookEntity>)
+
+    @Query("SELECT * FROM books WHERE id = :bookId LIMIT 1")
+    fun observeBookById(bookId: String): Flow<BookEntity?>
 }

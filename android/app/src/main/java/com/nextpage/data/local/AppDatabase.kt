@@ -18,7 +18,7 @@ import com.nextpage.data.local.entity.ReadingProgressEntity
         HighlightEntity::class,
         BookmarkEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

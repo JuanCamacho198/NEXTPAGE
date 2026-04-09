@@ -33,4 +33,10 @@
     <string name="reader_highlight_note">Note (optional)</string>
     <string name="reader_save">Save</string>
     <string name="reader_cancel">Cancel</string>
+    <string name="highlights_tab">Highlights (%1$d)</string>
+    <string name="bookmarks_tab">Bookmarks (%1$d)</string>
+    <string name="highlights_empty">No highlights yet</string>
+    <string name="bookmarks_empty">No bookmarks yet</string>
+    <string name="highlight_location">Location: %1$s</string>
+    <string name="bookmark_location">Location: %1$s</string>
 </resources>

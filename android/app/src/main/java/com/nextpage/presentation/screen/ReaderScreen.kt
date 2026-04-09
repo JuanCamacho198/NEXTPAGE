@@ -231,7 +231,8 @@ private fun ReaderContent(
                         totalChapters = totalChapters,
                         onPrevious = { if (currentChapterIndex > 0) onChapterSelect(currentChapterIndex - 1) },
                         onNext = { if (currentChapterIndex < totalChapters - 1) onChapterSelect(currentChapterIndex + 1) },
-                        onChapterSelect = onChapterSelect
+                        onChapterSelect = onChapterSelect,
+                        chapters = chapters
                     )
                 }
             }
@@ -257,6 +258,24 @@ private fun ReaderContent(
                     }
                 )
         )
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(NextPageDimens.spacingLg)
+        ) {
+            androidx.compose.material3.FloatingActionButton(
+                onClick = {
+                    selectedText = chapterContent.take(200)
+                    showHighlightDialog = true
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.reader_add_highlight)
+                )
+            }
+        }
     }
 
     if (showHighlightDialog) {
@@ -277,7 +296,8 @@ private fun ChapterNavigationBar(
     totalChapters: Int,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-    onChapterSelect: (Int) -> Unit
+    onChapterSelect: (Int) -> Unit,
+    chapters: List<EpubContentLoader.Chapter>
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),

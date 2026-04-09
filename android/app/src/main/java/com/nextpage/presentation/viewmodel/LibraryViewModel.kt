@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.repository.LibraryRepository
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import com.nextpage.domain.usecase.ImportEpubBookUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +33,8 @@ sealed interface LibraryImportEvent {
 
 class LibraryViewModel(
     private val libraryRepository: LibraryRepository,
-    private val importEpubBookUseCase: ImportEpubBookUseCase
+    private val importEpubBookUseCase: ImportEpubBookUseCase,
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = mutableUiState.asStateFlow()
@@ -40,7 +43,7 @@ class LibraryViewModel(
     val importEvents: SharedFlow<LibraryImportEvent> = mutableImportEvents.asSharedFlow()
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(mainDispatcher) {
             libraryRepository.observeLibrary().collect { books ->
                 mutableUiState.update {
                     it.copy(
@@ -57,7 +60,7 @@ class LibraryViewModel(
         fallbackTitle: String?,
         inputStreamProvider: suspend () -> InputStream?
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(mainDispatcher) {
             mutableUiState.update { it.copy(isImporting = true) }
 
             val result = importEpubBookUseCase(

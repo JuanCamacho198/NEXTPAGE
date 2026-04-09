@@ -7,6 +7,7 @@ import com.nextpage.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -22,10 +23,12 @@ class ReaderViewModelProgressTest {
     @Test
     fun updateProgress_writesLocalProgressThroughRepository() = runTest {
         val repository = FakeReaderRepository()
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val viewModel = ReaderViewModel(
             readerRepository = repository,
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
-            defaultBookId = "book-10"
+            defaultBookId = "book-10",
+            mainDispatcher = dispatcher
         )
 
         viewModel.updateProgress(

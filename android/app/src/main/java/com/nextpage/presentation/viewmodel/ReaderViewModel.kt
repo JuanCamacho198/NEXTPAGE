@@ -7,6 +7,8 @@ import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +24,8 @@ data class ReaderUiState(
 class ReaderViewModel(
     private val readerRepository: ReaderRepository,
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
-    defaultBookId: String?
+    defaultBookId: String?,
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(
         ReaderUiState(selectedBookId = defaultBookId)
@@ -49,7 +52,7 @@ class ReaderViewModel(
             )
         }
 
-        observeProgressJob = viewModelScope.launch {
+        observeProgressJob = viewModelScope.launch(mainDispatcher) {
             readerRepository.observeProgress(bookId).collect { progress ->
                 mutableUiState.update {
                     it.copy(
@@ -62,7 +65,7 @@ class ReaderViewModel(
     }
 
     fun updateProgress(bookId: String, cfiLocation: String, percentage: Float) {
-        viewModelScope.launch {
+        viewModelScope.launch(mainDispatcher) {
             updateReadingProgressUseCase(
                 bookId = bookId,
                 cfiLocation = cfiLocation,

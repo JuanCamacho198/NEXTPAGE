@@ -8,8 +8,9 @@ import com.nextpage.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -28,16 +29,19 @@ class LibraryViewModelTest {
 
     @Test
     fun importBookFromEpub_setsImportingThenEmitsSuccess() = runTest(StandardTestDispatcher()) {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val repository = FakeLibraryRepository()
         val viewModel = LibraryViewModel(
             libraryRepository = repository,
-            importEpubBookUseCase = ImportEpubBookUseCase(repository)
+            importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            mainDispatcher = dispatcher
         )
 
         var emittedEvent: LibraryImportEvent? = null
         val collectJob = launch {
-            emittedEvent = viewModel.importEvents.first()
+            viewModel.importEvents.collect { emittedEvent = it }
         }
+        advanceUntilIdle()
 
         viewModel.importBookFromEpub(
             sourcePath = "content://books/success.epub",
@@ -56,16 +60,19 @@ class LibraryViewModelTest {
 
     @Test
     fun importBookFromEpub_emitsFailureEventOnError() = runTest(StandardTestDispatcher()) {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val repository = FakeLibraryRepository(importFailure = IllegalStateException("bad epub"))
         val viewModel = LibraryViewModel(
             libraryRepository = repository,
-            importEpubBookUseCase = ImportEpubBookUseCase(repository)
+            importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            mainDispatcher = dispatcher
         )
 
         var emittedEvent: LibraryImportEvent? = null
         val collectJob = launch {
-            emittedEvent = viewModel.importEvents.first()
+            viewModel.importEvents.collect { emittedEvent = it }
         }
+        advanceUntilIdle()
 
         viewModel.importBookFromEpub(
             sourcePath = "content://books/failure.epub",
@@ -83,10 +90,12 @@ class LibraryViewModelTest {
 
     @Test
     fun observeLibrary_transitionsFromLoadingToLoaded() = runTest(StandardTestDispatcher()) {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val repository = FakeLibraryRepository()
         val viewModel = LibraryViewModel(
             libraryRepository = repository,
-            importEpubBookUseCase = ImportEpubBookUseCase(repository)
+            importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            mainDispatcher = dispatcher
         )
 
         assertTrue(viewModel.uiState.value.isLoading)

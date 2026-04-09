@@ -8,6 +8,9 @@ import com.nextpage.data.epub.ZipEpubParserService
 import com.nextpage.data.local.AppDatabase
 import com.nextpage.data.repository.LibraryRepositoryImpl
 import com.nextpage.data.repository.ReaderRepositoryImpl
+import com.nextpage.data.remote.sync.SyncService
+import com.nextpage.data.remote.supabase.AuthService
+import com.nextpage.data.remote.supabase.SupabaseClientHolder
 import com.nextpage.data.storage.AppInternalCoverStorage
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
@@ -59,6 +62,26 @@ class AppContainer(context: Context) {
     private val contentLoaderInitTime = System.currentTimeMillis() - contentLoaderStartTime
     init {
         Log.d(TAG, "EpubContentLoader initialized in ${contentLoaderInitTime}ms")
+    }
+
+    val supabaseClientHolder = SupabaseClientHolder(context.applicationContext)
+
+    val authService: AuthService by lazy {
+        AuthService(supabaseClientHolder.client)
+    }
+
+    val syncService: SyncService? by lazy {
+        supabaseClientHolder.client?.let { client ->
+            SyncService(
+                client = client,
+                userId = "",
+                bookDao = appDatabase.bookDao(),
+                readingProgressDao = appDatabase.readingProgressDao(),
+                highlightDao = appDatabase.highlightDao(),
+                bookmarkDao = appDatabase.bookmarkDao(),
+                outboxDao = appDatabase.syncOutboxDao()
+            )
+        }
     }
 
     private val totalInitTime = System.currentTimeMillis() - startTime

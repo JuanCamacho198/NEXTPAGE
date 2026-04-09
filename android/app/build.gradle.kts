@@ -77,6 +77,15 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
+    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.6.3")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.6.3")
+    implementation("io.github.jan-tennert.supabase:storage-kt:2.6.3")
+    implementation("io.github.jan-tennert.supabase:realtime-kt:2.6.3")
+    implementation("io.github.jan-tennert.supabase:supabase-kt:2.6.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 

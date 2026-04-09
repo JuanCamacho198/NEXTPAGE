@@ -1,4 +1,26 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.iml
+
+# Android / Gradle
+.gradle/
+**/build/
+local.properties
+captures/
+
+# Build outputs
+*.apk
+*.aab
+*.ap_
+
+# Tooling
 .codedb/
 codedb.snapshot
+
+# Project-specific
 docs/
 openspec/

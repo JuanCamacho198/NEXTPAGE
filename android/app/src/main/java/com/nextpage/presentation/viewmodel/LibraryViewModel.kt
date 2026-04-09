@@ -60,9 +60,9 @@ class LibraryViewModel(
         fallbackTitle: String?,
         inputStreamProvider: suspend () -> InputStream?
     ) {
-        viewModelScope.launch(mainDispatcher) {
-            mutableUiState.update { it.copy(isImporting = true) }
+        mutableUiState.update { it.copy(isImporting = true) }
 
+        viewModelScope.launch(mainDispatcher) {
             val result = importEpubBookUseCase(
                 request = BookImportRequest(
                     sourcePath = sourcePath,

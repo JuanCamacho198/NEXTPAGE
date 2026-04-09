@@ -1,11 +1,14 @@
 package com.nextpage.data.epub
 
-import org.xmlpull.v1.XmlPullParser
-import org.xmlpull.v1.XmlPullParserFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import javax.xml.XMLConstants
+import org.w3c.dom.Document
+import org.w3c.dom.Element
+import org.w3c.dom.Node
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
+import javax.xml.parsers.DocumentBuilderFactory
 
 class ZipEpubParserService : EpubParserService {
     override suspend fun extractMetadata(inputStream: InputStream): Result<EpubMetadata> = runCatching {
@@ -35,50 +38,43 @@ class ZipEpubParserService : EpubParserService {
 
     private fun readRootFilePath(zipBytes: ByteArray): String? {
         val containerXml = readZipEntryBytes(zipBytes, CONTAINER_XML_PATH) ?: return null
-        val parser = newParser(containerXml)
-
-        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
-            if (parser.eventType == XmlPullParser.START_TAG && parser.name == "rootfile") {
-                return parser.getAttributeValue(null, "full-path")
-                    ?: parser.getAttributeValue("", "full-path")
+        val document = parseXml(containerXml)
+        val rootFiles = document.getElementsByTagName("*")
+        for (index in 0 until rootFiles.length) {
+            val node = rootFiles.item(index)
+            if (node is Element && node.localTagName() == "rootfile") {
+                return node.getAttribute("full-path").takeIf { it.isNotBlank() }
             }
-            parser.next()
         }
         return null
     }
 
     private fun parsePackageDocument(opfBytes: ByteArray): ParsedPackageDocument {
-        val parser = newParser(opfBytes)
-        var title: String? = null
-        var author: String? = null
+        val document = parseXml(opfBytes)
+        val title = firstElementTextByLocalName(document, "title")
+        val author = firstElementTextByLocalName(document, "creator")
         val manifestById = mutableMapOf<String, String>()
+        val allElements = document.getElementsByTagName("*")
         var coverItemId: String? = null
 
-        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
-            if (parser.eventType == XmlPullParser.START_TAG) {
-                when (parser.name) {
-                    "dc:title", "title" -> title = parser.readSimpleText()
-                    "dc:creator", "creator" -> author = parser.readSimpleText()
-                    "meta" -> {
-                        val nameAttr = parser.getAttributeValue(null, "name")
-                            ?: parser.getAttributeValue("", "name")
-                        if (nameAttr == "cover") {
-                            coverItemId = parser.getAttributeValue(null, "content")
-                                ?: parser.getAttributeValue("", "content")
-                        }
+        for (index in 0 until allElements.length) {
+            val node = allElements.item(index)
+            if (node !is Element) continue
+
+            when (node.localTagName()) {
+                "meta" -> {
+                    if (node.getAttribute("name") == "cover") {
+                        coverItemId = node.getAttribute("content").takeIf { it.isNotBlank() }
                     }
-                    "item" -> {
-                        val id = parser.getAttributeValue(null, "id")
-                            ?: parser.getAttributeValue("", "id")
-                        val href = parser.getAttributeValue(null, "href")
-                            ?: parser.getAttributeValue("", "href")
-                        if (!id.isNullOrBlank() && !href.isNullOrBlank()) {
-                            manifestById[id] = href
-                        }
+                }
+                "item" -> {
+                    val id = node.getAttribute("id").takeIf { it.isNotBlank() }
+                    val href = node.getAttribute("href").takeIf { it.isNotBlank() }
+                    if (id != null && href != null) {
+                        manifestById[id] = href
                     }
                 }
             }
-            parser.next()
         }
 
         return ParsedPackageDocument(
@@ -125,26 +121,32 @@ class ZipEpubParserService : EpubParserService {
         return baseParts.joinToString("/")
     }
 
-    private fun newParser(bytes: ByteArray): XmlPullParser {
-        val factory = XmlPullParserFactory.newInstance()
-        factory.isNamespaceAware = true
-        return factory.newPullParser().apply {
-            setInput(ByteArrayInputStream(bytes), Charsets.UTF_8.name())
+    private fun parseXml(bytes: ByteArray): Document {
+        val factory = DocumentBuilderFactory.newInstance().apply {
+            isNamespaceAware = true
+            setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+            setFeature("http://xml.org/sax/features/external-general-entities", false)
+            setFeature("http://xml.org/sax/features/external-parameter-entities", false)
         }
+        return factory.newDocumentBuilder().parse(ByteArrayInputStream(bytes))
     }
 
-    private fun XmlPullParser.readSimpleText(): String? {
-        var captured: String? = null
-        while (next() != XmlPullParser.END_TAG) {
-            if (eventType == XmlPullParser.TEXT) {
-                val value = text?.trim()
+    private fun firstElementTextByLocalName(document: Document, localName: String): String? {
+        val allElements = document.getElementsByTagName("*")
+        for (index in 0 until allElements.length) {
+            val node = allElements.item(index)
+            if (node is Element && node.localTagName() == localName) {
+                val value = node.textContent?.trim()
                 if (!value.isNullOrBlank()) {
-                    captured = value
+                    return value
                 }
             }
         }
-        return captured
+        return null
     }
+
+    private fun Node.localTagName(): String = localName ?: nodeName.substringAfter(':', nodeName)
 
     private data class ParsedPackageDocument(
         val title: String?,

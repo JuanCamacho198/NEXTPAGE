@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -29,7 +28,7 @@ class LibraryViewModelTest {
 
     @Test
     fun importBookFromEpub_setsImportingThenEmitsSuccess() = runTest(StandardTestDispatcher()) {
-        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = FakeLibraryRepository()
         val viewModel = LibraryViewModel(
             libraryRepository = repository,
@@ -60,7 +59,7 @@ class LibraryViewModelTest {
 
     @Test
     fun importBookFromEpub_emitsFailureEventOnError() = runTest(StandardTestDispatcher()) {
-        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = FakeLibraryRepository(importFailure = IllegalStateException("bad epub"))
         val viewModel = LibraryViewModel(
             libraryRepository = repository,
@@ -90,7 +89,7 @@ class LibraryViewModelTest {
 
     @Test
     fun observeLibrary_transitionsFromLoadingToLoaded() = runTest(StandardTestDispatcher()) {
-        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = FakeLibraryRepository()
         val viewModel = LibraryViewModel(
             libraryRepository = repository,

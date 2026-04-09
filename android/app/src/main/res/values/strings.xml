@@ -11,9 +11,14 @@
     <string name="library_open">Open</string>
     <string name="library_author_unknown">Unknown author</string>
     <string name="library_last_updated">Updated: %1$s</string>
+    <string name="library_cover_placeholder">No Cover</string>
+    <string name="library_layout_list">List</string>
+    <string name="library_layout_grid">Grid</string>
     <string name="reader_placeholder">Reader rendering engine is coming soon.</string>
     <string name="reader_selected_book">Book: %1$s</string>
     <string name="reader_no_progress">No local progress yet for this book.</string>
     <string name="reader_progress_cfi">CFI: %1$s</string>
     <string name="reader_progress_percent">Progress: %1$.1f%%</string>
+    <string name="reader_mark_quarter">Mark 25%%</string>
+    <string name="reader_mark_three_quarter">Mark 75%%</string>
 </resources>

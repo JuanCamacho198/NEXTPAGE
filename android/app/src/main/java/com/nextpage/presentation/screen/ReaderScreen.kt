@@ -3,9 +3,13 @@ package com.nextpage.presentation.screen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -69,5 +73,39 @@ fun ReaderScreen(
                 style = MaterialTheme.typography.bodyLarge
             )
         }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
+        ) {
+            Button(
+                onClick = {
+                    viewModel.updateProgress(
+                        bookId = selectedBookId,
+                        cfiLocation = "epubcfi(/6/2[chapter-1]!/4/1:0)",
+                        percentage = 25f
+                    )
+                },
+                modifier = Modifier.weight(1f),
+                enabled = selectedBookId.isNotBlank()
+            ) {
+                Text(text = stringResource(R.string.reader_mark_quarter))
+            }
+            Button(
+                onClick = {
+                    viewModel.updateProgress(
+                        bookId = selectedBookId,
+                        cfiLocation = "epubcfi(/6/2[chapter-4]!/4/1:0)",
+                        percentage = 75f
+                    )
+                },
+                modifier = Modifier.weight(1f),
+                enabled = selectedBookId.isNotBlank()
+            ) {
+                Text(text = stringResource(R.string.reader_mark_three_quarter))
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
     }
 }

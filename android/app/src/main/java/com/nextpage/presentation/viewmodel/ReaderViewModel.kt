@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.ReaderRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,11 +27,15 @@ class ReaderViewModel(
     )
     val uiState: StateFlow<ReaderUiState> = mutableUiState.asStateFlow()
 
+    private var observeProgressJob: Job? = null
+
     init {
         restoreProgressForBook(defaultBookId)
     }
 
     fun restoreProgressForBook(bookId: String) {
+        observeProgressJob?.cancel()
+
         mutableUiState.update {
             it.copy(
                 selectedBookId = bookId,
@@ -38,7 +43,7 @@ class ReaderViewModel(
             )
         }
 
-        viewModelScope.launch {
+        observeProgressJob = viewModelScope.launch {
             readerRepository.observeProgress(bookId).collect { progress ->
                 mutableUiState.update {
                     it.copy(

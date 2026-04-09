@@ -30,12 +30,14 @@ import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
 fun NextPageNavHost(appContainer: AppContainer) {
     val navController = rememberNavController()
     var selectedBookId by remember { mutableStateOf("") }
+    var selectedBookFilePath by remember { mutableStateOf<String?>(null) }
     val libraryViewModel: LibraryViewModel = viewModel(
         factory = LibraryViewModelFactory(appContainer.libraryRepository)
     )
     val readerViewModel: ReaderViewModel = viewModel(
         factory = ReaderViewModelFactory(
             readerRepository = appContainer.readerRepository,
+            epubContentLoader = appContainer.epubContentLoader,
             defaultBookId = selectedBookId
         )
     )
@@ -86,8 +88,9 @@ fun NextPageNavHost(appContainer: AppContainer) {
                 LibraryScreen(
                     contentPadding = innerPadding,
                     viewModel = libraryViewModel,
-                    onBookSelected = { bookId ->
+                    onBookSelected = { bookId, filePath ->
                         selectedBookId = bookId
+                        selectedBookFilePath = filePath
                         navController.navigate(NextPageDestination.Reader.route) {
                             launchSingleTop = true
                         }
@@ -98,7 +101,9 @@ fun NextPageNavHost(appContainer: AppContainer) {
                 ReaderScreen(
                     contentPadding = innerPadding,
                     selectedBookId = selectedBookId,
-                    viewModel = readerViewModel
+                    bookFilePath = selectedBookFilePath,
+                    viewModel = readerViewModel,
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
             composable(NextPageDestination.Highlights.route) {

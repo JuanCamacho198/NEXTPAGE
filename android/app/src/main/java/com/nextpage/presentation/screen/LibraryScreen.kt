@@ -55,7 +55,7 @@ import com.nextpage.presentation.viewmodel.LibraryViewModel
 fun LibraryScreen(
     contentPadding: PaddingValues,
     viewModel: LibraryViewModel,
-    onBookSelected: (String) -> Unit
+    onBookSelected: (String, String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -136,7 +136,7 @@ private fun LibraryCollection(
     isImporting: Boolean,
     layoutMode: LibraryLayoutMode,
     onLayoutModeChanged: (LibraryLayoutMode) -> Unit,
-    onBookSelected: (String) -> Unit,
+    onBookSelected: (String, String) -> Unit,
     onImportClick: () -> Unit
 ) {
     Column(
@@ -172,7 +172,7 @@ private fun LibraryCollection(
                 items(books, key = { book -> book.id }) { book ->
                     LibraryBookItem(
                         book = book,
-                        onClick = { onBookSelected(book.id) }
+                        onClick = { onBookSelected(book.id, book.filePath) }
                     )
                 }
             }
@@ -186,7 +186,7 @@ private fun LibraryCollection(
                 items(books, key = { book -> book.id }) { book ->
                     LibraryBookGridItem(
                         book = book,
-                        onClick = { onBookSelected(book.id) }
+                        onClick = { onBookSelected(book.id, book.filePath) }
                     )
                 }
             }

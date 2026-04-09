@@ -15,7 +15,19 @@ class ReaderRepositoryImpl(
             .observeProgressForBook(bookId)
             .map { progress -> progress?.toDomain() }
 
+    override suspend fun upsertProgress(progress: ReadingProgress) {
+        readingProgressDao.upsert(progress.toEntity())
+    }
+
     private fun ReadingProgressEntity.toDomain(): ReadingProgress = ReadingProgress(
+        id = id,
+        bookId = bookId,
+        cfiLocation = cfiLocation,
+        percentage = percentage,
+        updatedAtEpochMillis = updatedAtEpochMillis
+    )
+
+    private fun ReadingProgress.toEntity(): ReadingProgressEntity = ReadingProgressEntity(
         id = id,
         bookId = bookId,
         cfiLocation = cfiLocation,

@@ -4,6 +4,7 @@ import com.nextpage.data.epub.EpubMetadata
 import com.nextpage.data.epub.EpubParserService
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.entity.BookEntity
+import com.nextpage.data.storage.CoverStorage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
@@ -27,7 +28,8 @@ class LibraryRepositoryImplTest {
                         coverImageBytes = null
                     )
                 )
-            )
+            ),
+            coverStorage = FakeCoverStorage()
         )
 
         val result = repository.importBookFromEpub(
@@ -45,6 +47,7 @@ class LibraryRepositoryImplTest {
         assertEquals("Eric Evans", inserted?.author)
         assertEquals("content://books/ddd.epub", inserted?.filePath)
         assertEquals("epub", inserted?.format)
+        assertEquals(null, inserted?.coverPath)
     }
 
     private class FakeEpubParserService(
@@ -69,6 +72,15 @@ class LibraryRepositoryImplTest {
 
         override suspend fun upsertAll(books: List<BookEntity>) {
             books.forEach { upsert(it) }
+        }
+
+        override fun observeBookById(bookId: String): Flow<BookEntity?> =
+            MutableStateFlow(booksState.value.firstOrNull { it.id == bookId })
+    }
+
+    private class FakeCoverStorage : CoverStorage {
+        override suspend fun saveCover(bookId: String, coverBytes: ByteArray): Result<String> {
+            return Result.success("/tmp/$bookId.jpg")
         }
     }
 }

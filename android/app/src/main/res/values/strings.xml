@@ -5,9 +5,14 @@
     <string name="tab_reader">Reader</string>
     <string name="tab_highlights">Highlights</string>
     <string name="library_empty">No local books yet.</string>
+    <string name="library_import_button">Import EPUB</string>
+    <string name="library_import_success">Imported "%1$s"</string>
+    <string name="library_import_failure">Import failed: %1$s</string>
     <string name="library_open">Open</string>
     <string name="library_author_unknown">Unknown author</string>
     <string name="library_last_updated">Updated: %1$s</string>
+    <string name="reader_placeholder">Reader rendering engine is coming soon.</string>
+    <string name="reader_selected_book">Book: %1$s</string>
     <string name="reader_no_progress">No local progress yet for this book.</string>
     <string name="reader_progress_cfi">CFI: %1$s</string>
     <string name="reader_progress_percent">Progress: %1$.1f%%</string>

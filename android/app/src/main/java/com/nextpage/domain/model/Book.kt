@@ -4,6 +4,7 @@ data class Book(
     val id: String,
     val title: String,
     val author: String?,
+    val coverPath: String?,
     val filePath: String,
     val format: String,
     val updatedAtEpochMillis: Long

@@ -4,6 +4,18 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+import java.util.Properties
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun String.escapeForBuildConfig(): String =
+    replace("\\", "\\\\").replace("\"", "\\\"")
+
 android {
     namespace = "com.nextpage"
     compileSdk = 35
@@ -19,6 +31,12 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        val supabaseUrl = (localProperties.getProperty("supabase.url") ?: "").escapeForBuildConfig()
+        val supabaseAnonKey = (localProperties.getProperty("supabase.anonkey") ?: "").escapeForBuildConfig()
+
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
     }
 
     buildTypes {
@@ -42,6 +60,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -56,6 +75,7 @@ android {
 }
 
 dependencies {
+    val supabaseVersion = "2.6.1"
     val composeBom = platform("androidx.compose:compose-bom:2024.09.03")
 
     implementation(composeBom)
@@ -77,11 +97,11 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
-    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.6.3")
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.6.3")
-    implementation("io.github.jan-tennert.supabase:storage-kt:2.6.3")
-    implementation("io.github.jan-tennert.supabase:realtime-kt:2.6.3")
-    implementation("io.github.jan-tennert.supabase:supabase-kt:2.6.3")
+    implementation("io.github.jan-tennert.supabase:supabase-kt:$supabaseVersion")
+    implementation("io.github.jan-tennert.supabase:gotrue-kt:$supabaseVersion")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:$supabaseVersion")
+    implementation("io.github.jan-tennert.supabase:storage-kt:$supabaseVersion")
+    implementation("io.github.jan-tennert.supabase:realtime-kt:$supabaseVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")

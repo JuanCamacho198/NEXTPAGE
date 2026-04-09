@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BookmarkDao {
+    @Query("SELECT * FROM bookmarks WHERE deleted_at IS NULL ORDER BY updated_at DESC")
+    fun observeAllBookmarks(): Flow<List<BookmarkEntity>>
+
     @Query("SELECT * FROM bookmarks WHERE book_id = :bookId AND deleted_at IS NULL ORDER BY updated_at DESC")
     fun observeBookmarksForBook(bookId: String): Flow<List<BookmarkEntity>>
 

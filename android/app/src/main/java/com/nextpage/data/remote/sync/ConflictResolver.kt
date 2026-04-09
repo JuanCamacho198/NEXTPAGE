@@ -1,55 +1,41 @@
 package com.nextpage.data.remote.sync
 
-import android.util.Log
-import com.nextpage.data.local.entity.HighlightEntity
-import com.nextpage.data.local.entity.BookmarkEntity
-import com.nextpage.data.local.entity.ReadingProgressEntity
+interface ConflictResolver<T> {
+    fun resolve(local: T?, remote: T): T
+}
 
-object ConflictResolver {
-    private const val TAG = "ConflictResolver"
+interface VersionedSyncRecord {
+    val recordId: String
+    val updatedAtEpochMillis: Long
+    val deletedAtEpochMillis: Long?
+}
 
-    fun resolveProgress(local: ReadingProgressEntity?, remote: ReadingProgressEntity): ReadingProgressEntity {
-        if (local == null) return remote
+class LastWriteWinsConflictResolver<T : VersionedSyncRecord> : ConflictResolver<T> {
+    override fun resolve(local: T?, remote: T): T {
+        val localRecord = local ?: return remote
 
-        return if (local.updatedAtEpochMillis >= remote.updatedAtEpochMillis) local else remote
+        if (localRecord.deletedAtEpochMillis != null || remote.deletedAtEpochMillis != null) {
+            return resolveTombstone(localRecord, remote)
+        }
+
+        return chooseLatest(localRecord, remote)
     }
 
-    fun resolveHighlight(local: HighlightEntity?, remote: HighlightEntity): HighlightEntity {
-        if (local == null) return remote
+    private fun resolveTombstone(local: T, remote: T): T {
+        val localDeletedAt = local.deletedAtEpochMillis
+        val remoteDeletedAt = remote.deletedAtEpochMillis
 
-        if (local.deletedAtEpochMillis != null && remote.deletedAtEpochMillis == null) {
-            return local.copy(deletedAtEpochMillis = System.currentTimeMillis())
+        if (localDeletedAt != null && remoteDeletedAt == null) return local
+        if (localDeletedAt == null && remoteDeletedAt != null) return remote
+        if (localDeletedAt != null && remoteDeletedAt != null) {
+            return if (localDeletedAt >= remoteDeletedAt) local else remote
         }
-        if (local.deletedAtEpochMillis != null && remote.deletedAtEpochMillis != null) {
-            return if (local.deletedAtEpochMillis > remote.deletedAtEpochMillis) local else remote
-        }
-        if (local.deletedAtEpochMillis == null && remote.deletedAtEpochMillis != null) {
-            return remote
-        }
-
-        return if (local.updatedAtEpochMillis >= remote.updatedAtEpochMillis) local else remote
+        return chooseLatest(local, remote)
     }
 
-    fun resolveBookmark(local: BookmarkEntity?, remote: BookmarkEntity): BookmarkEntity {
-        if (local == null) return remote
-
-        if (local.deletedAtEpochMillis != null && remote.deletedAtEpochMillis == null) {
-            return local.copy(deletedAtEpochMillis = System.currentTimeMillis())
-        }
-        if (local.deletedAtEpochMillis != null && remote.deletedAtEpochMillis != null) {
-            return if (local.deletedAtEpochMillis > remote.deletedAtEpochMillis) local else remote
-        }
-        if (local.deletedAtEpochMillis == null && remote.deletedAtEpochMillis != null) {
-            return remote
-        }
-
-        return if (local.updatedAtEpochMillis >= remote.updatedAtEpochMillis) local else remote
-    }
-
-    fun resolveTimestamp(local: Long, remote: Long): Long {
-        if (local > remote) return local
-        if (remote > local) return remote
-
-        return if (local.toString().compareTo(remote.toString()) >= 0) local else remote
+    private fun chooseLatest(local: T, remote: T): T {
+        if (remote.updatedAtEpochMillis > local.updatedAtEpochMillis) return remote
+        if (remote.updatedAtEpochMillis < local.updatedAtEpochMillis) return local
+        return if (remote.recordId > local.recordId) remote else local
     }
 }

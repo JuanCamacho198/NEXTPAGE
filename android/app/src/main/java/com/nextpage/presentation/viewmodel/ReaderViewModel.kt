@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.ReaderRepository
+import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,7 @@ data class ReaderUiState(
 
 class ReaderViewModel(
     private val readerRepository: ReaderRepository,
+    private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
     defaultBookId: String?
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(
@@ -58,6 +60,16 @@ class ReaderViewModel(
             }
         }
     }
+
+    fun updateProgress(bookId: String, cfiLocation: String, percentage: Float) {
+        viewModelScope.launch {
+            updateReadingProgressUseCase(
+                bookId = bookId,
+                cfiLocation = cfiLocation,
+                percentage = percentage.coerceIn(0f, 100f)
+            )
+        }
+    }
 }
 
 class ReaderViewModelFactory(
@@ -69,6 +81,7 @@ class ReaderViewModelFactory(
         if (modelClass.isAssignableFrom(ReaderViewModel::class.java)) {
             return ReaderViewModel(
                 readerRepository = readerRepository,
+                updateReadingProgressUseCase = UpdateReadingProgressUseCase(readerRepository),
                 defaultBookId = defaultBookId
             ) as T
         }

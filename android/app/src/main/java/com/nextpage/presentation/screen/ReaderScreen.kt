@@ -5,11 +5,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.nextpage.R
@@ -29,11 +31,21 @@ fun ReaderScreen(
             .fillMaxSize()
             .padding(contentPadding)
             .padding(NextPageDimens.spacingLg),
-        verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
+        verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm),
+        horizontalAlignment = Alignment.Start
     ) {
+        if (uiState.isLoading) {
+            CircularProgressIndicator()
+        }
+
         Text(
-            text = selectedBookId,
+            text = stringResource(R.string.reader_selected_book, selectedBookId),
             style = MaterialTheme.typography.headlineSmall
+        )
+
+        Text(
+            text = stringResource(R.string.reader_placeholder),
+            style = MaterialTheme.typography.bodyMedium
         )
 
         if (uiState.readingProgress == null) {

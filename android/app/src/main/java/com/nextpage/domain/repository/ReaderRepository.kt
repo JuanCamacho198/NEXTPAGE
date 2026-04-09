@@ -5,4 +5,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface ReaderRepository {
     fun observeProgress(bookId: String): Flow<ReadingProgress?>
+
+    suspend fun upsertProgress(progress: ReadingProgress)
 }

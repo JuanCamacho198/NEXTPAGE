@@ -27,6 +27,11 @@ class ReaderRepositoryImpl(
         readingProgressDao.upsert(progress.toEntity())
     }
 
+    override fun observeAllHighlights(): Flow<List<Highlight>> =
+        highlightDao
+            .observeAllHighlights()
+            .map { list -> list.map { it.toDomain() } }
+
     override fun observeHighlights(bookId: String): Flow<List<Highlight>> =
         highlightDao
             .observeHighlightsForBook(bookId)
@@ -35,6 +40,11 @@ class ReaderRepositoryImpl(
     override suspend fun upsertHighlight(highlight: Highlight) {
         highlightDao.upsert(highlight.toEntity())
     }
+
+    override fun observeAllBookmarks(): Flow<List<Bookmark>> =
+        bookmarkDao
+            .observeAllBookmarks()
+            .map { list -> list.map { it.toDomain() } }
 
     override fun observeBookmarks(bookId: String): Flow<List<Bookmark>> =
         bookmarkDao

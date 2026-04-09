@@ -18,7 +18,7 @@ class LibraryRepositoryImpl(
     private val coverStorage: CoverStorage
 ) : LibraryRepository {
     override fun observeLibrary(): Flow<List<Book>> =
-        bookDao.observeAllBooks().map { books -> books.map(BookEntity::toDomain) }
+        bookDao.observeAllBooks().map { books -> books.map { it.toDomain() } }
 
     override fun observeBookById(bookId: String): Flow<Book?> =
         bookDao.observeBookById(bookId).map { it?.toDomain() }

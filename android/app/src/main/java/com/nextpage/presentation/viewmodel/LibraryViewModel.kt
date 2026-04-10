@@ -24,12 +24,20 @@ import java.io.InputStream
 data class LibraryUiState(
     val books: List<Book> = emptyList(),
     val isLoading: Boolean = true,
-    val isImporting: Boolean = false
+    val isImporting: Boolean = false,
+    val bookToDelete: Book? = null,
+    val totalMinutesRead: Long = 0L,
+    val readingMinutesByBook: Map<String, Long> = emptyMap()
 )
 
 sealed interface LibraryImportEvent {
     data class Success(val title: String) : LibraryImportEvent
     data class Failure(val message: String) : LibraryImportEvent
+}
+
+sealed interface LibraryUiEvent {
+    data class Success(val message: String) : LibraryUiEvent
+    data class Failure(val message: String) : LibraryUiEvent
 }
 
 class LibraryViewModel(
@@ -43,6 +51,9 @@ class LibraryViewModel(
     private val mutableImportEvents = MutableSharedFlow<LibraryImportEvent>()
     val importEvents: SharedFlow<LibraryImportEvent> = mutableImportEvents.asSharedFlow()
 
+    private val mutableUiEvents = MutableSharedFlow<LibraryUiEvent>()
+    val uiEvents: SharedFlow<LibraryUiEvent> = mutableUiEvents.asSharedFlow()
+
     init {
         viewModelScope.launch(mainDispatcher) {
             libraryRepository.observeLibrary().collect { books ->
@@ -52,6 +63,18 @@ class LibraryViewModel(
                         isLoading = false
                     )
                 }
+            }
+        }
+
+        viewModelScope.launch(mainDispatcher) {
+            libraryRepository.observeTotalReadingTime().collect { totalMinutes ->
+                mutableUiState.update { it.copy(totalMinutesRead = totalMinutes) }
+            }
+        }
+
+        viewModelScope.launch(mainDispatcher) {
+            libraryRepository.observeReadingTimeByBook().collect { readingMinutesByBook ->
+                mutableUiState.update { it.copy(readingMinutesByBook = readingMinutesByBook) }
             }
         }
     }
@@ -115,6 +138,36 @@ class LibraryViewModel(
                     mutableImportEvents.emit(
                         LibraryImportEvent.Failure(
                             error.message ?: "Failed to import PDF"
+                        )
+                    )
+                }
+            )
+        }
+    }
+
+    fun requestDeleteBook(book: Book) {
+        mutableUiState.update { it.copy(bookToDelete = book) }
+    }
+
+    fun dismissDeleteDialog() {
+        mutableUiState.update { it.copy(bookToDelete = null) }
+    }
+
+    fun confirmDeleteBook() {
+        val book = mutableUiState.value.bookToDelete ?: return
+
+        viewModelScope.launch(mainDispatcher) {
+            val result = libraryRepository.deleteBook(book.id)
+            mutableUiState.update { it.copy(bookToDelete = null) }
+
+            result.fold(
+                onSuccess = {
+                    mutableUiEvents.emit(LibraryUiEvent.Success("Deleted \"${book.title}\""))
+                },
+                onFailure = { error ->
+                    mutableUiEvents.emit(
+                        LibraryUiEvent.Failure(
+                            error.message ?: "Failed to delete book"
                         )
                     )
                 }

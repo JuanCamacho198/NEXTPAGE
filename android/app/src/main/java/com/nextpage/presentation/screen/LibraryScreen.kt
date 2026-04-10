@@ -5,7 +5,9 @@ import android.graphics.BitmapFactory
 import java.io.File
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,10 +28,12 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,6 +54,7 @@ import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.LibraryImportEvent
+import com.nextpage.presentation.viewmodel.LibraryUiEvent
 import com.nextpage.presentation.viewmodel.LibraryViewModel
 
 @Composable
@@ -124,6 +129,16 @@ fun LibraryScreen(
         }
     }
 
+    LaunchedEffect(viewModel) {
+        viewModel.uiEvents.collect { event ->
+            val message = when (event) {
+                is LibraryUiEvent.Success -> event.message
+                is LibraryUiEvent.Failure -> event.message
+            }
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         if (uiState.books.isEmpty()) {
             EmptyLibrary(
@@ -140,8 +155,33 @@ fun LibraryScreen(
                 layoutMode = layoutMode,
                 onLayoutModeChanged = { layoutMode = it },
                 onBookSelected = onBookSelected,
+                onBookLongPress = { book -> viewModel.requestDeleteBook(book) },
+                totalMinutesRead = uiState.totalMinutesRead,
+                readingMinutesByBook = uiState.readingMinutesByBook,
                 onEpubClick = { epubPickerLauncher.launch(arrayOf("application/epub+zip")) },
                 onPdfClick = { pdfPickerLauncher.launch(arrayOf("application/pdf")) }
+            )
+        }
+
+        uiState.bookToDelete?.let { selectedBook ->
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissDeleteDialog() },
+                title = { Text(text = stringResource(R.string.library_delete_title)) },
+                text = {
+                    Text(
+                        text = stringResource(R.string.library_delete_message, selectedBook.title)
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.confirmDeleteBook() }) {
+                        Text(text = stringResource(R.string.library_delete_confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.dismissDeleteDialog() }) {
+                        Text(text = stringResource(R.string.reader_cancel))
+                    }
+                }
             )
         }
 
@@ -168,6 +208,9 @@ private fun LibraryCollection(
     layoutMode: LibraryLayoutMode,
     onLayoutModeChanged: (LibraryLayoutMode) -> Unit,
     onBookSelected: (String, String, String) -> Unit,
+    onBookLongPress: (Book) -> Unit,
+    totalMinutesRead: Long,
+    readingMinutesByBook: Map<String, Long>,
     onEpubClick: () -> Unit,
     onPdfClick: () -> Unit
 ) {
@@ -199,6 +242,11 @@ private fun LibraryCollection(
             }
         }
 
+        Text(
+            text = stringResource(R.string.library_total_minutes_read, totalMinutesRead),
+            style = MaterialTheme.typography.bodyMedium
+        )
+
         if (layoutMode == LibraryLayoutMode.LIST) {
             LazyColumn(
                 modifier = Modifier.weight(1f),
@@ -207,7 +255,9 @@ private fun LibraryCollection(
                 items(books, key = { book -> book.id }) { book ->
                     LibraryBookItem(
                         book = book,
-                        onClick = { onBookSelected(book.id, book.filePath, book.format) }
+                        minutesRead = readingMinutesByBook[book.id] ?: 0L,
+                        onClick = { onBookSelected(book.id, book.filePath, book.format) },
+                        onLongPress = { onBookLongPress(book) }
                     )
                 }
             }
@@ -221,7 +271,9 @@ private fun LibraryCollection(
                 items(books, key = { book -> book.id }) { book ->
                     LibraryBookGridItem(
                         book = book,
-                        onClick = { onBookSelected(book.id, book.filePath, book.format) }
+                        minutesRead = readingMinutesByBook[book.id] ?: 0L,
+                        onClick = { onBookSelected(book.id, book.filePath, book.format) },
+                        onLongPress = { onBookLongPress(book) }
                     )
                 }
             }
@@ -266,13 +318,22 @@ private fun EmptyLibrary(
 }
 
 @Composable
-private fun LibraryBookItem(book: Book, onClick: () -> Unit) {
+@OptIn(ExperimentalFoundationApi::class)
+private fun LibraryBookItem(
+    book: Book,
+    minutesRead: Long,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit
+) {
     Surface(
         tonalElevation = NextPageDimens.spacingXs,
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongPress
+            )
     ) {
         Column(
             modifier = Modifier.padding(NextPageDimens.spacingMd),
@@ -308,18 +369,31 @@ private fun LibraryBookItem(book: Book, onClick: () -> Unit) {
                     style = MaterialTheme.typography.labelLarge
                 )
             }
+            Text(
+                text = stringResource(R.string.library_item_minutes_read, minutesRead),
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }
 
 @Composable
-private fun LibraryBookGridItem(book: Book, onClick: () -> Unit) {
+@OptIn(ExperimentalFoundationApi::class)
+private fun LibraryBookGridItem(
+    book: Book,
+    minutesRead: Long,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit
+) {
     Surface(
         tonalElevation = NextPageDimens.spacingXs,
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongPress
+            )
     ) {
         Column(
             modifier = Modifier.padding(NextPageDimens.spacingMd),
@@ -338,6 +412,11 @@ private fun LibraryBookGridItem(book: Book, onClick: () -> Unit) {
             Text(
                 text = book.author ?: stringResource(R.string.library_author_unknown),
                 style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = stringResource(R.string.library_item_minutes_read, minutesRead),
+                style = MaterialTheme.typography.labelMedium,
                 textAlign = TextAlign.Center
             )
         }

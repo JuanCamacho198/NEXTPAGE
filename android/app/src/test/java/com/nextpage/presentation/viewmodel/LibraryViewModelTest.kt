@@ -19,6 +19,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.io.InputStream
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -141,6 +142,25 @@ class LibraryViewModelTest {
                     coverPath = null,
                     filePath = request.sourcePath,
                     format = "epub",
+                    updatedAtEpochMillis = 1L
+                )
+            )
+        }
+
+        override suspend fun importBookFromPdf(
+            request: BookImportRequest,
+            file: File
+        ): Result<Book> {
+            importFailure?.let { return Result.failure(it) }
+
+            return Result.success(
+                Book(
+                    id = "imported-pdf-1",
+                    title = request.fallbackTitle ?: "Untitled",
+                    author = null,
+                    coverPath = null,
+                    filePath = request.sourcePath,
+                    format = "pdf",
                     updatedAtEpochMillis = 1L
                 )
             )

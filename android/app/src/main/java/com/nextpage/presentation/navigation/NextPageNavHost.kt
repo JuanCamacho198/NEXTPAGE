@@ -36,6 +36,7 @@ fun NextPageNavHost(appContainer: AppContainer) {
     val navController = rememberNavController()
     var selectedBookId by remember { mutableStateOf("") }
     var selectedBookFilePath by remember { mutableStateOf<String?>(null) }
+    var selectedBookFormat by remember { mutableStateOf("epub") }
     val libraryViewModel: LibraryViewModel = viewModel(
         factory = LibraryViewModelFactory(appContainer.libraryRepository)
     )
@@ -43,6 +44,7 @@ fun NextPageNavHost(appContainer: AppContainer) {
         factory = ReaderViewModelFactory(
             readerRepository = appContainer.readerRepository,
             epubContentLoader = appContainer.epubContentLoader,
+            pdfContentLoader = appContainer.pdfContentLoader,
             defaultBookId = selectedBookId
         )
     )
@@ -123,9 +125,10 @@ fun NextPageNavHost(appContainer: AppContainer) {
                 LibraryScreen(
                     contentPadding = innerPadding,
                     viewModel = libraryViewModel,
-                    onBookSelected = { bookId, filePath ->
+                    onBookSelected = { bookId, filePath, format ->
                         selectedBookId = bookId
                         selectedBookFilePath = filePath
+                        selectedBookFormat = format
                         navController.navigate(NextPageDestination.Reader.route) {
                             launchSingleTop = true
                         }
@@ -137,6 +140,7 @@ fun NextPageNavHost(appContainer: AppContainer) {
                     contentPadding = innerPadding,
                     selectedBookId = selectedBookId,
                     bookFilePath = selectedBookFilePath,
+                    bookFormat = selectedBookFormat,
                     viewModel = readerViewModel,
                     onNavigateBack = { navController.popBackStack() }
                 )

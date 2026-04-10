@@ -4,6 +4,8 @@ import com.nextpage.data.epub.EpubMetadata
 import com.nextpage.data.epub.EpubParserService
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.entity.BookEntity
+import com.nextpage.data.pdf.PdfMetadata
+import com.nextpage.data.pdf.PdfParserService
 import com.nextpage.data.storage.CoverStorage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +31,7 @@ class LibraryRepositoryImplTest {
                     )
                 )
             ),
+            pdfParserService = FakePdfParserService(Result.success(PdfMetadata("PDF Book", null, 10, 100))),
             coverStorage = FakeCoverStorage()
         )
 
@@ -50,10 +53,75 @@ class LibraryRepositoryImplTest {
         assertEquals(null, inserted?.coverPath)
     }
 
+    @Test
+    fun importBookFromPdf_persistsMetadataIntoBookDao() = runBlocking {
+        val fakeDao = FakeBookDao()
+        val repository = LibraryRepositoryImpl(
+            bookDao = fakeDao,
+            epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("Should not be called"))),
+            pdfParserService = FakePdfParserService(
+                Result.success(
+                    PdfMetadata(
+                        title = "PDF Guide",
+                        author = "John Doe",
+                        pageCount = 250,
+                        fileSizeBytes = 2048000L
+                    )
+                )
+            ),
+            coverStorage = FakeCoverStorage()
+        )
+
+        val result = repository.importBookFromPdf(
+            request = com.nextpage.domain.model.BookImportRequest(
+                sourcePath = "content://books/guide.pdf",
+                fallbackTitle = "guide.pdf"
+            ),
+            file = java.io.File("guide.pdf")
+        )
+
+        assertTrue(result.isSuccess)
+        val inserted = fakeDao.lastUpserted
+        assertNotNull(inserted)
+        assertEquals("PDF Guide", inserted?.title)
+        assertEquals("John Doe", inserted?.author)
+        assertEquals("content://books/guide.pdf", inserted?.filePath)
+        assertEquals("pdf", inserted?.format)
+        assertEquals(null, inserted?.coverPath)
+    }
+
+    @Test
+    fun importBookFromPdf_returnsFailureWhenMetadataExtractionFails() = runBlocking {
+        val fakeDao = FakeBookDao()
+        val repository = LibraryRepositoryImpl(
+            bookDao = fakeDao,
+            epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("Should not be called"))),
+            pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("Invalid PDF"))),
+            coverStorage = FakeCoverStorage()
+        )
+
+        val result = repository.importBookFromPdf(
+            request = com.nextpage.domain.model.BookImportRequest(
+                sourcePath = "content://books/broken.pdf",
+                fallbackTitle = "broken.pdf"
+            ),
+            file = java.io.File("broken.pdf")
+        )
+
+        assertTrue(result.isFailure)
+    }
+
     private class FakeEpubParserService(
         private val result: Result<EpubMetadata>
     ) : EpubParserService {
         override suspend fun extractMetadata(inputStream: java.io.InputStream): Result<EpubMetadata> = result
+    }
+
+    private class FakePdfParserService(
+        private val result: Result<PdfMetadata>
+    ) : PdfParserService {
+        override suspend fun extractMetadata(file: java.io.File): Result<PdfMetadata> = result
+        override fun getPageCount(file: java.io.File): Int = 0
     }
 
     private class FakeBookDao : BookDao {

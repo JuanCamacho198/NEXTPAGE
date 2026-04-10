@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 import java.io.InputStream
 
 data class LibraryUiState(
@@ -81,6 +82,39 @@ class LibraryViewModel(
                     mutableImportEvents.emit(
                         LibraryImportEvent.Failure(
                             error.message ?: "Failed to import EPUB"
+                        )
+                    )
+                }
+            )
+        }
+    }
+
+    fun importPdfBook(
+        sourcePath: String,
+        fallbackTitle: String?,
+        pdfFile: File
+    ) {
+        mutableUiState.update { it.copy(isImporting = true) }
+
+        viewModelScope.launch(mainDispatcher) {
+            val result = libraryRepository.importBookFromPdf(
+                request = BookImportRequest(
+                    sourcePath = sourcePath,
+                    fallbackTitle = fallbackTitle
+                ),
+                file = pdfFile
+            )
+
+            mutableUiState.update { it.copy(isImporting = false) }
+
+            result.fold(
+                onSuccess = { book ->
+                    mutableImportEvents.emit(LibraryImportEvent.Success(book.title))
+                },
+                onFailure = { error ->
+                    mutableImportEvents.emit(
+                        LibraryImportEvent.Failure(
+                            error.message ?: "Failed to import PDF"
                         )
                     )
                 }

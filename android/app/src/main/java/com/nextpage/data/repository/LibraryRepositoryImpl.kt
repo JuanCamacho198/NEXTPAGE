@@ -1,6 +1,7 @@
 package com.nextpage.data.repository
 
 import com.nextpage.data.epub.EpubParserService
+import com.nextpage.data.pdf.PdfParserService
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.entity.BookEntity
 import com.nextpage.data.storage.CoverStorage
@@ -15,6 +16,7 @@ import java.util.UUID
 class LibraryRepositoryImpl(
     private val bookDao: BookDao,
     private val epubParserService: EpubParserService,
+    private val pdfParserService: PdfParserService,
     private val coverStorage: CoverStorage
 ) : LibraryRepository {
     override fun observeLibrary(): Flow<List<Book>> =
@@ -51,6 +53,29 @@ class LibraryRepositoryImpl(
         book
     }
 
+    override suspend fun importBookFromPdf(
+        request: BookImportRequest,
+        file: java.io.File
+    ): Result<Book> = runCatching {
+        val metadata = pdfParserService.extractMetadata(file).getOrThrow()
+        val now = System.currentTimeMillis()
+        val bookId = UUID.randomUUID().toString()
+
+        val book = Book(
+            id = bookId,
+            title = metadata.title?.ifBlank { request.fallbackTitle ?: "Untitled" }
+                ?: request.fallbackTitle ?: "Untitled",
+            author = metadata.author,
+            coverPath = null,
+            filePath = request.sourcePath,
+            format = PDF_FORMAT,
+            updatedAtEpochMillis = now
+        )
+
+        bookDao.upsert(book.toEntity())
+        book
+    }
+
     private fun BookEntity.toDomain(): Book = Book(
         id = id,
         title = title,
@@ -73,5 +98,6 @@ class LibraryRepositoryImpl(
 
     private companion object {
         const val EPUB_FORMAT = "epub"
+        const val PDF_FORMAT = "pdf"
     }
 }

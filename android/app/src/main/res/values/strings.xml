@@ -6,7 +6,8 @@
     <string name="tab_reader">Reader</string>
     <string name="tab_highlights">Highlights</string>
     <string name="library_empty">No local books yet.</string>
-    <string name="library_import_button">Import EPUB</string>
+    <string name="library_import_epub">Import EPUB</string>
+    <string name="library_import_pdf">Import PDF</string>
     <string name="library_import_success">Imported "%1$s"</string>
     <string name="library_import_failure">Import failed: %1$s</string>
     <string name="library_open">Open</string>
@@ -40,4 +41,6 @@
     <string name="bookmarks_empty">No bookmarks yet</string>
     <string name="highlight_location">Location: %1$s</string>
     <string name="bookmark_location">Location: %1$s</string>
+    <string name="pdf_page_description">Page %1$d of %2$d</string>
+    <string name="pdf_loading">Loading PDF...</string>
 </resources>

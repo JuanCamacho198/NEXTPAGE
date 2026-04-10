@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.room.Room
 import com.nextpage.data.epub.EpubContentLoader
 import com.nextpage.data.epub.ZipEpubParserService
+import com.nextpage.data.pdf.DefaultPdfParserService
+import com.nextpage.data.pdf.PdfContentLoader
 import com.nextpage.data.local.AppDatabase
 import com.nextpage.data.repository.LibraryRepositoryImpl
 import com.nextpage.data.repository.ReaderRepositoryImpl
@@ -38,10 +40,13 @@ class AppContainer(context: Context) {
 
     private val coverStorage = AppInternalCoverStorage(context.applicationContext)
 
+    private val pdfParserService = DefaultPdfParserService(context.applicationContext)
+
     private val epubImportStartTime = System.currentTimeMillis()
     val libraryRepository: LibraryRepository = LibraryRepositoryImpl(
         bookDao = appDatabase.bookDao(),
         epubParserService = ZipEpubParserService(),
+        pdfParserService = pdfParserService,
         coverStorage = coverStorage
     )
     private val epubImportInitTime = System.currentTimeMillis() - epubImportStartTime
@@ -62,9 +67,10 @@ class AppContainer(context: Context) {
 
     private val contentLoaderStartTime = System.currentTimeMillis()
     val epubContentLoader: EpubContentLoader = EpubContentLoader(context.applicationContext)
+    val pdfContentLoader: PdfContentLoader = PdfContentLoader(context.applicationContext)
     private val contentLoaderInitTime = System.currentTimeMillis() - contentLoaderStartTime
     init {
-        Log.d(TAG, "EpubContentLoader initialized in ${contentLoaderInitTime}ms")
+        Log.d(TAG, "ContentLoaders initialized in ${contentLoaderInitTime}ms")
     }
 
     private val supabaseConfigProvider = SupabaseConfigProvider()

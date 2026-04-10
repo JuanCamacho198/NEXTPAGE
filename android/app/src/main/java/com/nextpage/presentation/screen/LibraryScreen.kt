@@ -2,6 +2,7 @@ package com.nextpage.presentation.screen
 
 import android.net.Uri
 import android.graphics.BitmapFactory
+import java.io.File
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -55,7 +56,7 @@ import com.nextpage.presentation.viewmodel.LibraryViewModel
 fun LibraryScreen(
     contentPadding: PaddingValues,
     viewModel: LibraryViewModel,
-    onBookSelected: (String, String) -> Unit
+    onBookSelected: (String, String, String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -75,6 +76,34 @@ fun LibraryScreen(
                 inputStreamProvider = {
                     context.contentResolver.openInputStream(uri)
                 }
+            )
+        }
+    )
+
+    val pdfPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+        onResult = { uri: Uri? ->
+            if (uri == null) {
+                return@rememberLauncherForActivityResult
+            }
+
+            val fileName = uri.lastPathSegment ?: "imported_${System.currentTimeMillis()}.pdf"
+            val pdfDir = File(context.filesDir, "pdfs")
+            if (!pdfDir.exists()) {
+                pdfDir.mkdirs()
+            }
+            val pdfFile = File(pdfDir, fileName)
+
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                pdfFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            viewModel.importPdfBook(
+                sourcePath = pdfFile.absolutePath,
+                fallbackTitle = fileName.removeSuffix(".pdf"),
+                pdfFile = pdfFile
             )
         }
     )
@@ -100,7 +129,8 @@ fun LibraryScreen(
             EmptyLibrary(
                 contentPadding = contentPadding,
                 isImporting = uiState.isImporting,
-                onImportClick = { epubPickerLauncher.launch(arrayOf("application/epub+zip")) }
+                onEpubClick = { epubPickerLauncher.launch(arrayOf("application/epub+zip")) },
+                onPdfClick = { pdfPickerLauncher.launch(arrayOf("application/pdf")) }
             )
         } else {
             LibraryCollection(
@@ -110,7 +140,8 @@ fun LibraryScreen(
                 layoutMode = layoutMode,
                 onLayoutModeChanged = { layoutMode = it },
                 onBookSelected = onBookSelected,
-                onImportClick = { epubPickerLauncher.launch(arrayOf("application/epub+zip")) }
+                onEpubClick = { epubPickerLauncher.launch(arrayOf("application/epub+zip")) },
+                onPdfClick = { pdfPickerLauncher.launch(arrayOf("application/pdf")) }
             )
         }
 
@@ -136,8 +167,9 @@ private fun LibraryCollection(
     isImporting: Boolean,
     layoutMode: LibraryLayoutMode,
     onLayoutModeChanged: (LibraryLayoutMode) -> Unit,
-    onBookSelected: (String, String) -> Unit,
-    onImportClick: () -> Unit
+    onBookSelected: (String, String, String) -> Unit,
+    onEpubClick: () -> Unit,
+    onPdfClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -147,8 +179,11 @@ private fun LibraryCollection(
         verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)) {
-            Button(onClick = onImportClick, enabled = !isImporting, modifier = Modifier.weight(1f)) {
-                Text(text = stringResource(R.string.library_import_button))
+            Button(onClick = onEpubClick, enabled = !isImporting, modifier = Modifier.weight(1f)) {
+                Text(text = stringResource(R.string.library_import_epub))
+            }
+            Button(onClick = onPdfClick, enabled = !isImporting, modifier = Modifier.weight(1f)) {
+                Text(text = stringResource(R.string.library_import_pdf))
             }
             Button(
                 onClick = { onLayoutModeChanged(LibraryLayoutMode.LIST) },
@@ -172,7 +207,7 @@ private fun LibraryCollection(
                 items(books, key = { book -> book.id }) { book ->
                     LibraryBookItem(
                         book = book,
-                        onClick = { onBookSelected(book.id, book.filePath) }
+                        onClick = { onBookSelected(book.id, book.filePath, book.format) }
                     )
                 }
             }
@@ -186,7 +221,7 @@ private fun LibraryCollection(
                 items(books, key = { book -> book.id }) { book ->
                     LibraryBookGridItem(
                         book = book,
-                        onClick = { onBookSelected(book.id, book.filePath) }
+                        onClick = { onBookSelected(book.id, book.filePath, book.format) }
                     )
                 }
             }
@@ -198,7 +233,8 @@ private fun LibraryCollection(
 private fun EmptyLibrary(
     contentPadding: PaddingValues,
     isImporting: Boolean,
-    onImportClick: () -> Unit
+    onEpubClick: () -> Unit,
+    onPdfClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -214,10 +250,17 @@ private fun EmptyLibrary(
         )
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
         Button(
-            onClick = onImportClick,
+            onClick = onEpubClick,
             enabled = !isImporting
         ) {
-            Text(text = stringResource(R.string.library_import_button))
+            Text(text = stringResource(R.string.library_import_epub))
+        }
+        Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
+        Button(
+            onClick = onPdfClick,
+            enabled = !isImporting
+        ) {
+            Text(text = stringResource(R.string.library_import_pdf))
         }
     }
 }

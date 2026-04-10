@@ -1,10 +1,12 @@
 package com.nextpage.presentation.viewmodel
 
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nextpage.data.epub.EpubContentLoader
+import com.nextpage.data.pdf.PdfContentLoader
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReadingProgress
@@ -23,9 +25,13 @@ import java.util.UUID
 data class ReaderUiState(
     val selectedBookId: String? = null,
     val bookFilePath: String? = null,
+    val bookFormat: String? = null,
     val chapters: List<EpubContentLoader.Chapter> = emptyList(),
     val currentChapterIndex: Int = 0,
     val chapterContent: String = "",
+    val currentPdfPage: Int = 0,
+    val totalPdfPages: Int = 0,
+    val pdfPageBitmap: Bitmap? = null,
     val readingProgress: ReadingProgress? = null,
     val highlights: List<Highlight> = emptyList(),
     val bookmarks: List<Bookmark> = emptyList(),
@@ -38,6 +44,7 @@ class ReaderViewModel(
     private val readerRepository: ReaderRepository,
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
     private val epubContentLoader: EpubContentLoader? = null,
+    private val pdfContentLoader: PdfContentLoader? = null,
     defaultBookId: String?,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) : ViewModel() {
@@ -62,18 +69,26 @@ class ReaderViewModel(
         }
     }
 
-    fun loadBook(bookId: String, filePath: String) {
+    fun loadBook(bookId: String, filePath: String, format: String = "epub") {
         val startTime = System.currentTimeMillis()
 
         mutableUiState.update {
             it.copy(
                 selectedBookId = bookId,
                 bookFilePath = filePath,
+                bookFormat = format,
                 isLoading = true,
                 error = null
             )
         }
 
+        when (format.lowercase()) {
+            "pdf" -> loadPdfBook(bookId, filePath, startTime)
+            else -> loadEpubBook(bookId, filePath, startTime)
+        }
+    }
+
+    private fun loadEpubBook(bookId: String, filePath: String, startTime: Long) {
         viewModelScope.launch(mainDispatcher) {
             val loader = epubContentLoader
             if (loader == null) {
@@ -117,6 +132,58 @@ class ReaderViewModel(
                     )
                 }
             }
+        }
+    }
+
+    private fun loadPdfBook(bookId: String, filePath: String, startTime: Long) {
+        viewModelScope.launch(mainDispatcher) {
+            val loader = pdfContentLoader
+            if (loader == null) {
+                mutableUiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "PDF content loader is unavailable"
+                    )
+                }
+                return@launch
+            }
+
+            try {
+                loader.load(java.io.File(filePath))
+                val pageCount = loader.getPageCount()
+                val loadTime = System.currentTimeMillis() - startTime
+                Log.d(TAG, "PDF loaded in ${loadTime}ms, $pageCount pages")
+
+                mutableUiState.update { state ->
+                    state.copy(
+                        currentPdfPage = 0,
+                        totalPdfPages = pageCount,
+                        isLoading = false,
+                        loadTimeMs = loadTime
+                    )
+                }
+
+                renderPdfPage(0)
+                updatePdfProgress(0, pageCount)
+                startObservingHighlights(bookId)
+                startObservingBookmarks(bookId)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load PDF: ${e.message}")
+                mutableUiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = e.message ?: "Failed to load PDF"
+                    )
+                }
+            }
+        }
+    }
+
+    private fun renderPdfPage(pageIndex: Int) {
+        viewModelScope.launch(mainDispatcher) {
+            val loader = pdfContentLoader ?: return@launch
+            val bitmap = loader.getPage(pageIndex, 1080)
+            mutableUiState.update { it.copy(pdfPageBitmap = bitmap) }
         }
     }
 
@@ -171,10 +238,48 @@ class ReaderViewModel(
     }
 
     fun onTapZone(isLeftZone: Boolean) {
-        if (isLeftZone) {
-            goToPreviousChapter()
-        } else {
-            goToNextChapter()
+        val format = mutableUiState.value.bookFormat
+        when (format) {
+            "pdf" -> if (isLeftZone) goToPreviousPdfPage() else goToNextPdfPage()
+            else -> if (isLeftZone) goToPreviousChapter() else goToNextChapter()
+        }
+    }
+
+    fun goToNextPdfPage() {
+        val currentPage = mutableUiState.value.currentPdfPage
+        val totalPages = mutableUiState.value.totalPdfPages
+
+        if (currentPage < totalPages - 1) {
+            val newPage = currentPage + 1
+            renderPdfPage(newPage)
+            updatePdfProgress(newPage, totalPages)
+        }
+    }
+
+    fun goToPreviousPdfPage() {
+        val currentPage = mutableUiState.value.currentPdfPage
+
+        if (currentPage > 0) {
+            val newPage = currentPage - 1
+            renderPdfPage(newPage)
+            updatePdfProgress(newPage, mutableUiState.value.totalPdfPages)
+        }
+    }
+
+    private fun updatePdfProgress(currentPage: Int, totalPages: Int) {
+        val bookId = mutableUiState.value.selectedBookId ?: return
+
+        if (totalPages > 0) {
+            val percentage = ((currentPage + 1).toFloat() / totalPages) * 100
+            val cfiLocation = "pdfpage:$currentPage"
+
+            viewModelScope.launch(mainDispatcher) {
+                updateReadingProgressUseCase(
+                    bookId = bookId,
+                    cfiLocation = cfiLocation,
+                    percentage = percentage
+                )
+            }
         }
     }
 
@@ -268,12 +373,23 @@ class ReaderViewModel(
 
     fun createBookmarkFromCurrentPosition() {
         val bookId = mutableUiState.value.selectedBookId ?: return
-        val chapter = mutableUiState.value.chapters.getOrNull(mutableUiState.value.currentChapterIndex)
-            ?: return
-        val cfiLocation = "epubcfi(/6/${mutableUiState.value.currentChapterIndex + 1})"
-        val titleOrSnippet = "Chapter ${mutableUiState.value.currentChapterIndex + 1}: ${chapter.title}"
+        val format = mutableUiState.value.bookFormat
 
-        createBookmark(bookId, cfiLocation, titleOrSnippet)
+        when (format) {
+            "pdf" -> {
+                val currentPage = mutableUiState.value.currentPdfPage
+                val cfiLocation = "pdfpage:$currentPage"
+                val titleOrSnippet = "Page ${currentPage + 1}"
+                createBookmark(bookId, cfiLocation, titleOrSnippet)
+            }
+            else -> {
+                val chapter = mutableUiState.value.chapters.getOrNull(mutableUiState.value.currentChapterIndex)
+                    ?: return
+                val cfiLocation = "epubcfi(/6/${mutableUiState.value.currentChapterIndex + 1})"
+                val titleOrSnippet = "Chapter ${mutableUiState.value.currentChapterIndex + 1}: ${chapter.title}"
+                createBookmark(bookId, cfiLocation, titleOrSnippet)
+            }
+        }
     }
 
     private fun startObservingHighlights(bookId: String) {
@@ -309,6 +425,7 @@ class ReaderViewModel(
 class ReaderViewModelFactory(
     private val readerRepository: ReaderRepository,
     private val epubContentLoader: EpubContentLoader,
+    private val pdfContentLoader: PdfContentLoader,
     private val defaultBookId: String?
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
@@ -318,6 +435,7 @@ class ReaderViewModelFactory(
                 readerRepository = readerRepository,
                 updateReadingProgressUseCase = UpdateReadingProgressUseCase(readerRepository),
                 epubContentLoader = epubContentLoader,
+                pdfContentLoader = pdfContentLoader,
                 defaultBookId = defaultBookId
             ) as T
         }

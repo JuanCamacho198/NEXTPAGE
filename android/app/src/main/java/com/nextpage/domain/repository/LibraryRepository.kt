@@ -14,4 +14,9 @@ interface LibraryRepository {
         request: BookImportRequest,
         inputStreamProvider: suspend () -> InputStream?
     ): Result<Book>
+
+    suspend fun importBookFromPdf(
+        request: BookImportRequest,
+        file: java.io.File
+    ): Result<Book>
 }

@@ -16,6 +16,11 @@
     <string name="library_cover_placeholder">No Cover</string>
     <string name="library_layout_list">List</string>
     <string name="library_layout_grid">Grid</string>
+    <string name="library_total_minutes_read">Total read: %1$d minutes</string>
+    <string name="library_item_minutes_read">Read: %1$d minutes</string>
+    <string name="library_delete_title">Delete book</string>
+    <string name="library_delete_message">Are you sure you want to delete &quot;%1$s&quot;?</string>
+    <string name="library_delete_confirm">Delete</string>
     <string name="reader_placeholder">Reader rendering engine is coming soon.</string>
     <string name="reader_selected_book">Book: %1$s</string>
     <string name="reader_no_progress">No local progress yet for this book.</string>
@@ -29,6 +34,10 @@
     <string name="reader_no_content">No content available</string>
     <string name="reader_chapter_loading">Loading chapter...</string>
     <string name="reader_add_bookmark">Add Bookmark</string>
+    <string name="reader_go_to_page">Go to page</string>
+    <string name="reader_go_to_page_input_label">Page number</string>
+    <string name="reader_go_to_page_input_hint">Enter a value between 1 and %1$d</string>
+    <string name="reader_go">Go</string>
     <string name="reader_previous_chapter">Previous Chapter</string>
     <string name="reader_next_chapter">Next Chapter</string>
     <string name="reader_add_highlight">Add Highlight</string>

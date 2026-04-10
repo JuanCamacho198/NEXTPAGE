@@ -11,14 +11,17 @@ import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.ReaderRepository
+import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -42,6 +45,7 @@ data class ReaderUiState(
 
 class ReaderViewModel(
     private val readerRepository: ReaderRepository,
+    private val readingStatsRepository: ReadingStatsRepository,
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
     private val epubContentLoader: EpubContentLoader? = null,
     private val pdfContentLoader: PdfContentLoader? = null,
@@ -60,6 +64,8 @@ class ReaderViewModel(
     private var observeProgressJob: Job? = null
     private var observeHighlightsJob: Job? = null
     private var observeBookmarksJob: Job? = null
+    private var readingTimeTickerJob: Job? = null
+    private var sessionStartTime: Long = 0L
 
     init {
         if (!defaultBookId.isNullOrBlank()) {
@@ -181,9 +187,13 @@ class ReaderViewModel(
 
     private fun renderPdfPage(pageIndex: Int) {
         viewModelScope.launch(mainDispatcher) {
-            val loader = pdfContentLoader ?: return@launch
-            val bitmap = loader.getPage(pageIndex, 1080)
-            mutableUiState.update { it.copy(pdfPageBitmap = bitmap) }
+            val bitmap = pdfContentLoader?.getPage(pageIndex, 1080)
+            mutableUiState.update {
+                it.copy(
+                    currentPdfPage = pageIndex,
+                    pdfPageBitmap = bitmap
+                )
+            }
         }
     }
 
@@ -263,6 +273,23 @@ class ReaderViewModel(
             val newPage = currentPage - 1
             renderPdfPage(newPage)
             updatePdfProgress(newPage, mutableUiState.value.totalPdfPages)
+        }
+    }
+
+    fun goToPage(pageNumber: Int) {
+        val totalPages = mutableUiState.value.totalPdfPages
+        if (pageNumber in 1..totalPages) {
+            val newPage = pageNumber - 1
+            renderPdfPage(newPage)
+            updatePdfProgress(newPage, totalPages)
+        }
+    }
+
+    fun goToPdfPage(pageIndex: Int) {
+        val totalPages = mutableUiState.value.totalPdfPages
+        if (pageIndex in 0 until totalPages) {
+            renderPdfPage(pageIndex)
+            updatePdfProgress(pageIndex, totalPages)
         }
     }
 
@@ -420,10 +447,66 @@ class ReaderViewModel(
             updateProgressForChapter(index)
         }
     }
+
+    fun onReaderOpened() {
+        if (sessionStartTime > 0L) {
+            return
+        }
+        sessionStartTime = System.currentTimeMillis()
+        readingTimeTickerJob?.cancel()
+        readingTimeTickerJob = viewModelScope.launch(mainDispatcher) {
+            while (isActive) {
+                delay(60_000L)
+                flushReadingTime(minimumMinutes = 1L)
+            }
+        }
+    }
+
+    fun onReaderPaused() {
+        readingTimeTickerJob?.cancel()
+        readingTimeTickerJob = null
+        flushReadingTime(minimumMinutes = 1L)
+    }
+
+    fun onReaderBackgrounded() {
+        onReaderPaused()
+    }
+
+    override fun onCleared() {
+        onReaderPaused()
+        super.onCleared()
+    }
+
+    private fun flushReadingTime(minimumMinutes: Long = 0L) {
+        val bookId = mutableUiState.value.selectedBookId ?: return
+        if (sessionStartTime <= 0L) {
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        val elapsedMs = now - sessionStartTime
+        val computedMinutes = elapsedMs / 60000L
+        val additionalMinutes = if (minimumMinutes > 0L) {
+            computedMinutes.coerceAtLeast(minimumMinutes)
+        } else {
+            computedMinutes
+        }
+
+        if (additionalMinutes <= 0L) {
+            return
+        }
+
+        viewModelScope.launch(mainDispatcher) {
+            readingStatsRepository.updateReadingTime(bookId, additionalMinutes)
+            Log.d(TAG, "Recorded $additionalMinutes minutes for book $bookId")
+        }
+        sessionStartTime = now
+    }
 }
 
 class ReaderViewModelFactory(
     private val readerRepository: ReaderRepository,
+    private val readingStatsRepository: ReadingStatsRepository,
     private val epubContentLoader: EpubContentLoader,
     private val pdfContentLoader: PdfContentLoader,
     private val defaultBookId: String?
@@ -433,6 +516,7 @@ class ReaderViewModelFactory(
         if (modelClass.isAssignableFrom(ReaderViewModel::class.java)) {
             return ReaderViewModel(
                 readerRepository = readerRepository,
+                readingStatsRepository = readingStatsRepository,
                 updateReadingProgressUseCase = UpdateReadingProgressUseCase(readerRepository),
                 epubContentLoader = epubContentLoader,
                 pdfContentLoader = pdfContentLoader,

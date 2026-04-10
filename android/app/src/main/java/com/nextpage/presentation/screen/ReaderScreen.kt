@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -31,10 +32,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +70,17 @@ fun ReaderScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    var showGoToPageDialog by remember { mutableStateOf(false) }
+    var goToPageInput by remember { mutableStateOf("") }
+    var goToPageError by remember { mutableStateOf<String?>(null) }
+
+    DisposableEffect(selectedBookId) {
+        viewModel.onReaderOpened()
+        onDispose {
+            viewModel.onReaderPaused()
+        }
+    }
+
     if (bookFilePath != null && uiState.bookFilePath == null) {
         viewModel.loadBook(selectedBookId, bookFilePath, bookFormat)
     }
@@ -80,12 +96,21 @@ fun ReaderScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (uiState.chapters.isNotEmpty()) {
-                            Text(
-                                text = "Chapter ${uiState.currentChapterIndex + 1} of ${uiState.chapters.size}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        when {
+                            uiState.totalPdfPages > 0 -> {
+                                Text(
+                                    text = "Page ${uiState.currentPdfPage + 1} of ${uiState.totalPdfPages}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            uiState.chapters.isNotEmpty() -> {
+                                Text(
+                                    text = "Chapter ${uiState.currentChapterIndex + 1} of ${uiState.chapters.size}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 },
@@ -98,6 +123,14 @@ fun ReaderScreen(
                     }
                 },
                 actions = {
+                    if (uiState.totalPdfPages > 0) {
+                        IconButton(onClick = { showGoToPageDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.List,
+                                contentDescription = stringResource(R.string.reader_go_to_page)
+                            )
+                        }
+                    }
                     IconButton(onClick = { viewModel.createBookmarkFromCurrentPosition() }) {
                         Icon(
                             imageVector = Icons.Default.Add,
@@ -203,6 +236,73 @@ fun ReaderScreen(
                     }
                 }
             }
+        }
+
+        if (showGoToPageDialog && uiState.totalPdfPages > 0) {
+            AlertDialog(
+                onDismissRequest = {
+                    showGoToPageDialog = false
+                    goToPageInput = ""
+                    goToPageError = null
+                },
+                title = { Text(text = stringResource(R.string.reader_go_to_page)) },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = goToPageInput,
+                            onValueChange = {
+                                goToPageInput = it
+                                goToPageError = null
+                            },
+                            label = { Text(text = stringResource(R.string.reader_go_to_page_input_label)) },
+                            singleLine = true,
+                            isError = goToPageError != null,
+                            supportingText = {
+                                val error = goToPageError
+                                if (error != null) {
+                                    Text(text = error)
+                                } else {
+                                    Text(
+                                        text = stringResource(
+                                            R.string.reader_go_to_page_input_hint,
+                                            uiState.totalPdfPages
+                                        )
+                                    )
+                                }
+                            }
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val pageNumber = goToPageInput.toIntOrNull()
+                            if (pageNumber == null || pageNumber !in 1..uiState.totalPdfPages) {
+                                goToPageError =
+                                    "Enter a value between 1 and ${uiState.totalPdfPages}"
+                            } else {
+                                viewModel.goToPdfPage(pageNumber - 1)
+                                showGoToPageDialog = false
+                                goToPageInput = ""
+                                goToPageError = null
+                            }
+                        }
+                    ) {
+                        Text(text = stringResource(R.string.reader_go))
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showGoToPageDialog = false
+                            goToPageInput = ""
+                            goToPageError = null
+                        }
+                    ) {
+                        Text(text = stringResource(R.string.reader_cancel))
+                    }
+                }
+            )
         }
     }
 }

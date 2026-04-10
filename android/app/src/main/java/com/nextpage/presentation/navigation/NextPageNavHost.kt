@@ -43,6 +43,7 @@ fun NextPageNavHost(appContainer: AppContainer) {
     val readerViewModel: ReaderViewModel = viewModel(
         factory = ReaderViewModelFactory(
             readerRepository = appContainer.readerRepository,
+            readingStatsRepository = appContainer.readingStatsRepository,
             epubContentLoader = appContainer.epubContentLoader,
             pdfContentLoader = appContainer.pdfContentLoader,
             defaultBookId = selectedBookId

@@ -15,6 +15,7 @@ import java.util.UUID
 
 class LibraryRepositoryImpl(
     private val bookDao: BookDao,
+    private val readingStatsDao: com.nextpage.data.local.dao.ReadingStatsDao,
     private val epubParserService: EpubParserService,
     private val pdfParserService: PdfParserService,
     private val coverStorage: CoverStorage
@@ -24,6 +25,14 @@ class LibraryRepositoryImpl(
 
     override fun observeBookById(bookId: String): Flow<Book?> =
         bookDao.observeBookById(bookId).map { it?.toDomain() }
+
+    override fun observeTotalReadingTime(): Flow<Long> =
+        readingStatsDao.observeTotalMinutesRead().map { it ?: 0L }
+
+    override fun observeReadingTimeByBook(): Flow<Map<String, Long>> =
+        readingStatsDao.observeAllStats().map { stats ->
+            stats.associate { it.bookId to it.totalMinutesRead }
+        }
 
     override suspend fun importBookFromEpub(
         request: BookImportRequest,
@@ -74,6 +83,12 @@ class LibraryRepositoryImpl(
 
         bookDao.upsert(book.toEntity())
         book
+    }
+
+    override suspend fun deleteBook(bookId: String): Result<Unit> = runCatching {
+        val now = System.currentTimeMillis()
+        bookDao.deleteBook(bookId, now)
+        readingStatsDao.deleteForBook(bookId)
     }
 
     private fun BookEntity.toDomain(): Book = Book(

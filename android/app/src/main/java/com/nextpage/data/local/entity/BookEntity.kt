@@ -16,5 +16,7 @@ data class BookEntity(
     val filePath: String,
     val format: String,
     @ColumnInfo(name = "updated_at")
-    val updatedAtEpochMillis: Long
+    val updatedAtEpochMillis: Long,
+    @ColumnInfo(name = "deleted_at")
+    val deletedAtEpochMillis: Long? = null
 )

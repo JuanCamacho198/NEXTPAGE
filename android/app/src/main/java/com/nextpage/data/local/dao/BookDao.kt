@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BookDao {
-    @Query("SELECT * FROM books ORDER BY updated_at DESC")
+    @Query("SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC")
     fun observeAllBooks(): Flow<List<BookEntity>>
 
     @Upsert
@@ -19,4 +19,7 @@ interface BookDao {
 
     @Query("SELECT * FROM books WHERE id = :bookId LIMIT 1")
     fun observeBookById(bookId: String): Flow<BookEntity?>
+
+    @Query("UPDATE books SET deleted_at = :deletedAt, updated_at = :deletedAt WHERE id = :bookId")
+    suspend fun deleteBook(bookId: String, deletedAt: Long)
 }

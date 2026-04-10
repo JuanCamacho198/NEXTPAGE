@@ -10,6 +10,10 @@ interface LibraryRepository {
 
     fun observeBookById(bookId: String): Flow<Book?>
 
+    fun observeTotalReadingTime(): Flow<Long>
+
+    fun observeReadingTimeByBook(): Flow<Map<String, Long>>
+
     suspend fun importBookFromEpub(
         request: BookImportRequest,
         inputStreamProvider: suspend () -> InputStream?
@@ -19,4 +23,6 @@ interface LibraryRepository {
         request: BookImportRequest,
         file: java.io.File
     ): Result<Book>
+
+    suspend fun deleteBook(bookId: String): Result<Unit>
 }

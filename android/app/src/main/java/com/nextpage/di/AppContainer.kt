@@ -10,6 +10,7 @@ import com.nextpage.data.pdf.PdfContentLoader
 import com.nextpage.data.local.AppDatabase
 import com.nextpage.data.repository.LibraryRepositoryImpl
 import com.nextpage.data.repository.ReaderRepositoryImpl
+import com.nextpage.data.repository.ReadingStatsRepositoryImpl
 import com.nextpage.data.repository.SupabaseAuthRepository
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.data.remote.supabase.SupabaseConfigProvider
@@ -19,6 +20,7 @@ import com.nextpage.data.storage.AppInternalCoverStorage
 import com.nextpage.domain.repository.AuthRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
+import com.nextpage.domain.repository.ReadingStatsRepository
 
 class AppContainer(context: Context) {
     companion object {
@@ -45,6 +47,7 @@ class AppContainer(context: Context) {
     private val epubImportStartTime = System.currentTimeMillis()
     val libraryRepository: LibraryRepository = LibraryRepositoryImpl(
         bookDao = appDatabase.bookDao(),
+        readingStatsDao = appDatabase.readingStatsDao(),
         epubParserService = ZipEpubParserService(),
         pdfParserService = pdfParserService,
         coverStorage = coverStorage
@@ -64,6 +67,10 @@ class AppContainer(context: Context) {
     init {
         Log.d(TAG, "ReaderRepository initialized in ${readerRepoInitTime}ms")
     }
+
+    val readingStatsRepository: ReadingStatsRepository = ReadingStatsRepositoryImpl(
+        readingStatsDao = appDatabase.readingStatsDao()
+    )
 
     private val contentLoaderStartTime = System.currentTimeMillis()
     val epubContentLoader: EpubContentLoader = EpubContentLoader(context.applicationContext)

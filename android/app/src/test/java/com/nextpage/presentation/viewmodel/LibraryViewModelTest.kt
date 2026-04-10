@@ -119,14 +119,107 @@ class LibraryViewModelTest {
         assertEquals(1, viewModel.uiState.value.books.size)
     }
 
+    @Test
+    fun confirmDeleteBook_deleteSuccessEmitsSuccessEvent() = runTest(StandardTestDispatcher()) {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = FakeLibraryRepository()
+        val viewModel = LibraryViewModel(
+            libraryRepository = repository,
+            importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            mainDispatcher = dispatcher
+        )
+
+        var emittedEvent: LibraryUiEvent? = null
+        val collectJob = launch {
+            viewModel.uiEvents.collect { emittedEvent = it }
+        }
+        advanceUntilIdle()
+
+        val book = Book(
+            id = "book-delete-1",
+            title = "Delete Me",
+            author = "Author",
+            coverPath = null,
+            filePath = "content://books/delete.epub",
+            format = "epub",
+            updatedAtEpochMillis = 1L
+        )
+        viewModel.requestDeleteBook(book)
+        viewModel.confirmDeleteBook()
+        advanceUntilIdle()
+
+        assertTrue(emittedEvent is LibraryUiEvent.Success)
+        assertEquals(null, viewModel.uiState.value.bookToDelete)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun confirmDeleteBook_deleteFailureEmitsErrorEvent() = runTest(StandardTestDispatcher()) {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = FakeLibraryRepository(deleteFailure = IllegalStateException("delete failed"))
+        val viewModel = LibraryViewModel(
+            libraryRepository = repository,
+            importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            mainDispatcher = dispatcher
+        )
+
+        var emittedEvent: LibraryUiEvent? = null
+        val collectJob = launch {
+            viewModel.uiEvents.collect { emittedEvent = it }
+        }
+        advanceUntilIdle()
+
+        val book = Book(
+            id = "book-delete-2",
+            title = "Delete Fail",
+            author = "Author",
+            coverPath = null,
+            filePath = "content://books/delete-fail.epub",
+            format = "epub",
+            updatedAtEpochMillis = 1L
+        )
+        viewModel.requestDeleteBook(book)
+        viewModel.confirmDeleteBook()
+        advanceUntilIdle()
+
+        assertTrue(emittedEvent is LibraryUiEvent.Failure)
+        assertEquals(null, viewModel.uiState.value.bookToDelete)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun observeReadingTimeByBook_updatesUiStateMap() = runTest(StandardTestDispatcher()) {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = FakeLibraryRepository()
+        val viewModel = LibraryViewModel(
+            libraryRepository = repository,
+            importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            mainDispatcher = dispatcher
+        )
+
+        repository.emitReadingMinutesByBook(mapOf("book-1" to 42L, "book-2" to 5L))
+        advanceUntilIdle()
+
+        assertEquals(42L, viewModel.uiState.value.readingMinutesByBook["book-1"])
+        assertEquals(5L, viewModel.uiState.value.readingMinutesByBook["book-2"])
+    }
+
     private class FakeLibraryRepository(
-        private val importFailure: Throwable? = null
+        private val importFailure: Throwable? = null,
+        private val deleteFailure: Throwable? = null
     ) : LibraryRepository {
         private val booksFlow = MutableStateFlow<List<Book>>(emptyList())
+        private val readingMinutesByBookFlow = MutableStateFlow<Map<String, Long>>(emptyMap())
 
         override fun observeLibrary(): Flow<List<Book>> = booksFlow
 
         override fun observeBookById(bookId: String): Flow<Book?> = MutableStateFlow(null)
+
+        override fun observeTotalReadingTime(): Flow<Long> = MutableStateFlow(0L)
+
+        override fun observeReadingTimeByBook(): Flow<Map<String, Long>> = readingMinutesByBookFlow
 
         override suspend fun importBookFromEpub(
             request: BookImportRequest,
@@ -166,8 +259,17 @@ class LibraryViewModelTest {
             )
         }
 
+        override suspend fun deleteBook(bookId: String): Result<Unit> {
+            deleteFailure?.let { return Result.failure(it) }
+            return Result.success(Unit)
+        }
+
         fun emitBooks(books: List<Book>) {
             booksFlow.value = books
+        }
+
+        fun emitReadingMinutesByBook(readingMinutesByBook: Map<String, Long>) {
+            readingMinutesByBookFlow.value = readingMinutesByBook
         }
     }
 }

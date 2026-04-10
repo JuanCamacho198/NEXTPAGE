@@ -3,12 +3,17 @@ package com.nextpage.data.repository
 import com.nextpage.data.epub.EpubMetadata
 import com.nextpage.data.epub.EpubParserService
 import com.nextpage.data.local.dao.BookDao
+import com.nextpage.data.local.dao.ReadingStatsDao
 import com.nextpage.data.local.entity.BookEntity
+import com.nextpage.data.local.entity.ReadingStatsEntity
 import com.nextpage.data.pdf.PdfMetadata
 import com.nextpage.data.pdf.PdfParserService
 import com.nextpage.data.storage.CoverStorage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -22,6 +27,7 @@ class LibraryRepositoryImplTest {
         val fakeDao = FakeBookDao()
         val repository = LibraryRepositoryImpl(
             bookDao = fakeDao,
+            readingStatsDao = FakeReadingStatsDao(),
             epubParserService = FakeEpubParserService(
                 Result.success(
                     EpubMetadata(
@@ -58,6 +64,7 @@ class LibraryRepositoryImplTest {
         val fakeDao = FakeBookDao()
         val repository = LibraryRepositoryImpl(
             bookDao = fakeDao,
+            readingStatsDao = FakeReadingStatsDao(),
             epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("Should not be called"))),
             pdfParserService = FakePdfParserService(
                 Result.success(
@@ -95,6 +102,7 @@ class LibraryRepositoryImplTest {
         val fakeDao = FakeBookDao()
         val repository = LibraryRepositoryImpl(
             bookDao = fakeDao,
+            readingStatsDao = FakeReadingStatsDao(),
             epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("Should not be called"))),
             pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("Invalid PDF"))),
             coverStorage = FakeCoverStorage()
@@ -109,6 +117,70 @@ class LibraryRepositoryImplTest {
         )
 
         assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun observeTotalReadingTime_mapsNullToZero() = runBlocking {
+        val fakeDao = FakeBookDao()
+        val fakeReadingStatsDao = FakeReadingStatsDao()
+        val repository = LibraryRepositoryImpl(
+            bookDao = fakeDao,
+            readingStatsDao = fakeReadingStatsDao,
+            epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
+            pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
+            coverStorage = FakeCoverStorage()
+        )
+
+        fakeReadingStatsDao.totalMinutesState.value = null
+        assertEquals(0L, repository.observeTotalReadingTime().first())
+
+        fakeReadingStatsDao.totalMinutesState.value = 55L
+        assertEquals(55L, repository.observeTotalReadingTime().first())
+    }
+
+    @Test
+    fun observeLibrary_excludesSoftDeletedBooks() = runBlocking {
+        val fakeDao = FakeBookDao()
+        val repository = LibraryRepositoryImpl(
+            bookDao = fakeDao,
+            readingStatsDao = FakeReadingStatsDao(),
+            epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
+            pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
+            coverStorage = FakeCoverStorage()
+        )
+
+        fakeDao.upsert(
+            BookEntity(
+                id = "active-book",
+                title = "Active",
+                author = "Author",
+                coverPath = null,
+                filePath = "/active.epub",
+                format = "epub",
+                updatedAtEpochMillis = 10L,
+                deletedAtEpochMillis = null
+            )
+        )
+        fakeDao.upsert(
+            BookEntity(
+                id = "deleted-book",
+                title = "Deleted",
+                author = "Author",
+                coverPath = null,
+                filePath = "/deleted.epub",
+                format = "epub",
+                updatedAtEpochMillis = 20L,
+                deletedAtEpochMillis = null
+            )
+        )
+        fakeDao.deleteBook("deleted-book", deletedAt = 30L)
+
+        val books = repository.observeLibrary().first()
+        assertEquals(1, books.size)
+        assertEquals("active-book", books.first().id)
+
+        val deletedById = repository.observeBookById("deleted-book").firstOrNull()
+        assertEquals("deleted-book", deletedById?.id)
     }
 
     private class FakeEpubParserService(
@@ -128,7 +200,8 @@ class LibraryRepositoryImplTest {
         private val booksState = MutableStateFlow<List<BookEntity>>(emptyList())
         var lastUpserted: BookEntity? = null
 
-        override fun observeAllBooks(): Flow<List<BookEntity>> = booksState
+        override fun observeAllBooks(): Flow<List<BookEntity>> =
+            booksState.map { books -> books.filter { it.deletedAtEpochMillis == null } }
 
         override suspend fun upsert(book: BookEntity) {
             lastUpserted = book
@@ -144,11 +217,38 @@ class LibraryRepositoryImplTest {
 
         override fun observeBookById(bookId: String): Flow<BookEntity?> =
             MutableStateFlow(booksState.value.firstOrNull { it.id == bookId })
+
+        override suspend fun deleteBook(bookId: String, deletedAt: Long) {
+            booksState.value = booksState.value.map { book ->
+                if (book.id == bookId) {
+                    book.copy(
+                        updatedAtEpochMillis = deletedAt,
+                        deletedAtEpochMillis = deletedAt
+                    )
+                } else {
+                    book
+                }
+            }
+        }
     }
 
     private class FakeCoverStorage : CoverStorage {
         override suspend fun saveCover(bookId: String, coverBytes: ByteArray): Result<String> {
             return Result.success("/tmp/$bookId.jpg")
         }
+    }
+
+    private class FakeReadingStatsDao : ReadingStatsDao {
+        val totalMinutesState = MutableStateFlow<Long?>(0L)
+
+        override fun observeStatsForBook(bookId: String): Flow<ReadingStatsEntity?> = MutableStateFlow(null)
+
+        override fun observeAllStats(): Flow<List<ReadingStatsEntity>> = MutableStateFlow(emptyList())
+
+        override suspend fun upsert(stats: ReadingStatsEntity) = Unit
+
+        override fun observeTotalMinutesRead(): Flow<Long?> = totalMinutesState
+
+        override suspend fun deleteForBook(bookId: String) = Unit
     }
 }

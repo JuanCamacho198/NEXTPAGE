@@ -2,32 +2,52 @@ package com.nextpage.data.pdf
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
 class PdfContentLoader(private val context: Context) {
+    companion object {
+        private const val TAG = "PdfContentLoader"
+    }
+
     private var pdfRenderer: PdfRendererWrapper? = null
     private var currentFile: File? = null
+    private val lock = Any()
 
     suspend fun load(file: File) = withContext(Dispatchers.IO) {
-        if (currentFile != file) {
-            pdfRenderer?.close()
-            pdfRenderer = PdfRendererWrapper(context)
-            pdfRenderer?.open(file)
-            currentFile = file
+        synchronized(lock) {
+            if (currentFile != file) {
+                Log.d(TAG, "Loading PDF file=${file.absolutePath}")
+                pdfRenderer?.close()
+                pdfRenderer = PdfRendererWrapper(context)
+                pdfRenderer?.open(file)
+                currentFile = file
+            }
         }
     }
 
-    fun getPageCount(): Int = pdfRenderer?.getPageCount() ?: 0
+    suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
+        synchronized(lock) {
+            pdfRenderer?.getPageCount() ?: 0
+        }
+    }
 
     suspend fun getPage(pageIndex: Int, width: Int): Bitmap? {
-        return pdfRenderer?.renderPage(pageIndex, width)
+        return withContext(Dispatchers.IO) {
+            synchronized(lock) {
+                pdfRenderer?.renderPage(pageIndex, width)
+            }
+        }
     }
 
     fun close() {
-        pdfRenderer?.close()
-        pdfRenderer = null
-        currentFile = null
+        synchronized(lock) {
+            val renderer = pdfRenderer
+            pdfRenderer = null
+            currentFile = null
+            renderer?.close()
+        }
     }
 }

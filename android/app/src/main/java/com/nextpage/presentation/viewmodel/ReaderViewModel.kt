@@ -174,7 +174,11 @@ class ReaderViewModel(
                 startObservingHighlights(bookId)
                 startObservingBookmarks(bookId)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to load PDF: ${e.message}")
+                Log.e(
+                    TAG,
+                    "Failed to load PDF for bookId=$bookId, filePath=$filePath: ${e.message}",
+                    e
+                )
                 mutableUiState.update {
                     it.copy(
                         isLoading = false,
@@ -187,12 +191,35 @@ class ReaderViewModel(
 
     private fun renderPdfPage(pageIndex: Int) {
         viewModelScope.launch(mainDispatcher) {
-            val bitmap = pdfContentLoader?.getPage(pageIndex, 1080)
-            mutableUiState.update {
-                it.copy(
-                    currentPdfPage = pageIndex,
-                    pdfPageBitmap = bitmap
+            val loader = pdfContentLoader
+            if (loader == null) {
+                mutableUiState.update {
+                    it.copy(error = "PDF content loader is unavailable")
+                }
+                return@launch
+            }
+
+            try {
+                val bitmap = loader.getPage(pageIndex, 1080)
+                mutableUiState.update {
+                    it.copy(
+                        currentPdfPage = pageIndex,
+                        pdfPageBitmap = bitmap,
+                        error = null
+                    )
+                }
+            } catch (e: Exception) {
+                val selectedBookId = mutableUiState.value.selectedBookId
+                Log.e(
+                    TAG,
+                    "Failed to render PDF page index=$pageIndex for bookId=$selectedBookId: ${e.message}",
+                    e
                 )
+                mutableUiState.update {
+                    it.copy(
+                        error = e.message ?: "Failed to render PDF page"
+                    )
+                }
             }
         }
     }

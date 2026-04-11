@@ -40,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -81,8 +82,10 @@ fun ReaderScreen(
         }
     }
 
-    if (bookFilePath != null && uiState.bookFilePath == null) {
-        viewModel.loadBook(selectedBookId, bookFilePath, bookFormat)
+    LaunchedEffect(selectedBookId, bookFilePath, bookFormat) {
+        if (!selectedBookId.isBlank() && bookFilePath != null) {
+            viewModel.loadBook(selectedBookId, bookFilePath, bookFormat)
+        }
     }
 
     Scaffold(

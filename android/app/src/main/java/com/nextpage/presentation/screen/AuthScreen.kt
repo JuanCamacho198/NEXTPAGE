@@ -7,18 +7,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nextpage.presentation.viewmodel.AuthFailureKind
 import com.nextpage.presentation.viewmodel.AuthViewModel
 
 @Composable
 fun AuthScreen(
     viewModel: AuthViewModel,
-    onAuthenticated: () -> Unit
+    onAuthenticated: () -> Unit,
+    onContinueLocal: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var isSignUp by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.currentSession) {
         if (uiState.currentSession != null) {
@@ -41,7 +39,7 @@ fun AuthScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = if (isSignUp) "Create Account" else "Sign In",
+            text = "Sign in",
             style = MaterialTheme.typography.titleMedium
         )
 
@@ -49,42 +47,16 @@ fun AuthScreen(
 
         if (!uiState.isConfigured) {
             Text(
-                text = "Supabase credentials are missing. Set supabase.url and supabase.anonkey in android/local.properties.",
+                text = "Configuration error: Google sync is unavailable because SUPABASE_URL or SUPABASE_ANON_KEY is invalid. You can continue using local library features.",
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
         Button(
-            onClick = {
-                if (isSignUp) {
-                    viewModel.signUp(email, password)
-                } else {
-                    viewModel.signIn(email, password)
-                }
-            },
-            enabled = uiState.isConfigured && !uiState.isLoading && email.isNotBlank() && password.isNotBlank(),
+            onClick = { viewModel.startGoogleSignIn() },
+            enabled = uiState.isConfigured && !uiState.hasWiringIssue && !uiState.isLoading,
             modifier = Modifier.fillMaxWidth()
         ) {
             if (uiState.isLoading) {
@@ -93,23 +65,37 @@ fun AuthScreen(
                     strokeWidth = 2.dp
                 )
             } else {
-                Text(if (isSignUp) "Sign Up" else "Sign In")
+                Text("Continue with Google")
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(onClick = { isSignUp = !isSignUp }) {
+        if (uiState.hasWiringIssue) {
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                if (isSignUp) "Already have an account? Sign In"
-                else "Don't have an account? Sign Up"
+                text = "Wiring error: Google OAuth callback wiring is incomplete. Verify redirect and callback handling. Local reading still works.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
             )
+        }
+
+        if (!uiState.isConfigured || uiState.hasWiringIssue) {
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onContinueLocal,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Continue in local mode")
+            }
         }
 
         uiState.errorMessage?.let { error ->
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = error,
+                text = when (uiState.failureKind) {
+                    AuthFailureKind.CONFIG_ERROR -> "Configuration error: $error. Continue in local mode until config is fixed."
+                    AuthFailureKind.WIRING_ERROR -> "Wiring error: $error. Continue in local mode while wiring is fixed."
+                    else -> error
+                },
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall
             )

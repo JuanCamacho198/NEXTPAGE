@@ -34,9 +34,17 @@ android {
 
         val supabaseUrl = (localProperties.getProperty("supabase.url") ?: "").escapeForBuildConfig()
         val supabaseAnonKey = (localProperties.getProperty("supabase.anonkey") ?: "").escapeForBuildConfig()
+        val authRedirectScheme = (localProperties.getProperty("supabase.auth.redirect.scheme") ?: "nextpage").escapeForBuildConfig()
+        val authRedirectHost = (localProperties.getProperty("supabase.auth.redirect.host") ?: "auth").escapeForBuildConfig()
+        val authRedirectPath = (localProperties.getProperty("supabase.auth.redirect.path") ?: "/callback").escapeForBuildConfig()
+        val storageBooksBucket = (localProperties.getProperty("supabase.storage.books.bucket") ?: "books").escapeForBuildConfig()
 
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
+        buildConfigField("String", "AUTH_REDIRECT_SCHEME", "\"$authRedirectScheme\"")
+        buildConfigField("String", "AUTH_REDIRECT_HOST", "\"$authRedirectHost\"")
+        buildConfigField("String", "AUTH_REDIRECT_PATH", "\"$authRedirectPath\"")
+        buildConfigField("String", "SUPABASE_STORAGE_BOOKS_BUCKET", "\"$storageBooksBucket\"")
     }
 
     buildTypes {

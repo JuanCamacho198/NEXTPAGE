@@ -1,5 +1,7 @@
 package com.nextpage.presentation.navigation
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -11,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -33,6 +36,7 @@ import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
 
 @Composable
 fun NextPageNavHost(appContainer: AppContainer) {
+    val context = LocalContext.current
     val navController = rememberNavController()
     var selectedBookId by remember { mutableStateOf("") }
     var selectedBookFilePath by remember { mutableStateOf<String?>(null) }
@@ -56,11 +60,28 @@ fun NextPageNavHost(appContainer: AppContainer) {
     val authViewModel: AuthViewModel = remember {
         AuthViewModel(
             authRepository = appContainer.authRepository,
-            isSupabaseConfigured = appContainer.supabaseClientProvider.isConfigured
+            syncService = appContainer.syncService,
+            isSupabaseConfigured = !appContainer.isSupabaseConfigError,
+            hasSupabaseWiringIssue = appContainer.isSupabaseWiringError
         )
     }
     val authState by authViewModel.uiState.collectAsState()
     val isAuthenticated = authState.currentSession != null
+
+    LaunchedEffect(appContainer, authViewModel) {
+        appContainer.authCallbackEvents.collect { callbackUri ->
+            authViewModel.onGoogleAuthCallback(callbackUri)
+        }
+    }
+
+    LaunchedEffect(authState.pendingGoogleSignInUrl) {
+        val url = authState.pendingGoogleSignInUrl ?: return@LaunchedEffect
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+        authViewModel.consumePendingGoogleSignInUrl()
+    }
 
     LaunchedEffect(selectedBookId) {
         if (selectedBookId.isNotBlank()) {
@@ -74,7 +95,7 @@ fun NextPageNavHost(appContainer: AppContainer) {
         NextPageDestination.Highlights
     )
 
-    val startDestination = if (appContainer.supabaseClientProvider.isConfigured && !isAuthenticated) {
+    val startDestination = if (!isAuthenticated) {
         NextPageDestination.Auth.route
     } else {
         NextPageDestination.Library.route
@@ -116,6 +137,11 @@ fun NextPageNavHost(appContainer: AppContainer) {
                 AuthScreen(
                     viewModel = authViewModel,
                     onAuthenticated = {
+                        navController.navigate(NextPageDestination.Library.route) {
+                            popUpTo(NextPageDestination.Auth.route) { inclusive = true }
+                        }
+                    },
+                    onContinueLocal = {
                         navController.navigate(NextPageDestination.Library.route) {
                             popUpTo(NextPageDestination.Auth.route) { inclusive = true }
                         }

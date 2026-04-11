@@ -20,6 +20,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE id = :bookId LIMIT 1")
     fun observeBookById(bookId: String): Flow<BookEntity?>
 
+    @Query("SELECT * FROM books WHERE id = :bookId LIMIT 1")
+    suspend fun getBookById(bookId: String): BookEntity?
+
     @Query("UPDATE books SET deleted_at = :deletedAt, updated_at = :deletedAt WHERE id = :bookId")
     suspend fun deleteBook(bookId: String, deletedAt: Long)
 }

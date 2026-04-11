@@ -8,11 +8,13 @@ import com.nextpage.data.local.dao.HighlightDao
 import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.ReadingStatsDao
 import com.nextpage.data.local.dao.SyncOutboxDao
+import com.nextpage.data.local.dao.SyncFileMappingDao
 import com.nextpage.data.local.entity.BookEntity
 import com.nextpage.data.local.entity.BookmarkEntity
 import com.nextpage.data.local.entity.HighlightEntity
 import com.nextpage.data.local.entity.ReadingProgressEntity
 import com.nextpage.data.local.entity.ReadingStatsEntity
+import com.nextpage.data.local.entity.SyncFileMappingEntity
 import com.nextpage.data.local.entity.SyncOutboxEntity
 
 @Database(
@@ -22,9 +24,10 @@ import com.nextpage.data.local.entity.SyncOutboxEntity
         ReadingStatsEntity::class,
         HighlightEntity::class,
         BookmarkEntity::class,
-        SyncOutboxEntity::class
+        SyncOutboxEntity::class,
+        SyncFileMappingEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -34,4 +37,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun highlightDao(): HighlightDao
     abstract fun bookmarkDao(): BookmarkDao
     abstract fun syncOutboxDao(): SyncOutboxDao
+    abstract fun syncFileMappingDao(): SyncFileMappingDao
 }

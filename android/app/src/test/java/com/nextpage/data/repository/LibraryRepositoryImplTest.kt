@@ -218,6 +218,10 @@ class LibraryRepositoryImplTest {
         override fun observeBookById(bookId: String): Flow<BookEntity?> =
             MutableStateFlow(booksState.value.firstOrNull { it.id == bookId })
 
+        override suspend fun getBookById(bookId: String): BookEntity? {
+            return booksState.value.firstOrNull { it.id == bookId }
+        }
+
         override suspend fun deleteBook(bookId: String, deletedAt: Long) {
             booksState.value = booksState.value.map { book ->
                 if (book.id == bookId) {

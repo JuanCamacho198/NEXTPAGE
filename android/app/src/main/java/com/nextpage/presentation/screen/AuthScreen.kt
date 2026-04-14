@@ -4,10 +4,12 @@ import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nextpage.R
 import com.nextpage.presentation.viewmodel.AuthFailureKind
 import com.nextpage.presentation.viewmodel.AuthUiState
 import com.nextpage.presentation.viewmodel.AuthViewModel
@@ -27,6 +29,23 @@ internal fun resolveGoogleButtonDisabledReason(uiState: AuthUiState): GoogleButt
         !uiState.isConfigured -> GoogleButtonDisabledReason.CONFIG_ERROR
         uiState.hasWiringIssue -> GoogleButtonDisabledReason.WIRING_ERROR
         else -> GoogleButtonDisabledReason.NONE
+    }
+}
+
+internal fun googleButtonDisabledReasonMessageRes(reason: GoogleButtonDisabledReason): Int? {
+    return when (reason) {
+        GoogleButtonDisabledReason.LOADING -> R.string.auth_google_disabled_loading
+        GoogleButtonDisabledReason.CONFIG_ERROR -> R.string.auth_google_disabled_config_error
+        GoogleButtonDisabledReason.WIRING_ERROR -> R.string.auth_google_disabled_wiring_error
+        GoogleButtonDisabledReason.NONE -> null
+    }
+}
+
+internal fun authFailureMessageTemplateRes(failureKind: AuthFailureKind?): Int? {
+    return when (failureKind) {
+        AuthFailureKind.CONFIG_ERROR -> R.string.auth_failure_config_error_with_details
+        AuthFailureKind.WIRING_ERROR -> R.string.auth_failure_wiring_error_with_details
+        else -> null
     }
 }
 
@@ -62,14 +81,14 @@ fun AuthScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "NextPage",
+            text = stringResource(R.string.auth_brand_title),
             style = MaterialTheme.typography.headlineLarge
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Sign in",
+            text = stringResource(R.string.auth_sign_in_title),
             style = MaterialTheme.typography.titleMedium
         )
 
@@ -77,7 +96,7 @@ fun AuthScreen(
 
         if (!uiState.isConfigured) {
             Text(
-                text = "Configuration error: Google sync is unavailable because SUPABASE_URL or SUPABASE_ANON_KEY is invalid. You can continue using local library features.",
+                text = stringResource(R.string.auth_config_error_google_unavailable),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall
             )
@@ -95,18 +114,14 @@ fun AuthScreen(
                     strokeWidth = 2.dp
                 )
             } else {
-                Text("Continue with Google")
+                Text(stringResource(R.string.auth_continue_with_google))
             }
         }
 
         if (!buttonEnabled) {
             Spacer(modifier = Modifier.height(12.dp))
-            val disabledReasonText = when (buttonDisabledReason) {
-                GoogleButtonDisabledReason.LOADING -> "Google sign-in is currently in progress."
-                GoogleButtonDisabledReason.CONFIG_ERROR -> "Google sign-in is disabled due to a configuration error (SUPABASE_URL or SUPABASE_ANON_KEY)."
-                GoogleButtonDisabledReason.WIRING_ERROR -> "Google sign-in is disabled due to an OAuth callback wiring error."
-                GoogleButtonDisabledReason.NONE -> null
-            }
+            val disabledReasonText = googleButtonDisabledReasonMessageRes(buttonDisabledReason)
+                ?.let { messageRes -> stringResource(messageRes) }
             if (disabledReasonText != null) {
                 Text(
                     text = disabledReasonText,
@@ -119,30 +134,26 @@ fun AuthScreen(
         if (uiState.hasWiringIssue) {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Wiring error: Google OAuth callback wiring is incomplete. Verify redirect and callback handling. Local reading still works.",
+                text = stringResource(R.string.auth_wiring_error_incomplete),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall
             )
         }
 
-        if (!uiState.isConfigured || uiState.hasWiringIssue) {
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = onContinueLocal,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Continue in local mode")
-            }
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = onContinueLocal,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.auth_continue_local_mode))
         }
 
         uiState.errorMessage?.let { error ->
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = when (uiState.failureKind) {
-                    AuthFailureKind.CONFIG_ERROR -> "Configuration error: $error. Continue in local mode until config is fixed."
-                    AuthFailureKind.WIRING_ERROR -> "Wiring error: $error. Continue in local mode while wiring is fixed."
-                    else -> error
-                },
+                text = authFailureMessageTemplateRes(uiState.failureKind)
+                    ?.let { messageTemplateRes -> stringResource(messageTemplateRes, error) }
+                    ?: error,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall
             )

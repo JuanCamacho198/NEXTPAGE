@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auth_brand_title">NextPage</string>
+    <string name="auth_sign_in_title">Iniciar sesion</string>
+    <string name="auth_config_error_google_unavailable">Error de configuracion: la sincronizacion con Google no esta disponible porque SUPABASE_URL o SUPABASE_ANON_KEY no es valido. Puedes continuar usando funciones de biblioteca local.</string>
+    <string name="auth_continue_with_google">Continuar con Google</string>
+    <string name="auth_google_disabled_loading">El inicio de sesion con Google esta en progreso.</string>
+    <string name="auth_google_disabled_config_error">El inicio de sesion con Google esta deshabilitado por un error de configuracion (SUPABASE_URL o SUPABASE_ANON_KEY).</string>
+    <string name="auth_google_disabled_wiring_error">El inicio de sesion con Google esta deshabilitado por un error de conexion del callback OAuth.</string>
+    <string name="auth_wiring_error_incomplete">Error de conexion: la conexion del callback OAuth de Google esta incompleta. Verifica redireccion y manejo del callback. La lectura local sigue disponible.</string>
+    <string name="auth_continue_local_mode">Continuar en modo local</string>
+    <string name="auth_failure_config_error_with_details">Error de configuracion: %1$s. Continua en modo local hasta corregir la configuracion.</string>
+    <string name="auth_failure_wiring_error_with_details">Error de conexion: %1$s. Continua en modo local mientras se corrige la conexion.</string>
+</resources>

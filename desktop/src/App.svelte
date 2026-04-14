@@ -3,6 +3,10 @@
   import type { UnlistenFn } from "@tauri-apps/api/event";
   import { onMount } from "svelte";
 
+  import SettingsPanel from "./lib/components/SettingsPanel.svelte";
+  import Button from "./lib/components/ui/Button.svelte";
+  import DropMenu from "./lib/components/ui/DropMenu.svelte";
+
   import type { BookDto, SaveProgressInput } from "./lib/types";
   import { getProgress, listBooks, saveProgress } from "./lib/tauriClient";
 
@@ -16,6 +20,7 @@
   let error = $state<string | null>(null);
   let status = $state("Ready");
   let hasUnsavedChanges = $state(false);
+  let isSettingsOpen = $state(false);
 
   const roundedPercentage = $derived(Math.round(percentage * 100) / 100);
   let lastPersistedSnapshot = "";
@@ -297,6 +302,34 @@
 </script>
 
 <main class="app">
+  <div class="auth-container">
+    <DropMenu position="bottom-right">
+      {#snippet trigger()}
+        <button class="settings-btn" aria-label="Open menu">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      {/snippet}
+      
+      <button 
+        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" 
+        onclick={() => isSettingsOpen = true}
+      >
+        Settings
+      </button>
+      <button 
+        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" 
+        onclick={() => alert('Future Feature')}
+      >
+        Help
+      </button>
+    </DropMenu>
+  </div>
+
+  <SettingsPanel bind:isOpen={isSettingsOpen} />
+
   <section class="card header-card">
     <h1>NextPage Desktop (M1)</h1>
     <p>Thin IPC boundary: listBooks, getProgress, saveProgress.</p>
@@ -353,11 +386,53 @@
           <label for="percentage">Progress ({roundedPercentage}%)</label>
           <input id="percentage" bind:value={percentage} max="100" min="0" step="0.1" type="range" />
 
-          <button disabled={isSaving} onclick={() => void persistProgress("manual", true)} type="button">
+          <Button disabled={isSaving} onclick={() => void persistProgress("manual", true)} class="mt-4">
             {isSaving ? "Saving..." : "Save Progress"}
-          </button>
+          </Button>
         {/if}
       {/if}
     </section>
   </section>
 </main>
+
+<div class="app-version">
+  v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}
+</div>
+
+<style>
+  .auth-container {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 100;
+  }
+
+  .settings-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-secondary, #4b5563);
+    padding: var(--spacing-sm, 8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md, 8px);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .settings-btn:hover {
+    color: var(--color-text-primary, #111827);
+    background-color: var(--color-bg-elevated, #ffffff);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .app-version {
+    position: fixed;
+    bottom: var(--spacing-sm, 8px);
+    right: var(--spacing-sm, 8px);
+    color: var(--color-surface-dim, #121212);
+    font-size: var(--text-xs, 12px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+</style>

@@ -9,6 +9,7 @@ import com.nextpage.data.epub.ZipEpubParserService
 import com.nextpage.data.pdf.DefaultPdfParserService
 import com.nextpage.data.pdf.PdfContentLoader
 import com.nextpage.data.local.AppDatabase
+import com.nextpage.data.local.AppDatabaseMigrations
 import com.nextpage.data.repository.LibraryRepositoryImpl
 import com.nextpage.data.repository.ReaderRepositoryImpl
 import com.nextpage.data.repository.ReadingStatsRepositoryImpl
@@ -41,7 +42,13 @@ class AppContainer(context: Context) {
         context = context.applicationContext,
         klass = AppDatabase::class.java,
         name = "nextpage.db"
-    ).fallbackToDestructiveMigration().build()
+    ).addMigrations(*AppDatabaseMigrations.ALL).let { builder ->
+        if (BuildConfig.DEBUG) {
+            builder.fallbackToDestructiveMigration()
+        } else {
+            builder
+        }
+    }.build()
 
     private val dbInitTime = System.currentTimeMillis() - startTime
     init {

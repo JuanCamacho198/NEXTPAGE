@@ -27,8 +27,8 @@ import com.nextpage.data.local.entity.SyncOutboxEntity
         SyncOutboxEntity::class,
         SyncFileMappingEntity::class
     ],
-    version = 4,
-    exportSchema = false
+    version = 5,
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun bookDao(): BookDao

@@ -20,6 +20,12 @@ captures/
 # Tooling
 .codedb/
 codedb.snapshot
+node_modules/
+dist/
+src-tauri/target/
+desktop/node_modules/
+desktop/dist/
+desktop/src-tauri/target/
 
 # Project-specific
 docs/

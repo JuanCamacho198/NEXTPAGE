@@ -1,13 +1,20 @@
 <script lang="ts">
 	import Button from "./ui/Button.svelte";
+	import { AuthService } from "../services/AuthService";
 	let isLoggingIn = $state(false);
 
 	async function handleLogin() {
-		isLoggingIn = true;
-		console.log('Google login clicked! Mocking auth process...');
-		await new Promise(resolve => setTimeout(resolve, 1000));
-		alert('Mock Google Login Successful!');
-		isLoggingIn = false;
+		try {
+			isLoggingIn = true;
+			console.log('Initiating Google login...');
+			const data = await AuthService.signInWithGoogle();
+			console.log('Google login redirect initiated:', data);
+		} catch (error: any) {
+			console.error('Login Error:', error.message);
+			alert(`Login failed: ${error.message}`);
+		} finally {
+			isLoggingIn = false;
+		}
 	}
 </script>
 

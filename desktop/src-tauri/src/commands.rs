@@ -10,6 +10,12 @@ pub fn list_books(state: State<'_, AppState>) -> Result<Vec<BookDto>, String> {
 }
 
 #[tauri::command(rename_all = "camelCase")]
+pub fn upsert_book(state: State<'_, AppState>, book: BookDto) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|err| err.to_string())?;
+    repository.upsert_book(book).map_err(|err| err.to_string())
+}
+
+#[tauri::command(rename_all = "camelCase")]
 pub fn get_progress(
     state: State<'_, AppState>,
     book_id: String,
@@ -25,5 +31,16 @@ pub fn save_progress(state: State<'_, AppState>, payload: SaveProgressInput) -> 
     let repository = state.repository.lock().map_err(|err| err.to_string())?;
     repository
         .save_progress(payload)
+        .map_err(|err| err.to_string())
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn upsert_progress(
+    state: State<'_, AppState>,
+    progress: ReadingProgressDto,
+) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|err| err.to_string())?;
+    repository
+        .upsert_progress(progress)
         .map_err(|err| err.to_string())
 }

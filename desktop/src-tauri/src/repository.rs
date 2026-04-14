@@ -38,6 +38,30 @@ impl LibraryRepository {
         Ok(books)
     }
 
+    pub fn upsert_book(&self, book: BookDto) -> AppResult<()> {
+        self.connection.execute(
+            "INSERT INTO books (id, title, author, file_path, format, created_at, updated_at, version)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 1)
+             ON CONFLICT(id) DO UPDATE SET
+               title = excluded.title,
+               author = excluded.author,
+               file_path = excluded.file_path,
+               format = excluded.format,
+               updated_at = excluded.updated_at,
+               version = version + 1",
+            params![
+                book.id,
+                book.title,
+                book.author,
+                book.file_path,
+                book.format,
+                book.created_at,
+                book.updated_at
+            ],
+        )?;
+        Ok(())
+    }
+
     pub fn get_progress(&self, book_id: &str) -> AppResult<Option<ReadingProgressDto>> {
         if book_id.trim().is_empty() {
             return Err(AppError::MissingBookId);
@@ -107,6 +131,27 @@ impl LibraryRepository {
             }
         }
 
+        Ok(())
+    }
+
+    pub fn upsert_progress(&self, progress: ReadingProgressDto) -> AppResult<()> {
+        self.connection.execute(
+            "INSERT INTO reading_progress (id, book_id, cfi_location, percentage, updated_at, version)
+             VALUES (?1, ?2, ?3, ?4, ?5, 1)
+             ON CONFLICT(id) DO UPDATE SET
+               book_id = excluded.book_id,
+               cfi_location = excluded.cfi_location,
+               percentage = excluded.percentage,
+               updated_at = excluded.updated_at,
+               version = version + 1",
+            params![
+                progress.id,
+                progress.book_id,
+                progress.cfi_location,
+                progress.percentage,
+                progress.updated_at
+            ],
+        )?;
         Ok(())
     }
 }

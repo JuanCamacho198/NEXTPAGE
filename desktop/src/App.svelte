@@ -9,6 +9,7 @@
 
   import type { BookDto, SaveProgressInput } from "./lib/types";
   import { getProgress, listBooks, saveProgress } from "./lib/tauriClient";
+  import { SyncService } from "./lib/services/SyncService";
 
   let books = $state<BookDto[]>([]);
   let selectedBook = $state<BookDto | null>(null);
@@ -290,6 +291,10 @@
     })();
 
     void loadBooks();
+    void SyncService.syncMetadata().then(() => {
+      // Refresh books after sync
+      loadBooks();
+    });
 
     return () => {
       window.removeEventListener("beforeunload", onBeforeUnload);

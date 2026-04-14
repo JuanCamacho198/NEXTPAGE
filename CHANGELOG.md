@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- (future features go here)
+- **Desktop UI**: Settings panel and Google Login mock using atomic design components.
+- **Desktop System**: Tailwind 4 setup with atomic tokens (`tokens.css`).
+- **Desktop App**: Embedded version display via Vite build injection.
 
 ### Changed
 - (improvements go here)

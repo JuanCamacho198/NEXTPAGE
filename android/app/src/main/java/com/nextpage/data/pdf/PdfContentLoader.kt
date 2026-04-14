@@ -18,11 +18,16 @@ class PdfContentLoader(private val context: Context) {
 
     suspend fun load(file: File) = withContext(Dispatchers.IO) {
         synchronized(lock) {
+            if (currentFile == file) {
+                return@withContext
+            }
+
             if (currentFile != file) {
                 Log.d(TAG, "Loading PDF file=${file.absolutePath}")
                 pdfRenderer?.close()
-                pdfRenderer = PdfRendererWrapper(context)
-                pdfRenderer?.open(file)
+                val renderer = PdfRendererWrapper(context)
+                renderer.open(file)
+                pdfRenderer = renderer
                 currentFile = file
             }
         }

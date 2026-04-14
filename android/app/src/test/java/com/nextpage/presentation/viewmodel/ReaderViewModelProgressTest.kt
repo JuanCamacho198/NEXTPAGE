@@ -151,6 +151,25 @@ class ReaderViewModelProgressTest {
         assertEquals(null, repository.lastUpserted)
     }
 
+    @Test
+    fun goToPdfPage_setsUiErrorWhenPdfLoaderUnavailable_insteadOfCrashing() = runTest(StandardTestDispatcher()) {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = FakeReaderRepository()
+        val viewModel = ReaderViewModel(
+            readerRepository = repository,
+            readingStatsRepository = FakeReadingStatsRepository(),
+            updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
+            defaultBookId = null,
+            mainDispatcher = dispatcher
+        )
+
+        setPdfState(viewModel, selectedBookId = "book-42", totalPdfPages = 10)
+        viewModel.goToPdfPage(2)
+        advanceUntilIdle()
+
+        assertEquals("PDF content loader is unavailable", viewModel.uiState.value.error)
+    }
+
     private fun setPdfState(
         viewModel: ReaderViewModel,
         selectedBookId: String,

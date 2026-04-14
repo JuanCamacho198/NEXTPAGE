@@ -194,7 +194,11 @@ class ReaderViewModel(
             val loader = pdfContentLoader
             if (loader == null) {
                 mutableUiState.update {
-                    it.copy(error = "PDF content loader is unavailable")
+                    it.copy(
+                        currentPdfPage = pageIndex,
+                        pdfPageBitmap = null,
+                        error = "PDF content loader is unavailable"
+                    )
                 }
                 return@launch
             }

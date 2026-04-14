@@ -1,5 +1,6 @@
 package com.nextpage.presentation.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -38,6 +39,10 @@ class AuthViewModel(
     private val hasSupabaseWiringIssue: Boolean
 ) : ViewModel() {
 
+    companion object {
+        private const val AUTH_VM_TAG = "AuthViewModel"
+    }
+
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
@@ -46,6 +51,7 @@ class AuthViewModel(
             isConfigured = isSupabaseConfigured,
             hasWiringIssue = hasSupabaseWiringIssue
         )
+        logDiagnostics("init")
         restoreSessionOnStart()
     }
 
@@ -70,6 +76,7 @@ class AuthViewModel(
                 failureKind = AuthFailureKind.NONE,
                 pendingGoogleSignInUrl = null
             )
+            logDiagnostics("startGoogleSignIn:loading")
             val result = authRepository.startGoogleSignIn()
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
@@ -77,12 +84,14 @@ class AuthViewModel(
                 errorMessage = result.exceptionOrNull()?.message,
                 failureKind = classifyFailure(result.exceptionOrNull())
             )
+            logDiagnostics("startGoogleSignIn:result")
         }
     }
 
     fun onGoogleAuthCallback(callbackUri: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
+            logDiagnostics("onGoogleAuthCallback:loading")
             when (val outcome = authRepository.completeGoogleSignIn(callbackUri)) {
                 is GoogleSignInOutcome.Success -> {
                     triggerSyncForSession(outcome.session)
@@ -93,6 +102,7 @@ class AuthViewModel(
                         failureKind = AuthFailureKind.NONE,
                         pendingGoogleSignInUrl = null
                     )
+                    logDiagnostics("onGoogleAuthCallback:success")
                 }
 
                 GoogleSignInOutcome.Cancelled -> {
@@ -102,6 +112,7 @@ class AuthViewModel(
                         failureKind = AuthFailureKind.NONE,
                         pendingGoogleSignInUrl = null
                     )
+                    logDiagnostics("onGoogleAuthCallback:cancelled")
                 }
 
                 is GoogleSignInOutcome.Failure -> {
@@ -111,6 +122,7 @@ class AuthViewModel(
                         failureKind = classifyFailure(outcome.error),
                         pendingGoogleSignInUrl = null
                     )
+                    logDiagnostics("onGoogleAuthCallback:failure")
                 }
             }
         }
@@ -158,6 +170,16 @@ class AuthViewModel(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null, failureKind = AuthFailureKind.NONE)
+    }
+
+    private fun logDiagnostics(context: String) {
+        val state = _uiState.value
+        runCatching {
+            Log.d(
+                AUTH_VM_TAG,
+                "Auth diagnostics [$context]: configured=${state.isConfigured}, wiring=${state.hasWiringIssue}, loading=${state.isLoading}, failure=${state.failureKind}"
+            )
+        }
     }
 
     private fun classifyFailure(error: Throwable?): AuthFailureKind {

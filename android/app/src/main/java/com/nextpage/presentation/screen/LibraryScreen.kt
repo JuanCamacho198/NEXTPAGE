@@ -1,15 +1,12 @@
 package com.nextpage.presentation.screen
 
 import android.net.Uri
-import android.graphics.BitmapFactory
 import java.io.File
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -45,11 +42,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageDimens
@@ -424,38 +424,36 @@ private fun LibraryBookGridItem(
 }
 
 @Composable
-private fun CoverThumbnail(coverPath: String?, modifier: Modifier = Modifier) {
-    val imageBitmap = remember(coverPath) {
-        if (coverPath.isNullOrBlank()) {
-            null
-        } else {
-            BitmapFactory.decodeFile(coverPath)?.asImageBitmap()
-        }
+internal fun CoverThumbnail(
+    coverPath: String?,
+    modifier: Modifier = Modifier,
+    onImageState: ((AsyncImagePainter.State) -> Unit)? = null
+) {
+    val context = LocalContext.current
+    val coverFile = remember(coverPath) {
+        coverPath
+            ?.takeIf { it.isNotBlank() }
+            ?.let(::File)
+    }
+    val imageRequest = remember(context, coverFile, coverPath) {
+        ImageRequest.Builder(context)
+            .data(coverFile)
+            .placeholder(R.drawable.cover_placeholder)
+            .error(R.drawable.cover_error)
+            .fallback(R.drawable.cover_placeholder)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .crossfade(true)
+            .build()
     }
 
-    if (imageBitmap != null) {
-        Image(
-            bitmap = imageBitmap,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = modifier.clip(MaterialTheme.shapes.small)
-        )
-    } else {
-        Surface(
-            shape = MaterialTheme.shapes.small,
-            tonalElevation = NextPageDimens.spacingXs,
-            modifier = modifier
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = stringResource(R.string.library_cover_placeholder),
-                    style = MaterialTheme.typography.labelSmall,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(NextPageDimens.spacingXs)
-                )
-            }
-        }
-    }
+    AsyncImage(
+        model = imageRequest,
+        onState = { state -> onImageState?.invoke(state) },
+        contentDescription = stringResource(R.string.library_cover_content_description),
+        contentScale = ContentScale.Crop,
+        modifier = modifier.clip(MaterialTheme.shapes.small)
+    )
 }
 
 private enum class LibraryLayoutMode {

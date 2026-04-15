@@ -63,7 +63,7 @@ export class SyncService {
       created_at: b.createdAt,
       updated_at_iso: b.updatedAt,
       updatedAtEpochMillis: new Date(b.updatedAt).getTime(),
-      deletedAtEpochMillis: b.deletedAt ? new Date(b.deletedAt).getTime() : null
+      deletedAtEpochMillis: null
     }));
 
     // 3. Resolve conflicts

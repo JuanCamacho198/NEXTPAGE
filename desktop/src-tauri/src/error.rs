@@ -13,6 +13,9 @@ pub enum AppError {
 
     #[error("book id is required")]
     MissingBookId,
+
+    #[error("invalid input: {0}")]
+    InvalidInput(String),
 }
 
 pub type AppResult<T> = Result<T, AppError>;

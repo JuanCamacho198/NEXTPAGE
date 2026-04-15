@@ -23,6 +23,8 @@ fn build_state(app: &AppHandle) -> Result<AppState, String> {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             let state = build_state(app.handle()).map_err(std::io::Error::other)?;
             app.manage(state);

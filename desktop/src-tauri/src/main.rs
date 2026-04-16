@@ -1,15 +1,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod commands;
-mod db;
-mod error;
-mod models;
-mod repository;
-mod state;
-
-use db::{open_and_migrate, resolve_db_path};
-use repository::LibraryRepository;
-use state::AppState;
+use nextpage_desktop::commands;
+use nextpage_desktop::db::{open_and_migrate, resolve_db_path};
+use nextpage_desktop::repository::LibraryRepository;
+use nextpage_desktop::state::AppState;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_deep_link::DeepLinkExt;
 
@@ -37,10 +31,18 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::list_books,
             commands::upsert_book,
+            commands::get_settings,
+            commands::upsert_settings,
+            commands::list_library_books,
             commands::get_progress,
             commands::save_progress,
             commands::upsert_progress,
+            commands::save_reading_session,
+            commands::get_reading_stats,
+            commands::index_book_text,
+            commands::search_book_text,
             commands::import_book,
+            commands::delete_book,
             commands::get_file_bytes,
             commands::update_book_progress,
             commands::list_highlights,

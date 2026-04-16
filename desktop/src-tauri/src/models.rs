@@ -92,3 +92,147 @@ pub struct SaveProgressInput {
     pub cfi_location: String,
     pub percentage: f64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppSettingDto {
+    pub key: String,
+    pub value_json: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BookCoverDto {
+    pub book_id: String,
+    pub storage_path: String,
+    pub mime_type: String,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+    pub byte_size: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryBookDto {
+    pub id: String,
+    pub title: String,
+    pub author: String,
+    pub format: String,
+    pub current_page: i32,
+    pub total_pages: i32,
+    pub progress_percentage: f64,
+    pub cover_path: Option<String>,
+    pub minutes_read: i64,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListLibraryBooksInput {
+    pub response_version: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReadingStatsSummaryDto {
+    pub total_minutes_read: i64,
+    pub total_sessions: i64,
+    pub books_started: i64,
+    pub books_completed: i64,
+    pub avg_progress_percentage: f64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReadingSessionInput {
+    pub book_id: String,
+    pub started_at: String,
+    pub ended_at: Option<String>,
+    pub duration_seconds: i64,
+    pub start_percentage: Option<f64>,
+    pub end_percentage: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchResultDto {
+    pub chunk_id: String,
+    pub book_id: String,
+    pub locator: String,
+    pub snippet: String,
+    pub rank: f64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndexBookTextInput {
+    pub book_id: String,
+    pub chunks: Vec<IndexBookTextChunkInput>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndexBookTextChunkInput {
+    pub locator: String,
+    pub chunk_index: i32,
+    pub text_content: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchBookTextInput {
+    pub book_id: String,
+    pub query: String,
+    pub page: i64,
+    pub page_size: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchBookTextResponse {
+    pub items: Vec<SearchResultDto>,
+    pub total: i64,
+    pub page: i64,
+    pub page_size: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommandErrorDto {
+    pub code: String,
+    pub message: String,
+    pub recoverable: bool,
+}
+
+impl CommandErrorDto {
+    pub fn validation(message: impl Into<String>) -> Self {
+        Self {
+            code: "VALIDATION_ERROR".to_string(),
+            message: message.into(),
+            recoverable: true,
+        }
+    }
+
+    pub fn internal(message: impl Into<String>) -> Self {
+        Self {
+            code: "INTERNAL_ERROR".to_string(),
+            message: message.into(),
+            recoverable: false,
+        }
+    }
+
+    pub fn compatibility(message: impl Into<String>) -> Self {
+        Self {
+            code: "COMPATIBILITY_ERROR".to_string(),
+            message: message.into(),
+            recoverable: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BookDeleteInput {
+    pub book_id: String,
+}

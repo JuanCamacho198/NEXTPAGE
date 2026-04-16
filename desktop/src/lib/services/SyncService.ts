@@ -91,9 +91,7 @@ export class SyncService {
           title: resolved.title,
           author: resolved.author,
           filePath: resolved.file_path,
-          format: resolved.format,
-          createdAt: resolved.created_at,
-          updatedAt: resolved.updated_at_iso
+          format: resolved.format
         });
 
         // Trigger file sync if file is missing locally

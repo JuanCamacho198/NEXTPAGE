@@ -1,5 +1,4 @@
 import "./styles.css";
-import "./lib/styles/tokens.css";
 import App from "./App.svelte";
 import { mount } from "svelte";
 import { onOpenUrl } from "@tauri-apps/plugin-deep-link";

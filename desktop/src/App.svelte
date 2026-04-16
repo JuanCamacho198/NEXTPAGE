@@ -1,137 +1,206 @@
 <script lang="ts">
-  import { getCurrentWindow } from "@tauri-apps/api/window";
-  import type { UnlistenFn } from "@tauri-apps/api/event";
   import { onMount } from "svelte";
-
-  import SettingsPanel from "./lib/components/SettingsPanel.svelte";
-  import PdfViewer from "./lib/components/PdfViewer.svelte";
-  import Button from "./lib/components/ui/Button.svelte";
   import DropMenu from "./lib/components/ui/DropMenu.svelte";
+  import Button from "./lib/components/ui/Button.svelte";
+  import SettingsPanel from "./lib/components/SettingsPanel.svelte";
+  import LibraryView from "./lib/components/library/LibraryView.svelte";
+  import ReadingStatsPanel from "./lib/components/stats/ReadingStatsPanel.svelte";
+  import SearchPanel from "./lib/components/reader/SearchPanel.svelte";
+  import EpubViewer from "./lib/components/EpubViewer.svelte";
+  import PdfViewer from "./lib/components/PdfViewer.svelte";
 
-  import type { BookDto, SaveProgressInput } from "./lib/types";
-  import { getProgress, listBooks, saveProgress, updateBookProgress } from "./lib/tauriClient";
-  import { SyncService } from "./lib/services/SyncService";
-  import { pickFile } from "./lib/services/FilePicker";
   import { importBook, type ImportProgress } from "./lib/services/BookImportService";
+  import { pickFile } from "./lib/services/FilePicker";
+  import {
+    getProgress,
+    getReadingStats,
+    listBooks,
+    listLibraryBooks,
+    saveProgress,
+    saveReadingSession,
+    searchBookText,
+    updateBookProgress,
+  } from "./lib/tauriClient";
 
-  let books = $state<BookDto[]>([]);
-  let selectedBook = $state<BookDto | null>(null);
-  let cfiLocation = $state("");
-  let percentage = $state(0);
-  let isLoadingBooks = $state(false);
-  let isLoadingProgress = $state(false);
-  let isSaving = $state(false);
+  import type {
+    BookDto,
+    CommandErrorDto,
+    LibraryBookDto,
+    ReadingSessionInput,
+    ReadingStatsSummaryDto,
+    SaveProgressInput,
+    SearchBookTextResponse,
+    SearchNavigationTarget,
+  } from "./lib/types";
+
+  type ReaderBook = LibraryBookDto & {
+    filePath: string;
+  };
+
+  type LibraryViewMode = "list" | "grid";
+
+  const DOMAIN = {
+    LIBRARY: "library",
+    STATS: "stats",
+    SEARCH: "search",
+  } as const;
+
+  type Domain = (typeof DOMAIN)[keyof typeof DOMAIN];
+  type MaybeCommandError = Error & { commandError?: CommandErrorDto };
+
+  let books = $state<ReaderBook[]>([]);
+  let selectedBook = $state<ReaderBook | null>(null);
+  let libraryViewMode = $state<LibraryViewMode>("list");
+  let libraryUnavailableReason = $state<string | null>(null);
+  let statsUnavailableReason = $state<string | null>(null);
+  let searchUnavailableReason = $state<string | null>(null);
+
+  let isSettingsOpen = $state(false);
+  let isLoadingLibrary = $state(false);
+  let isLoadingStats = $state(false);
+  let isSearching = $state(false);
   let isImporting = $state(false);
   let importProgress = $state<ImportProgress | null>(null);
-  let error = $state<string | null>(null);
-  let status = $state("Ready");
-  let hasUnsavedChanges = $state(false);
-  let isSettingsOpen = $state(false);
-  let currentFilePath = $state<string | null>(null);
 
-  const roundedPercentage = $derived(Math.round(percentage * 100) / 100);
-  let lastPersistedSnapshot = "";
-  let pendingPersist: Promise<boolean> | null = null;
-  let skipChangeTracking = false;
+  let cfiLocation = $state("");
+  let percentage = $state(0);
+  let stats = $state<ReadingStatsSummaryDto | null>(null);
+  let searchResponse = $state<SearchBookTextResponse | null>(null);
+  let searchTargetLocator = $state<string | null>(null);
+  let readerError = $state<string | null>(null);
 
-  const DRAFT_STORAGE_PREFIX = "nextpage:draft-progress:";
-
-  type LocalDraft = SaveProgressInput & {
-    updatedAt: string;
-  };
-
-  const clampPercentage = (value: number) => {
-    if (!Number.isFinite(value)) {
-      return 0;
+  const mapCommandError = (error: unknown) => {
+    const typed = error as MaybeCommandError;
+    if (typed.commandError) {
+      return typed.commandError;
     }
 
-    return Math.max(0, Math.min(100, value));
-  };
-
-  const toSnapshot = (payload: SaveProgressInput) =>
-    `${payload.bookId}|${payload.cfiLocation}|${payload.percentage.toFixed(3)}`;
-
-  const draftKey = (bookId: string) => `${DRAFT_STORAGE_PREFIX}${bookId}`;
-
-  const readDraft = (bookId: string): LocalDraft | null => {
-    try {
-      const raw = localStorage.getItem(draftKey(bookId));
-      if (!raw) {
-        return null;
-      }
-
-      const parsed = JSON.parse(raw) as LocalDraft;
-      if (!parsed.bookId || typeof parsed.cfiLocation !== "string") {
-        return null;
-      }
-
-      return {
-        ...parsed,
-        percentage: clampPercentage(parsed.percentage)
-      };
-    } catch {
-      return null;
-    }
-  };
-
-  const writeDraft = (payload: SaveProgressInput) => {
-    try {
-      const draft: LocalDraft = {
-        ...payload,
-        percentage: clampPercentage(payload.percentage),
-        updatedAt: new Date().toISOString()
-      };
-
-      localStorage.setItem(draftKey(payload.bookId), JSON.stringify(draft));
-    } catch {
-      // Ignore localStorage errors to avoid blocking UI flow.
-    }
-  };
-
-  const clearDraft = (bookId: string) => {
-    try {
-      localStorage.removeItem(draftKey(bookId));
-    } catch {
-      // Ignore localStorage errors to avoid blocking UI flow.
-    }
-  };
-
-  const applyProgressState = (nextCfiLocation: string, nextPercentage: number) => {
-    skipChangeTracking = true;
-    cfiLocation = nextCfiLocation;
-    percentage = clampPercentage(nextPercentage);
-    hasUnsavedChanges = false;
-    skipChangeTracking = false;
-  };
-
-  const markPersisted = (payload: SaveProgressInput) => {
-    lastPersistedSnapshot = toSnapshot(payload);
-    hasUnsavedChanges = false;
-  };
-
-  const buildPayload = (): SaveProgressInput | null => {
-    if (!selectedBook) {
-      return null;
-    }
-
+    const fallback = error instanceof Error ? error.message : "Unknown command failure";
     return {
-      bookId: selectedBook.id,
-      cfiLocation: cfiLocation.trim(),
-      percentage: clampPercentage(percentage)
-    };
+      code: "INTERNAL_ERROR",
+      message: fallback,
+      recoverable: false,
+    } satisfies CommandErrorDto;
   };
 
-  const formatBookDate = (isoDate: string) => {
-    const parsed = new Date(isoDate);
-    if (Number.isNaN(parsed.getTime())) {
-      return "Unknown date";
+  const setDomainUnavailable = (domain: Domain, reason: string | null) => {
+    if (domain === DOMAIN.LIBRARY) {
+      libraryUnavailableReason = reason;
+      return;
     }
 
-    return parsed.toLocaleDateString();
+    if (domain === DOMAIN.STATS) {
+      statsUnavailableReason = reason;
+      return;
+    }
+
+    searchUnavailableReason = reason;
   };
 
-  const formatIcon = (format: string) => {
-    return format.toLowerCase() === "pdf" ? "PDF" : "BOOK";
+  const openBook = async (book: ReaderBook) => {
+    selectedBook = book;
+    searchResponse = null;
+    searchTargetLocator = null;
+
+    if (book.format.toLowerCase() === "epub") {
+      try {
+        const progress = await getProgress(book.id);
+        cfiLocation = progress?.cfiLocation ?? "";
+        percentage = progress?.percentage ?? 0;
+      } catch {
+        cfiLocation = "";
+        percentage = 0;
+      }
+    }
+
+    void loadStats(book.id);
+  };
+
+  const loadLibrary = async () => {
+    isLoadingLibrary = true;
+    readerError = null;
+
+    try {
+      const [libraryRows, sourceRows] = await Promise.all([listLibraryBooks(1), listBooks()]);
+      const filePathById = new Map<string, string>(
+        sourceRows.map((book: BookDto) => [book.id, book.filePath]),
+      );
+
+      books = libraryRows.map((entry: LibraryBookDto) => ({
+        ...entry,
+        filePath: filePathById.get(entry.id) ?? "",
+      }));
+
+      setDomainUnavailable(DOMAIN.LIBRARY, null);
+
+      if (books.length > 0 && !selectedBook) {
+        void openBook(books[0]);
+      } else if (selectedBook) {
+        const refreshed = books.find((item) => item.id === selectedBook?.id) ?? null;
+        selectedBook = refreshed;
+      }
+    } catch (error) {
+      const details = mapCommandError(error);
+      if (details.recoverable) {
+        setDomainUnavailable(DOMAIN.LIBRARY, details.message);
+      } else {
+        readerError = details.message;
+      }
+    } finally {
+      isLoadingLibrary = false;
+    }
+  };
+
+  const loadStats = async (bookId?: string) => {
+    isLoadingStats = true;
+
+    try {
+      stats = await getReadingStats(bookId);
+      setDomainUnavailable(DOMAIN.STATS, null);
+    } catch (error) {
+      const details = mapCommandError(error);
+      if (details.recoverable) {
+        setDomainUnavailable(DOMAIN.STATS, details.message);
+      } else {
+        readerError = details.message;
+      }
+      stats = null;
+    } finally {
+      isLoadingStats = false;
+    }
+  };
+
+  const handleImportFile = async () => {
+    const file = await pickFile();
+    if (!file) {
+      return;
+    }
+
+    isImporting = true;
+    readerError = null;
+
+    try {
+      const format = file.name.toLowerCase().endsWith(".epub") ? "epub" : "pdf";
+      const title = file.name.replace(/\.(pdf|epub)$/i, "");
+
+      await importBook(
+        {
+          sourcePath: file.path,
+          title,
+          format,
+        },
+        (progress) => {
+          importProgress = progress;
+        },
+      );
+
+      await loadLibrary();
+    } catch (error) {
+      readerError = error instanceof Error ? error.message : "Import failed";
+    } finally {
+      isImporting = false;
+      importProgress = null;
+    }
   };
 
   const handlePdfPageChange = async (page: number, total: number) => {
@@ -140,407 +209,249 @@
       return;
     }
 
-    const nextBook = {
+    selectedBook = {
       ...current,
       currentPage: page,
       totalPages: total,
     };
 
-    selectedBook = nextBook;
-    books = books.map((book) => (book.id === current.id ? nextBook : book));
+    books = books.map((book) =>
+      book.id === current.id
+        ? {
+            ...book,
+            currentPage: page,
+            totalPages: total,
+          }
+        : book,
+    );
 
     try {
       await updateBookProgress(current.id, page);
     } catch {
-      status = "Failed to persist page progress.";
+      // keep reader responsive even if progress write fails
     }
+
+    void loadStats(current.id);
   };
 
-  const loadBooks = async () => {
-    isLoadingBooks = true;
-    error = null;
-
-    try {
-      const result = await listBooks();
-      books = result;
-      if (result.length > 0) {
-        selectedBook = result[0];
-      } else {
-        selectedBook = null;
-        cfiLocation = "";
-        percentage = 0;
-        status = "No books in local library.";
-      }
-    } catch (loadError) {
-      error = loadError instanceof Error ? loadError.message : "Failed to load books.";
-      status = "Failed to load library.";
-    } finally {
-      isLoadingBooks = false;
-    }
-  };
-
-  const selectBook = (book: BookDto) => {
-    selectedBook = book;
-  };
-
-  const handleImportFile = async () => {
-    const file = await pickFile();
-    if (!file) return;
-
-    currentFilePath = file.path;
-    isImporting = true;
-    error = null;
-
-    try {
-      const format = file.name.toLowerCase().endsWith(".epub") ? "epub" : "pdf";
-      const title = file.name.replace(/\.(pdf|epub)$/i, "");
-
-      const newBook = await importBook(
-        {
-          sourcePath: file.path,
-          title,
-          format,
-        },
-        (progress) => {
-          importProgress = progress;
-        }
-      );
-
-      books = [...books, newBook];
-      selectedBook = newBook;
-      status = `Imported: ${newBook.title}`;
-    } catch (importError) {
-      error = importError instanceof Error ? importError.message : "Import failed";
-      status = "Import failed";
-    } finally {
-      isImporting = false;
-      importProgress = null;
-    }
-  };
-
-  const loadProgress = async (bookId: string) => {
-    isLoadingProgress = true;
-    error = null;
-
-    try {
-      const progress = await getProgress(bookId);
-
-      if (progress) {
-        applyProgressState(progress.cfiLocation, progress.percentage);
-        status = `Resumed ${Math.round(progress.percentage)}% for current book.`;
-      } else {
-        applyProgressState("", 0);
-        status = "No saved progress. Start reading from beginning.";
-      }
-
-      const payload = buildPayload();
-      if (payload) {
-        markPersisted(payload);
-      }
-
-      const draft = readDraft(bookId);
-      if (draft) {
-        applyProgressState(draft.cfiLocation, draft.percentage);
-        hasUnsavedChanges = true;
-        status = "Recovered unsynced local draft. Save to sync with local DB.";
-      }
-    } catch (progressError) {
-      error = progressError instanceof Error ? progressError.message : "Failed to load progress.";
-      status = "Unable to fetch reading progress.";
-    } finally {
-      isLoadingProgress = false;
-    }
-  };
-
-  const persistProgress = async (
-    reason: "manual" | "visibility" | "beforeunload" | "close-requested",
-    force = false
-  ): Promise<boolean> => {
-    const payload = buildPayload();
-    if (!payload) {
-      return false;
-    }
-
-    const snapshot = toSnapshot(payload);
-    if (!force && snapshot === lastPersistedSnapshot) {
-      return true;
-    }
-
-    if (pendingPersist) {
-      return pendingPersist;
-    }
-
-    if (reason === "manual") {
-      isSaving = true;
-    }
-    error = null;
-
-    pendingPersist = (async () => {
-      try {
-        await saveProgress(payload);
-        clearDraft(payload.bookId);
-        markPersisted(payload);
-
-        if (reason === "manual") {
-          status = `Progress saved at ${Math.round(payload.percentage)}%.`;
-        }
-
-        return true;
-      } catch (saveError) {
-        writeDraft(payload);
-        hasUnsavedChanges = false;
-        error = saveError instanceof Error ? saveError.message : "Failed to save progress.";
-        status = "Unable to persist to DB. Draft saved locally for recovery.";
-        return false;
-      } finally {
-        if (reason === "manual") {
-          isSaving = false;
-        }
-        pendingPersist = null;
-      }
-    })();
-
-    return pendingPersist;
-  };
-
-  $effect(() => {
-    const currentBook = selectedBook;
-    if (!currentBook) {
+  const handlePdfSessionProgress = async (event: {
+    startedAt: string;
+    endedAt?: string;
+    durationSeconds: number;
+    startPercentage?: number;
+    endPercentage?: number;
+  }) => {
+    const current = selectedBook;
+    if (!current) {
       return;
     }
 
-    void loadProgress(currentBook.id);
-  });
+    const payload: ReadingSessionInput = {
+      bookId: current.id,
+      startedAt: event.startedAt,
+      endedAt: event.endedAt,
+      durationSeconds: event.durationSeconds,
+      startPercentage: event.startPercentage,
+      endPercentage: event.endPercentage,
+    };
 
-  $effect(() => {
-    const payload = buildPayload();
-    if (!payload || skipChangeTracking) {
+    try {
+      await saveReadingSession(payload);
+      void loadStats(current.id);
+    } catch {
+      // non-blocking stats event path
+    }
+  };
+
+  const handleEpubLocationChange = async (nextLocation: string, nextPercentage: number) => {
+    const current = selectedBook;
+    if (!current) {
       return;
     }
 
-    hasUnsavedChanges = toSnapshot(payload) !== lastPersistedSnapshot;
-  });
+    cfiLocation = nextLocation;
+    percentage = Math.max(0, Math.min(100, nextPercentage));
+
+    const payload: SaveProgressInput = {
+      bookId: current.id,
+      cfiLocation: nextLocation,
+      percentage,
+    };
+
+    try {
+      await saveProgress(payload);
+    } catch {
+      // keep UI usable even when save fails
+    }
+
+    void loadStats(current.id);
+  };
+
+  const handleSearch = async (query: string, page: number) => {
+    if (!selectedBook) {
+      return;
+    }
+
+    isSearching = true;
+
+    try {
+      searchResponse = await searchBookText({
+        bookId: selectedBook.id,
+        query,
+        page,
+        pageSize: 200,
+      });
+      setDomainUnavailable(DOMAIN.SEARCH, null);
+    } catch (error) {
+      const details = mapCommandError(error);
+      if (details.recoverable) {
+        setDomainUnavailable(DOMAIN.SEARCH, details.message);
+      } else {
+        readerError = details.message;
+      }
+      searchResponse = null;
+    } finally {
+      isSearching = false;
+    }
+  };
+
+  const handleSearchJump = (target: SearchNavigationTarget) => {
+    searchTargetLocator = target.locator;
+  };
+
+  const handleReaderLocationContext = () => {
+    // reserved for index_book_text integration when extraction pipeline is wired
+  };
 
   onMount(() => {
-    let isCloseFlowFinalized = false;
-    let unlistenCloseRequested: UnlistenFn | null = null;
-
-    const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (!hasUnsavedChanges) {
-        return;
-      }
-
-      void persistProgress("beforeunload", true);
-      event.preventDefault();
-      event.returnValue = "";
-    };
-
-    const onVisibilityChange = () => {
-      if (document.visibilityState !== "hidden") {
-        return;
-      }
-
-      void persistProgress("visibility", false);
-    };
-
-    window.addEventListener("beforeunload", onBeforeUnload);
-    document.addEventListener("visibilitychange", onVisibilityChange);
-
-    void (async () => {
-      try {
-        const currentWindow = getCurrentWindow();
-
-        unlistenCloseRequested = await currentWindow.onCloseRequested(async (event) => {
-          if (isCloseFlowFinalized || !hasUnsavedChanges) {
-            return;
-          }
-
-          event.preventDefault();
-          await persistProgress("close-requested", true);
-
-          isCloseFlowFinalized = true;
-          await currentWindow.close();
-        });
-      } catch {
-        // Browser fallback: close hook unavailable outside Tauri runtime.
-      }
-    })();
-
-    void loadBooks();
-    void SyncService.syncMetadata().then(() => {
-      // Refresh books after sync
-      loadBooks();
-    });
-
-    return () => {
-      window.removeEventListener("beforeunload", onBeforeUnload);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      if (unlistenCloseRequested) {
-        void unlistenCloseRequested();
-      }
-    };
+    void loadLibrary();
+    void loadStats(undefined);
   });
 </script>
 
-<main class="app">
-  <div class="auth-container">
-    <DropMenu position="bottom-right">
-      {#snippet trigger()}
-        <button class="settings-btn" aria-label="Open menu">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
-        </button>
-      {/snippet}
-      
-      <button 
-        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" 
-        onclick={() => isSettingsOpen = true}
-      >
-        Settings
-      </button>
-      <button 
-        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" 
-        onclick={() => alert('Future Feature')}
-      >
-        Help
-      </button>
-    </DropMenu>
-  </div>
-
-  <SettingsPanel bind:isOpen={isSettingsOpen} />
-
-  <section class="card header-card">
-    <h1>NextPage Desktop (M1)</h1>
-    <p>Thin IPC boundary: listBooks, getProgress, saveProgress.</p>
-    <p class="status">{status}</p>
-    {#if error}
-      <p class="error">{error}</p>
-    {/if}
-  </section>
-
-  <section class="workspace">
-    <aside class="card library-card">
-      <h2>Library</h2>
-      <div class="library-actions">
-        <Button onclick={handleImportFile} disabled={isImporting}>
+<main class="min-h-screen bg-slate-100 text-slate-900">
+  <div class="mx-auto max-w-7xl p-4 md:p-6">
+    <header class="mb-4 flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div>
+        <h1 class="text-xl font-semibold">NextPage Desktop</h1>
+        <p class="text-sm text-slate-500">Desktop parity integration: library, settings, stats, and reader search</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <Button onclick={handleImportFile} disabled={isImporting} size="sm">
           {isImporting ? "Importing..." : "Import Book"}
         </Button>
-        {#if importProgress}
-          <span class="import-status">{importProgress.message}</span>
-        {/if}
+        <DropMenu position="bottom-right">
+          {#snippet trigger()}
+            <button class="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 hover:bg-slate-50" aria-label="Open menu">
+              Menu
+            </button>
+          {/snippet}
+          <button
+            class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+            onclick={() => {
+              isSettingsOpen = true;
+            }}
+          >
+            Settings
+          </button>
+        </DropMenu>
       </div>
-      {#if isLoadingBooks}
-        <p>Loading books...</p>
-      {:else if books.length === 0}
-        <p>No books available.</p>
-      {:else}
-        <ul class="book-list">
-          {#each books as book}
-            <li>
-              <button
-                class:selected={selectedBook?.id === book.id}
-                onclick={() => selectBook(book)}
-                type="button"
-              >
-                <span>{book.title}</span>
-                <small>
-                  {formatIcon(book.format)} · Imported {formatBookDate(book.createdAt)}
-                </small>
-              </button>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    </aside>
+    </header>
 
-    <section class="card reader-card">
-      <h2>Reader State</h2>
-      {#if !selectedBook}
-        <p>Select a book to continue.</p>
-      {:else}
-        <p class="meta">Book: {selectedBook.title}</p>
-        <p class="meta">Format: {selectedBook.format}</p>
-        <p class="meta">Page: {selectedBook.currentPage || 1} / {selectedBook.totalPages || "-"}</p>
+    {#if importProgress}
+      <p class="mb-3 text-sm text-slate-600">{importProgress.message}</p>
+    {/if}
 
-        {#if selectedBook.format.toLowerCase() === "pdf"}
-          <div class="pdf-viewer-wrapper">
-            <PdfViewer
-              filePath={selectedBook.filePath}
-              initialPage={Math.max(1, selectedBook.currentPage || 1)}
-              onPageChange={handlePdfPageChange}
-            />
-          </div>
-        {:else if isLoadingProgress}
-          <p>Loading saved progress...</p>
+    {#if readerError}
+      <p class="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">{readerError}</p>
+    {/if}
+
+    <SettingsPanel bind:isOpen={isSettingsOpen} />
+
+    <div class="grid gap-4 lg:grid-cols-[340px_1fr]">
+      <div class="space-y-4">
+        <LibraryView
+          books={books}
+          selectedBookId={selectedBook?.id ?? null}
+          isLoading={isLoadingLibrary}
+          disabledReason={libraryUnavailableReason}
+          viewMode={libraryViewMode}
+          onToggleView={(mode) => {
+            libraryViewMode = mode;
+          }}
+          onSelect={(book) => {
+            selectedBook = books.find((entry) => entry.id === book.id) ?? null;
+          }}
+          onOpen={(book) => {
+            const match = books.find((entry) => entry.id === book.id);
+            if (match) {
+              void openBook(match);
+            }
+          }}
+        />
+
+        <ReadingStatsPanel
+          stats={stats}
+          isLoading={isLoadingStats}
+          disabledReason={statsUnavailableReason}
+          selectedBookTitle={selectedBook?.title ?? null}
+          onRefresh={() => {
+            void loadStats(selectedBook?.id);
+          }}
+        />
+      </div>
+
+      <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        {#if !selectedBook}
+          <p class="text-sm text-slate-500">Open a book from the library to start reading.</p>
         {:else}
-          <label for="cfi">CFI location</label>
-          <input
-            id="cfi"
-            bind:value={cfiLocation}
-            placeholder="epubcfi(/6/2!... )"
-            type="text"
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-semibold text-slate-800">{selectedBook.title}</h2>
+              <p class="text-sm text-slate-500">
+                {selectedBook.author || "Unknown author"} · {selectedBook.format.toUpperCase()} · {selectedBook.currentPage}/{selectedBook.totalPages || "-"}
+              </p>
+            </div>
+            {#if selectedBook.format.toLowerCase() === "epub"}
+              <p class="text-xs text-slate-500">Location: {cfiLocation || "start"} · {Math.round(percentage)}%</p>
+            {/if}
+          </div>
+
+          {#if selectedBook.format.toLowerCase() === "pdf"}
+            <div class="mb-4 h-[520px] overflow-hidden rounded-lg border border-slate-200">
+              <PdfViewer
+                filePath={selectedBook.filePath}
+                initialPage={Math.max(1, selectedBook.currentPage || 1)}
+                searchTargetLocator={searchTargetLocator}
+                onPageChange={handlePdfPageChange}
+                onSessionProgress={handlePdfSessionProgress}
+              />
+            </div>
+          {:else}
+            <div class="mb-4 h-[520px] overflow-hidden rounded-lg border border-slate-200">
+              <EpubViewer
+                filePath={selectedBook.filePath}
+                initialLocation={cfiLocation}
+                initialPercentage={percentage}
+                searchTargetLocator={searchTargetLocator}
+                onLocationContext={handleReaderLocationContext}
+                onLocationChange={handleEpubLocationChange}
+              />
+            </div>
+          {/if}
+
+          <SearchPanel
+            bookId={selectedBook.id}
+            disabledReason={searchUnavailableReason}
+            isSearching={isSearching}
+            response={searchResponse}
+            onSearch={(query, page) => {
+              void handleSearch(query, page);
+            }}
+            onJump={handleSearchJump}
           />
-
-          <label for="percentage">Progress ({roundedPercentage}%)</label>
-          <input id="percentage" bind:value={percentage} max="100" min="0" step="0.1" type="range" />
-
-          <Button disabled={isSaving} onclick={() => void persistProgress("manual", true)} class="mt-4">
-            {isSaving ? "Saving..." : "Save Progress"}
-          </Button>
         {/if}
-      {/if}
-    </section>
-  </section>
+      </section>
+    </div>
+  </div>
 </main>
-
-<div class="app-version">
-  v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}
-</div>
-
-<style>
-  .auth-container {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    z-index: 100;
-  }
-
-  .settings-btn {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: var(--color-text-secondary, #4b5563);
-    padding: var(--spacing-sm, 8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-md, 8px);
-    transition: background-color 0.2s ease, color 0.2s ease;
-  }
-
-  .settings-btn:hover {
-    color: var(--color-text-primary, #111827);
-    background-color: var(--color-bg-elevated, #ffffff);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-
-  .app-version {
-    position: fixed;
-    bottom: var(--spacing-sm, 8px);
-    right: var(--spacing-sm, 8px);
-    color: var(--color-surface-dim, #121212);
-    font-size: var(--text-xs, 12px);
-    opacity: 0.5;
-    pointer-events: none;
-  }
-
-  .pdf-viewer-wrapper {
-    margin-top: 0.75rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.75rem;
-    overflow: hidden;
-    min-height: 28rem;
-  }
-</style>

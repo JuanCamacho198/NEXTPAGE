@@ -24,8 +24,12 @@
   },
   "plugins": {
     "deep-link": {
-      "mobile": false,
-      "desktop": true
+      "mobile": [],
+      "desktop": {
+        "schemes": [
+          "nextpage-desktop"
+        ]
+      }
     }
   },
   "bundle": {

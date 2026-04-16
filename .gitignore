@@ -17,6 +17,9 @@ captures/
 *.aab
 *.ap_
 
+# environment variables
+.env
+
 # Tooling
 .codedb/
 codedb.snapshot

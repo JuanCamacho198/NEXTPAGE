@@ -3,7 +3,8 @@
   import Button from "./ui/Button.svelte";
   import { listHighlights, deleteHighlight } from "../tauriClient";
   import { listBookmarks, deleteBookmark, listBooks } from "../tauriClient";
-  import type { HighlightDto, BookmarkDto, BookDto } from "../types";
+  import { getSettings, upsertSettings } from "../tauriClient";
+  import type { AppSettingDto, HighlightDto, BookmarkDto, BookDto, CommandErrorDto } from "../types";
 
   let { isOpen = $bindable(false) } = $props<{ isOpen: boolean }>();
 
@@ -16,9 +17,106 @@
 
   let filterColor = $state<string>("");
   let filterBook = $state<string>("");
+  let preferredTheme = $state("light");
+  let preferredFontScale = $state(100);
+  let settingsError = $state<string | null>(null);
+  let settingsUnavailable = $state<string | null>(null);
+  let isSavingSettings = $state(false);
+
+  type MaybeCommandError = Error & { commandError?: CommandErrorDto };
+
+  const SETTINGS_KEY = {
+    THEME: "ui.theme",
+    FONT_SCALE: "reader.fontScale",
+  } as const;
+
+  const parseSettingValue = (settings: AppSettingDto[], key: string) => {
+    const item = settings.find((entry) => entry.key === key);
+    if (!item) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(item.valueJson) as unknown;
+    } catch {
+      return null;
+    }
+  };
+
+  const mapCommandErrorMessage = (error: unknown) => {
+    const err = error as MaybeCommandError;
+    const fallback = error instanceof Error ? error.message : "Settings command failed.";
+    if (err.commandError) {
+      return {
+        message: err.commandError.message,
+        recoverable: err.commandError.recoverable,
+      };
+    }
+
+    return {
+      message: fallback,
+      recoverable: false,
+    };
+  };
 
   function closePanel() {
     isOpen = false;
+  }
+
+  async function loadAppSettings() {
+    settingsError = null;
+    settingsUnavailable = null;
+
+    try {
+      const response = await getSettings();
+      const nextTheme = parseSettingValue(response, SETTINGS_KEY.THEME);
+      const nextFontScale = parseSettingValue(response, SETTINGS_KEY.FONT_SCALE);
+
+      if (typeof nextTheme === "string" && nextTheme.length > 0) {
+        preferredTheme = nextTheme;
+      }
+
+      if (typeof nextFontScale === "number" && Number.isFinite(nextFontScale)) {
+        preferredFontScale = Math.max(80, Math.min(140, Math.round(nextFontScale)));
+      }
+    } catch (error) {
+      const details = mapCommandErrorMessage(error);
+      if (details.recoverable) {
+        settingsUnavailable = details.message;
+      } else {
+        settingsError = details.message;
+      }
+    }
+  }
+
+  async function saveAppSettings() {
+    isSavingSettings = true;
+    settingsError = null;
+    settingsUnavailable = null;
+
+    try {
+      await upsertSettings([
+        {
+          key: SETTINGS_KEY.THEME,
+          valueJson: JSON.stringify(preferredTheme),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          key: SETTINGS_KEY.FONT_SCALE,
+          valueJson: JSON.stringify(preferredFontScale),
+          updatedAt: new Date().toISOString(),
+        },
+      ]);
+    } catch (error) {
+      const details = mapCommandErrorMessage(error);
+      if (details.recoverable) {
+        settingsUnavailable = details.message;
+      } else {
+        settingsError = details.message;
+      }
+    } finally {
+      isSavingSettings = false;
+    }
   }
 
   async function loadHighlights() {
@@ -65,7 +163,17 @@
       filterColor = "";
       filterBook = "";
     }
+
+    if (tab === "auth") {
+      await loadAppSettings();
+    }
   }
+
+  $effect(() => {
+    if (isOpen) {
+      void loadAppSettings();
+    }
+  });
 
   async function handleDeleteHighlight(id: string) {
     try {
@@ -148,6 +256,47 @@
           <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">Authentication</h3>
           <p class="text-sm text-gray-600 mb-4">Sign in to sync your reading progress across devices.</p>
           <GoogleLoginButton />
+
+          <div class="mt-6 border-t border-gray-200 pt-4">
+            <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">Local Preferences</h3>
+
+            {#if settingsUnavailable}
+              <p class="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
+                {settingsUnavailable}
+              </p>
+            {/if}
+            {#if settingsError}
+              <p class="mb-2 rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-900">
+                {settingsError}
+              </p>
+            {/if}
+
+            <div class="mb-2">
+              <label class="mb-1 block text-xs text-gray-600" for="theme-select">Theme</label>
+              <select id="theme-select" bind:value={preferredTheme} class="filter-select">
+                <option value="light">Light</option>
+                <option value="sepia">Sepia</option>
+                <option value="dark">Dark</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="mb-1 block text-xs text-gray-600" for="font-scale">Reader font scale ({preferredFontScale}%)</label>
+              <input
+                id="font-scale"
+                type="range"
+                min="80"
+                max="140"
+                step="5"
+                bind:value={preferredFontScale}
+                class="w-full"
+              />
+            </div>
+
+            <Button onclick={() => void saveAppSettings()} disabled={isSavingSettings} size="sm">
+              {isSavingSettings ? "Saving..." : "Save preferences"}
+            </Button>
+          </div>
         </div>
       {:else if activeTab === "highlights"}
         <div class="highlights-section">

@@ -4,6 +4,9 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 
 export default defineConfig({
+  // Tauri loads files from local bundle paths in production.
+  // Relative asset URLs avoid a blank window caused by absolute /assets paths.
+  base: "./",
   plugins: [
     tailwindcss(),
     svelte()

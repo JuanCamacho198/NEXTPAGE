@@ -6,7 +6,10 @@ use tauri::Manager;
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
-use crate::models::{BookDto, BookImportInput, ReadingProgressDto, SaveProgressInput};
+use crate::models::{
+    BookDto, BookImportInput, BookmarkDto, HighlightDto, ReadingProgressDto, SaveBookmarkInput,
+    SaveHighlightInput, SaveProgressInput,
+};
 
 pub struct LibraryRepository {
     connection: Connection,
@@ -265,6 +268,150 @@ impl LibraryRepository {
                 progress.percentage,
                 progress.updated_at
             ],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_highlights(&self, book_id: &str) -> AppResult<Vec<HighlightDto>> {
+        let mut statement = self.connection.prepare(
+            "SELECT id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, created_at, updated_at
+             FROM highlights
+             WHERE book_id = ?1 AND deleted_at IS NULL
+             ORDER BY page ASC, rect_top ASC",
+        )?;
+
+        let rows = statement.query_map(params![book_id], |row| {
+            Ok(HighlightDto {
+                id: row.get(0)?,
+                book_id: row.get(1)?,
+                color: row.get(2)?,
+                text: row.get(3)?,
+                page: row.get(4)?,
+                rect_left: row.get(5)?,
+                rect_right: row.get(6)?,
+                rect_top: row.get(7)?,
+                rect_bottom: row.get(8)?,
+                cfi: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
+            })
+        })?;
+
+        let highlights = rows.collect::<Result<Vec<_>, _>>()?;
+        Ok(highlights)
+    }
+
+    pub fn save_highlight(&self, payload: SaveHighlightInput) -> AppResult<HighlightDto> {
+        if payload.book_id.trim().is_empty() {
+            return Err(AppError::MissingBookId);
+        }
+
+        let now = Utc::now().to_rfc3339();
+        let id = Uuid::new_v4().to_string();
+
+        self.connection.execute(
+            "INSERT INTO highlights (id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, created_at, updated_at, version)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1)",
+            params![
+                id,
+                payload.book_id,
+                payload.color,
+                payload.text,
+                payload.page,
+                payload.rect_left,
+                payload.rect_right,
+                payload.rect_top,
+                payload.rect_bottom,
+                payload.cfi,
+                now,
+                now
+            ],
+        )?;
+
+        Ok(HighlightDto {
+            id,
+            book_id: payload.book_id,
+            color: payload.color,
+            text: payload.text,
+            page: payload.page,
+            rect_left: payload.rect_left,
+            rect_right: payload.rect_right,
+            rect_top: payload.rect_top,
+            rect_bottom: payload.rect_bottom,
+            cfi: payload.cfi,
+            created_at: now.clone(),
+            updated_at: now,
+        })
+    }
+
+    pub fn delete_highlight(&self, id: &str) -> AppResult<()> {
+        let now = Utc::now().to_rfc3339();
+        self.connection.execute(
+            "UPDATE highlights SET deleted_at = ?1, version = version + 1 WHERE id = ?2",
+            params![now, id],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_bookmarks(&self, book_id: &str) -> AppResult<Vec<BookmarkDto>> {
+        let mut statement = self.connection.prepare(
+            "SELECT id, book_id, page, position, title, created_at
+             FROM bookmarks
+             WHERE book_id = ?1 AND deleted_at IS NULL
+             ORDER BY page ASC, position ASC",
+        )?;
+
+        let rows = statement.query_map(params![book_id], |row| {
+            Ok(BookmarkDto {
+                id: row.get(0)?,
+                book_id: row.get(1)?,
+                page: row.get(2)?,
+                position: row.get(3)?,
+                title: row.get(4)?,
+                created_at: row.get(5)?,
+            })
+        })?;
+
+        let bookmarks = rows.collect::<Result<Vec<_>, _>>()?;
+        Ok(bookmarks)
+    }
+
+    pub fn save_bookmark(&self, payload: SaveBookmarkInput) -> AppResult<BookmarkDto> {
+        if payload.book_id.trim().is_empty() {
+            return Err(AppError::MissingBookId);
+        }
+
+        let now = Utc::now().to_rfc3339();
+        let id = Uuid::new_v4().to_string();
+
+        self.connection.execute(
+            "INSERT INTO bookmarks (id, book_id, page, position, title, created_at, version)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1)",
+            params![
+                id,
+                payload.book_id,
+                payload.page,
+                payload.position,
+                payload.title,
+                now
+            ],
+        )?;
+
+        Ok(BookmarkDto {
+            id,
+            book_id: payload.book_id,
+            page: payload.page,
+            position: payload.position,
+            title: payload.title,
+            created_at: now,
+        })
+    }
+
+    pub fn delete_bookmark(&self, id: &str) -> AppResult<()> {
+        let now = Utc::now().to_rfc3339();
+        self.connection.execute(
+            "UPDATE bookmarks SET deleted_at = ?1, version = version + 1 WHERE id = ?2",
+            params![now, id],
         )?;
         Ok(())
     }

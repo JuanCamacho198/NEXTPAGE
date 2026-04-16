@@ -42,7 +42,13 @@ fn main() {
             commands::upsert_progress,
             commands::import_book,
             commands::get_file_bytes,
-            commands::update_book_progress
+            commands::update_book_progress,
+            commands::list_highlights,
+            commands::save_highlight,
+            commands::delete_highlight,
+            commands::list_bookmarks,
+            commands::save_bookmark,
+            commands::delete_bookmark
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

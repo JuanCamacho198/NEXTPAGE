@@ -1,5 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { BookDto, ReadingProgressDto, SaveProgressInput } from "./types";
+import type {
+  BookDto,
+  ReadingProgressDto,
+  SaveProgressInput,
+  HighlightDto,
+  BookmarkDto,
+  SaveHighlightInput,
+  SaveBookmarkInput,
+} from "./types";
 
 export const listBooks = async (): Promise<BookDto[]> => {
   return invoke<BookDto[]>("listBooks");
@@ -53,4 +61,28 @@ export const fileExists = async (path: string): Promise<boolean> => {
 
 export const saveBookFile = async (id: string, data: number[]): Promise<void> => {
   await invoke("saveBookFile", { id, data });
+};
+
+export const listHighlights = async (bookId?: string): Promise<HighlightDto[]> => {
+  return invoke<HighlightDto[]>("listHighlights", { bookId });
+};
+
+export const saveHighlight = async (highlight: SaveHighlightInput): Promise<void> => {
+  await invoke("saveHighlight", { highlight });
+};
+
+export const deleteHighlight = async (id: string): Promise<void> => {
+  await invoke("deleteHighlight", { id });
+};
+
+export const listBookmarks = async (bookId?: string): Promise<BookmarkDto[]> => {
+  return invoke<BookmarkDto[]>("listBookmarks", { bookId });
+};
+
+export const saveBookmark = async (bookmark: SaveBookmarkInput): Promise<void> => {
+  await invoke("saveBookmark", { bookmark });
+};
+
+export const deleteBookmark = async (id: string): Promise<void> => {
+  await invoke("deleteBookmark", { id });
 };

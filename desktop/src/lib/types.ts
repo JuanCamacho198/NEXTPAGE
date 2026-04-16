@@ -31,3 +31,37 @@ export type BookImportInput = {
   author?: string;
   format: string;
 };
+
+export type HighlightDto = {
+  id: string;
+  bookId: string;
+  text: string;
+  color: string;
+  pageNumber: number;
+  createdAt: string;
+};
+
+export type BookmarkDto = {
+  id: string;
+  bookId: string;
+  pageNumber: number;
+  title?: string;
+  createdAt: string;
+};
+
+export type SaveHighlightInput = {
+  id: string;
+  bookId: string;
+  text: string;
+  color: string;
+  pageNumber: number;
+  createdAt: string;
+};
+
+export type SaveBookmarkInput = {
+  id: string;
+  bookId: string;
+  pageNumber: number;
+  title?: string;
+  createdAt: string;
+};

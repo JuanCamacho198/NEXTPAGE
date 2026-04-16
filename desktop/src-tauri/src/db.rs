@@ -6,7 +6,11 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::AppResult;
 
-const MIGRATIONS: [&str; 1] = [include_str!("../migrations/0001_init.sql")];
+const MIGRATIONS: [&str; 3] = [
+    include_str!("../migrations/0001_init.sql"),
+    include_str!("../migrations/0002_books.sql"),
+    include_str!("../migrations/0003_highlights.sql"),
+];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {
     let app_data_dir = app.path().app_data_dir()?;

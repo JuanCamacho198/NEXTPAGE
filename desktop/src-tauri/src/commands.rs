@@ -3,7 +3,10 @@ use std::path::PathBuf;
 
 use tauri::State;
 
-use crate::models::{BookDto, BookImportInput, ReadingProgressDto, SaveProgressInput};
+use crate::models::{
+    BookmarkDto, BookDto, BookImportInput, HighlightDto, ReadingProgressDto, SaveBookmarkInput,
+    SaveHighlightInput, SaveProgressInput,
+};
 use crate::state::AppState;
 
 #[tauri::command(rename_all = "camelCase")]
@@ -76,4 +79,54 @@ pub async fn update_book_progress(
     repository
         .update_book_progress(&book_id, current_page)
         .map_err(|e| format!("{}", e))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn list_highlights(state: State<'_, AppState>, book_id: String) -> Result<Vec<HighlightDto>, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository
+        .list_highlights(&book_id)
+        .map_err(|e| format!("{}", e))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn save_highlight(
+    state: State<'_, AppState>,
+    payload: SaveHighlightInput,
+) -> Result<HighlightDto, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository
+        .save_highlight(payload)
+        .map_err(|e| format!("{}", e))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn delete_highlight(state: State<'_, AppState>, id: String) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.delete_highlight(&id).map_err(|e| format!("{}", e))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn list_bookmarks(state: State<'_, AppState>, book_id: String) -> Result<Vec<BookmarkDto>, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository
+        .list_bookmarks(&book_id)
+        .map_err(|e| format!("{}", e))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn save_bookmark(
+    state: State<'_, AppState>,
+    payload: SaveBookmarkInput,
+) -> Result<BookmarkDto, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository
+        .save_bookmark(payload)
+        .map_err(|e| format!("{}", e))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn delete_bookmark(state: State<'_, AppState>, id: String) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.delete_bookmark(&id).map_err(|e| format!("{}", e))
 }

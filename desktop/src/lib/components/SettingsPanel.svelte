@@ -1,11 +1,100 @@
 <script lang="ts">
   import GoogleLoginButton from "./GoogleLoginButton.svelte";
   import Button from "./ui/Button.svelte";
+  import { listHighlights, deleteHighlight } from "../tauriClient";
+  import { listBookmarks, deleteBookmark, listBooks } from "../tauriClient";
+  import type { HighlightDto, BookmarkDto, BookDto } from "../types";
 
   let { isOpen = $bindable(false) } = $props<{ isOpen: boolean }>();
 
+  let activeTab = $state<"auth" | "highlights" | "bookmarks" | "about">("auth");
+
+  let highlights = $state<HighlightDto[]>([]);
+  let bookmarks = $state<BookmarkDto[]>([]);
+  let books = $state<BookDto[]>([]);
+  let isLoading = $state(false);
+
+  let filterColor = $state<string>("");
+  let filterBook = $state<string>("");
+
   function closePanel() {
     isOpen = false;
+  }
+
+  async function loadHighlights() {
+    isLoading = true;
+    try {
+      highlights = await listHighlights(filterBook || undefined);
+    } catch (err) {
+      console.error("Failed to load highlights:", err);
+      highlights = [];
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  async function loadBookmarks() {
+    isLoading = true;
+    try {
+      bookmarks = await listBookmarks(filterBook || undefined);
+    } catch (err) {
+      console.error("Failed to load bookmarks:", err);
+      bookmarks = [];
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  async function loadBooks() {
+    try {
+      books = await listBooks();
+    } catch (err) {
+      console.error("Failed to load books:", err);
+    }
+  }
+
+  async function handleTabChange(tab: "auth" | "highlights" | "bookmarks" | "about") {
+    activeTab = tab;
+    if (tab === "highlights" || tab === "bookmarks") {
+      await loadBooks();
+      if (tab === "highlights") {
+        await loadHighlights();
+      } else {
+        await loadBookmarks();
+      }
+      filterColor = "";
+      filterBook = "";
+    }
+  }
+
+  async function handleDeleteHighlight(id: string) {
+    try {
+      await deleteHighlight(id);
+      await loadHighlights();
+    } catch (err) {
+      console.error("Failed to delete highlight:", err);
+    }
+  }
+
+  async function handleDeleteBookmark(id: string) {
+    try {
+      await deleteBookmark(id);
+      await loadBookmarks();
+    } catch (err) {
+      console.error("Failed to delete bookmark:", err);
+    }
+  }
+
+  function getBookTitle(bookId: string): string {
+    return books.find((b) => b.id === bookId)?.title || "Unknown";
+  }
+
+  function handleFilterChange() {
+    if (activeTab === "highlights") {
+      loadHighlights();
+    } else if (activeTab === "bookmarks") {
+      loadBookmarks();
+    }
   }
 </script>
 
@@ -17,20 +106,156 @@
       <h2 class="m-0 text-lg font-semibold text-gray-900">Settings</h2>
       <button class="bg-transparent border-none text-xl cursor-pointer text-gray-600 p-1 flex items-center justify-center hover:text-gray-900" onclick={closePanel} aria-label="Close settings">✕</button>
     </div>
-    
-    <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-8">
-      <div class="auth-section">
-        <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">Authentication</h3>
-        <p class="text-sm text-gray-600 mb-4">Sign in to sync your reading progress across devices.</p>
-        <GoogleLoginButton />
-      </div>
 
-      <div class="about-section">
-        <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">About NextPage</h3>
-        <p class="text-sm text-gray-600">
-          Version {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}
-        </p>
-      </div>
+    <div class="tabs">
+      <button
+        type="button"
+        class="tab"
+        class:active={activeTab === "auth"}
+        onclick={() => handleTabChange("auth")}
+      >
+        Auth
+      </button>
+      <button
+        type="button"
+        class="tab"
+        class:active={activeTab === "highlights"}
+        onclick={() => handleTabChange("highlights")}
+      >
+        Highlights
+      </button>
+      <button
+        type="button"
+        class="tab"
+        class:active={activeTab === "bookmarks"}
+        onclick={() => handleTabChange("bookmarks")}
+      >
+        Bookmarks
+      </button>
+      <button
+        type="button"
+        class="tab"
+        class:active={activeTab === "about"}
+        onclick={() => handleTabChange("about")}
+      >
+        About
+      </button>
+    </div>
+    
+    <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+      {#if activeTab === "auth"}
+        <div class="auth-section">
+          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">Authentication</h3>
+          <p class="text-sm text-gray-600 mb-4">Sign in to sync your reading progress across devices.</p>
+          <GoogleLoginButton />
+        </div>
+      {:else if activeTab === "highlights"}
+        <div class="highlights-section">
+          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">Highlights</h3>
+
+          <div class="filters">
+            <select
+              bind:value={filterBook}
+              onchange={handleFilterChange}
+              class="filter-select"
+            >
+              <option value="">All Books</option>
+              {#each books as book}
+                <option value={book.id}>{book.title}</option>
+              {/each}
+            </select>
+            <select
+              bind:value={filterColor}
+              onchange={handleFilterChange}
+              class="filter-select"
+            >
+              <option value="">All Colors</option>
+              <option value="#fef08a">Yellow</option>
+              <option value="#bbf7d0">Green</option>
+              <option value="#bfdbfe">Blue</option>
+              <option value="#fbcfe8">Pink</option>
+              <option value="#fed7aa">Orange</option>
+            </select>
+          </div>
+
+          {#if isLoading}
+            <div class="loading">Loading highlights...</div>
+          {:else if highlights.length === 0}
+            <div class="empty">No highlights yet</div>
+          {:else}
+            <ul class="item-list">
+              {#each highlights as highlight}
+                <li class="item highlight-item">
+                  <div class="color-indicator" style="background-color: {highlight.color};"></div>
+                  <div class="item-content">
+                    <p class="item-text">{highlight.text}</p>
+                    <p class="item-meta">
+                      {getBookTitle(highlight.bookId)} - Page {highlight.pageNumber}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    class="delete-btn"
+                    onclick={() => handleDeleteHighlight(highlight.id)}
+                    title="Delete highlight"
+                  >
+                    ×
+                  </button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      {:else if activeTab === "bookmarks"}
+        <div class="bookmarks-section">
+          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">Bookmarks</h3>
+
+          <div class="filters">
+            <select
+              bind:value={filterBook}
+              onchange={handleFilterChange}
+              class="filter-select"
+            >
+              <option value="">All Books</option>
+              {#each books as book}
+                <option value={book.id}>{book.title}</option>
+              {/each}
+            </select>
+          </div>
+
+          {#if isLoading}
+            <div class="loading">Loading bookmarks...</div>
+          {:else if bookmarks.length === 0}
+            <div class="empty">No bookmarks yet</div>
+          {:else}
+            <ul class="item-list">
+              {#each bookmarks as bookmark}
+                <li class="item bookmark-item">
+                  <div class="item-content">
+                    <p class="item-text">{getBookTitle(bookmark.bookId)}</p>
+                    <p class="item-meta">Page {bookmark.pageNumber}</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="delete-btn"
+                    onclick={() => handleDeleteBookmark(bookmark.id)}
+                    title="Delete bookmark"
+                  >
+                    ×
+                  </button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      {:else if activeTab === "about"}
+        <div class="about-section">
+          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">About NextPage</h3>
+          <p class="text-sm text-gray-600">
+            Version {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}
+          </p>
+        </div>
+      {/if}
     </div>
   </aside>
 {/if}
@@ -43,5 +268,117 @@
     to {
       transform: translateX(0);
     }
+  }
+
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 12px 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 13px;
+    color: #6b7280;
+    border-bottom: 2px solid transparent;
+  }
+
+  .tab:hover {
+    color: #374151;
+  }
+
+  .tab.active {
+    color: #374151;
+    border-bottom-color: #374151;
+  }
+
+  .filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .filter-select {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 13px;
+    background: #fff;
+  }
+
+  .loading,
+  .empty {
+    padding: 24px;
+    text-align: center;
+    font-size: 13px;
+    color: #6b7280;
+  }
+
+  .item-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    background: #f9fafb;
+  }
+
+  .color-indicator {
+    width: 4px;
+    height: 100%;
+    min-height: 40px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .item-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .item-text {
+    margin: 0;
+    font-size: 13px;
+    color: #374151;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .item-meta {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  .delete-btn {
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .delete-btn:hover {
+    background: #fee2e2;
+    color: #dc2626;
   }
 </style>

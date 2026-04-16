@@ -16,6 +16,9 @@ pub enum AppError {
 
     #[error("invalid input: {0}")]
     InvalidInput(String),
+
+    #[error("compatibility error: {0}")]
+    Compatibility(String),
 }
 
 pub type AppResult<T> = Result<T, AppError>;

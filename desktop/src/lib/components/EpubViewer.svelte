@@ -8,9 +8,18 @@
     initialLocation?: string;
     initialPercentage?: number;
     onLocationChange?: (cfiLocation: string, percentage: number) => void;
+    searchTargetLocator?: string | null;
+    onLocationContext?: (context: { locator: string; percentage: number }) => void;
   };
 
-  let { filePath, initialLocation = "", initialPercentage = 0, onLocationChange }: Props = $props();
+  let {
+    filePath,
+    initialLocation = "",
+    initialPercentage = 0,
+    onLocationChange,
+    searchTargetLocator = null,
+    onLocationContext,
+  }: Props = $props();
 
   let viewerContainer: HTMLDivElement | undefined = $state();
   let book: Book | null = $state(null);
@@ -20,6 +29,7 @@
 
   let currentLocation = $state("");
   let currentPercentage = $state(initialPercentage);
+  let lastJumpTarget = "";
   let displaySettings = $state({
     fontSize: 100,
     fontFamily: "Georgia",
@@ -117,6 +127,10 @@
       currentLocation = loc.start.cfi;
       currentPercentage = loc.start.percentage * 100;
       onLocationChange?.(currentLocation, currentPercentage);
+      onLocationContext?.({
+        locator: currentLocation,
+        percentage: currentPercentage,
+      });
     });
 
     rendition.on("relocated", (loc: { start: { cfi: string } }) => {
@@ -130,6 +144,16 @@
     (rendition as Rendition).themes.fontSize(`${displaySettings.fontSize}%`);
     (rendition as Rendition).themes.font(displaySettings.fontFamily);
   }
+
+  $effect(() => {
+    const target = searchTargetLocator?.trim();
+    if (!target || !rendition || target === lastJumpTarget) {
+      return;
+    }
+
+    lastJumpTarget = target;
+    void rendition.display(target);
+  });
 
   function goToPrev() {
     if (!rendition) return;

@@ -8,14 +8,31 @@
     filePath: string;
     initialPage?: number;
     onPageChange?: (page: number, total: number) => void;
+    searchTargetLocator?: string | null;
+    onSessionProgress?: (event: {
+      startedAt: string;
+      endedAt?: string;
+      durationSeconds: number;
+      startPercentage?: number;
+      endPercentage?: number;
+    }) => void;
   };
 
-  let { filePath, initialPage = 1, onPageChange }: Props = $props();
+  let {
+    filePath,
+    initialPage = 1,
+    onPageChange,
+    searchTargetLocator = null,
+    onSessionProgress,
+  }: Props = $props();
 
   let canvas: HTMLCanvasElement | undefined = $state();
   let textLayer: HTMLDivElement | undefined = $state();
   let currentPage = $state(initialPage);
   let totalPages = $state(0);
+  let flashSearchResult = $state(false);
+  let sessionStartAt = new Date().toISOString();
+  let lastPercent = 0;
   let scale = $state(1.5);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
@@ -46,6 +63,52 @@
     }
   });
 
+  const readProgressPercent = (page: number, total: number) => {
+    if (total <= 0) {
+      return 0;
+    }
+
+    return Math.max(0, Math.min(100, (page / total) * 100));
+  };
+
+  const emitSessionProgress = (nextPage: number, nextTotal: number) => {
+    const now = new Date();
+    const nextPercent = readProgressPercent(nextPage, nextTotal);
+    const startedAt = sessionStartAt;
+    const endedAt = now.toISOString();
+    const started = new Date(startedAt);
+    const durationSeconds = Math.max(0, Math.round((now.getTime() - started.getTime()) / 1000));
+
+    onSessionProgress?.({
+      startedAt,
+      endedAt,
+      durationSeconds,
+      startPercentage: lastPercent,
+      endPercentage: nextPercent,
+    });
+
+    sessionStartAt = endedAt;
+    lastPercent = nextPercent;
+  };
+
+  const parseLocatorPage = (locator: string | null | undefined): number | null => {
+    if (!locator) {
+      return null;
+    }
+
+    const match = locator.match(/(\d+)$/);
+    if (!match) {
+      return null;
+    }
+
+    const parsed = Number.parseInt(match[1], 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return null;
+    }
+
+    return parsed;
+  };
+
   async function loadPdf() {
     if (!filePath) return;
 
@@ -64,6 +127,9 @@
 
       await renderPage(currentPage);
       onPageChange?.(currentPage, totalPages);
+      emitSessionProgress(currentPage, totalPages);
+      lastPercent = readProgressPercent(currentPage, totalPages);
+      sessionStartAt = new Date().toISOString();
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to load PDF";
     } finally {
@@ -169,6 +235,7 @@
     currentPage--;
     renderPage(currentPage);
     onPageChange?.(currentPage, totalPages);
+    emitSessionProgress(currentPage, totalPages);
   }
 
   function goToNextPage() {
@@ -177,6 +244,7 @@
     currentPage++;
     renderPage(currentPage);
     onPageChange?.(currentPage, totalPages);
+    emitSessionProgress(currentPage, totalPages);
   }
 
   async function goToPage(event: Event) {
@@ -187,8 +255,31 @@
       currentPage = page;
       await renderPage(currentPage);
       onPageChange?.(currentPage, totalPages);
+      emitSessionProgress(currentPage, totalPages);
     }
   }
+
+  $effect(() => {
+    const targetPage = parseLocatorPage(searchTargetLocator);
+    if (!targetPage || !pdfDoc || totalPages <= 0 || targetPage > totalPages || targetPage === currentPage) {
+      return;
+    }
+
+    hideToolbar();
+    currentPage = targetPage;
+    flashSearchResult = true;
+    void renderPage(currentPage);
+    onPageChange?.(currentPage, totalPages);
+    emitSessionProgress(currentPage, totalPages);
+
+    const timer = window.setTimeout(() => {
+      flashSearchResult = false;
+    }, 900);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  });
 
   export function setScale(newScale: number) {
     scale = newScale;
@@ -237,7 +328,7 @@
       </select>
     </div>
     <div class="canvas-container">
-      <div class="canvas-wrapper">
+      <div class="canvas-wrapper" class:search-hit={flashSearchResult}>
         <canvas bind:this={canvas}></canvas>
         <div bind:this={textLayer} class="text-layer"></div>
         {#if showToolbar && selectionPosition}
@@ -338,6 +429,12 @@
   .canvas-wrapper {
     position: relative;
     display: inline-block;
+  }
+
+  .canvas-wrapper.search-hit {
+    outline: 3px solid #3b82f6;
+    outline-offset: 6px;
+    border-radius: 4px;
   }
 
   canvas {

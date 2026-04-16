@@ -39,7 +39,10 @@ fn main() {
             commands::upsert_book,
             commands::get_progress,
             commands::save_progress,
-            commands::upsert_progress
+            commands::upsert_progress,
+            commands::import_book,
+            commands::get_file_bytes,
+            commands::update_book_progress
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

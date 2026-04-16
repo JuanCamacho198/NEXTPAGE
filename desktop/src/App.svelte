@@ -4,12 +4,15 @@
   import { onMount } from "svelte";
 
   import SettingsPanel from "./lib/components/SettingsPanel.svelte";
+  import PdfViewer from "./lib/components/PdfViewer.svelte";
   import Button from "./lib/components/ui/Button.svelte";
   import DropMenu from "./lib/components/ui/DropMenu.svelte";
 
   import type { BookDto, SaveProgressInput } from "./lib/types";
-  import { getProgress, listBooks, saveProgress } from "./lib/tauriClient";
+  import { getProgress, listBooks, saveProgress, updateBookProgress } from "./lib/tauriClient";
   import { SyncService } from "./lib/services/SyncService";
+  import { pickFile } from "./lib/services/FilePicker";
+  import { importBook, type ImportProgress } from "./lib/services/BookImportService";
 
   let books = $state<BookDto[]>([]);
   let selectedBook = $state<BookDto | null>(null);
@@ -18,10 +21,13 @@
   let isLoadingBooks = $state(false);
   let isLoadingProgress = $state(false);
   let isSaving = $state(false);
+  let isImporting = $state(false);
+  let importProgress = $state<ImportProgress | null>(null);
   let error = $state<string | null>(null);
   let status = $state("Ready");
   let hasUnsavedChanges = $state(false);
   let isSettingsOpen = $state(false);
+  let currentFilePath = $state<string | null>(null);
 
   const roundedPercentage = $derived(Math.round(percentage * 100) / 100);
   let lastPersistedSnapshot = "";
@@ -115,6 +121,41 @@
     };
   };
 
+  const formatBookDate = (isoDate: string) => {
+    const parsed = new Date(isoDate);
+    if (Number.isNaN(parsed.getTime())) {
+      return "Unknown date";
+    }
+
+    return parsed.toLocaleDateString();
+  };
+
+  const formatIcon = (format: string) => {
+    return format.toLowerCase() === "pdf" ? "PDF" : "BOOK";
+  };
+
+  const handlePdfPageChange = async (page: number, total: number) => {
+    const current = selectedBook;
+    if (!current) {
+      return;
+    }
+
+    const nextBook = {
+      ...current,
+      currentPage: page,
+      totalPages: total,
+    };
+
+    selectedBook = nextBook;
+    books = books.map((book) => (book.id === current.id ? nextBook : book));
+
+    try {
+      await updateBookProgress(current.id, page);
+    } catch {
+      status = "Failed to persist page progress.";
+    }
+  };
+
   const loadBooks = async () => {
     isLoadingBooks = true;
     error = null;
@@ -140,6 +181,41 @@
 
   const selectBook = (book: BookDto) => {
     selectedBook = book;
+  };
+
+  const handleImportFile = async () => {
+    const file = await pickFile();
+    if (!file) return;
+
+    currentFilePath = file.path;
+    isImporting = true;
+    error = null;
+
+    try {
+      const format = file.name.toLowerCase().endsWith(".epub") ? "epub" : "pdf";
+      const title = file.name.replace(/\.(pdf|epub)$/i, "");
+
+      const newBook = await importBook(
+        {
+          sourcePath: file.path,
+          title,
+          format,
+        },
+        (progress) => {
+          importProgress = progress;
+        }
+      );
+
+      books = [...books, newBook];
+      selectedBook = newBook;
+      status = `Imported: ${newBook.title}`;
+    } catch (importError) {
+      error = importError instanceof Error ? importError.message : "Import failed";
+      status = "Import failed";
+    } finally {
+      isImporting = false;
+      importProgress = null;
+    }
   };
 
   const loadProgress = async (bookId: string) => {
@@ -347,6 +423,14 @@
   <section class="workspace">
     <aside class="card library-card">
       <h2>Library</h2>
+      <div class="library-actions">
+        <Button onclick={handleImportFile} disabled={isImporting}>
+          {isImporting ? "Importing..." : "Import Book"}
+        </Button>
+        {#if importProgress}
+          <span class="import-status">{importProgress.message}</span>
+        {/if}
+      </div>
       {#if isLoadingBooks}
         <p>Loading books...</p>
       {:else if books.length === 0}
@@ -361,7 +445,9 @@
                 type="button"
               >
                 <span>{book.title}</span>
-                <small>{book.author}</small>
+                <small>
+                  {formatIcon(book.format)} · Imported {formatBookDate(book.createdAt)}
+                </small>
               </button>
             </li>
           {/each}
@@ -376,8 +462,17 @@
       {:else}
         <p class="meta">Book: {selectedBook.title}</p>
         <p class="meta">Format: {selectedBook.format}</p>
+        <p class="meta">Page: {selectedBook.currentPage || 1} / {selectedBook.totalPages || "-"}</p>
 
-        {#if isLoadingProgress}
+        {#if selectedBook.format.toLowerCase() === "pdf"}
+          <div class="pdf-viewer-wrapper">
+            <PdfViewer
+              filePath={selectedBook.filePath}
+              initialPage={Math.max(1, selectedBook.currentPage || 1)}
+              onPageChange={handlePdfPageChange}
+            />
+          </div>
+        {:else if isLoadingProgress}
           <p>Loading saved progress...</p>
         {:else}
           <label for="cfi">CFI location</label>
@@ -439,5 +534,13 @@
     font-size: var(--text-xs, 12px);
     opacity: 0.5;
     pointer-events: none;
+  }
+
+  .pdf-viewer-wrapper {
+    margin-top: 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    min-height: 28rem;
   }
 </style>

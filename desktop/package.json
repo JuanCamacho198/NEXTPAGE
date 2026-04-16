@@ -11,7 +11,8 @@
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "tauri": "bunx tauri",
     "tauri:dev": "bunx tauri dev",
-    "tauri:build": "bunx tauri build"
+    "tauri:build": "bunx tauri build",
+    "test": "vitest run"
   },
   "engines": {
     "bun": ">=1.3.0"
@@ -22,16 +23,22 @@
     "@tauri-apps/plugin-deep-link": "^2.4.8",
     "@tauri-apps/plugin-dialog": "^2.7.0",
     "@tauri-apps/plugin-fs": "^2.5.0",
+    "epubjs": "^0.3.93",
     "pdfjs-dist": "^5.6.205",
     "svelte": "^5.55.4"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.2.9",
+    "@testing-library/user-event": "^14.6.1",
     "@tailwindcss/vite": "^4.2.2",
     "@tauri-apps/cli": "^2.10.1",
+    "jsdom": "^27.4.0",
     "svelte-check": "^4.4.6",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
-    "vite": "^8.0.8"
+    "vite": "^8.0.8",
+    "vitest": "^4.1.4"
   }
 }

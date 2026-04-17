@@ -279,6 +279,8 @@
 
       if (!isStaleLoad(requestId)) {
         isLoading = false;
+      } else if (pdfDoc && totalPages > 0) {
+        isLoading = false;
       }
     }
   }

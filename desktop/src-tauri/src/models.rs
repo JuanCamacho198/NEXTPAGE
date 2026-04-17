@@ -112,6 +112,14 @@ pub struct BookCoverDto {
     pub byte_size: i64,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpsertBookCoverInput {
+    pub book_id: String,
+    pub data: Vec<u8>,
+    pub mime_type: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LibraryBookDto {

@@ -391,6 +391,96 @@ impl LibraryRepository {
         })
     }
 
+    pub fn upsert_book_cover_from_bytes(
+        &self,
+        app: &tauri::AppHandle,
+        book_id: &str,
+        data: &[u8],
+        mime_type: Option<&str>,
+    ) -> AppResult<BookCoverDto> {
+        if book_id.trim().is_empty() {
+            return Err(AppError::MissingBookId);
+        }
+        if data.is_empty() {
+            return Err(AppError::InvalidInput(
+                "Cover binary payload cannot be empty".to_string(),
+            ));
+        }
+
+        let normalized_mime = mime_type
+            .map(|value| value.trim().to_ascii_lowercase())
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| "image/png".to_string());
+
+        let extension = Self::extension_from_mime_type(&normalized_mime).ok_or_else(|| {
+            AppError::InvalidInput(format!("Unsupported cover mime type: {}", normalized_mime))
+        })?;
+
+        let covers_dir = self.resolve_covers_dir(app)?;
+        fs::create_dir_all(&covers_dir)?;
+        let storage_path = covers_dir.join(format!("{}.{}", book_id, extension));
+
+        fs::write(&storage_path, data)?;
+        let metadata = fs::metadata(&storage_path)?;
+        let now = Utc::now().to_rfc3339();
+
+        let existing_cover: Option<(String, String)> = self
+            .connection
+            .query_row(
+                "SELECT id, storage_path
+                 FROM book_covers
+                 WHERE book_id = ?1 AND deleted_at IS NULL
+                 LIMIT 1",
+                params![book_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()?;
+
+        let cover_id = existing_cover
+            .as_ref()
+            .map(|(id, _)| id.clone())
+            .unwrap_or_else(|| Uuid::new_v4().to_string());
+
+        self.connection.execute(
+            "INSERT INTO book_covers (id, book_id, storage_path, mime_type, width, height, byte_size, checksum, created_at, updated_at, deleted_at, version)
+             VALUES (?1, ?2, ?3, ?4, NULL, NULL, ?5, NULL, ?6, ?6, NULL, 1)
+             ON CONFLICT(id) DO UPDATE SET
+               storage_path = excluded.storage_path,
+               mime_type = excluded.mime_type,
+               width = excluded.width,
+               height = excluded.height,
+               byte_size = excluded.byte_size,
+               checksum = excluded.checksum,
+               updated_at = excluded.updated_at,
+               deleted_at = NULL,
+               version = book_covers.version + 1",
+            params![
+                cover_id,
+                book_id,
+                storage_path.to_string_lossy().to_string(),
+                normalized_mime,
+                metadata.len() as i64,
+                now,
+            ],
+        )?;
+
+        if let Some((_, old_storage_path)) = existing_cover {
+            let new_storage_path = storage_path.to_string_lossy().to_string();
+            if old_storage_path != new_storage_path {
+                let _ = fs::remove_file(old_storage_path);
+            }
+        }
+
+        Ok(BookCoverDto {
+            book_id: book_id.to_string(),
+            storage_path: storage_path.to_string_lossy().to_string(),
+            mime_type: normalized_mime,
+            width: None,
+            height: None,
+            byte_size: metadata.len() as i64,
+        })
+    }
+
     pub fn update_book_progress(&self, book_id: &str, current_page: i32) -> AppResult<()> {
         if book_id.trim().is_empty() {
             return Err(AppError::MissingBookId);
@@ -1309,6 +1399,15 @@ impl LibraryRepository {
             "png" => "image/png",
             "webp" => "image/webp",
             _ => "application/octet-stream",
+        }
+    }
+
+    fn extension_from_mime_type(mime_type: &str) -> Option<&'static str> {
+        match mime_type {
+            "image/jpeg" | "image/jpg" => Some("jpg"),
+            "image/png" => Some("png"),
+            "image/webp" => Some("webp"),
+            _ => None,
         }
     }
 }

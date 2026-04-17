@@ -8,7 +8,7 @@ use crate::models::{
     AppSettingDto, BookDeleteInput, BookmarkDto, BookDto, BookImportInput, CommandErrorDto,
     HideBookInput, HighlightDto, IndexBookTextInput, LibraryBookDto, ListLibraryBooksInput,
     ReadingProgressDto, ReadingSessionInput, ReadingStatsSummaryDto, SaveBookmarkInput,
-    SaveHighlightInput,
+    SaveHighlightInput, UpsertBookCoverInput,
     SaveProgressInput, SearchBookTextInput, SearchBookTextResponse,
 };
 use crate::state::AppState;
@@ -376,6 +376,34 @@ pub async fn save_book_file(
     repository
         .save_book_file(&id, &data)
         .map_err(map_command_error)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn upsert_book_cover(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    payload: UpsertBookCoverInput,
+) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository
+        .upsert_book_cover_from_bytes(
+            &app,
+            &payload.book_id,
+            &payload.data,
+            payload.mime_type.as_deref(),
+        )
+        .map_err(map_command_error)?;
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn upsertBookCover(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    payload: UpsertBookCoverInput,
+) -> Result<(), String> {
+    upsert_book_cover(app, state, payload)
 }
 
 #[allow(non_snake_case)]

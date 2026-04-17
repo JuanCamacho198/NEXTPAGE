@@ -5,6 +5,24 @@ import ReadingStatsPanel from "./ReadingStatsPanel.svelte";
 import type { ReadingStatsSummaryDto } from "../../types";
 import { getReadingStats } from "../../tauriClient";
 
+const t = (key: string) => {
+  const dictionary: Record<string, string> = {
+    "stats.title": "Reading Stats",
+    "stats.refresh": "Refresh",
+    "stats.scope": "Scope",
+    "stats.global": "Global",
+    "stats.loading": "Loading stats...",
+    "stats.unavailable": "Stats unavailable.",
+    "stats.minutes": "Minutes",
+    "stats.sessions": "Sessions",
+    "stats.started": "Started",
+    "stats.completed": "Completed",
+    "stats.averageProgress": "Average progress",
+  };
+
+  return dictionary[key] ?? key;
+};
+
 vi.mock("../../tauriClient", () => ({
   getReadingStats: vi.fn(),
 }));
@@ -31,6 +49,7 @@ describe("ReadingStatsPanel", () => {
       disabledReason: null,
       selectedBookTitle: "Book One",
       onRefresh,
+      t,
     });
 
     expect(screen.getByText("125")).toBeInTheDocument();

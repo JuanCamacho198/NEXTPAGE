@@ -3,10 +3,21 @@
   import Button from "./ui/Button.svelte";
   import { listHighlights, deleteHighlight } from "../tauriClient";
   import { listBookmarks, deleteBookmark, listBooks } from "../tauriClient";
-  import { getSettings, upsertSettings } from "../tauriClient";
-  import type { AppSettingDto, HighlightDto, BookmarkDto, BookDto, CommandErrorDto } from "../types";
+  import { getSettings, upsertSettings, getLocaleSetting } from "../tauriClient";
+  import { i18n, type MessageKey } from "../i18n";
+  import type { AppSettingDto, HighlightDto, BookmarkDto, BookDto, CommandErrorDto, UiLocale } from "../types";
 
-  let { isOpen = $bindable(false) } = $props<{ isOpen: boolean }>();
+  let {
+    isOpen = $bindable(false),
+    locale,
+    onLocaleChange,
+    t,
+  } = $props<{
+    isOpen: boolean;
+    locale: UiLocale;
+    onLocaleChange?: (locale: UiLocale) => void;
+    t: (key: MessageKey, params?: Record<string, string | number>) => string;
+  }>();
 
   let activeTab = $state<"auth" | "highlights" | "bookmarks" | "about">("auth");
 
@@ -79,6 +90,12 @@
       if (typeof nextFontScale === "number" && Number.isFinite(nextFontScale)) {
         preferredFontScale = Math.max(80, Math.min(140, Math.round(nextFontScale)));
       }
+
+      const persistedLocale = i18n.toSupportedLocale(await getLocaleSetting());
+      if (persistedLocale) {
+        locale = persistedLocale;
+        onLocaleChange?.(persistedLocale);
+      }
     } catch (error) {
       const details = mapCommandErrorMessage(error);
       if (details.recoverable) {
@@ -116,6 +133,25 @@
       }
     } finally {
       isSavingSettings = false;
+    }
+  }
+
+  async function handleLocaleSelect(value: string) {
+    const safeLocale = i18n.toSupportedLocale(value) ?? i18n.FALLBACK_LOCALE;
+    locale = safeLocale;
+    onLocaleChange?.(safeLocale);
+    settingsError = null;
+    settingsUnavailable = null;
+
+    try {
+      await i18n.setLocale(safeLocale);
+    } catch (error) {
+      const details = mapCommandErrorMessage(error);
+      if (details.recoverable) {
+        settingsUnavailable = details.message;
+      } else {
+        settingsError = details.message;
+      }
     }
   }
 
@@ -194,7 +230,7 @@
   }
 
   function getBookTitle(bookId: string): string {
-    return books.find((b) => b.id === bookId)?.title || "Unknown";
+    return books.find((b) => b.id === bookId)?.title || t("settings.unknownBook");
   }
 
   function handleFilterChange() {
@@ -211,8 +247,8 @@
   <div class="fixed inset-0 w-screen h-screen bg-black/40 z-[999]" onclick={closePanel}></div>
   <aside class="fixed top-0 right-0 w-[350px] h-screen bg-white border-l border-gray-200 shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]">
     <div class="flex items-center justify-between p-4 border-b border-gray-200">
-      <h2 class="m-0 text-lg font-semibold text-gray-900">Settings</h2>
-      <button class="bg-transparent border-none text-xl cursor-pointer text-gray-600 p-1 flex items-center justify-center hover:text-gray-900" onclick={closePanel} aria-label="Close settings">✕</button>
+      <h2 class="m-0 text-lg font-semibold text-gray-900">{t("settings.title")}</h2>
+      <button class="bg-transparent border-none text-xl cursor-pointer text-gray-600 p-1 flex items-center justify-center hover:text-gray-900" onclick={closePanel} aria-label={t("settings.close")}>✕</button>
     </div>
 
     <div class="tabs">
@@ -222,7 +258,7 @@
         class:active={activeTab === "auth"}
         onclick={() => handleTabChange("auth")}
       >
-        Auth
+        {t("settings.tab.auth")}
       </button>
       <button
         type="button"
@@ -230,7 +266,7 @@
         class:active={activeTab === "highlights"}
         onclick={() => handleTabChange("highlights")}
       >
-        Highlights
+        {t("settings.tab.highlights")}
       </button>
       <button
         type="button"
@@ -238,7 +274,7 @@
         class:active={activeTab === "bookmarks"}
         onclick={() => handleTabChange("bookmarks")}
       >
-        Bookmarks
+        {t("settings.tab.bookmarks")}
       </button>
       <button
         type="button"
@@ -246,19 +282,19 @@
         class:active={activeTab === "about"}
         onclick={() => handleTabChange("about")}
       >
-        About
+        {t("settings.tab.about")}
       </button>
     </div>
     
     <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
       {#if activeTab === "auth"}
         <div class="auth-section">
-          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">Authentication</h3>
-          <p class="text-sm text-gray-600 mb-4">Sign in to sync your reading progress across devices.</p>
+          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">{t("settings.authentication")}</h3>
+          <p class="text-sm text-gray-600 mb-4">{t("settings.authDescription")}</p>
           <GoogleLoginButton />
 
           <div class="mt-6 border-t border-gray-200 pt-4">
-            <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">Local Preferences</h3>
+            <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">{t("settings.localPreferences")}</h3>
 
             {#if settingsUnavailable}
               <p class="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
@@ -272,16 +308,29 @@
             {/if}
 
             <div class="mb-2">
-              <label class="mb-1 block text-xs text-gray-600" for="theme-select">Theme</label>
+              <label class="mb-1 block text-xs text-gray-600" for="locale-select">{t("settings.language")}</label>
+              <select
+                id="locale-select"
+                value={locale}
+                onchange={(event) => void handleLocaleSelect((event.currentTarget as HTMLSelectElement).value)}
+                class="filter-select"
+              >
+                <option value="es">{t("settings.languageSpanish")}</option>
+                <option value="en">{t("settings.languageEnglish")}</option>
+              </select>
+            </div>
+
+            <div class="mb-2">
+              <label class="mb-1 block text-xs text-gray-600" for="theme-select">{t("settings.theme")}</label>
               <select id="theme-select" bind:value={preferredTheme} class="filter-select">
-                <option value="light">Light</option>
-                <option value="sepia">Sepia</option>
-                <option value="dark">Dark</option>
+                <option value="light">{t("settings.theme.light")}</option>
+                <option value="sepia">{t("settings.theme.sepia")}</option>
+                <option value="dark">{t("settings.theme.dark")}</option>
               </select>
             </div>
 
             <div class="mb-3">
-              <label class="mb-1 block text-xs text-gray-600" for="font-scale">Reader font scale ({preferredFontScale}%)</label>
+              <label class="mb-1 block text-xs text-gray-600" for="font-scale">{t("settings.readerFontScale")} ({preferredFontScale}%)</label>
               <input
                 id="font-scale"
                 type="range"
@@ -294,13 +343,13 @@
             </div>
 
             <Button onclick={() => void saveAppSettings()} disabled={isSavingSettings} size="sm">
-              {isSavingSettings ? "Saving..." : "Save preferences"}
+              {isSavingSettings ? t("settings.saving") : t("settings.savePreferences")}
             </Button>
           </div>
         </div>
       {:else if activeTab === "highlights"}
         <div class="highlights-section">
-          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">Highlights</h3>
+          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">{t("settings.highlights")}</h3>
 
           <div class="filters">
             <select
@@ -308,7 +357,7 @@
               onchange={handleFilterChange}
               class="filter-select"
             >
-              <option value="">All Books</option>
+              <option value="">{t("settings.allBooks")}</option>
               {#each books as book}
                 <option value={book.id}>{book.title}</option>
               {/each}
@@ -318,19 +367,19 @@
               onchange={handleFilterChange}
               class="filter-select"
             >
-              <option value="">All Colors</option>
-              <option value="#fef08a">Yellow</option>
-              <option value="#bbf7d0">Green</option>
-              <option value="#bfdbfe">Blue</option>
-              <option value="#fbcfe8">Pink</option>
-              <option value="#fed7aa">Orange</option>
+              <option value="">{t("settings.allColors")}</option>
+              <option value="#fef08a">{t("settings.color.yellow")}</option>
+              <option value="#bbf7d0">{t("settings.color.green")}</option>
+              <option value="#bfdbfe">{t("settings.color.blue")}</option>
+              <option value="#fbcfe8">{t("settings.color.pink")}</option>
+              <option value="#fed7aa">{t("settings.color.orange")}</option>
             </select>
           </div>
 
           {#if isLoading}
-            <div class="loading">Loading highlights...</div>
+            <div class="loading">{t("settings.loadingHighlights")}</div>
           {:else if highlights.length === 0}
-            <div class="empty">No highlights yet</div>
+            <div class="empty">{t("settings.noHighlights")}</div>
           {:else}
             <ul class="item-list">
               {#each highlights as highlight}
@@ -339,14 +388,14 @@
                   <div class="item-content">
                     <p class="item-text">{highlight.text}</p>
                     <p class="item-meta">
-                      {getBookTitle(highlight.bookId)} - Page {highlight.pageNumber}
+                      {getBookTitle(highlight.bookId)} - {t("settings.page")} {highlight.pageNumber}
                     </p>
                   </div>
                   <button
                     type="button"
                     class="delete-btn"
                     onclick={() => handleDeleteHighlight(highlight.id)}
-                    title="Delete highlight"
+                    title={t("settings.deleteHighlight")}
                   >
                     ×
                   </button>
@@ -357,7 +406,7 @@
         </div>
       {:else if activeTab === "bookmarks"}
         <div class="bookmarks-section">
-          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">Bookmarks</h3>
+          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">{t("settings.bookmarks")}</h3>
 
           <div class="filters">
             <select
@@ -365,7 +414,7 @@
               onchange={handleFilterChange}
               class="filter-select"
             >
-              <option value="">All Books</option>
+              <option value="">{t("settings.allBooks")}</option>
               {#each books as book}
                 <option value={book.id}>{book.title}</option>
               {/each}
@@ -373,22 +422,22 @@
           </div>
 
           {#if isLoading}
-            <div class="loading">Loading bookmarks...</div>
+            <div class="loading">{t("settings.loadingBookmarks")}</div>
           {:else if bookmarks.length === 0}
-            <div class="empty">No bookmarks yet</div>
+            <div class="empty">{t("settings.noBookmarks")}</div>
           {:else}
             <ul class="item-list">
               {#each bookmarks as bookmark}
                 <li class="item bookmark-item">
                   <div class="item-content">
                     <p class="item-text">{getBookTitle(bookmark.bookId)}</p>
-                    <p class="item-meta">Page {bookmark.pageNumber}</p>
+                    <p class="item-meta">{t("settings.page")} {bookmark.pageNumber}</p>
                   </div>
                   <button
                     type="button"
                     class="delete-btn"
                     onclick={() => handleDeleteBookmark(bookmark.id)}
-                    title="Delete bookmark"
+                    title={t("settings.deleteBookmark")}
                   >
                     ×
                   </button>
@@ -399,7 +448,7 @@
         </div>
       {:else if activeTab === "about"}
         <div class="about-section">
-          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">About NextPage</h3>
+          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">{t("settings.about")}</h3>
           <p class="text-sm text-gray-600">
             Version {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}
           </p>

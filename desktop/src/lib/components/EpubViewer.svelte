@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import type { Book, Rendition } from "epubjs";
   import ePub from "epubjs";
+  import type { MessageKey } from "../i18n";
 
   type Props = {
     filePath: string;
@@ -10,6 +11,7 @@
     onLocationChange?: (cfiLocation: string, percentage: number) => void;
     searchTargetLocator?: string | null;
     onLocationContext?: (context: { locator: string; percentage: number }) => void;
+    t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
   let {
@@ -19,6 +21,7 @@
     onLocationChange,
     searchTargetLocator = null,
     onLocationContext,
+    t,
   }: Props = $props();
 
   let viewerContainer: HTMLDivElement | undefined = $state();
@@ -28,7 +31,7 @@
   let error = $state<string | null>(null);
 
   let currentLocation = $state("");
-  let currentPercentage = $state(initialPercentage);
+  let currentPercentage = $state(0);
   let lastJumpTarget = "";
   let displaySettings = $state({
     fontSize: 100,
@@ -82,7 +85,7 @@
 
       renderBook();
     } catch (err) {
-      error = err instanceof Error ? err.message : "Failed to load EPUB";
+      error = err instanceof Error ? err.message : t("epub.error");
     } finally {
       isLoading = false;
     }
@@ -105,6 +108,7 @@
     if (initialLocation) {
       await (rendition as Rendition).display(initialLocation);
     } else if (initialPercentage > 0 && initialPercentage < 100) {
+      currentPercentage = initialPercentage;
       try {
         await (book as Book).locations.generate(1000);
         const cfi = (book as Book).locations.cfiFromPercentage(initialPercentage / 100);
@@ -184,18 +188,18 @@
 
 <div class="epub-viewer">
   {#if isLoading}
-    <div class="loading">Loading EPUB...</div>
+    <div class="loading">{t("epub.loading")}</div>
   {:else if error}
-    <div class="error">Error: {error}</div>
+    <div class="error">{t("epub.error")}: {error}</div>
   {:else}
     <div class="toolbar">
       <button type="button" onclick={() => (showToc = !showToc)} class="toc-btn">
-        {showToc ? "Hide" : "TOC"}
+        {showToc ? t("epub.hide") : t("epub.toc")}
       </button>
       <span class="progress">{Math.round(currentPercentage)}%</span>
       <div class="nav-buttons">
-        <button type="button" onclick={goToPrev} class="nav-btn">Previous</button>
-        <button type="button" onclick={goToNext} class="nav-btn">Next</button>
+        <button type="button" onclick={goToPrev} class="nav-btn">{t("epub.previous")}</button>
+        <button type="button" onclick={goToNext} class="nav-btn">{t("epub.next")}</button>
       </div>
       <div class="settings-controls">
         <button type="button" onclick={() => updateFontSize(displaySettings.fontSize - 10)} class="size-btn">
@@ -211,7 +215,7 @@
     <div class="content-area">
       {#if showToc}
         <aside class="toc-sidebar">
-          <h3>Table of Contents</h3>
+          <h3>{t("epub.tableOfContents")}</h3>
           <ul class="toc-list">
             {#each toc as chapter}
               <li>
@@ -234,7 +238,8 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #faf9f7;
+    background: var(--color-background);
+    color: var(--color-primary);
   }
 
   .loading,
@@ -255,8 +260,8 @@
     align-items: center;
     gap: 12px;
     padding: 8px 12px;
-    background: #fff;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
     flex-wrap: wrap;
   }
 
@@ -264,9 +269,10 @@
   .nav-btn,
   .size-btn {
     padding: 6px 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-border);
     border-radius: 4px;
-    background: #fff;
+    background: var(--color-surface);
+    color: var(--color-primary);
     cursor: pointer;
     font-size: 13px;
   }
@@ -274,7 +280,7 @@
   .toc-btn:hover,
   .nav-btn:hover,
   .size-btn:hover {
-    background: #f3f4f6;
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
   }
 
   .nav-buttons {
@@ -284,7 +290,7 @@
 
   .progress {
     font-size: 13px;
-    color: #6b7280;
+    color: var(--color-text-muted);
     min-width: 40px;
     text-align: center;
   }
@@ -310,8 +316,8 @@
 
   .toc-sidebar {
     width: 240px;
-    background: #fff;
-    border-right: 1px solid #e5e7eb;
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-border);
     overflow-y: auto;
     flex-shrink: 0;
   }
@@ -320,8 +326,9 @@
     padding: 12px;
     font-size: 14px;
     font-weight: 600;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--color-border);
     margin: 0;
+    color: var(--color-primary);
   }
 
   .toc-list {
@@ -344,7 +351,7 @@
   }
 
   .toc-item:hover {
-    background: #f3f4f6;
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
   }
 
   .epub-container {

@@ -144,3 +144,11 @@ export type CommandErrorDto = {
   message: string;
   recoverable: boolean;
 };
+
+export const SUPPORTED_UI_LOCALES = ["es", "en"] as const;
+
+export type UiLocale = (typeof SUPPORTED_UI_LOCALES)[number];
+
+export const UI_LOCALE_SETTING_KEY = "ui.locale" as const;
+
+export type TranslationKey = string;

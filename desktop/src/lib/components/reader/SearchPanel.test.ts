@@ -5,6 +5,23 @@ import SearchPanel from "./SearchPanel.svelte";
 import type { SearchBookTextResponse } from "../../types";
 import { searchBookText } from "../../tauriClient";
 
+const t = (key: string) => {
+  const dictionary: Record<string, string> = {
+    "search.title": "In-Book Search",
+    "search.placeholder": "Search text in this book",
+    "search.search": "Search",
+    "search.searching": "Searching...",
+    "search.locator": "Locator",
+    "search.page": "Page",
+    "search.matches": "matches",
+    "search.prev": "Prev",
+    "search.next": "Next",
+    "search.noMatches": "No matches found for this query.",
+  };
+
+  return dictionary[key] ?? key;
+};
+
 vi.mock("../../tauriClient", () => ({
   searchBookText: vi.fn(),
 }));
@@ -37,6 +54,7 @@ describe("SearchPanel", () => {
       response: noMatches,
       onSearch,
       onJump,
+      t,
     });
 
     expect(screen.getByText("No matches found for this query.")).toBeInTheDocument();
@@ -70,6 +88,7 @@ describe("SearchPanel", () => {
       response: withMatches,
       onSearch,
       onJump,
+      t,
     });
     await user.click(screen.getByRole("button", { name: /needle/ }));
 

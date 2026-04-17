@@ -1,0 +1,1 @@
+ALTER TABLE books ADD COLUMN hidden_at TEXT;

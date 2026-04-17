@@ -236,3 +236,9 @@ impl CommandErrorDto {
 pub struct BookDeleteInput {
     pub book_id: String,
 }
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HideBookInput {
+    pub book_id: String,
+}

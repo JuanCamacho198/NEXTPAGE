@@ -13,6 +13,7 @@
   import { pickFile } from "./lib/services/FilePicker";
   import {
     getProgress,
+    hideBookFromLibrary,
     getReadingStats,
     listBooks,
     listLibraryBooks,
@@ -21,6 +22,7 @@
     searchBookText,
     updateBookProgress,
   } from "./lib/tauriClient";
+  import { i18n, type MessageKey } from "./lib/i18n";
 
   import type {
     BookDto,
@@ -31,6 +33,7 @@
     SaveProgressInput,
     SearchBookTextResponse,
     SearchNavigationTarget,
+    UiLocale,
   } from "./lib/types";
 
   type ReaderBook = LibraryBookDto & {
@@ -68,6 +71,9 @@
   let searchResponse = $state<SearchBookTextResponse | null>(null);
   let searchTargetLocator = $state<string | null>(null);
   let readerError = $state<string | null>(null);
+  let locale = $state<UiLocale>("es");
+
+  const t = (key: MessageKey, params?: Record<string, string | number>) => i18n.t(locale, key, params);
 
   const mapCommandError = (error: unknown) => {
     const typed = error as MaybeCommandError;
@@ -75,12 +81,36 @@
       return typed.commandError;
     }
 
-    const fallback = error instanceof Error ? error.message : "Unknown command failure";
+    const fallback = error instanceof Error ? error.message : t("errors.commandFailure");
     return {
       code: "INTERNAL_ERROR",
       message: fallback,
       recoverable: false,
     } satisfies CommandErrorDto;
+  };
+
+  const isValidSessionProgressEvent = (event: {
+    startedAt: string;
+    endedAt?: string;
+    durationSeconds: number;
+    startPercentage?: number;
+    endPercentage?: number;
+  }) => {
+    if (!event.endedAt || event.durationSeconds <= 0) {
+      return false;
+    }
+
+    const startedAt = Date.parse(event.startedAt);
+    const endedAt = Date.parse(event.endedAt);
+    if (!Number.isFinite(startedAt) || !Number.isFinite(endedAt) || endedAt <= startedAt) {
+      return false;
+    }
+
+    const percentages = [event.startPercentage, event.endPercentage].filter(
+      (value): value is number => typeof value === "number",
+    );
+
+    return percentages.every((value) => value >= 0 && value <= 100);
   };
 
   const setDomainUnavailable = (domain: Domain, reason: string | null) => {
@@ -196,7 +226,7 @@
 
       await loadLibrary();
     } catch (error) {
-      readerError = error instanceof Error ? error.message : "Import failed";
+      readerError = error instanceof Error ? error.message : t("import.failed");
     } finally {
       isImporting = false;
       importProgress = null;
@@ -243,6 +273,10 @@
   }) => {
     const current = selectedBook;
     if (!current) {
+      return;
+    }
+
+    if (!isValidSessionProgressEvent(event)) {
       return;
     }
 
@@ -319,54 +353,76 @@
     searchTargetLocator = target.locator;
   };
 
+  const handleHideBook = async (book: ReaderBook) => {
+    try {
+      await hideBookFromLibrary(book.id);
+
+      if (selectedBook?.id === book.id) {
+        selectedBook = null;
+      }
+
+      await loadLibrary();
+    } catch (error) {
+      const details = mapCommandError(error);
+      readerError = details.message;
+    }
+  };
+
   const handleReaderLocationContext = () => {
     // reserved for index_book_text integration when extraction pipeline is wired
   };
 
+  const handleLocaleChange = (nextLocale: UiLocale) => {
+    locale = nextLocale;
+  };
+
   onMount(() => {
+    void i18n.initializeLocale().then((nextLocale) => {
+      locale = nextLocale;
+    });
     void loadLibrary();
     void loadStats(undefined);
   });
 </script>
 
-<main class="min-h-screen bg-slate-100 text-slate-900">
+<main class="min-h-screen bg-[var(--color-background)] text-[var(--color-primary)]">
   <div class="mx-auto max-w-7xl p-4 md:p-6">
-    <header class="mb-4 flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <header class="mb-4 flex items-center justify-between rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
       <div>
-        <h1 class="text-xl font-semibold">NextPage Desktop</h1>
-        <p class="text-sm text-slate-500">Desktop parity integration: library, settings, stats, and reader search</p>
+        <h1 class="text-xl font-semibold">{t("app.title")}</h1>
+        <p class="text-sm text-[var(--color-text-muted)]">{t("app.subtitle")}</p>
       </div>
       <div class="flex items-center gap-2">
         <Button onclick={handleImportFile} disabled={isImporting} size="sm">
-          {isImporting ? "Importing..." : "Import Book"}
+          {isImporting ? t("app.importing") : t("app.importBook")}
         </Button>
         <DropMenu position="bottom-right">
           {#snippet trigger()}
-            <button class="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 hover:bg-slate-50" aria-label="Open menu">
-              Menu
+            <button class="rounded-md border border-[color:var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]" aria-label={t("app.openMenu")}>
+              {t("app.menu")}
             </button>
           {/snippet}
           <button
-            class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+            class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]"
             onclick={() => {
               isSettingsOpen = true;
             }}
           >
-            Settings
+            {t("app.settings")}
           </button>
         </DropMenu>
       </div>
     </header>
 
     {#if importProgress}
-      <p class="mb-3 text-sm text-slate-600">{importProgress.message}</p>
+      <p class="mb-3 text-sm text-[var(--color-secondary)]">{importProgress.message}</p>
     {/if}
 
     {#if readerError}
       <p class="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">{readerError}</p>
     {/if}
 
-    <SettingsPanel bind:isOpen={isSettingsOpen} />
+    <SettingsPanel bind:isOpen={isSettingsOpen} {t} {locale} onLocaleChange={handleLocaleChange} />
 
     <div class="grid gap-4 lg:grid-cols-[340px_1fr]">
       <div class="space-y-4">
@@ -388,6 +444,13 @@
               void openBook(match);
             }
           }}
+          onHide={(book) => {
+            const match = books.find((entry) => entry.id === book.id);
+            if (match) {
+              void handleHideBook(match);
+            }
+          }}
+          {t}
         />
 
         <ReadingStatsPanel
@@ -398,37 +461,39 @@
           onRefresh={() => {
             void loadStats(selectedBook?.id);
           }}
+          {t}
         />
       </div>
 
-      <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section class="rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
         {#if !selectedBook}
-          <p class="text-sm text-slate-500">Open a book from the library to start reading.</p>
+          <p class="text-sm text-[var(--color-text-muted)]">{t("app.openBookPrompt")}</p>
         {:else}
           <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 class="text-lg font-semibold text-slate-800">{selectedBook.title}</h2>
-              <p class="text-sm text-slate-500">
-                {selectedBook.author || "Unknown author"} · {selectedBook.format.toUpperCase()} · {selectedBook.currentPage}/{selectedBook.totalPages || "-"}
+              <h2 class="text-lg font-semibold text-[var(--color-primary)]">{selectedBook.title}</h2>
+              <p class="text-sm text-[var(--color-text-muted)]">
+                {selectedBook.author || t("app.unknownAuthor")} · {selectedBook.format.toUpperCase()} · {selectedBook.currentPage}/{selectedBook.totalPages || "-"}
               </p>
             </div>
             {#if selectedBook.format.toLowerCase() === "epub"}
-              <p class="text-xs text-slate-500">Location: {cfiLocation || "start"} · {Math.round(percentage)}%</p>
+              <p class="text-xs text-[var(--color-text-muted)]">{t("app.locationLabel")}: {cfiLocation || t("app.start")} · {Math.round(percentage)}%</p>
             {/if}
           </div>
 
           {#if selectedBook.format.toLowerCase() === "pdf"}
-            <div class="mb-4 h-[520px] overflow-hidden rounded-lg border border-slate-200">
+            <div class="mb-4 h-[520px] overflow-hidden rounded-lg border border-[color:var(--color-border)]">
               <PdfViewer
                 filePath={selectedBook.filePath}
                 initialPage={Math.max(1, selectedBook.currentPage || 1)}
                 searchTargetLocator={searchTargetLocator}
                 onPageChange={handlePdfPageChange}
                 onSessionProgress={handlePdfSessionProgress}
+                {t}
               />
             </div>
           {:else}
-            <div class="mb-4 h-[520px] overflow-hidden rounded-lg border border-slate-200">
+            <div class="mb-4 h-[520px] overflow-hidden rounded-lg border border-[color:var(--color-border)]">
               <EpubViewer
                 filePath={selectedBook.filePath}
                 initialLocation={cfiLocation}
@@ -436,6 +501,7 @@
                 searchTargetLocator={searchTargetLocator}
                 onLocationContext={handleReaderLocationContext}
                 onLocationChange={handleEpubLocationChange}
+                {t}
               />
             </div>
           {/if}
@@ -449,6 +515,7 @@
               void handleSearch(query, page);
             }}
             onJump={handleSearchJump}
+            {t}
           />
         {/if}
       </section>

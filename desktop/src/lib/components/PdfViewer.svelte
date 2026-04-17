@@ -271,17 +271,9 @@
 
       error = err instanceof Error ? err.message : "Failed to load PDF";
     } finally {
-      if (activeLoadingTask && isStaleLoad(requestId)) {
-        activeLoadingTask = null;
-      } else if (activeLoadingTask && !isStaleLoad(requestId)) {
-        activeLoadingTask = null;
-      }
-
-      if (!isStaleLoad(requestId)) {
-        isLoading = false;
-      } else if (pdfDoc && totalPages > 0) {
-        isLoading = false;
-      }
+      // Always clear loading state when done
+      isLoading = false;
+      activeLoadingTask = null;
     }
   }
 
@@ -435,29 +427,18 @@
     }
 
     hideToolbar();
-    const previousPage = currentPage;
-    const requestId = ++activeNavigationRequestId;
-    const loadRequestId = activeLoadRequestId;
     navigationError = null;
 
     try {
-      const rendered = await renderPage(targetPage, loadRequestId);
-      const resolution = resolveNavigationTransaction({
-        previousPage,
-        targetPage,
-        rendered: Boolean(rendered),
-        stale: isStaleNavigation(requestId) || isStaleLoad(loadRequestId),
-      });
-
-      if (!resolution.didCommit) {
-        currentPage = resolution.committedPage;
-        if (resolution.shouldShowError) {
-          navigationError = t("pdf.navigationFailed");
-        }
+      // Simple render - no complex transaction logic
+      const rendered = await renderPage(targetPage);
+      if (!rendered) {
+        navigationError = t("pdf.navigationFailed");
         return false;
       }
 
-      currentPage = resolution.committedPage;
+      // Success - update state
+      currentPage = targetPage;
       onPageChange?.(currentPage, totalPages);
       emitSessionProgress(currentPage, totalPages);
 
@@ -470,22 +451,19 @@
 
       return true;
     } catch {
-      if (!isStaleNavigation(requestId) && !isStaleLoad(loadRequestId)) {
-        currentPage = previousPage;
-        navigationError = t("pdf.navigationFailed");
-      }
+      navigationError = t("pdf.navigationFailed");
       return false;
     }
   }
 
   function goToPrevPage() {
-    if (currentPage <= 1) return;
-    void navigateToPage(currentPage - 1);
+    if (currentPage <= 1 || !pdfDoc) return;
+    navigateToPage(currentPage - 1);
   }
 
   function goToNextPage() {
-    if (currentPage >= totalPages) return;
-    void navigateToPage(currentPage + 1);
+    if (currentPage >= totalPages || !pdfDoc) return;
+    navigateToPage(currentPage + 1);
   }
 
   async function goToPage(event: Event) {

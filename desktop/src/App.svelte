@@ -20,11 +20,12 @@
     saveProgress,
     saveReadingSession,
     searchBookText,
+    upsertBook,
     upsertBookCover,
     updateBookProgress,
   } from "./lib/tauriClient";
   import { i18n, type MessageKey } from "./lib/i18n";
-  import { generatePdfFirstPageThumbnail } from "./lib/services/pdfThumbnail";
+  import { extractPdfMetadata } from "./lib/services/pdfThumbnail";
 
   import type {
     BookDto,
@@ -173,12 +174,30 @@
 
     thumbnailGenerationInFlight.add(book.id);
     try {
-      const thumbnailBytes = await generatePdfFirstPageThumbnail(book.filePath);
-      await upsertBookCover({
-        bookId: book.id,
-        data: Array.from(thumbnailBytes),
-        mimeType: "image/png",
-      });
+      const metadata = await extractPdfMetadata(book.filePath);
+
+      if (metadata.thumbnailBytes) {
+        await upsertBookCover({
+          bookId: book.id,
+          data: Array.from(metadata.thumbnailBytes),
+          mimeType: "image/png",
+        });
+      }
+
+      // Update author if we extracted one and the book has none stored
+      if (metadata.author && (!book.author || book.author.trim() === "")) {
+        const bookDtoUpdate = {
+          id: book.id,
+          title: book.title,
+          author: metadata.author,
+          format: book.format,
+          syncStatus: "local",
+          currentPage: book.currentPage,
+          totalPages: book.totalPages,
+        };
+        await upsertBook(bookDtoUpdate);
+      }
+
       await loadLibrary();
     } catch {
       // fallback UI remains stable when thumbnail generation fails
@@ -271,10 +290,24 @@
       const format = file.name.toLowerCase().endsWith(".epub") ? "epub" : "pdf";
       const title = file.name.replace(/\.(pdf|epub)$/i, "");
 
+      // For PDFs, extract author from metadata before importing
+      let author: string | undefined;
+      if (format === "pdf") {
+        try {
+          const meta = await extractPdfMetadata(file.path);
+          if (meta.author) {
+            author = meta.author;
+          }
+        } catch {
+          // metadata extraction is best-effort
+        }
+      }
+
       await importBook(
         {
           sourcePath: file.path,
           title,
+          author,
           format,
         },
         (progress) => {

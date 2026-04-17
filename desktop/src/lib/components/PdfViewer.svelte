@@ -62,6 +62,7 @@
   let activeLoadingTask: pdfjsLib.PDFDocumentLoadingTask | null = null;
   let activeRenderTask: pdfjsLib.RenderTask | null = null;
   let textLayerMouseupTarget: HTMLDivElement | null = null;
+  let lastLoadedFilePath: string | null = null;
 
   const isStaleLoad = (requestId: number) => requestId !== activeLoadRequestId;
 
@@ -166,7 +167,8 @@
   });
 
   $effect(() => {
-    if (filePath) {
+    if (filePath && filePath !== lastLoadedFilePath) {
+      lastLoadedFilePath = filePath;
       loadPdf();
     }
   });
@@ -528,60 +530,61 @@
 
 <div class="pdf-viewer" bind:this={viewerRoot}>
   {#if isLoading}
-    <div class="loading">{t("pdf.loading")}</div>
-  {:else if error}
-    <div class="error">{t("pdf.error")}: {error}</div>
-  {:else}
-    <div class="controls">
-      <button type="button" onclick={goToPrevPage} disabled={currentPage <= 1}>
-        {t("pdf.previous")}
-      </button>
-      <span class="page-info">
-        <input
-          type="number"
-          min="1"
-          max={totalPages}
-          value={currentPage}
-          onchange={goToPage}
-          class="page-input"
-        />
-        / {totalPages}
-      </span>
-      <button type="button" onclick={goToNextPage} disabled={currentPage >= totalPages}>
-        {t("pdf.next")}
-      </button>
-      <button type="button" onclick={toggleFullscreen} disabled={!fullscreenSupported}>
-        {isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}
-      </button>
-      <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select">
-        <option value={1}>100%</option>
-        <option value={1.5}>150%</option>
-        <option value={2}>200%</option>
-      </select>
-    </div>
-    {#if navigationError}
-      <p class="navigation-error" role="status" aria-live="polite">{navigationError}</p>
-    {/if}
-    <div class="canvas-container">
-      <div class="canvas-wrapper" class:search-hit={flashSearchResult}>
-        <canvas bind:this={canvas}></canvas>
-        <div bind:this={textLayer} class="text-layer"></div>
-        {#if showToolbar && selectionPosition}
-          <div
-            class="toolbar-container"
-            style="left: {selectionPosition.x}px; top: {selectionPosition.y}px;"
-          >
-            <HighlightToolbar
-              {selectedText}
-              bookId={filePath}
-              pageNumber={currentPage}
-              onClose={hideToolbar}
-            />
-          </div>
-        {/if}
-      </div>
-    </div>
+    <div class="loading-overlay">{t("pdf.loading")}</div>
   {/if}
+  {#if error}
+    <div class="error-overlay">{t("pdf.error")}: {error}</div>
+  {/if}
+  <!-- Controls and canvas always stay in DOM so canvas ref is always available -->
+  <div class="controls" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
+    <button type="button" onclick={goToPrevPage} disabled={currentPage <= 1}>
+      {t("pdf.previous")}
+    </button>
+    <span class="page-info">
+      <input
+        type="number"
+        min="1"
+        max={totalPages}
+        value={currentPage}
+        onchange={goToPage}
+        class="page-input"
+      />
+      / {totalPages}
+    </span>
+    <button type="button" onclick={goToNextPage} disabled={currentPage >= totalPages}>
+      {t("pdf.next")}
+    </button>
+    <button type="button" onclick={toggleFullscreen} disabled={!fullscreenSupported}>
+      {isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}
+    </button>
+    <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select">
+      <option value={1}>100%</option>
+      <option value={1.5}>150%</option>
+      <option value={2}>200%</option>
+    </select>
+  </div>
+  {#if navigationError}
+    <p class="navigation-error" role="status" aria-live="polite">{navigationError}</p>
+  {/if}
+  <div class="canvas-container" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
+    <div class="canvas-wrapper" class:search-hit={flashSearchResult}>
+      <canvas bind:this={canvas}></canvas>
+      <div bind:this={textLayer} class="text-layer"></div>
+      {#if showToolbar && selectionPosition}
+        <div
+          class="toolbar-container"
+          style="left: {selectionPosition.x}px; top: {selectionPosition.y}px;"
+        >
+          <HighlightToolbar
+            {selectedText}
+            bookId={filePath}
+            pageNumber={currentPage}
+            onClose={hideToolbar}
+          />
+        </div>
+      {/if}
+    </div>
+  </div>
 </div>
 
 <style>
@@ -591,17 +594,22 @@
     height: 100%;
     background: var(--color-background);
     color: var(--color-primary);
+    position: relative;
   }
 
-  .loading, .error {
+  .loading-overlay,
+  .error-overlay {
+    position: absolute;
+    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 200px;
     font-size: 14px;
+    z-index: 10;
+    background: var(--color-background);
   }
 
-  .error {
+  .error-overlay {
     color: #dc2626;
   }
 

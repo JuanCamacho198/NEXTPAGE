@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "NextPage Desktop",
         "width": 1200,
         "height": 800,
@@ -30,7 +31,9 @@
           "nextpage-desktop"
         ]
       }
-    }
+    },
+    "fs": {}
+
   },
   "bundle": {
     "active": true,

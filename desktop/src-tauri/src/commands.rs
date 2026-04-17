@@ -42,6 +42,10 @@ pub fn upsert_book(state: State<'_, AppState>, book: BookDto) -> Result<(), Stri
 #[tauri::command(rename_all = "camelCase")]
 pub fn get_settings(state: State<'_, AppState>) -> Result<Vec<AppSettingDto>, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    // Return empty if schema not ready
+    if !repository.has_desktop_parity_schema().unwrap_or(true) {
+        return Ok(vec![]);
+    }
     repository.get_settings().map_err(map_command_error)
 }
 
@@ -51,6 +55,10 @@ pub fn upsert_settings(
     settings: Vec<AppSettingDto>,
 ) -> Result<(), String> {
     let mut repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    // No-op if schema not ready
+    if !repository.has_desktop_parity_schema().unwrap_or(true) {
+        return Ok(());
+    }
     repository
         .upsert_settings(settings)
         .map_err(map_command_error)
@@ -81,9 +89,8 @@ pub fn list_library_books_internal(
     }
 
     if !repository.has_desktop_parity_schema()? {
-        return Err(AppError::Compatibility(
-            "Desktop parity schema is not available. Please run migrations and retry.".to_string(),
-        ));
+        // Schema not ready - return empty list, don't fail
+        return Ok(vec![]);
     }
 
     repository.list_library_books()
@@ -136,6 +143,16 @@ pub fn get_reading_stats(
     book_id: Option<String>,
 ) -> Result<ReadingStatsSummaryDto, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    // Return default stats if schema not ready
+    if !repository.has_desktop_parity_schema().unwrap_or(true) {
+        return Ok(ReadingStatsSummaryDto {
+            total_minutes_read: 0,
+            total_sessions: 0,
+            books_started: 0,
+            books_completed: 0,
+            avg_progress_percentage: 0.0,
+        });
+    }
     repository
         .get_reading_stats(book_id.as_deref())
         .map_err(map_command_error)

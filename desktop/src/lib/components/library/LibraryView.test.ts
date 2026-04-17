@@ -1,9 +1,14 @@
 import { render, screen } from "@testing-library/svelte";
+import { fireEvent } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import LibraryView from "./LibraryView.svelte";
 import type { LibraryBookDto } from "../../types";
 import { listLibraryBooks } from "../../tauriClient";
+
+vi.mock("@tauri-apps/api/core", () => ({
+  convertFileSrc: vi.fn((path: string) => `asset://localhost/${path}`),
+}));
 
 const t = (key: string, params?: Record<string, string | number>) => {
   if (key === "library.optionsFor") {
@@ -106,5 +111,62 @@ describe("LibraryView", () => {
 
     expect(onHide).toHaveBeenCalledTimes(1);
     expect(onHide.mock.calls[0][0].id).toBe("book-hide-1");
+  });
+
+  it("falls back to placeholder when cover image fails to load", async () => {
+    render(LibraryView, {
+      books: [
+        {
+          id: "book-cover-error",
+          title: "Libro con portada",
+          author: "Autor",
+          format: "pdf",
+          currentPage: 3,
+          totalPages: 10,
+          progressPercentage: 30,
+          coverPath: "C:/covers/book-cover-error.png",
+          minutesRead: 8,
+          updatedAt: new Date().toISOString(),
+        },
+      ] satisfies LibraryBookDto[],
+      selectedBookId: null,
+      isLoading: false,
+      disabledReason: null,
+      viewMode: "grid",
+      t,
+    });
+
+    const image = screen.getByRole("img", { name: /Cover for Libro con portada/i });
+    await fireEvent.error(image);
+
+    expect(screen.getByText("No cover")).toBeInTheDocument();
+  });
+
+  it("keeps long spanish labels constrained inside card layout", () => {
+    render(LibraryView, {
+      books: [
+        {
+          id: "book-overflow-1",
+          title: "Este es un titulo extremadamente largo para verificar truncado en tarjetas de biblioteca",
+          author: "Autor con nombre considerablemente largo para stress test",
+          format: "pdf",
+          currentPage: 123,
+          totalPages: 456,
+          progressPercentage: 27,
+          coverPath: null,
+          minutesRead: 120,
+          updatedAt: new Date().toISOString(),
+        },
+      ] satisfies LibraryBookDto[],
+      selectedBookId: null,
+      isLoading: false,
+      disabledReason: null,
+      viewMode: "list",
+      t,
+    });
+
+    expect(screen.getByText(/extremadamente largo/i)).toHaveClass("line-clamp-2");
+    expect(screen.getByText(/nombre considerablemente largo/i)).toHaveClass("truncate");
+    expect(screen.getByText(/Updated/i)).toHaveClass("truncate");
   });
 });

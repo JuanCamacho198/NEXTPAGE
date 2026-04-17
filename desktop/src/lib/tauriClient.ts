@@ -14,6 +14,7 @@ import type {
   SaveBookmarkInput,
   SearchBookTextInput,
   SearchBookTextResponse,
+  UpsertBookCoverInput,
   UiLocale,
 } from "./types";
 import { UI_LOCALE_SETTING_KEY } from "./types";
@@ -240,6 +241,14 @@ export const fileExists = async (path: string): Promise<boolean> => {
 
 export const saveBookFile = async (id: string, data: number[]): Promise<void> => {
   await invoke("saveBookFile", { id, data });
+};
+
+export const upsertBookCover = async (payload: UpsertBookCoverInput): Promise<void> => {
+  try {
+    await invoke("upsertBookCover", { payload });
+  } catch (error) {
+    attachCommandError(error);
+  }
 };
 
 export const listHighlights = async (bookId?: string): Promise<HighlightDto[]> => {

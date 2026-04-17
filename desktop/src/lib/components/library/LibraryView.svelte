@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { convertFileSrc } from "@tauri-apps/api/core";
   import DropMenu from "../ui/DropMenu.svelte";
   import type { LibraryBookDto } from "../../types";
   import type { MessageKey } from "../../i18n";
@@ -46,6 +47,64 @@
   };
 
   const formatProgress = (progress: number) => `${Math.round(progress)}%`;
+
+  let coverErrorByBookId = $state<Record<string, boolean>>({});
+
+  const isAbsolutePath = (value: string) => /^[a-zA-Z]:[\\/]/.test(value) || value.startsWith("/");
+
+  const normalizeFileProtocolPath = (value: string) => {
+    const withoutScheme = value.replace(/^file:\/\//i, "");
+    const normalized = /^[a-zA-Z]:[\\/]/.test(withoutScheme)
+      ? withoutScheme
+      : withoutScheme.replace(/^\/+/, "");
+
+    try {
+      return decodeURIComponent(normalized);
+    } catch {
+      return normalized;
+    }
+  };
+
+  const normalizeCoverSource = (coverPath: string | null) => {
+    if (!coverPath) {
+      return null;
+    }
+
+    const trimmed = coverPath.trim();
+    if (trimmed.length === 0) {
+      return null;
+    }
+
+    if (/^(https?:|data:|blob:|asset:)/i.test(trimmed)) {
+      return trimmed;
+    }
+
+    if (trimmed.startsWith("file://")) {
+      return convertFileSrc(normalizeFileProtocolPath(trimmed));
+    }
+
+    if (isAbsolutePath(trimmed)) {
+      return convertFileSrc(trimmed);
+    }
+
+    return trimmed;
+  };
+
+  const resolveCoverSrc = (book: LibraryBookDto) => {
+    if (coverErrorByBookId[book.id]) {
+      return null;
+    }
+
+    return normalizeCoverSource(book.coverPath);
+  };
+
+  const markCoverAsFailed = (bookId: string) => {
+    coverErrorByBookId = {
+      ...coverErrorByBookId,
+      [bookId]: true,
+    };
+  };
+
 </script>
 
 <section class="rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
@@ -80,7 +139,7 @@
   {:else if viewMode === LIBRARY_VIEW_MODE.GRID}
     <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {#each books as book}
-        <li class={`rounded-xl border p-3 ${selectedBookId === book.id ? "border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]" : "border-[color:var(--color-border)] bg-[var(--color-surface)]"}`}>
+        <li class={`min-w-0 rounded-xl border p-3 ${selectedBookId === book.id ? "border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]" : "border-[color:var(--color-border)] bg-[var(--color-surface)]"}`}>
           <div class="mb-2 flex items-start justify-end">
             <DropMenu position="bottom-right">
               {#snippet trigger()}
@@ -102,16 +161,21 @@
             </DropMenu>
           </div>
           <button type="button" class="w-full text-left" onclick={() => onSelect?.(book)}>
-            {#if book.coverPath}
-              <img src={book.coverPath} alt={`Cover for ${book.title}`} class="mb-2 h-32 w-full rounded object-cover" />
+            {#if resolveCoverSrc(book)}
+              <img
+                src={resolveCoverSrc(book) ?? undefined}
+                alt={`Cover for ${book.title}`}
+                class="mb-2 h-32 w-full rounded object-cover"
+                onerror={() => markCoverAsFailed(book.id)}
+              />
             {:else}
               <div class="mb-2 flex h-32 w-full items-center justify-center rounded bg-[var(--color-background)] text-sm text-[var(--color-text-muted)]">
                 {t("library.noCover")}
               </div>
             {/if}
-            <p class="line-clamp-1 text-sm font-semibold text-[var(--color-primary)]">{book.title}</p>
-            <p class="line-clamp-1 text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")}</p>
-            <p class="mt-2 text-xs text-[var(--color-text-muted)]">{formatProgress(book.progressPercentage)} · {book.minutesRead} {t("library.min")}</p>
+            <p class="line-clamp-2 min-w-0 break-words text-sm font-semibold text-[var(--color-primary)]">{book.title}</p>
+            <p class="line-clamp-1 min-w-0 truncate text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")}</p>
+            <p class="mt-2 min-w-0 truncate text-xs text-[var(--color-text-muted)]">{formatProgress(book.progressPercentage)} · {book.minutesRead} {t("library.min")}</p>
           </button>
           <button
             type="button"
@@ -126,21 +190,26 @@
   {:else}
     <ul class="space-y-2">
       {#each books as book}
-        <li class={`rounded-xl border p-3 ${selectedBookId === book.id ? "border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]" : "border-[color:var(--color-border)] bg-[var(--color-surface)]"}`}>
+        <li class={`min-w-0 rounded-xl border p-3 ${selectedBookId === book.id ? "border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]" : "border-[color:var(--color-border)] bg-[var(--color-surface)]"}`}>
           <div class="flex items-start gap-3">
             <button type="button" class="min-w-0 flex-1 text-left" onclick={() => onSelect?.(book)}>
               <div class="flex items-start gap-3">
-                {#if book.coverPath}
-                  <img src={book.coverPath} alt={`Cover for ${book.title}`} class="h-14 w-10 rounded object-cover" />
+                {#if resolveCoverSrc(book)}
+                  <img
+                    src={resolveCoverSrc(book) ?? undefined}
+                    alt={`Cover for ${book.title}`}
+                    class="h-14 w-10 rounded object-cover"
+                    onerror={() => markCoverAsFailed(book.id)}
+                  />
                 {:else}
                   <div class="flex h-14 w-10 items-center justify-center rounded bg-[var(--color-background)] text-[10px] uppercase text-[var(--color-text-muted)]">
                     {t("library.cover")}
                   </div>
                 {/if}
                 <div class="min-w-0 flex-1">
-                  <p class="truncate text-sm font-semibold text-[var(--color-primary)]">{book.title}</p>
+                  <p class="line-clamp-2 min-w-0 break-words text-sm font-semibold text-[var(--color-primary)]">{book.title}</p>
                   <p class="truncate text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}</p>
-                  <p class="mt-1 text-xs text-[var(--color-text-muted)]">
+                  <p class="mt-1 min-w-0 truncate text-xs text-[var(--color-text-muted)]">
                     {book.currentPage}/{book.totalPages || "-"} · {formatProgress(book.progressPercentage)} · {t("library.updated")} {formatUpdatedAt(book.updatedAt)}
                   </p>
                 </div>

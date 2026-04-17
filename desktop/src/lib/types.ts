@@ -81,6 +81,12 @@ export type BookCoverDto = {
   byteSize: number;
 };
 
+export type UpsertBookCoverInput = {
+  bookId: string;
+  data: number[];
+  mimeType?: string;
+};
+
 export type LibraryBookDto = {
   id: string;
   title: string;

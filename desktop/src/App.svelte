@@ -20,9 +20,11 @@
     saveProgress,
     saveReadingSession,
     searchBookText,
+    upsertBookCover,
     updateBookProgress,
   } from "./lib/tauriClient";
   import { i18n, type MessageKey } from "./lib/i18n";
+  import { generatePdfFirstPageThumbnail } from "./lib/services/pdfThumbnail";
 
   import type {
     BookDto,
@@ -72,6 +74,8 @@
   let searchTargetLocator = $state<string | null>(null);
   let readerError = $state<string | null>(null);
   let locale = $state<UiLocale>("es");
+  const thumbnailGenerationInFlight = new Set<string>();
+  const thumbnailGenerationAttempted = new Set<string>();
 
   const t = (key: MessageKey, params?: Record<string, string | number>) => i18n.t(locale, key, params);
 
@@ -146,6 +150,43 @@
     void loadStats(book.id);
   };
 
+  const hasResolvedCoverPath = (book: Pick<LibraryBookDto, "coverPath">) => {
+    return typeof book.coverPath === "string" && book.coverPath.trim().length > 0;
+  };
+
+  const shouldGeneratePdfCover = (book: ReaderBook) => {
+    if (book.format.toLowerCase() !== "pdf") {
+      return false;
+    }
+
+    if (hasResolvedCoverPath(book)) {
+      return false;
+    }
+
+    return book.filePath.trim().length > 0;
+  };
+
+  const ensurePdfCover = async (book: ReaderBook) => {
+    if (thumbnailGenerationInFlight.has(book.id)) {
+      return;
+    }
+
+    thumbnailGenerationInFlight.add(book.id);
+    try {
+      const thumbnailBytes = await generatePdfFirstPageThumbnail(book.filePath);
+      await upsertBookCover({
+        bookId: book.id,
+        data: Array.from(thumbnailBytes),
+        mimeType: "image/png",
+      });
+      await loadLibrary();
+    } catch {
+      // fallback UI remains stable when thumbnail generation fails
+    } finally {
+      thumbnailGenerationInFlight.delete(book.id);
+    }
+  };
+
   const loadLibrary = async () => {
     isLoadingLibrary = true;
     readerError = null;
@@ -161,6 +202,19 @@
         filePath: filePathById.get(entry.id) ?? "",
       }));
 
+      const pendingThumbnailBooks = books.filter((book) => {
+        if (!shouldGeneratePdfCover(book)) {
+          return false;
+        }
+
+        if (thumbnailGenerationAttempted.has(book.id)) {
+          return false;
+        }
+
+        thumbnailGenerationAttempted.add(book.id);
+        return true;
+      });
+
       setDomainUnavailable(DOMAIN.LIBRARY, null);
 
       if (books.length > 0 && !selectedBook) {
@@ -168,6 +222,10 @@
       } else if (selectedBook) {
         const refreshed = books.find((item) => item.id === selectedBook?.id) ?? null;
         selectedBook = refreshed;
+      }
+
+      for (const pendingBook of pendingThumbnailBooks) {
+        void ensurePdfCover(pendingBook);
       }
     } catch (error) {
       const details = mapCommandError(error);

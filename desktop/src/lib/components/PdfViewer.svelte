@@ -5,6 +5,11 @@
   import { getFileBytes } from "../tauriClient";
   import HighlightToolbar from "./HighlightToolbar.svelte";
   import type { MessageKey } from "../i18n";
+  import {
+    DEFAULT_PDF_SCALE,
+    isPageWithinBounds,
+    resolveNavigationTransaction,
+  } from "./pdfNavigation";
 
   type Props = {
     filePath: string;
@@ -32,14 +37,18 @@
 
   let canvas: HTMLCanvasElement | undefined = $state();
   let textLayer: HTMLDivElement | undefined = $state();
+  let viewerRoot: HTMLDivElement | undefined = $state();
   let currentPage = $state(1);
   let totalPages = $state(0);
   let flashSearchResult = $state(false);
   let sessionStartAt = new Date().toISOString();
   let lastPercent = 0;
-  let scale = $state(1.5);
+  let scale = $state(DEFAULT_PDF_SCALE);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
+  let navigationError = $state<string | null>(null);
+  let isFullscreen = $state(false);
+  let fullscreenSupported = $state(true);
 
   let pdfDoc: pdfjsLib.PDFDocumentProxy | null = null;
   let currentPageObj: pdfjsLib.PDFPageProxy | null = null;
@@ -49,11 +58,25 @@
   let showToolbar = $state(false);
 
   let activeLoadRequestId = 0;
+  let activeNavigationRequestId = 0;
   let activeLoadingTask: pdfjsLib.PDFDocumentLoadingTask | null = null;
   let activeRenderTask: pdfjsLib.RenderTask | null = null;
   let textLayerMouseupTarget: HTMLDivElement | null = null;
 
   const isStaleLoad = (requestId: number) => requestId !== activeLoadRequestId;
+
+  const isStaleNavigation = (requestId: number) => requestId !== activeNavigationRequestId;
+
+  const canUseFullscreenApi = () => {
+    if (typeof document === "undefined") {
+      return false;
+    }
+
+    return (
+      typeof viewerRoot?.requestFullscreen === "function" &&
+      typeof document.exitFullscreen === "function"
+    );
+  };
 
   const clearTextLayerListener = () => {
     if (!textLayerMouseupTarget) {
@@ -111,13 +134,35 @@
       import.meta.url
     ).toString();
 
+    const syncFullscreenState = () => {
+      isFullscreen = document.fullscreenElement === viewerRoot;
+    };
+
+    const handleFullscreenError = () => {
+      navigationError = t("pdf.fullscreenUnsupported");
+      fullscreenSupported = canUseFullscreenApi();
+      isFullscreen = document.fullscreenElement === viewerRoot;
+    };
+
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    document.addEventListener("fullscreenerror", handleFullscreenError);
+    fullscreenSupported = canUseFullscreenApi();
+
     return () => {
       activeLoadRequestId += 1;
+      activeNavigationRequestId += 1;
       clearTextLayerListener();
       destroyActiveLoadingTask();
       void cancelActiveRenderTask();
       void destroyCurrentDocument();
+      document.removeEventListener("fullscreenchange", syncFullscreenState);
+      document.removeEventListener("fullscreenerror", handleFullscreenError);
     };
+  });
+
+  $effect(() => {
+    viewerRoot;
+    fullscreenSupported = canUseFullscreenApi();
   });
 
   $effect(() => {
@@ -176,6 +221,7 @@
     if (!filePath) return;
 
     const requestId = ++activeLoadRequestId;
+    activeNavigationRequestId += 1;
     clearTextLayerListener();
     destroyActiveLoadingTask();
     await cancelActiveRenderTask();
@@ -183,6 +229,8 @@
 
     isLoading = true;
     error = null;
+    navigationError = null;
+    scale = DEFAULT_PDF_SCALE;
 
     try {
       const fileData = await getFileBytes(filePath);
@@ -204,15 +252,16 @@
       pdfDoc = loadedDoc;
       totalPages = loadedDoc.numPages;
       const requestedPage = Math.max(1, initialPage || 1);
-      currentPage = Math.min(requestedPage, totalPages);
+      const targetPage = Math.min(requestedPage, totalPages);
 
-      const rendered = await renderPage(currentPage, requestId);
+      const rendered = await renderPage(targetPage, requestId);
       if (!rendered || isStaleLoad(requestId)) {
         return;
       }
 
-      onPageChange?.(currentPage, totalPages);
-      lastPercent = readProgressPercent(currentPage, totalPages);
+      currentPage = targetPage;
+      onPageChange?.(targetPage, totalPages);
+      lastPercent = readProgressPercent(targetPage, totalPages);
       sessionStartAt = new Date().toISOString();
       error = null;
     } catch (err) {
@@ -378,47 +427,97 @@
     window.getSelection()?.removeAllRanges();
   }
 
-  function goToPrevPage() {
-    if (currentPage <= 1) return;
+  async function navigateToPage(targetPage: number, options?: { flash?: boolean }): Promise<boolean> {
+    if (!pdfDoc || !isPageWithinBounds(targetPage, totalPages)) {
+      return false;
+    }
+
     hideToolbar();
-    currentPage--;
-    void renderPage(currentPage).then((rendered) => {
-      if (!rendered) {
-        return;
+    const previousPage = currentPage;
+    const requestId = ++activeNavigationRequestId;
+    const loadRequestId = activeLoadRequestId;
+    navigationError = null;
+
+    try {
+      const rendered = await renderPage(targetPage, loadRequestId);
+      const resolution = resolveNavigationTransaction({
+        previousPage,
+        targetPage,
+        rendered: Boolean(rendered),
+        stale: isStaleNavigation(requestId) || isStaleLoad(loadRequestId),
+      });
+
+      if (!resolution.didCommit) {
+        currentPage = resolution.committedPage;
+        if (resolution.shouldShowError) {
+          navigationError = t("pdf.navigationFailed");
+        }
+        return false;
       }
 
+      currentPage = resolution.committedPage;
       onPageChange?.(currentPage, totalPages);
       emitSessionProgress(currentPage, totalPages);
-    });
+
+      if (options?.flash) {
+        flashSearchResult = true;
+        window.setTimeout(() => {
+          flashSearchResult = false;
+        }, 900);
+      }
+
+      return true;
+    } catch {
+      if (!isStaleNavigation(requestId) && !isStaleLoad(loadRequestId)) {
+        currentPage = previousPage;
+        navigationError = t("pdf.navigationFailed");
+      }
+      return false;
+    }
+  }
+
+  function goToPrevPage() {
+    if (currentPage <= 1) return;
+    void navigateToPage(currentPage - 1);
   }
 
   function goToNextPage() {
     if (currentPage >= totalPages) return;
-    hideToolbar();
-    currentPage++;
-    void renderPage(currentPage).then((rendered) => {
-      if (!rendered) {
-        return;
-      }
-
-      onPageChange?.(currentPage, totalPages);
-      emitSessionProgress(currentPage, totalPages);
-    });
+    void navigateToPage(currentPage + 1);
   }
 
   async function goToPage(event: Event) {
     const target = event.target as HTMLInputElement;
-    const page = parseInt(target.value, 10);
-    if (page >= 1 && page <= totalPages) {
-      hideToolbar();
-      currentPage = page;
-      const rendered = await renderPage(currentPage);
-      if (!rendered) {
-        return;
-      }
+    const page = Number.parseInt(target.value, 10);
+    if (!isPageWithinBounds(page, totalPages)) {
+      target.value = String(currentPage);
+      return;
+    }
 
-      onPageChange?.(currentPage, totalPages);
-      emitSessionProgress(currentPage, totalPages);
+    const didCommit = await navigateToPage(page);
+    if (!didCommit) {
+      target.value = String(currentPage);
+    }
+  }
+
+  async function toggleFullscreen() {
+    if (!canUseFullscreenApi()) {
+      fullscreenSupported = false;
+      navigationError = t("pdf.fullscreenUnsupported");
+      return;
+    }
+
+    try {
+      navigationError = null;
+      if (document.fullscreenElement === viewerRoot) {
+        await document.exitFullscreen();
+      } else {
+        await viewerRoot?.requestFullscreen();
+      }
+      isFullscreen = document.fullscreenElement === viewerRoot;
+    } catch {
+      navigationError = t("pdf.fullscreenUnsupported");
+      fullscreenSupported = false;
     }
   }
 
@@ -428,25 +527,7 @@
       return;
     }
 
-    hideToolbar();
-    currentPage = targetPage;
-    flashSearchResult = true;
-    void renderPage(currentPage).then((rendered) => {
-      if (!rendered) {
-        return;
-      }
-
-      onPageChange?.(currentPage, totalPages);
-      emitSessionProgress(currentPage, totalPages);
-    });
-
-    const timer = window.setTimeout(() => {
-      flashSearchResult = false;
-    }, 900);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
+    void navigateToPage(targetPage, { flash: true });
   });
 
   export function setScale(newScale: number) {
@@ -465,7 +546,7 @@
   }
 </script>
 
-<div class="pdf-viewer">
+<div class="pdf-viewer" bind:this={viewerRoot}>
   {#if isLoading}
     <div class="loading">{t("pdf.loading")}</div>
   {:else if error}
@@ -489,12 +570,18 @@
       <button type="button" onclick={goToNextPage} disabled={currentPage >= totalPages}>
         {t("pdf.next")}
       </button>
+      <button type="button" onclick={toggleFullscreen} disabled={!fullscreenSupported}>
+        {isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}
+      </button>
       <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select">
         <option value={1}>100%</option>
         <option value={1.5}>150%</option>
         <option value={2}>200%</option>
       </select>
     </div>
+    {#if navigationError}
+      <p class="navigation-error" role="status" aria-live="polite">{navigationError}</p>
+    {/if}
     <div class="canvas-container">
       <div class="canvas-wrapper" class:search-hit={flashSearchResult}>
         <canvas bind:this={canvas}></canvas>
@@ -599,6 +686,13 @@
     display: flex;
     justify-content: center;
     padding: 16px;
+  }
+
+  .navigation-error {
+    margin: 0;
+    padding: 8px 12px 0;
+    color: #dc2626;
+    font-size: 13px;
   }
 
   .canvas-wrapper {

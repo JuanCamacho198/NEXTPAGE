@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { SearchBookTextResponse, SearchNavigationTarget, SearchResult } from "../../types";
+  import type { MessageKey } from "../../i18n";
 
   type Props = {
     bookId?: string | null;
@@ -8,6 +9,7 @@
     response: SearchBookTextResponse | null;
     onSearch?: (query: string, page: number) => void;
     onJump?: (target: SearchNavigationTarget) => void;
+    t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
   let {
@@ -17,16 +19,18 @@
     response,
     onSearch,
     onJump,
+    t,
   }: Props = $props();
 
   let query = $state("");
 
-  const hasResults = $derived((response?.items.length ?? 0) > 0);
-  const isNoMatch = $derived(Boolean(response) && (response?.items.length ?? 0) === 0);
-  const currentPage = $derived(response?.page ?? 1);
-  const pageSize = $derived(response?.pageSize ?? 20);
-  const total = $derived(response?.total ?? 0);
-  const hasMore = $derived(currentPage * pageSize < total);
+  const resultCount = () => response?.items.length ?? 0;
+  const hasResults = () => resultCount() > 0;
+  const isNoMatch = () => Boolean(response) && resultCount() === 0;
+  const currentPage = () => response?.page ?? 1;
+  const pageSize = () => response?.pageSize ?? 20;
+  const total = () => response?.total ?? 0;
+  const hasMore = () => currentPage() * pageSize() < total();
 
   const runSearch = (page = 1) => {
     if (!bookId || !query.trim()) {
@@ -45,8 +49,8 @@
   };
 </script>
 
-<section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-  <h3 class="mb-3 text-base font-semibold text-slate-800">In-Book Search</h3>
+<section class="rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+  <h3 class="mb-3 text-base font-semibold text-[var(--color-primary)]">{t("search.title")}</h3>
 
   {#if disabledReason}
     <div class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -62,59 +66,59 @@
     >
       <input
         type="text"
-        class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+        class="min-w-0 flex-1 rounded-md border border-[color:var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-primary)]"
         bind:value={query}
-        placeholder="Search text in this book"
+        placeholder={t("search.placeholder")}
         disabled={isSearching || !bookId}
       />
       <button
         type="submit"
-        class="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+        class="rounded-md bg-[var(--color-primary)] px-3 py-2 text-sm font-medium text-[var(--color-background)] hover:opacity-90 disabled:opacity-60"
         disabled={isSearching || !bookId || !query.trim()}
       >
-        {isSearching ? "Searching..." : "Search"}
+        {isSearching ? t("search.searching") : t("search.search")}
       </button>
     </form>
 
-    {#if hasResults}
+    {#if hasResults()}
       <ul class="space-y-2">
         {#each response?.items ?? [] as item, index}
           <li>
             <button
               type="button"
-              class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left hover:bg-slate-100"
+              class="w-full rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-left hover:bg-[color:var(--color-border)]"
               onclick={() => jumpTo(item, index)}
             >
-              <p class="text-sm text-slate-800">{item.snippet}</p>
-              <p class="mt-1 text-xs text-slate-500">Locator: {item.locator}</p>
+              <p class="text-sm text-[var(--color-primary)]">{item.snippet}</p>
+              <p class="mt-1 text-xs text-[var(--color-text-muted)]">{t("search.locator")}: {item.locator}</p>
             </button>
           </li>
         {/each}
       </ul>
 
-      <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
-        <span>Page {currentPage} · {Math.min(total, pageSize * currentPage)} / {total} matches</span>
+      <div class="mt-3 flex items-center justify-between text-xs text-[var(--color-text-muted)]">
+        <span>{t("search.page")} {currentPage()} · {Math.min(total(), pageSize() * currentPage())} / {total()} {t("search.matches")}</span>
         <div class="flex gap-1">
           <button
             type="button"
-            class="rounded border border-slate-300 px-2 py-1 hover:bg-slate-50 disabled:opacity-50"
-            onclick={() => runSearch(currentPage - 1)}
-            disabled={currentPage <= 1 || isSearching}
+            class="rounded border border-[color:var(--color-border)] px-2 py-1 text-[var(--color-primary)] hover:bg-[color:var(--color-border)] disabled:opacity-50"
+            onclick={() => runSearch(currentPage() - 1)}
+            disabled={currentPage() <= 1 || isSearching}
           >
-            Prev
+            {t("search.prev")}
           </button>
           <button
             type="button"
-            class="rounded border border-slate-300 px-2 py-1 hover:bg-slate-50 disabled:opacity-50"
-            onclick={() => runSearch(currentPage + 1)}
-            disabled={!hasMore || isSearching}
+            class="rounded border border-[color:var(--color-border)] px-2 py-1 text-[var(--color-primary)] hover:bg-[color:var(--color-border)] disabled:opacity-50"
+            onclick={() => runSearch(currentPage() + 1)}
+            disabled={!hasMore() || isSearching}
           >
-            Next
+            {t("search.next")}
           </button>
         </div>
       </div>
-    {:else if isNoMatch}
-      <p class="text-sm text-slate-500">No matches found for this query.</p>
+    {:else if isNoMatch()}
+      <p class="text-sm text-[var(--color-text-muted)]">{t("search.noMatches")}</p>
     {/if}
   {/if}
 </section>

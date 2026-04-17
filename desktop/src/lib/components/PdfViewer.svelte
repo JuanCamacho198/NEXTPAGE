@@ -2,7 +2,9 @@
   import * as pdfjsLib from "pdfjs-dist";
   import { Util } from "pdfjs-dist";
   import { onMount } from "svelte";
+  import { getFileBytes } from "../tauriClient";
   import HighlightToolbar from "./HighlightToolbar.svelte";
+  import type { MessageKey } from "../i18n";
 
   type Props = {
     filePath: string;
@@ -16,6 +18,7 @@
       startPercentage?: number;
       endPercentage?: number;
     }) => void;
+    t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
   let {
@@ -24,11 +27,12 @@
     onPageChange,
     searchTargetLocator = null,
     onSessionProgress,
+    t,
   }: Props = $props();
 
   let canvas: HTMLCanvasElement | undefined = $state();
   let textLayer: HTMLDivElement | undefined = $state();
-  let currentPage = $state(initialPage);
+  let currentPage = $state(1);
   let totalPages = $state(0);
   let flashSearchResult = $state(false);
   let sessionStartAt = new Date().toISOString();
@@ -44,6 +48,63 @@
   let selectionPosition = $state<{ x: number; y: number } | null>(null);
   let showToolbar = $state(false);
 
+  let activeLoadRequestId = 0;
+  let activeLoadingTask: pdfjsLib.PDFDocumentLoadingTask | null = null;
+  let activeRenderTask: pdfjsLib.RenderTask | null = null;
+  let textLayerMouseupTarget: HTMLDivElement | null = null;
+
+  const isStaleLoad = (requestId: number) => requestId !== activeLoadRequestId;
+
+  const clearTextLayerListener = () => {
+    if (!textLayerMouseupTarget) {
+      return;
+    }
+
+    textLayerMouseupTarget.removeEventListener("mouseup", handleTextSelection);
+    textLayerMouseupTarget = null;
+  };
+
+  const cancelActiveRenderTask = async () => {
+    if (!activeRenderTask) {
+      return;
+    }
+
+    const task = activeRenderTask;
+    activeRenderTask = null;
+
+    task.cancel();
+    try {
+      await task.promise;
+    } catch {
+      // render cancellation is expected during document/page switches
+    }
+  };
+
+  const destroyActiveLoadingTask = () => {
+    if (!activeLoadingTask) {
+      return;
+    }
+
+    activeLoadingTask.destroy();
+    activeLoadingTask = null;
+  };
+
+  const destroyCurrentDocument = async () => {
+    if (!pdfDoc) {
+      return;
+    }
+
+    const current = pdfDoc;
+    pdfDoc = null;
+    currentPageObj = null;
+
+    try {
+      await current.destroy();
+    } catch {
+      // swallow teardown errors to keep viewer recovery path stable
+    }
+  };
+
   onMount(() => {
     pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
       "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -51,9 +112,11 @@
     ).toString();
 
     return () => {
-      if (pdfDoc) {
-        pdfDoc.destroy();
-      }
+      activeLoadRequestId += 1;
+      clearTextLayerListener();
+      destroyActiveLoadingTask();
+      void cancelActiveRenderTask();
+      void destroyCurrentDocument();
     };
   });
 
@@ -112,35 +175,73 @@
   async function loadPdf() {
     if (!filePath) return;
 
+    const requestId = ++activeLoadRequestId;
+    clearTextLayerListener();
+    destroyActiveLoadingTask();
+    await cancelActiveRenderTask();
+    await destroyCurrentDocument();
+
     isLoading = true;
     error = null;
 
     try {
-      if (pdfDoc) {
-        pdfDoc.destroy();
+      const fileData = await getFileBytes(filePath);
+      if (isStaleLoad(requestId)) {
+        return;
       }
 
-      const loadingTask = pdfjsLib.getDocument(filePath);
-      pdfDoc = await loadingTask.promise;
-      totalPages = pdfDoc.numPages;
-      currentPage = Math.min(initialPage, totalPages);
+      const loadingTask = pdfjsLib.getDocument({
+        data: new Uint8Array(fileData),
+      });
+      activeLoadingTask = loadingTask;
+      const loadedDoc = await loadingTask.promise;
 
-      await renderPage(currentPage);
+      if (isStaleLoad(requestId)) {
+        await loadedDoc.destroy();
+        return;
+      }
+
+      pdfDoc = loadedDoc;
+      totalPages = loadedDoc.numPages;
+      const requestedPage = Math.max(1, initialPage || 1);
+      currentPage = Math.min(requestedPage, totalPages);
+
+      const rendered = await renderPage(currentPage, requestId);
+      if (!rendered || isStaleLoad(requestId)) {
+        return;
+      }
+
       onPageChange?.(currentPage, totalPages);
-      emitSessionProgress(currentPage, totalPages);
       lastPercent = readProgressPercent(currentPage, totalPages);
       sessionStartAt = new Date().toISOString();
+      error = null;
     } catch (err) {
+      if (isStaleLoad(requestId)) {
+        return;
+      }
+
       error = err instanceof Error ? err.message : "Failed to load PDF";
     } finally {
-      isLoading = false;
+      if (activeLoadingTask && isStaleLoad(requestId)) {
+        activeLoadingTask = null;
+      } else if (activeLoadingTask && !isStaleLoad(requestId)) {
+        activeLoadingTask = null;
+      }
+
+      if (!isStaleLoad(requestId)) {
+        isLoading = false;
+      }
     }
   }
 
-  async function renderPage(pageNum: number) {
+  async function renderPage(pageNum: number, requestId = activeLoadRequestId) {
     if (!pdfDoc || !canvas || !textLayer) return;
 
     const page = await pdfDoc.getPage(pageNum);
+    if (isStaleLoad(requestId)) {
+      return false;
+    }
+
     currentPageObj = page;
     const viewport = page.getViewport({ scale });
 
@@ -156,17 +257,64 @@
       canvas,
     };
 
-    await page.render(renderContext).promise;
+    await cancelActiveRenderTask();
+    const renderTask = page.render(renderContext);
+    activeRenderTask = renderTask;
+
+    try {
+      await renderTask.promise;
+    } catch (err) {
+      if (activeRenderTask === renderTask) {
+        activeRenderTask = null;
+      }
+
+      const isCancelled =
+        typeof err === "object" &&
+        err !== null &&
+        "name" in err &&
+        String((err as { name?: string }).name) === "RenderingCancelledException";
+      if (isCancelled) {
+        return false;
+      }
+
+      throw err;
+    }
+
+    if (activeRenderTask === renderTask) {
+      activeRenderTask = null;
+    }
+
+    if (isStaleLoad(requestId)) {
+      return false;
+    }
 
     textLayer.style.width = `${viewport.width}px`;
     textLayer.style.height = `${viewport.height}px`;
 
     const textContent = await page.getTextContent();
-    renderTextLayer(textContent as { items: Array<{ str: string; transform: number[]; width: number; height: number }> }, viewport);
+    if (isStaleLoad(requestId)) {
+      return false;
+    }
+
+    renderTextLayer(
+      textContent as { items: Array<{ str: string; transform: number[]; width: number; height: number }> },
+      viewport,
+      requestId,
+    );
+    return true;
   }
 
-  async function renderTextLayer(textContent: { items: Array<{ str: string; transform: number[]; width: number; height: number }> }, viewport: pdfjsLib.PageViewport) {
+  async function renderTextLayer(
+    textContent: { items: Array<{ str: string; transform: number[]; width: number; height: number }> },
+    viewport: pdfjsLib.PageViewport,
+    requestId = activeLoadRequestId,
+  ) {
     if (!textLayer) return;
+    if (isStaleLoad(requestId)) {
+      return;
+    }
+
+    clearTextLayerListener();
 
     textLayer.innerHTML = "";
     textLayer.style.position = "absolute";
@@ -197,6 +345,7 @@
     }
 
     textLayer.addEventListener("mouseup", handleTextSelection);
+    textLayerMouseupTarget = textLayer;
   }
 
   function handleTextSelection() {
@@ -233,18 +382,28 @@
     if (currentPage <= 1) return;
     hideToolbar();
     currentPage--;
-    renderPage(currentPage);
-    onPageChange?.(currentPage, totalPages);
-    emitSessionProgress(currentPage, totalPages);
+    void renderPage(currentPage).then((rendered) => {
+      if (!rendered) {
+        return;
+      }
+
+      onPageChange?.(currentPage, totalPages);
+      emitSessionProgress(currentPage, totalPages);
+    });
   }
 
   function goToNextPage() {
     if (currentPage >= totalPages) return;
     hideToolbar();
     currentPage++;
-    renderPage(currentPage);
-    onPageChange?.(currentPage, totalPages);
-    emitSessionProgress(currentPage, totalPages);
+    void renderPage(currentPage).then((rendered) => {
+      if (!rendered) {
+        return;
+      }
+
+      onPageChange?.(currentPage, totalPages);
+      emitSessionProgress(currentPage, totalPages);
+    });
   }
 
   async function goToPage(event: Event) {
@@ -253,7 +412,11 @@
     if (page >= 1 && page <= totalPages) {
       hideToolbar();
       currentPage = page;
-      await renderPage(currentPage);
+      const rendered = await renderPage(currentPage);
+      if (!rendered) {
+        return;
+      }
+
       onPageChange?.(currentPage, totalPages);
       emitSessionProgress(currentPage, totalPages);
     }
@@ -268,9 +431,14 @@
     hideToolbar();
     currentPage = targetPage;
     flashSearchResult = true;
-    void renderPage(currentPage);
-    onPageChange?.(currentPage, totalPages);
-    emitSessionProgress(currentPage, totalPages);
+    void renderPage(currentPage).then((rendered) => {
+      if (!rendered) {
+        return;
+      }
+
+      onPageChange?.(currentPage, totalPages);
+      emitSessionProgress(currentPage, totalPages);
+    });
 
     const timer = window.setTimeout(() => {
       flashSearchResult = false;
@@ -284,7 +452,7 @@
   export function setScale(newScale: number) {
     scale = newScale;
     if (pdfDoc) {
-      renderPage(currentPage);
+      void renderPage(currentPage);
     }
   }
 
@@ -299,13 +467,13 @@
 
 <div class="pdf-viewer">
   {#if isLoading}
-    <div class="loading">Loading PDF...</div>
+    <div class="loading">{t("pdf.loading")}</div>
   {:else if error}
-    <div class="error">Error: {error}</div>
+    <div class="error">{t("pdf.error")}: {error}</div>
   {:else}
     <div class="controls">
       <button type="button" onclick={goToPrevPage} disabled={currentPage <= 1}>
-        Previous
+        {t("pdf.previous")}
       </button>
       <span class="page-info">
         <input
@@ -319,7 +487,7 @@
         / {totalPages}
       </span>
       <button type="button" onclick={goToNextPage} disabled={currentPage >= totalPages}>
-        Next
+        {t("pdf.next")}
       </button>
       <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select">
         <option value={1}>100%</option>
@@ -354,7 +522,8 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #f5f5f5;
+    background: var(--color-background);
+    color: var(--color-primary);
   }
 
   .loading, .error {
@@ -374,21 +543,22 @@
     align-items: center;
     gap: 12px;
     padding: 8px 12px;
-    background: #fff;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
   }
 
   .controls button {
     padding: 6px 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-border);
     border-radius: 4px;
-    background: #fff;
+    background: var(--color-surface);
+    color: var(--color-primary);
     cursor: pointer;
     font-size: 13px;
   }
 
   .controls button:hover:not(:disabled) {
-    background: #f3f4f6;
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
   }
 
   .controls button:disabled {
@@ -401,21 +571,26 @@
     align-items: center;
     gap: 4px;
     font-size: 13px;
+    color: var(--color-primary);
   }
 
   .page-input {
     width: 50px;
     padding: 4px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-border);
     border-radius: 4px;
     text-align: center;
+    background: var(--color-surface);
+    color: var(--color-primary);
   }
 
   .scale-select {
     padding: 4px 8px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-border);
     border-radius: 4px;
     margin-left: auto;
+    background: var(--color-surface);
+    color: var(--color-primary);
   }
 
   .canvas-container {

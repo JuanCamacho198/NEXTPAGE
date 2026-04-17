@@ -14,17 +14,44 @@ import type {
   SaveBookmarkInput,
   SearchBookTextInput,
   SearchBookTextResponse,
+  UiLocale,
 } from "./types";
+import { UI_LOCALE_SETTING_KEY } from "./types";
 
 type MaybeCommandError = Error & { commandError?: CommandErrorDto };
 
+const normalizeMessage = (error: unknown): string => {
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error !== null) {
+    const candidate = (error as { message?: unknown; error?: unknown }).message;
+    if (typeof candidate === "string" && candidate.length > 0) {
+      return candidate;
+    }
+
+    const nestedError = (error as { error?: unknown }).error;
+    if (typeof nestedError === "string" && nestedError.length > 0) {
+      return nestedError;
+    }
+  }
+
+  return "Command invocation failed";
+};
+
 const parseCommandError = (raw: unknown): CommandErrorDto | null => {
-  if (typeof raw !== "string") {
+  const text = normalizeMessage(raw);
+  if (text.length === 0) {
     return null;
   }
 
   try {
-    const parsed = JSON.parse(raw) as CommandErrorDto;
+    const parsed = JSON.parse(text) as CommandErrorDto;
     if (
       parsed &&
       typeof parsed.code === "string" &&
@@ -41,8 +68,8 @@ const parseCommandError = (raw: unknown): CommandErrorDto | null => {
 };
 
 const attachCommandError = (error: unknown): never => {
-  const fallbackMessage = error instanceof Error ? error.message : "Unexpected command failure";
-  const commandError = parseCommandError(fallbackMessage);
+  const fallbackMessage = normalizeMessage(error);
+  const commandError = parseCommandError(error);
 
   const wrapped = new Error(commandError?.message ?? fallbackMessage) as MaybeCommandError;
   wrapped.commandError = commandError ?? undefined;
@@ -120,6 +147,39 @@ export const upsertSettings = async (settings: AppSettingDto[]): Promise<void> =
   }
 };
 
+const readSettingValue = (settings: AppSettingDto[], key: string): unknown => {
+  const item = settings.find((entry) => entry.key === key);
+  if (!item) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(item.valueJson) as unknown;
+  } catch {
+    return null;
+  }
+};
+
+export const getLocaleSetting = async (): Promise<string | null> => {
+  const settings = await getSettings();
+  const rawLocale = readSettingValue(settings, UI_LOCALE_SETTING_KEY);
+  if (typeof rawLocale !== "string" || rawLocale.trim().length === 0) {
+    return null;
+  }
+
+  return rawLocale.trim().toLowerCase();
+};
+
+export const upsertLocaleSetting = async (locale: UiLocale): Promise<void> => {
+  await upsertSettings([
+    {
+      key: UI_LOCALE_SETTING_KEY,
+      valueJson: JSON.stringify(locale),
+      updatedAt: new Date().toISOString(),
+    },
+  ]);
+};
+
 export const indexBookText = async (payload: {
   bookId: string;
   chunks: Array<{ locator: string; chunkIndex: number; textContent: string }>;
@@ -151,7 +211,23 @@ export const importBook = async (input: {
 };
 
 export const getFileBytes = async (filePath: string): Promise<number[]> => {
-  return invoke<number[]>("getFileBytes", { filePath });
+  try {
+    return await invoke<number[]>("getFileBytes", { filePath });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const hideBookFromLibrary = async (bookId: string): Promise<void> => {
+  try {
+    await invoke("hideBookFromLibrary", {
+      payload: {
+        bookId,
+      },
+    });
+  } catch (error) {
+    attachCommandError(error);
+  }
 };
 
 export const updateBookProgress = async (bookId: string, currentPage: number): Promise<void> => {
@@ -167,7 +243,7 @@ export const saveBookFile = async (id: string, data: number[]): Promise<void> =>
 };
 
 export const listHighlights = async (bookId?: string): Promise<HighlightDto[]> => {
-  return invoke<HighlightDto[]>("listHighlights", { bookId });
+  return invoke<HighlightDto[]>("listHighlights", { bookId: bookId ?? null });
 };
 
 export const saveHighlight = async (highlight: SaveHighlightInput): Promise<void> => {
@@ -179,7 +255,7 @@ export const deleteHighlight = async (id: string): Promise<void> => {
 };
 
 export const listBookmarks = async (bookId?: string): Promise<BookmarkDto[]> => {
-  return invoke<BookmarkDto[]>("listBookmarks", { bookId });
+  return invoke<BookmarkDto[]>("listBookmarks", { bookId: bookId ?? null });
 };
 
 export const saveBookmark = async (bookmark: SaveBookmarkInput): Promise<void> => {

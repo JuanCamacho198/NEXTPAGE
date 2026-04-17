@@ -34,6 +34,7 @@ impl LibraryRepository {
             "SELECT id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at
              FROM books
              WHERE deleted_at IS NULL
+               AND hidden_at IS NULL
              ORDER BY updated_at DESC",
         )?;
 
@@ -403,6 +404,83 @@ impl LibraryRepository {
         Ok(())
     }
 
+    pub fn save_book_file(&self, id: &str, data: &[u8]) -> AppResult<()> {
+        let book_id = id.trim();
+        if book_id.is_empty() {
+            return Err(AppError::MissingBookId);
+        }
+
+        let file_path: Option<String> = self
+            .connection
+            .query_row(
+                "SELECT file_path
+                 FROM books
+                 WHERE id = ?1 AND deleted_at IS NULL
+                 LIMIT 1",
+                params![book_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+
+        let file_path = file_path
+            .ok_or_else(|| AppError::InvalidInput(format!("Book not found for id {}", book_id)))?;
+
+        let path = PathBuf::from(file_path);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, data)?;
+
+        self.connection.execute(
+            "UPDATE books
+             SET sync_status = 'synced', updated_at = ?1, version = version + 1
+             WHERE id = ?2",
+            params![Utc::now().to_rfc3339(), book_id],
+        )?;
+
+        Ok(())
+    }
+
+    pub fn hide_book_from_library(&self, book_id: &str) -> AppResult<()> {
+        let normalized_book_id = book_id.trim();
+        if normalized_book_id.is_empty() {
+            return Err(AppError::MissingBookId);
+        }
+
+        let existing_hidden_at: Option<Option<String>> = self
+            .connection
+            .query_row(
+                "SELECT hidden_at
+                 FROM books
+                 WHERE id = ?1 AND deleted_at IS NULL
+                 LIMIT 1",
+                params![normalized_book_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+
+        match existing_hidden_at {
+            None => {
+                return Err(AppError::InvalidInput(format!(
+                    "Book not found for id {}",
+                    normalized_book_id
+                )));
+            }
+            Some(Some(_)) => return Ok(()),
+            Some(None) => {}
+        }
+
+        let now = Utc::now().to_rfc3339();
+        self.connection.execute(
+            "UPDATE books
+             SET hidden_at = COALESCE(hidden_at, ?1), updated_at = ?1, version = version + 1
+             WHERE id = ?2 AND deleted_at IS NULL",
+            params![now, normalized_book_id],
+        )?;
+
+        Ok(())
+    }
+
     pub fn get_progress(&self, book_id: &str) -> AppResult<Option<ReadingProgressDto>> {
         if book_id.trim().is_empty() {
             return Err(AppError::MissingBookId);
@@ -472,32 +550,10 @@ impl LibraryRepository {
             }
         }
 
-        self.save_reading_session(ReadingSessionInput {
-            book_id: payload.book_id.clone(),
-            started_at: now.clone(),
-            ended_at: Some(now),
-            duration_seconds: 0,
-            start_percentage: None,
-            end_percentage: Some(payload.percentage),
-        })?;
-
         Ok(())
     }
 
     pub fn upsert_progress(&self, progress: ReadingProgressDto) -> AppResult<()> {
-        let previous_percentage: Option<f64> = self
-            .connection
-            .query_row(
-                "SELECT percentage
-                 FROM reading_progress
-                 WHERE book_id = ?1 AND deleted_at IS NULL
-                 ORDER BY updated_at DESC
-                 LIMIT 1",
-                params![&progress.book_id],
-                |row| row.get(0),
-            )
-            .optional()?;
-
         self.connection.execute(
             "INSERT INTO reading_progress (id, book_id, cfi_location, percentage, updated_at, version)
              VALUES (?1, ?2, ?3, ?4, ?5, 1)
@@ -515,15 +571,6 @@ impl LibraryRepository {
                 &progress.updated_at
             ],
         )?;
-
-        self.save_reading_session(ReadingSessionInput {
-            book_id: progress.book_id,
-            started_at: progress.updated_at.clone(),
-            ended_at: Some(progress.updated_at),
-            duration_seconds: 0,
-            start_percentage: previous_percentage,
-            end_percentage: Some(progress.percentage),
-        })?;
 
         Ok(())
     }
@@ -554,6 +601,7 @@ impl LibraryRepository {
              ) rs
                ON rs.book_id = b.id
              WHERE b.deleted_at IS NULL
+               AND b.hidden_at IS NULL
              ORDER BY b.updated_at DESC, b.id ASC",
         )?;
 
@@ -591,9 +639,41 @@ impl LibraryRepository {
                 "Reading session durationSeconds cannot be negative".to_string(),
             ));
         }
+        if session.duration_seconds == 0 {
+            return Err(AppError::InvalidInput(
+                "Reading session durationSeconds must be greater than zero".to_string(),
+            ));
+        }
+        if session.ended_at.is_none() {
+            return Err(AppError::InvalidInput(
+                "Reading session endedAt is required".to_string(),
+            ));
+        }
+
+        let started_at =
+            chrono::DateTime::parse_from_rfc3339(session.started_at.trim()).map_err(|_| {
+                AppError::InvalidInput("Reading session startedAt must be RFC3339".to_string())
+            })?;
+        let ended_at_raw = session.ended_at.as_deref().unwrap_or_default();
+        let ended_at = chrono::DateTime::parse_from_rfc3339(ended_at_raw.trim()).map_err(|_| {
+            AppError::InvalidInput("Reading session endedAt must be RFC3339".to_string())
+        })?;
+        if ended_at <= started_at {
+            return Err(AppError::InvalidInput(
+                "Reading session endedAt must be after startedAt".to_string(),
+            ));
+        }
 
         Self::validate_percentage("startPercentage", session.start_percentage)?;
         Self::validate_percentage("endPercentage", session.end_percentage)?;
+
+        if let (Some(start), Some(end)) = (session.start_percentage, session.end_percentage) {
+            if (start - end).abs() < f64::EPSILON {
+                return Err(AppError::InvalidInput(
+                    "Reading session startPercentage and endPercentage cannot be equal".to_string(),
+                ));
+            }
+        }
 
         self.connection.execute(
             "INSERT INTO reading_sessions (id, book_id, started_at, ended_at, duration_seconds, start_percentage, end_percentage, created_at)
@@ -747,11 +827,11 @@ impl LibraryRepository {
         })
     }
 
-    pub fn list_highlights(&self, book_id: &str) -> AppResult<Vec<HighlightDto>> {
+    pub fn list_highlights(&self, book_id: Option<&str>) -> AppResult<Vec<HighlightDto>> {
         let mut statement = self.connection.prepare(
             "SELECT id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, created_at, updated_at
              FROM highlights
-             WHERE book_id = ?1 AND deleted_at IS NULL
+             WHERE (?1 IS NULL OR book_id = ?1) AND deleted_at IS NULL
              ORDER BY page ASC, rect_top ASC",
         )?;
 
@@ -828,11 +908,11 @@ impl LibraryRepository {
         Ok(())
     }
 
-    pub fn list_bookmarks(&self, book_id: &str) -> AppResult<Vec<BookmarkDto>> {
+    pub fn list_bookmarks(&self, book_id: Option<&str>) -> AppResult<Vec<BookmarkDto>> {
         let mut statement = self.connection.prepare(
             "SELECT id, book_id, page, position, title, created_at
              FROM bookmarks
-             WHERE book_id = ?1 AND deleted_at IS NULL
+             WHERE (?1 IS NULL OR book_id = ?1) AND deleted_at IS NULL
              ORDER BY page ASC, position ASC",
         )?;
 
@@ -1252,6 +1332,9 @@ mod tests {
                 "../migrations/0004_desktop_feature_parity.sql"
             ))
             .unwrap();
+        connection
+            .execute_batch(include_str!("../migrations/0005_hidden_books.sql"))
+            .unwrap();
     }
 
     fn new_repository() -> LibraryRepository {
@@ -1504,7 +1587,7 @@ mod tests {
             .save_reading_session(ReadingSessionInput {
                 book_id: "book-a".to_string(),
                 started_at: Utc::now().to_rfc3339(),
-                ended_at: None,
+                ended_at: Some((Utc::now() + chrono::Duration::seconds(120)).to_rfc3339()),
                 duration_seconds: 120,
                 start_percentage: Some(10.0),
                 end_percentage: Some(20.0),
@@ -1514,7 +1597,7 @@ mod tests {
             .save_reading_session(ReadingSessionInput {
                 book_id: "book-b".to_string(),
                 started_at: Utc::now().to_rfc3339(),
-                ended_at: None,
+                ended_at: Some((Utc::now() + chrono::Duration::seconds(180)).to_rfc3339()),
                 duration_seconds: 180,
                 start_percentage: Some(30.0),
                 end_percentage: Some(90.0),
@@ -1526,5 +1609,126 @@ mod tests {
         assert_eq!(stats.books_started, 2);
         assert_eq!(stats.total_minutes_read, 5);
         assert!((stats.avg_progress_percentage - 55.0).abs() <= 1.0);
+    }
+
+    #[test]
+    fn hide_book_from_library_is_idempotent_and_removes_from_library_views() {
+        let repository = new_repository();
+        insert_book(&repository, "book-visible", "C:/library/book-visible.epub");
+
+        let initial_library_rows = repository.list_library_books().unwrap();
+        assert_eq!(initial_library_rows.len(), 1);
+        assert_eq!(initial_library_rows[0].id, "book-visible");
+
+        repository.hide_book_from_library("book-visible").unwrap();
+        repository.hide_book_from_library("book-visible").unwrap();
+
+        let remaining_library_rows = repository.list_library_books().unwrap();
+        assert!(remaining_library_rows.is_empty());
+
+        let remaining_books = repository.list_books().unwrap();
+        assert!(remaining_books.is_empty());
+
+        let hidden_at: Option<String> = repository
+            .connection
+            .query_row(
+                "SELECT hidden_at FROM books WHERE id = ?1",
+                params!["book-visible"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(hidden_at.is_some());
+    }
+
+    #[test]
+    fn hide_book_from_library_returns_error_for_unknown_book() {
+        let repository = new_repository();
+        let result = repository.hide_book_from_library("missing-book-id");
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn save_progress_does_not_create_reading_session() {
+        let repository = new_repository();
+        insert_book(
+            &repository,
+            "book-progress-only",
+            "C:/library/book-progress-only.epub",
+        );
+
+        repository
+            .save_progress(SaveProgressInput {
+                book_id: "book-progress-only".to_string(),
+                cfi_location: "cfi-1".to_string(),
+                percentage: 42.0,
+            })
+            .unwrap();
+
+        let total_sessions: i64 = repository
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM reading_sessions WHERE book_id = ?1",
+                params!["book-progress-only"],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(total_sessions, 0);
+    }
+
+    #[test]
+    fn save_reading_session_rejects_zero_signal_events() {
+        let repository = new_repository();
+        insert_book(
+            &repository,
+            "book-session-guard",
+            "C:/library/book-session-guard.epub",
+        );
+
+        let now = Utc::now().to_rfc3339();
+        let result = repository.save_reading_session(ReadingSessionInput {
+            book_id: "book-session-guard".to_string(),
+            started_at: now.clone(),
+            ended_at: Some(now),
+            duration_seconds: 0,
+            start_percentage: Some(10.0),
+            end_percentage: Some(10.0),
+        });
+
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn save_reading_session_accepts_valid_explicit_event() {
+        let repository = new_repository();
+        insert_book(
+            &repository,
+            "book-valid-session",
+            "C:/library/book-valid-session.epub",
+        );
+
+        let started_at = Utc::now();
+        let ended_at = started_at + chrono::Duration::seconds(45);
+
+        repository
+            .save_reading_session(ReadingSessionInput {
+                book_id: "book-valid-session".to_string(),
+                started_at: started_at.to_rfc3339(),
+                ended_at: Some(ended_at.to_rfc3339()),
+                duration_seconds: 45,
+                start_percentage: Some(12.0),
+                end_percentage: Some(14.0),
+            })
+            .unwrap();
+
+        let total_sessions: i64 = repository
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM reading_sessions WHERE book_id = ?1",
+                params!["book-valid-session"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(total_sessions, 1);
     }
 }

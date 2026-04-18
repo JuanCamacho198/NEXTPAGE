@@ -1,9 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   AppSettingDto,
-  CommandErrorDto,
+  BookCollectionInput,
   BookDto,
   BookmarkDto,
+  CommandErrorDto,
+  CreateCollectionInput,
   HighlightDto,
   LibraryBookDto,
   ReadingProgressDto,
@@ -16,6 +18,7 @@ import type {
   SearchBookTextResponse,
   UpsertBookCoverInput,
   UiLocale,
+  CollectionDto,
 } from "./types";
 import { UI_LOCALE_SETTING_KEY } from "./types";
 
@@ -273,4 +276,52 @@ export const saveBookmark = async (bookmark: SaveBookmarkInput): Promise<void> =
 
 export const deleteBookmark = async (id: string): Promise<void> => {
   await invoke("deleteBookmark", { id });
+};
+
+export const createCollection = async (payload: CreateCollectionInput): Promise<CollectionDto> => {
+  try {
+    return await invoke<CollectionDto>("createCollection", { payload });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const deleteCollection = async (id: number): Promise<void> => {
+  try {
+    await invoke("deleteCollection", { id });
+  } catch (error) {
+    attachCommandError(error);
+  }
+};
+
+export const listCollections = async (): Promise<CollectionDto[]> => {
+  try {
+    return await invoke<CollectionDto[]>("listCollections");
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const addBookToCollection = async (payload: BookCollectionInput): Promise<void> => {
+  try {
+    await invoke("addBookToCollection", { payload });
+  } catch (error) {
+    attachCommandError(error);
+  }
+};
+
+export const removeBookFromCollection = async (payload: BookCollectionInput): Promise<void> => {
+  try {
+    await invoke("removeBookFromCollection", { payload });
+  } catch (error) {
+    attachCommandError(error);
+  }
+};
+
+export const getBookCollections = async (bookId: string): Promise<CollectionDto[]> => {
+  try {
+    return await invoke<CollectionDto[]>("getBookCollections", { bookId });
+  } catch (error) {
+    return attachCommandError(error);
+  }
 };

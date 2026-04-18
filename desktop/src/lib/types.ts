@@ -98,6 +98,25 @@ export type LibraryBookDto = {
   coverPath: string | null;
   minutesRead: number;
   updatedAt: string;
+  collectionIds?: number[];
+};
+
+export type CollectionDto = {
+  id: number;
+  name: string;
+  color: string | null;
+  isSystem: boolean;
+  createdAt: string;
+};
+
+export type CreateCollectionInput = {
+  name: string;
+  color?: string;
+};
+
+export type BookCollectionInput = {
+  bookId: string;
+  collectionId: number;
 };
 
 export type ReadingStatsSummaryDto = {

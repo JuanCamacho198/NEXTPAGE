@@ -133,6 +133,7 @@ pub struct LibraryBookDto {
     pub cover_path: Option<String>,
     pub minutes_read: i64,
     pub updated_at: String,
+    pub collection_ids: Vec<i64>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -249,4 +250,28 @@ pub struct BookDeleteInput {
 #[serde(rename_all = "camelCase")]
 pub struct HideBookInput {
     pub book_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CollectionDto {
+    pub id: i64,
+    pub name: String,
+    pub color: Option<String>,
+    pub is_system: bool,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCollectionInput {
+    pub name: String,
+    pub color: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BookCollectionInput {
+    pub book_id: String,
+    pub collection_id: i64,
 }

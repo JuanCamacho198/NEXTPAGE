@@ -103,6 +103,16 @@ export const messagesEn = {
   "errors.commandFailure": "Unknown command failure",
   "errors.settingsCommandFailed": "Settings command failed.",
   "errors.importCommandFailed": "Import command failed. Verify the selected file path and format.",
+  "library.searchPlaceholder": "Search by title or author...",
+  "library.searchResults": "Showing {count} of {total} books",
+  "library.searchNoResults": "No results",
+  "library.editMetadata.title": "Edit Metadata",
+  "library.editMetadata.titleLabel": "Title",
+  "library.editMetadata.authorLabel": "Author",
+  "library.editMetadata.cancel": "Cancel",
+  "library.editMetadata.save": "Save",
+  "library.editMetadata.saving": "Saving...",
+  "library.editMetadata.titleRequired": "Title is required",
 } as const;
 
 export type MessageKey = keyof typeof messagesEn;

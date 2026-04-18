@@ -5,11 +5,11 @@ use tauri::State;
 
 use crate::error::AppError;
 use crate::models::{
-    AppSettingDto, BookDeleteInput, BookmarkDto, BookDto, BookImportInput, CommandErrorDto,
-    HideBookInput, HighlightDto, IndexBookTextInput, LibraryBookDto, ListLibraryBooksInput,
-    ReadingProgressDto, ReadingSessionInput, ReadingStatsSummaryDto, SaveBookmarkInput,
-    SaveHighlightInput, UpsertBookCoverInput,
-    SaveProgressInput, SearchBookTextInput, SearchBookTextResponse,
+    AppSettingDto, BookDeleteInput, BookmarkDto, BookDto, BookImportInput, BookCollectionInput,
+    CommandErrorDto, CreateCollectionInput, HideBookInput, HighlightDto, IndexBookTextInput,
+    LibraryBookDto, ListLibraryBooksInput, ReadingProgressDto, ReadingSessionInput,
+    ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput, UpsertBookCoverInput,
+    SaveProgressInput, SearchBookTextInput, SearchBookTextResponse, CollectionDto,
 };
 use crate::state::AppState;
 
@@ -518,4 +518,110 @@ pub fn delete_bookmark(state: State<'_, AppState>, id: String) -> Result<(), Str
 #[tauri::command(rename_all = "camelCase")]
 pub fn deleteBookmark(state: State<'_, AppState>, id: String) -> Result<(), String> {
     delete_bookmark(state, id)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn create_collection(
+    state: State<'_, AppState>,
+    payload: CreateCollectionInput,
+) -> Result<CollectionDto, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository
+        .create_collection(&payload.name, payload.color.as_deref())
+        .map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn createCollection(
+    state: State<'_, AppState>,
+    payload: CreateCollectionInput,
+) -> Result<CollectionDto, String> {
+    create_collection(state, payload)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn delete_collection(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository
+        .delete_collection(id)
+        .map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn deleteCollection(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    delete_collection(state, id)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn list_collections(state: State<'_, AppState>) -> Result<Vec<CollectionDto>, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.list_collections().map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn listCollections(state: State<'_, AppState>) -> Result<Vec<CollectionDto>, String> {
+    list_collections(state)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn add_book_to_collection(
+    state: State<'_, AppState>,
+    payload: BookCollectionInput,
+) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository
+        .add_book_to_collection(&payload.book_id, payload.collection_id)
+        .map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn addBookToCollection(
+    state: State<'_, AppState>,
+    payload: BookCollectionInput,
+) -> Result<(), String> {
+    add_book_to_collection(state, payload)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn remove_book_from_collection(
+    state: State<'_, AppState>,
+    payload: BookCollectionInput,
+) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository
+        .remove_book_from_collection(&payload.book_id, payload.collection_id)
+        .map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn removeBookFromCollection(
+    state: State<'_, AppState>,
+    payload: BookCollectionInput,
+) -> Result<(), String> {
+    remove_book_from_collection(state, payload)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn get_book_collections(
+    state: State<'_, AppState>,
+    book_id: String,
+) -> Result<Vec<CollectionDto>, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository
+        .get_book_collections(&book_id)
+        .map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn getBookCollections(
+    state: State<'_, AppState>,
+    book_id: String,
+) -> Result<Vec<CollectionDto>, String> {
+    get_book_collections(state, book_id)
 }

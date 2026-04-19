@@ -20,10 +20,30 @@ import type {
   UpsertBookCoverInput,
   UiLocale,
   CollectionDto,
+  ReaderSettings,
+  ReaderThemeMode,
 } from "./types";
-import { UI_LOCALE_SETTING_KEY } from "./types";
+import {
+  UI_LOCALE_SETTING_KEY,
+  READER_THEME_MODE_SETTING_KEY,
+  READER_BRIGHTNESS_SETTING_KEY,
+  READER_CONTRAST_SETTING_KEY,
+  READER_EPUB_FONT_SIZE_SETTING_KEY,
+  READER_EPUB_FONT_FAMILY_SETTING_KEY,
+} from "./types";
 
 type MaybeCommandError = Error & { commandError?: CommandErrorDto };
+
+type RawHighlightDto = {
+  id: string;
+  bookId: string;
+  text: string;
+  color: string;
+  pageNumber?: number;
+  page?: number;
+  note?: string | null;
+  createdAt: string;
+};
 
 const normalizeMessage = (error: unknown): string => {
   if (typeof error === "string") {
@@ -79,6 +99,61 @@ const attachCommandError = (error: unknown): never => {
   const wrapped = new Error(commandError?.message ?? fallbackMessage) as MaybeCommandError;
   wrapped.commandError = commandError ?? undefined;
   throw wrapped;
+};
+
+const normalizePageNumber = (
+  pageNumberValue: unknown,
+  legacyPageValue: unknown,
+): number => {
+  const hasCanonical = typeof pageNumberValue !== "undefined";
+  const hasLegacy = typeof legacyPageValue !== "undefined";
+
+  if (!hasCanonical && !hasLegacy) {
+    throw new Error("Highlight payload requires pageNumber (or legacy page)");
+  }
+
+  const canonical =
+    typeof pageNumberValue === "number" && Number.isFinite(pageNumberValue)
+      ? pageNumberValue
+      : null;
+  const legacy =
+    typeof legacyPageValue === "number" && Number.isFinite(legacyPageValue)
+      ? legacyPageValue
+      : null;
+
+  if (hasCanonical && canonical === null) {
+    throw new Error("Highlight payload pageNumber must be a finite number");
+  }
+
+  if (hasLegacy && legacy === null) {
+    throw new Error("Highlight payload page must be a finite number");
+  }
+
+  if (canonical !== null && legacy !== null && canonical !== legacy) {
+    throw new Error(
+      `Highlight payload has conflicting page fields: pageNumber=${canonical}, page=${legacy}`,
+    );
+  }
+
+  const resolved = canonical ?? legacy;
+  if (resolved === null || !Number.isInteger(resolved) || resolved <= 0) {
+    throw new Error("Highlight payload page number must be a positive integer");
+  }
+
+  return resolved;
+};
+
+const normalizeHighlightDto = (payload: RawHighlightDto): HighlightDto => {
+  const pageNumber = normalizePageNumber(payload.pageNumber, payload.page);
+  return {
+    id: payload.id,
+    bookId: payload.bookId,
+    text: payload.text,
+    color: payload.color,
+    pageNumber,
+    note: payload.note ?? null,
+    createdAt: payload.createdAt,
+  };
 };
 
 export const listBooks = async (): Promise<BookDto[]> => {
@@ -173,6 +248,121 @@ const readSettingValue = (settings: AppSettingDto[], key: string): unknown => {
   }
 };
 
+const READER_THEME_MODES: ReadonlyArray<ReaderThemeMode> = ["paper", "sepia", "night"];
+const DEFAULT_READER_SETTINGS: ReaderSettings = {
+  themeMode: "paper",
+  brightness: 100,
+  contrast: 100,
+  epub: {
+    fontSize: 100,
+    fontFamily: "serif",
+  },
+};
+
+const clampInteger = (value: number, min: number, max: number): number => {
+  return Math.min(max, Math.max(min, Math.round(value)));
+};
+
+const sanitizeThemeMode = (value: unknown): ReaderThemeMode => {
+  if (typeof value !== "string") {
+    return DEFAULT_READER_SETTINGS.themeMode;
+  }
+
+  const normalized = value.trim().toLowerCase() as ReaderThemeMode;
+  if (!READER_THEME_MODES.includes(normalized)) {
+    return DEFAULT_READER_SETTINGS.themeMode;
+  }
+
+  return normalized;
+};
+
+const sanitizeRangedNumber = (
+  value: unknown,
+  min: number,
+  max: number,
+  fallback: number,
+): number => {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return clampInteger(value, min, max);
+};
+
+const sanitizeFontFamily = (value: unknown): string => {
+  if (typeof value !== "string") {
+    return DEFAULT_READER_SETTINGS.epub.fontFamily;
+  }
+
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    return DEFAULT_READER_SETTINGS.epub.fontFamily;
+  }
+
+  return normalized;
+};
+
+export const sanitizeReaderSettings = (
+  input?: Partial<ReaderSettings> | null,
+): ReaderSettings => {
+  const next = input ?? {};
+
+  return {
+    themeMode: sanitizeThemeMode(next.themeMode),
+    brightness: sanitizeRangedNumber(
+      next.brightness,
+      50,
+      150,
+      DEFAULT_READER_SETTINGS.brightness,
+    ),
+    contrast: sanitizeRangedNumber(next.contrast, 50, 150, DEFAULT_READER_SETTINGS.contrast),
+    epub: {
+      fontSize: sanitizeRangedNumber(
+        next.epub?.fontSize,
+        80,
+        200,
+        DEFAULT_READER_SETTINGS.epub.fontSize,
+      ),
+      fontFamily: sanitizeFontFamily(next.epub?.fontFamily),
+    },
+  };
+};
+
+const buildReaderSettingsPayload = (settings: ReaderSettings): AppSettingDto[] => {
+  const now = new Date().toISOString();
+  return [
+    {
+      key: READER_THEME_MODE_SETTING_KEY,
+      valueJson: JSON.stringify(settings.themeMode),
+      updatedAt: now,
+    },
+    {
+      key: READER_BRIGHTNESS_SETTING_KEY,
+      valueJson: JSON.stringify(settings.brightness),
+      updatedAt: now,
+    },
+    {
+      key: READER_CONTRAST_SETTING_KEY,
+      valueJson: JSON.stringify(settings.contrast),
+      updatedAt: now,
+    },
+    {
+      key: READER_EPUB_FONT_SIZE_SETTING_KEY,
+      valueJson: JSON.stringify(settings.epub.fontSize),
+      updatedAt: now,
+    },
+    {
+      key: READER_EPUB_FONT_FAMILY_SETTING_KEY,
+      valueJson: JSON.stringify(settings.epub.fontFamily),
+      updatedAt: now,
+    },
+  ];
+};
+
+export const getDefaultReaderSettings = (): ReaderSettings => {
+  return sanitizeReaderSettings(DEFAULT_READER_SETTINGS);
+};
+
 export const getLocaleSetting = async (): Promise<string | null> => {
   const settings = await getSettings();
   const rawLocale = readSettingValue(settings, UI_LOCALE_SETTING_KEY);
@@ -191,6 +381,32 @@ export const upsertLocaleSetting = async (locale: UiLocale): Promise<void> => {
       updatedAt: new Date().toISOString(),
     },
   ]);
+};
+
+export const getReaderSettings = async (): Promise<ReaderSettings> => {
+  const settings = await getSettings();
+
+  return sanitizeReaderSettings({
+    themeMode: readSettingValue(settings, READER_THEME_MODE_SETTING_KEY) as ReaderThemeMode,
+    brightness: readSettingValue(settings, READER_BRIGHTNESS_SETTING_KEY) as number,
+    contrast: readSettingValue(settings, READER_CONTRAST_SETTING_KEY) as number,
+    epub: {
+      fontSize: readSettingValue(settings, READER_EPUB_FONT_SIZE_SETTING_KEY) as number,
+      fontFamily: readSettingValue(settings, READER_EPUB_FONT_FAMILY_SETTING_KEY) as string,
+    },
+  });
+};
+
+export const upsertReaderSettings = async (settings: Partial<ReaderSettings>): Promise<ReaderSettings> => {
+  const sanitized = sanitizeReaderSettings(settings);
+  await upsertSettings(buildReaderSettingsPayload(sanitized));
+  return sanitized;
+};
+
+export const resetReaderSettingsToDefaults = async (): Promise<ReaderSettings> => {
+  const defaults = getDefaultReaderSettings();
+  await upsertSettings(buildReaderSettingsPayload(defaults));
+  return defaults;
 };
 
 export const indexBookText = async (payload: {
@@ -264,11 +480,28 @@ export const upsertBookCover = async (payload: UpsertBookCoverInput): Promise<vo
 };
 
 export const listHighlights = async (bookId?: string): Promise<HighlightDto[]> => {
-  return invoke<HighlightDto[]>("listHighlights", { bookId: bookId ?? null });
+  try {
+    const rows = await invoke<RawHighlightDto[]>("listHighlights", { bookId: bookId ?? null });
+    return rows.map(normalizeHighlightDto);
+  } catch (error) {
+    return attachCommandError(error);
+  }
 };
 
 export const saveHighlight = async (highlight: SaveHighlightInput): Promise<void> => {
-  await invoke("saveHighlight", { highlight });
+  const pageNumber = normalizePageNumber(highlight.pageNumber, highlight.page);
+  const payload: SaveHighlightInput = {
+    ...highlight,
+    pageNumber,
+    page: pageNumber,
+    note: highlight.note ?? null,
+  };
+
+  try {
+    await invoke("saveHighlight", { highlight: payload });
+  } catch (error) {
+    attachCommandError(error);
+  }
 };
 
 export const deleteHighlight = async (id: string): Promise<void> => {

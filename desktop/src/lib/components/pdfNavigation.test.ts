@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  adjustPdfScaleForWheel,
+  clampPdfScale,
   DEFAULT_PDF_SCALE,
+  PDF_SCALE_MAX,
+  PDF_SCALE_MIN,
+  PDF_SCALE_STEP,
   isPageWithinBounds,
   resolveNavigationTransaction,
 } from "./pdfNavigation";
@@ -8,6 +13,19 @@ import {
 describe("pdfNavigation", () => {
   it("keeps the default PDF scale at 100%", () => {
     expect(DEFAULT_PDF_SCALE).toBe(1.0);
+  });
+
+  it("clamps scale between 50% and 300%", () => {
+    expect(clampPdfScale(PDF_SCALE_MIN - 0.1)).toBe(PDF_SCALE_MIN);
+    expect(clampPdfScale(PDF_SCALE_MAX + 0.1)).toBe(PDF_SCALE_MAX);
+    expect(clampPdfScale(1.23)).toBe(1.2);
+  });
+
+  it("adjusts wheel scale in 10% steps", () => {
+    expect(adjustPdfScaleForWheel(1, -100)).toBe(1 + PDF_SCALE_STEP);
+    expect(adjustPdfScaleForWheel(1, 100)).toBe(1 - PDF_SCALE_STEP);
+    expect(adjustPdfScaleForWheel(PDF_SCALE_MAX, -100)).toBe(PDF_SCALE_MAX);
+    expect(adjustPdfScaleForWheel(PDF_SCALE_MIN, 100)).toBe(PDF_SCALE_MIN);
   });
 
   it("validates page bounds consistently", () => {

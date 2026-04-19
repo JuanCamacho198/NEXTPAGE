@@ -3,14 +3,14 @@
   import DropMenu from "./lib/components/ui/DropMenu.svelte";
   import Button from "./lib/components/ui/Button.svelte";
   import SettingsPanel from "./lib/components/SettingsPanel.svelte";
-  import LibraryView from "./lib/components/library/LibraryView.svelte";
-  import ReadingStatsPanel from "./lib/components/stats/ReadingStatsPanel.svelte";
+  import HomeDesktopView from "./lib/components/layout/HomeDesktopView.svelte";
   import SearchPanel from "./lib/components/reader/SearchPanel.svelte";
   import EpubViewer from "./lib/components/EpubViewer.svelte";
   import PdfViewer from "./lib/components/PdfViewer.svelte";
   import EditMetadataModal from "./lib/components/library/EditMetadataModal.svelte";
   import CollectionManager from "./lib/components/library/CollectionManager.svelte";
   import BulkImportModal from "./lib/components/library/BulkImportModal.svelte";
+  import ShelfActionMenu from "./lib/components/library/ShelfActionMenu.svelte";
 
   import { importBook, type ImportProgress } from "./lib/services/BookImportService";
   import {
@@ -19,7 +19,9 @@
   } from "./lib/services/BulkImportService";
   import { pickFile, pickFolder } from "./lib/services/FilePicker";
   import {
+    getDefaultReaderSettings,
     getProgress,
+    getReaderSettings,
     hideBookFromLibrary,
     getReadingStats,
     listBooks,
@@ -38,6 +40,17 @@
   } from "./lib/tauriClient";
   import { i18n, type MessageKey } from "./lib/i18n";
   import { extractPdfMetadata } from "./lib/services/pdfThumbnail";
+  import {
+    type AppRoute,
+    createShelfQueryState,
+    getShelfQueryWarnings,
+    partitionHomeBooks,
+    promoteBookForReading,
+    reconcileHomeState,
+    getSafeProgressPercentage,
+    selectShelfBooks,
+    updateShelfQueryState,
+  } from "./lib/homeState";
 
   import type {
     BookDto,
@@ -52,13 +65,16 @@
     SearchBookTextResponse,
     SearchNavigationTarget,
     UiLocale,
+    ReaderSettings,
   } from "./lib/types";
 
   type ReaderBook = LibraryBookDto & {
     filePath: string;
+    isFavorite?: boolean;
+    toRead?: boolean;
+    completed?: boolean;
+    shelfStatus?: "all" | "favorites" | "to_read" | "completed";
   };
-
-  type LibraryViewMode = "list" | "grid";
 
   const DOMAIN = {
     LIBRARY: "library",
@@ -70,13 +86,15 @@
   type MaybeCommandError = Error & { commandError?: CommandErrorDto };
 
   let books = $state<ReaderBook[]>([]);
-  let selectedBook = $state<ReaderBook | null>(null);
-  let libraryViewMode = $state<LibraryViewMode>("list");
+  let shelfQueryState = $state(createShelfQueryState(""));
+  let route = $state<AppRoute>("home");
+  let previewBookId = $state<string | null>(null);
+  let activeReadingBookId = $state<string | null>(null);
+  let shelfDetailsBookId = $state<string | null>(null);
   let libraryUnavailableReason = $state<string | null>(null);
   let statsUnavailableReason = $state<string | null>(null);
   let searchUnavailableReason = $state<string | null>(null);
 
-  let isSettingsOpen = $state(false);
   let isLoadingLibrary = $state(false);
   let isLoadingStats = $state(false);
   let isSearching = $state(false);
@@ -90,12 +108,12 @@
   let searchTargetLocator = $state<string | null>(null);
   let readerError = $state<string | null>(null);
   let locale = $state<UiLocale>("es");
+  let readerSettings = $state<ReaderSettings>(getDefaultReaderSettings());
   const thumbnailGenerationInFlight = new Set<string>();
   const thumbnailGenerationAttempted = new Set<string>();
 
   let editingBook = $state<ReaderBook | null>(null);
   let collections = $state<CollectionDto[]>([]);
-  let selectedCollectionId = $state<string | null>(null);
   let isCollectionManagerOpen = $state(false);
   const bulkImportService = new BulkImportService();
 
@@ -110,6 +128,22 @@
   let bulkImportSummary = $state<BulkImportSummary | null>(null);
 
   const t = (key: MessageKey, params?: Record<string, string | number>) => i18n.t(locale, key, params);
+
+  const SHELF_TAB_OPTIONS = [
+    { key: "all", label: "home.shelfTab.all" },
+    { key: "favorites", label: "home.shelfTab.favorites" },
+    { key: "to_read", label: "home.shelfTab.toRead" },
+    { key: "completed", label: "home.shelfTab.completed" },
+  ] as const;
+
+  const SHELF_SORT_OPTIONS = [
+    { key: "progress", label: "home.shelfSort.progress" },
+    { key: "date", label: "home.shelfSort.date" },
+    { key: "last_read", label: "home.shelfSort.lastRead" },
+    { key: "author", label: "home.shelfSort.author" },
+    { key: "title", label: "home.shelfSort.title" },
+    { key: "file_size", label: "home.shelfSort.fileSize" },
+  ] as const;
 
   const mapCommandError = (error: unknown) => {
     const typed = error as MaybeCommandError;
@@ -163,8 +197,92 @@
     searchUnavailableReason = reason;
   };
 
-  const openBook = async (book: ReaderBook) => {
-    selectedBook = book;
+  const getBookById = (bookId: string | null) => {
+    if (!bookId) {
+      return null;
+    }
+
+    return books.find((book) => book.id === bookId) ?? null;
+  };
+
+  const openDetails = (book: ReaderBook) => {
+    previewBookId = book.id;
+  };
+
+  const openShelfDetails = (book: ReaderBook) => {
+    previewBookId = book.id;
+    shelfDetailsBookId = book.id;
+  };
+
+  const closeShelfDetails = () => {
+    shelfDetailsBookId = null;
+  };
+
+  const setShelfTab = (tab: (typeof SHELF_TAB_OPTIONS)[number]["key"]) => {
+    shelfQueryState = updateShelfQueryState(shelfQueryState, { tab });
+  };
+
+  const setShelfSort = (sortKey: (typeof SHELF_SORT_OPTIONS)[number]["key"]) => {
+    shelfQueryState = updateShelfQueryState(shelfQueryState, { sortKey });
+  };
+
+  const setShelfViewMode = (viewMode: "grid" | "list") => {
+    shelfQueryState = updateShelfQueryState(shelfQueryState, { viewMode });
+  };
+
+  const handleShelfQueryInput = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    shelfQueryState = updateShelfQueryState(shelfQueryState, { rawQuery: target.value });
+  };
+
+  const clearShelfQuery = () => {
+    shelfQueryState = updateShelfQueryState(shelfQueryState, { rawQuery: "" });
+  };
+
+  const continueReadingBooks = $derived.by(() => partitionHomeBooks(books).continueReadingBooks);
+  const myShelfBooks = $derived.by(() => partitionHomeBooks(books).myShelfBooks);
+  const shelfBooks = $derived.by(() => selectShelfBooks(myShelfBooks, shelfQueryState));
+  const shelfWarnings = $derived.by(() => getShelfQueryWarnings(shelfQueryState));
+  const shelfSortToken = $derived.by(() => {
+    for (let index = shelfQueryState.smartTokens.length - 1; index >= 0; index -= 1) {
+      const token = shelfQueryState.smartTokens[index];
+      if (token.field === "sort") {
+        return token.value;
+      }
+    }
+
+    return null;
+  });
+  const selectedShelfBook = $derived.by(() => {
+    const selected = getBookById(shelfDetailsBookId);
+    if (!selected) {
+      return null;
+    }
+
+    return myShelfBooks.find((book) => book.id === selected.id) ?? null;
+  });
+
+  const navigateToHome = () => {
+    route = "home";
+    shelfDetailsBookId = null;
+  };
+
+  const navigateToHighlights = () => {
+    route = "highlights";
+    shelfDetailsBookId = null;
+  };
+
+  const navigateToSettings = () => {
+    route = "settings";
+    shelfDetailsBookId = null;
+  };
+
+  const startReading = async (book: ReaderBook) => {
+    books = promoteBookForReading(books, book.id);
+
+    activeReadingBookId = book.id;
+    shelfDetailsBookId = null;
+    route = "reader";
     searchResponse = null;
     searchTargetLocator = null;
 
@@ -180,6 +298,10 @@
     }
 
     void loadStats(book.id);
+  };
+
+  const backToHome = () => {
+    route = "home";
   };
 
   const hasResolvedCoverPath = (book: Pick<LibraryBookDto, "coverPath">) => {
@@ -277,6 +399,17 @@
 
       books = booksWithCollections;
 
+      const reconciledState = reconcileHomeState(booksWithCollections, {
+        route,
+        previewBookId,
+        activeReadingBookId,
+        shelfDetailsBookId,
+      });
+      route = reconciledState.route;
+      previewBookId = reconciledState.previewBookId;
+      activeReadingBookId = reconciledState.activeReadingBookId;
+      shelfDetailsBookId = reconciledState.shelfDetailsBookId;
+
       const pendingThumbnailBooks = books.filter((book) => {
         if (!shouldGeneratePdfCover(book)) {
           return false;
@@ -291,13 +424,6 @@
       });
 
       setDomainUnavailable(DOMAIN.LIBRARY, null);
-
-      if (books.length > 0 && !selectedBook) {
-        void openBook(books[0]);
-      } else if (selectedBook) {
-        const refreshed = books.find((item) => item.id === selectedBook?.id) ?? null;
-        selectedBook = refreshed;
-      }
 
       for (const pendingBook of pendingThumbnailBooks) {
         void ensurePdfCover(pendingBook);
@@ -459,16 +585,10 @@
   };
 
   const handlePdfPageChange = async (page: number, total: number) => {
-    const current = selectedBook;
+    const current = getBookById(activeReadingBookId);
     if (!current) {
       return;
     }
-
-    selectedBook = {
-      ...current,
-      currentPage: page,
-      totalPages: total,
-    };
 
     books = books.map((book) =>
       book.id === current.id
@@ -496,7 +616,7 @@
     startPercentage?: number;
     endPercentage?: number;
   }) => {
-    const current = selectedBook;
+    const current = getBookById(activeReadingBookId);
     if (!current) {
       return;
     }
@@ -523,7 +643,7 @@
   };
 
   const handleEpubLocationChange = async (nextLocation: string, nextPercentage: number) => {
-    const current = selectedBook;
+    const current = getBookById(activeReadingBookId);
     if (!current) {
       return;
     }
@@ -547,7 +667,8 @@
   };
 
   const handleSearch = async (query: string, page: number) => {
-    if (!selectedBook) {
+    const activeBook = getBookById(activeReadingBookId);
+    if (!activeBook) {
       return;
     }
 
@@ -555,7 +676,7 @@
 
     try {
       searchResponse = await searchBookText({
-        bookId: selectedBook.id,
+        bookId: activeBook.id,
         query,
         page,
         pageSize: 200,
@@ -582,12 +703,68 @@
     try {
       await hideBookFromLibrary(book.id);
 
-      if (selectedBook?.id === book.id) {
-        selectedBook = null;
+      if (previewBookId === book.id) {
+        previewBookId = null;
+      }
+
+      if (shelfDetailsBookId === book.id) {
+        shelfDetailsBookId = null;
+      }
+
+      if (activeReadingBookId === book.id) {
+        activeReadingBookId = null;
+        route = "home";
       }
 
       await loadLibrary();
     } catch (error) {
+      const details = mapCommandError(error);
+      readerError = details.message;
+    }
+  };
+
+  const handleToggleFavorite = async (book: ReaderBook) => {
+    const nextFavorite = !Boolean(book.isFavorite);
+
+    books = books.map((currentBook) => {
+      if (currentBook.id !== book.id) {
+        return currentBook;
+      }
+
+      return {
+        ...currentBook,
+        isFavorite: nextFavorite,
+      };
+    });
+
+    const currentSnapshot = books.find((entry) => entry.id === book.id);
+    if (!currentSnapshot) {
+      return;
+    }
+
+    try {
+      await upsertBook({
+        id: currentSnapshot.id,
+        title: currentSnapshot.title,
+        author: currentSnapshot.author || "",
+        filePath: currentSnapshot.filePath,
+        format: currentSnapshot.format,
+        syncStatus: "local",
+        currentPage: currentSnapshot.currentPage,
+        totalPages: currentSnapshot.totalPages,
+      });
+    } catch (error) {
+      books = books.map((currentBook) => {
+        if (currentBook.id !== book.id) {
+          return currentBook;
+        }
+
+        return {
+          ...currentBook,
+          isFavorite: Boolean(book.isFavorite),
+        };
+      });
+
       const details = mapCommandError(error);
       readerError = details.message;
     }
@@ -599,6 +776,18 @@
 
   const handleLocaleChange = (nextLocale: UiLocale) => {
     locale = nextLocale;
+  };
+
+  const loadReaderSettings = async () => {
+    try {
+      readerSettings = await getReaderSettings();
+    } catch {
+      readerSettings = getDefaultReaderSettings();
+    }
+  };
+
+  const handleReaderSettingsChange = (nextSettings: ReaderSettings) => {
+    readerSettings = nextSettings;
   };
 
   const handleEditBook = (book: ReaderBook) => {
@@ -627,10 +816,6 @@
         b.id === updatedBook.id ? { ...b, title: updatedBook.title, author: updatedBook.author } : b,
       );
 
-      if (selectedBook?.id === updatedBook.id) {
-        selectedBook = { ...selectedBook, title: updatedBook.title, author: updatedBook.author };
-      }
-
       editingBook = null;
     } catch (error) {
       const details = mapCommandError(error);
@@ -642,6 +827,7 @@
     void i18n.initializeLocale().then((nextLocale) => {
       locale = nextLocale;
     });
+    void loadReaderSettings();
     void loadLibrary();
     void loadStats(undefined);
   });
@@ -649,33 +835,6 @@
 
 <main class="min-h-screen bg-[var(--color-background)] text-[var(--color-primary)]">
   <div class="mx-auto max-w-7xl p-4 md:p-6">
-    <header class="mb-4 flex items-center justify-between rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
-      <div>
-        <h1 class="text-xl font-semibold">{t("app.title")}</h1>
-        <p class="text-sm text-[var(--color-text-muted)]">{t("app.subtitle")}</p>
-      </div>
-      <div class="flex items-center gap-2">
-        <Button onclick={handleImportFile} disabled={isImporting} size="sm">
-          {isImporting ? t("app.importing") : t("app.importBook")}
-        </Button>
-        <DropMenu position="bottom-right">
-          {#snippet trigger()}
-            <button class="rounded-md border border-[color:var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]" aria-label={t("app.openMenu")}>
-              {t("app.menu")}
-            </button>
-          {/snippet}
-          <button
-            class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]"
-            onclick={() => {
-              isSettingsOpen = true;
-            }}
-          >
-            {t("app.settings")}
-          </button>
-        </DropMenu>
-      </div>
-    </header>
-
     {#if importProgress}
       <p class="mb-3 text-sm text-[var(--color-secondary)]">{importProgress.message}</p>
     {/if}
@@ -684,108 +843,460 @@
       <p class="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">{readerError}</p>
     {/if}
 
-    <SettingsPanel bind:isOpen={isSettingsOpen} {t} {locale} onLocaleChange={handleLocaleChange} />
+    {#if route === "home"}
+      {@const previewBook = getBookById(previewBookId)}
+      <HomeDesktopView
+        stats={stats}
+        isLoadingStats={isLoadingStats}
+        statsUnavailableReason={statsUnavailableReason}
+        selectedBookTitle={previewBook?.title ?? null}
+        activeRoute="home"
+        onNavigateHome={navigateToHome}
+        onNavigateHighlights={navigateToHighlights}
+        onNavigateSettings={navigateToSettings}
+        onRefreshStats={() => {
+          void loadStats(previewBookId ?? undefined);
+        }}
+        {t}
+      >
+        {#snippet navbarActions()}
+          <Button onclick={handleImportFile} disabled={isImporting} size="sm">
+            {isImporting ? t("app.importing") : t("app.importBook")}
+          </Button>
+          <DropMenu position="bottom-right">
+            {#snippet trigger()}
+              <button
+                class="rounded-md border border-[color:var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]"
+                aria-label={t("app.openMenu")}
+              >
+                {t("app.menu")}
+              </button>
+            {/snippet}
+            <button
+              class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]"
+              onclick={navigateToSettings}
+            >
+              {t("app.settings")}
+            </button>
+          </DropMenu>
+        {/snippet}
 
-    <div class="grid gap-4 lg:grid-cols-[340px_1fr]">
-      <div class="space-y-4">
-        <LibraryView
-          books={books}
-          {collections}
-          selectedBookId={selectedBook?.id ?? null}
-          {selectedCollectionId}
-          isLoading={isLoadingLibrary}
-          disabledReason={libraryUnavailableReason}
-          viewMode={libraryViewMode}
-          onToggleView={(mode) => {
-            libraryViewMode = mode;
-          }}
-          onSelect={(book) => {
-            selectedBook = books.find((entry) => entry.id === book.id) ?? null;
-          }}
-          onOpen={(book) => {
-            const match = books.find((entry) => entry.id === book.id);
-            if (match) {
-              void openBook(match);
-            }
-          }}
-          onHide={(book) => {
-            const match = books.find((entry) => entry.id === book.id);
-            if (match) {
-              void handleHideBook(match);
-            }
-          }}
-          onEdit={(book) => {
-            const match = books.find((entry) => entry.id === book.id);
-            if (match) {
-              handleEditBook(match);
-            }
-          }}
-          onCollectionSelect={(id) => {
-            selectedCollectionId = id;
-          }}
-          onManageCollections={() => {
-            isCollectionManagerOpen = true;
-          }}
-          onImportFolder={openBulkImportModal}
-          isImportingFolder={isBulkImporting}
-          {t}
-        />
-
-        <ReadingStatsPanel
-          stats={stats}
-          isLoading={isLoadingStats}
-          disabledReason={statsUnavailableReason}
-          selectedBookTitle={selectedBook?.title ?? null}
-          onRefresh={() => {
-            void loadStats(selectedBook?.id);
-          }}
-          {t}
-        />
-      </div>
-
-      <section class="rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
-        {#if !selectedBook}
-          <p class="text-sm text-[var(--color-text-muted)]">{t("app.openBookPrompt")}</p>
-        {:else}
-          <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 class="text-lg font-semibold text-[var(--color-primary)]">{selectedBook.title}</h2>
-              <p class="text-sm text-[var(--color-text-muted)]">
-                {selectedBook.author || t("app.unknownAuthor")} · {selectedBook.format.toUpperCase()} · {selectedBook.currentPage}/{selectedBook.totalPages || "-"}
-              </p>
-            </div>
-            {#if selectedBook.format.toLowerCase() === "epub"}
-              <p class="text-xs text-[var(--color-text-muted)]">{t("app.locationLabel")}: {cfiLocation || t("app.start")} · {Math.round(percentage)}%</p>
+        {#snippet continueSection()}
+          {#if continueReadingBooks.length === 0}
+            <p class="text-sm text-[var(--color-text-muted)]">{t("home.continueReadingPlaceholder")}</p>
+          {:else if continueReadingBooks.length === 1}
+            {@const book = continueReadingBooks[0]}
+            <article class="rounded-xl border border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))] p-4">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <button
+                  type="button"
+                  class="min-w-0 flex-1 text-left"
+                  onclick={() => {
+                    openDetails(book);
+                  }}
+                >
+                  <h3 class="line-clamp-2 text-lg font-semibold text-[var(--color-primary)]">{book.title}</h3>
+                  <p class="mt-1 truncate text-sm text-[var(--color-text-muted)]">
+                    {book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}
+                  </p>
+                  <p class="mt-2 text-xs text-[var(--color-text-muted)]">
+                    {book.currentPage}/{book.totalPages || "-"} · {Math.round(getSafeProgressPercentage(book))}%
+                  </p>
+                </button>
+                <Button
+                  size="sm"
+                  onclick={() => {
+                    void startReading(book);
+                  }}
+                >
+                  {t("app.read")}
+                </Button>
+              </div>
+            </article>
+          {:else}
+            <ul class="space-y-2">
+              {#each continueReadingBooks as book}
+                <li class="rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] p-3">
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <button
+                      type="button"
+                      class="min-w-0 flex-1 text-left"
+                      onclick={() => {
+                        openDetails(book);
+                      }}
+                    >
+                      <h3 class="line-clamp-2 text-base font-semibold text-[var(--color-primary)]">{book.title}</h3>
+                      <p class="truncate text-sm text-[var(--color-text-muted)]">
+                        {book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()} · {Math.round(getSafeProgressPercentage(book))}%
+                      </p>
+                    </button>
+                    <Button
+                      size="sm"
+                      onclick={() => {
+                        void startReading(book);
+                      }}
+                    >
+                      {t("app.read")}
+                    </Button>
+                  </div>
+                </li>
+              {/each}
+            </ul>
+            {#if previewBook}
+              <p class="mt-2 text-sm text-[var(--color-text-muted)]">{t("app.homeReadHint")}</p>
             {/if}
+          {/if}
+        {/snippet}
+
+        {#snippet shelfSection()}
+          <div class="space-y-3">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div class="flex flex-wrap items-center gap-2" data-testid="shelf-tabs">
+                {#each SHELF_TAB_OPTIONS as tabOption}
+                  <button
+                    type="button"
+                    data-testid={`shelf-tab-${tabOption.key}`}
+                    class={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${shelfQueryState.tab === tabOption.key ? "border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_12%,var(--color-surface))] text-[var(--color-primary)]" : "border-[color:var(--color-border)] bg-[var(--color-background)] text-[var(--color-text-muted)] hover:bg-[color:var(--color-border)]"}`}
+                    onclick={() => {
+                      setShelfTab(tabOption.key);
+                    }}
+                  >
+                    {t(tabOption.label)}
+                  </button>
+                {/each}
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <label class="sr-only" for="shelf-sort-select">{t("home.shelfSortLabel")}</label>
+                <select
+                  id="shelf-sort-select"
+                  data-testid="shelf-sort"
+                  class="rounded-md border border-[color:var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-xs text-[var(--color-primary)]"
+                  value={shelfQueryState.sortKey}
+                  onchange={(event) => {
+                    const value = (event.target as HTMLSelectElement).value as (typeof SHELF_SORT_OPTIONS)[number]["key"];
+                    setShelfSort(value);
+                  }}
+                >
+                  {#each SHELF_SORT_OPTIONS as sortOption}
+                    <option value={sortOption.key}>{t(sortOption.label)}</option>
+                  {/each}
+                </select>
+
+                <div class="inline-flex rounded-md border border-[color:var(--color-border)] bg-[var(--color-background)] p-1" data-testid="shelf-view-toggle">
+                  <button
+                    type="button"
+                    class={`rounded px-2 py-1 text-xs font-medium ${shelfQueryState.viewMode === "grid" ? "bg-[var(--color-surface)] text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}`}
+                    onclick={() => {
+                      setShelfViewMode("grid");
+                    }}
+                  >
+                    {t("library.grid")}
+                  </button>
+                  <button
+                    type="button"
+                    class={`rounded px-2 py-1 text-xs font-medium ${shelfQueryState.viewMode === "list" ? "bg-[var(--color-surface)] text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}`}
+                    onclick={() => {
+                      setShelfViewMode("list");
+                    }}
+                  >
+                    {t("library.list")}
+                  </button>
+                </div>
+
+                <div class="relative min-w-[220px] flex-1 lg:min-w-[280px]">
+                  <input
+                    type="text"
+                    data-testid="shelf-search"
+                    class="w-full rounded-md border border-[color:var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 pr-8 text-sm text-[var(--color-primary)] placeholder-[var(--color-text-muted)]"
+                    placeholder={t("home.shelfSearchPlaceholder")}
+                    value={shelfQueryState.rawQuery}
+                    oninput={handleShelfQueryInput}
+                  />
+                  {#if shelfQueryState.rawQuery.length > 0}
+                    <button
+                      type="button"
+                      class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)]"
+                      aria-label={t("home.shelfClearSearch")}
+                      onclick={clearShelfQuery}
+                    >
+                      x
+                    </button>
+                  {/if}
+                </div>
+              </div>
+            </div>
+
+            {#if shelfSortToken}
+              <p class="text-xs text-[var(--color-text-muted)]">{t("home.shelfSortFromQuery", { value: shelfSortToken })}</p>
+            {/if}
+
+            {#if shelfWarnings.length > 0}
+              <div class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900" data-testid="shelf-warnings">
+                <p class="font-medium">{t("home.shelfWarningsLabel")}</p>
+                <p class="mt-1">{t("home.shelfSearchInvalid", { value: shelfWarnings.join(", ") })}</p>
+              </div>
+            {/if}
+
+            <p class="text-xs text-[var(--color-text-muted)]">{t("home.shelfResults", { count: shelfBooks.length, total: myShelfBooks.length })}</p>
           </div>
 
-          {#if selectedBook.format.toLowerCase() === "pdf"}
-            <div class="mb-4 h-[520px] overflow-hidden rounded-lg border border-[color:var(--color-border)]">
-              <PdfViewer
-                filePath={selectedBook.filePath}
-                initialPage={Math.max(1, selectedBook.currentPage || 1)}
-                searchTargetLocator={searchTargetLocator}
-                onPageChange={handlePdfPageChange}
-                onSessionProgress={handlePdfSessionProgress}
-                {t}
-              />
-            </div>
+          {#if myShelfBooks.length === 0}
+            <p class="text-sm text-[var(--color-text-muted)]">{t("home.myShelfPlaceholder")}</p>
+          {:else if shelfBooks.length === 0}
+            <p class="text-sm text-[var(--color-text-muted)]">{t("home.shelfNoResults")}</p>
           {:else}
-            <div class="mb-4 h-[520px] overflow-hidden rounded-lg border border-[color:var(--color-border)]">
-              <EpubViewer
-                filePath={selectedBook.filePath}
-                initialLocation={cfiLocation}
-                initialPercentage={percentage}
-                searchTargetLocator={searchTargetLocator}
-                onLocationContext={handleReaderLocationContext}
-                onLocationChange={handleEpubLocationChange}
-                {t}
-              />
-            </div>
+            {#if shelfQueryState.viewMode === "grid"}
+              {#if shelfBooks.length === 1}
+                {@const book = shelfBooks[0]}
+                <article class={`rounded-xl border p-4 ${previewBookId === book.id ? "border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_12%,var(--color-surface))]" : "border-[color:var(--color-border)] bg-[var(--color-background)]"}`}>
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <button
+                      type="button"
+                      class="min-w-0 flex-1 text-left"
+                      onclick={() => {
+                        openShelfDetails(book);
+                      }}
+                    >
+                      <p class="line-clamp-2 text-lg font-semibold text-[var(--color-primary)]">{book.title}</p>
+                      <p class="mt-1 truncate text-sm text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}</p>
+                      <p class="mt-2 text-xs text-[var(--color-text-muted)]">{book.currentPage}/{book.totalPages || "-"} · {Math.round(getSafeProgressPercentage(book))}%</p>
+                    </button>
+
+                    <div class="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        onclick={() => {
+                          void startReading(book);
+                        }}
+                      >
+                        {t("app.read")}
+                      </Button>
+
+                      <ShelfActionMenu
+                        bookId={book.id}
+                        isFavorite={Boolean(book.isFavorite)}
+                        readLabel={t("app.read")}
+                        editLabel={t("library.editMetadata.title")}
+                        removeLabel={t("library.removeFromShelf")}
+                        favoriteAddLabel={t("library.favoriteAdd")}
+                        favoriteRemoveLabel={t("library.favoriteRemove")}
+                        triggerLabel={t("library.optionsFor", { title: book.title })}
+                        onEdit={() => {
+                          handleEditBook(book);
+                        }}
+                        onRemove={() => {
+                          void handleHideBook(book);
+                        }}
+                        onToggleFavorite={() => {
+                          void handleToggleFavorite(book);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </article>
+              {:else}
+                <ul class="grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {#each shelfBooks as book}
+                    <li class={`rounded-lg border p-3 transition-colors ${previewBookId === book.id ? "border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]" : "border-[color:var(--color-border)] bg-[var(--color-background)] hover:bg-[color:var(--color-border)]"}`}>
+                      <div class="flex items-start justify-between gap-2">
+                        <button
+                          type="button"
+                          class="min-w-0 flex-1 text-left"
+                          onclick={() => {
+                            openShelfDetails(book);
+                          }}
+                        >
+                          <p class="line-clamp-2 text-sm font-semibold text-[var(--color-primary)]">{book.title}</p>
+                          <p class="truncate text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}</p>
+                        </button>
+
+                        <ShelfActionMenu
+                          bookId={book.id}
+                          isFavorite={Boolean(book.isFavorite)}
+                          readLabel={t("app.read")}
+                          editLabel={t("library.editMetadata.title")}
+                          removeLabel={t("library.removeFromShelf")}
+                          favoriteAddLabel={t("library.favoriteAdd")}
+                          favoriteRemoveLabel={t("library.favoriteRemove")}
+                          triggerLabel={t("library.optionsFor", { title: book.title })}
+                          onRead={() => {
+                            void startReading(book);
+                          }}
+                          onEdit={() => {
+                            handleEditBook(book);
+                          }}
+                          onRemove={() => {
+                            void handleHideBook(book);
+                          }}
+                          onToggleFavorite={() => {
+                            void handleToggleFavorite(book);
+                          }}
+                        />
+                      </div>
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+            {:else}
+              <ul class="space-y-2">
+                {#each shelfBooks as book}
+                  <li class={`rounded-lg border p-3 transition-colors ${previewBookId === book.id ? "border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]" : "border-[color:var(--color-border)] bg-[var(--color-background)] hover:bg-[color:var(--color-border)]"}`}>
+                    <div class="flex items-start gap-3">
+                      <button
+                        type="button"
+                        class="min-w-0 flex-1 text-left"
+                        onclick={() => {
+                          openShelfDetails(book);
+                        }}
+                      >
+                        <p class="line-clamp-2 text-sm font-semibold text-[var(--color-primary)]">{book.title}</p>
+                        <p class="truncate text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}</p>
+                        <p class="mt-1 text-xs text-[var(--color-text-muted)]">{book.currentPage}/{book.totalPages || "-"} · {Math.round(getSafeProgressPercentage(book))}%</p>
+                      </button>
+
+                      <Button
+                        size="sm"
+                        onclick={() => {
+                          void startReading(book);
+                        }}
+                      >
+                        {t("app.read")}
+                      </Button>
+
+                      <ShelfActionMenu
+                        bookId={book.id}
+                        isFavorite={Boolean(book.isFavorite)}
+                        readLabel={t("app.read")}
+                        editLabel={t("library.editMetadata.title")}
+                        removeLabel={t("library.removeFromShelf")}
+                        favoriteAddLabel={t("library.favoriteAdd")}
+                        favoriteRemoveLabel={t("library.favoriteRemove")}
+                        triggerLabel={t("library.optionsFor", { title: book.title })}
+                        onEdit={() => {
+                          handleEditBook(book);
+                        }}
+                        onRemove={() => {
+                          void handleHideBook(book);
+                        }}
+                        onToggleFavorite={() => {
+                          void handleToggleFavorite(book);
+                        }}
+                      />
+                    </div>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
           {/if}
 
+          {#if selectedShelfBook}
+            <div class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={selectedShelfBook.title}>
+              <div class="w-full max-w-xl rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xl">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <h3 class="line-clamp-2 text-lg font-semibold text-[var(--color-primary)]">{selectedShelfBook.title}</h3>
+                    <p class="truncate text-sm text-[var(--color-text-muted)]">{selectedShelfBook.author || t("app.unknownAuthor")}</p>
+                  </div>
+                  <Button size="sm" variant="ghost" onclick={closeShelfDetails}>{t("settings.close")}</Button>
+                </div>
+                <div class="mt-4 space-y-1 text-sm text-[var(--color-text-muted)]">
+                  <p>{selectedShelfBook.format.toUpperCase()}</p>
+                  <p>{selectedShelfBook.currentPage}/{selectedShelfBook.totalPages || "-"} · {Math.round(getSafeProgressPercentage(selectedShelfBook))}%</p>
+                </div>
+                <div class="mt-4 flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onclick={closeShelfDetails}>{t("settings.close")}</Button>
+                  <Button
+                    size="sm"
+                    onclick={() => {
+                      void startReading(selectedShelfBook);
+                    }}
+                  >
+                    {t("app.read")}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          {/if}
+        {/snippet}
+      </HomeDesktopView>
+    {:else if route === "highlights"}
+      <section class="rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold text-[var(--color-primary)]">{t("home.highlightsTitle")}</h2>
+            <p class="text-sm text-[var(--color-text-muted)]">{t("home.highlightsPlaceholder")}</p>
+          </div>
+          <Button size="sm" variant="ghost" onclick={navigateToHome}>{t("app.backToHome")}</Button>
+        </div>
+      </section>
+    {:else if route === "settings"}
+      <section class="space-y-3">
+        <div class="flex justify-end">
+          <Button size="sm" variant="ghost" onclick={navigateToHome}>{t("app.backToHome")}</Button>
+        </div>
+        <SettingsPanel
+          isOpen={true}
+          mode="page"
+          onRequestClose={navigateToHome}
+          {t}
+          {locale}
+          onLocaleChange={handleLocaleChange}
+          onReaderSettingsChange={handleReaderSettingsChange}
+        />
+      </section>
+    {:else}
+      {@const activeReadingBook = getBookById(activeReadingBookId)}
+      <section class="rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <Button size="sm" variant="ghost" onclick={backToHome}>{t("app.backToHome")}</Button>
+            <div>
+              <h2 class="text-lg font-semibold text-[var(--color-primary)]">{activeReadingBook?.title ?? t("app.openBookPrompt")}</h2>
+              {#if activeReadingBook}
+                <p class="text-sm text-[var(--color-text-muted)]">
+                  {activeReadingBook.author || t("app.unknownAuthor")} · {activeReadingBook.format.toUpperCase()} · {activeReadingBook.currentPage}/{activeReadingBook.totalPages || "-"}
+                </p>
+              {/if}
+            </div>
+          </div>
+          {#if activeReadingBook && activeReadingBook.format.toLowerCase() === "epub"}
+            <p class="text-xs text-[var(--color-text-muted)]">{t("app.locationLabel")}: {cfiLocation || t("app.start")} · {Math.round(percentage)}%</p>
+          {/if}
+        </div>
+
+        {#if !activeReadingBook}
+          <p class="text-sm text-[var(--color-text-muted)]">{t("app.openBookPrompt")}</p>
+        {:else if activeReadingBook.format.toLowerCase() === "pdf"}
+          <div class="mb-4 h-[520px] overflow-hidden rounded-lg border border-[color:var(--color-border)]">
+            <PdfViewer
+              filePath={activeReadingBook.filePath}
+              initialPage={Math.max(1, activeReadingBook.currentPage || 1)}
+              searchTargetLocator={searchTargetLocator}
+              {readerSettings}
+              onPageChange={handlePdfPageChange}
+              onSessionProgress={handlePdfSessionProgress}
+              {t}
+            />
+          </div>
+        {:else}
+          <div class="mb-4 h-[520px] overflow-hidden rounded-lg border border-[color:var(--color-border)]">
+            <EpubViewer
+              filePath={activeReadingBook.filePath}
+              initialLocation={cfiLocation}
+              initialPercentage={percentage}
+              searchTargetLocator={searchTargetLocator}
+              {readerSettings}
+              onLocationContext={handleReaderLocationContext}
+              onLocationChange={handleEpubLocationChange}
+              {t}
+            />
+          </div>
+        {/if}
+
+        {#if activeReadingBook}
           <SearchPanel
-            bookId={selectedBook.id}
+            bookId={activeReadingBook.id}
             disabledReason={searchUnavailableReason}
             isSearching={isSearching}
             response={searchResponse}
@@ -797,7 +1308,7 @@
           />
         {/if}
       </section>
-    </div>
+    {/if}
 
     <EditMetadataModal
       book={editingBook as any}

@@ -3,6 +3,7 @@
   import type { Book, Rendition } from "epubjs";
   import ePub from "epubjs";
   import type { MessageKey } from "../i18n";
+  import type { ReaderSettings, ReaderThemeMode } from "../types";
 
   type Props = {
     filePath: string;
@@ -11,7 +12,18 @@
     onLocationChange?: (cfiLocation: string, percentage: number) => void;
     searchTargetLocator?: string | null;
     onLocationContext?: (context: { locator: string; percentage: number }) => void;
+    readerSettings?: ReaderSettings;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
+  };
+
+  const DEFAULT_READER_SETTINGS: ReaderSettings = {
+    themeMode: "paper",
+    brightness: 100,
+    contrast: 100,
+    epub: {
+      fontSize: 100,
+      fontFamily: "serif",
+    },
   };
 
   let {
@@ -21,6 +33,7 @@
     onLocationChange,
     searchTargetLocator = null,
     onLocationContext,
+    readerSettings = DEFAULT_READER_SETTINGS,
     t,
   }: Props = $props();
 
@@ -35,15 +48,40 @@
   let lastJumpTarget = "";
   let displaySettings = $state({
     fontSize: 100,
-    fontFamily: "Georgia",
+    fontFamily: "serif",
     margin: 20,
-    theme: "light",
+    theme: "paper" as ReaderThemeMode,
   });
 
   let toc = $state<Array<{ id: string; label: string; href: string }>>([]);
   let showToc = $state(false);
 
   let epubContainer: HTMLDivElement | undefined = $state();
+
+  const clamp = (value: number, min: number, max: number) => {
+    return Math.min(max, Math.max(min, Math.round(value)));
+  };
+
+  const resolveThemeStyles = (themeMode: ReaderThemeMode) => {
+    if (themeMode === "sepia") {
+      return {
+        background: "#f1e7d4",
+        color: "#3a2f1d",
+      };
+    }
+
+    if (themeMode === "night") {
+      return {
+        background: "#10141f",
+        color: "#e7ebf1",
+      };
+    }
+
+    return {
+      background: "#faf6eb",
+      color: "#2b2116",
+    };
+  };
 
   onMount(() => {
     initEpub();
@@ -147,7 +185,54 @@
 
     (rendition as Rendition).themes.fontSize(`${displaySettings.fontSize}%`);
     (rendition as Rendition).themes.font(displaySettings.fontFamily);
+
+    const themeStyles = resolveThemeStyles(displaySettings.theme as ReaderThemeMode);
+    rendition.themes.default({
+      body: {
+        "font-size": `${displaySettings.fontSize}%`,
+        "font-family": displaySettings.fontFamily,
+        "background-color": themeStyles.background,
+        color: themeStyles.color,
+      },
+      p: {
+        color: themeStyles.color,
+      },
+      h1: {
+        color: themeStyles.color,
+      },
+      h2: {
+        color: themeStyles.color,
+      },
+      h3: {
+        color: themeStyles.color,
+      },
+      h4: {
+        color: themeStyles.color,
+      },
+      h5: {
+        color: themeStyles.color,
+      },
+      h6: {
+        color: themeStyles.color,
+      },
+      a: {
+        color: themeStyles.color,
+      },
+    });
   }
+
+  $effect(() => {
+    readerSettings;
+    displaySettings.fontSize = clamp(readerSettings.epub.fontSize, 80, 200);
+    displaySettings.fontFamily =
+      readerSettings.epub.fontFamily?.trim().length > 0 ? readerSettings.epub.fontFamily : "serif";
+    displaySettings.theme = readerSettings.themeMode;
+    applyDisplaySettings();
+  });
+
+  const visualFilterStyle = $derived(
+    `brightness(${clamp(readerSettings.brightness, 50, 150)}%) contrast(${clamp(readerSettings.contrast, 50, 150)}%)`,
+  );
 
   $effect(() => {
     const target = searchTargetLocator?.trim();
@@ -210,6 +295,7 @@
           A+
         </button>
       </div>
+      <p class="selection-note" role="status" aria-live="polite">{t("epub.selectionActionsUnavailable")}</p>
     </div>
 
     <div class="content-area">
@@ -228,7 +314,7 @@
         </aside>
       {/if}
 
-      <div bind:this={epubContainer} class="epub-container"></div>
+      <div bind:this={epubContainer} class="epub-container" style:filter={visualFilterStyle}></div>
     </div>
   {/if}
 </div>
@@ -300,6 +386,13 @@
     align-items: center;
     gap: 4px;
     margin-left: auto;
+  }
+
+  .selection-note {
+    margin: 0;
+    flex: 1 1 100%;
+    font-size: 12px;
+    color: var(--color-text-muted);
   }
 
   .size-label {

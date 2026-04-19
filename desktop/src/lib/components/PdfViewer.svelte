@@ -5,11 +5,12 @@
   import { getFileBytes } from "../tauriClient";
   import HighlightToolbar from "./HighlightToolbar.svelte";
   import type { MessageKey } from "../i18n";
-  import type { PdfOutlineItem } from "../types";
+  import type { PdfOutlineItem, ReaderSettings, ReaderThemeMode } from "../types";
   import {
+    adjustPdfScaleForWheel,
+    clampPdfScale,
     DEFAULT_PDF_SCALE,
     isPageWithinBounds,
-    resolveNavigationTransaction,
   } from "./pdfNavigation";
 
   type Props = {
@@ -24,7 +25,18 @@
       startPercentage?: number;
       endPercentage?: number;
     }) => void;
+    readerSettings?: ReaderSettings;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
+  };
+
+  const DEFAULT_READER_SETTINGS: ReaderSettings = {
+    themeMode: "paper",
+    brightness: 100,
+    contrast: 100,
+    epub: {
+      fontSize: 100,
+      fontFamily: "serif",
+    },
   };
 
   let {
@@ -33,6 +45,7 @@
     onPageChange,
     searchTargetLocator = null,
     onSessionProgress,
+    readerSettings = DEFAULT_READER_SETTINGS,
     t,
   }: Props = $props();
 
@@ -59,6 +72,8 @@
   let currentPageObj: pdfjsLib.PDFPageProxy | null = null;
 
   let selectedText = $state("");
+  let selectedCfi = $state<string | null>(null);
+  let selectionHasAnchor = $state(false);
   let selectionPosition = $state<{ x: number; y: number } | null>(null);
   let showToolbar = $state(false);
 
@@ -66,9 +81,12 @@
   let activeNavigationRequestId = 0;
   let activeLoadingTask: pdfjsLib.PDFDocumentLoadingTask | null = null;
   let activeRenderTask: pdfjsLib.RenderTask | null = null;
+  let pendingWheelFrame: number | null = null;
+  let pendingWheelDelta = 0;
   let textLayerMouseupTarget: HTMLDivElement | null = null;
   let lastLoadedFilePath: string | null = null;
   const outlinePageCache = new Map<string, number>();
+  const scaleOptions = Array.from({ length: 26 }, (_, index) => (50 + index * 10) / 100);
 
   type RefLike = { num: number; gen: number };
   type PdfRefProxy = Parameters<pdfjsLib.PDFDocumentProxy["getPageIndex"]>[0];
@@ -81,6 +99,39 @@
   const isStaleLoad = (requestId: number) => requestId !== activeLoadRequestId;
 
   const isStaleNavigation = (requestId: number) => requestId !== activeNavigationRequestId;
+
+  const clamp = (value: number, min: number, max: number) => {
+    return Math.min(max, Math.max(min, Math.round(value)));
+  };
+
+  const resolveThemePalette = (themeMode: ReaderThemeMode) => {
+    if (themeMode === "sepia") {
+      return {
+        rootBackground: "#efe2cc",
+        surfaceBackground: "#f6ebd8",
+        textColor: "#2f2416",
+      };
+    }
+
+    if (themeMode === "night") {
+      return {
+        rootBackground: "#0f1320",
+        surfaceBackground: "#161c2d",
+        textColor: "#e8ecf7",
+      };
+    }
+
+    return {
+      rootBackground: "#f4efe1",
+      surfaceBackground: "#fbf7ed",
+      textColor: "#221a12",
+    };
+  };
+
+  const readerThemePalette = $derived(resolveThemePalette(readerSettings.themeMode));
+  const visualFilterStyle = $derived(
+    `brightness(${clamp(readerSettings.brightness, 50, 150)}%) contrast(${clamp(readerSettings.contrast, 50, 150)}%)`,
+  );
 
   const canUseFullscreenApi = () => {
     if (typeof document === "undefined") {
@@ -168,6 +219,11 @@
       activeLoadRequestId += 1;
       activeNavigationRequestId += 1;
       clearTextLayerListener();
+      if (pendingWheelFrame !== null) {
+        window.cancelAnimationFrame(pendingWheelFrame);
+        pendingWheelFrame = null;
+      }
+      pendingWheelDelta = 0;
       destroyActiveLoadingTask();
       void cancelActiveRenderTask();
       void destroyCurrentDocument();
@@ -578,27 +634,59 @@
 
     if (text && text.length > 0) {
       selectedText = text;
-
-      const range = selection?.getRangeAt(0);
-      const rect = range?.getBoundingClientRect();
       const containerRect = textLayer?.getBoundingClientRect();
 
-      if (rect && containerRect) {
-        selectionPosition = {
-          x: rect.left + rect.width / 2 - containerRect.left,
-          y: rect.top - containerRect.top - 10,
+      selectedCfi = null;
+      let hasAnchor = false;
+      let nextPosition: { x: number; y: number } | null = null;
+
+      if (selection && selection.rangeCount > 0) {
+        try {
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          if (rect && containerRect) {
+            hasAnchor = true;
+            nextPosition = {
+              x: rect.left + rect.width / 2 - containerRect.left,
+              y: rect.top - containerRect.top - 10,
+            };
+          }
+        } catch {
+          hasAnchor = false;
+        }
+      }
+
+      if (!nextPosition && containerRect) {
+        nextPosition = {
+          x: containerRect.width / 2,
+          y: 16,
         };
+      }
+
+      if (nextPosition) {
+        selectionPosition = {
+          x: nextPosition.x,
+          y: nextPosition.y,
+        };
+        selectionHasAnchor = hasAnchor;
         showToolbar = true;
+      } else {
+        showToolbar = false;
+        selectionHasAnchor = false;
       }
     } else {
       showToolbar = false;
       selectedText = "";
+      selectedCfi = null;
+      selectionHasAnchor = false;
     }
   }
 
   function hideToolbar() {
     showToolbar = false;
     selectedText = "";
+    selectedCfi = null;
+    selectionHasAnchor = false;
     window.getSelection()?.removeAllRanges();
   }
 
@@ -691,8 +779,39 @@
     void navigateToPage(targetPage, { flash: true });
   });
 
+  function handleViewerWheel(event: WheelEvent) {
+    if (!pdfDoc) {
+      return;
+    }
+
+    if (!event.ctrlKey && !event.metaKey) {
+      return;
+    }
+
+    if (event.deltaY === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    pendingWheelDelta += event.deltaY;
+
+    if (pendingWheelFrame !== null) {
+      return;
+    }
+
+    pendingWheelFrame = window.requestAnimationFrame(() => {
+      pendingWheelFrame = null;
+      const nextScale = adjustPdfScaleForWheel(scale, pendingWheelDelta);
+      pendingWheelDelta = 0;
+
+      if (nextScale !== scale) {
+        setScale(nextScale);
+      }
+    });
+  }
+
   export function setScale(newScale: number) {
-    scale = newScale;
+    scale = clampPdfScale(newScale);
     if (pdfDoc) {
       void renderPage(currentPage);
     }
@@ -707,7 +826,11 @@
   }
 </script>
 
-<div class="pdf-viewer" bind:this={viewerRoot}>
+<div
+  class="pdf-viewer"
+  bind:this={viewerRoot}
+  style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor};`}
+>
   {#if isLoading}
     <div class="loading-overlay">{t("pdf.loading")}</div>
   {/if}
@@ -740,9 +863,9 @@
       {isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}
     </button>
     <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select">
-      <option value={1}>100%</option>
-      <option value={1.5}>150%</option>
-      <option value={2}>200%</option>
+      {#each scaleOptions as option (option)}
+        <option value={option}>{Math.round(option * 100)}%</option>
+      {/each}
     </select>
   </div>
   {#if navigationError}
@@ -777,8 +900,8 @@
         {/if}
       </aside>
     {/if}
-    <div class="canvas-container">
-      <div class="canvas-wrapper" class:search-hit={flashSearchResult}>
+    <div class="canvas-container" onwheel={handleViewerWheel}>
+      <div class="canvas-wrapper" class:search-hit={flashSearchResult} style:filter={visualFilterStyle}>
         <canvas bind:this={canvas}></canvas>
         <div bind:this={textLayer} class="text-layer"></div>
         {#if showToolbar && selectionPosition}
@@ -790,6 +913,9 @@
               {selectedText}
               bookId={filePath}
               pageNumber={currentPage}
+              cfi={selectedCfi}
+              hasSelectionAnchor={selectionHasAnchor}
+              {t}
               onClose={hideToolbar}
             />
           </div>
@@ -804,8 +930,8 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: var(--color-background);
-    color: var(--color-primary);
+    background: var(--pdf-reader-root-bg, var(--color-background));
+    color: var(--pdf-reader-text, var(--color-primary));
     position: relative;
   }
 
@@ -830,7 +956,7 @@
     align-items: center;
     gap: 12px;
     padding: 8px 12px;
-    background: var(--color-surface);
+    background: var(--pdf-reader-surface-bg, var(--color-surface));
     border-bottom: 1px solid var(--color-border);
     flex-wrap: wrap;
   }
@@ -839,8 +965,8 @@
     padding: 6px 12px;
     border: 1px solid var(--color-border);
     border-radius: 4px;
-    background: var(--color-surface);
-    color: var(--color-primary);
+    background: var(--pdf-reader-surface-bg, var(--color-surface));
+    color: var(--pdf-reader-text, var(--color-primary));
     cursor: pointer;
     font-size: 13px;
   }
@@ -859,7 +985,7 @@
     align-items: center;
     gap: 4px;
     font-size: 13px;
-    color: var(--color-primary);
+    color: var(--pdf-reader-text, var(--color-primary));
   }
 
   .page-input {
@@ -868,8 +994,8 @@
     border: 1px solid var(--color-border);
     border-radius: 4px;
     text-align: center;
-    background: var(--color-surface);
-    color: var(--color-primary);
+    background: var(--pdf-reader-surface-bg, var(--color-surface));
+    color: var(--pdf-reader-text, var(--color-primary));
   }
 
   .scale-select {
@@ -877,8 +1003,8 @@
     border: 1px solid var(--color-border);
     border-radius: 4px;
     margin-left: auto;
-    background: var(--color-surface);
-    color: var(--color-primary);
+    background: var(--pdf-reader-surface-bg, var(--color-surface));
+    color: var(--pdf-reader-text, var(--color-primary));
   }
 
   .content-area {
@@ -889,7 +1015,7 @@
 
   .toc-sidebar {
     width: 240px;
-    background: var(--color-surface);
+    background: var(--pdf-reader-surface-bg, var(--color-surface));
     border-right: 1px solid var(--color-border);
     overflow-y: auto;
     flex-shrink: 0;
@@ -901,7 +1027,7 @@
     font-size: 14px;
     font-weight: 600;
     border-bottom: 1px solid var(--color-border);
-    color: var(--color-primary);
+    color: var(--pdf-reader-text, var(--color-primary));
   }
 
   .toc-list {
@@ -921,7 +1047,7 @@
     font-size: 13px;
     line-height: 1.4;
     word-break: break-word;
-    color: var(--color-primary);
+    color: var(--pdf-reader-text, var(--color-primary));
   }
 
   .toc-item:hover:not(:disabled) {
@@ -950,6 +1076,7 @@
     display: flex;
     justify-content: center;
     padding: 16px;
+    background: var(--pdf-reader-root-bg, var(--color-background));
   }
 
   .navigation-error {
@@ -972,7 +1099,7 @@
 
   canvas {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    background: #fff;
+    background: var(--pdf-reader-surface-bg, #fff);
   }
 
   .text-layer {

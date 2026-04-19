@@ -5,6 +5,7 @@
   import { getFileBytes } from "../tauriClient";
   import HighlightToolbar from "./HighlightToolbar.svelte";
   import type { MessageKey } from "../i18n";
+  import type { PdfOutlineItem } from "../types";
   import {
     DEFAULT_PDF_SCALE,
     isPageWithinBounds,
@@ -47,6 +48,10 @@
   let isLoading = $state(true);
   let error = $state<string | null>(null);
   let navigationError = $state<string | null>(null);
+  let showToc = $state(false);
+  let outline = $state<PdfOutlineItem[]>([]);
+  let tocLoading = $state(false);
+  let tocError = $state<string | null>(null);
   let isFullscreen = $state(false);
   let fullscreenSupported = $state(true);
 
@@ -63,6 +68,15 @@
   let activeRenderTask: pdfjsLib.RenderTask | null = null;
   let textLayerMouseupTarget: HTMLDivElement | null = null;
   let lastLoadedFilePath: string | null = null;
+  const outlinePageCache = new Map<string, number>();
+
+  type RefLike = { num: number; gen: number };
+  type PdfRefProxy = Parameters<pdfjsLib.PDFDocumentProxy["getPageIndex"]>[0];
+
+  type FlatOutlineItem = {
+    item: PdfOutlineItem;
+    depth: number;
+  };
 
   const isStaleLoad = (requestId: number) => requestId !== activeLoadRequestId;
 
@@ -85,6 +99,7 @@
     }
 
     textLayerMouseupTarget.removeEventListener("mouseup", handleTextSelection);
+    textLayerMouseupTarget.removeEventListener("touchend", handleTextSelection);
     textLayerMouseupTarget = null;
   };
 
@@ -219,6 +234,159 @@
     return parsed;
   };
 
+  const isRefLike = (value: unknown): value is RefLike => {
+    if (!value || typeof value !== "object") {
+      return false;
+    }
+
+    const candidate = value as { num?: unknown; gen?: unknown };
+    return typeof candidate.num === "number" && typeof candidate.gen === "number";
+  };
+
+  const toOutlineTitle = (title: unknown) => {
+    if (typeof title !== "string") {
+      return t("pdf.untitledSection");
+    }
+
+    const normalized = title.trim();
+    return normalized.length > 0 ? normalized : t("pdf.untitledSection");
+  };
+
+  const normalizeOutlineItems = (items: unknown[], parentId = "outline"): PdfOutlineItem[] => {
+    const normalized: PdfOutlineItem[] = [];
+
+    items.forEach((rawItem, index) => {
+      if (!rawItem || typeof rawItem !== "object") {
+        return;
+      }
+
+      const item = rawItem as {
+        title?: unknown;
+        dest?: unknown;
+        items?: unknown;
+      };
+      const children = Array.isArray(item.items)
+        ? normalizeOutlineItems(item.items, `${parentId}-${index}`)
+        : [];
+      const destination =
+        typeof item.dest === "string" || Array.isArray(item.dest) ? item.dest : null;
+
+      normalized.push({
+        id: `${parentId}-${index}`,
+        title: toOutlineTitle(item.title),
+        dest: destination,
+        items: children,
+      });
+    });
+
+    return normalized;
+  };
+
+  const flattenOutline = (items: PdfOutlineItem[], depth = 0): FlatOutlineItem[] => {
+    const flattened: FlatOutlineItem[] = [];
+
+    for (const item of items) {
+      flattened.push({ item, depth });
+      if (item.items.length > 0) {
+        flattened.push(...flattenOutline(item.items, depth + 1));
+      }
+    }
+
+    return flattened;
+  };
+
+  const flatOutline = $derived(flattenOutline(outline));
+
+  const loadOutline = async (doc: pdfjsLib.PDFDocumentProxy, requestId: number) => {
+    tocLoading = true;
+    tocError = null;
+    outline = [];
+    outlinePageCache.clear();
+
+    try {
+      const rawOutline = await doc.getOutline();
+      if (isStaleLoad(requestId)) {
+        return;
+      }
+
+      outline = Array.isArray(rawOutline) ? normalizeOutlineItems(rawOutline) : [];
+      tocError = null;
+    } catch {
+      if (isStaleLoad(requestId)) {
+        return;
+      }
+
+      outline = [];
+      tocError = t("pdf.tocLoadFailed");
+    } finally {
+      if (!isStaleLoad(requestId)) {
+        tocLoading = false;
+      }
+    }
+  };
+
+  const resolveDestinationPage = async (dest: string | unknown[] | null): Promise<number | null> => {
+    if (!pdfDoc || !dest || totalPages <= 0) {
+      return null;
+    }
+
+    try {
+      const resolvedDest = typeof dest === "string" ? await pdfDoc.getDestination(dest) : dest;
+      if (!Array.isArray(resolvedDest) || resolvedDest.length === 0) {
+        return null;
+      }
+
+      const target = resolvedDest[0];
+      if (typeof target === "number" && Number.isFinite(target)) {
+        return isPageWithinBounds(target + 1, totalPages) ? target + 1 : null;
+      }
+
+      if (!isRefLike(target)) {
+        return null;
+      }
+
+      const cacheKey = `${target.num}:${target.gen}`;
+      const cachedPage = outlinePageCache.get(cacheKey);
+      if (cachedPage && isPageWithinBounds(cachedPage, totalPages)) {
+        return cachedPage;
+      }
+
+      const pageIndex = await pdfDoc.getPageIndex(target as PdfRefProxy);
+      const pageNumber = pageIndex + 1;
+      if (!isPageWithinBounds(pageNumber, totalPages)) {
+        return null;
+      }
+
+      outlinePageCache.set(cacheKey, pageNumber);
+      return pageNumber;
+    } catch {
+      return null;
+    }
+  };
+
+  async function navigateToOutlineItem(item: PdfOutlineItem) {
+    if (!item.dest) {
+      return;
+    }
+
+    navigationError = null;
+    const page = await resolveDestinationPage(item.dest);
+    if (!page) {
+      navigationError = t("pdf.tocNavigationFailed");
+      return;
+    }
+
+    const didNavigate = await navigateToPage(page);
+    if (!didNavigate) {
+      navigationError = t("pdf.tocNavigationFailed");
+      return;
+    }
+
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 900px)").matches) {
+      showToc = false;
+    }
+  }
+
   async function loadPdf() {
     if (!filePath) return;
 
@@ -233,6 +401,11 @@
     error = null;
     navigationError = null;
     scale = DEFAULT_PDF_SCALE;
+    showToc = false;
+    outline = [];
+    tocLoading = false;
+    tocError = null;
+    outlinePageCache.clear();
 
     try {
       const fileData = await getFileBytes(filePath);
@@ -253,6 +426,10 @@
 
       pdfDoc = loadedDoc;
       totalPages = loadedDoc.numPages;
+      await loadOutline(loadedDoc, requestId);
+      if (isStaleLoad(requestId)) {
+        return;
+      }
       const requestedPage = Math.max(1, initialPage || 1);
       const targetPage = Math.min(requestedPage, totalPages);
 
@@ -379,6 +556,7 @@
       div.textContent = item.str;
       div.style.position = "absolute";
       div.style.whiteSpace = "pre";
+      div.style.pointerEvents = "auto";
 
       const tx = Util.transform(viewport.transform, item.transform);
       div.style.left = `${tx[4]}px`;
@@ -390,6 +568,7 @@
     }
 
     textLayer.addEventListener("mouseup", handleTextSelection);
+    textLayer.addEventListener("touchend", handleTextSelection);
     textLayerMouseupTarget = textLayer;
   }
 
@@ -537,6 +716,9 @@
   {/if}
   <!-- Controls and canvas always stay in DOM so canvas ref is always available -->
   <div class="controls" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
+    <button type="button" onclick={() => (showToc = !showToc)}>
+      {t("pdf.contents")}
+    </button>
     <button type="button" onclick={goToPrevPage} disabled={currentPage <= 1}>
       {t("pdf.previous")}
     </button>
@@ -566,23 +748,53 @@
   {#if navigationError}
     <p class="navigation-error" role="status" aria-live="polite">{navigationError}</p>
   {/if}
-  <div class="canvas-container" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
-    <div class="canvas-wrapper" class:search-hit={flashSearchResult}>
-      <canvas bind:this={canvas}></canvas>
-      <div bind:this={textLayer} class="text-layer"></div>
-      {#if showToolbar && selectionPosition}
-        <div
-          class="toolbar-container"
-          style="left: {selectionPosition.x}px; top: {selectionPosition.y}px;"
-        >
-          <HighlightToolbar
-            {selectedText}
-            bookId={filePath}
-            pageNumber={currentPage}
-            onClose={hideToolbar}
-          />
-        </div>
-      {/if}
+  <div class="content-area" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
+    {#if showToc}
+      <aside class="toc-sidebar">
+        <h3>{t("pdf.tableOfContents")}</h3>
+        {#if tocLoading}
+          <p class="toc-message">{t("pdf.tocLoading")}</p>
+        {:else if tocError}
+          <p class="toc-message toc-error">{tocError}</p>
+        {:else if flatOutline.length === 0}
+          <p class="toc-message">{t("pdf.tocEmpty")}</p>
+        {:else}
+          <ul class="toc-list">
+            {#each flatOutline as entry (entry.item.id)}
+              <li>
+                <button
+                  type="button"
+                  onclick={() => navigateToOutlineItem(entry.item)}
+                  class="toc-item"
+                  disabled={!entry.item.dest}
+                  style={`--toc-depth: ${entry.depth};`}
+                >
+                  {entry.item.title}
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </aside>
+    {/if}
+    <div class="canvas-container">
+      <div class="canvas-wrapper" class:search-hit={flashSearchResult}>
+        <canvas bind:this={canvas}></canvas>
+        <div bind:this={textLayer} class="text-layer"></div>
+        {#if showToolbar && selectionPosition}
+          <div
+            class="toolbar-container"
+            style="left: {selectionPosition.x}px; top: {selectionPosition.y}px;"
+          >
+            <HighlightToolbar
+              {selectedText}
+              bookId={filePath}
+              pageNumber={currentPage}
+              onClose={hideToolbar}
+            />
+          </div>
+        {/if}
+      </div>
     </div>
   </div>
 </div>
@@ -620,6 +832,7 @@
     padding: 8px 12px;
     background: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
+    flex-wrap: wrap;
   }
 
   .controls button {
@@ -666,6 +879,69 @@
     margin-left: auto;
     background: var(--color-surface);
     color: var(--color-primary);
+  }
+
+  .content-area {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .toc-sidebar {
+    width: 240px;
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-border);
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  .toc-sidebar h3 {
+    margin: 0;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-primary);
+  }
+
+  .toc-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .toc-item {
+    display: block;
+    width: 100%;
+    padding: 10px 12px 10px calc(12px + (var(--toc-depth, 0) * 16px));
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1.4;
+    word-break: break-word;
+    color: var(--color-primary);
+  }
+
+  .toc-item:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  }
+
+  .toc-item:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  .toc-message {
+    margin: 0;
+    padding: 12px;
+    font-size: 13px;
+    color: var(--color-text-muted);
+  }
+
+  .toc-error {
+    color: #dc2626;
   }
 
   .canvas-container {
@@ -724,5 +1000,15 @@
     position: absolute;
     transform: translateX(-50%);
     z-index: 100;
+  }
+
+  @media (max-width: 900px) {
+    .toc-sidebar {
+      width: min(240px, 70vw);
+    }
+
+    .scale-select {
+      margin-left: 0;
+    }
   }
 </style>

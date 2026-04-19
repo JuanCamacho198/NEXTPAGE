@@ -74,13 +74,18 @@
 </script>
 
 {#if open}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
     role="dialog"
     aria-modal="true"
     aria-labelledby="collection-manager-title"
+    tabindex="-1"
     onclick={(e) => {
       if (e.target === e.currentTarget) onClose();
+    }}
+    onkeydown={(e) => {
+      if (e.key === "Escape") onClose();
     }}
   >
     <div class="w-full max-w-md rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg max-h-[80vh] overflow-y-auto">
@@ -92,6 +97,7 @@
           type="button"
           class="text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
           onclick={onClose}
+          aria-label="Close"
         >
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -116,6 +122,7 @@
                   class="h-8 w-8 rounded-full transition-transform hover:scale-110"
                   style="background-color: {color}; {newColor === color ? 'ring-2 ring-offset-2 ring-[var(--color-primary)]' : ''}"
                   onclick={() => newColor = color}
+                  aria-label="Select {color} color"
                 ></button>
               {/each}
             </div>

@@ -31,8 +31,12 @@
         bookId,
         text: selectedText,
         color: selectedColor,
-        pageNumber,
-        createdAt: new Date().toISOString(),
+        page: pageNumber,
+        rectLeft: 0,
+        rectRight: 0,
+        rectTop: 0,
+        rectBottom: 0,
+        cfi: null,
       });
       onClose();
     } catch (err) {

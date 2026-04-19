@@ -8,7 +8,7 @@
 
   let { collection, onClick }: Props = $props();
 
-  const bgColor = collection.color ?? "#6366f1";
+  const bgColor = $derived(collection.color ?? "#6366f1");
 </script>
 
 <button

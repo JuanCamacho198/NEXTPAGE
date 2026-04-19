@@ -23,13 +23,13 @@ const blobToBytes = async (blob: Blob) => {
 export type PdfMetadata = {
   author: string | null;
   title: string | null;
+  totalPages: number | null;
   thumbnailBytes: Uint8Array | null;
 };
 
 /**
- * Loads the PDF once and extracts both metadata (author, title) and
- * a first-page thumbnail. Returns null values for fields that cannot
- * be determined.
+ * Loads the PDF once and extracts metadata (author, title, total pages) and
+ * a first-page thumbnail.
  */
 export const extractPdfMetadata = async (
   filePath: string,
@@ -37,12 +37,15 @@ export const extractPdfMetadata = async (
 ): Promise<PdfMetadata> => {
   configureWorker();
 
+  console.log(`[PdfMetadata] Analyzing file: ${filePath}`);
   const fileData = await getFileBytes(filePath);
   const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(fileData),
   });
 
   const pdfDoc = await loadingTask.promise;
+  const numPages = pdfDoc.numPages;
+
   try {
     // Extract textual metadata
     let author: string | null = null;
@@ -50,8 +53,11 @@ export const extractPdfMetadata = async (
     try {
       const meta = await pdfDoc.getMetadata();
       const info = meta?.info as Record<string, unknown> | null | undefined;
+      
+      console.log(`[PdfMetadata] Raw Info:`, info);
+
       if (info) {
-        const rawAuthor = info["Author"] ?? info["author"];
+        const rawAuthor = info["Author"] ?? info["author"] ?? info["Creator"] ?? info["creator"];
         const rawTitle = info["Title"] ?? info["title"];
         if (typeof rawAuthor === "string" && rawAuthor.trim().length > 0) {
           author = rawAuthor.trim();
@@ -60,8 +66,8 @@ export const extractPdfMetadata = async (
           title = rawTitle.trim();
         }
       }
-    } catch {
-      // metadata is optional – continue without it
+    } catch (e) {
+      console.error(`[PdfMetadata] Meta extraction error:`, e);
     }
 
     // Render first page thumbnail
@@ -84,18 +90,20 @@ export const extractPdfMetadata = async (
         });
         if (blob) {
           thumbnailBytes = await blobToBytes(blob);
+          console.log(`[PdfMetadata] Thumbnail generated: ${thumbnailBytes.length} bytes`);
         }
       }
-    } catch {
-      // thumbnail is optional – continue without it
+    } catch (e) {
+      console.error(`[PdfMetadata] Thumbnail render error:`, e);
     }
 
-    return { author, title, thumbnailBytes };
+    return { author, title, totalPages: numPages, thumbnailBytes };
   } finally {
     await pdfDoc.destroy();
     loadingTask.destroy();
   }
 };
+
 
 /** @deprecated Use extractPdfMetadata instead which is more efficient */
 export const generatePdfFirstPageThumbnail = async (filePath: string, maxWidth = 280) => {

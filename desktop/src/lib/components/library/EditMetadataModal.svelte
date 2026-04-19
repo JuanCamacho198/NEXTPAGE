@@ -4,7 +4,7 @@
   import type { MessageKey } from "../../i18n";
 
   type Props = {
-    book: LibraryBookDto;
+    book: LibraryBookDto | null;
     open: boolean;
     onClose: () => void;
     onSave: (updatedBook: LibraryBookDto) => void;
@@ -13,23 +13,25 @@
 
   let { book, open, onClose, onSave, t }: Props = $props();
 
-  let title = $state(book.title);
-  let author = $state(book.author || "");
+  let title = $state("");
+  let author = $state("");
   let isSaving = $state(false);
   let error = $state<string | null>(null);
 
   $effect(() => {
-    if (open) {
+    if (open && book) {
       title = book.title;
       author = book.author || "";
       error = null;
     }
   });
 
-  const hasChanges = $derived(title !== book.title || author !== (book.author || ""));
+  const hasChanges = $derived(
+    book !== null && (title !== book.title || author !== (book.author || ""))
+  );
 
   const handleSave = async () => {
-    if (!title.trim()) {
+    if (!book || !title.trim()) {
       error = t("library.editMetadata.titleRequired");
       return;
     }
@@ -49,19 +51,30 @@
       isSaving = false;
     }
   };
+
+  function handleBackdropClick(e: MouseEvent) {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      onClose();
+    }
+  }
 </script>
 
-{#if open}
+{#if open && book}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
     role="dialog"
     aria-modal="true"
     aria-labelledby="edit-metadata-title"
-    onclick={(e) => {
-      if (e.target === e.currentTarget) {
-        onClose();
-      }
-    }}
+    tabindex="-1"
+    onclick={handleBackdropClick}
+    onkeydown={handleKeydown}
   >
     <div class="w-full max-w-md rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg">
       <h2 id="edit-metadata-title" class="mb-4 text-lg font-semibold text-[var(--color-primary)]">

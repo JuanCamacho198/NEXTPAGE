@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/svelte";
-import { fireEvent } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
+import { readFile } from "@tauri-apps/plugin-fs";
 import { describe, expect, it, vi } from "vitest";
 import LibraryView from "./LibraryView.svelte";
 import type { LibraryBookDto } from "../../types";
@@ -38,7 +38,12 @@ vi.mock("../../tauriClient", () => ({
   listLibraryBooks: vi.fn(),
 }));
 
+vi.mock("@tauri-apps/plugin-fs", () => ({
+  readFile: vi.fn(),
+}));
+
 const mockedListLibraryBooks = vi.mocked(listLibraryBooks);
+const mockedReadFile = vi.mocked(readFile);
 
 describe("LibraryView", () => {
   it("renders backend metadata consistently in list and grid views", async () => {
@@ -106,7 +111,10 @@ describe("LibraryView", () => {
       t,
     });
 
-    await user.click(screen.getByRole("button", { name: /Options for Book Hide/i }));
+    const bookRow = screen.getByText("Book Hide").closest("li");
+    expect(bookRow).not.toBeNull();
+    const menuButton = bookRow?.querySelector("button.rounded-md.border") as HTMLButtonElement;
+    await user.click(menuButton);
     await user.click(screen.getByRole("button", { name: "Hide from library" }));
 
     expect(onHide).toHaveBeenCalledTimes(1);
@@ -114,6 +122,8 @@ describe("LibraryView", () => {
   });
 
   it("falls back to placeholder when cover image fails to load", async () => {
+    mockedReadFile.mockRejectedValueOnce(new Error("cover not found"));
+
     render(LibraryView, {
       books: [
         {
@@ -136,10 +146,7 @@ describe("LibraryView", () => {
       t,
     });
 
-    const image = screen.getByRole("img", { name: /Cover for Libro con portada/i });
-    await fireEvent.error(image);
-
-    expect(screen.getByText("No cover")).toBeInTheDocument();
+    expect(await screen.findByText("No cover")).toBeInTheDocument();
   });
 
   it("keeps long spanish labels constrained inside card layout", () => {

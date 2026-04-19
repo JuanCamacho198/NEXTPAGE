@@ -117,7 +117,7 @@ fn restart_roundtrip_preserves_settings_and_stats() {
             .save_reading_session(ReadingSessionInput {
                 book_id: "book-restart".to_string(),
                 started_at: now.clone(),
-                ended_at: None,
+                ended_at: Some((Utc::now() + chrono::Duration::seconds(300)).to_rfc3339()),
                 duration_seconds: 300,
                 start_percentage: Some(0.0),
                 end_percentage: Some(45.0),

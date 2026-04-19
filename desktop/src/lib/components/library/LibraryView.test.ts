@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { readFile } from "@tauri-apps/plugin-fs";
 import { describe, expect, it, vi } from "vitest";
 import LibraryView from "./LibraryView.svelte";
-import type { LibraryBookDto } from "../../types";
-import { listLibraryBooks } from "../../tauriClient";
+import type { LibraryBookDto } from "$lib/types";
+import { listLibraryBooks } from "$lib/api/tauriClient";
 
 vi.mock("@tauri-apps/api/core", () => ({
   convertFileSrc: vi.fn((path: string) => `asset://localhost/${path}`),

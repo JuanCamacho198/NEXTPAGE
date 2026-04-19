@@ -1,6 +1,6 @@
 <script lang="ts">
   import Button from "../ui/Button.svelte";
-  import type { BulkImportSummary, ScanFolderResult } from "../../types.ts";
+  import type { BulkImportSummary, ScanFolderResult } from "$lib/types";
   import type { BulkImportProgress } from "../../services/BulkImportService";
   import type { MessageKey } from "../../i18n";
 

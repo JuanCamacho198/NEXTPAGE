@@ -2,7 +2,7 @@ import "./styles.css";
 import App from "./App.svelte";
 import { mount } from "svelte";
 import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
-import { supabase } from "./lib/supabase";
+import { supabase } from "./lib/api/supabase";
 
 // Handle incoming deep links (e.g. from Google OAuth callback)
 onOpenUrl((urls) => {

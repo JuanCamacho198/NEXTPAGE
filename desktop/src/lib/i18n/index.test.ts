@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../tauriClient", () => ({
+vi.mock("$lib/api/tauriClient", () => ({
   getLocaleSetting: vi.fn(),
   upsertLocaleSetting: vi.fn(),
 }));
 
-import { getLocaleSetting, upsertLocaleSetting } from "../tauriClient";
+import { getLocaleSetting, upsertLocaleSetting } from "$lib/api/tauriClient";
 
 describe("i18n", () => {
   beforeEach(() => {

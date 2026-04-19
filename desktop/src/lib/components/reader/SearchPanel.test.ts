@@ -2,8 +2,8 @@ import { fireEvent, render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import SearchPanel from "./SearchPanel.svelte";
-import type { SearchBookTextResponse } from "../../types";
-import { searchBookText } from "../../tauriClient";
+import type { SearchBookTextResponse } from "$lib/types";
+import { searchBookText } from "$lib/api/tauriClient";
 
 const t = (key: string) => {
   const dictionary: Record<string, string> = {

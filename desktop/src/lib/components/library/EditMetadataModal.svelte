@@ -1,6 +1,6 @@
 <script lang="ts">
   import Button from "../ui/Button.svelte";
-  import type { LibraryBookDto } from "../../types";
+  import type { LibraryBookDto } from "$lib/types";
   import type { MessageKey } from "../../i18n";
 
   type Props = {

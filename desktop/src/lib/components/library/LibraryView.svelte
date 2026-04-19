@@ -2,7 +2,7 @@
   import SafeCover from "./SafeCover.svelte";
   import DropMenu from "../ui/DropMenu.svelte";
   import CollectionBadge from "./CollectionBadge.svelte";
-  import type { LibraryBookDto, CollectionDto } from "../../types";
+  import type { LibraryBookDto, CollectionDto } from "$lib/types";
   import type { MessageKey } from "../../i18n";
 
   const LIBRARY_VIEW_MODE = {

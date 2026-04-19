@@ -2,11 +2,11 @@
   import { onMount } from "svelte";
   import DropMenu from "./lib/components/ui/DropMenu.svelte";
   import Button from "./lib/components/ui/Button.svelte";
-  import SettingsPanel from "./lib/components/SettingsPanel.svelte";
+  import SettingsPanel from "./lib/domain/settings/SettingsPanel.svelte";
   import HomeDesktopView from "./lib/components/layout/HomeDesktopView.svelte";
   import SearchPanel from "./lib/components/reader/SearchPanel.svelte";
-  import EpubViewer from "./lib/components/EpubViewer.svelte";
-  import PdfViewer from "./lib/components/PdfViewer.svelte";
+  import EpubViewer from "./lib/domain/reader/EpubViewer.svelte";
+  import PdfViewer from "./lib/domain/reader/PdfViewer.svelte";
   import EditMetadataModal from "./lib/components/library/EditMetadataModal.svelte";
   import CollectionManager from "./lib/components/library/CollectionManager.svelte";
   import BulkImportModal from "./lib/components/library/BulkImportModal.svelte";
@@ -37,7 +37,7 @@
     addBookToCollection,
     removeBookFromCollection,
     scanFolder,
-  } from "./lib/tauriClient";
+  } from "./lib/api/tauriClient";
   import { i18n, type MessageKey } from "./lib/i18n";
   import { extractPdfMetadata } from "./lib/services/pdfThumbnail";
   import {
@@ -50,7 +50,7 @@
     getSafeProgressPercentage,
     selectShelfBooks,
     updateShelfQueryState,
-  } from "./lib/homeState";
+  } from "./lib/stores/homeState";
 
   import type {
     BookDto,

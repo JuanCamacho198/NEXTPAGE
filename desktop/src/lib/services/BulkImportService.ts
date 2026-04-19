@@ -1,11 +1,11 @@
 import { importBook as importSingleBook } from "./BookImportService";
-import { scanFolder } from "../tauriClient";
+import { scanFolder } from "$lib/api/tauriClient";
 import {
   BULK_IMPORT_ITEM_STATUS,
   type BulkImportItemResult,
   type BulkImportSummary,
   type ScannedFile,
-} from "../types";
+} from "$lib/types";
 
 export type BulkImportProgress = {
   summary: BulkImportSummary;

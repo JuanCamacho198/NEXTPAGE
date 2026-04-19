@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { CollectionDto, CreateCollectionInput } from "../../types";
-  import { createCollection, deleteCollection, listCollections } from "../../tauriClient";
+  import type { CollectionDto, CreateCollectionInput } from "$lib/types";
+  import { createCollection, deleteCollection, listCollections } from "$lib/api/tauriClient";
 
   type Props = {
     open: boolean;

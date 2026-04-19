@@ -1,5 +1,5 @@
 import * as pdfjsLib from "pdfjs-dist";
-import { getFileBytes } from "../tauriClient";
+import { getFileBytes } from "$lib/api/tauriClient";
 
 let workerConfigured = false;
 

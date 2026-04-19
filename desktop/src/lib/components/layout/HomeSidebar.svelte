@@ -1,6 +1,6 @@
 <script lang="ts">
   import ReadingStatsPanel from "../stats/ReadingStatsPanel.svelte";
-  import type { ReadingStatsSummaryDto } from "../../types";
+  import type { ReadingStatsSummaryDto } from "$lib/types";
   import type { MessageKey } from "../../i18n";
 
   type Props = {

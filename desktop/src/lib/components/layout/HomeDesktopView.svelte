@@ -3,7 +3,7 @@
   import HomeTopNav from "./HomeTopNav.svelte";
   import HomeSidebar from "./HomeSidebar.svelte";
   import HomeMainContent from "./HomeMainContent.svelte";
-  import type { ReadingStatsSummaryDto } from "../../types";
+  import type { ReadingStatsSummaryDto } from "$lib/types";
   import type { MessageKey } from "../../i18n";
 
   type Props = {

@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import ReadingStatsPanel from "./ReadingStatsPanel.svelte";
-import type { ReadingStatsSummaryDto } from "../../types";
-import { getReadingStats } from "../../tauriClient";
+import type { ReadingStatsSummaryDto } from "$lib/types";
+import { getReadingStats } from "$lib/api/tauriClient";
 
 const t = (key: string) => {
   const dictionary: Record<string, string> = {

@@ -10,7 +10,7 @@ import {
   reconcileHomeState,
   selectShelfBooks,
   type HomeStateSnapshot,
-} from "./homeState";
+} from "./stores/homeState";
 
 type TestBook = {
   id: string;

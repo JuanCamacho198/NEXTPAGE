@@ -7,7 +7,11 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "types": ["svelte", "vite/client"]
+    "types": ["svelte", "vite/client"],
+    "paths": {
+      "$lib/*": ["./src/lib/*"]
+    },
+    "baseUrl": "."
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.svelte"]
 }

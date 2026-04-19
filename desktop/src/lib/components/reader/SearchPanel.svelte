@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { SearchBookTextResponse, SearchNavigationTarget, SearchResult } from "../../types";
+  import type { SearchBookTextResponse, SearchNavigationTarget, SearchResult } from "$lib/types";
   import type { MessageKey } from "../../i18n";
 
   type Props = {

@@ -1,4 +1,4 @@
-import { supabase } from '../../supabase';
+import { supabase } from '$lib/api/supabase';
 import type { StorageProvider } from './StorageProvider';
 
 export class GDriveProvider implements StorageProvider {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { CollectionDto } from "../../types";
+  import type { CollectionDto } from "$lib/types";
 
   type Props = {
     collection: CollectionDto;

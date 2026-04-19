@@ -12,7 +12,7 @@ import {
   resetReaderSettingsToDefaults,
   sanitizeReaderSettings,
   upsertReaderSettings,
-} from "./tauriClient";
+} from "./api/tauriClient";
 
 describe("tauriClient reader settings", () => {
   beforeEach(() => {

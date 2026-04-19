@@ -1,9 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
-import { supabase } from '../supabase';
+import { supabase } from '$lib/api/supabase';
 import { LastWriteWinsConflictResolver } from '../sync/ConflictResolver';
 import { GDriveProvider } from './storage/GDriveProvider';
 import type { VersionedSyncRecord } from './storage/StorageProvider';
-import * as tauri from '../tauriClient';
+import * as tauri from '$lib/api/tauriClient';
 
 export interface BookRecord extends VersionedSyncRecord {
   id: string;

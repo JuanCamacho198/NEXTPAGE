@@ -27,6 +27,8 @@
     onToggleView?: (mode: LibraryViewMode) => void;
     onCollectionSelect?: (collectionId: string | null) => void;
     onManageCollections?: () => void;
+    onImportFolder?: () => void;
+    isImportingFolder?: boolean;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
@@ -45,6 +47,8 @@
     onToggleView,
     onCollectionSelect,
     onManageCollections,
+    onImportFolder,
+    isImportingFolder = false,
     t,
   }: Props = $props();
 
@@ -90,11 +94,11 @@
 
 <section class="rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
   <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-    <div class="flex items-center gap-3">
-      <h2 class="text-lg font-semibold text-[var(--color-primary)]">{t("library.title")}</h2>
+    <div class="flex flex-wrap items-center gap-3">
+      <h2 class="text-lg font-semibold text-[var(--color-primary)] whitespace-nowrap">{t("library.title")}</h2>
       {#if collections.length > 0}
         <select
-          class="rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-sm text-[var(--color-primary)]"
+          class="max-w-[120px] sm:max-w-[150px] rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-sm text-[var(--color-primary)] text-ellipsis"
           value={selectedCollectionId ?? ""}
           onchange={(e) => {
             const value = (e.target as HTMLSelectElement).value;
@@ -108,7 +112,7 @@
         </select>
         <button
           type="button"
-          class="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
+          class="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] whitespace-nowrap"
           onclick={onManageCollections}
         >
           Manage
@@ -116,6 +120,14 @@
       {/if}
     </div>
     <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        class="shrink-0 rounded-md border border-[color:var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-primary)] hover:bg-[color:var(--color-border)] disabled:cursor-not-allowed disabled:opacity-60"
+        onclick={onImportFolder}
+        disabled={isImportingFolder}
+      >
+        {isImportingFolder ? t("library.bulkImport.importing") : t("library.bulkImport.importFolder")}
+      </button>
       <div class="relative">
         <svg class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -123,7 +135,7 @@
         <input
           type="text"
           placeholder={t("library.searchPlaceholder")}
-          class="h-8 w-40 rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] pl-9 pr-8 text-sm text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none"
+          class="h-8 w-[140px] sm:w-40 rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] pl-9 pr-8 text-sm text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none"
           value={searchQuery}
           oninput={handleSearchInput}
         />
@@ -140,7 +152,7 @@
           </button>
         {/if}
       </div>
-      <div class="inline-flex rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] p-1">
+      <div class="inline-flex shrink-0 rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] p-1">
       <button
         type="button"
         class={`rounded px-3 py-1 text-xs font-medium ${viewMode === LIBRARY_VIEW_MODE.LIST ? "bg-[var(--color-surface)] text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}`}
@@ -155,6 +167,7 @@
       >
         {t("library.grid")}
       </button>
+      </div>
     </div>
   </div>
 
@@ -169,7 +182,7 @@
   {:else if filteredBooks.length === 0}
     <p class="text-sm text-[var(--color-text-muted)]">{searchQuery ? t("library.searchNoResults") : t("library.empty")}</p>
   {:else}
-    <p class="mb-3 text-xs text-[var(--color-text-muted)]">
+    <p class="mb-3 break-words text-xs text-[var(--color-text-muted)]">
       {t("library.searchResults", { count: filteredBooks.length, total: books.length })}
     </p>
     {#if viewMode === LIBRARY_VIEW_MODE.GRID}

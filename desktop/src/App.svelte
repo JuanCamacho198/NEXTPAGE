@@ -8,9 +8,16 @@
   import SearchPanel from "./lib/components/reader/SearchPanel.svelte";
   import EpubViewer from "./lib/components/EpubViewer.svelte";
   import PdfViewer from "./lib/components/PdfViewer.svelte";
+  import EditMetadataModal from "./lib/components/library/EditMetadataModal.svelte";
+  import CollectionManager from "./lib/components/library/CollectionManager.svelte";
+  import BulkImportModal from "./lib/components/library/BulkImportModal.svelte";
 
   import { importBook, type ImportProgress } from "./lib/services/BookImportService";
-  import { pickFile } from "./lib/services/FilePicker";
+  import {
+    BulkImportService,
+    type BulkImportProgress,
+  } from "./lib/services/BulkImportService";
+  import { pickFile, pickFolder } from "./lib/services/FilePicker";
   import {
     getProgress,
     hideBookFromLibrary,
@@ -23,6 +30,11 @@
     upsertBook,
     upsertBookCover,
     updateBookProgress,
+    listCollections,
+    getBookCollections,
+    addBookToCollection,
+    removeBookFromCollection,
+    scanFolder,
   } from "./lib/tauriClient";
   import { i18n, type MessageKey } from "./lib/i18n";
   import { extractPdfMetadata } from "./lib/services/pdfThumbnail";
@@ -30,10 +42,13 @@
   import type {
     BookDto,
     CommandErrorDto,
+    CollectionDto,
     LibraryBookDto,
     ReadingSessionInput,
     ReadingStatsSummaryDto,
     SaveProgressInput,
+    ScanFolderResult,
+    BulkImportSummary,
     SearchBookTextResponse,
     SearchNavigationTarget,
     UiLocale,
@@ -77,6 +92,22 @@
   let locale = $state<UiLocale>("es");
   const thumbnailGenerationInFlight = new Set<string>();
   const thumbnailGenerationAttempted = new Set<string>();
+
+  let editingBook = $state<ReaderBook | null>(null);
+  let collections = $state<CollectionDto[]>([]);
+  let selectedCollectionId = $state<string | null>(null);
+  let isCollectionManagerOpen = $state(false);
+  const bulkImportService = new BulkImportService();
+
+  let isBulkImportOpen = $state(false);
+  let isBulkScanning = $state(false);
+  let isBulkImporting = $state(false);
+  let bulkImportFolderPath = $state<string | null>(null);
+  let bulkImportFolderName = $state<string | null>(null);
+  let bulkScanResult = $state<ScanFolderResult | null>(null);
+  let bulkScanError = $state<string | null>(null);
+  let bulkImportProgress = $state<BulkImportProgress | null>(null);
+  let bulkImportSummary = $state<BulkImportSummary | null>(null);
 
   const t = (key: MessageKey, params?: Record<string, string | number>) => i18n.t(locale, key, params);
 
@@ -174,7 +205,13 @@
 
     thumbnailGenerationInFlight.add(book.id);
     try {
+      console.log(`[App] Ensuring cover and metadata for book: ${book.title}`);
       const metadata = await extractPdfMetadata(book.filePath);
+      console.log(`[App] Extracted metadata:`, { 
+        hasThumbnail: !!metadata.thumbnailBytes, 
+        author: metadata.author, 
+        totalPages: metadata.totalPages 
+      });
 
       if (metadata.thumbnailBytes) {
         await upsertBookCover({
@@ -184,26 +221,31 @@
         });
       }
 
-      // Update author if we extracted one and the book has none stored
-      if (metadata.author && (!book.author || book.author.trim() === "")) {
+      // Update metadata if something was missing
+      const needsAuthorUpdate = metadata.author && (!book.author || book.author.trim() === "");
+      const needsPagesUpdate = metadata.totalPages && (!book.totalPages || book.totalPages === 0);
+
+      if (needsAuthorUpdate || needsPagesUpdate) {
+        console.log(`[App] Updating book metadata in database...`);
         const bookDtoUpdate = {
           id: book.id,
           title: book.title,
-          author: metadata.author,
+          author: metadata.author || book.author || "",
           format: book.format,
           syncStatus: "local",
           currentPage: book.currentPage,
-          totalPages: book.totalPages,
+          totalPages: metadata.totalPages || book.totalPages || 0,
         };
         await upsertBook(bookDtoUpdate);
       }
 
       await loadLibrary();
-    } catch {
-      // fallback UI remains stable when thumbnail generation fails
+    } catch (e) {
+      console.error(`[App] ensurePdfCover failed:`, e);
     } finally {
       thumbnailGenerationInFlight.delete(book.id);
     }
+
   };
 
   const loadLibrary = async () => {
@@ -211,15 +253,29 @@
     readerError = null;
 
     try {
-      const [libraryRows, sourceRows] = await Promise.all([listLibraryBooks(1), listBooks()]);
+      const [libraryRows, sourceRows, loadedCollections] = await Promise.all([
+        listLibraryBooks(1), 
+        listBooks(),
+        listCollections()
+      ]);
+      collections = loadedCollections;
+      
       const filePathById = new Map<string, string>(
         sourceRows.map((book: BookDto) => [book.id, book.filePath]),
       );
 
-      books = libraryRows.map((entry: LibraryBookDto) => ({
-        ...entry,
-        filePath: filePathById.get(entry.id) ?? "",
-      }));
+      const booksWithCollections = await Promise.all(
+        libraryRows.map(async (entry: LibraryBookDto) => {
+          const bookCollections = await getBookCollections(entry.id);
+          return {
+            ...entry,
+            filePath: filePathById.get(entry.id) ?? "",
+            collectionIds: bookCollections.map(c => c.id)
+          };
+        })
+      );
+
+      books = booksWithCollections;
 
       const pendingThumbnailBooks = books.filter((book) => {
         if (!shouldGeneratePdfCover(book)) {
@@ -321,6 +377,84 @@
     } finally {
       isImporting = false;
       importProgress = null;
+    }
+  };
+
+  const openBulkImportModal = () => {
+    isBulkImportOpen = true;
+  };
+
+  const closeBulkImportModal = () => {
+    if (isBulkImporting) {
+      bulkImportService.cancel();
+    }
+
+    isBulkImportOpen = false;
+    isBulkScanning = false;
+    bulkScanError = null;
+    bulkImportProgress = null;
+    bulkImportSummary = null;
+  };
+
+  const handlePickBulkImportFolder = async () => {
+    const selected = await pickFolder(t("library.bulkImport.selectFolderTitle"));
+    if (!selected) {
+      return;
+    }
+
+    bulkImportFolderPath = selected.path;
+    bulkImportFolderName = selected.name;
+    bulkScanResult = null;
+    bulkScanError = null;
+    bulkImportProgress = null;
+    bulkImportSummary = null;
+  };
+
+  const handleScanBulkImportFolder = async () => {
+    if (!bulkImportFolderPath) {
+      return;
+    }
+
+    isBulkScanning = true;
+    bulkScanError = null;
+
+    try {
+      bulkScanResult = await scanFolder(bulkImportFolderPath);
+    } catch (error) {
+      bulkScanError = error instanceof Error ? error.message : t("import.failed");
+    } finally {
+      isBulkScanning = false;
+    }
+  };
+
+  const handleCancelBulkImport = () => {
+    bulkImportService.cancel();
+  };
+
+  const handleStartBulkImport = async () => {
+    if (!bulkImportFolderPath || !bulkScanResult || bulkScanResult.files.length === 0) {
+      return;
+    }
+
+    isBulkImporting = true;
+    bulkScanError = null;
+    bulkImportProgress = null;
+    bulkImportSummary = null;
+
+    try {
+      const summary = await bulkImportService.importFolder(bulkImportFolderPath, (progress) => {
+        bulkImportProgress = progress;
+      });
+
+      bulkImportSummary = summary;
+
+      if (summary.success > 0 || summary.skipped > 0 || summary.failed > 0 || summary.cancelled > 0) {
+        await loadLibrary();
+      }
+    } catch (error) {
+      bulkScanError = error instanceof Error ? error.message : t("import.failed");
+    } finally {
+      isBulkImporting = false;
     }
   };
 
@@ -467,6 +601,43 @@
     locale = nextLocale;
   };
 
+  const handleEditBook = (book: ReaderBook) => {
+    editingBook = book;
+  };
+
+  const handleSaveEditedBook = async (updatedBook: LibraryBookDto) => {
+    try {
+      const readerBook = books.find((b) => b.id === updatedBook.id);
+      if (!readerBook) {
+        return;
+      }
+
+      await upsertBook({
+        id: updatedBook.id,
+        title: updatedBook.title,
+        author: updatedBook.author || "",
+        filePath: readerBook.filePath,
+        format: readerBook.format,
+        syncStatus: "local",
+        currentPage: readerBook.currentPage,
+        totalPages: readerBook.totalPages,
+      });
+
+      books = books.map((b) =>
+        b.id === updatedBook.id ? { ...b, title: updatedBook.title, author: updatedBook.author } : b,
+      );
+
+      if (selectedBook?.id === updatedBook.id) {
+        selectedBook = { ...selectedBook, title: updatedBook.title, author: updatedBook.author };
+      }
+
+      editingBook = null;
+    } catch (error) {
+      const details = mapCommandError(error);
+      readerError = details.message;
+    }
+  };
+
   onMount(() => {
     void i18n.initializeLocale().then((nextLocale) => {
       locale = nextLocale;
@@ -519,7 +690,9 @@
       <div class="space-y-4">
         <LibraryView
           books={books}
+          {collections}
           selectedBookId={selectedBook?.id ?? null}
+          {selectedCollectionId}
           isLoading={isLoadingLibrary}
           disabledReason={libraryUnavailableReason}
           viewMode={libraryViewMode}
@@ -541,6 +714,20 @@
               void handleHideBook(match);
             }
           }}
+          onEdit={(book) => {
+            const match = books.find((entry) => entry.id === book.id);
+            if (match) {
+              handleEditBook(match);
+            }
+          }}
+          onCollectionSelect={(id) => {
+            selectedCollectionId = id;
+          }}
+          onManageCollections={() => {
+            isCollectionManagerOpen = true;
+          }}
+          onImportFolder={openBulkImportModal}
+          isImportingFolder={isBulkImporting}
           {t}
         />
 
@@ -611,5 +798,40 @@
         {/if}
       </section>
     </div>
+
+    <EditMetadataModal
+      book={editingBook as any}
+      open={editingBook !== null}
+      onClose={() => {
+        editingBook = null;
+      }}
+      onSave={handleSaveEditedBook}
+      {t}
+    />
+
+    <CollectionManager
+      open={isCollectionManagerOpen}
+      onClose={() => {
+        isCollectionManagerOpen = false;
+      }}
+    />
+
+    <BulkImportModal
+      open={isBulkImportOpen}
+      folderName={bulkImportFolderName}
+      folderPath={bulkImportFolderPath}
+      scanResult={bulkScanResult}
+      isScanning={isBulkScanning}
+      scanError={bulkScanError}
+      isImporting={isBulkImporting}
+      importProgress={bulkImportProgress}
+      importSummary={bulkImportSummary}
+      onClose={closeBulkImportModal}
+      onPickFolder={handlePickBulkImportFolder}
+      onScan={handleScanBulkImportFolder}
+      onStartImport={handleStartBulkImport}
+      onCancelImport={handleCancelBulkImport}
+      {t}
+    />
   </div>
 </main>

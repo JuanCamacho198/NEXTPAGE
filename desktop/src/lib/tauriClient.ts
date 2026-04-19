@@ -4,6 +4,7 @@ import type {
   BookCollectionInput,
   BookDto,
   BookmarkDto,
+  ScanFolderResult,
   CommandErrorDto,
   CreateCollectionInput,
   HighlightDto,
@@ -82,6 +83,14 @@ const attachCommandError = (error: unknown): never => {
 
 export const listBooks = async (): Promise<BookDto[]> => {
   return invoke<BookDto[]>("listBooks");
+};
+
+export const scanFolder = async (path: string): Promise<ScanFolderResult> => {
+  try {
+    return await invoke<ScanFolderResult>("scanFolder", { path });
+  } catch (error) {
+    return attachCommandError(error);
+  }
 };
 
 export const listLibraryBooks = async (responseVersion = 1): Promise<LibraryBookDto[]> => {

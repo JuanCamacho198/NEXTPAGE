@@ -450,7 +450,7 @@ pub fn list_highlights(
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository
         .list_highlights(book_id.as_deref())
-        .map_err(|e| format!("{}", e))
+        .map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -470,7 +470,7 @@ pub fn save_highlight(
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository
         .save_highlight(payload)
-        .map_err(|e| format!("{}", e))
+        .map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -487,7 +487,7 @@ pub fn delete_highlight(state: State<'_, AppState>, id: String) -> Result<(), St
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository
         .delete_highlight(&id)
-        .map_err(|e| format!("{}", e))
+        .map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]

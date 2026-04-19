@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::error::AppError;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HighlightDto {
@@ -13,6 +15,7 @@ pub struct HighlightDto {
     pub rect_top: f64,
     pub rect_bottom: f64,
     pub cfi: Option<String>,
+    pub note: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -23,12 +26,32 @@ pub struct SaveHighlightInput {
     pub book_id: String,
     pub color: String,
     pub text: String,
-    pub page: i32,
+    pub page_number: Option<i32>,
+    pub page: Option<i32>,
     pub rect_left: f64,
     pub rect_right: f64,
     pub rect_top: f64,
     pub rect_bottom: f64,
     pub cfi: Option<String>,
+    pub note: Option<String>,
+}
+
+impl SaveHighlightInput {
+    pub fn resolve_page_number(&self) -> Result<i32, AppError> {
+        match (self.page_number, self.page) {
+            (Some(page_number), Some(page)) if page_number != page => {
+                Err(AppError::InvalidInput(format!(
+                    "Highlight payload has conflicting page fields: pageNumber={} page={}",
+                    page_number, page
+                )))
+            }
+            (Some(page_number), _) => Ok(page_number),
+            (None, Some(page)) => Ok(page),
+            (None, None) => Err(AppError::InvalidInput(
+                "Highlight payload requires pageNumber (or legacy page)".to_string(),
+            )),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

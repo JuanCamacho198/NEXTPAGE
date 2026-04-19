@@ -1024,7 +1024,7 @@ impl LibraryRepository {
 
     pub fn list_highlights(&self, book_id: Option<&str>) -> AppResult<Vec<HighlightDto>> {
         let mut statement = self.connection.prepare(
-            "SELECT id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, created_at, updated_at
+            "SELECT id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, note, created_at, updated_at
              FROM highlights
              WHERE (?1 IS NULL OR book_id = ?1) AND deleted_at IS NULL
              ORDER BY page ASC, rect_top ASC",
@@ -1042,8 +1042,9 @@ impl LibraryRepository {
                 rect_top: row.get(7)?,
                 rect_bottom: row.get(8)?,
                 cfi: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
+                note: row.get(10)?,
+                created_at: row.get(11)?,
+                updated_at: row.get(12)?,
             })
         })?;
 
@@ -1056,23 +1057,43 @@ impl LibraryRepository {
             return Err(AppError::MissingBookId);
         }
 
+        let page = payload.resolve_page_number()?;
+        if page <= 0 {
+            return Err(AppError::InvalidInput(
+                "Highlight pageNumber must be greater than 0".to_string(),
+            ));
+        }
+
+        if payload.color.trim().is_empty() {
+            return Err(AppError::InvalidInput(
+                "Highlight color is required".to_string(),
+            ));
+        }
+
+        if payload.text.trim().is_empty() {
+            return Err(AppError::InvalidInput(
+                "Highlight text is required".to_string(),
+            ));
+        }
+
         let now = Utc::now().to_rfc3339();
         let id = Uuid::new_v4().to_string();
 
         self.connection.execute(
-            "INSERT INTO highlights (id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, created_at, updated_at, version)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1)",
+            "INSERT INTO highlights (id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, note, created_at, updated_at, version)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, 1)",
             params![
                 id,
                 payload.book_id,
                 payload.color,
                 payload.text,
-                payload.page,
+                page,
                 payload.rect_left,
                 payload.rect_right,
                 payload.rect_top,
                 payload.rect_bottom,
                 payload.cfi,
+                payload.note,
                 now,
                 now
             ],
@@ -1083,12 +1104,13 @@ impl LibraryRepository {
             book_id: payload.book_id,
             color: payload.color,
             text: payload.text,
-            page: payload.page,
+            page,
             rect_left: payload.rect_left,
             rect_right: payload.rect_right,
             rect_top: payload.rect_top,
             rect_bottom: payload.rect_bottom,
             cfi: payload.cfi,
+            note: payload.note,
             created_at: now.clone(),
             updated_at: now,
         })
@@ -1723,6 +1745,11 @@ mod tests {
             .unwrap();
         connection
             .execute_batch(include_str!("../migrations/0006_collections.sql"))
+            .unwrap();
+        connection
+            .execute_batch(include_str!(
+                "../migrations/0007_highlight_note_and_page_contract.sql"
+            ))
             .unwrap();
     }
 

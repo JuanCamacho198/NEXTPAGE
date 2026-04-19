@@ -77,6 +77,23 @@ pub struct BookImportInput {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ScannedBookFileDto {
+    pub full_path: String,
+    pub file_name: String,
+    pub format: String,
+    pub is_duplicate: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScanFolderResultDto {
+    pub files: Vec<ScannedBookFileDto>,
+    pub skipped_unsupported_count: i64,
+    pub skipped_unreadable_count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReadingProgressDto {
     pub id: String,
     pub book_id: String,

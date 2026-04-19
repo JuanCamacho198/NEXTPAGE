@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -11,9 +12,10 @@ use uuid::Uuid;
 use crate::error::{AppError, AppResult};
 use crate::models::{
     AppSettingDto, BookCoverDto, BookDeleteInput, BookDto, BookImportInput, BookmarkDto,
-    HighlightDto, IndexBookTextInput, LibraryBookDto, ReadingProgressDto, ReadingSessionInput,
-    ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput, SaveProgressInput,
-    SearchBookTextInput, SearchBookTextResponse, SearchResultDto,
+    CollectionDto, HighlightDto, IndexBookTextInput, LibraryBookDto, ReadingProgressDto,
+    ReadingSessionInput, ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput,
+    SaveProgressInput, ScanFolderResultDto, ScannedBookFileDto, SearchBookTextInput,
+    SearchBookTextResponse, SearchResultDto,
 };
 
 const MAX_SETTING_BATCH: usize = 100;
@@ -238,6 +240,103 @@ impl LibraryRepository {
         let _ = self.run_deferred_cover_cleanup(&app);
 
         Ok(book)
+    }
+
+    pub fn scan_folder(&self, path: &str) -> AppResult<ScanFolderResultDto> {
+        let root = PathBuf::from(path);
+        if !root.exists() {
+            return Err(AppError::InvalidInput(format!(
+                "Folder does not exist: {}",
+                path
+            )));
+        }
+        if !root.is_dir() {
+            return Err(AppError::InvalidInput(format!(
+                "Path is not a folder: {}",
+                path
+            )));
+        }
+
+        let existing_filenames = self.existing_book_filenames_lowercase()?;
+        let mut files: Vec<ScannedBookFileDto> = Vec::new();
+        let mut skipped_unsupported_count: i64 = 0;
+        let mut skipped_unreadable_count: i64 = 0;
+        let mut pending_dirs = vec![root];
+
+        while let Some(current_dir) = pending_dirs.pop() {
+            let entries = match fs::read_dir(&current_dir) {
+                Ok(entries) => entries,
+                Err(_) => {
+                    skipped_unreadable_count += 1;
+                    continue;
+                }
+            };
+
+            for entry_result in entries {
+                let entry = match entry_result {
+                    Ok(entry) => entry,
+                    Err(_) => {
+                        skipped_unreadable_count += 1;
+                        continue;
+                    }
+                };
+
+                let file_type = match entry.file_type() {
+                    Ok(file_type) => file_type,
+                    Err(_) => {
+                        skipped_unreadable_count += 1;
+                        continue;
+                    }
+                };
+
+                let entry_path = entry.path();
+                if file_type.is_dir() {
+                    pending_dirs.push(entry_path);
+                    continue;
+                }
+                if !file_type.is_file() {
+                    skipped_unsupported_count += 1;
+                    continue;
+                }
+
+                let extension = entry_path
+                    .extension()
+                    .and_then(|value| value.to_str())
+                    .map(|value| value.to_ascii_lowercase());
+                let Some(format) = extension else {
+                    skipped_unsupported_count += 1;
+                    continue;
+                };
+                if format != "pdf" && format != "epub" {
+                    skipped_unsupported_count += 1;
+                    continue;
+                }
+
+                let file_name = entry_path
+                    .file_name()
+                    .and_then(|value| value.to_str())
+                    .map(|value| value.to_string())
+                    .unwrap_or_else(|| entry_path.to_string_lossy().to_string());
+
+                let file_name_lower = file_name.to_ascii_lowercase();
+                let is_duplicate = existing_filenames.contains(&file_name_lower);
+
+                files.push(ScannedBookFileDto {
+                    full_path: entry_path.to_string_lossy().to_string(),
+                    file_name,
+                    format,
+                    is_duplicate,
+                });
+            }
+        }
+
+        files.sort_by(|a, b| a.full_path.cmp(&b.full_path));
+
+        Ok(ScanFolderResultDto {
+            files,
+            skipped_unsupported_count,
+            skipped_unreadable_count,
+        })
     }
 
     pub fn delete_book(&mut self, app: tauri::AppHandle, input: BookDeleteInput) -> AppResult<()> {
@@ -676,7 +775,8 @@ impl LibraryRepository {
                     COALESCE(rp.percentage, 0.0) AS progress_percentage,
                     bc.storage_path,
                     COALESCE(CAST(ROUND(rs.total_duration_seconds / 60.0) AS INTEGER), 0) AS minutes_read,
-                    b.updated_at
+                    b.updated_at,
+                    (SELECT GROUP_CONCAT(collection_id, ',') FROM book_collections bc2 WHERE bc2.book_id = b.id) AS collection_ids
              FROM books b
              LEFT JOIN reading_progress rp
                ON rp.book_id = b.id
@@ -696,6 +796,10 @@ impl LibraryRepository {
         )?;
 
         let rows = statement.query_map([], |row| {
+            let collection_ids_str: Option<String> = row.get(10)?;
+            let collection_ids: Vec<i64> = collection_ids_str
+                .map(|s| s.split(',').filter_map(|x| x.parse().ok()).collect())
+                .unwrap_or_default();
             Ok(LibraryBookDto {
                 id: row.get(0)?,
                 title: row.get(1)?,
@@ -707,6 +811,7 @@ impl LibraryRepository {
                 cover_path: row.get(7)?,
                 minutes_read: row.get(8)?,
                 updated_at: row.get(9)?,
+                collection_ids,
             })
         })?;
 
@@ -1061,6 +1166,164 @@ impl LibraryRepository {
         Ok(())
     }
 
+    pub fn create_collection(&self, name: &str, color: Option<&str>) -> AppResult<CollectionDto> {
+        let name = name.trim();
+        if name.is_empty() {
+            return Err(AppError::InvalidInput(
+                "Collection name is required".to_string(),
+            ));
+        }
+
+        let now = Utc::now().to_rfc3339();
+        self.connection.execute(
+            "INSERT INTO collections (name, color, is_system, created_at) VALUES (?1, ?2, 0, ?3)",
+            params![name, color, now],
+        )?;
+
+        let id = self.connection.last_insert_rowid();
+        Ok(CollectionDto {
+            id,
+            name: name.to_string(),
+            color: color.map(String::from),
+            is_system: false,
+            created_at: now,
+        })
+    }
+
+    pub fn delete_collection(&self, id: i64) -> AppResult<()> {
+        if id <= 0 {
+            return Err(AppError::InvalidInput("Invalid collection id".to_string()));
+        }
+
+        let is_system: Option<i32> = self
+            .connection
+            .query_row(
+                "SELECT is_system FROM collections WHERE id = ?1",
+                params![id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if is_system.is_none() {
+            return Err(AppError::InvalidInput("Collection not found".to_string()));
+        }
+        if is_system.unwrap() == 1 {
+            return Err(AppError::InvalidInput(
+                "Cannot delete system collection".to_string(),
+            ));
+        }
+
+        self.connection.execute(
+            "DELETE FROM book_collections WHERE collection_id = ?1",
+            params![id],
+        )?;
+        self.connection
+            .execute("DELETE FROM collections WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn list_collections(&self) -> AppResult<Vec<CollectionDto>> {
+        let mut statement = self.connection.prepare(
+            "SELECT id, name, color, is_system, created_at FROM collections ORDER BY is_system DESC, name ASC",
+        )?;
+
+        let rows = statement.query_map([], |row| {
+            Ok(CollectionDto {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                color: row.get(2)?,
+                is_system: row.get::<_, i32>(3)? != 0,
+                created_at: row.get(4)?,
+            })
+        })?;
+
+        let collections = rows.collect::<Result<Vec<_>, _>>()?;
+        Ok(collections)
+    }
+
+    pub fn add_book_to_collection(&self, book_id: &str, collection_id: i64) -> AppResult<()> {
+        let book_id = book_id.trim();
+        if book_id.is_empty() {
+            return Err(AppError::MissingBookId);
+        }
+        if collection_id <= 0 {
+            return Err(AppError::InvalidInput("Invalid collection id".to_string()));
+        }
+
+        let collection_exists: Option<i32> = self
+            .connection
+            .query_row(
+                "SELECT 1 FROM collections WHERE id = ?1",
+                params![collection_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if collection_exists.is_none() {
+            return Err(AppError::InvalidInput("Collection not found".to_string()));
+        }
+
+        let book_exists: Option<String> = self
+            .connection
+            .query_row(
+                "SELECT id FROM books WHERE id = ?1 AND deleted_at IS NULL",
+                params![book_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if book_exists.is_none() {
+            return Err(AppError::InvalidInput("Book not found".to_string()));
+        }
+
+        self.connection.execute(
+            "INSERT OR IGNORE INTO book_collections (book_id, collection_id) VALUES (?1, ?2)",
+            params![book_id, collection_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn remove_book_from_collection(&self, book_id: &str, collection_id: i64) -> AppResult<()> {
+        let book_id = book_id.trim();
+        if book_id.is_empty() {
+            return Err(AppError::MissingBookId);
+        }
+        if collection_id <= 0 {
+            return Err(AppError::InvalidInput("Invalid collection id".to_string()));
+        }
+
+        self.connection.execute(
+            "DELETE FROM book_collections WHERE book_id = ?1 AND collection_id = ?2",
+            params![book_id, collection_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_book_collections(&self, book_id: &str) -> AppResult<Vec<CollectionDto>> {
+        let book_id = book_id.trim();
+        if book_id.is_empty() {
+            return Err(AppError::MissingBookId);
+        }
+
+        let mut statement = self.connection.prepare(
+            "SELECT c.id, c.name, c.color, c.is_system, c.created_at
+             FROM collections c
+             JOIN book_collections bc ON bc.collection_id = c.id
+             WHERE bc.book_id = ?1
+             ORDER BY c.is_system DESC, c.name ASC",
+        )?;
+
+        let rows = statement.query_map(params![book_id], |row| {
+            Ok(CollectionDto {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                color: row.get(2)?,
+                is_system: row.get::<_, i32>(3)? != 0,
+                created_at: row.get(4)?,
+            })
+        })?;
+
+        let collections = rows.collect::<Result<Vec<_>, _>>()?;
+        Ok(collections)
+    }
+
     fn validate_setting(setting: &AppSettingDto) -> AppResult<()> {
         let key = setting.key.trim();
         if key.is_empty() {
@@ -1101,6 +1364,30 @@ impl LibraryRepository {
         }
 
         Ok(())
+    }
+
+    fn existing_book_filenames_lowercase(&self) -> AppResult<HashSet<String>> {
+        let mut statement = self.connection.prepare(
+            "SELECT file_path
+             FROM books
+             WHERE deleted_at IS NULL",
+        )?;
+
+        let rows = statement.query_map([], |row| row.get::<_, String>(0))?;
+        let mut names = HashSet::new();
+
+        for file_path in rows {
+            let file_path = file_path?;
+            let file_name = Path::new(&file_path)
+                .file_name()
+                .and_then(|value| value.to_str())
+                .map(|value| value.to_ascii_lowercase());
+            if let Some(value) = file_name {
+                names.insert(value);
+            }
+        }
+
+        Ok(names)
     }
 
     pub fn has_desktop_parity_schema(&self) -> AppResult<bool> {
@@ -1433,6 +1720,9 @@ mod tests {
             .unwrap();
         connection
             .execute_batch(include_str!("../migrations/0005_hidden_books.sql"))
+            .unwrap();
+        connection
+            .execute_batch(include_str!("../migrations/0006_collections.sql"))
             .unwrap();
     }
 

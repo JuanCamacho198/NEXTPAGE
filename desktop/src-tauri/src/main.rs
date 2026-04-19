@@ -39,6 +39,8 @@ fn main() {
             commands::upsertSettings,
             commands::list_library_books,
             commands::listLibraryBooks,
+            commands::scan_folder,
+            commands::scanFolder,
             commands::get_progress,
             commands::getProgress,
             commands::save_progress,
@@ -79,7 +81,19 @@ fn main() {
             commands::save_bookmark,
             commands::saveBookmark,
             commands::deleteBookmark,
-            commands::delete_bookmark
+            commands::delete_bookmark,
+            commands::create_collection,
+            commands::createCollection,
+            commands::delete_collection,
+            commands::deleteCollection,
+            commands::list_collections,
+            commands::listCollections,
+            commands::add_book_to_collection,
+            commands::addBookToCollection,
+            commands::remove_book_from_collection,
+            commands::removeBookFromCollection,
+            commands::get_book_collections,
+            commands::getBookCollections
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

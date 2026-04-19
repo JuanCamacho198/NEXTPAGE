@@ -5,11 +5,12 @@ use tauri::State;
 
 use crate::error::AppError;
 use crate::models::{
-    AppSettingDto, BookDeleteInput, BookmarkDto, BookDto, BookImportInput, BookCollectionInput,
-    CommandErrorDto, CreateCollectionInput, HideBookInput, HighlightDto, IndexBookTextInput,
-    LibraryBookDto, ListLibraryBooksInput, ReadingProgressDto, ReadingSessionInput,
-    ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput, UpsertBookCoverInput,
-    SaveProgressInput, SearchBookTextInput, SearchBookTextResponse, CollectionDto,
+    AppSettingDto, BookCollectionInput, BookDeleteInput, BookDto, BookImportInput, BookmarkDto,
+    CollectionDto, CommandErrorDto, CreateCollectionInput, HideBookInput, HighlightDto,
+    IndexBookTextInput, LibraryBookDto, ListLibraryBooksInput, ReadingProgressDto,
+    ReadingSessionInput, ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput,
+    SaveProgressInput, ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse,
+    UpsertBookCoverInput,
 };
 use crate::state::AppState;
 
@@ -85,7 +86,10 @@ pub fn upsert_settings(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn upsertSettings(state: State<'_, AppState>, settings: Vec<AppSettingDto>) -> Result<(), String> {
+pub fn upsertSettings(
+    state: State<'_, AppState>,
+    settings: Vec<AppSettingDto>,
+) -> Result<(), String> {
     upsert_settings(state, settings)
 }
 
@@ -128,6 +132,21 @@ pub fn list_library_books_internal(
     }
 
     repository.list_library_books()
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn scan_folder(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<ScanFolderResultDto, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.scan_folder(&path).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn scanFolder(state: State<'_, AppState>, path: String) -> Result<ScanFolderResultDto, String> {
+    scan_folder(state, path)
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -240,12 +259,17 @@ pub fn index_book_text(
     payload: IndexBookTextInput,
 ) -> Result<(), String> {
     let mut repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository.index_book_text(payload).map_err(map_command_error)
+    repository
+        .index_book_text(payload)
+        .map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn indexBookText(state: State<'_, AppState>, payload: IndexBookTextInput) -> Result<(), String> {
+pub fn indexBookText(
+    state: State<'_, AppState>,
+    payload: IndexBookTextInput,
+) -> Result<(), String> {
     index_book_text(state, payload)
 }
 
@@ -255,7 +279,9 @@ pub fn search_book_text(
     payload: SearchBookTextInput,
 ) -> Result<SearchBookTextResponse, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository.search_book_text(payload).map_err(map_command_error)
+    repository
+        .search_book_text(payload)
+        .map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -459,7 +485,9 @@ pub fn saveHighlight(
 #[tauri::command(rename_all = "camelCase")]
 pub fn delete_highlight(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository.delete_highlight(&id).map_err(|e| format!("{}", e))
+    repository
+        .delete_highlight(&id)
+        .map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
@@ -511,7 +539,9 @@ pub fn saveBookmark(
 #[tauri::command(rename_all = "camelCase")]
 pub fn delete_bookmark(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository.delete_bookmark(&id).map_err(|e| format!("{}", e))
+    repository
+        .delete_bookmark(&id)
+        .map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
@@ -543,9 +573,7 @@ pub fn createCollection(
 #[tauri::command(rename_all = "camelCase")]
 pub fn delete_collection(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .delete_collection(id)
-        .map_err(map_command_error)
+    repository.delete_collection(id).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]

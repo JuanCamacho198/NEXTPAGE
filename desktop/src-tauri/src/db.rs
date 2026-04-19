@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::AppResult;
 
-const MIGRATIONS: [(&str, &str); 5] = [
+const MIGRATIONS: [(&str, &str); 6] = [
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_books", include_str!("../migrations/0002_books.sql")),
     (
@@ -22,6 +22,10 @@ const MIGRATIONS: [(&str, &str); 5] = [
     (
         "0005_hidden_books",
         include_str!("../migrations/0005_hidden_books.sql"),
+    ),
+    (
+        "0006_collections",
+        include_str!("../migrations/0006_collections.sql"),
     ),
 ];
 

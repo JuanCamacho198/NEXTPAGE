@@ -3,19 +3,40 @@
   import Button from "./ui/Button.svelte";
   import { listHighlights, deleteHighlight } from "../tauriClient";
   import { listBookmarks, deleteBookmark, listBooks } from "../tauriClient";
-  import { getSettings, upsertSettings, getLocaleSetting } from "../tauriClient";
+  import {
+    getSettings,
+    upsertSettings,
+    getLocaleSetting,
+    getReaderSettings,
+    upsertReaderSettings,
+  } from "../tauriClient";
   import { i18n, type MessageKey } from "../i18n";
-  import type { AppSettingDto, HighlightDto, BookmarkDto, BookDto, CommandErrorDto, UiLocale } from "../types";
+  import type {
+    AppSettingDto,
+    HighlightDto,
+    BookmarkDto,
+    BookDto,
+    CommandErrorDto,
+    UiLocale,
+    ReaderSettings,
+    ReaderThemeMode,
+  } from "../types";
 
   let {
     isOpen = $bindable(false),
+    mode = "overlay",
+    onRequestClose,
     locale,
     onLocaleChange,
+    onReaderSettingsChange,
     t,
   } = $props<{
     isOpen: boolean;
+    mode?: "overlay" | "page";
+    onRequestClose?: () => void;
     locale: UiLocale;
     onLocaleChange?: (locale: UiLocale) => void;
+    onReaderSettingsChange?: (settings: ReaderSettings) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   }>();
 
@@ -30,6 +51,11 @@
   let filterBook = $state<string>("");
   let preferredTheme = $state("light");
   let preferredFontScale = $state(100);
+  let readerThemeMode = $state<ReaderThemeMode>("paper");
+  let readerBrightness = $state(100);
+  let readerContrast = $state(100);
+  let readerEpubFontSize = $state(100);
+  let readerEpubFontFamily = $state("serif");
   let settingsError = $state<string | null>(null);
   let settingsUnavailable = $state<string | null>(null);
   let isSavingSettings = $state(false);
@@ -40,6 +66,33 @@
     THEME: "ui.theme",
     FONT_SCALE: "reader.fontScale",
   } as const;
+
+  const clampInteger = (value: number, min: number, max: number) => {
+    return Math.min(max, Math.max(min, Math.round(value)));
+  };
+
+  const normalizeFontFamily = (value: string) => {
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : "serif";
+  };
+
+  const buildReaderSettingsDraft = (): ReaderSettings => ({
+    themeMode: readerThemeMode,
+    brightness: clampInteger(readerBrightness, 50, 150),
+    contrast: clampInteger(readerContrast, 50, 150),
+    epub: {
+      fontSize: clampInteger(readerEpubFontSize, 80, 200),
+      fontFamily: normalizeFontFamily(readerEpubFontFamily),
+    },
+  });
+
+  const applyReaderSettingsToState = (settings: ReaderSettings) => {
+    readerThemeMode = settings.themeMode;
+    readerBrightness = settings.brightness;
+    readerContrast = settings.contrast;
+    readerEpubFontSize = settings.epub.fontSize;
+    readerEpubFontFamily = settings.epub.fontFamily;
+  };
 
   const parseSettingValue = (settings: AppSettingDto[], key: string) => {
     const item = settings.find((entry) => entry.key === key);
@@ -71,6 +124,11 @@
   };
 
   function closePanel() {
+    if (mode === "page") {
+      onRequestClose?.();
+      return;
+    }
+
     isOpen = false;
   }
 
@@ -96,6 +154,10 @@
         locale = persistedLocale;
         onLocaleChange?.(persistedLocale);
       }
+
+      const readerSettings = await getReaderSettings();
+      applyReaderSettingsToState(readerSettings);
+      onReaderSettingsChange?.(readerSettings);
     } catch (error) {
       const details = mapCommandErrorMessage(error);
       if (details.recoverable) {
@@ -124,6 +186,10 @@
           updatedAt: new Date().toISOString(),
         },
       ]);
+
+      const persistedReaderSettings = await upsertReaderSettings(buildReaderSettingsDraft());
+      applyReaderSettingsToState(persistedReaderSettings);
+      onReaderSettingsChange?.(persistedReaderSettings);
     } catch (error) {
       const details = mapCommandErrorMessage(error);
       if (details.recoverable) {
@@ -242,10 +308,14 @@
   }
 </script>
 
-{#if isOpen}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 w-screen h-screen bg-black/40 z-[999]" onclick={closePanel}></div>
-  <aside class="fixed top-0 right-0 w-[350px] h-screen bg-white border-l border-gray-200 shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]">
+{#if mode === "page" || isOpen}
+  {#if mode === "overlay"}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="fixed inset-0 w-screen h-screen bg-black/40 z-[999]" onclick={closePanel}></div>
+  {/if}
+  <aside class={mode === "overlay"
+    ? "fixed top-0 right-0 w-[350px] h-screen bg-white border-l border-gray-200 shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]"
+    : "w-full rounded-xl border border-[color:var(--color-border)] bg-white shadow-sm flex flex-col overflow-hidden"}>
     <div class="flex items-center justify-between p-4 border-b border-gray-200">
       <h2 class="m-0 text-lg font-semibold text-gray-900">{t("settings.title")}</h2>
       <button class="bg-transparent border-none text-xl cursor-pointer text-gray-600 p-1 flex items-center justify-center hover:text-gray-900" onclick={closePanel} aria-label={t("settings.close")}>✕</button>
@@ -339,6 +409,71 @@
                 step="5"
                 bind:value={preferredFontScale}
                 class="w-full"
+              />
+            </div>
+
+            <div class="mb-2">
+              <label class="mb-1 block text-xs text-gray-600" for="reader-theme-mode">{t("settings.reader.themeMode")}</label>
+              <select id="reader-theme-mode" bind:value={readerThemeMode} class="filter-select">
+                <option value="paper">{t("settings.reader.themeMode.paper")}</option>
+                <option value="sepia">{t("settings.reader.themeMode.sepia")}</option>
+                <option value="night">{t("settings.reader.themeMode.night")}</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="mb-1 block text-xs text-gray-600" for="reader-brightness">
+                {t("settings.reader.brightness")} ({readerBrightness}%)
+              </label>
+              <input
+                id="reader-brightness"
+                type="range"
+                min="50"
+                max="150"
+                step="1"
+                bind:value={readerBrightness}
+                class="w-full"
+              />
+            </div>
+
+            <div class="mb-3">
+              <label class="mb-1 block text-xs text-gray-600" for="reader-contrast">
+                {t("settings.reader.contrast")} ({readerContrast}%)
+              </label>
+              <input
+                id="reader-contrast"
+                type="range"
+                min="50"
+                max="150"
+                step="1"
+                bind:value={readerContrast}
+                class="w-full"
+              />
+            </div>
+
+            <div class="mb-3">
+              <label class="mb-1 block text-xs text-gray-600" for="reader-epub-font-size">
+                {t("settings.reader.epub.fontSize")} ({readerEpubFontSize}%)
+              </label>
+              <input
+                id="reader-epub-font-size"
+                type="range"
+                min="80"
+                max="200"
+                step="1"
+                bind:value={readerEpubFontSize}
+                class="w-full"
+              />
+            </div>
+
+            <div class="mb-3">
+              <label class="mb-1 block text-xs text-gray-600" for="reader-epub-font-family">{t("settings.reader.epub.fontFamily")}</label>
+              <input
+                id="reader-epub-font-family"
+                type="text"
+                bind:value={readerEpubFontFamily}
+                class="filter-select"
+                placeholder={t("settings.reader.epub.fontFamily.placeholder")}
               />
             </div>
 

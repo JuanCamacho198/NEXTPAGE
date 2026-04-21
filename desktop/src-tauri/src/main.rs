@@ -11,7 +11,8 @@ fn build_state(app: &AppHandle) -> Result<AppState, String> {
     let db_path = resolve_db_path(app).map_err(|err| err.to_string())?;
     let connection = open_and_migrate(&db_path).map_err(|err| err.to_string())?;
     let repository = LibraryRepository::new(connection);
-    Ok(AppState::new(repository))
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    Ok(AppState::new(repository, app_data_dir))
 }
 
 fn main() {
@@ -93,7 +94,8 @@ fn main() {
             commands::remove_book_from_collection,
             commands::removeBookFromCollection,
             commands::get_book_collections,
-            commands::getBookCollections
+            commands::getBookCollections,
+            commands::report_error_event
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

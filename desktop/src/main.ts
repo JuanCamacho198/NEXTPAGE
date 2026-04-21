@@ -6,13 +6,21 @@ import { supabase } from "./lib/api/supabase";
 import { logger } from "./lib/logger/Logger";
 import { consoleSink } from "./lib/logger/ConsoleSink";
 import { tauriSink } from "./lib/logger/TauriSink";
+import { SentrySink } from "./lib/logger/SentrySink";
+import { getSentrySettings } from "./lib/logger/sentryConfig";
 import { createErrorEvent, type ErrorEvent } from "./lib/events/ErrorEvent";
 
 let handlersRegistered = false;
 
-const initLogger = () => {
+const initLogger = async () => {
   logger.registerSink(consoleSink);
   logger.registerSink(tauriSink);
+
+  const sentrySettings = await getSentrySettings();
+  if (sentrySettings.dsn) {
+    const sentrySink = new SentrySink(sentrySettings);
+    logger.registerSink(sentrySink);
+  }
 };
 
 const generateCorrelationId = (): string => {
@@ -63,12 +71,12 @@ const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
   logger.error(errorEvent);
 };
 
-const registerGlobalHandlers = () => {
+const registerGlobalHandlers = async () => {
   if (handlersRegistered) {
     return;
   }
 
-  initLogger();
+  await initLogger();
 
   window.onerror = (message, source, lineno, colno, error) => {
     const event: ErrorEvent = {

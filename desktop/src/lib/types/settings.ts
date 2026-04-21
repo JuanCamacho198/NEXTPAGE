@@ -29,3 +29,9 @@ export type ReaderSettings = {
 };
 
 export type TranslationKey = string;
+
+export interface SentrySettings {
+  dsn: string;
+  tracesSampleRate: number;
+  enabled: boolean;
+}

@@ -7,7 +7,8 @@ export type ErrorCategory =
   | "network"
   | "parsing"
   | "validation"
-  | "unknown";
+  | "unknown"
+  | "alert";
 
 export type ErrorSource = "app_shell" | "reader" | "library" | "settings" | "import" | "sync";
 

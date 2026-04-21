@@ -2,6 +2,8 @@
   import { onMount } from "svelte";
   import DropMenu from "./lib/components/ui/DropMenu.svelte";
   import Button from "./lib/components/ui/Button.svelte";
+  import ErrorToast from "./lib/components/ui/ErrorToast.svelte";
+  import ErrorFallback from "./lib/components/ui/ErrorFallback.svelte";
   import SettingsPanel from "./lib/domain/settings/SettingsPanel.svelte";
   import HomeDesktopView from "./lib/components/layout/HomeDesktopView.svelte";
   import SearchPanel from "./lib/components/reader/SearchPanel.svelte";
@@ -11,6 +13,7 @@
   import CollectionManager from "./lib/components/library/CollectionManager.svelte";
   import BulkImportModal from "./lib/components/library/BulkImportModal.svelte";
   import ShelfActionMenu from "./lib/components/library/ShelfActionMenu.svelte";
+  import BookCard from "./lib/components/library/BookCard.svelte";
 
   import { importBook, type ImportProgress } from "./lib/services/BookImportService";
   import {
@@ -886,59 +889,35 @@
             <p class="text-sm text-[var(--color-text-muted)]">{t("home.continueReadingPlaceholder")}</p>
           {:else if continueReadingBooks.length === 1}
             {@const book = continueReadingBooks[0]}
-            <article class="rounded-xl border border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))] p-4">
-              <div class="flex flex-wrap items-start justify-between gap-3">
-                <button
-                  type="button"
-                  class="min-w-0 flex-1 text-left"
-                  onclick={() => {
-                    openDetails(book);
-                  }}
-                >
-                  <h3 class="line-clamp-2 text-lg font-semibold text-[var(--color-primary)]">{book.title}</h3>
-                  <p class="mt-1 truncate text-sm text-[var(--color-text-muted)]">
-                    {book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}
-                  </p>
-                  <p class="mt-2 text-xs text-[var(--color-text-muted)]">
-                    {book.currentPage}/{book.totalPages || "-"} · {Math.round(getSafeProgressPercentage(book))}%
-                  </p>
-                </button>
-                <Button
-                  size="sm"
-                  onclick={() => {
-                    void startReading(book);
-                  }}
-                >
-                  {t("app.read")}
-                </Button>
-              </div>
-            </article>
+            <BookCard
+              book={book}
+              variant="continue-reading"
+              selected={previewBookId === book.id}
+              onSelect={() => {
+                openDetails(book);
+              }}
+              onRead={() => {
+                void startReading(book);
+              }}
+              {t}
+            />
           {:else}
             <ul class="space-y-2">
               {#each continueReadingBooks as book}
-                <li class="rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] p-3">
-                  <div class="flex flex-wrap items-start justify-between gap-3">
-                    <button
-                      type="button"
-                      class="min-w-0 flex-1 text-left"
-                      onclick={() => {
-                        openDetails(book);
-                      }}
-                    >
-                      <h3 class="line-clamp-2 text-base font-semibold text-[var(--color-primary)]">{book.title}</h3>
-                      <p class="truncate text-sm text-[var(--color-text-muted)]">
-                        {book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()} · {Math.round(getSafeProgressPercentage(book))}%
-                      </p>
-                    </button>
-                    <Button
-                      size="sm"
-                      onclick={() => {
-                        void startReading(book);
-                      }}
-                    >
-                      {t("app.read")}
-                    </Button>
-                  </div>
+                <li>
+                  <BookCard
+                    book={book}
+                    variant="continue-reading"
+                    compact={continueReadingBooks.length > 1}
+                    selected={previewBookId === book.id}
+                    onSelect={() => {
+                      openDetails(book);
+                    }}
+                    onRead={() => {
+                      void startReading(book);
+                    }}
+                    {t}
+                  />
                 </li>
               {/each}
             </ul>
@@ -1049,68 +1028,101 @@
             {#if shelfQueryState.viewMode === "grid"}
               {#if shelfBooks.length === 1}
                 {@const book = shelfBooks[0]}
-                <article class={`rounded-xl border p-4 ${previewBookId === book.id ? "border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_12%,var(--color-surface))]" : "border-[color:var(--color-border)] bg-[var(--color-background)]"}`}>
-                  <div class="flex flex-wrap items-start justify-between gap-3">
-                    <button
-                      type="button"
-                      class="min-w-0 flex-1 text-left"
-                      onclick={() => {
-                        openShelfDetails(book);
+                <BookCard
+                  book={book}
+                  variant="shelf"
+                  selected={previewBookId === book.id}
+                  onSelect={() => {
+                    openShelfDetails(book);
+                  }}
+                  onRead={() => {
+                    void startReading(book);
+                  }}
+                  {t}
+                >
+                  {#snippet actions()}
+                    <ShelfActionMenu
+                      bookId={book.id}
+                      isFavorite={Boolean(book.isFavorite)}
+                      readLabel={t("app.read")}
+                      editLabel={t("library.editMetadata.title")}
+                      removeLabel={t("library.removeFromShelf")}
+                      favoriteAddLabel={t("library.favoriteAdd")}
+                      favoriteRemoveLabel={t("library.favoriteRemove")}
+                      triggerLabel={t("library.optionsFor", { title: book.title })}
+                      onEdit={() => {
+                        handleEditBook(book);
                       }}
-                    >
-                      <p class="line-clamp-2 text-lg font-semibold text-[var(--color-primary)]">{book.title}</p>
-                      <p class="mt-1 truncate text-sm text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}</p>
-                      <p class="mt-2 text-xs text-[var(--color-text-muted)]">{book.currentPage}/{book.totalPages || "-"} · {Math.round(getSafeProgressPercentage(book))}%</p>
-                    </button>
-
-                    <div class="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        onclick={() => {
-                          void startReading(book);
-                        }}
-                      >
-                        {t("app.read")}
-                      </Button>
-
-                      <ShelfActionMenu
-                        bookId={book.id}
-                        isFavorite={Boolean(book.isFavorite)}
-                        readLabel={t("app.read")}
-                        editLabel={t("library.editMetadata.title")}
-                        removeLabel={t("library.removeFromShelf")}
-                        favoriteAddLabel={t("library.favoriteAdd")}
-                        favoriteRemoveLabel={t("library.favoriteRemove")}
-                        triggerLabel={t("library.optionsFor", { title: book.title })}
-                        onEdit={() => {
-                          handleEditBook(book);
-                        }}
-                        onRemove={() => {
-                          void handleHideBook(book);
-                        }}
-                        onToggleFavorite={() => {
-                          void handleToggleFavorite(book);
-                        }}
-                      />
-                    </div>
-                  </div>
-                </article>
+                      onRemove={() => {
+                        void handleHideBook(book);
+                      }}
+                      onToggleFavorite={() => {
+                        void handleToggleFavorite(book);
+                      }}
+                    />
+                  {/snippet}
+                </BookCard>
               {:else}
                 <ul class="grid grid-cols-1 gap-2 md:grid-cols-2">
                   {#each shelfBooks as book}
-                    <li class={`rounded-lg border p-3 transition-colors ${previewBookId === book.id ? "border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]" : "border-[color:var(--color-border)] bg-[var(--color-background)] hover:bg-[color:var(--color-border)]"}`}>
-                      <div class="flex items-start justify-between gap-2">
-                        <button
-                          type="button"
-                          class="min-w-0 flex-1 text-left"
-                          onclick={() => {
-                            openShelfDetails(book);
-                          }}
-                        >
-                          <p class="line-clamp-2 text-sm font-semibold text-[var(--color-primary)]">{book.title}</p>
-                          <p class="truncate text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}</p>
-                        </button>
-
+                    <li>
+                      <BookCard
+                        book={book}
+                        variant="shelf"
+                        compact={true}
+                        selected={previewBookId === book.id}
+                        onSelect={() => {
+                          openShelfDetails(book);
+                        }}
+                        onRead={() => {
+                          void startReading(book);
+                        }}
+                        {t}
+                      >
+                        {#snippet actions()}
+                          <ShelfActionMenu
+                            bookId={book.id}
+                            isFavorite={Boolean(book.isFavorite)}
+                            readLabel={t("app.read")}
+                            editLabel={t("library.editMetadata.title")}
+                            removeLabel={t("library.removeFromShelf")}
+                            favoriteAddLabel={t("library.favoriteAdd")}
+                            favoriteRemoveLabel={t("library.favoriteRemove")}
+                            triggerLabel={t("library.optionsFor", { title: book.title })}
+                            onEdit={() => {
+                              handleEditBook(book);
+                            }}
+                            onRemove={() => {
+                              void handleHideBook(book);
+                            }}
+                            onToggleFavorite={() => {
+                              void handleToggleFavorite(book);
+                            }}
+                          />
+                        {/snippet}
+                      </BookCard>
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+            {:else}
+              <ul class="space-y-2">
+                {#each shelfBooks as book}
+                  <li>
+                    <BookCard
+                      book={book}
+                      variant="shelf"
+                      compact={true}
+                      selected={previewBookId === book.id}
+                      onSelect={() => {
+                        openShelfDetails(book);
+                      }}
+                      onRead={() => {
+                        void startReading(book);
+                      }}
+                      {t}
+                    >
+                      {#snippet actions()}
                         <ShelfActionMenu
                           bookId={book.id}
                           isFavorite={Boolean(book.isFavorite)}
@@ -1120,9 +1132,6 @@
                           favoriteAddLabel={t("library.favoriteAdd")}
                           favoriteRemoveLabel={t("library.favoriteRemove")}
                           triggerLabel={t("library.optionsFor", { title: book.title })}
-                          onRead={() => {
-                            void startReading(book);
-                          }}
                           onEdit={() => {
                             handleEditBook(book);
                           }}
@@ -1133,57 +1142,8 @@
                             void handleToggleFavorite(book);
                           }}
                         />
-                      </div>
-                    </li>
-                  {/each}
-                </ul>
-              {/if}
-            {:else}
-              <ul class="space-y-2">
-                {#each shelfBooks as book}
-                  <li class={`rounded-lg border p-3 transition-colors ${previewBookId === book.id ? "border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]" : "border-[color:var(--color-border)] bg-[var(--color-background)] hover:bg-[color:var(--color-border)]"}`}>
-                    <div class="flex items-start gap-3">
-                      <button
-                        type="button"
-                        class="min-w-0 flex-1 text-left"
-                        onclick={() => {
-                          openShelfDetails(book);
-                        }}
-                      >
-                        <p class="line-clamp-2 text-sm font-semibold text-[var(--color-primary)]">{book.title}</p>
-                        <p class="truncate text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}</p>
-                        <p class="mt-1 text-xs text-[var(--color-text-muted)]">{book.currentPage}/{book.totalPages || "-"} · {Math.round(getSafeProgressPercentage(book))}%</p>
-                      </button>
-
-                      <Button
-                        size="sm"
-                        onclick={() => {
-                          void startReading(book);
-                        }}
-                      >
-                        {t("app.read")}
-                      </Button>
-
-                      <ShelfActionMenu
-                        bookId={book.id}
-                        isFavorite={Boolean(book.isFavorite)}
-                        readLabel={t("app.read")}
-                        editLabel={t("library.editMetadata.title")}
-                        removeLabel={t("library.removeFromShelf")}
-                        favoriteAddLabel={t("library.favoriteAdd")}
-                        favoriteRemoveLabel={t("library.favoriteRemove")}
-                        triggerLabel={t("library.optionsFor", { title: book.title })}
-                        onEdit={() => {
-                          handleEditBook(book);
-                        }}
-                        onRemove={() => {
-                          void handleHideBook(book);
-                        }}
-                        onToggleFavorite={() => {
-                          void handleToggleFavorite(book);
-                        }}
-                      />
-                    </div>
+                      {/snippet}
+                    </BookCard>
                   </li>
                 {/each}
               </ul>
@@ -1271,6 +1231,7 @@
           <div class="mb-4 h-[520px] overflow-hidden rounded-lg border border-[color:var(--color-border)]">
             <PdfViewer
               filePath={activeReadingBook.filePath}
+              bookId={activeReadingBook.id}
               initialPage={Math.max(1, activeReadingBook.currentPage || 1)}
               searchTargetLocator={searchTargetLocator}
               {readerSettings}
@@ -1344,5 +1305,8 @@
       onCancelImport={handleCancelBulkImport}
       {t}
     />
+
+    <ErrorToast />
+    <ErrorFallback />
   </div>
 </main>

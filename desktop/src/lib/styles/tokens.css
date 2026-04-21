@@ -5,18 +5,33 @@
 
 :root {
   /* 1. Color Palette (Base Tokens) */
-  --color-primary: #FFFFFF;
-  --color-secondary: #E0E0E0;
-  --color-tertiary: #9E9E9E;
-  --color-neutral: #000000;
+  --color-primary: #111827;
+  --color-secondary: #4B5563;
+  --color-tertiary: #9CA3AF;
+  --color-neutral: #F9FAFB;
+  --color-text-muted: #6B7280;
+  --color-text-link: #2563EB;
 
-  /* 1.1 Semantic Colors */
+  /* 1.1 Semantic Colors (Dark Theme - Default) */
   --color-bg-app: #0A0A0A;
   --color-surface: #1E1E1E;
   --color-surface-dim: #121212;
   --color-surface-hover: #2C2C2C;
   --color-border: #424242;
   --color-destructive: #FFB4B4;
+  --color-error: #DC2626;
+  --color-error-bg: #FEE2E2;
+  --color-success: #16A34A;
+  --color-warning: #D97706;
+
+  /* 1.2 Light Theme Tokens */
+  --color-bg-app-light: #FFFFFF;
+  --color-surface-light: #FFFFFF;
+  --color-surface-dim-light: #F9FAFB;
+  --color-surface-hover-light: #F3F4F6;
+  --color-border-light: #E5E7EB;
+  --color-text-primary-light: #111827;
+  --color-text-muted-light: #6B7280;
 
   /* 2. Typography */
   --font-serif: "Newsreader", serif;
@@ -60,4 +75,34 @@ body {
 
 *, *::before, *::after {
   box-sizing: inherit;
+}
+
+/* Theme-aware color mappings for Settings Panel */
+.theme-settings-panel {
+  --color-bg-primary: var(--color-surface);
+  --color-bg-secondary: var(--color-surface-dim);
+  --color-bg-hover: var(--color-surface-hover);
+  --color-text-primary: var(--color-primary);
+  --color-text-secondary: var(--color-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-border: var(--color-border);
+}
+
+.theme-settings-panel[data-theme="light"] {
+  --color-bg-primary: var(--color-surface-light);
+  --color-bg-secondary: var(--color-surface-dim-light);
+  --color-bg-hover: var(--color-surface-hover-light);
+  --color-text-primary: var(--color-text-primary-light);
+  --color-text-muted: var(--color-text-muted-light);
+  --color-border: var(--color-border-light);
+}
+
+/* Reader preview theme colors */
+.theme-reader-preview {
+  --reader-bg-paper: #FAFAF9;
+  --reader-text-paper: #1C1917;
+  --reader-bg-sepia: #F4ECD8;
+  --reader-text-sepia: #3C2A1E;
+  --reader-bg-night: #18181B;
+  --reader-text-night: #E4E4E7;
 }

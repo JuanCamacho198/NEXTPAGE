@@ -47,7 +47,7 @@ const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoi
   };
 });
 
-vi.mock("./lib/tauriClient", () => tauriClientMock);
+vi.mock("./lib/api/tauriClient", () => tauriClientMock);
 
 vi.mock("./lib/services/FilePicker", () => ({
   pickFile: pickFileMock,
@@ -70,12 +70,12 @@ vi.mock("./lib/services/pdfThumbnail", () => ({
   })),
 }));
 
-vi.mock("./lib/components/EpubViewer.svelte", async () => {
+vi.mock("./lib/domain/reader/EpubViewer.svelte", async () => {
   const mod = await import("./test/stubs/ViewerStub.svelte");
   return { default: mod.default };
 });
 
-vi.mock("./lib/components/PdfViewer.svelte", async () => {
+vi.mock("./lib/domain/reader/PdfViewer.svelte", async () => {
   const mod = await import("./test/stubs/ViewerStub.svelte");
   return { default: mod.default };
 });
@@ -378,7 +378,8 @@ describe("App desktop home redesign QA scenarios", () => {
 
     const homeShelfButtons = screen.getAllByRole("button", { name: /Shelf A/i });
     await user.click(homeShelfButtons[0]);
-    await user.click(screen.getByRole("button", { name: "Read" }));
+    const shelfDialog = await screen.findByRole("dialog", { name: "Shelf A" });
+    await user.click(within(shelfDialog).getByRole("button", { name: "Read" }));
     expect(await screen.findByRole("button", { name: "Back to home" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Back to home" }));

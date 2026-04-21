@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use tauri::State;
 
 use crate::error::AppError;
+use crate::logger::ErrorEventDto;
 use crate::models::{
     AppSettingDto, BookCollectionInput, BookDeleteInput, BookDto, BookImportInput, BookmarkDto,
     CollectionDto, CommandErrorDto, CreateCollectionInput, HideBookInput, HighlightDto,
@@ -652,4 +653,13 @@ pub fn getBookCollections(
     book_id: String,
 ) -> Result<Vec<CollectionDto>, String> {
     get_book_collections(state, book_id)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn report_error_event(
+    state: State<'_, AppState>,
+    event: ErrorEventDto,
+) -> Result<(), String> {
+    let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
+    logger.log_to_file(&event)
 }

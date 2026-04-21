@@ -4,6 +4,7 @@
   import ePub from "epubjs";
   import type { MessageKey } from "$lib/i18n";
   import type { ReaderSettings, ReaderThemeMode } from "$lib/types";
+  import { canHandleReaderArrowNav } from "./keyboardNav";
 
   type Props = {
     filePath: string;
@@ -55,6 +56,7 @@
 
   let toc = $state<Array<{ id: string; label: string; href: string }>>([]);
   let showToc = $state(false);
+  let isViewerFocused = $state(false);
 
   let epubContainer: HTMLDivElement | undefined = $state();
 
@@ -254,6 +256,27 @@
     rendition.next();
   }
 
+  function handleViewerKeydown(event: KeyboardEvent) {
+    if (!isViewerFocused) {
+      return;
+    }
+
+    if (!canHandleReaderArrowNav(event)) {
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      goToPrev();
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      goToNext();
+    }
+  }
+
   function goToChapter(chapter: { id: string; href: string }) {
     if (!rendition) return;
     rendition.display(chapter.href);
@@ -271,7 +294,9 @@
   }
 </script>
 
-<div class="epub-viewer">
+<svelte:window onkeydown={handleViewerKeydown} />
+
+<div class="epub-viewer" onfocusin={() => { isViewerFocused = true; }} onfocusout={() => { isViewerFocused = false; }}>
   {#if isLoading}
     <div class="loading">{t("epub.loading")}</div>
   {:else if error}
@@ -283,8 +308,8 @@
       </button>
       <span class="progress">{Math.round(currentPercentage)}%</span>
       <div class="nav-buttons">
-        <button type="button" onclick={goToPrev} class="nav-btn">{t("epub.previous")}</button>
-        <button type="button" onclick={goToNext} class="nav-btn">{t("epub.next")}</button>
+        <button type="button" onclick={goToPrev} class="nav-btn" aria-label={t("epub.previous")}><span aria-hidden="true">&#8592;</span> {t("epub.previous")}</button>
+        <button type="button" onclick={goToNext} class="nav-btn" aria-label={t("epub.next")}><span aria-hidden="true">&#8594;</span> {t("epub.next")}</button>
       </div>
       <div class="settings-controls">
         <button type="button" onclick={() => updateFontSize(displaySettings.fontSize - 10)} class="size-btn">
@@ -326,6 +351,7 @@
     height: 100%;
     background: var(--color-background);
     color: var(--color-primary);
+    outline: none;
   }
 
   .loading,

@@ -6,15 +6,17 @@
   import HighlightToolbar from "./HighlightToolbar.svelte";
   import type { MessageKey } from "$lib/i18n";
   import type { PdfOutlineItem, ReaderSettings, ReaderThemeMode } from "$lib/types";
-  import {
+import {
     adjustPdfScaleForWheel,
     clampPdfScale,
     DEFAULT_PDF_SCALE,
-    isPageWithinBounds,
-  } from "$lib/components/pdfNavigation";
+  isPageWithinBounds,
+} from "./pdfNavigation";
+import { canHandleReaderArrowNav } from "./keyboardNav";
 
   type Props = {
     filePath: string;
+    bookId?: string;
     initialPage?: number;
     onPageChange?: (page: number, total: number) => void;
     searchTargetLocator?: string | null;
@@ -41,6 +43,7 @@
 
   let {
     filePath,
+    bookId,
     initialPage = 1,
     onPageChange,
     searchTargetLocator = null,
@@ -67,6 +70,7 @@
   let tocError = $state<string | null>(null);
   let isFullscreen = $state(false);
   let fullscreenSupported = $state(true);
+  let isViewerFocused = $state(false);
 
   let pdfDoc: pdfjsLib.PDFDocumentProxy | null = null;
   let currentPageObj: pdfjsLib.PDFPageProxy | null = null;
@@ -810,6 +814,27 @@
     });
   }
 
+  function handleViewerKeydown(event: KeyboardEvent) {
+    if (!isViewerFocused) {
+      return;
+    }
+
+    if (!canHandleReaderArrowNav(event)) {
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      goToPrevPage();
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      goToNextPage();
+    }
+  }
+
   export function setScale(newScale: number) {
     scale = clampPdfScale(newScale);
     if (pdfDoc) {
@@ -826,9 +851,17 @@
   }
 </script>
 
+<svelte:window onkeydown={handleViewerKeydown} />
+
 <div
   class="pdf-viewer"
   bind:this={viewerRoot}
+  onfocusin={() => {
+    isViewerFocused = true;
+  }}
+  onfocusout={() => {
+    isViewerFocused = false;
+  }}
   style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor};`}
 >
   {#if isLoading}
@@ -842,7 +875,8 @@
     <button type="button" onclick={() => (showToc = !showToc)}>
       {t("pdf.contents")}
     </button>
-    <button type="button" onclick={goToPrevPage} disabled={currentPage <= 1}>
+    <button type="button" class="reader-nav-button" aria-label={t("pdf.previous")} onclick={goToPrevPage} disabled={currentPage <= 1}>
+      <span aria-hidden="true">&#8592;</span>
       {t("pdf.previous")}
     </button>
     <span class="page-info">
@@ -856,7 +890,8 @@
       />
       / {totalPages}
     </span>
-    <button type="button" onclick={goToNextPage} disabled={currentPage >= totalPages}>
+    <button type="button" class="reader-nav-button" aria-label={t("pdf.next")} onclick={goToNextPage} disabled={currentPage >= totalPages}>
+      <span aria-hidden="true">&#8594;</span>
       {t("pdf.next")}
     </button>
     <button type="button" onclick={toggleFullscreen} disabled={!fullscreenSupported}>
@@ -911,7 +946,7 @@
           >
             <HighlightToolbar
               {selectedText}
-              bookId={filePath}
+              bookId={bookId || filePath}
               pageNumber={currentPage}
               cfi={selectedCfi}
               hasSelectionAnchor={selectionHasAnchor}
@@ -933,6 +968,7 @@
     background: var(--pdf-reader-root-bg, var(--color-background));
     color: var(--pdf-reader-text, var(--color-primary));
     position: relative;
+    outline: none;
   }
 
   .loading-overlay,
@@ -969,6 +1005,12 @@
     color: var(--pdf-reader-text, var(--color-primary));
     cursor: pointer;
     font-size: 13px;
+  }
+
+  .reader-nav-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
 
   .controls button:hover:not(:disabled) {

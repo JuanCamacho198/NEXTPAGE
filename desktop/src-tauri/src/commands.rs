@@ -21,6 +21,11 @@ fn map_command_error(error: AppError) -> String {
     let dto = match error {
         AppError::InvalidInput(message) => CommandErrorDto::validation(message),
         AppError::Compatibility(message) => CommandErrorDto::compatibility(message),
+        AppError::DbConstraint(message) => CommandErrorDto::db_constraint(message),
+        AppError::SyncConflict(message) => CommandErrorDto::sync_conflict(message),
+        AppError::ImportError(message) => CommandErrorDto::import_error(message),
+        AppError::ThumbnailFail(message) => CommandErrorDto::thumbnail_error(message),
+        AppError::MigrationFail(message) => CommandErrorDto::migration_fail(message),
         other => CommandErrorDto::internal(other.to_string()),
     };
 

@@ -3,5 +3,7 @@ pub mod db;
 pub mod error;
 pub mod logger;
 pub mod models;
+pub mod queue;
 pub mod repository;
+pub mod services;
 pub mod state;

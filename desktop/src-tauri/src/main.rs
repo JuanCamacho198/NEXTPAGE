@@ -2,17 +2,29 @@
 
 use nextpage_desktop::commands;
 use nextpage_desktop::db::{open_and_migrate, resolve_db_path};
+use nextpage_desktop::queue::repository::QueueRepository;
 use nextpage_desktop::repository::LibraryRepository;
 use nextpage_desktop::state::AppState;
+use rusqlite::Connection;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 fn build_state(app: &AppHandle) -> Result<AppState, String> {
     let db_path = resolve_db_path(app).map_err(|err| err.to_string())?;
     let connection = open_and_migrate(&db_path).map_err(|err| err.to_string())?;
+    let queue_connection = Connection::open(&db_path).map_err(|err| err.to_string())?;
+    queue_connection
+        .execute_batch("PRAGMA foreign_keys = ON;")
+        .map_err(|err| err.to_string())?;
     let repository = LibraryRepository::new(connection);
+    let queue_repository = QueueRepository::new(queue_connection);
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    Ok(AppState::new(repository, app_data_dir))
+    Ok(AppState::new(
+        repository,
+        queue_repository,
+        app_data_dir,
+        db_path,
+    ))
 }
 
 fn main() {

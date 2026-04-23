@@ -28,13 +28,13 @@
 </script>
 
 {#if variant === "book" || variant === "card"}
-  <div class="{variants[variant]} p-3 {className}" style="width: {width ?? '100%'}; height: {height ?? 'auto'};">
-    <div class="flex gap-3">
-      <div class="{baseShimmer} rounded-lg flex-shrink-0" style="width: 48px; height: 64px;"></div>
-      <div class="flex flex-1 flex-col gap-2">
+  <div class="{variants[variant]} p-4 {className}" style="width: {width ?? '100%'}; height: {height ?? 'auto'};">
+    <div class="flex gap-4">
+      <div class="{baseShimmer} flex-shrink-0 rounded" style="width: 64px; height: 80px;"></div>
+      <div class="flex flex-1 flex-col gap-3 pt-1">
         <div class="{baseShimmer} rounded h-4 w-3/4;"></div>
         <div class="{baseShimmer} rounded h-3 w-1/2;"></div>
-        <div class="{baseShimmer} rounded h-3 w-1/3;"></div>
+        <div class="{baseShimmer} mt-auto rounded h-2 w-1/3;"></div>
       </div>
     </div>
   </div>

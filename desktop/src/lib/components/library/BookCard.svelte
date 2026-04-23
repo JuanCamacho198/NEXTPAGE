@@ -48,22 +48,22 @@
   });
 </script>
 
-<article class={containerClass}>
+<article class={`${containerClass} transition-all duration-200`}>
   <div class="flex items-start justify-between gap-3">
     <button type="button" class="min-w-0 flex-1 text-left" onclick={onSelect}>
       <div class="flex items-start gap-3">
-        <SafeCover path={book.coverPath ?? ""} alt={`Cover for ${book.title}`} className={compact ? "h-14 w-10 rounded object-cover" : "h-16 w-12 rounded object-cover"}>
+        <SafeCover path={book.coverPath ?? ""} alt={`Cover for ${book.title}`} className={compact ? "h-14 w-10 rounded object-cover shadow-sm" : "h-16 w-12 rounded object-cover shadow-sm"}>
           {#snippet fallback()}
-            <div class={`${compact ? "h-14 w-10" : "h-16 w-12"} flex items-center justify-center rounded bg-[var(--color-surface)] text-[10px] uppercase text-[var(--color-text-muted)]`}>
+            <div class={`${compact ? "h-14 w-10" : "h-16 w-12"} flex items-center justify-center rounded bg-[var(--color-surface)] text-[10px] uppercase tracking-widest text-[var(--color-text-muted)]`}>
               {t("library.cover")}
             </div>
           {/snippet}
         </SafeCover>
 
-        <div class="min-w-0 flex-1">
-          <p class={`${compact ? "text-sm" : "text-base"} line-clamp-2 font-semibold text-[var(--color-primary)]`}>{book.title}</p>
-          <p class="truncate text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}</p>
-          <p class="mt-1 text-xs text-[var(--color-text-muted)]">{book.currentPage}/{book.totalPages || "-"}</p>
+        <div class="min-w-0 flex-1 space-y-1">
+          <p class={`${compact ? "text-sm" : "text-base"} font-semibold leading-tight text-[var(--color-primary)] line-clamp-2`}>{book.title}</p>
+          <p class="text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")} <span class="text-[var(--color-border)]">·</span> {book.format.toUpperCase()}</p>
+          <p class="text-xs tabular-nums text-[var(--color-text-muted)]">{book.currentPage}/{book.totalPages || "-"}</p>
           {#if showProgress}
             <div class="mt-2">
               <div class="mb-1 flex items-center justify-between text-[11px] text-[var(--color-text-muted)]">

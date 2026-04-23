@@ -25,10 +25,10 @@
   };
 </script>
 
-<div class="flex flex-col items-center justify-center text-center {className}">
+<div class={`flex flex-col items-center justify-center py-12 text-center ${className}`}>
   {#if icon && iconPaths[icon]}
-    <div class="mb-4 rounded-full bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-border)] p-4 ring-1 ring-[var(--color-border)]">
-      <svg class="h-8 w-8 text-[var(--color-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-border)] ring-1 ring-inset ring-[var(--color-border)]">
+      <svg class="h-6 w-6 text-[var(--color-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d={iconPaths[icon]} />
       </svg>
     </div>
@@ -41,7 +41,7 @@
   {/if}
 
   {#if action}
-    <div class="mt-6">
+    <div class="mt-8">
       {@render action()}
     </div>
   {/if}

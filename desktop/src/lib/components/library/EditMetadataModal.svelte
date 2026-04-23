@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from "../ui/Button.svelte";
+  import Modal from "../ui/Modal.svelte";
   import type { LibraryBookDto } from "$lib/types";
   import type { MessageKey } from "../../i18n";
 
@@ -51,36 +52,11 @@
       isSaving = false;
     }
   };
-
-  function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape") {
-      onClose();
-    }
-  }
 </script>
 
 {#if open && book}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="edit-metadata-title"
-    tabindex="-1"
-    onclick={handleBackdropClick}
-    onkeydown={handleKeydown}
-  >
-    <div class="w-full max-w-md rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg">
-      <h2 id="edit-metadata-title" class="mb-4 text-lg font-semibold text-[var(--color-primary)]">
-        {t("library.editMetadata.title")}
-      </h2>
-
+  <Modal bind:open={open} title={t("library.editMetadata.title")}>
+    {#snippet children()}
       <div class="space-y-4">
         <div>
           <label for="edit-title" class="mb-1 block text-sm font-medium text-[var(--color-primary)]">
@@ -110,15 +86,15 @@
           <p class="text-sm text-red-600">{error}</p>
         {/if}
       </div>
+    {/snippet}
 
-      <div class="mt-6 flex justify-end gap-2">
-        <Button variant="secondary" onclick={onClose} disabled={isSaving}>
-          {t("library.editMetadata.cancel")}
-        </Button>
-        <Button onclick={handleSave} disabled={!hasChanges || isSaving}>
-          {isSaving ? t("library.editMetadata.saving") : t("library.editMetadata.save")}
-        </Button>
-      </div>
-    </div>
-  </div>
+    {#snippet footer()}
+      <Button variant="secondary" onclick={onClose} disabled={isSaving}>
+        {t("library.editMetadata.cancel")}
+      </Button>
+      <Button onclick={handleSave} disabled={!hasChanges || isSaving}>
+        {isSaving ? t("library.editMetadata.saving") : t("library.editMetadata.save")}
+      </Button>
+    {/snippet}
+  </Modal>
 {/if}

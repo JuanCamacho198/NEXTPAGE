@@ -4,7 +4,7 @@
   type Props = {
     open: boolean;
     title: string;
-    default?: Snippet;
+    children?: Snippet;
     footer?: Snippet;
     class?: string;
   };
@@ -12,7 +12,7 @@
   let {
     open = $bindable(false),
     title,
-    default: content,
+    children,
     footer,
     class: className = ""
   }: Props = $props();
@@ -57,8 +57,8 @@
       </div>
 
       <div class="px-6 py-4">
-        {#if content}
-          {@render content()}
+        {#if children}
+          {@render children()}
         {/if}
       </div>
 

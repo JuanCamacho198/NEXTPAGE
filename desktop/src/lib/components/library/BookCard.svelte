@@ -4,6 +4,7 @@
   import type { MessageKey } from "$lib/i18n";
   import { getSafeProgressPercentage } from "$lib/stores/homeState";
   import SafeCover from "./SafeCover.svelte";
+  import Button from "../ui/Button.svelte";
 
   type Variant = "shelf" | "continue-reading";
 
@@ -80,13 +81,9 @@
 
     <div class="flex items-start gap-2">
       {#if showReadButton}
-        <button
-          type="button"
-          class="rounded-md bg-[var(--color-primary)] px-3 py-1.5 text-xs font-medium text-[var(--color-background)] hover:opacity-90"
-          onclick={onRead}
-        >
+        <Button size="sm" onclick={onRead}>
           {t("app.read")}
-        </button>
+        </Button>
       {/if}
       {@render actions?.()}
     </div>

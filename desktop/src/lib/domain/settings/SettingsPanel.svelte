@@ -1,6 +1,7 @@
 <script lang="ts">
   import GoogleLoginButton from "$lib/domain/library/GoogleLoginButton.svelte";
   import Button from "$lib/components/ui/Button.svelte";
+  import Panel from "$lib/components/ui/Panel.svelte";
   import {
     getSettings,
     upsertSettings,
@@ -49,7 +50,7 @@
   let readerBrightness = $state(100);
   let readerContrast = $state(100);
   let readerEpubFontSize = $state(100);
-  let readerEpubFontFamily = $state("serif");
+  let readerEpubFontFamily = $state("sans");
   let settingsError = $state<string | null>(null);
   let settingsUnavailable = $state<string | null>(null);
   let isSavingSettings = $state(false);
@@ -96,7 +97,7 @@
     readerBrightness: 100,
     readerContrast: 100,
     readerEpubFontSize: 100,
-    readerEpubFontFamily: "serif",
+    readerEpubFontFamily: "sans",
   };
 
   type MaybeCommandError = Error & { commandError?: CommandErrorDto };
@@ -112,7 +113,7 @@
 
   const normalizeFontFamily = (value: string) => {
     const normalized = value.trim();
-    return normalized.length > 0 ? normalized : "serif";
+    return normalized.length > 0 ? normalized : "sans";
   };
 
   const buildReaderSettingsDraft = (): ReaderSettings => ({
@@ -331,11 +332,11 @@
     <div class="fixed inset-0 w-screen h-screen bg-black/40 z-[999]" onclick={closePanel}></div>
   {/if}
   <aside class={mode === "overlay"
-    ? "fixed top-0 right-0 w-[350px] h-screen bg-white border-l border-gray-200 shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]"
+    ? "fixed top-0 right-0 w-[350px] h-screen bg-white border-l border-zinc-200 shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]"
     : "w-full rounded-xl border border-[color:var(--color-border)] bg-white shadow-sm flex flex-col overflow-hidden"}>
-    <div class="flex items-center justify-between p-4 border-b border-gray-200">
-      <h2 class="m-0 text-lg font-semibold text-gray-900">{t("settings.title")}</h2>
-      <button class="bg-transparent border-none text-xl cursor-pointer text-gray-600 p-1 flex items-center justify-center hover:text-gray-900" onclick={closePanel} aria-label={t("settings.close")}>✕</button>
+    <div class="flex items-center justify-between p-4 border-b border-zinc-200">
+      <h2 class="m-0 text-lg font-semibold text-zinc-900">{t("settings.title")}</h2>
+      <button class="bg-transparent border-none text-xl cursor-pointer text-zinc-600 p-1 flex items-center justify-center hover:text-zinc-900" onclick={closePanel} aria-label={t("settings.close")}>✕</button>
     </div>
 
     <div class="tabs">
@@ -383,27 +384,25 @@
     
     <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
       {#if activeTab === "account"}
-        <div class="account-section">
-          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">{t("settings.authentication")}</h3>
-          <p class="text-sm text-gray-600 mb-4">{t("settings.authDescription")}</p>
+        <Panel title={t("settings.authentication")} subtitle={t("settings.authDescription")}>
           <GoogleLoginButton />
 
-          <div class="mt-6 border-t border-gray-200 pt-4">
-            <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">{t("settings.localPreferences")}</h3>
+          {#if settingsUnavailable}
+            <p class="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
+              {settingsUnavailable}
+            </p>
+          {/if}
+          {#if settingsError}
+            <p class="mb-2 rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-900">
+              {settingsError}
+            </p>
+          {/if}
 
-            {#if settingsUnavailable}
-              <p class="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
-                {settingsUnavailable}
-              </p>
-            {/if}
-            {#if settingsError}
-              <p class="mb-2 rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-900">
-                {settingsError}
-              </p>
-            {/if}
+          <div class="mt-6 border-t border-zinc-200 pt-4">
+            <h3 class="mt-0 mb-2 text-base font-semibold text-zinc-900">{t("settings.localPreferences")}</h3>
 
             <div class="mb-2">
-              <label class="mb-1 block text-xs text-gray-600" for="locale-select">{t("settings.language")}</label>
+              <label class="mb-1 block text-xs text-zinc-600" for="locale-select">{t("settings.language")}</label>
               <select
                 id="locale-select"
                 value={locale}
@@ -416,7 +415,7 @@
             </div>
 
             <div class="mb-2">
-              <label class="mb-1 block text-xs text-gray-600" for="theme-select">{t("settings.theme")}</label>
+              <label class="mb-1 block text-xs text-zinc-600" for="theme-select">{t("settings.theme")}</label>
               <select
                 id="theme-select"
                 bind:value={preferredTheme}
@@ -429,7 +428,7 @@
             </div>
 
             <div class="mb-2">
-              <label class="mb-1 block text-xs text-gray-600" for="font-scale">{t("settings.fontScale")}: {preferredFontScale}%</label>
+              <label class="mb-1 block text-xs text-zinc-600" for="font-scale">{t("settings.fontScale")}: {preferredFontScale}%</label>
               <input
                 type="range"
                 id="font-scale"
@@ -449,12 +448,9 @@
               </Button>
             </div>
           </div>
-        </div>
+        </Panel>
       {:else if activeTab === "profile"}
-        <div class="profile-section">
-          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">{t("settings.tab.profile")}</h3>
-          <p class="text-sm text-gray-600 mb-4">{t("settings.profile.description")}</p>
-
+        <Panel title={t("settings.tab.profile")} subtitle={t("settings.profile.description")}>
           {#if profileError}
             <p class="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
               {profileError}
@@ -493,8 +489,8 @@
           </div>
 
           <div class="shortcuts-card">
-            <h4 class="mt-0 mb-2 text-sm font-semibold text-gray-900">{t("settings.shortcuts.title")}</h4>
-            <p class="text-xs text-gray-600 mb-3">{t("settings.shortcuts.description")}</p>
+            <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">{t("settings.shortcuts.title")}</h4>
+            <p class="text-xs text-zinc-600 mb-3">{t("settings.shortcuts.description")}</p>
             <ul class="shortcuts-list">
               {#each keyboardShortcuts as shortcut (shortcut.id)}
                 <li>
@@ -504,12 +500,9 @@
               {/each}
             </ul>
           </div>
-        </div>
+        </Panel>
       {:else if activeTab === "reader"}
-        <div class="reader-section">
-          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">{t("settings.tab.reader")}</h3>
-          <p class="text-sm text-gray-600 mb-4">Configure your reading experience.</p>
-          
+        <Panel title={t("settings.tab.reader")} subtitle="Configure your reading experience.">
           <div class="theme-preview-container mb-4">
             <button
               type="button"
@@ -542,7 +535,7 @@
 
           <div class="space-y-4">
             <div class="mb-2">
-              <label class="mb-1 block text-xs text-gray-600" for="reader-brightness">{t("settings.reader.brightness")}: {readerBrightness}%</label>
+              <label class="mb-1 block text-xs text-zinc-600" for="reader-brightness">{t("settings.reader.brightness")}: {readerBrightness}%</label>
               <input
                 type="range"
                 id="reader-brightness"
@@ -554,7 +547,7 @@
             </div>
 
             <div class="mb-2">
-              <label class="mb-1 block text-xs text-gray-600" for="reader-contrast">{t("settings.reader.contrast")}: {readerContrast}%</label>
+              <label class="mb-1 block text-xs text-zinc-600" for="reader-contrast">{t("settings.reader.contrast")}: {readerContrast}%</label>
               <input
                 type="range"
                 id="reader-contrast"
@@ -566,7 +559,7 @@
             </div>
 
             <div class="mb-2">
-              <label class="mb-1 block text-xs text-gray-600" for="reader-font-size">{t("settings.reader.epub.fontSize")}: {readerEpubFontSize}%</label>
+              <label class="mb-1 block text-xs text-zinc-600" for="reader-font-size">{t("settings.reader.epub.fontSize")}: {readerEpubFontSize}%</label>
               <input
                 type="range"
                 id="reader-font-size"
@@ -578,7 +571,7 @@
             </div>
 
             <div class="mb-2">
-              <label class="mb-1 block text-xs text-gray-600" for="reader-font-family">{t("settings.reader.epub.fontFamily")}</label>
+              <label class="mb-1 block text-xs text-zinc-600" for="reader-font-family">{t("settings.reader.epub.fontFamily")}</label>
               <select
                 id="reader-font-family"
                 bind:value={readerEpubFontFamily}
@@ -599,11 +592,9 @@
               </Button>
             </div>
           </div>
-        </div>
+        </Panel>
       {:else if activeTab === "appTheme"}
-        <div class="app-theme-section">
-          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">{t("settings.tab.appTheme")}</h3>
-          
+        <Panel title={t("settings.tab.appTheme")}>
           <div 
             class="app-theme-preview mb-4"
             style="
@@ -627,28 +618,28 @@
               <button
                 type="button"
                 class="flex-1 py-3 px-4 rounded-lg border-2 transition-colors"
-                class:border-gray-800={preferredTheme === "light"}
-                class:border-gray-200={preferredTheme !== "light"}
+                class:border-zinc-800={preferredTheme === "light"}
+                class:border-zinc-200={preferredTheme !== "light"}
                 onclick={() => preferredTheme = "light"}
               >
-                <div class="h-16 rounded bg-white border border-gray-200 mb-2"></div>
+                <div class="h-16 rounded bg-white border border-zinc-200 mb-2"></div>
                 <span class="text-xs">{t("settings.theme.light")}</span>
               </button>
               <button
                 type="button"
                 class="flex-1 py-3 px-4 rounded-lg border-2 transition-colors"
-                class:border-gray-800={preferredTheme === "dark"}
-                class:border-gray-200={preferredTheme !== "dark"}
+                class:border-zinc-800={preferredTheme === "dark"}
+                class:border-zinc-200={preferredTheme !== "dark"}
                 onclick={() => preferredTheme = "dark"}
               >
-                <div class="h-16 rounded bg-gray-800 border border-gray-700 mb-2"></div>
+                <div class="h-16 rounded bg-zinc-800 border border-zinc-700 mb-2"></div>
                 <span class="text-xs">{t("settings.theme.dark")}</span>
               </button>
               <button
                 type="button"
                 class="flex-1 py-3 px-4 rounded-lg border-2 transition-colors"
-                class:border-gray-800={preferredTheme === "sepia"}
-                class:border-gray-200={preferredTheme !== "sepia"}
+                class:border-zinc-800={preferredTheme === "sepia"}
+                class:border-zinc-200={preferredTheme !== "sepia"}
                 onclick={() => preferredTheme = "sepia"}
               >
                 <div class="h-16 rounded bg-[#f4ecd8] border border-[#d4c4a8] mb-2"></div>
@@ -658,7 +649,7 @@
           </div>
 
           <div class="mb-2">
-            <label class="mb-1 block text-xs text-gray-600" for="app-font-scale">{t("settings.fontScale")}: {preferredFontScale}%</label>
+            <label class="mb-1 block text-xs text-zinc-600" for="app-font-scale">{t("settings.fontScale")}: {preferredFontScale}%</label>
             <input
               type="range"
               id="app-font-scale"
@@ -677,11 +668,9 @@
               {t("settings.resetDefaults")}
             </Button>
           </div>
-        </div>
+        </Panel>
       {:else if activeTab === "about"}
-        <div class="about-section">
-          <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">{t("settings.about")}</h3>
-          
+        <Panel title={t("settings.about")}>
           <div class="about-card">
             <div class="about-logo">
               <span class="logo-icon">📚</span>
@@ -690,13 +679,13 @@
                 <span class="app-version">Version {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}</span>
               </div>
             </div>
-            <p class="about-description text-sm text-gray-600 mt-3">
+            <p class="about-description text-sm text-zinc-600 mt-3">
               A modern e-reader application for enjoying your EPUB collection with a clean, customizable reading experience.
             </p>
           </div>
 
           <div class="about-card mt-4">
-            <h4 class="mt-0 mb-2 text-sm font-semibold text-gray-900">Credits</h4>
+            <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">Credits</h4>
             <ul class="credits-list">
               <li>
                 <span class="credit-label">Core Team</span>
@@ -714,7 +703,7 @@
           </div>
 
           <div class="about-card mt-4">
-            <h4 class="mt-0 mb-2 text-sm font-semibold text-gray-900">Links</h4>
+            <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">Links</h4>
             <div class="about-links">
               <Button onclick={() => window.open("https://github.com/anomalyco/nextpage", "_blank")} variant="ghost" size="sm">
                 GitHub
@@ -724,14 +713,14 @@
               </Button>
             </div>
           </div>
-        </div>
+        </Panel>
       {/if}
 
       {#if showResetModal}
         <div class="modal-overlay">
           <div class="modal-content">
-            <h3 class="mt-0 mb-2 text-base font-semibold text-gray-900">{t("settings.resetConfirmTitle")}</h3>
-            <p class="text-sm text-gray-600 mb-4">{t("settings.resetConfirmMessage")}</p>
+            <h3 class="mt-0 mb-2 text-base font-semibold text-zinc-900">{t("settings.resetConfirmTitle")}</h3>
+            <p class="text-sm text-zinc-600 mb-4">{t("settings.resetConfirmMessage")}</p>
             <div class="flex gap-2 justify-end">
               <Button onclick={closeResetModal} variant="secondary" size="sm">
                 {t("settings.cancel")}

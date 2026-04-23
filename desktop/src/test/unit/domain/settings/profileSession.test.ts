@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getProfileInitials, normalizeProfileSession } from "./profileSession";
+import { getProfileInitials, normalizeProfileSession } from "$lib/domain/settings/profileSession";
 
 describe("profileSession", () => {
   it("normalizes signed-in session values", () => {

@@ -33,34 +33,48 @@
   --color-text-primary-light: #111827;
   --color-text-muted-light: #6B7280;
 
-  /* 2. Typography */
-  --font-serif: "Newsreader", serif;
+  /* 2. Typography - DASHBOARD uses sans only (anti-slop: no serif in UI) */
+  --font-display: "Manrope", sans-serif;
   --font-sans: "Manrope", sans-serif;
+  --font-serif: "Newsreader", serif; /* Reader content only */
   
-  --text-xs: 0.75rem; /* 12px */
-  --text-sm: 0.875rem; /* 14px */
-  --text-base: 1rem; /* 16px */
-  --text-lg: 1.125rem; /* 18px */
-  --text-xl: 1.25rem; /* 20px */
-  --text-2xl: 1.5rem; /* 24px */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* 3. Spacing */
-  --spacing-xs: 0.25rem; /* 4px */
-  --spacing-sm: 0.5rem; /* 8px */
-  --spacing-md: 1rem; /* 16px */
-  --spacing-lg: 1.5rem; /* 24px */
-  --spacing-xl: 2rem; /* 32px */
+  /* 3. Motion (MOTION_INTENSITY: 6) */
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
 
-  /* 4. Shapes (Border Radius) */
-  --shape-small: 4px;
-  --shape-medium: 8px;
-  --shape-large: 16px;
-  --shape-pill: 50px;
+  /* 4. Spacing (VISUAL_DENSITY: 4 - compact) */
+  --spacing-2xs: 0.125rem;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+
+  /* 5. Shapes */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
 }
 
 /* Base Body Styles */
@@ -97,7 +111,51 @@ body {
   --color-border: var(--color-border-light);
 }
 
-/* Reader preview theme colors */
+/* ============================================
+ * SKELETON LOADERS - Proper loading states
+ * ============================================ */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface) 0%,
+    var(--color-surface-hover) 50%,
+    var(--color-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer var(--duration-slower) ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+.skeleton-text {
+  height: 1em;
+  margin-bottom: var(--spacing-sm);
+}
+
+.skeleton-title {
+  height: 1.5em;
+  width: 60%;
+  margin-bottom: var(--spacing-md);
+}
+
+.skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+}
+
+.skeleton-card {
+  height: 80px;
+  margin-bottom: var(--spacing-sm);
+}
+
+/* ============================================
+ * READER PREVIEW THEMES
+ * ============================================ */
 .theme-reader-preview {
   --reader-bg-paper: #FAFAF9;
   --reader-text-paper: #1C1917;

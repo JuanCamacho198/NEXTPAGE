@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import ReadingStatsPanel from "./ReadingStatsPanel.svelte";
+import ReadingStatsPanel from "$lib/components/stats/ReadingStatsPanel.svelte";
 import type { ReadingStatsSummaryDto } from "$lib/types";
 import { getReadingStats } from "$lib/api/tauriClient";
 
@@ -23,11 +23,12 @@ const t = (key: string) => {
   return dictionary[key] ?? key;
 };
 
-vi.mock("../../tauriClient", () => ({
+vi.mock("$lib/api/tauriClient", () => ({
   getReadingStats: vi.fn(),
 }));
 
-const mockedGetReadingStats = vi.mocked(getReadingStats);
+// Use type cast since vi.mocked is not available in vitest 4.x
+const mockedGetReadingStats = getReadingStats as unknown as ReturnType<typeof vi.fn>;
 
 describe("ReadingStatsPanel", () => {
   it("renders global and per-book stats values from command response", async () => {

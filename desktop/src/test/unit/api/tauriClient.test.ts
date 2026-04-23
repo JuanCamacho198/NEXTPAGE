@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const invokeMock = vi.fn();
 
 vi.mock("@tauri-apps/api/core", () => ({
-  invoke: (...args: unknown[]) => invokeMock(...args),
+  invoke: (...args: unknown[]) => invokeMock(...args) as Promise<unknown>,
 }));
 
 import {
@@ -12,7 +12,7 @@ import {
   resetReaderSettingsToDefaults,
   sanitizeReaderSettings,
   upsertReaderSettings,
-} from "./api/tauriClient";
+} from "$lib/api/tauriClient";
 
 describe("tauriClient reader settings", () => {
   beforeEach(() => {

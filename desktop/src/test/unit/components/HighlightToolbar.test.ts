@@ -1,14 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import HighlightToolbar from "../domain/reader/HighlightToolbar.svelte";
+import HighlightToolbar from "$lib/domain/reader/HighlightToolbar.svelte";
 import { saveHighlight } from "$lib/api/tauriClient";
 
 vi.mock("$lib/api/tauriClient", () => ({
   saveHighlight: vi.fn(),
 }));
 
-const mockedSaveHighlight = vi.mocked(saveHighlight);
+// Use vi.fn() cast since vi.mocked is not available in vitest 4.x globals mode
+const mockedSaveHighlight = saveHighlight as ReturnType<typeof vi.fn>;
 
 const t = (key: string, params?: Record<string, string | number>) => {
   const dictionary: Record<string, string> = {

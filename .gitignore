@@ -22,6 +22,9 @@ captures/
 
 # Tooling
 .codedb/
+.graphifyignore
+.run-graphify.py
+graphify-out
 codedb.snapshot
 node_modules/
 dist/

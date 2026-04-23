@@ -27,21 +27,21 @@
 
 <div class="flex flex-col items-center justify-center text-center {className}">
   {#if icon && iconPaths[icon]}
-    <div class="mb-4 rounded-full bg-[var(--color-surface)] p-4">
+    <div class="mb-4 rounded-full bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-border)] p-4 ring-1 ring-[var(--color-border)]">
       <svg class="h-8 w-8 text-[var(--color-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d={iconPaths[icon]} />
       </svg>
     </div>
   {/if}
 
-  <h3 class="text-lg font-medium text-[var(--color-primary)]">{title}</h3>
+  <h3 class="text-lg font-semibold tracking-tight text-[var(--color-primary)]">{title}</h3>
 
   {#if description}
-    <p class="mt-1 max-w-xs text-sm text-[var(--color-muted)]">{description}</p>
+    <p class="mt-2 max-w-xs text-sm leading-relaxed text-[var(--color-muted)]">{description}</p>
   {/if}
 
   {#if action}
-    <div class="mt-4">
+    <div class="mt-6">
       {@render action()}
     </div>
   {/if}

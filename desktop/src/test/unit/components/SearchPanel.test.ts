@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import SearchPanel from "./SearchPanel.svelte";
+import SearchPanel from "$lib/components/reader/SearchPanel.svelte";
 import type { SearchBookTextResponse } from "$lib/types";
 import { searchBookText } from "$lib/api/tauriClient";
 
@@ -22,11 +22,12 @@ const t = (key: string) => {
   return dictionary[key] ?? key;
 };
 
-vi.mock("../../tauriClient", () => ({
+vi.mock("$lib/api/tauriClient", () => ({
   searchBookText: vi.fn(),
 }));
 
-const mockedSearchBookText = vi.mocked(searchBookText);
+// Use type cast since vi.mocked is not available in vitest 4.x
+const mockedSearchBookText = searchBookText as unknown as ReturnType<typeof vi.fn>;
 
 describe("SearchPanel", () => {
   it("shows no-match state and emits search/jump callbacks", async () => {

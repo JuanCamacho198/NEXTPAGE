@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { readFile } from "@tauri-apps/plugin-fs";
 import { describe, expect, it, vi } from "vitest";
-import LibraryView from "./LibraryView.svelte";
+import LibraryView from "$lib/components/library/LibraryView.svelte";
 import type { LibraryBookDto } from "$lib/types";
 import { listLibraryBooks } from "$lib/api/tauriClient";
 
@@ -34,7 +34,7 @@ const t = (key: string, params?: Record<string, string | number>) => {
   return dictionary[key] ?? key;
 };
 
-vi.mock("../../tauriClient", () => ({
+vi.mock("$lib/api/tauriClient", () => ({
   listLibraryBooks: vi.fn(),
 }));
 
@@ -42,8 +42,9 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
   readFile: vi.fn(),
 }));
 
-const mockedListLibraryBooks = vi.mocked(listLibraryBooks);
-const mockedReadFile = vi.mocked(readFile);
+// Use type casts since vi.mocked is not available in vitest 4.x globals mode
+const mockedListLibraryBooks = listLibraryBooks as unknown as ReturnType<typeof vi.fn>;
+const mockedReadFile = readFile as unknown as ReturnType<typeof vi.fn>;
 
 describe("LibraryView", () => {
   it("renders backend metadata consistently in list and grid views", async () => {

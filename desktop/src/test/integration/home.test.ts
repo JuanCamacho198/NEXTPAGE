@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import App from "./App.svelte";
+import App from "$lib/App.svelte";
 import type {
   BookDto,
   CollectionDto,
@@ -9,7 +9,7 @@ import type {
   ReadingStatsSummaryDto,
   ReaderSettings,
   SearchBookTextResponse,
-} from "./lib/types";
+} from "$lib/types";
 
 const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoisted(() => {
   return {
@@ -47,14 +47,14 @@ const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoi
   };
 });
 
-vi.mock("./lib/api/tauriClient", () => tauriClientMock);
+vi.mock("$lib/api/tauriClient", () => tauriClientMock);
 
-vi.mock("./lib/services/FilePicker", () => ({
+vi.mock("$lib/services/FilePicker", () => ({
   pickFile: pickFileMock,
   pickFolder: pickFolderMock,
 }));
 
-vi.mock("./lib/services/BookImportService", () => ({
+vi.mock("$lib/services/BookImportService", () => ({
   importBook: importBookMock,
   BulkImportService: class {
     cancel = vi.fn();
@@ -62,7 +62,7 @@ vi.mock("./lib/services/BookImportService", () => ({
   },
 }));
 
-vi.mock("./lib/services/pdfThumbnail", () => ({
+vi.mock("$lib/services/pdfThumbnail", () => ({
   extractPdfMetadata: vi.fn(async () => ({
     author: null,
     totalPages: null,
@@ -70,18 +70,18 @@ vi.mock("./lib/services/pdfThumbnail", () => ({
   })),
 }));
 
-vi.mock("./lib/domain/reader/EpubViewer.svelte", async () => {
-  const mod = await import("./test/stubs/ViewerStub.svelte");
+vi.mock("$lib/domain/reader/EpubViewer.svelte", async () => {
+  const mod = await import("../stubs/ViewerStub.svelte");
   return { default: mod.default };
 });
 
-vi.mock("./lib/domain/reader/PdfViewer.svelte", async () => {
-  const mod = await import("./test/stubs/ViewerStub.svelte");
+vi.mock("$lib/domain/reader/PdfViewer.svelte", async () => {
+  const mod = await import("../stubs/ViewerStub.svelte");
   return { default: mod.default };
 });
 
-vi.mock("./lib/components/layout/HomeDesktopView.svelte", async () => {
-  const mod = await import("./test/stubs/HomeDesktopViewStub.svelte");
+vi.mock("$lib/components/layout/HomeDesktopView.svelte", async () => {
+  const mod = await import("../stubs/HomeDesktopViewStub.svelte");
   return { default: mod.default };
 });
 
@@ -144,7 +144,7 @@ const dictionary: Record<string, string> = {
   "errors.commandFailure": "Command failed",
 };
 
-vi.mock("./lib/i18n", () => ({
+vi.mock("$lib/i18n", () => ({
   i18n: {
     initializeLocale: vi.fn(async () => "en"),
     t: (locale: string, key: string, params?: Record<string, string | number>) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canHandleReaderArrowNav } from "./keyboardNav";
+import { canHandleReaderArrowNav } from "$lib/domain/reader/keyboardNav";
 
 const createKeyboardEvent = (target: EventTarget | null, overrides: Partial<KeyboardEvent> = {}) => {
   return {

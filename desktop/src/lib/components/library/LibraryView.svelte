@@ -2,6 +2,8 @@
   import SafeCover from "./SafeCover.svelte";
   import DropMenu from "../ui/DropMenu.svelte";
   import CollectionBadge from "./CollectionBadge.svelte";
+  import Skeleton from "../ui/Skeleton.svelte";
+  import EmptyState from "../ui/EmptyState.svelte";
   import type { LibraryBookDto, CollectionDto } from "$lib/types";
   import type { MessageKey } from "../../i18n";
 
@@ -176,9 +178,27 @@
       {disabledReason}
     </div>
   {:else if isLoading}
-    <p class="text-sm text-[var(--color-text-muted)]">{t("library.loading")}</p>
-{:else if books.length === 0}
-    <p class="text-sm text-[var(--color-text-muted)]">{t("library.empty")}</p>
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {#each Array(6) as _, i}
+        <Skeleton variant="book" class="w-full" />
+      {/each}
+    </div>
+  {:else if books.length === 0}
+    <EmptyState
+      icon="book"
+      title={t("library.emptyTitle")}
+      description={t("library.emptyDescription")}
+    >
+      {#snippet action()}
+        <button
+          type="button"
+          class="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-[var(--color-background)] transition-all hover:opacity-90 active:scale-95"
+          onclick={onImportFolder}
+        >
+          {t("library.import")}
+        </button>
+      {/snippet}
+    </EmptyState>
   {:else if filteredBooks.length === 0}
     <p class="text-sm text-[var(--color-text-muted)]">{searchQuery ? t("library.searchNoResults") : t("library.empty")}</p>
   {:else}

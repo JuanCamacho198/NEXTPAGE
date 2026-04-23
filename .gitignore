@@ -24,6 +24,7 @@ captures/
 .codedb/
 .graphifyignore
 .run-graphify.py
+.opencode
 graphify-out
 codedb.snapshot
 node_modules/

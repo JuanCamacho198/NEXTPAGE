@@ -1,13 +1,13 @@
 import { defineConfig } from "vitest/config";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
-import path from "path";
+import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig({
   plugins: [svelte()],
   resolve: {
     conditions: ["browser"],
     alias: {
-      "$lib": path.resolve(__dirname, "./src/lib"),
+      $lib: fileURLToPath(new URL("./src/lib", import.meta.url))
     },
   },
   test: {

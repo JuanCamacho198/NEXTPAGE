@@ -36,7 +36,6 @@
     upsertBookCover,
     updateBookProgress,
     listCollections,
-    getBookCollections,
     addBookToCollection,
     removeBookFromCollection,
     scanFolder,
@@ -389,16 +388,12 @@
         sourceRows.map((book: BookDto) => [book.id, book.filePath]),
       );
 
-      const booksWithCollections = await Promise.all(
-        libraryRows.map(async (entry: LibraryBookDto) => {
-          const bookCollections = await getBookCollections(entry.id);
-          return {
-            ...entry,
-            filePath: filePathById.get(entry.id) ?? "",
-            collectionIds: bookCollections.map(c => c.id)
-          };
-        })
-      );
+      // Use collectionIds directly from backend (no N+1 needed)
+      const booksWithCollections = libraryRows.map((entry: LibraryBookDto) => ({
+        ...entry,
+        filePath: filePathById.get(entry.id) ?? "",
+        collectionIds: entry.collectionIds ?? []
+      }));
 
       books = booksWithCollections;
 
@@ -426,10 +421,14 @@
         return true;
       });
 
+      const THUMBNAIL_CONCURRENCY = 3;
+
       setDomainUnavailable(DOMAIN.LIBRARY, null);
 
-      for (const pendingBook of pendingThumbnailBooks) {
-        void ensurePdfCover(pendingBook);
+      // Process thumbnails in parallel batches
+      for (let i = 0; i < pendingThumbnailBooks.length; i += THUMBNAIL_CONCURRENCY) {
+        const batch = pendingThumbnailBooks.slice(i, i + THUMBNAIL_CONCURRENCY);
+        await Promise.all(batch.map((book) => ensurePdfCover(book)));
       }
     } catch (error) {
       const details = mapCommandError(error);
@@ -827,12 +826,25 @@
   };
 
   onMount(() => {
-    void i18n.initializeLocale().then((nextLocale) => {
+    // Load all initialization tasks in parallel
+    Promise.all([
+      i18n.initializeLocale(),
+      loadReaderSettings(),
+      loadLibrary(),
+      loadStats(undefined)
+    ]).then(([nextLocale]) => {
       locale = nextLocale;
+      // Note: loadReaderSettings, loadLibrary, loadStats already set their respective state
+    }).catch((error) => {
+      console.error("Initialization error:", error);
+      // Fallback: continue with defaults
+      i18n.initializeLocale().then((nextLocale) => {
+        locale = nextLocale;
+      });
+      loadReaderSettings();
+      loadLibrary();
+      loadStats(undefined);
     });
-    void loadReaderSettings();
-    void loadLibrary();
-    void loadStats(undefined);
   });
 </script>
 
@@ -853,6 +865,9 @@
         isLoadingStats={isLoadingStats}
         statsUnavailableReason={statsUnavailableReason}
         selectedBookTitle={previewBook?.title ?? null}
+        continueCount={continueReadingBooks.length}
+        shelfCount={myShelfBooks.length}
+        statsMinutes={stats?.totalMinutesRead ?? 0}
         activeRoute="home"
         onNavigateHome={navigateToHome}
         onNavigateHighlights={navigateToHighlights}

@@ -92,9 +92,42 @@ const markRemainingAsCancelled = (results: BulkImportItemResult[]) => {
 
 export class BulkImportService {
   private cancelled = false;
+  private static readonly CONCURRENCY = 3;
 
   cancel() {
     this.cancelled = true;
+  }
+
+  private async processSingleFile(result: BulkImportItemResult): Promise<BulkImportItemResult> {
+    if (result.status !== BULK_IMPORT_ITEM_STATUS.QUEUED) {
+      return result;
+    }
+
+    if (this.cancelled) {
+      result.status = BULK_IMPORT_ITEM_STATUS.CANCELLED;
+      result.message = "Cancelled";
+      return result;
+    }
+
+    result.status = BULK_IMPORT_ITEM_STATUS.IMPORTING;
+    result.message = null;
+
+    try {
+      const importedBook = await importSingleBook({
+        sourcePath: result.file.fullPath,
+        title: stripKnownExtension(result.file.fileName),
+        format: result.file.format,
+      });
+
+      result.status = BULK_IMPORT_ITEM_STATUS.SUCCESS;
+      result.bookId = importedBook.id;
+      result.message = null;
+    } catch (error) {
+      result.status = BULK_IMPORT_ITEM_STATUS.FAILED;
+      result.message = readErrorMessage(error);
+    }
+
+    return result;
   }
 
   async importFolder(path: string, onProgress?: ProgressCallback): Promise<BulkImportSummary> {
@@ -128,39 +161,31 @@ export class BulkImportService {
 
     emit(null);
 
-    for (const result of results) {
-      if (result.status !== BULK_IMPORT_ITEM_STATUS.QUEUED) {
-        continue;
-      }
+    // Process in parallel batches
+    const queuedIndices = results
+      .map((r, i) => ({ result: r, index: i }))
+      .filter(({ result }) => result.status === BULK_IMPORT_ITEM_STATUS.QUEUED)
+      .map(({ index }) => index);
 
+    for (let batchStart = 0; batchStart < queuedIndices.length; batchStart += BulkImportService.CONCURRENCY) {
       if (this.cancelled) {
         break;
       }
 
-      result.status = BULK_IMPORT_ITEM_STATUS.IMPORTING;
-      result.message = null;
-      emit(result.file);
+      const batchIndices = queuedIndices.slice(batchStart, batchStart + BulkImportService.CONCURRENCY);
+      const batch = batchIndices.map((i) => results[i]);
 
-      try {
-        const importedBook = await importSingleBook({
-          sourcePath: result.file.fullPath,
-          title: stripKnownExtension(result.file.fileName),
-          format: result.file.format,
-        });
+      // Emit current file being processed
+      emit(batch[0]?.file ?? null);
 
-        result.status = BULK_IMPORT_ITEM_STATUS.SUCCESS;
-        result.bookId = importedBook.id;
-        result.message = null;
-      } catch (error) {
-        result.status = BULK_IMPORT_ITEM_STATUS.FAILED;
-        result.message = readErrorMessage(error);
-      }
+      // Process batch in parallel
+      await Promise.all(batch.map((result) => this.processSingleFile(result)));
 
-      emit(result.file);
-
-      if (this.cancelled) {
-        break;
-      }
+      // Emit after batch completes
+      const completedFile = batch.find((r) => r.status === BULK_IMPORT_ITEM_STATUS.SUCCESS)?.file 
+        ?? batch[0]?.file 
+        ?? null;
+      emit(completedFile);
     }
 
     if (this.cancelled) {

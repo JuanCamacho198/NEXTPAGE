@@ -71,10 +71,6 @@
       {t}
       {continueSection}
       {shelfSection}
-      {selectedBookTitle}
-      {continueCount}
-      {shelfCount}
-      {statsMinutes}
     />
   </div>
 </div>

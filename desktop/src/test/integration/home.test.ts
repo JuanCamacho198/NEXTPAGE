@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import App from "$lib/App.svelte";
+import App from "../../App.svelte";
 import type {
   BookDto,
   CollectionDto,

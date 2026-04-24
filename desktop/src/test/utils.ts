@@ -14,6 +14,6 @@ export function mockFn<T>(fn: unknown): MockFn {
 }
 
 // Type-safe mock for imported functions
-export function mockImport<T>(module: { default?: T; [key: string]: T }): T {
+export function mockImport<T>(module: { default?: T; [key: string]: any }): T {
   return module as T;
 }

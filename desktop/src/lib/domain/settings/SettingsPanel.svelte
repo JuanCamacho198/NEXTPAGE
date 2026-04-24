@@ -824,41 +824,6 @@
     min-width: 0;
   }
 
-  .item-text {
-    margin: 0;
-    font-size: 13px;
-    color: var(--color-primary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .item-meta {
-    margin: 4px 0 0;
-    font-size: 12px;
-    color: var(--color-text-muted, var(--color-secondary));
-  }
-
-  .delete-btn {
-    width: 20px;
-    height: 20px;
-    border: none;
-    border-radius: 4px;
-    background: transparent;
-    color: var(--color-tertiary);
-    cursor: pointer;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .delete-btn:hover {
-    background: var(--color-error-bg);
-    color: var(--color-error);
-  }
-
   .theme-preview-container {
     display: flex;
     gap: 8px;

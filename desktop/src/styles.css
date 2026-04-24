@@ -6,14 +6,22 @@
 
   --color-background: #08111f;
   --color-surface: rgba(16, 28, 44, 0.84);
+  --color-panel-accent: rgba(73, 212, 255, 0.08);
   --color-primary: #f8fbff;
   --color-secondary: #dbe7f6;
   --color-tertiary: #8fa3bf;
   --color-border: rgba(148, 173, 206, 0.18);
+  --color-border-strong: rgba(148, 173, 206, 0.3);
   --color-error: #ff7b83;
+  --color-accent-blue: #49d4ff;
+  --color-accent-soft: rgba(73, 212, 255, 0.1);
 
   --color-text: #f8fbff;
   --color-text-muted: #8fa3bf;
+
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.2);
+  --shadow-glow: 0 0 15px rgba(73, 212, 255, 0.15);
+  --shadow-glow-hover: 0 0 20px rgba(73, 212, 255, 0.3);
 }
 
 * {

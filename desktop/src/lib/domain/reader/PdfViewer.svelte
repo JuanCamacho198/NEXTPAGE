@@ -79,6 +79,7 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
   let selectedCfi = $state<string | null>(null);
   let selectionHasAnchor = $state(false);
   let selectionPosition = $state<{ x: number; y: number } | null>(null);
+  let lastSelectionBounds = $state({ left: 0, top: 0, right: 0, bottom: 0 });
   let showToolbar = $state(false);
 
   let activeLoadRequestId = 0;
@@ -91,6 +92,7 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
   let lastLoadedFilePath: string | null = null;
   const outlinePageCache = new Map<string, number>();
   const scaleOptions = Array.from({ length: 26 }, (_, index) => (50 + index * 10) / 100);
+  const TOOLBAR_OFFSET = 40;
 
   type RefLike = { num: number; gen: number };
   type PdfRefProxy = Parameters<pdfjsLib.PDFDocumentProxy["getPageIndex"]>[0];
@@ -611,18 +613,69 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
       height: number;
     }>;
 
+    // Group text items by y-position to form continuous lines
+    // This enables paragraph-level selection instead of word fragments
+    const groupedLines: Array<{
+      text: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }[]> = [];
+
     for (const item of textItems) {
-      const div = document.createElement("span");
-      div.textContent = item.str;
-      div.style.position = "absolute";
-      div.style.whiteSpace = "pre";
-      div.style.pointerEvents = "auto";
+      const y = item.transform[5];
+      // Find existing line group with similar y-position (within 2px tolerance)
+      const existingLine = groupedLines.find(
+        (line) => line.length > 0 && Math.abs(line[0].y - y) < 2
+      );
 
       const tx = Util.transform(viewport.transform, item.transform);
-      div.style.left = `${tx[4]}px`;
-      div.style.top = `${tx[5] - item.height}px`;
-      div.style.fontSize = `${item.height}px`;
-      div.style.fontFamily = item.transform[0] > 0 ? "sans-serif" : "sans-serif";
+      const itemData = {
+        text: item.str,
+        x: tx[4],
+        y: tx[5] - item.height,
+        width: item.width,
+        height: item.height,
+      };
+
+      if (existingLine) {
+        existingLine.push(itemData);
+      } else {
+        groupedLines.push([itemData]);
+      }
+    }
+
+    // Sort lines by y-position (top to bottom), then by x-position (left to right)
+    groupedLines.sort((a, b) => {
+      const yDiff = a[0].y - b[0].y;
+      if (Math.abs(yDiff) > 2) return yDiff;
+      return a[0].x - b[0].x;
+    });
+
+    // Render grouped lines
+    for (const line of groupedLines) {
+      // Sort items within line by x-position
+      line.sort((a, b) => a.x - b.x);
+
+      // Calculate combined dimensions for the line
+      const lineWidth = line.reduce((sum, item) => sum + item.width, 0);
+      const lineHeight = line[0]?.height || 12;
+      const lineY = line[0]?.y || 0;
+      const lineStartX = line[0]?.x || 0;
+
+      // Create a single span for continuous text selection
+      const combinedText = line.map((item) => item.text).join(" ");
+      const div = document.createElement("span");
+      div.textContent = combinedText;
+      div.style.position = "absolute";
+      div.style.left = `${lineStartX}px`;
+      div.style.top = `${lineY}px`;
+      div.style.width = `${lineWidth}px`;
+      div.style.height = `${lineHeight}px`;
+      div.style.fontSize = `${lineHeight}px`;
+      div.style.whiteSpace = "pre";
+      div.style.pointerEvents = "auto";
 
       textLayer.appendChild(div);
     }
@@ -644,21 +697,35 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
       let hasAnchor = false;
       let nextPosition: { x: number; y: number } | null = null;
 
+      // Store selection bounds for highlight persistence
+      let selectionBounds = { left: 0, top: 0, right: 0, bottom: 0 };
+
       if (selection && selection.rangeCount > 0) {
         try {
           const range = selection.getRangeAt(0);
           const rect = range.getBoundingClientRect();
           if (rect && containerRect) {
             hasAnchor = true;
+            // Offset toolbar below selection to avoid covering text
             nextPosition = {
               x: rect.left + rect.width / 2 - containerRect.left,
-              y: rect.top - containerRect.top - 10,
+              y: rect.top - containerRect.top + TOOLBAR_OFFSET,
+            };
+            // Store actual bounds relative to container
+            selectionBounds = {
+              left: rect.left - containerRect.left,
+              top: rect.top - containerRect.top,
+              right: rect.right - containerRect.left,
+              bottom: rect.bottom - containerRect.top,
             };
           }
         } catch {
           hasAnchor = false;
         }
       }
+
+      // Store selection bounds in a variable accessible to saveHighlight
+      lastSelectionBounds = selectionBounds;
 
       if (!nextPosition && containerRect) {
         nextPosition = {
@@ -946,6 +1013,7 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
           >
             <HighlightToolbar
               {selectedText}
+              {selectionBounds}
               bookId={bookId || filePath}
               pageNumber={currentPage}
               cfi={selectedCfi}

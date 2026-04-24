@@ -6,13 +6,14 @@
     selectedText: string;
     bookId: string;
     pageNumber: number;
+    selectionBounds?: { left: number; top: number; right: number; bottom: number };
     cfi?: string | null;
     hasSelectionAnchor?: boolean;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     onClose: () => void;
   };
 
-  let { selectedText, bookId, pageNumber, cfi = null, hasSelectionAnchor = true, t, onClose }: Props = $props();
+  let { selectedText, bookId, pageNumber, selectionBounds = { left: 0, top: 0, right: 0, bottom: 0 }, cfi = null, hasSelectionAnchor = true, t, onClose }: Props = $props();
 
   const colors = [
     { name: "yellow", hex: "#fef08a" },
@@ -56,10 +57,10 @@
         text: selectedText.trim(),
         color: selectedColor,
         pageNumber,
-        rectLeft: 0,
-        rectRight: 0,
-        rectTop: 0,
-        rectBottom: 0,
+        rectLeft: selectionBounds.left,
+        rectRight: selectionBounds.right,
+        rectTop: selectionBounds.top,
+        rectBottom: selectionBounds.bottom,
         cfi: normalizedCfi,
         note,
       });

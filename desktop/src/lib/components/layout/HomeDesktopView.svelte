@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import HomeTopNav from "./HomeTopNav.svelte";
-  import HomeSidebar from "./HomeSidebar.svelte";
+  import HomeHero from "./HomeHero.svelte";
+  import HomeStatsGrid from "./HomeStatsGrid.svelte";
   import HomeMainContent from "./HomeMainContent.svelte";
   import type { ReadingStatsSummaryDto } from "$lib/types";
   import type { MessageKey } from "../../i18n";
@@ -46,31 +46,18 @@
 </script>
 
 <div class="space-y-6">
-  <HomeTopNav
+  <HomeHero {t} actions={navbarActions} />
+
+  <HomeStatsGrid
+    {stats}
+    isLoading={isLoadingStats}
+    disabledReason={statsUnavailableReason}
     {t}
-    {activeRoute}
-    {onNavigateHome}
-    {onNavigateHighlights}
-    {onNavigateSettings}
-    actions={navbarActions}
   />
 
-  <div class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-    <HomeSidebar
-      {stats}
-      {t}
-      isLoadingStats={isLoadingStats}
-      statsUnavailableReason={statsUnavailableReason}
-      selectedBookTitle={selectedBookTitle}
-      onRefreshStats={onRefreshStats}
-      {onNavigateHighlights}
-      {onNavigateSettings}
-    />
-
-    <HomeMainContent
-      {t}
-      {continueSection}
-      {shelfSection}
-    />
-  </div>
+  <HomeMainContent
+    {t}
+    {continueSection}
+    {shelfSection}
+  />
 </div>

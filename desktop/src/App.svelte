@@ -6,6 +6,7 @@
   import ErrorFallback from "./lib/components/ui/ErrorFallback.svelte";
   import SettingsPanel from "./lib/domain/settings/SettingsPanel.svelte";
   import HomeDesktopView from "./lib/components/layout/HomeDesktopView.svelte";
+  import AppSidebar from "./lib/components/layout/AppSidebar.svelte";
   import SearchPanel from "./lib/components/reader/SearchPanel.svelte";
   import EpubViewer from "./lib/domain/reader/EpubViewer.svelte";
   import PdfViewer from "./lib/domain/reader/PdfViewer.svelte";
@@ -848,9 +849,20 @@
   });
 </script>
 
-<main class="min-h-screen bg-[var(--color-background)] text-[var(--color-primary)]">
-  <div class="mx-auto max-w-7xl p-4 md:p-6">
-    {#if importProgress}
+<main class="flex h-screen overflow-hidden bg-[var(--color-background)] text-[var(--color-primary)]">
+  {#if route !== "reader"}
+    <AppSidebar
+      activeRoute={route}
+      onNavigateHome={navigateToHome}
+      onNavigateHighlights={navigateToHighlights}
+      onNavigateSettings={navigateToSettings}
+      {t}
+    />
+  {/if}
+  
+  <div class="flex-1 overflow-y-auto p-4 md:p-6 relative">
+    <div class="mx-auto max-w-7xl">
+      {#if importProgress}
       <p class="mb-3 text-sm text-[var(--color-secondary)]">{importProgress.message}</p>
     {/if}
 
@@ -1323,5 +1335,6 @@
 
     <ErrorToast />
     <ErrorFallback />
+    </div>
   </div>
 </main>

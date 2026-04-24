@@ -1,43 +1,60 @@
-/* 
- * Design System & Tokens - NextPage Desktop 
- * Translated from docs/design-tokens.md
- */
+/* Design System & Tokens - NextPage Desktop */
 
 :root {
-  /* 1. Color Palette (Base Tokens) */
-  --color-primary: #111827;
-  --color-secondary: #4B5563;
-  --color-tertiary: #9CA3AF;
-  --color-neutral: #F9FAFB;
-  --color-text-muted: #6B7280;
-  --color-text-link: #2563EB;
+  /* Color primitives */
+  --color-ink-950: #08111f;
+  --color-ink-900: #0d1828;
+  --color-ink-800: #152438;
+  --color-ink-700: #20344d;
+  --color-slate-500: #88a0bf;
+  --color-slate-300: #c2d0e2;
+  --color-white: #f8fbff;
+  --color-cyan-400: #49d4ff;
+  --color-cyan-300: #94ecff;
+  --color-amber-300: #f5cf7a;
+  --color-emerald-400: #48d597;
+  --color-red-400: #ff7b83;
 
-  /* 1.1 Semantic Colors (Dark Theme - Default) */
-  --color-bg-app: #0A0A0A;
-  --color-surface: #1E1E1E;
-  --color-surface-dim: #121212;
-  --color-surface-hover: #2C2C2C;
-  --color-border: #424242;
-  --color-destructive: #FFB4B4;
-  --color-error: #DC2626;
-  --color-error-bg: #FEE2E2;
-  --color-success: #16A34A;
-  --color-warning: #D97706;
+  /* Semantic tokens */
+  --color-background: var(--color-ink-950);
+  --color-bg-app: var(--color-ink-950);
+  --color-surface-dim: #0f1a2b;
+  --color-surface: rgba(16, 28, 44, 0.84);
+  --color-surface-hover: rgba(25, 41, 62, 0.96);
+  --color-surface-strong: #18263b;
+  --color-panel-accent: rgba(73, 212, 255, 0.16);
+  --color-border: rgba(148, 173, 206, 0.18);
+  --color-border-strong: rgba(148, 236, 255, 0.34);
 
-  /* 1.2 Light Theme Tokens */
-  --color-bg-app-light: #FFFFFF;
-  --color-surface-light: #FFFFFF;
-  --color-surface-dim-light: #F9FAFB;
-  --color-surface-hover-light: #F3F4F6;
-  --color-border-light: #E5E7EB;
-  --color-text-primary-light: #111827;
-  --color-text-muted-light: #6B7280;
+  --color-primary: var(--color-white);
+  --color-secondary: #dbe7f6;
+  --color-tertiary: var(--color-slate-500);
+  --color-text: var(--color-white);
+  --color-text-muted: #8fa3bf;
+  --color-text-link: var(--color-cyan-300);
 
-  /* 2. Typography - DASHBOARD uses sans only (anti-slop: no serif in UI) */
-  --font-display: "Manrope", sans-serif;
-  --font-sans: "Manrope", sans-serif;
-  --font-serif: "Newsreader", serif; /* Reader content only */
-  
+  --color-accent: var(--color-cyan-400);
+  --color-accent-soft: rgba(73, 212, 255, 0.18);
+  --color-success: var(--color-emerald-400);
+  --color-warning: var(--color-amber-300);
+  --color-error: var(--color-red-400);
+  --color-error-bg: rgba(255, 123, 131, 0.14);
+  --color-destructive: #ffc3c6;
+
+  /* Light theme tokens kept for settings surfaces */
+  --color-bg-app-light: #f5f8fc;
+  --color-surface-light: #ffffff;
+  --color-surface-dim-light: #eef3f9;
+  --color-surface-hover-light: #e6edf6;
+  --color-border-light: rgba(17, 24, 39, 0.1);
+  --color-text-primary-light: #101828;
+  --color-text-muted-light: #667085;
+
+  /* Typography */
+  --font-display: "Manrope", "Segoe UI", sans-serif;
+  --font-sans: "Manrope", "Segoe UI", sans-serif;
+  --font-serif: "Newsreader", serif;
+
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -45,22 +62,22 @@
   --text-xl: 1.25rem;
   --text-2xl: 1.5rem;
   --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
+  --text-4xl: 2.5rem;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* 3. Motion (MOTION_INTENSITY: 6) */
-  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Motion */
+  --ease-bounce: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-  --duration-fast: 100ms;
+  --duration-fast: 120ms;
   --duration-normal: 200ms;
-  --duration-slow: 300ms;
-  --duration-slower: 500ms;
+  --duration-slow: 280ms;
+  --duration-slower: 480ms;
 
-  /* 4. Spacing (VISUAL_DENSITY: 4 - compact) */
+  /* Spacing */
   --spacing-2xs: 0.125rem;
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
@@ -69,18 +86,22 @@
   --spacing-xl: 2rem;
   --spacing-2xl: 3rem;
 
-  /* 5. Shapes */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  /* Shapes & effects */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
   --radius-pill: 9999px;
+  --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.28);
+  --shadow-panel: 0 28px 80px rgba(3, 10, 20, 0.46);
 }
 
-/* Base Body Styles */
 body {
-  background-color: var(--color-bg-app);
-  color: var(--color-secondary);
+  background:
+    radial-gradient(circle at top left, rgba(73, 212, 255, 0.12), transparent 26%),
+    radial-gradient(circle at top right, rgba(245, 207, 122, 0.1), transparent 24%),
+    linear-gradient(180deg, #07111d 0%, #09111d 45%, #08101a 100%);
+  color: var(--color-text);
   font-family: var(--font-sans);
   margin: 0;
   padding: 0;
@@ -91,7 +112,6 @@ body {
   box-sizing: inherit;
 }
 
-/* Theme-aware color mappings for Settings Panel */
 .theme-settings-panel {
   --color-bg-primary: var(--color-surface);
   --color-bg-secondary: var(--color-surface-dim);
@@ -111,9 +131,6 @@ body {
   --color-border: var(--color-border-light);
 }
 
-/* ============================================
- * SKELETON LOADERS - Proper loading states
- * ============================================ */
 @keyframes skeleton-shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -153,14 +170,11 @@ body {
   margin-bottom: var(--spacing-sm);
 }
 
-/* ============================================
- * READER PREVIEW THEMES
- * ============================================ */
 .theme-reader-preview {
-  --reader-bg-paper: #FAFAF9;
-  --reader-text-paper: #1C1917;
-  --reader-bg-sepia: #F4ECD8;
-  --reader-text-sepia: #3C2A1E;
-  --reader-bg-night: #18181B;
-  --reader-text-night: #E4E4E7;
+  --reader-bg-paper: #fafaf9;
+  --reader-text-paper: #1c1917;
+  --reader-bg-sepia: #f4ecd8;
+  --reader-text-sepia: #3c2a1e;
+  --reader-bg-night: #18181b;
+  --reader-text-night: #e4e4e7;
 }

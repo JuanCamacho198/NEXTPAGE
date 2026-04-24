@@ -36,25 +36,27 @@
   };
 </script>
 
-<section class="rounded-xl border border-[var(--color-border)] {variantClasses[variant]} shadow-sm {className}">
+<section class={`overflow-hidden rounded-[24px] border border-[var(--color-border)] ${variantClasses[variant]} shadow-[var(--shadow-soft)] backdrop-blur-xl ${className}`}>
   {#if title || subtitle || hint || actions}
-    <div class="mb-3 flex items-center justify-between gap-2">
-      <div class="min-w-0">
-        {#if title}
-          <h2 class="text-lg font-semibold text-[var(--color-primary)]">{title}</h2>
-        {/if}
-        {#if subtitle}
-          <p class="text-sm text-[var(--color-text-muted)]">{subtitle}</p>
-        {/if}
-        {#if hint}
-          <span class="text-xs text-[var(--color-text-muted)]">{hint}</span>
+    <div class="border-b border-[color:var(--color-border)]/80 px-5 py-4">
+      <div class="flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          {#if title}
+            <h2 class="text-lg font-semibold tracking-tight text-[var(--color-primary)]">{title}</h2>
+          {/if}
+          {#if subtitle}
+            <p class="mt-1 text-sm text-[var(--color-secondary)]">{subtitle}</p>
+          {/if}
+          {#if hint}
+            <span class="mt-1 inline-block text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">{hint}</span>
+          {/if}
+        </div>
+        {#if actions}
+          <div class="flex shrink-0 items-center gap-2">
+            {@render actions()}
+          </div>
         {/if}
       </div>
-      {#if actions}
-        <div class="flex shrink-0 items-center gap-2">
-          {@render actions()}
-        </div>
-      {/if}
     </div>
   {/if}
 

@@ -20,6 +20,9 @@
     navbarActions?: Snippet;
     continueSection?: Snippet;
     shelfSection?: Snippet;
+    continueCount?: number;
+    shelfCount?: number;
+    statsMinutes?: number;
   };
 
   let {
@@ -36,10 +39,13 @@
     navbarActions,
     continueSection,
     shelfSection,
+    continueCount = 0,
+    shelfCount = 0,
+    statsMinutes = 0,
   }: Props = $props();
 </script>
 
-<div class="space-y-4">
+<div class="space-y-6">
   <HomeTopNav
     {t}
     {activeRoute}
@@ -49,7 +55,7 @@
     actions={navbarActions}
   />
 
-  <div class="grid gap-4 lg:grid-cols-[300px_1fr]">
+  <div class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
     <HomeSidebar
       {stats}
       {t}
@@ -61,6 +67,14 @@
       {onNavigateSettings}
     />
 
-    <HomeMainContent {t} {continueSection} {shelfSection} />
+    <HomeMainContent
+      {t}
+      {continueSection}
+      {shelfSection}
+      {selectedBookTitle}
+      {continueCount}
+      {shelfCount}
+      {statsMinutes}
+    />
   </div>
 </div>

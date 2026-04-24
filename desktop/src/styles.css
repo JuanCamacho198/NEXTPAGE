@@ -4,16 +4,16 @@
   --font-sans: "Manrope", "Segoe UI", Arial, sans-serif;
   --font-serif: "Newsreader", "Times New Roman", serif;
 
-  --color-background: #0a0a0a;
-  --color-surface: #1e1e1e;
-  --color-primary: #ffffff;
-  --color-secondary: #e0e0e0;
-  --color-tertiary: #9e9e9e;
-  --color-border: #424242;
-  --color-error: #ffb4b4;
+  --color-background: #08111f;
+  --color-surface: rgba(16, 28, 44, 0.84);
+  --color-primary: #f8fbff;
+  --color-secondary: #dbe7f6;
+  --color-tertiary: #8fa3bf;
+  --color-border: rgba(148, 173, 206, 0.18);
+  --color-error: #ff7b83;
 
-  --color-text: #ffffff;
-  --color-text-muted: #9e9e9e;
+  --color-text: #f8fbff;
+  --color-text-muted: #8fa3bf;
 }
 
 * {
@@ -23,7 +23,10 @@
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background: var(--color-background);
+  background:
+    radial-gradient(circle at top left, rgba(73, 212, 255, 0.12), transparent 26%),
+    radial-gradient(circle at top right, rgba(245, 207, 122, 0.1), transparent 24%),
+    linear-gradient(180deg, #07111d 0%, #09111d 45%, #08101a 100%);
   color: var(--color-primary);
 }
 
@@ -35,17 +38,11 @@ body {
   min-height: 100vh;
 }
 
-.app {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 24px;
-}
-
 .card {
   background: var(--color-surface);
-  border-radius: 12px;
+  border-radius: 24px;
   padding: 16px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 28px 80px rgba(3, 10, 20, 0.46);
   margin-bottom: 16px;
 }
 
@@ -64,7 +61,7 @@ body {
 .workspace {
   display: grid;
   grid-template-columns: 280px 1fr;
-  gap: 16px;
+  gap: 24px;
 }
 
 .library-card h2,
@@ -155,7 +152,7 @@ input[type="text"] {
 }
 
 .btn-primary:hover:not(:disabled) {
-  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
+  box-shadow: 0 16px 28px rgba(73, 212, 255, 0.18);
 }
 
 .btn-secondary {
@@ -165,7 +162,7 @@ input[type="text"] {
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--color-surface-hover);
+  background: rgba(25, 41, 62, 0.96);
 }
 
 .btn-ghost {
@@ -180,5 +177,24 @@ input[type="text"] {
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: 1fr;
+  }
+}
+
+::selection {
+  background: rgba(73, 212, 255, 0.28);
+  color: var(--color-text);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(148, 236, 255, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
   }
 }

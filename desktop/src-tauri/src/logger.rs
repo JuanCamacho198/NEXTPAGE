@@ -130,7 +130,7 @@ impl Logger {
             .map_err(|e| format!("Failed to open log file for trimming: {}", e))?;
         let reader = BufReader::new(file);
 
-        let lines: Vec<String> = reader.lines().filter_map(|l| l.ok()).collect();
+        let lines: Vec<String> = reader.lines().map_while(Result::ok).collect();
         let total_lines = lines.len();
 
         if total_lines > MAX_LOG_LINES {
@@ -163,7 +163,7 @@ impl Logger {
 
         let mut events: Vec<ErrorEventDto> = reader
             .lines()
-            .filter_map(|l| l.ok())
+            .map_while(Result::ok)
             .filter_map(|line| serde_json::from_str(&line).ok())
             .collect();
 

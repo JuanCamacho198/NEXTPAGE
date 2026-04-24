@@ -147,7 +147,7 @@ impl Default for WorkerConfig {
 }
 
 pub fn compute_retry_at(attempt: i32) -> String {
-    let capped_attempt = attempt.max(1).min(6);
+    let capped_attempt = attempt.clamp(1, 6);
     let backoff_seconds = 2_i64.pow(capped_attempt as u32);
     (Utc::now() + Duration::seconds(backoff_seconds)).to_rfc3339()
 }

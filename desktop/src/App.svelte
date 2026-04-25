@@ -15,6 +15,7 @@
   import BulkImportModal from "./lib/components/library/BulkImportModal.svelte";
   import ShelfActionMenu from "./lib/components/library/ShelfActionMenu.svelte";
   import BookCard from "./lib/components/library/BookCard.svelte";
+  import HighlightsView from "./lib/components/layout/HighlightsView.svelte";
 
   import { importBook, type ImportProgress } from "./lib/services/BookImportService";
   import {
@@ -54,6 +55,7 @@
     selectShelfBooks,
     updateShelfQueryState,
   } from "./lib/stores/homeState";
+  import { initTheme } from "./lib/stores/theme";
 
   import type {
     BookDto,
@@ -827,6 +829,9 @@
   };
 
   onMount(() => {
+    // Apply persisted theme immediately
+    initTheme();
+
     // Load all initialization tasks in parallel
     Promise.all([
       i18n.initializeLocale(),
@@ -1208,15 +1213,10 @@
         {/snippet}
       </HomeDesktopView>
     {:else if route === "highlights"}
-      <section class="rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
-        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="text-lg font-semibold text-[var(--color-primary)]">{t("home.highlightsTitle")}</h2>
-            <p class="text-sm text-[var(--color-text-muted)]">{t("home.highlightsPlaceholder")}</p>
-          </div>
-          <Button size="sm" variant="ghost" onclick={navigateToHome}>{t("app.backToHome")}</Button>
-        </div>
-      </section>
+      <HighlightsView
+        {books}
+        {t}
+      />
     {:else if route === "settings"}
       <section class="space-y-3">
         <div class="flex justify-end">

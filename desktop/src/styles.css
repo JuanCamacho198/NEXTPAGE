@@ -1,5 +1,46 @@
 @import "tailwindcss";
 
+/* ============================================
+ * THEME TRANSITION — smooth switch on all elements
+ * ============================================ */
+*, *::before, *::after {
+  transition:
+    background-color 0.35s ease,
+    border-color 0.35s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+/* ============================================
+ * LIGHT THEME OVERRIDES
+ * ============================================ */
+[data-theme="light"] {
+  --color-background: #eef2f7;
+  --color-surface: rgba(255, 255, 255, 0.9);
+  --color-panel-accent: rgba(0, 110, 200, 0.06);
+  --color-primary: #111827;
+  --color-secondary: #1e3a5f;
+  --color-tertiary: #4a6888;
+  --color-border: rgba(30, 58, 95, 0.15);
+  --color-border-strong: rgba(30, 58, 95, 0.28);
+  --color-error: #c0392b;
+  --color-accent-blue: #006ec8;
+  --color-accent-soft: rgba(0, 110, 200, 0.12);
+  --color-text: #111827;
+  --color-text-muted: #4a6888;
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 15px rgba(0, 110, 200, 0.14);
+  --shadow-glow-hover: 0 0 20px rgba(0, 110, 200, 0.26);
+}
+
+[data-theme="light"] body {
+  background:
+    radial-gradient(circle at top left, rgba(0, 110, 200, 0.07), transparent 28%),
+    radial-gradient(circle at top right, rgba(255, 190, 80, 0.08), transparent 26%),
+    linear-gradient(180deg, #e8eef6 0%, #eef2f8 50%, #f0f4fa 100%);
+  color: var(--color-primary);
+}
+
 @theme {
   --font-sans: "Manrope", "Segoe UI", Arial, sans-serif;
   --font-serif: "Newsreader", "Times New Roman", serif;

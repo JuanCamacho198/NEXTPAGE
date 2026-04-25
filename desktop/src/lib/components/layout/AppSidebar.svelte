@@ -2,6 +2,7 @@
   import type { AppRoute } from "../../stores/homeState";
   import type { MessageKey } from "../../i18n";
   import Button from "../ui/Button.svelte";
+  import ThemeToggle from "../ui/ThemeToggle.svelte";
 
   type Props = {
     activeRoute: AppRoute;
@@ -49,7 +50,11 @@
     {/each}
   </nav>
 
-  <div class="p-4 border-t border-[color:var(--color-border)]">
+  <div class="p-4 border-t border-[color:var(--color-border)] flex flex-col gap-2">
+    <!-- Theme toggle button -->
+    <ThemeToggle />
+
+    <!-- User section -->
     <button class="w-full flex items-center justify-between rounded-xl p-3 bg-[var(--color-surface)] border border-[color:var(--color-border)] hover:border-[color:var(--color-border-strong)] transition-colors">
       <div class="flex items-center gap-3">
         <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">

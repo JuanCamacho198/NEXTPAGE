@@ -333,9 +333,9 @@
   {/if}
   <aside class={mode === "overlay"
     ? "fixed top-0 right-0 w-[350px] h-screen bg-white border-l border-zinc-200 shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]"
-    : "w-full rounded-xl border border-[color:var(--color-border)] bg-white shadow-sm flex flex-col overflow-hidden"}>
+    : "w-full rounded-xl border border-[color:var(--color-border)] bg-background shadow-sm flex flex-col overflow-hidden"}>
     <div class="flex items-center justify-between p-4 border-b border-zinc-200">
-      <h2 class="m-0 text-lg font-semibold text-zinc-900">{t("settings.title")}</h2>
+      <h2 class="m-0 text-lg font-semibold text-emerald-50">{t("settings.title")}</h2>
       <button class="bg-transparent border-none text-xl cursor-pointer text-zinc-600 p-1 flex items-center justify-center hover:text-zinc-900" onclick={closePanel} aria-label={t("settings.close")}>✕</button>
     </div>
 

@@ -6,13 +6,13 @@
   import HighlightToolbar from "./HighlightToolbar.svelte";
   import type { MessageKey } from "$lib/i18n";
   import type { PdfOutlineItem, ReaderSettings, ReaderThemeMode } from "$lib/types";
-import {
+  import {
     adjustPdfScaleForWheel,
     clampPdfScale,
     DEFAULT_PDF_SCALE,
-  isPageWithinBounds,
-} from "./pdfNavigation";
-import { canHandleReaderArrowNav } from "./keyboardNav";
+    isPageWithinBounds,
+  } from "./pdfNavigation";
+  import { canHandleReaderArrowNav } from "./keyboardNav";
 
   type Props = {
     filePath: string;
@@ -79,6 +79,7 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
   let selectedCfi = $state<string | null>(null);
   let selectionHasAnchor = $state(false);
   let selectionPosition = $state<{ x: number; y: number } | null>(null);
+  let selectionPlacement = $state<"above" | "below">("above");
   let lastSelectionBounds = $state({ left: 0, top: 0, right: 0, bottom: 0 });
   let showToolbar = $state(false);
 
@@ -92,7 +93,9 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
   let lastLoadedFilePath: string | null = null;
   const outlinePageCache = new Map<string, number>();
   const scaleOptions = Array.from({ length: 26 }, (_, index) => (50 + index * 10) / 100);
-  const TOOLBAR_OFFSET = 40;
+  const TOOLBAR_OFFSET = 18;
+  const TOOLBAR_WIDTH_ESTIMATE = 320;
+  const TOOLBAR_EDGE_PADDING = 16;
 
   type RefLike = { num: number; gen: number };
   type PdfRefProxy = Parameters<pdfjsLib.PDFDocumentProxy["getPageIndex"]>[0];
@@ -108,6 +111,14 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
 
   const clamp = (value: number, min: number, max: number) => {
     return Math.min(max, Math.max(min, Math.round(value)));
+  };
+
+  const clampSelectionPoint = (value: number, min: number, max: number) => {
+    if (max < min) {
+      return min;
+    }
+
+    return Math.min(max, Math.max(min, value));
   };
 
   const resolveThemePalette = (themeMode: ReaderThemeMode) => {
@@ -217,8 +228,19 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
       isFullscreen = document.fullscreenElement === viewerRoot;
     };
 
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      const text = selection?.toString().trim();
+
+      if (!text) {
+        showToolbar = false;
+        selectionHasAnchor = false;
+      }
+    };
+
     document.addEventListener("fullscreenchange", syncFullscreenState);
     document.addEventListener("fullscreenerror", handleFullscreenError);
+    document.addEventListener("selectionchange", handleSelectionChange);
     fullscreenSupported = canUseFullscreenApi();
 
     return () => {
@@ -235,6 +257,7 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
       void destroyCurrentDocument();
       document.removeEventListener("fullscreenchange", syncFullscreenState);
       document.removeEventListener("fullscreenerror", handleFullscreenError);
+      document.removeEventListener("selectionchange", handleSelectionChange);
     };
   });
 
@@ -659,10 +682,11 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
       line.sort((a, b) => a.x - b.x);
 
       // Calculate combined dimensions for the line
-      const lineWidth = line.reduce((sum, item) => sum + item.width, 0);
+      const lineStartX = line[0]?.x || 0;
+      const lineEndX = line.reduce((maxRight, item) => Math.max(maxRight, item.x + item.width), 0);
+      const lineWidth = Math.max(lineEndX - lineStartX, 0);
       const lineHeight = line[0]?.height || 12;
       const lineY = line[0]?.y || 0;
-      const lineStartX = line[0]?.x || 0;
 
       // Create a single span for continuous text selection
       const combinedText = line.map((item) => item.text).join(" ");
@@ -675,6 +699,8 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
       div.style.height = `${lineHeight}px`;
       div.style.fontSize = `${lineHeight}px`;
       div.style.whiteSpace = "pre";
+      div.style.userSelect = "text";
+      div.style.webkitUserSelect = "text";
       div.style.pointerEvents = "auto";
 
       textLayer.appendChild(div);
@@ -686,6 +712,10 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
   }
 
   function handleTextSelection() {
+    queueMicrotask(updateSelectionState);
+  }
+
+  function updateSelectionState() {
     const selection = window.getSelection();
     const text = selection?.toString().trim();
 
@@ -703,20 +733,41 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
       if (selection && selection.rangeCount > 0) {
         try {
           const range = selection.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
-          if (rect && containerRect) {
+          const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
+          const fallbackRect = range.getBoundingClientRect();
+          const resolvedRects =
+            rects.length > 0
+              ? rects
+              : fallbackRect.width > 0 || fallbackRect.height > 0
+                ? [fallbackRect]
+                : [];
+
+          if (resolvedRects.length > 0 && containerRect) {
+            const left = Math.min(...resolvedRects.map((rect) => rect.left));
+            const top = Math.min(...resolvedRects.map((rect) => rect.top));
+            const right = Math.max(...resolvedRects.map((rect) => rect.right));
+            const bottom = Math.max(...resolvedRects.map((rect) => rect.bottom));
+            const selectionCenter = left + (right - left) / 2;
+            const anchorX = clampSelectionPoint(
+              selectionCenter - containerRect.left,
+              TOOLBAR_EDGE_PADDING + TOOLBAR_WIDTH_ESTIMATE / 2,
+              containerRect.width - TOOLBAR_EDGE_PADDING - TOOLBAR_WIDTH_ESTIMATE / 2,
+            );
+            const canPlaceAbove = top - containerRect.top > 76;
+
             hasAnchor = true;
-            // Offset toolbar below selection to avoid covering text
+            selectionPlacement = canPlaceAbove ? "above" : "below";
             nextPosition = {
-              x: rect.left + rect.width / 2 - containerRect.left,
-              y: rect.top - containerRect.top + TOOLBAR_OFFSET,
+              x: anchorX,
+              y: canPlaceAbove
+                ? top - containerRect.top - TOOLBAR_OFFSET
+                : bottom - containerRect.top + TOOLBAR_OFFSET,
             };
-            // Store actual bounds relative to container
             selectionBounds = {
-              left: rect.left - containerRect.left,
-              top: rect.top - containerRect.top,
-              right: rect.right - containerRect.left,
-              bottom: rect.bottom - containerRect.top,
+              left: left - containerRect.left,
+              top: top - containerRect.top,
+              right: right - containerRect.left,
+              bottom: bottom - containerRect.top,
             };
           }
         } catch {
@@ -728,6 +779,7 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
       lastSelectionBounds = selectionBounds;
 
       if (!nextPosition && containerRect) {
+        selectionPlacement = "below";
         nextPosition = {
           x: containerRect.width / 2,
           y: 16,
@@ -1009,11 +1061,12 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
         {#if showToolbar && selectionPosition}
           <div
             class="toolbar-container"
+            class:below={selectionPlacement === "below"}
             style="left: {selectionPosition.x}px; top: {selectionPosition.y}px;"
           >
             <HighlightToolbar
               {selectedText}
-              {selectionBounds}
+              selectionBounds={lastSelectionBounds}
               bookId={bookId || filePath}
               pageNumber={currentPage}
               cfi={selectedCfi}
@@ -1220,6 +1273,9 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
     pointer-events: auto;
     opacity: 0.3;
     line-height: 1;
+    user-select: text;
+    -webkit-user-select: text;
+    cursor: text;
   }
 
   .text-layer :global(span) {
@@ -1237,6 +1293,30 @@ import { canHandleReaderArrowNav } from "./keyboardNav";
     position: absolute;
     transform: translateX(-50%);
     z-index: 100;
+    width: min(320px, calc(100vw - 32px));
+  }
+
+  .toolbar-container::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -8px;
+    width: 16px;
+    height: 16px;
+    transform: translateX(-50%) rotate(45deg);
+    background: color-mix(in srgb, var(--pdf-reader-surface-bg, #fff) 92%, #0f172a 8%);
+    border-right: 1px solid rgba(148, 163, 184, 0.28);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.28);
+    z-index: -1;
+  }
+
+  .toolbar-container.below::before {
+    top: -8px;
+    bottom: auto;
+    border-right: none;
+    border-bottom: none;
+    border-left: 1px solid rgba(148, 163, 184, 0.28);
+    border-top: 1px solid rgba(148, 163, 184, 0.28);
   }
 
   @media (max-width: 900px) {

@@ -7,6 +7,7 @@
   import SettingsPanel from "./lib/domain/settings/SettingsPanel.svelte";
   import HomeDesktopView from "./lib/components/layout/HomeDesktopView.svelte";
   import AppSidebar from "./lib/components/layout/AppSidebar.svelte";
+  import LibraryShelfScreen from "./lib/components/layout/LibraryShelfScreen.svelte";
   import SearchPanel from "./lib/components/reader/SearchPanel.svelte";
   import EpubViewer from "./lib/domain/reader/EpubViewer.svelte";
   import PdfViewer from "./lib/domain/reader/PdfViewer.svelte";
@@ -16,6 +17,7 @@
   import ShelfActionMenu from "./lib/components/library/ShelfActionMenu.svelte";
   import BookCard from "./lib/components/library/BookCard.svelte";
   import HighlightsView from "./lib/components/layout/HighlightsView.svelte";
+  import ReadingStatisticsView from "./lib/components/stats/ReadingStatisticsView.svelte";
 
   import { importBook, type ImportProgress } from "./lib/services/BookImportService";
   import {
@@ -269,6 +271,16 @@
 
   const navigateToHome = () => {
     route = "home";
+    shelfDetailsBookId = null;
+  };
+
+  const navigateToLibrary = () => {
+    route = "library";
+    shelfDetailsBookId = null;
+  };
+
+  const navigateToStats = () => {
+    route = "stats";
     shelfDetailsBookId = null;
   };
 
@@ -775,6 +787,37 @@
     }
   };
 
+  const handleMarkCompleted = async (book: ReaderBook) => {
+    try {
+      if (book.format.toLowerCase() === "epub") {
+        await saveProgress({
+          bookId: book.id,
+          cfiLocation: "",
+          percentage: 100,
+        });
+      } else {
+        await updateBookProgress(book.id, Math.max(1, book.totalPages || book.currentPage || 1));
+      }
+
+      books = books.map((currentBook) =>
+        currentBook.id === book.id
+          ? {
+              ...currentBook,
+              currentPage: Math.max(currentBook.currentPage, currentBook.totalPages || currentBook.currentPage),
+              progressPercentage: 100,
+              completed: true,
+            }
+          : currentBook,
+      );
+
+      await loadLibrary();
+      await loadStats(undefined);
+    } catch (error) {
+      const details = mapCommandError(error);
+      readerError = details.message;
+    }
+  };
+
   const handleReaderLocationContext = () => {
     // reserved for index_book_text integration when extraction pipeline is wired
   };
@@ -859,6 +902,8 @@
     <AppSidebar
       activeRoute={route}
       onNavigateHome={navigateToHome}
+      onNavigateLibrary={navigateToLibrary}
+      onNavigateStats={navigateToStats}
       onNavigateHighlights={navigateToHighlights}
       onNavigateSettings={navigateToSettings}
       {t}
@@ -1212,6 +1257,35 @@
           {/if}
         {/snippet}
       </HomeDesktopView>
+    {:else if route === "library"}
+      <LibraryShelfScreen
+        books={books}
+        isImporting={isImporting}
+        onImportBook={handleImportFile}
+        onOpenBook={(book) => {
+          void startReading(book);
+        }}
+        onContinueReading={(book) => {
+          void startReading(book);
+        }}
+        onToggleFavorite={(book) => {
+          void handleToggleFavorite(book);
+        }}
+        onMarkCompleted={(book) => {
+          void handleMarkCompleted(book);
+        }}
+        onViewDetails={openShelfDetails}
+        onRemoveBook={(book) => {
+          void handleHideBook(book);
+        }}
+      />
+    {:else if route === "stats"}
+      <ReadingStatisticsView
+        books={books}
+        stats={stats}
+        isLoading={isLoadingStats}
+        disabledReason={statsUnavailableReason}
+      />
     {:else if route === "highlights"}
       <HighlightsView
         {books}

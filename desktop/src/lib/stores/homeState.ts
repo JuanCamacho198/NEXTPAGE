@@ -3,7 +3,7 @@ export type ProgressLike = {
   progressPercentage?: number | null;
 };
 
-export type AppRoute = "home" | "reader" | "highlights" | "settings";
+export type AppRoute = "home" | "library" | "stats" | "reader" | "highlights" | "settings";
 
 export const SHELF_TAB_CODES = ["all", "favorites", "to_read", "completed"] as const;
 export type ShelfTabCode = (typeof SHELF_TAB_CODES)[number];

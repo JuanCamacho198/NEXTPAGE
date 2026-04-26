@@ -7,18 +7,20 @@
   type Props = {
     activeRoute: AppRoute;
     onNavigateHome: () => void;
+    onNavigateLibrary: () => void;
+    onNavigateStats: () => void;
     onNavigateHighlights: () => void;
     onNavigateSettings: () => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
-  let { activeRoute, onNavigateHome, onNavigateHighlights, onNavigateSettings, t }: Props = $props();
+  let { activeRoute, onNavigateHome, onNavigateLibrary, onNavigateStats, onNavigateHighlights, onNavigateSettings, t }: Props = $props();
 
   let navItems = $derived([
     { id: "home", label: "Inicio", icon: "🏠", action: onNavigateHome },
-    { id: "library", label: "Estantería", icon: "📚", action: onNavigateHome }, // Todo: specific route
+    { id: "library", label: "Estantería", icon: "📚", action: onNavigateLibrary },
     { id: "continue", label: "Continuar", icon: "📖", action: onNavigateHome },
-    { id: "stats", label: "Estadísticas", icon: "📊", action: onNavigateHome },
+    { id: "stats", label: "Estadísticas", icon: "📊", action: onNavigateStats },
     { id: "highlights", label: "Notas y resaltados", icon: "📝", action: onNavigateHighlights },
     { id: "settings", label: "Ajustes", icon: "⚙️", action: onNavigateSettings },
   ]);

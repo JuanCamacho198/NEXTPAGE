@@ -3,6 +3,7 @@
   import { onMount } from "svelte";
   import { getFileBytes } from "$lib/api/tauriClient";
   import HighlightToolbar from "./HighlightToolbar.svelte";
+  import ErrorBoundary from "$lib/components/ui/feedback/ErrorBoundary.svelte";
   import type { MessageKey } from "$lib/i18n";
   import type { PdfOutlineItem, ReaderSettings, ReaderThemeMode } from "$lib/types";
   import {
@@ -1213,6 +1214,7 @@
 
 <svelte:window onkeydown={handleViewerKeydown} />
 
+<ErrorBoundary>
   <div
     class="pdf-viewer"
     bind:this={viewerRoot}
@@ -1371,7 +1373,9 @@
     </div>
   </div>
 </div>
+  </div>
 </div>
+</ErrorBoundary>
 
 <style>
   .pdf-viewer {

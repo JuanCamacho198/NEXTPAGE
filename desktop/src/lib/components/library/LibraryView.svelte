@@ -1,10 +1,10 @@
 <script lang="ts">
   import SafeCover from "./SafeCover.svelte";
-  import DropMenu from "../ui/DropMenu.svelte";
+  import DropMenu from "../ui/navigation/DropMenu.svelte";
   import CollectionBadge from "./CollectionBadge.svelte";
-  import Skeleton from "../ui/Skeleton.svelte";
-  import EmptyState from "../ui/EmptyState.svelte";
-  import Panel from "../ui/Panel.svelte";
+  import Skeleton from "../ui/feedback/Skeleton.svelte";
+  import EmptyState from "../ui/feedback/EmptyState.svelte";
+  import Panel from "../ui/layout/Panel.svelte";
   import type { LibraryBookDto, CollectionDto } from "$lib/types";
   import type { MessageKey } from "../../i18n";
 

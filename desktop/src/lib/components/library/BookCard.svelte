@@ -4,7 +4,7 @@
   import type { MessageKey } from "$lib/i18n";
   import { getSafeProgressPercentage } from "$lib/stores/homeState";
   import SafeCover from "./SafeCover.svelte";
-  import Button from "../ui/Button.svelte";
+  import Button from "../ui/forms/Button.svelte";
 
   type Variant = "shelf" | "continue-reading";
 

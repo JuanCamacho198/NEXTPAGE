@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Button from "../ui/Button.svelte";
-  import DropMenu from "../ui/DropMenu.svelte";
+  import Button from "../ui/forms/Button.svelte";
+import DropMenu from "../ui/navigation/DropMenu.svelte";
   import SafeCover from "../library/SafeCover.svelte";
   import { getSafeProgressPercentage } from "$lib/stores/homeState";
   import type { LibraryBookDto } from "$lib/types";

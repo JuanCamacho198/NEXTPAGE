@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import type { MessageKey } from "../../i18n";
-  import Button from "../ui/Button.svelte";
+  import Button from "../ui/forms/Button.svelte";
 
   type Props = {
     t: (key: MessageKey, params?: Record<string, string | number>) => string;

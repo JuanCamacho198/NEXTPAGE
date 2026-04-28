@@ -1,6 +1,6 @@
 <script lang="ts">
   import { errorState } from "$lib/stores/errorState";
-  import Button from "./Button.svelte";
+  import Button from "../forms/Button.svelte";
 
   let visible = $state(false);
   let message = $state("");

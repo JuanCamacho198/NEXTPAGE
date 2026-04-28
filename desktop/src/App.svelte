@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import DropMenu from "./lib/components/ui/DropMenu.svelte";
-  import Button from "./lib/components/ui/Button.svelte";
-  import ErrorToast from "./lib/components/ui/ErrorToast.svelte";
-  import ErrorFallback from "./lib/components/ui/ErrorFallback.svelte";
+  import DropMenu from "./lib/components/ui/navigation/DropMenu.svelte";
+  import Button from "./lib/components/ui/forms/Button.svelte";
+  import ErrorToast from "./lib/components/ui/feedback/ErrorToast.svelte";
+  import ErrorFallback from "./lib/components/ui/feedback/ErrorFallback.svelte";
   import SettingsPanel from "./lib/domain/settings/SettingsPanel.svelte";
   import HomeDesktopView from "./lib/components/layout/HomeDesktopView.svelte";
   import AppSidebar from "./lib/components/layout/AppSidebar.svelte";

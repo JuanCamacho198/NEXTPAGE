@@ -1,7 +1,7 @@
 <script lang="ts">
   import GoogleLoginButton from "$lib/domain/library/GoogleLoginButton.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Panel from "$lib/components/ui/Panel.svelte";
+  import Button from "$lib/components/ui/forms/Button.svelte";
+  import Panel from "$lib/components/ui/layout/Panel.svelte";
   import {
     getSettings,
     upsertSettings,

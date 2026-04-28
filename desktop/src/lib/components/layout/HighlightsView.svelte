@@ -3,11 +3,11 @@
   import type { MessageKey } from "../../i18n";
   import type { HighlightDto, LibraryBookDto } from "$lib/types";
   import { listHighlights, deleteHighlight } from "$lib/api/tauriClient";
-  import Pagination from "../ui/Pagination.svelte";
-  import DropMenu from "../ui/DropMenu.svelte";
-  import EmptyState from "../ui/EmptyState.svelte";
-  import Skeleton from "../ui/Skeleton.svelte";
-  import Button from "../ui/Button.svelte";
+  import Pagination from "../ui/navigation/Pagination.svelte";
+import DropMenu from "../ui/navigation/DropMenu.svelte";
+import EmptyState from "../ui/feedback/EmptyState.svelte";
+import Skeleton from "../ui/feedback/Skeleton.svelte";
+import Button from "../ui/forms/Button.svelte";
 
   type Props = {
     books: LibraryBookDto[];

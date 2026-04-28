@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { theme, toggleTheme } from "../../stores/theme";
+  import { theme, toggleTheme } from "../../../stores/theme";
 
   let animating = $state(false);
 

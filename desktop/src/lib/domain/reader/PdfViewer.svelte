@@ -83,6 +83,7 @@
   let selectionPosition = $state<{ x: number; y: number } | null>(null);
   let selectionPlacement = $state<"above" | "below">("above");
   let lastSelectionBounds = $state({ left: 0, top: 0, right: 0, bottom: 0 });
+  let selectionOverlayRects = $state<Array<{ left: number; top: number; width: number; height: number }>>([]);
   let showToolbar = $state(false);
 
   let activeLoadRequestId = 0;
@@ -105,6 +106,9 @@
   const VERTICAL_SCROLL_STEP_PX = 120;
   const ZOOM_COMMIT_DELAY_MS = 120;
   const ZOOM_EPSILON = 0.001;
+  const SELECTION_X_PADDING_PX = 3;
+  const SELECTION_Y_INSET_PX = 1;
+  const SELECTION_LINE_TOLERANCE_PX = 4;
 
   type RefLike = { num: number; gen: number };
   type PdfRefProxy = Parameters<pdfjsLib.PDFDocumentProxy["getPageIndex"]>[0];
@@ -112,6 +116,13 @@
   type FlatOutlineItem = {
     item: PdfOutlineItem;
     depth: number;
+  };
+
+  type SelectionOverlayRect = {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
   };
 
   const isStaleLoad = (requestId: number) => requestId !== activeLoadRequestId;
@@ -194,7 +205,84 @@
 
     textLayerMouseupTarget.removeEventListener("mouseup", handleTextSelection);
     textLayerMouseupTarget.removeEventListener("touchend", handleTextSelection);
+    textLayerMouseupTarget.removeEventListener("pointerup", handleTextSelection);
     textLayerMouseupTarget = null;
+  };
+
+  const clearSelectionUi = () => {
+    showToolbar = false;
+    selectedText = "";
+    selectedCfi = null;
+    selectionHasAnchor = false;
+    selectionPosition = null;
+    selectionOverlayRects = [];
+  };
+
+  const buildSelectionOverlayRects = (range: Range, containerRect: DOMRect) => {
+    const rawRects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
+    if (rawRects.length === 0) {
+      const fallbackRect = range.getBoundingClientRect();
+      if (fallbackRect.width <= 0 || fallbackRect.height <= 0) {
+        return [] as SelectionOverlayRect[];
+      }
+
+      rawRects.push(fallbackRect);
+    }
+
+    const normalizedRects = rawRects
+      .map((rect) => {
+        const left = clampSelectionPoint(rect.left - containerRect.left, 0, containerRect.width);
+        const right = clampSelectionPoint(rect.right - containerRect.left, 0, containerRect.width);
+        const top = clampSelectionPoint(rect.top - containerRect.top, 0, containerRect.height);
+        const bottom = clampSelectionPoint(rect.bottom - containerRect.top, 0, containerRect.height);
+        return { left, right, top, bottom };
+      })
+      .filter((rect) => rect.right - rect.left > 0 && rect.bottom - rect.top > 0)
+      .sort((left, right) => {
+        if (Math.abs(left.top - right.top) <= SELECTION_LINE_TOLERANCE_PX) {
+          return left.left - right.left;
+        }
+
+        return left.top - right.top;
+      });
+
+    const mergedLines: Array<{ left: number; right: number; top: number; bottom: number }> = [];
+
+    normalizedRects.forEach((rect) => {
+      const previous = mergedLines[mergedLines.length - 1];
+      if (!previous) {
+        mergedLines.push({ ...rect });
+        return;
+      }
+
+      const sameLine =
+        Math.abs(rect.top - previous.top) <= SELECTION_LINE_TOLERANCE_PX &&
+        Math.abs(rect.bottom - previous.bottom) <= Math.max(SELECTION_LINE_TOLERANCE_PX, rect.bottom - rect.top);
+
+      if (!sameLine) {
+        mergedLines.push({ ...rect });
+        return;
+      }
+
+      previous.left = Math.min(previous.left, rect.left);
+      previous.right = Math.max(previous.right, rect.right);
+      previous.top = Math.min(previous.top, rect.top);
+      previous.bottom = Math.max(previous.bottom, rect.bottom);
+    });
+
+    return mergedLines.map((rect) => {
+      const left = clampSelectionPoint(rect.left - SELECTION_X_PADDING_PX, 0, containerRect.width);
+      const right = clampSelectionPoint(rect.right + SELECTION_X_PADDING_PX, 0, containerRect.width);
+      const top = clampSelectionPoint(rect.top + SELECTION_Y_INSET_PX, 0, containerRect.height);
+      const bottom = clampSelectionPoint(rect.bottom - SELECTION_Y_INSET_PX, top, containerRect.height);
+
+      return {
+        left,
+        top,
+        width: Math.max(1, right - left),
+        height: Math.max(1, bottom - top),
+      };
+    });
   };
 
   const clearPendingZoomCommit = () => {
@@ -284,8 +372,7 @@
       const text = selection?.toString().trim();
 
       if (!text) {
-        showToolbar = false;
-        selectionHasAnchor = false;
+        clearSelectionUi();
       }
     };
 
@@ -749,108 +836,107 @@
 
     textLayer.addEventListener("mouseup", handleTextSelection);
     textLayer.addEventListener("touchend", handleTextSelection);
+    textLayer.addEventListener("pointerup", handleTextSelection);
     textLayerMouseupTarget = textLayer;
   }
 
   function handleTextSelection() {
-    queueMicrotask(updateSelectionState);
+    // Small delay to let the browser settle the selection
+    window.setTimeout(updateSelectionState, 10);
   }
 
   function updateSelectionState() {
     const selection = window.getSelection();
-    const text = selection?.toString().trim();
+    if (!selection || selection.rangeCount === 0) {
+      clearSelectionUi();
+      return;
+    }
 
-    if (text && text.length > 0) {
-      selectedText = text;
-      const containerRect = textLayer?.getBoundingClientRect();
+    const text = selection.toString().trim();
+    if (!text) {
+      clearSelectionUi();
+      return;
+    }
 
-      selectedCfi = null;
-      let hasAnchor = false;
-      let nextPosition: { x: number; y: number } | null = null;
+    selectedText = text;
+    const containerRect = textLayer?.getBoundingClientRect();
 
-      // Store selection bounds for highlight persistence
-      let selectionBounds = { left: 0, top: 0, right: 0, bottom: 0 };
+    selectedCfi = null;
+    let hasAnchor = false;
+    let nextPosition: { x: number; y: number } | null = null;
 
-      if (selection && selection.rangeCount > 0) {
-        try {
-          const range = selection.getRangeAt(0);
-          const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
-          const fallbackRect = range.getBoundingClientRect();
-          const resolvedRects =
-            rects.length > 0
-              ? rects
-              : fallbackRect.width > 0 || fallbackRect.height > 0
-                ? [fallbackRect]
-                : [];
+    // Store selection bounds for highlight persistence
+    let selectionBounds = { left: 0, top: 0, right: 0, bottom: 0 };
+    let overlayRects: SelectionOverlayRect[] = [];
 
-          if (resolvedRects.length > 0 && containerRect) {
-            const left = Math.min(...resolvedRects.map((rect) => rect.left));
-            const top = Math.min(...resolvedRects.map((rect) => rect.top));
-            const right = Math.max(...resolvedRects.map((rect) => rect.right));
-            const bottom = Math.max(...resolvedRects.map((rect) => rect.bottom));
-            const selectionCenter = left + (right - left) / 2;
-            const anchorX = clampSelectionPoint(
-              selectionCenter - containerRect.left,
-              TOOLBAR_EDGE_PADDING + TOOLBAR_WIDTH_ESTIMATE / 2,
-              containerRect.width - TOOLBAR_EDGE_PADDING - TOOLBAR_WIDTH_ESTIMATE / 2,
-            );
-            const canPlaceAbove = top - containerRect.top > 76;
-
-            hasAnchor = true;
-            selectionPlacement = canPlaceAbove ? "above" : "below";
-            nextPosition = {
-              x: anchorX,
-              y: canPlaceAbove
-                ? top - containerRect.top - TOOLBAR_OFFSET
-                : bottom - containerRect.top + TOOLBAR_OFFSET,
-            };
-            selectionBounds = {
-              left: left - containerRect.left,
-              top: top - containerRect.top,
-              right: right - containerRect.left,
-              bottom: bottom - containerRect.top,
-            };
-          }
-        } catch {
-          hasAnchor = false;
-        }
+    try {
+      const range = selection.getRangeAt(0);
+      if (containerRect) {
+        overlayRects = buildSelectionOverlayRects(range, containerRect);
       }
 
-      // Store selection bounds in a variable accessible to saveHighlight
-      lastSelectionBounds = selectionBounds;
+      if (overlayRects.length > 0 && containerRect) {
+        const left = Math.min(...overlayRects.map((rect) => rect.left));
+        const top = Math.min(...overlayRects.map((rect) => rect.top));
+        const right = Math.max(...overlayRects.map((rect) => rect.left + rect.width));
+        const bottom = Math.max(...overlayRects.map((rect) => rect.top + rect.height));
+        
+        const selectionCenter = left + (right - left) / 2;
+        const anchorX = clampSelectionPoint(
+          selectionCenter,
+          TOOLBAR_EDGE_PADDING + TOOLBAR_WIDTH_ESTIMATE / 2,
+          containerRect.width - TOOLBAR_EDGE_PADDING - TOOLBAR_WIDTH_ESTIMATE / 2,
+        );
+        
+        const canPlaceAbove = top > 100; // Increased threshold for safety
 
-      if (!nextPosition && containerRect) {
-        selectionPlacement = "below";
+        hasAnchor = true;
+        selectionPlacement = canPlaceAbove ? "above" : "below";
         nextPosition = {
-          x: containerRect.width / 2,
-          y: 16,
+          x: anchorX,
+          y: canPlaceAbove
+            ? top - TOOLBAR_OFFSET
+            : bottom + TOOLBAR_OFFSET,
+        };
+        selectionBounds = {
+          left,
+          top,
+          right,
+          bottom,
         };
       }
+    } catch (e) {
+      console.error("Selection state update failed:", e);
+      hasAnchor = false;
+      overlayRects = [];
+    }
 
-      if (nextPosition) {
-        selectionPosition = {
-          x: nextPosition.x,
-          y: nextPosition.y,
-        };
-        selectionHasAnchor = hasAnchor;
-        showToolbar = true;
-      } else {
-        showToolbar = false;
-        selectionHasAnchor = false;
-      }
+    // Store selection bounds
+    lastSelectionBounds = selectionBounds;
+    selectionOverlayRects = overlayRects;
+
+    if (!nextPosition && containerRect) {
+      selectionPlacement = "below";
+      nextPosition = {
+        x: containerRect.width / 2,
+        y: 20,
+      };
+    }
+
+    if (nextPosition) {
+      selectionPosition = {
+        x: nextPosition.x,
+        y: nextPosition.y,
+      };
+      selectionHasAnchor = hasAnchor;
+      showToolbar = true;
     } else {
-      showToolbar = false;
-      selectedText = "";
-      selectedCfi = null;
-      selectionHasAnchor = false;
+      clearSelectionUi();
     }
   }
 
   function hideToolbar() {
-    showToolbar = false;
-    selectedText = "";
-    selectedCfi = null;
-    selectionHasAnchor = false;
+    clearSelectionUi();
     window.getSelection()?.removeAllRanges();
   }
 
@@ -1155,7 +1241,10 @@
   onblur={() => {
     isViewerFocused = false;
   }}
-  onclick={() => {
+  onclick={(event) => {
+    if (textLayer && event.target instanceof Node && textLayer.contains(event.target)) {
+      return;
+    }
     viewerRoot?.focus();
   }}
   style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor}; --pdf-selection-color: ${readerSettings.selectionColor};`}
@@ -1175,18 +1264,6 @@
       <span aria-hidden="true">&#8592;</span>
       {t("pdf.previous")}
     </button>
-    <span class="page-info">
-      <input
-        type="number"
-        min="1"
-        max={totalPages}
-        value={currentPage}
-        onchange={goToPage}
-        class="page-input"
-      />
-      / {totalPages}
-      <span class="page-progress"> · {totalPages - currentPage} {t("pdf.pagesLeft")} | {Math.round((currentPage / totalPages) * 100)}%</span>
-    </span>
     <button type="button" class="reader-nav-button" aria-label={t("pdf.next")} onclick={goToNextPage} disabled={currentPage >= totalPages}>
       <span aria-hidden="true">&#8594;</span>
       {t("pdf.next")}
@@ -1235,6 +1312,14 @@
     <div class="canvas-container" bind:this={canvasContainer} onwheel={handleViewerWheel}>
       <div class="canvas-wrapper" class:search-hit={flashSearchResult} style={canvasWrapperStyle}>
         <canvas bind:this={canvas}></canvas>
+        <div class="selection-overlay" aria-hidden="true">
+          {#each selectionOverlayRects as rect, index (`${rect.left}-${rect.top}-${index}`)}
+            <div
+              class="selection-rect"
+              style={`left: ${rect.left}px; top: ${rect.top}px; width: ${rect.width}px; height: ${rect.height}px;`}
+            ></div>
+          {/each}
+        </div>
         <div bind:this={textLayer} class="text-layer"></div>
         {#if showToolbar && selectionPosition}
           <div
@@ -1254,6 +1339,30 @@
             />
           </div>
         {/if}
+      </div>
+    </div>
+  </div>
+  <div class="pdf-footer" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
+    <div class="footer-content">
+      <div class="footer-left">
+        <span class="page-info">
+          <input
+            type="number"
+            min="1"
+            max={totalPages}
+            value={currentPage}
+            onchange={goToPage}
+            class="page-input"
+          />
+          <span class="total-pages">/ {totalPages}</span>
+        </span>
+      </div>
+      <div class="progress-details">
+        <span class="pages-left">{totalPages - currentPage} {t("pdf.pagesLeft")}</span>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" style="width: {(currentPage / totalPages) * 100}%"></div>
+        </div>
+        <span class="percent-complete">{Math.round((currentPage / totalPages) * 100)}%</span>
       </div>
     </div>
   </div>
@@ -1304,60 +1413,6 @@
     color: var(--pdf-reader-text, var(--color-primary));
     cursor: pointer;
     font-size: 13px;
-  }
-
-  .reader-nav-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .controls button:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
-  }
-
-  .controls button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .page-info {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 13px;
-    color: var(--pdf-reader-text, var(--color-primary));
-  }
-
-  .page-progress {
-    margin-left: 8px;
-    color: var(--pdf-reader-muted, #888);
-    font-size: 12px;
-  }
-
-  .page-input {
-    width: 50px;
-    padding: 4px;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    text-align: center;
-    background: var(--pdf-reader-surface-bg, var(--color-surface));
-    color: var(--pdf-reader-text, var(--color-primary));
-  }
-
-  .scale-select {
-    padding: 4px 8px;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    margin-left: auto;
-    background: var(--pdf-reader-surface-bg, var(--color-surface));
-    color: var(--pdf-reader-text, var(--color-primary));
-  }
-
-  .content-area {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
   }
 
   .toc-sidebar {
@@ -1437,6 +1492,7 @@
     position: relative;
     display: inline-block;
     transition: transform 120ms ease-out;
+    isolation: isolate;
   }
 
   .canvas-wrapper.search-hit {
@@ -1446,21 +1502,44 @@
   }
 
   canvas {
+    position: relative;
+    z-index: 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     background: var(--pdf-reader-surface-bg, #fff);
+  }
+
+  .selection-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .selection-rect {
+    position: absolute;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--pdf-selection-color, #3388ff) 42%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--pdf-selection-color, #3388ff) 22%, transparent),
+      0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 3;
+    pointer-events: none;
   }
 
   .text-layer {
     position: absolute;
     top: 0;
     left: 0;
+    inset: 0;
     overflow: hidden;
     pointer-events: auto;
     opacity: 1;
     line-height: 1;
     cursor: text;
-    user-select: text;
-    -webkit-user-select: text;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    text-align: initial;
+    z-index: 5;
   }
 
   .text-layer :global(span),
@@ -1471,13 +1550,18 @@
     transform-origin: 0% 0%;
     cursor: text;
     pointer-events: auto;
+    user-select: text !important;
+    -webkit-user-select: text !important;
   }
 
-/* Highlighter-style selection: uniform rectangular box, not per-glyph */
-  .text-layer :global(span)::selection {
-    background: var(--pdf-selection-color, #3388ff) !important;
-    color: inherit !important;
-    -webkit-text-fill-color: inherit !important;
+  .text-layer :global(span)::selection,
+  .text-layer :global(br)::selection {
+    background: var(--pdf-selection-color, rgba(51, 136, 255, 0.4)) !important;
+  }
+
+  .text-layer :global(span)::-moz-selection,
+  .text-layer :global(br)::-moz-selection {
+    background: var(--pdf-selection-color, rgba(51, 136, 255, 0.4)) !important;
   }
 
   .toolbar-container {
@@ -1518,5 +1602,116 @@
     .scale-select {
       margin-left: 0;
     }
+  }
+
+  .pdf-footer {
+    padding: 8px 16px;
+    background: var(--pdf-reader-surface-bg, var(--color-surface));
+    border-top: 1px solid var(--color-border);
+    z-index: 20;
+    height: 48px;
+    display: flex;
+    align-items: center;
+  }
+
+  .footer-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    gap: 32px;
+  }
+
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .progress-details {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    max-width: 800px;
+  }
+
+  .progress-bar-container {
+    flex: 1;
+    height: 6px;
+    background: rgba(148, 163, 184, 0.15);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--pdf-selection-color, #3b82f6);
+    border-radius: 3px;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .pages-left, .percent-complete {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--pdf-reader-text, #64748b);
+    opacity: 0.8;
+    white-space: nowrap;
+  }
+
+  .total-pages {
+    font-size: 13px;
+    color: var(--pdf-reader-text, #64748b);
+    opacity: 0.7;
+  }
+
+  .reader-nav-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .controls button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  }
+
+  .controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .page-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--pdf-reader-text, var(--color-primary));
+  }
+
+  .page-input {
+    width: 50px;
+    padding: 4px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    text-align: center;
+    background: var(--pdf-reader-surface-bg, var(--color-surface));
+    color: var(--pdf-reader-text, var(--color-primary));
+  }
+
+  .scale-select {
+    padding: 4px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    margin-left: auto;
+    background: var(--pdf-reader-surface-bg, var(--color-surface));
+    color: var(--pdf-reader-text, var(--color-primary));
+  }
+
+  .content-area {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
   }
 </style>

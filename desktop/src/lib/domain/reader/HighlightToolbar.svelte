@@ -114,7 +114,9 @@
   role="presentation"
   onkeydown={handleRootKeydown}
 >
-  <div class="toolbar-header">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div onkeydown={handleRootKeydown}>
+    <div class="toolbar-header">
     <p class="selection-preview">{selectionPreview}</p>
     <button type="button" class="dismiss-btn" onclick={handleDelete} aria-label={t("highlight.cancel")}>
       ×

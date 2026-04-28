@@ -84,7 +84,12 @@
       if (e.key === "Escape") onClose();
     }}
   >
-    <div class="w-full max-w-md rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg max-h-[80vh] overflow-y-auto">
+    <div 
+      class="w-full max-w-md rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+      onkeydown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+    >
       <div class="flex items-center justify-between mb-4">
         <h2 id="collection-manager-title" class="text-lg font-semibold text-[var(--color-primary)]">
           Manage Collections

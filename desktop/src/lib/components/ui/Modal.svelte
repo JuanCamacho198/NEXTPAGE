@@ -39,7 +39,11 @@
     onkeydown={handleKeydown}
     role="presentation"
   >
-    <div class="w-full max-w-lg rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl {className}">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div 
+      class="w-full max-w-lg rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl {className}"
+      onkeydown={handleKeydown}
+    >
       <div class="flex items-center justify-between border-b border-[var(--color-border)] px-6 py-4">
         <h2 id="modal-title" class="text-lg font-semibold text-[var(--color-primary)]">{title}</h2>
         <button

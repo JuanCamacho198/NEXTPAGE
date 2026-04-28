@@ -37,10 +37,7 @@
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
     onclick={handleBackdropClick}
     onkeydown={handleKeydown}
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="modal-title"
-    tabindex="-1"
+    role="presentation"
   >
     <div class="w-full max-w-lg rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl {className}">
       <div class="flex items-center justify-between border-b border-[var(--color-border)] px-6 py-4">

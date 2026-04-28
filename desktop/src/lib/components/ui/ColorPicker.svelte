@@ -37,11 +37,12 @@
     value = target.value;
     onchange?.({ value: target.value });
   }
+  let id = $state(crypto.randomUUID());
 </script>
 
 <div class="color-picker">
   {#if label}
-    <label class="mb-1 block text-xs text-zinc-600">{label}</label>
+    <label for={id} class="mb-1 block text-xs text-zinc-600">{label}</label>
   {/if}
   
   <div class="flex items-center gap-2">
@@ -55,6 +56,7 @@
     
     <input
       type="text"
+      id={id}
       {value}
       oninput={handleInputChange}
       class="h-8 w-20 rounded border border-[var(--color-border)] px-2 text-xs font-mono"

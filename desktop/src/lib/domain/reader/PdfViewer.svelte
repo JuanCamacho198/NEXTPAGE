@@ -1201,6 +1201,14 @@
   export function getCurrentFilePath() {
     return filePath;
   }
+
+  const handleViewerKeydown_ = (event: KeyboardEvent) => {
+    if (event.key === "ArrowLeft") {
+      goToPrevPage();
+    } else if (event.key === "ArrowRight") {
+      goToNextPage();
+    }
+  };
 </script>
 
 <svelte:window onkeydown={handleViewerKeydown} />
@@ -1209,12 +1217,15 @@
   class="pdf-viewer"
   bind:this={viewerRoot}
   tabindex="0"
+  role="region"
+  aria-label={t("pdf.viewerAriaLabel") || "PDF Viewer"}
   onfocus={() => {
     isViewerFocused = true;
   }}
   onblur={() => {
     isViewerFocused = false;
   }}
+  onkeydown={handleViewerKeydown_}
   onclick={(event) => {
     if (textLayer && event.target instanceof Node && textLayer.contains(event.target)) {
       handleTextSelection();
@@ -1302,6 +1313,7 @@
           bind:this={textLayer} 
           class="text-layer debug-text-layer"
           draggable="false"
+          role="presentation"
           ondragstart={(e) => e.preventDefault()}
         ></div>
         <!-- Debug Overlay -->

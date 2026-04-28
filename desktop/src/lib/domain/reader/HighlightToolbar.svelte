@@ -111,9 +111,7 @@
 
 <div
   class="highlight-toolbar"
-  role="dialog"
-  tabindex="-1"
-  aria-label={t("highlight.menuAriaLabel")}
+  role="presentation"
   onkeydown={handleRootKeydown}
 >
   <div class="toolbar-header">

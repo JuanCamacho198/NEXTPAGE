@@ -38,12 +38,13 @@
 
   // Calculate percentage for thumb position
   const percentage = $derived(((value - min) / (max - min)) * 100);
+  let id = $state(crypto.randomUUID());
 </script>
 
 <div class="visual-slider">
   {#if label}
     <div class="slider-header">
-      <label class="mb-1 block text-xs text-zinc-600">{label}</label>
+      <label for={id} class="mb-1 block text-xs text-zinc-600">{label}</label>
       {#if showValue}
         <span class="slider-value">{value}{unit}</span>
       {/if}
@@ -53,6 +54,7 @@
   <div class="slider-container">
     <input
       type="range"
+      id={id}
       {min}
       {max}
       {step}

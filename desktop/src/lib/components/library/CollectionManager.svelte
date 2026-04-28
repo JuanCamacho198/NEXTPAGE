@@ -86,6 +86,7 @@
   >
     <div 
       class="w-full max-w-md rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+      role="presentation"
       onkeydown={(e) => {
         if (e.key === "Escape") onClose();
       }}

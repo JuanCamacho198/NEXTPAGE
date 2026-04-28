@@ -180,6 +180,7 @@
   {#if errorMessage}
     <p class="error" role="status" aria-live="polite">{errorMessage}</p>
   {/if}
+  </div>
 </div>
 
 <style>

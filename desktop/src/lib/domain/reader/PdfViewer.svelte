@@ -1213,7 +1213,6 @@
 
 <svelte:window onkeydown={handleViewerKeydown} />
 
-  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div
     class="pdf-viewer"
     bind:this={viewerRoot}
@@ -1239,9 +1238,9 @@
     ontouchend={handleTextSelection}
     style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor}; --pdf-selection-color: ${readerSettings.selectionColor};`}
   >
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div onkeydown={handleViewerKeydown_}>
-  {#if isLoading}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div onkeydown={handleViewerKeydown_}>
+      {#if isLoading}
         <div class="loading-overlay">{t("pdf.loading")}</div>
       {/if}
   {#if error}
@@ -1368,6 +1367,7 @@
           <div class="progress-bar-fill" style="width: {(currentPage / totalPages) * 100}%"></div>
         </div>
         <span class="percent-complete">{Math.round((currentPage / totalPages) * 100)}%</span>
+      </div>
     </div>
   </div>
 </div>

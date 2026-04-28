@@ -1185,6 +1185,7 @@
         class="page-input"
       />
       / {totalPages}
+      <span class="page-progress"> · {totalPages - currentPage} {t("pdf.pagesLeft")} | {Math.round((currentPage / totalPages) * 100)}%</span>
     </span>
     <button type="button" class="reader-nav-button" aria-label={t("pdf.next")} onclick={goToNextPage} disabled={currentPage >= totalPages}>
       <span aria-hidden="true">&#8594;</span>
@@ -1328,6 +1329,12 @@
     color: var(--pdf-reader-text, var(--color-primary));
   }
 
+  .page-progress {
+    margin-left: 8px;
+    color: var(--pdf-reader-muted, #888);
+    font-size: 12px;
+  }
+
   .page-input {
     width: 50px;
     padding: 4px;
@@ -1451,9 +1458,9 @@
     pointer-events: auto;
     opacity: 1;
     line-height: 1;
+    cursor: text;
     user-select: text;
     -webkit-user-select: text;
-    cursor: text;
   }
 
   .text-layer :global(span),
@@ -1462,10 +1469,21 @@
     position: absolute;
     white-space: pre;
     transform-origin: 0% 0%;
+    cursor: text;
+    pointer-events: auto;
   }
 
-  .text-layer :global(span::selection) {
+  /* Highlighter-style selection: uniform rectangular box, not per-glyph */
+  .text-layer :global(span)::selection,
+  .text-layer :global(span)::selection * {
+    background: var(--pdf-selection-color, #3388ff) !important;
+    color: inherit !important;
+    -webkit-text-fill-color: inherit !important;
+  }
+  
+  .text-layer :global(span)::selection {
     background: var(--pdf-selection-color, #3388ff);
+    text-shadow: none;
   }
 
   .toolbar-container {

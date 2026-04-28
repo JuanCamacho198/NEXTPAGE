@@ -200,6 +200,7 @@ export const messagesEn = {
   "pdf.fullscreenExit": "Exit fullscreen",
   "pdf.fullscreenUnsupported": "Fullscreen is not available in this environment.",
   "pdf.navigationFailed": "Could not render the requested page. Keeping current page.",
+  "pdf.pagesLeft": "pages left",
   "epub.loading": "Loading EPUB...",
   "epub.error": "Error",
   "epub.hide": "Hide",

@@ -8,6 +8,7 @@ export { default as DropMenu } from "./DropMenu.svelte";
 export { default as EmptyState } from "./EmptyState.svelte";
 export { default as ErrorFallback } from "./ErrorFallback.svelte";
 export { default as ErrorToast } from "./ErrorToast.svelte";
+export { default as ErrorBoundary } from "./feedback/ErrorBoundary.svelte";
 export { default as Field } from "./Field.svelte";
 export { default as Modal } from "./Modal.svelte";
 export { default as Pagination } from "./Pagination.svelte";

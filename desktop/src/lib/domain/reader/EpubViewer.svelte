@@ -4,7 +4,7 @@
   import ePub from "epubjs";
   import type { MessageKey } from "$lib/i18n";
   import type { ReaderSettings, ReaderThemeMode } from "$lib/types";
-  import { canHandleReaderArrowNav } from "./keyboardNav";
+  import { resolveReaderArrowIntent } from "./keyboardNav";
 
   type Props = {
     filePath: string;
@@ -25,6 +25,7 @@
       fontSize: 100,
       fontFamily: "serif",
     },
+    selectionColor: "#33bbff",
   };
 
   let {
@@ -59,6 +60,8 @@
   let isViewerFocused = $state(false);
 
   let epubContainer: HTMLDivElement | undefined = $state();
+
+  const VERTICAL_SCROLL_STEP_PX = 120;
 
   const clamp = (value: number, min: number, max: number) => {
     return Math.min(max, Math.max(min, Math.round(value)));
@@ -261,19 +264,100 @@
       return;
     }
 
-    if (!canHandleReaderArrowNav(event)) {
+    if ((event.ctrlKey || event.metaKey) && (event.key === "=" || event.key === "+" || event.key === "-")) {
+      event.preventDefault();
+      const step = event.key === "-" ? -10 : 10;
+      updateFontSize(displaySettings.fontSize + step);
       return;
     }
 
-    if (event.key === "ArrowLeft") {
+    const intent = resolveReaderArrowIntent(event);
+    if (!intent) {
+      return;
+    }
+
+    if (intent === "prevPage") {
       event.preventDefault();
       goToPrev();
       return;
     }
 
-    if (event.key === "ArrowRight") {
+    if (intent === "nextPage") {
       event.preventDefault();
       goToNext();
+      return;
+    }
+
+    if (intent === "scrollUp") {
+      event.preventDefault();
+      scrollByVerticalStep(-VERTICAL_SCROLL_STEP_PX);
+      return;
+    }
+
+    if (intent === "scrollDown") {
+      event.preventDefault();
+      scrollByVerticalStep(VERTICAL_SCROLL_STEP_PX);
+    }
+  }
+
+  function canScrollElementInDirection(element: HTMLElement, delta: number) {
+    if (element.scrollHeight <= element.clientHeight + 1) {
+      return false;
+    }
+
+    if (delta < 0) {
+      return element.scrollTop > 0;
+    }
+
+    return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
+  }
+
+  function resolveEpubIframeScrollHost(): HTMLElement | null {
+    const iframe = epubContainer?.querySelector("iframe");
+    if (!(iframe instanceof HTMLIFrameElement)) {
+      return null;
+    }
+
+    try {
+      const frameDocument = iframe.contentDocument;
+      if (!frameDocument) {
+        return null;
+      }
+
+      const scrollingElement = frameDocument.scrollingElement;
+      if (scrollingElement instanceof HTMLElement) {
+        return scrollingElement;
+      }
+
+      if (frameDocument.documentElement instanceof HTMLElement) {
+        return frameDocument.documentElement;
+      }
+
+      if (frameDocument.body instanceof HTMLElement) {
+        return frameDocument.body;
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
+
+  function scrollByVerticalStep(delta: number) {
+    const iframeScrollHost = resolveEpubIframeScrollHost();
+    if (iframeScrollHost && canScrollElementInDirection(iframeScrollHost, delta)) {
+      iframeScrollHost.scrollBy({ top: delta, behavior: "auto" });
+      return;
+    }
+
+    const containerScrollHost = epubContainer;
+    if (containerScrollHost && canScrollElementInDirection(containerScrollHost, delta)) {
+      containerScrollHost.scrollBy({ top: delta, behavior: "auto" });
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      window.scrollBy({ top: delta, behavior: "auto" });
     }
   }
 

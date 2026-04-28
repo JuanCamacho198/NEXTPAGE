@@ -79,14 +79,19 @@
       descriptionKey: "settings.shortcuts.readerNext",
     },
     {
+      id: "reader-scroll-up",
+      combo: "ArrowUp",
+      descriptionKey: "settings.shortcuts.readerScrollUp",
+    },
+    {
+      id: "reader-scroll-down",
+      combo: "ArrowDown",
+      descriptionKey: "settings.shortcuts.readerScrollDown",
+    },
+    {
       id: "dialog-close",
       combo: "Escape",
       descriptionKey: "settings.shortcuts.closeDialog",
-    },
-    {
-      id: "menu-open",
-      combo: "ArrowDown",
-      descriptionKey: "settings.shortcuts.openActionsMenu",
     },
   ];
 
@@ -124,6 +129,7 @@
       fontSize: clampInteger(readerEpubFontSize, 80, 200),
       fontFamily: normalizeFontFamily(readerEpubFontFamily),
     },
+    selectionColor: "#33bbff",
   });
 
   const applyReaderSettingsToState = (settings: ReaderSettings) => {

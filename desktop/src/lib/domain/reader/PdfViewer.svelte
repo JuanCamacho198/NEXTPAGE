@@ -1,6 +1,5 @@
 <script lang="ts">
   import * as pdfjsLib from "pdfjs-dist";
-  import { Util } from "pdfjs-dist";
   import { onMount } from "svelte";
   import { getFileBytes } from "$lib/api/tauriClient";
   import HighlightToolbar from "./HighlightToolbar.svelte";
@@ -11,8 +10,9 @@
     clampPdfScale,
     DEFAULT_PDF_SCALE,
     isPageWithinBounds,
+    PDF_SCALE_STEP,
   } from "./pdfNavigation";
-  import { canHandleReaderArrowNav } from "./keyboardNav";
+  import { resolveReaderArrowIntent } from "./keyboardNav";
 
   type Props = {
     filePath: string;
@@ -39,6 +39,7 @@
       fontSize: 100,
       fontFamily: "serif",
     },
+    selectionColor: "#33bbff",
   };
 
   let {
@@ -55,6 +56,7 @@
   let canvas: HTMLCanvasElement | undefined = $state();
   let textLayer: HTMLDivElement | undefined = $state();
   let viewerRoot: HTMLDivElement | undefined = $state();
+  let canvasContainer: HTMLDivElement | undefined = $state();
   let currentPage = $state(1);
   let totalPages = $state(0);
   let flashSearchResult = $state(false);
@@ -85,17 +87,24 @@
 
   let activeLoadRequestId = 0;
   let activeNavigationRequestId = 0;
+  let activeZoomRequestId = 0;
   let activeLoadingTask: pdfjsLib.PDFDocumentLoadingTask | null = null;
   let activeRenderTask: pdfjsLib.RenderTask | null = null;
+  let activeTextLayerTask: { cancel?: () => void; promise?: Promise<void> } | null = null;
+  let pendingZoomCommitTimer: number | null = null;
   let pendingWheelFrame: number | null = null;
   let pendingWheelDelta = 0;
   let textLayerMouseupTarget: HTMLDivElement | null = null;
   let lastLoadedFilePath: string | null = null;
+  let committedScale = $state(DEFAULT_PDF_SCALE);
   const outlinePageCache = new Map<string, number>();
   const scaleOptions = Array.from({ length: 26 }, (_, index) => (50 + index * 10) / 100);
   const TOOLBAR_OFFSET = 18;
   const TOOLBAR_WIDTH_ESTIMATE = 320;
   const TOOLBAR_EDGE_PADDING = 16;
+  const VERTICAL_SCROLL_STEP_PX = 120;
+  const ZOOM_COMMIT_DELAY_MS = 120;
+  const ZOOM_EPSILON = 0.001;
 
   type RefLike = { num: number; gen: number };
   type PdfRefProxy = Parameters<pdfjsLib.PDFDocumentProxy["getPageIndex"]>[0];
@@ -149,6 +158,23 @@
   const visualFilterStyle = $derived(
     `brightness(${clamp(readerSettings.brightness, 50, 150)}%) contrast(${clamp(readerSettings.contrast, 50, 150)}%)`,
   );
+  const zoomPreviewRatio = $derived.by(() => {
+    if (committedScale <= 0) {
+      return 1;
+    }
+
+    return scale / committedScale;
+  });
+  const canvasWrapperStyle = $derived.by(() => {
+    const styles = [`filter: ${visualFilterStyle};`];
+    if (Math.abs(zoomPreviewRatio - 1) > ZOOM_EPSILON) {
+      styles.push(`transform: scale(${zoomPreviewRatio});`);
+      styles.push("transform-origin: top center;");
+      styles.push("will-change: transform;");
+    }
+
+    return styles.join(" ");
+  });
 
   const canUseFullscreenApi = () => {
     if (typeof document === "undefined") {
@@ -171,6 +197,15 @@
     textLayerMouseupTarget = null;
   };
 
+  const clearPendingZoomCommit = () => {
+    if (pendingZoomCommitTimer === null) {
+      return;
+    }
+
+    window.clearTimeout(pendingZoomCommitTimer);
+    pendingZoomCommitTimer = null;
+  };
+
   const cancelActiveRenderTask = async () => {
     if (!activeRenderTask) {
       return;
@@ -184,6 +219,22 @@
       await task.promise;
     } catch {
       // render cancellation is expected during document/page switches
+    }
+  };
+
+  const cancelActiveTextLayerTask = async () => {
+    if (!activeTextLayerTask) {
+      return;
+    }
+
+    const task = activeTextLayerTask;
+    activeTextLayerTask = null;
+
+    try {
+      task.cancel?.();
+      await task.promise;
+    } catch {
+      // text-layer cancellation is expected during navigation/zoom
     }
   };
 
@@ -246,6 +297,8 @@
     return () => {
       activeLoadRequestId += 1;
       activeNavigationRequestId += 1;
+      activeZoomRequestId += 1;
+      clearPendingZoomCommit();
       clearTextLayerListener();
       if (pendingWheelFrame !== null) {
         window.cancelAnimationFrame(pendingWheelFrame);
@@ -254,6 +307,7 @@
       pendingWheelDelta = 0;
       destroyActiveLoadingTask();
       void cancelActiveRenderTask();
+      void cancelActiveTextLayerTask();
       void destroyCurrentDocument();
       document.removeEventListener("fullscreenchange", syncFullscreenState);
       document.removeEventListener("fullscreenerror", handleFullscreenError);
@@ -480,12 +534,16 @@
     clearTextLayerListener();
     destroyActiveLoadingTask();
     await cancelActiveRenderTask();
+    await cancelActiveTextLayerTask();
     await destroyCurrentDocument();
 
     isLoading = true;
     error = null;
     navigationError = null;
+    clearPendingZoomCommit();
+    activeZoomRequestId += 1;
     scale = DEFAULT_PDF_SCALE;
+    committedScale = DEFAULT_PDF_SCALE;
     showToc = false;
     outline = [];
     tocLoading = false;
@@ -518,7 +576,10 @@
       const requestedPage = Math.max(1, initialPage || 1);
       const targetPage = Math.min(requestedPage, totalPages);
 
-      const rendered = await renderPage(targetPage, requestId);
+      const rendered = await renderPage(targetPage, {
+        requestId,
+        renderScale: scale,
+      });
       if (!rendered || isStaleLoad(requestId)) {
         return;
       }
@@ -541,8 +602,14 @@
     }
   }
 
-  async function renderPage(pageNum: number, requestId = activeLoadRequestId) {
+  async function renderPage(
+    pageNum: number,
+    options: { requestId?: number; renderScale?: number } = {},
+  ) {
     if (!pdfDoc || !canvas || !textLayer) return;
+
+    const requestId = options.requestId ?? activeLoadRequestId;
+    const renderScale = options.renderScale ?? scale;
 
     const page = await pdfDoc.getPage(pageNum);
     if (isStaleLoad(requestId)) {
@@ -550,7 +617,7 @@
     }
 
     currentPageObj = page;
-    const viewport = page.getViewport({ scale });
+    const viewport = page.getViewport({ scale: renderScale });
 
     canvas.height = viewport.height;
     canvas.width = viewport.width;
@@ -603,7 +670,7 @@
       return false;
     }
 
-    renderTextLayer(
+    await renderTextLayer(
       textContent as { items: Array<{ str: string; transform: number[]; width: number; height: number }> },
       viewport,
       requestId,
@@ -621,89 +688,63 @@
       return;
     }
 
+    await cancelActiveTextLayerTask();
     clearTextLayerListener();
 
     textLayer.innerHTML = "";
     textLayer.style.position = "absolute";
     textLayer.style.left = "0";
     textLayer.style.top = "0";
-    textLayer.style.pointerEvents = "none";
+    textLayer.style.pointerEvents = "auto";
 
-    const textItems = textContent.items as Array<{
-      str: string;
-      transform: number[];
-      width: number;
-      height: number;
-    }>;
+    const textDivs: HTMLSpanElement[] = [];
+    const sharedParams = {
+      container: textLayer,
+      viewport,
+      textDivs,
+      enhanceTextSelection: true,
+    };
 
-    // Group text items by y-position to form continuous lines
-    // This enables paragraph-level selection instead of word fragments
-    const groupedLines: Array<{
-      text: string;
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    }[]> = [];
+    const pdfLibWithTextLayer = pdfjsLib as unknown as {
+      renderTextLayer?: (params: {
+        container: HTMLDivElement;
+        viewport: pdfjsLib.PageViewport;
+        textDivs: HTMLSpanElement[];
+        enhanceTextSelection: boolean;
+        textContent?: unknown;
+        textContentSource?: unknown;
+      }) => { cancel?: () => void; promise?: Promise<void> } | void;
+    };
 
-    for (const item of textItems) {
-      const y = item.transform[5];
-      // Find existing line group with similar y-position (within 2px tolerance)
-      const existingLine = groupedLines.find(
-        (line) => line.length > 0 && Math.abs(line[0].y - y) < 2
-      );
+    let task =
+      pdfLibWithTextLayer.renderTextLayer?.({
+        ...sharedParams,
+        textContentSource: textContent,
+      }) ?? null;
 
-      const tx = Util.transform(viewport.transform, item.transform);
-      const itemData = {
-        text: item.str,
-        x: tx[4],
-        y: tx[5] - item.height,
-        width: item.width,
-        height: item.height,
-      };
-
-      if (existingLine) {
-        existingLine.push(itemData);
-      } else {
-        groupedLines.push([itemData]);
-      }
+    if (!task) {
+      task =
+        pdfLibWithTextLayer.renderTextLayer?.({
+          ...sharedParams,
+          textContent,
+        }) ?? null;
     }
 
-    // Sort lines by y-position (top to bottom), then by x-position (left to right)
-    groupedLines.sort((a, b) => {
-      const yDiff = a[0].y - b[0].y;
-      if (Math.abs(yDiff) > 2) return yDiff;
-      return a[0].x - b[0].x;
-    });
-
-    // Render grouped lines
-    for (const line of groupedLines) {
-      // Sort items within line by x-position
-      line.sort((a, b) => a.x - b.x);
-
-      // Calculate combined dimensions for the line
-      const lineStartX = line[0]?.x || 0;
-      const lineEndX = line.reduce((maxRight, item) => Math.max(maxRight, item.x + item.width), 0);
-      const lineWidth = Math.max(lineEndX - lineStartX, 0);
-      const lineHeight = line[0]?.height || 12;
-      const lineY = line[0]?.y || 0;
-
-      // Create a single span for continuous text selection
-      const combinedText = line.map((item) => item.text).join(" ");
-      const div = document.createElement("span");
-      div.textContent = combinedText;
-      div.style.position = "absolute";
-      div.style.left = `${lineStartX}px`;
-      div.style.top = `${lineY}px`;
-      div.style.width = `${lineWidth}px`;
-      div.style.height = `${lineHeight}px`;
-      div.style.fontSize = `${lineHeight}px`;
-      div.style.whiteSpace = "pre";
-      div.style.userSelect = "text";
-      div.style.webkitUserSelect = "text";
-      div.style.pointerEvents = "auto";
-
-      textLayer.appendChild(div);
+    if (task) {
+      activeTextLayerTask = task;
+      if (task.promise) {
+        try {
+          await task.promise;
+        } catch {
+          return;
+        } finally {
+          if (activeTextLayerTask === task) {
+            activeTextLayerTask = null;
+          }
+        }
+      } else if (activeTextLayerTask === task) {
+        activeTextLayerTask = null;
+      }
     }
 
     textLayer.addEventListener("mouseup", handleTextSelection);
@@ -822,15 +863,17 @@
     navigationError = null;
 
     try {
-      // Simple render - no complex transaction logic
-      const rendered = await renderPage(targetPage);
+      clearPendingZoomCommit();
+      const rendered = await renderPage(targetPage, {
+        renderScale: scale,
+      });
       if (!rendered) {
         navigationError = t("pdf.navigationFailed");
         return false;
       }
 
-      // Success - update state
       currentPage = targetPage;
+      committedScale = scale;
       onPageChange?.(currentPage, totalPages);
       emitSessionProgress(currentPage, totalPages);
 
@@ -933,33 +976,163 @@
     });
   }
 
+  function captureScrollAnchor() {
+    const host = canvasContainer;
+    if (!host) {
+      return null;
+    }
+
+    return {
+      host,
+      previousScrollTop: host.scrollTop,
+      previousHeight: host.scrollHeight,
+      viewportHeight: host.clientHeight,
+    };
+  }
+
+  function restoreScrollAnchor(
+    anchor: {
+      host: HTMLDivElement;
+      previousScrollTop: number;
+      previousHeight: number;
+      viewportHeight: number;
+    } | null,
+  ) {
+    if (!anchor) {
+      return;
+    }
+
+    const { host, previousScrollTop, previousHeight, viewportHeight } = anchor;
+    const previousCenter = previousScrollTop + viewportHeight / 2;
+    const nextHeight = host.scrollHeight;
+    if (previousHeight <= 0 || nextHeight <= 0) {
+      return;
+    }
+
+    const centerRatio = previousCenter / previousHeight;
+    const nextCenter = centerRatio * nextHeight;
+    const nextScrollTop = Math.max(0, nextCenter - host.clientHeight / 2);
+    host.scrollTop = nextScrollTop;
+  }
+
+  function queueZoomCommit() {
+    if (!pdfDoc) {
+      return;
+    }
+
+    clearPendingZoomCommit();
+    const requestId = ++activeZoomRequestId;
+    const targetScale = scale;
+
+    pendingZoomCommitTimer = window.setTimeout(async () => {
+      pendingZoomCommitTimer = null;
+      if (requestId !== activeZoomRequestId || !pdfDoc) {
+        return;
+      }
+
+      const anchor = captureScrollAnchor();
+      try {
+        const rendered = await renderPage(currentPage, {
+          renderScale: targetScale,
+        });
+        if (!rendered || requestId !== activeZoomRequestId) {
+          return;
+        }
+
+        committedScale = targetScale;
+        restoreScrollAnchor(anchor);
+      } catch {
+        navigationError = t("pdf.navigationFailed");
+      }
+    }, ZOOM_COMMIT_DELAY_MS);
+  }
+
   function handleViewerKeydown(event: KeyboardEvent) {
     if (!isViewerFocused) {
       return;
     }
 
-    if (!canHandleReaderArrowNav(event)) {
+    if ((event.ctrlKey || event.metaKey) && (event.key === "=" || event.key === "+" || event.key === "-")) {
+      event.preventDefault();
+      const step = event.key === "-" ? -PDF_SCALE_STEP : PDF_SCALE_STEP;
+      setScale(scale + step);
       return;
     }
 
-    if (event.key === "ArrowLeft") {
+    const intent = resolveReaderArrowIntent(event);
+    if (!intent) {
+      return;
+    }
+
+    if (intent === "prevPage") {
       event.preventDefault();
       goToPrevPage();
       return;
     }
 
-    if (event.key === "ArrowRight") {
+    if (intent === "nextPage") {
       event.preventDefault();
       goToNextPage();
+      return;
+    }
+
+    if (intent === "scrollUp") {
+      event.preventDefault();
+      scrollByVerticalStep(-VERTICAL_SCROLL_STEP_PX);
+      return;
+    }
+
+    if (intent === "scrollDown") {
+      event.preventDefault();
+      scrollByVerticalStep(VERTICAL_SCROLL_STEP_PX);
+    }
+  }
+
+  function canScrollElementInDirection(element: HTMLElement, delta: number) {
+    if (element.scrollHeight <= element.clientHeight + 1) {
+      return false;
+    }
+
+    if (delta < 0) {
+      return element.scrollTop > 0;
+    }
+
+    return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
+  }
+
+  function scrollByVerticalStep(delta: number) {
+    const primaryHost = canvasContainer;
+    if (primaryHost && canScrollElementInDirection(primaryHost, delta)) {
+      primaryHost.scrollBy({ top: delta, behavior: "auto" });
+      return;
+    }
+
+    const fallbackHost = viewerRoot;
+    if (fallbackHost && canScrollElementInDirection(fallbackHost, delta)) {
+      fallbackHost.scrollBy({ top: delta, behavior: "auto" });
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      window.scrollBy({ top: delta, behavior: "auto" });
     }
   }
 
   export function setScale(newScale: number) {
-    scale = clampPdfScale(newScale);
-    if (pdfDoc) {
-      void renderPage(currentPage);
+    const nextScale = clampPdfScale(newScale);
+    if (Math.abs(nextScale - scale) <= ZOOM_EPSILON) {
+      return;
     }
+
+    scale = nextScale;
+    queueZoomCommit();
   }
+
+  $effect(() => {
+    if (!pdfDoc) {
+      committedScale = scale;
+    }
+  });
 
   export function getCurrentPage() {
     return currentPage;
@@ -975,13 +1148,17 @@
 <div
   class="pdf-viewer"
   bind:this={viewerRoot}
-  onfocusin={() => {
+  tabindex="0"
+  onfocus={() => {
     isViewerFocused = true;
   }}
-  onfocusout={() => {
+  onblur={() => {
     isViewerFocused = false;
   }}
-  style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor};`}
+  onclick={() => {
+    viewerRoot?.focus();
+  }}
+  style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor}; --pdf-selection-color: ${readerSettings.selectionColor};`}
 >
   {#if isLoading}
     <div class="loading-overlay">{t("pdf.loading")}</div>
@@ -1054,8 +1231,8 @@
         {/if}
       </aside>
     {/if}
-    <div class="canvas-container" onwheel={handleViewerWheel}>
-      <div class="canvas-wrapper" class:search-hit={flashSearchResult} style:filter={visualFilterStyle}>
+    <div class="canvas-container" bind:this={canvasContainer} onwheel={handleViewerWheel}>
+      <div class="canvas-wrapper" class:search-hit={flashSearchResult} style={canvasWrapperStyle}>
         <canvas bind:this={canvas}></canvas>
         <div bind:this={textLayer} class="text-layer"></div>
         {#if showToolbar && selectionPosition}
@@ -1252,6 +1429,7 @@
   .canvas-wrapper {
     position: relative;
     display: inline-block;
+    transition: transform 120ms ease-out;
   }
 
   .canvas-wrapper.search-hit {
@@ -1271,22 +1449,23 @@
     left: 0;
     overflow: hidden;
     pointer-events: auto;
-    opacity: 0.3;
+    opacity: 1;
     line-height: 1;
     user-select: text;
     -webkit-user-select: text;
     cursor: text;
   }
 
-  .text-layer :global(span) {
+  .text-layer :global(span),
+  .text-layer :global(br) {
     color: transparent;
     position: absolute;
     white-space: pre;
-    transform-origin: left bottom;
+    transform-origin: 0% 0%;
   }
 
   .text-layer :global(span::selection) {
-    background: #3388ff;
+    background: var(--pdf-selection-color, #3388ff);
   }
 
   .toolbar-container {

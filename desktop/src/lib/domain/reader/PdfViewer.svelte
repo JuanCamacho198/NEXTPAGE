@@ -854,7 +854,7 @@
     window.getSelection()?.removeAllRanges();
   }
 
-  async function navigateToPage(targetPage: number, options?: { flash?: boolean }): Promise<boolean> {
+  const navigateToPage = async (targetPage: number, options?: { flash?: boolean }) => {
     if (!pdfDoc || !isPageWithinBounds(targetPage, totalPages)) {
       return false;
     }
@@ -889,7 +889,7 @@
       navigationError = t("pdf.navigationFailed");
       return false;
     }
-  }
+  };
 
   function goToPrevPage() {
     if (currentPage <= 1 || !pdfDoc) return;

@@ -185,7 +185,7 @@
     });
   }
 
-  function applyDisplaySettings() {
+  const applyDisplaySettings = () => {
     if (!rendition) return;
 
     (rendition as Rendition).themes.fontSize(`${displaySettings.fontSize}%`);
@@ -224,7 +224,7 @@
         color: themeStyles.color,
       },
     });
-  }
+  };
 
   $effect(() => {
     readerSettings;
@@ -249,17 +249,17 @@
     void rendition.display(target);
   });
 
-  function goToPrev() {
+  const goToPrev = () => {
     if (!rendition) return;
     rendition.prev();
-  }
+  };
 
-  function goToNext() {
+  const goToNext = () => {
     if (!rendition) return;
     rendition.next();
-  }
+  };
 
-  function handleViewerKeydown(event: KeyboardEvent) {
+  const handleViewerKeydown = (event: KeyboardEvent) => {
     if (!isViewerFocused) {
       return;
     }
@@ -299,9 +299,9 @@
       scrollByVerticalStep(VERTICAL_SCROLL_STEP_PX);
       return;
     }
-  }
+  };
 
-  function canScrollElementInDirection(element: HTMLElement, delta: number) {
+  const canScrollElementInDirection = (element: HTMLElement, delta: number) => {
     if (element.scrollHeight <= element.clientHeight + 1) {
       return false;
     }
@@ -311,9 +311,9 @@
     }
 
     return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
-  }
+  };
 
-  function resolveEpubIframeScrollHost(): HTMLElement | null {
+  const resolveEpubIframeScrollHost = () => {
     const iframe = epubContainer?.querySelector("iframe");
     if (!(iframe instanceof HTMLIFrameElement)) {
       return null;
@@ -342,9 +342,9 @@
     }
 
     return null;
-  }
+  };
 
-  function scrollByVerticalStep(delta: number) {
+  const scrollByVerticalStep = (delta: number) => {
     const iframeScrollHost = resolveEpubIframeScrollHost();
     if (iframeScrollHost && canScrollElementInDirection(iframeScrollHost, delta)) {
       iframeScrollHost.scrollBy({ top: delta, behavior: "auto" });
@@ -360,23 +360,23 @@
     if (typeof window !== "undefined") {
       window.scrollBy({ top: delta, behavior: "auto" });
     }
-  }
+  };
 
-  function goToChapter(chapter: { id: string; href: string }) {
+  const goToChapter = (chapter: { id: string; href: string }) => {
     if (!rendition) return;
     rendition.display(chapter.href);
     showToc = false;
-  }
+  };
 
-  function updateFontSize(size: number) {
+  const updateFontSize = (size: number) => {
     displaySettings.fontSize = Math.max(50, Math.min(200, size));
     applyDisplaySettings();
-  }
+  };
 
-  function updateMargin(margin: number) {
+  const updateMargin = (margin: number) => {
     displaySettings.margin = Math.max(0, Math.min(50, margin));
     applyDisplaySettings();
-  }
+  };
 </script>
 
 <svelte:window onkeydown={handleViewerKeydown} />

@@ -1262,20 +1262,20 @@
         books={books}
         isImporting={isImporting}
         onImportBook={handleImportFile}
-        onOpenBook={(book) => {
+        onOpenBook={(book: ReaderBook) => {
           void startReading(book);
         }}
-        onContinueReading={(book) => {
+        onContinueReading={(book: ReaderBook) => {
           void startReading(book);
         }}
-        onToggleFavorite={(book) => {
+        onToggleFavorite={(book: ReaderBook) => {
           void handleToggleFavorite(book);
         }}
-        onMarkCompleted={(book) => {
+        onMarkCompleted={(book: ReaderBook) => {
           void handleMarkCompleted(book);
         }}
         onViewDetails={openShelfDetails}
-        onRemoveBook={(book) => {
+        onRemoveBook={(book: ReaderBook) => {
           void handleHideBook(book);
         }}
       />

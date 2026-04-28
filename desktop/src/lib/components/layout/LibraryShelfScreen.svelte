@@ -6,6 +6,7 @@
   import type { LibraryBookDto } from "$lib/types";
 
   type ShelfBook = LibraryBookDto & {
+    filePath: string;
     isFavorite?: boolean;
     toRead?: boolean;
     completed?: boolean;
@@ -135,7 +136,7 @@
       return progress === 0;
     });
 
-    return visible.toSorted((left, right) => {
+    return [...visible].sort((left: ShelfBook, right: ShelfBook) => {
       if (activeSort === "title") {
         return left.title.localeCompare(right.title, "es");
       }

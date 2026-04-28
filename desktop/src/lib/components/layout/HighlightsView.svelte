@@ -121,7 +121,7 @@
     currentPage = 1;
   }
 
-  function formatDate(iso: string): string {
+  const formatDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleDateString("es-ES", {
       day: "numeric",
@@ -132,7 +132,7 @@
       minute: "2-digit",
       hour12: true,
     });
-  }
+  };
 
   // Reset page when filters change
   $effect(() => {
@@ -142,13 +142,13 @@
   });
 
   // Keyboard shortcut
-  function handleKeydown(e: KeyboardEvent) {
+  const handleKeydown = (e: KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "k") {
       e.preventDefault();
       const el = document.getElementById("highlights-search");
       el?.focus();
     }
-  }
+  };
 
   onMount(() => {
     loadHighlights();

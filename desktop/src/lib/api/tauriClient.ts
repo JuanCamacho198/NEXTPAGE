@@ -28,6 +28,7 @@ import {
   READER_THEME_MODE_SETTING_KEY,
   READER_BRIGHTNESS_SETTING_KEY,
   READER_CONTRAST_SETTING_KEY,
+  READER_SELECTION_COLOR_SETTING_KEY,
   READER_EPUB_FONT_SIZE_SETTING_KEY,
   READER_EPUB_FONT_FAMILY_SETTING_KEY,
 } from "$lib/types";
@@ -253,6 +254,7 @@ const DEFAULT_READER_SETTINGS: ReaderSettings = {
   themeMode: "paper",
   brightness: 100,
   contrast: 100,
+  selectionColor: "#3388ff",
   epub: {
     fontSize: 100,
     fontFamily: "serif",
@@ -307,6 +309,10 @@ export const sanitizeReaderSettings = (
 ): ReaderSettings => {
   const next = input ?? {};
 
+  const selectionColor = typeof next.selectionColor === "string" && next.selectionColor.trim().length > 0
+    ? next.selectionColor.trim()
+    : DEFAULT_READER_SETTINGS.selectionColor;
+
   return {
     themeMode: sanitizeThemeMode(next.themeMode),
     brightness: sanitizeRangedNumber(
@@ -316,6 +322,7 @@ export const sanitizeReaderSettings = (
       DEFAULT_READER_SETTINGS.brightness,
     ),
     contrast: sanitizeRangedNumber(next.contrast, 50, 150, DEFAULT_READER_SETTINGS.contrast),
+    selectionColor,
     epub: {
       fontSize: sanitizeRangedNumber(
         next.epub?.fontSize,
@@ -344,6 +351,11 @@ const buildReaderSettingsPayload = (settings: ReaderSettings): AppSettingDto[] =
     {
       key: READER_CONTRAST_SETTING_KEY,
       valueJson: JSON.stringify(settings.contrast),
+      updatedAt: now,
+    },
+    {
+      key: READER_SELECTION_COLOR_SETTING_KEY,
+      valueJson: JSON.stringify(settings.selectionColor),
       updatedAt: now,
     },
     {

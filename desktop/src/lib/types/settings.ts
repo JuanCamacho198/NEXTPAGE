@@ -13,6 +13,7 @@ export const UI_LOCALE_SETTING_KEY = "ui.locale" as const;
 export const READER_THEME_MODE_SETTING_KEY = "reader.themeMode" as const;
 export const READER_BRIGHTNESS_SETTING_KEY = "reader.brightness" as const;
 export const READER_CONTRAST_SETTING_KEY = "reader.contrast" as const;
+export const READER_SELECTION_COLOR_SETTING_KEY = "reader.selectionColor" as const;
 export const READER_EPUB_FONT_SIZE_SETTING_KEY = "reader.epub.fontSize" as const;
 export const READER_EPUB_FONT_FAMILY_SETTING_KEY = "reader.epub.fontFamily" as const;
 
@@ -22,6 +23,7 @@ export type ReaderSettings = {
   themeMode: ReaderThemeMode;
   brightness: number;
   contrast: number;
+  selectionColor: string;
   epub: {
     fontSize: number;
     fontFamily: string;

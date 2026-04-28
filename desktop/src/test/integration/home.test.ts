@@ -16,8 +16,9 @@ const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoi
     tauriClientMock: {
       getDefaultReaderSettings: vi.fn<() => ReaderSettings>(() => ({
         themeMode: "paper",
-        brightness: 1,
-        contrast: 1,
+        brightness: 100,
+        contrast: 100,
+        selectionColor: "#3388ff",
         epub: {
           fontSize: 100,
           fontFamily: "serif",

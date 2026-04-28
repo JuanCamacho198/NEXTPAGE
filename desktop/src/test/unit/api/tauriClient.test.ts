@@ -34,6 +34,7 @@ describe("tauriClient reader settings", () => {
       themeMode: "paper",
       brightness: 150,
       contrast: 50,
+      selectionColor: "#3388ff",
       epub: {
         fontSize: 80,
         fontFamily: "serif",
@@ -57,6 +58,7 @@ describe("tauriClient reader settings", () => {
       themeMode: "night",
       brightness: 50,
       contrast: 150,
+      selectionColor: "#3388ff",
       epub: {
         fontSize: 150,
         fontFamily: "Literata",
@@ -81,6 +83,7 @@ describe("tauriClient reader settings", () => {
       themeMode: "sepia",
       brightness: 89,
       contrast: 112,
+      selectionColor: "#3388ff",
       epub: {
         fontSize: 200,
         fontFamily: "Merriweather",
@@ -90,7 +93,7 @@ describe("tauriClient reader settings", () => {
     expect(invokeMock).toHaveBeenCalledTimes(1);
     const [command, args] = invokeMock.mock.calls[0] as [string, { settings: Array<{ key: string; valueJson: string }> }];
     expect(command).toBe("upsertSettings");
-    expect(args.settings).toHaveLength(5);
+    expect(args.settings).toHaveLength(6);
     expect(args.settings.find((entry) => entry.key === "reader.themeMode")?.valueJson).toBe(
       JSON.stringify("sepia"),
     );
@@ -124,6 +127,9 @@ describe("tauriClient reader settings", () => {
     );
     expect(args.settings.find((entry) => entry.key === "reader.contrast")?.valueJson).toBe(
       JSON.stringify(100),
+    );
+    expect(args.settings.find((entry) => entry.key === "reader.selectionColor")?.valueJson).toBe(
+      JSON.stringify("#3388ff"),
     );
     expect(args.settings.find((entry) => entry.key === "reader.epub.fontSize")?.valueJson).toBe(
       JSON.stringify(100),

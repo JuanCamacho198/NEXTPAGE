@@ -1473,17 +1473,11 @@
     pointer-events: auto;
   }
 
-  /* Highlighter-style selection: uniform rectangular box, not per-glyph */
-  .text-layer :global(span)::selection,
-  .text-layer :global(span)::selection * {
+/* Highlighter-style selection: uniform rectangular box, not per-glyph */
+  .text-layer :global(span)::selection {
     background: var(--pdf-selection-color, #3388ff) !important;
     color: inherit !important;
     -webkit-text-fill-color: inherit !important;
-  }
-  
-  .text-layer :global(span)::selection {
-    background: var(--pdf-selection-color, #3388ff);
-    text-shadow: none;
   }
 
   .toolbar-container {

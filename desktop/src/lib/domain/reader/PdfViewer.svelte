@@ -784,59 +784,39 @@
     textLayer.style.top = "0";
     textLayer.style.pointerEvents = "auto";
 
-    const textDivs: HTMLSpanElement[] = [];
-    const sharedParams = {
-      container: textLayer,
-      viewport,
-      textDivs,
-      enhanceTextSelection: true,
-    };
+    try {
+      // @ts-ignore
+      if (pdfjsLib.TextLayer) {
+        // @ts-ignore
+        const textLayerInstance = new pdfjsLib.TextLayer({
+          container: textLayer,
+          viewport,
+          textContentSource: textContent,
+        });
+        await textLayerInstance.render();
+      } else {
 
-    const pdfLibWithTextLayer = pdfjsLib as unknown as {
-      renderTextLayer?: (params: {
-        container: HTMLDivElement;
-        viewport: pdfjsLib.PageViewport;
-        textDivs: HTMLSpanElement[];
-        enhanceTextSelection: boolean;
-        textContent?: unknown;
-        textContentSource?: unknown;
-      }) => { cancel?: () => void; promise?: Promise<void> } | void;
-    };
 
-    let task =
-      pdfLibWithTextLayer.renderTextLayer?.({
-        ...sharedParams,
-        textContentSource: textContent,
-      }) ?? null;
 
-    if (!task) {
-      task =
-        pdfLibWithTextLayer.renderTextLayer?.({
-          ...sharedParams,
-          textContent,
-        }) ?? null;
-    }
 
-    if (task) {
-      activeTextLayerTask = task;
-      if (task.promise) {
-        try {
-          await task.promise;
-        } catch {
-          return;
-        } finally {
-          if (activeTextLayerTask === task) {
-            activeTextLayerTask = null;
-          }
-        }
-      } else if (activeTextLayerTask === task) {
-        activeTextLayerTask = null;
+
+
+
+        const pdfLibWithTextLayer = pdfjsLib as any;
+        const task = pdfLibWithTextLayer.renderTextLayer?.({
+          container: textLayer,
+          viewport,
+          textDivs: [],
+          enhanceTextSelection: true,
+          textContentSource: textContent,
+        });
+        if (task?.promise) await task.promise;
       }
+    } catch (err) {
+      console.error("Text layer render error:", err);
     }
 
-    textLayer.addEventListener("mouseup", handleTextSelection);
-    textLayer.addEventListener("touchend", handleTextSelection);
-    textLayer.addEventListener("pointerup", handleTextSelection);
+    // Events are now handled at the viewerRoot level for better reliability
     textLayerMouseupTarget = textLayer;
   }
 
@@ -847,6 +827,8 @@
 
   function updateSelectionState() {
     const selection = window.getSelection();
+    console.log("PDF Selection Update:", selection?.toString().trim());
+    
     if (!selection || selection.rangeCount === 0) {
       clearSelectionUi();
       return;
@@ -854,7 +836,8 @@
 
     const text = selection.toString().trim();
     if (!text) {
-      clearSelectionUi();
+      // Don't clear immediately to allow clicking toolbar buttons
+      // clearSelectionUi();
       return;
     }
 
@@ -1243,10 +1226,14 @@
   }}
   onclick={(event) => {
     if (textLayer && event.target instanceof Node && textLayer.contains(event.target)) {
+      handleTextSelection();
       return;
     }
     viewerRoot?.focus();
   }}
+  onmouseup={handleTextSelection}
+  onpointerup={handleTextSelection}
+  ontouchend={handleTextSelection}
   style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor}; --pdf-selection-color: ${readerSettings.selectionColor};`}
 >
   {#if isLoading}
@@ -1320,7 +1307,19 @@
             ></div>
           {/each}
         </div>
-        <div bind:this={textLayer} class="text-layer"></div>
+        <div 
+          bind:this={textLayer} 
+          class="text-layer debug-text-layer"
+          draggable="false"
+          ondragstart={(e) => e.preventDefault()}
+        ></div>
+        <!-- Debug Overlay -->
+        <div class="debug-info-overlay">
+          <div>Selection: {selectedText || 'None'}</div>
+          <div>Pos: {selectionPosition ? `x:${Math.round(selectionPosition.x)} y:${Math.round(selectionPosition.y)}` : 'None'}</div>
+          <div>Layer: {textLayer ? 'Exists' : 'Missing'}</div>
+          <div>Spans: {textLayer?.children?.length || 0}</div>
+        </div>
         {#if showToolbar && selectionPosition}
           <div
             class="toolbar-container"
@@ -1377,6 +1376,8 @@
     color: var(--pdf-reader-text, var(--color-primary));
     position: relative;
     outline: none;
+    user-select: text !important;
+    -webkit-user-select: text !important;
   }
 
   .loading-overlay,
@@ -1532,14 +1533,18 @@
     left: 0;
     inset: 0;
     overflow: hidden;
-    pointer-events: auto;
+    pointer-events: auto !important;
     opacity: 1;
     line-height: 1;
-    cursor: text;
+    cursor: text !important;
     user-select: text !important;
     -webkit-user-select: text !important;
     text-align: initial;
-    z-index: 5;
+    z-index: 5000 !important;
+    min-width: 100%;
+    min-height: 100%;
+    -webkit-user-drag: none !important;
+    user-drag: none !important;
   }
 
   .text-layer :global(span),
@@ -1548,10 +1553,12 @@
     position: absolute;
     white-space: pre;
     transform-origin: 0% 0%;
-    cursor: text;
-    pointer-events: auto;
+    cursor: text !important;
+    pointer-events: auto !important;
     user-select: text !important;
     -webkit-user-select: text !important;
+    -webkit-user-drag: none !important;
+    user-drag: none !important;
   }
 
   .text-layer :global(span)::selection,
@@ -1713,5 +1720,35 @@
     display: flex;
     flex: 1;
     overflow: hidden;
+  }
+  .debug-text-layer {
+    background: rgba(255, 0, 0, 0.1) !important;
+    outline: 2px dashed red !important;
+  }
+
+  .debug-info-overlay {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #00ff00;
+    padding: 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 10px;
+    z-index: 9999;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .selection-rect {
+    position: absolute;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--pdf-selection-color, #3388ff) 42%, transparent);
+    box-shadow: 0 0 0 2px red; /* Extra visible shadow for debug */
+    z-index: 3;
+    pointer-events: none;
   }
 </style>

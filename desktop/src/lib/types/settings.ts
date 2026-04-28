@@ -37,3 +37,60 @@ export interface SentrySettings {
   tracesSampleRate: number;
   enabled: boolean;
 }
+
+// Reader Layout Settings (margins, spacing, header/footer)
+export interface ReaderLayoutSettings {
+  margins: {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+  };
+  lineHeight: number;
+  paragraphSpacing: number;
+  showHeader: boolean;
+  showFooter: boolean;
+  showPageNumbers: boolean;
+  progressIndicator: "percentage" | "chapter" | "time";
+}
+
+// Notification Settings
+export interface NotificationSettings {
+  readingReminders: {
+    enabled: boolean;
+    frequency: "daily" | "weekly";
+    time?: string;
+  };
+  progressAlerts: {
+    enabled: boolean;
+    milestones: number[];
+  };
+}
+
+// Sync Settings
+export interface SyncSettings {
+  autoSync: boolean;
+  frequency: "manual" | "hourly" | "daily";
+  conflictResolution: "local" | "remote" | "ask";
+  lastSyncTime?: string;
+}
+
+// Storage Information
+export interface StorageInfo {
+  cacheSize: number;
+  downloadedBooks: number;
+  tempFiles: number;
+}
+
+// Export/Import Config
+export interface AppConfigExport {
+  version: string;
+  exportedAt: string;
+  locale: UiLocale;
+  theme: string;
+  fontScale: number;
+  readerSettings: ReaderSettings;
+  readerLayoutSettings: ReaderLayoutSettings;
+  notificationSettings: NotificationSettings;
+  syncSettings: SyncSettings;
+}

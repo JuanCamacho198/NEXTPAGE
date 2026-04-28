@@ -1,5 +1,14 @@
 const INPUT_LIKE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT", "BUTTON"]);
 
+const ARROW_INTENT_BY_KEY = {
+  ArrowLeft: "prevPage",
+  ArrowRight: "nextPage",
+  ArrowUp: "scrollUp",
+  ArrowDown: "scrollDown",
+} as const;
+
+export type ReaderArrowIntent = (typeof ARROW_INTENT_BY_KEY)[keyof typeof ARROW_INTENT_BY_KEY];
+
 const hasEditableRole = (element: HTMLElement) => {
   const role = element.getAttribute("role");
   if (!role) {
@@ -65,4 +74,12 @@ export const canHandleReaderArrowNav = (event: KeyboardEvent) => {
   }
 
   return true;
+};
+
+export const resolveReaderArrowIntent = (event: KeyboardEvent): ReaderArrowIntent | null => {
+  if (!canHandleReaderArrowNav(event)) {
+    return null;
+  }
+
+  return ARROW_INTENT_BY_KEY[event.key as keyof typeof ARROW_INTENT_BY_KEY] ?? null;
 };

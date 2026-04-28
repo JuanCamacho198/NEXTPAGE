@@ -1240,141 +1240,135 @@
     ontouchend={handleTextSelection}
     style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor}; --pdf-selection-color: ${readerSettings.selectionColor};`}
   >
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div onkeydown={handleViewerKeydown_}>
-      {#if isLoading}
-        <div class="loading-overlay">{t("pdf.loading")}</div>
-      {/if}
-  {#if error}
-    <div class="error-overlay">{t("pdf.error")}: {error}</div>
-  {/if}
-  <!-- Controls and canvas always stay in DOM so canvas ref is always available -->
-  <div class="controls" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
-    <button type="button" onclick={() => (showToc = !showToc)}>
-      {t("pdf.contents")}
-    </button>
-    <button type="button" class="reader-nav-button" aria-label={t("pdf.previous")} onclick={goToPrevPage} disabled={currentPage <= 1}>
-      <span aria-hidden="true">&#8592;</span>
-      {t("pdf.previous")}
-    </button>
-    <button type="button" class="reader-nav-button" aria-label={t("pdf.next")} onclick={goToNextPage} disabled={currentPage >= totalPages}>
-      <span aria-hidden="true">&#8594;</span>
-      {t("pdf.next")}
-    </button>
-    <button type="button" onclick={toggleFullscreen} disabled={!fullscreenSupported}>
-      {isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}
-    </button>
-    <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select">
-      {#each scaleOptions as option (option)}
-        <option value={option}>{Math.round(option * 100)}%</option>
-      {/each}
-    </select>
-  </div>
-  {#if navigationError}
-    <p class="navigation-error" role="status" aria-live="polite">{navigationError}</p>
-  {/if}
-  <div class="content-area" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
-    {#if showToc}
-      <aside class="toc-sidebar">
-        <h3>{t("pdf.tableOfContents")}</h3>
-        {#if tocLoading}
-          <p class="toc-message">{t("pdf.tocLoading")}</p>
-        {:else if tocError}
-          <p class="toc-message toc-error">{tocError}</p>
-        {:else if flatOutline.length === 0}
-          <p class="toc-message">{t("pdf.tocEmpty")}</p>
-        {:else}
-          <ul class="toc-list">
-            {#each flatOutline as entry (entry.item.id)}
-              <li>
-                <button
-                  type="button"
-                  onclick={() => navigateToOutlineItem(entry.item)}
-                  class="toc-item"
-                  disabled={!entry.item.dest}
-                  style={`--toc-depth: ${entry.depth};`}
-                >
-                  {entry.item.title}
-                </button>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-      </aside>
+    {#if isLoading}
+      <div class="loading-overlay">{t("pdf.loading")}</div>
     {/if}
-    <div class="canvas-container" bind:this={canvasContainer} onwheel={handleViewerWheel}>
-      <div class="canvas-wrapper" class:search-hit={flashSearchResult} style={canvasWrapperStyle}>
-        <canvas bind:this={canvas}></canvas>
-        <div class="selection-overlay" aria-hidden="true">
-          {#each selectionOverlayRects as rect, index (`${rect.left}-${rect.top}-${index}`)}
-            <div
-              class="selection-rect"
-              style={`left: ${rect.left}px; top: ${rect.top}px; width: ${rect.width}px; height: ${rect.height}px;`}
-            ></div>
-          {/each}
-        </div>
-        <div 
-          bind:this={textLayer} 
-          class="text-layer debug-text-layer"
-          draggable="false"
-          role="presentation"
-          ondragstart={(e) => e.preventDefault()}
-        ></div>
-        <!-- Debug Overlay -->
-        <div class="debug-info-overlay">
-          <div>Selection: {selectedText || 'None'}</div>
-          <div>Pos: {selectionPosition ? `x:${Math.round(selectionPosition.x)} y:${Math.round(selectionPosition.y)}` : 'None'}</div>
-          <div>Layer: {textLayer ? 'Exists' : 'Missing'}</div>
-          <div>Spans: {textLayer?.children?.length || 0}</div>
-        </div>
-        {#if showToolbar && selectionPosition}
-          <div
-            class="toolbar-container"
-            class:below={selectionPlacement === "below"}
-            style="left: {selectionPosition.x}px; top: {selectionPosition.y}px;"
-          >
-            <HighlightToolbar
-              {selectedText}
-              selectionBounds={lastSelectionBounds}
-              bookId={bookId || filePath}
-              pageNumber={currentPage}
-              cfi={selectedCfi}
-              hasSelectionAnchor={selectionHasAnchor}
-              {t}
-              onClose={hideToolbar}
-            />
+    {#if error}
+      <div class="error-overlay">{t("pdf.error")}: {error}</div>
+    {/if}
+    <div class="controls" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
+      <button type="button" onclick={() => (showToc = !showToc)}>
+        {t("pdf.contents")}
+      </button>
+      <button type="button" class="reader-nav-button" aria-label={t("pdf.previous")} onclick={goToPrevPage} disabled={currentPage <= 1}>
+        <span aria-hidden="true">&#8592;</span>
+        {t("pdf.previous")}
+      </button>
+      <button type="button" class="reader-nav-button" aria-label={t("pdf.next")} onclick={goToNextPage} disabled={currentPage >= totalPages}>
+        <span aria-hidden="true">&#8594;</span>
+        {t("pdf.next")}
+      </button>
+      <button type="button" onclick={toggleFullscreen} disabled={!fullscreenSupported}>
+        {isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}
+      </button>
+      <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select">
+        {#each scaleOptions as option (option)}
+          <option value={option}>{Math.round(option * 100)}%</option>
+        {/each}
+      </select>
+    </div>
+    {#if navigationError}
+      <p class="navigation-error" role="status" aria-live="polite">{navigationError}</p>
+    {/if}
+    <div class="content-area" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
+      {#if showToc}
+        <aside class="toc-sidebar">
+          <h3>{t("pdf.tableOfContents")}</h3>
+          {#if tocLoading}
+            <p class="toc-message">{t("pdf.tocLoading")}</p>
+          {:else if tocError}
+            <p class="toc-message toc-error">{tocError}</p>
+          {:else if flatOutline.length === 0}
+            <p class="toc-message">{t("pdf.tocEmpty")}</p>
+          {:else}
+            <ul class="toc-list">
+              {#each flatOutline as entry (entry.item.id)}
+                <li>
+                  <button
+                    type="button"
+                    onclick={() => navigateToOutlineItem(entry.item)}
+                    class="toc-item"
+                    disabled={!entry.item.dest}
+                    style={`--toc-depth: ${entry.depth};`}
+                  >
+                    {entry.item.title}
+                  </button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </aside>
+      {/if}
+      <div class="canvas-container" bind:this={canvasContainer} onwheel={handleViewerWheel}>
+        <div class="canvas-wrapper" class:search-hit={flashSearchResult} style={canvasWrapperStyle}>
+          <canvas bind:this={canvas}></canvas>
+          <div class="selection-overlay" aria-hidden="true">
+            {#each selectionOverlayRects as rect, index (`${rect.left}-${rect.top}-${index}`)}
+              <div
+                class="selection-rect"
+                style={`left: ${rect.left}px; top: ${rect.top}px; width: ${rect.width}px; height: ${rect.height}px;`}
+              ></div>
+            {/each}
           </div>
-        {/if}
-      </div>
-    </div>
-  </div>
-  <div class="pdf-footer" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
-    <div class="footer-content">
-      <div class="footer-left">
-        <span class="page-info">
-          <input
-            type="number"
-            min="1"
-            max={totalPages}
-            value={currentPage}
-            onchange={goToPage}
-            class="page-input"
-          />
-          <span class="total-pages">/ {totalPages}</span>
-        </span>
-      </div>
-      <div class="progress-details">
-        <span class="pages-left">{totalPages - currentPage} {t("pdf.pagesLeft")}</span>
-        <div class="progress-bar-container">
-          <div class="progress-bar-fill" style="width: {(currentPage / totalPages) * 100}%"></div>
+          <div
+            bind:this={textLayer}
+            class="text-layer debug-text-layer"
+            draggable="false"
+            role="presentation"
+            ondragstart={(e) => e.preventDefault()}
+          ></div>
+          <div class="debug-info-overlay">
+            <div>Selection: {selectedText || 'None'}</div>
+            <div>Pos: {selectionPosition ? `x:${Math.round(selectionPosition.x)} y:${Math.round(selectionPosition.y)}` : 'None'}</div>
+            <div>Layer: {textLayer ? 'Exists' : 'Missing'}</div>
+            <div>Spans: {textLayer?.children?.length || 0}</div>
+          </div>
+          {#if showToolbar && selectionPosition}
+            <div
+              class="toolbar-container"
+              class:below={selectionPlacement === "below"}
+              style="left: {selectionPosition.x}px; top: {selectionPosition.y}px;"
+            >
+              <HighlightToolbar
+                {selectedText}
+                selectionBounds={lastSelectionBounds}
+                bookId={bookId || filePath}
+                pageNumber={currentPage}
+                cfi={selectedCfi}
+                hasSelectionAnchor={selectionHasAnchor}
+                {t}
+                onClose={hideToolbar}
+              />
+            </div>
+          {/if}
         </div>
-        <span class="percent-complete">{Math.round((currentPage / totalPages) * 100)}%</span>
+      </div>
+    </div>
+    <div class="pdf-footer" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
+      <div class="footer-content">
+        <div class="footer-left">
+          <span class="page-info">
+            <input
+              type="number"
+              min="1"
+              max={totalPages}
+              value={currentPage}
+              onchange={goToPage}
+              class="page-input"
+            />
+            <span class="total-pages">/ {totalPages}</span>
+          </span>
+        </div>
+        <div class="progress-details">
+          <span class="pages-left">{totalPages - currentPage} {t("pdf.pagesLeft")}</span>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="width: {(currentPage / totalPages) * 100}%"></div>
+          </div>
+          <span class="percent-complete">{Math.round((currentPage / totalPages) * 100)}%</span>
+        </div>
       </div>
     </div>
   </div>
-</div>
-  </div>
-</div>
 </ErrorBoundary>
 
 <style>

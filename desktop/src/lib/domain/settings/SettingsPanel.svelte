@@ -777,59 +777,6 @@
     border-bottom-color: var(--color-primary);
   }
 
-  .filters {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  .filter-select {
-    flex: 1;
-    padding: 6px 8px;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    font-size: 13px;
-    background: var(--color-surface);
-    color: var(--color-primary);
-  }
-
-  .loading,
-  .empty {
-    padding: 24px;
-    text-align: center;
-    font-size: 13px;
-    color: var(--color-text-muted, var(--color-secondary));
-  }
-
-  .item-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .item {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 8px;
-    border-radius: 4px;
-    margin-bottom: 8px;
-    background: var(--color-surface-hover, var(--color-surface-dim));
-  }
-
-  .color-indicator {
-    width: 4px;
-    height: 100%;
-    min-height: 40px;
-    border-radius: 2px;
-    flex-shrink: 0;
-  }
-
-  .item-content {
-    flex: 1;
-    min-width: 0;
-  }
-
   .theme-preview-container {
     display: flex;
     gap: 8px;

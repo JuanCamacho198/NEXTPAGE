@@ -785,30 +785,21 @@
     textLayer.style.pointerEvents = "auto";
 
     try {
-      // @ts-ignore
+      const pdfLibWithTextLayer = pdfjsLib as any;
       if (pdfjsLib.TextLayer) {
-        // @ts-ignore
-        const textLayerInstance = new pdfjsLib.TextLayer({
+        const textLayerInstance = new (pdfjsLib as any).TextLayer({
           container: textLayer,
           viewport,
-          textContentSource: textContent,
+          textContentSource: textContent as any,
         });
         await textLayerInstance.render();
       } else {
-
-
-
-
-
-
-
-        const pdfLibWithTextLayer = pdfjsLib as any;
         const task = pdfLibWithTextLayer.renderTextLayer?.({
           container: textLayer,
           viewport,
           textDivs: [],
           enhanceTextSelection: true,
-          textContentSource: textContent,
+          textContentSource: textContent as any,
         });
         if (task?.promise) await task.promise;
       }

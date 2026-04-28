@@ -297,6 +297,7 @@
     if (intent === "scrollDown") {
       event.preventDefault();
       scrollByVerticalStep(VERTICAL_SCROLL_STEP_PX);
+      return;
     }
   }
 

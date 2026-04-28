@@ -136,7 +136,8 @@
 
   // Reset page when filters change
   $effect(() => {
-    searchQuery; selectedColor; selectedBookId; selectedDateRange;
+    // Tracking dependencies to reset page
+    void [searchQuery, selectedColor, selectedBookId, selectedDateRange];
     currentPage = 1;
   });
 

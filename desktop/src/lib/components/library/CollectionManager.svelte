@@ -1,11 +1,7 @@
 <script lang="ts">
   import type { CollectionDto, CreateCollectionInput } from "$lib/types";
   import { createCollection, deleteCollection, listCollections } from "$lib/api/tauriClient";
-
-  type Props = {
-    open: boolean;
-    onClose: () => void;
-  };
+  import { COLOR_OPTIONS, type Props } from "./collectionManagerState.svelte";
 
   let { open, onClose }: Props = $props();
 
@@ -16,11 +12,6 @@
   let editingId = $state<number | null>(null);
   let editName = $state("");
   let editColor = $state("");
-
-  const colorOptions = [
-    "#6366f1", "#8b5cf6", "#ec4899", "#ef4444", 
-    "#f97316", "#eab308", "#22c55e", "#14b8a6", "#0ea5e9"
-  ];
 
   async function loadCollections() {
     loading = true;
@@ -118,7 +109,7 @@
               bind:value={newName}
             />
             <div class="flex gap-1">
-              {#each colorOptions as color}
+              {#each COLOR_OPTIONS as color}
                 <button
                   type="button"
                   class="h-8 w-8 rounded-full transition-transform hover:scale-110"

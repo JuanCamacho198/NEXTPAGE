@@ -14,6 +14,22 @@
     PDF_SCALE_STEP,
   } from "./pdf/pdfNavigation";
   import { resolveReaderArrowIntent } from "./epub/keyboardNav";
+  import {
+    TOOLBAR_OFFSET,
+    TOOLBAR_WIDTH_ESTIMATE,
+    TOOLBAR_EDGE_PADDING,
+    VERTICAL_SCROLL_STEP_PX,
+    ZOOM_COMMIT_DELAY_MS,
+    ZOOM_EPSILON,
+    SELECTION_X_PADDING_PX,
+    SELECTION_Y_INSET_PX,
+    SELECTION_LINE_TOLERANCE_PX,
+    resolveThemePalette,
+    clamp,
+    clampSelectionPoint,
+    scaleOptions,
+    type SelectionOverlayRect,
+  } from "./pdfState.svelte";
 
   type Props = {
     filePath: string;
@@ -100,16 +116,6 @@
   let lastLoadedFilePath: string | null = null;
   let committedScale = $state(DEFAULT_PDF_SCALE);
   const outlinePageCache = new Map<string, number>();
-  const scaleOptions = Array.from({ length: 26 }, (_, index) => (50 + index * 10) / 100);
-  const TOOLBAR_OFFSET = 18;
-  const TOOLBAR_WIDTH_ESTIMATE = 320;
-  const TOOLBAR_EDGE_PADDING = 16;
-  const VERTICAL_SCROLL_STEP_PX = 120;
-  const ZOOM_COMMIT_DELAY_MS = 120;
-  const ZOOM_EPSILON = 0.001;
-  const SELECTION_X_PADDING_PX = 3;
-  const SELECTION_Y_INSET_PX = 1;
-  const SELECTION_LINE_TOLERANCE_PX = 4;
 
   type RefLike = { num: number; gen: number };
   type PdfRefProxy = Parameters<pdfjsLib.PDFDocumentProxy["getPageIndex"]>[0];
@@ -119,52 +125,9 @@
     depth: number;
   };
 
-  type SelectionOverlayRect = {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  };
-
   const isStaleLoad = (requestId: number) => requestId !== activeLoadRequestId;
 
   const isStaleNavigation = (requestId: number) => requestId !== activeNavigationRequestId;
-
-  const clamp = (value: number, min: number, max: number) => {
-    return Math.min(max, Math.max(min, Math.round(value)));
-  };
-
-  const clampSelectionPoint = (value: number, min: number, max: number) => {
-    if (max < min) {
-      return min;
-    }
-
-    return Math.min(max, Math.max(min, value));
-  };
-
-  const resolveThemePalette = (themeMode: ReaderThemeMode) => {
-    if (themeMode === "sepia") {
-      return {
-        rootBackground: "#efe2cc",
-        surfaceBackground: "#f6ebd8",
-        textColor: "#2f2416",
-      };
-    }
-
-    if (themeMode === "night") {
-      return {
-        rootBackground: "#0f1320",
-        surfaceBackground: "#161c2d",
-        textColor: "#e8ecf7",
-      };
-    }
-
-    return {
-      rootBackground: "#f4efe1",
-      surfaceBackground: "#fbf7ed",
-      textColor: "#221a12",
-    };
-  };
 
   const readerThemePalette = $derived(resolveThemePalette(readerSettings.themeMode));
   const visualFilterStyle = $derived(

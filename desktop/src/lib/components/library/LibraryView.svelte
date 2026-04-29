@@ -7,33 +7,13 @@
   import Panel from "../ui/layout/Panel.svelte";
   import type { LibraryBookDto, CollectionDto } from "$lib/types";
   import type { MessageKey } from "../../i18n";
-
-  const LIBRARY_VIEW_MODE = {
-    LIST: "list",
-    GRID: "grid",
-  } as const;
-
-  type LibraryViewMode = (typeof LIBRARY_VIEW_MODE)[keyof typeof LIBRARY_VIEW_MODE];
-
-  type Props = {
-    books: LibraryBookDto[];
-    collections?: CollectionDto[];
-    selectedBookId?: string | null;
-    selectedCollectionId?: string | null;
-    isLoading?: boolean;
-    disabledReason?: string | null;
-    viewMode?: LibraryViewMode;
-    onSelect?: (book: LibraryBookDto) => void;
-    onOpen?: (book: LibraryBookDto) => void;
-    onHide?: (book: LibraryBookDto) => void;
-    onEdit?: (book: LibraryBookDto) => void;
-    onToggleView?: (mode: LibraryViewMode) => void;
-    onCollectionSelect?: (collectionId: string | null) => void;
-    onManageCollections?: () => void;
-    onImportFolder?: () => void;
-    isImportingFolder?: boolean;
-    t: (key: MessageKey, params?: Record<string, string | number>) => string;
-  };
+  import {
+    LIBRARY_VIEW_MODE,
+    formatUpdatedAt,
+    formatProgress,
+    type LibraryViewMode,
+    type Props,
+  } from "./libraryState.svelte";
 
   let {
     books,
@@ -82,16 +62,6 @@
       return matchesSearch && matchesCollection;
     });
   });
-
-  const formatUpdatedAt = (iso: string) => {
-    const parsed = new Date(iso);
-    if (Number.isNaN(parsed.getTime())) {
-      return t("settings.unknownBook");
-    }
-    return parsed.toLocaleDateString();
-  };
-
-  const formatProgress = (progress: number) => `${Math.round(progress)}%`;
 </script>
 
 <Panel title={t("library.title")} variant="default" padding="md">
@@ -261,7 +231,7 @@
                       <p class="line-clamp-2 min-w-0 break-words text-sm font-semibold text-[var(--color-primary)]">{book.title}</p>
                       <p class="truncate text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}</p>
                       <p class="mt-1 min-w-0 truncate text-xs text-[var(--color-text-muted)]">
-                        {book.currentPage}/{book.totalPages || "-"} · {formatProgress(book.progressPercentage)} · {t("library.updated")} {formatUpdatedAt(book.updatedAt)}
+                        {book.currentPage}/{book.totalPages || "-"} · {formatProgress(book.progressPercentage)} · {t("library.updated")} {formatUpdatedAt(book.updatedAt, t)}
                       </p>
                       {#if book.collectionIds && book.collectionIds.length > 0}
                         <div class="mt-1 flex flex-wrap gap-1">

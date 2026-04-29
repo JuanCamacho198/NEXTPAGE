@@ -4,15 +4,17 @@
   import type { HighlightDto, LibraryBookDto } from "$lib/types";
   import { listHighlights, deleteHighlight } from "$lib/api/tauriClient";
   import Pagination from "../ui/navigation/Pagination.svelte";
-import DropMenu from "../ui/navigation/DropMenu.svelte";
-import EmptyState from "../ui/feedback/EmptyState.svelte";
-import Skeleton from "../ui/feedback/Skeleton.svelte";
-import Button from "../ui/forms/Button.svelte";
-
-  type Props = {
-    books: LibraryBookDto[];
-    t: (key: MessageKey, params?: Record<string, string | number>) => string;
-  };
+  import DropMenu from "../ui/navigation/DropMenu.svelte";
+  import EmptyState from "../ui/feedback/EmptyState.svelte";
+  import Skeleton from "../ui/feedback/Skeleton.svelte";
+  import Button from "../ui/forms/Button.svelte";
+  import {
+    PAGE_SIZE,
+    HIGHLIGHT_COLORS,
+    formatDate,
+    filterHighlights,
+    type Props,
+  } from "./highlightsState.svelte";
 
   let { books, t }: Props = $props();
 
@@ -24,17 +26,6 @@ import Button from "../ui/forms/Button.svelte";
   let selectedBookId = $state<string | null>(null);
   let selectedDateRange = $state<string | null>(null);
   let currentPage = $state(1);
-  const PAGE_SIZE = 6;
-
-  // ── Highlight colors ──
-  const HIGHLIGHT_COLORS = [
-    { key: "yellow", hex: "#facc15" },
-    { key: "green", hex: "#4ade80" },
-    { key: "blue", hex: "#60a5fa" },
-    { key: "purple", hex: "#c084fc" },
-    { key: "pink", hex: "#f472b6" },
-    { key: "orange", hex: "#fb923c" },
-  ] as const;
 
   // ── Derived ──
   const bookMap = $derived(new Map(books.map((b) => [b.id, b])));
@@ -120,19 +111,6 @@ import Button from "../ui/forms/Button.svelte";
     selectedDateRange = null;
     currentPage = 1;
   }
-
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleDateString("es-ES", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }) + " — " + d.toLocaleTimeString("es-ES", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
 
   // Reset page when filters change
   $effect(() => {

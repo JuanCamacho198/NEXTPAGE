@@ -2,60 +2,22 @@
   import SafeCover from "../library/SafeCover.svelte";
   import type { LibraryBookDto, ReadingStatsSummaryDto } from "$lib/types";
   import { getSafeProgressPercentage } from "$lib/stores/homeState";
-
-  type StatsBook = LibraryBookDto & {
-    isFavorite?: boolean;
-    toRead?: boolean;
-    completed?: boolean;
-  };
-
-  type PeriodKey = "week" | "month" | "year" | "all";
-  type Granularity = "day" | "week" | "month";
-  type GenreKey = "Desarrollo personal" | "Productividad" | "Finanzas" | "Ficcion" | "Otros";
-
-  type Props = {
-    books: StatsBook[];
-    stats: ReadingStatsSummaryDto | null;
-    isLoading?: boolean;
-    disabledReason?: string | null;
-  };
+  import {
+    periodLabels,
+    hashNumber,
+    inferGenre,
+    calculateGenreDistribution,
+    type StatsBook,
+    type PeriodKey,
+    type Granularity,
+    type GenreKey,
+    type Props,
+  } from "./readingStatsState.svelte";
 
   let { books, stats, isLoading = false, disabledReason = null }: Props = $props();
 
   let activePeriod = $state<PeriodKey>("month");
   let activeGranularity = $state<Granularity>("day");
-
-  const periodLabels: Record<PeriodKey, string> = {
-    week: "Esta semana",
-    month: "Este mes",
-    year: "Este año",
-    all: "Todo el tiempo",
-  };
-
-  const hashNumber = (value: string) => {
-    let hash = 0;
-    for (const char of value) {
-      hash = (hash * 31 + char.charCodeAt(0)) % 997;
-    }
-    return hash;
-  };
-
-  const inferGenre = (book: StatsBook): GenreKey => {
-    const text = `${book.title} ${book.author}`.toLowerCase();
-    if (/(habitos|mindset|vida|feliz|atomic|self|mejora)/.test(text)) {
-      return "Desarrollo personal";
-    }
-    if (/(deep work|productividad|eficacia|principios|efectiva|work)/.test(text)) {
-      return "Productividad";
-    }
-    if (/(rico|finanza|money|wealth|inversion)/.test(text)) {
-      return "Finanzas";
-    }
-    if (/(novela|cuento|fiction|ficcion)/.test(text)) {
-      return "Ficcion";
-    }
-    return "Otros";
-  };
 
   const genreDistribution = $derived.by(() => {
     const buckets: Record<GenreKey, number> = {

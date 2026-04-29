@@ -1,20 +1,20 @@
 <script lang="ts">
   import Button from "../ui/forms/Button.svelte";
-import DropMenu from "../ui/navigation/DropMenu.svelte";
+  import DropMenu from "../ui/navigation/DropMenu.svelte";
   import SafeCover from "../library/SafeCover.svelte";
-  import { getSafeProgressPercentage } from "$lib/stores/homeState";
-  import type { LibraryBookDto } from "$lib/types";
-
-  type ShelfBook = LibraryBookDto & {
-    filePath: string;
-    isFavorite?: boolean;
-    toRead?: boolean;
-    completed?: boolean;
-  };
-
-  type ShelfFilter = "all" | "reading" | "pending" | "completed" | "favorites";
-  type ShelfSort = "date_added" | "last_read" | "progress" | "title";
-  type ShelfView = "grid" | "list";
+  import {
+    FILTER_OPTIONS,
+    SORT_OPTIONS,
+    getSafeProgressPercentage,
+    getBookState,
+    getStateLabel,
+    getTimestamp,
+    formatPercent,
+    type ShelfBook,
+    type ShelfFilter,
+    type ShelfSort,
+    type ShelfView,
+  } from "./libraryShelfState.svelte";
 
   type Props = {
     books: ShelfBook[];
@@ -44,60 +44,6 @@ import DropMenu from "../ui/navigation/DropMenu.svelte";
   let activeFilter = $state<ShelfFilter>("all");
   let activeSort = $state<ShelfSort>("date_added");
   let activeView = $state<ShelfView>("grid");
-
-  const FILTER_OPTIONS: Array<{ key: ShelfFilter; label: string }> = [
-    { key: "all", label: "Todos" },
-    { key: "reading", label: "Leyendo" },
-    { key: "pending", label: "Pendientes" },
-    { key: "completed", label: "Completados" },
-    { key: "favorites", label: "Favoritos" },
-  ];
-
-  const SORT_OPTIONS: Array<{ key: ShelfSort; label: string }> = [
-    { key: "date_added", label: "Fecha agregada" },
-    { key: "last_read", label: "Ultima lectura" },
-    { key: "progress", label: "Progreso" },
-    { key: "title", label: "Titulo" },
-  ];
-
-  const getBookState = (book: ShelfBook): ShelfFilter => {
-    const progress = getSafeProgressPercentage(book);
-
-    if (book.completed || progress >= 100) {
-      return "completed";
-    }
-
-    if (progress > 0) {
-      return "reading";
-    }
-
-    if (book.isFavorite) {
-      return "favorites";
-    }
-
-    return "pending";
-  };
-
-  const getStateLabel = (book: ShelfBook) => {
-    if (book.completed || getSafeProgressPercentage(book) >= 100) {
-      return "Completado";
-    }
-
-    if (getSafeProgressPercentage(book) > 0) {
-      return "En lectura";
-    }
-
-    if (book.isFavorite) {
-      return "Favorito";
-    }
-
-    return "Pendiente";
-  };
-
-  const getTimestamp = (book: ShelfBook) => {
-    const parsed = Date.parse(book.updatedAt);
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
 
   const totalBooks = $derived(books.length);
   const readingBooks = $derived(books.filter((book) => getSafeProgressPercentage(book) > 0 && getSafeProgressPercentage(book) < 100).length);
@@ -152,8 +98,6 @@ import DropMenu from "../ui/navigation/DropMenu.svelte";
       return getTimestamp(right) - getTimestamp(left);
     });
   });
-
-  const formatPercent = (book: ShelfBook) => `${Math.round(getSafeProgressPercentage(book))}%`;
 </script>
 
 <section class="space-y-5">

@@ -1,20 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-
-  type Props = {
-    bookId: string;
-    isFavorite: boolean;
-    readLabel: string;
-    editLabel: string;
-    removeLabel: string;
-    favoriteAddLabel: string;
-    favoriteRemoveLabel: string;
-    triggerLabel: string;
-    onRead?: () => void;
-    onEdit: () => void;
-    onRemove: () => void;
-    onToggleFavorite: () => void;
-  };
+  import { getMenuId, type Props } from "./shelfActionState.svelte";
 
   const {
     bookId,
@@ -35,8 +21,6 @@
   let containerEl = $state<HTMLDivElement | null>(null);
   let triggerEl = $state<HTMLButtonElement | null>(null);
   let menuEl = $state<HTMLDivElement | null>(null);
-
-  const getMenuId = () => `shelf-actions-menu-${bookId}`;
 
   const getMenuButtons = () => {
     if (!menuEl) {
@@ -226,7 +210,7 @@
     aria-label={triggerLabel}
     aria-haspopup="menu"
     aria-expanded={isOpen}
-    aria-controls={getMenuId()}
+    aria-controls={getMenuId(bookId)}
     data-testid={`shelf-actions-trigger-${bookId}`}
     onclick={toggleMenu}
     onkeydown={handleTriggerKeyDown}
@@ -237,7 +221,7 @@
   {#if isOpen}
     <div
       bind:this={menuEl}
-      id={getMenuId()}
+      id={getMenuId(bookId)}
       role="menu"
       tabindex="-1"
       aria-label={triggerLabel}

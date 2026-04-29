@@ -2,4 +2,4 @@ export * from "./api";
 export * from "./stores";
 export * from "./types";
 
-export * from "./epub";
+export * from "./domain/reader/epub/epub";

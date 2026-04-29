@@ -1,6 +1,6 @@
 import * as pdfjsLib from "pdfjs-dist";
 import { ReaderError, handleError } from "$lib/utils/errors";
-import { DEFAULT_PDF_SCALE } from "$lib/domain/reader/pdfNavigation";
+import { DEFAULT_PDF_SCALE } from "$lib/domain/reader/pdf/pdfNavigation";
 import { readable, writable } from "svelte/store";
 
 export interface PdfStateOptions {

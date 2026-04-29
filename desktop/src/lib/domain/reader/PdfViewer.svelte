@@ -12,8 +12,8 @@
     DEFAULT_PDF_SCALE,
     isPageWithinBounds,
     PDF_SCALE_STEP,
-  } from "./pdfNavigation";
-  import { resolveReaderArrowIntent } from "./keyboardNav";
+  } from "./pdf/pdfNavigation";
+  import { resolveReaderArrowIntent } from "./epub/keyboardNav";
 
   type Props = {
     filePath: string;

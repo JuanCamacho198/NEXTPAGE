@@ -4,7 +4,7 @@
   import ePub from "epubjs";
   import type { MessageKey } from "$lib/i18n";
   import type { ReaderSettings, ReaderThemeMode } from "$lib/types";
-  import { resolveReaderArrowIntent } from "./keyboardNav";
+  import { resolveReaderArrowIntent } from "./epub/keyboardNav";
 
   type Props = {
     filePath: string;

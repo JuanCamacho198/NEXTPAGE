@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, cleanup, fireEvent } from "@testing-library/svelte";
 import PdfViewer from "$lib/domain/reader/PdfViewer.svelte";
 import EpubViewer from "$lib/domain/reader/EpubViewer.svelte";
-import type { ReaderArrowIntent } from "$lib/domain/reader/keyboardNav";
+import type { ReaderArrowIntent } from "$lib/domain/reader/epub/keyboardNav";
 
 vi.mock("$lib/stores/reader", () => ({
   readerStore: {

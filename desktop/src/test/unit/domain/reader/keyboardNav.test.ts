@@ -3,7 +3,7 @@ import {
   canHandleReaderArrowNav,
   resolveReaderArrowIntent,
   type ReaderArrowIntent,
-} from "$lib/domain/reader/keyboardNav";
+} from "$lib/domain/reader/epub/keyboardNav";
 
 const createKeyboardEvent = (target: EventTarget | null, overrides: Partial<KeyboardEvent> = {}) => {
   return {

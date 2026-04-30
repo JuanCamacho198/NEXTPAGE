@@ -26,6 +26,10 @@ captures/
 .run-graphify.py
 .opencode
 graphify-out
+.agents
+.opencode
+AGENTS.md
+skills-lock.json
 codedb.snapshot
 node_modules/
 dist/

@@ -231,7 +231,7 @@
           <div class="highlight-content">
             <p class="highlight-text">{highlight.text}</p>
             {#if highlight.note}
-              <p class="highlight-note">📝 {highlight.note}</p>
+              <p class="highlight-note"><Icon name="note" size="sm" /> {highlight.note}</p>
             {/if}
             <p class="highlight-chapter">{t("home.highlightsPageLabel")} {highlight.pageNumber}{book ? ` · ${book.title}` : ""}</p>
           </div>
@@ -242,7 +242,7 @@
                 {#if book.coverPath}
                   <img src={book.coverPath} alt={book.title} />
                 {:else}
-                  <span class="cover-placeholder">📖</span>
+                  <span class="cover-placeholder"><Icon name="book" size="lg" /></span>
                 {/if}
               </div>
               <p class="highlight-book-title">{book.title}</p>

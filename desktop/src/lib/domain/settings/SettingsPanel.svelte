@@ -343,7 +343,7 @@
     : "w-full rounded-xl border border-[color:var(--color-border)] bg-background shadow-sm flex flex-col overflow-hidden"}>
     <div class="flex items-center justify-between p-4 border-b border-zinc-200">
       <h2 class="m-0 text-lg font-semibold text-emerald-50">{t("settings.title")}</h2>
-      <button class="bg-transparent border-none text-xl cursor-pointer text-zinc-600 p-1 flex items-center justify-center hover:text-zinc-900" onclick={closePanel} aria-label={t("settings.close")}>✕</button>
+      <button class="bg-transparent border-none text-xl cursor-pointer text-zinc-600 p-1 flex items-center justify-center hover:text-zinc-900" onclick={closePanel} aria-label={t("settings.close")}><Icon name="close" size="md" /></button>
     </div>
 
     <div class="tabs">
@@ -611,7 +611,7 @@
             "
           >
             <div class="preview-header">
-              <span class="preview-icon">☰</span>
+              <span class="preview-icon"><Icon name="menu" size="sm" /></span>
               <span class="preview-title">NextPage</span>
             </div>
             <div class="preview-content">
@@ -680,7 +680,7 @@
         <Panel title={t("settings.about")}>
           <div class="about-card">
             <div class="about-logo">
-              <span class="logo-icon">📚</span>
+              <span class="logo-icon"><Icon name="library" size="lg" /></span>
               <div class="logo-text">
                 <span class="app-name">NextPage</span>
                 <span class="app-version">Version {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}</span>

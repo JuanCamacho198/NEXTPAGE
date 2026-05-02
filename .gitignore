@@ -27,6 +27,7 @@ captures/
 .opencode
 graphify-out
 .agents
+.atl
 .opencode
 skills-lock.json
 codedb.snapshot

@@ -14,13 +14,6 @@ export const shelfViewMode = writable<"grid" | "list">("grid");
 export const shelfRawQuery = writable<string>("");
 
 export function getShelfBooks(books: LibraryBookDto[]) {
-  const shelfState = {
-    tab: "all",
-    sortKey: "progress",
-    viewMode: "grid" as const,
-    rawQuery: ""
-  };
-  
   let currentTab = "all";
   let currentSort = "progress";
   let currentView: "grid" | "list" = "grid";
@@ -35,7 +28,10 @@ export function getShelfBooks(books: LibraryBookDto[]) {
     tab: currentTab,
     sortKey: currentSort,
     viewMode: currentView,
-    rawQuery: currentQuery
+    rawQuery: currentQuery,
+    searchText: "",
+    smartTokens: [],
+    invalidTokens: []
   };
   
   const { myShelfBooks } = partitionHomeBooks(books);

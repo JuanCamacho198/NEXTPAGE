@@ -53,7 +53,7 @@
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   } = $props();
 
-  const libState = new LibraryState();
+  
 
   let searchQuery = $state("");
   let debounceTimer: ReturnType<typeof setTimeout> | undefined = $state(undefined);
@@ -218,7 +218,7 @@
                 </SafeCover>
                 <p class="line-clamp-2 min-w-0 break-words text-sm font-semibold text-[var(--color-primary)]">{book.title}</p>
                 <p class="line-clamp-1 min-w-0 truncate text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")}</p>
-                <p class="mt-2 min-w-0 truncate text-xs text-[var(--color-text-muted)]">{libState.formatProgress(book.progressPercentage)} · {book.minutesRead} {t("library.min")}</p>
+                <p class="mt-2 min-w-0 truncate text-xs text-[var(--color-text-muted)]">{LibraryState.formatProgress(book.progressPercentage)} · {book.minutesRead} {t("library.min")}</p>
                 {#if book.collectionIds && book.collectionIds.length > 0}
                   <div class="mt-2 flex flex-wrap gap-1">
                     {#each collections.filter(c => book.collectionIds?.includes(c.id)) as collection}
@@ -251,7 +251,7 @@
                       <p class="line-clamp-2 min-w-0 break-words text-sm font-semibold text-[var(--color-primary)]">{book.title}</p>
                       <p class="truncate text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}</p>
                       <p class="mt-1 min-w-0 truncate text-xs text-[var(--color-text-muted)]">
-                        {book.currentPage}/{book.totalPages || "-"} · {libState.formatProgress(book.progressPercentage)} · {t("library.updated")} {libState.formatUpdatedAt(book.updatedAt, t)}
+                        {book.currentPage}/{book.totalPages || "-"} · {LibraryState.formatProgress(book.progressPercentage)} · {t("library.updated")} {LibraryState.formatUpdatedAt(book.updatedAt, t)}
                       </p>
                       {#if book.collectionIds && book.collectionIds.length > 0}
                         <div class="mt-1 flex flex-wrap gap-1">

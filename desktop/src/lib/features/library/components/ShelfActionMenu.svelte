@@ -30,7 +30,7 @@
     onToggleFavorite: () => void;
   } = $props();
 
-  const libState = new LibraryState();
+  
 
   let isOpen = $state(false);
   let containerEl = $state<HTMLDivElement | null>(null);
@@ -225,7 +225,7 @@
     aria-label={triggerLabel}
     aria-haspopup="menu"
     aria-expanded={isOpen}
-    aria-controls={libState.getShelfMenuId(bookId)}
+    aria-controls={LibraryState.getShelfMenuId(bookId)}
     data-testid={`shelf-actions-trigger-${bookId}`}
     onclick={toggleMenu}
     onkeydown={handleTriggerKeyDown}
@@ -236,7 +236,7 @@
   {#if isOpen}
     <div
       bind:this={menuEl}
-      id={libState.getShelfMenuId(bookId)}
+      id={LibraryState.getShelfMenuId(bookId)}
       role="menu"
       tabindex="-1"
       aria-label={triggerLabel}

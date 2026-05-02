@@ -42,8 +42,6 @@
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   } = $props();
 
-  const libState = new LibraryState();
-
   const effectiveSummary = $derived(importProgress?.summary ?? importSummary ?? null);
   const currentFileName = $derived(importProgress?.currentFile?.fileName ?? null);
   const canStartImport = $derived(
@@ -126,8 +124,8 @@
             <li class="p-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <p class="truncate text-sm font-medium text-[var(--color-primary)]">{row.file.fileName}</p>
-                <span class={`text-xs font-semibold uppercase ${libState.getBulkImportStatusClass(row.status)}`}>
-                  {t(libState.getBulkImportStatusKey(row.status))}
+                <span class={`text-xs font-semibold uppercase ${LibraryState.getBulkImportStatusClass(row.status)}`}>
+                  {t(LibraryState.getBulkImportStatusKey(row.status))}
                 </span>
               </div>
               <p class="text-xs text-[var(--color-text-muted)]">{row.file.format.toUpperCase()}</p>
@@ -145,8 +143,8 @@
             <li class="p-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <p class="truncate text-sm font-medium text-[var(--color-primary)]">{row.file.fileName}</p>
-                <span class={`text-xs font-semibold uppercase ${libState.getBulkImportStatusClass(row.status)}`}>
-                  {t(libState.getBulkImportStatusKey(row.status))}
+                <span class={`text-xs font-semibold uppercase ${LibraryState.getBulkImportStatusClass(row.status)}`}>
+                  {t(LibraryState.getBulkImportStatusKey(row.status))}
                 </span>
               </div>
               <p class="text-xs text-[var(--color-text-muted)]">{row.file.format.toUpperCase()}</p>

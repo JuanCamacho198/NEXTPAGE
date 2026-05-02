@@ -199,8 +199,6 @@
   role="group"
   aria-label={triggerLabel}
   class="relative inline-block"
-  onmouseenter={handleContainerMouseEnter}
-  onmouseleave={handleContainerMouseLeave}
   onfocusout={handleContainerFocusOut}
 >
   <button

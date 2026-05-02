@@ -5,6 +5,7 @@
   import { listHighlights, deleteHighlight } from "$lib/api/tauriClient";
   import Pagination from "../ui/navigation/Pagination.svelte";
   import DropMenu from "../ui/navigation/DropMenu.svelte";
+  import Icon from "../ui/Icon.svelte";
   import EmptyState from "../ui/feedback/EmptyState.svelte";
   import Skeleton from "../ui/feedback/Skeleton.svelte";
   import Button from "../ui/forms/Button.svelte";
@@ -254,22 +255,22 @@
 
             <DropMenu position="bottom-right">
               {#snippet trigger()}
-                <button class="highlight-menu-btn" aria-label="Opciones">⋯</button>
+                <button class="highlight-menu-btn" aria-label="Opciones"><Icon name="more-dot" size="sm" /></button>
               {/snippet}
               <div class="flex flex-col">
                 <button class="menu-item" onclick={() => handleCopy(highlight.text)}>
-                  <span>📋</span> {t("home.highlightsCopy")}
+                  <Icon name="copy" size="sm" /> {t("home.highlightsCopy")}
                 </button>
                 <button class="menu-item">
-                  <span>📖</span> {t("home.highlightsViewInBook")}
+                  <Icon name="book" size="sm" /> {t("home.highlightsViewInBook")}
                 </button>
                 {#if highlight.note}
                   <button class="menu-item">
-                    <span>✏️</span> {t("home.highlightsEditNote")}
+                    <Icon name="edit" size="sm" /> {t("home.highlightsEditNote")}
                   </button>
                 {/if}
                 <button class="menu-item menu-item--danger" onclick={() => handleDelete(highlight.id)}>
-                  <span>🗑️</span> {t("home.highlightsDelete")}
+                  <Icon name="trash" size="sm" /> {t("home.highlightsDelete")}
                 </button>
               </div>
             </DropMenu>

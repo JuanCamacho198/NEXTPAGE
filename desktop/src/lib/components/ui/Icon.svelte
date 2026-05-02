@@ -82,7 +82,7 @@
   };
 </script>
 
-<div class="icon-wrapper relative inline-flex" class:has-tooltip={!!title}>
+<div class="group relative inline-flex" class:has-tooltip={!!title}>
   <svg
     class="{sizeClasses[size]} {className}"
     fill="none"
@@ -96,43 +96,15 @@
     <path d={paths[name]} />
   </svg>
   {#if title}
-    <span class="tooltip" role="tooltip">{title}</span>
+    <span
+      class="absolute bottom-full left-1/2 -translate-x-1/2 translate-y-1
+             bg-[var(--color-surface)] text-[var(--color-text)] p-1 rounded text-xs
+             whitespace-nowrap opacity-0 invisible transition-all duration-150 ease
+             pointer-events-none z-50 shadow-[0_2px_8px_rgba(0,0,0,0.2)]
+             group-hover:opacity-100 group-hover:visible group-hover:translate-y-0
+             after:absolute after:top-full after:left-1/2 after:-translate-x-1/2
+             after:border-4 after:border-transparent after:border-t-[var(--color-surface)]"
+      role="tooltip"
+    >{title}</span>
   {/if}
 </div>
-
-<style>
-  .icon-wrapper.has-tooltip:hover .tooltip {
-    opacity: 1;
-    visibility: visible;
-    transform: translateX(-50%) translateY(0);
-  }
-
-  .tooltip {
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%) translateY(4px);
-    background: var(--color-surface, #1e293b);
-    color: var(--color-text, #f1f5f9);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.15s ease;
-    pointer-events: none;
-    z-index: 50;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  }
-
-  .tooltip::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 4px solid transparent;
-    border-top-color: var(--color-surface, #1e293b);
-  }
-</style>

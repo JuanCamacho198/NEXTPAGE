@@ -65,7 +65,7 @@
     onclick={onclick}
   >
     {#if media}
-      <div class="media">
+      <div class="[&_img]:w-full [&_img]:h-full [&_img]:object-cover">
         {@render media()}
       </div>
     {/if}
@@ -98,7 +98,7 @@
 {:else}
   <div class="{baseClasses} {variantClasses[variant]} {className}">
     {#if media}
-      <div class="media">
+      <div class="[&_img]:w-full [&_img]:h-full [&_img]:object-cover">
         {@render media()}
       </div>
     {/if}
@@ -129,11 +129,3 @@
     {/if}
   </div>
 {/if}
-
-<style>
-  .media :global(img) {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-</style>

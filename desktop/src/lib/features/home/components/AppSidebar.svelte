@@ -18,7 +18,6 @@
   let navItems = $derived([
     { id: "home", label: "Inicio", icon: "🏠", action: onNavigateHome },
     { id: "library", label: "Estantería", icon: "📚", action: onNavigateLibrary },
-    { id: "continue", label: t("app.continue"), icon: "📖", action: onNavigateHome },
     { id: "stats", label: "Estadísticas", icon: "📊", action: onNavigateStats },
     { id: "highlights", label: "Notas y resaltados", icon: "📝", action: onNavigateHighlights },
     { id: "settings", label: "Ajustes", icon: "⚙️", action: onNavigateSettings },

@@ -4,6 +4,7 @@
   import { getFileBytes } from "$lib/shared/api/tauriClient";
   import HighlightToolbar from "$lib/features/reader/components/HighlightToolbar.svelte";
   import ErrorBoundary from "$lib/shared/ui/feedback/ErrorBoundary.svelte";
+  import Icon from "$lib/components/ui/Icon.svelte";
   import type { MessageKey } from "$lib/shared/i18n";
   import type { PdfOutlineItem, ReaderSettings, ReaderThemeMode } from "$lib/shared/types";
   import {
@@ -1214,15 +1215,15 @@
         {t("pdf.contents")}
       </button>
       <button type="button" class="reader-nav-button" aria-label={t("pdf.previous")} onclick={goToPrevPage} disabled={currentPage <= 1}>
-        <span aria-hidden="true">&#8592;</span>
+        <Icon name="chevron-left" size="sm" />
         {t("pdf.previous")}
       </button>
       <button type="button" class="reader-nav-button" aria-label={t("pdf.next")} onclick={goToNextPage} disabled={currentPage >= totalPages}>
-        <span aria-hidden="true">&#8594;</span>
         {t("pdf.next")}
+        <Icon name="arrow-right" size="sm" />
       </button>
-      <button type="button" onclick={toggleFullscreen} disabled={!fullscreenSupported}>
-        {isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}
+      <button type="button" onclick={toggleFullscreen} disabled={!fullscreenSupported} title={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}>
+        <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
       </button>
       <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select">
         {#each scaleOptions as option (option)}

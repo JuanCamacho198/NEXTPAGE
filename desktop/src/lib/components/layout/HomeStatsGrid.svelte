@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ReadingStatsSummaryDto } from "$lib/types";
   import type { MessageKey } from "../../i18n";
+  import Icon from "../ui/Icon.svelte";
 
   type Props = {
     stats: ReadingStatsSummaryDto | null;
@@ -13,37 +14,37 @@
 
   const statItems = $derived([
     {
-      label: "Iniciados", // Replace with t() key if available, like t("stats.booksStarted")
+      label: "Iniciados",
       value: stats?.booksStarted?.toString() ?? "0",
-      icon: "📚",
+      icon: "book" as const,
       color: "var(--color-accent-blue)",
       bg: "rgba(73, 212, 255, 0.1)"
     },
     {
       label: "Completados",
       value: stats?.booksCompleted?.toString() ?? "0",
-      icon: "✅",
+      icon: "check" as const,
       color: "#4ade80",
       bg: "rgba(74, 222, 128, 0.1)"
     },
     {
       label: "Minutos leídos",
       value: stats?.totalMinutesRead?.toString() ?? "0",
-      icon: "⏱️",
+      icon: "clock" as const,
       color: "#a78bfa",
       bg: "rgba(167, 139, 250, 0.1)"
     },
     {
       label: "Sesiones",
       value: stats?.totalSessions?.toString() ?? "0",
-      icon: "📈",
+      icon: "trend-up" as const,
       color: "#fbbf24",
       bg: "rgba(251, 191, 36, 0.1)"
     },
     {
       label: "Progreso promedio",
       value: `${stats ? Math.round(stats.avgProgressPercentage) : 0}%`,
-      icon: "📊",
+      icon: "chart" as const,
       color: "#60a5fa",
       bg: "rgba(96, 165, 250, 0.1)"
     }
@@ -68,7 +69,7 @@
             {/if}
           </div>
           <div class="flex h-10 w-10 items-center justify-center rounded-full" style="background-color: {item.bg}; color: {item.color};">
-            <span class="text-lg">{item.icon}</span>
+            <Icon name={item.icon} size="md" title={item.label} />
           </div>
         </div>
         

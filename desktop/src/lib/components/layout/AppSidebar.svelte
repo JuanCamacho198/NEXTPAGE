@@ -2,7 +2,8 @@
   import type { AppRoute } from "../../stores/homeState";
   import type { MessageKey } from "../../i18n";
   import Button from "../ui/forms/Button.svelte";
-import ThemeToggle from "../ui/navigation/ThemeToggle.svelte";
+  import ThemeToggle from "../ui/navigation/ThemeToggle.svelte";
+  import Icon from "../ui/Icon.svelte";
 
   type Props = {
     activeRoute: AppRoute;
@@ -17,11 +18,11 @@ import ThemeToggle from "../ui/navigation/ThemeToggle.svelte";
   let { activeRoute, onNavigateHome, onNavigateLibrary, onNavigateStats, onNavigateHighlights, onNavigateSettings, t }: Props = $props();
 
   let navItems = $derived([
-    { id: "home", label: "Inicio", icon: "🏠", action: onNavigateHome },
-    { id: "library", label: "Estantería", icon: "📚", action: onNavigateLibrary },
-    { id: "stats", label: "Estadísticas", icon: "📊", action: onNavigateStats },
-    { id: "highlights", label: "Notas y resaltados", icon: "📝", action: onNavigateHighlights },
-    { id: "settings", label: "Ajustes", icon: "⚙️", action: onNavigateSettings },
+    { id: "home", label: "Inicio", icon: "home" as const, action: onNavigateHome },
+    { id: "library", label: "Estantería", icon: "library" as const, action: onNavigateLibrary },
+    { id: "stats", label: "Estadísticas", icon: "stats" as const, action: onNavigateStats },
+    { id: "highlights", label: "Notas y resaltados", icon: "highlights" as const, action: onNavigateHighlights },
+    { id: "settings", label: "Ajustes", icon: "settings" as const, action: onNavigateSettings },
   ]);
 </script>
 
@@ -45,7 +46,7 @@ import ThemeToggle from "../ui/navigation/ThemeToggle.svelte";
         }`}
         onclick={item.action}
       >
-        <span class="text-lg">{item.icon}</span>
+        <Icon name={item.icon} size="md" title={item.label} />
         {item.label}
       </button>
     {/each}

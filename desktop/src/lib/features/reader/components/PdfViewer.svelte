@@ -1222,8 +1222,9 @@
         {t("pdf.next")}
         <Icon name="arrow-right" size="sm" />
       </button>
-      <button type="button" onclick={toggleFullscreen} disabled={!fullscreenSupported} title={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}>
+      <button type="button" class="flex flex-col items-center gap-0.5" onclick={toggleFullscreen} disabled={!fullscreenSupported} title={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}>
         <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
+        <span class="text-[10px] leading-tight">{isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}</span>
       </button>
       <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select">
         {#each scaleOptions as option (option)}

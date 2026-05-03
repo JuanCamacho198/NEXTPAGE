@@ -44,7 +44,7 @@ Winston made for the stairs. It was no use trying the lift. Even at the best of 
 </script>
 
 <div
-  class="live-preview"
+  class="w-full rounded-lg overflow-hidden"
   style="
     --preview-bg: {colors.bg};
     --preview-text: {colors.text};
@@ -56,82 +56,18 @@ Winston made for the stairs. It was no use trying the lift. Even at the best of 
     --preview-contrast: {effectiveContrast};
   "
 >
-  <div class="preview-page">
-    <div class="preview-header">
-      <span class="preview-chapter">Chapter One</span>
-      <span class="preview-page-num">1</span>
+  <div class="flex flex-col min-h-[200px] rounded border border-[var(--color-border)]"
+    style="background: var(--preview-bg); color: var(--preview-text); font-family: var(--preview-font-family); font-size: var(--preview-font-size); line-height: 1.6; padding: var(--preview-margin);"
+  >
+    <div class="flex justify-between items-center pb-3 border-b border-[var(--preview-muted)] mb-3 opacity-70">
+      <span class="text-xs font-semibold uppercase tracking-wider">Chapter One</span>
+      <span class="text-xs">1</span>
     </div>
-    <div class="preview-content">
-      <p>{displayText.split('\n\n')[0]}</p>
+    <div class="flex-1">
+      <p class="m-0 text-indent-[1.5em]">{displayText.split('\n\n')[0]}</p>
     </div>
-    <div class="preview-footer">
-      <span class="preview-progress">12%</span>
+    <div class="flex justify-end pt-3 border-t border-[var(--preview-muted)] mt-3 opacity-70">
+      <span class="text-xs">12%</span>
     </div>
   </div>
 </div>
-
-<style>
-  .live-preview {
-    width: 100%;
-    border-radius: 8px;
-    overflow: hidden;
-    filter: brightness(var(--preview-brightness)) contrast(var(--preview-contrast));
-  }
-
-  .preview-page {
-    background: var(--preview-bg);
-    color: var(--preview-text);
-    font-family: var(--preview-font-family);
-    font-size: var(--preview-font-size);
-    line-height: 1.6;
-    padding: var(--preview-margin);
-    min-height: 200px;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-  }
-
-  .preview-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--preview-muted);
-    margin-bottom: 12px;
-    opacity: 0.7;
-  }
-
-  .preview-chapter {
-    font-size: 0.75em;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .preview-page-num {
-    font-size: 0.75em;
-  }
-
-  .preview-content {
-    flex: 1;
-  }
-
-  .preview-content p {
-    margin: 0;
-    text-indent: 1.5em;
-  }
-
-  .preview-footer {
-    display: flex;
-    justify-content: flex-end;
-    padding-top: 12px;
-    border-top: 1px solid var(--preview-muted);
-    margin-top: 12px;
-    opacity: 0.7;
-  }
-
-  .preview-progress {
-    font-size: 0.75em;
-  }
-</style>

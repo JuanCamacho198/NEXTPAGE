@@ -15,17 +15,16 @@
 
 <button
   id="theme-toggle-btn"
-  class="theme-toggle"
+  class="w-full flex items-center gap-[10px] rounded-[12px] p-[10px_12px] bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)] cursor-pointer transition-all duration-200 font-sans text-[13px] font-medium select-none -webkit-tap-highlight-transparent hover:bg-[var(--color-panel-accent)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-primary)] hover:shadow-[var(--shadow-soft)] active:scale-[0.98]"
   class:animating
   onclick={handleToggle}
   aria-label={$theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
   title={$theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
 >
-  <div class="icon-wrapper">
+  <div class="w-5 h-5 flex items-center justify-center flex-shrink-0 relative">
     <!-- Sun icon (visible in light mode) -->
     <svg
-      class="sun-icon"
-      class:hidden={$theme === "dark"}
+      class="absolute transition-all duration-[420ms] cubic-bezier(0.34,1.56,0.64,1) origin-center {$theme === 'light' ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-90 rotate-[90deg] pointer-events-none'} {animating ? 'animate-[icon-spin-in_0.42s_cubic-bezier(0.34,1.56,0.64,1)_forwards]' : ''}"
       width="18"
       height="18"
       viewBox="0 0 24 24"
@@ -39,8 +38,7 @@
 
     <!-- Moon icon (visible in dark mode) -->
     <svg
-      class="moon-icon"
-      class:hidden={$theme === "light"}
+      class="absolute transition-all duration-[420ms] cubic-bezier(0.34,1.56,0.64,1) origin-center {$theme === 'dark' ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-90 rotate-[90deg] pointer-events-none'} {animating ? 'animate-[icon-spin-in_0.42s_cubic-bezier(0.34,1.56,0.64,1)_forwards]' : ''}"
       width="18"
       height="18"
       viewBox="0 0 24 24"
@@ -48,111 +46,9 @@
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      <path
-        d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-        fill="currentColor"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
     </svg>
   </div>
 
-  <span class="toggle-label">
-    {$theme === "dark" ? "Tema oscuro" : "Tema claro"}
-  </span>
+  <span class="flex-1 text-left text-[var(--color-primary)]">{$theme === "dark" ? "Tema oscuro" : "Tema claro"}</span>
 </button>
-
-<style>
-  .theme-toggle {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-radius: 12px;
-    padding: 10px 12px;
-    background: transparent;
-    border: 1px solid var(--color-border);
-    color: var(--color-text-muted);
-    cursor: pointer;
-    transition:
-      background 0.2s ease,
-      border-color 0.2s ease,
-      color 0.2s ease,
-      box-shadow 0.2s ease;
-    font-family: var(--font-sans);
-    font-size: 0.8125rem;
-    font-weight: 500;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .theme-toggle:hover {
-    background: var(--color-panel-accent);
-    border-color: var(--color-border-strong);
-    color: var(--color-primary);
-    box-shadow: var(--shadow-glow);
-  }
-
-  .theme-toggle:active {
-    transform: scale(0.98);
-  }
-
-  .icon-wrapper {
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    position: relative;
-  }
-
-  .sun-icon,
-  .moon-icon {
-    position: absolute;
-    transition:
-      transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1),
-      opacity 0.3s ease;
-    transform-origin: center;
-  }
-
-  .sun-icon.hidden,
-  .moon-icon.hidden {
-    opacity: 0;
-    transform: scale(0.4) rotate(90deg);
-    pointer-events: none;
-  }
-
-  .sun-icon:not(.hidden),
-  .moon-icon:not(.hidden) {
-    opacity: 1;
-    transform: scale(1) rotate(0deg);
-  }
-
-  /* Spin animation on click */
-  .theme-toggle.animating .sun-icon:not(.hidden),
-  .theme-toggle.animating .moon-icon:not(.hidden) {
-    animation: icon-spin-in 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  }
-
-  @keyframes icon-spin-in {
-    0% {
-      transform: scale(0.3) rotate(-180deg);
-      opacity: 0;
-    }
-    60% {
-      opacity: 0.8;
-    }
-    100% {
-      transform: scale(1) rotate(0deg);
-      opacity: 1;
-    }
-  }
-
-  .toggle-label {
-    flex: 1;
-    text-align: left;
-  }
-</style>

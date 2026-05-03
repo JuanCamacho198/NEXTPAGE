@@ -67,12 +67,12 @@
   }
 </script>
 
-<div class="bookmarks-panel">
-  <div class="header">
-    <h3 class="title">Bookmarks</h3>
+<div class="flex flex-col h-full">
+  <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+    <h3 class="m-0 text-sm font-semibold text-gray-700">Bookmarks</h3>
     <button
       type="button"
-      class="add-btn"
+      class="w-6 h-6 border-0 rounded bg-gray-700 text-white cursor-pointer text-base flex items-center justify-center hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
       onclick={handleAddBookmark}
       disabled={!bookId}
       title="Add bookmark for current page"
@@ -82,26 +82,26 @@
   </div>
 
   {#if isLoading}
-    <div class="loading">Loading bookmarks...</div>
+    <div class="p-6 text-center text-xs text-gray-500">Loading bookmarks...</div>
   {:else if bookmarks.length === 0}
-    <div class="empty">No bookmarks yet</div>
+    <div class="p-6 text-center text-xs text-gray-500">No bookmarks yet</div>
   {:else}
-    <ul class="bookmark-list">
+    <ul class="list-none m-0 p-2">
       {#each bookmarks as bookmark}
-        <li class="bookmark-item">
+        <li class="flex items-center p-1 rounded mb-1 hover:bg-gray-50">
           <button
             type="button"
-            class="bookmark-link"
+            class="flex-1 flex flex-col items-start p-1 border-0 bg-transparent cursor-pointer text-left"
             onclick={() => handleNavigate(bookmark.pageNumber)}
           >
-            <span class="page-num">Page {bookmark.pageNumber}</span>
+            <span class="text-xs font-medium text-gray-700">Page {bookmark.pageNumber}</span>
             {#if bookmark.title}
-              <span class="bookmark-title">{bookmark.title}</span>
+              <span class="text-xs text-gray-500">{bookmark.title}</span>
             {/if}
           </button>
           <button
             type="button"
-            class="delete-btn"
+            class="w-5 h-5 border-0 rounded bg-transparent text-gray-400 cursor-pointer text-base flex items-center justify-center hover:bg-red-100 hover:text-red-600"
             onclick={() => handleDeleteBookmark(bookmark.id)}
             title="Delete bookmark"
           >
@@ -112,117 +112,3 @@
     </ul>
   {/if}
 </div>
-
-<style>
-  .bookmarks-panel {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-  }
-
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  .title {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #374151;
-  }
-
-  .add-btn {
-    width: 24px;
-    height: 24px;
-    border: none;
-    border-radius: 4px;
-    background: #374151;
-    color: #fff;
-    cursor: pointer;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .add-btn:hover:not(:disabled) {
-    background: #1f2937;
-  }
-
-  .add-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .loading,
-  .empty {
-    padding: 24px;
-    text-align: center;
-    font-size: 13px;
-    color: #6b7280;
-  }
-
-  .bookmark-list {
-    list-style: none;
-    margin: 0;
-    padding: 8px;
-  }
-
-  .bookmark-item {
-    display: flex;
-    align-items: center;
-    padding: 4px;
-    border-radius: 4px;
-    margin-bottom: 4px;
-  }
-
-  .bookmark-item:hover {
-    background: #f9fafb;
-  }
-
-  .bookmark-link {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 4px 8px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    text-align: left;
-  }
-
-  .page-num {
-    font-size: 13px;
-    font-weight: 500;
-    color: #374151;
-  }
-
-  .bookmark-title {
-    font-size: 12px;
-    color: #6b7280;
-  }
-
-  .delete-btn {
-    width: 20px;
-    height: 20px;
-    border: none;
-    border-radius: 4px;
-    background: transparent;
-    color: #9ca3af;
-    cursor: pointer;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .delete-btn:hover {
-    background: #fee2e2;
-    color: #dc2626;
-  }
-</style>

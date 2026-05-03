@@ -186,12 +186,7 @@
               activeView = "grid";
             }}
           >
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <rect x="4" y="4" width="6" height="6" rx="1"></rect>
-              <rect x="14" y="4" width="6" height="6" rx="1"></rect>
-              <rect x="4" y="14" width="6" height="6" rx="1"></rect>
-              <rect x="14" y="14" width="6" height="6" rx="1"></rect>
-            </svg>
+            <Icon name="grid" size="sm" />
           </button>
           <button
             type="button"
@@ -201,12 +196,7 @@
               activeView = "list";
             }}
           >
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M8 6H20"></path>
-              <path d="M8 12H20"></path>
-              <path d="M8 18H20"></path>
-              <circle cx="4" cy="6" r="1"></circle>
-              <circle cx="4" cy="12" r="1"></circle>
+            <Icon name="list" size="sm" />
               <circle cx="4" cy="18" r="1"></circle>
             </svg>
           </button>

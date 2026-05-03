@@ -136,55 +136,53 @@
   });
 </script>
 
-<section class="highlights-page">
+<section class="max-w-full">
   <!-- Header -->
-  <header class="highlights-header">
-    <h1 class="highlights-title">{t("home.highlightsTitle")}</h1>
-    <p class="highlights-subtitle">{t("home.highlightsSubtitle")}</p>
+  <header class="mb-6">
+    <h1 class="text-[1.875rem] font-bold text-[var(--color-primary)] m-0 mb-1">{t("home.highlightsTitle")}</h1>
+    <p class="text-[0.875rem] text-[var(--color-text-muted)] m-0">{t("home.highlightsSubtitle")}</p>
   </header>
 
   <!-- Search Bar -->
-  <div class="highlights-search-wrapper">
-    <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <div class="relative flex items-center mb-5">
+    <svg class="absolute left-4 w-5 h-5 text-[var(--color-text-muted)] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
     </svg>
     <input
       id="highlights-search"
       type="text"
-      class="highlights-search-input"
+      class="w-full h-12 px-[2.75rem] pr-[5rem] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-primary)] text-[0.875rem] font-sans transition-colors focus:outline-none focus:border-[var(--color-accent-blue,#49d4ff)] focus:shadow-[0_0_0_3px_rgba(73,212,255,0.15)] placeholder:text-[var(--color-text-muted)]"
       placeholder={t("home.highlightsSearchPlaceholder")}
       bind:value={searchQuery}
     />
-    <kbd class="search-shortcut">Ctrl K</kbd>
+    <kbd class="absolute right-4 inline-flex items-center gap-1 px-2 py-1 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text-muted)] text-[0.7rem] font-sans pointer-events-none">Ctrl K</kbd>
   </div>
 
   <!-- Filters -->
-  <div class="highlights-filters">
-    <div class="filter-group color-filters">
-      <span class="filter-label">{t("home.highlightsFilterColor")}</span>
-      <div class="color-circles">
+  <div class="flex flex-wrap items-center gap-4 mb-4 px-4 py-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+    <div class="flex items-center gap-2 border-r border-[var(--color-border)] pr-4">
+      <span class="text-[0.75rem] font-semibold text-[var(--color-primary)] uppercase tracking-wider">{t("home.highlightsFilterColor")}</span>
+      <div class="flex items-center gap-1">
         {#each HIGHLIGHT_COLORS as color}
           <button
             type="button"
-            class="color-circle"
-            class:active={selectedColor === color.key}
-            style="--circle-color: {color.hex}"
+            class="w-6 h-6 rounded-full border-2 border-transparent cursor-pointer transition-all hover:scale-[1.15] {selectedColor === color.key ? 'border-[var(--color-primary)] shadow-[0_0_0_3px_rgba(73,212,255,0.25)] scale-110' : ''}"
+            style="background: var(--circle-color);"
             aria-label={t("highlight.selectColor", { color: t(`settings.color.${color.key}` as any) })}
             onclick={() => { selectedColor = selectedColor === color.key ? null : color.key; }}
           ></button>
         {/each}
         <button
           type="button"
-          class="color-all-btn"
-          class:active={!selectedColor}
+          class="px-2 py-1 rounded-md border border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)] text-[0.75rem] cursor-pointer transition-all font-sans hover:bg-[var(--color-surface-hover,rgba(25,41,62,0.96))] {!selectedColor ? 'border-[var(--color-accent-blue,#49d4ff)] text-[var(--color-primary)] bg-[var(--color-panel-accent)]' : ''}"
           onclick={() => { selectedColor = null; }}
         >{t("home.shelfTab.all")}</button>
       </div>
     </div>
 
-    <div class="filter-group">
-      <span class="filter-label">{t("home.highlightsFilterBook")}</span>
-      <select class="filter-select" bind:value={selectedBookId}>
+    <div class="flex items-center gap-2">
+      <span class="text-[0.75rem] font-semibold text-[var(--color-primary)] uppercase tracking-wider">{t("home.highlightsFilterBook")}</span>
+      <select class="px-3 py-2 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-primary)] text-[0.75rem] font-sans cursor-pointer min-w-[140px] focus:outline-none focus:border-[var(--color-accent-blue,#49d4ff)]" bind:value={selectedBookId}>
         <option value={null}>{t("home.highlightsAllBooks")}</option>
         {#each uniqueBooks as book}
           <option value={book.id}>{book.title}</option>
@@ -192,9 +190,9 @@
       </select>
     </div>
 
-    <div class="filter-group">
-      <span class="filter-label">{t("home.highlightsFilterDate")}</span>
-      <select class="filter-select" bind:value={selectedDateRange}>
+    <div class="flex items-center gap-2">
+      <span class="text-[0.75rem] font-semibold text-[var(--color-primary)] uppercase tracking-wider">{t("home.highlightsFilterDate")}</span>
+      <select class="px-3 py-2 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-primary)] text-[0.75rem] font-sans cursor-pointer min-w-[140px] focus:outline-none focus:border-[var(--color-accent-blue,#49d4ff)]" bind:value={selectedDateRange}>
         <option value={null}>{t("home.highlightsAllDates")}</option>
         <option value="7d">{t("home.highlightsLastWeek")}</option>
         <option value="30d">{t("home.highlightsLastMonth")}</option>
@@ -206,15 +204,15 @@
   </div>
 
   <!-- Count -->
-  <p class="highlights-count">{t("home.highlightsShowingCount", { count: filteredHighlights.length })}</p>
+  <p class="text-[0.75rem] text-[var(--color-text-muted)] m-0 mb-3">{t("home.highlightsShowingCount", { count: filteredHighlights.length })}</p>
 
   <!-- List -->
   {#if isLoading}
-    <div class="highlights-list">
+    <ul class="list-none p-0 m-0 flex flex-col gap-2">
       {#each Array(3) as _}
         <Skeleton variant="book" height="100px" />
       {/each}
-    </div>
+    </ul>
   {:else if filteredHighlights.length === 0}
     <EmptyState
       icon="search"
@@ -222,54 +220,54 @@
       description={t("home.highlightsEmptyDescription")}
     />
   {:else}
-    <ul class="highlights-list">
+    <ul class="list-none p-0 m-0 flex flex-col gap-2">
       {#each paginatedHighlights as highlight (highlight.id)}
         {@const book = bookMap.get(highlight.bookId)}
-        <li class="highlight-card" style="--bar-color: {HIGHLIGHT_COLORS.find(c => c.key === highlight.color.toLowerCase())?.hex ?? '#60a5fa'}">
-          <div class="highlight-bar"></div>
+        <li class="flex items-stretch gap-4 p-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] transition-all cursor-default hover:border-[var(--color-border-strong)] hover:shadow-[var(--shadow-soft)] hover:bg-[var(--color-surface-hover,rgba(25,41,62,0.96)]" style="--bar-color: {HIGHLIGHT_COLORS.find(c => c.key === highlight.color.toLowerCase())?.hex ?? '#60a5fa'}">
+          <div class="w-1 min-h-full rounded bg-[var(--bar-color)] flex-shrink-0"></div>
 
-          <div class="highlight-content">
-            <p class="highlight-text">{highlight.text}</p>
+          <div class="flex-1 min-w-0 flex flex-col justify-center gap-1">
+            <p class="text-[0.875rem] font-medium text-[var(--color-primary)] m-0 line-height-[1.5]">{highlight.text}</p>
             {#if highlight.note}
-              <p class="highlight-note"><Icon name="note" size="sm" /> {highlight.note}</p>
+              <p class="text-[0.75rem] text-[var(--color-text-muted)] m-0 italic"><Icon name="note" size="sm" /> {highlight.note}</p>
             {/if}
-            <p class="highlight-chapter">{t("home.highlightsPageLabel")} {highlight.pageNumber}{book ? ` · ${book.title}` : ""}</p>
+            <p class="text-[0.75rem] text-[var(--color-text-muted)] m-0">{t("home.highlightsPageLabel")} {highlight.pageNumber}{book ? ` · ${book.title}` : ""}</p>
           </div>
 
           {#if book}
-            <div class="highlight-book-info">
-              <div class="highlight-book-cover" class:no-cover={!book.coverPath}>
+            <div class="flex flex-col items-center gap-1 flex-shrink-0 w-20 text-center">
+              <div class="w-12 h-16 rounded-md overflow-hidden border border-[var(--color-border)] bg-[var(--color-background)] flex items-center justify-center">
                 {#if book.coverPath}
-                  <img src={book.coverPath} alt={book.title} />
+                  <img src={book.coverPath} alt={book.title} class="w-full h-full object-cover" />
                 {:else}
-                  <span class="cover-placeholder"><Icon name="book" size="lg" /></span>
+                  <span class="text-[1.25rem] opacity-50"><Icon name="book" size="lg" /></span>
                 {/if}
               </div>
-              <p class="highlight-book-title">{book.title}</p>
-              <p class="highlight-book-author">{book.author || t("app.unknownAuthor")}</p>
+              <p class="text-[0.65rem] font-semibold text-[var(--color-primary)] m-0 max-w-20 overflow-hidden text-ellipsis whitespace-nowrap">{book.title}</p>
+              <p class="text-[0.6rem] text-[var(--color-text-muted)] m-0 max-w-20 overflow-hidden text-ellipsis whitespace-nowrap">{book.author || t("app.unknownAuthor")}</p>
             </div>
           {/if}
 
-          <div class="highlight-meta">
-            <span class="highlight-date">{formatDate(highlight.createdAt)}</span>
+          <div class="flex flex-col items-end justify-between flex-shrink-0 min-w-[120px]">
+            <span class="text-[0.75rem] text-[var(--color-text-muted)] whitespace-nowrap">{formatDate(highlight.createdAt)}</span>
 
             <DropMenu position="bottom-right">
               {#snippet trigger()}
-                <button class="highlight-menu-btn" aria-label="Opciones"><Icon name="more-dot" size="sm" /></button>
+                <button class="w-8 h-8 flex items-center justify-center rounded-md border border-transparent bg-transparent text-[var(--color-text-muted)] text-[1.1rem] cursor-pointer transition-all font-sans hover:bg-[var(--color-panel-accent)] hover:border-[var(--color-border)] hover:text-[var(--color-primary)]" aria-label="Opciones"><Icon name="more-dot" size="sm" /></button>
               {/snippet}
               <div class="flex flex-col">
-                <button class="menu-item" onclick={() => handleCopy(highlight.text)}>
+                <button class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--color-primary)] text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-[var(--color-panel-accent)]" onclick={() => handleCopy(highlight.text)}>
                   <Icon name="copy" size="sm" /> {t("home.highlightsCopy")}
                 </button>
-                <button class="menu-item">
+                <button class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--color-primary)] text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-[var(--color-panel-accent)]">
                   <Icon name="book" size="sm" /> {t("home.highlightsViewInBook")}
                 </button>
                 {#if highlight.note}
-                  <button class="menu-item">
+                  <button class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--color-primary)] text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-[var(--color-panel-accent)]">
                     <Icon name="edit" size="sm" /> {t("home.highlightsEditNote")}
                   </button>
                 {/if}
-                <button class="menu-item menu-item--danger" onclick={() => handleDelete(highlight.id)}>
+                <button class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--color-error)] text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-[var(--color-error-bg,rgba(255,123,131,0.14)]" onclick={() => handleDelete(highlight.id)}>
                   <Icon name="trash" size="sm" /> {t("home.highlightsDelete")}
                 </button>
               </div>
@@ -281,356 +279,9 @@
 
     <!-- Pagination -->
     {#if totalPages > 1}
-      <div class="highlights-pagination">
+      <div class="flex justify-center mt-6 pb-4">
         <Pagination bind:current={currentPage} total={totalPages} />
       </div>
     {/if}
   {/if}
 </section>
-
-<style>
-  .highlights-page {
-    max-width: 100%;
-  }
-
-  /* ── Header ── */
-  .highlights-header {
-    margin-bottom: 1.5rem;
-  }
-  .highlights-title {
-    font-size: var(--text-3xl, 1.875rem);
-    font-weight: var(--font-weight-bold, 700);
-    color: var(--color-primary);
-    margin: 0 0 0.25rem;
-  }
-  .highlights-subtitle {
-    font-size: var(--text-sm, 0.875rem);
-    color: var(--color-text-muted);
-    margin: 0;
-  }
-
-  /* ── Search ── */
-  .highlights-search-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    margin-bottom: 1.25rem;
-  }
-  .search-icon {
-    position: absolute;
-    left: 1rem;
-    width: 1.25rem;
-    height: 1.25rem;
-    color: var(--color-text-muted);
-    pointer-events: none;
-  }
-  .highlights-search-input {
-    width: 100%;
-    height: 3rem;
-    padding: 0 5rem 0 2.75rem;
-    border-radius: var(--radius-lg, 16px);
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    color: var(--color-primary);
-    font-size: var(--text-sm, 0.875rem);
-    font-family: var(--font-sans);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  }
-  .highlights-search-input::placeholder {
-    color: var(--color-text-muted);
-  }
-  .highlights-search-input:focus {
-    outline: none;
-    border-color: var(--color-accent-blue, #49d4ff);
-    box-shadow: 0 0 0 3px rgba(73, 212, 255, 0.15);
-  }
-  .search-shortcut {
-    position: absolute;
-    right: 1rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.2rem 0.5rem;
-    border-radius: var(--radius-sm, 6px);
-    border: 1px solid var(--color-border);
-    background: var(--color-background);
-    color: var(--color-text-muted);
-    font-size: 0.7rem;
-    font-family: var(--font-sans);
-    pointer-events: none;
-  }
-
-  /* ── Filters ── */
-  .highlights-filters {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius-lg, 16px);
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-  }
-  .filter-group {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .filter-label {
-    font-size: var(--text-xs, 0.75rem);
-    font-weight: var(--font-weight-semibold, 600);
-    color: var(--color-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  .color-filters {
-    border-right: 1px solid var(--color-border);
-    padding-right: 1rem;
-  }
-  .color-circles {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-  .color-circle {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    background: var(--circle-color);
-    cursor: pointer;
-    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-  .color-circle:hover {
-    transform: scale(1.15);
-  }
-  .color-circle.active {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(73, 212, 255, 0.25);
-    transform: scale(1.1);
-  }
-  .color-all-btn {
-    padding: 0.2rem 0.6rem;
-    border-radius: var(--radius-sm, 6px);
-    border: 1px solid var(--color-border);
-    background: transparent;
-    color: var(--color-text-muted);
-    font-size: var(--text-xs, 0.75rem);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    font-family: var(--font-sans);
-  }
-  .color-all-btn:hover {
-    background: var(--color-surface-hover, rgba(25, 41, 62, 0.96));
-  }
-  .color-all-btn.active {
-    border-color: var(--color-accent-blue, #49d4ff);
-    color: var(--color-primary);
-    background: var(--color-panel-accent);
-  }
-  .filter-select {
-    padding: 0.35rem 0.75rem;
-    border-radius: var(--radius-sm, 6px);
-    border: 1px solid var(--color-border);
-    background: var(--color-background);
-    color: var(--color-primary);
-    font-size: var(--text-xs, 0.75rem);
-    font-family: var(--font-sans);
-    cursor: pointer;
-    min-width: 140px;
-  }
-  .filter-select:focus {
-    outline: none;
-    border-color: var(--color-accent-blue, #49d4ff);
-  }
-
-  /* ── Count ── */
-  .highlights-count {
-    font-size: var(--text-xs, 0.75rem);
-    color: var(--color-text-muted);
-    margin: 0 0 0.75rem;
-  }
-
-  /* ── List ── */
-  .highlights-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  /* ── Card ── */
-  .highlight-card {
-    display: flex;
-    align-items: stretch;
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    border-radius: var(--radius-lg, 16px);
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-    cursor: default;
-  }
-  .highlight-card:hover {
-    border-color: var(--color-border-strong);
-    box-shadow: var(--shadow-soft);
-    background: var(--color-surface-hover, rgba(25, 41, 62, 0.96));
-  }
-
-  .highlight-bar {
-    width: 4px;
-    min-height: 100%;
-    border-radius: 4px;
-    background: var(--bar-color);
-    flex-shrink: 0;
-  }
-
-  .highlight-content {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 0.35rem;
-  }
-  .highlight-text {
-    font-size: var(--text-sm, 0.875rem);
-    font-weight: var(--font-weight-medium, 500);
-    color: var(--color-primary);
-    margin: 0;
-    line-height: 1.5;
-  }
-  .highlight-note {
-    font-size: var(--text-xs, 0.75rem);
-    color: var(--color-text-muted);
-    margin: 0;
-    font-style: italic;
-  }
-  .highlight-chapter {
-    font-size: var(--text-xs, 0.75rem);
-    color: var(--color-text-muted);
-    margin: 0;
-  }
-
-  /* ── Book info ── */
-  .highlight-book-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.25rem;
-    flex-shrink: 0;
-    width: 80px;
-    text-align: center;
-  }
-  .highlight-book-cover {
-    width: 48px;
-    height: 64px;
-    border-radius: var(--radius-sm, 6px);
-    overflow: hidden;
-    border: 1px solid var(--color-border);
-    background: var(--color-background);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .highlight-book-cover img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .cover-placeholder {
-    font-size: 1.25rem;
-    opacity: 0.5;
-  }
-  .highlight-book-title {
-    font-size: 0.65rem;
-    font-weight: var(--font-weight-semibold, 600);
-    color: var(--color-primary);
-    margin: 0;
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .highlight-book-author {
-    font-size: 0.6rem;
-    color: var(--color-text-muted);
-    margin: 0;
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* ── Meta / Date ── */
-  .highlight-meta {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: space-between;
-    flex-shrink: 0;
-    min-width: 120px;
-  }
-  .highlight-date {
-    font-size: var(--text-xs, 0.75rem);
-    color: var(--color-text-muted);
-    white-space: nowrap;
-  }
-
-  /* ── Menu ── */
-  .highlight-menu-btn {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm, 6px);
-    border: 1px solid transparent;
-    background: transparent;
-    color: var(--color-text-muted);
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    font-family: var(--font-sans);
-  }
-  .highlight-menu-btn:hover {
-    background: var(--color-panel-accent);
-    border-color: var(--color-border);
-    color: var(--color-primary);
-  }
-  .menu-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    padding: 0.5rem 1rem;
-    border: none;
-    background: transparent;
-    color: var(--color-primary);
-    font-size: var(--text-sm, 0.875rem);
-    font-family: var(--font-sans);
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.12s ease;
-  }
-  .menu-item:hover {
-    background: var(--color-panel-accent);
-  }
-  .menu-item--danger {
-    color: var(--color-error);
-  }
-  .menu-item--danger:hover {
-    background: var(--color-error-bg, rgba(255, 123, 131, 0.14));
-  }
-
-  /* ── Pagination ── */
-  .highlights-pagination {
-    display: flex;
-    justify-content: center;
-    margin-top: 1.5rem;
-    padding-bottom: 1rem;
-  }
-</style>

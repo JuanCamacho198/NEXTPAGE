@@ -1304,6 +1304,7 @@
           {locale}
           onLocaleChange={handleLocaleChange}
           onReaderSettingsChange={handleReaderSettingsChange}
+          books={books.map(b => ({ id: b.id, title: b.title }))}
         />
       </section>
     {:else}

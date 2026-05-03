@@ -30,6 +30,7 @@
 
 - **Svelte 5**: Use runes (`$state`, `$derived`, `$effect`) for reactive state
 - **Tailwind CSS**: Always use Tailwind for styling. Do NOT use `<style>` blocks in components.
+  - **Exceptions** (allowed in global CSS): `@keyframes` animations, `::-webkit-slider-thumb` / `::-moz-range-thumb` pseudo-elements for range inputs. Move these to `src/lib/styles/tokens.css`.
 - **Imports**: Use `$lib` alias (e.g., `import { something } from '$lib/stores'`)
 - **Types**: TypeScript with explicit return types on functions
 - **Tests**: Vitest with `@testing-library/svelte` and jsdom

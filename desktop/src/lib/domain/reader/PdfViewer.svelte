@@ -1180,7 +1180,8 @@
 
 <ErrorBoundary>
   <div
-    class="pdf-viewer"
+    class="flex flex-col h-full relative outline-none"
+    style="background: var(--pdf-reader-root-bg, var(--color-background)); color: var(--pdf-reader-text, var(--color-primary)); user-select: text !important; -webkit-user-select: text !important;"
     bind:this={viewerRoot}
     tabindex="0"
     role="region"
@@ -1202,58 +1203,59 @@
     onmouseup={handleTextSelection}
     onpointerup={handleTextSelection}
     ontouchend={handleTextSelection}
-    style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor}; --pdf-selection-color: ${readerSettings.selectionColor};`}
+    style:--pdf-reader-root-bg={readerThemePalette.rootBackground} style:--pdf-reader-surface-bg={readerThemePalette.surfaceBackground} style:--pdf-reader-text={readerThemePalette.textColor} style:--pdf-selection-color={readerSettings.selectionColor}
   >
     {#if isLoading}
-      <div class="loading-overlay">{t("pdf.loading")}</div>
+      <div class="absolute inset-0 flex items-center justify-center text-sm z-10 bg-[var(--color-background)]">{t("pdf.loading")}</div>
     {/if}
     {#if error}
-      <div class="error-overlay">{t("pdf.error")}: {error}</div>
+      <div class="absolute inset-0 flex items-center justify-center text-sm z-10 bg-[var(--color-background)] text-red-600">{t("pdf.error")}: {error}</div>
     {/if}
-    <div class="controls" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
-      <button type="button" onclick={() => (showToc = !showToc)}>
+    <div class="flex flex-wrap items-center gap-3 p-2" style="background: var(--pdf-reader-surface-bg, var(--color-surface)); border-bottom: 1px solid var(--color-border); visibility: {isLoading || error ? 'hidden' : 'visible'}">
+      <button type="button" class="px-3 py-1.5 border border-[var(--color-border)] rounded bg-[var(--pdf-reader-surface-bg,var(--color-surface))] text-[var(--pdf-reader-text,var(--color-primary))] cursor-pointer text-[13px] hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed" onclick={() => (showToc = !showToc)}>
         {t("pdf.contents")}
       </button>
-      <button type="button" class="reader-nav-button" aria-label={t("pdf.previous")} onclick={goToPrevPage} disabled={currentPage <= 1}>
+      <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded bg-[var(--pdf-reader-surface-bg,var(--color-surface))] text-[var(--pdf-reader-text,var(--color-primary))] cursor-pointer text-[13px] hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed" aria-label={t("pdf.previous")} onclick={goToPrevPage} disabled={currentPage <= 1}>
         <span aria-hidden="true">&#8592;</span>
         {t("pdf.previous")}
       </button>
-      <button type="button" class="reader-nav-button" aria-label={t("pdf.next")} onclick={goToNextPage} disabled={currentPage >= totalPages}>
+      <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] rounded bg-[var(--pdf-reader-surface-bg,var(--color-surface))] text-[var(--pdf-reader-text,var(--color-primary))] cursor-pointer text-[13px] hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed" aria-label={t("pdf.next")} onclick={goToNextPage} disabled={currentPage >= totalPages}>
         <span aria-hidden="true">&#8594;</span>
         {t("pdf.next")}
       </button>
-      <button type="button" onclick={toggleFullscreen} disabled={!fullscreenSupported}>
-        {isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}
+      <button type="button" class="flex flex-col items-center gap-0.5 px-3 py-1.5 border border-[var(--color-border)] rounded bg-[var(--pdf-reader-surface-bg,var(--color-surface))] text-[var(--pdf-reader-text,var(--color-primary))] cursor-pointer text-[13px] hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed" onclick={toggleFullscreen} disabled={!fullscreenSupported}>
+        <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
+        <span class="text-[10px] leading-tight">{isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}</span>
       </button>
-      <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select">
+      <select bind:value={scale} onchange={() => setScale(scale)} class="ml-auto px-2 py-1 border border-[var(--color-border)] rounded bg-[var(--pdf-reader-surface-bg,var(--color-surface))] text-[var(--pdf-reader-text,var(--color-primary))]">
         {#each scaleOptions as option (option)}
           <option value={option}>{Math.round(option * 100)}%</option>
         {/each}
       </select>
     </div>
     {#if navigationError}
-      <p class="navigation-error" role="status" aria-live="polite">{navigationError}</p>
+      <p class="p-2 text-red-600 text-[13px]" role="status" aria-live="polite">{navigationError}</p>
     {/if}
-    <div class="content-area" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
+    <div class="flex flex-1 overflow-hidden" style="visibility: {isLoading || error ? 'hidden' : 'visible'}">
       {#if showToc}
-        <aside class="toc-sidebar">
-          <h3>{t("pdf.tableOfContents")}</h3>
+        <aside class="w-60 flex-shrink-0 overflow-y-auto border-r border-[var(--color-border)]" style="background: var(--pdf-reader-surface-bg, var(--color-surface))">
+          <h3 class="m-0 p-3 text-[14px] font-semibold border-b border-[var(--color-border)] text-[var(--pdf-reader-text,var(--color-primary))]">{t("pdf.tableOfContents")}</h3>
           {#if tocLoading}
-            <p class="toc-message">{t("pdf.tocLoading")}</p>
+            <p class="m-0 p-3 text-[13px] text-[var(--color-text-muted)]">{t("pdf.tocLoading")}</p>
           {:else if tocError}
-            <p class="toc-message toc-error">{tocError}</p>
+            <p class="m-0 p-3 text-[13px] text-red-600">{t("pdf.tocError")}</p>
           {:else if flatOutline.length === 0}
-            <p class="toc-message">{t("pdf.tocEmpty")}</p>
+            <p class="m-0 p-3 text-[13px] text-[var(--color-text-muted)]">{t("pdf.tocEmpty")}</p>
           {:else}
-            <ul class="toc-list">
+            <ul class="list-none m-0 p-0">
               {#each flatOutline as entry (entry.item.id)}
                 <li>
                   <button
                     type="button"
                     onclick={() => navigateToOutlineItem(entry.item)}
-                    class="toc-item"
+                    class="block w-full text-left p-[10px_12px] border-none bg-transparent text-[13px] leading-relaxed break-words cursor-pointer disabled:opacity-55 disabled:cursor-default"
+                    style="padding-left: calc(12px + (var(--toc-depth, 0) * 16px)); color: var(--pdf-reader-text, var(--color-primary))"
                     disabled={!entry.item.dest}
-                    style={`--toc-depth: ${entry.depth};`}
                   >
                     {entry.item.title}
                   </button>
@@ -1263,20 +1265,20 @@
           {/if}
         </aside>
       {/if}
-      <div class="canvas-container" bind:this={canvasContainer} onwheel={handleViewerWheel}>
-        <div class="canvas-wrapper" class:search-hit={flashSearchResult} style={canvasWrapperStyle}>
-          <canvas bind:this={canvas}></canvas>
-          <div class="selection-overlay" aria-hidden="true">
+      <div class="flex-1 overflow-auto flex justify-center p-4" style="background: var(--pdf-reader-root-bg, var(--color-background))" bind:this={canvasContainer} onwheel={handleViewerWheel}>
+        <div class="relative inline-block transition-transform duration-120 ease-out" class:outline-4 class:outline-blue-500={flashSearchResult} class:outline-offset-2={flashSearchResult} style={canvasWrapperStyle}>
+          <canvas bind:this={canvas} class="relative z-0 shadow-[0_2px_8px_rgba(0,0,0,0.15)]" style="background: var(--pdf-reader-surface-bg, #fff)"></canvas>
+          <div class="absolute inset-0 z-1 pointer-events-none" aria-hidden="true">
             {#each selectionOverlayRects as rect, index (`${rect.left}-${rect.top}-${index}`)}
               <div
-                class="selection-rect"
+                class="absolute rounded bg-[color-mix(in_srgb,var(--pdf-selection-color,#3388ff)_42%,transparent)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--pdf-selection-color,#3388ff)_22%,transparent),0_2px_4px_rgba(0,0,0,0.1)] z-3 pointer-events-none"
                 style={`left: ${rect.left}px; top: ${rect.top}px; width: ${rect.width}px; height: ${rect.height}px;`}
               ></div>
             {/each}
           </div>
           <div
             bind:this={textLayer}
-            class="text-layer debug-text-layer"
+            class="absolute top-0 left-0 inset-0 overflow-hidden pointer-events-auto opacity-1 leading-none cursor-text text-initial z-[5000] min-w-full min-h-full"
             draggable="false"
             role="presentation"
             ondragstart={(e) => e.preventDefault()}
@@ -1289,7 +1291,7 @@
           </div>
           {#if showToolbar && selectionPosition}
             <div
-              class="toolbar-container"
+              class="absolute -translate-x-1/2 z-[100] w-[min(320px,calc(100vw-32px))]"
               class:below={selectionPlacement === "below"}
               style="left: {selectionPosition.x}px; top: {selectionPosition.y}px;"
             >
@@ -1308,27 +1310,27 @@
         </div>
       </div>
     </div>
-    <div class="pdf-footer" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
-      <div class="footer-content">
-        <div class="footer-left">
-          <span class="page-info">
+    <div class="flex items-center h-12 p-4 border-t z-20" style="background: var(--pdf-reader-surface-bg, var(--color-surface)); border-color: var(--color-border); visibility: {isLoading || error ? 'hidden' : 'visible'}">
+      <div class="flex items-center justify-between w-full max-w-[1200px] mx-auto gap-8">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center gap-1 text-[13px]" style="color: var(--pdf-reader-text, var(--color-primary))">
             <input
               type="number"
               min="1"
               max={totalPages}
               value={currentPage}
               onchange={goToPage}
-              class="page-input"
+              class="w-12 p-1 border border-[var(--color-border)] rounded text-center bg-[var(--pdf-reader-surface-bg,var(--color-surface))] text-[var(--pdf-reader-text,var(--color-primary))]"
             />
-            <span class="total-pages">/ {totalPages}</span>
+            <span class="opacity-70">/ {totalPages}</span>
           </span>
         </div>
-        <div class="progress-details">
-          <span class="pages-left">{totalPages - currentPage} {t("pdf.pagesLeft")}</span>
-          <div class="progress-bar-container">
-            <div class="progress-bar-fill" style="width: {(currentPage / totalPages) * 100}%"></div>
+        <div class="flex items-center gap-4 flex-1 max-w-[800px]">
+          <span class="text-[12px] font-medium opacity-80 whitespace-nowrap" style="color: var(--pdf-reader-text, #64748b)">{totalPages - currentPage} {t("pdf.pagesLeft")}</span>
+          <div class="flex-1 h-1.5 rounded-full overflow-hidden bg-[rgba(148,163,184,0.15)]">
+            <div class="h-full rounded-full transition-all duration-400" style="background: var(--pdf-selection-color, #3b82f6); width: {(currentPage / totalPages) * 100}%"></div>
           </div>
-          <span class="percent-complete">{Math.round((currentPage / totalPages) * 100)}%</span>
+          <span class="text-[12px] font-medium opacity-80 whitespace-nowrap" style="color: var(--pdf-reader-text, #64748b)">{Math.round((currentPage / totalPages) * 100)}%</span>
         </div>
       </div>
     </div>

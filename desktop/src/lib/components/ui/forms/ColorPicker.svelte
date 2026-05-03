@@ -40,7 +40,7 @@
   let id = $state(crypto.randomUUID());
 </script>
 
-<div class="color-picker">
+<div class="relative">
   {#if label}
     <label for={id} class="mb-1 block text-xs text-zinc-600">{label}</label>
   {/if}
@@ -71,13 +71,12 @@
   </div>
 
   {#if isOpen}
-    <div class="color-picker-dropdown">
-      <div class="color-grid">
+    <div class="absolute top-full left-0 z-50 mt-1 rounded-lg bg-[var(--color-surface,white)] border border-[var(--color-border)] shadow-[0_4px_12px_rgba(0,0,0,0.15)] p-2">
+      <div class="grid grid-cols-5 gap-1">
         {#each presetColors as color}
           <button
             type="button"
-            class="color-swatch"
-            class:selected={value === color}
+            class="w-6 h-6 rounded border-2 border-transparent cursor-pointer transition-all hover:scale-[1.15] {value === color ? 'border-[var(--color-primary)] shadow-[0_0_0_2px_var(--color-background)]' : ''}"
             style="background-color: {color};"
             onclick={() => selectColor(color)}
             aria-label="Select {color}"
@@ -87,46 +86,3 @@
     </div>
   {/if}
 </div>
-
-<style>
-  .color-picker {
-    position: relative;
-  }
-
-  .color-picker-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: 50;
-    margin-top: 4px;
-    border-radius: 8px;
-    background: var(--color-surface, white);
-    border: 1px solid var(--color-border);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    padding: 8px;
-  }
-
-  .color-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
-  }
-
-  .color-swatch {
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: transform 0.15s, border-color 0.15s;
-  }
-
-  .color-swatch:hover {
-    transform: scale(1.15);
-  }
-
-  .color-swatch.selected {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px var(--color-background);
-  }
-</style>

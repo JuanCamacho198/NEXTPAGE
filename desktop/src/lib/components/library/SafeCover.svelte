@@ -76,19 +76,7 @@
 {:else if fallback}
   {@render fallback()}
 {:else}
-  <div class={`${className} safe-cover-default-fallback`} role="img" aria-label={alt}>
+  <div class={`${className} flex items-center justify-center bg-gradient-to-br from-[#f2ede0] to-[#e4d5ba] text-[#5d4a33] border border-[var(--color-border,#d6d3ce)] font-bold`} role="img" aria-label={alt}>
     <span>{alt?.trim().slice(0, 1).toUpperCase() || "B"}</span>
   </div>
 {/if}
-
-<style>
-  .safe-cover-default-fallback {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #f2ede0, #e4d5ba);
-    color: #5d4a33;
-    border: 1px solid var(--color-border, #d6d3ce);
-    font-weight: 700;
-  }
-</style>

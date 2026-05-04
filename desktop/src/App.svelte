@@ -943,22 +943,6 @@
           <Button onclick={handleImportFile} disabled={isImporting} size="sm">
             {isImporting ? t("app.importing") : t("app.importBook")}
           </Button>
-          <DropMenu position="bottom-right">
-            {#snippet trigger()}
-              <button
-                class="rounded-md border border-[color:var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]"
-                aria-label={t("app.openMenu")}
-              >
-                {t("app.menu")}
-              </button>
-            {/snippet}
-            <button
-              class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]"
-              onclick={navigateToSettings}
-            >
-              {t("app.settings")}
-            </button>
-          </DropMenu>
         {/snippet}
 
         {#snippet continueSection()}

@@ -46,7 +46,7 @@
     "svelte-testing-library": "^1.6.0",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
-    "vite": "^8.0.8",
+    "vite": "^8.0.10",
     "vitest": "^4.1.5",
     "vitest-svelte-kit": "^0.0.7"
   }

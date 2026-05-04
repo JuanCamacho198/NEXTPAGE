@@ -494,7 +494,7 @@
           </div>
 
           <div class="shortcuts-card">
-            <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">{t("settings.shortcuts.title")}</h4>
+            <h4 class="mt-0 mb-2 text-sm font-semibold text-neutral-300">{t("settings.shortcuts.title")}</h4>
             <p class="text-xs text-zinc-600 mb-3">{t("settings.shortcuts.description")}</p>
             <ul class="shortcuts-list">
               {#each keyboardShortcuts as shortcut (shortcut.id)}

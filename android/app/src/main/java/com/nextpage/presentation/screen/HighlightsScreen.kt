@@ -61,6 +61,7 @@ fun HighlightsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .padding(contentPadding)
         ) {
             TabRow(selectedTabIndex = selectedTab) {
                 Tab(

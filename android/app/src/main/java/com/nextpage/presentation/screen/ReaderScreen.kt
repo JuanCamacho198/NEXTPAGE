@@ -129,7 +129,7 @@ fun ReaderScreen(
                     if (uiState.totalPdfPages > 0) {
                         IconButton(onClick = { showGoToPageDialog = true }) {
                             Icon(
-                                imageVector = Icons.Default.List,
+                                imageVector = Icons.AutoMirrored.Filled.List,
                                 contentDescription = stringResource(R.string.reader_go_to_page)
                             )
                         }
@@ -148,6 +148,7 @@ fun ReaderScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .padding(contentPadding)
         ) {
             when {
                 uiState.isLoading -> {
@@ -358,7 +359,6 @@ private fun ReaderContent(
                         totalChapters = totalChapters,
                         onPrevious = { if (currentChapterIndex > 0) onChapterSelect(currentChapterIndex - 1) },
                         onNext = { if (currentChapterIndex < totalChapters - 1) onChapterSelect(currentChapterIndex + 1) },
-                        onChapterSelect = onChapterSelect,
                         chapters = chapters
                     )
                 }
@@ -418,12 +418,13 @@ private fun ReaderContent(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 private fun ChapterNavigationBar(
     currentChapter: Int,
     totalChapters: Int,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-    onChapterSelect: (Int) -> Unit,
     chapters: List<EpubContentLoader.Chapter>
 ) {
     Card(
@@ -519,6 +520,7 @@ private fun HighlightDialog(
     )
 }
 
+@Suppress("UNUSED_PARAMETER")
 @Composable
 private fun PdfReaderContent(
     bitmap: Bitmap?,

@@ -283,7 +283,8 @@ fun QuickActionsGrid(onImportClick: () -> Unit = {}) {
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             QuickActionItem("Resaltados", Icons.Outlined.Create, Modifier.weight(1f))
-            QuickActionItem("Notas", Icons.Outlined.List, Modifier.weight(1f))
+            @Suppress("UNUSED_PARAMETER")
+            QuickActionItem("Notas", Icons.AutoMirrored.Outlined.List, Modifier.weight(1f))
         }
         Spacer(modifier = Modifier.height(16.dp))
         Row(
@@ -321,7 +322,7 @@ fun HomeBottomNavigation(onNavigate: (String) -> Unit = {}) {
     var selectedItem by remember { mutableStateOf(0) }
     val items = listOf(
         Triple("Inicio", Icons.Filled.Home, Icons.Outlined.Home),
-        Triple("Estantería", Icons.Filled.List, Icons.Outlined.List),
+        Triple("Estantería", Icons.AutoMirrored.Filled.List, Icons.AutoMirrored.Outlined.List),
         Triple("Resaltados", Icons.Filled.Star, Icons.Outlined.Star),
         Triple("Ajustes", Icons.Filled.Settings, Icons.Outlined.Settings)
     )

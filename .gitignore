@@ -11,6 +11,7 @@ Thumbs.db
 **/build/
 local.properties
 captures/
+android.exe
 
 # Build outputs
 *.apk

@@ -122,16 +122,16 @@
       </div>
 
       <div class="flex w-full flex-col gap-3 xl:max-w-[640px]">
-        <div class="flex flex-col gap-3 md:flex-row">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center">
           <label class="group relative flex-1">
             <span class="sr-only">Buscar libros</span>
-            <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <svg class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
               <circle cx="11" cy="11" r="7"></circle>
               <path d="M20 20L17 17"></path>
             </svg>
             <input
               type="text"
-              class="h-11 w-full rounded-2xl border border-[color:var(--color-border)] bg-[rgba(8,17,31,0.72)] pl-10 pr-4 text-sm text-[var(--color-primary)] outline-none placeholder:text-[var(--color-text-muted)]"
+              class="h-11 w-full rounded-2xl border border-[color:var(--color-border)] bg-[rgba(8,17,31,0.72)] pl-11 pr-4 text-sm text-[var(--color-primary)] outline-none placeholder:text-[var(--color-text-muted)]"
               placeholder="Buscar por titulo o autor..."
               bind:value={searchQuery}
             />
@@ -337,7 +337,7 @@
               {#snippet trigger()}
                 <button
                   type="button"
-                  class="flex h-10 w-10 items-center justify-center rounded-xl border border-[color:var(--color-border)] bg-[rgba(255,255,255,0.03)] text-[var(--color-text-muted)]"
+                  class="flex h-10 w-10 items-center justify-center rounded-xl border border-[color:var(--color-border)] bg-[rgba(20,32,49,0.92)] text-[var(--color-text-muted)]"
                   aria-label={`Opciones para ${book.title}`}
                 >
                   <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -347,13 +347,13 @@
                   </svg>
                 </button>
               {/snippet}
-              <button class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]" onclick={() => onOpenBook?.(book)}>Abrir libro</button>
-              <button class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]" onclick={() => onToggleFavorite?.(book)}>
+              <button class="w-full px-4 py-2.5 text-left text-sm text-[var(--color-primary)] hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onOpenBook?.(book)}>Abrir libro</button>
+              <button class="w-full px-4 py-2.5 text-left text-sm text-[var(--color-primary)] hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onToggleFavorite?.(book)}>
                 {book.isFavorite ? "Quitar de favoritos" : "Marcar como favorito"}
               </button>
-              <button class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]" onclick={() => onMarkCompleted?.(book)}>Marcar como completado</button>
-              <button class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]" onclick={() => onViewDetails?.(book)}>Ver detalles</button>
-              <button class="w-full px-4 py-2 text-left text-sm text-[#ff9fa5] hover:bg-[color:var(--color-border)]" onclick={() => onRemoveBook?.(book)}>Eliminar de la biblioteca</button>
+              <button class="w-full px-4 py-2.5 text-left text-sm text-[var(--color-primary)] hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onMarkCompleted?.(book)}>Marcar como completado</button>
+              <button class="w-full px-4 py-2.5 text-left text-sm text-[var(--color-primary)] hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onViewDetails?.(book)}>Ver detalles</button>
+              <button class="w-full px-4 py-2.5 text-left text-sm text-[#ff9fa5] hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onRemoveBook?.(book)}>Eliminar de la biblioteca</button>
             </DropMenu>
           </div>
         </article>

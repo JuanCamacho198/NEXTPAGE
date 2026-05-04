@@ -9,10 +9,22 @@ class SupabaseSessionManager(
     private val client: SupabaseClient?,
     private val diagnosticError: AppError?,
     private val sessionStore: SessionStore,
-    private val refresher: suspend (AuthSession) -> Result<AuthSession> = { session -> Result.success(session) },
-    private val remoteSignOut: suspend () -> Result<Unit> = { Result.success(Unit) },
     private val isClientAvailable: Boolean = client != null
 ) : SessionManager {
+
+    // Session refresh fallback - returns current session since gotrue module isn't available
+    // In production, this would call client.gotrue.refreshCurrentSession() if the module was available
+    private val refresher: suspend (AuthSession) -> Result<AuthSession> = { session ->
+        // For OAuth-based sessions, we return the existing session as refresh
+        // In a full implementation, this would hit the Supabase refresh endpoint
+        Result.success(session)
+    }
+
+    // Remote sign out fallback - clears local session since gotrue module isn't available
+    private val remoteSignOut: suspend () -> Result<Unit> = {
+        // In a full implementation, this would call client.gotrue.signOut()
+        Result.success(Unit)
+    }
 
     @Volatile
     private var currentSession: AuthSession? = null

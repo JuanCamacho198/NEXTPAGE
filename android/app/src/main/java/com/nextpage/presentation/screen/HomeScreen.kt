@@ -7,19 +7,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -232,25 +225,21 @@ private fun QuickActionsSection(
             horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
         ) {
             QuickActionButton(
-                icon = Icons.Filled.Add,
                 label = stringResource(R.string.home_action_import_epub),
                 onClick = onImportEpub,
                 modifier = Modifier.weight(1f)
             )
             QuickActionButton(
-                icon = Icons.Filled.Book,
                 label = stringResource(R.string.home_action_import_pdf),
                 onClick = onImportPdf,
                 modifier = Modifier.weight(1f)
             )
             QuickActionButton(
-                icon = Icons.Filled.Star,
                 label = stringResource(R.string.home_action_notes),
                 onClick = onNotes,
                 modifier = Modifier.weight(1f)
             )
             QuickActionButton(
-                icon = Icons.Filled.Settings,
                 label = stringResource(R.string.home_action_stats),
                 onClick = onStats,
                 modifier = Modifier.weight(1f)
@@ -261,7 +250,6 @@ private fun QuickActionsSection(
 
 @Composable
 private fun QuickActionButton(
-    icon: ImageVector,
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -271,23 +259,13 @@ private fun QuickActionButton(
         shape = RoundedCornerShape(NextPageDimens.spacingSm),
         color = MaterialTheme.colorScheme.secondaryContainer
     ) {
-        Column(
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(NextPageDimens.spacingSm),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.height(NextPageDimens.spacingXs))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -310,14 +288,16 @@ private fun BookCard(
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.primary),
+                    .background(
+                        MaterialTheme.colorScheme.primary,
+                        RoundedCornerShape(4.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Book,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary
+                Text(
+                    text = book.title.take(1),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
             Spacer(modifier = Modifier.width(NextPageDimens.spacingMd))
@@ -361,15 +341,16 @@ private fun BookGridCard(
             Box(
                 modifier = Modifier
                     .size(80.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.primary),
+                    .background(
+                        MaterialTheme.colorScheme.primary,
+                        RoundedCornerShape(4.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Book,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(32.dp)
+                Text(
+                    text = book.title.take(1),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
             Spacer(modifier = Modifier.height(NextPageDimens.spacingXs))

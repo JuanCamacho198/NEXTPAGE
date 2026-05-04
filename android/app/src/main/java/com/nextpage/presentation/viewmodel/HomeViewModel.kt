@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.InputStream
@@ -44,7 +45,7 @@ data class User(
 
 // --- Events ---
 
-sealed interface HomeUiEvent {
+sealed class HomeUiEvent {
     data class Error(val message: String) : HomeUiEvent()
     data object BookDeleted : HomeUiEvent()
     data class BookImported(val title: String) : HomeUiEvent()
@@ -76,7 +77,7 @@ class HomeViewModel(
                 homeRepository.observeRecentBooks(5),
                 homeRepository.observeDailyStats(),
                 homeRepository.observeCurrentBook()
-            ) { books, stats, currentBook ->
+            ) { books: List<Book>, stats: ReadingStats, currentBook: Book? ->
                 Triple(books, stats, currentBook)
             }.collect { (books, stats, currentBook) ->
                 mutableUiState.update { state ->
@@ -115,10 +116,10 @@ class HomeViewModel(
             mutableUiState.update { it.copy(isLoading = true) }
             val result = authRepository.startGoogleSignIn()
             result.fold(
-                onSuccess = { url ->
+                onSuccess = { url: String ->
                     mutableEvents.emit(HomeUiEvent.OpenBrowser(url))
                 },
-                onFailure = { error ->
+                onFailure = { error: Throwable ->
                     mutableUiState.update { it.copy(isLoading = false, error = error.message) }
                     mutableEvents.emit(HomeUiEvent.Error(error.message ?: "Error de autenticación"))
                 }
@@ -161,7 +162,7 @@ class HomeViewModel(
             mutableUiState.update { state ->
                 state.copy(
                     user = null,
-                    greeting = "Hola"
+                    greeting = "Iniciar sesión"
                 )
             }
         }
@@ -186,10 +187,10 @@ class HomeViewModel(
             mutableUiState.update { it.copy(isLoading = false) }
 
             result.fold(
-                onSuccess = { book ->
+                onSuccess = { book: Book ->
                     mutableEvents.emit(HomeUiEvent.BookImported(book.title))
                 },
-                onFailure = { error ->
+                onFailure = { error: Throwable ->
                     mutableUiState.update { it.copy(error = error.message) }
                     mutableEvents.emit(HomeUiEvent.Error(error.message ?: "Error al importar"))
                 }
@@ -204,7 +205,7 @@ class HomeViewModel(
                 onSuccess = {
                     mutableEvents.emit(HomeUiEvent.BookDeleted)
                 },
-                onFailure = { error ->
+                onFailure = { error: Throwable ->
                     mutableUiState.update { it.copy(error = error.message) }
                     mutableEvents.emit(HomeUiEvent.Error(error.message ?: "Error al eliminar"))
                 }

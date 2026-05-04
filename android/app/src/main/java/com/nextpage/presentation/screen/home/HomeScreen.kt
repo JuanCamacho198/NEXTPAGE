@@ -28,7 +28,6 @@ import com.nextpage.presentation.viewmodel.HomeUiState
 import com.nextpage.presentation.viewmodel.User
 import com.nextpage.ui.components.molecules.BookCard
 import com.nextpage.ui.components.atoms.NextPageProgressBar
-import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun HomeScreen(
@@ -60,7 +59,7 @@ fun HomeScreen(
     
     // Show error snackbar
     LaunchedEffect(uiState.error) {
-        uiState.error?.let { error ->
+        uiState.error?.let { error: String ->
             snackbarHostState.showSnackbar(error)
             onEvent(HomeUiEvent.Error(error))
         }

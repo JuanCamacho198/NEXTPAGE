@@ -10,6 +10,7 @@ import com.nextpage.data.pdf.DefaultPdfParserService
 import com.nextpage.data.pdf.PdfContentLoader
 import com.nextpage.data.local.AppDatabase
 import com.nextpage.data.local.AppDatabaseMigrations
+import com.nextpage.data.repository.HomeRepositoryImpl
 import com.nextpage.data.repository.LibraryRepositoryImpl
 import com.nextpage.data.repository.ReaderRepositoryImpl
 import com.nextpage.data.repository.ReadingStatsRepositoryImpl
@@ -25,6 +26,7 @@ import com.nextpage.data.session.SupabaseSessionManager
 import com.nextpage.data.session.PreferencesSessionStore
 import com.nextpage.data.storage.AppInternalCoverStorage
 import com.nextpage.domain.repository.AuthRepository
+import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
@@ -85,6 +87,12 @@ class AppContainer(context: Context) {
 
     val readingStatsRepository: ReadingStatsRepository = ReadingStatsRepositoryImpl(
         readingStatsDao = appDatabase.readingStatsDao()
+    )
+    
+    val homeRepository: HomeRepository = HomeRepositoryImpl(
+        bookDao = appDatabase.bookDao(),
+        readingProgressDao = appDatabase.readingProgressDao(),
+        readingSessionDao = appDatabase.readingSessionDao()
     )
 
     private val contentLoaderStartTime = System.currentTimeMillis()

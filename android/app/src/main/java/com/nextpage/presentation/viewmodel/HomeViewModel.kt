@@ -17,16 +17,38 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.InputStream
+
+// --- Data Models ---
+
+data class HomeUiState(
+    val user: User? = null,
+    val greeting: String = "Iniciar sesión",
+    val minutesRead: Int = 0,
+    val sessions: Int = 0,
+    val dailyProgressPercent: Float = 0f,
+    val currentBook: Book? = null,
+    val recentBooks: List<Book> = emptyList(),
+    val isLoading: Boolean = true,
+    val error: String? = null
+)
+
+data class User(
+    val id: String,
+    val displayName: String,
+    val email: String?,
+    val photoUrl: String?
+)
+
+// --- Events ---
 
 sealed interface HomeUiEvent {
     data class Error(val message: String) : HomeUiEvent()
     data object BookDeleted : HomeUiEvent()
     data class BookImported(val title: String) : HomeUiEvent()
+    data class OpenBrowser(val url: String) : HomeUiEvent()
 }
 
 class HomeViewModel(

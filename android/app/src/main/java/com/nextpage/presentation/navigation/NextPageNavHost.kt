@@ -2,6 +2,12 @@ package com.nextpage.presentation.navigation
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -13,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -24,9 +31,12 @@ import androidx.navigation.compose.rememberNavController
 import com.nextpage.di.AppContainer
 import com.nextpage.presentation.screen.AuthScreen
 import com.nextpage.presentation.screen.HighlightsScreen
+import com.nextpage.presentation.screen.HomeScreen
 import com.nextpage.presentation.screen.LibraryScreen
 import com.nextpage.presentation.screen.ReaderScreen
+import com.nextpage.presentation.screen.SettingsScreen
 import com.nextpage.presentation.viewmodel.AuthViewModel
+import com.nextpage.presentation.viewmodel.HomeViewModel
 import com.nextpage.presentation.viewmodel.LibraryViewModel
 import com.nextpage.presentation.viewmodel.LibraryViewModelFactory
 import com.nextpage.presentation.viewmodel.ReaderViewModel
@@ -38,12 +48,15 @@ import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
 fun NextPageNavHost(appContainer: AppContainer) {
     val context = LocalContext.current
     val navController = rememberNavController()
+
     var selectedBookId by remember { mutableStateOf("") }
     var selectedBookFilePath by remember { mutableStateOf<String?>(null) }
     var selectedBookFormat by remember { mutableStateOf("epub") }
+
     val libraryViewModel: LibraryViewModel = viewModel(
         factory = LibraryViewModelFactory(appContainer.libraryRepository)
     )
+
     val readerViewModel: ReaderViewModel = viewModel(
         factory = ReaderViewModelFactory(
             readerRepository = appContainer.readerRepository,
@@ -53,9 +66,12 @@ fun NextPageNavHost(appContainer: AppContainer) {
             defaultBookId = selectedBookId
         )
     )
+
     val highlightsViewModel: HighlightsViewModel = viewModel(
         factory = HighlightsViewModelFactory(appContainer.readerRepository)
     )
+
+    val homeViewModel: HomeViewModel = remember { HomeViewModel() }
 
     val authViewModel: AuthViewModel = remember {
         AuthViewModel(
@@ -65,8 +81,11 @@ fun NextPageNavHost(appContainer: AppContainer) {
             hasSupabaseWiringIssue = appContainer.isSupabaseWiringError
         )
     }
+
     val authState by authViewModel.uiState.collectAsState()
     val isAuthenticated = authState.currentSession != null
+
+    val libraryState by libraryViewModel.uiState.collectAsState()
 
     LaunchedEffect(appContainer, authViewModel) {
         appContainer.authCallbackEvents.collect { callbackUri ->
@@ -89,16 +108,17 @@ fun NextPageNavHost(appContainer: AppContainer) {
         }
     }
 
-    val destinations = listOf(
+    val bottomNavDestinations = listOf(
+        NextPageDestination.Home,
         NextPageDestination.Library,
-        NextPageDestination.Reader,
-        NextPageDestination.Highlights
+        NextPageDestination.Highlights,
+        NextPageDestination.Settings
     )
 
     val startDestination = if (!isAuthenticated) {
         NextPageDestination.Auth.route
     } else {
-        NextPageDestination.Library.route
+        NextPageDestination.Home.route
     }
 
     Scaffold(
@@ -107,11 +127,13 @@ fun NextPageNavHost(appContainer: AppContainer) {
                 val currentBackStack = navController.currentBackStackEntryAsState().value
                 val currentDestination = currentBackStack?.destination
                 NavigationBar {
-                    destinations.forEach { destination ->
+                    bottomNavDestinations.forEach { destination ->
+                        val selected = currentDestination
+                            ?.hierarchy
+                            ?.any { it.route == destination.route } == true
+
                         NavigationBarItem(
-                            selected = currentDestination
-                                ?.hierarchy
-                                ?.any { it.route == destination.route } == true,
+                            selected = selected,
                             onClick = {
                                 navController.navigate(destination.route) {
                                     launchSingleTop = true
@@ -121,7 +143,18 @@ fun NextPageNavHost(appContainer: AppContainer) {
                                     }
                                 }
                             },
-                            icon = { Text(text = stringResource(destination.labelRes).take(1)) },
+                            icon = {
+                                Icon(
+                                    imageVector = when (destination) {
+                                        NextPageDestination.Home -> Icons.Filled.Home
+                                        NextPageDestination.Library -> Icons.Filled.Home
+                                        NextPageDestination.Highlights -> Icons.Filled.Star
+                                        NextPageDestination.Settings -> Icons.Filled.Settings
+                                        else -> Icons.Filled.Home
+                                    },
+                                    contentDescription = stringResource(destination.labelRes)
+                                )
+                            },
                             label = { Text(text = stringResource(destination.labelRes)) }
                         )
                     }
@@ -137,17 +170,54 @@ fun NextPageNavHost(appContainer: AppContainer) {
                 AuthScreen(
                     viewModel = authViewModel,
                     onAuthenticated = {
-                        navController.navigate(NextPageDestination.Library.route) {
+                        navController.navigate(NextPageDestination.Home.route) {
                             popUpTo(NextPageDestination.Auth.route) { inclusive = true }
                         }
                     },
                     onContinueLocal = {
-                        navController.navigate(NextPageDestination.Library.route) {
+                        navController.navigate(NextPageDestination.Home.route) {
                             popUpTo(NextPageDestination.Auth.route) { inclusive = true }
                         }
                     }
                 )
             }
+
+            composable(NextPageDestination.Home.route) {
+                HomeScreen(
+                    contentPadding = innerPadding,
+                    viewModel = homeViewModel,
+                    onNavigateToLibrary = {
+                        navController.navigate(NextPageDestination.Library.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToHighlights = {
+                        navController.navigate(NextPageDestination.Highlights.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(NextPageDestination.Settings.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onBookSelected = { bookId, filePath, format ->
+                        selectedBookId = bookId
+                        selectedBookFilePath = filePath
+                        selectedBookFormat = format
+                        navController.navigate(NextPageDestination.Reader.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onImportEpub = {
+                        // Trigger EPUB import via library
+                    },
+                    onImportPdf = {
+                        // Trigger PDF import via library
+                    }
+                )
+            }
+
             composable(NextPageDestination.Library.route) {
                 LibraryScreen(
                     contentPadding = innerPadding,
@@ -162,6 +232,7 @@ fun NextPageNavHost(appContainer: AppContainer) {
                     }
                 )
             }
+
             composable(NextPageDestination.Reader.route) {
                 ReaderScreen(
                     contentPadding = innerPadding,
@@ -172,10 +243,17 @@ fun NextPageNavHost(appContainer: AppContainer) {
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
+
             composable(NextPageDestination.Highlights.route) {
                 HighlightsScreen(
                     contentPadding = innerPadding,
                     viewModel = highlightsViewModel
+                )
+            }
+
+            composable(NextPageDestination.Settings.route) {
+                SettingsScreen(
+                    contentPadding = innerPadding
                 )
             }
         }

@@ -44,7 +44,7 @@ data class SupabaseConfig(
             )
         }
 
-        if (trimmedAnonKey.contains("your-anon-key", ignoreCase = true)) {
+        if (trimmedAnonKey.contains("your-anon-key", ignoreCase = true) && !trimmedAnonKey.startsWith("sb_")) {
             return Result.failure(
                 AppError(
                     category = ErrorCategory.CONFIG_ERROR,
@@ -73,6 +73,10 @@ data class SupabaseConfig(
         get() = validate().isSuccess
 
     private fun isLikelyJwt(value: String): Boolean {
+        // Accept JWT format (3 segments) OR Supabase publishable keys (sb_publishable_...)
+        if (value.startsWith("sb_publishable_")) {
+            return true
+        }
         val segments = value.split('.')
         return segments.size == 3 && segments.none { it.isBlank() }
     }

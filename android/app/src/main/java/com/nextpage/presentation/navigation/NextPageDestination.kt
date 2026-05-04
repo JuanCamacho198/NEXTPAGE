@@ -8,7 +8,9 @@ sealed class NextPageDestination(
     @StringRes val labelRes: Int
 ) {
     data object Auth : NextPageDestination("auth", R.string.tab_auth)
+    data object Home : NextPageDestination("home", R.string.tab_home)
     data object Library : NextPageDestination("library", R.string.tab_library)
     data object Reader : NextPageDestination("reader", R.string.tab_reader)
     data object Highlights : NextPageDestination("highlights", R.string.tab_highlights)
+    data object Settings : NextPageDestination("settings", R.string.tab_settings)
 }

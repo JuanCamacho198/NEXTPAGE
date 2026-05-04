@@ -2,7 +2,7 @@
   import GoogleLoginButton from "$lib/domain/library/GoogleLoginButton.svelte";
   import Button from "$lib/components/ui/forms/Button.svelte";
   import Panel from "$lib/components/ui/layout/Panel.svelte";
-  import Icon from "$lib/components/ui/Icon.svelte";
+  import Icon from "$lib/components/ui/navigation/Icon.svelte";
   import SettingsSidebar, { type SettingsTab } from "./SettingsSidebar.svelte";
   import {
     getSettings,

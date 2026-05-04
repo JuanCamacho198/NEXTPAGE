@@ -32,3 +32,4 @@ export { default as Tabs } from './navigation/Tabs.svelte';
 export { default as LivePreview } from './navigation/LivePreview.svelte';
 export { default as DropMenu } from './navigation/DropMenu.svelte';
 export { default as ReaderToolbar } from './navigation/ReaderToolbar.svelte';
+export { default as Icon } from './navigation/Icon.svelte';

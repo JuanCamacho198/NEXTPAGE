@@ -5,7 +5,7 @@
   import { listHighlights, deleteHighlight } from "$lib/api/tauriClient";
   import Pagination from "../ui/navigation/Pagination.svelte";
   import DropMenu from "../ui/navigation/DropMenu.svelte";
-  import Icon from "../ui/Icon.svelte";
+  import Icon from "../ui/navigation/Icon.svelte";
   import EmptyState from "../ui/feedback/EmptyState.svelte";
   import Skeleton from "../ui/feedback/Skeleton.svelte";
   import Button from "../ui/forms/Button.svelte";

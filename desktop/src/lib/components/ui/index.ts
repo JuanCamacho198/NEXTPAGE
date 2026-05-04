@@ -2,6 +2,7 @@ export { default as Avatar } from "./forms/Avatar.svelte";
 export { default as Badge } from "./forms/Badge.svelte";
 export { default as Button } from "./forms/Button.svelte";
 export { default as Card } from "./layout/Card.svelte";
+export { default as Icon } from "./navigation/Icon.svelte";
 export { default as ConfirmDialog } from "./feedback/ConfirmDialog.svelte";
 export { default as Dropdown } from "./navigation/Dropdown.svelte";
 export { default as DropMenu } from "./navigation/DropMenu.svelte";

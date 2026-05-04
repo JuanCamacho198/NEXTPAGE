@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, DropMenu } from "$lib/shared/ui";
+  import { Button, DropMenu, Icon } from "$lib/shared/ui";
   import { SafeCover } from "$lib/features/library";
   import {
     FILTER_OPTIONS,
@@ -186,7 +186,7 @@
               activeView = "grid";
             }}
           >
-            <Icon name="grid" size="sm" />
+            <Icon name="list" size="sm" />
           </button>
           <button
             type="button"
@@ -196,9 +196,7 @@
               activeView = "list";
             }}
           >
-            <Icon name="list" size="sm" />
-              <circle cx="4" cy="18" r="1"></circle>
-            </svg>
+            <Icon name="grid" size="sm" />
           </button>
         </div>
       </div>

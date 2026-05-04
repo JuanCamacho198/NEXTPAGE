@@ -22,7 +22,7 @@
         <span class="text-xl font-bold text-[var(--color-accent-blue)]">NP</span>
       </div>
       <div>
-        <h2 class="text-2xl font-bold tracking-tight text-[var(--color-primary)]">Hola, Usuario 👋</h2>
+        <h2 class="text-2xl font-bold tracking-tight text-[var(--color-primary)]">Hola, Usuario</h2>
         <p class="mt-1 max-w-xl text-sm leading-relaxed text-[var(--color-text-muted)]">
           Aquí tienes un resumen de tu progreso de lectura. Importa nuevos libros o retoma donde lo dejaste.
         </p>

@@ -2,7 +2,7 @@
   import Button from "../ui/forms/Button.svelte";
   import DropMenu from "../ui/navigation/DropMenu.svelte";
   import SafeCover from "../library/SafeCover.svelte";
-  import Icon from "../ui/Icon.svelte";
+  import Icon from "../ui/navigation/Icon.svelte";
   import {
     FILTER_OPTIONS,
     SORT_OPTIONS,

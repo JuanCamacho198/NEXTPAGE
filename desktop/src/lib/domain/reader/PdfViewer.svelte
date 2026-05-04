@@ -4,7 +4,7 @@
   import { getFileBytes } from "$lib/api/tauriClient";
   import HighlightToolbar from "./HighlightToolbar.svelte";
   import ErrorBoundary from "$lib/components/ui/feedback/ErrorBoundary.svelte";
-  import Icon from "$lib/components/ui/Icon.svelte";
+  import Icon from "$lib/components/ui/navigation/Icon.svelte";
   import type { MessageKey } from "$lib/i18n";
   import type { PdfOutlineItem, ReaderSettings, ReaderThemeMode } from "$lib/types";
   import {

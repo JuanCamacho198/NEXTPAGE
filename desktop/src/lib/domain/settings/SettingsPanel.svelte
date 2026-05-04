@@ -3,7 +3,6 @@
   import Button from "$lib/components/ui/forms/Button.svelte";
   import Panel from "$lib/components/ui/layout/Panel.svelte";
   import Icon from "$lib/components/ui/navigation/Icon.svelte";
-  import SettingsSidebar, { type SettingsTab } from "./SettingsSidebar.svelte";
   import {
     getSettings,
     upsertSettings,
@@ -45,6 +44,8 @@
     books?: { id: string; title: string }[];
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   }>();
+
+  type SettingsTab = "general" | "appearance" | "data" | "about";
 
   let activeTab = $state<SettingsTab>("general");
 
@@ -434,14 +435,14 @@
   {/if}
   <aside class={mode === "overlay"
     ? "fixed top-0 right-0 w-[350px] h-screen bg-white border-l border-zinc-200 shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]"
-    : "settings-panel-wrapper rounded-xl border border-[color:var(--color-border)] bg-background shadow-sm flex overflow-hidden"}>
+    : "settings-panel-wrapper rounded-xl border border-[color:var(--color-border)] bg-background shadow-sm flex flex-col overflow-hidden"}>
     <div class="flex items-center justify-between p-4 border-b border-zinc-200">
       <h2 class="m-0 text-lg font-semibold text-emerald-50">{t("settings.title")}</h2>
       <button class="bg-transparent border-none text-xl cursor-pointer text-zinc-600 p-1 flex items-center justify-center hover:text-zinc-900" onclick={closePanel} aria-label={t("settings.close")}><Icon name="close" size="md" /></button>
     </div>
 
-    <!-- Mobile tabs (hidden on desktop) -->
-    <div class="tabs md:hidden">
+    <!-- Tabs (shown on all screen sizes) -->
+    <div class="tabs">
       <button
         type="button"
         class="tab"
@@ -480,12 +481,7 @@
       </button>
     </div>
     
-    <div class="settings-content flex flex-1 overflow-hidden">
-      <!-- Desktop sidebar (hidden on mobile) -->
-      <div class="hidden md:block">
-        <SettingsSidebar bind:activeTab {t} />
-      </div>
-
+    <div class="settings-content flex flex-col flex-1 overflow-hidden">
       <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
         {#if activeTab === "general"}
           <!-- Authentication Section -->
@@ -1000,18 +996,22 @@
 
   .tabs {
     display: flex;
+    flex-direction: row;
     border-bottom: 1px solid var(--color-border);
+    overflow-x: auto;
   }
 
   .tab {
     flex: 1;
-    padding: 12px 8px;
+    min-width: fit-content;
+    padding: 10px 6px;
     border: none;
     background: transparent;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     color: var(--color-text-muted, var(--color-secondary));
     border-bottom: 2px solid transparent;
+    white-space: nowrap;
   }
 
   .tab:hover {

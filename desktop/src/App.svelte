@@ -4,6 +4,7 @@
   import Button from "./lib/components/ui/forms/Button.svelte";
   import ErrorToast from "./lib/components/ui/feedback/ErrorToast.svelte";
   import ErrorFallback from "./lib/components/ui/feedback/ErrorFallback.svelte";
+  import Icon from "./lib/shared/ui/navigation/Icon.svelte";
   import SettingsPanel from "./lib/domain/settings/SettingsPanel.svelte";
   import HomeDesktopView from "./lib/components/layout/HomeDesktopView.svelte";
   import AppSidebar from "./lib/components/layout/AppSidebar.svelte";
@@ -1026,21 +1027,23 @@
                 <div class="inline-flex rounded-md border border-[color:var(--color-border)] bg-[var(--color-background)] p-1" data-testid="shelf-view-toggle">
                   <button
                     type="button"
-                    class={`rounded px-2 py-1 text-xs font-medium ${shelfQueryState.viewMode === "grid" ? "bg-[var(--color-surface)] text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}`}
+                    class={`flex h-7 w-8 items-center justify-center rounded px-0 py-1 text-xs font-medium ${shelfQueryState.viewMode === "grid" ? "bg-[var(--color-surface)] text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}`}
                     onclick={() => {
                       setShelfViewMode("grid");
                     }}
+                    aria-label="Vista en cuadrícula"
                   >
-                    {t("library.grid")}
+                    <Icon name="list" size="sm" />
                   </button>
                   <button
                     type="button"
-                    class={`rounded px-2 py-1 text-xs font-medium ${shelfQueryState.viewMode === "list" ? "bg-[var(--color-surface)] text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}`}
+                    class={`flex h-7 w-8 items-center justify-center rounded px-0 py-1 text-xs font-medium ${shelfQueryState.viewMode === "list" ? "bg-[var(--color-surface)] text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}`}
                     onclick={() => {
                       setShelfViewMode("list");
                     }}
+                    aria-label="Vista en lista"
                   >
-                    {t("library.list")}
+                    <Icon name="grid" size="sm" />
                   </button>
                 </div>
 

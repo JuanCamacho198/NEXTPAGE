@@ -1,15 +1,14 @@
 package com.nextpage.ui.components.molecules
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
@@ -21,42 +20,83 @@ fun BookCard(
     title: String,
     author: String,
     progress: Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+    onDeleteClick: () -> Unit = {}
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+    var showMenu by remember { mutableStateOf(false) }
+    
+    Box(modifier = modifier) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 2.dp
         ) {
-            // Placeholder for Cover Image
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.secondary)
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                // Placeholder for Cover Image
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.secondary)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                NextPageTypography(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                NextPageTypography(
+                    text = author,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                NextPageProgressBar(
+                    progress = progress,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+        
+        // Options menu button
+        IconButton(
+            onClick = { showMenu = true },
+            modifier = Modifier.align(Alignment.TopEnd)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.MoreVert,
+                contentDescription = "Opciones",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            NextPageTypography(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2
+        }
+        
+        // Dropdown menu
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Editar metadatos") },
+                onClick = {
+                    showMenu = false
+                    // TODO: Navigate to edit screen
+                }
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            NextPageTypography(
-                text = author,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            NextPageProgressBar(
-                progress = progress,
-                modifier = Modifier.fillMaxWidth()
+            DropdownMenuItem(
+                text = { Text("Eliminar de estantería") },
+                onClick = {
+                    showMenu = false
+                    onDeleteClick()
+                }
             )
         }
     }

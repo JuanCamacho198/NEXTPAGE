@@ -129,7 +129,7 @@ fun ReaderScreen(
                     if (uiState.totalPdfPages > 0) {
                         IconButton(onClick = { showGoToPageDialog = true }) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.List,
+                                imageVector = Icons.Default.List,
                                 contentDescription = stringResource(R.string.reader_go_to_page)
                             )
                         }
@@ -417,7 +417,6 @@ private fun ReaderContent(
     }
 }
 
-@Composable
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChapterNavigationBar(

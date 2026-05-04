@@ -544,7 +544,7 @@
                 <Icon name="clock" size="sm" />
                 {t("settings.shortcuts.title")}
               </h4>
-              <p class="text-xs text-zinc-600 mb-3">{t("settings.shortcuts.description")}</p>
+              <p class="text-xs text-[var(--color-text-muted)] mb-3">{t("settings.shortcuts.description")}</p>
               <ul class="shortcuts-list">
                 {#each keyboardShortcuts as shortcut (shortcut.id)}
                   <li>
@@ -799,7 +799,7 @@
 
             <div class="space-y-4">
               <div class="mb-2">
-                <label class="mb-1 block text-xs text-zinc-600" for="reader-brightness">{t("settings.reader.brightness")}: {readerBrightness}%</label>
+                <label class="mb-1 block text-xs text-[var(--color-text-muted)]" for="reader-brightness">{t("settings.reader.brightness")}: {readerBrightness}%</label>
                 <input
                   type="range"
                   id="reader-brightness"
@@ -811,7 +811,7 @@
               </div>
 
               <div class="mb-2">
-                <label class="mb-1 block text-xs text-zinc-600" for="reader-contrast">{t("settings.reader.contrast")}: {readerContrast}%</label>
+                <label class="mb-1 block text-xs text-[var(--color-text-muted)]" for="reader-contrast">{t("settings.reader.contrast")}: {readerContrast}%</label>
                 <input
                   type="range"
                   id="reader-contrast"
@@ -823,7 +823,7 @@
               </div>
 
               <div class="mb-2">
-                <label class="mb-1 block text-xs text-zinc-600" for="reader-font-size">{t("settings.reader.epub.fontSize")}: {readerEpubFontSize}%</label>
+                <label class="mb-1 block text-xs text-[var(--color-text-muted)]" for="reader-font-size">{t("settings.reader.epub.fontSize")}: {readerEpubFontSize}%</label>
                 <input
                   type="range"
                   id="reader-font-size"
@@ -835,7 +835,7 @@
               </div>
 
               <div class="mb-2">
-                <label class="mb-1 block text-xs text-zinc-600" for="reader-font-family">{t("settings.reader.epub.fontFamily")}</label>
+                <label class="mb-1 block text-xs text-[var(--color-text-muted)]" for="reader-font-family">{t("settings.reader.epub.fontFamily")}</label>
                 <select
                   id="reader-font-family"
                   bind:value={readerEpubFontFamily}
@@ -927,7 +927,7 @@
                 <span class="app-version">Version {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}</span>
               </div>
             </div>
-            <p class="about-description text-sm text-zinc-600 mt-3">
+            <p class="about-description text-sm text-[var(--color-text-muted)] mt-3">
               A modern e-reader application for enjoying your EPUB collection with a clean, customizable reading experience.
             </p>
           </div>
@@ -968,7 +968,7 @@
         <div class="modal-overlay">
           <div class="modal-content">
             <h3 class="mt-0 mb-2 text-base font-semibold text-zinc-900">{t("settings.resetConfirmTitle")}</h3>
-            <p class="text-sm text-zinc-600 mb-4">{t("settings.resetConfirmMessage")}</p>
+            <p class="text-sm text-[var(--color-text-muted)] mb-4">{t("settings.resetConfirmMessage")}</p>
             <div class="flex gap-2 justify-end">
               <Button onclick={closeResetModal} variant="secondary" size="sm">
                 {t("settings.cancel")}

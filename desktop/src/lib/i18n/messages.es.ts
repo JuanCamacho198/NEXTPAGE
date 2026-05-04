@@ -380,4 +380,13 @@ export const messagesEs: Partial<Record<MessageKey, string>> = {
   "library.bulkImport.status.skipped": "Omitido",
   "library.bulkImport.status.failed": "Fallido",
   "library.bulkImport.status.cancelled": "Cancelado",
+  "settings.localPreferences": "Preferencias locales",
+  "settings.localPreferencesDescription": "Configura el idioma y tema de la aplicación.",
+  "settings.language": "Idioma",
+  "settings.languageSpanish": "Español",
+  "settings.languageEnglish": "Inglés",
+  "settings.theme": "Tema",
+  "settings.fontScale": "Escala de fuente",
+  "settings.authentication": "Autenticación",
+  "settings.authDescription": "Inicia sesión con Google para sincronizar tu biblioteca.",
 };

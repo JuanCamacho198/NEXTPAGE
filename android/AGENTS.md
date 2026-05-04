@@ -1,0 +1,187 @@
+# AGENTS.md
+
+## Commands
+
+### Build & Run
+```powershell
+# Build debug APK
+.\gradlew.bat assembleDebug
+
+# Build release APK
+.\gradlew.bat assembleRelease
+
+# Run tests (all)
+.\gradlew.bat test
+
+# Run unit tests only
+.\gradlew.bat testDebugUnitTest
+.\gradlew.bat testReleaseUnitTest
+
+# Run single test class
+.\gradlew.bat testDebugUnitTest --tests "com.nextpage.presentation.viewmodel.AuthViewModelTest"
+.\gradlew.bat testReleaseUnitTest --tests "com.nextpage.presentation.viewmodel.AuthViewModelTest"
+
+# Run single test method
+.\gradlew.bat testDebugUnitTest --tests "com.nextpage.presentation.viewmodel.AuthViewModelTest.signInWithEmailPassword_Success"
+```
+
+### Verification Tasks
+```powershell
+# Verify no hardcoded strings in AuthScreen
+.\gradlew.bat verifyAuthScreenNoHardcodedStrings
+
+# Verify release mapping (minify enabled by default)
+.\gradlew.bat verifyReleaseMapping
+
+# Run detekt (static analysis)
+.\gradlew.bat detekt
+
+# Build with info for debugging
+.\gradlew.bat assembleDebug --info --max-workers=2
+```
+
+### Android
+```powershell
+# Install debug APK to device/emulator
+.\gradlew.bat installDebug
+
+# Start emulator (requires ANDROID_HOME)
+emulator -avd <avd_name>
+```
+
+## Project Structure
+
+```
+android/
+├── app/
+│   └── src/
+│       ├── main/java/com/nextpage/
+│       │   ├── data/              # Data layer (repositories, Room, Supabase, PDF, EPUB)
+│       │   ├── domain/           # Domain layer (models, repository interfaces, usecases)
+│       │   ├── presentation/    # UI layer (screens, viewmodels, theme, navigation)
+│       │   ├── ui/              # Reusable UI components (atoms, molecules)
+│       │   ├── di/              # Dependency injection (AppContainer)
+│       │   └── MainActivity.kt  # Entry point
+│       ├── test/                # Unit tests (JVM)
+│       │   └── java/com/nextpage/
+│       │       ├── data/
+│       │       ├── domain/
+│       │       ├── presentation/
+│       │       └── testutil/     # Test utilities (MainDispatcherRule)
+│       └── androidTest/         # Instrumented tests (device/emulator)
+│           └── java/com/nextpage/
+├── gradle/                      # Gradle wrapper
+├── build.gradle.kts             # Root build config
+├── app/build.gradle.kts          # App build config
+├── gradle.properties            # Gradle properties
+└── local.properties             # Local config (Supabase keys, NOT in git)
+```
+
+### Package Organization
+| Package | Purpose |
+|---------|---------|
+| `data/local/` | Room database, DAOs, entities |
+| `data/remote/` | Supabase client, sync service |
+| `data/session/` | Session management |
+| `data/repository/` | Repository implementations |
+| `data/pdf/` | PDF rendering |
+| `data/epub/` | EPUB parsing |
+| `data/storage/` | File storage |
+| `domain/model/` | Domain models (Book, ReadingProgress, etc.) |
+| `domain/repository/` | Repository interfaces |
+| `domain/usecase/` | Business logic |
+| `presentation/screen/` | Compose screens |
+| `presentation/viewmodel/` | ViewModels |
+| `presentation/theme/` | Theme (Color, Type, Dimens, Shape) |
+| `presentation/navigation/` | Navigation graph |
+| `ui/components/atoms/` | Basic components (Button, ProgressBar, Typography) |
+| `ui/components/molecules/` | Compound components (BookCard) |
+| `di/` | DI container |
+
+## Code Style
+
+### Kotlin
+- **Kotlin 1.9.24** with **Compose 1.5.14**
+- Use **coroutines** for async operations
+- Use **Flow** for reactive streams
+- Follow **Clean Architecture**: presentation -> domain -> data
+- **Dependency direction**: UI depends on domain, domain has no dependencies, data implements domain interfaces
+
+### Compose
+- Use **Material 3** (`material3` dependency)
+- Follow **compoundable pattern**: atoms -> molecules -> screens
+- Use **StateFlow** in ViewModels, collect via `collectAsState()` in Compose
+- Use **rememberCoroutineScope** for async operations in Composables
+
+### Imports
+```kotlin
+// Standard
+import kotlinx.coroutines.flow.*
+// Compose
+import androidx.compose.runtime.*
+// Room
+import androidx.room.*
+// Supabase
+import io.github.jan-tennert.supabase.*
+// ViewModel
+import androidx.lifecycle.viewModelScope
+```
+
+### Error Handling
+- Use sealed classes for error types in domain layer
+- Wrap exceptions in domain errors
+- Show user-friendly messages in UI
+
+### Naming
+- **Files**: PascalCase (e.g., `AuthViewModel.kt`, `BookCard.kt`)
+- **Functions**: camelCase
+- **Classes/Objects**: PascalCase
+- **Constants**: UPPER_SNAKE_CASE
+- **Tests**: `<ClassName>Test.kt` or `<Feature>Test.kt`, test methods: `<methodName>_<scenario>_<expected>`
+
+## Conventions
+
+### Room Database
+- Schema location: `app/schemas/com.nextpage.data.local.AppDatabase/` (auto-generated)
+- Migration files: `AppDatabaseMigrations.kt`
+- Use **@Dao** for data access
+- Use **@Entity** for tables
+
+### Supabase
+- Config via `local.properties` (never commit keys)
+- BuildConfig fields for runtime config
+- Session management in `data/session/`
+
+### Testing
+- Tests go in same package structure under `test/`
+- Use `MainDispatcherRule` for coroutine dispatchers
+- Use **MockK** for mocking dependencies: `mockk()`, `every {}`, `verify {}`
+- Mock dependencies via interfaces or constructor injection
+- Test one thing per test method
+
+### Strings
+- All user-facing strings in `res/values/strings.xml` (English) and `res/values-es/strings.xml` (Spanish)
+- No hardcoded strings in Compose code
+- Custom Gradle task `verifyAuthScreenNoHardcodedStrings` enforces this
+
+## Safety
+
+### NEVER DO
+- **Never commit `local.properties`** - contains sensitive keys
+- **Never hardcode user-facing strings** - use string resources
+- **Never use `sudo`** - not needed
+- **Never run shell commands with user input** - dangerous
+- **Never skip tests** before committing
+
+### ALWAYS DO
+- **Run tests** before commit: `.\gradlew.bat test`
+- **Verify strings**: `.\gradlew.bat verifyAuthScreenNoHardcodedStrings`
+- **Use string resources** for all UI text
+- **Handle errors gracefully** in ViewModels and repositories
+
+## Gradle Notes
+
+- **Release minify enabled by default** - sets `proguard-rules.pro`
+- **KSP** for Room annotation processing
+- **Compose compiler** version matched to Kotlin version
+- Custom tasks in `app/build.gradle.kts` for verification

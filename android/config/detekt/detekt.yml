@@ -1,0 +1,28 @@
+# Configuración básica de Detekt
+# https://detekt.dev/
+
+build:
+  maxIssues: 10
+  excludeRules: []
+
+complexity:
+  ComplexMethod:
+    threshold: 15
+  TooManyFunctions:
+    thresholdInInterfaces: 10
+    thresholdInClasses: 15
+
+formatting:
+  android: true
+  autoCorrect: true
+  indentSize: 4
+  maxLineLength: 150
+
+style:
+  UnnecessaryAbstractClass:
+    excludeInnerClasses: true
+  MagicNumber:
+    ignoreNumbers: [-1, 0, 1, 2, 100, 1000]
+    ignoreHashCodeFunction: true
+  WildcardImport:
+    excludeImports: ['java.util.*', 'kotlinx.coroutines.*']

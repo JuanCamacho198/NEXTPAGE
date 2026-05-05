@@ -1384,7 +1384,7 @@
                 },
                 {
                   "type": "frame",
-                  "id": "wWnWh",
+                  "id": "AmHxP",
                   "name": "importBtn",
                   "fill": "$textPrimary",
                   "cornerRadius": 8,
@@ -1396,7 +1396,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "id": "V3qbT",
+                      "id": "L9YWCb",
                       "fill": "$bgBase",
                       "content": "Import Book",
                       "fontFamily": "Inter",
@@ -1686,7 +1686,8 @@
                   "type": "frame",
                   "id": "aCmuH",
                   "name": "stat5",
-                  "width": "fill_container",
+                  "width": 175,
+                  "height": 85,
                   "fill": "$bgCard",
                   "cornerRadius": 12,
                   "stroke": {
@@ -2144,7 +2145,7 @@
                                   "type": "text",
                                   "id": "i6qOG",
                                   "fill": "$textPrimary",
-                                  "content": "De animales a dioses - Breve...",
+                                  "content": "De animales a dioses ...",
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "bold"
@@ -2179,6 +2180,7 @@
                                 8,
                                 16
                               ],
+                              "justifyContent": "center",
                               "children": [
                                 {
                                   "type": "text",
@@ -2783,92 +2785,6 @@
                       "fontFamily": "Inter",
                       "fontSize": 14,
                       "fontWeight": "normal"
-                    },
-                    {
-                      "type": "frame",
-                      "id": "geEwk",
-                      "name": "statsRow",
-                      "gap": 12,
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "hYJEw",
-                          "name": "stat1",
-                          "fill": "$bgBase",
-                          "cornerRadius": 12,
-                          "stroke": {
-                            "thickness": 1,
-                            "fill": "$border"
-                          },
-                          "padding": [
-                            4,
-                            12
-                          ],
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "GFl5m",
-                              "fill": "$textSecondary",
-                              "content": "0 libros",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "Dd6Dm",
-                          "name": "stat2",
-                          "fill": "$bgBase",
-                          "cornerRadius": 12,
-                          "stroke": {
-                            "thickness": 1,
-                            "fill": "$border"
-                          },
-                          "padding": [
-                            4,
-                            12
-                          ],
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "mbUdj",
-                              "fill": "$textSecondary",
-                              "content": "0 leyendo",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "kOfJg",
-                          "name": "stat3",
-                          "fill": "$bgBase",
-                          "cornerRadius": 12,
-                          "stroke": {
-                            "thickness": 1,
-                            "fill": "$border"
-                          },
-                          "padding": [
-                            4,
-                            12
-                          ],
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "aZbSq",
-                              "fill": "$textSecondary",
-                              "content": "0 completados",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        }
-                      ]
                     }
                   ]
                 },
@@ -5597,6 +5513,7 @@
                       "fill": "$bgCard",
                       "cornerRadius": 6,
                       "stroke": {
+                        "align": "inside",
                         "thickness": 1,
                         "fill": "$border"
                       },
@@ -5604,6 +5521,7 @@
                         4,
                         8
                       ],
+                      "alignItems": "center",
                       "children": [
                         {
                           "type": "text",
@@ -5649,7 +5567,7 @@
                       "type": "text",
                       "id": "h1tNRw",
                       "fill": "$textPrimary",
-                      "content": "COLOR",
+                      "content": "Color",
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "bold"
@@ -5693,7 +5611,7 @@
                       "type": "text",
                       "id": "A9inB",
                       "fill": "$textPrimary",
-                      "content": "LIBRO",
+                      "content": "Libros",
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "bold"
@@ -5748,7 +5666,7 @@
                       "type": "text",
                       "id": "dEO07",
                       "fill": "$textPrimary",
-                      "content": "FECHA",
+                      "content": "Fecha",
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "bold"
@@ -5791,15 +5709,6 @@
                       ]
                     }
                   ]
-                },
-                {
-                  "type": "text",
-                  "id": "vEjao",
-                  "fill": "$textSecondary",
-                  "content": "Limpiar filtros",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
                 }
               ]
             },
@@ -5975,42 +5884,6 @@
                           "fontSize": 16,
                           "fontWeight": "normal",
                           "fontStyle": "italic"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "y3ydLR",
-                          "name": "note2",
-                          "width": "fill_container",
-                          "fill": "$bgBase",
-                          "cornerRadius": 8,
-                          "stroke": {
-                            "thickness": 1,
-                            "fill": "$border"
-                          },
-                          "gap": 12,
-                          "padding": 16,
-                          "children": [
-                            {
-                              "type": "icon_font",
-                              "id": "N82zBi",
-                              "width": 14,
-                              "height": 14,
-                              "iconFontName": "edit-2",
-                              "iconFontFamily": "lucide",
-                              "fill": "$textSecondary"
-                            },
-                            {
-                              "type": "text",
-                              "id": "E8Vhrl",
-                              "fill": "$textSecondary",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Interesante concepto sobre los mitos y religiones primitivas como herramientas de cooperación masiva.",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "normal"
-                            }
-                          ]
                         },
                         {
                           "type": "frame",
@@ -7032,6 +6905,7 @@
                                       "id": "noxDN",
                                       "fill": "$textSecondary",
                                       "content": "ES",
+                                      "textAlignVertical": "bottom",
                                       "fontFamily": "Inter",
                                       "fontSize": 12,
                                       "fontWeight": "bold"
@@ -7041,6 +6915,7 @@
                                       "id": "knsQ7",
                                       "fill": "$textPrimary",
                                       "content": "Español",
+                                      "textAlignVertical": "bottom",
                                       "fontFamily": "Inter",
                                       "fontSize": 14,
                                       "fontWeight": "bold"
@@ -7385,6 +7260,18 @@
           ]
         }
       ]
+    },
+    {
+      "id": "PM175",
+      "type": "ref",
+      "ref": "lii9t",
+      "x": 1035,
+      "y": 506,
+      "descendants": {
+        "c1Hi6": {
+          "content": "Limpiar Filtros"
+        }
+      }
     }
   ],
   "variables": {

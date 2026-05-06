@@ -5383,7 +5383,7 @@
       "type": "frame",
       "id": "iYbAZ",
       "x": 0,
-      "y": 2475,
+      "y": 2726,
       "name": "vista-resaltados",
       "width": 1280,
       "height": 800,
@@ -7603,18 +7603,6 @@
       ]
     },
     {
-      "id": "PM175",
-      "type": "ref",
-      "ref": "lii9t",
-      "x": 1035,
-      "y": 506,
-      "descendants": {
-        "c1Hi6": {
-          "content": "Limpiar Filtros"
-        }
-      }
-    },
-    {
       "type": "frame",
       "id": "zz6UC",
       "x": 3110,
@@ -7954,7 +7942,8 @@
                               "fill": "$textSecondary",
                               "content": "Oscuro",
                               "fontFamily": "Inter",
-                              "fontSize": 14
+                              "fontSize": 14,
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -7989,7 +7978,8 @@
                               "fill": "$textSecondary",
                               "content": "Sistema",
                               "fontFamily": "Inter",
-                              "fontSize": 14
+                              "fontSize": 14,
+                              "fontWeight": "normal"
                             }
                           ]
                         }

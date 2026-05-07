@@ -908,8 +908,8 @@
     {
       "type": "frame",
       "id": "ZnFqZ",
-      "x": 0,
-      "y": -982,
+      "x": -1,
+      "y": -981,
       "name": "vista-inicio",
       "width": 1280,
       "height": 800,
@@ -2846,7 +2846,7 @@
                               "type": "text",
                               "id": "g4YIJB",
                               "fill": "$textSecondary",
-                              "content": "Ctrl K",
+                              "content": "Ctrl + F",
                               "fontFamily": "Inter",
                               "fontSize": 10,
                               "fontWeight": "normal"

@@ -1057,9 +1057,9 @@
     {
       "type": "frame",
       "id": "WDYjT",
-      "x": -259,
+      "x": 434,
       "y": 0,
-      "name": "Inicio",
+      "name": "Home",
       "width": 390,
       "fill": "$bg_main",
       "layout": "vertical",
@@ -1418,7 +1418,7 @@
                   "fill": {
                     "type": "image",
                     "enabled": true,
-                    "url": "./images/generated-1778000466931.png",
+                    "url": "images/generated-1778000466931.png",
                     "mode": "fill"
                   },
                   "cornerRadius": 8
@@ -1613,7 +1613,7 @@
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "./images/generated-1778000483982.png",
+                        "url": "images/generated-1778000483982.png",
                         "mode": "fill"
                       },
                       "cornerRadius": 8
@@ -1690,7 +1690,7 @@
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "./images/generated-1778000481133.png",
+                        "url": "images/generated-1778000481133.png",
                         "mode": "fill"
                       },
                       "cornerRadius": 8
@@ -1767,7 +1767,7 @@
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "./images/generated-1778000479678.png",
+                        "url": "images/generated-1778000479678.png",
                         "mode": "fill"
                       },
                       "cornerRadius": 8
@@ -2174,9 +2174,9 @@
     {
       "type": "frame",
       "id": "HQRl6",
-      "x": 275,
-      "y": -14,
-      "name": "Estantería",
+      "x": 1048,
+      "y": 0,
+      "name": "Bookshelf",
       "width": 390,
       "fill": "$bg_main",
       "layout": "vertical",
@@ -2447,7 +2447,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "./images/generated-1778001270511.png",
+                            "url": "images/generated-1778001270511.png",
                             "mode": "fill"
                           },
                           "cornerRadius": 8
@@ -2558,7 +2558,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "./images/generated-1778001263225.png",
+                            "url": "images/generated-1778001263225.png",
                             "mode": "fill"
                           },
                           "cornerRadius": 8
@@ -2725,7 +2725,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "./images/generated-1778001275466.png",
+                            "url": "images/generated-1778001275466.png",
                             "mode": "fill"
                           },
                           "cornerRadius": 8
@@ -2836,7 +2836,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "./images/generated-1778001287480.png",
+                            "url": "images/generated-1778001287480.png",
                             "mode": "fill"
                           },
                           "cornerRadius": 8
@@ -2956,7 +2956,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "./images/generated-1778001291413.png",
+                            "url": "images/generated-1778001291413.png",
                             "mode": "fill"
                           },
                           "cornerRadius": 8
@@ -3223,6 +3223,162 @@
               ]
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "W29xCr",
+      "x": -175,
+      "y": 0,
+      "name": "Welcome Screen",
+      "width": 360,
+      "height": 800,
+      "fill": "$bg_main",
+      "layout": "vertical",
+      "padding": 24,
+      "justifyContent": "space_between",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "Jl0Bd",
+          "name": "topSpacer",
+          "width": "fit_content(0)",
+          "height": 120
+        },
+        {
+          "type": "frame",
+          "id": "nRvgN",
+          "name": "brandContainer",
+          "layout": "vertical",
+          "gap": 16,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "UAtQ8",
+              "name": "Logo Placeholder",
+              "width": 80,
+              "height": 80,
+              "fill": "#E0E0E0",
+              "cornerRadius": 20
+            },
+            {
+              "type": "text",
+              "id": "e7DjOi",
+              "name": "title",
+              "fill": "$text_primary",
+              "content": "NextPage",
+              "fontFamily": "Inter",
+              "fontSize": 36,
+              "fontWeight": "bold"
+            },
+            {
+              "type": "text",
+              "id": "Ee0UN",
+              "name": "subtitle",
+              "fill": "$text_secondary",
+              "content": "Your library, everywhere",
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "G1PRz",
+          "name": "actionContainer",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "U9nCNG",
+              "name": "btnGoogle",
+              "width": "fill_container",
+              "height": 56,
+              "fill": "#EEEEEE",
+              "cornerRadius": 28,
+              "gap": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "BPBsb",
+                  "name": "Google Icon Placeholder",
+                  "width": 24,
+                  "height": 24,
+                  "fill": "#CCCCCC"
+                },
+                {
+                  "type": "text",
+                  "id": "Xbcg5",
+                  "name": "googleText",
+                  "fill": "#121212",
+                  "content": "Continue with Google",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "bold"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "G8JQ5",
+              "name": "btnEmail",
+              "width": "fill_container",
+              "height": 56,
+              "fill": "#121212",
+              "cornerRadius": 28,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "wT27q",
+                  "name": "emailText",
+                  "fill": "#FFFFFF",
+                  "content": "Continue with Email",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "bold"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "UcyEH",
+              "name": "btnLocal",
+              "width": "fill_container",
+              "height": 56,
+              "fill": "#00000000",
+              "cornerRadius": 28,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "hgawr",
+                  "fill": "#666666",
+                  "content": "Continuar en local (Dev)",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "semi-bold"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "c9la0",
+          "name": "bottomSpacer",
+          "width": "fit_content(0)",
+          "height": 24
         }
       ]
     }

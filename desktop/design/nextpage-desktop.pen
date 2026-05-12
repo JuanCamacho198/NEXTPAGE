@@ -9618,7 +9618,12 @@
                       "id": "Ik7p8",
                       "width": 200,
                       "height": 280,
-                      "fill": "#334155",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "images/generated-1778553867901.png",
+                        "mode": "fill"
+                      },
                       "cornerRadius": 8,
                       "stroke": {
                         "thickness": 1,
@@ -9839,6 +9844,1289 @@
                       "iconFontName": "x",
                       "iconFontFamily": "lucide",
                       "fill": "$textSecondary"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "bHcGW",
+      "x": 10010,
+      "y": -982,
+      "name": "vista-lector-contraido",
+      "width": 1280,
+      "height": 800,
+      "fill": "$bgBase",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "HchXQ",
+          "name": "header",
+          "width": "fill_container",
+          "height": 64,
+          "stroke": {
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "$border"
+          },
+          "padding": [
+            0,
+            32
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "iZko5",
+              "name": "leftTools",
+              "gap": 24,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "VnHDb",
+                  "name": "backBtn",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "gsuAF",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "chevron-left",
+                      "iconFontFamily": "lucide",
+                      "fill": "$textSecondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "FvjsS",
+                      "fill": "$textSecondary",
+                      "content": "Biblioteca",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "icon_font",
+                  "id": "NUb0s",
+                  "width": 20,
+                  "height": 20,
+                  "iconFontName": "list",
+                  "iconFontFamily": "lucide",
+                  "fill": "$textPrimary"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "RTGLH",
+              "name": "rightTools",
+              "gap": 24,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "AplTS",
+                  "width": 20,
+                  "height": 20,
+                  "iconFontName": "search",
+                  "iconFontFamily": "lucide",
+                  "fill": "$textPrimary"
+                },
+                {
+                  "type": "icon_font",
+                  "id": "Mq4Si",
+                  "width": 20,
+                  "height": 20,
+                  "iconFontName": "type",
+                  "iconFontFamily": "lucide",
+                  "fill": "$textPrimary"
+                },
+                {
+                  "type": "icon_font",
+                  "id": "wf2PC",
+                  "width": 20,
+                  "height": 20,
+                  "iconFontName": "bookmark",
+                  "iconFontFamily": "lucide",
+                  "fill": "$textPrimary"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "qqyJB",
+          "name": "readerWorkspace",
+          "width": "fill_container",
+          "height": "fill_container",
+          "children": [
+            {
+              "type": "frame",
+              "id": "w57pN",
+              "name": "readingArea",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "padding": [
+                60,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "RsQrP",
+                  "name": "contentContainer",
+                  "width": 740,
+                  "layout": "vertical",
+                  "gap": 32,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "K88PNf",
+                      "fill": "$textPrimary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "CapÃ­tulo 1: El Despertar",
+                      "fontFamily": "Newsreader",
+                      "fontSize": 32,
+                      "fontWeight": "bold"
+                    },
+                    {
+                      "type": "text",
+                      "id": "yUjFr",
+                      "name": "bodyText",
+                      "fill": "$textPrimary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "El sol comenzaba a filtrarse por las rendijas de las persianas, dibujando lÃ­neas de luz dorada sobre el suelo de madera. HabÃ­a algo diferente en el aire aquella maÃ±ana, una quietud que invitaba a la reflexiÃ³n. No era solo el silencio habitual de la casa, sino una sensaciÃ³n de expectativa, como si el dÃ­a mismo estuviera conteniendo el aliento.",
+                      "lineHeight": 1.6,
+                      "fontFamily": "Newsreader",
+                      "fontSize": 18,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "LbuND",
+                  "layoutPosition": "absolute",
+                  "x": 480,
+                  "y": 105,
+                  "name": "highlightOverlay",
+                  "width": 250,
+                  "height": 28,
+                  "fill": "#38bdf840",
+                  "cornerRadius": 4,
+                  "layout": "none"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "r3e4rE",
+              "name": "sidebar",
+              "width": 320,
+              "height": "fill_container",
+              "fill": "$bgCard",
+              "stroke": {
+                "thickness": {
+                  "left": 1
+                },
+                "fill": "$border"
+              },
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "pXQFS",
+                  "name": "sidebarHeader",
+                  "width": "fill_container",
+                  "stroke": {
+                    "thickness": {
+                      "bottom": 1
+                    },
+                    "fill": "$border"
+                  },
+                  "padding": 20,
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "JeCjF",
+                      "fill": "$textPrimary",
+                      "content": "Notas y Resaltados",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "bold"
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "hAkB8",
+                      "width": 18,
+                      "height": 18,
+                      "iconFontName": "x",
+                      "iconFontFamily": "lucide",
+                      "fill": "$textSecondary"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "bxqYD",
+                  "name": "sidebarContent",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "tcEAq",
+                      "name": "item1",
+                      "width": "fill_container",
+                      "fill": "$bgBase",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border"
+                      },
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "dRLnm",
+                          "width": 40,
+                          "height": 4,
+                          "fill": "#38BDF8",
+                          "cornerRadius": 2
+                        },
+                        {
+                          "type": "text",
+                          "id": "QgBjE",
+                          "fill": "$textPrimary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "\"...una quietud que invitaba a la reflexiÃ³n. No era solo el silencio...\"",
+                          "lineHeight": 1.4,
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "yZ0Vu",
+                          "fill": "$textSecondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Esta frase captura la esencia del inicio del viaje del protagonista.",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal",
+                          "fontStyle": "italic"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rVvb5",
+                      "name": "item2",
+                      "width": "fill_container",
+                      "fill": "$bgBase",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border"
+                      },
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "W13bDP",
+                          "width": 40,
+                          "height": 4,
+                          "fill": "#FDE047",
+                          "cornerRadius": 2
+                        },
+                        {
+                          "type": "text",
+                          "id": "ITosA",
+                          "fill": "$textPrimary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "\"...el dÃ­a mismo estuviera conteniendo el aliento.\"",
+                          "lineHeight": 1.4,
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "wmJ2f",
+          "name": "footer",
+          "width": "fill_container",
+          "height": 48,
+          "stroke": {
+            "thickness": {
+              "top": 1
+            },
+            "fill": "$border"
+          },
+          "padding": [
+            0,
+            32
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Aa0ze",
+              "fill": "$textSecondary",
+              "content": "El Despertar",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "W8ddTC",
+              "name": "progressGroup",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "NDJLD",
+                  "type": "ref",
+                  "ref": "vVEie",
+                  "width": 200
+                },
+                {
+                  "type": "text",
+                  "id": "FVvdQ",
+                  "fill": "$textSecondary",
+                  "content": "15%",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "EtIL3",
+          "layoutPosition": "absolute",
+          "x": 500,
+          "y": 150,
+          "name": "selectionMenu",
+          "fill": "$bgCard",
+          "cornerRadius": 12,
+          "stroke": {
+            "thickness": 1,
+            "fill": "$border"
+          },
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000066",
+            "blur": 20
+          },
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 12,
+          "children": [
+            {
+              "type": "frame",
+              "id": "WHFAP",
+              "name": "colorRow",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "QX278",
+                  "fill": "#FDE047",
+                  "width": 24,
+                  "height": 24
+                },
+                {
+                  "type": "ellipse",
+                  "id": "b1PVW",
+                  "fill": "#2DD4BF",
+                  "width": 24,
+                  "height": 24
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ypLor",
+                  "fill": "#38BDF8",
+                  "width": 24,
+                  "height": 24,
+                  "stroke": {
+                    "thickness": 2,
+                    "fill": "$textPrimary"
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "J92oqg",
+                  "fill": "#A78BFA",
+                  "width": 24,
+                  "height": 24
+                },
+                {
+                  "type": "ellipse",
+                  "id": "RaAyF",
+                  "fill": "#FB923C",
+                  "width": 24,
+                  "height": 24
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "G86dL4",
+              "name": "divider",
+              "width": "fill_container",
+              "height": 1,
+              "fill": "$border"
+            },
+            {
+              "type": "frame",
+              "id": "LY4hm",
+              "name": "actionsRow",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ysLFU",
+                  "fill": "$textPrimary",
+                  "content": "Nota",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "mthxG",
+                  "fill": "$textPrimary",
+                  "content": "Copiar",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "BEsMR",
+                  "fill": "$textPrimary",
+                  "content": "Definir",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "path",
+              "id": "nkjQy",
+              "layoutPosition": "absolute",
+              "x": 45,
+              "y": 78,
+              "name": "tip",
+              "geometry": "M10 10l-10-10h20l-10 10z",
+              "viewBox": [
+                0,
+                0,
+                20,
+                10
+              ],
+              "fill": "$bgCard",
+              "width": 20,
+              "height": 10
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "EEFLD",
+      "x": 7250,
+      "y": -82,
+      "name": "vista-lector-apariencia",
+      "width": 1280,
+      "height": 800,
+      "fill": "$bgBase",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "a80Js",
+          "name": "header",
+          "width": "fill_container",
+          "height": 64,
+          "stroke": {
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "$border"
+          },
+          "padding": [
+            0,
+            32
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "IqT3s",
+              "name": "leftTools",
+              "gap": 24,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "gmbUf",
+                  "name": "backBtn",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "p5aIip",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "chevron-left",
+                      "iconFontFamily": "lucide",
+                      "fill": "$textSecondary"
+                    },
+                    {
+                      "type": "text",
+                      "id": "kvzC5",
+                      "fill": "$textSecondary",
+                      "content": "Biblioteca",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "icon_font",
+                  "id": "r82Qim",
+                  "width": 20,
+                  "height": 20,
+                  "iconFontName": "list",
+                  "iconFontFamily": "lucide",
+                  "fill": "$textPrimary"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "cbNvI",
+              "name": "rightTools",
+              "gap": 24,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "glQrq",
+                  "width": 20,
+                  "height": 20,
+                  "iconFontName": "search",
+                  "iconFontFamily": "lucide",
+                  "fill": "$textPrimary"
+                },
+                {
+                  "type": "icon_font",
+                  "id": "wGFzf",
+                  "width": 20,
+                  "height": 20,
+                  "iconFontName": "type",
+                  "iconFontFamily": "lucide",
+                  "fill": "$textPrimary"
+                },
+                {
+                  "type": "icon_font",
+                  "id": "fz3WU",
+                  "width": 20,
+                  "height": 20,
+                  "iconFontName": "bookmark",
+                  "iconFontFamily": "lucide",
+                  "fill": "$textPrimary"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Jbp3o",
+          "name": "readerWorkspace",
+          "width": "fill_container",
+          "height": "fill_container",
+          "children": [
+            {
+              "type": "frame",
+              "id": "bDqzm",
+              "name": "readingArea",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "padding": [
+                60,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "SVZeP",
+                  "name": "contentContainer",
+                  "width": 740,
+                  "layout": "vertical",
+                  "gap": 32,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "MskNJ",
+                      "fill": "$textPrimary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "CapÃ­tulo 1: El Despertar",
+                      "fontFamily": "Newsreader",
+                      "fontSize": 32,
+                      "fontWeight": "bold"
+                    },
+                    {
+                      "type": "text",
+                      "id": "TBysd",
+                      "name": "bodyText",
+                      "fill": "$textPrimary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "El sol comenzaba a filtrarse por las rendijas de las persianas, dibujando lÃ­neas de luz dorada sobre el suelo de madera. HabÃ­a algo diferente en el aire aquella maÃ±ana, una quietud que invitaba a la reflexiÃ³n. No era solo el silencio habitual de la casa, sino una sensaciÃ³n de expectativa, como si el dÃ­a mismo estuviera conteniendo el aliento.",
+                      "lineHeight": 1.6,
+                      "fontFamily": "Newsreader",
+                      "fontSize": 18,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qXLX3",
+                  "layoutPosition": "absolute",
+                  "x": 480,
+                  "y": 105,
+                  "name": "highlightOverlay",
+                  "width": 250,
+                  "height": 28,
+                  "fill": "#38bdf840",
+                  "cornerRadius": 4,
+                  "layout": "none"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "XcIjx",
+              "name": "sidebar",
+              "width": 320,
+              "height": "fill_container",
+              "fill": "$bgCard",
+              "stroke": {
+                "thickness": {
+                  "left": 1
+                },
+                "fill": "$border"
+              },
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "CW7RU",
+                  "name": "sidebarHeader",
+                  "width": "fill_container",
+                  "stroke": {
+                    "thickness": {
+                      "bottom": 1
+                    },
+                    "fill": "$border"
+                  },
+                  "padding": 20,
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "P0mxu",
+                      "fill": "$textPrimary",
+                      "content": "Notas y Resaltados",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "bold"
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "R6oT6",
+                      "width": 18,
+                      "height": 18,
+                      "iconFontName": "x",
+                      "iconFontFamily": "lucide",
+                      "fill": "$textSecondary"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "FD0dS",
+                  "name": "sidebarContent",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "dFbMJ",
+                      "name": "item1",
+                      "width": "fill_container",
+                      "fill": "$bgBase",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border"
+                      },
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Uggol",
+                          "width": 40,
+                          "height": 4,
+                          "fill": "#38BDF8",
+                          "cornerRadius": 2
+                        },
+                        {
+                          "type": "text",
+                          "id": "FGa07",
+                          "fill": "$textPrimary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "\"...una quietud que invitaba a la reflexiÃ³n. No era solo el silencio...\"",
+                          "lineHeight": 1.4,
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "kpAS2",
+                          "fill": "$textSecondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Esta frase captura la esencia del inicio del viaje del protagonista.",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal",
+                          "fontStyle": "italic"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "qq8sg",
+                      "name": "item2",
+                      "width": "fill_container",
+                      "fill": "$bgBase",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border"
+                      },
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "hTdLd",
+                          "width": 40,
+                          "height": 4,
+                          "fill": "#FDE047",
+                          "cornerRadius": 2
+                        },
+                        {
+                          "type": "text",
+                          "id": "wlpVl",
+                          "fill": "$textPrimary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "\"...el dÃ­a mismo estuviera conteniendo el aliento.\"",
+                          "lineHeight": 1.4,
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "SFGJT",
+          "name": "footer",
+          "width": "fill_container",
+          "height": 48,
+          "stroke": {
+            "thickness": {
+              "top": 1
+            },
+            "fill": "$border"
+          },
+          "padding": [
+            0,
+            32
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "P69xy",
+              "fill": "$textSecondary",
+              "content": "El Despertar",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "hjji4",
+              "name": "progressGroup",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "x0pK6",
+                  "type": "ref",
+                  "ref": "vVEie",
+                  "width": 200
+                },
+                {
+                  "type": "text",
+                  "id": "piRkd",
+                  "fill": "$textSecondary",
+                  "content": "15%",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "G6275T",
+          "layoutPosition": "absolute",
+          "x": 500,
+          "y": 150,
+          "name": "selectionMenu",
+          "fill": "$bgCard",
+          "cornerRadius": 12,
+          "stroke": {
+            "thickness": 1,
+            "fill": "$border"
+          },
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000066",
+            "blur": 20
+          },
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 12,
+          "children": [
+            {
+              "type": "frame",
+              "id": "DHsqb",
+              "name": "colorRow",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "rGQDf",
+                  "fill": "#FDE047",
+                  "width": 24,
+                  "height": 24
+                },
+                {
+                  "type": "ellipse",
+                  "id": "jNafO",
+                  "fill": "#2DD4BF",
+                  "width": 24,
+                  "height": 24
+                },
+                {
+                  "type": "ellipse",
+                  "id": "WFZhp",
+                  "fill": "#38BDF8",
+                  "width": 24,
+                  "height": 24,
+                  "stroke": {
+                    "thickness": 2,
+                    "fill": "$textPrimary"
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "pMqRF",
+                  "fill": "#A78BFA",
+                  "width": 24,
+                  "height": 24
+                },
+                {
+                  "type": "ellipse",
+                  "id": "KRDum",
+                  "fill": "#FB923C",
+                  "width": 24,
+                  "height": 24
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "aV2Ij",
+              "name": "divider",
+              "width": "fill_container",
+              "height": 1,
+              "fill": "$border"
+            },
+            {
+              "type": "frame",
+              "id": "ttTKX",
+              "name": "actionsRow",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "juV41",
+                  "fill": "$textPrimary",
+                  "content": "Nota",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "CmDzC",
+                  "fill": "$textPrimary",
+                  "content": "Copiar",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "XUhgK",
+                  "fill": "$textPrimary",
+                  "content": "Definir",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "path",
+              "id": "uYDeh",
+              "layoutPosition": "absolute",
+              "x": 45,
+              "y": 78,
+              "name": "tip",
+              "geometry": "M10 10l-10-10h20l-10 10z",
+              "viewBox": [
+                0,
+                0,
+                20,
+                10
+              ],
+              "fill": "$bgCard",
+              "width": 20,
+              "height": 10
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TCNW4",
+          "layoutPosition": "absolute",
+          "x": 797,
+          "y": 90,
+          "name": "appearancePopover",
+          "width": 280,
+          "fill": "$bgCard",
+          "cornerRadius": 12,
+          "stroke": {
+            "thickness": 1,
+            "fill": "$border"
+          },
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000066",
+            "blur": 20
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "Sw9TQ",
+              "name": "sizeRow",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ug3OA",
+                  "fill": "$textSecondary",
+                  "content": "Tamaño",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "s8w63",
+                  "name": "sizeControls",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "mNA9S",
+                      "type": "ref",
+                      "ref": "AbSdu",
+                      "descendants": {
+                        "cm63l": {
+                          "iconFontName": "minus",
+                          "width": 16,
+                          "height": 16
+                        }
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "DXRtI",
+                      "fill": "$textPrimary",
+                      "content": "100%",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "id": "A1qHi",
+                      "type": "ref",
+                      "ref": "AbSdu",
+                      "descendants": {
+                        "cm63l": {
+                          "iconFontName": "plus",
+                          "width": 16,
+                          "height": 16
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "xzYtX",
+              "name": "fontRow",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "onjuL",
+                  "fill": "$textSecondary",
+                  "content": "Tipografía",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "D8QL0",
+                  "type": "ref",
+                  "ref": "jZYdS",
+                  "width": "fill_container",
+                  "name": "fontSelect",
+                  "descendants": {
+                    "THL3r": {
+                      "content": "Inter (Sans)"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rx5qw",
+              "name": "themeRow",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "uC1JG",
+                  "fill": "$textSecondary",
+                  "content": "Fondo",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "e1ePeA",
+                  "name": "themeOptions",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "uzQ5O",
+                      "width": 32,
+                      "height": 32,
+                      "fill": "#ffffff",
+                      "cornerRadius": 16,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border"
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DIDa9",
+                      "width": 32,
+                      "height": 32,
+                      "fill": "#fdf6e3",
+                      "cornerRadius": 16,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border"
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "EkDFq",
+                      "width": 32,
+                      "height": 32,
+                      "fill": "#1e293b",
+                      "cornerRadius": 16,
+                      "stroke": {
+                        "thickness": 2,
+                        "fill": "$border"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "w9Tzq",
+              "name": "marginRow",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Z616Ib",
+                  "fill": "$textSecondary",
+                  "content": "Márgenes",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "frSuw",
+                  "name": "marginControls",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "V2UG9c",
+                      "type": "ref",
+                      "ref": "AbSdu",
+                      "descendants": {
+                        "cm63l": {
+                          "iconFontName": "align-center",
+                          "width": 16,
+                          "height": 16
+                        }
+                      }
+                    },
+                    {
+                      "id": "v0z5gj",
+                      "type": "ref",
+                      "ref": "AbSdu",
+                      "descendants": {
+                        "cm63l": {
+                          "iconFontName": "align-justify",
+                          "width": 16,
+                          "height": 16
+                        }
+                      }
                     }
                   ]
                 }

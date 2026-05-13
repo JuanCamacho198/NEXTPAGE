@@ -24,16 +24,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -77,7 +74,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.ViewList
+import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -186,7 +183,6 @@ fun LibraryScreen(
             LibraryBookshelfContent(
                 contentPadding = contentPadding,
                 books = uiState.books,
-                isImporting = uiState.isImporting,
                 readingMinutesByBook = uiState.readingMinutesByBook,
                 statusFilter = statusFilter,
                 onStatusFilterChanged = { statusFilter = it },
@@ -244,7 +240,6 @@ fun LibraryScreen(
 private fun LibraryBookshelfContent(
     contentPadding: PaddingValues,
     books: List<Book>,
-    isImporting: Boolean,
     readingMinutesByBook: Map<String, Long>,
     statusFilter: String,
     onStatusFilterChanged: (String) -> Unit,
@@ -461,7 +456,7 @@ private fun SortRowComposable(
             }
             IconButton(onClick = { /* TODO: list view toggle */ }) {
                 Icon(
-                    imageVector = Icons.Outlined.ViewList,
+                    imageVector = Icons.AutoMirrored.Outlined.ViewList,
                     contentDescription = "List view",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )

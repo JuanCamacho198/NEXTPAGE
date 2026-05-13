@@ -36,4 +36,19 @@
     <string name="nav_library">Estantería</string>
     <string name="nav_highlights">Resaltados</string>
     <string name="nav_settings">Ajustes</string>
+    <!-- Library / Bookshelf - New Pencil design -->
+    <string name="library_search_placeholder">Buscar libros...</string>
+    <string name="library_filter_label">Filtrar</string>
+    <string name="library_tab_all">Todos</string>
+    <string name="library_tab_reading">Leyendo</string>
+    <string name="library_tab_pending">Pendientes</string>
+    <string name="library_tab_completed">Completados</string>
+    <string name="library_sort_label">Ordenar por:</string>
+    <string name="library_sort_date_added">Fecha agregada</string>
+    <string name="library_sort_title">Título</string>
+    <string name="library_sort_author">Autor</string>
+    <string name="library_sort_last_read">Última lectura</string>
+    <string name="library_add_book">Añadir libro</string>
+    <string name="library_status_in_progress">%1$d min</string>
+    <string name="library_status_completed">Completado</string>
 </resources>

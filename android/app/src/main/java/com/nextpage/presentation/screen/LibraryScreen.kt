@@ -779,10 +779,14 @@ private fun Modifier.dashedBorder(
     dashLength: Dp = 8.dp,
     gapLength: Dp = 4.dp
 ) = this.drawBehind {
+    val rect = androidx.compose.ui.geometry.Rect(
+        offset = androidx.compose.ui.geometry.Offset.Zero,
+        size = size
+    )
     val path = Path().apply {
         addRoundRect(
             androidx.compose.ui.geometry.RoundRect(
-                rect = size.toRect(),
+                rect = rect,
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius.toPx())
             )
         )

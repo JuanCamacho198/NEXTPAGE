@@ -16,6 +16,11 @@
     <string name="auth_google_disabled_wiring_error">Google sign-in is disabled due to an OAuth callback wiring error.</string>
     <string name="auth_wiring_error_incomplete">Wiring error: Google OAuth callback wiring is incomplete. Verify redirect and callback handling. Local reading still works.</string>
     <string name="auth_continue_local_mode">Continue in local mode</string>
+    <string name="auth_email_label">Email</string>
+    <string name="auth_password_label">Password</string>
+    <string name="auth_sign_in">Sign In</string>
+    <string name="auth_sign_up">Sign Up</string>
+    <string name="auth_continue_local_dev">Continue in local (Dev)</string>
     <string name="home_welcome">Welcome back</string>
     <string name="home_today_summary">Today\'s summary</string>
     <string name="home_minutes_read_today">%1$d minutes read today</string>

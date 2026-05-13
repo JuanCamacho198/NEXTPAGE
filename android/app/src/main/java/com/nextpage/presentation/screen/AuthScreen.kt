@@ -2,8 +2,11 @@ package com.nextpage.presentation.screen
 
 import android.util.Log
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +63,9 @@ fun AuthScreen(
 
     val buttonEnabled = buttonDisabledReason == GoogleButtonDisabledReason.NONE
 
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
     LaunchedEffect(uiState.currentSession) {
         if (uiState.currentSession != null) {
             onAuthenticated()
@@ -76,7 +82,8 @@ fun AuthScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -140,12 +147,56 @@ fun AuthScreen(
             )
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text(stringResource(R.string.auth_email_label)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text(stringResource(R.string.auth_password_label)) },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = { viewModel.signIn(email, password) },
+                enabled = !uiState.isLoading,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(R.string.auth_sign_in))
+            }
+
+            OutlinedButton(
+                onClick = { viewModel.signUp(email, password) },
+                enabled = !uiState.isLoading,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(R.string.auth_sign_up))
+            }
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
         OutlinedButton(
             onClick = onContinueLocal,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(stringResource(R.string.auth_continue_local_mode))
+            Text(stringResource(R.string.auth_continue_local_dev))
         }
 
         uiState.errorMessage?.let { error ->

@@ -5,30 +5,41 @@ import java.io.File
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,14 +49,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.CachePolicy
@@ -56,6 +72,23 @@ import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.LibraryImportEvent
 import com.nextpage.presentation.viewmodel.LibraryUiEvent
 import com.nextpage.presentation.viewmodel.LibraryViewModel
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.ViewList
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.Dp
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Screen Composable
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun LibraryScreen(
@@ -66,7 +99,9 @@ fun LibraryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-    var layoutMode by remember { mutableStateOf(LibraryLayoutMode.LIST) }
+
+    var statusFilter by remember { mutableStateOf("all") }
+    var sortBy by remember { mutableStateOf("date_added") }
 
     val epubPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -148,16 +183,17 @@ fun LibraryScreen(
                 onPdfClick = { pdfPickerLauncher.launch(arrayOf("application/pdf")) }
             )
         } else {
-            LibraryCollection(
-                books = uiState.books,
+            LibraryBookshelfContent(
                 contentPadding = contentPadding,
+                books = uiState.books,
                 isImporting = uiState.isImporting,
-                layoutMode = layoutMode,
-                onLayoutModeChanged = { layoutMode = it },
+                readingMinutesByBook = uiState.readingMinutesByBook,
+                statusFilter = statusFilter,
+                onStatusFilterChanged = { statusFilter = it },
+                sortBy = sortBy,
+                onSortByChanged = { sortBy = it },
                 onBookSelected = onBookSelected,
                 onBookLongPress = { book -> viewModel.requestDeleteBook(book) },
-                totalMinutesRead = uiState.totalMinutesRead,
-                readingMinutesByBook = uiState.readingMinutesByBook,
                 onEpubClick = { epubPickerLauncher.launch(arrayOf("application/epub+zip")) },
                 onPdfClick = { pdfPickerLauncher.launch(arrayOf("application/pdf")) }
             )
@@ -200,86 +236,435 @@ fun LibraryScreen(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Bookshelf Content (non-empty state)
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
-private fun LibraryCollection(
-    books: List<Book>,
+private fun LibraryBookshelfContent(
     contentPadding: PaddingValues,
+    books: List<Book>,
     isImporting: Boolean,
-    layoutMode: LibraryLayoutMode,
-    onLayoutModeChanged: (LibraryLayoutMode) -> Unit,
+    readingMinutesByBook: Map<String, Long>,
+    statusFilter: String,
+    onStatusFilterChanged: (String) -> Unit,
+    sortBy: String,
+    onSortByChanged: (String) -> Unit,
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
-    totalMinutesRead: Long,
-    readingMinutesByBook: Map<String, Long>,
     onEpubClick: () -> Unit,
     onPdfClick: () -> Unit
 ) {
+    val filteredBooks = remember(books, statusFilter, readingMinutesByBook) {
+        filterBooks(books, statusFilter, readingMinutesByBook)
+    }
+
+    val sortedBooks = remember(filteredBooks, sortBy) {
+        sortBookList(filteredBooks, sortBy)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
-            .padding(horizontal = NextPageDimens.spacingMd, vertical = NextPageDimens.spacingMd),
-        verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)) {
-            Button(onClick = onEpubClick, enabled = !isImporting, modifier = Modifier.weight(1f)) {
-                Text(text = stringResource(R.string.library_import_epub))
-            }
-            Button(onClick = onPdfClick, enabled = !isImporting, modifier = Modifier.weight(1f)) {
-                Text(text = stringResource(R.string.library_import_pdf))
-            }
-            Button(
-                onClick = { onLayoutModeChanged(LibraryLayoutMode.LIST) },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(text = stringResource(R.string.library_layout_list))
-            }
-            Button(
-                onClick = { onLayoutModeChanged(LibraryLayoutMode.GRID) },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(text = stringResource(R.string.library_layout_grid))
-            }
-        }
+        // 1. Header
+        LibraryHeader()
 
-        Text(
-            text = stringResource(R.string.library_total_minutes_read, totalMinutesRead),
-            style = MaterialTheme.typography.bodyMedium
+        // 2. Status Tabs
+        StatusTabsRow(
+            selectedTab = statusFilter,
+            onTabSelected = onStatusFilterChanged
         )
 
-        if (layoutMode == LibraryLayoutMode.LIST) {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
-            ) {
-                items(books, key = { book -> book.id }) { book ->
-                    LibraryBookItem(
-                        book = book,
-                        minutesRead = readingMinutesByBook[book.id] ?: 0L,
-                        onClick = { onBookSelected(book.id, book.filePath, book.format) },
-                        onLongPress = { onBookLongPress(book) }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 3. Sort Row
+        SortRowComposable(
+            sortBy = sortBy,
+            onSortByChanged = onSortByChanged
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 4. Book Grid
+        BookGridSection(
+            books = sortedBooks,
+            readingMinutesByBook = readingMinutesByBook,
+            onBookSelected = onBookSelected,
+            onBookLongPress = onBookLongPress,
+            onEpubClick = onEpubClick,
+            onPdfClick = onPdfClick
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Section 1: Header
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun LibraryHeader() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 24.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(R.string.nav_library),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            IconButton(onClick = { /* TODO: search action */ }) {
+                Icon(
+                    imageVector = Icons.Outlined.Search,
+                    contentDescription = stringResource(R.string.library_search_placeholder)
+                )
+            }
+            IconButton(onClick = { /* TODO: filter action */ }) {
+                Icon(
+                    imageVector = Icons.Outlined.FilterList,
+                    contentDescription = stringResource(R.string.library_filter_label)
+                )
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Section 2: Status Tabs
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun StatusTabsRow(
+    selectedTab: String,
+    onTabSelected: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        val tabs = listOf(
+            "all" to R.string.library_tab_all,
+            "reading" to R.string.library_tab_reading,
+            "pending" to R.string.library_tab_pending,
+            "completed" to R.string.library_tab_completed
+        )
+        tabs.forEach { (tabId, labelRes) ->
+            val isSelected = selectedTab == tabId
+            AssistChip(
+                onClick = { onTabSelected(tabId) },
+                label = {
+                    Text(
+                        text = stringResource(labelRes),
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                shape = RoundedCornerShape(16.dp),
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = if (isSelected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.surfaceVariant,
+                    labelColor = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                border = null
+            )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Section 3: Sort Row
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun SortRowComposable(
+    sortBy: String,
+    onSortByChanged: (String) -> Unit
+) {
+    var sortMenuExpanded by remember { mutableStateOf(false) }
+
+    val sortLabelRes = when (sortBy) {
+        "title" -> R.string.library_sort_title
+        "author" -> R.string.library_sort_author
+        "last_read" -> R.string.library_sort_last_read
+        else -> R.string.library_sort_date_added
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.library_sort_label),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Box {
+                TextButton(onClick = { sortMenuExpanded = true }) {
+                    Text(text = stringResource(sortLabelRes))
+                }
+                DropdownMenu(
+                    expanded = sortMenuExpanded,
+                    onDismissRequest = { sortMenuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.library_sort_date_added)) },
+                        onClick = {
+                            onSortByChanged("date_added")
+                            sortMenuExpanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.library_sort_title)) },
+                        onClick = {
+                            onSortByChanged("title")
+                            sortMenuExpanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.library_sort_author)) },
+                        onClick = {
+                            onSortByChanged("author")
+                            sortMenuExpanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.library_sort_last_read)) },
+                        onClick = {
+                            onSortByChanged("last_read")
+                            sortMenuExpanded = false
+                        }
                     )
                 }
             }
-        } else {
-            LazyVerticalGrid(
-                modifier = Modifier.weight(1f),
-                columns = GridCells.Adaptive(minSize = 140.dp),
-                verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm),
-                horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
-            ) {
-                items(books, key = { book -> book.id }) { book ->
-                    LibraryBookGridItem(
-                        book = book,
-                        minutesRead = readingMinutesByBook[book.id] ?: 0L,
-                        onClick = { onBookSelected(book.id, book.filePath, book.format) },
-                        onLongPress = { onBookLongPress(book) }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            IconButton(onClick = { /* grid view active */ }) {
+                Icon(
+                    imageVector = Icons.Outlined.GridView,
+                    contentDescription = "Grid view",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            IconButton(onClick = { /* TODO: list view toggle */ }) {
+                Icon(
+                    imageVector = Icons.Outlined.ViewList,
+                    contentDescription = "List view",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Section 4: Book Grid
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun BookGridSection(
+    books: List<Book>,
+    readingMinutesByBook: Map<String, Long>,
+    onBookSelected: (String, String, String) -> Unit,
+    onBookLongPress: (Book) -> Unit,
+    onEpubClick: () -> Unit,
+    onPdfClick: () -> Unit
+) {
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(2),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalItemSpacing = 16.dp,
+        contentPadding = PaddingValues(bottom = 16.dp)
+    ) {
+        items(books, key = { it.id }) { book ->
+            BookGridCard(
+                book = book,
+                minutesRead = readingMinutesByBook[book.id] ?: 0L,
+                onClick = { onBookSelected(book.id, book.filePath, book.format) },
+                onLongPress = { onBookLongPress(book) }
+            )
+        }
+        item {
+            AddBookCard(
+                onEpubClick = onEpubClick,
+                onPdfClick = onPdfClick
+            )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Book Grid Card
+// ─────────────────────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BookGridCard(
+    book: Book,
+    minutesRead: Long,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit
+) {
+    val progressFraction = if (minutesRead > 0L) {
+        (minutesRead.toFloat() / 300f).coerceIn(0f, 1f)
+    } else 0f
+
+    val statusText = when {
+        progressFraction >= 1f -> stringResource(R.string.library_status_completed)
+        minutesRead > 0L -> stringResource(R.string.library_status_in_progress, minutesRead)
+        else -> null
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongPress
+            )
+    ) {
+        // Cover thumbnail
+        CoverThumbnail(
+            coverPath = book.coverPath,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+        )
+
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Title
+            Text(
+                text = book.title,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            // Author
+            Text(
+                text = book.author ?: stringResource(R.string.library_author_unknown),
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            // Status and progress
+            if (statusText != null) {
+                Text(
+                    text = statusText,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                if (progressFraction in 0.01f..0.99f) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    LinearProgressIndicator(
+                        progress = { progressFraction },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(2.dp)
+                            .clip(RoundedCornerShape(1.dp)),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 }
             }
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Add Book Card
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun AddBookCard(
+    onEpubClick: () -> Unit,
+    onPdfClick: () -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(280.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .dashedBorder(
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                strokeWidth = 1.5.dp,
+                cornerRadius = 12.dp,
+                dashLength = 8.dp,
+                gapLength = 4.dp
+            )
+            .clickable { showMenu = true },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Add,
+                contentDescription = stringResource(R.string.library_add_book),
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = stringResource(R.string.library_add_book),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.library_import_epub)) },
+                onClick = {
+                    showMenu = false
+                    onEpubClick()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.library_import_pdf)) },
+                onClick = {
+                    showMenu = false
+                    onPdfClick()
+                }
+            )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Empty Library (preserved)
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun EmptyLibrary(
@@ -301,127 +686,19 @@ private fun EmptyLibrary(
             style = MaterialTheme.typography.bodyLarge
         )
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
-        Button(
-            onClick = onEpubClick,
-            enabled = !isImporting
-        ) {
+        TextButton(onClick = onEpubClick, enabled = !isImporting) {
             Text(text = stringResource(R.string.library_import_epub))
         }
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
-        Button(
-            onClick = onPdfClick,
-            enabled = !isImporting
-        ) {
+        TextButton(onClick = onPdfClick, enabled = !isImporting) {
             Text(text = stringResource(R.string.library_import_pdf))
         }
     }
 }
 
-@Composable
-@OptIn(ExperimentalFoundationApi::class)
-private fun LibraryBookItem(
-    book: Book,
-    minutesRead: Long,
-    onClick: () -> Unit,
-    onLongPress: () -> Unit
-) {
-    Surface(
-        tonalElevation = NextPageDimens.spacingXs,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongPress
-            )
-    ) {
-        Column(
-            modifier = Modifier.padding(NextPageDimens.spacingMd),
-            verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingXs)
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)) {
-                CoverThumbnail(
-                    coverPath = book.coverPath,
-                    modifier = Modifier.size(56.dp)
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingXs)) {
-                    Text(
-                        text = book.title,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = book.author ?: stringResource(R.string.library_author_unknown),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(
-                        R.string.library_last_updated,
-                        book.updatedAtEpochMillis.toString()
-                    ),
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = stringResource(R.string.library_open),
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
-            Text(
-                text = stringResource(R.string.library_item_minutes_read, minutesRead),
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-    }
-}
-
-@Composable
-@OptIn(ExperimentalFoundationApi::class)
-private fun LibraryBookGridItem(
-    book: Book,
-    minutesRead: Long,
-    onClick: () -> Unit,
-    onLongPress: () -> Unit
-) {
-    Surface(
-        tonalElevation = NextPageDimens.spacingXs,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongPress
-            )
-    ) {
-        Column(
-            modifier = Modifier.padding(NextPageDimens.spacingMd),
-            verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            CoverThumbnail(
-                coverPath = book.coverPath,
-                modifier = Modifier.size(120.dp)
-            )
-            Text(
-                text = book.title,
-                style = MaterialTheme.typography.titleSmall,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = book.author ?: stringResource(R.string.library_author_unknown),
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = stringResource(R.string.library_item_minutes_read, minutesRead),
-                style = MaterialTheme.typography.labelMedium,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Cover Thumbnail (preserved)
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 internal fun CoverThumbnail(
@@ -456,7 +733,69 @@ internal fun CoverThumbnail(
     )
 }
 
-private enum class LibraryLayoutMode {
-    LIST,
-    GRID
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+private fun filterBooks(
+    books: List<Book>,
+    statusFilter: String,
+    readingMinutesByBook: Map<String, Long>
+): List<Book> {
+    return when (statusFilter) {
+        "reading" -> books.filter {
+            (readingMinutesByBook[it.id] ?: 0L) > 0L
+        }
+        "pending" -> books.filter {
+            (readingMinutesByBook[it.id] ?: 0L) == 0L
+        }
+        "completed" -> books.filter {
+            (readingMinutesByBook[it.id] ?: 0L) >= 300L
+        }
+        else -> books
+    }
+}
+
+private fun sortBookList(
+    books: List<Book>,
+    sortBy: String
+): List<Book> {
+    return when (sortBy) {
+        "title" -> books.sortedBy { it.title }
+        "author" -> books.sortedBy { it.author ?: "" }
+        "last_read" -> books.sortedByDescending { it.updatedAtEpochMillis }
+        else -> books // "date_added" — already in insertion order
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dashed Border Modifier
+// ─────────────────────────────────────────────────────────────────────────────
+
+private fun Modifier.dashedBorder(
+    color: Color,
+    strokeWidth: Dp = 1.dp,
+    cornerRadius: Dp = 12.dp,
+    dashLength: Dp = 8.dp,
+    gapLength: Dp = 4.dp
+) = this.drawBehind {
+    val path = Path().apply {
+        addRoundRect(
+            androidx.compose.ui.geometry.RoundRect(
+                rect = size.toRect(),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius.toPx())
+            )
+        )
+    }
+    drawPath(
+        path = path,
+        color = color,
+        style = Stroke(
+            width = strokeWidth.toPx(),
+            pathEffect = PathEffect.dashPathEffect(
+                floatArrayOf(dashLength.toPx(), gapLength.toPx()),
+                0f
+            )
+        )
+    )
 }

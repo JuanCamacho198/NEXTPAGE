@@ -69,6 +69,21 @@
     <string name="library_delete_title">Delete book</string>
     <string name="library_delete_message">Are you sure you want to delete &quot;%1$s&quot;?</string>
     <string name="library_delete_confirm">Delete</string>
+    <!-- Library / Bookshelf - New Pencil design -->
+    <string name="library_search_placeholder">Buscar libros...</string>
+    <string name="library_filter_label">Filtrar</string>
+    <string name="library_tab_all">Todos</string>
+    <string name="library_tab_reading">Leyendo</string>
+    <string name="library_tab_pending">Pendientes</string>
+    <string name="library_tab_completed">Completados</string>
+    <string name="library_sort_label">Ordenar por:</string>
+    <string name="library_sort_date_added">Fecha agregada</string>
+    <string name="library_sort_title">Título</string>
+    <string name="library_sort_author">Autor</string>
+    <string name="library_sort_last_read">Última lectura</string>
+    <string name="library_add_book">Añadir libro</string>
+    <string name="library_status_in_progress">%1$d min</string>
+    <string name="library_status_completed">Completado</string>
     <string name="reader_placeholder">Reader rendering engine is coming soon.</string>
     <string name="reader_selected_book">Book: %1$s</string>
     <string name="reader_no_progress">No local progress yet for this book.</string>

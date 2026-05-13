@@ -2592,11 +2592,11 @@
                         {
                           "type": "frame",
                           "id": "tMsQP",
-                          "x": 43,
+                          "x": 34,
                           "y": 36,
                           "name": "menu_panel",
-                          "width": 120,
-                          "height": 120,
+                          "width": 129,
+                          "height": 84,
                           "fill": "$bg_surface",
                           "cornerRadius": 8,
                           "stroke": {

@@ -16,4 +16,24 @@
     <string name="auth_continue_local_dev">Continuar en local (Dev)</string>
     <string name="auth_failure_config_error_with_details">Error de configuracion: %1$s. Continua en modo local hasta corregir la configuracion.</string>
     <string name="auth_failure_wiring_error_with_details">Error de conexion: %1$s. Continua en modo local mientras se corrige la conexion.</string>
+    <string name="home_greeting">Hola, %1$s</string>
+    <string name="home_subtitle">¿Qué vas a leer hoy?</string>
+    <string name="home_continue_reading">Continuar leyendo</string>
+    <string name="home_continuar">Continuar</string>
+    <string name="home_sessions">Sesiones</string>
+    <string name="home_progress">Progreso</string>
+    <string name="home_minutes">Minutos</string>
+    <string name="home_my_bookshelf_title">Mi estantería</string>
+    <string name="home_ver_todo">Ver todo</string>
+    <string name="home_import_epub">Importar EPUB</string>
+    <string name="home_import_pdf">Importar PDF</string>
+    <string name="home_highlights">Resaltados</string>
+    <string name="home_settings">Ajustes</string>
+    <string name="home_no_current_book">Sin libro en curso</string>
+    <string name="home_today_summary_title">Resumen de hoy</string>
+    <string name="home_nextpage_title">NextPage</string>
+    <string name="nav_home">Inicio</string>
+    <string name="nav_library">Estantería</string>
+    <string name="nav_highlights">Resaltados</string>
+    <string name="nav_settings">Ajustes</string>
 </resources>

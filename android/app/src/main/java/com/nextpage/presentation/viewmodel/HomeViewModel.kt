@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.asStateFlow
 data class HomeUiState(
     val userName: String = "Reader",
     val minutesReadToday: Int = 0,
+    val sessionsToday: Int = 0,
+    val dailyProgressPercent: Float = 0f,
     val currentBook: Book? = null,
     val recentBooks: List<Book> = emptyList(),
     val isLoading: Boolean = false

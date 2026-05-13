@@ -3,6 +3,7 @@ package com.nextpage.presentation.navigation
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -138,7 +139,12 @@ fun NextPageNavHost(appContainer: AppContainer) {
                                     }
                                 }
                             },
-                            icon = { Text(text = stringResource(destination.labelRes).take(1)) },
+                            icon = {
+                                Icon(
+                                    imageVector = destination.icon,
+                                    contentDescription = stringResource(destination.labelRes)
+                                )
+                            },
                             label = { Text(text = stringResource(destination.labelRes)) }
                         )
                     }

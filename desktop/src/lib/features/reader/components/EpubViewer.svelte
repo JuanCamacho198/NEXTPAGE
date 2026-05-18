@@ -6,6 +6,8 @@
   import type { ReaderSettings, ReaderThemeMode } from "$lib/shared/types";
   import { resolveReaderArrowIntent } from "$lib/features/reader/epub/keyboardNav";
 
+  import type { TocEntry } from "./ReaderTocPanel.svelte";
+
   type Props = {
     filePath: string;
     initialLocation?: string;
@@ -18,6 +20,8 @@
       text: string;
       rect: { left: number; top: number; right: number; bottom: number; placement: string };
     }) => void;
+    onTocReady?: (entries: TocEntry[]) => void;
+    externalTocNavigate?: TocEntry | null;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
@@ -41,8 +45,33 @@
     onLocationContext,
     readerSettings = DEFAULT_READER_SETTINGS,
     onselection,
+    onTocReady,
+    externalTocNavigate = null,
     t,
   }: Props = $props();
+
+  // Emit TOC entries to parent when epub TOC is ready
+  $effect(() => {
+    if (toc.length > 0) {
+      onTocReady?.(
+        toc.map((item) => ({
+          id: item.id,
+          title: item.label,
+          depth: 0,
+        }))
+      );
+    }
+  });
+
+  // Navigate to a TOC entry triggered from an external panel
+  $effect(() => {
+    if (externalTocNavigate && externalTocNavigate.id) {
+      const chapter = toc.find((t) => t.id === externalTocNavigate.id);
+      if (chapter) {
+        goToChapter(chapter);
+      }
+    }
+  });
 
   let viewerContainer: HTMLDivElement | undefined = $state();
   let book: Book | null = $state(null);

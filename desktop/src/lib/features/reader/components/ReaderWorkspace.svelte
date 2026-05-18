@@ -3,6 +3,8 @@
   import EpubViewer from "./EpubViewer.svelte";
   import SearchPanel from "./SearchPanel.svelte";
   import SelectionToolbar from "./SelectionToolbar.svelte";
+  import ReaderTextSettings from "./ReaderTextSettings.svelte";
+  import ReaderTocPanel, { type TocEntry } from "./ReaderTocPanel.svelte";
   import Icon from "$lib/components/ui/navigation/Icon.svelte";
   import type { MessageKey } from "$lib/shared/i18n";
   import type { ReaderSettings } from "$lib/shared/types";
@@ -58,6 +60,58 @@
 
   // Search panel state
   let searchPanelOpen = $state(false);
+
+  // Right sidebar panels
+  let showTextSettings = $state(false);
+  let showTocPanel = $state(false);
+  let isFullscreen = $state(false);
+
+  // TOC data from active viewer
+  let tocEntries = $state<TocEntry[]>([]);
+  let tocNavigate = $state<TocEntry | null>(null);
+  let activeTocId = $state("");
+
+  // Fullscreen toggle
+  async function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      try {
+        await document.documentElement.requestFullscreen();
+        isFullscreen = true;
+      } catch {
+        // Fullscreen not supported
+      }
+    } else {
+      await document.exitFullscreen();
+      isFullscreen = false;
+    }
+  }
+
+  // Listen for fullscreen changes from browser (Esc key, etc.)
+  $effect(() => {
+    const handler = () => {
+      isFullscreen = !!document.fullscreenElement;
+    };
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  });
+
+  // TOC panel handlers
+  function handleTocReady(entries: TocEntry[]) {
+    tocEntries = entries;
+  }
+
+  function handleTocNavigate(entry: TocEntry) {
+    tocNavigate = entry;
+    showTocPanel = false;
+  }
+
+  function toggleTocPanel() {
+    showTocPanel = !showTocPanel;
+  }
+
+  function toggleTextSettings() {
+    showTextSettings = !showTextSettings;
+  }
 
   const isPdf = $derived(activeReadingBook?.format?.toLowerCase() === "pdf");
   const isEpub = $derived(activeReadingBook?.format?.toLowerCase() === "epub");
@@ -125,20 +179,20 @@
 
     <!-- Right: tools -->
     <div class="flex items-center gap-6 text-[#94A3B8]">
-      <button type="button" class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="menu">
+      <button type="button" onclick={toggleTocPanel} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="tabla de contenidos">
         <Icon name="menu" size="sm" />
       </button>
       <button type="button" onclick={toggleSearch} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={t("epub.search")}>
         <Icon name="search" size="sm" />
       </button>
-      <button type="button" class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="font settings">
+      <button type="button" onclick={toggleTextSettings} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="ajustes de texto">
         <Icon name="settings" size="sm" />
       </button>
       <button type="button" class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="bookmark">
         <Icon name="bookmark" size="sm" />
       </button>
-      <button type="button" class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="fullscreen">
-        <Icon name="fullscreen-enter" size="sm" />
+      <button type="button" onclick={toggleFullscreen} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="pantalla completa">
+        <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
       </button>
     </div>
   </header>
@@ -161,6 +215,8 @@
           onPageChange={onPdfPageChange}
           onSessionProgress={onPdfSessionProgress}
           onselection={handlePdfSelection}
+          onTocReady={handleTocReady}
+          externalTocNavigate={tocNavigate}
           {t}
         />
       </div>
@@ -175,6 +231,8 @@
           readerSettings={readerSettings}
           onLocationContext={onReaderLocationContext}
           onLocationChange={onEpubLocationChange}
+          onTocReady={handleTocReady}
+          externalTocNavigate={tocNavigate}
           {t}
         />
       </div>
@@ -225,3 +283,20 @@
     {t}
   />
 {/if}
+
+<!-- Text Settings Panel -->
+<ReaderTextSettings
+  open={showTextSettings}
+  onClose={() => (showTextSettings = false)}
+  {t}
+/>
+
+<!-- Table of Contents Panel -->
+<ReaderTocPanel
+  open={showTocPanel}
+  entries={tocEntries}
+  activeId={tocNavigate?.id}
+  onNavigate={handleTocNavigate}
+  onClose={() => (showTocPanel = false)}
+  {t}
+/>

@@ -31,6 +31,8 @@
     type SelectionOverlayRect,
   } from "$lib/features/reader/pdf/pdfState.svelte";
 
+  import type { TocEntry } from "./ReaderTocPanel.svelte";
+
   type Props = {
     filePath: string;
     bookId?: string;
@@ -49,6 +51,8 @@
       text: string;
       rect: { left: number; top: number; right: number; bottom: number; placement: string };
     }) => void;
+    onTocReady?: (entries: TocEntry[]) => void;
+    externalTocNavigate?: TocEntry | null;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
@@ -72,8 +76,33 @@
     onSessionProgress,
     readerSettings = DEFAULT_READER_SETTINGS,
     onselection,
+    onTocReady,
+    externalTocNavigate = null,
     t,
   }: Props = $props();
+
+  // Emit TOC entries to parent when outline data is ready
+  $effect(() => {
+    if (flatOutline.length > 0) {
+      onTocReady?.(
+        flatOutline.map((entry) => ({
+          id: entry.item.id,
+          title: entry.item.title,
+          depth: entry.depth,
+        }))
+      );
+    }
+  });
+
+  // Navigate to a TOC entry triggered from an external panel
+  $effect(() => {
+    if (externalTocNavigate && externalTocNavigate.id) {
+      const entry = flatOutline.find((e) => e.item.id === externalTocNavigate.id);
+      if (entry) {
+        navigateToOutlineItem(entry.item);
+      }
+    }
+  });
 
   let canvas: HTMLCanvasElement | undefined = $state();
   let textLayer: HTMLDivElement | undefined = $state();

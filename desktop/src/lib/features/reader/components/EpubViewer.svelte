@@ -14,6 +14,10 @@
     searchTargetLocator?: string | null;
     onLocationContext?: (context: { locator: string; percentage: number }) => void;
     readerSettings?: ReaderSettings;
+    onselection?: (event: {
+      text: string;
+      rect: { left: number; top: number; right: number; bottom: number; placement: string };
+    }) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
@@ -36,6 +40,7 @@
     searchTargetLocator = null,
     onLocationContext,
     readerSettings = DEFAULT_READER_SETTINGS,
+    onselection,
     t,
   }: Props = $props();
 
@@ -101,6 +106,54 @@
     if (filePath) {
       initEpub();
     }
+  });
+
+  // Selection listener: try to attach to the EPUB iframe once it's available
+  $effect(() => {
+    if (!epubContainer) return;
+
+    const tryAttachSelectionListener = () => {
+      const iframe = epubContainer.querySelector("iframe");
+      if (!iframe) {
+        // Iframe might not be ready yet, retry
+        setTimeout(tryAttachSelectionListener, 500);
+        return;
+      }
+
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!doc) {
+          setTimeout(tryAttachSelectionListener, 500);
+          return;
+        }
+
+        doc.addEventListener("mouseup", () => {
+          const selection = doc.getSelection();
+          if (!selection || selection.rangeCount === 0 || !selection.toString().trim()) return;
+
+          const text = selection.toString().trim();
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          const containerRect = epubContainer.getBoundingClientRect();
+
+          onselection?.({
+            text,
+            rect: {
+              left: rect.left - containerRect.left,
+              top: rect.top - containerRect.top,
+              right: rect.right - containerRect.left,
+              bottom: rect.bottom - containerRect.top,
+              placement: rect.top > 120 ? "above" : "below",
+            },
+          });
+        });
+      } catch {
+        // Cross-origin iframe — selection unavailable
+        console.warn("Cannot access EPUB iframe selection (cross-origin or sandbox)");
+      }
+    };
+
+    tryAttachSelectionListener();
   });
 
   async function initEpub() {
@@ -405,7 +458,6 @@
           A+
         </button>
       </div>
-      <p class="selection-note" role="status" aria-live="polite">{t("epub.selectionActionsUnavailable")}</p>
     </div>
 
     <div class="content-area">

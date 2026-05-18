@@ -9,9 +9,7 @@
   import HomeDesktopView from "./lib/components/layout/HomeDesktopView.svelte";
   import AppSidebar from "./lib/components/layout/AppSidebar.svelte";
   import LibraryShelfScreen from "./lib/components/layout/LibraryShelfScreen.svelte";
-  import SearchPanel from "./lib/components/reader/SearchPanel.svelte";
-  import EpubViewer from "./lib/domain/reader/EpubViewer.svelte";
-  import PdfViewer from "./lib/domain/reader/PdfViewer.svelte";
+  import ReaderWorkspace from "./lib/features/reader/components/ReaderWorkspace.svelte";
   import EditMetadataModal from "./lib/components/library/EditMetadataModal.svelte";
   import CollectionManager from "./lib/components/library/CollectionManager.svelte";
   import BulkImportModal from "./lib/components/library/BulkImportModal.svelte";
@@ -1295,69 +1293,25 @@
         />
       </section>
     {:else}
-      {@const activeReadingBook = getBookById(activeReadingBookId)}
-      <section class="rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
-        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <Button size="sm" variant="ghost" onclick={backToHome}>{t("app.backToHome")}</Button>
-            <div>
-              <h2 class="text-lg font-semibold text-[var(--color-primary)]">{activeReadingBook?.title ?? t("app.openBookPrompt")}</h2>
-              {#if activeReadingBook}
-                <p class="text-sm text-[var(--color-text-muted)]">
-                  {activeReadingBook.author || t("app.unknownAuthor")} · {activeReadingBook.format.toUpperCase()} · {activeReadingBook.currentPage}/{activeReadingBook.totalPages || "-"}
-                </p>
-              {/if}
-            </div>
-          </div>
-          {#if activeReadingBook && activeReadingBook.format.toLowerCase() === "epub"}
-            <p class="text-xs text-[var(--color-text-muted)]">{t("app.locationLabel")}: {cfiLocation || t("app.start")} · {Math.round(percentage)}%</p>
-          {/if}
-        </div>
-
-        {#if !activeReadingBook}
-          <p class="text-sm text-[var(--color-text-muted)]">{t("app.openBookPrompt")}</p>
-        {:else if activeReadingBook.format.toLowerCase() === "pdf"}
-          <div class="mb-4 h-[520px] overflow-hidden rounded-lg border border-[color:var(--color-border)]">
-            <PdfViewer
-              filePath={activeReadingBook.filePath}
-              bookId={activeReadingBook.id}
-              initialPage={Math.max(1, activeReadingBook.currentPage || 1)}
-              searchTargetLocator={searchTargetLocator}
-              {readerSettings}
-              onPageChange={handlePdfPageChange}
-              onSessionProgress={handlePdfSessionProgress}
-              {t}
-            />
-          </div>
-        {:else}
-          <div class="mb-4 h-[520px] overflow-hidden rounded-lg border border-[color:var(--color-border)]">
-            <EpubViewer
-              filePath={activeReadingBook.filePath}
-              initialLocation={cfiLocation}
-              initialPercentage={percentage}
-              searchTargetLocator={searchTargetLocator}
-              {readerSettings}
-              onLocationContext={handleReaderLocationContext}
-              onLocationChange={handleEpubLocationChange}
-              {t}
-            />
-          </div>
-        {/if}
-
-        {#if activeReadingBook}
-          <SearchPanel
-            bookId={activeReadingBook.id}
-            disabledReason={searchUnavailableReason}
-            isSearching={isSearching}
-            response={searchResponse}
-            onSearch={(query, page) => {
-              void handleSearch(query, page);
-            }}
-            onJump={handleSearchJump}
-            {t}
-          />
-        {/if}
-      </section>
+      <ReaderWorkspace
+        activeReadingBook={getBookById(activeReadingBookId)}
+        {readerSettings}
+        {cfiLocation}
+        {percentage}
+        {searchResponse}
+        searchTargetLocator={searchTargetLocator}
+        {isSearching}
+        searchUnavailableReason={searchUnavailableReason}
+        {readerError}
+        {t}
+        onBackToHome={backToHome}
+        onPdfPageChange={handlePdfPageChange}
+        onPdfSessionProgress={handlePdfSessionProgress}
+        onEpubLocationChange={handleEpubLocationChange}
+        onReaderLocationContext={handleReaderLocationContext}
+        onSearch={handleSearch}
+        onSearchJump={handleSearchJump}
+      />
     {/if}
 
     <EditMetadataModal

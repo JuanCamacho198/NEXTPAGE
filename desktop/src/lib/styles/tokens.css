@@ -40,6 +40,26 @@
  * Declared here (not just in @theme) so var() works
  * ============================================ */
 :root {
+  /* Font families — duplicado de @theme para var() */
+  --font-sans: "Manrope", "Segoe UI", Arial, sans-serif;
+  --font-serif: "Newsreader", "Times New Roman", serif;
+
+  /* Font sizes — del diseño anterior */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.5rem;
+
+  /* Font weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
   /* Spacing */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
@@ -133,10 +153,10 @@
 /* ============================================
  * BASE STYLES
  * ============================================ */
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
   transition:
     background-color var(--duration-slow) ease,
     border-color var(--duration-slow) ease,
@@ -148,6 +168,7 @@ body {
   font-family: var(--font-sans);
   background: var(--gradient-surface);
   color: var(--color-primary);
+  margin: 0;
   min-height: 100vh;
 }
 

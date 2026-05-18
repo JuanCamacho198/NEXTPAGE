@@ -308,6 +308,7 @@ export const messagesEs: Partial<Record<MessageKey, string>> = {
   "epub.previous": "Anterior",
   "epub.next": "Siguiente",
   "epub.tableOfContents": "Tabla de contenidos",
+  "epub.search": "Buscar en el libro",
   "epub.selectionActionsUnavailable": "Las notas y resaltados por seleccion aun no estan disponibles para EPUB.",
   "import.reading": "Leyendo archivo...",
   "import.importing": "Importando a la biblioteca...",

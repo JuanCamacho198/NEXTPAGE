@@ -110,10 +110,11 @@
 
   // Selection listener: try to attach to the EPUB iframe once it's available
   $effect(() => {
-    if (!epubContainer) return;
+    const container = epubContainer;
+    if (!container) return;
 
     const tryAttachSelectionListener = () => {
-      const iframe = epubContainer.querySelector("iframe");
+      const iframe = container.querySelector("iframe");
       if (!iframe) {
         // Iframe might not be ready yet, retry
         setTimeout(tryAttachSelectionListener, 500);
@@ -134,7 +135,7 @@
           const text = selection.toString().trim();
           const range = selection.getRangeAt(0);
           const rect = range.getBoundingClientRect();
-          const containerRect = epubContainer.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
 
           onselection?.({
             text,

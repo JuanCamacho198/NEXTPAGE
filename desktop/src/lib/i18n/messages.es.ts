@@ -185,8 +185,6 @@ export const messagesEs: Partial<Record<MessageKey, string>> = {
   "settings.tab.reading": "Lectura",
   "settings.tab.notifications": "Notificaciones",
   "settings.tab.sync": "Sincronizacion",
-  "settings.tab.data": "Datos",
-
   // Reading Tab
   "settings.reading.description": "Configura el diseño y apariencia del lector.",
   "settings.reading.margins": "Margenes",
@@ -330,6 +328,7 @@ export const messagesEs: Partial<Record<MessageKey, string>> = {
   "epub.previous": "Anterior",
   "epub.next": "Siguiente",
   "epub.tableOfContents": "Tabla de contenidos",
+  "epub.search": "Buscar en el libro",
   "epub.selectionActionsUnavailable": "Las notas y resaltados por seleccion aun no estan disponibles para EPUB.",
   "import.reading": "Leyendo archivo...",
   "import.importing": "Importando a la biblioteca...",
@@ -385,8 +384,6 @@ export const messagesEs: Partial<Record<MessageKey, string>> = {
   "settings.language": "Idioma",
   "settings.languageSpanish": "Español",
   "settings.languageEnglish": "Inglés",
-  "settings.theme": "Tema",
-  "settings.fontScale": "Escala de fuente",
   "settings.authentication": "Autenticación",
   "settings.authDescription": "Inicia sesión con Google para sincronizar tu biblioteca.",
   

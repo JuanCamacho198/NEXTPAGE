@@ -328,6 +328,7 @@ export const messagesEn = {
   "epub.previous": "Previous",
   "epub.next": "Next",
   "epub.tableOfContents": "Table of Contents",
+  "epub.search": "Search in book",
   "epub.selectionActionsUnavailable": "Selection notes and highlights are not available for EPUB yet.",
   "import.reading": "Reading file...",
   "import.importing": "Importing to library...",

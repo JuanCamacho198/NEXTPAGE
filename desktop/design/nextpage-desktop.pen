@@ -11057,7 +11057,6 @@
           ],
           "justifyContent": "center",
           "alignItems": "center",
-          "layoutIncludeStroke": true,
           "children": [
             {
               "type": "frame",
@@ -11184,7 +11183,6 @@
           ],
           "justifyContent": "space_between",
           "alignItems": "center",
-          "layoutIncludeStroke": true,
           "children": [
             {
               "type": "frame",
@@ -11430,7 +11428,6 @@
             "fill": "#94adce08"
           },
           "layout": "vertical",
-          "layoutIncludeStroke": true,
           "children": [
             {
               "type": "frame",
@@ -11453,7 +11450,6 @@
               ],
               "justifyContent": "space_between",
               "alignItems": "center",
-              "layoutIncludeStroke": true,
               "children": [
                 {
                   "type": "frame",
@@ -11726,7 +11722,6 @@
                       ],
                       "justifyContent": "center",
                       "alignItems": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "text",
@@ -11764,7 +11759,6 @@
                       ],
                       "justifyContent": "center",
                       "alignItems": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "text",
@@ -11802,7 +11796,6 @@
                       ],
                       "justifyContent": "center",
                       "alignItems": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "text",
@@ -11840,7 +11833,6 @@
                       ],
                       "justifyContent": "center",
                       "alignItems": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "text",
@@ -11878,7 +11870,6 @@
                       ],
                       "justifyContent": "center",
                       "alignItems": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "text",
@@ -13222,7 +13213,6 @@
           ],
           "justifyContent": "center",
           "alignItems": "center",
-          "layoutIncludeStroke": true,
           "children": [
             {
               "type": "frame",
@@ -13349,7 +13339,6 @@
           ],
           "justifyContent": "space_between",
           "alignItems": "center",
-          "layoutIncludeStroke": true,
           "children": [
             {
               "type": "frame",
@@ -13595,7 +13584,6 @@
             "fill": "#94adce08"
           },
           "layout": "vertical",
-          "layoutIncludeStroke": true,
           "children": [
             {
               "type": "frame",
@@ -13686,7 +13674,6 @@
                         12
                       ],
                       "alignItems": "end",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "frame",

@@ -10608,7 +10608,7 @@
             "thickness": {
               "left": 1
             },
-            "fill": "#94adce08"
+            "fill": "#17263a00"
           },
           "layout": "vertical",
           "children": [
@@ -11548,66 +11548,6 @@
                   "layout": "vertical",
                   "gap": 16,
                   "children": [
-                    {
-                      "type": "frame",
-                      "id": "iN6IH",
-                      "name": "Container",
-                      "width": "fill_container",
-                      "stroke": {
-                        "align": "inside",
-                        "thickness": 1
-                      },
-                      "gap": 171.97000122070312,
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "rRIaA",
-                          "name": "Container",
-                          "stroke": {
-                            "align": "inside",
-                            "thickness": 1
-                          },
-                          "layout": "vertical",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "iCIrW",
-                              "name": "Text",
-                              "fill": "#8fa3bfff",
-                              "content": "Audio",
-                              "lineHeight": 1.4285714285714286,
-                              "textAlignVertical": "middle",
-                              "fontFamily": "Manrope",
-                              "fontSize": 14,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "LiBEZ",
-                          "name": "Container",
-                          "stroke": {
-                            "align": "inside",
-                            "thickness": 1
-                          },
-                          "layout": "vertical",
-                          "children": [
-                            {
-                              "type": "path",
-                              "id": "p9zsJi",
-                              "name": "Icon",
-                              "geometry": "M4.5 6l-4.5 0 0-1.5 4.5 0 0-4.5 1.5 0 0 4.5 4.5 0 0 1.5-4.5 0 0 4.5-1.5 0 0-4.5 0 0",
-                              "fill": "#49d4ffff",
-                              "width": 10.5,
-                              "height": 10.5
-                            }
-                          ]
-                        }
-                      ]
-                    },
                     {
                       "type": "frame",
                       "id": "slHeA",

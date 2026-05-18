@@ -183,7 +183,6 @@ export const messagesEn = {
   "settings.tab.reading": "Reading",
   "settings.tab.notifications": "Notifications",
   "settings.tab.sync": "Sync",
-  "settings.tab.data": "Data",
 
   // Reading Tab
   "settings.reading.description": "Configure the reader layout and appearance.",

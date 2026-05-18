@@ -358,4 +358,14 @@ export const messagesEs: Partial<Record<MessageKey, string>> = {
   "library.bulkImport.status.skipped": "Omitido",
   "library.bulkImport.status.failed": "Fallido",
   "library.bulkImport.status.cancelled": "Cancelado",
+
+  // Reader — Nueva rediseño
+  "reader.copiar": "Copiar",
+  "reader.nota": "Nota",
+  "reader.eliminar_destacado": "Eliminar resaltado",
+  "reader.seleccion_no_disponible": "Selección no disponible en este formato",
+  "reader.biblioteca": "Biblioteca",
+  "reader.formato_no_soportado": "Formato no soportado",
+  "reader.no_book_loaded": "No hay libro cargado",
+  "reader.error_cargar_libro": "Error al cargar el libro",
 };

@@ -6,10 +6,12 @@
   import Icon from "$lib/components/ui/navigation/Icon.svelte";
   import type { MessageKey } from "$lib/shared/i18n";
   import type { ReaderSettings } from "$lib/shared/types";
-  import type { ReaderBook } from "$lib/shared/types/book";
+  import type { LibraryBookDto } from "$lib/shared/types/library";
+
+  type ActiveBook = LibraryBookDto & { filePath: string };
 
   type Props = {
-    activeReadingBook?: ReaderBook | null;
+    activeReadingBook?: ActiveBook | null;
     readerSettings?: ReaderSettings;
     cfiLocation?: string;
     percentage?: number;
@@ -65,13 +67,13 @@
       : Math.round(percentage)
   );
 
-  function handlePdfSelection(text: string, rect: { left: number; top: number; right: number; bottom: number; placement?: string }) {
-    selectedText = text;
+  function handlePdfSelection(event: { text: string; rect: { left: number; top: number; right: number; bottom: number; placement: string } }) {
+    selectedText = event.text;
     selectionBounds = {
-      left: rect.left,
-      top: rect.top === 9999 ? 0 : rect.top,
-      right: rect.right,
-      bottom: rect.bottom,
+      left: event.rect.left,
+      top: event.rect.top === 9999 ? 0 : event.rect.top,
+      right: event.rect.right,
+      bottom: event.rect.bottom,
     };
     showToolbar = true;
   }
@@ -111,7 +113,7 @@
     <!-- Left: back + biblioteca -->
     <div class="flex items-center gap-2">
       <button type="button" onclick={onBackToHome} class="flex cursor-pointer items-center gap-2 text-[#94A3B8] hover:text-white">
-        <Icon name="chevron-left" size={20} />
+        <Icon name="chevron-left" size="sm" />
         <span class="font-inter text-sm font-medium text-[#94A3B8]">{t("reader.biblioteca")}</span>
       </button>
     </div>
@@ -124,19 +126,19 @@
     <!-- Right: tools -->
     <div class="flex items-center gap-6 text-[#94A3B8]">
       <button type="button" class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="menu">
-        <Icon name="menu" size={20} />
+        <Icon name="menu" size="sm" />
       </button>
       <button type="button" onclick={toggleSearch} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={t("epub.search")}>
-        <Icon name="search" size={20} />
+        <Icon name="search" size="sm" />
       </button>
       <button type="button" class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="font settings">
-        <Icon name="type" size={20} />
+        <Icon name="settings" size="sm" />
       </button>
       <button type="button" class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="bookmark">
-        <Icon name="bookmark" size={20} />
+        <Icon name="bookmark" size="sm" />
       </button>
       <button type="button" class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="fullscreen">
-        <Icon name="maximize" size={20} />
+        <Icon name="fullscreen-enter" size="sm" />
       </button>
     </div>
   </header>

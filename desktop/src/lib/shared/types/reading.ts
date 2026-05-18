@@ -47,3 +47,17 @@ export type CommandErrorDto = {
   message: string;
   recoverable: boolean;
 };
+
+export type SelectionRect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+export type SelectionEvent = {
+  text: string;
+  rect: DOMRect;
+  range: Range;
+  containerRect: DOMRect;
+};

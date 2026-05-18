@@ -379,6 +379,15 @@ export const messagesEn = {
   "library.bulkImport.status.skipped": "Skipped",
   "library.bulkImport.status.failed": "Failed",
   "library.bulkImport.status.cancelled": "Cancelled",
+  // Reader - New redesign
+  "reader.copiar": "Copy",
+  "reader.nota": "Note",
+  "reader.eliminar_destacado": "Delete highlight",
+  "reader.seleccion_no_disponible": "Selection unavailable for this format",
+  "reader.biblioteca": "Library",
+  "reader.formato_no_soportado": "Unsupported format",
+  "reader.no_book_loaded": "No book loaded",
+  "reader.error_cargar_libro": "Error loading book",
 } as const;
 
 export type MessageKey = keyof typeof messagesEn;

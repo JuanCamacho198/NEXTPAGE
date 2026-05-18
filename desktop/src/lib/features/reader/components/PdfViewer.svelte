@@ -2,7 +2,6 @@
   import * as pdfjsLib from "pdfjs-dist";
   import { onMount } from "svelte";
   import { getFileBytes } from "$lib/shared/api/tauriClient";
-  import HighlightToolbar from "$lib/features/reader/components/HighlightToolbar.svelte";
   import ErrorBoundary from "$lib/shared/ui/feedback/ErrorBoundary.svelte";
   import Icon from "$lib/components/ui/navigation/Icon.svelte";
   import type { MessageKey } from "$lib/shared/i18n";
@@ -46,6 +45,10 @@
       endPercentage?: number;
     }) => void;
     readerSettings?: ReaderSettings;
+    onselection?: (event: {
+      text: string;
+      rect: { left: number; top: number; right: number; bottom: number; placement: string };
+    }) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
@@ -68,6 +71,7 @@
     searchTargetLocator = null,
     onSessionProgress,
     readerSettings = DEFAULT_READER_SETTINGS,
+    onselection,
     t,
   }: Props = $props();
 
@@ -869,6 +873,18 @@
       };
       selectionHasAnchor = hasAnchor;
       showToolbar = true;
+
+      // Notify parent (ReaderWorkspace) about the selection
+      onselection?.({
+        text,
+        rect: {
+          left: selectionBounds.left,
+          top: selectionBounds.top,
+          right: selectionBounds.right,
+          bottom: selectionBounds.bottom,
+          placement: selectionPlacement,
+        },
+      });
     } else {
       clearSelectionUi();
     }
@@ -1288,24 +1304,7 @@
             <div>Layer: {textLayer ? 'Exists' : 'Missing'}</div>
             <div>Spans: {textLayer?.children?.length || 0}</div>
           </div>
-          {#if showToolbar && selectionPosition}
-            <div
-              class="toolbar-container"
-              class:below={selectionPlacement === "below"}
-              style="left: {selectionPosition.x}px; top: {selectionPosition.y}px;"
-            >
-              <HighlightToolbar
-                {selectedText}
-                selectionBounds={lastSelectionBounds}
-                bookId={bookId || filePath}
-                pageNumber={currentPage}
-                cfi={selectedCfi}
-                hasSelectionAnchor={selectionHasAnchor}
-                {t}
-                onClose={hideToolbar}
-              />
-            </div>
-          {/if}
+
         </div>
       </div>
     </div>

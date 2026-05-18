@@ -389,4 +389,14 @@ export const messagesEs: Partial<Record<MessageKey, string>> = {
   "settings.fontScale": "Escala de fuente",
   "settings.authentication": "Autenticación",
   "settings.authDescription": "Inicia sesión con Google para sincronizar tu biblioteca.",
+  
+  // Reader - Nueva rediseño
+  "reader.copiar": "Copiar",
+  "reader.nota": "Nota",
+  "reader.eliminar_destacado": "Eliminar resaltado",
+  "reader.seleccion_no_disponible": "Selección no disponible en este formato",
+  "reader.biblioteca": "Biblioteca",
+  "reader.formato_no_soportado": "Formato no soportado",
+  "reader.no_book_loaded": "No hay libro cargado",
+  "reader.error_cargar_libro": "Error al cargar el libro",
 };

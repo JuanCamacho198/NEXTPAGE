@@ -139,16 +139,13 @@
 
   let activeLoadRequestId = 0;
   let activeNavigationRequestId = 0;
-  let activeZoomRequestId = 0;
   let activeLoadingTask: pdfjsLib.PDFDocumentLoadingTask | null = null;
   let activeRenderTask: pdfjsLib.RenderTask | null = null;
   let activeTextLayerTask: { cancel?: () => void; promise?: Promise<void> } | null = null;
-  let pendingZoomCommitTimer: number | null = null;
   let pendingWheelFrame: number | null = null;
   let pendingWheelDelta = 0;
   let textLayerMouseupTarget: HTMLDivElement | null = null;
   let lastLoadedFilePath: string | null = null;
-  let committedScale = $state(DEFAULT_PDF_SCALE);
   const outlinePageCache = new Map<string, number>();
 
   type RefLike = { num: number; gen: number };
@@ -167,23 +164,7 @@
   const visualFilterStyle = $derived(
     `brightness(${clamp(readerSettings.brightness, 50, 150)}%) contrast(${clamp(readerSettings.contrast, 50, 150)}%)`,
   );
-  const zoomPreviewRatio = $derived.by(() => {
-    if (committedScale <= 0) {
-      return 1;
-    }
-
-    return scale / committedScale;
-  });
-  const canvasWrapperStyle = $derived.by(() => {
-    const styles = [`filter: ${visualFilterStyle};`];
-    if (Math.abs(zoomPreviewRatio - 1) > ZOOM_EPSILON) {
-      styles.push(`transform: scale(${zoomPreviewRatio});`);
-      styles.push("transform-origin: top center;");
-      styles.push("will-change: transform;");
-    }
-
-    return styles.join(" ");
-  });
+  const canvasWrapperStyle = $derived(`filter: ${visualFilterStyle};`);
 
   const canUseFullscreenApi = () => {
     if (typeof document === "undefined") {
@@ -227,16 +208,16 @@
       rawRects.push(fallbackRect);
     }
 
-    const scale = zoomPreviewRatio || 1;
-    const unscaledWidth = containerRect.width / scale;
-    const unscaledHeight = containerRect.height / scale;
+    const scale = 1;
+    const unscaledWidth = containerRect.width;
+    const unscaledHeight = containerRect.height;
 
     const normalizedRects = rawRects
       .map((rect) => {
-        const left = clampSelectionPoint((rect.left - containerRect.left) / scale, 0, unscaledWidth);
-        const right = clampSelectionPoint((rect.right - containerRect.left) / scale, 0, unscaledWidth);
-        const top = clampSelectionPoint((rect.top - containerRect.top) / scale, 0, unscaledHeight);
-        const bottom = clampSelectionPoint((rect.bottom - containerRect.top) / scale, 0, unscaledHeight);
+        const left = clampSelectionPoint(rect.left - containerRect.left, 0, unscaledWidth);
+        const right = clampSelectionPoint(rect.right - containerRect.left, 0, unscaledWidth);
+        const top = clampSelectionPoint(rect.top - containerRect.top, 0, unscaledHeight);
+        const bottom = clampSelectionPoint(rect.bottom - containerRect.top, 0, unscaledHeight);
         return { left, right, top, bottom };
       })
       .filter((rect) => rect.right - rect.left > 0 && rect.bottom - rect.top > 0)
@@ -287,14 +268,7 @@
     });
   };
 
-  const clearPendingZoomCommit = () => {
-    if (pendingZoomCommitTimer === null) {
-      return;
-    }
 
-    window.clearTimeout(pendingZoomCommitTimer);
-    pendingZoomCommitTimer = null;
-  };
 
   const cancelActiveRenderTask = async () => {
     if (!activeRenderTask) {
@@ -386,8 +360,6 @@
     return () => {
       activeLoadRequestId += 1;
       activeNavigationRequestId += 1;
-      activeZoomRequestId += 1;
-      clearPendingZoomCommit();
       clearTextLayerListener();
       if (pendingWheelFrame !== null) {
         window.cancelAnimationFrame(pendingWheelFrame);
@@ -629,10 +601,7 @@
     isLoading = true;
     error = null;
     navigationError = null;
-    clearPendingZoomCommit();
-    activeZoomRequestId += 1;
     scale = DEFAULT_PDF_SCALE;
-    committedScale = DEFAULT_PDF_SCALE;
     showToc = false;
     outline = [];
     tocLoading = false;
@@ -698,6 +667,10 @@
     options: { requestId?: number; renderScale?: number } = {},
   ) {
     if (!pdfDoc || !canvas || !textLayer) return;
+
+    if (typeof document !== "undefined") {
+      await document.fonts.ready;
+    }
 
     const requestId = options.requestId ?? activeNavigationRequestId;
     const renderScale = options.renderScale ?? scale;
@@ -856,9 +829,9 @@
     let selectionBounds = { left: 0, top: 0, right: 0, bottom: 0 };
     let overlayRects: SelectionOverlayRect[] = [];
 
-    const scale = zoomPreviewRatio || 1;
-    const unscaledWidth = containerRect ? containerRect.width / scale : 0;
-    const unscaledHeight = containerRect ? containerRect.height / scale : 0;
+    const scale = 1;
+    const unscaledWidth = containerRect ? containerRect.width : 0;
+    const unscaledHeight = containerRect ? containerRect.height : 0;
 
     try {
       const range = selection.getRangeAt(0);
@@ -984,7 +957,6 @@
     }
 
     try {
-      clearPendingZoomCommit();
       const rendered = await renderPage(targetPage, {
         requestId: navRequestId,
         renderScale: scale,
@@ -995,7 +967,6 @@
       }
 
       currentPage = targetPage;
-      committedScale = scale;
       onPageChange?.(currentPage, totalPages);
       emitSessionProgress(currentPage, totalPages);
 
@@ -1137,45 +1108,7 @@
     host.scrollTop = nextScrollTop;
   }
 
-  function queueZoomCommit() {
-    if (!pdfDoc) {
-      return;
-    }
 
-    clearPendingZoomCommit();
-    const requestId = ++activeZoomRequestId;
-    const targetScale = scale;
-
-    pendingZoomCommitTimer = window.setTimeout(async () => {
-      pendingZoomCommitTimer = null;
-      if (requestId !== activeZoomRequestId || !pdfDoc) {
-        return;
-      }
-
-      const anchor = captureScrollAnchor();
-      const navRequestId = ++activeNavigationRequestId;
-
-      // Immediately clear the stale text layer content during zoom commits
-      if (textLayer) {
-        textLayer.innerHTML = "";
-      }
-
-      try {
-        const rendered = await renderPage(currentPage, {
-          requestId: navRequestId,
-          renderScale: targetScale,
-        });
-        if (!rendered || requestId !== activeZoomRequestId || isStaleNavigation(navRequestId)) {
-          return;
-        }
-
-        committedScale = targetScale;
-        restoreScrollAnchor(anchor);
-      } catch {
-        navigationError = t("pdf.navigationFailed");
-      }
-    }, ZOOM_COMMIT_DELAY_MS);
-  }
 
   function handleViewerKeydown(event: KeyboardEvent) {
     if (!isViewerFocused) {
@@ -1248,21 +1181,39 @@
     }
   }
 
-  export function setScale(newScale: number) {
+  export async function setScale(newScale: number) {
     const nextScale = clampPdfScale(newScale);
     if (Math.abs(nextScale - scale) <= ZOOM_EPSILON) {
       return;
     }
 
     scale = nextScale;
-    queueZoomCommit();
-  }
+    hideToolbar();
 
-  $effect(() => {
     if (!pdfDoc) {
-      committedScale = scale;
+      return;
     }
-  });
+
+    const anchor = captureScrollAnchor();
+    const navRequestId = ++activeNavigationRequestId;
+
+    if (textLayer) {
+      textLayer.innerHTML = "";
+    }
+
+    try {
+      const rendered = await renderPage(currentPage, {
+        requestId: navRequestId,
+        renderScale: nextScale,
+      });
+      if (rendered && !isStaleNavigation(navRequestId)) {
+        restoreScrollAnchor(anchor);
+      }
+    } catch (err) {
+      console.error("Error setting scale:", err);
+      navigationError = t("pdf.navigationFailed");
+    }
+  }
 
   export function getCurrentPage() {
     return currentPage;
@@ -1543,7 +1494,6 @@
   .canvas-wrapper {
     position: relative;
     display: inline-block;
-    transition: transform 120ms ease-out;
     isolation: isolate;
   }
 
@@ -1579,47 +1529,54 @@
     pointer-events: none;
   }
 
-  .text-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    inset: 0;
-    overflow: hidden;
+  :global(.text-layer), :global(.textLayer) {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    inset: 0 !important;
+    overflow: hidden !important;
     pointer-events: auto !important;
-    opacity: 1;
-    line-height: 1;
+    opacity: 0.25 !important;
+    line-height: 1.0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
     cursor: text !important;
     user-select: text !important;
     -webkit-user-select: text !important;
-    text-align: initial;
+    text-align: initial !important;
     z-index: 5000 !important;
-    min-width: 100%;
-    min-height: 100%;
-    -webkit-user-drag: none !important;
-    user-drag: none !important;
+    min-width: 100% !important;
+    min-height: 100% !important;
+    mix-blend-mode: multiply !important;
+    text-size-adjust: none !important;
+    forced-color-adjust: none !important;
   }
 
-  .text-layer :global(span),
-  .text-layer :global(br) {
-    color: transparent;
-    position: absolute;
-    white-space: pre;
-    transform-origin: 0% 0%;
+  :global(.text-layer span), :global(.textLayer span),
+  :global(.text-layer div), :global(.textLayer div),
+  :global(.text-layer br), :global(.textLayer br) {
+    color: transparent !important;
+    position: absolute !important;
+    white-space: pre !important;
+    transform-origin: 0% 0% !important;
     cursor: text !important;
     pointer-events: auto !important;
     user-select: text !important;
     -webkit-user-select: text !important;
     -webkit-user-drag: none !important;
     user-drag: none !important;
+    line-height: 1.0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  .text-layer :global(span)::selection,
-  .text-layer :global(br)::selection {
+  :global(.text-layer span::selection), :global(.textLayer span::selection),
+  :global(.text-layer br::selection), :global(.textLayer br::selection) {
     background: var(--pdf-selection-color, rgba(51, 136, 255, 0.4)) !important;
   }
 
-  .text-layer :global(span)::-moz-selection,
-  .text-layer :global(br)::-moz-selection {
+  :global(.text-layer span::-moz-selection), :global(.textLayer span::-moz-selection),
+  :global(.text-layer br::-moz-selection), :global(.textLayer br::-moz-selection) {
     background: var(--pdf-selection-color, rgba(51, 136, 255, 0.4)) !important;
   }
 

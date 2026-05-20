@@ -227,12 +227,16 @@
       rawRects.push(fallbackRect);
     }
 
+    const scale = zoomPreviewRatio || 1;
+    const unscaledWidth = containerRect.width / scale;
+    const unscaledHeight = containerRect.height / scale;
+
     const normalizedRects = rawRects
       .map((rect) => {
-        const left = clampSelectionPoint(rect.left - containerRect.left, 0, containerRect.width);
-        const right = clampSelectionPoint(rect.right - containerRect.left, 0, containerRect.width);
-        const top = clampSelectionPoint(rect.top - containerRect.top, 0, containerRect.height);
-        const bottom = clampSelectionPoint(rect.bottom - containerRect.top, 0, containerRect.height);
+        const left = clampSelectionPoint((rect.left - containerRect.left) / scale, 0, unscaledWidth);
+        const right = clampSelectionPoint((rect.right - containerRect.left) / scale, 0, unscaledWidth);
+        const top = clampSelectionPoint((rect.top - containerRect.top) / scale, 0, unscaledHeight);
+        const bottom = clampSelectionPoint((rect.bottom - containerRect.top) / scale, 0, unscaledHeight);
         return { left, right, top, bottom };
       })
       .filter((rect) => rect.right - rect.left > 0 && rect.bottom - rect.top > 0)
@@ -269,10 +273,10 @@
     });
 
     return mergedLines.map((rect) => {
-      const left = clampSelectionPoint(rect.left - SELECTION_X_PADDING_PX, 0, containerRect.width);
-      const right = clampSelectionPoint(rect.right + SELECTION_X_PADDING_PX, 0, containerRect.width);
-      const top = clampSelectionPoint(rect.top + SELECTION_Y_INSET_PX, 0, containerRect.height);
-      const bottom = clampSelectionPoint(rect.bottom - SELECTION_Y_INSET_PX, top, containerRect.height);
+      const left = clampSelectionPoint(rect.left - SELECTION_X_PADDING_PX, 0, unscaledWidth);
+      const right = clampSelectionPoint(rect.right + SELECTION_X_PADDING_PX, 0, unscaledWidth);
+      const top = clampSelectionPoint(rect.top + SELECTION_Y_INSET_PX, 0, unscaledHeight);
+      const bottom = clampSelectionPoint(rect.bottom - SELECTION_Y_INSET_PX, top, unscaledHeight);
 
       return {
         left,
@@ -614,8 +618,8 @@
   async function loadPdf() {
     if (!filePath) return;
 
-    const requestId = ++activeLoadRequestId;
-    activeNavigationRequestId += 1;
+    const loadRequestId = ++activeLoadRequestId;
+    const navRequestId = ++activeNavigationRequestId;
     clearTextLayerListener();
     destroyActiveLoadingTask();
     await cancelActiveRenderTask();
@@ -637,7 +641,7 @@
 
     try {
       const fileData = await getFileBytes(filePath);
-      if (isStaleLoad(requestId)) {
+      if (isStaleLoad(loadRequestId)) {
         return;
       }
 
@@ -647,25 +651,25 @@
       activeLoadingTask = loadingTask;
       const loadedDoc = await loadingTask.promise;
 
-      if (isStaleLoad(requestId)) {
+      if (isStaleLoad(loadRequestId)) {
         await loadedDoc.destroy();
         return;
       }
 
       pdfDoc = loadedDoc;
       totalPages = loadedDoc.numPages;
-      await loadOutline(loadedDoc, requestId);
-      if (isStaleLoad(requestId)) {
+      await loadOutline(loadedDoc, loadRequestId);
+      if (isStaleLoad(loadRequestId)) {
         return;
       }
       const requestedPage = Math.max(1, initialPage || 1);
       const targetPage = Math.min(requestedPage, totalPages);
 
       const rendered = await renderPage(targetPage, {
-        requestId,
+        requestId: navRequestId,
         renderScale: scale,
       });
-      if (!rendered || isStaleLoad(requestId)) {
+      if (!rendered || isStaleLoad(loadRequestId) || isStaleNavigation(navRequestId)) {
         return;
       }
 
@@ -675,15 +679,17 @@
       sessionStartAt = new Date().toISOString();
       error = null;
     } catch (err) {
-      if (isStaleLoad(requestId)) {
+      if (isStaleLoad(loadRequestId)) {
         return;
       }
 
       error = err instanceof Error ? err.message : "Failed to load PDF";
     } finally {
       // Always clear loading state when done
-      isLoading = false;
-      activeLoadingTask = null;
+      if (!isStaleLoad(loadRequestId)) {
+        isLoading = false;
+        activeLoadingTask = null;
+      }
     }
   }
 
@@ -693,27 +699,36 @@
   ) {
     if (!pdfDoc || !canvas || !textLayer) return;
 
-    const requestId = options.requestId ?? activeLoadRequestId;
+    const requestId = options.requestId ?? activeNavigationRequestId;
     const renderScale = options.renderScale ?? scale;
 
     const page = await pdfDoc.getPage(pageNum);
-    if (isStaleLoad(requestId)) {
+    if (isStaleNavigation(requestId)) {
       return false;
     }
 
     currentPageObj = page;
     const viewport = page.getViewport({ scale: renderScale });
 
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
+    // Implement HiDPI scaling for sharp rendering and perfect subpixel alignment
+    const outputScale = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(viewport.width * outputScale);
+    canvas.height = Math.floor(viewport.height * outputScale);
+    canvas.style.width = `${viewport.width}px`;
+    canvas.style.height = `${viewport.height}px`;
 
     const context = canvas.getContext("2d");
     if (!context) return;
 
+    // Reset transform to identity before applying new transform
+    context.setTransform(1, 0, 0, 1, 0, 0);
+
+    const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : undefined;
     const renderContext = {
       canvasContext: context,
       viewport,
       canvas,
+      transform,
     };
 
     await cancelActiveRenderTask();
@@ -743,7 +758,7 @@
       activeRenderTask = null;
     }
 
-    if (isStaleLoad(requestId)) {
+    if (isStaleNavigation(requestId)) {
       return false;
     }
 
@@ -751,7 +766,7 @@
     textLayer.style.height = `${viewport.height}px`;
 
     const textContent = await page.getTextContent();
-    if (isStaleLoad(requestId)) {
+    if (isStaleNavigation(requestId)) {
       return false;
     }
 
@@ -766,10 +781,10 @@
   async function renderTextLayer(
     textContent: { items: Array<{ str: string; transform: number[]; width: number; height: number }> },
     viewport: pdfjsLib.PageViewport,
-    requestId = activeLoadRequestId,
+    requestId = activeNavigationRequestId,
   ) {
     if (!textLayer) return;
-    if (isStaleLoad(requestId)) {
+    if (isStaleNavigation(requestId)) {
       return;
     }
 
@@ -841,6 +856,10 @@
     let selectionBounds = { left: 0, top: 0, right: 0, bottom: 0 };
     let overlayRects: SelectionOverlayRect[] = [];
 
+    const scale = zoomPreviewRatio || 1;
+    const unscaledWidth = containerRect ? containerRect.width / scale : 0;
+    const unscaledHeight = containerRect ? containerRect.height / scale : 0;
+
     try {
       const range = selection.getRangeAt(0);
       if (containerRect) {
@@ -857,7 +876,7 @@
         const anchorX = clampSelectionPoint(
           selectionCenter,
           TOOLBAR_EDGE_PADDING + TOOLBAR_WIDTH_ESTIMATE / 2,
-          containerRect.width - TOOLBAR_EDGE_PADDING - TOOLBAR_WIDTH_ESTIMATE / 2,
+          unscaledWidth - TOOLBAR_EDGE_PADDING - TOOLBAR_WIDTH_ESTIMATE / 2,
         );
         
         const canPlaceAbove = top > 100; // Increased threshold for safety
@@ -890,12 +909,12 @@
     if (!nextPosition && containerRect) {
       selectionPlacement = "below";
       nextPosition = {
-        x: containerRect.width / 2,
+        x: unscaledWidth / 2,
         y: 20,
       };
     }
 
-    if (nextPosition) {
+    if (nextPosition && containerRect) {
       selectionPosition = {
         x: nextPosition.x,
         y: nextPosition.y,
@@ -903,14 +922,39 @@
       selectionHasAnchor = hasAnchor;
       showToolbar = true;
 
+      // Extract raw screen/viewport coordinates from getClientRects for perfect placement of the floating SelectionToolbar
+      let viewLeft = containerRect.left + selectionBounds.left * scale;
+      let viewTop = containerRect.top + selectionBounds.top * scale;
+      let viewRight = containerRect.left + selectionBounds.right * scale;
+      let viewBottom = containerRect.top + selectionBounds.bottom * scale;
+
+      try {
+        const range = selection.getRangeAt(0);
+        const rawRects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
+        if (rawRects.length === 0) {
+          const fallbackRect = range.getBoundingClientRect();
+          if (fallbackRect.width > 0 && fallbackRect.height > 0) {
+            rawRects.push(fallbackRect);
+          }
+        }
+        if (rawRects.length > 0) {
+          viewLeft = Math.min(...rawRects.map((rect) => rect.left));
+          viewTop = Math.min(...rawRects.map((rect) => rect.top));
+          viewRight = Math.max(...rawRects.map((rect) => rect.right));
+          viewBottom = Math.max(...rawRects.map((rect) => rect.bottom));
+        }
+      } catch (err) {
+        console.error("Failed to read raw client rects:", err);
+      }
+
       // Notify parent (ReaderWorkspace) about the selection
       onselection?.({
         text,
         rect: {
-          left: selectionBounds.left,
-          top: selectionBounds.top,
-          right: selectionBounds.right,
-          bottom: selectionBounds.bottom,
+          left: viewLeft,
+          top: viewTop,
+          right: viewRight,
+          bottom: viewBottom,
           placement: selectionPlacement,
         },
       });
@@ -932,12 +976,20 @@
     hideToolbar();
     navigationError = null;
 
+    const navRequestId = ++activeNavigationRequestId;
+
+    // Immediately clear the stale text layer content to prevent selection mismatches
+    if (textLayer) {
+      textLayer.innerHTML = "";
+    }
+
     try {
       clearPendingZoomCommit();
       const rendered = await renderPage(targetPage, {
+        requestId: navRequestId,
         renderScale: scale,
       });
-      if (!rendered) {
+      if (!rendered || isStaleNavigation(navRequestId)) {
         navigationError = t("pdf.navigationFailed");
         return false;
       }
@@ -1101,11 +1153,19 @@
       }
 
       const anchor = captureScrollAnchor();
+      const navRequestId = ++activeNavigationRequestId;
+
+      // Immediately clear the stale text layer content during zoom commits
+      if (textLayer) {
+        textLayer.innerHTML = "";
+      }
+
       try {
         const rendered = await renderPage(currentPage, {
+          requestId: navRequestId,
           renderScale: targetScale,
         });
-        if (!rendered || requestId !== activeZoomRequestId) {
+        if (!rendered || requestId !== activeZoomRequestId || isStaleNavigation(navRequestId)) {
           return;
         }
 
@@ -1322,17 +1382,11 @@
           </div>
           <div
             bind:this={textLayer}
-            class="text-layer debug-text-layer"
+            class="text-layer"
             draggable="false"
             role="presentation"
             ondragstart={(e) => e.preventDefault()}
           ></div>
-          <div class="debug-info-overlay">
-            <div>Selection: {selectedText || 'None'}</div>
-            <div>Pos: {selectionPosition ? `x:${Math.round(selectionPosition.x)} y:${Math.round(selectionPosition.y)}` : 'None'}</div>
-            <div>Layer: {textLayer ? 'Exists' : 'Missing'}</div>
-            <div>Spans: {textLayer?.children?.length || 0}</div>
-          </div>
 
         </div>
       </div>
@@ -1500,6 +1554,7 @@
   }
 
   canvas {
+    display: block;
     position: relative;
     z-index: 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -1718,34 +1773,5 @@
     flex: 1;
     overflow: hidden;
   }
-  .debug-text-layer {
-    background: rgba(255, 0, 0, 0.1) !important;
-    outline: 2px dashed red !important;
-  }
-
-  .debug-info-overlay {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: rgba(0, 0, 0, 0.8);
-    color: #00ff00;
-    padding: 8px;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 10px;
-    z-index: 9999;
-    pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .selection-rect {
-    position: absolute;
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--pdf-selection-color, #3388ff) 42%, transparent);
-    box-shadow: 0 0 0 2px red; /* Extra visible shadow for debug */
-    z-index: 3;
-    pointer-events: none;
-  }
+  /* Debug styling removed to maintain clean user interface */
 </style>

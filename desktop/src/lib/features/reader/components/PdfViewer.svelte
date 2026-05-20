@@ -1,5 +1,6 @@
 <script lang="ts">
   import * as pdfjsLib from "pdfjs-dist";
+  import "pdfjs-dist/web/pdf_viewer.css";
   import { onMount } from "svelte";
   import { getFileBytes } from "$lib/shared/api/tauriClient";
   import ErrorBoundary from "$lib/shared/ui/feedback/ErrorBoundary.svelte";
@@ -136,6 +137,9 @@
   let lastSelectionBounds = $state({ left: 0, top: 0, right: 0, bottom: 0 });
   let selectionOverlayRects = $state<Array<{ left: number; top: number; width: number; height: number }>>([]);
   let showToolbar = $state(false);
+  
+  let viewportWidth = $state(0);
+  let viewportHeight = $state(0);
 
   let activeLoadRequestId = 0;
   let activeNavigationRequestId = 0;
@@ -164,7 +168,9 @@
   const visualFilterStyle = $derived(
     `brightness(${clamp(readerSettings.brightness, 50, 150)}%) contrast(${clamp(readerSettings.contrast, 50, 150)}%)`,
   );
-  const canvasWrapperStyle = $derived(`filter: ${visualFilterStyle};`);
+  const canvasWrapperStyle = $derived(
+    `filter: ${visualFilterStyle}; width: ${viewportWidth ? viewportWidth + 'px' : 'auto'}; height: ${viewportHeight ? viewportHeight + 'px' : 'auto'};`
+  );
 
   const canUseFullscreenApi = () => {
     if (typeof document === "undefined") {
@@ -690,6 +696,9 @@
     canvas.style.width = `${viewport.width}px`;
     canvas.style.height = `${viewport.height}px`;
 
+    viewportWidth = viewport.width;
+    viewportHeight = viewport.height;
+
     const context = canvas.getContext("2d");
     if (!context) return;
 
@@ -769,7 +778,7 @@
     textLayer.style.left = "0";
     textLayer.style.top = "0";
     textLayer.style.pointerEvents = "auto";
-    textLayer.style.setProperty("--text-scale-factor", String(viewport.scale));
+    textLayer.style.setProperty("--scale-factor", String(viewport.scale));
 
     try {
       const pdfLibWithTextLayer = pdfjsLib as any;
@@ -1334,7 +1343,7 @@
           </div>
           <div
             bind:this={textLayer}
-            class="text-layer"
+            class="textLayer"
             draggable="false"
             role="presentation"
             ondragstart={(e) => e.preventDefault()}

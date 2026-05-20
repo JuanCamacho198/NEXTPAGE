@@ -257,43 +257,9 @@ body {
 
 /* ============================================
  * PDF.js TEXT LAYER
- * Text selection alignment fixes
+ * Custom selection color for the imported text layer
  * ============================================ */
-.text-layer, .textLayer {
-  position: absolute;
-  text-align: initial;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  line-height: 1;
-  text-size-adjust: none;
-  forced-color-adjust: none;
-  transform-origin: 0 0;
-  z-index: 2;
-  pointer-events: auto;
-}
-
-.text-layer span, .textLayer span {
-  color: transparent;
-  position: absolute;
-  white-space: pre;
-  cursor: text;
-  transform-origin: 0% 0%;
-}
-
-.textLayer span {
-  /* PDF.js v5+ variable math */
-  font-size: calc(var(--text-scale-factor, 1) * var(--font-height, 1px));
-  transform: rotate(var(--rotate, 0deg)) scaleX(var(--scale-x, 1)) scale(var(--min-font-size-inv, 1));
-}
-
-.text-layer br, .textLayer br {
-  display: none;
-}
-
-.text-layer span::selection, .textLayer span::selection {
+.textLayer span::selection {
   background: rgba(73, 212, 255, 0.28);
   color: transparent;
 }

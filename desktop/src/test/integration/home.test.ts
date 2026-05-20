@@ -71,12 +71,12 @@ vi.mock("$lib/services/pdfThumbnail", () => ({
   })),
 }));
 
-vi.mock("$lib/domain/reader/EpubViewer.svelte", async () => {
+vi.mock("$lib/features/reader/components/EpubViewer.svelte", async () => {
   const mod = await import("../stubs/ViewerStub.svelte");
   return { default: mod.default };
 });
 
-vi.mock("$lib/domain/reader/PdfViewer.svelte", async () => {
+vi.mock("$lib/features/reader/components/PdfViewer.svelte", async () => {
   const mod = await import("../stubs/ViewerStub.svelte");
   return { default: mod.default };
 });

@@ -1530,56 +1530,7 @@
     pointer-events: none;
   }
 
-  :global(.text-layer), :global(.textLayer) {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    inset: 0 !important;
-    overflow: hidden !important;
-    pointer-events: auto !important;
-    opacity: 0.25 !important;
-    line-height: 1.0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    cursor: text !important;
-    user-select: text !important;
-    -webkit-user-select: text !important;
-    text-align: initial !important;
-    z-index: 5000 !important;
-    min-width: 100% !important;
-    min-height: 100% !important;
-    mix-blend-mode: multiply !important;
-    text-size-adjust: none !important;
-    forced-color-adjust: none !important;
-  }
 
-  :global(.text-layer span), :global(.textLayer span),
-  :global(.text-layer div), :global(.textLayer div),
-  :global(.text-layer br), :global(.textLayer br) {
-    color: transparent !important;
-    position: absolute !important;
-    white-space: pre !important;
-    transform-origin: 0% 0% !important;
-    cursor: text !important;
-    pointer-events: auto !important;
-    user-select: text !important;
-    -webkit-user-select: text !important;
-    -webkit-user-drag: none !important;
-    user-drag: none !important;
-    line-height: 1.0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  :global(.text-layer span::selection), :global(.textLayer span::selection),
-  :global(.text-layer br::selection), :global(.textLayer br::selection) {
-    background: var(--pdf-selection-color, rgba(51, 136, 255, 0.4)) !important;
-  }
-
-  :global(.text-layer span::-moz-selection), :global(.textLayer span::-moz-selection),
-  :global(.text-layer br::-moz-selection), :global(.textLayer br::-moz-selection) {
-    background: var(--pdf-selection-color, rgba(51, 136, 255, 0.4)) !important;
-  }
 
   .toolbar-container {
     position: absolute;

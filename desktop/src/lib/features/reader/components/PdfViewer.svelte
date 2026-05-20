@@ -769,6 +769,7 @@
     textLayer.style.left = "0";
     textLayer.style.top = "0";
     textLayer.style.pointerEvents = "auto";
+    textLayer.style.setProperty("--text-scale-factor", String(viewport.scale));
 
     try {
       const pdfLibWithTextLayer = pdfjsLib as any;

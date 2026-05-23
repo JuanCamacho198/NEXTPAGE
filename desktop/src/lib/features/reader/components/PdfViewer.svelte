@@ -955,9 +955,20 @@
       });
 
       if (debugState.enabled) {
-        debugState.selection = text ? { text, source: "pdf", rectCount: overlayRects.length } : null;
+        if (text && overlayRects.length > 0) {
+          const r = overlayRects[0];
+          debugState.selection = {
+            text,
+            source: "pdf",
+            rectCount: overlayRects.length,
+            firstRect: { top: r.top, left: r.left, width: r.width, height: r.height },
+          };
+        } else {
+          debugState.selection = null;
+        }
       }
     } else {
+      if (debugState.enabled) debugState.selection = null;
       clearSelectionUi();
     }
   }

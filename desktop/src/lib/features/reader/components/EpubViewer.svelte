@@ -180,9 +180,27 @@
 
           if (debugState.enabled) {
             const rectCount = range.getClientRects().length;
-            debugState.selection = text ? { text, source: "epub", rectCount } : null;
+            if (text) {
+              const r = range.getClientRects()[0];
+              debugState.selection = {
+                text,
+                source: "epub",
+                rectCount,
+                firstRect: { top: r.top, left: r.left, width: r.width, height: r.height },
+              };
+            } else {
+              debugState.selection = null;
+            }
           }
         });
+
+        // Clean up selection when user clicks outside the iframe
+        const clearOutside = (e: MouseEvent) => {
+          if (debugState.enabled && e.target !== iframe && !iframe.contains(e.target as Node)) {
+            debugState.selection = null;
+          }
+        };
+        doc.addEventListener("mouseup", clearOutside);
       } catch {
         // Cross-origin iframe — selection unavailable
         console.warn("Cannot access EPUB iframe selection (cross-origin or sandbox)");

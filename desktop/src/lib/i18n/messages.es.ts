@@ -385,7 +385,6 @@ export const messagesEs: Partial<Record<MessageKey, string>> = {
   "settings.languageSpanish": "Español",
   "settings.languageEnglish": "Inglés",
   "settings.authentication": "Autenticación",
-  "settings.authDescription": "Inicia sesión con Google para sincronizar tu biblioteca.",
   
   // Reader - Nueva rediseño
   "reader.copiar": "Copiar",

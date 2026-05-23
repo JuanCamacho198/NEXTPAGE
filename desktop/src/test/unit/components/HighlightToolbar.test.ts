@@ -2,9 +2,9 @@ import { fireEvent, render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import HighlightToolbar from "$lib/features/reader/components/HighlightToolbar.svelte";
-import { saveHighlight } from "$lib/api/tauriClient";
+import { saveHighlight } from "$lib/shared/api/tauriClient";
 
-vi.mock("$lib/api/tauriClient", () => ({
+vi.mock("$lib/shared/api/tauriClient", () => ({
   saveHighlight: vi.fn(),
 }));
 

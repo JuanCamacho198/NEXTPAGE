@@ -326,10 +326,10 @@ describe("App desktop home redesign QA scenarios", () => {
     const dialog = screen.getByRole("dialog", { name: "Shelf A" });
     await user.click(within(dialog).getByRole("button", { name: "Read" }));
 
-    expect(await screen.findByRole("button", { name: "Back to home" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "reader.biblioteca" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "Shelf A" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Back to home" }));
+    await user.click(screen.getByRole("button", { name: "reader.biblioteca" }));
     expect(await screen.findByTestId("home-desktop-view-stub")).toBeInTheDocument();
 
     const continueSection = screen.getByTestId("continue-section");
@@ -368,22 +368,22 @@ describe("App desktop home redesign QA scenarios", () => {
     expect(screen.getByRole("heading", { name: "Highlights" })).toBeInTheDocument();
     expect(screen.queryByTestId("home-desktop-view-stub")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Back to home" }));
+    await user.click(screen.getByRole("button", { name: /Inicio/ }));
     expect(await screen.findByTestId("home-desktop-view-stub")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Settings" }));
     expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Back to home" }));
+    await user.click(screen.getByRole("button", { name: /Inicio/ }));
     expect(await screen.findByTestId("home-desktop-view-stub")).toBeInTheDocument();
 
     const homeShelfButtons = screen.getAllByRole("button", { name: /Shelf A/i });
     await user.click(homeShelfButtons[0]);
     const shelfDialog = await screen.findByRole("dialog", { name: "Shelf A" });
     await user.click(within(shelfDialog).getByRole("button", { name: "Read" }));
-    expect(await screen.findByRole("button", { name: "Back to home" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "reader.biblioteca" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Back to home" }));
+    await user.click(screen.getByRole("button", { name: "reader.biblioteca" }));
     expect(await screen.findByTestId("home-desktop-view-stub")).toBeInTheDocument();
   });
 
@@ -437,7 +437,7 @@ describe("App desktop home redesign QA scenarios", () => {
     });
 
     const viewToggle = screen.getByTestId("shelf-view-toggle");
-    await user.click(within(viewToggle).getByRole("button", { name: "List" }));
+    await user.click(within(viewToggle).getByRole("button", { name: "Vista en lista" }));
 
     await waitFor(() => {
       expect(shelfSection.querySelector("ul.space-y-2")).not.toBeNull();

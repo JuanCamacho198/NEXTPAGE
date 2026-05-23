@@ -7,6 +7,7 @@
   import { resolveReaderArrowIntent } from "$lib/features/reader/epub/keyboardNav";
 
   import type { TocEntry } from "./ReaderTocPanel.svelte";
+  import { debugState } from "$lib/debug/debugState.svelte";
 
   type Props = {
     filePath: string;
@@ -176,6 +177,11 @@
               placement: rect.top > 120 ? "above" : "below",
             },
           });
+
+          if (debugState.enabled) {
+            const rectCount = range.getClientRects().length;
+            debugState.selection = text ? { text, source: "epub", rectCount } : null;
+          }
         });
       } catch {
         // Cross-origin iframe — selection unavailable
@@ -261,6 +267,17 @@
         locator: currentLocation,
         percentage: currentPercentage,
       });
+
+      if (debugState.enabled) {
+        debugState.readerInfo = {
+          format: "epub",
+          isTocOpen: showToc,
+          isSearchOpen: false,
+          isFullscreen: !!document.fullscreenElement,
+          pageInfo: `${Math.round(currentPercentage)}%`,
+          scale: displaySettings.fontSize,
+        };
+      }
     });
 
     rendition.on("relocated", (loc: { start: { cfi: string } }) => {

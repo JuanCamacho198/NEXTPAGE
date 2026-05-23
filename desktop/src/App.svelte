@@ -17,6 +17,9 @@
   import BookCard from "./lib/components/library/BookCard.svelte";
   import HighlightsView from "./lib/components/layout/HighlightsView.svelte";
   import ReadingStatisticsView from "./lib/components/stats/ReadingStatisticsView.svelte";
+  import DebugToggle from "./lib/debug/DebugToggle.svelte";
+  import DebugPanel from "./lib/debug/DebugPanel.svelte";
+  import { debugState } from "./lib/debug/debugState.svelte";
 
   import { importBook, type ImportProgress } from "./lib/services/BookImportService";
   import {
@@ -894,6 +897,10 @@
       loadStats(undefined);
     });
   });
+
+  $effect(() => {
+    debugState.currentRoute = route;
+  });
 </script>
 
 <main class="flex h-screen overflow-hidden bg-[var(--color-background)] text-[var(--color-primary)]">
@@ -1351,6 +1358,8 @@
 
     <ErrorToast />
     <ErrorFallback />
+    <DebugToggle />
+    <DebugPanel />
     </div>
   </div>
 </main>

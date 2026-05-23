@@ -33,6 +33,7 @@
   } from "$lib/features/reader/pdf/pdfState.svelte";
 
   import type { TocEntry } from "./ReaderTocPanel.svelte";
+  import { debugState } from "$lib/debug/debugState.svelte";
 
   type Props = {
     filePath: string;
@@ -699,6 +700,17 @@
     viewportWidth = viewport.width;
     viewportHeight = viewport.height;
 
+    if (debugState.enabled) {
+      debugState.readerInfo = {
+        format: "pdf",
+        isTocOpen: showToc,
+        isSearchOpen: false,
+        isFullscreen,
+        pageInfo: `${currentPage} / ${totalPages}`,
+        scale,
+      };
+    }
+
     const context = canvas.getContext("2d");
     if (!context) return;
 
@@ -941,6 +953,10 @@
           placement: selectionPlacement,
         },
       });
+
+      if (debugState.enabled) {
+        debugState.selection = text ? { text, source: "pdf", rectCount: overlayRects.length } : null;
+      }
     } else {
       clearSelectionUi();
     }
@@ -1354,6 +1370,11 @@
     </div>
     <div class="pdf-footer" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
       <div class="footer-content">
+        {#if debugState.enabled}
+          <div id="debug-inline" class="text-[10px] font-mono text-[var(--color-text-muted)]">
+            PDF | p{currentPage}/{totalPages} | {Math.round(scale * 100)}%
+          </div>
+        {/if}
         <div class="footer-left">
           <span class="page-info">
             <input

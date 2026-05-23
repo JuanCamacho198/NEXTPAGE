@@ -9,6 +9,7 @@
   import type { MessageKey } from "$lib/shared/i18n";
   import type { ReaderSettings } from "$lib/shared/types";
   import type { LibraryBookDto } from "$lib/shared/types/library";
+  import { debugState } from "$lib/debug/debugState.svelte";
 
   type ActiveBook = LibraryBookDto & { filePath: string };
 
@@ -71,6 +72,20 @@
   let tocNavigate = $state<TocEntry | null>(null);
   let activeTocId = $state("");
 
+  // Sync debug readerInfo when relevant state changes (gated)
+  function syncDebugReaderInfo() {
+    if (debugState.enabled) {
+      debugState.readerInfo = {
+        format: isPdf ? "pdf" : isEpub ? "epub" : null,
+        isTocOpen: showTocPanel,
+        isSearchOpen: searchPanelOpen,
+        isFullscreen,
+        pageInfo: `${bookProgress}%`,
+        scale: 0,
+      };
+    }
+  }
+
   // Fullscreen toggle
   async function toggleFullscreen() {
     if (!document.fullscreenElement) {
@@ -84,12 +99,14 @@
       await document.exitFullscreen();
       isFullscreen = false;
     }
+    syncDebugReaderInfo();
   }
 
   // Listen for fullscreen changes from browser (Esc key, etc.)
   $effect(() => {
     const handler = () => {
       isFullscreen = !!document.fullscreenElement;
+      syncDebugReaderInfo();
     };
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
@@ -98,6 +115,7 @@
   // TOC panel handlers
   function handleTocReady(entries: TocEntry[]) {
     tocEntries = entries;
+    syncDebugReaderInfo();
   }
 
   function handleTocNavigate(entry: TocEntry) {
@@ -107,10 +125,12 @@
 
   function toggleTocPanel() {
     showTocPanel = !showTocPanel;
+    syncDebugReaderInfo();
   }
 
   function toggleTextSettings() {
     showTextSettings = !showTextSettings;
+    syncDebugReaderInfo();
   }
 
   const isPdf = $derived(activeReadingBook?.format?.toLowerCase() === "pdf");
@@ -157,6 +177,7 @@
 
   function toggleSearch() {
     searchPanelOpen = !searchPanelOpen;
+    syncDebugReaderInfo();
   }
 </script>
 

@@ -1,6 +1,6 @@
 import { writable, type Writable } from "svelte/store";
 import type { LibraryBookDto } from "$lib/shared/types";
-import { partitionHomeBooks, selectShelfBooks, type ShelfTabCode } from "$lib/shared/stores/homeState";
+import { partitionHomeBooks, selectShelfBooks, type ShelfTabCode, type ShelfSortKey, type ShelfViewMode, type ShelfQueryState } from "$lib/shared/stores/homeState";
 
 export type AppRoute = "home" | "reader" | "library" | "stats" | "settings";
 
@@ -9,14 +9,14 @@ export const previewBookId = writable<string | null>(null);
 export const shelfDetailsBookId = writable<string | null>(null);
 
 export const shelfTab = writable<ShelfTabCode>("all");
-export const shelfSortKey = writable<string>("progress");
-export const shelfViewMode = writable<"grid" | "list">("grid");
+export const shelfSortKey = writable<ShelfSortKey>("progress");
+export const shelfViewMode = writable<ShelfViewMode>("grid");
 export const shelfRawQuery = writable<string>("");
 
 export function getShelfBooks(books: LibraryBookDto[]) {
   let currentTab: ShelfTabCode = "all";
-  let currentSort = "progress";
-  let currentView: "grid" | "list" = "grid";
+  let currentSort: ShelfSortKey = "progress";
+  let currentView: ShelfViewMode = "grid";
   let currentQuery = "";
   
   shelfTab.subscribe(v => currentTab = v)();
@@ -24,7 +24,7 @@ export function getShelfBooks(books: LibraryBookDto[]) {
   shelfViewMode.subscribe(v => currentView = v)();
   shelfRawQuery.subscribe(v => currentQuery = v)();
   
-  const shelfStateWithDeps = {
+  const shelfStateWithDeps: ShelfQueryState = {
     tab: currentTab,
     sortKey: currentSort,
     viewMode: currentView,

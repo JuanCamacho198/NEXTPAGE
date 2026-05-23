@@ -16,8 +16,8 @@ type DebugSelectionInfo = {
 class DebugState {
   enabled = $state(false);
   currentRoute = $state("");
-  readerInfo = $state<DebugReaderInfo>(null);
-  selection = $state<DebugSelectionInfo>(null);
+  readerInfo: DebugReaderInfo = $state(null);
+  selection: DebugSelectionInfo = $state(null);
 }
 
 export const debugState = new DebugState();

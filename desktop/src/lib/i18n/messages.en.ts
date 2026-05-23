@@ -391,6 +391,10 @@ export const messagesEn = {
 
   "settings.localPreferences": "Local preferences",
   "settings.localPreferencesDescription": "Configure the language and theme of the application",
+  "settings.language": "Language",
+  "settings.languageSpanish": "Spanish",
+  "settings.languageEnglish": "English",
+  "settings.authentication": "Authentication",
 } as const;
 
 export type MessageKey = keyof typeof messagesEn;

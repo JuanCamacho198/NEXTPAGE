@@ -23,8 +23,8 @@ describe("DebugState", () => {
   });
 
   it("assigns selection correctly", () => {
-    debugState.selection = { text: "hello world", source: "pdf", rectCount: 3 };
-    expect(debugState.selection).toEqual({ text: "hello world", source: "pdf", rectCount: 3 });
+    debugState.selection = { text: "hello world", source: "pdf", rectCount: 3, firstRect: { top: 0, left: 0, width: 100, height: 20 } };
+    expect(debugState.selection).toEqual({ text: "hello world", source: "pdf", rectCount: 3, firstRect: { top: 0, left: 0, width: 100, height: 20 } });
     debugState.selection = null;
     expect(debugState.selection).toBeNull();
   });

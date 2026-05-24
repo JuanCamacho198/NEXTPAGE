@@ -3,6 +3,7 @@
   import type { Book, Rendition } from "epubjs";
   import ePub from "epubjs";
   import type { MessageKey } from "$lib/i18n";
+  import { getFileBytes } from "$lib/shared/api/tauriClient";
   import type { ReaderSettings, ReaderThemeMode } from "$lib/shared/types";
   import { resolveReaderArrowIntent } from "$lib/features/reader/epub/keyboardNav";
 
@@ -221,7 +222,9 @@
         book.destroy();
       }
 
-      book = ePub(filePath) as unknown as Book;
+      const bytes = await getFileBytes(filePath);
+      const epubData = new Uint8Array(bytes).buffer;
+      book = ePub(epubData) as unknown as Book;
 
       const metadata = await (book as Book).loaded.metadata;
       console.log("Loaded book:", metadata.title);

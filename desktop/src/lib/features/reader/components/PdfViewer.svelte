@@ -48,6 +48,7 @@
       startPercentage?: number;
       endPercentage?: number;
     }) => void;
+    selectionColor?: string;
     readerSettings?: ReaderSettings;
     isFullscreen?: boolean;
     onToggleFullscreen?: () => void;
@@ -81,6 +82,7 @@
     onPageChange,
     searchTargetLocator = null,
     onSessionProgress,
+    selectionColor,
     readerSettings = DEFAULT_READER_SETTINGS,
     isFullscreen = false,
     onToggleFullscreen,
@@ -1314,7 +1316,7 @@
     onmouseup={handleTextSelection}
     onpointerup={handleTextSelection}
     ontouchend={handleTextSelection}
-    style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor}; --pdf-selection-color: ${readerSettings.selectionColor};`}
+    style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor}; --pdf-selection-color: ${selectionColor ?? readerSettings.selectionColor};`}
   >
     {#if isLoading}
       <div class="loading-overlay">{t("pdf.loading")}</div>

@@ -256,6 +256,7 @@
           bookId={activeReadingBook.id}
           initialPage={Math.max(1, activeReadingBook.currentPage || 1)}
           searchTargetLocator={searchTargetLocator}
+          selectionColor={selectedColor}
           readerSettings={readerSettings}
           onPageChange={onPdfPageChange}
           onSessionProgress={onPdfSessionProgress}

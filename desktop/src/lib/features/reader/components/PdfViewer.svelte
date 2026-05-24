@@ -49,6 +49,8 @@
       endPercentage?: number;
     }) => void;
     readerSettings?: ReaderSettings;
+    isFullscreen?: boolean;
+    onToggleFullscreen?: () => void;
     onselection?: (event: {
       text: string;
       bounds: { left: number; top: number; right: number; bottom: number };
@@ -79,6 +81,8 @@
     searchTargetLocator = null,
     onSessionProgress,
     readerSettings = DEFAULT_READER_SETTINGS,
+    isFullscreen = false,
+    onToggleFullscreen,
     onselection,
     onTocReady,
     externalTocNavigate = null,
@@ -125,7 +129,6 @@
   let outline = $state<PdfOutlineItem[]>([]);
   let tocLoading = $state(false);
   let tocError = $state<string | null>(null);
-  let isFullscreen = $state(false);
   let fullscreenSupported = $state(true);
   let isViewerFocused = $state(false);
 
@@ -948,10 +951,10 @@
       onselection?.({
         text,
         bounds: {
-          left: viewLeft,
-          top: viewTop,
-          right: viewRight,
-          bottom: viewBottom,
+          left: viewLeft - containerRect.left,
+          top: viewTop - containerRect.top,
+          right: viewRight - containerRect.left,
+          bottom: viewBottom - containerRect.top,
         },
         container: {
           left: containerRect.left,
@@ -1054,6 +1057,11 @@
   }
 
   async function toggleFullscreen() {
+    if (onToggleFullscreen) {
+      onToggleFullscreen();
+      return;
+    }
+
     if (!canUseFullscreenApi()) {
       fullscreenSupported = false;
       navigationError = t("pdf.fullscreenUnsupported");
@@ -1067,7 +1075,6 @@
       } else {
         await viewerRoot?.requestFullscreen();
       }
-      isFullscreen = document.fullscreenElement === viewerRoot;
     } catch {
       navigationError = t("pdf.fullscreenUnsupported");
       fullscreenSupported = false;

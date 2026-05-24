@@ -173,10 +173,10 @@
           onselection?.({
             text,
             bounds: {
-              left: rect.left,
-              top: rect.top,
-              right: rect.right,
-              bottom: rect.bottom,
+              left: rect.left - containerRect.left,
+              top: rect.top - containerRect.top,
+              right: rect.right - containerRect.left,
+              bottom: rect.bottom - containerRect.top,
             },
             container: {
               left: containerRect.left,

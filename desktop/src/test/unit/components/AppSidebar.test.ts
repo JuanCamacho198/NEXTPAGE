@@ -11,16 +11,7 @@ describe("AppSidebar", () => {
     onNavigateStats: vi.fn(),
     onNavigateHighlights: vi.fn(),
     onNavigateSettings: vi.fn(),
-    t: vi.fn((key: string) => {
-      const labels: Record<string, string> = {
-        "sidebar.home": "Inicio",
-        "sidebar.library": "Estantería",
-        "sidebar.stats": "Estadísticas",
-        "sidebar.highlights": "Notas y resaltados",
-        "sidebar.settings": "Ajustes",
-      };
-      return labels[key] ?? key;
-    }),
+    t: fakeT,
   });
 
   function findNavButton(name: string): HTMLButtonElement | null {

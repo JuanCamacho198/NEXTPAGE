@@ -368,6 +368,9 @@ export const messagesEn = {
   "reader.formato_no_soportado": "Unsupported format",
   "reader.no_book_loaded": "No book loaded",
   "reader.error_cargar_libro": "Error loading book",
+  "reader.tabla_contenidos": "Table of Contents",
+  "reader.toc_empty": "No chapters yet",
+  "reader.ajustes_texto": "Text Settings",
 } as const;
 
 export type MessageKey = keyof typeof messagesEn;

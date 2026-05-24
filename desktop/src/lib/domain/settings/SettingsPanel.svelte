@@ -109,7 +109,7 @@
       ];
       
       const highlightsToExport = mockHighlights;
-      const bookTitle = selectedExportBook === "all" ? "todos-los-libros" : (books.find(b => b.id === selectedExportBook)?.title || "desconocido").replace(/[^a-zA-Z0-9]/g, "-");
+      const bookTitle = selectedExportBook === "all" ? "todos-los-libros" : (books.find((b: { id: string; title: string }) => b.id === selectedExportBook)?.title || "desconocido").replace(/[^a-zA-Z0-9]/g, "-");
       const date = new Date().toISOString().split('T')[0];
       let content: string;
       let mimeType: string;
@@ -117,7 +117,7 @@
 
       if (selectedExportFormat === "markdown") {
         // Generar Markdown
-        const bookFilter = selectedExportBook === "all" ? "Todos los libros" : (books.find(b => b.id === selectedExportBook)?.title || "Desconocido");
+        const bookFilter = selectedExportBook === "all" ? "Todos los libros" : (books.find((b: { id: string; title: string }) => b.id === selectedExportBook)?.title || "Desconocido");
         let md = `# Resaltados Exportados\n\n`;
         md += `- **Fecha de exportación:** ${new Date().toLocaleDateString()}\n`;
         md += `- **Libro:** ${bookFilter}\n`;
@@ -140,7 +140,7 @@
         const exportData = {
           exportDate: new Date().toISOString(),
           totalHighlights: highlightsToExport.length,
-          bookFilter: selectedExportBook === "all" ? "all" : books.find(b => b.id === selectedExportBook)?.title || "unknown",
+          bookFilter: selectedExportBook === "all" ? "all" : books.find((b: { id: string; title: string }) => b.id === selectedExportBook)?.title || "unknown",
           highlights: highlightsToExport
         };
         content = JSON.stringify(exportData, null, 2);

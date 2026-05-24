@@ -369,4 +369,7 @@ export const messagesEs: Partial<Record<MessageKey, string>> = {
   "reader.formato_no_soportado": "Formato no soportado",
   "reader.no_book_loaded": "No hay libro cargado",
   "reader.error_cargar_libro": "Error al cargar el libro",
+  "reader.tabla_contenidos": "Tabla de Contenidos",
+  "reader.toc_empty": "No hay capítulos disponibles",
+  "reader.ajustes_texto": "Ajustes de Texto",
 };

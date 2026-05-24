@@ -3,6 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import AppSidebar from "$lib/components/layout/AppSidebar.svelte";
 
+function fakeT(key: string): string {
+  const labels: Record<string, string> = {
+    "sidebar.home": "Inicio",
+    "sidebar.library": "Estantería",
+    "sidebar.stats": "Estadísticas",
+    "sidebar.highlights": "Notas y resaltados",
+    "sidebar.settings": "Ajustes",
+  };
+  return labels[key] ?? key;
+}
+
 describe("AppSidebar", () => {
   const defaultProps = {
     activeRoute: "home" as const,
@@ -12,7 +23,7 @@ describe("AppSidebar", () => {
     onNavigateHighlights: vi.fn(),
     onNavigateSettings: vi.fn(),
     t: fakeT,
-  });
+  };
 
   function findNavButton(name: string): HTMLButtonElement | null {
     const buttons = screen.getAllByRole("button");
@@ -21,7 +32,6 @@ describe("AppSidebar", () => {
 
   it("renders all five navigation items with labels", () => {
     render(AppSidebar, defaultProps);
-    // Items appear both as visible text and in tooltips — check presence via getAllByText
     expect(screen.getAllByText("Inicio").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Estantería").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Estadísticas").length).toBeGreaterThanOrEqual(1);

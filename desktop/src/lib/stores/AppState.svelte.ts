@@ -290,34 +290,34 @@ class AppState {
 
   // ——— Navigation ———
 
-  navigateToHome(): void {
+  navigateToHome = (): void => {
     this.route = "home";
     this.shelfDetailsBookId = null;
-  }
+  };
 
-  navigateToLibrary(): void {
+  navigateToLibrary = (): void => {
     this.route = "library";
     this.shelfDetailsBookId = null;
-  }
+  };
 
-  navigateToStats(): void {
+  navigateToStats = (): void => {
     this.route = "stats";
     this.shelfDetailsBookId = null;
-  }
+  };
 
-  navigateToHighlights(): void {
+  navigateToHighlights = (): void => {
     this.route = "highlights";
     this.shelfDetailsBookId = null;
-  }
+  };
 
-  navigateToSettings(): void {
+  navigateToSettings = (): void => {
     this.route = "settings";
     this.shelfDetailsBookId = null;
-  }
+  };
 
-  backToHome(): void {
+  backToHome = (): void => {
     this.route = "home";
-  }
+  };
 
   // ——— Data loading ———
 
@@ -420,6 +420,14 @@ class AppState {
 
   async init(): Promise<void> {
     initTheme();
+    // Reset UI state that was previously component-local
+    this.route = "home";
+    this.shelfDetailsBookId = null;
+    this.shelfQueryState = createShelfQueryState();
+    this.previewBookId = null;
+    this.readerError = null;
+    this.isImporting = false;
+    this.importProgress = null;
 
     try {
       const [nextLocale] = await Promise.all([
@@ -445,7 +453,7 @@ class AppState {
 
   // ——— Import ———
 
-  async handleImportFile(): Promise<void> {
+  handleImportFile = async (): Promise<void> => {
     const file = await pickFile();
     if (!file) {
       return;
@@ -490,13 +498,13 @@ class AppState {
       this.isImporting = false;
       this.importProgress = null;
     }
-  }
+  };
 
   openBulkImportModal(): void {
     this.isBulkImportOpen = true;
   }
 
-  closeBulkImportModal(): void {
+  closeBulkImportModal = (): void => {
     if (this.isBulkImporting) {
       this.bulkImportService.cancel();
     }
@@ -506,9 +514,9 @@ class AppState {
     this.bulkScanError = null;
     this.bulkImportProgress = null;
     this.bulkImportSummary = null;
-  }
+  };
 
-  async handlePickBulkImportFolder(): Promise<void> {
+  handlePickBulkImportFolder = async (): Promise<void> => {
     const selected = await pickFolder(this.t("library.bulkImport.selectFolderTitle"));
     if (!selected) {
       return;
@@ -520,9 +528,9 @@ class AppState {
     this.bulkScanError = null;
     this.bulkImportProgress = null;
     this.bulkImportSummary = null;
-  }
+  };
 
-  async handleScanBulkImportFolder(): Promise<void> {
+  handleScanBulkImportFolder = async (): Promise<void> => {
     if (!this.bulkImportFolderPath) {
       return;
     }
@@ -537,13 +545,13 @@ class AppState {
     } finally {
       this.isBulkScanning = false;
     }
-  }
+  };
 
-  handleCancelBulkImport(): void {
+  handleCancelBulkImport = (): void => {
     this.bulkImportService.cancel();
-  }
+  };
 
-  async handleStartBulkImport(): Promise<void> {
+  handleStartBulkImport = async (): Promise<void> => {
     if (!this.bulkImportFolderPath || !this.bulkScanResult || this.bulkScanResult.files.length === 0) {
       return;
     }
@@ -571,7 +579,7 @@ class AppState {
     } finally {
       this.isBulkImporting = false;
     }
-  }
+  };
 
   // ——— Reading ———
 
@@ -830,7 +838,7 @@ class AppState {
     this.editingBook = book;
   }
 
-  async handleSaveEditedBook(updatedBook: LibraryBookDto): Promise<void> {
+  handleSaveEditedBook = async (updatedBook: LibraryBookDto): Promise<void> => {
     try {
       const readerBook = this.books.find((b) => b.id === updatedBook.id);
       if (!readerBook) {
@@ -859,15 +867,15 @@ class AppState {
       const details = this.mapCommandError(error);
       this.readerError = details.message;
     }
-  }
+  };
 
-  handleReaderSettingsChange(nextSettings: ReaderSettings): void {
+  handleReaderSettingsChange = (nextSettings: ReaderSettings): void => {
     this.readerSettings = nextSettings;
-  }
+  };
 
-  handleLocaleChange(nextLocale: UiLocale): void {
+  handleLocaleChange = (nextLocale: UiLocale): void => {
     this.locale = nextLocale;
-  }
+  };
 
   // ——— Shelf ———
 
@@ -880,9 +888,9 @@ class AppState {
     this.shelfDetailsBookId = book.id;
   }
 
-  closeShelfDetails(): void {
+  closeShelfDetails = (): void => {
     this.shelfDetailsBookId = null;
-  }
+  };
 
   setShelfTab(tab: (typeof this.SHELF_TAB_OPTIONS)[number]["key"]): void {
     this.shelfQueryState = updateShelfQueryState(this.shelfQueryState, { tab });
@@ -896,16 +904,16 @@ class AppState {
     this.shelfQueryState = updateShelfQueryState(this.shelfQueryState, { viewMode });
   }
 
-  handleShelfQueryInput(event: Event): void {
+  handleShelfQueryInput = (event: Event): void => {
     const target = event.target as HTMLInputElement;
     this.shelfQueryState = updateShelfQueryState(this.shelfQueryState, {
       rawQuery: target.value,
     });
-  }
+  };
 
-  clearShelfQuery(): void {
+  clearShelfQuery = (): void => {
     this.shelfQueryState = updateShelfQueryState(this.shelfQueryState, { rawQuery: "" });
-  }
+  };
 }
 
 export const appState = new AppState();

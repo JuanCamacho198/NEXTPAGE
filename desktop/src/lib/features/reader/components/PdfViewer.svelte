@@ -51,7 +51,9 @@
     readerSettings?: ReaderSettings;
     onselection?: (event: {
       text: string;
-      rect: { left: number; top: number; right: number; bottom: number; placement: string };
+      bounds: { left: number; top: number; right: number; bottom: number };
+      container: { left: number; top: number; width: number; height: number };
+      placement: string;
     }) => void;
     onTocReady?: (entries: TocEntry[]) => void;
     externalTocNavigate?: TocEntry | null;
@@ -945,13 +947,19 @@
       // Notify parent (ReaderWorkspace) about the selection
       onselection?.({
         text,
-        rect: {
+        bounds: {
           left: viewLeft,
           top: viewTop,
           right: viewRight,
           bottom: viewBottom,
-          placement: selectionPlacement,
         },
+        container: {
+          left: containerRect.left,
+          top: containerRect.top,
+          width: containerRect.width,
+          height: containerRect.height,
+        },
+        placement: selectionPlacement,
       });
 
       if (debugState.enabled) {

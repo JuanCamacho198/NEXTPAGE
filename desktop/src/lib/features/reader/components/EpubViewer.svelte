@@ -20,7 +20,9 @@
     readerSettings?: ReaderSettings;
     onselection?: (event: {
       text: string;
-      rect: { left: number; top: number; right: number; bottom: number; placement: string };
+      bounds: { left: number; top: number; right: number; bottom: number };
+      container: { left: number; top: number; width: number; height: number };
+      placement: string;
     }) => void;
     onTocReady?: (entries: TocEntry[]) => void;
     externalTocNavigate?: TocEntry | null;
@@ -170,13 +172,19 @@
 
           onselection?.({
             text,
-            rect: {
-              left: rect.left - containerRect.left,
-              top: rect.top - containerRect.top,
-              right: rect.right - containerRect.left,
-              bottom: rect.bottom - containerRect.top,
-              placement: rect.top > 120 ? "above" : "below",
+            bounds: {
+              left: rect.left,
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom,
             },
+            container: {
+              left: containerRect.left,
+              top: containerRect.top,
+              width: containerRect.width,
+              height: containerRect.height,
+            },
+            placement: rect.top > 120 ? "above" : "below",
           });
 
           if (debugState.enabled) {

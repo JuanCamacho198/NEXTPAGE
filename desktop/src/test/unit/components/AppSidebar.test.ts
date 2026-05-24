@@ -25,7 +25,7 @@ describe("AppSidebar", () => {
     t: fakeT,
   };
 
-  function findNavButton(name: string): HTMLButtonElement | null {
+  function findNavButton(name: string): HTMLElement | null {
     const buttons = screen.getAllByRole("button");
     return buttons.find((btn) => btn.textContent?.trim().includes(name)) ?? null;
   }
@@ -52,7 +52,7 @@ describe("AppSidebar", () => {
     render(AppSidebar, { ...defaultProps, onNavigateHome });
     const btn = findNavButton("Inicio");
     expect(btn).not.toBeNull();
-    await user.click(btn!);
+    await user.click(btn as HTMLElement);
     expect(onNavigateHome).toHaveBeenCalledTimes(1);
   });
 
@@ -62,7 +62,7 @@ describe("AppSidebar", () => {
     render(AppSidebar, { ...defaultProps, onNavigateLibrary });
     const btn = findNavButton("Estantería");
     expect(btn).not.toBeNull();
-    await user.click(btn!);
+    await user.click(btn as HTMLElement);
     expect(onNavigateLibrary).toHaveBeenCalledTimes(1);
   });
 
@@ -72,7 +72,7 @@ describe("AppSidebar", () => {
     render(AppSidebar, { ...defaultProps, onNavigateStats });
     const btn = findNavButton("Estadísticas");
     expect(btn).not.toBeNull();
-    await user.click(btn!);
+    await user.click(btn as HTMLElement);
     expect(onNavigateStats).toHaveBeenCalledTimes(1);
   });
 
@@ -82,7 +82,7 @@ describe("AppSidebar", () => {
     render(AppSidebar, { ...defaultProps, onNavigateHighlights });
     const btn = findNavButton("Notas y resaltados");
     expect(btn).not.toBeNull();
-    await user.click(btn!);
+    await user.click(btn as HTMLElement);
     expect(onNavigateHighlights).toHaveBeenCalledTimes(1);
   });
 
@@ -92,7 +92,7 @@ describe("AppSidebar", () => {
     render(AppSidebar, { ...defaultProps, onNavigateSettings });
     const btn = findNavButton("Ajustes");
     expect(btn).not.toBeNull();
-    await user.click(btn!);
+    await user.click(btn as HTMLElement);
     expect(onNavigateSettings).toHaveBeenCalledTimes(1);
   });
 

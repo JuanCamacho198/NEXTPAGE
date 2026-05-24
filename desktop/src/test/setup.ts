@@ -1,4 +1,10 @@
 import '@testing-library/jest-dom/vitest'
+import { vi } from 'vitest';
+
+// Global mock for Tauri IPC
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn(),
+}));
 
 // Polyfill DOMMatrix for pdfjs-dist (not available in Node.js/jsdom/happy-dom)
 if (typeof globalThis.DOMMatrix === 'undefined') {

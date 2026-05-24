@@ -201,8 +201,8 @@
 
 <!-- Full viewport reader layout -->
 <div class="flex h-screen flex-col bg-[#0B1120]" bind:this={workspaceRoot}>
-  <!-- Header (64px) -->
-  <header class="flex h-16 shrink-0 items-center justify-between border-b border-[#1E293B] px-8">
+  <!-- Header (64px) - hidden in fullscreen -->
+  <header class="flex h-16 shrink-0 items-center justify-between border-b border-[#1E293B] px-8" class:hidden={isFullscreen}>
     <!-- Left: back + biblioteca -->
     <div class="flex items-center gap-2">
       <button type="button" onclick={onBackToHome} class="flex cursor-pointer items-center gap-2 text-[#94A3B8] hover:text-white">
@@ -237,14 +237,20 @@
   </header>
 
   <!-- Reading area (centered, fill remaining space) -->
-  <div class="flex flex-1 items-center justify-center px-10">
+  <div class="flex flex-1 items-center justify-center" class:px-10={!isFullscreen} class:p-0={isFullscreen}>
     {#if readerError}
       <p class="font-inter text-sm text-white">{readerError}</p>
     {:else if !activeReadingBook}
       <p class="font-inter text-sm text-white">{t("reader.no_book_loaded")}</p>
     {:else if isPdf}
       <!-- White content card for PDF -->
-      <div class="relative w-[800px] overflow-hidden rounded-xl bg-white shadow-lg">
+      <div
+        class="relative overflow-hidden bg-white"
+        class:rounded-xl={!isFullscreen}
+        class:shadow-lg={!isFullscreen}
+        class:w-[800px]={!isFullscreen}
+        class:w-full={isFullscreen}
+      >
         <PdfViewer
           filePath={activeReadingBook.filePath}
           bookId={activeReadingBook.id}
@@ -254,6 +260,7 @@
           onPageChange={onPdfPageChange}
           onSessionProgress={onPdfSessionProgress}
           onselection={handlePdfSelection}
+          onselectionclear={dismissToolbar}
           onTocReady={handleTocReady}
           externalTocNavigate={tocNavigate}
           {isFullscreen}
@@ -296,8 +303,8 @@
     {/if}
   </div>
 
-  <!-- Footer (48px) -->
-  <footer class="flex h-12 shrink-0 items-center justify-between border-t border-[#1E293B] px-8">
+  <!-- Footer (48px) - hidden in fullscreen -->
+  <footer class="flex h-12 shrink-0 items-center justify-between border-t border-[#1E293B] px-8" class:hidden={isFullscreen}>
     <span class="font-inter text-xs font-normal text-[#94A3B8]">
       {activeReadingBook?.title ?? ""}
     </span>

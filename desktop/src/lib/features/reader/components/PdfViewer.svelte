@@ -57,6 +57,7 @@
       container: { left: number; top: number; width: number; height: number };
       placement: string;
     }) => void;
+    onselectionclear?: () => void;
     onTocReady?: (entries: TocEntry[]) => void;
     externalTocNavigate?: TocEntry | null;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -84,6 +85,7 @@
     isFullscreen = false,
     onToggleFullscreen,
     onselection,
+    onselectionclear,
     onTocReady,
     externalTocNavigate = null,
     t,
@@ -207,6 +209,7 @@
     selectionHasAnchor = false;
     selectionPosition = null;
     selectionOverlayRects = [];
+    onselectionclear?.();
   };
 
   const buildSelectionOverlayRects = (range: Range, containerRect: DOMRect) => {

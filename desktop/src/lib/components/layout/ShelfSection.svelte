@@ -3,7 +3,7 @@
   import { getSafeProgressPercentage } from "$lib/stores/homeState";
   import BookCard from "$lib/components/library/BookCard.svelte";
   import ShelfActionMenu from "$lib/components/library/ShelfActionMenu.svelte";
-  import Icon from "$lib/shared/ui/navigation/Icon.svelte";
+  import Icon from "$lib/components/ui/navigation/Icon.svelte";
   import Button from "$lib/components/ui/forms/Button.svelte";
 </script>
 

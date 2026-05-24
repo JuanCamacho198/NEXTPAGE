@@ -1,2 +1,3 @@
-export { default as HighlightsView } from "./components/HighlightsView.svelte";
-export * from "./components/highlightsState.svelte";
+// NOTE: canonical files are in components/layout/
+export { default as HighlightsView } from "../../components/layout/HighlightsView.svelte";
+export * from "../../components/layout/highlightsState.svelte";

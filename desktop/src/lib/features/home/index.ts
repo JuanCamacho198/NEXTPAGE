@@ -1,24 +1,15 @@
-export { default as AppSidebar } from "./components/AppSidebar.svelte";
-export { default as HomeDesktopView } from "./components/HomeDesktopView.svelte";
-export { default as LibraryShelfScreen } from "./components/LibraryShelfScreen.svelte";
+// NOTE: canonical components are in components/layout/
+// These re-exports keep the barrel intact for existing consumers
+export { default as AppSidebar } from "../../components/layout/AppSidebar.svelte";
+export { default as HomeDesktopView } from "../../components/layout/HomeDesktopView.svelte";
+export { default as LibraryShelfScreen } from "../../components/layout/LibraryShelfScreen.svelte";
 
-// Export stores and functions from state
-export {
-  route,
-  previewBookId,
-  shelfDetailsBookId,
-  shelfTab,
-  shelfSortKey,
-  shelfViewMode,
-  shelfRawQuery,
-  setRoute,
-  openDetails,
-  openShelfDetails,
-  closeShelfDetails,
-  getShelfBooks,
-} from "./state";
+// State is managed by AppState ($lib/stores/AppState.svelte).
+// The homeState singleton is kept for backward compat with legacy consumers.
+export { homeState } from "./state";
+export type { AppRoute } from "./state";
 
-// Re-export from homeState, but avoid AppRoute conflict
+// Re-export from canonical homeState
 export {
   createShelfQueryState,
   getShelfQueryWarnings,
@@ -28,7 +19,6 @@ export {
   promoteBookForReading,
   reconcileHomeState,
   getSafeProgressPercentage,
-  type AppRoute,
   type ShelfQueryState,
   type ShelfTabCode,
   type ShelfSortKey,

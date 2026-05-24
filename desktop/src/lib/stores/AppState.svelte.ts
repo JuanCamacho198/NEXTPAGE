@@ -664,7 +664,7 @@ class AppState {
     }
   };
 
-  handleEpubLocationChange(nextLocation: string, nextPercentage: number): Promise<void> {
+  handleEpubLocationChange = async (nextLocation: string, nextPercentage: number): Promise<void> => {
     const current = this.getBookById(this.activeReadingBookId);
     if (!current) {
       return;

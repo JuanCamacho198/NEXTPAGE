@@ -1,3 +1,6 @@
+// TRANSITION FACADE: keep public command names stable (snake_case + camelCase aliases) during backend refactor.
+// Rollback: revert per feature module by restoring previous wrapper exports without touching invoke_handler symbols.
+
 pub mod settings;
 pub mod library;
 pub mod progress;
@@ -7,13 +10,21 @@ pub mod collections;
 pub mod search;
 pub mod files;
 
+#[allow(unused_imports)]
 pub use settings::*;
+#[allow(unused_imports)]
 pub use library::*;
+#[allow(unused_imports)]
 pub use progress::*;
+#[allow(unused_imports)]
 pub use highlights::*;
+#[allow(unused_imports)]
 pub use bookmarks::*;
+#[allow(unused_imports)]
 pub use collections::*;
+#[allow(unused_imports)]
 pub use search::*;
+#[allow(unused_imports)]
 pub use files::*;
 
 use std::fs;
@@ -686,5 +697,6 @@ pub fn report_error_event(
     let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
     logger.log_to_file(&event)
 }
+
 
 

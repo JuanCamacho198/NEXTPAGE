@@ -1,6 +1,7 @@
 use super::LibraryRepository;
 use chrono::Utc;
 use rusqlite::params;
+use uuid::Uuid;
 use crate::error::{AppError, AppResult};
 use crate::models::{HighlightDto, SaveHighlightInput};
 

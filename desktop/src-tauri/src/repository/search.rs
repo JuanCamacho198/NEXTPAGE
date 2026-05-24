@@ -1,5 +1,6 @@
 use super::LibraryRepository;
 use chrono::Utc;
+use uuid::Uuid;
 use rusqlite::params;
 use crate::error::{AppError, AppResult};
 use crate::models::{IndexBookTextInput, SearchBookTextInput, SearchBookTextResponse, SearchResultDto};
@@ -55,7 +56,6 @@ use super::{DEFAULT_SEARCH_PAGE_SIZE, MAX_SEARCH_PAGE_SIZE};
     }
 
     pub fn search_book_text(repo: &LibraryRepository,
-        &self,
         payload: SearchBookTextInput,
     ) -> AppResult<SearchBookTextResponse> {
         let book_id = payload.book_id.trim();

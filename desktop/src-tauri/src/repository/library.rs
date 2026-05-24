@@ -4,6 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 use rusqlite::params;
 use uuid::Uuid;
+use tauri::Manager;
 use crate::error::{AppError, AppResult};
 use crate::models::{BookDeleteInput, BookDto, BookImportInput, ScanFolderResultDto, ScannedBookFileDto};
 
@@ -233,3 +234,47 @@ use crate::models::{BookDeleteInput, BookDto, BookImportInput, ScanFolderResultD
         let _ = repo.run_deferred_cover_cleanup(&app);
         Ok(())
     }
+
+
+pub fn list_books(repo: &LibraryRepository) -> AppResult<Vec<BookDto>> {
+    let mut statement = repo.connection.prepare(
+        "SELECT id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at\n         FROM books\n         WHERE deleted_at IS NULL\n           AND hidden_at IS NULL\n         ORDER BY updated_at DESC",
+    )?;
+
+    let rows = statement.query_map([], |row| {
+        Ok(BookDto {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            author: row.get(2)?,
+            file_path: row.get(3)?,
+            format: row.get(4)?,
+            sync_status: row.get(5)?,
+            current_page: row.get(6)?,
+            total_pages: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
+        })
+    })?;
+
+    let books = rows.collect::<Result<Vec<_>, _>>()?;
+    Ok(books)
+}
+
+pub fn upsert_book(repo: &LibraryRepository, book: BookDto) -> AppResult<()> {
+    repo.connection.execute(
+        "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1)\n         ON CONFLICT(id) DO UPDATE SET\n           title = excluded.title,\n           author = excluded.author,\n           file_path = excluded.file_path,\n           format = excluded.format,\n           sync_status = excluded.sync_status,\n           current_page = excluded.current_page,\n           total_pages = excluded.total_pages,\n           updated_at = excluded.updated_at,\n           version = version + 1",
+        params![
+            book.id,
+            book.title,
+            book.author,
+            book.file_path,
+            book.format,
+            book.sync_status,
+            book.current_page,
+            book.total_pages,
+            book.created_at,
+            book.updated_at
+        ],
+    )?;
+    Ok(())
+}

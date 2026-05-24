@@ -176,3 +176,49 @@ fn repository_domain_sql_ownership_isolated_by_module_files() {
     assert!(collections_src.contains("collections") || collections_src.contains("book_collections"));
     assert!(search_src.contains("book_text_chunks") || search_src.contains("book_text_fts"));
 }
+
+#[test]
+fn repository_mutability_boundaries_are_explicit_in_facade_signatures() {
+    let repository_mod = include_str!("../src/repository/mod.rs");
+
+    assert!(repository_mod.contains("pub fn list_books(&self"));
+    assert!(repository_mod.contains("pub fn get_progress(&self"));
+    assert!(repository_mod.contains("pub fn save_progress(&self"));
+
+    assert!(repository_mod.contains("pub fn delete_book(&mut self"));
+    assert!(repository_mod.contains("pub fn delete_book_metadata(&mut self"));
+    assert!(repository_mod.contains("pub fn index_book_text(&mut self"));
+}
+
+#[test]
+fn commands_feature_isolation_contract_is_enforced_by_module_layout() {
+    let commands_mod = include_str!("../src/commands/mod.rs");
+    let bookmarks_mod = include_str!("../src/commands/bookmarks.rs");
+
+    assert!(commands_mod.contains("pub mod bookmarks;"));
+    assert!(commands_mod.contains("pub use bookmarks::*;"));
+
+    assert!(bookmarks_mod.contains("save_bookmark"));
+    assert!(bookmarks_mod.contains("delete_bookmark"));
+    assert!(!bookmarks_mod.contains("save_progress"));
+    assert!(!bookmarks_mod.contains("list_highlights"));
+}
+
+#[test]
+fn domain_evolution_keeps_ipc_contract_stable_via_mapper_boundaries() {
+    let domain = nextpage_desktop::models::domain::ReadingProgress {
+        id: "p2".to_string(),
+        book_id: "b2".to_string(),
+        locator: "epubcfi(/6/4)".to_string(),
+        percent: 77.0,
+        updated_at: Utc::now().to_rfc3339(),
+    };
+
+    let dto = nextpage_desktop::models::mapper::progress_domain_to_dto(domain);
+    let json = serde_json::to_value(dto).unwrap();
+
+    assert!(json.get("bookId").is_some());
+    assert!(json.get("cfiLocation").is_some());
+    assert!(json.get("percentage").is_some());
+    assert!(json.get("updatedAt").is_some());
+}

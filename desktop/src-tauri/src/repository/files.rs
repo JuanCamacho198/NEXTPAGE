@@ -1,6 +1,8 @@
 use super::LibraryRepository;
 use chrono::Utc;
-use rusqlite::params;
+use std::fs;
+use std::path::PathBuf;
+use rusqlite::{params, OptionalExtension};
 use crate::error::{AppError, AppResult};
 
 
@@ -23,7 +25,7 @@ use crate::error::{AppError, AppResult};
             return Err(AppError::MissingBookId);
         }
 
-        let file_path: Option<String> = self
+        let file_path: Option<String> = repo
             .connection
             .query_row(
                 "SELECT file_path
@@ -60,7 +62,7 @@ use crate::error::{AppError, AppResult};
             return Err(AppError::MissingBookId);
         }
 
-        let existing_hidden_at: Option<Option<String>> = self
+        let existing_hidden_at: Option<Option<String>> = repo
             .connection
             .query_row(
                 "SELECT hidden_at

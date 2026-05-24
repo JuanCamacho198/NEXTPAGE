@@ -1,3 +1,6 @@
+// TRANSITION FACADE: LibraryRepository remains the stable public API while domain slices are extracted.
+// REMOVE ONLY AFTER VERIFY: remove facade delegation only when parity + serde contract checks are green in verify.
+
 pub mod settings;
 pub mod library;
 pub mod progress;
@@ -23,8 +26,8 @@ use crate::models::{
     AppSettingDto, BookCoverDto, BookDeleteInput, BookDto, BookImportInput, BookmarkDto,
     CollectionDto, HighlightDto, IndexBookTextInput, LibraryBookDto, ReadingProgressDto,
     ReadingSessionInput, ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput,
-    SaveProgressInput, ScanFolderResultDto, ScannedBookFileDto, SearchBookTextInput,
-    SearchBookTextResponse, SearchResultDto,
+    SaveProgressInput, ScanFolderResultDto, SearchBookTextInput,
+    SearchBookTextResponse,
 };
 
 const MAX_SETTING_BATCH: usize = 100;
@@ -1344,5 +1347,6 @@ mod tests {
         assert_eq!(total_sessions, 1);
     }
 }
+
 
 

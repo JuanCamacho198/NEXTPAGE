@@ -1,5 +1,8 @@
 use super::LibraryRepository;
+use chrono::Utc;
 use crate::error::{AppError, AppResult};
+use uuid::Uuid;
+use rusqlite::{params, OptionalExtension};
 use crate::models::{ReadingProgressDto, ReadingSessionInput, ReadingStatsSummaryDto, SaveProgressInput};
 
 
@@ -38,7 +41,7 @@ use crate::models::{ReadingProgressDto, ReadingSessionInput, ReadingStatsSummary
 
         let now = Utc::now().to_rfc3339();
 
-        let existing_id: Option<String> = self
+        let existing_id: Option<String> = repo
             .connection
             .query_row(
                 "SELECT id FROM reading_progress WHERE book_id = ?1 AND deleted_at IS NULL LIMIT 1",

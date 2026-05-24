@@ -1,7 +1,6 @@
 use super::LibraryRepository;
 use chrono::Utc;
-use rusqlite::params;
-use uuid::Uuid;
+use rusqlite::{params, OptionalExtension};
 use crate::error::{AppError, AppResult};
 use crate::models::CollectionDto;
 
@@ -35,7 +34,7 @@ use crate::models::CollectionDto;
             return Err(AppError::InvalidInput("Invalid collection id".to_string()));
         }
 
-        let is_system: Option<i32> = self
+        let is_system: Option<i32> = repo
             .connection
             .query_row(
                 "SELECT is_system FROM collections WHERE id = ?1",
@@ -61,7 +60,7 @@ use crate::models::CollectionDto;
         Ok(())
     }
 
-    pub fn list_collections(repo: &LibraryRepository,&self) -> AppResult<Vec<CollectionDto>> {
+    pub fn list_collections(repo: &LibraryRepository) -> AppResult<Vec<CollectionDto>> {
         let mut statement = repo.connection.prepare(
             "SELECT id, name, color, is_system, created_at FROM collections ORDER BY is_system DESC, name ASC",
         )?;
@@ -89,7 +88,7 @@ use crate::models::CollectionDto;
             return Err(AppError::InvalidInput("Invalid collection id".to_string()));
         }
 
-        let collection_exists: Option<i32> = self
+        let collection_exists: Option<i32> = repo
             .connection
             .query_row(
                 "SELECT 1 FROM collections WHERE id = ?1",
@@ -101,7 +100,7 @@ use crate::models::CollectionDto;
             return Err(AppError::InvalidInput("Collection not found".to_string()));
         }
 
-        let book_exists: Option<String> = self
+        let book_exists: Option<String> = repo
             .connection
             .query_row(
                 "SELECT id FROM books WHERE id = ?1 AND deleted_at IS NULL",

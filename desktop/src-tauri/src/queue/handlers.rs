@@ -10,7 +10,6 @@ use crate::services::job_service::JobDispatcher;
 
 const MAX_IMPORT_SIZE_MB: u64 = 500;
 const MAX_THUMBNAIL_SIZE_MB: u64 = 50;
-const THUMBNAIL_MAX_DIMENSION: u32 = 800;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportPayload {
@@ -178,10 +177,10 @@ impl JobDispatcher for ImportJobHandler {
 }
 
 impl ImportJobHandler {
-    fn record_progress(&self, job_id: &str, stage: &str, duration_ms: f64) -> AppResult<()> {
-        let tags = serde_json::json!({
-            "job_id": job_id,
-            "stage": stage
+    fn record_progress(&self, _job_id: &str, _stage: &str, _duration_ms: f64) -> AppResult<()> {
+        let _tags = serde_json::json!({
+            "job_id": _job_id,
+            "stage": _stage
         })
         .to_string();
         let _ = self.app_data_dir.join("metrics.db");
@@ -189,13 +188,11 @@ impl ImportJobHandler {
     }
 }
 
-pub struct ThumbnailHandler {
-    app_data_dir: PathBuf,
-}
+pub struct ThumbnailHandler {}
 
 impl ThumbnailHandler {
-    pub fn new(app_data_dir: PathBuf) -> Self {
-        Self { app_data_dir }
+    pub fn new(_app_data_dir: PathBuf) -> Self {
+        Self {}
     }
 }
 

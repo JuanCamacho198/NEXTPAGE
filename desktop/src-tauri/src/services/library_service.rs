@@ -10,14 +10,14 @@ use crate::repository::LibraryRepository;
 use crate::services::job_service::{JobEnqueuer, JobService};
 
 pub struct LibraryService {
-    repository: Arc<Mutex<LibraryRepository>>,
+    _repository: Arc<Mutex<LibraryRepository>>,
     job_service: Arc<JobService>,
 }
 
 impl LibraryService {
     pub fn new(repository: Arc<Mutex<LibraryRepository>>, job_service: Arc<JobService>) -> Self {
         Self {
-            repository,
+            _repository: repository,
             job_service,
         }
     }

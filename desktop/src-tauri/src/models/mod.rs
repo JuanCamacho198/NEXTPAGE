@@ -1,3 +1,7 @@
+pub mod dto;
+pub mod domain;
+pub mod mapper;
+
 use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
@@ -463,3 +467,4 @@ mod tests {
         }
     }
 }
+

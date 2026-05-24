@@ -1,3 +1,21 @@
+pub mod settings;
+pub mod library;
+pub mod progress;
+pub mod highlights;
+pub mod bookmarks;
+pub mod collections;
+pub mod search;
+pub mod files;
+
+pub use settings::*;
+pub use library::*;
+pub use progress::*;
+pub use highlights::*;
+pub use bookmarks::*;
+pub use collections::*;
+pub use search::*;
+pub use files::*;
+
 use std::fs;
 use std::path::PathBuf;
 
@@ -668,3 +686,5 @@ pub fn report_error_event(
     let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
     logger.log_to_file(&event)
 }
+
+

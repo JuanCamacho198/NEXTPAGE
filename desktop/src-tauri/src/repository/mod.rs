@@ -1,3 +1,12 @@
+pub mod settings;
+pub mod library;
+pub mod progress;
+pub mod highlights;
+pub mod bookmarks;
+pub mod collections;
+pub mod search;
+pub mod files;
+
 use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -32,109 +41,19 @@ impl LibraryRepository {
     }
 
     pub fn list_books(&self) -> AppResult<Vec<BookDto>> {
-        let mut statement = self.connection.prepare(
-            "SELECT id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at
-             FROM books
-             WHERE deleted_at IS NULL
-               AND hidden_at IS NULL
-             ORDER BY updated_at DESC",
-        )?;
-
-        let rows = statement.query_map([], |row| {
-            Ok(BookDto {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                author: row.get(2)?,
-                file_path: row.get(3)?,
-                format: row.get(4)?,
-                sync_status: row.get(5)?,
-                current_page: row.get(6)?,
-                total_pages: row.get(7)?,
-                created_at: row.get(8)?,
-                updated_at: row.get(9)?,
-            })
-        })?;
-
-        let books = rows.collect::<Result<Vec<_>, _>>()?;
-        Ok(books)
+        library::list_books(self)
     }
 
     pub fn upsert_book(&self, book: BookDto) -> AppResult<()> {
-        self.connection.execute(
-            "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1)
-             ON CONFLICT(id) DO UPDATE SET
-               title = excluded.title,
-               author = excluded.author,
-               file_path = excluded.file_path,
-               format = excluded.format,
-               sync_status = excluded.sync_status,
-               current_page = excluded.current_page,
-               total_pages = excluded.total_pages,
-               updated_at = excluded.updated_at,
-               version = version + 1",
-            params![
-                book.id,
-                book.title,
-                book.author,
-                book.file_path,
-                book.format,
-                book.sync_status,
-                book.current_page,
-                book.total_pages,
-                book.created_at,
-                book.updated_at
-            ],
-        )?;
-        Ok(())
+        library::upsert_book(self, book)
     }
 
     pub fn get_settings(&self) -> AppResult<Vec<AppSettingDto>> {
-        let mut statement = self.connection.prepare(
-            "SELECT key, value_json, updated_at
-             FROM app_settings
-             ORDER BY key ASC",
-        )?;
-
-        let rows = statement.query_map([], |row| {
-            Ok(AppSettingDto {
-                key: row.get(0)?,
-                value_json: row.get(1)?,
-                updated_at: row.get(2)?,
-            })
-        })?;
-
-        let settings = rows.collect::<Result<Vec<_>, _>>()?;
-        Ok(settings)
+        settings::get_settings(self)
     }
 
     pub fn upsert_settings(&mut self, settings: Vec<AppSettingDto>) -> AppResult<()> {
-        if settings.len() > MAX_SETTING_BATCH {
-            return Err(AppError::InvalidInput(format!(
-                "Too many settings in one request (max {})",
-                MAX_SETTING_BATCH
-            )));
-        }
-
-        for setting in &settings {
-            Self::validate_setting(setting)?;
-        }
-
-        let now = Utc::now().to_rfc3339();
-        let tx = self.connection.transaction()?;
-        for setting in settings {
-            tx.execute(
-                "INSERT INTO app_settings (key, value_json, updated_at)
-                 VALUES (?1, ?2, ?3)
-                 ON CONFLICT(key) DO UPDATE SET
-                   value_json = excluded.value_json,
-                   updated_at = excluded.updated_at",
-                params![setting.key, setting.value_json, now],
-            )?;
-        }
-        tx.commit()?;
-
-        Ok(())
+        self::settings::upsert_settings(self, settings)
     }
 
     pub fn is_feature_enabled(&self, feature_name: &str) -> AppResult<bool> {
@@ -2259,3 +2178,5 @@ mod tests {
         assert_eq!(total_sessions, 1);
     }
 }
+
+

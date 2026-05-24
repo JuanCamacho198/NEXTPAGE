@@ -606,7 +606,7 @@ class AppState {
     void this.loadStats(book.id);
   }
 
-  async handlePdfPageChange(page: number, total: number): Promise<void> {
+  handlePdfPageChange = async (page: number, total: number): Promise<void> => {
     const current = this.getBookById(this.activeReadingBookId);
     if (!current) {
       return;
@@ -629,15 +629,15 @@ class AppState {
     }
 
     void this.loadStats(current.id);
-  }
+  };
 
-  async handlePdfSessionProgress(event: {
+  handlePdfSessionProgress = async (event: {
     startedAt: string;
     endedAt?: string;
     durationSeconds: number;
     startPercentage?: number;
     endPercentage?: number;
-  }): Promise<void> {
+  }): Promise<void> => {
     const current = this.getBookById(this.activeReadingBookId);
     if (!current) {
       return;
@@ -662,9 +662,9 @@ class AppState {
     } catch {
       // non-blocking stats event path
     }
-  }
+  };
 
-  async handleEpubLocationChange(nextLocation: string, nextPercentage: number): Promise<void> {
+  handleEpubLocationChange(nextLocation: string, nextPercentage: number): Promise<void> {
     const current = this.getBookById(this.activeReadingBookId);
     if (!current) {
       return;
@@ -686,15 +686,15 @@ class AppState {
     }
 
     void this.loadStats(current.id);
-  }
+  };
 
-  handleReaderLocationContext(): void {
+  handleReaderLocationContext = (): void => {
     // reserved for index_book_text integration when extraction pipeline is wired
-  }
+  };
 
   // ——— Search ———
 
-  async handleSearch(query: string, page: number): Promise<void> {
+  handleSearch = async (query: string, page: number): Promise<void> => {
     const activeBook = this.getBookById(this.activeReadingBookId);
     if (!activeBook) {
       return;
@@ -721,11 +721,11 @@ class AppState {
     } finally {
       this.isSearching = false;
     }
-  }
+  };
 
-  handleSearchJump(target: SearchNavigationTarget): void {
+  handleSearchJump = (target: SearchNavigationTarget): void => {
     this.searchTargetLocator = target.locator;
-  }
+  };
 
   // ——— Book actions ———
 
@@ -883,10 +883,10 @@ class AppState {
     this.previewBookId = book.id;
   }
 
-  openShelfDetails(book: ReaderBook): void {
+  openShelfDetails = (book: ReaderBook): void => {
     this.previewBookId = book.id;
     this.shelfDetailsBookId = book.id;
-  }
+  };
 
   closeShelfDetails = (): void => {
     this.shelfDetailsBookId = null;

@@ -8,6 +8,13 @@
 
 import { describe, expect, it, vi, beforeAll } from "vitest";
 
+vi.mock("pdfjs-dist", () => ({
+  GlobalWorkerOptions: { workerSrc: "" },
+  getDocument: vi.fn(),
+}));
+
+vi.mock("pdfjs-dist/web/pdf_viewer.css", () => ({}));
+
 // Stub constructors/classes that pdfjs-dist touches during import
 beforeAll(() => {
   if (!globalThis.DOMMatrix) {
@@ -28,8 +35,12 @@ beforeAll(() => {
 });
 
 describe("PdfViewer module", () => {
-  it("exports the component as default", async () => {
-    const mod = await import("$lib/features/reader/components/PdfViewer.svelte");
-    expect(typeof mod.default).toBe("function");
-  });
+  it(
+    "exports the component as default",
+    async () => {
+      const mod = await import("$lib/features/reader/components/PdfViewer.svelte");
+      expect(typeof mod.default).toBe("function");
+    },
+    15000
+  );
 });

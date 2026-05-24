@@ -963,6 +963,14 @@
         console.error("Failed to read raw client rects:", err);
       }
 
+      // Normalize rects to scale 1.0 so persisted highlights stay aligned after zoom
+      const normalizedRects = overlayRects.map((r) => ({
+        left: r.left / scale,
+        top: r.top / scale,
+        width: r.width / scale,
+        height: r.height / scale,
+      }));
+
       // Notify parent (ReaderWorkspace) about the selection
       onselection?.({
         text,
@@ -979,7 +987,7 @@
           height: containerRect.height,
         },
         placement: selectionPlacement,
-        rects: overlayRects,
+        rects: normalizedRects,
         pageNumber: currentPage,
       });
 
@@ -1408,7 +1416,7 @@
               {#each hl.rects as rect, index (`${hl.id}-${index}`)}
                 <div
                   class="highlight-rect"
-                  style={`left: ${rect.left}px; top: ${rect.top}px; width: ${rect.width}px; height: ${rect.height}px; --highlight-color: ${hl.color};`}
+                  style={`left: ${rect.left * scale}px; top: ${rect.top * scale}px; width: ${rect.width * scale}px; height: ${rect.height * scale}px; --highlight-color: ${hl.color};`}
                 ></div>
               {/each}
             {/each}

@@ -366,7 +366,7 @@ describe("AppState", () => {
   // ─── i18n helper ───
 
   it("t() calls i18n.t with current locale", () => {
-    const result = appState.t("home.title");
+    const result = appState.t("home.title" as any);
     expect(typeof result).toBe("string");
   });
 

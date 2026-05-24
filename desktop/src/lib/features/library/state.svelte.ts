@@ -65,7 +65,7 @@ class LibraryStateManager {
 
   // ─── Utility functions ───
 
-  formatUpdatedAt(iso: string, t: (key: string, params?: Record<string, string | number>) => string): string {
+  formatUpdatedAt(iso: string, t: (...args: any[]) => string): string {
     const parsed = new Date(iso);
     if (Number.isNaN(parsed.getTime())) return t("settings.unknownBook");
     return parsed.toLocaleDateString();

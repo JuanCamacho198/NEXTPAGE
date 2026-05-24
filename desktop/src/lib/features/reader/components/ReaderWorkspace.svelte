@@ -56,6 +56,7 @@
   // Selection state
   let selectedText = $state("");
   let selectionBounds = $state<{ left: number; top: number; right: number; bottom: number } | null>(null);
+  let selectionContainer = $state<{ left: number; top: number; width: number; height: number } | null>(null);
   let showToolbar = $state(false);
   let selectedColor = $state("#FACC15");
 
@@ -66,6 +67,7 @@
   let showTextSettings = $state(false);
   let showTocPanel = $state(false);
   let isFullscreen = $state(false);
+  let workspaceRoot: HTMLDivElement | null = $state(null);
 
   // TOC data from active viewer
   let tocEntries = $state<TocEntry[]>([]);
@@ -88,24 +90,28 @@
 
   // Fullscreen toggle
   async function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-      try {
-        await document.documentElement.requestFullscreen();
-        isFullscreen = true;
-      } catch {
-        // Fullscreen not supported
-      }
-    } else {
-      await document.exitFullscreen();
-      isFullscreen = false;
+    if (!workspaceRoot) {
+      return;
     }
+
+    try {
+      if (document.fullscreenElement === workspaceRoot) {
+        await document.exitFullscreen();
+      } else {
+        await workspaceRoot.requestFullscreen();
+      }
+    } catch {
+      // Fullscreen not supported
+    }
+
+    isFullscreen = document.fullscreenElement === workspaceRoot;
     syncDebugReaderInfo();
   }
 
   // Listen for fullscreen changes from browser (Esc key, etc.)
   $effect(() => {
     const handler = () => {
-      isFullscreen = !!document.fullscreenElement;
+      isFullscreen = document.fullscreenElement === workspaceRoot;
       syncDebugReaderInfo();
     };
     document.addEventListener("fullscreenchange", handler);
@@ -141,13 +147,24 @@
       : Math.round(percentage)
   );
 
-  function handlePdfSelection(event: { text: string; rect: { left: number; top: number; right: number; bottom: number; placement: string } }) {
+  function handlePdfSelection(event: {
+    text: string;
+    bounds: { left: number; top: number; right: number; bottom: number };
+    container: { left: number; top: number; width: number; height: number };
+    placement: string;
+  }) {
     selectedText = event.text;
     selectionBounds = {
-      left: event.rect.left,
-      top: event.rect.top === 9999 ? 0 : event.rect.top,
-      right: event.rect.right,
-      bottom: event.rect.bottom,
+      left: event.bounds.left,
+      top: event.bounds.top,
+      right: event.bounds.right,
+      bottom: event.bounds.bottom,
+    };
+    selectionContainer = {
+      left: event.container.left,
+      top: event.container.top,
+      width: event.container.width,
+      height: event.container.height,
     };
     showToolbar = true;
   }
@@ -172,6 +189,7 @@
     showToolbar = false;
     selectedText = "";
     selectionBounds = null;
+    selectionContainer = null;
     window.getSelection()?.removeAllRanges();
   }
 
@@ -182,7 +200,7 @@
 </script>
 
 <!-- Full viewport reader layout -->
-<div class="flex h-screen flex-col bg-[#0B1120]">
+<div class="flex h-screen flex-col bg-[#0B1120]" bind:this={workspaceRoot}>
   <!-- Header (64px) -->
   <header class="flex h-16 shrink-0 items-center justify-between border-b border-[#1E293B] px-8">
     <!-- Left: back + biblioteca -->
@@ -238,6 +256,8 @@
           onselection={handlePdfSelection}
           onTocReady={handleTocReady}
           externalTocNavigate={tocNavigate}
+          {isFullscreen}
+          onToggleFullscreen={toggleFullscreen}
           {t}
         />
       </div>
@@ -262,10 +282,11 @@
     {/if}
 
     <!-- Selection Toolbar (floating) -->
-    {#if showToolbar && selectionBounds && selectedText}
+    {#if showToolbar && selectionBounds && selectionContainer && selectedText}
       <SelectionToolbar
         {selectedText}
         selectionBounds={selectionBounds}
+        containerRect={selectionContainer}
         onCopy={handleCopy}
         onNote={handleNote}
         onDismiss={dismissToolbar}

@@ -4,6 +4,7 @@
   type Props = {
     selectedText: string;
     selectionBounds: { left: number; top: number; right: number; bottom: number };
+    containerRect: { left: number; top: number; width: number; height: number };
     onCopy: () => void;
     onNote: (text: string) => void;
     onDismiss: () => void;
@@ -14,6 +15,7 @@
   let {
     selectedText,
     selectionBounds,
+    containerRect,
     onCopy,
     onNote,
     onDismiss,
@@ -33,21 +35,30 @@
   let showNoteEditor = $state(false);
   let noteText = $state("");
 
-  // Position above selection if space allows
-  const toolbarY = $derived(
-    selectionBounds.top > 120
-      ? selectionBounds.top - 56 // above
-      : selectionBounds.bottom + 16 // below
-  );
-  const toolbarX = $derived(
+  const TOOLBAR_HEIGHT_ESTIMATE = 56;
+  const TOOLBAR_WIDTH_ESTIMATE = 320;
+  const TOOLBAR_EDGE_PADDING = 16;
+  const TOOLBAR_OFFSET = 16;
+
+  const selectionCenterX = $derived((selectionBounds.left + selectionBounds.right) / 2);
+  const viewerAnchorX = $derived(
     Math.max(
-      16,
+      TOOLBAR_EDGE_PADDING + TOOLBAR_WIDTH_ESTIMATE / 2,
       Math.min(
-        selectionBounds.left - 140, // center-ish above the selection
-        window.innerWidth - 360
+        selectionCenterX,
+        containerRect.width - TOOLBAR_EDGE_PADDING - TOOLBAR_WIDTH_ESTIMATE / 2
       )
     )
   );
+  const viewerToolbarX = $derived(Math.max(0, viewerAnchorX - TOOLBAR_WIDTH_ESTIMATE / 2));
+  const viewerToolbarY = $derived(
+    selectionBounds.top > TOOLBAR_HEIGHT_ESTIMATE + TOOLBAR_OFFSET
+      ? selectionBounds.top - TOOLBAR_HEIGHT_ESTIMATE - TOOLBAR_OFFSET
+      : selectionBounds.bottom + TOOLBAR_OFFSET
+  );
+
+  const toolbarX = $derived(containerRect.left + viewerToolbarX);
+  const toolbarY = $derived(containerRect.top + viewerToolbarY);
 
   function selectColor(hex: string) {
     selectedColor = hex;
@@ -73,7 +84,7 @@
 </script>
 
 <div
-  class="fixed z-50"
+  class="selection-toolbar fixed z-50"
   style="left: {toolbarX}px; top: {toolbarY}px;"
   role="presentation"
   onmouseup={(e) => e.stopPropagation()}

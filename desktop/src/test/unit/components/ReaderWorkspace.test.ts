@@ -1,0 +1,71 @@
+import { fireEvent, render, screen } from "@testing-library/svelte";
+import { describe, expect, it, vi } from "vitest";
+
+const t = (key: string) => key;
+
+vi.mock("$lib/features/reader/components/PdfViewer.svelte", async () => {
+  const mod = await import("../../mocks/MockPdfViewer.svelte");
+  return { default: mod.default };
+});
+
+vi.mock("$lib/features/reader/components/EpubViewer.svelte", async () => {
+  const mod = await import("../../mocks/MockPdfViewer.svelte");
+  return { default: mod.default };
+});
+
+import ReaderWorkspace from "$lib/features/reader/components/ReaderWorkspace.svelte";
+
+const makeBook = (overrides: Partial<{ format: string; filePath: string }> = {}) => ({
+  id: "book-1",
+  title: "Book",
+  author: "Author",
+  filePath: "C:/book.pdf",
+  format: "pdf",
+  currentPage: 1,
+  totalPages: 10,
+  progressPercentage: 0,
+  coverPath: null,
+  minutesRead: 0,
+  updatedAt: new Date().toISOString(),
+  ...overrides,
+});
+
+describe("ReaderWorkspace", () => {
+  it("owns fullscreen at workspace root", async () => {
+    const requestFullscreen = vi.fn(function (this: HTMLElement) {
+      Object.defineProperty(document, "fullscreenElement", {
+        configurable: true,
+        value: this,
+      });
+      document.dispatchEvent(new Event("fullscreenchange"));
+      return Promise.resolve();
+    });
+
+    Object.defineProperty(document.documentElement, "requestFullscreen", {
+      configurable: true,
+      value: requestFullscreen,
+    });
+
+    render(ReaderWorkspace, {
+      activeReadingBook: makeBook(),
+      t,
+      onBackToHome: () => undefined,
+    });
+
+    await fireEvent.click(screen.getByTestId("mock-pdfviewer-toggle"));
+    expect(requestFullscreen).toHaveBeenCalled();
+  });
+  it("renders selection toolbar using viewerSpace payload", async () => {
+    render(ReaderWorkspace, {
+      activeReadingBook: makeBook(),
+      t,
+      onBackToHome: () => undefined,
+    });
+
+    await fireEvent.click(screen.getByTestId("mock-pdfviewer-select"));
+    const toolbar = document.querySelector(".selection-toolbar");
+    expect(toolbar).toBeTruthy();
+    expect(toolbar?.getAttribute("style")).toContain("left: 116px");
+    expect(toolbar?.getAttribute("style")).toContain("top: 296px");
+  });
+});

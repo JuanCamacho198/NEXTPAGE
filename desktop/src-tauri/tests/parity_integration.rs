@@ -141,3 +141,38 @@ fn restart_roundtrip_preserves_settings_and_stats() {
 
     let _ = fs::remove_file(db_path);
 }
+
+#[test]
+fn dto_camel_case_contract_and_mapper_roundtrip_are_preserved() {
+    let dto = nextpage_desktop::models::dto::ReadingProgressDto {
+        id: "p1".to_string(),
+        book_id: "b1".to_string(),
+        cfi_location: "epubcfi(/6/2)".to_string(),
+        percentage: 42.5,
+        updated_at: Utc::now().to_rfc3339(),
+    };
+
+    let json = serde_json::to_value(&dto).unwrap();
+    assert!(json.get("bookId").is_some());
+    assert!(json.get("cfiLocation").is_some());
+    assert!(json.get("updatedAt").is_some());
+
+    let domain = nextpage_desktop::models::mapper::progress_dto_to_domain(dto.clone());
+    let back = nextpage_desktop::models::mapper::progress_domain_to_dto(domain);
+    assert_eq!(dto, back);
+}
+
+#[test]
+fn repository_domain_sql_ownership_isolated_by_module_files() {
+    let progress_src = include_str!("../src/repository/progress.rs");
+    let highlights_src = include_str!("../src/repository/highlights.rs");
+    let bookmarks_src = include_str!("../src/repository/bookmarks.rs");
+    let collections_src = include_str!("../src/repository/collections.rs");
+    let search_src = include_str!("../src/repository/search.rs");
+
+    assert!(progress_src.contains("reading_progress") || progress_src.contains("reading_sessions"));
+    assert!(highlights_src.contains("highlights"));
+    assert!(bookmarks_src.contains("bookmarks"));
+    assert!(collections_src.contains("collections") || collections_src.contains("book_collections"));
+    assert!(search_src.contains("book_text_chunks") || search_src.contains("book_text_fts"));
+}

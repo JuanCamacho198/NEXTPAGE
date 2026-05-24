@@ -28,12 +28,6 @@ beforeAll(() => {
 });
 
 describe("PdfViewer module", () => {
-  it("can be imported without crashing", async () => {
-    // This verifies the module graph loads (pdfjs-dist mock, tauri mock, etc.)
-    const mod = await import("$lib/features/reader/components/PdfViewer.svelte");
-    expect(mod).toBeDefined();
-  });
-
   it("exports the component as default", async () => {
     const mod = await import("$lib/features/reader/components/PdfViewer.svelte");
     expect(typeof mod.default).toBe("function");

@@ -125,7 +125,7 @@
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <p class="truncate text-sm font-medium text-[var(--color-primary)]">{row.file.fileName}</p>
                 <span class={`text-xs font-semibold uppercase ${LibraryState.getBulkImportStatusClass(row.status)}`}>
-                  {t(LibraryState.getBulkImportStatusKey(row.status))}
+                  {t(LibraryState.getBulkImportStatusKey(row.status) as any)}
                 </span>
               </div>
               <p class="text-xs text-[var(--color-text-muted)]">{row.file.format.toUpperCase()}</p>
@@ -144,7 +144,7 @@
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <p class="truncate text-sm font-medium text-[var(--color-primary)]">{row.file.fileName}</p>
                 <span class={`text-xs font-semibold uppercase ${LibraryState.getBulkImportStatusClass(row.status)}`}>
-                  {t(LibraryState.getBulkImportStatusKey(row.status))}
+                  {t(LibraryState.getBulkImportStatusKey(row.status) as any)}
                 </span>
               </div>
               <p class="text-xs text-[var(--color-text-muted)]">{row.file.format.toUpperCase()}</p>

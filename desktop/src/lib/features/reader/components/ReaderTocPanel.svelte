@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { MessageKey } from "$lib/i18n";
 
   export interface TocEntry {
     id: string;
@@ -43,6 +43,7 @@
       onkeydown={(e) => e.key === "Escape" && onClose()}
       role="dialog"
       aria-label={t("reader.tabla_contenidos")}
+      tabindex="0"
     >
       <!-- Heading -->
       <div class="border-b border-[#94adce]/5 px-5 py-4">

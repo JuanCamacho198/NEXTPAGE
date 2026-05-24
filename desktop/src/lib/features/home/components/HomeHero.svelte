@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { MessageKey } from "$lib/i18n";
   import { Button } from "$lib/shared/ui";
 
   type Props = {

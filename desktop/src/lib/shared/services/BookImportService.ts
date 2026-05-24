@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { i18n } from "../i18n";
+import { i18n } from "$lib/i18n";
 
 export type BookImportInput = {
   sourcePath: string;

@@ -6,7 +6,7 @@
   import ReaderTextSettings from "./ReaderTextSettings.svelte";
   import ReaderTocPanel, { type TocEntry } from "./ReaderTocPanel.svelte";
   import Icon from "$lib/components/ui/navigation/Icon.svelte";
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { MessageKey } from "$lib/i18n";
   import type { ReaderSettings } from "$lib/shared/types";
   import type { LibraryBookDto } from "$lib/shared/types/library";
   import { debugState } from "$lib/debug/debugState.svelte";

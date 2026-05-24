@@ -8,7 +8,7 @@
     Panel,
   } from "$lib/shared/ui";
   import type { LibraryBookDto, CollectionDto } from "$lib/shared/types";
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { MessageKey } from "$lib/i18n";
   import {
     LIBRARY_VIEW_MODE,
     LibraryState,

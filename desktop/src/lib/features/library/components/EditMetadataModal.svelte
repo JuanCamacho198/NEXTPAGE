@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button, Modal } from "$lib/shared/ui";
   import type { LibraryBookDto } from "$lib/shared/types";
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { MessageKey } from "$lib/i18n";
 
   type Props = {
     book: LibraryBookDto | null;

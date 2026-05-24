@@ -2,7 +2,7 @@
   import { Button, Modal } from "$lib/shared/ui";
   import type { BulkImportSummary, ScanFolderResult } from "$lib/shared/types";
   import type { BulkImportProgress } from "$lib/shared/services/BulkImportService";
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { MessageKey } from "$lib/i18n";
   import {
     BULK_IMPORT_STATUS,
     LibraryState,

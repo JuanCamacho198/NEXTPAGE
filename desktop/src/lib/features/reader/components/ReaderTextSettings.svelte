@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { MessageKey } from "$lib/i18n";
   import Icon from "$lib/components/ui/navigation/Icon.svelte";
 
   type Props = {
@@ -48,6 +48,7 @@
       onkeydown={(e) => e.key === "Escape" && onClose()}
       role="dialog"
       aria-label={t("reader.ajustes_texto")}
+      tabindex="0"
     >
       <!-- Sidebar Header Icons -->
       <div class="flex items-center justify-between border-b border-[#94adce]/5 px-4 py-4">
@@ -171,6 +172,7 @@
             onclick={() => (publisherDefaults = !publisherDefaults)}
             role="switch"
             aria-checked={publisherDefaults}
+            aria-label={t("settings.reading.showHeader")}
           >
             <span
               class="h-4 w-4 rounded-full bg-white shadow transition-transform"
@@ -188,6 +190,7 @@
             onclick={() => (verticalScrolling = !verticalScrolling)}
             role="switch"
             aria-checked={verticalScrolling}
+            aria-label={t("settings.reading.showFooter")}
           >
             <span
               class="h-4 w-4 rounded-full bg-white shadow transition-transform"

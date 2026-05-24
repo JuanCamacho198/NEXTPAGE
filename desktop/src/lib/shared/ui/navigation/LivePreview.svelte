@@ -28,7 +28,7 @@ The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloure
 
 Winston made for the stairs. It was no use trying the lift. Even at the best of times it was seldom working, and at present the electric current was cut off during daylight hours. It was part of the economy drive in preparation for Hate Week.`;
 
-  const displayText = text || defaultSampleText;
+  let displayText = $derived(text || defaultSampleText);
 
   // Theme colors
   const themeColors = {

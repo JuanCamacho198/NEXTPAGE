@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { MessageKey } from "$lib/i18n";
 
   type Props = {
     selectedText: string;

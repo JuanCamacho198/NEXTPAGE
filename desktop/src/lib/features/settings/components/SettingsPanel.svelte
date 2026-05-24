@@ -9,7 +9,7 @@
     upsertReaderSettings,
   } from "$lib/shared/api/tauriClient";
   import { AuthService } from "$lib/shared/services/AuthService";
-  import { i18n, type MessageKey } from "$lib/shared/i18n";
+  import { i18n, type MessageKey } from "$lib/i18n";
   import {
     getProfileInitials,
     normalizeProfileSession,

@@ -641,7 +641,7 @@
 
             <!-- Font scale con preview -->
             <div class="preference-card mb-4">
-              <label class="preference-label">{t("settings.fontScale")}: {preferredFontScale}%</label>
+              <label class="preference-label" for="font-scale">{t("settings.fontScale")}: {preferredFontScale}%</label>
               <input
                 type="range"
                 id="font-scale"
@@ -747,7 +747,7 @@
             </div>
 
             <div class="mb-4">
-              <label class="preference-label">{t("settings.fontScale")}: {preferredFontScale}%</label>
+              <label class="preference-label" for="app-font-scale">{t("settings.fontScale")}: {preferredFontScale}%</label>
               <input
                 type="range"
                 id="app-font-scale"
@@ -981,7 +981,7 @@
         </div>
       {/if}
     </div>
-  </aside>
+    </div>\r\n  </aside>
 {/if}
 
 <style>
@@ -1463,22 +1463,6 @@
   }
 
   /* Datos y privacidad */
-  .privacy-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--color-primary);
-    margin: 0 0 12px 0;
-  }
-
-  .privacy-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
   .privacy-action {
     display: flex;
     align-items: center;
@@ -1521,12 +1505,6 @@
     background: var(--color-background);
     border: 1px solid var(--color-border);
     border-radius: 8px;
-  }
-
-  .export-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--color-text-muted);
   }
 
   .export-controls {

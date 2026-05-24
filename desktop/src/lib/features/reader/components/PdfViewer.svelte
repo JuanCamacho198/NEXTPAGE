@@ -5,7 +5,7 @@
   import { getFileBytes } from "$lib/shared/api/tauriClient";
   import ErrorBoundary from "$lib/shared/ui/feedback/ErrorBoundary.svelte";
   import Icon from "$lib/components/ui/navigation/Icon.svelte";
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { MessageKey } from "$lib/i18n";
   import type { PdfOutlineItem, ReaderSettings, ReaderThemeMode } from "$lib/shared/types";
   import {
     adjustPdfScaleForWheel,
@@ -1272,6 +1272,7 @@
 <svelte:window onkeydown={handleViewerKeydown} />
 
 <ErrorBoundary>
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
   <div
     class="pdf-viewer"
     bind:this={viewerRoot}
@@ -1573,37 +1574,8 @@
 
 
 
-  .toolbar-container {
-    position: absolute;
-    transform: translateX(-50%);
-    z-index: 100;
-    width: min(320px, calc(100vw - 32px));
-  }
 
-  .toolbar-container::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    bottom: -8px;
-    width: 16px;
-    height: 16px;
-    transform: translateX(-50%) rotate(45deg);
-    background: color-mix(in srgb, var(--pdf-reader-surface-bg, #fff) 92%, #0f172a 8%);
-    border-right: 1px solid rgba(148, 163, 184, 0.28);
-    border-bottom: 1px solid rgba(148, 163, 184, 0.28);
-    z-index: -1;
-  }
-
-  .toolbar-container.below::before {
-    top: -8px;
-    bottom: auto;
-    border-right: none;
-    border-bottom: none;
-    border-left: 1px solid rgba(148, 163, 184, 0.28);
-    border-top: 1px solid rgba(148, 163, 184, 0.28);
-  }
-
-  @media (max-width: 900px) {
+@media (max-width: 900px) {
     .toc-sidebar {
       width: min(240px, 70vw);
     }

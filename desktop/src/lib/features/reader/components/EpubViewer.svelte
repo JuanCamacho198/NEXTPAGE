@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import type { Book, Rendition } from "epubjs";
   import ePub from "epubjs";
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { MessageKey } from "$lib/i18n";
   import type { ReaderSettings, ReaderThemeMode } from "$lib/shared/types";
   import { resolveReaderArrowIntent } from "$lib/features/reader/epub/keyboardNav";
 
@@ -614,13 +614,6 @@
     align-items: center;
     gap: 4px;
     margin-left: auto;
-  }
-
-  .selection-note {
-    margin: 0;
-    flex: 1 1 100%;
-    font-size: 12px;
-    color: var(--color-text-muted);
   }
 
   .size-label {

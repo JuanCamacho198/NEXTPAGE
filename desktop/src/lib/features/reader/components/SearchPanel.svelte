@@ -4,7 +4,7 @@
     SearchNavigationTarget,
     SearchResult,
   } from "$lib/shared/types";
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { MessageKey } from "$lib/i18n";
   import Panel from "$lib/shared/ui/layout/Panel.svelte";
 
   type Props = {

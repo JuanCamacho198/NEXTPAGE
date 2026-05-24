@@ -9,7 +9,7 @@ import type {
   LibraryBookDto,
   ScanFolderResult,
 } from "$lib/shared/types";
-import type { MessageKey } from "$lib/shared/i18n";
+import type { MessageKey } from "$lib/i18n";
 
 // Local type (not in shared/types, preserved for backward compat)
 export type ReaderBook = LibraryBookDto & {

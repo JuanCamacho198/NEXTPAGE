@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import type { LibraryBookDto } from "$lib/shared/types";
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { MessageKey } from "$lib/i18n";
   import { getSafeProgressPercentage } from "$lib/shared/stores/homeState";
   import SafeCover from "./SafeCover.svelte";
   import { Button } from "$lib/shared/ui";

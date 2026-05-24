@@ -355,3 +355,111 @@ pub struct BookCollectionInput {
     pub book_id: String,
     pub collection_id: i64,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_page_number_with_page_number_only() {
+        let input = SaveHighlightInput {
+            book_id: "b1".to_string(),
+            color: "yellow".to_string(),
+            text: "test".to_string(),
+            page_number: Some(42),
+            page: None,
+            rect_left: 0.0,
+            rect_right: 10.0,
+            rect_top: 0.0,
+            rect_bottom: 10.0,
+            cfi: None,
+            note: None,
+        };
+        assert_eq!(input.resolve_page_number().unwrap(), 42);
+    }
+
+    #[test]
+    fn test_resolve_page_number_with_legacy_page_only() {
+        let input = SaveHighlightInput {
+            book_id: "b1".to_string(),
+            color: "yellow".to_string(),
+            text: "test".to_string(),
+            page_number: None,
+            page: Some(99),
+            rect_left: 0.0,
+            rect_right: 10.0,
+            rect_top: 0.0,
+            rect_bottom: 10.0,
+            cfi: None,
+            note: None,
+        };
+        assert_eq!(input.resolve_page_number().unwrap(), 99);
+    }
+
+    #[test]
+    fn test_resolve_page_number_with_both_matching() {
+        let input = SaveHighlightInput {
+            book_id: "b1".to_string(),
+            color: "yellow".to_string(),
+            text: "test".to_string(),
+            page_number: Some(7),
+            page: Some(7),
+            rect_left: 0.0,
+            rect_right: 10.0,
+            rect_top: 0.0,
+            rect_bottom: 10.0,
+            cfi: None,
+            note: None,
+        };
+        assert_eq!(input.resolve_page_number().unwrap(), 7);
+    }
+
+    #[test]
+    fn test_resolve_page_number_with_conflicting_fields() {
+        let input = SaveHighlightInput {
+            book_id: "b1".to_string(),
+            color: "yellow".to_string(),
+            text: "test".to_string(),
+            page_number: Some(7),
+            page: Some(99),
+            rect_left: 0.0,
+            rect_right: 10.0,
+            rect_top: 0.0,
+            rect_bottom: 10.0,
+            cfi: None,
+            note: None,
+        };
+        let err = input.resolve_page_number().unwrap_err();
+        match err {
+            AppError::InvalidInput(msg) => {
+                assert!(msg.contains("pageNumber"));
+                assert!(msg.contains("page"));
+            }
+            _ => panic!("Expected InvalidInput error"),
+        }
+    }
+
+    #[test]
+    fn test_resolve_page_number_with_neither_field() {
+        let input = SaveHighlightInput {
+            book_id: "b1".to_string(),
+            color: "yellow".to_string(),
+            text: "test".to_string(),
+            page_number: None,
+            page: None,
+            rect_left: 0.0,
+            rect_right: 10.0,
+            rect_top: 0.0,
+            rect_bottom: 10.0,
+            cfi: None,
+            note: None,
+        };
+        let err = input.resolve_page_number().unwrap_err();
+        match err {
+            AppError::InvalidInput(msg) => {
+                assert!(msg.contains("pageNumber"));
+            }
+            _ => panic!("Expected InvalidInput error"),
+        }
+    }
+}

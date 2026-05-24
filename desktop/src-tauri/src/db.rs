@@ -247,3 +247,47 @@ fn has_column(connection: &Connection, table_name: &str, column_name: &str) -> A
     }
     Ok(false)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_health_status_equality() {
+        assert_eq!(HealthStatus::Healthy, HealthStatus::Healthy);
+        assert_eq!(HealthStatus::Degraded, HealthStatus::Degraded);
+        assert_eq!(HealthStatus::Missing, HealthStatus::Missing);
+        assert_ne!(HealthStatus::Healthy, HealthStatus::Degraded);
+        assert_ne!(HealthStatus::Healthy, HealthStatus::Missing);
+    }
+
+    #[test]
+    fn test_queue_health_healthy_no_warnings() {
+        let health = QueueHealth {
+            status: HealthStatus::Healthy,
+            warnings: vec![],
+        };
+        assert_eq!(health.status, HealthStatus::Healthy);
+        assert!(health.warnings.is_empty());
+    }
+
+    #[test]
+    fn test_queue_health_degraded_with_warnings() {
+        let health = QueueHealth {
+            status: HealthStatus::Degraded,
+            warnings: vec!["missing index".to_string()],
+        };
+        assert_eq!(health.status, HealthStatus::Degraded);
+        assert_eq!(health.warnings.len(), 1);
+        assert_eq!(health.warnings[0], "missing index");
+    }
+
+    #[test]
+    fn test_queue_health_missing() {
+        let health = QueueHealth {
+            status: HealthStatus::Missing,
+            warnings: vec!["jobs table does not exist".to_string()],
+        };
+        assert_eq!(health.status, HealthStatus::Missing);
+    }
+}

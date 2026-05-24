@@ -34,3 +34,39 @@ impl FeatureFlags {
     pub const SYNC_ENABLED: &'static str = "feature_sync_enabled";
     pub const DEBUG_MODE: &'static str = "feature_debug_mode";
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_flag_disabled_by_default() {
+        let flag = FeatureFlag::new("test_flag", false);
+        assert_eq!(flag.name, "test_flag");
+        assert!(!flag.enabled);
+        assert!(flag.value_json.is_none());
+    }
+
+    #[test]
+    fn test_new_flag_enabled() {
+        let flag = FeatureFlag::new("test_flag", true);
+        assert!(flag.enabled);
+        assert!(flag.value_json.is_none());
+    }
+
+    #[test]
+    fn test_with_value_creates_enabled_flag() {
+        let flag = FeatureFlag::with_value("config_flag", r#"{"limit": 50}"#);
+        assert!(flag.enabled);
+        assert_eq!(flag.value_json, Some(r#"{"limit": 50}"#.to_string()));
+    }
+
+    #[test]
+    fn test_feature_flag_constants() {
+        assert_eq!(FeatureFlags::IMPORT_HANDLER, "feature_import_handler");
+        assert_eq!(FeatureFlags::THUMBNAIL_HANDLER, "feature_thumbnail_handler");
+        assert_eq!(FeatureFlags::TELEMETRY_ENABLED, "feature_telemetry_enabled");
+        assert_eq!(FeatureFlags::SYNC_ENABLED, "feature_sync_enabled");
+        assert_eq!(FeatureFlags::DEBUG_MODE, "feature_debug_mode");
+    }
+}

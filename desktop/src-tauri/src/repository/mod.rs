@@ -168,229 +168,15 @@ impl LibraryRepository {
     }
 
     pub fn import_book(&self, app: tauri::AppHandle, input: BookImportInput) -> AppResult<BookDto> {
-        let source_path = PathBuf::from(&input.source_path);
-        if !source_path.exists() {
-            return Err(AppError::InvalidInput(format!(
-                "Source file does not exist: {}",
-                input.source_path
-            )));
-        }
-
-        let app_data_dir = app
-            .path()
-            .app_data_dir()
-            .map_err(|err| AppError::InvalidInput(err.to_string()))?;
-        let books_dir = app_data_dir.join("books");
-        std::fs::create_dir_all(&books_dir).map_err(|err| {
-            AppError::InvalidInput(format!("Failed to create books directory: {}", err))
-        })?;
-
-        let file_name = source_path
-            .file_name()
-            .ok_or_else(|| AppError::InvalidInput("Invalid file name".to_string()))?
-            .to_string_lossy()
-            .to_string();
-
-        let dest_path = books_dir.join(&file_name);
-        if dest_path.exists() {
-            let stem = source_path
-                .file_stem()
-                .ok_or_else(|| AppError::InvalidInput("Invalid file name".to_string()))?
-                .to_string_lossy()
-                .to_string();
-            let ext = source_path
-                .extension()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string();
-            let unique_name = format!("{}_{}.{}", stem, Uuid::new_v4(), ext);
-            let dest_path = books_dir.join(unique_name);
-            std::fs::copy(&source_path, &dest_path)
-                .map_err(|err| AppError::InvalidInput(format!("Failed to copy file: {}", err)))?;
-        } else {
-            std::fs::copy(&source_path, &dest_path)
-                .map_err(|err| AppError::InvalidInput(format!("Failed to copy file: {}", err)))?;
-        }
-
-        let now = Utc::now().to_rfc3339();
-        let title = input.title.unwrap_or_else(|| {
-            source_path
-                .file_stem()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string()
-        });
-        let author = input.author.unwrap_or_default();
-        let format = input.format;
-
-        let book = BookDto {
-            id: Uuid::new_v4().to_string(),
-            title,
-            author,
-            file_path: dest_path.to_string_lossy().to_string(),
-            format,
-            sync_status: "local".to_string(),
-            current_page: 0,
-            total_pages: 0,
-            created_at: now.clone(),
-            updated_at: now,
-        };
-
-        self.connection.execute(
-            "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1)",
-            params![
-                book.id,
-                book.title,
-                book.author,
-                book.file_path,
-                book.format,
-                book.sync_status,
-                book.current_page,
-                book.total_pages,
-                book.created_at,
-                book.updated_at
-            ],
-        )?;
-
-        if let Some(cover_source_path) = Self::find_cover_source_path(&source_path) {
-            if let Err(err) = self.upsert_book_cover_from_file(&app, &book.id, &cover_source_path) {
-                let _ = self.log_recoverable_cover_error(
-                    &app,
-                    &format!(
-                        "cover_ingest_failed book_id={} source={} error={}",
-                        book.id,
-                        cover_source_path.display(),
-                        err
-                    ),
-                );
-            }
-        }
-
-        let _ = self.run_deferred_cover_cleanup(&app);
-
-        Ok(book)
+        library::import_book(self, app, input)
     }
 
     pub fn scan_folder(&self, path: &str) -> AppResult<ScanFolderResultDto> {
-        let root = PathBuf::from(path);
-        if !root.exists() {
-            return Err(AppError::InvalidInput(format!(
-                "Folder does not exist: {}",
-                path
-            )));
-        }
-        if !root.is_dir() {
-            return Err(AppError::InvalidInput(format!(
-                "Path is not a folder: {}",
-                path
-            )));
-        }
-
-        let existing_filenames = self.existing_book_filenames_lowercase()?;
-        let mut files: Vec<ScannedBookFileDto> = Vec::new();
-        let mut skipped_unsupported_count: i64 = 0;
-        let mut skipped_unreadable_count: i64 = 0;
-        let mut pending_dirs = vec![root];
-
-        while let Some(current_dir) = pending_dirs.pop() {
-            let entries = match fs::read_dir(&current_dir) {
-                Ok(entries) => entries,
-                Err(_) => {
-                    skipped_unreadable_count += 1;
-                    continue;
-                }
-            };
-
-            for entry_result in entries {
-                let entry = match entry_result {
-                    Ok(entry) => entry,
-                    Err(_) => {
-                        skipped_unreadable_count += 1;
-                        continue;
-                    }
-                };
-
-                let file_type = match entry.file_type() {
-                    Ok(file_type) => file_type,
-                    Err(_) => {
-                        skipped_unreadable_count += 1;
-                        continue;
-                    }
-                };
-
-                let entry_path = entry.path();
-                if file_type.is_dir() {
-                    pending_dirs.push(entry_path);
-                    continue;
-                }
-                if !file_type.is_file() {
-                    skipped_unsupported_count += 1;
-                    continue;
-                }
-
-                let extension = entry_path
-                    .extension()
-                    .and_then(|value| value.to_str())
-                    .map(|value| value.to_ascii_lowercase());
-                let Some(format) = extension else {
-                    skipped_unsupported_count += 1;
-                    continue;
-                };
-                if format != "pdf" && format != "epub" {
-                    skipped_unsupported_count += 1;
-                    continue;
-                }
-
-                let file_name = entry_path
-                    .file_name()
-                    .and_then(|value| value.to_str())
-                    .map(|value| value.to_string())
-                    .unwrap_or_else(|| entry_path.to_string_lossy().to_string());
-
-                let file_name_lower = file_name.to_ascii_lowercase();
-                let is_duplicate = existing_filenames.contains(&file_name_lower);
-
-                files.push(ScannedBookFileDto {
-                    full_path: entry_path.to_string_lossy().to_string(),
-                    file_name,
-                    format,
-                    is_duplicate,
-                });
-            }
-        }
-
-        files.sort_by(|a, b| a.full_path.cmp(&b.full_path));
-
-        Ok(ScanFolderResultDto {
-            files,
-            skipped_unsupported_count,
-            skipped_unreadable_count,
-        })
+        library::scan_folder(self, path)
     }
 
     pub fn delete_book(&mut self, app: tauri::AppHandle, input: BookDeleteInput) -> AppResult<()> {
-        let book_id = input.book_id.trim();
-        let maybe_cover_path = self.delete_book_metadata(book_id)?;
-
-        if let Some(storage_path) = maybe_cover_path {
-            let remove_result = fs::remove_file(PathBuf::from(&storage_path));
-            if let Err(err) = remove_result {
-                if err.kind() != std::io::ErrorKind::NotFound {
-                    self.enqueue_cover_cleanup(&app, &storage_path)?;
-                    self.log_recoverable_cover_error(
-                        &app,
-                        &format!(
-                            "deferred_cover_cleanup_queued book_id={} path={} error={}",
-                            book_id, storage_path, err
-                        ),
-                    )?;
-                }
-            }
-        }
-
-        let _ = self.run_deferred_cover_cleanup(&app);
-        Ok(())
+        library::delete_book(self, app, input)
     }
 
     pub fn delete_book_metadata(&mut self, book_id: &str) -> AppResult<Option<String>> {
@@ -611,187 +397,27 @@ impl LibraryRepository {
     }
 
     pub fn update_book_progress(&self, book_id: &str, current_page: i32) -> AppResult<()> {
-        if book_id.trim().is_empty() {
-            return Err(AppError::MissingBookId);
-        }
-
-        let now = Utc::now().to_rfc3339();
-        self.connection.execute(
-            "UPDATE books SET current_page = ?1, updated_at = ?2, version = version + 1 WHERE id = ?3",
-            params![current_page, now, book_id],
-        )?;
-        Ok(())
+        files::update_book_progress(self, book_id, current_page)
     }
 
     pub fn save_book_file(&self, id: &str, data: &[u8]) -> AppResult<()> {
-        let book_id = id.trim();
-        if book_id.is_empty() {
-            return Err(AppError::MissingBookId);
-        }
-
-        let file_path: Option<String> = self
-            .connection
-            .query_row(
-                "SELECT file_path
-                 FROM books
-                 WHERE id = ?1 AND deleted_at IS NULL
-                 LIMIT 1",
-                params![book_id],
-                |row| row.get(0),
-            )
-            .optional()?;
-
-        let file_path = file_path
-            .ok_or_else(|| AppError::InvalidInput(format!("Book not found for id {}", book_id)))?;
-
-        let path = PathBuf::from(file_path);
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        fs::write(path, data)?;
-
-        self.connection.execute(
-            "UPDATE books
-             SET sync_status = 'synced', updated_at = ?1, version = version + 1
-             WHERE id = ?2",
-            params![Utc::now().to_rfc3339(), book_id],
-        )?;
-
-        Ok(())
+        files::save_book_file(self, id, data)
     }
 
     pub fn hide_book_from_library(&self, book_id: &str) -> AppResult<()> {
-        let normalized_book_id = book_id.trim();
-        if normalized_book_id.is_empty() {
-            return Err(AppError::MissingBookId);
-        }
-
-        let existing_hidden_at: Option<Option<String>> = self
-            .connection
-            .query_row(
-                "SELECT hidden_at
-                 FROM books
-                 WHERE id = ?1 AND deleted_at IS NULL
-                 LIMIT 1",
-                params![normalized_book_id],
-                |row| row.get(0),
-            )
-            .optional()?;
-
-        match existing_hidden_at {
-            None => {
-                return Err(AppError::InvalidInput(format!(
-                    "Book not found for id {}",
-                    normalized_book_id
-                )));
-            }
-            Some(Some(_)) => return Ok(()),
-            Some(None) => {}
-        }
-
-        let now = Utc::now().to_rfc3339();
-        self.connection.execute(
-            "UPDATE books
-             SET hidden_at = COALESCE(hidden_at, ?1), updated_at = ?1, version = version + 1
-             WHERE id = ?2 AND deleted_at IS NULL",
-            params![now, normalized_book_id],
-        )?;
-
-        Ok(())
+        files::hide_book_from_library(self, book_id)
     }
 
     pub fn get_progress(&self, book_id: &str) -> AppResult<Option<ReadingProgressDto>> {
-        if book_id.trim().is_empty() {
-            return Err(AppError::MissingBookId);
-        }
-
-        let mut statement = self.connection.prepare(
-            "SELECT id, book_id, cfi_location, percentage, updated_at
-             FROM reading_progress
-             WHERE book_id = ?1 AND deleted_at IS NULL
-             ORDER BY updated_at DESC
-             LIMIT 1",
-        )?;
-
-        let progress = statement
-            .query_row(params![book_id], |row| {
-                Ok(ReadingProgressDto {
-                    id: row.get(0)?,
-                    book_id: row.get(1)?,
-                    cfi_location: row.get(2)?,
-                    percentage: row.get(3)?,
-                    updated_at: row.get(4)?,
-                })
-            })
-            .optional()?;
-
-        Ok(progress)
+        progress::get_progress(self, book_id)
     }
 
     pub fn save_progress(&self, payload: SaveProgressInput) -> AppResult<()> {
-        if payload.book_id.trim().is_empty() {
-            return Err(AppError::MissingBookId);
-        }
-
-        let now = Utc::now().to_rfc3339();
-
-        let existing_id: Option<String> = self
-            .connection
-            .query_row(
-                "SELECT id FROM reading_progress WHERE book_id = ?1 AND deleted_at IS NULL LIMIT 1",
-                params![&payload.book_id],
-                |row| row.get(0),
-            )
-            .optional()?;
-
-        match existing_id {
-            Some(id) => {
-                self.connection.execute(
-                    "UPDATE reading_progress
-                     SET cfi_location = ?1, percentage = ?2, updated_at = ?3, version = version + 1
-                     WHERE id = ?4",
-                    params![payload.cfi_location, payload.percentage, now, id],
-                )?;
-            }
-            None => {
-                self.connection.execute(
-                    "INSERT INTO reading_progress (id, book_id, cfi_location, percentage, updated_at, version)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                    params![
-                        Uuid::new_v4().to_string(),
-                        &payload.book_id,
-                        &payload.cfi_location,
-                        payload.percentage,
-                        &now,
-                        1
-                    ],
-                )?;
-            }
-        }
-
-        Ok(())
+        progress::save_progress(self, payload)
     }
 
     pub fn upsert_progress(&self, progress: ReadingProgressDto) -> AppResult<()> {
-        self.connection.execute(
-            "INSERT INTO reading_progress (id, book_id, cfi_location, percentage, updated_at, version)
-             VALUES (?1, ?2, ?3, ?4, ?5, 1)
-             ON CONFLICT(id) DO UPDATE SET
-               book_id = excluded.book_id,
-               cfi_location = excluded.cfi_location,
-               percentage = excluded.percentage,
-               updated_at = excluded.updated_at,
-               version = version + 1",
-            params![
-                progress.id,
-                &progress.book_id,
-                &progress.cfi_location,
-                progress.percentage,
-                &progress.updated_at
-            ],
-        )?;
-
-        Ok(())
+        progress::upsert_progress(self, progress)
     }
 
     pub fn list_library_books(&self) -> AppResult<Vec<LibraryBookDto>> {
@@ -850,530 +476,70 @@ impl LibraryRepository {
     }
 
     pub fn save_reading_session(&self, session: ReadingSessionInput) -> AppResult<()> {
-        let book_id = session.book_id.trim();
-        if book_id.is_empty() {
-            return Err(AppError::MissingBookId);
-        }
-        if session.started_at.trim().is_empty() {
-            return Err(AppError::InvalidInput(
-                "Reading session startedAt is required".to_string(),
-            ));
-        }
-        if session.duration_seconds < 0 {
-            return Err(AppError::InvalidInput(
-                "Reading session durationSeconds cannot be negative".to_string(),
-            ));
-        }
-        if session.duration_seconds == 0 {
-            return Err(AppError::InvalidInput(
-                "Reading session durationSeconds must be greater than zero".to_string(),
-            ));
-        }
-        if session.ended_at.is_none() {
-            return Err(AppError::InvalidInput(
-                "Reading session endedAt is required".to_string(),
-            ));
-        }
-
-        let started_at =
-            chrono::DateTime::parse_from_rfc3339(session.started_at.trim()).map_err(|_| {
-                AppError::InvalidInput("Reading session startedAt must be RFC3339".to_string())
-            })?;
-        let ended_at_raw = session.ended_at.as_deref().unwrap_or_default();
-        let ended_at = chrono::DateTime::parse_from_rfc3339(ended_at_raw.trim()).map_err(|_| {
-            AppError::InvalidInput("Reading session endedAt must be RFC3339".to_string())
-        })?;
-        if ended_at <= started_at {
-            return Err(AppError::InvalidInput(
-                "Reading session endedAt must be after startedAt".to_string(),
-            ));
-        }
-
-        Self::validate_percentage("startPercentage", session.start_percentage)?;
-        Self::validate_percentage("endPercentage", session.end_percentage)?;
-
-        if let (Some(start), Some(end)) = (session.start_percentage, session.end_percentage) {
-            if (start - end).abs() < f64::EPSILON {
-                return Err(AppError::InvalidInput(
-                    "Reading session startPercentage and endPercentage cannot be equal".to_string(),
-                ));
-            }
-        }
-
-        self.connection.execute(
-            "INSERT INTO reading_sessions (id, book_id, started_at, ended_at, duration_seconds, start_percentage, end_percentage, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            params![
-                Uuid::new_v4().to_string(),
-                book_id,
-                session.started_at,
-                session.ended_at,
-                session.duration_seconds,
-                session.start_percentage,
-                session.end_percentage,
-                Utc::now().to_rfc3339(),
-            ],
-        )?;
-
-        Ok(())
+        progress::save_reading_session(self, session)
     }
 
     pub fn get_reading_stats(&self, book_id: Option<&str>) -> AppResult<ReadingStatsSummaryDto> {
-        if let Some(id) = book_id {
-            if id.trim().is_empty() {
-                return Err(AppError::MissingBookId);
-            }
-        }
-
-        let mut stats = self.recompute_reading_stats_from_sessions(book_id)?;
-
-        if self.reading_stats_drift_over_threshold(book_id, stats.avg_progress_percentage)? {
-            stats = self.recompute_reading_stats_from_sessions(book_id)?;
-        }
-
-        Ok(stats)
+        progress::get_reading_stats(self, book_id)
     }
 
     pub fn index_book_text(&mut self, payload: IndexBookTextInput) -> AppResult<()> {
-        let book_id = payload.book_id.trim();
-        if book_id.is_empty() {
-            return Err(AppError::MissingBookId);
-        }
-
-        let tx = self.connection.transaction()?;
-
-        tx.execute(
-            "DELETE FROM book_text_fts WHERE book_id = ?1",
-            params![book_id],
-        )?;
-        tx.execute(
-            "DELETE FROM book_text_chunks WHERE book_id = ?1",
-            params![book_id],
-        )?;
-
-        let now = Utc::now().to_rfc3339();
-        for chunk in payload.chunks {
-            if chunk.locator.trim().is_empty() || chunk.text_content.trim().is_empty() {
-                continue;
-            }
-
-            let chunk_id = Uuid::new_v4().to_string();
-            tx.execute(
-                "INSERT INTO book_text_chunks (id, book_id, locator, chunk_index, text_content, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                params![
-                    chunk_id,
-                    book_id,
-                    chunk.locator,
-                    chunk.chunk_index,
-                    chunk.text_content,
-                    now,
-                ],
-            )?;
-
-            tx.execute(
-                "INSERT INTO book_text_fts (chunk_id, book_id, locator, text_content)
-                 VALUES (?1, ?2, ?3, ?4)",
-                params![chunk_id, book_id, chunk.locator, chunk.text_content],
-            )?;
-        }
-
-        tx.commit()?;
-        Ok(())
+        search::index_book_text(self, payload)
     }
 
     pub fn search_book_text(
         &self,
         payload: SearchBookTextInput,
     ) -> AppResult<SearchBookTextResponse> {
-        let book_id = payload.book_id.trim();
-        if book_id.is_empty() {
-            return Err(AppError::MissingBookId);
-        }
-
-        let query = Self::build_fts_match_query(&payload.query)?;
-        let page = payload.page.max(1);
-        let page_size = if payload.page_size <= 0 {
-            DEFAULT_SEARCH_PAGE_SIZE
-        } else {
-            payload.page_size.min(MAX_SEARCH_PAGE_SIZE)
-        };
-
-        let total: i64 = self.connection.query_row(
-            "SELECT COUNT(*)
-             FROM book_text_fts
-             WHERE book_id = ?1
-               AND book_text_fts MATCH ?2",
-            params![book_id, &query],
-            |row| row.get(0),
-        )?;
-
-        let offset = (page - 1) * page_size;
-        if offset >= total {
-            return Ok(SearchBookTextResponse {
-                items: Vec::new(),
-                total,
-                page,
-                page_size,
-            });
-        }
-
-        let mut statement = self.connection.prepare(
-            "SELECT fts.chunk_id,
-                    fts.book_id,
-                    fts.locator,
-                    snippet(book_text_fts, 3, '[', ']', '...', 18) AS snippet,
-                    bm25(book_text_fts) AS rank
-             FROM book_text_fts fts
-             JOIN book_text_chunks chunks
-               ON chunks.id = fts.chunk_id
-             WHERE fts.book_id = ?1
-               AND book_text_fts MATCH ?2
-             ORDER BY rank ASC, chunks.chunk_index ASC, fts.chunk_id ASC
-             LIMIT ?3 OFFSET ?4",
-        )?;
-
-        let rows = statement.query_map(params![book_id, &query, page_size, offset], |row| {
-            Ok(SearchResultDto {
-                chunk_id: row.get(0)?,
-                book_id: row.get(1)?,
-                locator: row.get(2)?,
-                snippet: row.get(3)?,
-                rank: row.get(4)?,
-            })
-        })?;
-
-        let items = rows.collect::<Result<Vec<_>, _>>()?;
-        Ok(SearchBookTextResponse {
-            items,
-            total,
-            page,
-            page_size,
-        })
+        search::search_book_text(self, payload)
     }
 
     pub fn list_highlights(&self, book_id: Option<&str>) -> AppResult<Vec<HighlightDto>> {
-        let mut statement = self.connection.prepare(
-            "SELECT id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, note, created_at, updated_at
-             FROM highlights
-             WHERE (?1 IS NULL OR book_id = ?1) AND deleted_at IS NULL
-             ORDER BY page ASC, rect_top ASC",
-        )?;
-
-        let rows = statement.query_map(params![book_id], |row| {
-            Ok(HighlightDto {
-                id: row.get(0)?,
-                book_id: row.get(1)?,
-                color: row.get(2)?,
-                text: row.get(3)?,
-                page: row.get(4)?,
-                rect_left: row.get(5)?,
-                rect_right: row.get(6)?,
-                rect_top: row.get(7)?,
-                rect_bottom: row.get(8)?,
-                cfi: row.get(9)?,
-                note: row.get(10)?,
-                created_at: row.get(11)?,
-                updated_at: row.get(12)?,
-            })
-        })?;
-
-        let highlights = rows.collect::<Result<Vec<_>, _>>()?;
-        Ok(highlights)
+        highlights::list_highlights(self, book_id)
     }
 
     pub fn save_highlight(&self, payload: SaveHighlightInput) -> AppResult<HighlightDto> {
-        if payload.book_id.trim().is_empty() {
-            return Err(AppError::MissingBookId);
-        }
-
-        let page = payload.resolve_page_number()?;
-        if page <= 0 {
-            return Err(AppError::InvalidInput(
-                "Highlight pageNumber must be greater than 0".to_string(),
-            ));
-        }
-
-        if payload.color.trim().is_empty() {
-            return Err(AppError::InvalidInput(
-                "Highlight color is required".to_string(),
-            ));
-        }
-
-        if payload.text.trim().is_empty() {
-            return Err(AppError::InvalidInput(
-                "Highlight text is required".to_string(),
-            ));
-        }
-
-        let now = Utc::now().to_rfc3339();
-        let id = Uuid::new_v4().to_string();
-
-        self.connection.execute(
-            "INSERT INTO highlights (id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, note, created_at, updated_at, version)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, 1)",
-            params![
-                id,
-                payload.book_id,
-                payload.color,
-                payload.text,
-                page,
-                payload.rect_left,
-                payload.rect_right,
-                payload.rect_top,
-                payload.rect_bottom,
-                payload.cfi,
-                payload.note,
-                now,
-                now
-            ],
-        )?;
-
-        Ok(HighlightDto {
-            id,
-            book_id: payload.book_id,
-            color: payload.color,
-            text: payload.text,
-            page,
-            rect_left: payload.rect_left,
-            rect_right: payload.rect_right,
-            rect_top: payload.rect_top,
-            rect_bottom: payload.rect_bottom,
-            cfi: payload.cfi,
-            note: payload.note,
-            created_at: now.clone(),
-            updated_at: now,
-        })
+        highlights::save_highlight(self, payload)
     }
 
     pub fn delete_highlight(&self, id: &str) -> AppResult<()> {
-        let now = Utc::now().to_rfc3339();
-        self.connection.execute(
-            "UPDATE highlights SET deleted_at = ?1, version = version + 1 WHERE id = ?2",
-            params![now, id],
-        )?;
-        Ok(())
+        highlights::delete_highlight(self, id)
     }
 
     pub fn list_bookmarks(&self, book_id: Option<&str>) -> AppResult<Vec<BookmarkDto>> {
-        let mut statement = self.connection.prepare(
-            "SELECT id, book_id, page, position, title, created_at
-             FROM bookmarks
-             WHERE (?1 IS NULL OR book_id = ?1) AND deleted_at IS NULL
-             ORDER BY page ASC, position ASC",
-        )?;
-
-        let rows = statement.query_map(params![book_id], |row| {
-            Ok(BookmarkDto {
-                id: row.get(0)?,
-                book_id: row.get(1)?,
-                page: row.get(2)?,
-                position: row.get(3)?,
-                title: row.get(4)?,
-                created_at: row.get(5)?,
-            })
-        })?;
-
-        let bookmarks = rows.collect::<Result<Vec<_>, _>>()?;
-        Ok(bookmarks)
+        bookmarks::list_bookmarks(self, book_id)
     }
 
     pub fn save_bookmark(&self, payload: SaveBookmarkInput) -> AppResult<BookmarkDto> {
-        if payload.book_id.trim().is_empty() {
-            return Err(AppError::MissingBookId);
-        }
-
-        let now = Utc::now().to_rfc3339();
-        let id = Uuid::new_v4().to_string();
-
-        self.connection.execute(
-            "INSERT INTO bookmarks (id, book_id, page, position, title, created_at, version)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1)",
-            params![
-                id,
-                payload.book_id,
-                payload.page,
-                payload.position,
-                payload.title,
-                now
-            ],
-        )?;
-
-        Ok(BookmarkDto {
-            id,
-            book_id: payload.book_id,
-            page: payload.page,
-            position: payload.position,
-            title: payload.title,
-            created_at: now,
-        })
+        bookmarks::save_bookmark(self, payload)
     }
 
     pub fn delete_bookmark(&self, id: &str) -> AppResult<()> {
-        let now = Utc::now().to_rfc3339();
-        self.connection.execute(
-            "UPDATE bookmarks SET deleted_at = ?1, version = version + 1 WHERE id = ?2",
-            params![now, id],
-        )?;
-        Ok(())
+        bookmarks::delete_bookmark(self, id)
     }
 
     pub fn create_collection(&self, name: &str, color: Option<&str>) -> AppResult<CollectionDto> {
-        let name = name.trim();
-        if name.is_empty() {
-            return Err(AppError::InvalidInput(
-                "Collection name is required".to_string(),
-            ));
-        }
-
-        let now = Utc::now().to_rfc3339();
-        self.connection.execute(
-            "INSERT INTO collections (name, color, is_system, created_at) VALUES (?1, ?2, 0, ?3)",
-            params![name, color, now],
-        )?;
-
-        let id = self.connection.last_insert_rowid();
-        Ok(CollectionDto {
-            id,
-            name: name.to_string(),
-            color: color.map(String::from),
-            is_system: false,
-            created_at: now,
-        })
+        collections::create_collection(self, name, color)
     }
 
     pub fn delete_collection(&self, id: i64) -> AppResult<()> {
-        if id <= 0 {
-            return Err(AppError::InvalidInput("Invalid collection id".to_string()));
-        }
-
-        let is_system: Option<i32> = self
-            .connection
-            .query_row(
-                "SELECT is_system FROM collections WHERE id = ?1",
-                params![id],
-                |row| row.get(0),
-            )
-            .optional()?;
-        if is_system.is_none() {
-            return Err(AppError::InvalidInput("Collection not found".to_string()));
-        }
-        if is_system.unwrap() == 1 {
-            return Err(AppError::InvalidInput(
-                "Cannot delete system collection".to_string(),
-            ));
-        }
-
-        self.connection.execute(
-            "DELETE FROM book_collections WHERE collection_id = ?1",
-            params![id],
-        )?;
-        self.connection
-            .execute("DELETE FROM collections WHERE id = ?1", params![id])?;
-        Ok(())
+        collections::delete_collection(self, id)
     }
 
     pub fn list_collections(&self) -> AppResult<Vec<CollectionDto>> {
-        let mut statement = self.connection.prepare(
-            "SELECT id, name, color, is_system, created_at FROM collections ORDER BY is_system DESC, name ASC",
-        )?;
-
-        let rows = statement.query_map([], |row| {
-            Ok(CollectionDto {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                color: row.get(2)?,
-                is_system: row.get::<_, i32>(3)? != 0,
-                created_at: row.get(4)?,
-            })
-        })?;
-
-        let collections = rows.collect::<Result<Vec<_>, _>>()?;
-        Ok(collections)
+        collections::list_collections(self)
     }
 
     pub fn add_book_to_collection(&self, book_id: &str, collection_id: i64) -> AppResult<()> {
-        let book_id = book_id.trim();
-        if book_id.is_empty() {
-            return Err(AppError::MissingBookId);
-        }
-        if collection_id <= 0 {
-            return Err(AppError::InvalidInput("Invalid collection id".to_string()));
-        }
-
-        let collection_exists: Option<i32> = self
-            .connection
-            .query_row(
-                "SELECT 1 FROM collections WHERE id = ?1",
-                params![collection_id],
-                |row| row.get(0),
-            )
-            .optional()?;
-        if collection_exists.is_none() {
-            return Err(AppError::InvalidInput("Collection not found".to_string()));
-        }
-
-        let book_exists: Option<String> = self
-            .connection
-            .query_row(
-                "SELECT id FROM books WHERE id = ?1 AND deleted_at IS NULL",
-                params![book_id],
-                |row| row.get(0),
-            )
-            .optional()?;
-        if book_exists.is_none() {
-            return Err(AppError::InvalidInput("Book not found".to_string()));
-        }
-
-        self.connection.execute(
-            "INSERT OR IGNORE INTO book_collections (book_id, collection_id) VALUES (?1, ?2)",
-            params![book_id, collection_id],
-        )?;
-        Ok(())
+        collections::add_book_to_collection(self, book_id, collection_id)
     }
 
     pub fn remove_book_from_collection(&self, book_id: &str, collection_id: i64) -> AppResult<()> {
-        let book_id = book_id.trim();
-        if book_id.is_empty() {
-            return Err(AppError::MissingBookId);
-        }
-        if collection_id <= 0 {
-            return Err(AppError::InvalidInput("Invalid collection id".to_string()));
-        }
-
-        self.connection.execute(
-            "DELETE FROM book_collections WHERE book_id = ?1 AND collection_id = ?2",
-            params![book_id, collection_id],
-        )?;
-        Ok(())
+        collections::remove_book_from_collection(self, book_id, collection_id)
     }
 
     pub fn get_book_collections(&self, book_id: &str) -> AppResult<Vec<CollectionDto>> {
-        let book_id = book_id.trim();
-        if book_id.is_empty() {
-            return Err(AppError::MissingBookId);
-        }
-
-        let mut statement = self.connection.prepare(
-            "SELECT c.id, c.name, c.color, c.is_system, c.created_at
-             FROM collections c
-             JOIN book_collections bc ON bc.collection_id = c.id
-             WHERE bc.book_id = ?1
-             ORDER BY c.is_system DESC, c.name ASC",
-        )?;
-
-        let rows = statement.query_map(params![book_id], |row| {
-            Ok(CollectionDto {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                color: row.get(2)?,
-                is_system: row.get::<_, i32>(3)? != 0,
-                created_at: row.get(4)?,
-            })
-        })?;
-
-        let collections = rows.collect::<Result<Vec<_>, _>>()?;
-        Ok(collections)
+        collections::get_book_collections(self, book_id)
     }
 
     fn validate_setting(setting: &AppSettingDto) -> AppResult<()> {

@@ -10,6 +10,7 @@
   import type { ReaderSettings } from "$lib/shared/types";
   import type { LibraryBookDto } from "$lib/shared/types/library";
   import { debugState } from "$lib/debug/debugState.svelte";
+  import { saveHighlight } from "$lib/shared/api/tauriClient";
 
   type ActiveBook = LibraryBookDto & { filePath: string };
 
@@ -59,6 +60,21 @@
   let selectionContainer = $state<{ left: number; top: number; width: number; height: number } | null>(null);
   let showToolbar = $state(false);
   let selectedColor = $state("#FACC15");
+
+  // Persisted highlights state
+  type PersistedHighlight = {
+    id: string;
+    color: string;
+    pageNumber: number;
+    rects: Array<{ left: number; top: number; width: number; height: number }>;
+  };
+  let persistedHighlights = $state<PersistedHighlight[]>([]);
+  let lastSelectionData = $state<{
+    text: string;
+    bounds: { left: number; top: number; right: number; bottom: number };
+    rects: Array<{ left: number; top: number; width: number; height: number }>;
+    pageNumber: number;
+  } | null>(null);
 
   // Search panel state
   let searchPanelOpen = $state(false);
@@ -152,6 +168,8 @@
     bounds: { left: number; top: number; right: number; bottom: number };
     container: { left: number; top: number; width: number; height: number };
     placement: string;
+    rects: Array<{ left: number; top: number; width: number; height: number }>;
+    pageNumber: number;
   }) {
     selectedText = event.text;
     selectionBounds = {
@@ -165,6 +183,13 @@
       top: event.container.top,
       width: event.container.width,
       height: event.container.height,
+    };
+    // Store selection data for highlight saving
+    lastSelectionData = {
+      text: event.text,
+      bounds: event.bounds,
+      rects: event.rects,
+      pageNumber: event.pageNumber,
     };
     showToolbar = true;
   }
@@ -181,8 +206,41 @@
     dismissToolbar();
   }
 
-  function handleColorSelect(color: string) {
+  async function handleColorSelect(color: string) {
     selectedColor = color;
+
+    // Save highlight and persist it visually on the PDF
+    if (lastSelectionData && activeReadingBook) {
+      const highlightId = crypto.randomUUID();
+      const bounds = lastSelectionData.bounds;
+      const pageNumber = lastSelectionData.pageNumber ?? 1;
+
+      // Persist visually immediately
+      persistedHighlights = [...persistedHighlights, {
+        id: highlightId,
+        color,
+        pageNumber,
+        rects: lastSelectionData.rects,
+      }];
+
+      // Save to backend (async, don't block UI)
+      try {
+        await saveHighlight({
+          id: highlightId,
+          bookId: activeReadingBook.id,
+          text: lastSelectionData.text,
+          color,
+          pageNumber,
+          rectLeft: bounds.left,
+          rectRight: bounds.right,
+          rectTop: bounds.top,
+          rectBottom: bounds.bottom,
+          cfi: null,
+        });
+      } catch (err) {
+        console.error("Failed to save highlight:", err);
+      }
+    }
   }
 
   function dismissToolbar() {
@@ -190,6 +248,7 @@
     selectedText = "";
     selectionBounds = null;
     selectionContainer = null;
+    lastSelectionData = null;
     window.getSelection()?.removeAllRanges();
   }
 
@@ -266,6 +325,7 @@
           externalTocNavigate={tocNavigate}
           {isFullscreen}
           onToggleFullscreen={toggleFullscreen}
+          persistedHighlights={persistedHighlights}
           {t}
         />
       </div>

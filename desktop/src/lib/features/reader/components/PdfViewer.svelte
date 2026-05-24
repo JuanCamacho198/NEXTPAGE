@@ -35,6 +35,13 @@
   import type { TocEntry } from "./ReaderTocPanel.svelte";
   import { debugState } from "$lib/debug/debugState.svelte";
 
+  type PersistedHighlight = {
+    id: string;
+    color: string;
+    pageNumber: number;
+    rects: Array<{ left: number; top: number; width: number; height: number }>;
+  };
+
   type Props = {
     filePath: string;
     bookId?: string;
@@ -57,10 +64,13 @@
       bounds: { left: number; top: number; right: number; bottom: number };
       container: { left: number; top: number; width: number; height: number };
       placement: string;
+      rects: Array<{ left: number; top: number; width: number; height: number }>;
+      pageNumber: number;
     }) => void;
     onselectionclear?: () => void;
     onTocReady?: (entries: TocEntry[]) => void;
     externalTocNavigate?: TocEntry | null;
+    persistedHighlights?: PersistedHighlight[];
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
@@ -90,6 +100,7 @@
     onselectionclear,
     onTocReady,
     externalTocNavigate = null,
+    persistedHighlights = [],
     t,
   }: Props = $props();
 
@@ -968,6 +979,8 @@
           height: containerRect.height,
         },
         placement: selectionPlacement,
+        rects: overlayRects,
+        pageNumber: currentPage,
       });
 
       if (debugState.enabled) {
@@ -1389,6 +1402,17 @@
               ></div>
             {/each}
           </div>
+          <!-- Persisted highlights overlay -->
+          <div class="highlights-overlay" aria-hidden="true">
+            {#each persistedHighlights.filter(h => h.pageNumber === currentPage) as hl (hl.id)}
+              {#each hl.rects as rect, index (`${hl.id}-${index}`)}
+                <div
+                  class="highlight-rect"
+                  style={`left: ${rect.left}px; top: ${rect.top}px; width: ${rect.width}px; height: ${rect.height}px; --highlight-color: ${hl.color};`}
+                ></div>
+              {/each}
+            {/each}
+          </div>
           <div
             bind:this={textLayer}
             class="textLayer"
@@ -1574,7 +1598,8 @@
     background: var(--pdf-reader-surface-bg, #fff);
   }
 
-  .selection-overlay {
+  .selection-overlay,
+  .highlights-overlay {
     position: absolute;
     inset: 0;
     z-index: 1;
@@ -1589,6 +1614,16 @@
       0 0 0 1px color-mix(in srgb, var(--pdf-selection-color, #3388ff) 22%, transparent),
       0 2px 4px rgba(0, 0, 0, 0.1);
     z-index: 3;
+    pointer-events: none;
+  }
+
+  .highlight-rect {
+    position: absolute;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--highlight-color, #FACC15) 25%, transparent);
+    z-index: 2;
     pointer-events: none;
   }
 

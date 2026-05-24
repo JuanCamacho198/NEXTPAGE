@@ -172,10 +172,10 @@ const t = (key: string, _params?: Record<string, string | number>) => {
     "errors.importCommandFailed": "Import failed",
   };
 
-  if (!params) return dictionary[key] ?? key;
+  if (!_params) return dictionary[key] ?? key;
 
   let result = dictionary[key] ?? key;
-  for (const [k, v] of Object.entries(params)) {
+  for (const [k, v] of Object.entries(_params)) {
     result = result.replace(`{{${k}}}`, String(v));
   }
   return result;

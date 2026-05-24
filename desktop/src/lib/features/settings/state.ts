@@ -1,24 +1,5 @@
-import { writable, get } from "svelte/store";
-import type { ReaderSettings, UiLocale } from "$lib/shared/types";
-import { getReaderSettings, getDefaultReaderSettings } from "$lib/shared/api/tauriClient";
+// ─── DEPRECATED: Superseded by AppState ($lib/stores/AppState.svelte) ───
+// Re-exports from state.svelte.ts for backward compat.
+// TODO: Remove once all components migrate to AppState.
 
-export const locale = writable<UiLocale>("es");
-export const readerSettings = writable<ReaderSettings>(getDefaultReaderSettings());
-
-export const SettingsState = {
-  async loadSettings() {
-    try {
-      readerSettings.set(await getReaderSettings());
-    } catch {
-      readerSettings.set(getDefaultReaderSettings());
-    }
-  },
-
-  setLocale(newLocale: UiLocale) {
-    locale.set(newLocale);
-  },
-
-  setReaderSettings(settings: ReaderSettings) {
-    readerSettings.set(settings);
-  }
-};
+export { settingsState } from "./state.svelte";

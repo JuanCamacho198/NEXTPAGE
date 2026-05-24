@@ -3,7 +3,6 @@
 // New code should import from AppState directly.
 // TODO: Remove this file once all components migrate to AppState.
 
-// Re-export from state.svelte.ts
 export {
   LIBRARY_VIEW_MODE,
   BULK_IMPORT_STATUS,
@@ -13,5 +12,5 @@ export {
   type LibraryViewMode,
 } from "./state.svelte";
 
-// Backward compat alias for components still using LibraryState
-export const LibraryState = libraryState;
+// Backward compat alias — LibraryState = libraryState
+export { libraryState as LibraryState } from "./state.svelte";

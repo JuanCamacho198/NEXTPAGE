@@ -417,7 +417,14 @@
   </header>
 
   <!-- Reading area (centered, fill remaining space) -->
-  <div class="flex flex-1 items-center justify-center" class:px-10={!isFullscreen} class:p-0={isFullscreen}>
+  <div
+    class="flex flex-1"
+    class:items-center={!isFullscreen}
+    class:justify-center={!isFullscreen}
+    class:items-stretch={isFullscreen}
+    class:px-10={!isFullscreen}
+    class:p-0={isFullscreen}
+  >
     {#if readerError}
       <p class="font-inter text-sm text-white">{readerError}</p>
     {:else if !activeReadingBook}
@@ -430,6 +437,7 @@
         class:shadow-lg={!isFullscreen}
         class:w-200={!isFullscreen}
         class:w-full={isFullscreen}
+        class:h-full={isFullscreen}
       >
         <PdfViewer
           filePath={activeReadingBook.filePath}
@@ -454,7 +462,12 @@
       </div>
     {:else if isEpub}
       <!-- White content card for EPUB -->
-      <div class="relative w-200 rounded-xl bg-white shadow-lg">
+      <div
+        class="relative rounded-xl bg-white shadow-lg"
+        class:w-200={!isFullscreen}
+        class:w-full={isFullscreen}
+        class:h-full={isFullscreen}
+      >
         <EpubViewer
           filePath={activeReadingBook.filePath}
           initialLocation={cfiLocation}

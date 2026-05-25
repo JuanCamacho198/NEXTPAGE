@@ -36,6 +36,7 @@
     flattenOutline,
     type ScrollAnchor,
   } from "$lib/features/reader/pdf/pdfSelection";
+  import { SafeTextLayer } from "$lib/features/reader/pdf/safeTextLayer";
 
   import PdfControls from "./pdf/PdfControls.svelte";
   import PdfSelectionOverlay from "./pdf/PdfSelectionOverlay.svelte";
@@ -168,7 +169,7 @@
   let activeNavigationRequestId = 0;
   let activeLoadingTask: pdfjsLib.PDFDocumentLoadingTask | null = null;
   let activeRenderTask: pdfjsLib.RenderTask | null = null;
-  let textLayerInstance: any = null;
+  let textLayerInstance: SafeTextLayer | null = null;
   let pendingWheelFrame: number | null = null;
   let pendingWheelDelta = 0;
   let lastLoadedFilePath: string | null = null;
@@ -494,8 +495,7 @@
     if (activeRenderTask === renderTask) activeRenderTask = null;
     if (isStaleNavigation(requestId)) return false;
 
-    textLayer.style.width = `${viewport.width}px`;
-    textLayer.style.height = `${viewport.height}px`;
+    // Container dimensions + CSS vars are set by SafeTextLayer constructor
 
     const textContent = await page.getTextContent();
     if (isStaleNavigation(requestId)) return false;
@@ -521,28 +521,14 @@
     textLayerInstance = null;
 
     textLayer.innerHTML = "";
-    textLayer.style.position = "absolute";
-    textLayer.style.left = "0";
-    textLayer.style.top = "0";
     textLayer.style.pointerEvents = "auto";
-    textLayer.style.setProperty("--scale-factor", String(viewport.scale));
-    textLayer.style.setProperty("--total-scale-factor", String(viewport.scale));
-    textLayer.style.setProperty("--scale-round-x", "1px");
-    textLayer.style.setProperty("--scale-round-y", "1px");
+    // position/left/top and CSS vars are now set by SafeTextLayer constructor
 
     try {
       if (pdfjsLib.TextLayer) {
-        textLayerInstance = new (pdfjsLib as any).TextLayer({
+        textLayerInstance = new SafeTextLayer({
           container: textLayer, viewport, textContentSource: textContent as any,
         });
-        // HACK: pdfjs-dist v5.6.205 multiplica #scale por DPR en el constructor
-        // (build/pdf.mjs:14324), inflando fontAscent vertical. El update() no
-        // recalcula #scale, así que parchamos antes del primer render para que
-        // el valor persista en todos los zooms.
-        // TODO: Migrar a TextLayerBuilder que maneja esto correctamente.
-        if (textLayerInstance['#scale'] !== undefined) {
-          textLayerInstance['#scale'] = viewport.scale;
-        }
         await textLayerInstance.render();
       } else {
         const task = (pdfjsLib as any).renderTextLayer?.({
@@ -877,15 +863,7 @@
         if (activeRenderTask === renderTask) activeRenderTask = null;
         if (isStaleNavigation(navRequestId)) return;
 
-        // Resize textLayer container
-        textLayer.style.width = `${viewport.width}px`;
-        textLayer.style.height = `${viewport.height}px`;
-        textLayer.style.setProperty("--scale-factor", String(viewport.scale));
-        textLayer.style.setProperty("--total-scale-factor", String(viewport.scale));
-        textLayer.style.setProperty("--scale-round-x", "1px");
-        textLayer.style.setProperty("--scale-round-y", "1px");
-
-        // Update existing text layer — reuses spans instead of recreating
+        // SafeTextLayer.update() re-sets CSS vars, dimensions, and patches #scale
         textLayerInstance.update({ viewport });
 
         // Re-apply pointer-events to repositioned spans

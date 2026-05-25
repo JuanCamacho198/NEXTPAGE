@@ -20,6 +20,7 @@ import {
   updateBookProgress,
   listCollections,
   scanFolder,
+  getFileBytes,
 } from "$lib/api/tauriClient";
 import { i18n, type MessageKey } from "$lib/i18n";
 import { extractPdfMetadata } from "$lib/services/pdfThumbnail";
@@ -112,7 +113,6 @@ class AppState {
 
   // Preloaded file data for instant reader startup
   preloadedBytes = $state<{ filePath: string; data: number[] } | null>(null);
-  preloadedPdfPath = $state<string | null>(null);
 
   // Internal state (class properties, not reactive)
   thumbnailGenerationInFlight = new Set<string>();
@@ -598,7 +598,6 @@ class AppState {
 
     // Clear previous preload data
     this.preloadedBytes = null;
-    this.preloadedPdfPath = null;
 
     // Start preloading file data during the navigation transition
     const format = book.format.toLowerCase();
@@ -620,7 +619,6 @@ class AppState {
       });
 
       // Also kick off streaming via pdfStreaming.ts which will cache the document
-      this.preloadedPdfPath = book.filePath;
       import("$lib/features/reader/pdf/pdfStreaming").then(({ createPdfDocument }) => {
         void createPdfDocument(book.filePath).catch(() => {
           // Preload failed — viewer will try fresh

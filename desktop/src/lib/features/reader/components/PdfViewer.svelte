@@ -2,7 +2,7 @@
   import * as pdfjsLib from "pdfjs-dist";
   import "pdfjs-dist/web/pdf_viewer.css";
   import { onMount } from "svelte";
-  import { createPdfDocument, loadPdfOutline, clearDocumentCache, removeCachedDocument } from "$lib/features/reader/pdf/pdfStreaming";
+  import { createPdfDocument, loadPdfOutline, clearDocumentCache, removeCachedDocument, setCachedDocument } from "$lib/features/reader/pdf/pdfStreaming";
   import ErrorBoundary from "$lib/shared/ui/feedback/ErrorBoundary.svelte";
   import Icon from "$lib/components/ui/navigation/Icon.svelte";
   import type { MessageKey } from "$lib/i18n";
@@ -76,6 +76,7 @@
     onTocReady?: (entries: TocEntry[]) => void;
     externalTocNavigate?: TocEntry | null;
     persistedHighlights?: PersistedHighlight[];
+    preloadedBytes?: number[] | null;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
@@ -107,6 +108,7 @@
     onTocReady,
     externalTocNavigate = null,
     persistedHighlights = [],
+    preloadedBytes = null,
     t,
   }: Props = $props();
 
@@ -144,6 +146,8 @@
   let lastPercent = 0;
   let scale = $state(DEFAULT_PDF_SCALE);
   let isLoading = $state(true);
+  let loadProgress = $state(0);
+  let loadProgressMax = $state(0);
   let error = $state<string | null>(null);
   let navigationError = $state<string | null>(null);
   let showToc = $state(false);
@@ -615,6 +619,8 @@
     await destroyCurrentDocument();
 
     isLoading = true;
+    loadProgress = 0;
+    loadProgressMax = 0;
     error = null;
     navigationError = null;
     scale = DEFAULT_PDF_SCALE;
@@ -626,8 +632,33 @@
     outlinePageCache.clear();
 
     try {
-      // Use streaming via IPC range requests with cache fallback
-      const { document: loadedDoc } = await createPdfDocument(filePath);
+      let loadedDoc: pdfjsLib.PDFDocumentProxy;
+
+      // Use preloaded bytes if available (avoids re-reading from disk for small files)
+      const USE_PRELOAD_THRESHOLD = 5 * 1024 * 1024; // 5MB — only use preload for small files
+      if (preloadedBytes && preloadedBytes.length > 0 && preloadedBytes.length <= USE_PRELOAD_THRESHOLD) {
+        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(preloadedBytes) });
+        loadingTask.onProgress = (progress: { loaded: number; total: number }) => {
+          loadProgress = progress.loaded;
+          loadProgressMax = progress.total;
+        };
+        loadedDoc = await loadingTask.promise;
+        // Cache the document for instant re-open
+        setCachedDocument(filePath, {
+          document: loadedDoc,
+          outline: [],
+          outlineLoaded: false,
+        });
+      } else {
+        // Use streaming via IPC range requests with cache fallback
+        const result = await createPdfDocument(filePath, {
+          onProgress: (loaded, total) => {
+            loadProgress = loaded;
+            loadProgressMax = total;
+          },
+        });
+        loadedDoc = result.document;
+      }
 
       if (isStaleLoad(loadRequestId)) {
         await loadedDoc.destroy();
@@ -1416,7 +1447,22 @@
     style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor}; --pdf-selection-color: ${selectionColor ?? readerSettings.selectionColor};`}
   >
     {#if isLoading}
-      <div class="loading-overlay">{t("pdf.loading")}</div>
+      <div class="loading-overlay">
+        {#if loadProgressMax > 0 && loadProgress < loadProgressMax}
+          <div class="loading-progress">
+            <span class="loading-text">{t("pdf.loading")}</span>
+            <div class="progress-bar-track">
+              <div
+                class="progress-bar-fill"
+                style="width: {Math.round((loadProgress / loadProgressMax) * 100)}%"
+              ></div>
+            </div>
+            <span class="loading-percent">{Math.round((loadProgress / loadProgressMax) * 100)}%</span>
+          </div>
+        {:else}
+          {t("pdf.loading")}
+        {/if}
+      </div>
     {/if}
     {#if error}
       <div class="error-overlay">{t("pdf.error")}: {error}</div>
@@ -1598,6 +1644,40 @@
 
   .error-overlay {
     color: #dc2626;
+  }
+
+  .loading-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 240px;
+  }
+
+  .loading-text {
+    font-size: 14px;
+    color: var(--pdf-reader-text, #64748b);
+  }
+
+  .progress-bar-track {
+    width: 100%;
+    height: 6px;
+    background: var(--color-border, #1E293B);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: #38BDF8;
+    border-radius: 3px;
+    transition: width 0.15s ease;
+  }
+
+  .loading-percent {
+    font-size: 12px;
+    color: var(--pdf-reader-text, #94A3B8);
+    opacity: 0.8;
   }
 
   .controls {

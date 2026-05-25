@@ -25,6 +25,7 @@
     searchTargetLocator?: string | null;
     onLocationContext?: (context: { locator: string; percentage: number }) => void;
     readerSettings?: ReaderSettings;
+    preloadedBytes?: number[] | null;
     onselection?: (event: {
       text: string;
       bounds: { left: number; top: number; right: number; bottom: number };
@@ -55,6 +56,7 @@
     searchTargetLocator = null,
     onLocationContext,
     readerSettings = DEFAULT_READER_SETTINGS,
+    preloadedBytes = null,
     onselection,
     onTocReady,
     externalTocNavigate = null,
@@ -274,6 +276,10 @@
 
       if (cached) {
         epubData = cached.data;
+      } else if (preloadedBytes && preloadedBytes.length > 0) {
+        // Use preloaded bytes from AppState (loaded during navigation transition)
+        epubData = new Uint8Array(preloadedBytes).buffer;
+        setCachedEpub(filePath, { data: epubData, toc: [], tocLoaded: false });
       } else {
         const bytes = await getFileBytes(filePath);
         epubData = new Uint8Array(bytes).buffer;

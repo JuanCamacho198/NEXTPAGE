@@ -167,7 +167,7 @@
           </div>
           <div class="rounded bg-[rgba(255,255,255,0.04)] p-1.5 text-center">
             <p class="text-[9px] text-(--color-text-muted)">Ok</p>
-            <p class="text-sm font-bold" class:status-okay={ipcSummary.successRate >= 95} class:status-warn={ipcSummary.successRate < 95}>
+            <p class="text-sm font-bold" class:text-green-500={ipcSummary.successRate >= 95} class:text-yellow-500={ipcSummary.successRate < 95}>
               {ipcSummary.successRate}%
             </p>
           </div>
@@ -230,7 +230,7 @@
                   <span>min {cmd.minDuration}ms</span>
                   <span>p50 {cmd.p50Duration}ms</span>
                   <span>max {cmd.maxDuration}ms</span>
-                  <span class:status-okay={cmd.successRate >= 95} class:status-warn={cmd.successRate < 95}>
+                  <span class:text-green-500={cmd.successRate >= 95} class:text-yellow-500={cmd.successRate < 95}>
                     {cmd.successRate}% ok
                   </span>
                 </div>
@@ -260,7 +260,7 @@
       <h4 class="mb-1 text-[10px] uppercase tracking-wider text-(--color-text-muted)">Health Diagnose</h4>
       {#if diagnoseResult}
         <div class="space-y-0.5">
-          <p>DB: <span class="font-semibold" class:status-okay={diagnoseResult.database === "healthy"} class:status-warn={diagnoseResult.database !== "healthy"}>{diagnoseResult.database}</span></p>
+          <p>DB: <span class="font-semibold" class:text-green-500={diagnoseResult.database === "healthy"} class:text-yellow-500={diagnoseResult.database !== "healthy"}>{diagnoseResult.database}</span></p>
           <p>Queue: <span class="font-semibold">{diagnoseResult.queue}</span></p>
           <p>FS: <span class="font-semibold">{diagnoseResult.filesystem}</span></p>
           <p>Log: <span class="font-semibold">{diagnoseResult.logFile}</span></p>
@@ -327,12 +327,3 @@
     </div>
   </div>
 {/if}
-
-<style>
-  .status-okay {
-    color: #22c55e;
-  }
-  .status-warn {
-    color: #eab308;
-  }
-</style>

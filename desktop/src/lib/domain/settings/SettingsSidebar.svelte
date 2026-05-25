@@ -62,72 +62,21 @@
   }
 </script>
 
-<nav class="settings-sidebar" aria-label={t("settings.title")}>
-  <div class="sidebar-tabs">
+<nav class="w-[180px] shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] max-md:hidden" aria-label={t("settings.title")}>
+  <div class="flex flex-col gap-1 p-2">
     {#each tabs as tab (tab.id)}
       <button
         type="button"
-        class="sidebar-tab"
-        class:active={activeTab === tab.id}
+        class="flex items-center gap-3 px-4 py-3 border-none rounded-lg bg-transparent cursor-pointer text-sm w-full text-left text-[var(--color-text-muted,var(--color-secondary))] transition-all duration-200 hover:bg-[var(--color-background)] hover:text-[var(--color-text)]"
+        class:bg-[rgba(78,140,255,0.1)]={activeTab === tab.id}
+        class:text-[var(--color-primary)]={activeTab === tab.id}
+        class:font-medium={activeTab === tab.id}
         onclick={() => handleTabClick(tab.id)}
         aria-current={activeTab === tab.id ? "page" : undefined}
       >
         <Icon name={tab.icon} size="md" />
-        <span class="tab-label">{t(tab.labelKey)}</span>
+        <span class="flex-1">{t(tab.labelKey)}</span>
       </button>
     {/each}
   </div>
 </nav>
-
-<style>
-  .settings-sidebar {
-    width: 180px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--color-border);
-    background: var(--color-surface);
-  }
-
-  .sidebar-tabs {
-    display: flex;
-    flex-direction: column;
-    padding: 8px;
-    gap: 4px;
-  }
-
-  .sidebar-tab {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--color-text-muted, var(--color-secondary));
-    transition: all 0.2s ease;
-    text-align: left;
-    width: 100%;
-  }
-
-  .sidebar-tab:hover {
-    background: var(--color-background);
-    color: var(--color-text);
-  }
-
-  .sidebar-tab.active {
-    background: rgba(78, 140, 255, 0.1);
-    color: var(--color-primary);
-    font-weight: 500;
-  }
-
-  .tab-label {
-    flex: 1;
-  }
-
-  @media (max-width: 767px) {
-    .settings-sidebar {
-      display: none;
-    }
-  }
-</style>

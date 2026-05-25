@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/browser";
+import { browserTracingIntegration } from "@sentry/browser";
 import type { LoggerSink } from "./Logger";
 import type { ErrorEvent } from "../events/ErrorEvent";
 import type { SentrySettings } from "../types/settings";
@@ -35,7 +36,9 @@ export class SentrySink implements LoggerSink {
     Sentry.init({
       dsn: this.settings.dsn,
       tracesSampleRate: this.settings.tracesSampleRate ?? 0.1,
-      integrations: [],
+      integrations: [
+        browserTracingIntegration(),
+      ],
       defaultIntegrations: false,
     });
   }

@@ -111,7 +111,10 @@ fn main() {
             commands::removeBookFromCollection,
             commands::get_book_collections,
             commands::getBookCollections,
-            commands::report_error_event
+            commands::report_error_event,
+            commands::log_event,
+            commands::diagnose,
+            commands::get_logs
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

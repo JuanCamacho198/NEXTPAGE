@@ -41,6 +41,7 @@ const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoi
       addBookToCollection: vi.fn(),
       removeBookFromCollection: vi.fn(),
       scanFolder: vi.fn(),
+      getFileBytes: vi.fn().mockResolvedValue([]),
     },
     pickFileMock: vi.fn(),
     pickFolderMock: vi.fn(),

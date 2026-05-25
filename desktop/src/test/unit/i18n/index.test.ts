@@ -39,15 +39,19 @@ describe("i18n", () => {
     expect(globalThis.localStorage?.getItem("nextpage.ui.locale")).toBe("en");
   });
 
-  it("returns en translation when active locale misses a key", async () => {
+  // All MessageKey entries are required in both locales (Record<MessageKey, string>),
+  // so locale-to-locale fallback is never exercised at runtime.
+  // This test verifies that i18n.t() returns the correct translations for each locale.
+  it("returns correct translation per locale", async () => {
     const mockGetLocale = getLocaleSetting as ReturnType<typeof vi.fn>;
     mockGetLocale.mockResolvedValueOnce("es");
 
     const { i18n }: any = await import("$lib/i18n");
     const locale = await i18n.initializeLocale();
-    const translated = i18n.t(locale as string, "errors.commandFailure");
 
-    expect(translated).toBe("Unknown command failure");
+    expect(i18n.t("es", "errors.commandFailure")).toBe("Fallo desconocido del comando");
     expect(i18n.t("en", "errors.commandFailure")).toBe("Unknown command failure");
+    expect(i18n.t("es", "errors.settingsCommandFailed")).toBe("Fallo el comando de ajustes.");
+    expect(i18n.t("en", "errors.settingsCommandFailed")).toBe("Settings command failed.");
   });
 });

@@ -32,8 +32,9 @@ use std::path::PathBuf;
 
 use tauri::State;
 
+use crate::db::verify_queue_health;
 use crate::error::AppError;
-use crate::logger::ErrorEventDto;
+use crate::logger::{ErrorEventDto, LogEventDto, LogLevel, DEFAULT_MAX_LOG_LINES, SETTING_MAX_LOG_LINES_KEY};
 use crate::models::{
     AppSettingDto, BookCollectionInput, BookDeleteInput, BookDto, BookImportInput, BookmarkDto,
     CollectionDto, CommandErrorDto, CreateCollectionInput, HideBookInput, HighlightDto,
@@ -734,9 +735,159 @@ pub fn report_error_event(
     state: State<'_, AppState>,
     event: ErrorEventDto,
 ) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let max_lines = get_max_log_lines_internal(&repository).unwrap_or(DEFAULT_MAX_LOG_LINES);
     let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
-    logger.log_to_file(&event)
+    logger.log_to_file(&event, max_lines)
 }
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn log_event(
+    state: State<'_, AppState>,
+    event: LogEventDto,
+) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let max_lines = get_max_log_lines_internal(&repository).unwrap_or(DEFAULT_MAX_LOG_LINES);
+    let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
+    logger.log_generic(&event, max_lines)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagnoseResult {
+    pub database: String,
+    pub queue: String,
+    pub filesystem: String,
+    pub log_file: String,
+    pub details: std::collections::HashMap<String, serde_json::Value>,
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn diagnose(state: State<'_, AppState>) -> DiagnoseResult {
+    let mut details = std::collections::HashMap::new();
+
+    // Database health
+    let (database_status, db_detail) = match state.repository.lock() {
+        Ok(repo) => {
+            match repo.connection() {
+                Ok(conn) => {
+                    match conn.query_row("SELECT 1", [], |row| row.get::<_, i32>(0)) {
+                        Ok(1) => {
+                            details.insert("db_query_ok".to_string(), serde_json::Value::Bool(true));
+                            ("healthy".to_string(), "DB responded OK".to_string())
+                        },
+                        Err(e) => {
+                            details.insert("db_error".to_string(), serde_json::Value::String(e.to_string()));
+                            ("degraded".to_string(), format!("DB query failed: {}", e))
+                        }
+                    }
+                },
+                Err(e) => {
+                    details.insert("db_error".to_string(), serde_json::Value::String(e.to_string()));
+                    ("degraded".to_string(), format!("DB connection failed: {}", e))
+                }
+            }
+        },
+        Err(e) => {
+            details.insert("db_lock_error".to_string(), serde_json::Value::String(e.to_string()));
+            ("unhealthy".to_string(), format!("DB lock failed: {}", e))
+        }
+    };
+
+    // Queue health
+    let (queue_status, queue_detail) = match state.queue_repository.lock() {
+        Ok(queue_repo) => {
+            match queue_repo.connection() {
+                Ok(conn) => {
+                    match crate::db::verify_queue_health(conn) {
+                        Ok(health) => {
+                            let status = if health.warnings.is_empty() { "healthy" } else { "degraded" };
+                            details.insert("queue_warnings".to_string(), serde_json::Value::Array(
+                                health.warnings.iter().map(|w| serde_json::Value::String(w.clone())).collect()
+                            ));
+                            (status.to_string(), format!("Queue health: {:?}", health.status))
+                        },
+                        Err(e) => ("degraded".to_string(), format!("Queue check failed: {}", e)),
+                    }
+                },
+                Err(e) => ("degraded".to_string(), format!("Queue connection failed: {}", e)),
+            }
+        },
+        Err(e) => ("unhealthy".to_string(), format!("Queue lock failed: {}", e)),
+    };
+
+    // Filesystem health
+    let (fs_status, fs_detail) = match state.repository.lock() {
+        Ok(repo) => {
+            let books = repo.list_books().unwrap_or_default();
+            let missing = books.iter().filter(|b| !std::path::Path::new(&b.file_path).exists()).count();
+            details.insert("total_books".to_string(), serde_json::Value::Number(serde_json::Number::from(books.len())));
+            details.insert("missing_files".to_string(), serde_json::Value::Number(serde_json::Number::from(missing)));
+            if missing > 0 {
+                ("degraded".to_string(), format!("{} of {} book files missing", missing, books.len()))
+            } else {
+                ("healthy".to_string(), format!("{} book files OK", books.len()))
+            }
+        },
+        Err(e) => ("unhealthy".to_string(), format!("FS check failed: {}", e)),
+    };
+
+    // Log file
+    let (log_status, log_detail) = match state.logger.lock() {
+        Ok(logger) => {
+            let log_path = logger.get_log_path().clone();
+            if log_path.exists() {
+                match log_path.metadata() {
+                    Ok(meta) => {
+                        details.insert("log_size_bytes".to_string(), serde_json::Value::Number(serde_json::Number::from(meta.len())));
+                        details.insert("log_path".to_string(), serde_json::Value::String(log_path.to_string_lossy().to_string()));
+                        ("healthy".to_string(), format!("Log file exists ({} bytes)", meta.len()))
+                    },
+                    Err(e) => ("degraded".to_string(), format!("Log metadata error: {}", e)),
+                }
+            } else {
+                ("healthy".to_string(), "No log file yet".to_string())
+            }
+        },
+        Err(e) => ("unhealthy".to_string(), format!("Logger lock failed: {}", e)),
+    };
+
+    DiagnoseResult {
+        database: database_status,
+        queue: queue_status,
+        filesystem: fs_status,
+        log_file: log_status,
+        details,
+    }
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn get_logs(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
+    logger.read_all_logs()
+}
+
+fn get_max_log_lines_internal(repository: &crate::repository::LibraryRepository) -> Result<usize, String> {
+    let settings = repository.get_settings().map_err(|e| format!("{}", e))?;
+    let item = settings.iter().find(|s| s.key == SETTING_MAX_LOG_LINES_KEY);
+    match item {
+        Some(setting) => {
+            match serde_json::from_str::<serde_json::Value>(&setting.value_json) {
+                Ok(val) => {
+                    if let Some(n) = val.as_u64() {
+                        Ok(n as usize)
+                    } else {
+                        Ok(DEFAULT_MAX_LOG_LINES)
+                    }
+                },
+                Err(_) => Ok(DEFAULT_MAX_LOG_LINES),
+            }
+        },
+        None => Ok(DEFAULT_MAX_LOG_LINES),
+    }
+}
+
+
 
 
 

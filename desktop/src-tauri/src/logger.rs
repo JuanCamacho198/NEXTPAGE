@@ -1,10 +1,32 @@
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-const MAX_LOG_LINES: usize = 1000;
+pub const DEFAULT_MAX_LOG_LINES: usize = 1000;
+pub const SETTING_MAX_LOG_LINES_KEY: &str = "observability.maxLogLines";
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum LogLevel {
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
+impl fmt::Display for LogLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LogLevel::Debug => write!(f, "debug"),
+            LogLevel::Info => write!(f, "info"),
+            LogLevel::Warn => write!(f, "warn"),
+            LogLevel::Error => write!(f, "error"),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,6 +40,17 @@ pub struct ErrorEventDto {
     pub correlation_id: String,
     pub source: String,
     pub recoverable: bool,
+}
+
+/// Generic log event with level — for info/warn/debug non-error events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LogEventDto {
+    pub timestamp: String,
+    pub level: LogLevel,
+    pub message: String,
+    pub context: serde_json::Value,
+    pub source: String,
 }
 
 pub struct Logger {
@@ -39,7 +72,7 @@ impl Logger {
         }
     }
 
-    pub fn log_to_file(&self, event: &ErrorEventDto) -> Result<(), String> {
+    pub fn log_to_file(&self, event: &ErrorEventDto, max_lines: usize) -> Result<(), String> {
         if let Some(parent) = self.log_path.parent() {
             fs::create_dir_all(parent).map_err(|e| format!("Failed to create log dir: {}", e))?;
         }
@@ -56,7 +89,7 @@ impl Logger {
 
         writeln!(file, "{}", json_line).map_err(|e| format!("Failed to write to log: {}", e))?;
 
-        self.trim_old_lines()?;
+        self.trim_old_lines(max_lines)?;
 
         Ok(())
     }
@@ -121,7 +154,7 @@ impl Logger {
         }
     }
 
-    fn trim_old_lines(&self) -> Result<(), String> {
+    fn trim_old_lines(&self, max_lines: usize) -> Result<(), String> {
         if !self.log_path.exists() {
             return Ok(());
         }
@@ -133,8 +166,8 @@ impl Logger {
         let lines: Vec<String> = reader.lines().map_while(Result::ok).collect();
         let total_lines = lines.len();
 
-        if total_lines > MAX_LOG_LINES {
-            let skip_count = total_lines - MAX_LOG_LINES;
+        if total_lines > max_lines {
+            let skip_count = total_lines - max_lines;
             let lines_to_keep: Vec<String> = lines.into_iter().skip(skip_count).collect();
 
             let mut file = OpenOptions::new()
@@ -150,6 +183,30 @@ impl Logger {
         }
 
         Ok(())
+    }
+
+    pub fn log_generic(&self, event: &LogEventDto, max_lines: usize) -> Result<(), String> {
+        if let Some(parent) = self.log_path.parent() {
+            fs::create_dir_all(parent).map_err(|e| format!("Failed to create log dir: {}", e))?;
+        }
+
+        let json_line = serde_json::to_string(event)
+            .map_err(|e| format!("Failed to serialize log event: {}", e))?;
+
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&self.log_path)
+            .map_err(|e| format!("Failed to open log file: {}", e))?;
+
+        writeln!(file, "{}", json_line).map_err(|e| format!("Failed to write log: {}", e))?;
+
+        self.trim_old_lines(max_lines)?;
+        Ok(())
+    }
+
+    pub fn get_log_path(&self) -> &PathBuf {
+        &self.log_path
     }
 
     pub fn get_recent_errors(&self, limit: usize) -> Result<Vec<ErrorEventDto>, String> {
@@ -170,6 +227,28 @@ impl Logger {
         events.reverse();
         events.truncate(limit);
         Ok(events)
+    }
+
+    pub fn read_all_logs(&self) -> Result<Vec<String>, String> {
+        if !self.log_path.exists() {
+            return Ok(vec![]);
+        }
+
+        let file = fs::File::open(&self.log_path)
+            .map_err(|e| format!("Failed to open log file: {}", e))?;
+        let reader = BufReader::new(file);
+
+        let lines: Vec<String> = reader.lines().map_while(Result::ok).collect();
+        Ok(lines)
+    }
+
+    pub fn get_log_contents(&self) -> Result<String, String> {
+        if !self.log_path.exists() {
+            return Ok(String::new());
+        }
+
+        fs::read_to_string(&self.log_path)
+            .map_err(|e| format!("Failed to read log file: {}", e))
     }
 }
 

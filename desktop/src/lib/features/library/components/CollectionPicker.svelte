@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { CollectionDto } from "$lib/shared/types";
-  import { addBookToCollection, removeBookFromCollection } from "$lib/shared/api/tauriClient";
+  import { addBookToCollection, removeBookFromCollection } from "$lib/api/tauriClient";
 
   type Props = {
     bookId: string;

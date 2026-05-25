@@ -129,6 +129,7 @@
         isSearching={appState.isSearching}
         searchUnavailableReason={appState.searchUnavailableReason}
         readerError={appState.readerError}
+        preloadedBytes={appState.preloadedBytes}
         t={appState.t}
         onBackToHome={appState.backToHome}
         onPdfPageChange={appState.handlePdfPageChange}

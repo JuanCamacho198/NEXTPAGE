@@ -357,8 +357,11 @@
     pdfDoc = null;
     currentPageObj = null;
 
-    // Remove from cache before destroying to avoid returning a stale document
-    removeCachedDocument(filePath);
+    // Remove from cache before destroying to avoid returning a stale document.
+    // Use lastLoadedFilePath (the file that was actually loaded) instead of the
+    // current reactive filePath (which may already point to a new book).
+    const cachedPath = lastLoadedFilePath ?? filePath;
+    removeCachedDocument(cachedPath);
 
     try {
       await current.destroy();

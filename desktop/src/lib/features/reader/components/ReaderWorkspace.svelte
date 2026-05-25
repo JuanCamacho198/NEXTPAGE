@@ -34,6 +34,7 @@
     onReaderLocationContext?: (ctx: any) => void;
     onSearch?: (query: string, page: number) => void;
     onSearchJump?: (target: any) => void;
+    preloadedBytes?: { filePath: string; data: number[] } | null;
   };
 
   let {
@@ -46,6 +47,7 @@
     isSearching = false,
     searchUnavailableReason = null,
     readerError = null,
+    preloadedBytes = null,
     t,
     onBackToHome,
     onPdfPageChange,
@@ -425,6 +427,7 @@
           searchTargetLocator={searchTargetLocator}
           selectionColor={selectedColor}
           readerSettings={readerSettings}
+          preloadedBytes={preloadedBytes?.filePath === activeReadingBook.filePath ? preloadedBytes.data : null}
           onPageChange={handlePdfPageChange}
           onSessionProgress={onPdfSessionProgress}
           onselection={handlePdfSelection}
@@ -447,6 +450,7 @@
           initialPercentage={percentage}
           searchTargetLocator={searchTargetLocator}
           readerSettings={readerSettings}
+          preloadedBytes={preloadedBytes?.filePath === activeReadingBook.filePath ? preloadedBytes.data : null}
           onLocationContext={onReaderLocationContext}
           onLocationChange={onEpubLocationChange}
           onTocReady={handleTocReady}

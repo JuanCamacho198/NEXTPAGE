@@ -110,6 +110,10 @@ class AppState {
   bulkImportProgress = $state<BulkImportProgress | null>(null);
   bulkImportSummary = $state<BulkImportSummary | null>(null);
 
+  // Preloaded file data for instant reader startup
+  preloadedBytes = $state<{ filePath: string; data: number[] } | null>(null);
+  preloadedPdfPath = $state<string | null>(null);
+
   // Internal state (class properties, not reactive)
   thumbnailGenerationInFlight = new Set<string>();
   thumbnailGenerationAttempted = new Set<string>();
@@ -592,7 +596,39 @@ class AppState {
     this.searchResponse = null;
     this.searchTargetLocator = null;
 
-    if (book.format.toLowerCase() === "epub") {
+    // Clear previous preload data
+    this.preloadedBytes = null;
+    this.preloadedPdfPath = null;
+
+    // Start preloading file data during the navigation transition
+    const format = book.format.toLowerCase();
+
+    if (format === "epub") {
+      // Preload EPUB bytes — the viewer will use them instead of calling getFileBytes
+      getFileBytes(book.filePath)
+        .then((bytes) => {
+          this.preloadedBytes = { filePath: book.filePath, data: bytes };
+        })
+        .catch(() => {
+          // Preload failed silently — viewer will load normally
+        });
+    } else if (format === "pdf") {
+      // Pre-start PDF streaming early so the document caches before viewer mounts.
+      // We also preload the raw bytes as a fallback for small files.
+      void getFileBytes(book.filePath).then((bytes) => {
+        this.preloadedBytes = { filePath: book.filePath, data: bytes };
+      });
+
+      // Also kick off streaming via pdfStreaming.ts which will cache the document
+      this.preloadedPdfPath = book.filePath;
+      import("$lib/features/reader/pdf/pdfStreaming").then(({ createPdfDocument }) => {
+        void createPdfDocument(book.filePath).catch(() => {
+          // Preload failed — viewer will try fresh
+        });
+      });
+    }
+
+    if (format === "epub") {
       try {
         const progress = await getProgress(book.id);
         this.cfiLocation = progress?.cfiLocation ?? "";

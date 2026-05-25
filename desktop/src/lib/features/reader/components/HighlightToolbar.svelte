@@ -110,296 +110,100 @@
 </script>
 
 <div
-  class="highlight-toolbar"
+  class="flex w-full flex-col gap-2.5 rounded-2xl border border-[rgba(148,163,184,0.3)] p-3 shadow-[0_20px_40px_rgba(15,23,42,0.18)] backdrop-blur-xl sm:rounded-2xl sm:p-3"
+  style="background: linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0)), color-mix(in srgb, var(--pdf-reader-surface-bg, #fff) 92%, #0f172a 8%);"
   role="presentation"
   onkeydown={handleRootKeydown}
 >
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div onkeydown={handleRootKeydown}>
-    <div class="toolbar-header">
-    <p class="selection-preview">{selectionPreview}</p>
-    <button type="button" class="dismiss-btn" onclick={handleDelete} aria-label={t("highlight.cancel")}>
-      ×
-    </button>
-  </div>
+    <div class="flex items-start justify-between gap-3">
+      <p
+        class="m-0 line-clamp-3 text-xs font-semibold leading-[1.45] tracking-[0.01em]"
+        style="color: color-mix(in srgb, var(--pdf-reader-text, #0f172a) 92%, white 8%);"
+      >
+        {selectionPreview}
+      </p>
+      <button
+        type="button"
+        class="shrink-0 cursor-pointer rounded-full border border-[rgba(148,163,184,0.28)] bg-white/62 p-0 text-center text-lg leading-none transition-transform duration-150 hover:-translate-y-0.5 hover:bg-white/85"
+        style="width: 28px; height: 28px; color: color-mix(in srgb, var(--pdf-reader-text, #0f172a) 86%, white 14%);"
+        onclick={handleDelete}
+        aria-label={t("highlight.cancel")}
+      >
+        ×
+      </button>
+    </div>
 
-  <div class="toolbar-body">
-    <div class="color-picker">
-      {#each colors as color}
+    <div class="flex flex-wrap items-center gap-2.5 sm:items-center max-sm:items-stretch">
+      <div class="flex gap-1.5 rounded-full bg-[rgba(148,163,184,0.12)] p-1.5 max-sm:w-full max-sm:justify-center">
+        {#each colors as color}
+          <button
+            type="button"
+            class="cursor-pointer rounded-full border-2 border-white/78 p-0 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.08)] transition-all duration-150 hover:-translate-y-0.5 hover:scale-105"
+            style="width: 26px; height: 26px; background-color: {color.hex};"
+            class:border-[rgba(15,23,42,0.76)]={selectedColor === color.hex}
+            class:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12),0_0_0_3px_rgba(148,163,184,0.18)]={selectedColor === color.hex}
+            onclick={() => handleColorSelect(color.hex)}
+            title={t(`settings.color.${color.name}` as MessageKey)}
+            aria-label={t("highlight.selectColor", { color: t(`settings.color.${color.name}` as MessageKey) })}
+          ></button>
+        {/each}
+      </div>
+      <div class="flex flex-1 flex-wrap gap-1.5 max-sm:w-full">
         <button
           type="button"
-          class="color-btn"
-          class:selected={selectedColor === color.hex}
-          style="background-color: {color.hex};"
-          onclick={() => handleColorSelect(color.hex)}
-          title={t(`settings.color.${color.name}` as MessageKey)}
-          aria-label={t("highlight.selectColor", { color: t(`settings.color.${color.name}` as MessageKey) })}
-        ></button>
-      {/each}
+          class="inline-flex min-h-[34px] cursor-pointer items-center rounded-full border border-transparent bg-[#0f172a]/82 px-3 py-[7px] text-xs font-bold tracking-[0.01em] text-[#f8fafc] shadow-[0_10px_18px_rgba(15,23,42,0.2)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#020617]/88 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
+          onclick={() => handleCreateHighlight()}
+          disabled={isSaving}
+        >
+          {isSaving ? t("highlight.saving") : t("highlight.save")}
+        </button>
+        <button
+          type="button"
+          class="inline-flex min-h-[34px] cursor-pointer items-center rounded-full border border-[rgba(96,165,250,0.2)] bg-[#dbeafe]/72 px-3 py-[7px] text-xs font-bold tracking-[0.01em] text-[#0c4a6e] transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#bfdbfe]/82 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
+          onclick={handleToggleNoteEditor}
+          disabled={isSaving}
+          aria-expanded={showNoteEditor}
+          aria-controls="highlight-note-editor"
+        >
+          {t("highlight.note")}
+        </button>
+        <button
+          type="button"
+          class="inline-flex min-h-[34px] cursor-pointer items-center rounded-full border border-[rgba(148,163,184,0.28)] bg-white/58 px-3 py-[7px] text-xs font-bold tracking-[0.01em] transition-all duration-150 hover:-translate-y-0.5 hover:bg-white/82 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
+          style="color: color-mix(in srgb, var(--pdf-reader-text, #0f172a) 86%, white 14%);"
+          onclick={handleDelete}
+        >
+          {t("highlight.cancel")}
+        </button>
+      </div>
     </div>
-    <div class="actions">
-      <button
-        type="button"
-        class="action-btn save"
-        onclick={() => handleCreateHighlight()}
-        disabled={isSaving}
-      >
-        {isSaving ? t("highlight.saving") : t("highlight.save")}
-      </button>
-      <button
-        type="button"
-        class="action-btn note"
-        onclick={handleToggleNoteEditor}
-        disabled={isSaving}
-        aria-expanded={showNoteEditor}
-        aria-controls="highlight-note-editor"
-      >
-        {t("highlight.note")}
-      </button>
-      <button type="button" class="action-btn delete" onclick={handleDelete}>
-        {t("highlight.cancel")}
-      </button>
-    </div>
-  </div>
 
-  {#if showNoteEditor}
-    <div class="note-editor" id="highlight-note-editor">
-      <textarea
-        bind:value={noteText}
-        rows="3"
-        maxlength="500"
-        placeholder={t("highlight.notePlaceholder")}
-        aria-label={t("highlight.noteInputAriaLabel")}
-      ></textarea>
-      <button type="button" class="action-btn save" onclick={handleSaveWithNote} disabled={isSaving}>
-        {isSaving ? t("highlight.saving") : t("highlight.saveWithNote")}
-      </button>
-    </div>
-  {/if}
+    {#if showNoteEditor}
+      <div class="flex w-full flex-col gap-1.5 border-t border-[rgba(148,163,184,0.2)] pt-1" id="highlight-note-editor">
+        <textarea
+          bind:value={noteText}
+          rows="3"
+          maxlength="500"
+          class="w-full min-w-0 resize-y rounded-xl border border-[rgba(148,163,184,0.3)] bg-white/82 px-3 py-2.5 text-xs font-[inherit]"
+          style="color: var(--pdf-reader-text, #0f172a);"
+          placeholder={t("highlight.notePlaceholder")}
+          aria-label={t("highlight.noteInputAriaLabel")}
+        ></textarea>
+        <button
+          type="button"
+          class="inline-flex min-h-[34px] cursor-pointer items-center self-end rounded-full border border-transparent bg-[#0f172a]/82 px-3 py-[7px] text-xs font-bold tracking-[0.01em] text-[#f8fafc] shadow-[0_10px_18px_rgba(15,23,42,0.2)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#020617]/88 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          onclick={handleSaveWithNote}
+          disabled={isSaving}
+        >
+          {isSaving ? t("highlight.saving") : t("highlight.saveWithNote")}
+        </button>
+      </div>
+    {/if}
 
-  {#if errorMessage}
-    <p class="error" role="status" aria-live="polite">{errorMessage}</p>
-  {/if}
+    {#if errorMessage}
+      <p class="m-0 w-full text-xs font-semibold text-red-700" role="status" aria-live="polite">{errorMessage}</p>
+    {/if}
   </div>
 </div>
-
-<style>
-  .highlight-toolbar {
-    --toolbar-surface: color-mix(in srgb, var(--pdf-reader-surface-bg, #fff) 92%, #0f172a 8%);
-    --toolbar-border: rgba(148, 163, 184, 0.3);
-    --toolbar-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    width: 100%;
-    padding: 12px;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0)),
-      var(--toolbar-surface);
-    border-radius: 18px;
-    box-shadow: var(--toolbar-shadow);
-    border: 1px solid var(--toolbar-border);
-    backdrop-filter: blur(18px);
-  }
-
-  .toolbar-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .selection-preview {
-    margin: 0;
-    color: color-mix(in srgb, var(--pdf-reader-text, #0f172a) 92%, white 8%);
-    font-size: 12px;
-    line-height: 1.45;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    display: -webkit-box;
-    overflow: hidden;
-    line-clamp: 3;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-  }
-
-  .dismiss-btn {
-    width: 28px;
-    height: 28px;
-    border: 1px solid rgba(148, 163, 184, 0.28);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.62);
-    color: color-mix(in srgb, var(--pdf-reader-text, #0f172a) 86%, white 14%);
-    cursor: pointer;
-    font-size: 18px;
-    line-height: 1;
-    flex-shrink: 0;
-    transition:
-      transform 0.18s ease,
-      background-color 0.18s ease;
-  }
-
-  .dismiss-btn:hover {
-    transform: translateY(-1px);
-    background: rgba(255, 255, 255, 0.85);
-  }
-
-  .toolbar-body {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .color-picker {
-    display: flex;
-    gap: 6px;
-    padding: 6px;
-    border-radius: 999px;
-    background: rgba(148, 163, 184, 0.12);
-  }
-
-  .color-btn {
-    width: 26px;
-    height: 26px;
-    border: 2px solid rgba(255, 255, 255, 0.78);
-    border-radius: 50%;
-    cursor: pointer;
-    padding: 0;
-    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
-    transition:
-      transform 0.15s ease,
-      box-shadow 0.15s ease,
-      border-color 0.15s ease;
-  }
-
-  .color-btn:hover {
-    transform: translateY(-1px) scale(1.05);
-  }
-
-  .color-btn.selected {
-    border-color: rgba(15, 23, 42, 0.76);
-    box-shadow:
-      inset 0 0 0 1px rgba(15, 23, 42, 0.12),
-      0 0 0 3px rgba(148, 163, 184, 0.18);
-  }
-
-  .actions {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    flex: 1;
-  }
-
-  .action-btn {
-    display: inline-flex;
-    align-items: center;
-    min-height: 34px;
-    padding: 7px 12px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    transition:
-      transform 0.18s ease,
-      background-color 0.18s ease,
-      border-color 0.18s ease,
-      box-shadow 0.18s ease;
-  }
-
-  .action-btn.save {
-    background: color-mix(in srgb, #0f172a 82%, var(--pdf-reader-text, #0f172a) 18%);
-    color: #f8fafc;
-    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.2);
-  }
-
-  .action-btn.save:hover:not(:disabled) {
-    transform: translateY(-1px);
-    background: color-mix(in srgb, #020617 88%, var(--pdf-reader-text, #0f172a) 12%);
-  }
-
-  .action-btn.save:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    box-shadow: none;
-  }
-
-  .action-btn.delete {
-    background: rgba(255, 255, 255, 0.58);
-    border-color: rgba(148, 163, 184, 0.28);
-    color: color-mix(in srgb, var(--pdf-reader-text, #0f172a) 86%, white 14%);
-  }
-
-  .action-btn.delete:hover:not(:disabled) {
-    transform: translateY(-1px);
-    background: rgba(255, 255, 255, 0.82);
-  }
-
-  .action-btn.note {
-    background: color-mix(in srgb, #dbeafe 72%, white 28%);
-    border-color: rgba(96, 165, 250, 0.2);
-    color: #0c4a6e;
-  }
-
-  .action-btn.note:hover:not(:disabled) {
-    transform: translateY(-1px);
-    background: color-mix(in srgb, #bfdbfe 82%, white 18%);
-  }
-
-  .note-editor {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    width: 100%;
-    padding-top: 4px;
-    border-top: 1px solid rgba(148, 163, 184, 0.2);
-  }
-
-  .note-editor textarea {
-    width: 100%;
-    min-width: 0;
-    resize: vertical;
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    border-radius: 12px;
-    padding: 10px 12px;
-    font-size: 12px;
-    font-family: inherit;
-    background: rgba(255, 255, 255, 0.82);
-    color: var(--pdf-reader-text, #0f172a);
-  }
-
-  .error {
-    margin: 0;
-    width: 100%;
-    color: #b91c1c;
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  @media (max-width: 640px) {
-    .highlight-toolbar {
-      padding: 10px;
-      border-radius: 16px;
-    }
-
-    .toolbar-body {
-      align-items: stretch;
-    }
-
-    .color-picker {
-      justify-content: center;
-      width: 100%;
-    }
-
-    .actions {
-      width: 100%;
-    }
-
-    .action-btn {
-      flex: 1 1 calc(50% - 6px);
-      justify-content: center;
-    }
-  }
-</style>

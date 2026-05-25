@@ -144,14 +144,14 @@
 
           <!-- Font Size & Spacing (EPUB only) -->
           <div class="flex justify-between">
-            <button type="button" class="flex h-12 w-[105px] cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label={t("reader.font_decrease")}>
+            <button type="button" class="flex h-12 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label={t("reader.font_decrease")}>
               <svg xmlns="http://www.w3.org/2000/svg" width="17" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
                 <polyline points="4 7 4 4 20 4 20 7"></polyline>
                 <line x1="9" y1="20" x2="15" y2="20"></line>
                 <line x1="12" y1="4" x2="12" y2="20"></line>
               </svg>
             </button>
-            <button type="button" class="flex h-12 w-[105px] cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label={t("reader.line_spacing")}>
+            <button type="button" class="flex h-12 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label={t("reader.line_spacing")}>
               <svg xmlns="http://www.w3.org/2000/svg" width="27" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#f8fbff]">
                 <line x1="5" y1="3" x2="19" y2="3"></line>
                 <line x1="5" y1="21" x2="19" y2="21"></line>
@@ -164,12 +164,12 @@
 
           <!-- A- / A+ row (EPUB only) -->
           <div class="flex justify-between">
-            <button type="button" class="flex h-10 w-[105px] cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label={t("reader.spacing_decrease")}>
+            <button type="button" class="flex h-10 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label={t("reader.spacing_decrease")}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
             </button>
-            <button type="button" class="flex h-10 w-[105px] cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label={t("reader.spacing_increase")}>
+            <button type="button" class="flex h-10 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label={t("reader.spacing_increase")}>
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>

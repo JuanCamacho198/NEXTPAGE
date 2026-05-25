@@ -5,15 +5,17 @@
   import SelectionToolbar from "./SelectionToolbar.svelte";
   import ReaderTextSettings from "./ReaderTextSettings.svelte";
   import ReaderTocPanel, { type TocEntry } from "./ReaderTocPanel.svelte";
-  import Icon from "$lib/components/ui/navigation/Icon.svelte";
+  import ReaderHeader from "./ReaderHeader.svelte";
+  import ReaderFooter from "./ReaderFooter.svelte";
   import type { MessageKey } from "$lib/i18n";
   import type { ReaderSettings } from "$lib/shared/types";
   import type { LibraryBookDto } from "$lib/shared/types/library";
   import { debugState } from "$lib/debug/debugState.svelte";
-  import { saveHighlight, deleteHighlight, listBookmarks, saveBookmark, deleteBookmark } from "$lib/api/tauriClient";
+  import { saveHighlight, deleteHighlight } from "$lib/api/tauriClient";
   import DebugToggle from "$lib/debug/DebugToggle.svelte";
   import DebugPanel from "$lib/debug/DebugPanel.svelte";
   import { createFocusTrap } from "$lib/shared/utils/focusTrap";
+  import { createBookmarksState } from "../stores/bookmarksState.svelte";
 
   type ActiveBook = LibraryBookDto & { filePath: string };
 
@@ -107,14 +109,7 @@
   let activeTocId = $state("");
 
   // Bookmarks state
-  let bookmarksList = $state<Array<{
-    id: string;
-    bookId: string;
-    pageNumber: number;
-    title?: string;
-    createdAt: string;
-  }>>([]);
-  let bookmarksLoading = $state(false);
+  let bookmarksState = createBookmarksState();
   let bookmarksPanelEl: HTMLDivElement | undefined = $state();
 
   // Focus trap for bookmarks panel when open
@@ -126,49 +121,10 @@
     }
   });
 
-  async function loadBookmarks() {
-    if (!activeReadingBook) return;
-    bookmarksLoading = true;
-    try {
-      bookmarksList = await listBookmarks(activeReadingBook.id);
-    } catch (err) {
-      console.error("Failed to load bookmarks:", err);
-      bookmarksList = [];
-    } finally {
-      bookmarksLoading = false;
-    }
-  }
-
-  async function handleAddBookmark() {
-    if (!activeReadingBook) return;
-    const pageNumber = currentPdfPage || 1;
-    try {
-      await saveBookmark({
-        id: crypto.randomUUID(),
-        bookId: activeReadingBook.id,
-        pageNumber,
-        title: `Page ${pageNumber}`,
-        createdAt: new Date().toISOString(),
-      });
-      await loadBookmarks();
-    } catch (err) {
-      console.error("Failed to save bookmark:", err);
-    }
-  }
-
-  async function handleDeleteBookmark(id: string) {
-    try {
-      await deleteBookmark(id);
-      await loadBookmarks();
-    } catch (err) {
-      console.error("Failed to delete bookmark:", err);
-    }
-  }
-
   // Load bookmarks when panel opens
   $effect(() => {
     if (showBookmarks && activeReadingBook) {
-      loadBookmarks();
+      bookmarksState.loadBookmarks(activeReadingBook.id);
     }
   });
 
@@ -381,40 +337,21 @@
 
 <!-- Full viewport reader layout -->
 <div class="flex h-screen flex-col bg-[#0B1120]" bind:this={workspaceRoot}>
-  <!-- Header (64px) - hidden in fullscreen -->
-  <header class="flex h-16 shrink-0 items-center justify-between border-b border-[#1E293B] px-8" class:hidden={isFullscreen}>
-    <!-- Left: back + biblioteca -->
-    <div class="flex items-center gap-2">
-      <button type="button" onclick={onBackToHome} class="flex cursor-pointer items-center gap-2 text-[#94A3B8] hover:text-white">
-        <Icon name="chevron-left" size="sm" />
-        <span class="font-inter text-sm font-medium text-[#94A3B8]">{t("reader.biblioteca")}</span>
-      </button>
-    </div>
-
-    <!-- Center: book title -->
-    <span class="font-inter text-sm font-medium text-[#94A3B8]">
-      {activeReadingBook?.title ?? ""}
-    </span>
-
-    <!-- Right: tools -->
-    <div class="flex items-center gap-6 text-[#94A3B8]">
-      <button type="button" onclick={toggleTocPanel} class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors" class:text-[#49d4ff]={showTocPanel} class:text-[#94A3B8]={!showTocPanel} class:hover:text-white={!showTocPanel} class:hover:brightness-125={showTocPanel} aria-label={showTocPanel ? t("settings.close") : t("reader.tabla_contenidos")}>
-        <Icon name={showTocPanel ? "close" : "menu"} size="sm" />
-      </button>
-      <button type="button" onclick={toggleSearch} class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors" class:text-[#49d4ff]={searchPanelOpen} class:text-[#94A3B8]={!searchPanelOpen} class:hover:text-white={!searchPanelOpen} class:hover:brightness-125={searchPanelOpen} aria-label={searchPanelOpen ? t("settings.close") : t("epub.search")}>
-        <Icon name={searchPanelOpen ? "close" : "search"} size="sm" />
-      </button>
-      <button type="button" onclick={toggleTextSettings} class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors" class:text-[#49d4ff]={showTextSettings} class:text-[#94A3B8]={!showTextSettings} class:hover:text-white={!showTextSettings} class:hover:brightness-125={showTextSettings} aria-label={showTextSettings ? t("settings.close") : t("reader.ajustes_texto")}>
-        <Icon name={showTextSettings ? "close" : "settings"} size="sm" />
-      </button>
-      <button type="button" onclick={toggleBookmarks} class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors" class:text-[#49d4ff]={showBookmarks} class:text-[#94A3B8]={!showBookmarks} class:hover:text-white={!showBookmarks} class:hover:brightness-125={showBookmarks} aria-label={showBookmarks ? t("settings.close") : t("reader.bookmark")}>
-        <Icon name={showBookmarks ? "close" : "bookmark"} size="sm" />
-      </button>
-      <button type="button" onclick={toggleFullscreen} class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors text-[#94A3B8] hover:text-white" aria-label={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}>
-        <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
-      </button>
-    </div>
-  </header>
+  <ReaderHeader
+    title={activeReadingBook?.title ?? ""}
+    {showTocPanel}
+    {searchPanelOpen}
+    {showTextSettings}
+    {showBookmarks}
+    {isFullscreen}
+    {t}
+    {onBackToHome}
+    onToggleToc={toggleTocPanel}
+    onToggleSearch={toggleSearch}
+    onToggleTextSettings={toggleTextSettings}
+    onToggleBookmarks={toggleBookmarks}
+    onToggleFullscreen={toggleFullscreen}
+  />
 
   <!-- Reading area (centered, fill remaining space) -->
   <div
@@ -501,34 +438,15 @@
     {/if}
   </div>
 
-  <!-- Footer (48px) - hidden in fullscreen -->
-  <footer class="flex h-12 shrink-0 items-center justify-between border-t border-[#1E293B] px-8" class:hidden={isFullscreen}>
-    <span class="font-inter text-xs font-normal text-[#94A3B8]">
-      {activeReadingBook?.title ?? ""}
-    </span>
-    {#if isPdf && totalPdfPages > 0}
-      <div class="flex items-center gap-3">
-        <span class="font-inter text-xs font-normal text-[#94A3B8]">{totalPdfPages - currentPdfPage} {t("pdf.pagesLeft")}</span>
-        <div class="h-2 w-50 rounded-full bg-[#1E293B]">
-          <div
-            class="h-full rounded-full bg-[#38BDF8] transition-all duration-300"
-            style="width: {Math.round((currentPdfPage / totalPdfPages) * 100)}%"
-          ></div>
-        </div>
-        <span class="font-inter text-xs font-normal text-[#94A3B8]">{Math.round((currentPdfPage / totalPdfPages) * 100)}%</span>
-      </div>
-    {:else}
-      <div class="flex items-center gap-3">
-        <div class="h-2 w-50 rounded-full bg-[#1E293B]">
-          <div
-            class="h-full rounded-full bg-[#38BDF8] transition-all duration-300"
-            style="width: {bookProgress}%"
-          ></div>
-        </div>
-        <span class="font-inter text-xs font-normal text-[#94A3B8]">{bookProgress}%</span>
-      </div>
-    {/if}
-  </footer>
+  <ReaderFooter
+    title={activeReadingBook?.title ?? ""}
+    {bookProgress}
+    {currentPdfPage}
+    {totalPdfPages}
+    {isPdf}
+    {isFullscreen}
+    {t}
+  />
 
   <!-- Debug tools (inside workspaceRoot so visible in fullscreen) -->
   <DebugToggle />
@@ -577,7 +495,7 @@
       <div class="flex items-center justify-between border-b border-[#94adce]/5 px-5 py-4">
         <h2 class="text-base font-bold text-[#f8fbff]">{t("reader.bookmark")}</h2>
         <div class="flex items-center gap-2">
-          <button type="button" onclick={handleAddBookmark} class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-[#49d4ff] text-xs font-bold text-[#0B1120] transition-colors hover:bg-[#38bdf8]" title={t("reader.bookmark")}>
+          <button type="button" onclick={() => bookmarksState.addBookmark(activeReadingBook.id, currentPdfPage || 1)} class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-[#49d4ff] text-xs font-bold text-[#0B1120] transition-colors hover:bg-[#38bdf8]" title={t("reader.bookmark")}>
             +
           </button>
           <button type="button" onclick={() => (showBookmarks = false)} class="cursor-pointer text-[#8fa3bf] hover:text-white" aria-label={t("settings.close")}>
@@ -591,13 +509,13 @@
 
       <!-- Content -->
       <div class="flex-1 overflow-y-auto p-4">
-        {#if bookmarksLoading}
+        {#if bookmarksState.bookmarksLoading}
           <p class="text-center text-sm italic text-[#8fa3bf]/60">{t("settings.loadingBookmarks")}</p>
-        {:else if bookmarksList.length === 0}
+        {:else if bookmarksState.bookmarksList.length === 0}
           <p class="text-center text-sm italic text-[#8fa3bf]/60">{t("settings.noBookmarks")}</p>
         {:else}
           <ul class="flex flex-col gap-2">
-            {#each bookmarksList as bookmark (bookmark.id)}
+            {#each bookmarksState.bookmarksList as bookmark (bookmark.id)}
               <li class="flex items-center gap-2 rounded-lg border border-[#17263a] bg-white/2 px-3 py-2 transition-colors hover:bg-white/5">
                 <button type="button" class="flex flex-1 flex-col items-start gap-0.5 text-left" onclick={() => { showBookmarks = false; }}>
                   <span class="text-sm font-medium text-[#f8fbff]">Page {bookmark.pageNumber}</span>
@@ -605,7 +523,7 @@
                     <span class="text-xs text-[#8fa3bf]/60">{bookmark.title}</span>
                   {/if}
                 </button>
-                <button type="button" onclick={() => handleDeleteBookmark(bookmark.id)} class="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sm text-[#8fa3bf] transition-colors hover:bg-red-500/20 hover:text-red-400" title={t("settings.deleteBookmark")}>
+                <button type="button" onclick={() => bookmarksState.removeBookmark(bookmark.id, activeReadingBook.id)} class="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sm text-[#8fa3bf] transition-colors hover:bg-red-500/20 hover:text-red-400" title={t("settings.deleteBookmark")}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="3 6 5 6 21 6"></polyline>
                     <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>

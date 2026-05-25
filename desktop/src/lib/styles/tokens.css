@@ -260,7 +260,8 @@ body {
  * Custom selection color for the imported text layer
  * ============================================ */
 .textLayer {
-  contain: layout style;
+  contain: layout style paint;
+  pointer-events: auto;
 }
 
 .textLayer span::selection {

@@ -1,6 +1,6 @@
 import type { MessageKey } from "./messages.en";
 
-export const messagesEs: Partial<Record<MessageKey, string>> = {
+export const messagesEs: Record<MessageKey, string> = {
   "app.title": "NextPage Desktop",
   "app.subtitle": "Integracion de paridad desktop: biblioteca, ajustes, estadisticas y busqueda en lector",
   "app.importBook": "Importar libro",

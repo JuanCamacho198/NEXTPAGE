@@ -259,6 +259,10 @@ body {
  * PDF.js TEXT LAYER
  * Custom selection color for the imported text layer
  * ============================================ */
+.textLayer {
+  contain: layout style;
+}
+
 .textLayer span::selection {
   background: rgba(73, 212, 255, 0.28);
   color: transparent;

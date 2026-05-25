@@ -191,7 +191,7 @@
     `brightness(${clamp(readerSettings.brightness, 50, 150)}%) contrast(${clamp(readerSettings.contrast, 50, 150)}%)`,
   );
   const canvasWrapperStyle = $derived(
-    `filter: ${visualFilterStyle}; width: ${viewportWidth ? viewportWidth + 'px' : 'auto'}; height: ${viewportHeight ? viewportHeight + 'px' : 'auto'};`
+    `width: ${viewportWidth ? viewportWidth + 'px' : 'auto'}; height: ${viewportHeight ? viewportHeight + 'px' : 'auto'};`
   );
 
   const flatOutline = $derived(flattenOutline(outline));
@@ -914,7 +914,7 @@
       {/if}
       <div class="flex-1 overflow-auto flex justify-center p-4 bg-(--pdf-reader-root-bg,var(--color-background))" bind:this={canvasContainer} onwheel={handleViewerWheel}>
         <div class="relative inline-block" class:search-hit={flashSearchResult} style="isolation: isolate; {canvasWrapperStyle}">
-          <canvas bind:this={canvas}></canvas>
+          <canvas bind:this={canvas} style="filter: {visualFilterStyle};"></canvas>
 
           <PdfSelectionOverlay
             selectionOverlayRects={selectionOverlayRects}

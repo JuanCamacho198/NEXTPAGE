@@ -457,8 +457,8 @@
     const viewport = page.getViewport({ scale: renderScale });
 
     const outputScale = window.devicePixelRatio || 1;
-    canvas.width = Math.floor(viewport.width * outputScale);
-    canvas.height = Math.floor(viewport.height * outputScale);
+    canvas.width = Math.round(viewport.width * outputScale);
+    canvas.height = Math.round(viewport.height * outputScale);
     canvas.style.width = `${viewport.width}px`;
     canvas.style.height = `${viewport.height}px`;
 
@@ -526,12 +526,23 @@
     textLayer.style.top = "0";
     textLayer.style.pointerEvents = "auto";
     textLayer.style.setProperty("--scale-factor", String(viewport.scale));
+    textLayer.style.setProperty("--total-scale-factor", String(viewport.scale));
+    textLayer.style.setProperty("--scale-round-x", "1px");
+    textLayer.style.setProperty("--scale-round-y", "1px");
 
     try {
       if (pdfjsLib.TextLayer) {
         textLayerInstance = new (pdfjsLib as any).TextLayer({
           container: textLayer, viewport, textContentSource: textContent as any,
         });
+        // HACK: pdfjs-dist v5.6.205 multiplica #scale por DPR en el constructor
+        // (build/pdf.mjs:14324), inflando fontAscent vertical. El update() no
+        // recalcula #scale, así que parchamos antes del primer render para que
+        // el valor persista en todos los zooms.
+        // TODO: Migrar a TextLayerBuilder que maneja esto correctamente.
+        if (textLayerInstance['#scale'] !== undefined) {
+          textLayerInstance['#scale'] = viewport.scale;
+        }
         await textLayerInstance.render();
       } else {
         const task = (pdfjsLib as any).renderTextLayer?.({
@@ -837,8 +848,8 @@
         const outputScale = window.devicePixelRatio || 1;
 
         // Update canvas buffer + CSS size
-        canvas.width = Math.floor(viewport.width * outputScale);
-        canvas.height = Math.floor(viewport.height * outputScale);
+        canvas.width = Math.round(viewport.width * outputScale);
+        canvas.height = Math.round(viewport.height * outputScale);
         canvas.style.width = `${viewport.width}px`;
         canvas.style.height = `${viewport.height}px`;
 
@@ -870,6 +881,9 @@
         textLayer.style.width = `${viewport.width}px`;
         textLayer.style.height = `${viewport.height}px`;
         textLayer.style.setProperty("--scale-factor", String(viewport.scale));
+        textLayer.style.setProperty("--total-scale-factor", String(viewport.scale));
+        textLayer.style.setProperty("--scale-round-x", "1px");
+        textLayer.style.setProperty("--scale-round-y", "1px");
 
         // Update existing text layer — reuses spans instead of recreating
         textLayerInstance.update({ viewport });

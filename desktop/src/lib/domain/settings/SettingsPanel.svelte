@@ -342,7 +342,7 @@
           onOpenResetModal={openResetModal}
           onPreferredThemeChange={(v: string) => preferredTheme = v}
           onPreferredFontScaleChange={(v: number) => preferredFontScale = v}
-          onReaderThemeModeChange={(v: string) => readerThemeMode = v}
+          onReaderThemeModeChange={(v: ReaderThemeMode | string) => { readerThemeMode = v as ReaderThemeMode; }}
           onReaderBrightnessChange={(v: number) => readerBrightness = v}
           onReaderContrastChange={(v: number) => readerContrast = v}
           onReaderEpubFontSizeChange={(v: number) => readerEpubFontSize = v}

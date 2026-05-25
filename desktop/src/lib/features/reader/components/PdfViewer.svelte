@@ -39,6 +39,8 @@
 
   import PdfControls from "./pdf/PdfControls.svelte";
   import PdfSelectionOverlay from "./pdf/PdfSelectionOverlay.svelte";
+  import PdfLoadingOverlay from "./pdf/PdfLoadingOverlay.svelte";
+  import PdfTocSidebar from "./pdf/PdfTocSidebar.svelte";
 
   import type { TocEntry } from "./ReaderTocPanel.svelte";
   import { debugState } from "$lib/debug/debugState.svelte";
@@ -876,24 +878,7 @@
     ontouchend={handleTextSelection}
     style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor}; --pdf-selection-color: ${selectionColor ?? readerSettings.selectionColor};`}
   >
-    {#if isLoading}
-      <div class="loading-overlay">
-        {#if loadProgressMax > 0 && loadProgress < loadProgressMax}
-          <div class="loading-progress">
-            <span class="loading-text">{t("pdf.loading")}</span>
-            <div class="progress-bar-track">
-              <div class="progress-bar-fill" style="width: {Math.round((loadProgress / loadProgressMax) * 100)}%"></div>
-            </div>
-            <span class="loading-percent">{Math.round((loadProgress / loadProgressMax) * 100)}%</span>
-          </div>
-        {:else}
-          {t("pdf.loading")}
-        {/if}
-      </div>
-    {/if}
-    {#if error}
-      <div class="error-overlay">{t("pdf.error")}: {error}</div>
-    {/if}
+    <PdfLoadingOverlay {isLoading} {error} {loadProgress} {loadProgressMax} {t} />
 
     <PdfControls
       {currentPage}
@@ -914,40 +899,21 @@
     />
 
     {#if navigationError}
-      <p class="navigation-error" role="status" aria-live="polite">{navigationError}</p>
+      <p class="m-0 px-3 pt-2 text-red-600 text-xs" role="status" aria-live="polite">{navigationError}</p>
     {/if}
 
-    <div class="content-area" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
+    <div class="flex flex-1 overflow-hidden" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
       {#if showToc}
-        <aside class="toc-sidebar scrollbar-thumb-[#475569] scrollbar-track-transparent">
-          <h3>{t("pdf.tableOfContents")}</h3>
-          {#if tocLoading}
-            <p class="toc-message">{t("pdf.tocLoading")}</p>
-          {:else if tocError}
-            <p class="toc-message toc-error">{tocError}</p>
-          {:else if flatOutline.length === 0}
-            <p class="toc-message">{t("pdf.tocEmpty")}</p>
-          {:else}
-            <ul class="toc-list">
-              {#each flatOutline as entry (entry.item.id)}
-                <li>
-                  <button
-                    type="button"
-                    onclick={() => navigateToOutlineItem(entry.item)}
-                    class="toc-item"
-                    disabled={!entry.item.dest}
-                    style={`--toc-depth: ${entry.depth};`}
-                  >
-                    {entry.item.title}
-                  </button>
-                </li>
-              {/each}
-            </ul>
-          {/if}
-        </aside>
+        <PdfTocSidebar
+          {flatOutline}
+          {tocLoading}
+          {tocError}
+          {t}
+          onNavigate={(item) => navigateToOutlineItem(item)}
+        />
       {/if}
-      <div class="canvas-container scrollbar-thumb-[#475569] scrollbar-track-transparent" bind:this={canvasContainer} onwheel={handleViewerWheel}>
-        <div class="canvas-wrapper" class:search-hit={flashSearchResult} style={canvasWrapperStyle}>
+      <div class="flex-1 overflow-auto flex justify-center p-4 bg-[var(--pdf-reader-root-bg,var(--color-background))]" bind:this={canvasContainer} onwheel={handleViewerWheel}>
+        <div class="relative inline-block" class:outline-[3px]={flashSearchResult} class:outline-blue-500={flashSearchResult} class:outline-offset-[6px]={flashSearchResult} class:rounded={flashSearchResult} style="isolation: isolate; {canvasWrapperStyle}"
           <canvas bind:this={canvas}></canvas>
 
           <PdfSelectionOverlay
@@ -979,131 +945,11 @@
 </ErrorBoundary>
 
 <style>
-  .pdf-viewer {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    background: var(--pdf-reader-root-bg, var(--color-background));
-    color: var(--pdf-reader-text, var(--color-primary));
-    position: relative;
-    outline: none;
-    user-select: text !important;
-    -webkit-user-select: text !important;
-  }
-
-  .loading-overlay,
-  .error-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    z-index: 10;
-    background: var(--color-background);
-  }
-
-  .error-overlay { color: #dc2626; }
-
-  .loading-progress {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    min-width: 240px;
-  }
-
-  .loading-text { font-size: 14px; color: var(--pdf-reader-text, #64748b); }
-
-  .progress-bar-track {
-    width: 100%; height: 6px;
-    background: var(--color-border, #1E293B);
-    border-radius: 3px; overflow: hidden;
-  }
-
-  .progress-bar-fill {
-    height: 100%; background: #38BDF8;
-    border-radius: 3px; transition: width 0.15s ease;
-  }
-
-  .loading-percent { font-size: 12px; color: var(--pdf-reader-text, #94A3B8); opacity: 0.8; }
-
-  .navigation-error {
-    margin: 0; padding: 8px 12px 0;
-    color: #dc2626; font-size: 13px;
-  }
-
-  .content-area {
-    display: flex; flex: 1; overflow: hidden;
-  }
-
-  .toc-sidebar {
-    width: 240px;
-    background: var(--pdf-reader-surface-bg, var(--color-surface));
-    border-right: 1px solid var(--color-border);
-    overflow-y: auto;
-    flex-shrink: 0;
-  }
-
-  .toc-sidebar h3 {
-    margin: 0; padding: 12px;
-    font-size: 14px; font-weight: 600;
-    border-bottom: 1px solid var(--color-border);
-    color: var(--pdf-reader-text, var(--color-primary));
-  }
-
-  .toc-list { list-style: none; margin: 0; padding: 0; }
-
-  .toc-item {
-    display: block; width: 100%;
-    padding: 10px 12px 10px calc(12px + (var(--toc-depth, 0) * 16px));
-    border: none; background: transparent; text-align: left;
-    cursor: pointer; font-size: 13px; line-height: 1.4;
-    word-break: break-word;
-    color: var(--pdf-reader-text, var(--color-primary));
-  }
-
-  .toc-item:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
-  }
-
-  .toc-item:disabled { opacity: 0.55; cursor: default; }
-
-  .toc-message { margin: 0; padding: 12px; font-size: 13px; color: var(--color-text-muted); }
-  .toc-error { color: #dc2626; }
-
-  .canvas-container {
-    flex: 1;
-    overflow: auto;
-    display: flex;
-    justify-content: center;
-    padding: 16px;
-    background: var(--pdf-reader-root-bg, var(--color-background));
-  }
-
-  .canvas-wrapper {
-    position: relative;
-    display: inline-block;
-    isolation: isolate;
-  }
-
-  .canvas-wrapper.search-hit {
-    outline: 3px solid #3b82f6;
-    outline-offset: 6px;
-    border-radius: 4px;
-  }
-
   canvas {
     display: block;
     position: relative;
     z-index: 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     background: var(--pdf-reader-surface-bg, #fff);
-  }
-
-
-
-  @media (max-width: 900px) {
-    .toc-sidebar { width: min(240px, 70vw); }
   }
 </style>

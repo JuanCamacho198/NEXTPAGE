@@ -54,42 +54,43 @@
   }
 </script>
 
-<div class="controls" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
-  <button type="button" onclick={onToggleToc} title={t("pdf.contents")}>
+<div class="flex items-center gap-3 px-3 py-2 bg-[var(--pdf-reader-surface-bg,var(--color-surface))] border-b border-[var(--color-border)] flex-wrap" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
+  <button type="button" onclick={onToggleToc} title={t("pdf.contents")} class="inline-flex items-center justify-center px-2.5 py-1.5 border border-[var(--color-border)] rounded bg-[var(--pdf-reader-surface-bg,var(--color-surface))] text-[var(--pdf-reader-text,var(--color-primary))] cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed">
     <Icon name="menu" size="sm" />
   </button>
-  <button type="button" onclick={onPrevPage} disabled={currentPage <= 1} title={t("pdf.previous")}>
+  <button type="button" onclick={onPrevPage} disabled={currentPage <= 1} title={t("pdf.previous")} class="inline-flex items-center justify-center px-2.5 py-1.5 border border-[var(--color-border)] rounded bg-[var(--pdf-reader-surface-bg,var(--color-surface))] text-[var(--pdf-reader-text,var(--color-primary))] cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed">
     <Icon name="chevron-left" size="sm" />
   </button>
-  <button type="button" onclick={onNextPage} disabled={currentPage >= totalPages} title={t("pdf.next")}>
+  <button type="button" onclick={onNextPage} disabled={currentPage >= totalPages} title={t("pdf.next")} class="inline-flex items-center justify-center px-2.5 py-1.5 border border-[var(--color-border)] rounded bg-[var(--pdf-reader-surface-bg,var(--color-surface))] text-[var(--pdf-reader-text,var(--color-primary))] cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed">
     <Icon name="arrow-right" size="sm" />
   </button>
-  <span class="page-info">
+  <span class="flex items-center gap-1 text-xs text-[var(--pdf-reader-text,var(--color-primary))]">
     <input
       type="number"
       min="1"
       max={totalPages}
       value={currentPage}
       onchange={handleGoToPage}
-      class="page-input"
+      class="w-[50px] p-1 border border-[var(--color-border)] rounded text-center bg-[var(--pdf-reader-surface-bg,var(--color-surface))] text-[var(--pdf-reader-text,var(--color-primary))]"
     />
-    <span class="total-pages">/ {totalPages}</span>
+    <span class="text-xs text-[var(--pdf-reader-text,#64748b)] opacity-70">/ {totalPages}</span>
   </span>
   <button
     type="button"
     onclick={onToggleFullscreen}
     disabled={!fullscreenSupported}
     title={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}
+    class="inline-flex items-center justify-center px-2.5 py-1.5 border border-[var(--color-border)] rounded bg-[var(--pdf-reader-surface-bg,var(--color-surface))] text-[var(--pdf-reader-text,var(--color-primary))] cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
   >
     <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
   </button>
   {#if debugState.enabled}
-    <span class="debug-info">p{currentPage}/{totalPages} | {Math.round(scale * 100)}%</span>
+    <span class="text-[11px] text-[var(--pdf-reader-text,#64748b)] opacity-60 font-mono">p{currentPage}/{totalPages} | {Math.round(scale * 100)}%</span>
   {/if}
   <select
     value={scale}
     onchange={(e) => onSetScale(Number(e.currentTarget.value))}
-    class="scale-select"
+    class="ml-auto px-2 py-1 border border-[var(--color-border)] rounded bg-[var(--pdf-reader-surface-bg,var(--color-surface))] text-[var(--pdf-reader-text,var(--color-primary))] max-sm:ml-0"
     title={t("pdf.zoomLevel", { level: String(Math.round(scale * 100)) })}
   >
     {#each scaleOptions as option (option)}
@@ -97,85 +98,3 @@
     {/each}
   </select>
 </div>
-
-<style>
-  .controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    background: var(--pdf-reader-surface-bg, var(--color-surface));
-    border-bottom: 1px solid var(--color-border);
-    flex-wrap: wrap;
-  }
-
-  .controls button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 10px;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    background: var(--pdf-reader-surface-bg, var(--color-surface));
-    color: var(--pdf-reader-text, var(--color-primary));
-    cursor: pointer;
-    font-size: 13px;
-    min-width: 32px;
-    min-height: 32px;
-  }
-
-  .controls button:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
-  }
-
-  .controls button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .page-info {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 13px;
-    color: var(--pdf-reader-text, var(--color-primary));
-  }
-
-  .page-input {
-    width: 50px;
-    padding: 4px;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    text-align: center;
-    background: var(--pdf-reader-surface-bg, var(--color-surface));
-    color: var(--pdf-reader-text, var(--color-primary));
-  }
-
-  .total-pages {
-    font-size: 13px;
-    color: var(--pdf-reader-text, #64748b);
-    opacity: 0.7;
-  }
-
-  .scale-select {
-    padding: 4px 8px;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    margin-left: auto;
-    background: var(--pdf-reader-surface-bg, var(--color-surface));
-    color: var(--pdf-reader-text, var(--color-primary));
-  }
-
-  .debug-info {
-    font-size: 12px;
-    color: var(--pdf-reader-text, #64748b);
-    opacity: 0.6;
-    font-family: monospace;
-  }
-
-  @media (max-width: 900px) {
-    .scale-select {
-      margin-left: 0;
-    }
-  }
-</style>

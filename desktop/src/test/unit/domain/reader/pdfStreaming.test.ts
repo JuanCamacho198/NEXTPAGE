@@ -8,48 +8,74 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock pdfjs-dist before importing the module under test
-const mockDestroy = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
-const mockGetOutline = vi.fn();
+// Hoisted mock values — must be before vi.mock calls
+const {
+  mockDestroy,
+  mockGetOutline,
+  MockPDFDataRangeTransport,
+  mockGetFileSize,
+  mockReadFileRange,
+  mockGetFileBytes,
+  mockPdfDocument,
+} = vi.hoisted(() => {
+  const destroy = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const getOutline = vi.fn();
 
-const mockPdfDocument = {
-  numPages: 10,
-  destroy: mockDestroy,
-  getOutline: mockGetOutline,
-  getPage: vi.fn(),
-  getDestination: vi.fn(),
-  getPageIndex: vi.fn(),
-};
+  const pdfDoc = {
+    numPages: 10,
+    destroy,
+    getOutline,
+    getPage: vi.fn(),
+    getDestination: vi.fn(),
+    getPageIndex: vi.fn(),
+  };
 
-// Mock PDFDataRangeTransport
-const MockPDFDataRangeTransport = vi.fn(function (
-  this: { addRangeListener: any; addProgressListener: any; onDataRange: any },
-  _size: number,
-  _initialData: Uint8Array,
-) {
-  this.addRangeListener = vi.fn();
-  this.addProgressListener = vi.fn();
-  this.onDataRange = null as any;
+  const getFileSize = vi.fn();
+  const readFileRange = vi.fn();
+  const getFileBytes = vi.fn();
+
+  const MockTransport = vi.fn(function (
+    this: { addRangeListener: any; addProgressListener: any; onDataRange: any },
+    _size: number,
+    _initialData: Uint8Array,
+  ) {
+    this.addRangeListener = vi.fn();
+    this.addProgressListener = vi.fn();
+    this.onDataRange = null as any;
+  });
+
+  return {
+    mockDestroy: destroy,
+    mockGetOutline: getOutline,
+    mockPdfDocument: pdfDoc,
+    MockPDFDataRangeTransport: MockTransport,
+    mockGetFileSize: getFileSize,
+    mockReadFileRange: readFileRange,
+    mockGetFileBytes: getFileBytes,
+  };
 });
 
-vi.mock("pdfjs-dist", () => ({
-  default: {
-    GlobalWorkerOptions: { workerSrc: "" },
-    getDocument: vi.fn(() => ({
-      promise: Promise.resolve(mockPdfDocument),
-      onProgress: null as any,
-      destroy: vi.fn(),
-    })),
-    PDFDataRangeTransport: MockPDFDataRangeTransport,
-  },
-  PDFDocumentProxy: class {},
-  PDFDocumentLoadingTask: class {},
-}));
+const mockGetDocument = vi.hoisted(() =>
+  vi.fn(() => ({
+    promise: Promise.resolve(mockPdfDocument),
+    onProgress: null as any,
+    destroy: vi.fn(),
+  })),
+);
 
-// Mock Tauri IPC client
-const mockGetFileSize = vi.fn();
-const mockReadFileRange = vi.fn();
-const mockGetFileBytes = vi.fn();
+vi.mock("pdfjs-dist", () => {
+  return {
+    default: {
+      GlobalWorkerOptions: { workerSrc: "" },
+      getDocument: mockGetDocument,
+      PDFDataRangeTransport: MockPDFDataRangeTransport,
+    },
+    getDocument: mockGetDocument,
+    PDFDataRangeTransport: MockPDFDataRangeTransport,
+    PDFDocumentProxy: class {},
+    PDFDocumentLoadingTask: class {},
+  };
+});
 
 vi.mock("$lib/api/tauriClient", () => ({
   getFileSize: (...args: unknown[]) => mockGetFileSize(...args),
@@ -66,8 +92,6 @@ import {
   createPdfDocument,
   documentCache,
 } from "$lib/features/reader/pdf/pdfStreaming";
-
-import type { PdfOutlineItem } from "$lib/types";
 
 function makeMockDocument() {
   return {
@@ -113,7 +137,6 @@ describe("pdfStreaming — Document Cache", () => {
     const entry = getCachedDocument("/book.pdf");
     expect(entry!.document).toBe(doc2);
     expect(entry!.outlineLoaded).toBe(true);
-    // First doc should NOT be destroyed on overwrite (only on LRU eviction)
     expect(mockDestroy).not.toHaveBeenCalled();
   });
 
@@ -161,20 +184,14 @@ describe("pdfStreaming — LRU Eviction", () => {
       setCachedDocument(`/book-${i}.pdf`, { document: doc, outline: [], outlineLoaded: false });
     }
 
-    // Cache should have at most 8 entries
     expect(documentCache.size).toBeLessThanOrEqual(8);
 
-    // The first 2 entries should have been evicted (and destroyed)
     expect(getCachedDocument("/book-0.pdf")).toBeUndefined();
     expect(getCachedDocument("/book-1.pdf")).toBeUndefined();
 
-    // The most recent 8 should still be present
     expect(getCachedDocument("/book-9.pdf")).toBeDefined();
     expect(getCachedDocument("/book-8.pdf")).toBeDefined();
 
-    // Destroy should have been called for evicted docs
-    // Note: eviction destroys the document, but the exact count depends on implementation
-    // (8th insert triggers eviction of 1st, 9th triggers eviction of 2nd, etc.)
     expect(mockDestroy).toHaveBeenCalled();
   });
 
@@ -182,7 +199,6 @@ describe("pdfStreaming — LRU Eviction", () => {
     for (let i = 0; i < 8; i++) {
       setCachedDocument(`/book-${i}.pdf`, { document: makeMockDocument(), outline: [], outlineLoaded: false });
     }
-    // Re-set an existing key — should not evict
     setCachedDocument("/book-0.pdf", { document: makeMockDocument(), outline: [], outlineLoaded: true });
     expect(documentCache.size).toBe(8);
   });
@@ -213,7 +229,6 @@ describe("pdfStreaming — loadPdfOutline", () => {
     expect(outline[1].items).toHaveLength(1);
     expect(outline[1].items[0].title).toBe("Section 2.1");
 
-    // Should be cached now
     expect(getCachedDocument("/book.pdf")!.outlineLoaded).toBe(true);
     expect(getCachedDocument("/book.pdf")!.outline).toHaveLength(2);
   });
@@ -227,7 +242,6 @@ describe("pdfStreaming — loadPdfOutline", () => {
     const first = await loadPdfOutline(doc, "/book.pdf");
     expect(first).toHaveLength(1);
 
-    // Second call should use cache
     mockGetOutline.mockClear();
     const second = await loadPdfOutline(doc, "/book.pdf");
     expect(second).toHaveLength(1);
@@ -265,8 +279,7 @@ describe("pdfStreaming — loadPdfOutline", () => {
 describe("pdfStreaming — createPdfDocument", () => {
   beforeEach(() => {
     resetAllMocks();
-    // Default: file is large enough to trigger streaming
-    mockGetFileSize.mockResolvedValue(500 * 1024); // 500KB
+    mockGetFileSize.mockResolvedValue(500 * 1024);
     mockReadFileRange.mockResolvedValue(new Array(8192).fill(0));
     mockGetFileBytes.mockResolvedValue(new Array(500 * 1024).fill(0));
   });
@@ -277,7 +290,6 @@ describe("pdfStreaming — createPdfDocument", () => {
     expect(mockGetFileSize).toHaveBeenCalledWith("/large.pdf");
     expect(mockReadFileRange).toHaveBeenCalled();
 
-    // Should be cached
     const cached = getCachedDocument("/large.pdf");
     expect(cached).toBeDefined();
     expect(cached!.outlineLoaded).toBe(false);
@@ -292,24 +304,22 @@ describe("pdfStreaming — createPdfDocument", () => {
     mockGetFileBytes.mockClear();
 
     const second = await createPdfDocument("/book.pdf");
-    expect(second.document).toBe(firstDoc); // Same document instance
-    expect(mockGetFileSize).not.toHaveBeenCalled(); // No file access
+    expect(second.document).toBe(firstDoc);
+    expect(mockGetFileSize).not.toHaveBeenCalled();
     expect(mockReadFileRange).not.toHaveBeenCalled();
     expect(mockGetFileBytes).not.toHaveBeenCalled();
   });
 
   it("loads via full file bytes for small files (<64KB)", async () => {
-    mockGetFileSize.mockResolvedValue(32 * 1024); // 32KB — under threshold
+    mockGetFileSize.mockResolvedValue(32 * 1024);
     mockGetFileBytes.mockResolvedValue(new Array(32 * 1024).fill(42));
     const result = await createPdfDocument("/small.pdf");
     expect(result.document).toBeDefined();
-    // Should use getFileBytes, not readFileRange
     expect(mockGetFileBytes).toHaveBeenCalledWith("/small.pdf");
     expect(mockReadFileRange).not.toHaveBeenCalled();
   });
 
   it("loads via full file bytes when PDFDataRangeTransport is unavailable", async () => {
-    // Temporarily remove PDFDataRangeTransport from pdfjs-dist mock
     const { default: pdfjsLib } = await import("pdfjs-dist");
     const originalTransport = (pdfjsLib as any).PDFDataRangeTransport;
     delete (pdfjsLib as any).PDFDataRangeTransport;
@@ -321,7 +331,6 @@ describe("pdfStreaming — createPdfDocument", () => {
     expect(result.document).toBeDefined();
     expect(mockGetFileBytes).toHaveBeenCalled();
 
-    // Restore
     (pdfjsLib as any).PDFDataRangeTransport = originalTransport;
   });
 

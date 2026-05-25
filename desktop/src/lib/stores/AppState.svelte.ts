@@ -616,6 +616,8 @@ class AppState {
       // We also preload the raw bytes as a fallback for small files.
       void getFileBytes(book.filePath).then((bytes) => {
         this.preloadedBytes = { filePath: book.filePath, data: bytes };
+      }).catch(() => {
+        // Preload failed silently — viewer will load normally
       });
 
       // Also kick off streaming via pdfStreaming.ts which will cache the document

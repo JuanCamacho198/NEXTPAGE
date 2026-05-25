@@ -912,7 +912,7 @@
           onNavigate={(item) => navigateToOutlineItem(item)}
         />
       {/if}
-      <div class="flex-1 overflow-auto flex justify-center p-4 bg-[var(--pdf-reader-root-bg,var(--color-background))]" bind:this={canvasContainer} onwheel={handleViewerWheel}>
+      <div class="flex-1 overflow-auto flex justify-center p-4 bg-(--pdf-reader-root-bg,var(--color-background))" bind:this={canvasContainer} onwheel={handleViewerWheel}>
         <div class="relative inline-block" class:search-hit={flashSearchResult} style="isolation: isolate; {canvasWrapperStyle}">
           <canvas bind:this={canvas}></canvas>
 

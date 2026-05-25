@@ -298,7 +298,7 @@
       {#each filteredBooks as book}
         <article class="flex flex-col gap-4 rounded-[24px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.18)] md:flex-row md:items-center">
           <div class="flex items-start gap-4 md:min-w-0 md:flex-1">
-            <div class="h-28 w-20 flex-shrink-0 overflow-hidden rounded-[18px] bg-[rgba(255,255,255,0.03)]">
+            <div class="h-28 w-20 shrink-0 overflow-hidden rounded-[18px] bg-[rgba(255,255,255,0.03)]">
               <SafeCover path={book.coverPath ?? ""} alt={`Portada de ${book.title}`} className="h-full w-full object-cover">
                 {#snippet fallback()}
                   <div class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] px-2 text-center text-[10px] uppercase tracking-[0.16em] text-(--color-primary)">

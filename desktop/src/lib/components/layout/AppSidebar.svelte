@@ -25,7 +25,7 @@
   ]);
 </script>
 
-<aside class="sticky top-0 h-screen w-64 flex-shrink-0 border-r border-(--color-border) bg-[rgba(12,20,32,0.6)] backdrop-blur-xl flex flex-col hidden lg:flex">
+<aside class="sticky top-0 h-screen w-64 shrink-0 border-r border-(--color-border) bg-[rgba(12,20,32,0.6)] backdrop-blur-xl max-lg:hidden lg:flex lg:flex-col">
   <div class="p-6 pb-2">
     <div class="flex items-center gap-3">
       <div class="flex h-10 w-10 items-center justify-center rounded-full bg-(--color-accent-soft) text-sm font-bold text-(--color-accent-blue) border border-(--color-border-strong)">

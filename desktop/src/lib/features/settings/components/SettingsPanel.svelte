@@ -347,7 +347,7 @@
     <div class="flex border-b border-(--color-border)">
       <button
         type="button"
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-(--color-primary)"
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
         class:text-(--color-primary)={activeTab === "account"}
         class:border-(--color-primary)={activeTab === "account"}
         onclick={() => handleTabChange("account")}
@@ -356,7 +356,7 @@
       </button>
       <button
         type="button"
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-(--color-primary)"
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
         class:text-(--color-primary)={activeTab === "profile"}
         class:border-(--color-primary)={activeTab === "profile"}
         onclick={() => handleTabChange("profile")}
@@ -365,7 +365,7 @@
       </button>
       <button
         type="button"
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-(--color-primary)"
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
         class:text-(--color-primary)={activeTab === "reader"}
         class:border-(--color-primary)={activeTab === "reader"}
         onclick={() => handleTabChange("reader")}
@@ -374,7 +374,7 @@
       </button>
       <button
         type="button"
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-(--color-primary)"
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
         class:text-(--color-primary)={activeTab === "appTheme"}
         class:border-(--color-primary)={activeTab === "appTheme"}
         onclick={() => handleTabChange("appTheme")}
@@ -383,7 +383,7 @@
       </button>
       <button
         type="button"
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-(--color-primary)"
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
         class:text-(--color-primary)={activeTab === "about"}
         class:border-(--color-primary)={activeTab === "about"}
         onclick={() => handleTabChange("about")}
@@ -695,7 +695,7 @@
               <span class="text-[32px]">📚</span>
               <div class="flex flex-col">
                 <span class="text-lg font-semibold text-(--color-primary)">NextPage</span>
-                <span class="text-xs text-[var(--color-text-muted,var(--color-secondary))]">Version {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}</span>
+                <span class="text-xs text-(--color-text-muted,var(--color-secondary))">Version {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}</span>
               </div>
             </div>
             <p class="text-sm text-zinc-600 mt-3">
@@ -707,15 +707,15 @@
             <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">Credits</h4>
             <ul class="list-none m-0 p-0">
               <li class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0">
-                <span class="text-[13px] text-[var(--color-text-muted,var(--color-secondary))]">Core Team</span>
+                <span class="text-[13px] text-(--color-text-muted,var(--color-secondary))">Core Team</span>
                 <span class="text-[13px] text-(--color-primary) font-medium">NextPage Contributors</span>
               </li>
               <li class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0">
-                <span class="text-[13px] text-[var(--color-text-muted,var(--color-secondary))]">EPUB Parsing</span>
+                <span class="text-[13px] text-(--color-text-muted,var(--color-secondary))">EPUB Parsing</span>
                 <span class="text-[13px] text-(--color-primary) font-medium">epub.js</span>
               </li>
               <li class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0">
-                <span class="text-[13px] text-[var(--color-text-muted,var(--color-secondary))]">Framework</span>
+                <span class="text-[13px] text-(--color-text-muted,var(--color-secondary))">Framework</span>
                 <span class="text-[13px] text-(--color-primary) font-medium">Svelte / Tauri</span>
               </li>
             </ul>

@@ -54,7 +54,18 @@
     - ✅ `bg-(--color-primary)/12` ❌ `bg-[var(--color-primary)]/12`
     - ✅ `text-(--color-text-muted,#6b7280)` ❌ `text-[var(--color-text-muted,#6b7280)]`
     - ✅ `hover:bg-(--color-border)` ❌ `hover:bg-[color:var(--color-border)]`
-  - **Renamed classes in v4**: `break-words` → `wrap-break-word`
+  - **Renamed classes in v4**: `break-words` → `wrap-break-word`, `flex-shrink-0` → `shrink-0`
+  - **Arbitrary values with canonical names**: `min-w-[86px]` → `min-w-21.5`, `duration-[420ms]` → `duration-420`
+  - **CSS conflictos**: NO pongas `flex` y `hidden` en el mismo elemento (usa `max-lg:hidden lg:flex`). NO combines `font-(--font-sans)` con `font-medium` (usa inline `style="font-family: var(--font-sans)"` para la font-family).
+  - **VS Code settings** (`.vscode/settings.json`):
+    ```jsonc
+    {
+      "tailwindCSS.lint.cssConflict": "warning",
+      "tailwindCSS.lint.suggestCanonicalClasses": "ignore",
+      "tailwindCSS.updateDebounce": 500,
+      "tailwindCSS.validate": true
+    }
+    ```
   - **Auto-detection**: Run `bun run lint` — the custom rule `local-rules/tailwind-v4-canonical` (in `eslint-local-rules/`) detects old syntax as warnings and can auto-fix with `bun run lint:fix`.
 - **Imports**: Use `$lib` alias (e.g., `import { something } from '$lib/stores'`)
 - **Types**: TypeScript with explicit return types on functions

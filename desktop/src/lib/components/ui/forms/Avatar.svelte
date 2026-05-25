@@ -35,7 +35,7 @@
   }
 </script>
 
-<div class="relative flex-shrink-0 {sizeClasses[size]} {className}">
+<div class="relative shrink-0 {sizeClasses[size]} {className}">
   {#if src && !isBroken}
     <img
       {src}

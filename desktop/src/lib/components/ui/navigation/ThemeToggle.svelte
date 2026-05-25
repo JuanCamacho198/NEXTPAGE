@@ -21,10 +21,10 @@
   aria-label={$theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
   title={$theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
 >
-  <div class="w-5 h-5 flex items-center justify-center flex-shrink-0 relative">
+  <div class="w-5 h-5 flex items-center justify-center shrink-0 relative">
     <!-- Sun icon (visible in light mode) -->
     <svg
-      class="absolute transition-all duration-[420ms] cubic-bezier(0.34,1.56,0.64,1) origin-center {$theme === 'light' ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-90 rotate-[90deg] pointer-events-none'} {animating ? 'animate-[icon-spin-in_0.42s_cubic-bezier(0.34,1.56,0.64,1)_forwards]' : ''}"
+      class="absolute transition-all duration-420 cubic-bezier(0.34,1.56,0.64,1) origin-center {$theme === 'light' ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-90 rotate-[90deg] pointer-events-none'} {animating ? 'animate-[icon-spin-in_0.42s_cubic-bezier(0.34,1.56,0.64,1)_forwards]' : ''}"
       width="18"
       height="18"
       viewBox="0 0 24 24"
@@ -38,7 +38,7 @@
 
     <!-- Moon icon (visible in dark mode) -->
     <svg
-      class="absolute transition-all duration-[420ms] cubic-bezier(0.34,1.56,0.64,1) origin-center {$theme === 'dark' ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-90 rotate-[90deg] pointer-events-none'} {animating ? 'animate-[icon-spin-in_0.42s_cubic-bezier(0.34,1.56,0.64,1)_forwards]' : ''}"
+      class="absolute transition-all duration-420 cubic-bezier(0.34,1.56,0.64,1) origin-center {$theme === 'dark' ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-90 rotate-[90deg] pointer-events-none'} {animating ? 'animate-[icon-spin-in_0.42s_cubic-bezier(0.34,1.56,0.64,1)_forwards]' : ''}"
       width="18"
       height="18"
       viewBox="0 0 24 24"

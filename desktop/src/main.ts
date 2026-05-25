@@ -23,13 +23,7 @@ const initLogger = async () => {
   }
 };
 
-const generateCorrelationId = (): string => {
-  return crypto.randomUUID();
-};
-
 const handleGlobalError = (event: ErrorEvent) => {
-  const correlationId = generateCorrelationId();
-
   const errorEvent = createErrorEvent({
     severity: "high",
     category: "runtime",
@@ -48,8 +42,6 @@ const handleGlobalError = (event: ErrorEvent) => {
 };
 
 const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-  const correlationId = generateCorrelationId();
-
   const errorMessage = event.reason instanceof Error
     ? event.reason.message
     : String(event.reason);

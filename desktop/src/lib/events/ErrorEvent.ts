@@ -36,6 +36,8 @@ export interface ErrorEventDto {
   recoverable: boolean;
 }
 
+import { metricsStore } from "$lib/logger/MetricsStore";
+
 export const createErrorEvent = (
   params: Omit<ErrorEvent, "timestamp" | "correlationId"> & {
     correlationId?: string;
@@ -43,7 +45,7 @@ export const createErrorEvent = (
 ): ErrorEvent => {
   return {
     timestamp: new Date().toISOString(),
-    correlationId: params.correlationId ?? crypto.randomUUID(),
+    correlationId: params.correlationId ?? metricsStore.getSessionId(),
     ...params,
   };
 };

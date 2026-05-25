@@ -3,6 +3,8 @@ import { getLocaleSetting, upsertLocaleSetting } from "$lib/api/tauriClient";
 import { SUPPORTED_UI_LOCALES, type UiLocale } from "$lib/types";
 import { messagesEn, type MessageKey } from "./messages.en";
 import { messagesEs } from "./messages.es";
+import { logger } from "$lib/logger/Logger";
+import { createErrorEvent } from "$lib/events/ErrorEvent";
 
 type TranslationParams = Record<string, string | number>;
 
@@ -41,6 +43,8 @@ const interpolate = (template: string, params?: TranslationParams) => {
   });
 };
 
+let missingKeysLogged = new Set<string>();
+
 const resolveMessage = (locale: UiLocale, key: MessageKey): string => {
   const primary = dictionaries[locale][key];
   if (primary) {
@@ -49,7 +53,35 @@ const resolveMessage = (locale: UiLocale, key: MessageKey): string => {
 
   const fallback = dictionaries[FALLBACK_LOCALE][key];
   if (fallback) {
+    // Log warning once per missing key per locale
+    const logKey = `${locale}:${key}`;
+    if (!missingKeysLogged.has(logKey)) {
+      missingKeysLogged.add(logKey);
+      logger.warn(createErrorEvent({
+        severity: "low",
+        category: "runtime",
+        code: "I18N_MISSING_KEY",
+        message: `i18n key "${key}" not found in locale "${locale}", using fallback "${FALLBACK_LOCALE}"`,
+        context: { locale, key, fallbackLocale: FALLBACK_LOCALE },
+        source: "app_shell" as const,
+        recoverable: true,
+      }));
+    }
     return fallback;
+  }
+
+  // Log warning once per missing key (no translation found at all)
+  if (!missingKeysLogged.has(key)) {
+    missingKeysLogged.add(key);
+    logger.warn(createErrorEvent({
+      severity: "low",
+      category: "runtime",
+      code: "I18N_MISSING_KEY",
+      message: `i18n key "${key}" not found in any locale`,
+      context: { key, locales: Object.keys(dictionaries) },
+      source: "app_shell" as const,
+      recoverable: true,
+    }));
   }
 
   return key;

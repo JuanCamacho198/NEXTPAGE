@@ -31,6 +31,8 @@ vi.mock("$lib/i18n", () => ({
 }));
 
 // Tauri client methods used by AppState
+const mockGetFileBytes = vi.fn<(...args: unknown[]) => Promise<number[]>>().mockResolvedValue([1, 2, 3]);
+
 vi.mock("$lib/api/tauriClient", () => {
   const rf = vi.fn(function () {
     return Promise.resolve([]);
@@ -78,6 +80,7 @@ vi.mock("$lib/api/tauriClient", () => {
     scanFolder: vi.fn(function () {
       return Promise.resolve({ files: [] });
     }),
+    getFileBytes: mockGetFileBytes,
   };
 });
 
@@ -126,12 +129,102 @@ function resetAppState() {
   appState.bulkImportProgress = null;
   appState.bulkImportSummary = null;
   appState.books = [];
+  appState.preloadedBytes = null;
 }
 
 describe("AppState", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetAppState();
+  });
+
+  // ─── Preload (startReading) ───
+
+  it("startReading clears preloadedBytes before starting", async () => {
+    appState.preloadedBytes = { filePath: "/old.epub", data: [1, 2, 3] };
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    await appState.startReading(book);
+    expect(appState.preloadedBytes).toBeNull();
+  });
+
+  it("startReading sets route to reader", async () => {
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    await appState.startReading(book);
+    expect(appState.route).toBe("reader");
+  });
+
+  it("startReading sets activeReadingBookId", async () => {
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    await appState.startReading(book);
+    expect(appState.activeReadingBookId).toBe("b1");
+  });
+
+  it("startReading fires getFileBytes for EPUB preload", async () => {
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    await appState.startReading(book);
+    expect(mockGetFileBytes).toHaveBeenCalledWith("/test.epub");
+  });
+
+  it("startReading preloadedBytes is populated asynchronously for EPUB", async () => {
+    mockGetFileBytes.mockResolvedValueOnce([10, 20, 30]);
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    await appState.startReading(book);
+    // At this point, getFileBytes was called but the promise may not have resolved yet
+    // since startReading doesn't await the preload promise for EPUB
+    // Wait a microtask for the preload promise to resolve
+    await vi.waitFor(() => {
+      expect(appState.preloadedBytes).not.toBeNull();
+    });
+    expect(appState.preloadedBytes!.filePath).toBe("/test.epub");
+    expect(appState.preloadedBytes!.data).toEqual([10, 20, 30]);
+  });
+
+  it("startReading preload failure does not throw for EPUB", async () => {
+    mockGetFileBytes.mockRejectedValueOnce(new Error("EPUB load failed"));
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    await expect(appState.startReading(book)).resolves.toBeUndefined();
+    // preloadedBytes should remain null since the preload failed
+    expect(appState.preloadedBytes).toBeNull();
+  });
+
+  it("startReading fires getFileBytes for PDF preload", async () => {
+    const book = { id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" } as any;
+    await appState.startReading(book);
+    expect(mockGetFileBytes).toHaveBeenCalledWith("/test.pdf");
+  });
+
+  it("startReading preloadedBytes is populated asynchronously for PDF", async () => {
+    mockGetFileBytes.mockResolvedValueOnce([99, 98, 97]);
+    const book = { id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" } as any;
+    await appState.startReading(book);
+    // Wait for async preload
+    await vi.waitFor(() => {
+      expect(appState.preloadedBytes).not.toBeNull();
+    });
+    expect(appState.preloadedBytes!.filePath).toBe("/test.pdf");
+    expect(appState.preloadedBytes!.data).toEqual([99, 98, 97]);
+  });
+
+  it("startReading preload failure does not throw for PDF", async () => {
+    mockGetFileBytes.mockRejectedValueOnce(new Error("PDF load failed"));
+    const book = { id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" } as any;
+    await expect(appState.startReading(book)).resolves.toBeUndefined();
+    expect(appState.preloadedBytes).toBeNull();
+  });
+
+  it("startReading with EPUB calls getProgress for location and percentage", async () => {
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    await appState.startReading(book);
+    // getProgress should have been called
+    const { getProgress } = await import("$lib/api/tauriClient");
+    expect(getProgress).toHaveBeenCalledWith("b1");
+  });
+
+  it("startReading with PDF does not call getProgress", async () => {
+    const book = { id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" } as any;
+    await appState.startReading(book);
+    const { getProgress } = await import("$lib/api/tauriClient");
+    expect(getProgress).not.toHaveBeenCalled();
   });
 
   // ─── Navigation ───
@@ -379,5 +472,31 @@ describe("AppState", () => {
 
   it("SHELF_SORT_OPTIONS has expected entries", () => {
     expect(appState.SHELF_SORT_OPTIONS).toHaveLength(6);
+  });
+});
+
+describe("AppState — Preload edge cases", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetAppState();
+  });
+
+  it("preloadedBytes is null by default", () => {
+    expect(appState.preloadedBytes).toBeNull();
+  });
+
+  it("preloadedBytes persists across state changes until overwritten", () => {
+    appState.preloadedBytes = { filePath: "/book.pdf", data: [1, 2] };
+    appState.route = "foo" as any;
+    expect(appState.preloadedBytes).toEqual({ filePath: "/book.pdf", data: [1, 2] });
+  });
+
+  it("startReading clears preloadedBytes even if getFileBytes fails", async () => {
+    mockGetFileBytes.mockRejectedValueOnce(new Error("fail"));
+    appState.preloadedBytes = { filePath: "/old.epub", data: [9, 9, 9] };
+    const book = { id: "b1", filePath: "/new.epub", format: "epub" } as any;
+    await appState.startReading(book);
+    // Should be null because the new preload failed
+    expect(appState.preloadedBytes).toBeNull();
   });
 });

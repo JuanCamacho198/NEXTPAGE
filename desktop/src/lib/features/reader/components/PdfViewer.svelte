@@ -554,6 +554,12 @@
         });
         if (task?.promise) await task.promise;
       }
+
+      // pdfjs-dist v5 TextLayer creates spans with pointer-events:none (from
+      // pdf_viewer.css). Override inline so click-and-drag selection works.
+      for (const span of textLayer.querySelectorAll("span")) {
+        span.style.pointerEvents = "auto";
+      }
     } catch (err) { console.error("Text layer render error:", err); }
 
     textLayerMouseupTarget = textLayer;

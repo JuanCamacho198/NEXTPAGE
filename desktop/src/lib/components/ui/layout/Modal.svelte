@@ -54,15 +54,15 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div 
       bind:this={dialogEl}
-      class="w-full max-w-lg rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl {className}"
+      class="w-full max-w-lg rounded-xl border border-(--color-border) bg-(--color-surface) shadow-xl {className}"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
-      <div class="flex items-center justify-between border-b border-[var(--color-border)] px-6 py-4">
-        <h2 id="modal-title" class="text-lg font-semibold text-[var(--color-primary)]">{title}</h2>
+      <div class="flex items-center justify-between border-b border-(--color-border) px-6 py-4">
+        <h2 id="modal-title" class="text-lg font-semibold text-(--color-primary)">{title}</h2>
         <button
-          class="flex items-center justify-center min-w-[28px] min-h-[28px] text-[var(--color-muted)] transition-colors hover:text-[var(--color-primary)]"
+          class="flex items-center justify-center min-w-7 min-h-7 text-(--color-muted) transition-colors hover:text-(--color-primary)"
           onclick={() => (open = false)}
           aria-label="Close"
         >
@@ -79,7 +79,7 @@
       </div>
 
       {#if footer}
-        <div class="flex items-center justify-end gap-3 border-t border-[var(--color-border)] px-6 py-4">
+        <div class="flex items-center justify-end gap-3 border-t border-(--color-border) px-6 py-4">
           {@render footer()}
         </div>
       {/if}

@@ -55,7 +55,7 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       bind:this={sidebarEl}
-      class="absolute right-0 top-0 flex h-full w-[260px] flex-col overflow-y-auto border-l border-[#17263a] bg-[#101c2c]/70 pt-[60px] text-[#8fa3bf] backdrop-blur-sm"
+      class="absolute right-0 top-0 flex h-full w-65 flex-col overflow-y-auto border-l border-[#17263a] bg-[#101c2c]/70 pt-15 text-[#8fa3bf] backdrop-blur-sm"
       onkeydown={(e) => e.key === "Escape" && onClose()}
       role="dialog"
       aria-label={t("reader.ajustes_texto")}

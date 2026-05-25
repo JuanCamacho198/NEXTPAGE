@@ -37,7 +37,7 @@
   </div>
   <div class="mx-auto max-w-7xl">
     {#if appState.importProgress}
-      <p class="mb-3 text-sm text-[var(--color-secondary)]">{appState.importProgress.message}</p>
+      <p class="mb-3 text-sm text-(--color-secondary)">{appState.importProgress.message}</p>
     {/if}
 
     {#if appState.readerError}

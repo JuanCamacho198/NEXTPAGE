@@ -926,29 +926,25 @@ mod tests {
 
     fn apply_test_migrations(connection: &Connection) {
         connection
-            .execute_batch(include_str!("../migrations/0001_init.sql"))
+            .execute_batch(include_str!("../../migrations/0001_init.sql"))
             .unwrap();
         connection
-            .execute_batch(include_str!("../migrations/0002_books.sql"))
+            .execute_batch(include_str!("../../migrations/0002_books.sql"))
             .unwrap();
         connection
-            .execute_batch(include_str!("../migrations/0003_highlights.sql"))
+            .execute_batch(include_str!("../../migrations/0003_highlights.sql"))
             .unwrap();
         connection
-            .execute_batch(include_str!(
-                "../migrations/0004_desktop_feature_parity.sql"
-            ))
+            .execute_batch(include_str!("../../migrations/0004_desktop_feature_parity.sql"))
             .unwrap();
         connection
-            .execute_batch(include_str!("../migrations/0005_hidden_books.sql"))
+            .execute_batch(include_str!("../../migrations/0005_hidden_books.sql"))
             .unwrap();
         connection
-            .execute_batch(include_str!("../migrations/0006_collections.sql"))
+            .execute_batch(include_str!("../../migrations/0006_collections.sql"))
             .unwrap();
         connection
-            .execute_batch(include_str!(
-                "../migrations/0007_highlight_note_and_page_contract.sql"
-            ))
+            .execute_batch(include_str!("../../migrations/0007_highlight_note_and_page_contract.sql"))
             .unwrap();
     }
 

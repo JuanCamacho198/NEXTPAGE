@@ -140,34 +140,34 @@
 <section class="max-w-full">
   <!-- Header -->
   <header class="mb-6">
-    <h1 class="text-[1.875rem] font-bold text-[var(--color-primary)] m-0 mb-1">{t("home.highlightsTitle")}</h1>
-    <p class="text-[0.875rem] text-[var(--color-text-muted)] m-0">{t("home.highlightsSubtitle")}</p>
+    <h1 class="text-[1.875rem] font-bold text-(--color-primary) m-0 mb-1">{t("home.highlightsTitle")}</h1>
+    <p class="text-[0.875rem] text-(--color-text-muted) m-0">{t("home.highlightsSubtitle")}</p>
   </header>
 
   <!-- Search Bar -->
   <div class="relative flex items-center mb-5">
-    <svg class="absolute left-4 w-5 h-5 text-[var(--color-text-muted)] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg class="absolute left-4 w-5 h-5 text-(--color-text-muted) pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
     </svg>
     <input
       id="highlights-search"
       type="text"
-      class="w-full h-12 px-[2.75rem] pr-[5rem] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-primary)] text-[0.875rem] font-sans transition-colors focus:outline-none focus:border-[var(--color-accent-blue,#49d4ff)] focus:shadow-[0_0_0_3px_rgba(73,212,255,0.15)] placeholder:text-[var(--color-text-muted)]"
+      class="w-full h-12 px-11 pr-20 rounded-2xl border border-(--color-border) bg-(--color-surface) text-(--color-primary) text-[0.875rem] font-sans transition-colors focus:outline-none focus:border-(--color-accent-blue,#49d4ff) focus:shadow-[0_0_0_3px_rgba(73,212,255,0.15)] placeholder:text-(--color-text-muted)"
       placeholder={t("home.highlightsSearchPlaceholder")}
       bind:value={searchQuery}
     />
-    <kbd class="absolute right-4 inline-flex items-center gap-1 px-2 py-1 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text-muted)] text-[0.7rem] font-sans pointer-events-none">Ctrl K</kbd>
+    <kbd class="absolute right-4 inline-flex items-center gap-1 px-2 py-1 rounded-md border border-(--color-border) bg-(--color-background) text-(--color-text-muted) text-[0.7rem] font-sans pointer-events-none">Ctrl K</kbd>
   </div>
 
   <!-- Filters -->
-  <div class="flex flex-wrap items-center gap-4 mb-4 px-4 py-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
-    <div class="flex items-center gap-2 border-r border-[var(--color-border)] pr-4">
-      <span class="text-[0.75rem] font-semibold text-[var(--color-primary)] uppercase tracking-wider">{t("home.highlightsFilterColor")}</span>
+  <div class="flex flex-wrap items-center gap-4 mb-4 px-4 py-3 rounded-2xl border border-(--color-border) bg-(--color-surface)">
+    <div class="flex items-center gap-2 border-r border-(--color-border) pr-4">
+      <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider">{t("home.highlightsFilterColor")}</span>
       <div class="flex items-center gap-1">
         {#each HIGHLIGHT_COLORS as color}
           <button
             type="button"
-            class="w-6 h-6 rounded-full border-2 border-transparent cursor-pointer transition-all hover:scale-[1.15] {selectedColor === color.key ? 'border-[var(--color-primary)] shadow-[0_0_0_3px_rgba(73,212,255,0.25)] scale-110' : ''}"
+            class="w-6 h-6 rounded-full border-2 border-transparent cursor-pointer transition-all hover:scale-[1.15] {selectedColor === color.key ? 'border-(--color-primary) shadow-[0_0_0_3px_rgba(73,212,255,0.25)] scale-110' : ''}"
             style="background: var(--circle-color);"
             aria-label={t("highlight.selectColor", { color: t(`settings.color.${color.key}` as any) })}
             onclick={() => { selectedColor = selectedColor === color.key ? null : color.key; }}
@@ -175,15 +175,15 @@
         {/each}
         <button
           type="button"
-          class="px-2 py-1 rounded-md border border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)] text-[0.75rem] cursor-pointer transition-all font-sans hover:bg-[var(--color-surface-hover,rgba(25,41,62,0.96))] {!selectedColor ? 'border-[var(--color-accent-blue,#49d4ff)] text-[var(--color-primary)] bg-[var(--color-panel-accent)]' : ''}"
+          class="px-2 py-1 rounded-md border border-(--color-border) bg-transparent text-(--color-text-muted) text-[0.75rem] cursor-pointer transition-all font-sans hover:bg-(--color-surface-hover,rgba(25,41,62,0.96)) {!selectedColor ? 'border-(--color-accent-blue,#49d4ff) text-(--color-primary) bg-(--color-panel-accent)' : ''}"
           onclick={() => { selectedColor = null; }}
         >{t("home.shelfTab.all")}</button>
       </div>
     </div>
 
     <div class="flex items-center gap-2">
-      <span class="text-[0.75rem] font-semibold text-[var(--color-primary)] uppercase tracking-wider">{t("home.highlightsFilterBook")}</span>
-      <select class="px-3 py-2 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-primary)] text-[0.75rem] font-sans cursor-pointer min-w-[140px] focus:outline-none focus:border-[var(--color-accent-blue,#49d4ff)]" bind:value={selectedBookId}>
+      <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider">{t("home.highlightsFilterBook")}</span>
+      <select class="px-3 py-2 rounded-md border border-(--color-border) bg-(--color-background) text-(--color-primary) text-[0.75rem] font-sans cursor-pointer min-w-35 focus:outline-none focus:border-(--color-accent-blue,#49d4ff)" bind:value={selectedBookId}>
         <option value={null}>{t("home.highlightsAllBooks")}</option>
         {#each uniqueBooks as book}
           <option value={book.id}>{book.title}</option>
@@ -192,8 +192,8 @@
     </div>
 
     <div class="flex items-center gap-2">
-      <span class="text-[0.75rem] font-semibold text-[var(--color-primary)] uppercase tracking-wider">{t("home.highlightsFilterDate")}</span>
-      <select class="px-3 py-2 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-primary)] text-[0.75rem] font-sans cursor-pointer min-w-[140px] focus:outline-none focus:border-[var(--color-accent-blue,#49d4ff)]" bind:value={selectedDateRange}>
+      <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider">{t("home.highlightsFilterDate")}</span>
+      <select class="px-3 py-2 rounded-md border border-(--color-border) bg-(--color-background) text-(--color-primary) text-[0.75rem] font-sans cursor-pointer min-w-35 focus:outline-none focus:border-(--color-accent-blue,#49d4ff)" bind:value={selectedDateRange}>
         <option value={null}>{t("home.highlightsAllDates")}</option>
         <option value="7d">{t("home.highlightsLastWeek")}</option>
         <option value="30d">{t("home.highlightsLastMonth")}</option>
@@ -205,7 +205,7 @@
   </div>
 
   <!-- Count -->
-  <p class="text-[0.75rem] text-[var(--color-text-muted)] m-0 mb-3">{t("home.highlightsShowingCount", { count: filteredHighlights.length })}</p>
+  <p class="text-[0.75rem] text-(--color-text-muted) m-0 mb-3">{t("home.highlightsShowingCount", { count: filteredHighlights.length })}</p>
 
   <!-- List -->
   {#if isLoading}
@@ -224,51 +224,51 @@
     <ul class="list-none p-0 m-0 flex flex-col gap-2">
       {#each paginatedHighlights as highlight (highlight.id)}
         {@const book = bookMap.get(highlight.bookId)}
-        <li class="flex items-stretch gap-4 p-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] transition-all cursor-default hover:border-[var(--color-border-strong)] hover:shadow-[var(--shadow-soft)] hover:bg-[var(--color-surface-hover,rgba(25,41,62,0.96)]" style="--bar-color: {HIGHLIGHT_COLORS.find(c => c.key === highlight.color.toLowerCase())?.hex ?? '#60a5fa'}">
-          <div class="w-1 min-h-full rounded bg-[var(--bar-color)] flex-shrink-0"></div>
+        <li class="flex items-stretch gap-4 p-5 rounded-2xl border border-(--color-border) bg-(--color-surface) transition-all cursor-default hover:border-(--color-border-strong) hover:shadow-(--shadow-soft) hover:bg-(--color-surface-hover,rgba(25,41,62,0.96))" style="--bar-color: {HIGHLIGHT_COLORS.find(c => c.key === highlight.color.toLowerCase())?.hex ?? '#60a5fa'}">
+          <div class="w-1 min-h-full rounded bg-(--bar-color) shrink-0"></div>
 
           <div class="flex-1 min-w-0 flex flex-col justify-center gap-1">
-            <p class="text-[0.875rem] font-medium text-[var(--color-primary)] m-0 line-height-[1.5]">{highlight.text}</p>
+            <p class="text-[0.875rem] font-medium text-(--color-primary) m-0 line-height-[1.5]">{highlight.text}</p>
             {#if highlight.note}
-              <p class="text-[0.75rem] text-[var(--color-text-muted)] m-0 italic"><Icon name="note" size="sm" /> {highlight.note}</p>
+              <p class="text-[0.75rem] text-(--color-text-muted) m-0 italic"><Icon name="note" size="sm" /> {highlight.note}</p>
             {/if}
-            <p class="text-[0.75rem] text-[var(--color-text-muted)] m-0">{t("home.highlightsPageLabel")} {highlight.pageNumber}{book ? ` · ${book.title}` : ""}</p>
+            <p class="text-[0.75rem] text-(--color-text-muted) m-0">{t("home.highlightsPageLabel")} {highlight.pageNumber}{book ? ` · ${book.title}` : ""}</p>
           </div>
 
           {#if book}
-            <div class="flex flex-col items-center gap-1 flex-shrink-0 w-20 text-center">
-              <div class="w-12 h-16 rounded-md overflow-hidden border border-[var(--color-border)] bg-[var(--color-background)] flex items-center justify-center">
+            <div class="flex flex-col items-center gap-1 shrink-0 w-20 text-center">
+              <div class="w-12 h-16 rounded-md overflow-hidden border border-(--color-border) bg-(--color-background) flex items-center justify-center">
                 {#if book.coverPath}
                   <SafeCover path={book.coverPath} alt={book.title} className="w-full h-full object-cover" />
                 {:else}
                   <span class="text-[1.25rem] opacity-50"><Icon name="book" size="lg" /></span>
                 {/if}
               </div>
-              <p class="text-[0.65rem] font-semibold text-[var(--color-primary)] m-0 max-w-20 overflow-hidden text-ellipsis whitespace-nowrap">{book.title}</p>
-              <p class="text-[0.6rem] text-[var(--color-text-muted)] m-0 max-w-20 overflow-hidden text-ellipsis whitespace-nowrap">{book.author || t("app.unknownAuthor")}</p>
+              <p class="text-[0.65rem] font-semibold text-(--color-primary) m-0 max-w-20 overflow-hidden text-ellipsis whitespace-nowrap">{book.title}</p>
+              <p class="text-[0.6rem] text-(--color-text-muted) m-0 max-w-20 overflow-hidden text-ellipsis whitespace-nowrap">{book.author || t("app.unknownAuthor")}</p>
             </div>
           {/if}
 
-          <div class="flex flex-col items-end justify-between flex-shrink-0 min-w-[120px]">
-            <span class="text-[0.75rem] text-[var(--color-text-muted)] whitespace-nowrap">{formatDate(highlight.createdAt)}</span>
+          <div class="flex flex-col items-end justify-between shrink-0 min-w-30">
+            <span class="text-[0.75rem] text-(--color-text-muted) whitespace-nowrap">{formatDate(highlight.createdAt)}</span>
 
             <DropMenu position="bottom-right">
               {#snippet trigger()}
-                <button class="w-8 h-8 flex items-center justify-center rounded-md border border-transparent bg-transparent text-[var(--color-text-muted)] text-[1.1rem] cursor-pointer transition-all font-sans hover:bg-[var(--color-panel-accent)] hover:border-[var(--color-border)] hover:text-[var(--color-primary)]" aria-label="Opciones"><Icon name="more-dot" size="sm" /></button>
+                <button class="w-8 h-8 flex items-center justify-center rounded-md border border-transparent bg-transparent text-(--color-text-muted) text-[1.1rem] cursor-pointer transition-all font-sans hover:bg-(--color-panel-accent) hover:border-(--color-border) hover:text-(--color-primary)" aria-label="Opciones"><Icon name="more-dot" size="sm" /></button>
               {/snippet}
               <div class="flex flex-col">
-                <button class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--color-primary)] text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-[var(--color-panel-accent)]" onclick={() => handleCopy(highlight.text)}>
+                <button class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-panel-accent)" onclick={() => handleCopy(highlight.text)}>
                   <Icon name="copy" size="sm" /> {t("home.highlightsCopy")}
                 </button>
-                <button class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--color-primary)] text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-[var(--color-panel-accent)]">
+                <button class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-panel-accent)">
                   <Icon name="book" size="sm" /> {t("home.highlightsViewInBook")}
                 </button>
                 {#if highlight.note}
-                  <button class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--color-primary)] text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-[var(--color-panel-accent)]">
+                  <button class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-panel-accent)">
                     <Icon name="edit" size="sm" /> {t("home.highlightsEditNote")}
                   </button>
                 {/if}
-                <button class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-[var(--color-error)] text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-[var(--color-error-bg,rgba(255,123,131,0.14)]" onclick={() => handleDelete(highlight.id)}>
+                <button class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-error) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-error-bg,rgba(255,123,131,0.14))" onclick={() => handleDelete(highlight.id)}>
                   <Icon name="trash" size="sm" /> {t("home.highlightsDelete")}
                 </button>
               </div>

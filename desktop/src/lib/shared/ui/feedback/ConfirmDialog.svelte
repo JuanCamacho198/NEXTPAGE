@@ -59,15 +59,15 @@
   >
     <div
       bind:this={dialogContentEl}
-      class="w-full max-w-md rounded-lg bg-[var(--color-surface)] p-6 shadow-xl"
+      class="w-full max-w-md rounded-lg bg-(--color-surface) p-6 shadow-xl"
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
     >
-      <h3 id="confirm-dialog-title" class="mb-2 text-lg font-semibold text-[var(--color-primary)]">
+      <h3 id="confirm-dialog-title" class="mb-2 text-lg font-semibold text-(--color-primary)">
         {title}
       </h3>
-      <p class="mb-6 text-sm text-[var(--color-text-muted)]">{message}</p>
+      <p class="mb-6 text-sm text-(--color-text-muted)">{message}</p>
       <div class="flex justify-end gap-3">
         <Button variant="secondary" onclick={handleCancel}>
           {cancelText}

@@ -19,11 +19,11 @@
   });
 </script>
 
-<main class="flex h-screen overflow-hidden bg-[var(--color-background)] text-[var(--color-primary)]">
+<main class="flex h-screen overflow-hidden bg-(--color-background) text-(--color-primary)">
   <!-- Skip link: visible only on keyboard focus for keyboard/screen reader users -->
   <a
     href="#main-content"
-    class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-1/2 focus:-translate-x-1/2 focus:z-[100] focus:px-4 focus:py-2.5 focus:rounded-lg focus:bg-[var(--color-accent-blue)] focus:text-[var(--color-background)] focus:text-sm focus:font-semibold focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50"
+    class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-1/2 focus:-translate-x-1/2 focus:z-100 focus:px-4 focus:py-2.5 focus:rounded-lg focus:bg-(--color-accent-blue) focus:text-(--color-background) focus:text-sm focus:font-semibold focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50"
   >
     {appState.t("app.skipToContent")}
   </a>

@@ -1,21 +1,24 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import type { Book, Rendition } from "epubjs";
-  import ePub from "epubjs";
-  import type { MessageKey } from "$lib/i18n";
-  import { getFileBytes } from "$lib/api/tauriClient";
-  import type { ReaderSettings, ReaderThemeMode } from "$lib/shared/types";
-  import { resolveReaderArrowIntent } from "$lib/features/reader/epub/keyboardNav";
+  import { onMount } from 'svelte';
+  import type { Book, Rendition } from 'epubjs';
+  import ePub from 'epubjs';
+  import type { MessageKey } from '$lib/i18n';
+  import { getFileBytes } from '$lib/api/tauriClient';
+  import type { ReaderSettings, ReaderThemeMode } from '$lib/shared/types';
+  import { resolveReaderArrowIntent } from '$lib/features/reader/epub/keyboardNav';
   import {
     getCachedEpub,
     setCachedEpub,
     getCachedEpubToc,
     setCachedEpubToc,
     clearEpubCache,
-  } from "$lib/features/reader/epub/epubCache";
+  } from '$lib/features/reader/epub/epubCache';
+  import { clamp, FONT_SIZE_MIN, FONT_SIZE_MAX, applyDisplaySettings } from '$lib/features/reader/epub/epubTheme';
+  import { scrollByVerticalStep } from '$lib/features/reader/epub/epubScroll';
+  import EpubControls from './epub/EpubControls.svelte';
 
-  import type { TocEntry } from "./ReaderTocPanel.svelte";
-  import { debugState } from "$lib/debug/debugState.svelte";
+  import type { TocEntry } from './ReaderTocPanel.svelte';
+  import { debugState } from '$lib/debug/debugState.svelte';
 
   type Props = {
     filePath: string;
@@ -38,19 +41,19 @@
   };
 
   const DEFAULT_READER_SETTINGS: ReaderSettings = {
-    themeMode: "paper",
+    themeMode: 'paper',
     brightness: 100,
     contrast: 100,
     epub: {
       fontSize: 100,
-      fontFamily: "serif",
+      fontFamily: 'serif',
     },
-    selectionColor: "#33bbff",
+    selectionColor: '#33bbff',
   };
 
   let {
     filePath,
-    initialLocation = "",
+    initialLocation = '',
     initialPercentage = 0,
     onLocationChange,
     searchTargetLocator = null,
@@ -63,43 +66,22 @@
     t,
   }: Props = $props();
 
-  // Emit TOC entries to parent when epub TOC is ready
-  $effect(() => {
-    if (toc.length > 0) {
-      onTocReady?.(
-        toc.map((item) => ({
-          id: item.id,
-          title: item.label,
-          depth: 0,
-        }))
-      );
-    }
-  });
-
-  // Navigate to a TOC entry triggered from an external panel
-  $effect(() => {
-    if (externalTocNavigate && externalTocNavigate.id) {
-      const chapter = toc.find((t) => t.id === externalTocNavigate.id);
-      if (chapter) {
-        goToChapter(chapter);
-      }
-    }
-  });
-
-  let viewerContainer: HTMLDivElement | undefined = $state();
+  // --- state ---
+  let epubContainer: HTMLDivElement | undefined = $state();
   let book: Book | null = $state(null);
   let rendition: Rendition | null = $state(null);
   let isLoading = $state(true);
   let error = $state<string | null>(null);
 
-  let currentLocation = $state("");
+  let currentLocation = $state('');
   let currentPercentage = $state(0);
-  let lastJumpTarget = "";
+  let lastJumpTarget = '';
+
   let displaySettings = $state({
     fontSize: 100,
-    fontFamily: "serif",
+    fontFamily: 'serif',
     margin: 20,
-    theme: "paper" as ReaderThemeMode,
+    theme: 'paper' as ReaderThemeMode,
   });
 
   let toc = $state<Array<{ id: string; label: string; href: string }>>([]);
@@ -107,35 +89,9 @@
   let isViewerFocused = $state(false);
   let tocDeferred = $state(false);
 
-  let epubContainer: HTMLDivElement | undefined = $state();
-
   const VERTICAL_SCROLL_STEP_PX = 120;
 
-  const clamp = (value: number, min: number, max: number) => {
-    return Math.min(max, Math.max(min, Math.round(value)));
-  };
-
-  const resolveThemeStyles = (themeMode: ReaderThemeMode) => {
-    if (themeMode === "sepia") {
-      return {
-        background: "#f1e7d4",
-        color: "#3a2f1d",
-      };
-    }
-
-    if (themeMode === "night") {
-      return {
-        background: "#10141f",
-        color: "#e7ebf1",
-      };
-    }
-
-    return {
-      background: "#faf6eb",
-      color: "#2b2116",
-    };
-  };
-
+  // --- lifecycle ---
   onMount(() => {
     return () => {
       clearEpubCache();
@@ -151,13 +107,34 @@
     }
   });
 
-  // Lazy TOC loading: load EPUB navigation only when the user opens the TOC panel
+  // --- TOC ---
   $effect(() => {
     if (!showToc || tocDeferred || !book) return;
-
     tocDeferred = true;
-
     loadEpubToc();
+  });
+
+  // Emit TOC entries to parent when ready
+  $effect(() => {
+    if (toc.length > 0) {
+      onTocReady?.(
+        toc.map((item) => ({
+          id: item.id,
+          title: item.label,
+          depth: 0,
+        })),
+      );
+    }
+  });
+
+  // Navigate to a TOC entry triggered from an external panel
+  $effect(() => {
+    if (externalTocNavigate && externalTocNavigate.id) {
+      const chapter = toc.find((t) => t.id === externalTocNavigate.id);
+      if (chapter) {
+        goToChapter(chapter);
+      }
+    }
   });
 
   async function loadEpubToc() {
@@ -173,20 +150,18 @@
       toc = tocItems;
       setCachedEpubToc(filePath, tocItems);
     } catch {
-      // TOC loading failed — keep current state
       tocDeferred = false;
     }
   }
 
-  // Selection listener: try to attach to the EPUB iframe once it's available
+  // --- selection ---
   $effect(() => {
     const container = epubContainer;
     if (!container) return;
 
     const tryAttachSelectionListener = () => {
-      const iframe = container.querySelector("iframe");
+      const iframe = container.querySelector('iframe');
       if (!iframe) {
-        // Iframe might not be ready yet, retry
         setTimeout(tryAttachSelectionListener, 500);
         return;
       }
@@ -198,7 +173,7 @@
           return;
         }
 
-        doc.addEventListener("mouseup", () => {
+        doc.addEventListener('mouseup', () => {
           const selection = doc.getSelection();
           if (!selection || selection.rangeCount === 0 || !selection.toString().trim()) return;
 
@@ -221,7 +196,7 @@
               width: containerRect.width,
               height: containerRect.height,
             },
-            placement: rect.top > 120 ? "above" : "below",
+            placement: rect.top > 120 ? 'above' : 'below',
           });
 
           if (debugState.enabled) {
@@ -230,7 +205,7 @@
               const r = range.getClientRects()[0];
               debugState.selection = {
                 text,
-                source: "epub",
+                source: 'epub',
                 rectCount,
                 firstRect: { top: r.top, left: r.left, width: r.width, height: r.height },
               };
@@ -240,22 +215,21 @@
           }
         });
 
-        // Clean up selection when user clicks outside the iframe
         const clearOutside = (e: MouseEvent) => {
           if (debugState.enabled && e.target !== iframe && !iframe.contains(e.target as Node)) {
             debugState.selection = null;
           }
         };
-        doc.addEventListener("mouseup", clearOutside);
+        doc.addEventListener('mouseup', clearOutside);
       } catch {
-        // Cross-origin iframe — selection unavailable
-        console.warn("Cannot access EPUB iframe selection (cross-origin or sandbox)");
+        console.warn('Cannot access EPUB iframe selection (cross-origin or sandbox)');
       }
     };
 
     tryAttachSelectionListener();
   });
 
+  // --- init ---
   async function initEpub() {
     if (!filePath) return;
 
@@ -270,31 +244,24 @@
         book = null;
       }
 
-      // Check cache first — avoids re-reading the file from disk
       const cached = getCachedEpub(filePath);
       let epubData: ArrayBuffer;
 
       if (cached) {
         epubData = cached.data;
       } else if (preloadedBytes && preloadedBytes.length > 0) {
-        // Use preloaded bytes from AppState (loaded during navigation transition)
         epubData = new Uint8Array(preloadedBytes).buffer;
         setCachedEpub(filePath, { data: epubData, toc: [], tocLoaded: false });
       } else {
         const bytes = await getFileBytes(filePath);
         epubData = new Uint8Array(bytes).buffer;
-        // Cache the blob for instant re-opening
         setCachedEpub(filePath, { data: epubData, toc: [], tocLoaded: false });
       }
 
       book = ePub(epubData) as unknown as Book;
-
-      // Check if metadata already cached
       const metadata = await (book as Book).loaded.metadata;
-      console.log("Loaded book:", metadata.title);
+      console.log('Loaded book:', metadata.title);
 
-      // TOC is loaded lazily — only when user opens the panel
-      // Check if we have cached TOC from a previous session
       const cachedToc = getCachedEpubToc(filePath);
       if (cachedToc) {
         toc = cachedToc;
@@ -303,7 +270,7 @@
 
       await renderBook();
     } catch (err) {
-      error = err instanceof Error ? err.message : t("epub.error");
+      error = err instanceof Error ? err.message : t('epub.error');
     } finally {
       isLoading = false;
     }
@@ -313,15 +280,15 @@
     if (!book || !epubContainer) return;
 
     rendition = book.renderTo(epubContainer, {
-      width: "100%",
-      height: "100%",
-      spread: "none",
-      flow: "paginated",
+      width: '100%',
+      height: '100%',
+      spread: 'none',
+      flow: 'paginated',
     });
 
     await rendition.display();
 
-    applyDisplaySettings();
+    applyDisplaySettings(rendition as any, displaySettings);
 
     if (initialLocation) {
       await (rendition as Rendition).display(initialLocation);
@@ -340,12 +307,12 @@
 
     rendition.themes.default({
       body: {
-        "font-size": `${displaySettings.fontSize}%`,
-        "font-family": displaySettings.fontFamily,
+        'font-size': `${displaySettings.fontSize}%`,
+        'font-family': displaySettings.fontFamily,
       },
     });
 
-    rendition.on("locationChanged", (loc: { start: { cfi: string; percentage: number } }) => {
+    rendition.on('locationChanged', (loc: { start: { cfi: string; percentage: number } }) => {
       currentLocation = loc.start.cfi;
       currentPercentage = loc.start.percentage * 100;
       onLocationChange?.(currentLocation, currentPercentage);
@@ -356,7 +323,7 @@
 
       if (debugState.enabled) {
         debugState.readerInfo = {
-          format: "epub",
+          format: 'epub',
           isTocOpen: showToc,
           isSearchOpen: false,
           isFullscreen: !!document.fullscreenElement,
@@ -366,65 +333,28 @@
       }
     });
 
-    rendition.on("relocated", (loc: { start: { cfi: string } }) => {
+    rendition.on('relocated', (loc: { start: { cfi: string } }) => {
       currentLocation = loc.start.cfi;
     });
   }
 
-  const applyDisplaySettings = () => {
-    if (!rendition) return;
-
-    (rendition as Rendition).themes.fontSize(`${displaySettings.fontSize}%`);
-    (rendition as Rendition).themes.font(displaySettings.fontFamily);
-
-    const themeStyles = resolveThemeStyles(displaySettings.theme as ReaderThemeMode);
-    rendition.themes.default({
-      body: {
-        "font-size": `${displaySettings.fontSize}%`,
-        "font-family": displaySettings.fontFamily,
-        "background-color": themeStyles.background,
-        color: themeStyles.color,
-      },
-      p: {
-        color: themeStyles.color,
-      },
-      h1: {
-        color: themeStyles.color,
-      },
-      h2: {
-        color: themeStyles.color,
-      },
-      h3: {
-        color: themeStyles.color,
-      },
-      h4: {
-        color: themeStyles.color,
-      },
-      h5: {
-        color: themeStyles.color,
-      },
-      h6: {
-        color: themeStyles.color,
-      },
-      a: {
-        color: themeStyles.color,
-      },
-    });
-  };
-
+  // --- settings sync ---
   $effect(() => {
     readerSettings;
-    displaySettings.fontSize = clamp(readerSettings.epub.fontSize, 80, 200);
+    displaySettings.fontSize = clamp(readerSettings.epub.fontSize, FONT_SIZE_MIN, FONT_SIZE_MAX);
     displaySettings.fontFamily =
-      readerSettings.epub.fontFamily?.trim().length > 0 ? readerSettings.epub.fontFamily : "serif";
+      readerSettings.epub.fontFamily?.trim().length > 0 ? readerSettings.epub.fontFamily : 'serif';
     displaySettings.theme = readerSettings.themeMode;
-    applyDisplaySettings();
+    if (rendition) {
+      applyDisplaySettings(rendition as any, displaySettings);
+    }
   });
 
   const visualFilterStyle = $derived(
     `brightness(${clamp(readerSettings.brightness, 50, 150)}%) contrast(${clamp(readerSettings.contrast, 50, 150)}%)`,
   );
 
+  // --- search jump ---
   $effect(() => {
     const target = searchTargetLocator?.trim();
     if (!target || !rendition || target === lastJumpTarget) {
@@ -435,6 +365,7 @@
     void rendition.display(target);
   });
 
+  // --- navigation ---
   const goToPrev = () => {
     if (!rendition) return;
     rendition.prev();
@@ -445,15 +376,33 @@
     rendition.next();
   };
 
-  const handleViewerKeydown = (event: KeyboardEvent) => {
+  const goToChapter = (chapter: { id: string; href: string }) => {
+    if (!rendition) return;
+    rendition.display(chapter.href);
+    showToc = false;
+  };
+
+  const handleFontSizeChange = (size: number) => {
+    displaySettings.fontSize = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, size));
+    if (rendition) {
+      applyDisplaySettings(rendition as any, displaySettings);
+    }
+  };
+
+  const toggleToc = () => {
+    showToc = !showToc;
+  };
+
+  // --- keyboard ---
+  function handleViewerKeydown(event: KeyboardEvent) {
     if (!isViewerFocused) {
       return;
     }
 
-    if ((event.ctrlKey || event.metaKey) && (event.key === "=" || event.key === "+" || event.key === "-")) {
+    if ((event.ctrlKey || event.metaKey) && (event.key === '=' || event.key === '+' || event.key === '-')) {
       event.preventDefault();
-      const step = event.key === "-" ? -10 : 10;
-      updateFontSize(displaySettings.fontSize + step);
+      const step = event.key === '-' ? -10 : 10;
+      handleFontSizeChange(displaySettings.fontSize + step);
       return;
     }
 
@@ -462,141 +411,59 @@
       return;
     }
 
-    if (intent === "prevPage") {
+    if (intent === 'prevPage') {
       event.preventDefault();
       goToPrev();
       return;
     }
 
-    if (intent === "nextPage") {
+    if (intent === 'nextPage') {
       event.preventDefault();
       goToNext();
       return;
     }
 
-    if (intent === "scrollUp") {
+    if (intent === 'scrollUp') {
       event.preventDefault();
-      scrollByVerticalStep(-VERTICAL_SCROLL_STEP_PX);
+      if (epubContainer) {
+        scrollByVerticalStep(epubContainer, -VERTICAL_SCROLL_STEP_PX);
+      }
       return;
     }
 
-    if (intent === "scrollDown") {
+    if (intent === 'scrollDown') {
       event.preventDefault();
-      scrollByVerticalStep(VERTICAL_SCROLL_STEP_PX);
+      if (epubContainer) {
+        scrollByVerticalStep(epubContainer, VERTICAL_SCROLL_STEP_PX);
+      }
       return;
     }
-  };
-
-  const canScrollElementInDirection = (element: HTMLElement, delta: number) => {
-    if (element.scrollHeight <= element.clientHeight + 1) {
-      return false;
-    }
-
-    if (delta < 0) {
-      return element.scrollTop > 0;
-    }
-
-    return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
-  };
-
-  const resolveEpubIframeScrollHost = () => {
-    const iframe = epubContainer?.querySelector("iframe");
-    if (!(iframe instanceof HTMLIFrameElement)) {
-      return null;
-    }
-
-    try {
-      const frameDocument = iframe.contentDocument;
-      if (!frameDocument) {
-        return null;
-      }
-
-      const scrollingElement = frameDocument.scrollingElement;
-      if (scrollingElement instanceof HTMLElement) {
-        return scrollingElement;
-      }
-
-      if (frameDocument.documentElement instanceof HTMLElement) {
-        return frameDocument.documentElement;
-      }
-
-      if (frameDocument.body instanceof HTMLElement) {
-        return frameDocument.body;
-      }
-    } catch {
-      return null;
-    }
-
-    return null;
-  };
-
-  const scrollByVerticalStep = (delta: number) => {
-    const iframeScrollHost = resolveEpubIframeScrollHost();
-    if (iframeScrollHost && canScrollElementInDirection(iframeScrollHost, delta)) {
-      iframeScrollHost.scrollBy({ top: delta, behavior: "auto" });
-      return;
-    }
-
-    const containerScrollHost = epubContainer;
-    if (containerScrollHost && canScrollElementInDirection(containerScrollHost, delta)) {
-      containerScrollHost.scrollBy({ top: delta, behavior: "auto" });
-      return;
-    }
-
-    if (typeof window !== "undefined") {
-      window.scrollBy({ top: delta, behavior: "auto" });
-    }
-  };
-
-  const goToChapter = (chapter: { id: string; href: string }) => {
-    if (!rendition) return;
-    rendition.display(chapter.href);
-    showToc = false;
-  };
-
-  const updateFontSize = (size: number) => {
-    displaySettings.fontSize = Math.max(50, Math.min(200, size));
-    applyDisplaySettings();
-  };
-
-  const updateMargin = (margin: number) => {
-    displaySettings.margin = Math.max(0, Math.min(50, margin));
-    applyDisplaySettings();
-  };
+  }
 </script>
 
 <svelte:window onkeydown={handleViewerKeydown} />
 
 <div class="epub-viewer" onfocusin={() => { isViewerFocused = true; }} onfocusout={() => { isViewerFocused = false; }}>
   {#if isLoading}
-    <div class="loading">{t("epub.loading")}</div>
+    <div class="loading">{t('epub.loading')}</div>
   {:else if error}
-    <div class="error">{t("epub.error")}: {error}</div>
+    <div class="error">{t('epub.error')}: {error}</div>
   {:else}
-    <div class="toolbar">
-      <button type="button" onclick={() => (showToc = !showToc)} class="toc-btn">
-        {showToc ? t("epub.hide") : t("epub.toc")}
-      </button>
-      <span class="progress">{Math.round(currentPercentage)}%</span>
-      <div class="nav-buttons">
-        <button type="button" onclick={goToPrev} class="nav-btn" aria-label={t("epub.previous")}><span aria-hidden="true">&#8592;</span> {t("epub.previous")}</button>
-        <button type="button" onclick={goToNext} class="nav-btn" aria-label={t("epub.next")}><span aria-hidden="true">&#8594;</span> {t("epub.next")}</button>
-      </div>
-      <div class="settings-controls">
-        <button type="button" onclick={() => updateFontSize(displaySettings.fontSize - 10)} class="size-btn">
-          A-
-        </button>
-        <span class="size-label">{displaySettings.fontSize}%</span>
-        <button type="button" onclick={() => updateFontSize(displaySettings.fontSize + 10)} class="size-btn">
-          A+
-        </button>
-      </div>
-    </div>
+    <EpubControls
+      {t}
+      currentPercentage={currentPercentage}
+      fontSize={displaySettings.fontSize}
+      {showToc}
+      onPrev={goToPrev}
+      onNext={goToNext}
+      onFontSizeChange={handleFontSizeChange}
+      onToggleToc={toggleToc}
+    />
 
     <div class="content-area">
       {#if showToc}
         <aside class="toc-sidebar">
-          <h3>{t("epub.tableOfContents")}</h3>
+          <h3>{t('epub.tableOfContents')}</h3>
           <ul class="toc-list">
             {#each toc as chapter}
               <li>
@@ -635,59 +502,6 @@
 
   .error {
     color: #dc2626;
-  }
-
-  .toolbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    flex-wrap: wrap;
-  }
-
-  .toc-btn,
-  .nav-btn,
-  .size-btn {
-    padding: 6px 12px;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    background: var(--color-surface);
-    color: var(--color-primary);
-    cursor: pointer;
-    font-size: 13px;
-  }
-
-  .toc-btn:hover,
-  .nav-btn:hover,
-  .size-btn:hover {
-    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
-  }
-
-  .nav-buttons {
-    display: flex;
-    gap: 8px;
-  }
-
-  .progress {
-    font-size: 13px;
-    color: var(--color-text-muted);
-    min-width: 40px;
-    text-align: center;
-  }
-
-  .settings-controls {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-left: auto;
-  }
-
-  .size-label {
-    font-size: 12px;
-    min-width: 40px;
-    text-align: center;
   }
 
   .content-area {

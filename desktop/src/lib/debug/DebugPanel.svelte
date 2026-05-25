@@ -10,6 +10,95 @@
   let diagnoseResult = $state<DiagnoseResult | null>(null);
   let diagnoseLoading = $state(false);
 
+  // ── IPC Performance auto-refresh ──
+  const CHART_W = 340;
+  let refreshTick = $state(0);
+
+  $effect(() => {
+    const interval = setInterval(() => {
+      refreshTick++;
+    }, 2000);
+    return () => clearInterval(interval);
+  });
+
+  const ipcCalls = $derived.by(() => {
+    refreshTick; // force re-evaluation every 2s
+    return metricsStore.getByName("ipc_call");
+  });
+
+  const ipcSummary = $derived.by(() => {
+    const totalCalls = ipcCalls.length;
+    const withDuration = ipcCalls.filter((c) => c.durationMs != null);
+    const successCount = ipcCalls.filter((c) => c.success).length;
+    const totalDuration = withDuration.reduce((sum, c) => sum + (c.durationMs ?? 0), 0);
+    const avgDuration = withDuration.length > 0 ? Math.round(totalDuration / withDuration.length) : 0;
+    const maxDuration = withDuration.length > 0 ? Math.round(Math.max(...withDuration.map((c) => c.durationMs ?? 0))) : 0;
+    const successRate = totalCalls > 0 ? Math.round((successCount / totalCalls) * 100) : 100;
+    return { totalCalls, avgDuration, maxDuration, successRate };
+  });
+
+  const recentCalls = $derived(ipcCalls.slice(-25).reverse());
+
+  const ipcCommands = $derived.by(() => {
+    type AccumEntry = {
+      feature: string;
+      count: number;
+      durations: number[];
+    };
+
+    const grouped = new Map<string, AccumEntry>();
+    for (const call of ipcCalls) {
+      const key = call.feature ?? "unknown";
+      let existing = grouped.get(key);
+      if (!existing) {
+        existing = { feature: key, count: 0, durations: [] };
+        grouped.set(key, existing);
+      }
+      existing.count++;
+      if (call.durationMs != null) {
+        existing.durations.push(call.durationMs);
+      }
+    }
+
+    type Row = {
+      feature: string;
+      count: number;
+      avgDuration: number;
+      minDuration: number;
+      p50Duration: number;
+      maxDuration: number;
+      successRate: number;
+    };
+
+    const result: Row[] = [];
+    for (const entry of grouped.values()) {
+      const sorted = [...entry.durations].sort((a, b) => a - b);
+      const minDuration = sorted.length > 0 ? Math.round(sorted[0]) : 0;
+      const maxDuration = sorted.length > 0 ? Math.round(sorted[sorted.length - 1]) : 0;
+      const avgDuration = sorted.length > 0 ? Math.round(sorted.reduce((a, b) => a + b, 0) / sorted.length) : 0;
+      const p50Index = Math.floor(sorted.length / 2);
+      const p50Duration = sorted.length > 0 ? Math.round(sorted[p50Index]) : 0;
+
+      const successCount = ipcCalls.filter((c) => c.feature === entry.feature && c.success).length;
+      const successRate = entry.count > 0 ? Math.round((successCount / entry.count) * 100) : 100;
+
+      result.push({
+        feature: entry.feature,
+        count: entry.count,
+        avgDuration,
+        minDuration,
+        p50Duration,
+        maxDuration,
+        successRate,
+      });
+    }
+
+    result.sort((a, b) => b.count - a.count);
+    return result;
+  });
+
+
+
   const handleExportLogs = async () => {
     logsLoading = true;
     try {
@@ -50,6 +139,106 @@
     <div class="border-b border-[var(--color-border)] p-3">
       <h4 class="mb-1 text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">Route</h4>
       <p class="text-sm">{debugState.currentRoute || "Unknown Route"}</p>
+    </div>
+
+    <!-- IPC Performance -->
+    <div class="border-b border-[var(--color-border)] p-3">
+      <div class="flex items-center justify-between">
+        <h4 class="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">IPC Performance</h4>
+        <span class="text-[9px] text-[var(--color-text-muted)]">refreshing…</span>
+      </div>
+
+      {#if ipcCalls.length === 0}
+        <p class="mt-1 text-[var(--color-text-muted)]">No IPC calls yet</p>
+      {:else}
+        <!-- Summary cards -->
+        <div class="mt-2 grid grid-cols-4 gap-1.5">
+          <div class="rounded bg-[rgba(255,255,255,0.04)] p-1.5 text-center">
+            <p class="text-[9px] text-[var(--color-text-muted)]">Calls</p>
+            <p class="text-sm font-bold">{ipcSummary.totalCalls}</p>
+          </div>
+          <div class="rounded bg-[rgba(255,255,255,0.04)] p-1.5 text-center">
+            <p class="text-[9px] text-[var(--color-text-muted)]">Avg</p>
+            <p class="text-sm font-bold">{ipcSummary.avgDuration}<span class="text-[9px] font-normal">ms</span></p>
+          </div>
+          <div class="rounded bg-[rgba(255,255,255,0.04)] p-1.5 text-center">
+            <p class="text-[9px] text-[var(--color-text-muted)]">Max</p>
+            <p class="text-sm font-bold">{ipcSummary.maxDuration}<span class="text-[9px] font-normal">ms</span></p>
+          </div>
+          <div class="rounded bg-[rgba(255,255,255,0.04)] p-1.5 text-center">
+            <p class="text-[9px] text-[var(--color-text-muted)]">Ok</p>
+            <p class="text-sm font-bold" class:status-okay={ipcSummary.successRate >= 95} class:status-warn={ipcSummary.successRate < 95}>
+              {ipcSummary.successRate}%
+            </p>
+          </div>
+        </div>
+
+        <!-- Recent calls bar chart -->
+        {#if recentCalls.length > 1}
+          <div class="mt-2">
+            <p class="mb-1 text-[9px] text-[var(--color-text-muted)]">Recent calls (last {recentCalls.length})</p>
+            <div class="rounded bg-[rgba(255,255,255,0.03)] p-2">
+              <svg viewBox={`0 0 ${CHART_W} 68`} class="h-[68px] w-full">
+                {#each recentCalls as call, i}
+                  {@const barW = (CHART_W - (recentCalls.length - 1) * 2) / recentCalls.length}
+                  {@const barH = call.durationMs != null ? Math.max(2, (call.durationMs / ipcSummary.maxDuration) * 56) : 2}
+                  {@const x = i * (barW + 2)}
+                  {@const y = 64 - barH}
+                  <rect
+                    {x} {y}
+                    width={Math.max(3, barW)}
+                    height={barH}
+                    rx="1.5"
+                    fill={call.success ? "#3388ff" : "#ef4444"}
+                    opacity={call.success ? 0.7 : 0.9}
+                  >
+                    <title>{call.feature}: {call.durationMs}ms {call.success ? "✓" : "✗"}</title>
+                  </rect>
+                {/each}
+              </svg>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Per-command breakdown -->
+        <div class="mt-2">
+          <p class="mb-1 text-[9px] text-[var(--color-text-muted)]">By command</p>
+          <div class="space-y-1">
+            {#each ipcCommands as cmd}
+              {@const maxCount = Math.max(...ipcCommands.map((c) => c.count), 1)}
+              <div class="rounded bg-[rgba(255,255,255,0.03)] p-1.5">
+                <div class="flex items-center justify-between gap-1">
+                  <span class="truncate text-[10px]" title={cmd.feature}>{cmd.feature}</span>
+                  <span class="shrink-0 text-[10px] font-semibold">{cmd.count}x</span>
+                </div>
+                <div class="mt-0.5 flex items-center gap-2">
+                  <!-- Mini bar -->
+                  <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
+                    <div
+                      class="h-full rounded-full"
+                      class:bg-[#22c55e]={cmd.successRate >= 95}
+                      class:bg-[#eab308]={cmd.successRate >= 80 && cmd.successRate < 95}
+                      class:bg-[#ef4444]={cmd.successRate < 80}
+                      style={`width: ${(cmd.count / Math.max(maxCount, 1)) * 100}%`}
+                    ></div>
+                  </div>
+                  <span class="shrink-0 text-[9px] text-[var(--color-text-muted)]">
+                    {cmd.avgDuration}ms
+                  </span>
+                </div>
+                <div class="mt-0.5 flex gap-2 text-[9px] text-[var(--color-text-muted)]">
+                  <span>min {cmd.minDuration}ms</span>
+                  <span>p50 {cmd.p50Duration}ms</span>
+                  <span>max {cmd.maxDuration}ms</span>
+                  <span class:status-okay={cmd.successRate >= 95} class:status-warn={cmd.successRate < 95}>
+                    {cmd.successRate}% ok
+                  </span>
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
     </div>
 
     <!-- Session Info -->

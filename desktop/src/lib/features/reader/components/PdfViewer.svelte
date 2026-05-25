@@ -2,7 +2,7 @@
   import * as pdfjsLib from "pdfjs-dist";
   import "pdfjs-dist/web/pdf_viewer.css";
   import { onMount } from "svelte";
-  import { createPdfDocument, getCachedDocument, loadPdfOutline, clearDocumentCache } from "$lib/features/reader/pdf/pdfStreaming";
+  import { createPdfDocument, loadPdfOutline, clearDocumentCache, removeCachedDocument } from "$lib/features/reader/pdf/pdfStreaming";
   import ErrorBoundary from "$lib/shared/ui/feedback/ErrorBoundary.svelte";
   import Icon from "$lib/components/ui/navigation/Icon.svelte";
   import type { MessageKey } from "$lib/i18n";
@@ -147,9 +147,9 @@
   let error = $state<string | null>(null);
   let navigationError = $state<string | null>(null);
   let showToc = $state(false);
-  let outline = $state<PdfOutlineItem[]>([]);
-  let tocLoading = $state(false);
+  let outline = $state<PdfOutlineItem[]>([]);    let tocLoading = $state(false);
   let tocError = $state<string | null>(null);
+  let outlineDeferred = $state(false);
   let fullscreenSupported = $state(true);
   let isViewerFocused = $state(false);
 
@@ -357,6 +357,9 @@
     pdfDoc = null;
     currentPageObj = null;
 
+    // Remove from cache before destroying to avoid returning a stale document
+    removeCachedDocument(filePath);
+
     try {
       await current.destroy();
     } catch {
@@ -407,6 +410,7 @@
       void cancelActiveRenderTask();
       void cancelActiveTextLayerTask();
       void destroyCurrentDocument();
+      clearDocumentCache();
       document.removeEventListener("fullscreenchange", syncFullscreenState);
       document.removeEventListener("fullscreenerror", handleFullscreenError);
       document.removeEventListener("selectionchange", handleSelectionChange);
@@ -534,34 +538,6 @@
 
   const flatOutline = $derived(flattenOutline(outline));
 
-  const loadOutline = async (doc: pdfjsLib.PDFDocumentProxy, requestId: number) => {
-    tocLoading = true;
-    tocError = null;
-    outline = [];
-    outlinePageCache.clear();
-
-    try {
-      const rawOutline = await doc.getOutline();
-      if (isStaleLoad(requestId)) {
-        return;
-      }
-
-      outline = Array.isArray(rawOutline) ? normalizeOutlineItems(rawOutline) : [];
-      tocError = null;
-    } catch {
-      if (isStaleLoad(requestId)) {
-        return;
-      }
-
-      outline = [];
-      tocError = t("pdf.tocLoadFailed");
-    } finally {
-      if (!isStaleLoad(requestId)) {
-        tocLoading = false;
-      }
-    }
-  };
-
   const resolveDestinationPage = async (dest: string | unknown[] | null): Promise<number | null> => {
     if (!pdfDoc || !dest || totalPages <= 0) {
       return null;
@@ -643,19 +619,12 @@
     outline = [];
     tocLoading = false;
     tocError = null;
+    outlineDeferred = false;
     outlinePageCache.clear();
 
     try {
-      const fileData = await getFileBytes(filePath);
-      if (isStaleLoad(loadRequestId)) {
-        return;
-      }
-
-      const loadingTask = pdfjsLib.getDocument({
-        data: new Uint8Array(fileData),
-      });
-      activeLoadingTask = loadingTask;
-      const loadedDoc = await loadingTask.promise;
+      // Use streaming via IPC range requests with cache fallback
+      const { document: loadedDoc } = await createPdfDocument(filePath);
 
       if (isStaleLoad(loadRequestId)) {
         await loadedDoc.destroy();
@@ -664,10 +633,9 @@
 
       pdfDoc = loadedDoc;
       totalPages = loadedDoc.numPages;
-      await loadOutline(loadedDoc, loadRequestId);
-      if (isStaleLoad(loadRequestId)) {
-        return;
-      }
+
+      // Outline is loaded lazily — deferred until user opens TOC panel
+
       const requestedPage = Math.max(1, initialPage || 1);
       const targetPage = Math.min(requestedPage, totalPages);
 
@@ -1170,6 +1138,40 @@
       fullscreenSupported = false;
     }
   }
+
+  // Lazy outline loading: load PDF outline only when the user opens the TOC panel
+  $effect(() => {
+    if (!showToc || !pdfDoc) return;
+
+    // If already loaded or currently loading, skip
+    if (outlineDeferred) {
+      if (outline.length > 0 || tocLoading) {
+        return;
+      }
+      // outlineDeferred is true but outline is empty and not loading
+      // → previous attempt failed, retry
+    }
+
+    outlineDeferred = true;
+    tocLoading = true;
+    tocError = null;
+
+    loadPdfOutline(pdfDoc, filePath)
+      .then((items) => {
+        outline = items;
+        tocError = null;
+        outlineDeferred = true; // keep flag so we don't reload
+      })
+      .catch(() => {
+        outline = [];
+        tocError = t("pdf.tocLoadFailed");
+        // Reset outlineDeferred so user can retry by toggling TOC
+        outlineDeferred = false;
+      })
+      .finally(() => {
+        tocLoading = false;
+      });
+  });
 
   $effect(() => {
     const targetPage = parseLocatorPage(searchTargetLocator);

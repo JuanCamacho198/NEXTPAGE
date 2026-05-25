@@ -336,6 +336,7 @@ export const messagesEs: Partial<Record<MessageKey, string>> = {
   "import.complete": "Importacion completa",
   "import.failed": "Fallo la importacion",
   "import.emptyPath": "Fallo el comando de importacion. La ruta seleccionada esta vacia.",
+  "errors.commandFailure": "Fallo desconocido del comando",
   "errors.settingsCommandFailed": "Fallo el comando de ajustes.",
   "errors.importCommandFailed": "Fallo el comando de importacion. Verifica la ruta y formato del archivo.",
   "library.searchPlaceholder": "Buscar por titulo o autor...",

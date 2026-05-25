@@ -305,16 +305,16 @@
 
     <!-- Tabs -->
     <div class="flex border-b border-[var(--color-border)] overflow-x-auto">
-      <button type="button" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs text-[var(--color-text-muted)] border-b-2 border-transparent whitespace-nowrap hover:text-[var(--color-primary)]" class:!text-[var(--color-primary)] class:!border-b-[var(--color-primary)]={activeTab === "general"} onclick={() => handleTabChange("general")}>
+      <button type="button" onclick={() => handleTabChange("general")} style="color: {activeTab === 'general' ? 'var(--color-primary)' : 'var(--color-text-muted)'}; border-bottom: {activeTab === 'general' ? '2px solid var(--color-primary)' : '2px solid transparent'};" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs whitespace-nowrap hover:text-[var(--color-primary)]">
         {t("settings.tab.general")}
       </button>
-      <button type="button" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs text-[var(--color-text-muted)] border-b-2 border-transparent whitespace-nowrap hover:text-[var(--color-primary)]" class:!text-[var(--color-primary)] class:!border-b-[var(--color-primary)]={activeTab === "appearance"} onclick={() => handleTabChange("appearance")}>
+      <button type="button" onclick={() => handleTabChange("appearance")} style="color: {activeTab === 'appearance' ? 'var(--color-primary)' : 'var(--color-text-muted)'}; border-bottom: {activeTab === 'appearance' ? '2px solid var(--color-primary)' : '2px solid transparent'};" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs whitespace-nowrap hover:text-[var(--color-primary)]">
         {t("settings.tab.appearance")}
       </button>
-      <button type="button" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs text-[var(--color-text-muted)] border-b-2 border-transparent whitespace-nowrap hover:text-[var(--color-primary)]" class:!text-[var(--color-primary)] class:!border-b-[var(--color-primary)]={activeTab === "data"} onclick={() => handleTabChange("data")}>
+      <button type="button" onclick={() => handleTabChange("data")} style="color: {activeTab === 'data' ? 'var(--color-primary)' : 'var(--color-text-muted)'}; border-bottom: {activeTab === 'data' ? '2px solid var(--color-primary)' : '2px solid transparent'};" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs whitespace-nowrap hover:text-[var(--color-primary)]">
         {t("settings.tab.data")}
       </button>
-      <button type="button" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs text-[var(--color-text-muted)] border-b-2 border-transparent whitespace-nowrap hover:text-[var(--color-primary)]" class:!text-[var(--color-primary)] class:!border-b-[var(--color-primary)]={activeTab === "about"} onclick={() => handleTabChange("about")}>
+      <button type="button" onclick={() => handleTabChange("about")} style="color: {activeTab === 'about' ? 'var(--color-primary)' : 'var(--color-text-muted)'}; border-bottom: {activeTab === 'about' ? '2px solid var(--color-primary)' : '2px solid transparent'};" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs whitespace-nowrap hover:text-[var(--color-primary)]">
         {t("settings.tab.about")}
       </button>
     </div>
@@ -327,11 +327,11 @@
           {settingsError} {settingsUnavailable} {isSavingSettings}
           {isProfileLoading} {profileError} {profileAvatarBroken} {profile}
           keyboardShortcuts={keyboardShortcuts}
-          onLocaleChange={(v) => void handleLocaleSelect(v)}
+          onLocaleChange={(v: string) => void handleLocaleSelect(v)}
           onSaveSettings={() => void saveAppSettings()}
           onOpenResetModal={openResetModal}
-          onPreferredThemeChange={(v) => preferredTheme = v}
-          onPreferredFontScaleChange={(v) => preferredFontScale = v}
+          onPreferredThemeChange={(v: string) => preferredTheme = v}
+          onPreferredFontScaleChange={(v: number) => preferredFontScale = v}
         />
       {:else if activeTab === "appearance"}
         <SettingsAppearanceTab
@@ -340,13 +340,13 @@
           {readerEpubFontSize} {readerEpubFontFamily} {isSavingSettings}
           onSaveSettings={() => void saveAppSettings()}
           onOpenResetModal={openResetModal}
-          onPreferredThemeChange={(v) => preferredTheme = v}
-          onPreferredFontScaleChange={(v) => preferredFontScale = v}
-          onReaderThemeModeChange={(v) => readerThemeMode = v}
-          onReaderBrightnessChange={(v) => readerBrightness = v}
-          onReaderContrastChange={(v) => readerContrast = v}
-          onReaderEpubFontSizeChange={(v) => readerEpubFontSize = v}
-          onReaderEpubFontFamilyChange={(v) => readerEpubFontFamily = v}
+          onPreferredThemeChange={(v: string) => preferredTheme = v}
+          onPreferredFontScaleChange={(v: number) => preferredFontScale = v}
+          onReaderThemeModeChange={(v: string) => readerThemeMode = v}
+          onReaderBrightnessChange={(v: number) => readerBrightness = v}
+          onReaderContrastChange={(v: number) => readerContrast = v}
+          onReaderEpubFontSizeChange={(v: number) => readerEpubFontSize = v}
+          onReaderEpubFontFamilyChange={(v: string) => readerEpubFontFamily = v}
         />
       {:else if activeTab === "data"}
         <SettingsDataTab

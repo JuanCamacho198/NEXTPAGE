@@ -82,11 +82,8 @@
       <div class="flex gap-2">
         <button
           type="button"
-          class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer"
-          class:border-[var(--color-primary)]={locale === "es"}
-          class:border-[var(--color-border)]={locale !== "es"}
-          class:bg-[var(--color-primary)]/10={locale === "es"}
-          class:bg-[var(--color-background)]={locale !== "es"}
+          class={locale === "es" ? "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-primary)]" : "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-border)]"}
+          style={locale === "es" ? 'background: color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'background: var(--color-background)'}
           onclick={() => onLocaleChange("es")}
         >
           <span class="text-xl">🇪🇸</span>
@@ -94,11 +91,8 @@
         </button>
         <button
           type="button"
-          class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer"
-          class:border-[var(--color-primary)]={locale === "en"}
-          class:border-[var(--color-border)]={locale !== "en"}
-          class:bg-[var(--color-primary)]/10={locale === "en"}
-          class:bg-[var(--color-background)]={locale !== "en"}
+          class={locale === "en" ? "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-primary)]" : "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-border)]"}
+          style={locale === "en" ? 'background: color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'background: var(--color-background)'}
           onclick={() => onLocaleChange("en")}
         >
           <span class="text-xl">🇺🇸</span>
@@ -113,12 +107,8 @@
       <div class="flex gap-2">
         <button
           type="button"
-          class="flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer text-[var(--color-text-muted)]"
-          class:border-[var(--color-primary)]={preferredTheme === "light"}
-          class:border-[var(--color-border)]={preferredTheme !== "light"}
-          class:bg-[var(--color-primary)]/10={preferredTheme === "light"}
-          class:bg-[var(--color-background)]={preferredTheme !== "light"}
-          class:text-[var(--color-primary)]={preferredTheme === "light"}
+          class={preferredTheme === "light" ? "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-primary)] text-[var(--color-primary)]" : "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-border)] text-[var(--color-text-muted)]"}
+          style={preferredTheme === "light" ? 'background: color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'background: var(--color-background)'}
           onclick={() => onPreferredThemeChange("light")}
           title={t("settings.theme.light")}
         >
@@ -126,12 +116,8 @@
         </button>
         <button
           type="button"
-          class="flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer text-[var(--color-text-muted)]"
-          class:border-[var(--color-primary)]={preferredTheme === "dark"}
-          class:border-[var(--color-border)]={preferredTheme !== "dark"}
-          class:bg-[var(--color-primary)]/10={preferredTheme === "dark"}
-          class:bg-[var(--color-background)]={preferredTheme !== "dark"}
-          class:text-[var(--color-primary)]={preferredTheme === "dark"}
+          class={preferredTheme === "dark" ? "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-primary)] text-[var(--color-primary)]" : "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-border)] text-[var(--color-text-muted)]"}
+          style={preferredTheme === "dark" ? 'background: color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'background: var(--color-background)'}
           onclick={() => onPreferredThemeChange("dark")}
           title={t("settings.theme.dark")}
         >
@@ -139,12 +125,8 @@
         </button>
         <button
           type="button"
-          class="flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer text-[var(--color-text-muted)]"
-          class:border-[var(--color-primary)]={preferredTheme === "sepia"}
-          class:border-[var(--color-border)]={preferredTheme !== "sepia"}
-          class:bg-[var(--color-primary)]/10={preferredTheme === "sepia"}
-          class:bg-[var(--color-background)]={preferredTheme !== "sepia"}
-          class:text-[var(--color-primary)]={preferredTheme === "sepia"}
+          class={preferredTheme === "sepia" ? "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-primary)] text-[var(--color-primary)]" : "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-border)] text-[var(--color-text-muted)]"}
+          style={preferredTheme === "sepia" ? 'background: color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'background: var(--color-background)'}
           onclick={() => onPreferredThemeChange("sepia")}
           title={t("settings.theme.sepia")}
         >
@@ -152,12 +134,8 @@
         </button>
         <button
           type="button"
-          class="flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer text-[var(--color-text-muted)]"
-          class:border-[var(--color-primary)]={preferredTheme === "system"}
-          class:border-[var(--color-border)]={preferredTheme !== "system"}
-          class:bg-[var(--color-primary)]/10={preferredTheme === "system"}
-          class:bg-[var(--color-background)]={preferredTheme !== "system"}
-          class:text-[var(--color-primary)]={preferredTheme === "system"}
+          class={preferredTheme === "system" ? "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-primary)] text-[var(--color-primary)]" : "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-border)] text-[var(--color-text-muted)]"}
+          style={preferredTheme === "system" ? 'background: color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'background: var(--color-background)'}
           onclick={() => onPreferredThemeChange("system")}
           title={t("settings.theme.system")}
         >

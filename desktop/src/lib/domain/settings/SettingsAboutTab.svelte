@@ -8,8 +8,6 @@
   };
 
   let { t }: Props = $props();
-
-  declare const __APP_VERSION__: string | undefined;
 </script>
 
 <Panel title={t("settings.about")}>
@@ -18,7 +16,7 @@
       <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--color-primary)]"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       <div class="flex flex-col">
         <span class="text-lg font-semibold text-[var(--color-primary)]">NextPage</span>
-        <span class="text-xs text-[var(--color-text-muted)]">Version {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}</span>
+        <span class="text-xs text-[var(--color-text-muted)]">Version {'0.1.0'}</span>
       </div>
     </div>
     <p class="text-sm text-[var(--color-text-muted)] mt-3">

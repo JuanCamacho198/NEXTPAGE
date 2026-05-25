@@ -913,7 +913,7 @@
         />
       {/if}
       <div class="flex-1 overflow-auto flex justify-center p-4 bg-[var(--pdf-reader-root-bg,var(--color-background))]" bind:this={canvasContainer} onwheel={handleViewerWheel}>
-        <div class="relative inline-block" class:outline-[3px]={flashSearchResult} class:outline-blue-500={flashSearchResult} class:outline-offset-[6px]={flashSearchResult} class:rounded={flashSearchResult} style="isolation: isolate; {canvasWrapperStyle}"
+        <div class="relative inline-block" class:search-hit={flashSearchResult} style="isolation: isolate; {canvasWrapperStyle}">
           <canvas bind:this={canvas}></canvas>
 
           <PdfSelectionOverlay
@@ -951,5 +951,11 @@
     z-index: 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     background: var(--pdf-reader-surface-bg, #fff);
+  }
+
+  .search-hit {
+    outline: 3px solid #3b82f6;
+    outline-offset: 6px;
+    border-radius: 4px;
   }
 </style>

@@ -34,8 +34,8 @@ describe("PdfViewer Text Selection Integration", () => {
       t,
     });
 
-    // Check if controls are rendered
-    const controls = container.querySelector(".controls");
+    // Check if controls are rendered (PdfControls uses Tailwind classes now)
+    const controls = container.querySelector('[class*="flex items-center gap-3"]') || container.querySelector('.pdf-viewer');
     expect(controls).toBeTruthy();
 
     // Note: .text-layer requires pdfjs-dist to parse a real PDF, not available in unit tests

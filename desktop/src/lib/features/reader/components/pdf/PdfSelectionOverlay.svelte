@@ -60,16 +60,15 @@
     {#each hl.rects as rect, index (`${hl.id}-${index}`)}
       <div
         class="absolute rounded pointer-events-auto cursor-pointer"
-        class:z-[3]={activeHighlightId === hl.id}
+        class:z-3={activeHighlightId === hl.id}
         style="left: {rect.left * scale}px; top: {rect.top * scale}px; width: {rect.width * scale}px; height: {rect.height * scale}px; --highlight-color: {hl.color}; background: color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--highlight-color, #FACC15) 25%, transparent);"
-        class:hover:bg-[color-mix(in_srgb,var(--highlight-color,#FACC15)_60%,transparent)]
-        class:bg-[color-mix(in_srgb,var(--highlight-color,#FACC15)_72%,transparent)]={activeHighlightId === hl.id}
-        class:shadow-[0_0_0_2px_color-mix(in_srgb,var(--highlight-color,#FACC15)_50%,transparent),0_0_12px_color-mix(in_srgb,var(--highlight-color,#FACC15)_30%,transparent)]={activeHighlightId === hl.id}
-        onclick={(e) => onHighlightClick(hl, e)}
-        onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onHighlightClick(hl, e as unknown as MouseEvent); } }}
+        onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = `color-mix(in srgb, var(--highlight-color, #FACC15) 60%, transparent)`; }}
+        onmouseleave={(e) => { const isActive = activeHighlightId === hl.id; (e.currentTarget as HTMLElement).style.background = isActive ? `color-mix(in srgb, var(--highlight-color, #FACC15) 72%, transparent)` : `color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent)`; }}
         role="button"
         tabindex="0"
         aria-label="Highlight"
+        onclick={(e) => onHighlightClick(hl, e)}
+        onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onHighlightClick(hl, e as unknown as MouseEvent); } }}
       ></div>
     {/each}
   {/each}
@@ -88,10 +87,8 @@
     {#each HIGHLIGHT_COLORS as color}
       <button
         type="button"
-        class="w-[22px] h-[22px] border-2 border-white/60 rounded-full cursor-pointer p-0 transition-[transform,border-color] duration-150 hover:scale-115"
-        class:!border-white={activeHighlightColor === color.hex}
-        class:shadow-[0_0_0_2px_rgba(255,255,255,0.3)]={activeHighlightColor === color.hex}
-        style="background-color: {color.hex};"
+        class="w-[22px] h-[22px] border-2 border-white/60 rounded-full cursor-pointer p-0 transition-[transform,border-color] duration-150 hover:scale-110"
+        style="background-color: {color.hex}; {activeHighlightColor === color.hex ? 'border-color: white; box-shadow: 0 0 0 2px rgba(255,255,255,0.3);' : ''}"
         onclick={() => onHighlightColorPick(color.hex)}
         aria-label={color.label}
       ></button>

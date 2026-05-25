@@ -11,6 +11,8 @@
   import type { LibraryBookDto } from "$lib/shared/types/library";
   import { debugState } from "$lib/debug/debugState.svelte";
   import { saveHighlight, deleteHighlight } from "$lib/shared/api/tauriClient";
+  import DebugToggle from "$lib/debug/DebugToggle.svelte";
+  import DebugPanel from "$lib/debug/DebugPanel.svelte";
 
   type ActiveBook = LibraryBookDto & { filePath: string };
 
@@ -75,6 +77,16 @@
     rects: Array<{ left: number; top: number; width: number; height: number }>;
     pageNumber: number;
   } | null>(null);
+
+  // PDF page tracking for footer
+  let currentPdfPage = $state(0);
+  let totalPdfPages = $state(0);
+
+  function handlePdfPageChange(page: number, total: number) {
+    currentPdfPage = page;
+    totalPdfPages = total;
+    onPdfPageChange?.(page, total);
+  }
 
   // Search panel state
   let searchPanelOpen = $state(false);
@@ -351,7 +363,7 @@
           searchTargetLocator={searchTargetLocator}
           selectionColor={selectedColor}
           readerSettings={readerSettings}
-          onPageChange={onPdfPageChange}
+          onPageChange={handlePdfPageChange}
           onSessionProgress={onPdfSessionProgress}
           onselection={handlePdfSelection}
           onselectionclear={dismissToolbar}
@@ -404,16 +416,33 @@
     <span class="font-inter text-xs font-normal text-[#94A3B8]">
       {activeReadingBook?.title ?? ""}
     </span>
-    <div class="flex items-center gap-3">
-      <div class="h-2 w-[200px] rounded-full bg-[#1E293B]">
-        <div
-          class="h-full rounded-full bg-[#38BDF8] transition-all duration-300"
-          style="width: {bookProgress}%"
-        ></div>
+    {#if isPdf && totalPdfPages > 0}
+      <div class="flex items-center gap-3">
+        <span class="font-inter text-xs font-normal text-[#94A3B8]">{totalPdfPages - currentPdfPage} {t("pdf.pagesLeft")}</span>
+        <div class="h-2 w-[200px] rounded-full bg-[#1E293B]">
+          <div
+            class="h-full rounded-full bg-[#38BDF8] transition-all duration-300"
+            style="width: {Math.round((currentPdfPage / totalPdfPages) * 100)}%"
+          ></div>
+        </div>
+        <span class="font-inter text-xs font-normal text-[#94A3B8]">{Math.round((currentPdfPage / totalPdfPages) * 100)}%</span>
       </div>
-      <span class="font-inter text-xs font-normal text-[#94A3B8]">{bookProgress}%</span>
-    </div>
+    {:else}
+      <div class="flex items-center gap-3">
+        <div class="h-2 w-[200px] rounded-full bg-[#1E293B]">
+          <div
+            class="h-full rounded-full bg-[#38BDF8] transition-all duration-300"
+            style="width: {bookProgress}%"
+          ></div>
+        </div>
+        <span class="font-inter text-xs font-normal text-[#94A3B8]">{bookProgress}%</span>
+      </div>
+    {/if}
   </footer>
+
+  <!-- Debug tools (inside workspaceRoot so visible in fullscreen) -->
+  <DebugToggle />
+  <DebugPanel />
 </div>
 
 <!-- Search Panel overlay -->

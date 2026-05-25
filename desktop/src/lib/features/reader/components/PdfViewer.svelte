@@ -1423,10 +1423,24 @@
         {t("pdf.next")}
         <Icon name="arrow-right" size="sm" />
       </button>
+      <span class="page-info">
+        <input
+          type="number"
+          min="1"
+          max={totalPages}
+          value={currentPage}
+          onchange={goToPage}
+          class="page-input"
+        />
+        <span class="total-pages">/ {totalPages}</span>
+      </span>
       <button type="button" class="flex flex-col items-center gap-0.5" onclick={toggleFullscreen} disabled={!fullscreenSupported} title={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}>
         <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
         <span class="text-[10px] leading-tight">{isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}</span>
       </button>
+      {#if debugState.enabled}
+        <span class="debug-info">p{currentPage}/{totalPages} | {Math.round(scale * 100)}%</span>
+      {/if}
       <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select">
         {#each scaleOptions as option (option)}
           <option value={option}>{Math.round(option * 100)}%</option>
@@ -1546,35 +1560,7 @@
         </button>
       </div>
     {/if}
-    <div class="pdf-footer" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
-      <div class="footer-content">
-        {#if debugState.enabled}
-          <div id="debug-inline" class="text-[10px] font-mono text-[var(--color-text-muted)]">
-            PDF | p{currentPage}/{totalPages} | {Math.round(scale * 100)}%
-          </div>
-        {/if}
-        <div class="footer-left">
-          <span class="page-info">
-            <input
-              type="number"
-              min="1"
-              max={totalPages}
-              value={currentPage}
-              onchange={goToPage}
-              class="page-input"
-            />
-            <span class="total-pages">/ {totalPages}</span>
-          </span>
-        </div>
-        <div class="progress-details">
-          <span class="pages-left">{totalPages - currentPage} {t("pdf.pagesLeft")}</span>
-          <div class="progress-bar-container">
-            <div class="progress-bar-fill" style="width: {(currentPage / totalPages) * 100}%"></div>
-          </div>
-          <span class="percent-complete">{Math.round((currentPage / totalPages) * 100)}%</span>
-        </div>
-      </div>
-    </div>
+
   </div>
 </ErrorBoundary>
 
@@ -1775,73 +1761,16 @@
     }
   }
 
-  .pdf-footer {
-    padding: 8px 16px;
-    background: var(--pdf-reader-surface-bg, var(--color-surface));
-    border-top: 1px solid var(--color-border);
-    z-index: 20;
-    height: 48px;
-    display: flex;
+  .reader-nav-button {
+    display: inline-flex;
     align-items: center;
-  }
-
-  .footer-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    gap: 32px;
-  }
-
-  .footer-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .progress-details {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex: 1;
-    max-width: 800px;
-  }
-
-  .progress-bar-container {
-    flex: 1;
-    height: 6px;
-    background: rgba(148, 163, 184, 0.15);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-
-  .progress-bar-fill {
-    height: 100%;
-    background: var(--pdf-selection-color, #3b82f6);
-    border-radius: 3px;
-    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .pages-left, .percent-complete {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--pdf-reader-text, #64748b);
-    opacity: 0.8;
-    white-space: nowrap;
+    gap: 6px;
   }
 
   .total-pages {
     font-size: 13px;
     color: var(--pdf-reader-text, #64748b);
     opacity: 0.7;
-  }
-
-  .reader-nav-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
   }
 
   .controls button:hover:not(:disabled) {
@@ -1973,5 +1902,4 @@
     background: rgba(148, 163, 184, 0.15);
     color: #F8FAFC;
   }
-  /* Debug styling removed to maintain clean user interface */
 </style>

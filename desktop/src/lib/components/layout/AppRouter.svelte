@@ -25,7 +25,7 @@
   />
 {/if}
 
-<div class="flex-1 overflow-y-auto p-4 md:p-6 relative">
+<div class="flex-1 overflow-y-auto relative" class:p-4={appState.route !== "reader"} class:md:p-6={appState.route !== "reader"}>
   <div class="mx-auto max-w-7xl">
     {#if appState.importProgress}
       <p class="mb-3 text-sm text-[var(--color-secondary)]">{appState.importProgress.message}</p>

@@ -5,8 +5,6 @@
   import BulkImportModal from "$lib/components/library/BulkImportModal.svelte";
   import ErrorToast from "$lib/components/ui/feedback/ErrorToast.svelte";
   import ErrorFallback from "$lib/components/ui/feedback/ErrorFallback.svelte";
-  import DebugToggle from "$lib/debug/DebugToggle.svelte";
-  import DebugPanel from "$lib/debug/DebugPanel.svelte";
 </script>
 
 <EditMetadataModal
@@ -46,5 +44,3 @@
 
 <ErrorToast />
 <ErrorFallback />
-<DebugToggle />
-<DebugPanel />

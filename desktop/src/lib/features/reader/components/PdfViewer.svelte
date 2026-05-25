@@ -4,9 +4,8 @@
   import { onMount } from "svelte";
   import { createPdfDocument, loadPdfOutline, clearDocumentCache, removeCachedDocument, setCachedDocument } from "$lib/features/reader/pdf/pdfStreaming";
   import ErrorBoundary from "$lib/shared/ui/feedback/ErrorBoundary.svelte";
-  import Icon from "$lib/components/ui/navigation/Icon.svelte";
   import type { MessageKey } from "$lib/i18n";
-  import type { PdfOutlineItem, ReaderSettings, ReaderThemeMode } from "$lib/shared/types";
+  import type { PdfOutlineItem, ReaderSettings } from "$lib/shared/types";
   import {
     adjustPdfScaleForWheel,
     clampPdfScale,
@@ -20,17 +19,26 @@
     TOOLBAR_WIDTH_ESTIMATE,
     TOOLBAR_EDGE_PADDING,
     VERTICAL_SCROLL_STEP_PX,
-    ZOOM_COMMIT_DELAY_MS,
     ZOOM_EPSILON,
-    SELECTION_X_PADDING_PX,
-    SELECTION_Y_INSET_PX,
-    SELECTION_LINE_TOLERANCE_PX,
     resolveThemePalette,
     clamp,
     clampSelectionPoint,
-    scaleOptions,
     type SelectionOverlayRect,
   } from "$lib/features/reader/pdf/pdfState.svelte";
+  import {
+    buildSelectionOverlayRects,
+    readProgressPercent,
+    parseLocatorPage,
+    captureScrollAnchor,
+    restoreScrollAnchor,
+    canScrollElementInDirection,
+    isRefLike,
+    flattenOutline,
+    type ScrollAnchor,
+  } from "$lib/features/reader/pdf/pdfSelection";
+
+  import PdfControls from "./pdf/PdfControls.svelte";
+  import PdfSelectionOverlay from "./pdf/PdfSelectionOverlay.svelte";
 
   import type { TocEntry } from "./ReaderTocPanel.svelte";
   import { debugState } from "$lib/debug/debugState.svelte";
@@ -112,29 +120,7 @@
     t,
   }: Props = $props();
 
-  // Emit TOC entries to parent when outline data is ready
-  $effect(() => {
-    if (flatOutline.length > 0) {
-      onTocReady?.(
-        flatOutline.map((entry) => ({
-          id: entry.item.id,
-          title: entry.item.title,
-          depth: entry.depth,
-        }))
-      );
-    }
-  });
-
-  // Navigate to a TOC entry triggered from an external panel
-  $effect(() => {
-    if (externalTocNavigate && externalTocNavigate.id) {
-      const entry = flatOutline.find((e) => e.item.id === externalTocNavigate.id);
-      if (entry) {
-        navigateToOutlineItem(entry.item);
-      }
-    }
-  });
-
+  // ── Reactive State ──────────────────────────────────────
   let canvas: HTMLCanvasElement | undefined = $state();
   let textLayer: HTMLDivElement | undefined = $state();
   let viewerRoot: HTMLDivElement | undefined = $state();
@@ -151,7 +137,8 @@
   let error = $state<string | null>(null);
   let navigationError = $state<string | null>(null);
   let showToc = $state(false);
-  let outline = $state<PdfOutlineItem[]>([]);    let tocLoading = $state(false);
+  let outline = $state<PdfOutlineItem[]>([]);
+  let tocLoading = $state(false);
   let tocError = $state<string | null>(null);
   let outlineDeferred = $state(false);
   let fullscreenSupported = $state(true);
@@ -171,7 +158,7 @@
   let activeHighlightId = $state<string | null>(null);
   let activeHighlightColor = $state<string>("");
   let highlightToolbarPos = $state<{ x: number; y: number } | null>(null);
-  
+
   let viewportWidth = $state(0);
   let viewportHeight = $state(0);
 
@@ -195,7 +182,6 @@
   };
 
   const isStaleLoad = (requestId: number) => requestId !== activeLoadRequestId;
-
   const isStaleNavigation = (requestId: number) => requestId !== activeNavigationRequestId;
 
   const readerThemePalette = $derived(resolveThemePalette(readerSettings.themeMode));
@@ -206,22 +192,42 @@
     `filter: ${visualFilterStyle}; width: ${viewportWidth ? viewportWidth + 'px' : 'auto'}; height: ${viewportHeight ? viewportHeight + 'px' : 'auto'};`
   );
 
-  const canUseFullscreenApi = () => {
-    if (typeof document === "undefined") {
-      return false;
-    }
+  const flatOutline = $derived(flattenOutline(outline));
 
+  // ── Emit TOC entries ────────────────────────────────────
+  $effect(() => {
+    if (flatOutline.length > 0) {
+      onTocReady?.(
+        flatOutline.map((entry) => ({
+          id: entry.item.id,
+          title: entry.item.title,
+          depth: entry.depth,
+        }))
+      );
+    }
+  });
+
+  $effect(() => {
+    if (externalTocNavigate && externalTocNavigate.id) {
+      const entry = flatOutline.find((e) => e.item.id === externalTocNavigate.id);
+      if (entry) {
+        navigateToOutlineItem(entry.item);
+      }
+    }
+  });
+
+  // ── Fullscreen API check ────────────────────────────────
+  const canUseFullscreenApi = () => {
+    if (typeof document === "undefined") return false;
     return (
       typeof viewerRoot?.requestFullscreen === "function" &&
       typeof document.exitFullscreen === "function"
     );
   };
 
+  // ── Text layer listener management ──────────────────────
   const clearTextLayerListener = () => {
-    if (!textLayerMouseupTarget) {
-      return;
-    }
-
+    if (!textLayerMouseupTarget) return;
     textLayerMouseupTarget.removeEventListener("mouseup", handleTextSelection);
     textLayerMouseupTarget.removeEventListener("touchend", handleTextSelection);
     textLayerMouseupTarget.removeEventListener("pointerup", handleTextSelection);
@@ -238,168 +244,59 @@
     onselectionclear?.();
   };
 
-  const buildSelectionOverlayRects = (range: Range, containerRect: DOMRect) => {
-    const rawRects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
-    if (rawRects.length === 0) {
-      const fallbackRect = range.getBoundingClientRect();
-      if (fallbackRect.width <= 0 || fallbackRect.height <= 0) {
-        return [] as SelectionOverlayRect[];
-      }
-
-      rawRects.push(fallbackRect);
-    }
-
-    const scale = 1;
-    const unscaledWidth = containerRect.width;
-    const unscaledHeight = containerRect.height;
-
-    const normalizedRects = rawRects
-      .map((rect) => {
-        const left = clampSelectionPoint(rect.left - containerRect.left, 0, unscaledWidth);
-        const right = clampSelectionPoint(rect.right - containerRect.left, 0, unscaledWidth);
-        const top = clampSelectionPoint(rect.top - containerRect.top, 0, unscaledHeight);
-        const bottom = clampSelectionPoint(rect.bottom - containerRect.top, 0, unscaledHeight);
-        return { left, right, top, bottom };
-      })
-      .filter((rect) => rect.right - rect.left > 0 && rect.bottom - rect.top > 0)
-      .sort((left, right) => {
-        if (Math.abs(left.top - right.top) <= SELECTION_LINE_TOLERANCE_PX) {
-          return left.left - right.left;
-        }
-
-        return left.top - right.top;
-      });
-
-    const mergedLines: Array<{ left: number; right: number; top: number; bottom: number }> = [];
-
-    normalizedRects.forEach((rect) => {
-      const previous = mergedLines[mergedLines.length - 1];
-      if (!previous) {
-        mergedLines.push({ ...rect });
-        return;
-      }
-
-      const sameLine =
-        Math.abs(rect.top - previous.top) <= SELECTION_LINE_TOLERANCE_PX &&
-        Math.abs(rect.bottom - previous.bottom) <= Math.max(SELECTION_LINE_TOLERANCE_PX, rect.bottom - rect.top);
-
-      if (!sameLine) {
-        mergedLines.push({ ...rect });
-        return;
-      }
-
-      previous.left = Math.min(previous.left, rect.left);
-      previous.right = Math.max(previous.right, rect.right);
-      previous.top = Math.min(previous.top, rect.top);
-      previous.bottom = Math.max(previous.bottom, rect.bottom);
-    });
-
-    return mergedLines.map((rect) => {
-      const left = clampSelectionPoint(rect.left - SELECTION_X_PADDING_PX, 0, unscaledWidth);
-      const right = clampSelectionPoint(rect.right + SELECTION_X_PADDING_PX, 0, unscaledWidth);
-      const top = clampSelectionPoint(rect.top + SELECTION_Y_INSET_PX, 0, unscaledHeight);
-      const bottom = clampSelectionPoint(rect.bottom - SELECTION_Y_INSET_PX, top, unscaledHeight);
-
-      return {
-        left,
-        top,
-        width: Math.max(1, right - left),
-        height: Math.max(1, bottom - top),
-      };
-    });
-  };
-
-
-
+  // ── Render cancellation helpers ─────────────────────────
   const cancelActiveRenderTask = async () => {
-    if (!activeRenderTask) {
-      return;
-    }
-
+    if (!activeRenderTask) return;
     const task = activeRenderTask;
     activeRenderTask = null;
-
     task.cancel();
-    try {
-      await task.promise;
-    } catch {
-      // render cancellation is expected during document/page switches
-    }
+    try { await task.promise; } catch { /* expected */ }
   };
 
   const cancelActiveTextLayerTask = async () => {
-    if (!activeTextLayerTask) {
-      return;
-    }
-
+    if (!activeTextLayerTask) return;
     const task = activeTextLayerTask;
     activeTextLayerTask = null;
-
     try {
       task.cancel?.();
       await task.promise;
-    } catch {
-      // text-layer cancellation is expected during navigation/zoom
-    }
+    } catch { /* expected */ }
   };
 
   const destroyActiveLoadingTask = () => {
-    if (!activeLoadingTask) {
-      return;
-    }
-
+    if (!activeLoadingTask) return;
     activeLoadingTask.destroy();
     activeLoadingTask = null;
   };
 
   const destroyCurrentDocument = async () => {
-    if (!pdfDoc) {
-      return;
-    }
-
+    if (!pdfDoc) return;
     const current = pdfDoc;
     pdfDoc = null;
     currentPageObj = null;
-
-    // Remove from cache before destroying to avoid returning a stale document.
-    // Use lastLoadedFilePath (the file that was actually loaded) instead of the
-    // current reactive filePath (which may already point to a new book).
     const cachedPath = lastLoadedFilePath ?? filePath;
     removeCachedDocument(cachedPath);
-
-    try {
-      await current.destroy();
-    } catch {
-      // swallow teardown errors to keep viewer recovery path stable
-    }
+    try { await current.destroy(); } catch { /* swallow */ }
   };
 
+  // ── onMount ──────────────────────────────────────────────
   onMount(() => {
     pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
       "pdfjs-dist/build/pdf.worker.min.mjs",
       import.meta.url
     ).toString();
 
-    const syncFullscreenState = () => {
-      isFullscreen = document.fullscreenElement === viewerRoot;
-    };
-
     const handleFullscreenError = () => {
       navigationError = t("pdf.fullscreenUnsupported");
       fullscreenSupported = canUseFullscreenApi();
-      isFullscreen = document.fullscreenElement === viewerRoot;
     };
 
     const handleSelectionChange = () => {
       const selection = window.getSelection();
       const text = selection?.toString().trim();
-
-      if (!text) {
-        clearSelectionUi();
-      }
+      if (!text) clearSelectionUi();
     };
 
-    document.addEventListener("fullscreenchange", syncFullscreenState);
     document.addEventListener("fullscreenerror", handleFullscreenError);
     document.addEventListener("selectionchange", handleSelectionChange);
     fullscreenSupported = canUseFullscreenApi();
@@ -418,7 +315,6 @@
       void cancelActiveTextLayerTask();
       void destroyCurrentDocument();
       clearDocumentCache();
-      document.removeEventListener("fullscreenchange", syncFullscreenState);
       document.removeEventListener("fullscreenerror", handleFullscreenError);
       document.removeEventListener("selectionchange", handleSelectionChange);
     };
@@ -436,14 +332,7 @@
     }
   });
 
-  const readProgressPercent = (page: number, total: number) => {
-    if (total <= 0) {
-      return 0;
-    }
-
-    return Math.max(0, Math.min(100, (page / total) * 100));
-  };
-
+  // ── Session progress ────────────────────────────────────
   const emitSessionProgress = (nextPage: number, nextTotal: number) => {
     const now = new Date();
     const nextPercent = readProgressPercent(nextPage, nextTotal);
@@ -451,162 +340,49 @@
     const endedAt = now.toISOString();
     const started = new Date(startedAt);
     const durationSeconds = Math.max(0, Math.round((now.getTime() - started.getTime()) / 1000));
-
     onSessionProgress?.({
-      startedAt,
-      endedAt,
-      durationSeconds,
-      startPercentage: lastPercent,
-      endPercentage: nextPercent,
+      startedAt, endedAt, durationSeconds,
+      startPercentage: lastPercent, endPercentage: nextPercent,
     });
-
     sessionStartAt = endedAt;
     lastPercent = nextPercent;
   };
 
-  const parseLocatorPage = (locator: string | null | undefined): number | null => {
-    if (!locator) {
-      return null;
-    }
-
-    const match = locator.match(/(\d+)$/);
-    if (!match) {
-      return null;
-    }
-
-    const parsed = Number.parseInt(match[1], 10);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      return null;
-    }
-
-    return parsed;
-  };
-
-  const isRefLike = (value: unknown): value is RefLike => {
-    if (!value || typeof value !== "object") {
-      return false;
-    }
-
-    const candidate = value as { num?: unknown; gen?: unknown };
-    return typeof candidate.num === "number" && typeof candidate.gen === "number";
-  };
-
-  const toOutlineTitle = (title: unknown) => {
-    if (typeof title !== "string") {
-      return t("pdf.untitledSection");
-    }
-
-    const normalized = title.trim();
-    return normalized.length > 0 ? normalized : t("pdf.untitledSection");
-  };
-
-  const normalizeOutlineItems = (items: unknown[], parentId = "outline"): PdfOutlineItem[] => {
-    const normalized: PdfOutlineItem[] = [];
-
-    items.forEach((rawItem, index) => {
-      if (!rawItem || typeof rawItem !== "object") {
-        return;
-      }
-
-      const item = rawItem as {
-        title?: unknown;
-        dest?: unknown;
-        items?: unknown;
-      };
-      const children = Array.isArray(item.items)
-        ? normalizeOutlineItems(item.items, `${parentId}-${index}`)
-        : [];
-      const destination =
-        typeof item.dest === "string" || Array.isArray(item.dest) ? item.dest : null;
-
-      normalized.push({
-        id: `${parentId}-${index}`,
-        title: toOutlineTitle(item.title),
-        dest: destination,
-        items: children,
-      });
-    });
-
-    return normalized;
-  };
-
-  const flattenOutline = (items: PdfOutlineItem[], depth = 0): FlatOutlineItem[] => {
-    const flattened: FlatOutlineItem[] = [];
-
-    for (const item of items) {
-      flattened.push({ item, depth });
-      if (item.items.length > 0) {
-        flattened.push(...flattenOutline(item.items, depth + 1));
-      }
-    }
-
-    return flattened;
-  };
-
-  const flatOutline = $derived(flattenOutline(outline));
-
+  // ── Outline resolution ──────────────────────────────────
   const resolveDestinationPage = async (dest: string | unknown[] | null): Promise<number | null> => {
-    if (!pdfDoc || !dest || totalPages <= 0) {
-      return null;
-    }
-
+    if (!pdfDoc || !dest || totalPages <= 0) return null;
     try {
       const resolvedDest = typeof dest === "string" ? await pdfDoc.getDestination(dest) : dest;
-      if (!Array.isArray(resolvedDest) || resolvedDest.length === 0) {
-        return null;
-      }
-
+      if (!Array.isArray(resolvedDest) || resolvedDest.length === 0) return null;
       const target = resolvedDest[0];
       if (typeof target === "number" && Number.isFinite(target)) {
         return isPageWithinBounds(target + 1, totalPages) ? target + 1 : null;
       }
-
-      if (!isRefLike(target)) {
-        return null;
-      }
-
+      if (!isRefLike(target)) return null;
       const cacheKey = `${target.num}:${target.gen}`;
       const cachedPage = outlinePageCache.get(cacheKey);
-      if (cachedPage && isPageWithinBounds(cachedPage, totalPages)) {
-        return cachedPage;
-      }
-
+      if (cachedPage && isPageWithinBounds(cachedPage, totalPages)) return cachedPage;
       const pageIndex = await pdfDoc.getPageIndex(target as PdfRefProxy);
       const pageNumber = pageIndex + 1;
-      if (!isPageWithinBounds(pageNumber, totalPages)) {
-        return null;
-      }
-
+      if (!isPageWithinBounds(pageNumber, totalPages)) return null;
       outlinePageCache.set(cacheKey, pageNumber);
       return pageNumber;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   };
 
   async function navigateToOutlineItem(item: PdfOutlineItem) {
-    if (!item.dest) {
-      return;
-    }
-
+    if (!item.dest) return;
     navigationError = null;
     const page = await resolveDestinationPage(item.dest);
-    if (!page) {
-      navigationError = t("pdf.tocNavigationFailed");
-      return;
-    }
-
+    if (!page) { navigationError = t("pdf.tocNavigationFailed"); return; }
     const didNavigate = await navigateToPage(page);
-    if (!didNavigate) {
-      navigationError = t("pdf.tocNavigationFailed");
-      return;
-    }
-
+    if (!didNavigate) { navigationError = t("pdf.tocNavigationFailed"); return; }
     if (typeof window !== "undefined" && window.matchMedia("(max-width: 900px)").matches) {
       showToc = false;
     }
   }
 
+  // ── Load PDF ─────────────────────────────────────────────
   async function loadPdf() {
     if (!filePath) return;
 
@@ -634,8 +410,7 @@
     try {
       let loadedDoc: pdfjsLib.PDFDocumentProxy;
 
-      // Use preloaded bytes if available (avoids re-reading from disk for small files)
-      const USE_PRELOAD_THRESHOLD = 5 * 1024 * 1024; // 5MB — only use preload for small files
+      const USE_PRELOAD_THRESHOLD = 5 * 1024 * 1024;
       if (preloadedBytes && preloadedBytes.length > 0 && preloadedBytes.length <= USE_PRELOAD_THRESHOLD) {
         const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(preloadedBytes) });
         loadingTask.onProgress = (progress: { loaded: number; total: number }) => {
@@ -643,43 +418,24 @@
           loadProgressMax = progress.total;
         };
         loadedDoc = await loadingTask.promise;
-        // Cache the document for instant re-open
-        setCachedDocument(filePath, {
-          document: loadedDoc,
-          outline: [],
-          outlineLoaded: false,
-        });
+        setCachedDocument(filePath, { document: loadedDoc, outline: [], outlineLoaded: false });
       } else {
-        // Use streaming via IPC range requests with cache fallback
         const result = await createPdfDocument(filePath, {
-          onProgress: (loaded, total) => {
-            loadProgress = loaded;
-            loadProgressMax = total;
-          },
+          onProgress: (loaded, total) => { loadProgress = loaded; loadProgressMax = total; },
         });
         loadedDoc = result.document;
       }
 
-      if (isStaleLoad(loadRequestId)) {
-        await loadedDoc.destroy();
-        return;
-      }
+      if (isStaleLoad(loadRequestId)) { await loadedDoc.destroy(); return; }
 
       pdfDoc = loadedDoc;
       totalPages = loadedDoc.numPages;
 
-      // Outline is loaded lazily — deferred until user opens TOC panel
-
       const requestedPage = Math.max(1, initialPage || 1);
       const targetPage = Math.min(requestedPage, totalPages);
 
-      const rendered = await renderPage(targetPage, {
-        requestId: navRequestId,
-        renderScale: scale,
-      });
-      if (!rendered || isStaleLoad(loadRequestId) || isStaleNavigation(navRequestId)) {
-        return;
-      }
+      const rendered = await renderPage(targetPage, { requestId: navRequestId, renderScale: scale });
+      if (!rendered || isStaleLoad(loadRequestId) || isStaleNavigation(navRequestId)) return;
 
       currentPage = targetPage;
       onPageChange?.(targetPage, totalPages);
@@ -687,42 +443,31 @@
       sessionStartAt = new Date().toISOString();
       error = null;
     } catch (err) {
-      if (isStaleLoad(loadRequestId)) {
-        return;
-      }
-
+      if (isStaleLoad(loadRequestId)) return;
       error = err instanceof Error ? err.message : "Failed to load PDF";
     } finally {
-      // Always clear loading state when done
-      if (!isStaleLoad(loadRequestId)) {
-        isLoading = false;
-        activeLoadingTask = null;
-      }
+      if (!isStaleLoad(loadRequestId)) { isLoading = false; activeLoadingTask = null; }
     }
   }
 
+  // ── Render page ──────────────────────────────────────────
   async function renderPage(
     pageNum: number,
     options: { requestId?: number; renderScale?: number } = {},
   ) {
     if (!pdfDoc || !canvas || !textLayer) return;
 
-    if (typeof document !== "undefined") {
-      await document.fonts.ready;
-    }
+    if (typeof document !== "undefined") await document.fonts.ready;
 
     const requestId = options.requestId ?? activeNavigationRequestId;
     const renderScale = options.renderScale ?? scale;
 
     const page = await pdfDoc.getPage(pageNum);
-    if (isStaleNavigation(requestId)) {
-      return false;
-    }
+    if (isStaleNavigation(requestId)) return false;
 
     currentPageObj = page;
     const viewport = page.getViewport({ scale: renderScale });
 
-    // Implement HiDPI scaling for sharp rendering and perfect subpixel alignment
     const outputScale = window.devicePixelRatio || 1;
     canvas.width = Math.floor(viewport.width * outputScale);
     canvas.height = Math.floor(viewport.height * outputScale);
@@ -734,85 +479,54 @@
 
     if (debugState.enabled) {
       debugState.readerInfo = {
-        format: "pdf",
-        isTocOpen: showToc,
-        isSearchOpen: false,
-        isFullscreen,
-        pageInfo: `${currentPage} / ${totalPages}`,
-        scale,
+        format: "pdf", isTocOpen: showToc, isSearchOpen: false,
+        isFullscreen, pageInfo: `${currentPage} / ${totalPages}`, scale,
       };
     }
 
     const context = canvas.getContext("2d");
     if (!context) return;
 
-    // Reset transform to identity before applying new transform
     context.setTransform(1, 0, 0, 1, 0, 0);
-
     const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : undefined;
-    const renderContext = {
-      canvasContext: context,
-      viewport,
-      canvas,
-      transform,
-    };
+    const renderContext = { canvasContext: context, viewport, canvas, transform };
 
     await cancelActiveRenderTask();
     const renderTask = page.render(renderContext);
     activeRenderTask = renderTask;
 
-    try {
-      await renderTask.promise;
-    } catch (err) {
-      if (activeRenderTask === renderTask) {
-        activeRenderTask = null;
-      }
-
-      const isCancelled =
-        typeof err === "object" &&
-        err !== null &&
-        "name" in err &&
+    try { await renderTask.promise; } catch (err) {
+      if (activeRenderTask === renderTask) activeRenderTask = null;
+      const isCancelled = typeof err === "object" && err !== null && "name" in err &&
         String((err as { name?: string }).name) === "RenderingCancelledException";
-      if (isCancelled) {
-        return false;
-      }
-
+      if (isCancelled) return false;
       throw err;
     }
 
-    if (activeRenderTask === renderTask) {
-      activeRenderTask = null;
-    }
-
-    if (isStaleNavigation(requestId)) {
-      return false;
-    }
+    if (activeRenderTask === renderTask) activeRenderTask = null;
+    if (isStaleNavigation(requestId)) return false;
 
     textLayer.style.width = `${viewport.width}px`;
     textLayer.style.height = `${viewport.height}px`;
 
     const textContent = await page.getTextContent();
-    if (isStaleNavigation(requestId)) {
-      return false;
-    }
+    if (isStaleNavigation(requestId)) return false;
 
     await renderTextLayer(
       textContent as { items: Array<{ str: string; transform: number[]; width: number; height: number }> },
-      viewport,
-      requestId,
+      viewport, requestId,
     );
     return true;
   }
 
+  // ── Render text layer ────────────────────────────────────
   async function renderTextLayer(
     textContent: { items: Array<{ str: string; transform: number[]; width: number; height: number }> },
     viewport: pdfjsLib.PageViewport,
     requestId = activeNavigationRequestId,
   ) {
     if (!textLayer) return;
-    if (isStaleNavigation(requestId)) {
-      return;
-    }
+    if (isStaleNavigation(requestId)) return;
 
     await cancelActiveTextLayerTask();
     clearTextLayerListener();
@@ -828,49 +542,33 @@
       const pdfLibWithTextLayer = pdfjsLib as any;
       if (pdfjsLib.TextLayer) {
         const textLayerInstance = new (pdfjsLib as any).TextLayer({
-          container: textLayer,
-          viewport,
-          textContentSource: textContent as any,
+          container: textLayer, viewport, textContentSource: textContent as any,
         });
         await textLayerInstance.render();
       } else {
         const task = pdfLibWithTextLayer.renderTextLayer?.({
-          container: textLayer,
-          viewport,
-          textDivs: [],
-          enhanceTextSelection: true,
-          textContentSource: textContent as any,
+          container: textLayer, viewport, textDivs: [],
+          enhanceTextSelection: true, textContentSource: textContent as any,
         });
         if (task?.promise) await task.promise;
       }
-    } catch (err) {
-      console.error("Text layer render error:", err);
-    }
+    } catch (err) { console.error("Text layer render error:", err); }
 
-    // Events are now handled at the viewerRoot level for better reliability
     textLayerMouseupTarget = textLayer;
   }
 
+  // ── Selection handling ───────────────────────────────────
   function handleTextSelection() {
-    // Small delay to let the browser settle the selection
     window.setTimeout(updateSelectionState, 10);
   }
 
   function updateSelectionState() {
     const selection = window.getSelection();
     console.log("PDF Selection Update:", selection?.toString().trim());
-    
-    if (!selection || selection.rangeCount === 0) {
-      clearSelectionUi();
-      return;
-    }
 
+    if (!selection || selection.rangeCount === 0) { clearSelectionUi(); return; }
     const text = selection.toString().trim();
-    if (!text) {
-      // Don't clear immediately to allow clicking toolbar buttons
-      // clearSelectionUi();
-      return;
-    }
+    if (!text) return;
 
     selectedText = text;
     const containerRect = textLayer?.getBoundingClientRect();
@@ -878,49 +576,36 @@
     selectedCfi = null;
     let hasAnchor = false;
     let nextPosition: { x: number; y: number } | null = null;
-
-    // Store selection bounds for highlight persistence
     let selectionBounds = { left: 0, top: 0, right: 0, bottom: 0 };
     let overlayRects: SelectionOverlayRect[] = [];
-
     const unscaledWidth = containerRect ? containerRect.width : 0;
     const unscaledHeight = containerRect ? containerRect.height : 0;
 
     try {
       const range = selection.getRangeAt(0);
-      if (containerRect) {
-        overlayRects = buildSelectionOverlayRects(range, containerRect);
-      }
+      if (containerRect) overlayRects = buildSelectionOverlayRects(range, containerRect);
 
       if (overlayRects.length > 0 && containerRect) {
-        const left = Math.min(...overlayRects.map((rect) => rect.left));
-        const top = Math.min(...overlayRects.map((rect) => rect.top));
-        const right = Math.max(...overlayRects.map((rect) => rect.left + rect.width));
-        const bottom = Math.max(...overlayRects.map((rect) => rect.top + rect.height));
-        
+        const left = Math.min(...overlayRects.map((r) => r.left));
+        const top = Math.min(...overlayRects.map((r) => r.top));
+        const right = Math.max(...overlayRects.map((r) => r.left + r.width));
+        const bottom = Math.max(...overlayRects.map((r) => r.top + r.height));
+
         const selectionCenter = left + (right - left) / 2;
         const anchorX = clampSelectionPoint(
           selectionCenter,
           TOOLBAR_EDGE_PADDING + TOOLBAR_WIDTH_ESTIMATE / 2,
           unscaledWidth - TOOLBAR_EDGE_PADDING - TOOLBAR_WIDTH_ESTIMATE / 2,
         );
-        
-        const canPlaceAbove = top > 100; // Increased threshold for safety
+        const canPlaceAbove = top > 100;
 
         hasAnchor = true;
         selectionPlacement = canPlaceAbove ? "above" : "below";
         nextPosition = {
           x: anchorX,
-          y: canPlaceAbove
-            ? top - TOOLBAR_OFFSET
-            : bottom + TOOLBAR_OFFSET,
+          y: canPlaceAbove ? top - TOOLBAR_OFFSET : bottom + TOOLBAR_OFFSET,
         };
-        selectionBounds = {
-          left,
-          top,
-          right,
-          bottom,
-        };
+        selectionBounds = { left, top, right, bottom };
       }
     } catch (e) {
       console.error("Selection state update failed:", e);
@@ -928,27 +613,19 @@
       overlayRects = [];
     }
 
-    // Store selection bounds
     lastSelectionBounds = selectionBounds;
     selectionOverlayRects = overlayRects;
 
     if (!nextPosition && containerRect) {
       selectionPlacement = "below";
-      nextPosition = {
-        x: unscaledWidth / 2,
-        y: 20,
-      };
+      nextPosition = { x: unscaledWidth / 2, y: 20 };
     }
 
     if (nextPosition && containerRect) {
-      selectionPosition = {
-        x: nextPosition.x,
-        y: nextPosition.y,
-      };
+      selectionPosition = { x: nextPosition.x, y: nextPosition.y };
       selectionHasAnchor = hasAnchor;
       showToolbar = true;
 
-      // Extract raw screen/viewport coordinates from getClientRects for perfect placement of the floating SelectionToolbar
       let viewLeft = containerRect.left + selectionBounds.left * scale;
       let viewTop = containerRect.top + selectionBounds.top * scale;
       let viewRight = containerRect.left + selectionBounds.right * scale;
@@ -956,46 +633,31 @@
 
       try {
         const range = selection.getRangeAt(0);
-        const rawRects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
+        const rawRects = Array.from(range.getClientRects()).filter((r) => r.width > 0 && r.height > 0);
         if (rawRects.length === 0) {
           const fallbackRect = range.getBoundingClientRect();
-          if (fallbackRect.width > 0 && fallbackRect.height > 0) {
-            rawRects.push(fallbackRect);
-          }
+          if (fallbackRect.width > 0 && fallbackRect.height > 0) rawRects.push(fallbackRect);
         }
         if (rawRects.length > 0) {
-          viewLeft = Math.min(...rawRects.map((rect) => rect.left));
-          viewTop = Math.min(...rawRects.map((rect) => rect.top));
-          viewRight = Math.max(...rawRects.map((rect) => rect.right));
-          viewBottom = Math.max(...rawRects.map((rect) => rect.bottom));
+          viewLeft = Math.min(...rawRects.map((r) => r.left));
+          viewTop = Math.min(...rawRects.map((r) => r.top));
+          viewRight = Math.max(...rawRects.map((r) => r.right));
+          viewBottom = Math.max(...rawRects.map((r) => r.bottom));
         }
-      } catch (err) {
-        console.error("Failed to read raw client rects:", err);
-      }
+      } catch (err) { console.error("Failed to read raw client rects:", err); }
 
-      // Normalize rects to scale 1.0 so persisted highlights stay aligned after zoom
       const normalizedRects = overlayRects.map((r) => ({
-        left: r.left / scale,
-        top: r.top / scale,
-        width: r.width / scale,
-        height: r.height / scale,
+        left: r.left / scale, top: r.top / scale,
+        width: r.width / scale, height: r.height / scale,
       }));
 
-      // Notify parent (ReaderWorkspace) about the selection
       onselection?.({
         text,
         bounds: {
-          left: viewLeft - containerRect.left,
-          top: viewTop - containerRect.top,
-          right: viewRight - containerRect.left,
-          bottom: viewBottom - containerRect.top,
+          left: viewLeft - containerRect.left, top: viewTop - containerRect.top,
+          right: viewRight - containerRect.left, bottom: viewBottom - containerRect.top,
         },
-        container: {
-          left: containerRect.left,
-          top: containerRect.top,
-          width: containerRect.width,
-          height: containerRect.height,
-        },
+        container: { left: containerRect.left, top: containerRect.top, width: containerRect.width, height: containerRect.height },
         placement: selectionPlacement,
         rects: normalizedRects,
         pageNumber: currentPage,
@@ -1004,15 +666,8 @@
       if (debugState.enabled) {
         if (text && overlayRects.length > 0) {
           const r = overlayRects[0];
-          debugState.selection = {
-            text,
-            source: "pdf",
-            rectCount: overlayRects.length,
-            firstRect: { top: r.top, left: r.left, width: r.width, height: r.height },
-          };
-        } else {
-          debugState.selection = null;
-        }
+          debugState.selection = { text, source: "pdf", rectCount: overlayRects.length, firstRect: { top: r.top, left: r.left, width: r.width, height: r.height } };
+        } else { debugState.selection = null; }
       }
     } else {
       if (debugState.enabled) debugState.selection = null;
@@ -1033,10 +688,7 @@
 
   function handleHighlightClick(hl: PersistedHighlight, event: MouseEvent) {
     event.stopPropagation();
-    if (activeHighlightId === hl.id) {
-      dismissHighlightManager();
-      return;
-    }
+    if (activeHighlightId === hl.id) { dismissHighlightManager(); return; }
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     activeHighlightId = hl.id;
     activeHighlightColor = hl.color;
@@ -1045,29 +697,15 @@
     const offset = 12;
     let x = rect.left + rect.width / 2 - toolbarWidth / 2;
     let y = rect.top - toolbarHeight - offset;
-    if (y < 8) {
-      y = rect.bottom + offset;
-    }
+    if (y < 8) y = rect.bottom + offset;
     x = Math.max(8, Math.min(x, window.innerWidth - toolbarWidth - 8));
     highlightToolbarPos = { x, y };
   }
 
-  const HIGHLIGHT_COLORS = [
-    { hex: "#FACC15", label: "yellow" },
-    { hex: "#4ADE80", label: "green" },
-    { hex: "#60A5FA", label: "blue" },
-    { hex: "#C084FC", label: "purple" },
-    { hex: "#FB923C", label: "orange" },
-  ];
-
   function handleHighlightColorPick(hex: string) {
     if (!activeHighlightId) return;
     activeHighlightColor = hex;
-    onHighlightAction?.({
-      highlightId: activeHighlightId,
-      action: "updateColor",
-      color: hex,
-    });
+    onHighlightAction?.({ highlightId: activeHighlightId, action: "updateColor", color: hex });
     dismissHighlightManager();
   }
 
@@ -1075,270 +713,101 @@
     if (!activeHighlightId) return;
     const id = activeHighlightId;
     dismissHighlightManager();
-    onHighlightAction?.({
-      highlightId: id,
-      action: "delete",
-    });
+    onHighlightAction?.({ highlightId: id, action: "delete" });
   }
 
+  // ── Navigation ───────────────────────────────────────────
   const navigateToPage = async (targetPage: number, options?: { flash?: boolean }) => {
-    if (!pdfDoc || !isPageWithinBounds(targetPage, totalPages)) {
-      return false;
-    }
-
+    if (!pdfDoc || !isPageWithinBounds(targetPage, totalPages)) return false;
     hideToolbar();
     navigationError = null;
-
     const navRequestId = ++activeNavigationRequestId;
-
-    // Immediately clear the stale text layer content to prevent selection mismatches
-    if (textLayer) {
-      textLayer.innerHTML = "";
-    }
-
+    if (textLayer) textLayer.innerHTML = "";
     try {
-      const rendered = await renderPage(targetPage, {
-        requestId: navRequestId,
-        renderScale: scale,
-      });
-      if (!rendered || isStaleNavigation(navRequestId)) {
-        navigationError = t("pdf.navigationFailed");
-        return false;
-      }
-
+      const rendered = await renderPage(targetPage, { requestId: navRequestId, renderScale: scale });
+      if (!rendered || isStaleNavigation(navRequestId)) { navigationError = t("pdf.navigationFailed"); return false; }
       currentPage = targetPage;
       onPageChange?.(currentPage, totalPages);
       emitSessionProgress(currentPage, totalPages);
-
-      if (options?.flash) {
-        flashSearchResult = true;
-        window.setTimeout(() => {
-          flashSearchResult = false;
-        }, 900);
-      }
-
+      if (options?.flash) { flashSearchResult = true; window.setTimeout(() => { flashSearchResult = false; }, 900); }
       return true;
-    } catch {
-      navigationError = t("pdf.navigationFailed");
-      return false;
-    }
+    } catch { navigationError = t("pdf.navigationFailed"); return false; }
   };
 
-  function goToPrevPage() {
-    if (currentPage <= 1 || !pdfDoc) return;
-    navigateToPage(currentPage - 1);
-  }
+  function goToPrevPage() { if (currentPage <= 1 || !pdfDoc) return; navigateToPage(currentPage - 1); }
+  function goToNextPage() { if (currentPage >= totalPages || !pdfDoc) return; navigateToPage(currentPage + 1); }
 
-  function goToNextPage() {
-    if (currentPage >= totalPages || !pdfDoc) return;
-    navigateToPage(currentPage + 1);
-  }
 
-  async function goToPage(event: Event) {
-    const target = event.target as HTMLInputElement;
-    const page = Number.parseInt(target.value, 10);
-    if (!isPageWithinBounds(page, totalPages)) {
-      target.value = String(currentPage);
-      return;
-    }
-
-    const didCommit = await navigateToPage(page);
-    if (!didCommit) {
-      target.value = String(currentPage);
-    }
-  }
 
   async function toggleFullscreen() {
-    if (onToggleFullscreen) {
-      onToggleFullscreen();
-      return;
-    }
-
-    if (!canUseFullscreenApi()) {
-      fullscreenSupported = false;
-      navigationError = t("pdf.fullscreenUnsupported");
-      return;
-    }
-
+    if (onToggleFullscreen) { onToggleFullscreen(); return; }
+    if (!canUseFullscreenApi()) { fullscreenSupported = false; navigationError = t("pdf.fullscreenUnsupported"); return; }
     try {
       navigationError = null;
-      if (document.fullscreenElement === viewerRoot) {
-        await document.exitFullscreen();
-      } else {
-        await viewerRoot?.requestFullscreen();
-      }
-    } catch {
-      navigationError = t("pdf.fullscreenUnsupported");
-      fullscreenSupported = false;
-    }
+      if (document.fullscreenElement === viewerRoot) { await document.exitFullscreen(); }
+      else { await viewerRoot?.requestFullscreen(); }
+    } catch { navigationError = t("pdf.fullscreenUnsupported"); fullscreenSupported = false; }
   }
 
-  // Lazy outline loading: load PDF outline only when the user opens the TOC panel
+  // ── Lazy outline loading ─────────────────────────────────
   $effect(() => {
     if (!showToc || !pdfDoc) return;
-
-    // If already loaded or currently loading, skip
-    if (outlineDeferred) {
-      if (outline.length > 0 || tocLoading) {
-        return;
-      }
-      // outlineDeferred is true but outline is empty and not loading
-      // → previous attempt failed, retry
-    }
-
+    if (outlineDeferred) { if (outline.length > 0 || tocLoading) return; }
     outlineDeferred = true;
     tocLoading = true;
     tocError = null;
-
     loadPdfOutline(pdfDoc, filePath)
       .then((items) => {
         outline = items;
         tocError = null;
-        outlineDeferred = true; // keep flag so we don't reload
+        outlineDeferred = true;
       })
       .catch(() => {
         outline = [];
         tocError = t("pdf.tocLoadFailed");
-        // Reset outlineDeferred so user can retry by toggling TOC
         outlineDeferred = false;
       })
-      .finally(() => {
-        tocLoading = false;
-      });
+      .finally(() => { tocLoading = false; });
   });
 
+  // ── Search locator navigation ────────────────────────────
   $effect(() => {
     const targetPage = parseLocatorPage(searchTargetLocator);
-    if (!targetPage || !pdfDoc || totalPages <= 0 || targetPage > totalPages || targetPage === currentPage) {
-      return;
-    }
-
+    if (!targetPage || !pdfDoc || totalPages <= 0 || targetPage > totalPages || targetPage === currentPage) return;
     void navigateToPage(targetPage, { flash: true });
   });
 
+  // ── Wheel zoom ───────────────────────────────────────────
   function handleViewerWheel(event: WheelEvent) {
-    if (!pdfDoc) {
-      return;
-    }
-
-    if (!event.ctrlKey && !event.metaKey) {
-      return;
-    }
-
-    if (event.deltaY === 0) {
-      return;
-    }
-
+    if (!pdfDoc) return;
+    if (!event.ctrlKey && !event.metaKey) return;
+    if (event.deltaY === 0) return;
     event.preventDefault();
     pendingWheelDelta += event.deltaY;
-
-    if (pendingWheelFrame !== null) {
-      return;
-    }
-
+    if (pendingWheelFrame !== null) return;
     pendingWheelFrame = window.requestAnimationFrame(() => {
       pendingWheelFrame = null;
       const nextScale = adjustPdfScaleForWheel(scale, pendingWheelDelta);
       pendingWheelDelta = 0;
-
-      if (nextScale !== scale) {
-        setScale(nextScale);
-      }
+      if (nextScale !== scale) setScale(nextScale);
     });
   }
 
-  function captureScrollAnchor() {
-    const host = canvasContainer;
-    if (!host) {
-      return null;
-    }
-
-    return {
-      host,
-      previousScrollTop: host.scrollTop,
-      previousHeight: host.scrollHeight,
-      viewportHeight: host.clientHeight,
-    };
-  }
-
-  function restoreScrollAnchor(
-    anchor: {
-      host: HTMLDivElement;
-      previousScrollTop: number;
-      previousHeight: number;
-      viewportHeight: number;
-    } | null,
-  ) {
-    if (!anchor) {
-      return;
-    }
-
-    const { host, previousScrollTop, previousHeight, viewportHeight } = anchor;
-    const previousCenter = previousScrollTop + viewportHeight / 2;
-    const nextHeight = host.scrollHeight;
-    if (previousHeight <= 0 || nextHeight <= 0) {
-      return;
-    }
-
-    const centerRatio = previousCenter / previousHeight;
-    const nextCenter = centerRatio * nextHeight;
-    const nextScrollTop = Math.max(0, nextCenter - host.clientHeight / 2);
-    host.scrollTop = nextScrollTop;
-  }
-
-
-
+  // ── Keyboard navigation ──────────────────────────────────
   function handleViewerKeydown(event: KeyboardEvent) {
-    if (!isViewerFocused) {
-      return;
-    }
-
+    if (!isViewerFocused) return;
     if ((event.ctrlKey || event.metaKey) && (event.key === "=" || event.key === "+" || event.key === "-")) {
       event.preventDefault();
       const step = event.key === "-" ? -PDF_SCALE_STEP : PDF_SCALE_STEP;
       setScale(scale + step);
       return;
     }
-
     const intent = resolveReaderArrowIntent(event);
-    if (!intent) {
-      return;
-    }
-
-    if (intent === "prevPage") {
-      event.preventDefault();
-      goToPrevPage();
-      return;
-    }
-
-    if (intent === "nextPage") {
-      event.preventDefault();
-      goToNextPage();
-      return;
-    }
-
-    if (intent === "scrollUp") {
-      event.preventDefault();
-      scrollByVerticalStep(-VERTICAL_SCROLL_STEP_PX);
-      return;
-    }
-
-    if (intent === "scrollDown") {
-      event.preventDefault();
-      scrollByVerticalStep(VERTICAL_SCROLL_STEP_PX);
-    }
-  }
-
-  function canScrollElementInDirection(element: HTMLElement, delta: number) {
-    if (element.scrollHeight <= element.clientHeight + 1) {
-      return false;
-    }
-
-    if (delta < 0) {
-      return element.scrollTop > 0;
-    }
-
-    return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
+    if (!intent) return;
+    if (intent === "prevPage") { event.preventDefault(); goToPrevPage(); return; }
+    if (intent === "nextPage") { event.preventDefault(); goToNextPage(); return; }
+    if (intent === "scrollUp") { event.preventDefault(); scrollByVerticalStep(-VERTICAL_SCROLL_STEP_PX); return; }
+    if (intent === "scrollDown") { event.preventDefault(); scrollByVerticalStep(VERTICAL_SCROLL_STEP_PX); }
   }
 
   function scrollByVerticalStep(delta: number) {
@@ -1347,66 +816,38 @@
       primaryHost.scrollBy({ top: delta, behavior: "auto" });
       return;
     }
-
     const fallbackHost = viewerRoot;
     if (fallbackHost && canScrollElementInDirection(fallbackHost, delta)) {
       fallbackHost.scrollBy({ top: delta, behavior: "auto" });
       return;
     }
-
-    if (typeof window !== "undefined") {
-      window.scrollBy({ top: delta, behavior: "auto" });
-    }
+    if (typeof window !== "undefined") window.scrollBy({ top: delta, behavior: "auto" });
   }
 
+  // ── Scale ────────────────────────────────────────────────
   export async function setScale(newScale: number) {
     const nextScale = clampPdfScale(newScale);
-    if (Math.abs(nextScale - scale) <= ZOOM_EPSILON) {
-      return;
-    }
-
+    if (Math.abs(nextScale - scale) <= ZOOM_EPSILON) return;
     scale = nextScale;
     hideToolbar();
-
-    if (!pdfDoc) {
-      return;
-    }
-
-    const anchor = captureScrollAnchor();
+    if (!pdfDoc) return;
+    const anchor = captureScrollAnchor(canvasContainer ?? null);
     const navRequestId = ++activeNavigationRequestId;
-
-    if (textLayer) {
-      textLayer.innerHTML = "";
-    }
-
+    if (textLayer) textLayer.innerHTML = "";
     try {
-      const rendered = await renderPage(currentPage, {
-        requestId: navRequestId,
-        renderScale: nextScale,
-      });
+      const rendered = await renderPage(currentPage, { requestId: navRequestId, renderScale: nextScale });
       if (rendered && !isStaleNavigation(navRequestId)) {
-        restoreScrollAnchor(anchor);
+        restoreScrollAnchor(anchor, canvasContainer ?? null);
       }
-    } catch (err) {
-      console.error("Error setting scale:", err);
-      navigationError = t("pdf.navigationFailed");
-    }
+    } catch (err) { console.error("Error setting scale:", err); navigationError = t("pdf.navigationFailed"); }
   }
 
-  export function getCurrentPage() {
-    return currentPage;
-  }
-
-  export function getCurrentFilePath() {
-    return filePath;
-  }
+  export function getCurrentPage() { return currentPage; }
+  export function getCurrentFilePath() { return filePath; }
 
   const handleViewerKeydown_ = (event: KeyboardEvent) => {
-    if (event.key === "ArrowLeft") {
-      goToPrevPage();
-    } else if (event.key === "ArrowRight") {
-      goToNextPage();
-    }
+    if (event.key === "ArrowLeft") goToPrevPage();
+    else if (event.key === "ArrowRight") goToNextPage();
   };
 </script>
 
@@ -1420,25 +861,14 @@
     tabindex="0"
     role="region"
     aria-label="PDF Viewer"
-    onfocus={() => {
-      isViewerFocused = true;
-    }}
-    onblur={() => {
-      isViewerFocused = false;
-    }}
+    onfocus={() => { isViewerFocused = true; }}
+    onblur={() => { isViewerFocused = false; }}
     onkeydown={handleViewerKeydown_}
     onclick={(event) => {
-      // Dismiss highlight manager when clicking outside
       dismissHighlightManager();
-      // Don't steal focus from form elements (select, input, button)
       const target = event.target;
-      if (target instanceof HTMLSelectElement || target instanceof HTMLInputElement || target instanceof HTMLButtonElement || target instanceof HTMLTextAreaElement) {
-        return;
-      }
-      if (textLayer && target instanceof Node && textLayer.contains(target)) {
-        handleTextSelection();
-        return;
-      }
+      if (target instanceof HTMLSelectElement || target instanceof HTMLInputElement || target instanceof HTMLButtonElement || target instanceof HTMLTextAreaElement) return;
+      if (textLayer && target instanceof Node && textLayer.contains(target)) { handleTextSelection(); return; }
       viewerRoot?.focus();
     }}
     onmouseup={handleTextSelection}
@@ -1452,10 +882,7 @@
           <div class="loading-progress">
             <span class="loading-text">{t("pdf.loading")}</span>
             <div class="progress-bar-track">
-              <div
-                class="progress-bar-fill"
-                style="width: {Math.round((loadProgress / loadProgressMax) * 100)}%"
-              ></div>
+              <div class="progress-bar-fill" style="width: {Math.round((loadProgress / loadProgressMax) * 100)}%"></div>
             </div>
             <span class="loading-percent">{Math.round((loadProgress / loadProgressMax) * 100)}%</span>
           </div>
@@ -1467,42 +894,29 @@
     {#if error}
       <div class="error-overlay">{t("pdf.error")}: {error}</div>
     {/if}
-    <div class="controls" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
-      <button type="button" onclick={() => (showToc = !showToc)} title={t("pdf.contents")}>
-        <Icon name="menu" size="sm" />
-      </button>
-      <button type="button" onclick={goToPrevPage} disabled={currentPage <= 1} title={t("pdf.previous")}>
-        <Icon name="chevron-left" size="sm" />
-      </button>
-      <button type="button" onclick={goToNextPage} disabled={currentPage >= totalPages} title={t("pdf.next")}>
-        <Icon name="arrow-right" size="sm" />
-      </button>
-      <span class="page-info">
-        <input
-          type="number"
-          min="1"
-          max={totalPages}
-          value={currentPage}
-          onchange={goToPage}
-          class="page-input"
-        />
-        <span class="total-pages">/ {totalPages}</span>
-      </span>
-      <button type="button" onclick={toggleFullscreen} disabled={!fullscreenSupported} title={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}>
-        <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
-      </button>
-      {#if debugState.enabled}
-        <span class="debug-info">p{currentPage}/{totalPages} | {Math.round(scale * 100)}%</span>
-      {/if}
-      <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select" title={t("pdf.zoomLevel", { level: String(Math.round(scale * 100)) })}>
-        {#each scaleOptions as option (option)}
-          <option value={option}>{Math.round(option * 100)}%</option>
-        {/each}
-      </select>
-    </div>
+
+    <PdfControls
+      {currentPage}
+      {totalPages}
+      {scale}
+      {isFullscreen}
+      {fullscreenSupported}
+      {showToc}
+      {isLoading}
+      {error}
+      {t}
+      onPrevPage={goToPrevPage}
+      onNextPage={goToNextPage}
+      onGoToPage={navigateToPage}
+      onSetScale={(s) => setScale(s)}
+      onToggleFullscreen={toggleFullscreen}
+      onToggleToc={() => { showToc = !showToc; }}
+    />
+
     {#if navigationError}
       <p class="navigation-error" role="status" aria-live="polite">{navigationError}</p>
     {/if}
+
     <div class="content-area" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
       {#if showToc}
         <aside class="toc-sidebar scrollbar-thumb-[#475569] scrollbar-track-transparent">
@@ -1535,30 +949,21 @@
       <div class="canvas-container scrollbar-thumb-[#475569] scrollbar-track-transparent" bind:this={canvasContainer} onwheel={handleViewerWheel}>
         <div class="canvas-wrapper" class:search-hit={flashSearchResult} style={canvasWrapperStyle}>
           <canvas bind:this={canvas}></canvas>
-          <div class="selection-overlay" aria-hidden="true">
-            {#each selectionOverlayRects as rect, index (`${rect.left}-${rect.top}-${index}`)}
-              <div
-                class="selection-rect"
-                style={`left: ${rect.left}px; top: ${rect.top}px; width: ${rect.width}px; height: ${rect.height}px;`}
-              ></div>
-            {/each}
-          </div>
-          <!-- Persisted highlights overlay -->
-          <div class="highlights-overlay" role="presentation">
-            {#each persistedHighlights.filter(h => h.pageNumber === currentPage) as hl (hl.id)}
-              {#each hl.rects as rect, index (`${hl.id}-${index}`)}
-                <div
-                  class="highlight-rect"
-                  class:active={activeHighlightId === hl.id}
-                  style={`left: ${rect.left * scale}px; top: ${rect.top * scale}px; width: ${rect.width * scale}px; height: ${rect.height * scale}px; --highlight-color: ${hl.color};`}
-                  onclick={(e) => handleHighlightClick(hl, e)}
-                  role="button"
-                  tabindex="0"
-                  aria-label="Highlight"
-                ></div>
-              {/each}
-            {/each}
-          </div>
+
+          <PdfSelectionOverlay
+            selectionOverlayRects={selectionOverlayRects}
+            {persistedHighlights}
+            {currentPage}
+            {scale}
+            {activeHighlightId}
+            {activeHighlightColor}
+            {highlightToolbarPos}
+            onHighlightClick={handleHighlightClick}
+            onHighlightColorPick={handleHighlightColorPick}
+            onHighlightDelete={handleHighlightDelete}
+            onDismissHighlightManager={dismissHighlightManager}
+          />
+
           <div
             bind:this={textLayer}
             class="textLayer"
@@ -1570,51 +975,6 @@
         </div>
       </div>
     </div>
-    {#if highlightToolbarPos && activeHighlightId}
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <div
-        class="highlight-manager"
-        style="left: {highlightToolbarPos.x}px; top: {highlightToolbarPos.y}px;"
-        onclick={(e) => e.stopPropagation()}
-        role="toolbar"
-        tabindex="-1"
-        aria-label="Highlight options"
-      >
-        {#each HIGHLIGHT_COLORS as color}
-          <button
-            type="button"
-            class="hm-color-btn"
-            class:selected={activeHighlightColor === color.hex}
-            style="background-color: {color.hex};"
-            onclick={() => handleHighlightColorPick(color.hex)}
-            aria-label={color.label}
-          ></button>
-        {/each}
-        <span class="hm-separator"></span>
-        <button
-          type="button"
-          class="hm-delete-btn"
-          onclick={handleHighlightDelete}
-          aria-label="Delete highlight"
-          title="Delete highlight"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 6h18"></path>
-            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-          </svg>
-        </button>
-        <button
-          type="button"
-          class="hm-close-btn"
-          onclick={dismissHighlightManager}
-          aria-label="Close"
-        >
-          &times;
-        </button>
-      </div>
-    {/if}
-
   </div>
 </ErrorBoundary>
 
@@ -1643,9 +1003,7 @@
     background: var(--color-background);
   }
 
-  .error-overlay {
-    color: #dc2626;
-  }
+  .error-overlay { color: #dc2626; }
 
   .loading-progress {
     display: flex;
@@ -1655,55 +1013,28 @@
     min-width: 240px;
   }
 
-  .loading-text {
-    font-size: 14px;
-    color: var(--pdf-reader-text, #64748b);
-  }
+  .loading-text { font-size: 14px; color: var(--pdf-reader-text, #64748b); }
 
   .progress-bar-track {
-    width: 100%;
-    height: 6px;
+    width: 100%; height: 6px;
     background: var(--color-border, #1E293B);
-    border-radius: 3px;
-    overflow: hidden;
+    border-radius: 3px; overflow: hidden;
   }
 
   .progress-bar-fill {
-    height: 100%;
-    background: #38BDF8;
-    border-radius: 3px;
-    transition: width 0.15s ease;
+    height: 100%; background: #38BDF8;
+    border-radius: 3px; transition: width 0.15s ease;
   }
 
-  .loading-percent {
-    font-size: 12px;
-    color: var(--pdf-reader-text, #94A3B8);
-    opacity: 0.8;
+  .loading-percent { font-size: 12px; color: var(--pdf-reader-text, #94A3B8); opacity: 0.8; }
+
+  .navigation-error {
+    margin: 0; padding: 8px 12px 0;
+    color: #dc2626; font-size: 13px;
   }
 
-  .controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    background: var(--pdf-reader-surface-bg, var(--color-surface));
-    border-bottom: 1px solid var(--color-border);
-    flex-wrap: wrap;
-  }
-
-  .controls button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 10px;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    background: var(--pdf-reader-surface-bg, var(--color-surface));
-    color: var(--pdf-reader-text, var(--color-primary));
-    cursor: pointer;
-    font-size: 13px;
-    min-width: 32px;
-    min-height: 32px;
+  .content-area {
+    display: flex; flex: 1; overflow: hidden;
   }
 
   .toc-sidebar {
@@ -1715,30 +1046,19 @@
   }
 
   .toc-sidebar h3 {
-    margin: 0;
-    padding: 12px;
-    font-size: 14px;
-    font-weight: 600;
+    margin: 0; padding: 12px;
+    font-size: 14px; font-weight: 600;
     border-bottom: 1px solid var(--color-border);
     color: var(--pdf-reader-text, var(--color-primary));
   }
 
-  .toc-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
+  .toc-list { list-style: none; margin: 0; padding: 0; }
 
   .toc-item {
-    display: block;
-    width: 100%;
+    display: block; width: 100%;
     padding: 10px 12px 10px calc(12px + (var(--toc-depth, 0) * 16px));
-    border: none;
-    background: transparent;
-    text-align: left;
-    cursor: pointer;
-    font-size: 13px;
-    line-height: 1.4;
+    border: none; background: transparent; text-align: left;
+    cursor: pointer; font-size: 13px; line-height: 1.4;
     word-break: break-word;
     color: var(--pdf-reader-text, var(--color-primary));
   }
@@ -1747,21 +1067,10 @@
     background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
   }
 
-  .toc-item:disabled {
-    opacity: 0.55;
-    cursor: default;
-  }
+  .toc-item:disabled { opacity: 0.55; cursor: default; }
 
-  .toc-message {
-    margin: 0;
-    padding: 12px;
-    font-size: 13px;
-    color: var(--color-text-muted);
-  }
-
-  .toc-error {
-    color: #dc2626;
-  }
+  .toc-message { margin: 0; padding: 12px; font-size: 13px; color: var(--color-text-muted); }
+  .toc-error { color: #dc2626; }
 
   .canvas-container {
     flex: 1;
@@ -1770,13 +1079,6 @@
     justify-content: center;
     padding: 16px;
     background: var(--pdf-reader-root-bg, var(--color-background));
-  }
-
-  .navigation-error {
-    margin: 0;
-    padding: 8px 12px 0;
-    color: #dc2626;
-    font-size: 13px;
   }
 
   .canvas-wrapper {
@@ -1799,196 +1101,9 @@
     background: var(--pdf-reader-surface-bg, #fff);
   }
 
-  .selection-overlay,
-  .highlights-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-  }
-
-  .selection-rect {
-    position: absolute;
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--pdf-selection-color, #3388ff) 42%, transparent);
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--pdf-selection-color, #3388ff) 22%, transparent),
-      0 2px 4px rgba(0, 0, 0, 0.1);
-    z-index: 3;
-    pointer-events: none;
-  }
-
-  .highlight-rect {
-    position: absolute;
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent);
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--highlight-color, #FACC15) 25%, transparent);
-    z-index: 2;
-    pointer-events: auto;
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-  }
-
-  .highlight-rect:hover {
-    background: color-mix(in srgb, var(--highlight-color, #FACC15) 60%, transparent);
-  }
-
-  .highlight-rect.active {
-    background: color-mix(in srgb, var(--highlight-color, #FACC15) 72%, transparent);
-    box-shadow:
-      0 0 0 2px color-mix(in srgb, var(--highlight-color, #FACC15) 50%, transparent),
-      0 0 12px color-mix(in srgb, var(--highlight-color, #FACC15) 30%, transparent);
-  }
 
 
-
-
-@media (max-width: 900px) {
-    .toc-sidebar {
-      width: min(240px, 70vw);
-    }
-
-    .scale-select {
-      margin-left: 0;
-    }
-  }
-
-
-
-  .total-pages {
-    font-size: 13px;
-    color: var(--pdf-reader-text, #64748b);
-    opacity: 0.7;
-  }
-
-  .controls button:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
-  }
-
-  .controls button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .page-info {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 13px;
-    color: var(--pdf-reader-text, var(--color-primary));
-  }
-
-  .page-input {
-    width: 50px;
-    padding: 4px;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    text-align: center;
-    background: var(--pdf-reader-surface-bg, var(--color-surface));
-    color: var(--pdf-reader-text, var(--color-primary));
-  }
-
-  .scale-select {
-    padding: 4px 8px;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    margin-left: auto;
-    background: var(--pdf-reader-surface-bg, var(--color-surface));
-    color: var(--pdf-reader-text, var(--color-primary));
-  }
-
-  .content-area {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-  /* Highlight manager toolbar — floating fixed menu */
-  .highlight-manager {
-    position: fixed;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    border-radius: 28px;
-    background: #1E293B;
-    border: 1px solid #334155;
-    box-shadow:
-      0 8px 24px rgba(0, 0, 0, 0.35),
-      0 2px 8px rgba(0, 0, 0, 0.15);
-    pointer-events: auto;
-  }
-
-  .highlight-manager .hm-color-btn {
-    width: 22px;
-    height: 22px;
-    border: 2px solid rgba(255, 255, 255, 0.6);
-    border-radius: 50%;
-    cursor: pointer;
-    padding: 0;
-    transition:
-      transform 0.15s ease,
-      border-color 0.15s ease;
-  }
-
-  .highlight-manager .hm-color-btn:hover {
-    transform: scale(1.15);
-  }
-
-  .highlight-manager .hm-color-btn.selected {
-    border-color: white;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
-  }
-
-  .highlight-manager .hm-separator {
-    width: 1px;
-    height: 20px;
-    background: #334155;
-    margin: 0 4px;
-  }
-
-  .highlight-manager .hm-delete-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border: none;
-    border-radius: 50%;
-    background: transparent;
-    color: #EF4444;
-    cursor: pointer;
-    transition:
-      background-color 0.15s ease,
-      transform 0.15s ease;
-  }
-
-  .highlight-manager .hm-delete-btn:hover {
-    background: rgba(239, 68, 68, 0.15);
-    transform: scale(1.1);
-  }
-
-  .highlight-manager .hm-close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    border: none;
-    border-radius: 50%;
-    background: transparent;
-    color: #94A3B8;
-    cursor: pointer;
-    font-size: 14px;
-    line-height: 1;
-    transition:
-      background-color 0.15s ease,
-      color 0.15s ease;
-  }
-
-  .highlight-manager .hm-close-btn:hover {
-    background: rgba(148, 163, 184, 0.15);
-    color: #F8FAFC;
+  @media (max-width: 900px) {
+    .toc-sidebar { width: min(240px, 70vw); }
   }
 </style>

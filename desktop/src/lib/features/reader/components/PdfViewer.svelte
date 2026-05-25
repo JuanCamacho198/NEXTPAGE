@@ -68,6 +68,11 @@
       pageNumber: number;
     }) => void;
     onselectionclear?: () => void;
+    onHighlightAction?: (event: {
+      highlightId: string;
+      action: "updateColor" | "delete";
+      color?: string;
+    }) => void;
     onTocReady?: (entries: TocEntry[]) => void;
     externalTocNavigate?: TocEntry | null;
     persistedHighlights?: PersistedHighlight[];
@@ -98,6 +103,7 @@
     onToggleFullscreen,
     onselection,
     onselectionclear,
+    onHighlightAction,
     onTocReady,
     externalTocNavigate = null,
     persistedHighlights = [],
@@ -158,6 +164,9 @@
   let lastSelectionBounds = $state({ left: 0, top: 0, right: 0, bottom: 0 });
   let selectionOverlayRects = $state<Array<{ left: number; top: number; width: number; height: number }>>([]);
   let showToolbar = $state(false);
+  let activeHighlightId = $state<string | null>(null);
+  let activeHighlightColor = $state<string>("");
+  let highlightToolbarPos = $state<{ x: number; y: number } | null>(null);
   
   let viewportWidth = $state(0);
   let viewportHeight = $state(0);
@@ -872,7 +881,6 @@
     let selectionBounds = { left: 0, top: 0, right: 0, bottom: 0 };
     let overlayRects: SelectionOverlayRect[] = [];
 
-    const scale = 1;
     const unscaledWidth = containerRect ? containerRect.width : 0;
     const unscaledHeight = containerRect ? containerRect.height : 0;
 
@@ -1013,6 +1021,62 @@
   function hideToolbar() {
     clearSelectionUi();
     window.getSelection()?.removeAllRanges();
+  }
+
+  function dismissHighlightManager() {
+    activeHighlightId = null;
+    activeHighlightColor = "";
+    highlightToolbarPos = null;
+  }
+
+  function handleHighlightClick(hl: PersistedHighlight, event: MouseEvent) {
+    event.stopPropagation();
+    if (activeHighlightId === hl.id) {
+      dismissHighlightManager();
+      return;
+    }
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    activeHighlightId = hl.id;
+    activeHighlightColor = hl.color;
+    const toolbarWidth = 280;
+    const toolbarHeight = 56;
+    const offset = 12;
+    let x = rect.left + rect.width / 2 - toolbarWidth / 2;
+    let y = rect.top - toolbarHeight - offset;
+    if (y < 8) {
+      y = rect.bottom + offset;
+    }
+    x = Math.max(8, Math.min(x, window.innerWidth - toolbarWidth - 8));
+    highlightToolbarPos = { x, y };
+  }
+
+  const HIGHLIGHT_COLORS = [
+    { hex: "#FACC15", label: "yellow" },
+    { hex: "#4ADE80", label: "green" },
+    { hex: "#60A5FA", label: "blue" },
+    { hex: "#C084FC", label: "purple" },
+    { hex: "#FB923C", label: "orange" },
+  ];
+
+  function handleHighlightColorPick(hex: string) {
+    if (!activeHighlightId) return;
+    activeHighlightColor = hex;
+    onHighlightAction?.({
+      highlightId: activeHighlightId,
+      action: "updateColor",
+      color: hex,
+    });
+    dismissHighlightManager();
+  }
+
+  function handleHighlightDelete() {
+    if (!activeHighlightId) return;
+    const id = activeHighlightId;
+    dismissHighlightManager();
+    onHighlightAction?.({
+      highlightId: id,
+      action: "delete",
+    });
   }
 
   const navigateToPage = async (targetPage: number, options?: { flash?: boolean }) => {
@@ -1328,6 +1392,8 @@
     }}
     onkeydown={handleViewerKeydown_}
     onclick={(event) => {
+      // Dismiss highlight manager when clicking outside
+      dismissHighlightManager();
       if (textLayer && event.target instanceof Node && textLayer.contains(event.target)) {
         handleTextSelection();
         return;
@@ -1411,12 +1477,17 @@
             {/each}
           </div>
           <!-- Persisted highlights overlay -->
-          <div class="highlights-overlay" aria-hidden="true">
+          <div class="highlights-overlay" role="presentation">
             {#each persistedHighlights.filter(h => h.pageNumber === currentPage) as hl (hl.id)}
               {#each hl.rects as rect, index (`${hl.id}-${index}`)}
                 <div
                   class="highlight-rect"
+                  class:active={activeHighlightId === hl.id}
                   style={`left: ${rect.left * scale}px; top: ${rect.top * scale}px; width: ${rect.width * scale}px; height: ${rect.height * scale}px; --highlight-color: ${hl.color};`}
+                  onclick={(e) => handleHighlightClick(hl, e)}
+                  role="button"
+                  tabindex="0"
+                  aria-label="Highlight"
                 ></div>
               {/each}
             {/each}
@@ -1432,6 +1503,49 @@
         </div>
       </div>
     </div>
+    {#if highlightToolbarPos && activeHighlightId}
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <div
+        class="highlight-manager"
+        style="left: {highlightToolbarPos.x}px; top: {highlightToolbarPos.y}px;"
+        onclick={(e) => e.stopPropagation()}
+        role="toolbar"
+        aria-label="Highlight options"
+      >
+        {#each HIGHLIGHT_COLORS as color}
+          <button
+            type="button"
+            class="hm-color-btn"
+            class:selected={activeHighlightColor === color.hex}
+            style="background-color: {color.hex};"
+            onclick={() => handleHighlightColorPick(color.hex)}
+            aria-label={color.label}
+          ></button>
+        {/each}
+        <span class="hm-separator"></span>
+        <button
+          type="button"
+          class="hm-delete-btn"
+          onclick={handleHighlightDelete}
+          aria-label="Delete highlight"
+          title="Delete highlight"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"></path>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="hm-close-btn"
+          onclick={dismissHighlightManager}
+          aria-label="Close"
+        >
+          &times;
+        </button>
+      </div>
+    {/if}
     <div class="pdf-footer" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
       <div class="footer-content">
         {#if debugState.enabled}
@@ -1632,7 +1746,20 @@
     box-shadow:
       0 0 0 1px color-mix(in srgb, var(--highlight-color, #FACC15) 25%, transparent);
     z-index: 2;
-    pointer-events: none;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  .highlight-rect:hover {
+    background: color-mix(in srgb, var(--highlight-color, #FACC15) 60%, transparent);
+  }
+
+  .highlight-rect.active {
+    background: color-mix(in srgb, var(--highlight-color, #FACC15) 72%, transparent);
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--highlight-color, #FACC15) 50%, transparent),
+      0 0 12px color-mix(in srgb, var(--highlight-color, #FACC15) 30%, transparent);
   }
 
 
@@ -1757,6 +1884,94 @@
     display: flex;
     flex: 1;
     overflow: hidden;
+  }
+  /* Highlight manager toolbar — floating fixed menu */
+  .highlight-manager {
+    position: fixed;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 28px;
+    background: #1E293B;
+    border: 1px solid #334155;
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.35),
+      0 2px 8px rgba(0, 0, 0, 0.15);
+    pointer-events: auto;
+  }
+
+  .highlight-manager .hm-color-btn {
+    width: 22px;
+    height: 22px;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    transition:
+      transform 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .highlight-manager .hm-color-btn:hover {
+    transform: scale(1.15);
+  }
+
+  .highlight-manager .hm-color-btn.selected {
+    border-color: white;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+  }
+
+  .highlight-manager .hm-separator {
+    width: 1px;
+    height: 20px;
+    background: #334155;
+    margin: 0 4px;
+  }
+
+  .highlight-manager .hm-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #EF4444;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .highlight-manager .hm-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.15);
+    transform: scale(1.1);
+  }
+
+  .highlight-manager .hm-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #94A3B8;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .highlight-manager .hm-close-btn:hover {
+    background: rgba(148, 163, 184, 0.15);
+    color: #F8FAFC;
   }
   /* Debug styling removed to maintain clean user interface */
 </style>

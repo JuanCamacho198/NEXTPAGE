@@ -10,7 +10,7 @@
   import type { ReaderSettings } from "$lib/shared/types";
   import type { LibraryBookDto } from "$lib/shared/types/library";
   import { debugState } from "$lib/debug/debugState.svelte";
-  import { saveHighlight } from "$lib/shared/api/tauriClient";
+  import { saveHighlight, deleteHighlight } from "$lib/shared/api/tauriClient";
 
   type ActiveBook = LibraryBookDto & { filePath: string };
 
@@ -243,6 +243,40 @@
     }
   }
 
+  function handleHighlightAction(event: {
+    highlightId: string;
+    action: "updateColor" | "delete";
+    color?: string;
+  }) {
+    if (event.action === "updateColor" && event.color) {
+      persistedHighlights = persistedHighlights.map((h) =>
+        h.id === event.highlightId ? { ...h, color: event.color! } : h
+      );
+      if (activeReadingBook) {
+        const hl = persistedHighlights.find((h) => h.id === event.highlightId);
+        if (hl) {
+          saveHighlight({
+            id: hl.id,
+            bookId: activeReadingBook.id,
+            text: "",
+            color: event.color,
+            pageNumber: hl.pageNumber,
+            rectLeft: 0,
+            rectRight: 0,
+            rectTop: 0,
+            rectBottom: 0,
+            cfi: null,
+          }).catch((err) => console.error("Failed to update highlight color:", err));
+        }
+      }
+    } else if (event.action === "delete") {
+      persistedHighlights = persistedHighlights.filter((h) => h.id !== event.highlightId);
+      deleteHighlight(event.highlightId).catch((err) =>
+        console.error("Failed to delete highlight:", err)
+      );
+    }
+  }
+
   function dismissToolbar() {
     showToolbar = false;
     selectedText = "";
@@ -321,6 +355,7 @@
           onSessionProgress={onPdfSessionProgress}
           onselection={handlePdfSelection}
           onselectionclear={dismissToolbar}
+          onHighlightAction={handleHighlightAction}
           onTocReady={handleTocReady}
           externalTocNavigate={tocNavigate}
           {isFullscreen}

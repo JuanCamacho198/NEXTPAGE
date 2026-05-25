@@ -3,6 +3,7 @@
   import type { MessageKey } from "../../i18n";
   import type { HighlightDto, LibraryBookDto } from "$lib/types";
   import { listHighlights, deleteHighlight } from "$lib/api/tauriClient";
+  import SafeCover from "../library/SafeCover.svelte";
   import Pagination from "../ui/navigation/Pagination.svelte";
   import DropMenu from "../ui/navigation/DropMenu.svelte";
   import Icon from "../ui/navigation/Icon.svelte";
@@ -238,7 +239,7 @@
             <div class="flex flex-col items-center gap-1 flex-shrink-0 w-20 text-center">
               <div class="w-12 h-16 rounded-md overflow-hidden border border-[var(--color-border)] bg-[var(--color-background)] flex items-center justify-center">
                 {#if book.coverPath}
-                  <img src={book.coverPath} alt={book.title} class="w-full h-full object-cover" />
+                  <SafeCover path={book.coverPath} alt={book.title} className="w-full h-full object-cover" />
                 {:else}
                   <span class="text-[1.25rem] opacity-50"><Icon name="book" size="lg" /></span>
                 {/if}

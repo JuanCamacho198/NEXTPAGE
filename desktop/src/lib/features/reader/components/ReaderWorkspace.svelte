@@ -323,14 +323,14 @@
 
     <!-- Right: tools -->
     <div class="flex items-center gap-6 text-[#94A3B8]">
-      <button type="button" onclick={toggleTocPanel} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={t("reader.tabla_contenidos")}>
-        <Icon name="menu" size="sm" />
+      <button type="button" onclick={toggleTocPanel} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={showTocPanel ? t("settings.close") : t("reader.tabla_contenidos")}>
+        <Icon name={showTocPanel ? "close" : "menu"} size="sm" />
       </button>
-      <button type="button" onclick={toggleSearch} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={t("epub.search")}>
-        <Icon name="search" size="sm" />
+      <button type="button" onclick={toggleSearch} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={searchPanelOpen ? t("settings.close") : t("epub.search")}>
+        <Icon name={searchPanelOpen ? "close" : "search"} size="sm" />
       </button>
-      <button type="button" onclick={toggleTextSettings} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={t("reader.ajustes_texto")}>
-        <Icon name="settings" size="sm" />
+      <button type="button" onclick={toggleTextSettings} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={showTextSettings ? t("settings.close") : t("reader.ajustes_texto")}>
+        <Icon name={showTextSettings ? "close" : "settings"} size="sm" />
       </button>
       <button type="button" class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={t("reader.bookmark")}>
         <Icon name="bookmark" size="sm" />

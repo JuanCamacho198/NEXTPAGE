@@ -49,12 +49,11 @@ const { mockDestroy, mockGetOutline, mockPdfDocument, mockGetFileSize, mockReadF
 // MockTransport is defined inline — no TDZ risk.
 vi.mock("pdfjs-dist", () => {
   const MockTransport = vi.fn(function (
-    this: { addRangeListener: any; addProgressListener: any; onDataRange: any },
+    this: { addRangeListener: any; onDataRange: any },
     _size: number,
     _initialData: Uint8Array,
   ) {
     this.addRangeListener = vi.fn();
-    this.addProgressListener = vi.fn();
     this.onDataRange = null as any;
   });
 

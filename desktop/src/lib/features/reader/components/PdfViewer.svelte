@@ -1413,7 +1413,7 @@
 <svelte:window onkeydown={handleViewerKeydown} />
 
 <ErrorBoundary>
-  <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions, a11y_click_events_have_key_events -->
   <div
     class="pdf-viewer"
     bind:this={viewerRoot}
@@ -1577,6 +1577,7 @@
         style="left: {highlightToolbarPos.x}px; top: {highlightToolbarPos.y}px;"
         onclick={(e) => e.stopPropagation()}
         role="toolbar"
+        tabindex="-1"
         aria-label="Highlight options"
       >
         {#each HIGHLIGHT_COLORS as color}

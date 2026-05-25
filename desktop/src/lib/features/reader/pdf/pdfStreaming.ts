@@ -98,12 +98,6 @@ async function loadStreamingPdf(
     fetchRange();
   });
 
-  if (onProgress) {
-    transport.addProgressListener((loaded: number, total: number) => {
-      onProgress(loaded, total);
-    });
-  }
-
   const loadingTask = pdfjsLib.getDocument(transport);
 
   if (onProgress) {

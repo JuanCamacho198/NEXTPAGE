@@ -6,6 +6,13 @@
   import { getFileBytes } from "$lib/shared/api/tauriClient";
   import type { ReaderSettings, ReaderThemeMode } from "$lib/shared/types";
   import { resolveReaderArrowIntent } from "$lib/features/reader/epub/keyboardNav";
+  import {
+    getCachedEpub,
+    setCachedEpub,
+    getCachedEpubToc,
+    setCachedEpubToc,
+    clearEpubCache,
+  } from "$lib/features/reader/epub/epubCache";
 
   import type { TocEntry } from "./ReaderTocPanel.svelte";
   import { debugState } from "$lib/debug/debugState.svelte";
@@ -96,6 +103,7 @@
   let toc = $state<Array<{ id: string; label: string; href: string }>>([]);
   let showToc = $state(false);
   let isViewerFocused = $state(false);
+  let tocDeferred = $state(false);
 
   let epubContainer: HTMLDivElement | undefined = $state();
 
@@ -127,8 +135,8 @@
   };
 
   onMount(() => {
-    initEpub();
     return () => {
+      clearEpubCache();
       if (book) {
         book.destroy();
       }
@@ -140,6 +148,33 @@
       initEpub();
     }
   });
+
+  // Lazy TOC loading: load EPUB navigation only when the user opens the TOC panel
+  $effect(() => {
+    if (!showToc || tocDeferred || !book) return;
+
+    tocDeferred = true;
+
+    loadEpubToc();
+  });
+
+  async function loadEpubToc() {
+    if (!book || !filePath) return;
+
+    try {
+      const navigation = await (book as Book).loaded.navigation;
+      const tocItems = navigation.toc.map((item: { id: string; label: string; href: string }) => ({
+        id: item.id,
+        label: item.label,
+        href: item.href,
+      }));
+      toc = tocItems;
+      setCachedEpubToc(filePath, tocItems);
+    } catch {
+      // TOC loading failed — keep current state
+      tocDeferred = false;
+    }
+  }
 
   // Selection listener: try to attach to the EPUB iframe once it's available
   $effect(() => {
@@ -224,27 +259,43 @@
 
     isLoading = true;
     error = null;
+    toc = [];
+    tocDeferred = false;
 
     try {
       if (book) {
         book.destroy();
+        book = null;
       }
 
-      const bytes = await getFileBytes(filePath);
-      const epubData = new Uint8Array(bytes).buffer;
+      // Check cache first — avoids re-reading the file from disk
+      const cached = getCachedEpub(filePath);
+      let epubData: ArrayBuffer;
+
+      if (cached) {
+        epubData = cached.data;
+      } else {
+        const bytes = await getFileBytes(filePath);
+        epubData = new Uint8Array(bytes).buffer;
+        // Cache the blob for instant re-opening
+        setCachedEpub(filePath, { data: epubData, toc: [], tocLoaded: false });
+      }
+
       book = ePub(epubData) as unknown as Book;
 
+      // Check if metadata already cached
       const metadata = await (book as Book).loaded.metadata;
       console.log("Loaded book:", metadata.title);
 
-      const navigation = await (book as Book).loaded.navigation;
-      toc = navigation.toc.map((item: { id: string; label: string; href: string }) => ({
-        id: item.id,
-        label: item.label,
-        href: item.href,
-      }));
+      // TOC is loaded lazily — only when user opens the panel
+      // Check if we have cached TOC from a previous session
+      const cachedToc = getCachedEpubToc(filePath);
+      if (cachedToc) {
+        toc = cachedToc;
+        tocDeferred = true;
+      }
 
-      renderBook();
+      await renderBook();
     } catch (err) {
       error = err instanceof Error ? err.message : t("epub.error");
     } finally {

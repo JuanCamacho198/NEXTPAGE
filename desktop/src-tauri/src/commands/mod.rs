@@ -32,9 +32,11 @@ use std::path::PathBuf;
 
 use tauri::State;
 
+use serde::{Deserialize, Serialize};
+
 use crate::db::verify_queue_health;
 use crate::error::AppError;
-use crate::logger::{ErrorEventDto, LogEventDto, LogLevel, DEFAULT_MAX_LOG_LINES, SETTING_MAX_LOG_LINES_KEY};
+use crate::logger::{ErrorEventDto, LogEventDto, DEFAULT_MAX_LOG_LINES, SETTING_MAX_LOG_LINES_KEY};
 use crate::models::{
     AppSettingDto, BookCollectionInput, BookDeleteInput, BookDto, BookImportInput, BookmarkDto,
     CollectionDto, CommandErrorDto, CreateCollectionInput, HideBookInput, HighlightDto,
@@ -769,22 +771,19 @@ pub fn diagnose(state: State<'_, AppState>) -> DiagnoseResult {
     // Database health
     let (database_status, db_detail) = match state.repository.lock() {
         Ok(repo) => {
-            match repo.connection() {
-                Ok(conn) => {
-                    match conn.query_row("SELECT 1", [], |row| row.get::<_, i32>(0)) {
-                        Ok(1) => {
-                            details.insert("db_query_ok".to_string(), serde_json::Value::Bool(true));
-                            ("healthy".to_string(), "DB responded OK".to_string())
-                        },
-                        Err(e) => {
-                            details.insert("db_error".to_string(), serde_json::Value::String(e.to_string()));
-                            ("degraded".to_string(), format!("DB query failed: {}", e))
-                        }
-                    }
+            let conn = repo.connection();
+            match conn.query_row("SELECT 1", [], |row| row.get::<_, i32>(0)) {
+                Ok(1) => {
+                    details.insert("db_query_ok".to_string(), serde_json::Value::Bool(true));
+                    ("healthy".to_string(), "DB responded OK".to_string())
+                },
+                Ok(other) => {
+                    details.insert("db_unexpected".to_string(), serde_json::Value::Number(serde_json::Number::from(other)));
+                    ("degraded".to_string(), format!("DB query returned unexpected value: {}", other))
                 },
                 Err(e) => {
                     details.insert("db_error".to_string(), serde_json::Value::String(e.to_string()));
-                    ("degraded".to_string(), format!("DB connection failed: {}", e))
+                    ("degraded".to_string(), format!("DB query failed: {}", e))
                 }
             }
         },
@@ -797,20 +796,16 @@ pub fn diagnose(state: State<'_, AppState>) -> DiagnoseResult {
     // Queue health
     let (queue_status, queue_detail) = match state.queue_repository.lock() {
         Ok(queue_repo) => {
-            match queue_repo.connection() {
-                Ok(conn) => {
-                    match crate::db::verify_queue_health(conn) {
-                        Ok(health) => {
-                            let status = if health.warnings.is_empty() { "healthy" } else { "degraded" };
-                            details.insert("queue_warnings".to_string(), serde_json::Value::Array(
-                                health.warnings.iter().map(|w| serde_json::Value::String(w.clone())).collect()
-                            ));
-                            (status.to_string(), format!("Queue health: {:?}", health.status))
-                        },
-                        Err(e) => ("degraded".to_string(), format!("Queue check failed: {}", e)),
-                    }
+            let conn = queue_repo.connection();
+            match verify_queue_health(conn) {
+                Ok(health) => {
+                    let status = if health.warnings.is_empty() { "healthy" } else { "degraded" };
+                    details.insert("queue_warnings".to_string(), serde_json::Value::Array(
+                        health.warnings.iter().map(|w| serde_json::Value::String(w.clone())).collect()
+                    ));
+                    (status.to_string(), format!("Queue health: {:?}", health.status))
                 },
-                Err(e) => ("degraded".to_string(), format!("Queue connection failed: {}", e)),
+                Err(e) => ("degraded".to_string(), format!("Queue check failed: {}", e)),
             }
         },
         Err(e) => ("unhealthy".to_string(), format!("Queue lock failed: {}", e)),

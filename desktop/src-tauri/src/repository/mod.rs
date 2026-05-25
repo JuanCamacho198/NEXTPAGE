@@ -43,6 +43,10 @@ impl LibraryRepository {
         Self { connection }
     }
 
+    pub fn connection(&self) -> &Connection {
+        &self.connection
+    }
+
     pub fn list_books(&self) -> AppResult<Vec<BookDto>> {
         library::list_books(self)
     }

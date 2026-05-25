@@ -15,6 +15,10 @@ impl QueueRepository {
         Self { connection }
     }
 
+    pub fn connection(&self) -> &Connection {
+        &self.connection
+    }
+
     pub fn enqueue(&mut self, job: NewJob) -> AppResult<String> {
         let dedupe_key = job.dedupe_key.clone();
         let result = self.connection.execute(

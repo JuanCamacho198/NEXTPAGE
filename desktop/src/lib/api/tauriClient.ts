@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "$lib/shared/api/invokeWrapper";
 import type {
   AppSettingDto,
   BookCollectionInput,
@@ -22,6 +22,7 @@ import type {
   CollectionDto,
   ReaderSettings,
   ReaderThemeMode,
+  DiagnoseResult,
 } from "$lib/types";
 import {
   UI_LOCALE_SETTING_KEY,
@@ -594,4 +595,12 @@ export const getBookCollections = async (bookId: string): Promise<CollectionDto[
   } catch (error) {
     return attachCommandError(error);
   }
+};
+
+export const diagnose = async (): Promise<DiagnoseResult> => {
+  return invoke<DiagnoseResult>("diagnose");
+};
+
+export const getLogs = async (): Promise<string[]> => {
+  return invoke<string[]>("getLogs");
 };

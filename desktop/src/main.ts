@@ -71,18 +71,16 @@ const registerGlobalHandlers = async () => {
   await initLogger();
 
   window.onerror = (message, source, lineno, colno, error) => {
-    const event: ErrorEvent = {
-      timestamp: new Date().toISOString(),
+    const errorEvent = createErrorEvent({
       severity: "high",
       category: "runtime",
       code: "UNCAUGHT_ERROR",
       message: typeof message === "string" ? message : "Unknown error",
       context: { source, lineno, colno, error: error?.stack },
-      correlationId: generateCorrelationId(),
       source: "app_shell",
       recoverable: false,
-    };
-    handleGlobalError(event);
+    });
+    handleGlobalError(errorEvent);
     return false;
   };
 

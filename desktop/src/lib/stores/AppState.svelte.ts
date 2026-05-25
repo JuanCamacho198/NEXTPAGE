@@ -23,7 +23,8 @@ import {
   getFileBytes,
 } from "$lib/api/tauriClient";
 import { i18n, type MessageKey } from "$lib/i18n";
-import { recordMetric, METRIC_NAMES } from "$lib/logger/MetricsStore";
+import { recordMetric } from "$lib/logger/MetricsStore";
+import { METRIC_NAMES } from "$lib/logger/metricTypes";
 import { extractPdfMetadata } from "$lib/services/pdfThumbnail";
 import {
   type AppRoute,

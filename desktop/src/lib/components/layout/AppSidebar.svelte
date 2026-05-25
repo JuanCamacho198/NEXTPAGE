@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { AppRoute } from "../../stores/homeState";
   import type { MessageKey } from "../../i18n";
-  import Button from "../ui/forms/Button.svelte";
   import ThemeToggle from "../ui/navigation/ThemeToggle.svelte";
   import Icon from "../ui/navigation/Icon.svelte";
 

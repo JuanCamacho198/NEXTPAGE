@@ -39,3 +39,6 @@ graphify-out/cache/
 
 # Test's
 fixtures/
+
+# ESlint local rules
+/eslint-local-rules/

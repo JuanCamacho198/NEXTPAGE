@@ -55,6 +55,7 @@
     - ✅ `text-(--color-text-muted,#6b7280)` ❌ `text-[var(--color-text-muted,#6b7280)]`
     - ✅ `hover:bg-(--color-border)` ❌ `hover:bg-[color:var(--color-border)]`
   - **Renamed classes in v4**: `break-words` → `wrap-break-word`
+  - **Auto-detection**: Run `bun run lint` — the custom rule `local-rules/tailwind-v4-canonical` (in `eslint-local-rules/`) detects old syntax as warnings and can auto-fix with `bun run lint:fix`.
 - **Imports**: Use `$lib` alias (e.g., `import { something } from '$lib/stores'`)
 - **Types**: TypeScript with explicit return types on functions
 - **Tests**: Vitest with `@testing-library/svelte` and jsdom

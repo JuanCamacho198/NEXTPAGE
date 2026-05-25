@@ -3,6 +3,7 @@ import tsPlugin from '@typescript-eslint/eslint-plugin';
 import sveltePlugin from 'eslint-plugin-svelte';
 import svelteParser from 'svelte-eslint-parser';
 import prettier from 'eslint-config-prettier';
+import tailwindV4Canonical from './eslint-local-rules/tailwind-v4-canonical.js';
 
 export default [
   {
@@ -43,11 +44,17 @@ export default [
     },
     plugins: {
       svelte: sveltePlugin,
+      'local-rules': {
+        rules: {
+          'tailwind-v4-canonical': tailwindV4Canonical,
+        },
+      },
     },
     rules: {
       ...sveltePlugin.configs.recommended.rules,
       'svelte/valid-each-key': 'error',
       'svelte/no-unused-svelte-ignore': 'warn',
+      'local-rules/tailwind-v4-canonical': 'warn',
     },
   },
   prettier,

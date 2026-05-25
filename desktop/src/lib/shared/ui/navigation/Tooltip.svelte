@@ -34,7 +34,7 @@
 
   {#if isVisible && text}
     <div
-      class="absolute z-50 whitespace-nowrap rounded bg-[var(--color-primary)] px-2 py-1 text-xs text-[var(--color-background)] {positionClasses[position]}"
+      class="absolute z-50 whitespace-nowrap rounded bg-(--color-primary) px-2 py-1 text-xs text-(--color-background) {positionClasses[position]}"
       role="tooltip"
     >
       {text}

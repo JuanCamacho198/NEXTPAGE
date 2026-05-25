@@ -26,13 +26,13 @@
   ]);
 </script>
 
-<aside class="sticky top-0 h-screen w-64 flex-shrink-0 border-r border-[color:var(--color-border)] bg-[rgba(12,20,32,0.6)] backdrop-blur-xl flex flex-col hidden lg:flex">
+<aside class="sticky top-0 h-screen w-64 flex-shrink-0 border-r border-(--color-border) bg-[rgba(12,20,32,0.6)] backdrop-blur-xl flex flex-col hidden lg:flex">
   <div class="p-6 pb-2">
     <div class="flex items-center gap-3">
-      <div class="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-accent-soft)] text-sm font-bold text-[var(--color-accent-blue)] border border-[color:var(--color-border-strong)]">
+      <div class="flex h-10 w-10 items-center justify-center rounded-full bg-(--color-accent-soft) text-sm font-bold text-(--color-accent-blue) border border-(--color-border-strong)">
         NP
       </div>
-      <h1 class="text-base font-bold tracking-tight text-[var(--color-primary)]">NextPage<br/><span class="text-xs font-normal text-[var(--color-text-muted)]">Desktop</span></h1>
+      <h1 class="text-base font-bold tracking-tight text-(--color-primary)">NextPage<br/><span class="text-xs font-normal text-(--color-text-muted)">Desktop</span></h1>
     </div>
   </div>
 
@@ -41,8 +41,8 @@
       <button
         class={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
           activeRoute === item.id || (activeRoute === 'home' && item.id === 'home')
-            ? "bg-[var(--color-accent-blue)] text-[var(--color-background)] shadow-[var(--shadow-glow)]"
-            : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-accent)] hover:text-[var(--color-primary)]"
+            ? "bg-(--color-accent-blue) text-(--color-background) shadow-(--shadow-glow)"
+            : "text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary)"
         }`}
         onclick={item.action}
       >
@@ -52,19 +52,19 @@
     {/each}
   </nav>
 
-  <div class="p-4 border-t border-[color:var(--color-border)] flex flex-col gap-2">
+  <div class="p-4 border-t border-(--color-border) flex flex-col gap-2">
     <!-- Theme toggle button -->
     <ThemeToggle />
 
     <!-- User section -->
-    <button class="w-full flex items-center justify-between rounded-xl p-3 bg-[var(--color-surface)] border border-[color:var(--color-border)] hover:border-[color:var(--color-border-strong)] transition-colors">
+    <button class="w-full flex items-center justify-between rounded-xl p-3 bg-(--color-surface) border border-(--color-border) hover:border-(--color-border-strong) transition-colors">
       <div class="flex items-center gap-3">
         <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
           U
         </div>
         <div class="text-left">
-          <p class="text-sm font-medium text-[var(--color-primary)]">Usuario</p>
-          <p class="text-xs text-[var(--color-text-muted)]">Ver perfil</p>
+          <p class="text-sm font-medium text-(--color-primary)">Usuario</p>
+          <p class="text-xs text-(--color-text-muted)">Ver perfil</p>
         </div>
       </div>
     </button>

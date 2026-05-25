@@ -48,7 +48,7 @@
 <nav class="flex items-center gap-1">
   <button
     type="button"
-    class="rounded-md border border-[color:var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)] disabled:cursor-not-allowed disabled:opacity-50"
+    class="rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm text-(--color-primary) hover:bg-(--color-border) disabled:cursor-not-allowed disabled:opacity-50"
     onclick={() => goTo(current - 1)}
     disabled={current <= 1}
     aria-label="Previous page"
@@ -65,14 +65,14 @@
 
   {#each pages as page}
     {#if page === "..."}
-      <span class="px-2 text-[var(--color-text-muted)]">...</span>
+      <span class="px-2 text-(--color-text-muted)">...</span>
     {:else}
       <button
         type="button"
         class="rounded-md px-3 py-1.5 text-sm transition-colors
           {page === current
-          ? 'bg-[var(--color-primary)] text-[var(--color-background)]'
-          : 'text-[var(--color-primary)] hover:bg-[color:var(--color-border)]'}"
+          ? 'bg-(--color-primary) text-(--color-background)'
+          : 'text-(--color-primary) hover:bg-(--color-border)'}"
         onclick={() => goTo(page)}
       >
         {page}
@@ -82,7 +82,7 @@
 
   <button
     type="button"
-    class="rounded-md border border-[color:var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)] disabled:cursor-not-allowed disabled:opacity-50"
+    class="rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm text-(--color-primary) hover:bg-(--color-border) disabled:cursor-not-allowed disabled:opacity-50"
     onclick={() => goTo(current + 1)}
     disabled={current >= total}
     aria-label="Next page"

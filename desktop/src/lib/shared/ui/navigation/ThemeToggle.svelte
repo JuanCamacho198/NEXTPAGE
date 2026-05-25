@@ -15,7 +15,7 @@
 
 <button
   id="theme-toggle-btn"
-  class="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)] cursor-pointer transition-all duration-200 font-[var(--font-sans)] text-[0.8125rem] font-medium select-none [-webkit-tap-highlight-color:transparent] hover:bg-[var(--color-panel-accent)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-primary)] hover:shadow-[var(--shadow-glow)] active:scale-[0.98]"
+  class="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 bg-transparent border border-(--color-border) text-(--color-text-muted) cursor-pointer transition-all duration-200 font-(--font-sans) text-[0.8125rem] font-medium select-none [-webkit-tap-highlight-color:transparent] hover:bg-(--color-panel-accent) hover:border-(--color-border-strong) hover:text-(--color-primary) hover:shadow-(--shadow-glow) active:scale-[0.98]"
   class:animating
   onclick={handleToggle}
   aria-label={$theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}

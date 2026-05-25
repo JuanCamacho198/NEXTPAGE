@@ -90,7 +90,7 @@
       <div class="flex flex-wrap items-center gap-3">
         {#if collections.length > 0}
           <select
-            class="max-w-[120px] sm:max-w-[150px] rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-sm text-[var(--color-primary)] text-ellipsis"
+            class="max-w-[120px] sm:max-w-[150px] rounded-lg border border-(--color-border) bg-(--color-background) px-2 py-1 text-sm text-(--color-primary) text-ellipsis"
             value={selectedCollectionId ?? ""}
             onchange={(e) => {
               const value = (e.target as HTMLSelectElement).value;
@@ -104,7 +104,7 @@
           </select>
           <button
             type="button"
-            class="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] whitespace-nowrap"
+            class="text-xs text-(--color-text-muted) hover:text-(--color-primary) whitespace-nowrap"
             onclick={onManageCollections}
           >
             Manage
@@ -114,27 +114,27 @@
       <div class="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          class="shrink-0 rounded-md border border-[color:var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-primary)] hover:bg-[color:var(--color-border)] disabled:cursor-not-allowed disabled:opacity-60"
+          class="shrink-0 rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-xs font-medium text-(--color-primary) hover:bg-(--color-border) disabled:cursor-not-allowed disabled:opacity-60"
           onclick={onImportFolder}
           disabled={isImportingFolder}
         >
           {isImportingFolder ? t("library.bulkImport.importing") : t("library.bulkImport.importFolder")}
         </button>
         <div class="relative">
-          <svg class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-(--color-text-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
             type="text"
             placeholder={t("library.searchPlaceholder")}
-            class="h-8 w-[140px] sm:w-40 rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] pl-9 pr-8 text-sm text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none"
+            class="h-8 w-[140px] sm:w-40 rounded-lg border border-(--color-border) bg-(--color-background) pl-9 pr-8 text-sm text-(--color-text) placeholder-(--color-text-muted) focus:border-(--color-primary) focus:outline-none"
             value={searchQuery}
             oninput={handleSearchInput}
           />
           {#if searchQuery}
             <button
               type="button"
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-(--color-text-muted) hover:text-(--color-text)"
               aria-label="Clear search"
               onclick={clearSearch}
             >
@@ -144,17 +144,17 @@
             </button>
           {/if}
         </div>
-        <div class="inline-flex shrink-0 rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] p-1">
+        <div class="inline-flex shrink-0 rounded-lg border border-(--color-border) bg-(--color-background) p-1">
           <button
             type="button"
-            class={`rounded px-3 py-1 text-xs font-medium ${viewMode === LIBRARY_VIEW_MODE.LIST ? "bg-[var(--color-surface)] text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}`}
+            class={`rounded px-3 py-1 text-xs font-medium ${viewMode === LIBRARY_VIEW_MODE.LIST ? "bg-(--color-surface) text-(--color-primary)" : "text-(--color-text-muted)"}`}
             onclick={() => onToggleView?.(LIBRARY_VIEW_MODE.LIST)}
           >
             {t("library.list")}
           </button>
           <button
             type="button"
-            class={`rounded px-3 py-1 text-xs font-medium ${viewMode === LIBRARY_VIEW_MODE.GRID ? "bg-[var(--color-surface)] text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"}`}
+            class={`rounded px-3 py-1 text-xs font-medium ${viewMode === LIBRARY_VIEW_MODE.GRID ? "bg-(--color-surface) text-(--color-primary)" : "text-(--color-text-muted)"}`}
             onclick={() => onToggleView?.(LIBRARY_VIEW_MODE.GRID)}
           >
             {t("library.grid")}
@@ -178,7 +178,7 @@
         {#snippet action()}
           <button
             type="button"
-            class="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-[var(--color-background)] transition-all hover:opacity-90 active:scale-95"
+            class="rounded-lg bg-(--color-primary) px-4 py-2 text-sm font-medium text-(--color-background) transition-all hover:opacity-90 active:scale-95"
             onclick={onImportFolder}
           >
             {t("library.import")}
@@ -186,24 +186,24 @@
         {/snippet}
       </EmptyState>
     {:else if filteredBooks.length === 0}
-      <p class="text-sm text-[var(--color-text-muted)]">{searchQuery ? t("library.searchNoResults") : t("library.empty")}</p>
+      <p class="text-sm text-(--color-text-muted)">{searchQuery ? t("library.searchNoResults") : t("library.empty")}</p>
     {:else}
-      <p class="mb-3 break-words text-xs text-[var(--color-text-muted)]">
+      <p class="mb-3 wrap-break-word text-xs text-(--color-text-muted)">
         {t("library.searchResults", { count: filteredBooks.length, total: books.length })}
       </p>
       {#if viewMode === LIBRARY_VIEW_MODE.GRID}
         <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {#each filteredBooks as book}
-            <li class={`group relative min-w-0 rounded-xl border p-3 ${selectedBookId === book.id ? "border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]" : "border-[color:var(--color-border)] bg-[var(--color-surface)]"}`}>
+            <li class={`group relative min-w-0 rounded-xl border p-3 ${selectedBookId === book.id ? "border-(--color-primary) bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]" : "border-(--color-border) bg-(--color-surface)"}`}>
               <div class="mb-2 flex items-start justify-end">
                 <DropMenu position="bottom-right">
                   {#snippet trigger()}
-                    <button type="button" class="rounded-md border border-[color:var(--color-border)] px-2 py-1 text-xs text-[var(--color-text-muted)] hover:bg-[color:var(--color-border)]">...</button>
+                    <button type="button" class="rounded-md border border-(--color-border) px-2 py-1 text-xs text-(--color-text-muted) hover:bg-(--color-border)">...</button>
                   {/snippet}
-                  <button type="button" class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]" onclick={() => onEdit?.(book)}>
+                  <button type="button" class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)" onclick={() => onEdit?.(book)}>
                     {t("library.editMetadata.title")}
                   </button>
-                  <button type="button" class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]" onclick={() => onHide?.(book)}>
+                  <button type="button" class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)" onclick={() => onHide?.(book)}>
                     {t("library.hide")}
                   </button>
                 </DropMenu>
@@ -211,14 +211,14 @@
               <button type="button" class="w-full text-left" onclick={() => onSelect?.(book)}>
                 <SafeCover path={book.coverPath ?? ""} alt={`Cover for ${book.title}`} className="mb-2 h-32 w-full rounded object-cover">
                   {#snippet fallback()}
-                    <div class="mb-2 flex h-32 w-full items-center justify-center rounded bg-[var(--color-background)] text-sm text-[var(--color-text-muted)]">
+                    <div class="mb-2 flex h-32 w-full items-center justify-center rounded bg-(--color-background) text-sm text-(--color-text-muted)">
                       {t("library.noCover")}
                     </div>
                   {/snippet}
                 </SafeCover>
-                <p class="line-clamp-2 min-w-0 break-words text-sm font-semibold text-[var(--color-primary)]">{book.title}</p>
-                <p class="line-clamp-1 min-w-0 truncate text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")}</p>
-                <p class="mt-2 min-w-0 truncate text-xs text-[var(--color-text-muted)]">{LibraryState.formatProgress(book.progressPercentage)} · {book.minutesRead} {t("library.min")}</p>
+                <p class="line-clamp-2 min-w-0 wrap-break-word text-sm font-semibold text-(--color-primary)">{book.title}</p>
+                <p class="line-clamp-1 min-w-0 truncate text-xs text-(--color-text-muted)">{book.author || t("app.unknownAuthor")}</p>
+                <p class="mt-2 min-w-0 truncate text-xs text-(--color-text-muted)">{LibraryState.formatProgress(book.progressPercentage)} · {book.minutesRead} {t("library.min")}</p>
                 {#if book.collectionIds && book.collectionIds.length > 0}
                   <div class="mt-2 flex flex-wrap gap-1">
                     {#each collections.filter(c => book.collectionIds?.includes(c.id)) as collection}
@@ -227,7 +227,7 @@
                   </div>
                 {/if}
               </button>
-              <button type="button" class="mt-3 w-full rounded-md bg-[var(--color-primary)] px-3 py-1.5 text-xs font-medium text-[var(--color-background)] hover:opacity-90" onclick={() => onOpen?.(book)}>
+              <button type="button" class="mt-3 w-full rounded-md bg-(--color-primary) px-3 py-1.5 text-xs font-medium text-(--color-background) hover:opacity-90" onclick={() => onOpen?.(book)}>
                 {t("library.open")}
               </button>
             </li>
@@ -236,21 +236,21 @@
       {:else}
         <ul class="space-y-2">
           {#each filteredBooks as book}
-            <li class={`min-w-0 rounded-xl border p-3 ${selectedBookId === book.id ? "border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]" : "border-[color:var(--color-border)] bg-[var(--color-surface)]"}`}>
+            <li class={`min-w-0 rounded-xl border p-3 ${selectedBookId === book.id ? "border-(--color-primary) bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]" : "border-(--color-border) bg-(--color-surface)"}`}>
               <div class="flex items-start gap-3">
                 <button type="button" class="min-w-0 flex-1 text-left" onclick={() => onSelect?.(book)}>
                   <div class="flex items-start gap-3">
                     <SafeCover path={book.coverPath ?? ""} alt={`Cover for ${book.title}`} className="h-14 w-10 rounded object-cover">
                       {#snippet fallback()}
-                        <div class="flex h-14 w-10 items-center justify-center rounded bg-[var(--color-background)] text-[10px] uppercase text-[var(--color-text-muted)]">
+                        <div class="flex h-14 w-10 items-center justify-center rounded bg-(--color-background) text-[10px] uppercase text-(--color-text-muted)">
                           {t("library.cover")}
                         </div>
                       {/snippet}
                     </SafeCover>
                     <div class="min-w-0 flex-1">
-                      <p class="line-clamp-2 min-w-0 break-words text-sm font-semibold text-[var(--color-primary)]">{book.title}</p>
-                      <p class="truncate text-xs text-[var(--color-text-muted)]">{book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}</p>
-                      <p class="mt-1 min-w-0 truncate text-xs text-[var(--color-text-muted)]">
+                      <p class="line-clamp-2 min-w-0 wrap-break-word text-sm font-semibold text-(--color-primary)">{book.title}</p>
+                      <p class="truncate text-xs text-(--color-text-muted)">{book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}</p>
+                      <p class="mt-1 min-w-0 truncate text-xs text-(--color-text-muted)">
                         {book.currentPage}/{book.totalPages || "-"} · {LibraryState.formatProgress(book.progressPercentage)} · {t("library.updated")} {LibraryState.formatUpdatedAt(book.updatedAt, t)}
                       </p>
                       {#if book.collectionIds && book.collectionIds.length > 0}
@@ -263,17 +263,17 @@
                     </div>
                   </div>
                 </button>
-                <button type="button" class="rounded-md bg-[var(--color-primary)] px-3 py-1.5 text-xs font-medium text-[var(--color-background)] hover:opacity-90" onclick={() => onOpen?.(book)}>
+                <button type="button" class="rounded-md bg-(--color-primary) px-3 py-1.5 text-xs font-medium text-(--color-background) hover:opacity-90" onclick={() => onOpen?.(book)}>
                   {t("library.open")}
                 </button>
                 <DropMenu position="bottom-right">
                   {#snippet trigger()}
-                    <button type="button" class="rounded-md border border-[color:var(--color-border)] px-2 py-1 text-xs text-[var(--color-text-muted)]">...</button>
+                    <button type="button" class="rounded-md border border-(--color-border) px-2 py-1 text-xs text-(--color-text-muted)">...</button>
                   {/snippet}
-                  <button type="button" class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]" onclick={() => onEdit?.(book)}>
+                  <button type="button" class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)" onclick={() => onEdit?.(book)}>
                     {t("library.editMetadata.title")}
                   </button>
-                  <button type="button" class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]" onclick={() => onHide?.(book)}>
+                  <button type="button" class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)" onclick={() => onHide?.(book)}>
                     {t("library.hide")}
                   </button>
                 </DropMenu>

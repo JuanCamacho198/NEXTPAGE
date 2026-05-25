@@ -36,7 +36,7 @@
 <Panel title={t("settings.data.exportLibrary")} subtitle={t("settings.data.exportLibraryDescription")}>
   <button
     type="button"
-    class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] cursor-pointer transition-all duration-200 text-[var(--color-primary)] text-xs hover:bg-[var(--color-surface)] hover:border-[var(--color-text-muted)]"
+    class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-(--color-border) bg-(--color-background) cursor-pointer transition-all duration-200 text-(--color-primary) text-xs hover:bg-(--color-surface) hover:border-(--color-text-muted)"
     onclick={onExportLibrary}
   >
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -45,12 +45,12 @@
 </Panel>
 
 <Panel title={t("settings.data.exportHighlights")} subtitle={t("settings.data.exportHighlightsDescription")}>
-  <div class="flex flex-col gap-2 p-3 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg">
+  <div class="flex flex-col gap-2 p-3 bg-(--color-background) border border-(--color-border) rounded-lg">
     <div class="flex gap-2">
       <select
         value={selectedExportBook}
         onchange={(e) => onSelectedExportBookChange((e.target as HTMLSelectElement).value)}
-        class="flex-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-primary)] cursor-pointer outline-none focus:border-[var(--color-primary)]"
+        class="flex-1 rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-2 text-xs text-(--color-primary) cursor-pointer outline-none focus:border-(--color-primary)"
       >
         <option value="all">{t("settings.data.allBooks")}</option>
         {#if books && books.length > 0}
@@ -62,14 +62,14 @@
       <select
         value={selectedExportFormat}
         onchange={(e) => onSelectedExportFormatChange((e.target as HTMLSelectElement).value as "json" | "markdown")}
-        class="w-[90px] shrink-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-primary)] cursor-pointer outline-none focus:border-[var(--color-primary)]"
+        class="w-[90px] shrink-0 rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-2 text-xs text-(--color-primary) cursor-pointer outline-none focus:border-(--color-primary)"
       >
         <option value="json">JSON</option>
         <option value="markdown">{t("settings.data.markdown")}</option>
       </select>
       <button
         type="button"
-        class="flex items-center gap-2 px-4 py-2 rounded-md border border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-background)] cursor-pointer transition-all duration-200 text-xs font-medium hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+        class="flex items-center gap-2 px-4 py-2 rounded-md border border-(--color-primary) bg-(--color-primary) text-(--color-background) cursor-pointer transition-all duration-200 text-xs font-medium hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
         onclick={onExportHighlights}
         disabled={isExportingHighlights}
       >
@@ -83,7 +83,7 @@
 <Panel title={t("settings.data.clearCache")} subtitle={t("settings.data.clearCacheDescription")}>
   <button
     type="button"
-    class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-red-300 bg-[var(--color-background)] cursor-pointer transition-all duration-200 text-red-500 text-xs hover:bg-red-50 hover:border-red-500 disabled:opacity-60 disabled:cursor-not-allowed"
+    class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-red-300 bg-(--color-background) cursor-pointer transition-all duration-200 text-red-500 text-xs hover:bg-red-50 hover:border-red-500 disabled:opacity-60 disabled:cursor-not-allowed"
     onclick={onClearCache}
     disabled={isClearingCache}
   >

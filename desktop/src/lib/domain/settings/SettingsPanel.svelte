@@ -297,24 +297,24 @@
   {/if}
   <aside class={mode === "overlay"
     ? "fixed top-0 right-0 w-[350px] h-screen bg-white border-l border-zinc-200 shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]"
-    : "settings-panel-wrapper rounded-xl border border-[color:var(--color-border)] bg-background shadow-sm flex flex-col overflow-hidden"}>
+    : "settings-panel-wrapper rounded-xl border border-(--color-border) bg-background shadow-sm flex flex-col overflow-hidden"}>
     <div class="flex items-center justify-between p-4 border-b border-zinc-200">
       <h2 class="m-0 text-lg font-semibold text-emerald-50">{t("settings.title")}</h2>
       <button class="bg-transparent border-none text-xl cursor-pointer text-zinc-600 p-1 flex items-center justify-center hover:text-zinc-900" onclick={closePanel} aria-label={t("settings.close")}><Icon name="close" size="md" /></button>
     </div>
 
     <!-- Tabs -->
-    <div class="flex border-b border-[var(--color-border)] overflow-x-auto">
-      <button type="button" onclick={() => handleTabChange("general")} style="color: {activeTab === 'general' ? 'var(--color-primary)' : 'var(--color-text-muted)'}; border-bottom: {activeTab === 'general' ? '2px solid var(--color-primary)' : '2px solid transparent'};" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs whitespace-nowrap hover:text-[var(--color-primary)]">
+    <div class="flex border-b border-(--color-border) overflow-x-auto">
+      <button type="button" onclick={() => handleTabChange("general")} style="color: {activeTab === 'general' ? 'var(--color-primary)' : 'var(--color-text-muted)'}; border-bottom: {activeTab === 'general' ? '2px solid var(--color-primary)' : '2px solid transparent'};" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs whitespace-nowrap hover:text-(--color-primary)">
         {t("settings.tab.general")}
       </button>
-      <button type="button" onclick={() => handleTabChange("appearance")} style="color: {activeTab === 'appearance' ? 'var(--color-primary)' : 'var(--color-text-muted)'}; border-bottom: {activeTab === 'appearance' ? '2px solid var(--color-primary)' : '2px solid transparent'};" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs whitespace-nowrap hover:text-[var(--color-primary)]">
+      <button type="button" onclick={() => handleTabChange("appearance")} style="color: {activeTab === 'appearance' ? 'var(--color-primary)' : 'var(--color-text-muted)'}; border-bottom: {activeTab === 'appearance' ? '2px solid var(--color-primary)' : '2px solid transparent'};" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs whitespace-nowrap hover:text-(--color-primary)">
         {t("settings.tab.appearance")}
       </button>
-      <button type="button" onclick={() => handleTabChange("data")} style="color: {activeTab === 'data' ? 'var(--color-primary)' : 'var(--color-text-muted)'}; border-bottom: {activeTab === 'data' ? '2px solid var(--color-primary)' : '2px solid transparent'};" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs whitespace-nowrap hover:text-[var(--color-primary)]">
+      <button type="button" onclick={() => handleTabChange("data")} style="color: {activeTab === 'data' ? 'var(--color-primary)' : 'var(--color-text-muted)'}; border-bottom: {activeTab === 'data' ? '2px solid var(--color-primary)' : '2px solid transparent'};" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs whitespace-nowrap hover:text-(--color-primary)">
         {t("settings.tab.data")}
       </button>
-      <button type="button" onclick={() => handleTabChange("about")} style="color: {activeTab === 'about' ? 'var(--color-primary)' : 'var(--color-text-muted)'}; border-bottom: {activeTab === 'about' ? '2px solid var(--color-primary)' : '2px solid transparent'};" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs whitespace-nowrap hover:text-[var(--color-primary)]">
+      <button type="button" onclick={() => handleTabChange("about")} style="color: {activeTab === 'about' ? 'var(--color-primary)' : 'var(--color-text-muted)'}; border-bottom: {activeTab === 'about' ? '2px solid var(--color-primary)' : '2px solid transparent'};" class="flex-1 min-w-fit px-1.5 py-2.5 border-none bg-transparent cursor-pointer text-xs whitespace-nowrap hover:text-(--color-primary)">
         {t("settings.tab.about")}
       </button>
     </div>

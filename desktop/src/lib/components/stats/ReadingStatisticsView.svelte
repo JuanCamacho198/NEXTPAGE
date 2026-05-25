@@ -129,14 +129,14 @@
 </script>
 
 <section class="space-y-5">
-  <div class="rounded-[28px] border border-[color:var(--color-border)] bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-[0_24px_80px_rgba(3,10,20,0.38)]">
+  <div class="rounded-[28px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-[0_24px_80px_rgba(3,10,20,0.38)]">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
-        <h1 class="text-3xl font-semibold tracking-tight text-[var(--color-primary)]">Estadísticas</h1>
-        <p class="mt-1 text-sm text-[var(--color-text-muted)]">Tu progreso de lectura en detalle.</p>
+        <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">Estadísticas</h1>
+        <p class="mt-1 text-sm text-(--color-text-muted)">Tu progreso de lectura en detalle.</p>
       </div>
 
-      <label class="inline-flex items-center gap-2 self-start rounded-2xl border border-[color:var(--color-border)] bg-[rgba(255,255,255,0.03)] px-3 py-2 text-sm text-[var(--color-primary)]">
+      <label class="inline-flex items-center gap-2 self-start rounded-2xl border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--color-primary)">
         <span class="sr-only">Periodo</span>
         <select class="bg-transparent outline-none" bind:value={activePeriod}>
           {#each Object.entries(periodLabels) as [value, label]}
@@ -150,29 +150,29 @@
   {#if disabledReason}
     <div class="rounded-[24px] border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">{disabledReason}</div>
   {:else if isLoading}
-    <div class="rounded-[24px] border border-[color:var(--color-border)] bg-[rgba(11,21,35,0.88)] px-4 py-8 text-sm text-[var(--color-text-muted)]">Cargando estadisticas...</div>
+    <div class="rounded-[24px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] px-4 py-8 text-sm text-(--color-text-muted)">Cargando estadisticas...</div>
   {:else}
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-5">
       {#each metricCards as metric}
-        <article class="rounded-[24px] border border-[color:var(--color-border)] bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
-          <p class="text-xs text-[var(--color-text-muted)]">{metric.label}</p>
-          <p class="mt-3 text-3xl font-semibold tracking-tight text-[var(--color-primary)]">{metric.value}</p>
+        <article class="rounded-[24px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
+          <p class="text-xs text-(--color-text-muted)">{metric.label}</p>
+          <p class="mt-3 text-3xl font-semibold tracking-tight text-(--color-primary)">{metric.value}</p>
           <p class="mt-2 text-xs text-[#61d6a6]">{metric.delta}</p>
         </article>
       {/each}
     </div>
 
     <div class="grid grid-cols-1 gap-4 2xl:grid-cols-[1.6fr_1fr]">
-      <article class="rounded-[28px] border border-[color:var(--color-border)] bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
+      <article class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
         <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 class="text-base font-semibold text-[var(--color-primary)]">Minutos leidos</h2>
-            <p class="text-sm text-[var(--color-text-muted)]">Actividad de lectura a lo largo del tiempo.</p>
+            <h2 class="text-base font-semibold text-(--color-primary)">Minutos leidos</h2>
+            <p class="text-sm text-(--color-text-muted)">Actividad de lectura a lo largo del tiempo.</p>
           </div>
 
-          <label class="inline-flex items-center gap-2 rounded-2xl border border-[color:var(--color-border)] bg-[rgba(255,255,255,0.03)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
+          <label class="inline-flex items-center gap-2 rounded-2xl border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-3 py-2 text-xs text-(--color-text-muted)">
             <span>Vista</span>
-            <select class="bg-transparent text-sm text-[var(--color-primary)] outline-none" bind:value={activeGranularity}>
+            <select class="bg-transparent text-sm text-(--color-primary) outline-none" bind:value={activeGranularity}>
               <option value="day">Dia</option>
               <option value="week">Semana</option>
               <option value="month">Mes</option>
@@ -180,7 +180,7 @@
           </label>
         </div>
 
-        <div class="rounded-[22px] border border-[color:var(--color-border)] bg-[linear-gradient(180deg,rgba(6,14,24,0.86),rgba(10,18,30,0.94))] p-4">
+        <div class="rounded-[22px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(6,14,24,0.86),rgba(10,18,30,0.94))] p-4">
           <svg viewBox={`0 0 ${chartMeta.width} ${chartMeta.height + 28}`} class="h-[280px] w-full">
             <defs>
               <linearGradient id="lineStroke" x1="0%" x2="100%" y1="0%" y2="0%">
@@ -220,10 +220,10 @@
         </div>
       </article>
 
-      <article class="rounded-[28px] border border-[color:var(--color-border)] bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
+      <article class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
         <div class="mb-4">
-          <h2 class="text-base font-semibold text-[var(--color-primary)]">Tiempo por genero</h2>
-          <p class="text-sm text-[var(--color-text-muted)]">Distribucion del tiempo de lectura por categoria.</p>
+          <h2 class="text-base font-semibold text-(--color-primary)">Tiempo por genero</h2>
+          <p class="text-sm text-(--color-text-muted)">Distribucion del tiempo de lectura por categoria.</p>
         </div>
 
         <div class="flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -236,8 +236,8 @@
             }).join(", ")});`}
           >
             <div class="absolute inset-[26px] flex flex-col items-center justify-center rounded-full bg-[rgba(9,17,29,0.96)] text-center">
-              <span class="text-3xl font-semibold text-[var(--color-primary)]">{totalMinutes.toLocaleString("es-CO")}</span>
-              <span class="text-xs text-[var(--color-text-muted)]">minutos</span>
+              <span class="text-3xl font-semibold text-(--color-primary)">{totalMinutes.toLocaleString("es-CO")}</span>
+              <span class="text-xs text-(--color-text-muted)">minutos</span>
             </div>
           </div>
 
@@ -246,9 +246,9 @@
               <div class="flex items-center justify-between gap-3 text-sm">
                 <div class="flex items-center gap-3">
                   <span class="h-3 w-3 rounded-full" style={`background:${entry.color};`}></span>
-                  <span class="text-[var(--color-secondary)]">{entry.genre}</span>
+                  <span class="text-(--color-secondary)">{entry.genre}</span>
                 </div>
-                <span class="text-[var(--color-primary)]">{entry.percent}%</span>
+                <span class="text-(--color-primary)">{entry.percent}%</span>
               </div>
             {/each}
           </div>
@@ -257,19 +257,19 @@
     </div>
 
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_1fr]">
-      <article class="rounded-[28px] border border-[color:var(--color-border)] bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
+      <article class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
         <div class="mb-4">
-          <h2 class="text-base font-semibold text-[var(--color-primary)]">Libros mas leidos</h2>
-          <p class="text-sm text-[var(--color-text-muted)]">Titulos con mayor tiempo de lectura acumulado.</p>
+          <h2 class="text-base font-semibold text-(--color-primary)">Libros mas leidos</h2>
+          <p class="text-sm text-(--color-text-muted)">Titulos con mayor tiempo de lectura acumulado.</p>
         </div>
 
         <div class="space-y-3">
           {#each mostReadBooks as book}
-            <div class="flex items-center gap-3 rounded-[22px] border border-[color:var(--color-border)] bg-[rgba(255,255,255,0.02)] p-3">
+            <div class="flex items-center gap-3 rounded-[22px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3">
               <div class="h-14 w-10 overflow-hidden rounded-xl bg-[rgba(255,255,255,0.03)]">
                 <SafeCover path={book.coverPath ?? ""} alt={`Portada de ${book.title}`} className="h-full w-full object-cover">
                   {#snippet fallback()}
-                    <div class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] text-[9px] uppercase tracking-[0.16em] text-[var(--color-primary)]">
+                    <div class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] text-[9px] uppercase tracking-[0.16em] text-(--color-primary)">
                       Libro
                     </div>
                   {/snippet}
@@ -277,32 +277,32 @@
               </div>
 
               <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-medium text-[var(--color-primary)]">{book.title}</p>
+                <p class="truncate text-sm font-medium text-(--color-primary)">{book.title}</p>
                 <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                   <div class="h-full rounded-full bg-[linear-gradient(90deg,#4e8cff,#49d4ff)]" style={`width: ${Math.max(12, Math.round((book.minutesRead / Math.max(mostReadBooks[0]?.minutesRead || 1, 1)) * 100))}%;`}></div>
                 </div>
               </div>
 
-              <span class="text-sm text-[var(--color-secondary)]">{book.minutesRead} min</span>
+              <span class="text-sm text-(--color-secondary)">{book.minutesRead} min</span>
             </div>
           {/each}
         </div>
       </article>
 
       <article class="grid gap-4">
-        <div class="rounded-[28px] border border-[color:var(--color-border)] bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
+        <div class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
           <div class="mb-3">
-            <h2 class="text-base font-semibold text-[var(--color-primary)]">Racha actual</h2>
-            <p class="text-sm text-[var(--color-text-muted)]">Consistencia reciente de lectura.</p>
+            <h2 class="text-base font-semibold text-(--color-primary)">Racha actual</h2>
+            <p class="text-sm text-(--color-text-muted)">Consistencia reciente de lectura.</p>
           </div>
 
-          <p class="text-4xl font-semibold tracking-tight text-[var(--color-primary)]">{streakDays} dias</p>
-          <p class="mt-1 text-sm text-[var(--color-text-muted)]">Sigue asi.</p>
+          <p class="text-4xl font-semibold tracking-tight text-(--color-primary)">{streakDays} dias</p>
+          <p class="mt-1 text-sm text-(--color-text-muted)">Sigue asi.</p>
 
           <div class="mt-5 flex flex-wrap gap-2">
             {#each streakCalendar as day}
               <div class="flex flex-col items-center gap-2">
-                <div class={`flex h-8 w-8 items-center justify-center rounded-full text-[11px] ${day.active ? "bg-[linear-gradient(135deg,#4e8cff,#49d4ff)] text-[#07111d]" : "border border-[color:var(--color-border)] bg-[rgba(255,255,255,0.03)] text-[var(--color-text-muted)]"}`}>
+                <div class={`flex h-8 w-8 items-center justify-center rounded-full text-[11px] ${day.active ? "bg-[linear-gradient(135deg,#4e8cff,#49d4ff)] text-[#07111d]" : "border border-(--color-border) bg-[rgba(255,255,255,0.03)] text-(--color-text-muted)"}`}>
                   {day.label}
                 </div>
               </div>
@@ -310,24 +310,24 @@
           </div>
         </div>
 
-        <div class="rounded-[28px] border border-[color:var(--color-border)] bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
+        <div class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
           <div class="mb-4">
-            <h2 class="text-base font-semibold text-[var(--color-primary)]">Informacion adicional</h2>
-            <p class="text-sm text-[var(--color-text-muted)]">Promedios utiles para entender el habito de lectura.</p>
+            <h2 class="text-base font-semibold text-(--color-primary)">Informacion adicional</h2>
+            <p class="text-sm text-(--color-text-muted)">Promedios utiles para entender el habito de lectura.</p>
           </div>
 
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
-            <div class="rounded-[20px] border border-[color:var(--color-border)] bg-[rgba(255,255,255,0.02)] p-3">
-              <p class="text-xs text-[var(--color-text-muted)]">Promedio por sesion</p>
-              <p class="mt-2 text-2xl font-semibold text-[var(--color-primary)]">{averageMinutesPerSession} min</p>
+            <div class="rounded-[20px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3">
+              <p class="text-xs text-(--color-text-muted)">Promedio por sesion</p>
+              <p class="mt-2 text-2xl font-semibold text-(--color-primary)">{averageMinutesPerSession} min</p>
             </div>
-            <div class="rounded-[20px] border border-[color:var(--color-border)] bg-[rgba(255,255,255,0.02)] p-3">
-              <p class="text-xs text-[var(--color-text-muted)]">Promedio por dia</p>
-              <p class="mt-2 text-2xl font-semibold text-[var(--color-primary)]">{averageMinutesPerDay} min</p>
+            <div class="rounded-[20px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3">
+              <p class="text-xs text-(--color-text-muted)">Promedio por dia</p>
+              <p class="mt-2 text-2xl font-semibold text-(--color-primary)">{averageMinutesPerDay} min</p>
             </div>
-            <div class="rounded-[20px] border border-[color:var(--color-border)] bg-[rgba(255,255,255,0.02)] p-3">
-              <p class="text-xs text-[var(--color-text-muted)]">Paginas leidas</p>
-              <p class="mt-2 text-2xl font-semibold text-[var(--color-primary)]">{totalPagesRead.toLocaleString("es-CO")}</p>
+            <div class="rounded-[20px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3">
+              <p class="text-xs text-(--color-text-muted)">Paginas leidas</p>
+              <p class="mt-2 text-2xl font-semibold text-(--color-primary)">{totalPagesRead.toLocaleString("es-CO")}</p>
             </div>
           </div>
         </div>

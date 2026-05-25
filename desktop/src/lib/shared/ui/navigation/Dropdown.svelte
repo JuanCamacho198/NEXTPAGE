@@ -62,7 +62,7 @@
 <div class="relative inline-block" use:handleClickOutside>
   <button
     type="button"
-    class="inline-flex items-center justify-between rounded-lg border border-[color:var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)] disabled:cursor-not-allowed disabled:opacity-50"
+    class="inline-flex items-center justify-between rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm text-(--color-primary) hover:bg-(--color-border) disabled:cursor-not-allowed disabled:opacity-50"
     onclick={toggle}
     {disabled}
   >
@@ -88,14 +88,14 @@
 
   {#if isOpen}
     <div
-      class="absolute z-10 mt-1 w-full min-w-[160px] rounded-md bg-[var(--color-surface)] shadow-lg ring-1 ring-[var(--color-border)]"
+      class="absolute z-10 mt-1 w-full min-w-[160px] rounded-md bg-(--color-surface) shadow-lg ring-1 ring-(--color-border)"
     >
       <ul class="py-1">
         {#each options as opt}
           <li>
             <button
               type="button"
-              class="w-full px-3 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]"
+              class="w-full px-3 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
               onclick={() => select(opt)}
             >
               {#if option}

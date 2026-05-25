@@ -50,7 +50,7 @@
 
 <Modal bind:open={open} title={t("library.bulkImport.title")}>
   {#snippet children()}
-    <div class="mb-4 rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] p-3">
+    <div class="mb-4 rounded-lg border border-(--color-border) bg-(--color-background) p-3">
       <div class="mb-2 flex flex-wrap items-center gap-2">
         <Button variant="secondary" size="sm" onclick={onPickFolder} disabled={isScanning || isImporting}>
           {t("library.bulkImport.selectFolder")}
@@ -68,14 +68,14 @@
         {/if}
       </div>
 
-      <p class="text-xs text-[var(--color-text-muted)]">
+      <p class="text-xs text-(--color-text-muted)">
         {folderName
           ? t("library.bulkImport.selectedFolder", { name: folderName })
           : t("library.bulkImport.noFolder")}
       </p>
 
       {#if scanResult}
-        <div class="mt-2 flex flex-wrap gap-2 text-xs text-[var(--color-text-muted)]">
+        <div class="mt-2 flex flex-wrap gap-2 text-xs text-(--color-text-muted)">
           <span>{t("library.bulkImport.filesFound", { count: scanResult.files.length })}</span>
           <span>{t("library.bulkImport.skippedUnsupported", { count: scanResult.skippedUnsupportedCount })}</span>
           <span>{t("library.bulkImport.skippedUnreadable", { count: scanResult.skippedUnreadableCount })}</span>
@@ -88,7 +88,7 @@
     {/if}
 
     {#if effectiveSummary}
-      <div class="mb-3 rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] p-3 text-xs text-[var(--color-text-muted)]">
+      <div class="mb-3 rounded-lg border border-(--color-border) bg-(--color-background) p-3 text-xs text-(--color-text-muted)">
         <div class="mb-2 flex flex-wrap gap-2">
           <span>{t("library.bulkImport.summary.total", { count: effectiveSummary.total })}</span>
           <span>{t("library.bulkImport.summary.queued", { count: effectiveSummary.queued })}</span>
@@ -104,20 +104,20 @@
       </div>
     {/if}
 
-    <div class="min-h-0 flex-1 overflow-y-auto rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)]">
+    <div class="min-h-0 flex-1 overflow-y-auto rounded-lg border border-(--color-border) bg-(--color-background)">
       {#if (effectiveSummary?.results.length ?? 0) > 0}
-        <ul class="divide-y divide-[color:var(--color-border)]">
+        <ul class="divide-y divide-(--color-border)">
           {#each effectiveSummary?.results ?? [] as row}
             <li class="p-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
-                <p class="truncate text-sm font-medium text-[var(--color-primary)]">{row.file.fileName}</p>
+                <p class="truncate text-sm font-medium text-(--color-primary)">{row.file.fileName}</p>
                 <span class={`text-xs font-semibold uppercase ${getStatusClass(row.status)}`}>
                   {t(getStatusKey(row.status))}
                 </span>
               </div>
-              <p class="text-xs text-[var(--color-text-muted)]">{row.file.format.toUpperCase()}</p>
+              <p class="text-xs text-(--color-text-muted)">{row.file.format.toUpperCase()}</p>
               {#if row.message}
-                <p class={`mt-1 text-xs ${row.status === STATUS.FAILED ? "text-red-700" : "text-[var(--color-text-muted)]"}`}>
+                <p class={`mt-1 text-xs ${row.status === STATUS.FAILED ? "text-red-700" : "text-(--color-text-muted)"}`}>
                   {row.message}
                 </p>
               {/if}
@@ -125,24 +125,24 @@
           {/each}
         </ul>
       {:else if fallbackRows.length > 0}
-        <ul class="divide-y divide-[color:var(--color-border)]">
+        <ul class="divide-y divide-(--color-border)">
           {#each fallbackRows as row}
             <li class="p-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
-                <p class="truncate text-sm font-medium text-[var(--color-primary)]">{row.file.fileName}</p>
+                <p class="truncate text-sm font-medium text-(--color-primary)">{row.file.fileName}</p>
                 <span class={`text-xs font-semibold uppercase ${getStatusClass(row.status)}`}>
                   {t(getStatusKey(row.status))}
                 </span>
               </div>
-              <p class="text-xs text-[var(--color-text-muted)]">{row.file.format.toUpperCase()}</p>
+              <p class="text-xs text-(--color-text-muted)">{row.file.format.toUpperCase()}</p>
               {#if row.message}
-                <p class="mt-1 text-xs text-[var(--color-text-muted)]">{row.message}</p>
+                <p class="mt-1 text-xs text-(--color-text-muted)">{row.message}</p>
               {/if}
             </li>
           {/each}
         </ul>
       {:else}
-        <p class="p-4 text-sm text-[var(--color-text-muted)]">{t("library.bulkImport.noFiles")}</p>
+        <p class="p-4 text-sm text-(--color-text-muted)">{t("library.bulkImport.noFiles")}</p>
       {/if}
     </div>
   {/snippet}

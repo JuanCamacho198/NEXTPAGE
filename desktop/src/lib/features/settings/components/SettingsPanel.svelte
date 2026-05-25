@@ -338,54 +338,54 @@
   {/if}
   <aside class={mode === "overlay"
     ? "fixed top-0 right-0 w-[350px] h-screen bg-white border-l border-zinc-200 shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]"
-    : "w-full rounded-xl border border-[color:var(--color-border)] bg-background shadow-sm flex flex-col overflow-hidden"}>
+    : "w-full rounded-xl border border-(--color-border) bg-background shadow-sm flex flex-col overflow-hidden"}>
     <div class="flex items-center justify-between p-4 border-b border-zinc-200">
       <h2 class="m-0 text-lg font-semibold text-emerald-50">{t("settings.title")}</h2>
       <button class="bg-transparent border-none text-xl cursor-pointer text-zinc-600 p-1 flex items-center justify-center hover:text-zinc-900" onclick={closePanel} aria-label={t("settings.close")}>✕</button>
     </div>
 
-    <div class="flex border-b border-[var(--color-border)]">
+    <div class="flex border-b border-(--color-border)">
       <button
         type="button"
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-[var(--color-primary)]"
-        class:text-[var(--color-primary)]={activeTab === "account"}
-        class:border-[var(--color-primary)]={activeTab === "account"}
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-(--color-primary)"
+        class:text-(--color-primary)={activeTab === "account"}
+        class:border-(--color-primary)={activeTab === "account"}
         onclick={() => handleTabChange("account")}
       >
         {t("settings.tab.account")}
       </button>
       <button
         type="button"
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-[var(--color-primary)]"
-        class:text-[var(--color-primary)]={activeTab === "profile"}
-        class:border-[var(--color-primary)]={activeTab === "profile"}
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-(--color-primary)"
+        class:text-(--color-primary)={activeTab === "profile"}
+        class:border-(--color-primary)={activeTab === "profile"}
         onclick={() => handleTabChange("profile")}
       >
         {t("settings.tab.profile")}
       </button>
       <button
         type="button"
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-[var(--color-primary)]"
-        class:text-[var(--color-primary)]={activeTab === "reader"}
-        class:border-[var(--color-primary)]={activeTab === "reader"}
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-(--color-primary)"
+        class:text-(--color-primary)={activeTab === "reader"}
+        class:border-(--color-primary)={activeTab === "reader"}
         onclick={() => handleTabChange("reader")}
       >
         {t("settings.tab.reader")}
       </button>
       <button
         type="button"
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-[var(--color-primary)]"
-        class:text-[var(--color-primary)]={activeTab === "appTheme"}
-        class:border-[var(--color-primary)]={activeTab === "appTheme"}
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-(--color-primary)"
+        class:text-(--color-primary)={activeTab === "appTheme"}
+        class:border-(--color-primary)={activeTab === "appTheme"}
         onclick={() => handleTabChange("appTheme")}
       >
         {t("settings.tab.appTheme")}
       </button>
       <button
         type="button"
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-[var(--color-primary)]"
-        class:text-[var(--color-primary)]={activeTab === "about"}
-        class:border-[var(--color-primary)]={activeTab === "about"}
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-(--color-primary)"
+        class:text-(--color-primary)={activeTab === "about"}
+        class:border-(--color-primary)={activeTab === "about"}
         onclick={() => handleTabChange("about")}
       >
         {t("settings.tab.about")}
@@ -417,7 +417,7 @@
                 id="locale-select"
                 value={locale}
                 onchange={(event) => void handleLocaleSelect((event.currentTarget as HTMLSelectElement).value)}
-                class="w-full rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                class="w-full rounded border border-(--color-border) bg-(--color-surface) px-2 py-1.5 text-sm text-(--color-text) focus:outline-none focus:ring-2 focus:ring-(--color-primary)"
               >
                 <option value="es">{t("settings.languageSpanish")}</option>
                 <option value="en">{t("settings.languageEnglish")}</option>
@@ -429,7 +429,7 @@
               <select
                 id="theme-select"
                 bind:value={preferredTheme}
-                class="w-full rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                class="w-full rounded border border-(--color-border) bg-(--color-surface) px-2 py-1.5 text-sm text-(--color-text) focus:outline-none focus:ring-2 focus:ring-(--color-primary)"
               >
                 <option value="light">{t("settings.theme.light")}</option>
                 <option value="dark">{t("settings.theme.dark")}</option>
@@ -467,20 +467,20 @@
             </p>
           {/if}
 
-          <div class="flex gap-3 items-start border border-[var(--color-border)] rounded-xl bg-[var(--color-surface,#fff)] p-3">
+          <div class="flex gap-3 items-start border border-(--color-border) rounded-xl bg-(--color-surface,#fff) p-3">
             <div class="size-14 shrink-0">
               {#if profile.avatarUrl && !profileAvatarBroken}
                 <img
                   src={profile.avatarUrl}
                   alt={t("settings.profile.avatarAlt", { name: profile.name })}
-                  class="block size-full rounded-full border border-[var(--color-border)] object-cover"
+                  class="block size-full rounded-full border border-(--color-border) object-cover"
                   onerror={() => {
                     profileAvatarBroken = true;
                   }}
                 />
               {:else}
                 <div
-                  class="flex size-full items-center justify-center rounded-full border border-[var(--color-border)] text-[14px] font-bold text-[var(--color-primary)]"
+                  class="flex size-full items-center justify-center rounded-full border border-(--color-border) text-[14px] font-bold text-(--color-primary)"
                   style="background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));"
                   aria-hidden="true"
                 >
@@ -490,26 +490,26 @@
             </div>
 
             <div class="min-w-0 flex-1">
-              <p class="m-0 text-[11px] text-[var(--color-text-muted,#6b7280)]">{t("settings.profile.nameLabel")}</p>
-              <p class="my-[2px] mb-2 text-[14px] text-[var(--color-primary)] break-words">{isProfileLoading ? t("settings.profile.loading") : profile.name}</p>
+              <p class="m-0 text-[11px] text-(--color-text-muted,#6b7280)">{t("settings.profile.nameLabel")}</p>
+              <p class="my-[2px] mb-2 text-[14px] text-(--color-primary) wrap-break-word">{isProfileLoading ? t("settings.profile.loading") : profile.name}</p>
 
-              <p class="m-0 text-[11px] text-[var(--color-text-muted,#6b7280)]">{t("settings.profile.emailLabel")}</p>
-              <p class="my-[2px] mb-2 text-[14px] text-[var(--color-primary)] break-words">{isProfileLoading ? t("settings.profile.loading") : profile.email}</p>
+              <p class="m-0 text-[11px] text-(--color-text-muted,#6b7280)">{t("settings.profile.emailLabel")}</p>
+              <p class="my-[2px] mb-2 text-[14px] text-(--color-primary) wrap-break-word">{isProfileLoading ? t("settings.profile.loading") : profile.email}</p>
 
               {#if !profile.isSignedIn}
-                <p class="mt-1.5 text-xs text-[var(--color-text-muted,#6b7280)]">{t("settings.profile.signInPrompt")}</p>
+                <p class="mt-1.5 text-xs text-(--color-text-muted,#6b7280)">{t("settings.profile.signInPrompt")}</p>
               {/if}
             </div>
           </div>
 
-          <div class="border border-[var(--color-border)] rounded-xl bg-[var(--color-surface,#fff)] p-3 mt-3">
+          <div class="border border-(--color-border) rounded-xl bg-(--color-surface,#fff) p-3 mt-3">
             <h4 class="mt-0 mb-2 text-sm font-semibold text-neutral-300">{t("settings.shortcuts.title")}</h4>
             <p class="text-xs text-zinc-600 mb-3">{t("settings.shortcuts.description")}</p>
             <ul class="m-0 p-0 list-none grid gap-2">
               {#each keyboardShortcuts as shortcut (shortcut.id)}
                 <li class="flex items-center gap-2">
-                  <span class="inline-flex items-center justify-center min-w-[86px] px-2 py-1 border border-[var(--color-border)] rounded-md font-mono text-[11px] text-[var(--color-primary)] bg-[var(--color-background)]">{shortcut.combo}</span>
-                  <span class="text-xs text-[var(--color-primary)]">{t(shortcut.descriptionKey)}</span>
+                  <span class="inline-flex items-center justify-center min-w-[86px] px-2 py-1 border border-(--color-border) rounded-md font-mono text-[11px] text-(--color-primary) bg-(--color-background)">{shortcut.combo}</span>
+                  <span class="text-xs text-(--color-primary)">{t(shortcut.descriptionKey)}</span>
                 </li>
               {/each}
             </ul>
@@ -521,7 +521,7 @@
             <button
               type="button"
               class="flex-1 py-3 px-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md flex items-center justify-center"
-              class:border-[var(--color-primary)]={readerThemeMode === "paper"}
+              class:border-(--color-primary)={readerThemeMode === "paper"}
               class:!shadow-[0_0_0_2px_var(--color-primary)]={readerThemeMode === "paper"}
               style="border-color: var(--preview-border, #e0e0e0); background: var(--preview-bg, #fafafa);"
               onclick={() => readerThemeMode = "paper"}
@@ -531,7 +531,7 @@
             <button
               type="button"
               class="flex-1 py-3 px-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md flex items-center justify-center"
-              class:border-[var(--color-primary)]={readerThemeMode === "sepia"}
+              class:border-(--color-primary)={readerThemeMode === "sepia"}
               class:!shadow-[0_0_0_2px_var(--color-primary)]={readerThemeMode === "sepia"}
               style="border-color: var(--preview-border, #d4c4a8); background: var(--preview-bg, #f4ecd8);"
               onclick={() => readerThemeMode = "sepia"}
@@ -541,7 +541,7 @@
             <button
               type="button"
               class="flex-1 py-3 px-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md flex items-center justify-center"
-              class:border-[var(--color-primary)]={readerThemeMode === "night"}
+              class:border-(--color-primary)={readerThemeMode === "night"}
               class:!shadow-[0_0_0_2px_var(--color-primary)]={readerThemeMode === "night"}
               style="border-color: var(--preview-border, #333333); background: var(--preview-bg, #1a1a1a);"
               onclick={() => readerThemeMode = "night"}
@@ -592,7 +592,7 @@
               <select
                 id="reader-font-family"
                 bind:value={readerEpubFontFamily}
-                class="w-full rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                class="w-full rounded border border-(--color-border) bg-(--color-surface) px-2 py-1.5 text-sm text-(--color-text) focus:outline-none focus:ring-2 focus:ring-(--color-primary)"
               >
                 <option value="serif">Serif</option>
                 <option value="sans-serif">Sans Serif</option>
@@ -690,11 +690,11 @@
         </Panel>
       {:else if activeTab === "about"}
         <Panel title={t("settings.about")}>
-          <div class="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)]">
+          <div class="border border-(--color-border) rounded-lg p-4 bg-(--color-surface)">
             <div class="flex items-center gap-3">
               <span class="text-[32px]">📚</span>
               <div class="flex flex-col">
-                <span class="text-lg font-semibold text-[var(--color-primary)]">NextPage</span>
+                <span class="text-lg font-semibold text-(--color-primary)">NextPage</span>
                 <span class="text-xs text-[var(--color-text-muted,var(--color-secondary))]">Version {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}</span>
               </div>
             </div>
@@ -703,25 +703,25 @@
             </p>
           </div>
 
-          <div class="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)] mt-4">
+          <div class="border border-(--color-border) rounded-lg p-4 bg-(--color-surface) mt-4">
             <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">Credits</h4>
             <ul class="list-none m-0 p-0">
-              <li class="flex justify-between py-1 border-b border-[var(--color-border)] last:border-b-0">
+              <li class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0">
                 <span class="text-[13px] text-[var(--color-text-muted,var(--color-secondary))]">Core Team</span>
-                <span class="text-[13px] text-[var(--color-primary)] font-medium">NextPage Contributors</span>
+                <span class="text-[13px] text-(--color-primary) font-medium">NextPage Contributors</span>
               </li>
-              <li class="flex justify-between py-1 border-b border-[var(--color-border)] last:border-b-0">
+              <li class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0">
                 <span class="text-[13px] text-[var(--color-text-muted,var(--color-secondary))]">EPUB Parsing</span>
-                <span class="text-[13px] text-[var(--color-primary)] font-medium">epub.js</span>
+                <span class="text-[13px] text-(--color-primary) font-medium">epub.js</span>
               </li>
-              <li class="flex justify-between py-1 border-b border-[var(--color-border)] last:border-b-0">
+              <li class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0">
                 <span class="text-[13px] text-[var(--color-text-muted,var(--color-secondary))]">Framework</span>
-                <span class="text-[13px] text-[var(--color-primary)] font-medium">Svelte / Tauri</span>
+                <span class="text-[13px] text-(--color-primary) font-medium">Svelte / Tauri</span>
               </li>
             </ul>
           </div>
 
-          <div class="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)] mt-4">
+          <div class="border border-(--color-border) rounded-lg p-4 bg-(--color-surface) mt-4">
             <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">Links</h4>
             <div class="flex gap-2">
               <Button onclick={() => window.open("https://github.com/anomalyco/nextpage", "_blank")} variant="ghost" size="sm">
@@ -737,7 +737,7 @@
 
       {#if showResetModal}
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[1001]">
-          <div class="bg-[var(--color-surface,white)] rounded-lg p-5 max-w-[320px] w-[90%] shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
+          <div class="bg-(--color-surface,white) rounded-lg p-5 max-w-[320px] w-[90%] shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
             <h3 class="mt-0 mb-2 text-base font-semibold text-zinc-900">{t("settings.resetConfirmTitle")}</h3>
             <p class="text-sm text-zinc-600 mb-4">{t("settings.resetConfirmMessage")}</p>
             <div class="flex gap-2 justify-end">

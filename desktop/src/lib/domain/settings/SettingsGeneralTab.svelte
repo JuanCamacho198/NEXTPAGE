@@ -78,37 +78,37 @@
 <Panel title={t("settings.localPreferences")} subtitle={t("settings.localPreferencesDescription")}>
   <div class="grid grid-cols-2 gap-4 mb-4">
     <!-- Language selector -->
-    <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
-      <label class="block text-xs font-medium text-[var(--color-text-muted)] mb-3">{t("settings.language")}</label>
+    <div class="bg-(--color-surface) border border-(--color-border) rounded-xl p-4">
+      <label class="block text-xs font-medium text-(--color-text-muted) mb-3">{t("settings.language")}</label>
       <div class="flex gap-2">
         <button
           type="button"
-          class={locale === "es" ? "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-primary)]" : "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-border)]"}
+          class={locale === "es" ? "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-(--color-primary)" : "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-(--color-border)"}
           style={locale === "es" ? 'background: color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'background: var(--color-background)'}
           onclick={() => onLocaleChange("es")}
         >
           <span class="text-xl">🇪🇸</span>
-          <span class="text-xs font-medium text-[var(--color-primary)]">{t("settings.languageSpanish")}</span>
+          <span class="text-xs font-medium text-(--color-primary)">{t("settings.languageSpanish")}</span>
         </button>
         <button
           type="button"
-          class={locale === "en" ? "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-primary)]" : "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-border)]"}
+          class={locale === "en" ? "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-(--color-primary)" : "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-(--color-border)"}
           style={locale === "en" ? 'background: color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'background: var(--color-background)'}
           onclick={() => onLocaleChange("en")}
         >
           <span class="text-xl">🇺🇸</span>
-          <span class="text-xs font-medium text-[var(--color-primary)]">{t("settings.languageEnglish")}</span>
+          <span class="text-xs font-medium text-(--color-primary)">{t("settings.languageEnglish")}</span>
         </button>
       </div>
     </div>
 
     <!-- Theme selector -->
-    <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
-      <label class="block text-xs font-medium text-[var(--color-text-muted)] mb-3">{t("settings.theme")}</label>
+    <div class="bg-(--color-surface) border border-(--color-border) rounded-xl p-4">
+      <label class="block text-xs font-medium text-(--color-text-muted) mb-3">{t("settings.theme")}</label>
       <div class="flex gap-2">
         <button
           type="button"
-          class={preferredTheme === "light" ? "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-primary)] text-[var(--color-primary)]" : "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-border)] text-[var(--color-text-muted)]"}
+          class={preferredTheme === "light" ? "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-(--color-primary) text-(--color-primary)" : "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-(--color-border) text-(--color-text-muted)"}
           style={preferredTheme === "light" ? 'background: color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'background: var(--color-background)'}
           onclick={() => onPreferredThemeChange("light")}
           title={t("settings.theme.light")}
@@ -117,7 +117,7 @@
         </button>
         <button
           type="button"
-          class={preferredTheme === "dark" ? "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-primary)] text-[var(--color-primary)]" : "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-border)] text-[var(--color-text-muted)]"}
+          class={preferredTheme === "dark" ? "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-(--color-primary) text-(--color-primary)" : "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-(--color-border) text-(--color-text-muted)"}
           style={preferredTheme === "dark" ? 'background: color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'background: var(--color-background)'}
           onclick={() => onPreferredThemeChange("dark")}
           title={t("settings.theme.dark")}
@@ -126,7 +126,7 @@
         </button>
         <button
           type="button"
-          class={preferredTheme === "sepia" ? "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-primary)] text-[var(--color-primary)]" : "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-border)] text-[var(--color-text-muted)]"}
+          class={preferredTheme === "sepia" ? "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-(--color-primary) text-(--color-primary)" : "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-(--color-border) text-(--color-text-muted)"}
           style={preferredTheme === "sepia" ? 'background: color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'background: var(--color-background)'}
           onclick={() => onPreferredThemeChange("sepia")}
           title={t("settings.theme.sepia")}
@@ -135,7 +135,7 @@
         </button>
         <button
           type="button"
-          class={preferredTheme === "system" ? "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-primary)] text-[var(--color-primary)]" : "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-[var(--color-border)] text-[var(--color-text-muted)]"}
+          class={preferredTheme === "system" ? "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-(--color-primary) text-(--color-primary)" : "flex-1 flex items-center justify-center p-2.5 rounded-lg border-2 transition-all duration-200 cursor-pointer border-(--color-border) text-(--color-text-muted)"}
           style={preferredTheme === "system" ? 'background: color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'background: var(--color-background)'}
           onclick={() => onPreferredThemeChange("system")}
           title={t("settings.theme.system")}
@@ -147,8 +147,8 @@
   </div>
 
   <!-- Font scale -->
-  <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 mb-4">
-    <label class="block text-xs font-medium text-[var(--color-text-muted)] mb-3" for="general-font-scale">{t("settings.fontScale")}: {preferredFontScale}%</label>
+  <div class="bg-(--color-surface) border border-(--color-border) rounded-xl p-4 mb-4">
+    <label class="block text-xs font-medium text-(--color-text-muted) mb-3" for="general-font-scale">{t("settings.fontScale")}: {preferredFontScale}%</label>
     <input
       type="range"
       id="general-font-scale"
@@ -156,9 +156,9 @@
       max="140"
       value={preferredFontScale}
       oninput={(e) => onPreferredFontScaleChange(Number((e.target as HTMLInputElement).value))}
-      class="w-full h-1.5 appearance-none bg-[var(--color-border)] rounded-full outline-none slider-thumb"
+      class="w-full h-1.5 appearance-none bg-(--color-border) rounded-full outline-none slider-thumb"
     />
-    <div class="flex items-center justify-center h-12 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg text-[var(--color-primary)] font-medium" style="font-size: {preferredFontScale * 0.14}px">
+    <div class="flex items-center justify-center h-12 bg-(--color-background) border border-(--color-border) rounded-lg text-(--color-primary) font-medium" style="font-size: {preferredFontScale * 0.14}px">
       Aa
     </div>
   </div>

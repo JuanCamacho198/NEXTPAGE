@@ -4,7 +4,7 @@
 </script>
 
 {#if appState.continueReadingBooks.length === 0}
-  <p class="text-sm text-[var(--color-text-muted)]">{appState.t("home.continueReadingPlaceholder")}</p>
+  <p class="text-sm text-(--color-text-muted)">{appState.t("home.continueReadingPlaceholder")}</p>
 {:else if appState.continueReadingBooks.length === 1}
   {@const book = appState.continueReadingBooks[0]}
   <BookCard
@@ -42,7 +42,7 @@
   {#if appState.previewBookId}
     {@const pb = appState.getBookById(appState.previewBookId)}
     {#if pb}
-      <p class="mt-2 text-sm text-[var(--color-text-muted)]">{appState.t("app.homeReadHint")}</p>
+      <p class="mt-2 text-sm text-(--color-text-muted)">{appState.t("app.homeReadHint")}</p>
     {/if}
   {/if}
 {/if}

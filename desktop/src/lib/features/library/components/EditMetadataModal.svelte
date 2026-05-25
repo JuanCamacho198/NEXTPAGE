@@ -58,26 +58,26 @@
     {#snippet children()}
       <div class="space-y-4">
         <div>
-          <label for="edit-title" class="mb-1 block text-sm font-medium text-[var(--color-primary)]">
+          <label for="edit-title" class="mb-1 block text-sm font-medium text-(--color-primary)">
             {t("library.editMetadata.titleLabel")}
           </label>
           <input
             id="edit-title"
             type="text"
             bind:value={title}
-            class="w-full rounded-md border border-[color:var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-primary)] focus:border-[var(--color-primary)] focus:outline-none"
+            class="w-full rounded-md border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-primary) focus:border-(--color-primary) focus:outline-none"
           />
         </div>
 
         <div>
-          <label for="edit-author" class="mb-1 block text-sm font-medium text-[var(--color-primary)]">
+          <label for="edit-author" class="mb-1 block text-sm font-medium text-(--color-primary)">
             {t("library.editMetadata.authorLabel")}
           </label>
           <input
             id="edit-author"
             type="text"
             bind:value={author}
-            class="w-full rounded-md border border-[color:var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-primary)] focus:border-[var(--color-primary)] focus:outline-none"
+            class="w-full rounded-md border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-primary) focus:border-(--color-primary) focus:outline-none"
           />
         </div>
 

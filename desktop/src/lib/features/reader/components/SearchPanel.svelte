@@ -70,14 +70,14 @@
       >
         <input
           type="text"
-          class="min-w-0 flex-1 rounded-md border border-[color:var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-primary)]"
+          class="min-w-0 flex-1 rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm text-(--color-primary)"
           bind:value={query}
           placeholder={t("search.placeholder")}
           disabled={isSearching || !bookId}
         />
         <button
           type="submit"
-          class="rounded-md bg-[var(--color-primary)] px-3 py-2 text-sm font-medium text-[var(--color-background)] hover:opacity-90 disabled:opacity-60"
+          class="rounded-md bg-(--color-primary) px-3 py-2 text-sm font-medium text-(--color-background) hover:opacity-90 disabled:opacity-60"
           disabled={isSearching || !bookId || !query.trim()}
         >
           {isSearching ? t("search.searching") : t("search.search")}
@@ -90,22 +90,22 @@
             <li>
               <button
                 type="button"
-                class="w-full rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-left hover:bg-[color:var(--color-border)]"
+                class="w-full rounded-lg border border-(--color-border) bg-(--color-background) px-3 py-2 text-left hover:bg-(--color-border)"
                 onclick={() => jumpTo(item, index)}
               >
-                <p class="text-sm text-[var(--color-primary)]">{item.snippet}</p>
-                <p class="mt-1 text-xs text-[var(--color-text-muted)]">{t("search.locator")}: {item.locator}</p>
+                <p class="text-sm text-(--color-primary)">{item.snippet}</p>
+                <p class="mt-1 text-xs text-(--color-text-muted)">{t("search.locator")}: {item.locator}</p>
               </button>
             </li>
           {/each}
         </ul>
 
-        <div class="mt-3 flex items-center justify-between text-xs text-[var(--color-text-muted)]">
+        <div class="mt-3 flex items-center justify-between text-xs text-(--color-text-muted)">
           <span>{t("search.page")} {currentPage()} · {Math.min(total(), pageSize() * currentPage())} / {total()} {t("search.matches")}</span>
           <div class="flex gap-1">
             <button
               type="button"
-              class="rounded border border-[color:var(--color-border)] px-2 py-1 text-[var(--color-primary)] hover:bg-[color:var(--color-border)] disabled:opacity-50"
+              class="rounded border border-(--color-border) px-2 py-1 text-(--color-primary) hover:bg-(--color-border) disabled:opacity-50"
               onclick={() => runSearch(currentPage() - 1)}
               disabled={currentPage() <= 1 || isSearching}
             >
@@ -113,7 +113,7 @@
             </button>
             <button
               type="button"
-              class="rounded border border-[color:var(--color-border)] px-2 py-1 text-[var(--color-primary)] hover:bg-[color:var(--color-border)] disabled:opacity-50"
+              class="rounded border border-(--color-border) px-2 py-1 text-(--color-primary) hover:bg-(--color-border) disabled:opacity-50"
               onclick={() => runSearch(currentPage() + 1)}
               disabled={!hasMore() || isSearching}
             >
@@ -122,7 +122,7 @@
           </div>
         </div>
       {:else if isNoMatch()}
-        <p class="text-sm text-[var(--color-text-muted)]">{t("search.noMatches")}</p>
+        <p class="text-sm text-(--color-text-muted)">{t("search.noMatches")}</p>
       {/if}
     {/if}
   {/snippet}

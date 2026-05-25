@@ -15,15 +15,15 @@
     class: className = ""
   }: SkeletonProps = $props();
 
-  const baseShimmer = "animate-pulse bg-gradient-to-r from-[var(--color-border)] via-[var(--color-surface)] to-[var(--color-border)] bg-[length:200%_100%]";
+  const baseShimmer = "animate-pulse bg-gradient-to-r from-(--color-border) via-(--color-surface) to-(--color-border) bg-[length:200%_100%]";
 
   const variants = {
     text: "rounded h-4",
     circular: "rounded-full",
     rectangular: "rounded-none",
     rounded: "rounded-lg",
-    card: "rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]",
-    book: "rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+    card: "rounded-xl border border-(--color-border) bg-(--color-surface)",
+    book: "rounded-xl border border-(--color-border) bg-(--color-surface)"
   };
 </script>
 

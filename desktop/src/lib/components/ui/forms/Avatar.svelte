@@ -40,11 +40,11 @@
     <img
       {src}
       alt={name}
-      class="w-full h-full rounded-full border border-[var(--color-border)] object-fit block"
+      class="w-full h-full rounded-full border border-(--color-border) object-fit block"
       onerror={handleError}
     />
   {:else}
-    <div class="w-full h-full rounded-full border border-[var(--color-border)] flex items-center justify-center font-bold text-[var(--color-primary)] bg-[color-mix(in_srgb,var(--color-primary)_12%,var(--color-surface))]">
+    <div class="w-full h-full rounded-full border border-(--color-border) flex items-center justify-center font-bold text-(--color-primary) bg-[color-mix(in_srgb,var(--color-primary)_12%,var(--color-surface))]">
       {initials}
     </div>
   {/if}

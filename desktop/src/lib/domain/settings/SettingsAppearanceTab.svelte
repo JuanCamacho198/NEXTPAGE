@@ -77,61 +77,61 @@
     <div class="grid grid-cols-4 gap-2">
       <button
         type="button"
-        class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer bg-[var(--color-surface)]"
-        class:border-[var(--color-primary)]={preferredTheme === "light"}
-        class:border-[var(--color-border)]={preferredTheme !== "light"}
+        class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer bg-(--color-surface)"
+        class:border-(--color-primary)={preferredTheme === "light"}
+        class:border-(--color-border)={preferredTheme !== "light"}
         onclick={() => onPreferredThemeChange("light")}
         title={t("settings.theme.light")}
       >
         <div class="w-10 h-10 rounded-[10px] flex items-center justify-center bg-gradient-to-br from-white to-gray-100 text-amber-500">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
         </div>
-        <span class="text-[11px] font-medium text-[var(--color-text-muted)]">{t("settings.theme.light")}</span>
+        <span class="text-[11px] font-medium text-(--color-text-muted)">{t("settings.theme.light")}</span>
       </button>
       <button
         type="button"
-        class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer bg-[var(--color-surface)]"
-        class:border-[var(--color-primary)]={preferredTheme === "dark"}
-        class:border-[var(--color-border)]={preferredTheme !== "dark"}
+        class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer bg-(--color-surface)"
+        class:border-(--color-primary)={preferredTheme === "dark"}
+        class:border-(--color-border)={preferredTheme !== "dark"}
         onclick={() => onPreferredThemeChange("dark")}
         title={t("settings.theme.dark")}
       >
         <div class="w-10 h-10 rounded-[10px] flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-900 text-zinc-400">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </div>
-        <span class="text-[11px] font-medium text-[var(--color-text-muted)]">{t("settings.theme.dark")}</span>
+        <span class="text-[11px] font-medium text-(--color-text-muted)">{t("settings.theme.dark")}</span>
       </button>
       <button
         type="button"
-        class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer bg-[var(--color-surface)]"
-        class:border-[var(--color-primary)]={preferredTheme === "sepia"}
-        class:border-[var(--color-border)]={preferredTheme !== "sepia"}
+        class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer bg-(--color-surface)"
+        class:border-(--color-primary)={preferredTheme === "sepia"}
+        class:border-(--color-border)={preferredTheme !== "sepia"}
         onclick={() => onPreferredThemeChange("sepia")}
         title={t("settings.theme.sepia")}
       >
         <div class="w-10 h-10 rounded-[10px] flex items-center justify-center bg-gradient-to-br from-amber-100 to-amber-200 text-amber-700">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         </div>
-        <span class="text-[11px] font-medium text-[var(--color-text-muted)]">{t("settings.theme.sepia")}</span>
+        <span class="text-[11px] font-medium text-(--color-text-muted)">{t("settings.theme.sepia")}</span>
       </button>
       <button
         type="button"
-        class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer bg-[var(--color-surface)]"
-        class:border-[var(--color-primary)]={preferredTheme === "system"}
-        class:border-[var(--color-border)]={preferredTheme !== "system"}
+        class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer bg-(--color-surface)"
+        class:border-(--color-primary)={preferredTheme === "system"}
+        class:border-(--color-border)={preferredTheme !== "system"}
         onclick={() => onPreferredThemeChange("system")}
         title={t("settings.theme.system")}
       >
         <div class="w-10 h-10 rounded-[10px] flex items-center justify-center bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-600">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         </div>
-        <span class="text-[11px] font-medium text-[var(--color-text-muted)]">{t("settings.theme.system")}</span>
+        <span class="text-[11px] font-medium text-(--color-text-muted)">{t("settings.theme.system")}</span>
       </button>
     </div>
   </div>
 
   <div class="mb-4">
-    <label class="mb-1 block text-xs text-[var(--color-text-muted)]" for="app-font-scale">{t("settings.fontScale")}: {preferredFontScale}%</label>
+    <label class="mb-1 block text-xs text-(--color-text-muted)" for="app-font-scale">{t("settings.fontScale")}: {preferredFontScale}%</label>
     <input
       type="range"
       id="app-font-scale"
@@ -139,9 +139,9 @@
       max="140"
       value={preferredFontScale}
       oninput={(e) => onPreferredFontScaleChange(Number((e.target as HTMLInputElement).value))}
-      class="w-full h-1.5 appearance-none bg-[var(--color-border)] rounded-full outline-none slider-thumb"
+      class="w-full h-1.5 appearance-none bg-(--color-border) rounded-full outline-none slider-thumb"
     />
-    <div class="flex items-center justify-center h-12 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg text-[var(--color-primary)] font-medium" style="font-size: {preferredFontScale * 0.14}px">
+    <div class="flex items-center justify-center h-12 bg-(--color-background) border border-(--color-border) rounded-lg text-(--color-primary) font-medium" style="font-size: {preferredFontScale * 0.14}px">
       Aa
     </div>
   </div>
@@ -152,7 +152,7 @@
     <button
       type="button"
       class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-[11px] font-medium cursor-pointer"
-      class:border-[var(--color-primary)]={readerThemeMode === "paper"}
+      class:border-(--color-primary)={readerThemeMode === "paper"}
       class:border-[--preview-border,#e0e0e0]={readerThemeMode !== "paper"}
       style="--preview-bg: #fafafa; --preview-text: #1a1a1a; --preview-border: #e0e0e0; background: var(--preview-bg); color: var(--preview-text);"
       onclick={() => onReaderThemeModeChange("paper")}
@@ -162,7 +162,7 @@
     <button
       type="button"
       class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-[11px] font-medium cursor-pointer"
-      class:border-[var(--color-primary)]={readerThemeMode === "sepia"}
+      class:border-(--color-primary)={readerThemeMode === "sepia"}
       class:border-[--preview-border,#d4c4a8]={readerThemeMode !== "sepia"}
       style="--preview-bg: #f4ecd8; --preview-text: #5b4636; --preview-border: #d4c4a8; background: var(--preview-bg); color: var(--preview-text);"
       onclick={() => onReaderThemeModeChange("sepia")}
@@ -172,7 +172,7 @@
     <button
       type="button"
       class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-[11px] font-medium cursor-pointer"
-      class:border-[var(--color-primary)]={readerThemeMode === "night"}
+      class:border-(--color-primary)={readerThemeMode === "night"}
       class:border-[--preview-border,#333333]={readerThemeMode !== "night"}
       style="--preview-bg: #1a1a1a; --preview-text: #e8e8e8; --preview-border: #333333; background: var(--preview-bg); color: var(--preview-text);"
       onclick={() => onReaderThemeModeChange("night")}
@@ -183,45 +183,45 @@
 
   <div class="space-y-4">
     <div class="mb-2">
-      <label class="mb-1 block text-xs text-[var(--color-text-muted)]" for="reader-brightness">{t("settings.reader.brightness")}: {readerBrightness}%</label>
+      <label class="mb-1 block text-xs text-(--color-text-muted)" for="reader-brightness">{t("settings.reader.brightness")}: {readerBrightness}%</label>
       <input
         type="range"
         id="reader-brightness"
         min="50" max="150"
         value={readerBrightness}
         oninput={(e) => onReaderBrightnessChange(Number((e.target as HTMLInputElement).value))}
-        class="w-full h-1.5 appearance-none bg-[var(--color-border)] rounded-full outline-none slider-thumb"
+        class="w-full h-1.5 appearance-none bg-(--color-border) rounded-full outline-none slider-thumb"
       />
     </div>
     <div class="mb-2">
-      <label class="mb-1 block text-xs text-[var(--color-text-muted)]" for="reader-contrast">{t("settings.reader.contrast")}: {readerContrast}%</label>
+      <label class="mb-1 block text-xs text-(--color-text-muted)" for="reader-contrast">{t("settings.reader.contrast")}: {readerContrast}%</label>
       <input
         type="range"
         id="reader-contrast"
         min="50" max="150"
         value={readerContrast}
         oninput={(e) => onReaderContrastChange(Number((e.target as HTMLInputElement).value))}
-        class="w-full h-1.5 appearance-none bg-[var(--color-border)] rounded-full outline-none slider-thumb"
+        class="w-full h-1.5 appearance-none bg-(--color-border) rounded-full outline-none slider-thumb"
       />
     </div>
     <div class="mb-2">
-      <label class="mb-1 block text-xs text-[var(--color-text-muted)]" for="reader-font-size">{t("settings.reader.epub.fontSize")}: {readerEpubFontSize}%</label>
+      <label class="mb-1 block text-xs text-(--color-text-muted)" for="reader-font-size">{t("settings.reader.epub.fontSize")}: {readerEpubFontSize}%</label>
       <input
         type="range"
         id="reader-font-size"
         min="80" max="200"
         value={readerEpubFontSize}
         oninput={(e) => onReaderEpubFontSizeChange(Number((e.target as HTMLInputElement).value))}
-        class="w-full h-1.5 appearance-none bg-[var(--color-border)] rounded-full outline-none slider-thumb"
+        class="w-full h-1.5 appearance-none bg-(--color-border) rounded-full outline-none slider-thumb"
       />
     </div>
     <div class="mb-2">
-      <label class="mb-1 block text-xs text-[var(--color-text-muted)]" for="reader-font-family">{t("settings.reader.epub.fontFamily")}</label>
+      <label class="mb-1 block text-xs text-(--color-text-muted)" for="reader-font-family">{t("settings.reader.epub.fontFamily")}</label>
       <select
         id="reader-font-family"
         value={readerEpubFontFamily}
         onchange={(e) => onReaderEpubFontFamilyChange((e.target as HTMLSelectElement).value)}
-        class="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-primary)] cursor-pointer outline-none"
+        class="w-full rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm text-(--color-primary) cursor-pointer outline-none"
       >
         <option value="serif">Serif</option>
         <option value="sans-serif">Sans Serif</option>

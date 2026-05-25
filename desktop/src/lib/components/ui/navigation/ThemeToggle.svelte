@@ -15,7 +15,7 @@
 
 <button
   id="theme-toggle-btn"
-  class="w-full flex items-center gap-[10px] rounded-[12px] p-[10px_12px] bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)] cursor-pointer transition-all duration-200 font-sans text-[13px] font-medium select-none -webkit-tap-highlight-transparent hover:bg-[var(--color-panel-accent)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-primary)] hover:shadow-[var(--shadow-soft)] active:scale-[0.98]"
+  class="w-full flex items-center gap-[10px] rounded-[12px] p-[10px_12px] bg-transparent border border-(--color-border) text-(--color-text-muted) cursor-pointer transition-all duration-200 font-sans text-[13px] font-medium select-none -webkit-tap-highlight-transparent hover:bg-(--color-panel-accent) hover:border-(--color-border-strong) hover:text-(--color-primary) hover:shadow-(--shadow-soft) active:scale-[0.98]"
   class:animating
   onclick={handleToggle}
   aria-label={$theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
@@ -50,5 +50,5 @@
     </svg>
   </div>
 
-  <span class="flex-1 text-left text-[var(--color-primary)]">{$theme === "dark" ? "Tema oscuro" : "Tema claro"}</span>
+  <span class="flex-1 text-left text-(--color-primary)">{$theme === "dark" ? "Tema oscuro" : "Tema claro"}</span>
 </button>

@@ -62,14 +62,14 @@
   }
 </script>
 
-<nav class="w-[180px] shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] max-md:hidden" aria-label={t("settings.title")}>
+<nav class="w-[180px] shrink-0 border-r border-(--color-border) bg-(--color-surface) max-md:hidden" aria-label={t("settings.title")}>
   <div class="flex flex-col gap-1 p-2">
     {#each tabs as tab (tab.id)}
       <button
         type="button"
-        class="flex items-center gap-3 px-4 py-3 border-none rounded-lg bg-transparent cursor-pointer text-sm w-full text-left text-[var(--color-text-muted,var(--color-secondary))] transition-all duration-200 hover:bg-[var(--color-background)] hover:text-[var(--color-text)]"
+        class="flex items-center gap-3 px-4 py-3 border-none rounded-lg bg-transparent cursor-pointer text-sm w-full text-left text-[var(--color-text-muted,var(--color-secondary))] transition-all duration-200 hover:bg-(--color-background) hover:text-(--color-text)"
         class:bg-[rgba(78,140,255,0.1)]={activeTab === tab.id}
-        class:text-[var(--color-primary)]={activeTab === tab.id}
+        class:text-(--color-primary)={activeTab === tab.id}
         class:font-medium={activeTab === tab.id}
         onclick={() => handleTabClick(tab.id)}
         aria-current={activeTab === tab.id ? "page" : undefined}

@@ -15,16 +15,16 @@
   let { shortcuts, t }: Props = $props();
 </script>
 
-<div class="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface,#fff)] p-3">
+<div class="mt-3 rounded-xl border border-(--color-border) bg-(--color-surface,#fff) p-3">
   <h4 class="mt-0 mb-2 text-sm font-semibold text-neutral-300">
     {t("settings.shortcuts.title")}
   </h4>
-  <p class="text-xs text-[var(--color-text-muted)] mb-3">{t("settings.shortcuts.description")}</p>
+  <p class="text-xs text-(--color-text-muted) mb-3">{t("settings.shortcuts.description")}</p>
   <ul class="m-0 p-0 list-none grid gap-2">
     {#each shortcuts as shortcut (shortcut.id)}
       <li class="flex items-center gap-2">
-        <span class="inline-flex items-center justify-center min-w-[86px] px-2 py-1 rounded-md border border-[var(--color-border)] font-mono text-[11px] text-[var(--color-primary)] bg-[var(--color-background)]">{shortcut.combo}</span>
-        <span class="text-xs text-[var(--color-primary)]">{t(shortcut.descriptionKey)}</span>
+        <span class="inline-flex items-center justify-center min-w-[86px] px-2 py-1 rounded-md border border-(--color-border) font-mono text-[11px] text-(--color-primary) bg-(--color-background)">{shortcut.combo}</span>
+        <span class="text-xs text-(--color-primary)">{t(shortcut.descriptionKey)}</span>
       </li>
     {/each}
   </ul>

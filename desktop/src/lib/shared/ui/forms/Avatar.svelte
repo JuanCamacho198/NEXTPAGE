@@ -40,12 +40,12 @@
     <img
       {src}
       alt={name}
-      class="block size-full rounded-full border border-[var(--color-border)] object-cover"
+      class="block size-full rounded-full border border-(--color-border) object-cover"
       onerror={handleError}
     />
   {:else}
     <div
-      class="flex size-full items-center justify-center rounded-full border border-[var(--color-border)] font-bold text-[var(--color-primary)]"
+      class="flex size-full items-center justify-center rounded-full border border-(--color-border) font-bold text-(--color-primary)"
       style="background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));"
     >
       {initials}

@@ -444,7 +444,7 @@
 
 <svelte:window onkeydown={handleViewerKeydown} />
 
-<div class="flex flex-col h-full bg-[var(--color-background)] text-[var(--color-primary)] outline-none" onfocusin={() => { isViewerFocused = true; }} onfocusout={() => { isViewerFocused = false; }}>
+<div class="flex flex-col h-full bg-(--color-background) text-(--color-primary) outline-none" onfocusin={() => { isViewerFocused = true; }} onfocusout={() => { isViewerFocused = false; }}>
   {#if isLoading}
     <div class="flex items-center justify-center h-[200px] text-sm">{t('epub.loading')}</div>
   {:else if error}

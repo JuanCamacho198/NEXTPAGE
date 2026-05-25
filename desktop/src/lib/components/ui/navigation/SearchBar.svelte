@@ -36,7 +36,7 @@
 <div class="relative">
   {#if icon}
     <svg
-      class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]"
+      class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-(--color-text-muted)"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -52,14 +52,14 @@
   <input
     type="text"
     {placeholder}
-    class="h-8 w-[140px] sm:w-40 rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] pl-9 pr-8 text-sm text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none"
+    class="h-8 w-[140px] sm:w-40 rounded-lg border border-(--color-border) bg-(--color-background) pl-9 pr-8 text-sm text-(--color-text) placeholder-(--color-text-muted) focus:border-(--color-primary) focus:outline-none"
     {value}
     oninput={handleInput}
   />
   {#if value}
     <button
       type="button"
-      class="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+      class="absolute right-2 top-1/2 -translate-y-1/2 text-(--color-text-muted) hover:text-(--color-text)"
       aria-label="Clear search"
       onclick={clear}
     >

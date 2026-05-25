@@ -104,12 +104,12 @@
   {#if title}
     <span
       class="absolute bottom-full left-1/2 -translate-x-1/2 translate-y-1
-             bg-[var(--color-surface)] text-[var(--color-text)] p-1 rounded text-xs
+             bg-(--color-surface) text-(--color-text) p-1 rounded text-xs
              whitespace-nowrap opacity-0 invisible transition-all duration-150 ease
              pointer-events-none z-50 shadow-[0_2px_8px_rgba(0,0,0,0.2)]
              group-hover:opacity-100 group-hover:visible group-hover:translate-y-0
              after:absolute after:top-full after:left-1/2 after:-translate-x-1/2
-             after:border-4 after:border-transparent after:border-t-[var(--color-surface)]"
+             after:border-4 after:border-transparent after:border-t-(--color-surface)"
       role="tooltip"
     >{title}</span>
   {/if}

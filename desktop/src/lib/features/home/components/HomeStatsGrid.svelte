@@ -51,20 +51,20 @@
 </script>
 
 {#if disabledReason}
-  <div class="rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-4 text-center">
-    <p class="text-sm text-[var(--color-text-muted)]">{disabledReason}</p>
+  <div class="rounded-xl border border-(--color-border) bg-(--color-surface) p-4 text-center">
+    <p class="text-sm text-(--color-text-muted)">{disabledReason}</p>
   </div>
 {:else}
   <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
     {#each statItems as item}
-      <div class="group relative overflow-hidden rounded-[20px] border border-[color:var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[color:var(--color-border-strong)] hover:shadow-[var(--shadow-soft)]">
+      <div class="group relative overflow-hidden rounded-[20px] border border-(--color-border) bg-(--color-surface) p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-(--color-border-strong) hover:shadow-(--shadow-soft)">
         <div class="flex items-start justify-between">
           <div>
-            <p class="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">{item.label}</p>
+            <p class="text-xs font-medium uppercase tracking-wider text-(--color-text-muted)">{item.label}</p>
             {#if isLoading}
-              <div class="mt-2 h-8 w-16 animate-pulse rounded bg-[color:var(--color-border)]"></div>
+              <div class="mt-2 h-8 w-16 animate-pulse rounded bg-(--color-border)"></div>
             {:else}
-              <p class="mt-1 text-3xl font-semibold tracking-tight text-[var(--color-primary)]">{item.value}</p>
+              <p class="mt-1 text-3xl font-semibold tracking-tight text-(--color-primary)">{item.value}</p>
             {/if}
           </div>
           <div class="flex h-10 w-10 items-center justify-center rounded-full" style="background-color: {item.bg}; color: {item.color};">

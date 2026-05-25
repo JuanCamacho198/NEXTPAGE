@@ -19,7 +19,7 @@
 </script>
 
 <div class="flex flex-col gap-1.5 {className}">
-  <label for={id} class="text-sm font-medium text-[var(--color-primary)]">
+  <label for={id} class="text-sm font-medium text-(--color-primary)">
     {label}
   </label>
 
@@ -30,6 +30,6 @@
   </div>
 
   {#if error}
-    <p class="text-sm text-[var(--color-error)]">{error}</p>
+    <p class="text-sm text-(--color-error)">{error}</p>
   {/if}
 </div>

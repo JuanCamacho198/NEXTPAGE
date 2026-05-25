@@ -46,7 +46,7 @@
     <div class="flex justify-between items-center mb-1">
       <label for={id} class="mb-1 block text-xs text-zinc-600">{label}</label>
       {#if showValue}
-        <span class="text-xs font-medium text-[var(--color-primary)]">{value}{unit}</span>
+        <span class="text-xs font-medium text-(--color-primary)">{value}{unit}</span>
       {/if}
     </div>
   {/if}

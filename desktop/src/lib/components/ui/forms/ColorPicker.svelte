@@ -48,7 +48,7 @@
   <div class="flex items-center gap-2">
     <button
       type="button"
-      class="h-8 w-8 rounded-lg border-2 border-[var(--color-border)] cursor-pointer transition-transform hover:scale-105"
+      class="h-8 w-8 rounded-lg border-2 border-(--color-border) cursor-pointer transition-transform hover:scale-105"
       style="background-color: {value};"
       onclick={() => (isOpen = !isOpen)}
       aria-label="Select color"
@@ -59,7 +59,7 @@
       id={id}
       {value}
       oninput={handleInputChange}
-      class="h-8 w-20 rounded border border-[var(--color-border)] px-2 text-xs font-mono"
+      class="h-8 w-20 rounded border border-(--color-border) px-2 text-xs font-mono"
     />
     
     <input
@@ -71,12 +71,12 @@
   </div>
 
   {#if isOpen}
-    <div class="absolute top-full left-0 z-50 mt-1 rounded-lg bg-[var(--color-surface,white)] border border-[var(--color-border)] shadow-[0_4px_12px_rgba(0,0,0,0.15)] p-2">
+    <div class="absolute top-full left-0 z-50 mt-1 rounded-lg bg-(--color-surface,white) border border-(--color-border) shadow-[0_4px_12px_rgba(0,0,0,0.15)] p-2">
       <div class="grid grid-cols-5 gap-1">
         {#each presetColors as color}
           <button
             type="button"
-            class="w-6 h-6 rounded border-2 border-transparent cursor-pointer transition-all hover:scale-[1.15] {value === color ? 'border-[var(--color-primary)] shadow-[0_0_0_2px_var(--color-background)]' : ''}"
+            class="w-6 h-6 rounded border-2 border-transparent cursor-pointer transition-all hover:scale-[1.15] {value === color ? 'border-(--color-primary) shadow-[0_0_0_2px_var(--color-background)]' : ''}"
             style="background-color: {color};"
             onclick={() => selectColor(color)}
             aria-label="Select {color}"

@@ -46,10 +46,10 @@
   const scaleOptions = Array.from({ length: 26 }, (_, index) => (50 + index * 10) / 100);
 </script>
 
-<div class="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 {className}">
+<div class="flex flex-wrap items-center gap-3 border-b border-(--color-border) bg-(--color-surface) px-3 py-2 {className}">
   <button
     type="button"
-    class="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm text-[var(--color-primary)] transition-colors hover:bg-[color:var(--color-border)]"
+    class="rounded border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm text-(--color-primary) transition-colors hover:bg-(--color-border)"
     onclick={callbacks.onToggleToc}
   >
     {i18n(format === "pdf" ? "pdf.contents" : "epub.contents")}
@@ -57,7 +57,7 @@
 
   <button
     type="button"
-    class="reader-nav-button flex items-center gap-1.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm text-[var(--color-primary)] transition-colors hover:bg-[color:var(--color-border)] disabled:opacity-50 disabled:cursor-not-allowed"
+    class="reader-nav-button flex items-center gap-1.5 rounded border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm text-(--color-primary) transition-colors hover:bg-(--color-border) disabled:opacity-50 disabled:cursor-not-allowed"
     aria-label={i18n("pdf.previous")}
     onclick={callbacks.onPrevPage}
     disabled={state.currentPage <= 1}
@@ -66,13 +66,13 @@
     {i18n("pdf.previous")}
   </button>
 
-  <span class="flex items-center gap-1 text-sm text-[var(--color-primary)]">
+  <span class="flex items-center gap-1 text-sm text-(--color-primary)">
     {state.currentPage} / {state.totalPages}
   </span>
 
   <button
     type="button"
-    class="reader-nav-button flex items-center gap-1.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm text-[var(--color-primary)] transition-colors hover:bg-[color:var(--color-border)] disabled:opacity-50 disabled:cursor-not-allowed"
+    class="reader-nav-button flex items-center gap-1.5 rounded border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm text-(--color-primary) transition-colors hover:bg-(--color-border) disabled:opacity-50 disabled:cursor-not-allowed"
     aria-label={i18n("pdf.next")}
     onclick={callbacks.onNextPage}
     disabled={state.currentPage >= state.totalPages}
@@ -82,7 +82,7 @@
   </button>
 
   {#if state.progress > 0}
-    <span class="text-sm text-[var(--color-muted)]">
+    <span class="text-sm text-(--color-muted)">
       {Math.round(state.progress)}%
     </span>
   {/if}

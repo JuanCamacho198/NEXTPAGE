@@ -41,17 +41,17 @@
         type="checkbox"
         checked={collectionIds.includes(collection.id)}
         disabled={loading}
-        class="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+        class="h-4 w-4 rounded border-(--color-border) text-(--color-primary) focus:ring-(--color-primary)"
         onchange={(e) => handleToggle(collection.id, e.currentTarget.checked)}
       />
       <span
         class="inline-block h-3 w-3 rounded-full"
         style="background-color: {collection.color ?? '#6366f1'}"
       ></span>
-      <span class="text-sm text-[var(--color-primary)]">{collection.name}</span>
+      <span class="text-sm text-(--color-primary)">{collection.name}</span>
     </label>
   {/each}
   {#if collections.length === 0}
-    <p class="text-sm text-[var(--color-text-muted)]">No collections available</p>
+    <p class="text-sm text-(--color-text-muted)">No collections available</p>
   {/if}
 </div>

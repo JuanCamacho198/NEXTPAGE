@@ -15,7 +15,7 @@
 </script>
 
 <div class="flex items-center justify-between {className}">
-  <h2 class="text-xl font-semibold text-[var(--color-primary)]">{title}</h2>
+  <h2 class="text-xl font-semibold text-(--color-primary)">{title}</h2>
 
   {#if actions}
     <div class="actions flex items-center gap-2">

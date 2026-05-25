@@ -26,18 +26,18 @@
 </script>
 
 <div class="{className}">
-  <div class="flex border-b border-[var(--color-border)]" role="tablist">
+  <div class="flex border-b border-(--color-border)" role="tablist">
     {#each tabs as tab}
       <button
         type="button"
-        class="relative px-4 py-2.5 text-sm font-medium transition-colors hover:text-[var(--color-primary)] {active === tab.id ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted)]'}"
+        class="relative px-4 py-2.5 text-sm font-medium transition-colors hover:text-(--color-primary) {active === tab.id ? 'text-(--color-primary)' : 'text-(--color-muted)'}"
         role="tab"
         aria-selected={active === tab.id}
         onclick={() => handleTabClick(tab.id)}
       >
         {tab.label}
         {#if active === tab.id}
-          <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--color-primary)]"></div>
+          <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-(--color-primary)"></div>
         {/if}
       </button>
     {/each}

@@ -44,11 +44,11 @@
 
   const variantClasses: Record<string, string> = {
     default: "",
-    surface: "bg-[var(--color-surface-dim)]",
-    interactive: "hover:border-[var(--color-primary)] hover:shadow-md transition-all duration-200"
+    surface: "bg-(--color-surface-dim)",
+    interactive: "hover:border-(--color-primary) hover:shadow-md transition-all duration-200"
   };
 
-  let baseClasses = $derived(`${sizeClasses[size]} border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden`);
+  let baseClasses = $derived(`${sizeClasses[size]} border border-(--color-border) bg-(--color-surface) overflow-hidden`);
 
   function handleKeydown(e: KeyboardEvent) {
     if (clickable && (e.key === "Enter" || e.key === " ")) {
@@ -74,10 +74,10 @@
       {#if title || subtitle}
         <div class="mb-3">
           {#if title}
-            <h3 class="text-lg font-semibold text-[var(--color-primary)]">{title}</h3>
+            <h3 class="text-lg font-semibold text-(--color-primary)">{title}</h3>
           {/if}
           {#if subtitle}
-            <p class="mt-1 text-sm text-[var(--color-text-muted)]">{subtitle}</p>
+            <p class="mt-1 text-sm text-(--color-text-muted)">{subtitle}</p>
           {/if}
         </div>
       {/if}
@@ -90,7 +90,7 @@
     </div>
 
     {#if actions}
-      <div class="flex items-center gap-2 border-t border-[var(--color-border)] px-4 py-3">
+      <div class="flex items-center gap-2 border-t border-(--color-border) px-4 py-3">
         {@render actions()}
       </div>
     {/if}
@@ -107,10 +107,10 @@
       {#if title || subtitle}
         <div class="mb-3">
           {#if title}
-            <h3 class="text-lg font-semibold text-[var(--color-primary)]">{title}</h3>
+            <h3 class="text-lg font-semibold text-(--color-primary)">{title}</h3>
           {/if}
           {#if subtitle}
-            <p class="mt-1 text-sm text-[var(--color-text-muted)]">{subtitle}</p>
+            <p class="mt-1 text-sm text-(--color-text-muted)">{subtitle}</p>
           {/if}
         </div>
       {/if}
@@ -123,7 +123,7 @@
     </div>
 
     {#if actions}
-      <div class="flex items-center gap-2 border-t border-[var(--color-border)] px-4 py-3">
+      <div class="flex items-center gap-2 border-t border-(--color-border) px-4 py-3">
         {@render actions()}
       </div>
     {/if}

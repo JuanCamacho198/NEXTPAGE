@@ -27,17 +27,17 @@
 
 <div class={`flex flex-col items-center justify-center py-12 text-center ${className}`}>
   {#if icon && iconPaths[icon]}
-    <div class="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-border)] ring-1 ring-inset ring-[var(--color-border)]">
-      <svg class="h-6 w-6 text-[var(--color-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-(--color-surface) to-(--color-border) ring-1 ring-inset ring-(--color-border)">
+      <svg class="h-6 w-6 text-(--color-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d={iconPaths[icon]} />
       </svg>
     </div>
   {/if}
 
-  <h3 class="text-lg font-semibold tracking-tight text-[var(--color-primary)]">{title}</h3>
+  <h3 class="text-lg font-semibold tracking-tight text-(--color-primary)">{title}</h3>
 
   {#if description}
-    <p class="mt-2 max-w-xs text-sm leading-relaxed text-[var(--color-muted)]">{description}</p>
+    <p class="mt-2 max-w-xs text-sm leading-relaxed text-(--color-muted)">{description}</p>
   {/if}
 
   {#if action}

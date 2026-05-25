@@ -77,7 +77,7 @@
   {@render fallback()}
 {:else}
   <div
-    class={`${className} flex items-center justify-center bg-gradient-to-br from-[#f2ede0] to-[#e4d5ba] text-[#5d4a33] border border-[var(--color-border,#d6d3ce)] font-bold`}
+    class={`${className} flex items-center justify-center bg-gradient-to-br from-[#f2ede0] to-[#e4d5ba] text-[#5d4a33] border border-(--color-border,#d6d3ce) font-bold`}
     role="img"
     aria-label={alt}
   >

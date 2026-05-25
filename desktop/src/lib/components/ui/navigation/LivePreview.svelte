@@ -56,17 +56,17 @@ Winston made for the stairs. It was no use trying the lift. Even at the best of 
     --preview-contrast: {effectiveContrast};
   "
 >
-  <div class="flex flex-col min-h-[200px] rounded border border-[var(--color-border)]"
+  <div class="flex flex-col min-h-[200px] rounded border border-(--color-border)"
     style="background: var(--preview-bg); color: var(--preview-text); font-family: var(--preview-font-family); font-size: var(--preview-font-size); line-height: 1.6; padding: var(--preview-margin);"
   >
-    <div class="flex justify-between items-center pb-3 border-b border-[var(--preview-muted)] mb-3 opacity-70">
+    <div class="flex justify-between items-center pb-3 border-b border-(--preview-muted) mb-3 opacity-70">
       <span class="text-xs font-semibold uppercase tracking-wider">Chapter One</span>
       <span class="text-xs">1</span>
     </div>
     <div class="flex-1">
       <p class="m-0 text-indent-[1.5em]">{displayText.split('\n\n')[0]}</p>
     </div>
-    <div class="flex justify-end pt-3 border-t border-[var(--preview-muted)] mt-3 opacity-70">
+    <div class="flex justify-end pt-3 border-t border-(--preview-muted) mt-3 opacity-70">
       <span class="text-xs">12%</span>
     </div>
   </div>

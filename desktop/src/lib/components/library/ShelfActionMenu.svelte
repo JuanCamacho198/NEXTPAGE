@@ -204,7 +204,7 @@
   <button
     bind:this={triggerEl}
     type="button"
-    class="rounded-md border border-[color:var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs text-[var(--color-text-muted)]"
+    class="rounded-md border border-(--color-border) bg-(--color-surface) px-2 py-1 text-xs text-(--color-text-muted)"
     aria-label={triggerLabel}
     aria-haspopup="menu"
     aria-expanded={isOpen}
@@ -223,7 +223,7 @@
       role="menu"
       tabindex="-1"
       aria-label={triggerLabel}
-      class="absolute right-0 z-10 mt-2 w-56 rounded-md bg-[var(--color-surface)] shadow-lg ring-1 ring-[var(--color-border)]"
+      class="absolute right-0 z-10 mt-2 w-56 rounded-md bg-(--color-surface) shadow-lg ring-1 ring-(--color-border)"
       onkeydown={handleMenuKeyDown}
     >
       <div class="py-1">
@@ -232,7 +232,7 @@
           role="menuitem"
           tabindex="0"
           data-menu-item="true"
-          class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]"
+          class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
           onclick={() => {
             handleAction(onToggleFavorite);
           }}
@@ -246,7 +246,7 @@
             role="menuitem"
             tabindex="0"
             data-menu-item="true"
-            class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]"
+            class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
             onclick={() => {
               handleAction(onRead);
             }}
@@ -260,7 +260,7 @@
           role="menuitem"
           tabindex="0"
           data-menu-item="true"
-          class="w-full px-4 py-2 text-left text-sm text-[var(--color-primary)] hover:bg-[color:var(--color-border)]"
+          class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
           onclick={() => {
             handleAction(onEdit);
           }}
@@ -273,7 +273,7 @@
           role="menuitem"
           tabindex="0"
           data-menu-item="true"
-          class="w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-[color:var(--color-border)]"
+          class="w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-(--color-border)"
           onclick={() => {
             handleAction(onRemove);
           }}

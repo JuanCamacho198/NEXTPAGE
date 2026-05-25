@@ -24,25 +24,25 @@
   }: Props = $props();
 </script>
 
-<div class="flex items-center gap-3 px-3 py-2 bg-[var(--color-surface)] border-b border-[var(--color-border)] flex-wrap">
-  <button type="button" onclick={onToggleToc} class="px-3 py-1.5 border border-[var(--color-border)] rounded bg-[var(--color-surface)] text-[var(--color-primary)] cursor-pointer text-xs hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))]">
+<div class="flex items-center gap-3 px-3 py-2 bg-(--color-surface) border-b border-(--color-border) flex-wrap">
+  <button type="button" onclick={onToggleToc} class="px-3 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))]">
     {showToc ? t('epub.hide') : t('epub.toc')}
   </button>
-  <span class="text-xs text-[var(--color-text-muted)] min-w-10 text-center">{Math.round(currentPercentage)}%</span>
+  <span class="text-xs text-(--color-text-muted) min-w-10 text-center">{Math.round(currentPercentage)}%</span>
   <div class="flex gap-2">
-    <button type="button" onclick={onPrev} class="px-3 py-1.5 border border-[var(--color-border)] rounded bg-[var(--color-surface)] text-[var(--color-primary)] cursor-pointer text-xs hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))]" aria-label={t('epub.previous')}>
+    <button type="button" onclick={onPrev} class="px-3 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))]" aria-label={t('epub.previous')}>
       <span aria-hidden="true">&larr;</span> {t('epub.previous')}
     </button>
-    <button type="button" onclick={onNext} class="px-3 py-1.5 border border-[var(--color-border)] rounded bg-[var(--color-surface)] text-[var(--color-primary)] cursor-pointer text-xs hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))]" aria-label={t('epub.next')}>
+    <button type="button" onclick={onNext} class="px-3 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))]" aria-label={t('epub.next')}>
       <span aria-hidden="true">&rarr;</span> {t('epub.next')}
     </button>
   </div>
   <div class="flex items-center gap-1 ml-auto">
-    <button type="button" onclick={() => onFontSizeChange(fontSize - 10)} class="px-3 py-1.5 border border-[var(--color-border)] rounded bg-[var(--color-surface)] text-[var(--color-primary)] cursor-pointer text-xs hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))]">
+    <button type="button" onclick={() => onFontSizeChange(fontSize - 10)} class="px-3 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))]">
       A-
     </button>
-    <span class="text-[11px] min-w-10 text-center text-[var(--color-primary)]">{fontSize}%</span>
-    <button type="button" onclick={() => onFontSizeChange(fontSize + 10)} class="px-3 py-1.5 border border-[var(--color-border)] rounded bg-[var(--color-surface)] text-[var(--color-primary)] cursor-pointer text-xs hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))]">
+    <span class="text-[11px] min-w-10 text-center text-(--color-primary)">{fontSize}%</span>
+    <button type="button" onclick={() => onFontSizeChange(fontSize + 10)} class="px-3 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))]">
       A+
     </button>
   </div>

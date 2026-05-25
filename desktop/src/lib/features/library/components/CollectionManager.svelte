@@ -113,7 +113,7 @@
                 <button
                   type="button"
                   class="h-8 w-8 rounded-full transition-transform hover:scale-110"
-                  style="background-color: {color}; {newColor === color ? 'ring-2 ring-offset-2 ring-[var(--color-primary)]' : ''}"
+                  style="background-color: {color}; {newColor === color ? 'ring-2 ring-offset-2 ring-(--color-primary)' : ''}"
                   onclick={() => newColor = color}
                   aria-label="Select {color} color"
                 ></button>

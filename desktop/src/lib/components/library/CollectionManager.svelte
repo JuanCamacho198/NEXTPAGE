@@ -76,19 +76,19 @@
     }}
   >
     <div 
-      class="w-full max-w-md rounded-xl border border-[color:var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+      class="w-full max-w-md rounded-xl border border-(--color-border) bg-(--color-surface) p-6 shadow-lg max-h-[80vh] overflow-y-auto"
       role="presentation"
       onkeydown={(e) => {
         if (e.key === "Escape") onClose();
       }}
     >
       <div class="flex items-center justify-between mb-4">
-        <h2 id="collection-manager-title" class="text-lg font-semibold text-[var(--color-primary)]">
+        <h2 id="collection-manager-title" class="text-lg font-semibold text-(--color-primary)">
           Manage Collections
         </h2>
         <button
           type="button"
-          class="text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+          class="text-(--color-text-muted) hover:text-(--color-text)"
           onclick={onClose}
           aria-label="Close"
         >
@@ -100,12 +100,12 @@
 
       <div class="space-y-4">
         <div class="space-y-2">
-          <h3 class="text-sm font-medium text-[var(--color-primary)]">Create New Collection</h3>
+          <h3 class="text-sm font-medium text-(--color-primary)">Create New Collection</h3>
           <div class="flex gap-2">
             <input
               type="text"
               placeholder="Collection name"
-              class="flex-1 rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text)]"
+              class="flex-1 rounded-lg border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-text)"
               bind:value={newName}
             />
             <div class="flex gap-1">
@@ -113,7 +113,7 @@
                 <button
                   type="button"
                   class="h-8 w-8 rounded-full transition-transform hover:scale-110"
-                  style="background-color: {color}; {newColor === color ? 'ring-2 ring-offset-2 ring-[var(--color-primary)]' : ''}"
+                  style="background-color: {color}; {newColor === color ? 'ring-2 ring-offset-2 ring-(--color-primary)' : ''}"
                   onclick={() => newColor = color}
                   aria-label="Select {color} color"
                 ></button>
@@ -122,7 +122,7 @@
           </div>
           <button
             type="button"
-            class="w-full rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-[var(--color-background)] hover:opacity-90"
+            class="w-full rounded-lg bg-(--color-primary) px-4 py-2 text-sm font-medium text-(--color-background) hover:opacity-90"
             onclick={handleCreate}
             disabled={!newName.trim()}
           >
@@ -130,25 +130,25 @@
           </button>
         </div>
 
-        <div class="border-t border-[color:var(--color-border)] pt-4">
-          <h3 class="text-sm font-medium text-[var(--color-primary)] mb-2">Existing Collections</h3>
+        <div class="border-t border-(--color-border) pt-4">
+          <h3 class="text-sm font-medium text-(--color-primary) mb-2">Existing Collections</h3>
           {#if loading}
-            <p class="text-sm text-[var(--color-text-muted)]">Loading...</p>
+            <p class="text-sm text-(--color-text-muted)">Loading...</p>
           {:else if collections.length === 0}
-            <p class="text-sm text-[var(--color-text-muted)]">No collections yet</p>
+            <p class="text-sm text-(--color-text-muted)">No collections yet</p>
           {:else}
             <ul class="space-y-2">
               {#each collections as collection}
-                <li class="flex items-center gap-2 rounded-lg border border-[color:var(--color-border)] p-2">
+                <li class="flex items-center gap-2 rounded-lg border border-(--color-border) p-2">
                   {#if editingId === collection.id}
                     <input
                       type="text"
-                      class="flex-1 rounded border border-[color:var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-sm"
+                      class="flex-1 rounded border border-(--color-border) bg-(--color-background) px-2 py-1 text-sm"
                       bind:value={editName}
                     />
                     <button
                       type="button"
-                      class="text-[var(--color-primary)] hover:opacity-80"
+                      class="text-(--color-primary) hover:opacity-80"
                       onclick={cancelEdit}
                     >
                       Cancel
@@ -158,13 +158,13 @@
                       class="h-4 w-4 rounded-full"
                       style="background-color: {collection.color ?? '#6366f1'}"
                     ></span>
-                    <span class="flex-1 text-sm text-[var(--color-primary)]">{collection.name}</span>
+                    <span class="flex-1 text-sm text-(--color-primary)">{collection.name}</span>
                     {#if collection.isSystem}
-                      <span class="text-xs text-[var(--color-text-muted)]">System</span>
+                      <span class="text-xs text-(--color-text-muted)">System</span>
                     {:else}
                       <button
                         type="button"
-                        class="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-error)]"
+                        class="text-xs text-(--color-text-muted) hover:text-(--color-error)"
                         onclick={() => handleDelete(collection.id)}
                       >
                         Delete

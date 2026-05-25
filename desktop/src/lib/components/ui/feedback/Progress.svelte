@@ -16,11 +16,11 @@
 
 <div class="flex items-center gap-2 {className}">
   {#if showLabel}
-    <span class="text-xs text-[var(--color-text-muted)]">{percentage}%</span>
+    <span class="text-xs text-(--color-text-muted)">{percentage}%</span>
   {/if}
-  <div class="h-1.5 w-full overflow-hidden rounded bg-[color:var(--color-border)]">
+  <div class="h-1.5 w-full overflow-hidden rounded bg-(--color-border)">
     <div
-      class="h-full rounded bg-[var(--color-primary)] transition-all"
+      class="h-full rounded bg-(--color-primary) transition-all"
       style="width: {percentage}%"
     ></div>
   </div>

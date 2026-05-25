@@ -24,7 +24,7 @@
   <div class="w-5 h-5 flex items-center justify-center shrink-0 relative">
     <!-- Sun icon (visible in light mode) -->
     <svg
-      class="absolute transition-all duration-[420ms] [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] origin-center"
+      class="absolute transition-[opacity,transform] duration-[420ms] [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] origin-center"
       class:opacity-100={$theme === "light"}
       class:opacity-0={$theme === "dark"}
       class:scale-100={$theme === "light"}
@@ -45,7 +45,7 @@
 
     <!-- Moon icon (visible in dark mode) -->
     <svg
-      class="absolute transition-all duration-[420ms] [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] origin-center"
+      class="absolute transition-[opacity,transform] duration-[420ms] [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] origin-center"
       class:opacity-100={$theme === "dark"}
       class:opacity-0={$theme === "light"}
       class:scale-100={$theme === "dark"}

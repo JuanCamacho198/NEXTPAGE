@@ -417,7 +417,7 @@
                 id="locale-select"
                 value={locale}
                 onchange={(event) => void handleLocaleSelect((event.currentTarget as HTMLSelectElement).value)}
-                class="filter-select"
+                class="w-full rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
               >
                 <option value="es">{t("settings.languageSpanish")}</option>
                 <option value="en">{t("settings.languageEnglish")}</option>
@@ -429,7 +429,7 @@
               <select
                 id="theme-select"
                 bind:value={preferredTheme}
-                class="filter-select"
+                class="w-full rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
               >
                 <option value="light">{t("settings.theme.light")}</option>
                 <option value="dark">{t("settings.theme.dark")}</option>
@@ -467,45 +467,49 @@
             </p>
           {/if}
 
-          <div class="profile-card">
-            <div class="profile-avatar-wrap">
+          <div class="flex gap-3 items-start border border-[var(--color-border)] rounded-xl bg-[var(--color-surface,#fff)] p-3">
+            <div class="size-14 shrink-0">
               {#if profile.avatarUrl && !profileAvatarBroken}
                 <img
                   src={profile.avatarUrl}
                   alt={t("settings.profile.avatarAlt", { name: profile.name })}
-                  class="profile-avatar"
+                  class="block size-full rounded-full border border-[var(--color-border)] object-cover"
                   onerror={() => {
                     profileAvatarBroken = true;
                   }}
                 />
               {:else}
-                <div class="profile-avatar-fallback" aria-hidden="true">
+                <div
+                  class="flex size-full items-center justify-center rounded-full border border-[var(--color-border)] text-[14px] font-bold text-[var(--color-primary)]"
+                  style="background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));"
+                  aria-hidden="true"
+                >
                   {getProfileInitials(profile.name)}
                 </div>
               {/if}
             </div>
 
-            <div class="profile-fields">
-              <p class="profile-row-label">{t("settings.profile.nameLabel")}</p>
-              <p class="profile-row-value">{isProfileLoading ? t("settings.profile.loading") : profile.name}</p>
+            <div class="min-w-0 flex-1">
+              <p class="m-0 text-[11px] text-[var(--color-text-muted,#6b7280)]">{t("settings.profile.nameLabel")}</p>
+              <p class="my-[2px] mb-2 text-[14px] text-[var(--color-primary)] break-words">{isProfileLoading ? t("settings.profile.loading") : profile.name}</p>
 
-              <p class="profile-row-label">{t("settings.profile.emailLabel")}</p>
-              <p class="profile-row-value">{isProfileLoading ? t("settings.profile.loading") : profile.email}</p>
+              <p class="m-0 text-[11px] text-[var(--color-text-muted,#6b7280)]">{t("settings.profile.emailLabel")}</p>
+              <p class="my-[2px] mb-2 text-[14px] text-[var(--color-primary)] break-words">{isProfileLoading ? t("settings.profile.loading") : profile.email}</p>
 
               {#if !profile.isSignedIn}
-                <p class="profile-signin-hint">{t("settings.profile.signInPrompt")}</p>
+                <p class="mt-1.5 text-xs text-[var(--color-text-muted,#6b7280)]">{t("settings.profile.signInPrompt")}</p>
               {/if}
             </div>
           </div>
 
-          <div class="shortcuts-card">
+          <div class="border border-[var(--color-border)] rounded-xl bg-[var(--color-surface,#fff)] p-3 mt-3">
             <h4 class="mt-0 mb-2 text-sm font-semibold text-neutral-300">{t("settings.shortcuts.title")}</h4>
             <p class="text-xs text-zinc-600 mb-3">{t("settings.shortcuts.description")}</p>
-            <ul class="shortcuts-list">
+            <ul class="m-0 p-0 list-none grid gap-2">
               {#each keyboardShortcuts as shortcut (shortcut.id)}
-                <li>
-                  <span class="shortcut-combo">{shortcut.combo}</span>
-                  <span class="shortcut-description">{t(shortcut.descriptionKey)}</span>
+                <li class="flex items-center gap-2">
+                  <span class="inline-flex items-center justify-center min-w-[86px] px-2 py-1 border border-[var(--color-border)] rounded-md font-mono text-[11px] text-[var(--color-primary)] bg-[var(--color-background)]">{shortcut.combo}</span>
+                  <span class="text-xs text-[var(--color-primary)]">{t(shortcut.descriptionKey)}</span>
                 </li>
               {/each}
             </ul>
@@ -588,7 +592,7 @@
               <select
                 id="reader-font-family"
                 bind:value={readerEpubFontFamily}
-                class="filter-select"
+                class="w-full rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
               >
                 <option value="serif">Serif</option>
                 <option value="sans-serif">Sans Serif</option>
@@ -694,32 +698,32 @@
                 <span class="text-xs text-[var(--color-text-muted,var(--color-secondary))]">Version {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}</span>
               </div>
             </div>
-            <p class="about-description text-sm text-zinc-600 mt-3">
+            <p class="text-sm text-zinc-600 mt-3">
               A modern e-reader application for enjoying your EPUB collection with a clean, customizable reading experience.
             </p>
           </div>
 
-          <div class="about-card mt-4">
+          <div class="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)] mt-4">
             <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">Credits</h4>
-            <ul class="credits-list">
-              <li>
-                <span class="credit-label">Core Team</span>
-                <span class="credit-value">NextPage Contributors</span>
+            <ul class="list-none m-0 p-0">
+              <li class="flex justify-between py-1 border-b border-[var(--color-border)] last:border-b-0">
+                <span class="text-[13px] text-[var(--color-text-muted,var(--color-secondary))]">Core Team</span>
+                <span class="text-[13px] text-[var(--color-primary)] font-medium">NextPage Contributors</span>
               </li>
-              <li>
-                <span class="credit-label">EPUB Parsing</span>
-                <span class="credit-value">epub.js</span>
+              <li class="flex justify-between py-1 border-b border-[var(--color-border)] last:border-b-0">
+                <span class="text-[13px] text-[var(--color-text-muted,var(--color-secondary))]">EPUB Parsing</span>
+                <span class="text-[13px] text-[var(--color-primary)] font-medium">epub.js</span>
               </li>
-              <li>
-                <span class="credit-label">Framework</span>
-                <span class="credit-value">Svelte / Tauri</span>
+              <li class="flex justify-between py-1 border-b border-[var(--color-border)] last:border-b-0">
+                <span class="text-[13px] text-[var(--color-text-muted,var(--color-secondary))]">Framework</span>
+                <span class="text-[13px] text-[var(--color-primary)] font-medium">Svelte / Tauri</span>
               </li>
             </ul>
           </div>
 
-          <div class="about-card mt-4">
+          <div class="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)] mt-4">
             <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">Links</h4>
-            <div class="about-links">
+            <div class="flex gap-2">
               <Button onclick={() => window.open("https://github.com/anomalyco/nextpage", "_blank")} variant="ghost" size="sm">
                 GitHub
               </Button>
@@ -759,286 +763,5 @@
     to {
       transform: translateX(0);
     }
-  }
-
-  .tabs {
-    display: flex;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .tab {
-    flex: 1;
-    padding: 12px 8px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-size: 13px;
-    color: var(--color-text-muted, var(--color-secondary));
-    border-bottom: 2px solid transparent;
-  }
-
-  .tab:hover {
-    color: var(--color-primary);
-  }
-
-  .tab.active {
-    color: var(--color-primary);
-    border-bottom-color: var(--color-primary);
-  }
-
-  .theme-preview-container {
-    display: flex;
-    gap: 8px;
-    justify-content: stretch;
-  }
-
-  .theme-preview-box {
-    flex: 1;
-    padding: 12px 8px;
-    border-radius: 8px;
-    border: 2px solid var(--preview-border, #e0e0e0);
-    background: var(--preview-bg, #fafafa);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .theme-preview-box:hover {
-    transform: scale(1.02);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  .theme-preview-box.selected {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px var(--color-primary);
-  }
-
-  .preview-label {
-    font-size: 11px;
-    color: var(--preview-text);
-    font-weight: 500;
-  }
-
-  .app-theme-preview {
-    border-radius: 8px;
-    border: 1px solid var(--preview-border);
-    background: var(--preview-bg);
-    padding: 12px;
-    transition: all 0.3s ease;
-  }
-
-  .preview-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--preview-border);
-    margin-bottom: 8px;
-  }
-
-  .preview-icon {
-    color: var(--preview-text);
-    opacity: 0.7;
-  }
-
-  .preview-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--preview-text);
-  }
-
-  .preview-content {
-    color: var(--preview-text);
-  }
-
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1001;
-  }
-
-  .modal-content {
-    background: var(--color-surface, white);
-    border-radius: 8px;
-    padding: 20px;
-    max-width: 320px;
-    width: 90%;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  }
-
-  .about-card {
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 16px;
-    background: var(--color-surface);
-  }
-
-  .about-logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .logo-icon {
-    font-size: 32px;
-  }
-
-  .logo-text {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .app-name {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--color-primary);
-  }
-
-  .app-version {
-    font-size: 12px;
-    color: var(--color-text-muted, var(--color-secondary));
-  }
-
-  .credits-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .credits-list li {
-    display: flex;
-    justify-content: space-between;
-    padding: 4px 0;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .credits-list li:last-child {
-    border-bottom: none;
-  }
-
-  .credit-label {
-    font-size: 13px;
-    color: var(--color-text-muted, var(--color-secondary));
-  }
-
-  .credit-value {
-    font-size: 13px;
-    color: var(--color-primary);
-    font-weight: 500;
-  }
-
-  .about-links {
-    display: flex;
-    gap: 8px;
-  }
-
-  .profile-card,
-  .shortcuts-card {
-    border: 1px solid var(--color-border);
-    border-radius: 10px;
-    background: var(--color-surface, #fff);
-    padding: 12px;
-  }
-
-  .shortcuts-card {
-    margin-top: 12px;
-  }
-
-  .profile-card {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-  }
-
-  .profile-avatar-wrap {
-    width: 56px;
-    height: 56px;
-    flex-shrink: 0;
-  }
-
-  .profile-avatar,
-  .profile-avatar-fallback {
-    width: 100%;
-    height: 100%;
-    border-radius: 9999px;
-    border: 1px solid var(--color-border);
-  }
-
-  .profile-avatar {
-    object-fit: cover;
-    display: block;
-  }
-
-  .profile-avatar-fallback {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
-  }
-
-  .profile-fields {
-    min-width: 0;
-    flex: 1;
-  }
-
-  .profile-row-label {
-    margin: 0;
-    font-size: 11px;
-    color: var(--color-text-muted, #6b7280);
-  }
-
-  .profile-row-value {
-    margin: 2px 0 8px;
-    font-size: 14px;
-    color: var(--color-primary);
-    word-break: break-word;
-  }
-
-  .profile-signin-hint {
-    margin: 6px 0 0;
-    font-size: 12px;
-    color: var(--color-text-muted, #6b7280);
-  }
-
-  .shortcuts-list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: grid;
-    gap: 8px;
-  }
-
-  .shortcuts-list li {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .shortcut-combo {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 86px;
-    padding: 4px 8px;
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: 11px;
-    color: var(--color-primary);
-    background: var(--color-background);
-  }
-
-  .shortcut-description {
-    font-size: 12px;
-    color: var(--color-primary);
   }
 </style>

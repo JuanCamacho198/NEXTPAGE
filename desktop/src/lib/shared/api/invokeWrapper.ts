@@ -1,5 +1,6 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import { metricsStore, METRIC_NAMES } from "$lib/logger/MetricsStore";
+import { metricsStore } from "$lib/logger/MetricsStore";
+import { METRIC_NAMES } from "$lib/logger/metricTypes";
 
 /**
  * Wrapper around Tauri's invoke that measures the duration of every IPC call

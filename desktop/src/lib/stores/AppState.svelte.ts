@@ -23,6 +23,7 @@ import {
   getFileBytes,
 } from "$lib/api/tauriClient";
 import { i18n, type MessageKey } from "$lib/i18n";
+import { recordMetric, METRIC_NAMES } from "$lib/logger/MetricsStore";
 import { extractPdfMetadata } from "$lib/services/pdfThumbnail";
 import {
   type AppRoute,
@@ -595,6 +596,11 @@ class AppState {
     this.route = "reader";
     this.searchResponse = null;
     this.searchTargetLocator = null;
+
+    // Record reader open metric
+    recordMetric(METRIC_NAMES.READER_OPEN, {
+      feature: book.format.toLowerCase(),
+    });
 
     // Clear previous preload data
     this.preloadedBytes = null;

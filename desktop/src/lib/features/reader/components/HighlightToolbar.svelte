@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { saveHighlight } from "$lib/shared/api/tauriClient";
+  import { saveHighlight } from "$lib/api/tauriClient";
   import type { MessageKey } from "$lib/i18n";
 
   type Props = {

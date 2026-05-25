@@ -3,7 +3,7 @@
   import type { Book, Rendition } from "epubjs";
   import ePub from "epubjs";
   import type { MessageKey } from "$lib/i18n";
-  import { getFileBytes } from "$lib/shared/api/tauriClient";
+  import { getFileBytes } from "$lib/api/tauriClient";
   import type { ReaderSettings, ReaderThemeMode } from "$lib/shared/types";
   import { resolveReaderArrowIntent } from "$lib/features/reader/epub/keyboardNav";
   import {

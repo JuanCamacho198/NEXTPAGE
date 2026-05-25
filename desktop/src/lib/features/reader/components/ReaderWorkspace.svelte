@@ -10,7 +10,7 @@
   import type { ReaderSettings } from "$lib/shared/types";
   import type { LibraryBookDto } from "$lib/shared/types/library";
   import { debugState } from "$lib/debug/debugState.svelte";
-  import { saveHighlight, deleteHighlight, listBookmarks, saveBookmark, deleteBookmark } from "$lib/shared/api/tauriClient";
+  import { saveHighlight, deleteHighlight, listBookmarks, saveBookmark, deleteBookmark } from "$lib/api/tauriClient";
   import DebugToggle from "$lib/debug/DebugToggle.svelte";
   import DebugPanel from "$lib/debug/DebugPanel.svelte";
   import { createFocusTrap } from "$lib/shared/utils/focusTrap";

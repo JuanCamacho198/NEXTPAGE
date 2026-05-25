@@ -1,1 +1,3 @@
-pub use super::{list_bookmarks, listBookmarks, save_bookmark, saveBookmark, delete_bookmark, deleteBookmark};
+pub use super::{
+    deleteBookmark, delete_bookmark, listBookmarks, list_bookmarks, saveBookmark, save_bookmark,
+};

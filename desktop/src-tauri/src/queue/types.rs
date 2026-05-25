@@ -58,10 +58,7 @@ impl JobState {
             "running" => Ok(Self::Running),
             "failed" => Ok(Self::Failed),
             "done" => Ok(Self::Done),
-            other => Err(AppError::InvalidInput(format!(
-                "unsupported job state '{}'",
-                other
-            ))),
+            other => Err(AppError::InvalidInput(format!("unsupported job state '{}'", other))),
         }
     }
 }
@@ -137,12 +134,7 @@ pub struct WorkerConfig {
 
 impl Default for WorkerConfig {
     fn default() -> Self {
-        Self {
-            poll_interval_ms: 750,
-            lease_seconds: 30,
-            max_concurrency: 2,
-            batch_size: 8,
-        }
+        Self { poll_interval_ms: 750, lease_seconds: 30, max_concurrency: 2, batch_size: 8 }
     }
 }
 

@@ -11,30 +11,15 @@ use crate::error::{AppError, AppResult};
 const MIGRATIONS: [(&str, &str); 8] = [
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_books", include_str!("../migrations/0002_books.sql")),
-    (
-        "0003_highlights",
-        include_str!("../migrations/0003_highlights.sql"),
-    ),
-    (
-        "0004_desktop_feature_parity",
-        include_str!("../migrations/0004_desktop_feature_parity.sql"),
-    ),
-    (
-        "0005_hidden_books",
-        include_str!("../migrations/0005_hidden_books.sql"),
-    ),
-    (
-        "0006_collections",
-        include_str!("../migrations/0006_collections.sql"),
-    ),
+    ("0003_highlights", include_str!("../migrations/0003_highlights.sql")),
+    ("0004_desktop_feature_parity", include_str!("../migrations/0004_desktop_feature_parity.sql")),
+    ("0005_hidden_books", include_str!("../migrations/0005_hidden_books.sql")),
+    ("0006_collections", include_str!("../migrations/0006_collections.sql")),
     (
         "0007_highlight_note_and_page_contract",
         include_str!("../migrations/0007_highlight_note_and_page_contract.sql"),
     ),
-    (
-        "0008_queue_and_perf_indexes",
-        include_str!("../migrations/0008_queue_and_perf_indexes.sql"),
-    ),
+    ("0008_queue_and_perf_indexes", include_str!("../migrations/0008_queue_and_perf_indexes.sql")),
 ];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {
@@ -57,11 +42,9 @@ pub fn open_and_migrate(db_path: &Path) -> AppResult<Connection> {
 
     for (name, sql) in MIGRATIONS {
         let applied: Option<i32> = connection
-            .query_row(
-                "SELECT 1 FROM schema_migrations WHERE name = ?1 LIMIT 1",
-                [name],
-                |row| row.get(0),
-            )
+            .query_row("SELECT 1 FROM schema_migrations WHERE name = ?1 LIMIT 1", [name], |row| {
+                row.get(0)
+            })
             .optional()?;
         if applied.is_some() {
             continue;
@@ -215,11 +198,7 @@ pub fn verify_queue_health(connection: &Connection) -> AppResult<QueueHealth> {
         warnings.push(format!("{} orphaned running jobs found", orphaned));
     }
 
-    let status = if warnings.is_empty() {
-        HealthStatus::Healthy
-    } else {
-        HealthStatus::Degraded
-    };
+    let status = if warnings.is_empty() { HealthStatus::Healthy } else { HealthStatus::Degraded };
 
     Ok(QueueHealth { status, warnings })
 }
@@ -263,10 +242,7 @@ mod tests {
 
     #[test]
     fn test_queue_health_healthy_no_warnings() {
-        let health = QueueHealth {
-            status: HealthStatus::Healthy,
-            warnings: vec![],
-        };
+        let health = QueueHealth { status: HealthStatus::Healthy, warnings: vec![] };
         assert_eq!(health.status, HealthStatus::Healthy);
         assert!(health.warnings.is_empty());
     }

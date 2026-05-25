@@ -1,1 +1,4 @@
-pub use super::{list_highlights, listHighlights, save_highlight, saveHighlight, delete_highlight, deleteHighlight};
+pub use super::{
+    deleteHighlight, delete_highlight, listHighlights, list_highlights, saveHighlight,
+    save_highlight,
+};

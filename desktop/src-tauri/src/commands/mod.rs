@@ -1,31 +1,31 @@
 // TRANSITION FACADE: keep public command names stable (snake_case + camelCase aliases) during backend refactor.
 // Rollback: revert per feature module by restoring previous wrapper exports without touching invoke_handler symbols.
 
-pub mod settings;
-pub mod library;
-pub mod progress;
-pub mod highlights;
 pub mod bookmarks;
 pub mod collections;
-pub mod search;
 pub mod files;
+pub mod highlights;
+pub mod library;
+pub mod progress;
+pub mod search;
+pub mod settings;
 
-#[allow(unused_imports)]
-pub use settings::*;
-#[allow(unused_imports)]
-pub use library::*;
-#[allow(unused_imports)]
-pub use progress::*;
-#[allow(unused_imports)]
-pub use highlights::*;
 #[allow(unused_imports)]
 pub use bookmarks::*;
 #[allow(unused_imports)]
 pub use collections::*;
 #[allow(unused_imports)]
+pub use files::*;
+#[allow(unused_imports)]
+pub use highlights::*;
+#[allow(unused_imports)]
+pub use library::*;
+#[allow(unused_imports)]
+pub use progress::*;
+#[allow(unused_imports)]
 pub use search::*;
 #[allow(unused_imports)]
-pub use files::*;
+pub use settings::*;
 
 use std::fs;
 use std::path::PathBuf;
@@ -117,9 +117,7 @@ pub fn upsert_settings(
     if !repository.has_desktop_parity_schema().unwrap_or(true) {
         return Ok(());
     }
-    repository
-        .upsert_settings(settings)
-        .map_err(map_command_error)
+    repository.upsert_settings(settings).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -193,9 +191,7 @@ pub fn get_progress(
     book_id: String,
 ) -> Result<Option<ReadingProgressDto>, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .get_progress(&book_id)
-        .map_err(|e| format!("{}", e))
+    repository.get_progress(&book_id).map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
@@ -210,9 +206,7 @@ pub fn getProgress(
 #[tauri::command(rename_all = "camelCase")]
 pub fn save_progress(state: State<'_, AppState>, payload: SaveProgressInput) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .save_progress(payload)
-        .map_err(|e| format!("{}", e))
+    repository.save_progress(payload).map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
@@ -227,9 +221,7 @@ pub fn upsert_progress(
     progress: ReadingProgressDto,
 ) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .upsert_progress(progress)
-        .map_err(|e| format!("{}", e))
+    repository.upsert_progress(progress).map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
@@ -247,9 +239,7 @@ pub fn save_reading_session(
     payload: ReadingSessionInput,
 ) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .save_reading_session(payload)
-        .map_err(map_command_error)
+    repository.save_reading_session(payload).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -277,9 +267,7 @@ pub fn get_reading_stats(
             avg_progress_percentage: 0.0,
         });
     }
-    repository
-        .get_reading_stats(book_id.as_deref())
-        .map_err(map_command_error)
+    repository.get_reading_stats(book_id.as_deref()).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -297,9 +285,7 @@ pub fn index_book_text(
     payload: IndexBookTextInput,
 ) -> Result<(), String> {
     let mut repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .index_book_text(payload)
-        .map_err(map_command_error)
+    repository.index_book_text(payload).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -317,9 +303,7 @@ pub fn search_book_text(
     payload: SearchBookTextInput,
 ) -> Result<SearchBookTextResponse, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .search_book_text(payload)
-        .map_err(map_command_error)
+    repository.search_book_text(payload).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -338,9 +322,7 @@ pub async fn import_book(
     input: BookImportInput,
 ) -> Result<BookDto, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .import_book(app, input)
-        .map_err(|e| format!("{}", e))
+    repository.import_book(app, input).map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
@@ -360,9 +342,7 @@ pub fn delete_book(
     payload: BookDeleteInput,
 ) -> Result<(), String> {
     let mut repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .delete_book(app, payload)
-        .map_err(map_command_error)
+    repository.delete_book(app, payload).map_err(map_command_error)
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -371,9 +351,7 @@ pub fn hide_book_from_library(
     payload: HideBookInput,
 ) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .hide_book_from_library(&payload.book_id)
-        .map_err(map_command_error)
+    repository.hide_book_from_library(&payload.book_id).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -394,7 +372,8 @@ pub async fn get_file_bytes(file_path: String) -> Result<Vec<u8>, String> {
 #[tauri::command(rename_all = "camelCase")]
 pub async fn get_file_size(file_path: String) -> Result<u64, String> {
     let path = PathBuf::from(&file_path);
-    let metadata = std::fs::metadata(&path).map_err(|err| format!("Failed to read file metadata: {}", err))?;
+    let metadata =
+        std::fs::metadata(&path).map_err(|err| format!("Failed to read file metadata: {}", err))?;
     Ok(metadata.len())
 }
 
@@ -412,9 +391,9 @@ pub async fn read_file_range(
 ) -> Result<Vec<u8>, String> {
     use std::io::{Read, Seek, SeekFrom};
     let path = PathBuf::from(&file_path);
-    let mut file = std::fs::File::open(&path).map_err(|err| format!("Failed to open file: {}", err))?;
-    file.seek(SeekFrom::Start(offset))
-        .map_err(|err| format!("Failed to seek in file: {}", err))?;
+    let mut file =
+        std::fs::File::open(&path).map_err(|err| format!("Failed to open file: {}", err))?;
+    file.seek(SeekFrom::Start(offset)).map_err(|err| format!("Failed to seek in file: {}", err))?;
     let mut buf = vec![0u8; length as usize];
     let n = file.read(&mut buf).map_err(|err| format!("Failed to read file: {}", err))?;
     buf.truncate(n);
@@ -423,11 +402,7 @@ pub async fn read_file_range(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub async fn readFileRange(
-    file_path: String,
-    offset: u64,
-    length: u64,
-) -> Result<Vec<u8>, String> {
+pub async fn readFileRange(file_path: String, offset: u64, length: u64) -> Result<Vec<u8>, String> {
     read_file_range(file_path, offset, length).await
 }
 
@@ -444,9 +419,7 @@ pub async fn update_book_progress(
     current_page: i32,
 ) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .update_book_progress(&book_id, current_page)
-        .map_err(|e| format!("{}", e))
+    repository.update_book_progress(&book_id, current_page).map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
@@ -477,9 +450,7 @@ pub async fn save_book_file(
     data: Vec<u8>,
 ) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .save_book_file(&id, &data)
-        .map_err(map_command_error)
+    repository.save_book_file(&id, &data).map_err(map_command_error)
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -526,9 +497,7 @@ pub fn list_highlights(
     book_id: Option<String>,
 ) -> Result<Vec<HighlightDto>, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .list_highlights(book_id.as_deref())
-        .map_err(map_command_error)
+    repository.list_highlights(book_id.as_deref()).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -546,9 +515,7 @@ pub fn save_highlight(
     payload: SaveHighlightInput,
 ) -> Result<HighlightDto, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .save_highlight(payload)
-        .map_err(map_command_error)
+    repository.save_highlight(payload).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -563,9 +530,7 @@ pub fn saveHighlight(
 #[tauri::command(rename_all = "camelCase")]
 pub fn delete_highlight(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .delete_highlight(&id)
-        .map_err(map_command_error)
+    repository.delete_highlight(&id).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -580,9 +545,7 @@ pub fn list_bookmarks(
     book_id: Option<String>,
 ) -> Result<Vec<BookmarkDto>, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .list_bookmarks(book_id.as_deref())
-        .map_err(|e| format!("{}", e))
+    repository.list_bookmarks(book_id.as_deref()).map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
@@ -600,9 +563,7 @@ pub fn save_bookmark(
     payload: SaveBookmarkInput,
 ) -> Result<BookmarkDto, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .save_bookmark(payload)
-        .map_err(|e| format!("{}", e))
+    repository.save_bookmark(payload).map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
@@ -617,9 +578,7 @@ pub fn saveBookmark(
 #[tauri::command(rename_all = "camelCase")]
 pub fn delete_bookmark(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .delete_bookmark(&id)
-        .map_err(|e| format!("{}", e))
+    repository.delete_bookmark(&id).map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
@@ -634,9 +593,7 @@ pub fn create_collection(
     payload: CreateCollectionInput,
 ) -> Result<CollectionDto, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .create_collection(&payload.name, payload.color.as_deref())
-        .map_err(map_command_error)
+    repository.create_collection(&payload.name, payload.color.as_deref()).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -718,9 +675,7 @@ pub fn get_book_collections(
     book_id: String,
 ) -> Result<Vec<CollectionDto>, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository
-        .get_book_collections(&book_id)
-        .map_err(map_command_error)
+    repository.get_book_collections(&book_id).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -733,10 +688,7 @@ pub fn getBookCollections(
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn report_error_event(
-    state: State<'_, AppState>,
-    event: ErrorEventDto,
-) -> Result<(), String> {
+pub fn report_error_event(state: State<'_, AppState>, event: ErrorEventDto) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     let max_lines = get_max_log_lines_internal(&repository).unwrap_or(DEFAULT_MAX_LOG_LINES);
     let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
@@ -744,10 +696,7 @@ pub fn report_error_event(
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn log_event(
-    state: State<'_, AppState>,
-    event: LogEventDto,
-) -> Result<(), String> {
+pub fn log_event(state: State<'_, AppState>, event: LogEventDto) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     let max_lines = get_max_log_lines_internal(&repository).unwrap_or(DEFAULT_MAX_LOG_LINES);
     let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
@@ -769,24 +718,31 @@ pub fn diagnose(state: State<'_, AppState>) -> DiagnoseResult {
     let mut details = std::collections::HashMap::new();
 
     // Database health
-    let (database_status, db_detail) = match state.repository.lock() {
+    let (database_status, _db_detail) = match state.repository.lock() {
         Ok(repo) => {
             let conn = repo.connection();
             match conn.query_row("SELECT 1", [], |row| row.get::<_, i32>(0)) {
                 Ok(1) => {
                     details.insert("db_query_ok".to_string(), serde_json::Value::Bool(true));
                     ("healthy".to_string(), "DB responded OK".to_string())
-                },
+                }
                 Ok(other) => {
-                    details.insert("db_unexpected".to_string(), serde_json::Value::Number(serde_json::Number::from(other)));
-                    ("degraded".to_string(), format!("DB query returned unexpected value: {}", other))
-                },
+                    details.insert(
+                        "db_unexpected".to_string(),
+                        serde_json::Value::Number(serde_json::Number::from(other)),
+                    );
+                    (
+                        "degraded".to_string(),
+                        format!("DB query returned unexpected value: {}", other),
+                    )
+                }
                 Err(e) => {
-                    details.insert("db_error".to_string(), serde_json::Value::String(e.to_string()));
+                    details
+                        .insert("db_error".to_string(), serde_json::Value::String(e.to_string()));
                     ("degraded".to_string(), format!("DB query failed: {}", e))
                 }
             }
-        },
+        }
         Err(e) => {
             details.insert("db_lock_error".to_string(), serde_json::Value::String(e.to_string()));
             ("unhealthy".to_string(), format!("DB lock failed: {}", e))
@@ -794,56 +750,79 @@ pub fn diagnose(state: State<'_, AppState>) -> DiagnoseResult {
     };
 
     // Queue health
-    let (queue_status, queue_detail) = match state.queue_repository.lock() {
+    let (queue_status, _queue_detail) = match state.queue_repository.lock() {
         Ok(queue_repo) => {
             let conn = queue_repo.connection();
             match verify_queue_health(conn) {
                 Ok(health) => {
                     let status = if health.warnings.is_empty() { "healthy" } else { "degraded" };
-                    details.insert("queue_warnings".to_string(), serde_json::Value::Array(
-                        health.warnings.iter().map(|w| serde_json::Value::String(w.clone())).collect()
-                    ));
+                    details.insert(
+                        "queue_warnings".to_string(),
+                        serde_json::Value::Array(
+                            health
+                                .warnings
+                                .iter()
+                                .map(|w| serde_json::Value::String(w.clone()))
+                                .collect(),
+                        ),
+                    );
                     (status.to_string(), format!("Queue health: {:?}", health.status))
-                },
+                }
                 Err(e) => ("degraded".to_string(), format!("Queue check failed: {}", e)),
             }
-        },
+        }
         Err(e) => ("unhealthy".to_string(), format!("Queue lock failed: {}", e)),
     };
 
     // Filesystem health
-    let (fs_status, fs_detail) = match state.repository.lock() {
+    let (fs_status, _fs_detail) = match state.repository.lock() {
         Ok(repo) => {
             let books = repo.list_books().unwrap_or_default();
-            let missing = books.iter().filter(|b| !std::path::Path::new(&b.file_path).exists()).count();
-            details.insert("total_books".to_string(), serde_json::Value::Number(serde_json::Number::from(books.len())));
-            details.insert("missing_files".to_string(), serde_json::Value::Number(serde_json::Number::from(missing)));
+            let missing =
+                books.iter().filter(|b| !std::path::Path::new(&b.file_path).exists()).count();
+            details.insert(
+                "total_books".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(books.len())),
+            );
+            details.insert(
+                "missing_files".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(missing)),
+            );
             if missing > 0 {
-                ("degraded".to_string(), format!("{} of {} book files missing", missing, books.len()))
+                (
+                    "degraded".to_string(),
+                    format!("{} of {} book files missing", missing, books.len()),
+                )
             } else {
                 ("healthy".to_string(), format!("{} book files OK", books.len()))
             }
-        },
+        }
         Err(e) => ("unhealthy".to_string(), format!("FS check failed: {}", e)),
     };
 
     // Log file
-    let (log_status, log_detail) = match state.logger.lock() {
+    let (log_status, _log_detail) = match state.logger.lock() {
         Ok(logger) => {
             let log_path = logger.get_log_path().clone();
             if log_path.exists() {
                 match log_path.metadata() {
                     Ok(meta) => {
-                        details.insert("log_size_bytes".to_string(), serde_json::Value::Number(serde_json::Number::from(meta.len())));
-                        details.insert("log_path".to_string(), serde_json::Value::String(log_path.to_string_lossy().to_string()));
+                        details.insert(
+                            "log_size_bytes".to_string(),
+                            serde_json::Value::Number(serde_json::Number::from(meta.len())),
+                        );
+                        details.insert(
+                            "log_path".to_string(),
+                            serde_json::Value::String(log_path.to_string_lossy().to_string()),
+                        );
                         ("healthy".to_string(), format!("Log file exists ({} bytes)", meta.len()))
-                    },
+                    }
                     Err(e) => ("degraded".to_string(), format!("Log metadata error: {}", e)),
                 }
             } else {
                 ("healthy".to_string(), "No log file yet".to_string())
             }
-        },
+        }
         Err(e) => ("unhealthy".to_string(), format!("Logger lock failed: {}", e)),
     };
 
@@ -862,27 +841,22 @@ pub fn get_logs(state: State<'_, AppState>) -> Result<Vec<String>, String> {
     logger.read_all_logs()
 }
 
-fn get_max_log_lines_internal(repository: &crate::repository::LibraryRepository) -> Result<usize, String> {
+fn get_max_log_lines_internal(
+    repository: &crate::repository::LibraryRepository,
+) -> Result<usize, String> {
     let settings = repository.get_settings().map_err(|e| format!("{}", e))?;
     let item = settings.iter().find(|s| s.key == SETTING_MAX_LOG_LINES_KEY);
     match item {
-        Some(setting) => {
-            match serde_json::from_str::<serde_json::Value>(&setting.value_json) {
-                Ok(val) => {
-                    if let Some(n) = val.as_u64() {
-                        Ok(n as usize)
-                    } else {
-                        Ok(DEFAULT_MAX_LOG_LINES)
-                    }
-                },
-                Err(_) => Ok(DEFAULT_MAX_LOG_LINES),
+        Some(setting) => match serde_json::from_str::<serde_json::Value>(&setting.value_json) {
+            Ok(val) => {
+                if let Some(n) = val.as_u64() {
+                    Ok(n as usize)
+                } else {
+                    Ok(DEFAULT_MAX_LOG_LINES)
+                }
             }
+            Err(_) => Ok(DEFAULT_MAX_LOG_LINES),
         },
         None => Ok(DEFAULT_MAX_LOG_LINES),
     }
 }
-
-
-
-
-

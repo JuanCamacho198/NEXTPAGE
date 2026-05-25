@@ -1,1 +1,5 @@
-pub use super::{get_progress, getProgress, save_progress, saveProgress, upsert_progress, upsertProgress, save_reading_session, saveReadingSession, get_reading_stats, getReadingStats, update_book_progress, updateBookProgress};
+pub use super::{
+    getProgress, getReadingStats, get_progress, get_reading_stats, saveProgress,
+    saveReadingSession, save_progress, save_reading_session, updateBookProgress,
+    update_book_progress, upsertProgress, upsert_progress,
+};

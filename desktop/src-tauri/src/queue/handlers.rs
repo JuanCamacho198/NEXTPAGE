@@ -81,9 +81,7 @@ impl JobDispatcher for CoverCleanupHandler {
     fn dispatch(&self, _job: &JobRecord) -> JobOutcome {
         match self.run_cleanup() {
             Ok(_) => JobOutcome::Done { result_json: None },
-            Err(e) => JobOutcome::Failed {
-                error: e.to_string(),
-            },
+            Err(e) => JobOutcome::Failed { error: e.to_string() },
         }
     }
 }
@@ -106,9 +104,7 @@ impl JobDispatcher for ImportJobHandler {
         let payload = match payload {
             Ok(p) => p,
             Err(e) => {
-                return JobOutcome::Failed {
-                    error: format!("invalid import payload: {}", e),
-                }
+                return JobOutcome::Failed { error: format!("invalid import payload: {}", e) }
             }
         };
 
@@ -150,9 +146,7 @@ impl JobDispatcher for ImportJobHandler {
             .map(|e| e.to_lowercase())
             .unwrap_or_default();
 
-        let valid_extensions = [
-            "epub", "pdf", "mobi", "azw", "azw3", "txt", "fb2", "cbr", "cbz",
-        ];
+        let valid_extensions = ["epub", "pdf", "mobi", "azw", "azw3", "txt", "fb2", "cbr", "cbz"];
         if !valid_extensions.contains(&extension.as_str()) {
             return JobOutcome::Failed {
                 error: AppError::ImportError(format!("unsupported file format: {}", extension))
@@ -204,9 +198,7 @@ impl JobDispatcher for ThumbnailHandler {
         let payload = match payload {
             Ok(p) => p,
             Err(e) => {
-                return JobOutcome::Failed {
-                    error: format!("invalid thumbnail payload: {}", e),
-                }
+                return JobOutcome::Failed { error: format!("invalid thumbnail payload: {}", e) }
             }
         };
 

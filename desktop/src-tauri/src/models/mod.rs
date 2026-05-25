@@ -1,5 +1,5 @@
-pub mod dto;
 pub mod domain;
+pub mod dto;
 pub mod mapper;
 
 use serde::{Deserialize, Serialize};
@@ -260,67 +260,35 @@ pub struct CommandErrorDto {
 
 impl CommandErrorDto {
     pub fn validation(message: impl Into<String>) -> Self {
-        Self {
-            code: "VALIDATION_ERROR".to_string(),
-            message: message.into(),
-            recoverable: true,
-        }
+        Self { code: "VALIDATION_ERROR".to_string(), message: message.into(), recoverable: true }
     }
 
     pub fn internal(message: impl Into<String>) -> Self {
-        Self {
-            code: "INTERNAL_ERROR".to_string(),
-            message: message.into(),
-            recoverable: false,
-        }
+        Self { code: "INTERNAL_ERROR".to_string(), message: message.into(), recoverable: false }
     }
 
     pub fn compatibility(message: impl Into<String>) -> Self {
-        Self {
-            code: "COMPATIBILITY_ERROR".to_string(),
-            message: message.into(),
-            recoverable: true,
-        }
+        Self { code: "COMPATIBILITY_ERROR".to_string(), message: message.into(), recoverable: true }
     }
 
     pub fn db_constraint(message: impl Into<String>) -> Self {
-        Self {
-            code: "DB_CONSTRAINT".to_string(),
-            message: message.into(),
-            recoverable: false,
-        }
+        Self { code: "DB_CONSTRAINT".to_string(), message: message.into(), recoverable: false }
     }
 
     pub fn sync_conflict(message: impl Into<String>) -> Self {
-        Self {
-            code: "SYNC_CONFLICT".to_string(),
-            message: message.into(),
-            recoverable: true,
-        }
+        Self { code: "SYNC_CONFLICT".to_string(), message: message.into(), recoverable: true }
     }
 
     pub fn import_error(message: impl Into<String>) -> Self {
-        Self {
-            code: "IMPORT_ERROR".to_string(),
-            message: message.into(),
-            recoverable: true,
-        }
+        Self { code: "IMPORT_ERROR".to_string(), message: message.into(), recoverable: true }
     }
 
     pub fn thumbnail_error(message: impl Into<String>) -> Self {
-        Self {
-            code: "THUMBNAIL_ERROR".to_string(),
-            message: message.into(),
-            recoverable: true,
-        }
+        Self { code: "THUMBNAIL_ERROR".to_string(), message: message.into(), recoverable: true }
     }
 
     pub fn migration_fail(message: impl Into<String>) -> Self {
-        Self {
-            code: "MIGRATION_FAIL".to_string(),
-            message: message.into(),
-            recoverable: false,
-        }
+        Self { code: "MIGRATION_FAIL".to_string(), message: message.into(), recoverable: false }
     }
 }
 
@@ -467,4 +435,3 @@ mod tests {
         }
     }
 }
-

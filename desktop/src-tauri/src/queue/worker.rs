@@ -49,10 +49,7 @@ impl QueueWorkerRuntime {
             })
             .ok();
 
-        Self {
-            shutdown,
-            join_handle,
-        }
+        Self { shutdown, join_handle }
     }
 
     pub fn stop(&mut self) {

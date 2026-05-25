@@ -56,12 +56,8 @@ impl JobEnqueuer for JobService {
         dedupe_key: Option<String>,
     ) -> AppResult<String> {
         let job_id = Uuid::new_v4().to_string();
-        let payload = NewJob::now(
-            job_id.clone(),
-            job_type.trim().to_string(),
-            payload,
-            dedupe_key,
-        )?;
+        let payload =
+            NewJob::now(job_id.clone(), job_type.trim().to_string(), payload, dedupe_key)?;
         let mut repository = self
             .queue_repository
             .lock()

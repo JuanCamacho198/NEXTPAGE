@@ -1,14 +1,14 @@
 // TRANSITION FACADE: LibraryRepository remains the stable public API while domain slices are extracted.
 // REMOVE ONLY AFTER VERIFY: remove facade delegation only when parity + serde contract checks are green in verify.
 
-pub mod settings;
-pub mod library;
-pub mod progress;
-pub mod highlights;
 pub mod bookmarks;
 pub mod collections;
-pub mod search;
 pub mod files;
+pub mod highlights;
+pub mod library;
+pub mod progress;
+pub mod search;
+pub mod settings;
 
 use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
@@ -26,8 +26,7 @@ use crate::models::{
     AppSettingDto, BookCoverDto, BookDeleteInput, BookDto, BookImportInput, BookmarkDto,
     CollectionDto, HighlightDto, IndexBookTextInput, LibraryBookDto, ReadingProgressDto,
     ReadingSessionInput, ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput,
-    SaveProgressInput, ScanFolderResultDto, SearchBookTextInput,
-    SearchBookTextResponse,
+    SaveProgressInput, ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse,
 };
 
 const MAX_SETTING_BATCH: usize = 100;
@@ -64,13 +63,11 @@ impl LibraryRepository {
     }
 
     pub fn is_feature_enabled(&self, feature_name: &str) -> AppResult<bool> {
-        let mut statement = self
-            .connection
-            .prepare("SELECT value_json FROM app_settings WHERE key = ?1")?;
+        let mut statement =
+            self.connection.prepare("SELECT value_json FROM app_settings WHERE key = ?1")?;
 
-        let result: Option<String> = statement
-            .query_row(params![feature_name], |row| row.get(0))
-            .optional()?;
+        let result: Option<String> =
+            statement.query_row(params![feature_name], |row| row.get(0)).optional()?;
 
         match result {
             Some(value) => {
@@ -324,9 +321,7 @@ impl LibraryRepository {
             return Err(AppError::MissingBookId);
         }
         if data.is_empty() {
-            return Err(AppError::InvalidInput(
-                "Cover binary payload cannot be empty".to_string(),
-            ));
+            return Err(AppError::InvalidInput("Cover binary payload cannot be empty".to_string()));
         }
 
         let normalized_mime = mime_type
@@ -552,19 +547,12 @@ impl LibraryRepository {
     fn validate_setting(setting: &AppSettingDto) -> AppResult<()> {
         let key = setting.key.trim();
         if key.is_empty() {
-            return Err(AppError::InvalidInput(
-                "Setting key is required".to_string(),
-            ));
+            return Err(AppError::InvalidInput("Setting key is required".to_string()));
         }
         if key.len() > 128 {
-            return Err(AppError::InvalidInput(
-                "Setting key exceeds 128 characters".to_string(),
-            ));
+            return Err(AppError::InvalidInput("Setting key exceeds 128 characters".to_string()));
         }
-        if !key
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-')
-        {
+        if !key.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-') {
             return Err(AppError::InvalidInput(format!(
                 "Setting key contains unsupported characters: {}",
                 setting.key
@@ -578,10 +566,7 @@ impl LibraryRepository {
             ))
         })?;
 
-        if !matches!(
-            parsed,
-            Value::String(_) | Value::Bool(_) | Value::Number(_) | Value::Null
-        ) {
+        if !matches!(parsed, Value::String(_) | Value::Bool(_) | Value::Number(_) | Value::Null) {
             return Err(AppError::InvalidInput(format!(
                 "Setting '{}' value must be scalar JSON type",
                 setting.key
@@ -644,10 +629,7 @@ impl LibraryRepository {
     fn validate_percentage(label: &str, value: Option<f64>) -> AppResult<()> {
         if let Some(v) = value {
             if !(0.0..=100.0).contains(&v) {
-                return Err(AppError::InvalidInput(format!(
-                    "{} must be between 0 and 100",
-                    label
-                )));
+                return Err(AppError::InvalidInput(format!("{} must be between 0 and 100", label)));
             }
         }
 
@@ -698,9 +680,7 @@ impl LibraryRepository {
         )?;
         let total_sessions: i64 =
             self.connection
-                .query_row("SELECT COUNT(*) FROM reading_sessions", [], |row| {
-                    row.get(0)
-                })?;
+                .query_row("SELECT COUNT(*) FROM reading_sessions", [], |row| row.get(0))?;
         let books_started: i64 = self.connection.query_row(
             "SELECT COUNT(DISTINCT book_id) FROM reading_sessions",
             [],
@@ -778,35 +758,27 @@ impl LibraryRepository {
             .collect();
 
         if tokens.is_empty() {
-            return Err(AppError::InvalidInput(
-                "Search query cannot be empty".to_string(),
-            ));
+            return Err(AppError::InvalidInput("Search query cannot be empty".to_string()));
         }
 
         Ok(tokens.join(" AND "))
     }
 
     fn resolve_covers_dir(&self, app: &tauri::AppHandle) -> AppResult<PathBuf> {
-        let app_data_dir = app
-            .path()
-            .app_data_dir()
-            .map_err(|err| AppError::InvalidInput(err.to_string()))?;
+        let app_data_dir =
+            app.path().app_data_dir().map_err(|err| AppError::InvalidInput(err.to_string()))?;
         Ok(app_data_dir.join("covers"))
     }
 
     fn deferred_cleanup_queue_path(&self, app: &tauri::AppHandle) -> AppResult<PathBuf> {
-        let app_data_dir = app
-            .path()
-            .app_data_dir()
-            .map_err(|err| AppError::InvalidInput(err.to_string()))?;
+        let app_data_dir =
+            app.path().app_data_dir().map_err(|err| AppError::InvalidInput(err.to_string()))?;
         Ok(app_data_dir.join("cover_cleanup_queue.txt"))
     }
 
     fn deferred_cleanup_log_path(&self, app: &tauri::AppHandle) -> AppResult<PathBuf> {
-        let app_data_dir = app
-            .path()
-            .app_data_dir()
-            .map_err(|err| AppError::InvalidInput(err.to_string()))?;
+        let app_data_dir =
+            app.path().app_data_dir().map_err(|err| AppError::InvalidInput(err.to_string()))?;
         Ok(app_data_dir.join("cover_cleanup.log"))
     }
 
@@ -821,10 +793,7 @@ impl LibraryRepository {
             return Ok(());
         }
 
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(queue_path)?;
+        let mut file = OpenOptions::new().create(true).append(true).open(queue_path)?;
         writeln!(file, "{}", storage_path)?;
         Ok(())
     }
@@ -882,10 +851,7 @@ impl LibraryRepository {
             fs::create_dir_all(parent)?;
         }
         let now = Utc::now().to_rfc3339();
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(log_path)?;
+        let mut file = OpenOptions::new().create(true).append(true).open(log_path)?;
         writeln!(file, "[{}] {}", now, message)?;
         Ok(())
     }
@@ -929,26 +895,18 @@ mod tests {
     use super::*;
 
     fn apply_test_migrations(connection: &Connection) {
-        connection
-            .execute_batch(include_str!("../../migrations/0001_init.sql"))
-            .unwrap();
-        connection
-            .execute_batch(include_str!("../../migrations/0002_books.sql"))
-            .unwrap();
-        connection
-            .execute_batch(include_str!("../../migrations/0003_highlights.sql"))
-            .unwrap();
+        connection.execute_batch(include_str!("../../migrations/0001_init.sql")).unwrap();
+        connection.execute_batch(include_str!("../../migrations/0002_books.sql")).unwrap();
+        connection.execute_batch(include_str!("../../migrations/0003_highlights.sql")).unwrap();
         connection
             .execute_batch(include_str!("../../migrations/0004_desktop_feature_parity.sql"))
             .unwrap();
+        connection.execute_batch(include_str!("../../migrations/0005_hidden_books.sql")).unwrap();
+        connection.execute_batch(include_str!("../../migrations/0006_collections.sql")).unwrap();
         connection
-            .execute_batch(include_str!("../../migrations/0005_hidden_books.sql"))
-            .unwrap();
-        connection
-            .execute_batch(include_str!("../../migrations/0006_collections.sql"))
-            .unwrap();
-        connection
-            .execute_batch(include_str!("../../migrations/0007_highlight_note_and_page_contract.sql"))
+            .execute_batch(include_str!(
+                "../../migrations/0007_highlight_note_and_page_contract.sql"
+            ))
             .unwrap();
     }
 
@@ -1035,10 +993,7 @@ mod tests {
             .collect::<Vec<_>>();
 
         repository
-            .index_book_text(IndexBookTextInput {
-                book_id: "book-search".to_string(),
-                chunks,
-            })
+            .index_book_text(IndexBookTextInput { book_id: "book-search".to_string(), chunks })
             .unwrap();
 
         let response = repository
@@ -1069,22 +1024,14 @@ mod tests {
             )
             .unwrap();
 
-        assert!(!repository
-            .reading_stats_drift_over_threshold(Some("book-stats"), 10.5)
-            .unwrap());
-        assert!(repository
-            .reading_stats_drift_over_threshold(Some("book-stats"), 12.5)
-            .unwrap());
+        assert!(!repository.reading_stats_drift_over_threshold(Some("book-stats"), 10.5).unwrap());
+        assert!(repository.reading_stats_drift_over_threshold(Some("book-stats"), 12.5).unwrap());
     }
 
     #[test]
     fn delete_book_metadata_marks_cover_deleted_and_returns_path() {
         let mut repository = new_repository();
-        insert_book(
-            &repository,
-            "book-cover-delete",
-            "C:/library/book-cover-delete.epub",
-        );
+        insert_book(&repository, "book-cover-delete", "C:/library/book-cover-delete.epub");
         let now = Utc::now().to_rfc3339();
 
         repository
@@ -1101,13 +1048,8 @@ mod tests {
             )
             .unwrap();
 
-        let storage_path = repository
-            .delete_book_metadata("book-cover-delete")
-            .unwrap();
-        assert_eq!(
-            storage_path.as_deref(),
-            Some("C:/tmp/book-cover-delete.png")
-        );
+        let storage_path = repository.delete_book_metadata("book-cover-delete").unwrap();
+        assert_eq!(storage_path.as_deref(), Some("C:/tmp/book-cover-delete.png"));
 
         let deleted_cover_rows: i64 = repository
             .connection
@@ -1148,11 +1090,7 @@ mod tests {
     #[test]
     fn search_returns_empty_when_paging_beyond_final_results() {
         let mut repository = new_repository();
-        insert_book(
-            &repository,
-            "book-pagination",
-            "C:/library/book-pagination.epub",
-        );
+        insert_book(&repository, "book-pagination", "C:/library/book-pagination.epub");
 
         let chunks = (0..450)
             .map(|index| crate::models::IndexBookTextChunkInput {
@@ -1163,10 +1101,7 @@ mod tests {
             .collect::<Vec<_>>();
 
         repository
-            .index_book_text(IndexBookTextInput {
-                book_id: "book-pagination".to_string(),
-                chunks,
-            })
+            .index_book_text(IndexBookTextInput { book_id: "book-pagination".to_string(), chunks })
             .unwrap();
 
         let final_page = repository
@@ -1265,11 +1200,7 @@ mod tests {
     #[test]
     fn save_progress_does_not_create_reading_session() {
         let repository = new_repository();
-        insert_book(
-            &repository,
-            "book-progress-only",
-            "C:/library/book-progress-only.epub",
-        );
+        insert_book(&repository, "book-progress-only", "C:/library/book-progress-only.epub");
 
         repository
             .save_progress(SaveProgressInput {
@@ -1294,11 +1225,7 @@ mod tests {
     #[test]
     fn save_reading_session_rejects_zero_signal_events() {
         let repository = new_repository();
-        insert_book(
-            &repository,
-            "book-session-guard",
-            "C:/library/book-session-guard.epub",
-        );
+        insert_book(&repository, "book-session-guard", "C:/library/book-session-guard.epub");
 
         let now = Utc::now().to_rfc3339();
         let result = repository.save_reading_session(ReadingSessionInput {
@@ -1316,11 +1243,7 @@ mod tests {
     #[test]
     fn save_reading_session_accepts_valid_explicit_event() {
         let repository = new_repository();
-        insert_book(
-            &repository,
-            "book-valid-session",
-            "C:/library/book-valid-session.epub",
-        );
+        insert_book(&repository, "book-valid-session", "C:/library/book-valid-session.epub");
 
         let started_at = Utc::now();
         let ended_at = started_at + chrono::Duration::seconds(45);
@@ -1347,6 +1270,3 @@ mod tests {
         assert_eq!(total_sessions, 1);
     }
 }
-
-
-

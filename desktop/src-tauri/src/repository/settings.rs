@@ -13,18 +13,17 @@ pub fn get_settings(repo: &LibraryRepository) -> AppResult<Vec<AppSettingDto>> {
     )?;
 
     let rows = statement.query_map([], |row| {
-        Ok(AppSettingDto {
-            key: row.get(0)?,
-            value_json: row.get(1)?,
-            updated_at: row.get(2)?,
-        })
+        Ok(AppSettingDto { key: row.get(0)?, value_json: row.get(1)?, updated_at: row.get(2)? })
     })?;
 
     let settings = rows.collect::<Result<Vec<_>, _>>()?;
     Ok(settings)
 }
 
-pub fn upsert_settings(repo: &mut LibraryRepository, settings: Vec<AppSettingDto>) -> AppResult<()> {
+pub fn upsert_settings(
+    repo: &mut LibraryRepository,
+    settings: Vec<AppSettingDto>,
+) -> AppResult<()> {
     if settings.len() > MAX_SETTING_BATCH {
         return Err(AppError::InvalidInput(format!(
             "Too many settings in one request (max {})",

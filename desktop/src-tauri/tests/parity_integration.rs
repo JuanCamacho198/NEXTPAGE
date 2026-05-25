@@ -33,17 +33,13 @@ fn list_library_books_internal_enforces_response_version_and_schema_presence() {
 
     let unsupported = list_library_books_internal(
         &repository,
-        Some(ListLibraryBooksInput {
-            response_version: Some(99),
-        }),
+        Some(ListLibraryBooksInput { response_version: Some(99) }),
     );
     assert!(unsupported.is_err());
 
     let supported = list_library_books_internal(
         &repository,
-        Some(ListLibraryBooksInput {
-            response_version: Some(1),
-        }),
+        Some(ListLibraryBooksInput { response_version: Some(1) }),
     );
     assert!(supported.is_ok());
 
@@ -173,7 +169,9 @@ fn repository_domain_sql_ownership_isolated_by_module_files() {
     assert!(progress_src.contains("reading_progress") || progress_src.contains("reading_sessions"));
     assert!(highlights_src.contains("highlights"));
     assert!(bookmarks_src.contains("bookmarks"));
-    assert!(collections_src.contains("collections") || collections_src.contains("book_collections"));
+    assert!(
+        collections_src.contains("collections") || collections_src.contains("book_collections")
+    );
     assert!(search_src.contains("book_text_chunks") || search_src.contains("book_text_fts"));
 }
 

@@ -16,10 +16,7 @@ pub struct LibraryService {
 
 impl LibraryService {
     pub fn new(repository: Arc<Mutex<LibraryRepository>>, job_service: Arc<JobService>) -> Self {
-        Self {
-            _repository: repository,
-            job_service,
-        }
+        Self { _repository: repository, job_service }
     }
 
     pub fn import_book_as_job(&self, _app: AppHandle, input: BookImportInput) -> AppResult<String> {
@@ -31,8 +28,7 @@ impl LibraryService {
         });
 
         let job_id =
-            self.job_service
-                .enqueue_json(JOB_TYPE_IMPORT, payload, Some(input.source_path))?;
+            self.job_service.enqueue_json(JOB_TYPE_IMPORT, payload, Some(input.source_path))?;
 
         Ok(job_id)
     }

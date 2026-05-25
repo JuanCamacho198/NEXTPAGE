@@ -228,11 +228,7 @@ impl QueueRepository {
             .ok_or_else(|| QueueError::JobNotFound(id.to_string()))?;
 
         if current.state != from {
-            return Err(QueueError::InvalidTransition {
-                from: current.state,
-                to,
-            }
-            .into());
+            return Err(QueueError::InvalidTransition { from: current.state, to }.into());
         }
 
         update_fn(&self.connection)?;
@@ -308,35 +304,21 @@ mod tests {
 
     fn build_repo() -> QueueRepository {
         let connection = Connection::open_in_memory().unwrap();
+        connection.execute_batch(include_str!("../../migrations/0001_init.sql")).unwrap();
+        connection.execute_batch(include_str!("../../migrations/0002_books.sql")).unwrap();
+        connection.execute_batch(include_str!("../../migrations/0003_highlights.sql")).unwrap();
         connection
-            .execute_batch(include_str!("../../migrations/0001_init.sql"))
+            .execute_batch(include_str!("../../migrations/0004_desktop_feature_parity.sql"))
             .unwrap();
-        connection
-            .execute_batch(include_str!("../../migrations/0002_books.sql"))
-            .unwrap();
-        connection
-            .execute_batch(include_str!("../../migrations/0003_highlights.sql"))
-            .unwrap();
-        connection
-            .execute_batch(include_str!(
-                "../../migrations/0004_desktop_feature_parity.sql"
-            ))
-            .unwrap();
-        connection
-            .execute_batch(include_str!("../../migrations/0005_hidden_books.sql"))
-            .unwrap();
-        connection
-            .execute_batch(include_str!("../../migrations/0006_collections.sql"))
-            .unwrap();
+        connection.execute_batch(include_str!("../../migrations/0005_hidden_books.sql")).unwrap();
+        connection.execute_batch(include_str!("../../migrations/0006_collections.sql")).unwrap();
         connection
             .execute_batch(include_str!(
                 "../../migrations/0007_highlight_note_and_page_contract.sql"
             ))
             .unwrap();
         connection
-            .execute_batch(include_str!(
-                "../../migrations/0008_queue_and_perf_indexes.sql"
-            ))
+            .execute_batch(include_str!("../../migrations/0008_queue_and_perf_indexes.sql"))
             .unwrap();
         QueueRepository::new(connection)
     }
@@ -396,8 +378,7 @@ mod tests {
         )
         .unwrap();
         repo.enqueue(created).unwrap();
-        repo.mark_running("job-expired", "2001-01-01T00:00:00Z")
-            .unwrap();
+        repo.mark_running("job-expired", "2001-01-01T00:00:00Z").unwrap();
 
         let recovered = repo.recover_expired_running_jobs().unwrap();
         assert_eq!(recovered, 1);

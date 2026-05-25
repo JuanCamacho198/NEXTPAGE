@@ -1,1 +1,5 @@
-pub use super::{list_books, listBooks, upsert_book, upsertBook, list_library_books, listLibraryBooks, list_library_books_internal, scan_folder, scanFolder, import_book, importBook, delete_book, hide_book_from_library, hideBookFromLibrary, upsert_book_cover, upsertBookCover};
+pub use super::{
+    delete_book, hideBookFromLibrary, hide_book_from_library, importBook, import_book, listBooks,
+    listLibraryBooks, list_books, list_library_books, list_library_books_internal, scanFolder,
+    scan_folder, upsertBook, upsertBookCover, upsert_book, upsert_book_cover,
+};

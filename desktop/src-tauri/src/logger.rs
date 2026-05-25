@@ -117,9 +117,7 @@ impl Logger {
             let pattern_escaped = regex::escape(pattern);
             let regex_pattern = format!(r"(?i){}:[^\s,}}]+", pattern_escaped);
             if let Ok(re) = regex::Regex::new(&regex_pattern) {
-                result = re
-                    .replace_all(&result, format!("{}:[REDACTED]", pattern))
-                    .to_string();
+                result = re.replace_all(&result, format!("{}:[REDACTED]", pattern)).to_string();
             }
         }
         result
@@ -131,10 +129,8 @@ impl Logger {
                 let mut new_map = serde_json::Map::new();
                 for (k, v) in map {
                     let lower_key = k.to_lowercase();
-                    let should_redact = self
-                        .redaction_patterns
-                        .iter()
-                        .any(|p| lower_key.contains(p));
+                    let should_redact =
+                        self.redaction_patterns.iter().any(|p| lower_key.contains(p));
                     new_map.insert(
                         k.clone(),
                         if should_redact {
@@ -247,8 +243,7 @@ impl Logger {
             return Ok(String::new());
         }
 
-        fs::read_to_string(&self.log_path)
-            .map_err(|e| format!("Failed to read log file: {}", e))
+        fs::read_to_string(&self.log_path).map_err(|e| format!("Failed to read log file: {}", e))
     }
 }
 
@@ -258,8 +253,6 @@ pub struct LoggerState {
 
 impl LoggerState {
     pub fn new(app_data_dir: PathBuf) -> Self {
-        Self {
-            logger: Mutex::new(Logger::new(app_data_dir)),
-        }
+        Self { logger: Mutex::new(Logger::new(app_data_dir)) }
     }
 }

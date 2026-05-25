@@ -321,6 +321,7 @@ export const messagesEs: Partial<Record<MessageKey, string>> = {
   "pdf.fullscreenUnsupported": "Pantalla completa no esta disponible en este entorno.",
   "pdf.navigationFailed": "No se pudo renderizar la pagina solicitada. Se mantiene la pagina actual.",
   "pdf.pagesLeft": "paginas restantes",
+  "pdf.zoomLevel": "Zoom: {{level}}%",
   "epub.loading": "Cargando EPUB...",
   "epub.error": "Error",
   "epub.hide": "Ocultar",

@@ -1394,7 +1394,12 @@
     onclick={(event) => {
       // Dismiss highlight manager when clicking outside
       dismissHighlightManager();
-      if (textLayer && event.target instanceof Node && textLayer.contains(event.target)) {
+      // Don't steal focus from form elements (select, input, button)
+      const target = event.target;
+      if (target instanceof HTMLSelectElement || target instanceof HTMLInputElement || target instanceof HTMLButtonElement || target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      if (textLayer && target instanceof Node && textLayer.contains(target)) {
         handleTextSelection();
         return;
       }
@@ -1412,15 +1417,13 @@
       <div class="error-overlay">{t("pdf.error")}: {error}</div>
     {/if}
     <div class="controls" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
-      <button type="button" onclick={() => (showToc = !showToc)}>
-        {t("pdf.contents")}
+      <button type="button" onclick={() => (showToc = !showToc)} title={t("pdf.contents")}>
+        <Icon name="menu" size="sm" />
       </button>
-      <button type="button" class="reader-nav-button" aria-label={t("pdf.previous")} onclick={goToPrevPage} disabled={currentPage <= 1}>
+      <button type="button" onclick={goToPrevPage} disabled={currentPage <= 1} title={t("pdf.previous")}>
         <Icon name="chevron-left" size="sm" />
-        {t("pdf.previous")}
       </button>
-      <button type="button" class="reader-nav-button" aria-label={t("pdf.next")} onclick={goToNextPage} disabled={currentPage >= totalPages}>
-        {t("pdf.next")}
+      <button type="button" onclick={goToNextPage} disabled={currentPage >= totalPages} title={t("pdf.next")}>
         <Icon name="arrow-right" size="sm" />
       </button>
       <span class="page-info">
@@ -1434,14 +1437,13 @@
         />
         <span class="total-pages">/ {totalPages}</span>
       </span>
-      <button type="button" class="flex flex-col items-center gap-0.5" onclick={toggleFullscreen} disabled={!fullscreenSupported} title={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}>
+      <button type="button" onclick={toggleFullscreen} disabled={!fullscreenSupported} title={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}>
         <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
-        <span class="text-[10px] leading-tight">{isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}</span>
       </button>
       {#if debugState.enabled}
         <span class="debug-info">p{currentPage}/{totalPages} | {Math.round(scale * 100)}%</span>
       {/if}
-      <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select">
+      <select bind:value={scale} onchange={() => setScale(scale)} class="scale-select" title={t("pdf.zoomLevel", { level: String(Math.round(scale * 100)) })}>
         {#each scaleOptions as option (option)}
           <option value={option}>{Math.round(option * 100)}%</option>
         {/each}
@@ -1452,7 +1454,7 @@
     {/if}
     <div class="content-area" style:visibility={isLoading || error ? 'hidden' : 'visible'}>
       {#if showToc}
-        <aside class="toc-sidebar">
+        <aside class="toc-sidebar scrollbar-thumb-[#475569] scrollbar-track-transparent">
           <h3>{t("pdf.tableOfContents")}</h3>
           {#if tocLoading}
             <p class="toc-message">{t("pdf.tocLoading")}</p>
@@ -1479,7 +1481,7 @@
           {/if}
         </aside>
       {/if}
-      <div class="canvas-container" bind:this={canvasContainer} onwheel={handleViewerWheel}>
+      <div class="canvas-container scrollbar-thumb-[#475569] scrollbar-track-transparent" bind:this={canvasContainer} onwheel={handleViewerWheel}>
         <div class="canvas-wrapper" class:search-hit={flashSearchResult} style={canvasWrapperStyle}>
           <canvas bind:this={canvas}></canvas>
           <div class="selection-overlay" aria-hidden="true">
@@ -1604,13 +1606,18 @@
   }
 
   .controls button {
-    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
     border: 1px solid var(--color-border);
     border-radius: 4px;
     background: var(--pdf-reader-surface-bg, var(--color-surface));
     color: var(--pdf-reader-text, var(--color-primary));
     cursor: pointer;
     font-size: 13px;
+    min-width: 32px;
+    min-height: 32px;
   }
 
   .toc-sidebar {
@@ -1761,11 +1768,7 @@
     }
   }
 
-  .reader-nav-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
+
 
   .total-pages {
     font-size: 13px;

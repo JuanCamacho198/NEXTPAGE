@@ -45,8 +45,16 @@
 ## Code Style
 
 - **Svelte 5**: Use runes (`$state`, `$derived`, `$effect`) for reactive state
-- **Tailwind CSS**: Always use Tailwind for styling. Do NOT use `<style>` blocks in components.
+- **Tailwind CSS v4**: Always use Tailwind for styling. Do NOT use `<style>` blocks in components.
   - **Exceptions** (allowed in global CSS): `@keyframes` animations, `::-webkit-slider-thumb` / `::-moz-range-thumb` pseudo-elements for range inputs. Move these to `src/lib/styles/tokens.css`.
+  - **Canonical v4 syntax for CSS variables**: Use `border-(--color-border)` NOT `border-[var(--color-border)]`. In Tailwind v4, drop the `var()` wrapper. Examples:
+    - ✅ `border-(--color-border)` ❌ `border-[var(--color-border)]`
+    - ✅ `text-(--color-primary)` ❌ `text-[var(--color-primary)]`
+    - ✅ `bg-(--color-surface)` ❌ `bg-[var(--color-surface)]`
+    - ✅ `bg-(--color-primary)/12` ❌ `bg-[var(--color-primary)]/12`
+    - ✅ `text-(--color-text-muted,#6b7280)` ❌ `text-[var(--color-text-muted,#6b7280)]`
+    - ✅ `hover:bg-(--color-border)` ❌ `hover:bg-[color:var(--color-border)]`
+  - **Renamed classes in v4**: `break-words` → `wrap-break-word`
 - **Imports**: Use `$lib` alias (e.g., `import { something } from '$lib/stores'`)
 - **Types**: TypeScript with explicit return types on functions
 - **Tests**: Vitest with `@testing-library/svelte` and jsdom

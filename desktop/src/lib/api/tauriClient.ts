@@ -451,6 +451,22 @@ export const importBook = async (input: {
   return invoke<{ id: string }>("importBook", { input });
 };
 
+export const getFileSize = async (filePath: string): Promise<number> => {
+  try {
+    return await invoke<number>("getFileSize", { filePath });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const readFileRange = async (filePath: string, offset: number, length: number): Promise<number[]> => {
+  try {
+    return await invoke<number[]>("readFileRange", { filePath, offset, length });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
 export const getFileBytes = async (filePath: string): Promise<number[]> => {
   try {
     return await invoke<number[]>("getFileBytes", { filePath });

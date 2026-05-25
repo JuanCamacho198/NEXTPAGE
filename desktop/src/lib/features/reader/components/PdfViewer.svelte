@@ -2,7 +2,7 @@
   import * as pdfjsLib from "pdfjs-dist";
   import "pdfjs-dist/web/pdf_viewer.css";
   import { onMount } from "svelte";
-  import { getFileBytes } from "$lib/shared/api/tauriClient";
+  import { createPdfDocument, getCachedDocument, loadPdfOutline, clearDocumentCache } from "$lib/features/reader/pdf/pdfStreaming";
   import ErrorBoundary from "$lib/shared/ui/feedback/ErrorBoundary.svelte";
   import Icon from "$lib/components/ui/navigation/Icon.svelte";
   import type { MessageKey } from "$lib/i18n";

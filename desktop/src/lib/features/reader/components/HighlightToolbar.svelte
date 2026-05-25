@@ -153,7 +153,7 @@
       <div class="flex flex-1 flex-wrap gap-1.5 max-sm:w-full">
         <button
           type="button"
-          class="inline-flex min-h-[34px] cursor-pointer items-center rounded-full border border-transparent bg-[#0f172a]/82 px-3 py-[7px] text-xs font-bold tracking-[0.01em] text-[#f8fafc] shadow-[0_10px_18px_rgba(15,23,42,0.2)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#020617]/88 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
+          class="inline-flex min-h-8.5 cursor-pointer items-center rounded-full border border-transparent bg-[#0f172a]/82 px-3 py-1.75 text-xs font-bold tracking-[0.01em] text-[#f8fafc] shadow-[0_10px_18px_rgba(15,23,42,0.2)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#020617]/88 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
           onclick={() => handleCreateHighlight()}
           disabled={isSaving}
         >
@@ -161,7 +161,7 @@
         </button>
         <button
           type="button"
-          class="inline-flex min-h-[34px] cursor-pointer items-center rounded-full border border-[rgba(96,165,250,0.2)] bg-[#dbeafe]/72 px-3 py-[7px] text-xs font-bold tracking-[0.01em] text-[#0c4a6e] transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#bfdbfe]/82 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
+          class="inline-flex min-h-8.5 cursor-pointer items-center rounded-full border border-[rgba(96,165,250,0.2)] bg-[#dbeafe]/72 px-3 py-1.75 text-xs font-bold tracking-[0.01em] text-[#0c4a6e] transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#bfdbfe]/82 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
           onclick={handleToggleNoteEditor}
           disabled={isSaving}
           aria-expanded={showNoteEditor}
@@ -171,7 +171,7 @@
         </button>
         <button
           type="button"
-          class="inline-flex min-h-[34px] cursor-pointer items-center rounded-full border border-[rgba(148,163,184,0.28)] bg-white/58 px-3 py-[7px] text-xs font-bold tracking-[0.01em] transition-all duration-150 hover:-translate-y-0.5 hover:bg-white/82 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
+          class="inline-flex min-h-8.5 cursor-pointer items-center rounded-full border border-[rgba(148,163,184,0.28)] bg-white/58 px-3 py-1.75 text-xs font-bold tracking-[0.01em] transition-all duration-150 hover:-translate-y-0.5 hover:bg-white/82 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
           style="color: color-mix(in srgb, var(--pdf-reader-text, #0f172a) 86%, white 14%);"
           onclick={handleDelete}
         >
@@ -193,7 +193,7 @@
         ></textarea>
         <button
           type="button"
-          class="inline-flex min-h-[34px] cursor-pointer items-center self-end rounded-full border border-transparent bg-[#0f172a]/82 px-3 py-[7px] text-xs font-bold tracking-[0.01em] text-[#f8fafc] shadow-[0_10px_18px_rgba(15,23,42,0.2)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#020617]/88 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          class="inline-flex min-h-8.5 cursor-pointer items-center self-end rounded-full border border-transparent bg-[#0f172a]/82 px-3 py-1.75 text-xs font-bold tracking-[0.01em] text-[#f8fafc] shadow-[0_10px_18px_rgba(15,23,42,0.2)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#020617]/88 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           onclick={handleSaveWithNote}
           disabled={isSaving}
         >

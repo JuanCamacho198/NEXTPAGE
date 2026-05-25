@@ -46,22 +46,25 @@
   }: Props = $props();
 </script>
 
-<div class="selection-overlay" aria-hidden="true">
+<div class="absolute inset-0 z-1 pointer-events-none" aria-hidden="true">
   {#each selectionOverlayRects as rect, index (`${rect.left}-${rect.top}-${index}`)}
     <div
-      class="selection-rect"
-      style={`left: ${rect.left}px; top: ${rect.top}px; width: ${rect.width}px; height: ${rect.height}px;`}
+      class="absolute rounded pointer-events-none"
+      style="left: {rect.left}px; top: {rect.top}px; width: {rect.width}px; height: {rect.height}px; background: color-mix(in srgb, var(--pdf-selection-color, #3388ff) 42%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--pdf-selection-color, #3388ff) 22%, transparent), 0 2px 4px rgba(0,0,0,0.1);"
     ></div>
   {/each}
 </div>
 
-<div class="highlights-overlay" role="presentation">
+<div class="absolute inset-0 z-1 pointer-events-none" role="presentation">
   {#each persistedHighlights.filter((h) => h.pageNumber === currentPage) as hl (hl.id)}
     {#each hl.rects as rect, index (`${hl.id}-${index}`)}
       <div
-        class="highlight-rect"
-        class:active={activeHighlightId === hl.id}
-        style={`left: ${rect.left * scale}px; top: ${rect.top * scale}px; width: ${rect.width * scale}px; height: ${rect.height * scale}px; --highlight-color: ${hl.color};`}
+        class="absolute rounded pointer-events-auto cursor-pointer"
+        class:z-[3]={activeHighlightId === hl.id}
+        style="left: {rect.left * scale}px; top: {rect.top * scale}px; width: {rect.width * scale}px; height: {rect.height * scale}px; --highlight-color: {hl.color}; background: color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--highlight-color, #FACC15) 25%, transparent);"
+        class:hover:bg-[color-mix(in_srgb,var(--highlight-color,#FACC15)_60%,transparent)]
+        class:bg-[color-mix(in_srgb,var(--highlight-color,#FACC15)_72%,transparent)]={activeHighlightId === hl.id}
+        class:shadow-[0_0_0_2px_color-mix(in_srgb,var(--highlight-color,#FACC15)_50%,transparent),0_0_12px_color-mix(in_srgb,var(--highlight-color,#FACC15)_30%,transparent)]={activeHighlightId === hl.id}
         onclick={(e) => onHighlightClick(hl, e)}
         onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onHighlightClick(hl, e as unknown as MouseEvent); } }}
         role="button"
@@ -75,7 +78,7 @@
 {#if highlightToolbarPos && activeHighlightId}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
-    class="highlight-manager"
+    class="fixed z-[100] flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-800 border border-slate-700 shadow-[0_8px_24px_rgba(0,0,0,0.35),0_2px_8px_rgba(0,0,0,0.15)] pointer-events-auto"
     style="left: {highlightToolbarPos.x}px; top: {highlightToolbarPos.y}px;"
     onclick={(e) => e.stopPropagation()}
     role="toolbar"
@@ -85,17 +88,18 @@
     {#each HIGHLIGHT_COLORS as color}
       <button
         type="button"
-        class="hm-color-btn"
-        class:selected={activeHighlightColor === color.hex}
+        class="w-[22px] h-[22px] border-2 border-white/60 rounded-full cursor-pointer p-0 transition-[transform,border-color] duration-150 hover:scale-115"
+        class:!border-white={activeHighlightColor === color.hex}
+        class:shadow-[0_0_0_2px_rgba(255,255,255,0.3)]={activeHighlightColor === color.hex}
         style="background-color: {color.hex};"
         onclick={() => onHighlightColorPick(color.hex)}
         aria-label={color.label}
       ></button>
     {/each}
-    <span class="hm-separator"></span>
+    <span class="w-px h-5 bg-slate-700 mx-1"></span>
     <button
       type="button"
-      class="hm-delete-btn"
+      class="flex items-center justify-center w-7 h-7 border-none rounded-full bg-transparent text-red-500 cursor-pointer transition-[background-color,transform] duration-150 hover:bg-red-500/15 hover:scale-110"
       onclick={onHighlightDelete}
       aria-label="Delete highlight"
       title="Delete highlight"
@@ -108,7 +112,7 @@
     </button>
     <button
       type="button"
-      class="hm-close-btn"
+      class="flex items-center justify-center w-5 h-5 border-none rounded-full bg-transparent text-slate-400 cursor-pointer text-sm leading-none transition-[background-color,color] duration-150 hover:bg-slate-400/15 hover:text-slate-100"
       onclick={onDismissHighlightManager}
       aria-label="Close"
     >
@@ -116,136 +120,3 @@
     </button>
   </div>
 {/if}
-
-<style>
-  .selection-overlay,
-  .highlights-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-  }
-
-  .selection-rect {
-    position: absolute;
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--pdf-selection-color, #3388ff) 42%, transparent);
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--pdf-selection-color, #3388ff) 22%, transparent),
-      0 2px 4px rgba(0, 0, 0, 0.1);
-    z-index: 3;
-    pointer-events: none;
-  }
-
-  .highlight-rect {
-    position: absolute;
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent);
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--highlight-color, #FACC15) 25%, transparent);
-    z-index: 2;
-    pointer-events: auto;
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-  }
-
-  .highlight-rect:hover {
-    background: color-mix(in srgb, var(--highlight-color, #FACC15) 60%, transparent);
-  }
-
-  .highlight-rect.active {
-    background: color-mix(in srgb, var(--highlight-color, #FACC15) 72%, transparent);
-    box-shadow:
-      0 0 0 2px color-mix(in srgb, var(--highlight-color, #FACC15) 50%, transparent),
-      0 0 12px color-mix(in srgb, var(--highlight-color, #FACC15) 30%, transparent);
-  }
-
-  /* Highlight manager toolbar — floating fixed menu */
-  .highlight-manager {
-    position: fixed;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    border-radius: 28px;
-    background: #1E293B;
-    border: 1px solid #334155;
-    box-shadow:
-      0 8px 24px rgba(0, 0, 0, 0.35),
-      0 2px 8px rgba(0, 0, 0, 0.15);
-    pointer-events: auto;
-  }
-
-  .highlight-manager .hm-color-btn {
-    width: 22px;
-    height: 22px;
-    border: 2px solid rgba(255, 255, 255, 0.6);
-    border-radius: 50%;
-    cursor: pointer;
-    padding: 0;
-    transition:
-      transform 0.15s ease,
-      border-color 0.15s ease;
-  }
-
-  .highlight-manager .hm-color-btn:hover {
-    transform: scale(1.15);
-  }
-
-  .highlight-manager .hm-color-btn.selected {
-    border-color: white;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
-  }
-
-  .highlight-manager .hm-separator {
-    width: 1px;
-    height: 20px;
-    background: #334155;
-    margin: 0 4px;
-  }
-
-  .highlight-manager .hm-delete-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border: none;
-    border-radius: 50%;
-    background: transparent;
-    color: #EF4444;
-    cursor: pointer;
-    transition:
-      background-color 0.15s ease,
-      transform 0.15s ease;
-  }
-
-  .highlight-manager .hm-delete-btn:hover {
-    background: rgba(239, 68, 68, 0.15);
-    transform: scale(1.1);
-  }
-
-  .highlight-manager .hm-close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    border: none;
-    border-radius: 50%;
-    background: transparent;
-    color: #94A3B8;
-    cursor: pointer;
-    font-size: 14px;
-    line-height: 1;
-    transition:
-      background-color 0.15s ease,
-      color 0.15s ease;
-  }
-
-  .highlight-manager .hm-close-btn:hover {
-    background: rgba(148, 163, 184, 0.15);
-    color: #F8FAFC;
-  }
-</style>

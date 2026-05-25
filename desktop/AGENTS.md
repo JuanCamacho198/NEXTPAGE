@@ -10,6 +10,17 @@
 - **Test all**: `bun run test`
 - **Test single**: `bun vitest run --testNamePattern="test name" src/test/file.test.ts`
 - **Type check**: `bun run check`
+- **Lint frontend**: `bun run lint`
+- **Format frontend**: `bun run format`
+- **Format check frontend**: `bun run format:check`
+
+## Rust Tooling
+
+- **Rust typecheck**: `cd src-tauri && cargo check`
+- **Rust lint (Clippy)**: `cd src-tauri && cargo clippy -- -D warnings`
+- **Rust format**: `cd src-tauri && cargo fmt`
+- **Rust format check**: `cd src-tauri && cargo fmt --check`
+- **Rust audit (deny)**: `cd src-tauri && cargo deny check`
 
 ## Project Structure
 
@@ -21,10 +32,15 @@
   - i18n: `src/lib/i18n/`
   - Tests: `src/test/` (unit/, integration/)
 - **Backend (Rust/Tauri)**: `src-tauri/src/`
-  - Commands: `src-tauri/src/commands.rs`
+  - Commands: `src-tauri/src/commands/`
   - DB: `src-tauri/src/db.rs`
 - **Database migrations**: `src-tauri/migrations/`
 - **Configs**: `src-tauri/Cargo.toml`, `vite.config.ts`, `vitest.config.ts`, `tsconfig.json`
+  - ESLint: `eslint.config.js`
+  - Prettier: `.prettierrc`
+  - EditorConfig: `.editorconfig`
+  - cargo-deny: `src-tauri/deny.toml`
+  - rustfmt: `src-tauri/.rustfmt.toml`
 
 ## Code Style
 
@@ -34,6 +50,8 @@
 - **Imports**: Use `$lib` alias (e.g., `import { something } from '$lib/stores'`)
 - **Types**: TypeScript with explicit return types on functions
 - **Tests**: Vitest with `@testing-library/svelte` and jsdom
+- **Formatting**: Single quotes, semicolons, trailing commas, 100 char width (Prettier)
+- **Indentation**: 2 spaces for TS/Svelte, 4 spaces for Rust/Markdown
 
 ## Conventions
 
@@ -42,6 +60,18 @@
 - State classes: `svelte.ts` suffix
 - Tests: `.test.ts` or `.test.svelte.ts` in `src/test/`
 - Rust error handling: Use `thiserror` crate in `src-tauri/src/error.rs`
+- Rust style: 4-space tabs, 100 char width (rustfmt)
+
+## Pre-commit Checklist
+
+Before committing, run:
+1. `cd src-tauri && cargo check` (Rust typecheck)
+2. `cd src-tauri && cargo clippy -- -D warnings` (Rust lint)
+3. `cd src-tauri && cargo fmt --check` (Rust format)
+4. `cd src-tauri && cargo deny check` (Rust security audit)
+5. `bun run check` (Svelte typecheck)
+6. `bun run lint` (ESLint)
+7. `bun run format:check` (Prettier)
 
 ## Safety
 

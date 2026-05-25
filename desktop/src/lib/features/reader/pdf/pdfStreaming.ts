@@ -1,6 +1,6 @@
 import * as pdfjsLib from "pdfjs-dist";
 import type { PDFDocumentProxy, PDFDocumentLoadingTask } from "pdfjs-dist";
-import { getFileSize, readFileRange } from "$lib/api/tauriClient";
+import { getFileSize, readFileRange, getFileBytes } from "$lib/api/tauriClient";
 import type { PdfOutlineItem } from "$lib/types";
 
 // ──────────────────────────────────────────
@@ -120,21 +120,9 @@ async function loadFullPdf(
   filePath: string,
   onProgress?: (loaded: number, total: number) => void,
 ): Promise<{ loadingTask: PDFDocumentLoadingTask; document: PDFDocumentProxy }> {
-  const size = await getFileSize(filePath);
-  const HEADER_SIZE = 8192;
-  const initialChunk: number[] =
-    size > 0 ? await readFileRange(filePath, 0, Math.min(HEADER_SIZE, size)) : [];
+  const fileData = await getFileBytes(filePath);
 
-  // Read the rest in parallel
-  const allData = new Uint8Array(size);
-  allData.set(new Uint8Array(initialChunk), 0);
-
-  if (size > HEADER_SIZE) {
-    const restData = await readFileRange(filePath, HEADER_SIZE, size - HEADER_SIZE);
-    allData.set(new Uint8Array(restData), HEADER_SIZE);
-  }
-
-  const loadingTask = pdfjsLib.getDocument({ data: allData });
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(fileData) });
 
   if (onProgress) {
     loadingTask.onProgress = (progress: { loaded: number; total: number }) => {

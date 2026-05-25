@@ -15,6 +15,7 @@ export const messagesEs: Record<MessageKey, string> = {
   "app.homeNavLabel": "Navegacion de inicio",
   "app.navBookshelf": "Estanteria",
   "app.navFuture": "Mas pronto",
+  "app.skipToContent": "Saltar al contenido principal",
   "app.openBookPrompt": "Abre un libro de la biblioteca para comenzar a leer.",
   "app.unknownAuthor": "Autor desconocido",
   "app.locationLabel": "Ubicacion",

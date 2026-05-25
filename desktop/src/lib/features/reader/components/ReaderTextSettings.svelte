@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { MessageKey } from "$lib/i18n";
   import Icon from "$lib/components/ui/navigation/Icon.svelte";
+  import { createFocusTrap } from "$lib/shared/utils/focusTrap";
 
   type Props = {
     open: boolean;
@@ -28,6 +29,15 @@
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) onClose();
   }
+
+  // Focus trap: keep Tab focus inside the text settings panel when open
+  $effect(() => {
+    if (open && sidebarEl) {
+      const trap = createFocusTrap(sidebarEl);
+      trap.activate();
+      return () => trap.deactivate();
+    }
+  });
 </script>
 
 {#if open}

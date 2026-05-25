@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { MessageKey } from "$lib/i18n";
+  import { createFocusTrap } from "$lib/shared/utils/focusTrap";
 
   export interface TocEntry {
     id: string;
@@ -20,9 +21,20 @@
 
   let { open, entries, activeId, t, onNavigate, onClose }: Props = $props();
 
+  let sidebarEl: HTMLDivElement | undefined = $state();
+
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) onClose();
   }
+
+  // Focus trap: keep Tab focus inside the sidebar when open
+  $effect(() => {
+    if (open && sidebarEl) {
+      const trap = createFocusTrap(sidebarEl);
+      trap.activate();
+      return () => trap.deactivate();
+    }
+  });
 </script>
 
 {#if open}
@@ -39,6 +51,7 @@
     <!-- Sidebar -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
+      bind:this={sidebarEl}
       class="absolute right-0 top-0 flex h-full w-[260px] flex-col overflow-y-auto border-l border-[#17263a] bg-[#101c2c]/70 pt-[60px] text-[#8fa3bf] backdrop-blur-sm"
       onkeydown={(e) => e.key === "Escape" && onClose()}
       role="dialog"

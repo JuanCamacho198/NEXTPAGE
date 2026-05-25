@@ -25,7 +25,16 @@
   />
 {/if}
 
-<div class="flex-1 overflow-y-auto relative" class:p-4={appState.route !== "reader"} class:md:p-6={appState.route !== "reader"}>
+<div id="main-content" tabindex="-1" class="flex-1 overflow-y-auto relative" class:p-4={appState.route !== "reader"} class:md:p-6={appState.route !== "reader"}>
+  <!-- aria-live region for screen reader announcements of dynamic content -->
+  <div aria-live="polite" aria-atomic="true" class="sr-only">
+    {#if appState.importProgress}
+      {appState.importProgress.message}
+    {/if}
+    {#if appState.readerError}
+      {appState.readerError}
+    {/if}
+  </div>
   <div class="mx-auto max-w-7xl">
     {#if appState.importProgress}
       <p class="mb-3 text-sm text-[var(--color-secondary)]">{appState.importProgress.message}</p>

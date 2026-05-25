@@ -13,6 +13,7 @@
   import { saveHighlight, deleteHighlight, listBookmarks, saveBookmark, deleteBookmark } from "$lib/shared/api/tauriClient";
   import DebugToggle from "$lib/debug/DebugToggle.svelte";
   import DebugPanel from "$lib/debug/DebugPanel.svelte";
+  import { createFocusTrap } from "$lib/shared/utils/focusTrap";
 
   type ActiveBook = LibraryBookDto & { filePath: string };
 
@@ -114,6 +115,16 @@
     createdAt: string;
   }>>([]);
   let bookmarksLoading = $state(false);
+  let bookmarksPanelEl: HTMLDivElement | undefined = $state();
+
+  // Focus trap for bookmarks panel when open
+  $effect(() => {
+    if (showBookmarks && bookmarksPanelEl) {
+      const trap = createFocusTrap(bookmarksPanelEl);
+      trap.activate();
+      return () => trap.deactivate();
+    }
+  });
 
   async function loadBookmarks() {
     if (!activeReadingBook) return;
@@ -387,19 +398,19 @@
 
     <!-- Right: tools -->
     <div class="flex items-center gap-6 text-[#94A3B8]">
-      <button type="button" onclick={toggleTocPanel} class="cursor-pointer transition-colors" class:text-[#49d4ff]={showTocPanel} class:text-[#94A3B8]={!showTocPanel} class:hover:text-white={!showTocPanel} class:hover:brightness-125={showTocPanel} aria-label={showTocPanel ? t("settings.close") : t("reader.tabla_contenidos")}>
+      <button type="button" onclick={toggleTocPanel} class="flex items-center justify-center min-w-[28px] min-h-[28px] cursor-pointer transition-colors" class:text-[#49d4ff]={showTocPanel} class:text-[#94A3B8]={!showTocPanel} class:hover:text-white={!showTocPanel} class:hover:brightness-125={showTocPanel} aria-label={showTocPanel ? t("settings.close") : t("reader.tabla_contenidos")}>
         <Icon name={showTocPanel ? "close" : "menu"} size="sm" />
       </button>
-      <button type="button" onclick={toggleSearch} class="cursor-pointer transition-colors" class:text-[#49d4ff]={searchPanelOpen} class:text-[#94A3B8]={!searchPanelOpen} class:hover:text-white={!searchPanelOpen} class:hover:brightness-125={searchPanelOpen} aria-label={searchPanelOpen ? t("settings.close") : t("epub.search")}>
+      <button type="button" onclick={toggleSearch} class="flex items-center justify-center min-w-[28px] min-h-[28px] cursor-pointer transition-colors" class:text-[#49d4ff]={searchPanelOpen} class:text-[#94A3B8]={!searchPanelOpen} class:hover:text-white={!searchPanelOpen} class:hover:brightness-125={searchPanelOpen} aria-label={searchPanelOpen ? t("settings.close") : t("epub.search")}>
         <Icon name={searchPanelOpen ? "close" : "search"} size="sm" />
       </button>
-      <button type="button" onclick={toggleTextSettings} class="cursor-pointer transition-colors" class:text-[#49d4ff]={showTextSettings} class:text-[#94A3B8]={!showTextSettings} class:hover:text-white={!showTextSettings} class:hover:brightness-125={showTextSettings} aria-label={showTextSettings ? t("settings.close") : t("reader.ajustes_texto")}>
+      <button type="button" onclick={toggleTextSettings} class="flex items-center justify-center min-w-[28px] min-h-[28px] cursor-pointer transition-colors" class:text-[#49d4ff]={showTextSettings} class:text-[#94A3B8]={!showTextSettings} class:hover:text-white={!showTextSettings} class:hover:brightness-125={showTextSettings} aria-label={showTextSettings ? t("settings.close") : t("reader.ajustes_texto")}>
         <Icon name={showTextSettings ? "close" : "settings"} size="sm" />
       </button>
-      <button type="button" onclick={toggleBookmarks} class="cursor-pointer transition-colors" class:text-[#49d4ff]={showBookmarks} class:text-[#94A3B8]={!showBookmarks} class:hover:text-white={!showBookmarks} class:hover:brightness-125={showBookmarks} aria-label={showBookmarks ? t("settings.close") : t("reader.bookmark")}>
+      <button type="button" onclick={toggleBookmarks} class="flex items-center justify-center min-w-[28px] min-h-[28px] cursor-pointer transition-colors" class:text-[#49d4ff]={showBookmarks} class:text-[#94A3B8]={!showBookmarks} class:hover:text-white={!showBookmarks} class:hover:brightness-125={showBookmarks} aria-label={showBookmarks ? t("settings.close") : t("reader.bookmark")}>
         <Icon name={showBookmarks ? "close" : "bookmark"} size="sm" />
       </button>
-      <button type="button" onclick={toggleFullscreen} class="cursor-pointer transition-colors text-[#94A3B8] hover:text-white" aria-label={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}>
+      <button type="button" onclick={toggleFullscreen} class="flex items-center justify-center min-w-[28px] min-h-[28px] cursor-pointer transition-colors text-[#94A3B8] hover:text-white" aria-label={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}>
         <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
       </button>
     </div>
@@ -548,7 +559,7 @@
   <div class="fixed inset-0 z-40" onclick={(e) => { if (e.target === e.currentTarget) showBookmarks = false; }} onkeydown={(e) => e.key === "Escape" && (showBookmarks = false)} role="presentation">
     <div class="absolute inset-0 bg-[#101c2c]/70"></div>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="absolute right-0 top-0 flex h-full w-[260px] flex-col border-l border-[#17263a] bg-[#101c2c]/70 pt-[60px] text-[#8fa3bf] backdrop-blur-sm" onkeydown={(e) => e.key === "Escape" && (showBookmarks = false)} role="dialog" aria-label={t("reader.bookmark")} tabindex="0">
+    <div bind:this={bookmarksPanelEl} class="absolute right-0 top-0 flex h-full w-[260px] flex-col border-l border-[#17263a] bg-[#101c2c]/70 pt-[60px] text-[#8fa3bf] backdrop-blur-sm" onkeydown={(e) => e.key === "Escape" && (showBookmarks = false)} role="dialog" aria-label={t("reader.bookmark")} tabindex="0">
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-[#94adce]/5 px-5 py-4">
         <h2 class="text-base font-bold text-[#f8fbff]">{t("reader.bookmark")}</h2>

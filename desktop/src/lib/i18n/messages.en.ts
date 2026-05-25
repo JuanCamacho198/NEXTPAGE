@@ -13,6 +13,7 @@ export const messagesEn = {
   "app.homeNavLabel": "Home navigation",
   "app.navBookshelf": "Bookshelf",
   "app.navFuture": "More soon",
+  "app.skipToContent": "Skip to main content",
   "app.openBookPrompt": "Open a book from the library to start reading.",
   "app.unknownAuthor": "Unknown author",
   "app.locationLabel": "Location",

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { createFocusTrap } from "$lib/shared/utils/focusTrap";
 
   type Props = {
     open: boolean;
@@ -17,6 +18,8 @@
     class: className = ""
   }: Props = $props();
 
+  let dialogEl: HTMLDivElement | undefined = $state();
+
   const handleBackdropClick = (e: MouseEvent) => {
     if (e.target === e.currentTarget) {
       open = false;
@@ -28,6 +31,15 @@
       open = false;
     }
   };
+
+  // Focus trap: trap Tab focus inside the dialog when open
+  $effect(() => {
+    if (open && dialogEl) {
+      const trap = createFocusTrap(dialogEl);
+      trap.activate();
+      return () => trap.deactivate();
+    }
+  });
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -41,13 +53,16 @@
   >
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div 
+      bind:this={dialogEl}
       class="w-full max-w-lg rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl {className}"
-      onkeydown={handleKeydown}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
     >
       <div class="flex items-center justify-between border-b border-[var(--color-border)] px-6 py-4">
         <h2 id="modal-title" class="text-lg font-semibold text-[var(--color-primary)]">{title}</h2>
         <button
-          class="text-[var(--color-muted)] transition-colors hover:text-[var(--color-primary)]"
+          class="flex items-center justify-center min-w-[28px] min-h-[28px] text-[var(--color-muted)] transition-colors hover:text-[var(--color-primary)]"
           onclick={() => (open = false)}
           aria-label="Close"
         >

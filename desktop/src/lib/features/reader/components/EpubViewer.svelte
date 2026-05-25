@@ -16,6 +16,7 @@
   import { clamp, FONT_SIZE_MIN, FONT_SIZE_MAX, applyDisplaySettings } from '$lib/features/reader/epub/epubTheme';
   import { scrollByVerticalStep } from '$lib/features/reader/epub/epubScroll';
   import EpubControls from './epub/EpubControls.svelte';
+  import EpubTocSidebar from './epub/EpubTocSidebar.svelte';
 
   import type { TocEntry } from './ReaderTocPanel.svelte';
   import { debugState } from '$lib/debug/debugState.svelte';
@@ -443,11 +444,11 @@
 
 <svelte:window onkeydown={handleViewerKeydown} />
 
-<div class="epub-viewer" onfocusin={() => { isViewerFocused = true; }} onfocusout={() => { isViewerFocused = false; }}>
+<div class="flex flex-col h-full bg-[var(--color-background)] text-[var(--color-primary)] outline-none" onfocusin={() => { isViewerFocused = true; }} onfocusout={() => { isViewerFocused = false; }}>
   {#if isLoading}
-    <div class="loading">{t('epub.loading')}</div>
+    <div class="flex items-center justify-center h-[200px] text-sm">{t('epub.loading')}</div>
   {:else if error}
-    <div class="error">{t('epub.error')}: {error}</div>
+    <div class="flex items-center justify-center h-[200px] text-sm text-red-600">{t('epub.error')}: {error}</div>
   {:else}
     <EpubControls
       {t}
@@ -460,101 +461,17 @@
       onToggleToc={toggleToc}
     />
 
-    <div class="content-area">
+    <div class="flex flex-1 overflow-hidden">
       {#if showToc}
-        <aside class="toc-sidebar">
-          <h3>{t('epub.tableOfContents')}</h3>
-          <ul class="toc-list">
-            {#each toc as chapter}
-              <li>
-                <button type="button" onclick={() => goToChapter(chapter)} class="toc-item">
-                  {chapter.label}
-                </button>
-              </li>
-            {/each}
-          </ul>
-        </aside>
+        <EpubTocSidebar {toc} {t} onNavigate={(chapter) => goToChapter(chapter)} />
       {/if}
 
-      <div bind:this={epubContainer} class="epub-container" style:filter={visualFilterStyle}></div>
+      <div bind:this={epubContainer} class="flex-1 overflow-hidden epub-container" style:filter={visualFilterStyle}></div>
     </div>
   {/if}
 </div>
 
 <style>
-  .epub-viewer {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    background: var(--color-background);
-    color: var(--color-primary);
-    outline: none;
-  }
-
-  .loading,
-  .error {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 200px;
-    font-size: 14px;
-  }
-
-  .error {
-    color: #dc2626;
-  }
-
-  .content-area {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  .toc-sidebar {
-    width: 240px;
-    background: var(--color-surface);
-    border-right: 1px solid var(--color-border);
-    overflow-y: auto;
-    flex-shrink: 0;
-  }
-
-  .toc-sidebar h3 {
-    padding: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    border-bottom: 1px solid var(--color-border);
-    margin: 0;
-    color: var(--color-primary);
-  }
-
-  .toc-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .toc-item {
-    display: block;
-    width: 100%;
-    padding: 10px 12px;
-    border: none;
-    background: transparent;
-    text-align: left;
-    cursor: pointer;
-    font-size: 13px;
-    line-height: 1.4;
-    word-break: break-word;
-  }
-
-  .toc-item:hover {
-    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
-  }
-
-  .epub-container {
-    flex: 1;
-    overflow: hidden;
-  }
-
   .epub-container :global(iframe) {
     width: 100%;
     height: 100%;

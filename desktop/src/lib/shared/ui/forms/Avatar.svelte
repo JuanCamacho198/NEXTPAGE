@@ -35,46 +35,20 @@
   }
 </script>
 
-<div class="avatar-container {sizeClasses[size]} {className}">
+<div class="relative shrink-0 {sizeClasses[size]} {className}">
   {#if src && !isBroken}
     <img
       {src}
       alt={name}
-      class="avatar-image"
+      class="block size-full rounded-full border border-[var(--color-border)] object-cover"
       onerror={handleError}
     />
   {:else}
-    <div class="avatar-fallback">
+    <div
+      class="flex size-full items-center justify-center rounded-full border border-[var(--color-border)] font-bold text-[var(--color-primary)]"
+      style="background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));"
+    >
       {initials}
     </div>
   {/if}
 </div>
-
-<style>
-  .avatar-container {
-    position: relative;
-    flex-shrink: 0;
-  }
-
-  .avatar-image,
-  .avatar-fallback {
-    width: 100%;
-    height: 100%;
-    border-radius: 9999px;
-    border: 1px solid var(--color-border);
-  }
-
-  .avatar-image {
-    object-fit: cover;
-    display: block;
-  }
-
-  .avatar-fallback {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
-  }
-</style>

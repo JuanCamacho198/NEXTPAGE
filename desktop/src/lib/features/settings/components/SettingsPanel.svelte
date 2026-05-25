@@ -344,43 +344,48 @@
       <button class="bg-transparent border-none text-xl cursor-pointer text-zinc-600 p-1 flex items-center justify-center hover:text-zinc-900" onclick={closePanel} aria-label={t("settings.close")}>✕</button>
     </div>
 
-    <div class="tabs">
+    <div class="flex border-b border-[var(--color-border)]">
       <button
         type="button"
-        class="tab"
-        class:active={activeTab === "account"}
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-[var(--color-primary)]"
+        class:text-[var(--color-primary)]={activeTab === "account"}
+        class:border-[var(--color-primary)]={activeTab === "account"}
         onclick={() => handleTabChange("account")}
       >
         {t("settings.tab.account")}
       </button>
       <button
         type="button"
-        class="tab"
-        class:active={activeTab === "profile"}
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-[var(--color-primary)]"
+        class:text-[var(--color-primary)]={activeTab === "profile"}
+        class:border-[var(--color-primary)]={activeTab === "profile"}
         onclick={() => handleTabChange("profile")}
       >
         {t("settings.tab.profile")}
       </button>
       <button
         type="button"
-        class="tab"
-        class:active={activeTab === "reader"}
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-[var(--color-primary)]"
+        class:text-[var(--color-primary)]={activeTab === "reader"}
+        class:border-[var(--color-primary)]={activeTab === "reader"}
         onclick={() => handleTabChange("reader")}
       >
         {t("settings.tab.reader")}
       </button>
       <button
         type="button"
-        class="tab"
-        class:active={activeTab === "appTheme"}
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-[var(--color-primary)]"
+        class:text-[var(--color-primary)]={activeTab === "appTheme"}
+        class:border-[var(--color-primary)]={activeTab === "appTheme"}
         onclick={() => handleTabChange("appTheme")}
       >
         {t("settings.tab.appTheme")}
       </button>
       <button
         type="button"
-        class="tab"
-        class:active={activeTab === "about"}
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-[var(--color-text-muted,var(--color-secondary))] border-b-2 border-transparent hover:text-[var(--color-primary)]"
+        class:text-[var(--color-primary)]={activeTab === "about"}
+        class:border-[var(--color-primary)]={activeTab === "about"}
         onclick={() => handleTabChange("about")}
       >
         {t("settings.tab.about")}
@@ -508,33 +513,36 @@
         </Panel>
       {:else if activeTab === "reader"}
         <Panel title={t("settings.tab.reader")} subtitle="Configure your reading experience.">
-          <div class="theme-preview-container mb-4">
+          <div class="flex gap-2 justify-stretch mb-4">
             <button
               type="button"
-              class="theme-preview-box"
-              class:selected={readerThemeMode === "paper"}
-              style="--preview-bg: #fafafa; --preview-text: #1a1a1a; --preview-border: #e0e0e0;"
+              class="flex-1 py-3 px-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md flex items-center justify-center"
+              class:border-[var(--color-primary)]={readerThemeMode === "paper"}
+              class:!shadow-[0_0_0_2px_var(--color-primary)]={readerThemeMode === "paper"}
+              style="border-color: var(--preview-border, #e0e0e0); background: var(--preview-bg, #fafafa);"
               onclick={() => readerThemeMode = "paper"}
             >
-              <span class="preview-label">{t("settings.reader.themeMode.paper")}</span>
+              <span style="font-size: 11px; color: var(--preview-text); font-weight: 500;">{t("settings.reader.themeMode.paper")}</span>
             </button>
             <button
               type="button"
-              class="theme-preview-box"
-              class:selected={readerThemeMode === "sepia"}
-              style="--preview-bg: #f4ecd8; --preview-text: #5b4636; --preview-border: #d4c4a8;"
+              class="flex-1 py-3 px-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md flex items-center justify-center"
+              class:border-[var(--color-primary)]={readerThemeMode === "sepia"}
+              class:!shadow-[0_0_0_2px_var(--color-primary)]={readerThemeMode === "sepia"}
+              style="border-color: var(--preview-border, #d4c4a8); background: var(--preview-bg, #f4ecd8);"
               onclick={() => readerThemeMode = "sepia"}
             >
-              <span class="preview-label">{t("settings.reader.themeMode.sepia")}</span>
+              <span style="font-size: 11px; color: var(--preview-text); font-weight: 500;">{t("settings.reader.themeMode.sepia")}</span>
             </button>
             <button
               type="button"
-              class="theme-preview-box"
-              class:selected={readerThemeMode === "night"}
-              style="--preview-bg: #1a1a1a; --preview-text: #e8e8e8; --preview-border: #333333;"
+              class="flex-1 py-3 px-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md flex items-center justify-center"
+              class:border-[var(--color-primary)]={readerThemeMode === "night"}
+              class:!shadow-[0_0_0_2px_var(--color-primary)]={readerThemeMode === "night"}
+              style="border-color: var(--preview-border, #333333); background: var(--preview-bg, #1a1a1a);"
               onclick={() => readerThemeMode = "night"}
             >
-              <span class="preview-label">{t("settings.reader.themeMode.night")}</span>
+              <span style="font-size: 11px; color: var(--preview-text); font-weight: 500;">{t("settings.reader.themeMode.night")}</span>
             </button>
           </div>
 
@@ -601,18 +609,20 @@
       {:else if activeTab === "appTheme"}
         <Panel title={t("settings.tab.appTheme")}>
           <div 
-            class="app-theme-preview mb-4"
+            class="rounded-lg border p-3 transition-all duration-300 mb-4"
             style="
+              border-color: var(--preview-border);
+              background: var(--preview-bg);
               --preview-bg: {preferredTheme === 'light' ? '#ffffff' : preferredTheme === 'dark' ? '#1a1a1a' : '#f4ecd8'};
               --preview-text: {preferredTheme === 'light' ? '#1a1a1a' : preferredTheme === 'dark' ? '#e8e8e8' : '#5b4636'};
               --preview-border: {preferredTheme === 'light' ? '#e0e0e0' : preferredTheme === 'dark' ? '#333333' : '#d4c4a8'};
             "
           >
-            <div class="preview-header">
-              <span class="preview-icon">☰</span>
-              <span class="preview-title">NextPage</span>
+            <div class="flex items-center gap-2 pb-2 border-b mb-2" style="border-color: var(--preview-border);">
+              <span style="color: var(--preview-text); opacity: 0.7;">☰</span>
+              <span style="font-size: 12px; font-weight: 600; color: var(--preview-text);">NextPage</span>
             </div>
-            <div class="preview-content">
+            <div style="color: var(--preview-text);">
               <p style="font-size: 12px; margin: 4px 0;">Sample text preview</p>
               <p style="font-size: 10px; opacity: 0.7;">Secondary text</p>
             </div>
@@ -676,12 +686,12 @@
         </Panel>
       {:else if activeTab === "about"}
         <Panel title={t("settings.about")}>
-          <div class="about-card">
-            <div class="about-logo">
-              <span class="logo-icon">📚</span>
-              <div class="logo-text">
-                <span class="app-name">NextPage</span>
-                <span class="app-version">Version {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}</span>
+          <div class="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)]">
+            <div class="flex items-center gap-3">
+              <span class="text-[32px]">📚</span>
+              <div class="flex flex-col">
+                <span class="text-lg font-semibold text-[var(--color-primary)]">NextPage</span>
+                <span class="text-xs text-[var(--color-text-muted,var(--color-secondary))]">Version {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}</span>
               </div>
             </div>
             <p class="about-description text-sm text-zinc-600 mt-3">
@@ -722,8 +732,8 @@
       {/if}
 
       {#if showResetModal}
-        <div class="modal-overlay">
-          <div class="modal-content">
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[1001]">
+          <div class="bg-[var(--color-surface,white)] rounded-lg p-5 max-w-[320px] w-[90%] shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
             <h3 class="mt-0 mb-2 text-base font-semibold text-zinc-900">{t("settings.resetConfirmTitle")}</h3>
             <p class="text-sm text-zinc-600 mb-4">{t("settings.resetConfirmMessage")}</p>
             <div class="flex gap-2 justify-end">

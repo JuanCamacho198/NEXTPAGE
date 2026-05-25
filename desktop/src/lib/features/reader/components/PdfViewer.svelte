@@ -285,7 +285,18 @@
     const handleSelectionChange = () => {
       const selection = window.getSelection();
       const text = selection?.toString().trim();
-      if (!text) clearSelectionUi();
+      if (!text) {
+        // Only reset local UI state.
+        // Do NOT call clearSelectionUi() which triggers onselectionclear,
+        // because that calls removeAllRanges() and kills the nascent
+        // browser selection before click-drag can start.
+        showToolbar = false;
+        selectedText = "";
+        selectedCfi = null;
+        selectionHasAnchor = false;
+        selectionPosition = null;
+        selectionOverlayRects = [];
+      }
     };
 
     document.addEventListener("fullscreenerror", handleFullscreenError);

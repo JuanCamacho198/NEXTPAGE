@@ -36,3 +36,6 @@ graphify-out/cache/
 
 # Logs
 *.log
+
+# Test's
+fixtures/

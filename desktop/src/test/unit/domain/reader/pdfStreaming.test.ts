@@ -3,8 +3,6 @@
  *
  * Tests document cache operations, LRU eviction, outline loading,
  * and createPdfDocument cache hit/miss behavior.
- * Streaming via PDFDataRangeTransport is tested structurally since it
- * requires pdf.js internals not available in jsdom.
  *
  * IMPORTANT: vi.mock() factories must avoid module-level const references
  * because they run before module-scope const assignments (TDZ). Instead:
@@ -14,14 +12,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Hoisted values — used directly in test assertions via destructured consts.
-// These are module-level consts but that's OK because they're only accessed
-// at test-execution time (long after all hoisting/assignments complete).
-const { mockDestroy, mockGetOutline, mockPdfDocument, mockGetFileSize, mockReadFileRange, mockGetFileBytes } =
+const { mockDestroy, mockGetOutline, mockPdfDocument, mockGetFileBytes } =
   vi.hoisted(() => {
     const destroy = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
     const getOutline = vi.fn();
-    const getFileSize = vi.fn();
-    const readFileRange = vi.fn();
     const getFileBytes = vi.fn();
 
     const pdfDoc = {
@@ -37,26 +31,12 @@ const { mockDestroy, mockGetOutline, mockPdfDocument, mockGetFileSize, mockReadF
       mockDestroy: destroy,
       mockGetOutline: getOutline,
       mockPdfDocument: pdfDoc,
-      mockGetFileSize: getFileSize,
-      mockReadFileRange: readFileRange,
       mockGetFileBytes: getFileBytes,
     };
   });
 
-// pdfjs-dist mock: inline factory with closures.
-// `mockPdfDocument` is captured via closure inside the arrow function
-// returned by getDocument() — accessed lazily, not during factory eval.
-// MockTransport is defined inline — no TDZ risk.
+// pdfjs-dist mock
 vi.mock("pdfjs-dist", () => {
-  const MockTransport = vi.fn(function (
-    this: { addRangeListener: any; onDataRange: any },
-    _size: number,
-    _initialData: Uint8Array,
-  ) {
-    this.addRangeListener = vi.fn();
-    this.onDataRange = null as any;
-  });
-
   const getDocument = vi.fn(() => ({
     promise: Promise.resolve(mockPdfDocument),
     onProgress: null as any,
@@ -67,20 +47,15 @@ vi.mock("pdfjs-dist", () => {
     default: {
       GlobalWorkerOptions: { workerSrc: "" },
       getDocument,
-      PDFDataRangeTransport: MockTransport,
     },
     getDocument,
-    PDFDataRangeTransport: MockTransport,
     PDFDocumentProxy: class {},
     PDFDocumentLoadingTask: class {},
   };
 });
 
-// $lib/api/tauriClient mock: arrow function closures capture hoisted
-// const bindings lazily — no TDZ because they're called at test time.
+// $lib/api/tauriClient mock
 vi.mock("$lib/api/tauriClient", () => ({
-  getFileSize: (...args: unknown[]) => mockGetFileSize(...args),
-  readFileRange: (...args: unknown[]) => mockReadFileRange(...args),
   getFileBytes: (...args: unknown[]) => mockGetFileBytes(...args),
 }));
 
@@ -280,16 +255,13 @@ describe("pdfStreaming — loadPdfOutline", () => {
 describe("pdfStreaming — createPdfDocument", () => {
   beforeEach(() => {
     resetAllMocks();
-    mockGetFileSize.mockResolvedValue(500 * 1024);
-    mockReadFileRange.mockResolvedValue(new Array(8192).fill(0));
     mockGetFileBytes.mockResolvedValue(new Array(500 * 1024).fill(0));
   });
 
-  it("loads via streaming for large files and caches the result", async () => {
+  it("loads via getFileBytes and caches the result", async () => {
     const result = await createPdfDocument("/large.pdf");
     expect(result.document).toBeDefined();
-    expect(mockGetFileSize).toHaveBeenCalledWith("/large.pdf");
-    expect(mockReadFileRange).toHaveBeenCalled();
+    expect(mockGetFileBytes).toHaveBeenCalledWith("/large.pdf");
 
     const cached = getCachedDocument("/large.pdf");
     expect(cached).toBeDefined();
@@ -300,35 +272,11 @@ describe("pdfStreaming — createPdfDocument", () => {
     const first = await createPdfDocument("/book.pdf");
     const firstDoc = first.document;
 
-    mockGetFileSize.mockClear();
-    mockReadFileRange.mockClear();
     mockGetFileBytes.mockClear();
 
     const second = await createPdfDocument("/book.pdf");
     expect(second.document).toBe(firstDoc);
-    expect(mockGetFileSize).not.toHaveBeenCalled();
-    expect(mockReadFileRange).not.toHaveBeenCalled();
     expect(mockGetFileBytes).not.toHaveBeenCalled();
-  });
-
-  it("loads via full file bytes for small files (<64KB)", async () => {
-    mockGetFileSize.mockResolvedValue(32 * 1024);
-    mockGetFileBytes.mockResolvedValue(new Array(32 * 1024).fill(42));
-    const result = await createPdfDocument("/small.pdf");
-    expect(result.document).toBeDefined();
-    expect(mockGetFileBytes).toHaveBeenCalledWith("/small.pdf");
-    expect(mockReadFileRange).not.toHaveBeenCalled();
-  });
-
-  describe("PDFDataRangeTransport availability", () => {
-    // This test verifies the mock setup. The `loadStreamingPdf` code checks
-    // `(pdfjsLib as any).PDFDataRangeTransport` via the namespace import.
-    // Since the mock exposes it as a named export, it must be a function
-    // for streaming to proceed.
-    it("mock exposes PDFDataRangeTransport as named export on namespace", async () => {
-      const pdfjsLib = await import("pdfjs-dist");
-      expect(typeof (pdfjsLib as any).PDFDataRangeTransport).toBe("function");
-    });
   });
 
   it("passes onProgress callback to loadingTask", async () => {

@@ -1,6 +1,6 @@
 import * as pdfjsLib from "pdfjs-dist";
 import type { PDFDocumentProxy, PDFDocumentLoadingTask } from "pdfjs-dist";
-import { getFileSize, readFileRange, getFileBytes } from "$lib/api/tauriClient";
+import { getFileBytes } from "$lib/api/tauriClient";
 import type { PdfOutlineItem } from "$lib/types";
 
 // ──────────────────────────────────────────
@@ -47,70 +47,15 @@ export function clearDocumentCache(): void {
 }
 
 // ──────────────────────────────────────────
-// 2. PDF Range Transport (streaming via IPC)
+// 2. PDF Loading (full-file via Tauri IPC)
 // ──────────────────────────────────────────
 
-type RangeRequestCallback = (begin: number, end: number) => void;
-
 /**
- * Creates a streaming PDF document using IPC range requests.
- * Falls back to loading the entire file if PDFDataRangeTransport is unavailable
- * or if the file is too small (under 64KB, where streaming overhead isn't worth it).
+ * Loads a PDF document by reading the entire file via Tauri IPC.
+ * For local files this is faster and more reliable than range-request
+ * streaming, which pdfjs-dist v5.x no longer supports via PDFDataRangeTransport.
  */
-async function loadStreamingPdf(
-  filePath: string,
-  onProgress?: (loaded: number, total: number) => void,
-): Promise<{ loadingTask: PDFDocumentLoadingTask; document: PDFDocumentProxy }> {
-  const size = await getFileSize(filePath);
-
-  // For small files, just load the whole thing — range overhead isn't worth it
-  const SMALL_FILE_THRESHOLD = 64 * 1024;
-  if (size <= SMALL_FILE_THRESHOLD) {
-    return loadFullPdf(filePath, onProgress);
-  }
-
-  // Fetch initial header (first 8KB) for PDF.js to parse the cross-reference table
-  const HEADER_SIZE = 8192;
-  const initialChunk: number[] =
-    size > 0 ? await readFileRange(filePath, 0, Math.min(HEADER_SIZE, size)) : [];
-
-  // Try to use PDFDataRangeTransport for true streaming
-  const PdfRangeTransport = (pdfjsLib as any).PDFDataRangeTransport;
-
-  if (typeof PdfRangeTransport !== "function") {
-    // PDFDataRangeTransport not available in this version — fall back to full load
-    return loadFullPdf(filePath, onProgress);
-  }
-
-  const transport = new PdfRangeTransport(size, new Uint8Array(initialChunk));
-
-  transport.addRangeListener((begin: number, end: number) => {
-    const fetchRange = async () => {
-      try {
-        const chunk = await readFileRange(filePath, begin, end - begin);
-        if (transport.onDataRange) {
-          transport.onDataRange(begin, new Uint8Array(chunk));
-        }
-      } catch (err) {
-        console.error("[PdfStreaming] Range fetch failed:", err);
-      }
-    };
-    fetchRange();
-  });
-
-  const loadingTask = pdfjsLib.getDocument(transport);
-
-  if (onProgress) {
-    loadingTask.onProgress = (progress: { loaded: number; total: number }) => {
-      onProgress(progress.loaded, progress.total);
-    };
-  }
-
-  const document = await loadingTask.promise;
-  return { loadingTask, document };
-}
-
-async function loadFullPdf(
+async function loadPdfFromFile(
   filePath: string,
   onProgress?: (loaded: number, total: number) => void,
 ): Promise<{ loadingTask: PDFDocumentLoadingTask; document: PDFDocumentProxy }> {
@@ -172,8 +117,8 @@ export async function createPdfDocument(
     return { document: cached.document, loadingTask: null as unknown as PDFDocumentLoadingTask };
   }
 
-  // Load streaming
-  const result = await loadStreamingPdf(filePath, options?.onProgress);
+  // Load the full file via Tauri IPC
+  const result = await loadPdfFromFile(filePath, options?.onProgress);
 
   // Cache the document (outline loaded lazily by loadPdfOutline)
   documentCache.set(filePath, {

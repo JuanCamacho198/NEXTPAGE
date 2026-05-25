@@ -388,6 +388,46 @@ pub async fn get_file_bytes(file_path: String) -> Result<Vec<u8>, String> {
     fs::read(&path).map_err(|err| format!("Failed to read file: {}", err))
 }
 
+#[tauri::command(rename_all = "camelCase")]
+pub async fn get_file_size(file_path: String) -> Result<u64, String> {
+    let path = PathBuf::from(&file_path);
+    let metadata = std::fs::metadata(&path).map_err(|err| format!("Failed to read file metadata: {}", err))?;
+    Ok(metadata.len())
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub async fn getFileSize(file_path: String) -> Result<u64, String> {
+    get_file_size(file_path).await
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn read_file_range(
+    file_path: String,
+    offset: u64,
+    length: u64,
+) -> Result<Vec<u8>, String> {
+    use std::io::{Read, Seek, SeekFrom};
+    let path = PathBuf::from(&file_path);
+    let mut file = std::fs::File::open(&path).map_err(|err| format!("Failed to open file: {}", err))?;
+    file.seek(SeekFrom::Start(offset))
+        .map_err(|err| format!("Failed to seek in file: {}", err))?;
+    let mut buf = vec![0u8; length as usize];
+    let n = file.read(&mut buf).map_err(|err| format!("Failed to read file: {}", err))?;
+    buf.truncate(n);
+    Ok(buf)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub async fn readFileRange(
+    file_path: String,
+    offset: u64,
+    length: u64,
+) -> Result<Vec<u8>, String> {
+    read_file_range(file_path, offset, length).await
+}
+
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
 pub async fn getFileBytes(file_path: String) -> Result<Vec<u8>, String> {

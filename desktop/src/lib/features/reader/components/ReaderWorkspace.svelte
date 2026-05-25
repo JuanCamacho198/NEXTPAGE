@@ -323,19 +323,19 @@
 
     <!-- Right: tools -->
     <div class="flex items-center gap-6 text-[#94A3B8]">
-      <button type="button" onclick={toggleTocPanel} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="tabla de contenidos">
+      <button type="button" onclick={toggleTocPanel} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={t("reader.tabla_contenidos")}>
         <Icon name="menu" size="sm" />
       </button>
       <button type="button" onclick={toggleSearch} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={t("epub.search")}>
         <Icon name="search" size="sm" />
       </button>
-      <button type="button" onclick={toggleTextSettings} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="ajustes de texto">
+      <button type="button" onclick={toggleTextSettings} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={t("reader.ajustes_texto")}>
         <Icon name="settings" size="sm" />
       </button>
-      <button type="button" class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="bookmark">
+      <button type="button" class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={t("reader.bookmark")}>
         <Icon name="bookmark" size="sm" />
       </button>
-      <button type="button" onclick={toggleFullscreen} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label="pantalla completa">
+      <button type="button" onclick={toggleFullscreen} class="cursor-pointer text-[#94A3B8] hover:text-white" aria-label={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}>
         <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
       </button>
     </div>

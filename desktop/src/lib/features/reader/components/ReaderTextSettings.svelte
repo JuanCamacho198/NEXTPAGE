@@ -52,8 +52,16 @@
     >
       <!-- Sidebar Header Icons -->
       <div class="flex items-center justify-between border-b border-[#94adce]/5 px-4 py-4">
+        <!-- Close button -->
+        <button type="button" onclick={onClose} class="flex cursor-pointer items-center gap-1 text-[#8fa3bf] hover:text-white" aria-label={t("settings.close")}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+          <span class="text-xs font-medium">{t("settings.close")}</span>
+        </button>
         <!-- 4 icon buttons -->
-        <button type="button" class="cursor-pointer rounded p-2 hover:bg-white/5" aria-label="list">
+        <button type="button" class="cursor-pointer rounded p-2 hover:bg-white/5" aria-label={t("reader.list_view")}">
           <svg xmlns="http://www.w3.org/2000/svg" width="17" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
             <line x1="8" y1="6" x2="21" y2="6"></line>
             <line x1="8" y1="12" x2="21" y2="12"></line>
@@ -63,7 +71,7 @@
             <line x1="3" y1="18" x2="3.01" y2="18"></line>
           </svg>
         </button>
-        <button type="button" class="cursor-pointer rounded p-2 hover:bg-white/5" aria-label="align left">
+        <button type="button" class="cursor-pointer rounded p-2 hover:bg-white/5" aria-label={t("reader.align_left")}">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
             <line x1="17" y1="10" x2="3" y2="10"></line>
             <line x1="21" y1="6" x2="3" y2="6"></line>
@@ -71,14 +79,14 @@
             <line x1="17" y1="18" x2="3" y2="18"></line>
           </svg>
         </button>
-        <button type="button" class="cursor-pointer rounded bg-[#49d4ff] p-2" aria-label="font size">
+        <button type="button" class="cursor-pointer rounded bg-[#49d4ff] p-2" aria-label={t("reader.font_increase")}">
           <svg xmlns="http://www.w3.org/2000/svg" width="17" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="4 7 4 4 20 4 20 7"></polyline>
             <line x1="9" y1="20" x2="15" y2="20"></line>
             <line x1="12" y1="4" x2="12" y2="20"></line>
           </svg>
         </button>
-        <button type="button" class="cursor-pointer rounded p-2 hover:bg-white/5" aria-label="columns">
+        <button type="button" class="cursor-pointer rounded p-2 hover:bg-white/5" aria-label={t("reader.columns")}">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
             <rect x="3" y="3" width="7" height="7"></rect>
             <rect x="14" y="3" width="7" height="7"></rect>
@@ -125,14 +133,14 @@
 
         <!-- Font Size & Spacing -->
         <div class="flex justify-between">
-          <button type="button" class="flex h-12 w-[105px] cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label="decrease font size">
+          <button type="button" class="flex h-12 w-[105px] cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label={t("reader.font_decrease")}">
             <svg xmlns="http://www.w3.org/2000/svg" width="17" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
               <polyline points="4 7 4 4 20 4 20 7"></polyline>
               <line x1="9" y1="20" x2="15" y2="20"></line>
               <line x1="12" y1="4" x2="12" y2="20"></line>
             </svg>
           </button>
-          <button type="button" class="flex h-12 w-[105px] cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label="line spacing">
+          <button type="button" class="flex h-12 w-[105px] cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label={t("reader.line_spacing")}">
             <svg xmlns="http://www.w3.org/2000/svg" width="27" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#f8fbff]">
               <line x1="5" y1="3" x2="19" y2="3"></line>
               <line x1="5" y1="21" x2="19" y2="21"></line>
@@ -145,12 +153,12 @@
 
         <!-- A- / A+ row -->
         <div class="flex justify-between">
-          <button type="button" class="flex h-10 w-[105px] cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label="decrease spacing">
+          <button type="button" class="flex h-10 w-[105px] cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label={t("reader.spacing_decrease")}">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
           </button>
-          <button type="button" class="flex h-10 w-[105px] cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label="increase spacing">
+          <button type="button" class="flex h-10 w-[105px] cursor-pointer items-center justify-center rounded p-2 hover:bg-white/5" aria-label={t("reader.spacing_increase")}">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -203,7 +211,7 @@
 
         <!-- Saved Settings -->
         <button type="button" class="flex w-full items-center justify-between rounded-xl bg-white/2 px-3 py-2">
-          <span class="text-sm text-[#49d4ff]">{t("settings.reading.description")}</span>
+          <span class="text-sm text-[#49d4ff]">{t("reader.saved_settings")}</span>
           <svg xmlns="http://www.w3.org/2000/svg" width="9" height="6" viewBox="0 0 24 24" fill="none" stroke="#49d4ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>

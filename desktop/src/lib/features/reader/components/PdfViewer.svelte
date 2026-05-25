@@ -168,10 +168,9 @@
   let activeNavigationRequestId = 0;
   let activeLoadingTask: pdfjsLib.PDFDocumentLoadingTask | null = null;
   let activeRenderTask: pdfjsLib.RenderTask | null = null;
-  let activeTextLayerTask: { cancel?: () => void; promise?: Promise<void> } | null = null;
+  let textLayerInstance: any = null;
   let pendingWheelFrame: number | null = null;
   let pendingWheelDelta = 0;
-  let textLayerMouseupTarget: HTMLDivElement | null = null;
   let lastLoadedFilePath: string | null = null;
   const outlinePageCache = new Map<string, number>();
 
@@ -227,13 +226,10 @@
     );
   };
 
-  // ── Text layer listener management ──────────────────────
-  const clearTextLayerListener = () => {
-    if (!textLayerMouseupTarget) return;
-    textLayerMouseupTarget.removeEventListener("mouseup", handleTextSelection);
-    textLayerMouseupTarget.removeEventListener("touchend", handleTextSelection);
-    textLayerMouseupTarget.removeEventListener("pointerup", handleTextSelection);
-    textLayerMouseupTarget = null;
+  // ── Text layer instance helper ──────────────────────────
+  const cancelTextLayer = () => {
+    textLayerInstance?.cancel();
+    textLayerInstance = null;
   };
 
   const clearSelectionUi = () => {
@@ -255,15 +251,7 @@
     try { await task.promise; } catch { /* expected */ }
   };
 
-  const cancelActiveTextLayerTask = async () => {
-    if (!activeTextLayerTask) return;
-    const task = activeTextLayerTask;
-    activeTextLayerTask = null;
-    try {
-      task.cancel?.();
-      await task.promise;
-    } catch { /* expected */ }
-  };
+
 
   const destroyActiveLoadingTask = () => {
     if (!activeLoadingTask) return;
@@ -306,7 +294,7 @@
     return () => {
       activeLoadRequestId += 1;
       activeNavigationRequestId += 1;
-      clearTextLayerListener();
+      cancelTextLayer();
       if (pendingWheelFrame !== null) {
         window.cancelAnimationFrame(pendingWheelFrame);
         pendingWheelFrame = null;
@@ -314,7 +302,6 @@
       pendingWheelDelta = 0;
       destroyActiveLoadingTask();
       void cancelActiveRenderTask();
-      void cancelActiveTextLayerTask();
       void destroyCurrentDocument();
       clearDocumentCache();
       document.removeEventListener("fullscreenerror", handleFullscreenError);
@@ -390,10 +377,9 @@
 
     const loadRequestId = ++activeLoadRequestId;
     const navRequestId = ++activeNavigationRequestId;
-    clearTextLayerListener();
+    cancelTextLayer();
     destroyActiveLoadingTask();
     await cancelActiveRenderTask();
-    await cancelActiveTextLayerTask();
     await destroyCurrentDocument();
 
     isLoading = true;
@@ -530,8 +516,9 @@
     if (!textLayer) return;
     if (isStaleNavigation(requestId)) return;
 
-    await cancelActiveTextLayerTask();
-    clearTextLayerListener();
+    // Cancel previous text layer instance
+    textLayerInstance?.cancel();
+    textLayerInstance = null;
 
     textLayer.innerHTML = "";
     textLayer.style.position = "absolute";
@@ -541,14 +528,13 @@
     textLayer.style.setProperty("--scale-factor", String(viewport.scale));
 
     try {
-      const pdfLibWithTextLayer = pdfjsLib as any;
       if (pdfjsLib.TextLayer) {
-        const textLayerInstance = new (pdfjsLib as any).TextLayer({
+        textLayerInstance = new (pdfjsLib as any).TextLayer({
           container: textLayer, viewport, textContentSource: textContent as any,
         });
         await textLayerInstance.render();
       } else {
-        const task = pdfLibWithTextLayer.renderTextLayer?.({
+        const task = (pdfjsLib as any).renderTextLayer?.({
           container: textLayer, viewport, textDivs: [],
           enhanceTextSelection: true, textContentSource: textContent as any,
         });
@@ -560,9 +546,10 @@
       for (const span of textLayer.querySelectorAll("span")) {
         span.style.pointerEvents = "auto";
       }
-    } catch (err) { console.error("Text layer render error:", err); }
-
-    textLayerMouseupTarget = textLayer;
+    } catch (err) {
+      console.error("Text layer render error:", err);
+      textLayerInstance = null;
+    }
   }
 
   // ── Selection handling ───────────────────────────────────
@@ -730,6 +717,7 @@
     hideToolbar();
     navigationError = null;
     const navRequestId = ++activeNavigationRequestId;
+    cancelTextLayer();
     if (textLayer) textLayer.innerHTML = "";
     try {
       const rendered = await renderPage(targetPage, { requestId: navRequestId, renderScale: scale });
@@ -838,16 +826,73 @@
     if (Math.abs(nextScale - scale) <= ZOOM_EPSILON) return;
     scale = nextScale;
     hideToolbar();
-    if (!pdfDoc) return;
+    if (!pdfDoc || !canvas || !textLayer || !currentPageObj) return;
     const anchor = captureScrollAnchor(canvasContainer ?? null);
     const navRequestId = ++activeNavigationRequestId;
-    if (textLayer) textLayer.innerHTML = "";
+
     try {
-      const rendered = await renderPage(currentPage, { requestId: navRequestId, renderScale: nextScale });
-      if (rendered && !isStaleNavigation(navRequestId)) {
-        restoreScrollAnchor(anchor, canvasContainer ?? null);
+      if (textLayerInstance) {
+        // ── Zoom quick-path: reuse text layer spans via update() ──
+        const viewport = currentPageObj.getViewport({ scale: nextScale });
+        const outputScale = window.devicePixelRatio || 1;
+
+        // Update canvas buffer + CSS size
+        canvas.width = Math.floor(viewport.width * outputScale);
+        canvas.height = Math.floor(viewport.height * outputScale);
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
+
+        viewportWidth = viewport.width;
+        viewportHeight = viewport.height;
+
+        const context = canvas.getContext("2d");
+        if (!context) return;
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : undefined;
+        const renderContext = { canvasContext: context, viewport, canvas, transform };
+
+        await cancelActiveRenderTask();
+        const renderTask = currentPageObj.render(renderContext);
+        activeRenderTask = renderTask;
+        try {
+          await renderTask.promise;
+        } catch (err) {
+          if (activeRenderTask === renderTask) activeRenderTask = null;
+          const isCancelled = typeof err === "object" && err !== null && "name" in err &&
+            String((err as { name?: string }).name) === "RenderingCancelledException";
+          if (isCancelled) return;
+          throw err;
+        }
+        if (activeRenderTask === renderTask) activeRenderTask = null;
+        if (isStaleNavigation(navRequestId)) return;
+
+        // Resize textLayer container
+        textLayer.style.width = `${viewport.width}px`;
+        textLayer.style.height = `${viewport.height}px`;
+        textLayer.style.setProperty("--scale-factor", String(viewport.scale));
+
+        // Update existing text layer — reuses spans instead of recreating
+        textLayerInstance.update({ viewport });
+
+        // Re-apply pointer-events to repositioned spans
+        for (const span of textLayer.querySelectorAll("span")) {
+          span.style.pointerEvents = "auto";
+        }
+
+        if (!isStaleNavigation(navRequestId)) {
+          restoreScrollAnchor(anchor, canvasContainer ?? null);
+        }
+      } else {
+        // Fallback: full re-render (first render or after page change)
+        const rendered = await renderPage(currentPage, { requestId: navRequestId, renderScale: nextScale });
+        if (rendered && !isStaleNavigation(navRequestId)) {
+          restoreScrollAnchor(anchor, canvasContainer ?? null);
+        }
       }
-    } catch (err) { console.error("Error setting scale:", err); navigationError = t("pdf.navigationFailed"); }
+    } catch (err) {
+      console.error("Error setting scale:", err);
+      navigationError = t("pdf.navigationFailed");
+    }
   }
 
   export function getCurrentPage() { return currentPage; }

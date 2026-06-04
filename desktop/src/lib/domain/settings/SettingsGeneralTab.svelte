@@ -78,8 +78,8 @@
 <Panel title={t("settings.localPreferences")} subtitle={t("settings.localPreferencesDescription")}>
   <div class="grid grid-cols-2 gap-4 mb-4">
     <!-- Language selector -->
-    <div class="bg-(--color-surface) border border-(--color-border) rounded-xl p-4">
-      <label class="block text-xs font-medium text-(--color-text-muted) mb-3">{t("settings.language")}</label>
+    <div class="bg-(--color-surface) border border-(--color-border) rounded-xl p-4" role="group" aria-label={t("settings.language")}>
+      <span class="block text-xs font-medium text-(--color-text-muted) mb-3">{t("settings.language")}</span>
       <div class="flex gap-2">
         <button
           type="button"
@@ -103,8 +103,8 @@
     </div>
 
     <!-- Theme selector -->
-    <div class="bg-(--color-surface) border border-(--color-border) rounded-xl p-4">
-      <label class="block text-xs font-medium text-(--color-text-muted) mb-3">{t("settings.theme")}</label>
+    <div class="bg-(--color-surface) border border-(--color-border) rounded-xl p-4" role="group" aria-label={t("settings.theme")}>
+      <span class="block text-xs font-medium text-(--color-text-muted) mb-3">{t("settings.theme")}</span>
       <div class="flex gap-2">
         <button
           type="button"

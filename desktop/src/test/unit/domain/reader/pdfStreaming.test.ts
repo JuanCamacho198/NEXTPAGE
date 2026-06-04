@@ -69,7 +69,8 @@ import {
   documentCache,
 } from "$lib/features/reader/pdf/pdfStreaming";
 
-function makeMockDocument() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
+function makeMockDocument(): any {
   return {
     numPages: 10,
     destroy: mockDestroy,
@@ -77,7 +78,7 @@ function makeMockDocument() {
     getPage: vi.fn(),
     getDestination: vi.fn(),
     getPageIndex: vi.fn(),
-  } as any;
+  };
 }
 
 function resetAllMocks(): void {

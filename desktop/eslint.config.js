@@ -72,5 +72,11 @@ export default [
       'local-rules/tailwind-v4-canonical': 'warn',
     },
   },
+  {
+    files: ['src/test/**/*.ts', 'src/test/**/*.svelte'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+    },
+  },
   prettier,
 ];

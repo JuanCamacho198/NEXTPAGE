@@ -57,6 +57,20 @@ export function resolveThemePalette(themeMode: ReaderThemeMode): ReaderThemePale
       textColor: "#e8ecf7",
     };
   }
+  if (themeMode === "dark") {
+    return {
+      rootBackground: "#1a1a2e",
+      surfaceBackground: "#16213e",
+      textColor: "#e0e0e0",
+    };
+  }
+  if (themeMode === "blue") {
+    return {
+      rootBackground: "#1e3a5f",
+      surfaceBackground: "#2b4d7a",
+      textColor: "#d6e4f0",
+    };
+  }
   return {
     rootBackground: "#f4efe1",
     surfaceBackground: "#fbf7ed",

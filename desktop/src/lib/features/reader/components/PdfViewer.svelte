@@ -100,6 +100,18 @@
       fontFamily: "serif",
     },
     selectionColor: "#33bbff",
+    lineHeight: 1.8,
+    letterSpacing: 0,
+    paragraphSpacing: 1,
+    textAlign: "left",
+    direction: "ltr",
+    hyphenation: false,
+    verticalScrolling: false,
+    margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+    showHeader: true,
+    showFooter: true,
+    showPageNumbers: true,
+    progressIndicator: "percentage",
   };
 
   let {
@@ -193,6 +205,20 @@
   const canvasWrapperStyle = $derived(
     `width: ${viewportWidth ? viewportWidth + 'px' : 'auto'}; height: ${viewportHeight ? viewportHeight + 'px' : 'auto'};`
   );
+
+  // Dynamic padding from readerSettings margins (in rem units)
+  const canvasContainerPaddingStyle = $derived(
+    `${readerSettings.margins.top}rem ${readerSettings.margins.right}rem ${readerSettings.margins.bottom}rem ${readerSettings.margins.left}rem`
+  );
+
+  // Reactively apply line-height and letter-spacing to the text layer
+  // so changes take effect immediately without requiring a page re-render
+  $effect(() => {
+    if (textLayer) {
+      textLayer.style.lineHeight = String(readerSettings.lineHeight);
+      textLayer.style.letterSpacing = `${readerSettings.letterSpacing}px`;
+    }
+  });
 
   const flatOutline = $derived(flattenOutline(outline));
 
@@ -548,6 +574,10 @@
         });
         if (task?.promise) await task.promise;
       }
+
+      // Apply layout settings from readerSettings
+      textLayer.style.lineHeight = String(readerSettings.lineHeight);
+      textLayer.style.letterSpacing = `${readerSettings.letterSpacing}px`;
 
       // pdfjs-dist v5 TextLayer creates spans with pointer-events:none (from
       // pdf_viewer.css). Override inline so click-and-drag selection works.
@@ -966,7 +996,7 @@
           onNavigate={(item) => navigateToOutlineItem(item)}
         />
       {/if}
-      <div class="flex-1 overflow-auto flex justify-center p-4 bg-(--pdf-reader-root-bg,var(--color-background))" bind:this={canvasContainer} onwheel={handleViewerWheel}>
+      <div class="flex-1 overflow-auto flex justify-center bg-(--pdf-reader-root-bg,var(--color-background))" bind:this={canvasContainer} onwheel={handleViewerWheel} style="padding: {canvasContainerPaddingStyle};">
         <div class="relative inline-block" class:search-hit={flashSearchResult} style="isolation: isolate; {canvasWrapperStyle}">
           <canvas bind:this={canvas} style="filter: {visualFilterStyle};"></canvas>
 

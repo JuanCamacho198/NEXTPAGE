@@ -251,7 +251,7 @@
   };
 
   // ── Render cancellation helpers ─────────────────────────
-  const cancelActiveRenderTask = async (): void => {
+  const cancelActiveRenderTask = async (): Promise<void> => {
     if (!activeRenderTask) return;
     const task = activeRenderTask;
     activeRenderTask = null;
@@ -267,7 +267,7 @@
     activeLoadingTask = null;
   };
 
-  const destroyCurrentDocument = async (): void => {
+  const destroyCurrentDocument = async (): Promise<void> => {
     if (!pdfDoc) return;
     const current = pdfDoc;
     pdfDoc = null;

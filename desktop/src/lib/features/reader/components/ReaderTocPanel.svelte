@@ -38,7 +38,6 @@
 </script>
 
 {#if open}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="fixed inset-0 z-40"
     onclick={handleBackdropClick}
@@ -49,7 +48,6 @@
     <div class="absolute inset-0 bg-[#101c2c]/70"></div>
 
     <!-- Sidebar -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       bind:this={sidebarEl}
       class="absolute right-0 top-0 flex h-full w-65 flex-col overflow-y-auto border-l border-[#17263a] bg-[#101c2c]/70 pt-15 text-[#8fa3bf] backdrop-blur-sm"

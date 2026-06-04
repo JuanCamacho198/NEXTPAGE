@@ -69,7 +69,7 @@ import {
   documentCache,
 } from "$lib/features/reader/pdf/pdfStreaming";
 
-function makeMockDocument(): void {
+function makeMockDocument() {
   return {
     numPages: 10,
     destroy: mockDestroy,
@@ -77,7 +77,7 @@ function makeMockDocument(): void {
     getPage: vi.fn(),
     getDestination: vi.fn(),
     getPageIndex: vi.fn(),
-  } as unknown as Record<string, unknown>;
+  } as any;
 }
 
 function resetAllMocks(): void {

@@ -447,7 +447,6 @@
     </div>
   {:else}
     <!-- Chapter iframe with zoom support -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="flex-1 w-full h-full"
       class:overflow-hidden={!verticalScrolling}

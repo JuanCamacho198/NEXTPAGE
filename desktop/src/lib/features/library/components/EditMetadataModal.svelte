@@ -30,7 +30,7 @@
     book !== null && (title !== book.title || author !== (book.author || ""))
   );
 
-  const handleSave = async (): void => {
+  const handleSave = async (): Promise<void> => {
     if (!book || !title.trim()) {
       error = t("library.editMetadata.titleRequired");
       return;

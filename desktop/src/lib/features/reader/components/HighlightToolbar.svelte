@@ -32,7 +32,7 @@
     selectedText.trim().length > 140 ? `${selectedText.trim().slice(0, 140)}...` : selectedText.trim()
   );
 
-  function hasResolvableSelectionContext(): void {
+  function hasResolvableSelectionContext(): boolean {
     if (!selectedText.trim() || !bookId.trim() || isSaving || !hasSelectionAnchor) {
       return false;
     }
@@ -115,8 +115,7 @@
   role="presentation"
   onkeydown={handleRootKeydown}
 >
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div onkeydown={handleRootKeydown}>
+  <div onkeydown={handleRootKeydown} role="presentation">
     <div class="flex items-start justify-between gap-3">
       <p
         class="m-0 line-clamp-3 text-xs font-semibold leading-[1.45] tracking-[0.01em]"

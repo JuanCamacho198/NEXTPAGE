@@ -13,7 +13,7 @@ const initialState: ErrorState = {
   showFallback: false,
 };
 
-function createErrorStateStore(): void {
+function createErrorStateStore() {
   const { subscribe, set, update } = writable<ErrorState>(initialState);
 
   return {

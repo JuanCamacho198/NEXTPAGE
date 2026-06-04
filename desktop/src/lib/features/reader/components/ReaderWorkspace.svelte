@@ -8,7 +8,7 @@
   import ReaderHeader from "./ReaderHeader.svelte";
   import ReaderFooter from "./ReaderFooter.svelte";
   import type { MessageKey } from "$lib/i18n";
-  import type { ReaderSettings } from "$lib/shared/types";
+  import type { ReaderSettings, SearchBookTextResponse } from "$lib/shared/types";
   import type { LibraryBookDto } from "$lib/shared/types/library";
   import { debugState } from "$lib/debug/debugState.svelte";
   import { saveHighlight, deleteHighlight, upsertReaderSettings, getDefaultReaderSettings } from "$lib/api/tauriClient";
@@ -26,7 +26,7 @@
     activeReadingBook?: ActiveBook | null;
     readerSettings?: ReaderSettings;
     percentage?: number;
-    searchResponse?: unknown;
+    searchResponse?: SearchBookTextResponse | null;
     searchTargetLocator?: string | null;
     isSearching?: boolean;
     searchUnavailableReason?: string | null;
@@ -34,7 +34,13 @@
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     onBackToHome: () => void;
     onPdfPageChange?: (page: number, total: number) => void;
-    onPdfSessionProgress?: (event: unknown) => void;
+    onPdfSessionProgress?: (event: {
+      startedAt: string;
+      endedAt?: string;
+      durationSeconds: number;
+      startPercentage?: number;
+      endPercentage?: number;
+    }) => void;
     onEpubLocationChange?: (cfi: string, pct: number) => void;
     onReaderLocationContext?: (ctx: unknown) => void;
     onSearch?: (query: string, page: number) => void;
@@ -63,7 +69,7 @@
   }: Props = $props();
 
   // ── Local reader settings state (mutable, debounce-persisted) ───
-  let localReaderSettings = $state(structuredClone(readerSettings ?? getDefaultReaderSettings()));
+  let localReaderSettings = $state<ReaderSettings>(getDefaultReaderSettings());
 
   // Debounced persistence
   let persistTimer: ReturnType<typeof setTimeout> | null = null;
@@ -514,10 +520,8 @@
 
 <!-- Bookmarks Sidebar Panel -->
 {#if showBookmarks && activeReadingBook}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="fixed inset-0 z-40" onclick={(e) => { if (e.target === e.currentTarget) showBookmarks = false; }} onkeydown={(e) => e.key === "Escape" && (showBookmarks = false)} role="presentation">
     <div class="absolute inset-0 bg-[#101c2c]/70"></div>
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div bind:this={bookmarksPanelEl} class="absolute right-0 top-0 flex h-full w-65 flex-col border-l border-[#17263a] bg-[#101c2c]/70 pt-15 text-[#8fa3bf] backdrop-blur-sm" onkeydown={(e) => e.key === "Escape" && (showBookmarks = false)} role="dialog" aria-label={t("reader.bookmark")} tabindex="0">
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-[#94adce]/5 px-5 py-4">

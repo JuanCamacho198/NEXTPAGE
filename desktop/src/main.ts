@@ -12,7 +12,7 @@ import { createErrorEvent, type ErrorEvent } from "./lib/events/ErrorEvent";
 
 let handlersRegistered = false;
 
-const initLogger = async (): void => {
+const initLogger = async (): Promise<void> => {
   logger.registerSink(consoleSink);
   logger.registerSink(tauriSink);
 

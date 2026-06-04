@@ -40,7 +40,7 @@
     onchange?.({ value: opt.value });
   }
 
-  function handleClickOutside(node: HTMLElement): void {
+  function handleClickOutside(node: HTMLElement): { destroy(): void } {
     const handle = (e: MouseEvent): void => {
       if (node && !node.contains(e.target as Node)) {
         isOpen = false;

@@ -51,7 +51,6 @@
     onkeydown={handleKeydown}
     role="presentation"
   >
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div 
       bind:this={dialogEl}
       class="w-full max-w-lg rounded-xl border border-(--color-border) bg-(--color-surface) shadow-xl {className}"

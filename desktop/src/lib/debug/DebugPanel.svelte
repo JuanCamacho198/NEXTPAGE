@@ -99,7 +99,7 @@
 
 
 
-  const handleExportLogs = async (): void => {
+  const handleExportLogs = async (): Promise<void> => {
     logsLoading = true;
     try {
       const lines = await getLogs();
@@ -117,7 +117,7 @@
     }
   };
 
-  const handleDiagnose = async (): void => {
+  const handleDiagnose = async (): Promise<void> => {
     diagnoseLoading = true;
     try {
       diagnoseResult = await diagnose();

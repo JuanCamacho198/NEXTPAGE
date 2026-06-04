@@ -251,7 +251,7 @@
                       <p class="line-clamp-2 min-w-0 wrap-break-word text-sm font-semibold text-(--color-primary)">{book.title}</p>
                       <p class="truncate text-xs text-(--color-text-muted)">{book.author || t("app.unknownAuthor")} · {book.format.toUpperCase()}</p>
                       <p class="mt-1 min-w-0 truncate text-xs text-(--color-text-muted)">
-                        {book.currentPage}/{book.totalPages || "-"} · {LibraryState.formatProgress(book.progressPercentage)} · {t("library.updated")} {LibraryState.formatUpdatedAt(book.updatedAt, t)}
+                        {book.currentPage}/{book.totalPages || "-"} · {LibraryState.formatProgress(book.progressPercentage)} · {t("library.updated")} {LibraryState.formatUpdatedAt(book.updatedAt, t("settings.unknownBook"))}
                       </p>
                       {#if book.collectionIds && book.collectionIds.length > 0}
                         <div class="mt-1 flex flex-wrap gap-1">

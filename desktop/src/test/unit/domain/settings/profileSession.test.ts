@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Session } from "@supabase/supabase-js";
 import { getProfileInitials, normalizeProfileSession } from "$lib/domain/settings/profileSession";
 
 describe("profileSession", () => {
@@ -11,7 +12,7 @@ describe("profileSession", () => {
           avatar_url: "https://example.com/avatar.png",
         },
       },
-    } as unknown as Record<string, unknown>);
+    } as unknown as Session | null);
 
     expect(viewModel).toEqual({
       name: "Reader Name",
@@ -27,7 +28,7 @@ describe("profileSession", () => {
         email: "local-part@example.com",
         user_metadata: {},
       },
-    } as unknown as Record<string, unknown>);
+    } as unknown as Session | null);
 
     expect(viewModel.name).toBe("local-part");
     expect(viewModel.email).toBe("local-part@example.com");
@@ -51,7 +52,7 @@ describe("profileSession", () => {
           avatar_url: "javascript:alert('xss')",
         },
       },
-    } as unknown as Record<string, unknown>);
+    } as unknown as Session | null);
 
     expect(viewModel.avatarUrl).toBeNull();
   });

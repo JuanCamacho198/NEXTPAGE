@@ -160,32 +160,19 @@ export function toOutlineTitle(
   return normalized.length > 0 ? normalized : fallbackLabel;
 }
 
+type NormalizedOutlineItem = {
+  id: string;
+  title: string;
+  dest: string | unknown[] | null;
+  items: NormalizedOutlineItem[];
+};
+
 export function normalizeOutlineItems(
   items: unknown[],
   fallbackLabel: string,
   parentId = "outline",
-): Array<{
-  id: string;
-  title: string;
-  dest: string | unknown[] | null;
-  items: Array<{
-    id: string;
-    title: string;
-    dest: string | unknown[] | null;
-    items: Array<{
-      id: string;
-      title: string;
-      dest: string | unknown[] | null;
-      items: never[];
-    }>;
-  }>;
-}> {
-  const normalized: Array<{
-    id: string;
-    title: string;
-    dest: string | unknown[] | null;
-    items: Array<Record<string, unknown>>;
-  }> = [];
+): NormalizedOutlineItem[] {
+  const normalized: NormalizedOutlineItem[] = [];
 
   items.forEach((rawItem, index) => {
     if (!rawItem || typeof rawItem !== "object") return;

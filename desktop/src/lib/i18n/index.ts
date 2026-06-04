@@ -90,7 +90,7 @@ const resolveMessage = (locale: UiLocale, key: MessageKey): string => {
 const createI18nStore = () => {
   const localeStore = writable<UiLocale>(DEFAULT_LOCALE);
 
-  const setLocale = async (nextLocale: string | UiLocale): void => {
+  const setLocale = async (nextLocale: string | UiLocale): Promise<void> => {
     const safeLocale = toSupportedLocale(nextLocale) ?? FALLBACK_LOCALE;
     localeStore.set(safeLocale);
     globalThis.localStorage?.setItem(LOCALE_STORAGE_KEY, safeLocale);

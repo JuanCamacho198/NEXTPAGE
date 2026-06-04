@@ -131,7 +131,6 @@
       <ReaderWorkspace
         activeReadingBook={appState.getBookById(appState.activeReadingBookId)}
         readerSettings={appState.readerSettings}
-        cfiLocation={appState.cfiLocation}
         percentage={appState.percentage}
         searchResponse={appState.searchResponse}
         searchTargetLocator={appState.searchTargetLocator}
@@ -145,8 +144,8 @@
         onPdfSessionProgress={appState.handlePdfSessionProgress}
         onEpubLocationChange={appState.handleEpubLocationChange}
         onReaderLocationContext={appState.handleReaderLocationContext}
-        onSearch={appState.handleSearch}
-        onSearchJump={appState.handleSearchJump}
+        onSearch={(query: string, page: number) => void appState.handleSearch(query, page)}
+        onSearchJump={(target: unknown) => void appState.handleSearchJump(target as Parameters<typeof appState.handleSearchJump>[0])}
       />
     {/if}
   </div>

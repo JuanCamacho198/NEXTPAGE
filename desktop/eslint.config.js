@@ -16,7 +16,7 @@ export default [
     ],
   },
   {
-    files: ['**/*.ts', '**/*.svelte'],
+    files: ['**/*.ts'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
@@ -48,6 +48,7 @@ export default [
       },
     },
     plugins: {
+      '@typescript-eslint': tsPlugin,
       svelte: sveltePlugin,
       'local-rules': {
         rules: {
@@ -57,8 +58,17 @@ export default [
     },
     rules: {
       ...sveltePlugin.configs.recommended.rules,
+      ...tsPlugin.configs.recommended.rules,
       'svelte/valid-each-key': 'error',
       'svelte/no-unused-svelte-ignore': 'warn',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/explicit-function-return-type': ['warn', {
+        allowExpressions: true,
+        allowTypedFunctionExpressions: true,
+        allowHigherOrderFunctions: true,
+        allowDirectConstAssertionInArrowFunctions: true,
+      }],
+      '@typescript-eslint/no-explicit-any': 'warn',
       'local-rules/tailwind-v4-canonical': 'warn',
     },
   },

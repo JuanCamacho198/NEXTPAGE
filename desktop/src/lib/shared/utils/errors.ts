@@ -1,4 +1,4 @@
-import { createErrorEvent, type ErrorCategory, type ErrorSource } from "../events/ErrorEvent";
+import { createErrorEvent, type ErrorEvent, type ErrorCategory, type ErrorSource } from "../events/ErrorEvent";
 import { classifyError } from "../events/classifyError";
 import { errorState } from "../stores/errorState";
 import { logger } from "../logger";

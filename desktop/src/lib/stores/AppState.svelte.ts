@@ -4,6 +4,7 @@ import {
   type BulkImportProgress,
 } from "$lib/services/BulkImportService";
 import { pickFile, pickFolder } from "$lib/services/FilePicker";
+import { readFile } from "@tauri-apps/plugin-fs";
 import {
   getDefaultReaderSettings,
   getProgress,
@@ -17,10 +18,10 @@ import {
   searchBookText,
   upsertBook,
   upsertBookCover,
+  extractEpubCover,
   updateBookProgress,
   listCollections,
   scanFolder,
-  getFileBytes,
 } from "$lib/api/tauriClient";
 import { i18n, type MessageKey } from "$lib/i18n";
 import { recordMetric } from "$lib/logger/MetricsStore";
@@ -113,8 +114,8 @@ class AppState {
   bulkImportProgress = $state<BulkImportProgress | null>(null);
   bulkImportSummary = $state<BulkImportSummary | null>(null);
 
-  // Preloaded file data for instant reader startup
-  preloadedBytes = $state<{ filePath: string; data: number[] } | null>(null);
+  // Preloaded file data for instant reader startup (Uint8Array from readFile)
+  preloadedBytes = $state<{ filePath: string; data: Uint8Array } | null>(null);
 
   // Internal state (class properties, not reactive)
   thumbnailGenerationInFlight = new Set<string>();
@@ -245,6 +246,36 @@ class AppState {
     return book.filePath.trim().length > 0;
   }
 
+  shouldGenerateEpubCover(book: ReaderBook): boolean {
+    if (book.format.toLowerCase() !== "epub") {
+      return false;
+    }
+
+    if (this.hasResolvedCoverPath(book)) {
+      return false;
+    }
+
+    return book.filePath.trim().length > 0;
+  }
+
+  async ensureEpubCover(book: ReaderBook): Promise<void> {
+    if (this.thumbnailGenerationInFlight.has(book.id)) {
+      return;
+    }
+
+    this.thumbnailGenerationInFlight.add(book.id);
+    try {
+      const found = await extractEpubCover(book.id, book.filePath);
+      if (found) {
+        await this.loadLibrary();
+      }
+    } catch (e) {
+      console.error(`[App] ensureEpubCover failed:`, e);
+    } finally {
+      this.thumbnailGenerationInFlight.delete(book.id);
+    }
+  }
+
   async ensurePdfCover(book: ReaderBook): Promise<void> {
     if (this.thumbnailGenerationInFlight.has(book.id)) {
       return;
@@ -363,8 +394,21 @@ class AppState {
       this.activeReadingBookId = reconciledState.activeReadingBookId;
       this.shelfDetailsBookId = reconciledState.shelfDetailsBookId;
 
-      const pendingThumbnailBooks = this.books.filter((book) => {
+      const pendingPdfThumbnails = this.books.filter((book) => {
         if (!this.shouldGeneratePdfCover(book)) {
+          return false;
+        }
+
+        if (this.thumbnailGenerationAttempted.has(book.id)) {
+          return false;
+        }
+
+        this.thumbnailGenerationAttempted.add(book.id);
+        return true;
+      });
+
+      const pendingEpubCovers = this.books.filter((book) => {
+        if (!this.shouldGenerateEpubCover(book)) {
           return false;
         }
 
@@ -380,10 +424,16 @@ class AppState {
 
       this.setDomainUnavailable(DOMAIN.LIBRARY, null);
 
-      // Process thumbnails in parallel batches
-      for (let i = 0; i < pendingThumbnailBooks.length; i += THUMBNAIL_CONCURRENCY) {
-        const batch = pendingThumbnailBooks.slice(i, i + THUMBNAIL_CONCURRENCY);
+      // Process PDF thumbnails in parallel batches
+      for (let i = 0; i < pendingPdfThumbnails.length; i += THUMBNAIL_CONCURRENCY) {
+        const batch = pendingPdfThumbnails.slice(i, i + THUMBNAIL_CONCURRENCY);
         await Promise.all(batch.map((book) => this.ensurePdfCover(book)));
+      }
+
+      // Process EPUB covers in parallel batches
+      for (let i = 0; i < pendingEpubCovers.length; i += THUMBNAIL_CONCURRENCY) {
+        const batch = pendingEpubCovers.slice(i, i + THUMBNAIL_CONCURRENCY);
+        await Promise.all(batch.map((book) => this.ensureEpubCover(book)));
       }
     } catch (error) {
       const details = this.mapCommandError(error);
@@ -610,8 +660,8 @@ class AppState {
     const format = book.format.toLowerCase();
 
     if (format === "epub") {
-      // Preload EPUB bytes — the viewer will use them instead of calling getFileBytes
-      getFileBytes(book.filePath)
+      // Preload EPUB bytes via FS plugin (no JSON serialization overhead)
+      readFile(book.filePath)
         .then((bytes) => {
           this.preloadedBytes = { filePath: book.filePath, data: bytes };
         })
@@ -621,7 +671,7 @@ class AppState {
     } else if (format === "pdf") {
       // Pre-start PDF streaming early so the document caches before viewer mounts.
       // We also preload the raw bytes as a fallback for small files.
-      void getFileBytes(book.filePath).then((bytes) => {
+      void readFile(book.filePath).then((bytes) => {
         this.preloadedBytes = { filePath: book.filePath, data: bytes };
       }).catch(() => {
         // Preload failed silently — viewer will load normally

@@ -108,14 +108,14 @@ export function createFocusTrap(
   }
 
   return {
-    activate() {
+    activate(): void {
       previouslyFocused = document.activeElement as HTMLElement | null;
       activeElement.addEventListener("keydown", handleKeyDown);
       activeElement.addEventListener("focusout", handleFocusOut);
       focusFirst();
     },
 
-    deactivate() {
+    deactivate(): void {
       activeElement.removeEventListener("keydown", handleKeyDown);
       activeElement.removeEventListener("focusout", handleFocusOut);
 
@@ -126,7 +126,7 @@ export function createFocusTrap(
       onDeactivate?.();
     },
 
-    updateContainer(el: HTMLElement) {
+    updateContainer(el: HTMLElement): void {
       activeElement = el;
     },
   };

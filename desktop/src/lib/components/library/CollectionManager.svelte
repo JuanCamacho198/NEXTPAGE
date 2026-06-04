@@ -12,7 +12,7 @@
   let editingId = $state<number | null>(null);
   let editName = $state("");
 
-  async function loadCollections() {
+  async function loadCollections(): Promise<void> {
     loading = true;
     try {
       collections = await listCollections();
@@ -23,7 +23,7 @@
     }
   }
 
-  async function handleCreate() {
+  async function handleCreate(): Promise<void> {
     if (!newName.trim()) return;
     try {
       const created = await createCollection({ name: newName.trim(), color: newColor });
@@ -35,7 +35,7 @@
     }
   }
 
-  async function handleDelete(id: number) {
+  async function handleDelete(id: number): Promise<void> {
     try {
       await deleteCollection(id);
       collections = collections.filter(c => c.id !== id);
@@ -44,7 +44,7 @@
     }
   }
 
-  function cancelEdit() {
+  function cancelEdit(): void {
     editingId = null;
     editName = "";
   }

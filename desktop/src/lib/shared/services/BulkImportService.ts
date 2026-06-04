@@ -81,7 +81,7 @@ const buildSummary = (results: BulkImportItemResult[]): BulkImportSummary => {
   };
 };
 
-const markRemainingAsCancelled = (results: BulkImportItemResult[]) => {
+const markRemainingAsCancelled = (results: BulkImportItemResult[]): void => {
   for (const result of results) {
     if (result.status === BULK_IMPORT_ITEM_STATUS.QUEUED) {
       result.status = BULK_IMPORT_ITEM_STATUS.CANCELLED;
@@ -152,7 +152,7 @@ export class BulkImportService {
       };
     });
 
-    const emit = (currentFile: ScannedFile | null) => {
+    const emit = (currentFile: ScannedFile | null): void => {
       onProgress?.({
         summary: buildSummary(results),
         currentFile,

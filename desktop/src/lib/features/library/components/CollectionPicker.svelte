@@ -13,7 +13,7 @@
 
   let loading = $state(false);
 
-  async function handleToggle(collectionId: number, checked: boolean) {
+  async function handleToggle(collectionId: number, checked: boolean): Promise<void> {
     if (loading) return;
     loading = true;
     try {

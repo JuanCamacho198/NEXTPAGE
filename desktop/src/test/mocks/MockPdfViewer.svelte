@@ -17,7 +17,7 @@
     fullscreenState = isFullscreen;
   });
 
-  function emitSelection() {
+  function emitSelection(): void {
     onselection?.({
       text: "Selection text",
       bounds: { left: 20, top: 40, right: 180, bottom: 80 },
@@ -26,7 +26,7 @@
     });
   }
 
-  async function handleToggle() {
+  async function handleToggle(): Promise<void> {
     const isActive = !!document.fullscreenElement;
     if (!isActive) {
       await document.documentElement.requestFullscreen?.();

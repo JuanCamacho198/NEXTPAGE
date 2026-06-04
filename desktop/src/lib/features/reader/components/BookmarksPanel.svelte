@@ -23,7 +23,7 @@
     }
   });
 
-  async function loadBookmarks() {
+  async function loadBookmarks(): Promise<void> {
     isLoading = true;
     try {
       bookmarks = await listBookmarks(bookId);
@@ -35,7 +35,7 @@
     }
   }
 
-  async function handleAddBookmark() {
+  async function handleAddBookmark(): Promise<void> {
     if (!bookId) return;
 
     const pageNumber = 1;
@@ -53,7 +53,7 @@
     }
   }
 
-  async function handleDeleteBookmark(id: string) {
+  async function handleDeleteBookmark(id: string): Promise<void> {
     try {
       await deleteBookmark(id);
       await loadBookmarks();
@@ -62,7 +62,7 @@
     }
   }
 
-  function handleNavigate(pageNumber: number) {
+  function handleNavigate(pageNumber: number): void {
     onNavigate?.(pageNumber);
   }
 </script>

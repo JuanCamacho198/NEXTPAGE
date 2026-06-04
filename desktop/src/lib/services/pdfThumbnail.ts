@@ -3,7 +3,7 @@ import { getFileBytes } from "$lib/api/tauriClient";
 
 let workerConfigured = false;
 
-const configureWorker = () => {
+const configureWorker = (): void => {
   if (workerConfigured) {
     return;
   }

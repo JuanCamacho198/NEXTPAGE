@@ -80,7 +80,7 @@
   });
 
   // ── Actions ──
-  async function loadHighlights() {
+  async function loadHighlights(): Promise<void> {
     isLoading = true;
     try {
       highlights = await listHighlights();
@@ -91,7 +91,7 @@
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(id: string): Promise<void> {
     try {
       await deleteHighlight(id);
       highlights = highlights.filter((h) => h.id !== id);
@@ -100,11 +100,11 @@
     }
   }
 
-  function handleCopy(text: string) {
+  function handleCopy(text: string): void {
     navigator.clipboard.writeText(text);
   }
 
-  function clearFilters() {
+  function clearFilters(): void {
     searchQuery = "";
     selectedColor = null;
     selectedBookId = null;
@@ -120,7 +120,7 @@
   });
 
   // Keyboard shortcut
-  const handleKeydown = (e: KeyboardEvent) => {
+  const handleKeydown = (e: KeyboardEvent): void => {
     if ((e.ctrlKey || e.metaKey) && e.key === "k") {
       e.preventDefault();
       const el = document.getElementById("highlights-search");

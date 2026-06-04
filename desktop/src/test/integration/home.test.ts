@@ -231,7 +231,7 @@ const defaultStats: ReadingStatsSummaryDto = {
 
 const collections: CollectionDto[] = [];
 
-const configureLibrary = (libraryBooks: LibraryBookDto[], sourceBooks?: BookDto[]) => {
+const configureLibrary = (libraryBooks: LibraryBookDto[], sourceBooks?: BookDto[]): void => {
   tauriClientMock.listLibraryBooks.mockResolvedValue(libraryBooks);
   tauriClientMock.listBooks.mockResolvedValue(
     sourceBooks ?? libraryBooks.map((book) => makeSourceBook(book.id, `C:/library/${book.id}.epub`)),

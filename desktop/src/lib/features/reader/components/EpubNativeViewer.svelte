@@ -127,7 +127,7 @@
   });
 
   // ─── Lifecycle ───────────────────────────────────────────
-  function handleSelectionMessage(event: MessageEvent) {
+  function handleSelectionMessage(event: MessageEvent): void {
     if (event.data?.type !== 'epub-selection') return;
 
     if (!event.data.text) {
@@ -173,7 +173,7 @@
   });
 
   // ─── Init ────────────────────────────────────────────────
-  async function initReader() {
+  async function initReader(): Promise<void> {
     isLoading = true;
     error = null;
 
@@ -223,7 +223,7 @@
   }
 
   // ─── Render Chapter ──────────────────────────────────────
-  async function renderChapter(index: number) {
+  async function renderChapter(index: number): Promise<void> {
     if (!metadata || !iframeEl) return;
 
     try {
@@ -341,37 +341,37 @@
   }
 
   // ─── Navigation ──────────────────────────────────────────
-  function goToPrev() {
+  function goToPrev(): void {
     if (currentChapterIndex > 0) {
       renderChapter(currentChapterIndex - 1);
     }
   }
 
-  function goToNext() {
+  function goToNext(): void {
     if (currentChapterIndex < totalChapters - 1) {
       renderChapter(currentChapterIndex + 1);
     }
   }
 
-  function goToChapter(index: number) {
+  function goToChapter(index: number): void {
     if (index >= 0 && index < totalChapters) {
       renderChapter(index);
     }
   }
 
   // ─── Zoom ─────────────────────────────────────────────────
-  function changeZoom(delta: number) {
+  function changeZoom(delta: number): void {
     const newZoom = Math.max(50, Math.min(200, zoomLevel + delta));
     if (newZoom !== zoomLevel) {
       zoomLevel = newZoom;
     }
   }
 
-  function resetZoom() {
+  function resetZoom(): void {
     zoomLevel = 100;
   }
 
-  function handleWheel(e: WheelEvent) {
+  function handleWheel(e: WheelEvent): void {
     if (!e.ctrlKey && !e.metaKey) return;
     e.preventDefault();
     const delta = e.deltaY > 0 ? -5 : 5;
@@ -417,7 +417,7 @@
     return bgs[themeMode] || bgs.paper;
   }
 
-  function handleKeydown(e: KeyboardEvent) {
+  function handleKeydown(e: KeyboardEvent): void {
     if (e.key === 'ArrowLeft') goToPrev();
     if (e.key === 'ArrowRight') goToNext();
     if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+' || e.key === '-')) {

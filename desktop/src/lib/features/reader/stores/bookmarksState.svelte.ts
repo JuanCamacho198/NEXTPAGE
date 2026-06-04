@@ -12,7 +12,7 @@ export function createBookmarksState() {
   let bookmarksList = $state<BookmarkItem[]>([]);
   let bookmarksLoading = $state(false);
 
-  async function loadBookmarks(bookId: string) {
+  async function loadBookmarks(bookId: string): Promise<void> {
     bookmarksLoading = true;
     try {
       bookmarksList = await listBookmarks(bookId);
@@ -24,7 +24,7 @@ export function createBookmarksState() {
     }
   }
 
-  async function addBookmark(bookId: string, pageNumber: number) {
+  async function addBookmark(bookId: string, pageNumber: number): Promise<void> {
     try {
       await saveBookmark({
         id: crypto.randomUUID(),
@@ -39,7 +39,7 @@ export function createBookmarksState() {
     }
   }
 
-  async function removeBookmark(id: string, bookId: string) {
+  async function removeBookmark(id: string, bookId: string): Promise<void> {
     try {
       await deleteBookmark(id);
       await loadBookmarks(bookId);

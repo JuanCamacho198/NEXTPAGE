@@ -31,7 +31,7 @@ vi.mock("pdfjs-dist", () => ({
 }));
 
 // ── SUT —──────────────────────────────────────────────────
-import { SafeTextLayer } from "$lib/features/reader/pdf/safeTextLayer";
+import { SafeTextLayer, type SafeTextLayerParams } from "$lib/features/reader/pdf/safeTextLayer";
 
 // ── Helpers ───────────────────────────────────────────────
 function createViewport(overrides: Partial<{ scale: number; width: number; height: number }> = {}) {
@@ -41,6 +41,10 @@ function createViewport(overrides: Partial<{ scale: number; width: number; heigh
 function getLastMockInstance(): Record<string, unknown> {
   const results = mockTextLayer.mock.results;
   return results[results.length - 1].value as Record<string, unknown>;
+}
+
+function makeEmptyTextSource(): SafeTextLayerParams["textContentSource"] {
+  return {} as SafeTextLayerParams["textContentSource"];
 }
 
 // ── Suite ─────────────────────────────────────────────────
@@ -55,7 +59,7 @@ describe("SafeTextLayer", () => {
   // ── Constructor ──────────────────────────────────────────
   describe("constructor", () => {
     it("sets position absolute, left 0, top 0 on container", () => {
-      new SafeTextLayer({ container, viewport: createViewport(), textContentSource: {} as unknown as import("$lib/features/reader/pdf/safeTextLayer").SafeTextLayerParams["textContentSource"] });
+      new SafeTextLayer({ container, viewport: createViewport(), textContentSource: makeEmptyTextSource() });
 
       expect(container.style.position).toBe("absolute");
       // jsdom coerces unitless 0 → "0px"; real browsers preserve "0"
@@ -64,35 +68,35 @@ describe("SafeTextLayer", () => {
     });
 
     it("sets CSS vars --scale-factor and --total-scale-factor to viewport.scale", () => {
-      new SafeTextLayer({ container, viewport: createViewport({ scale: 1.5 }), textContentSource: {} as any });
+      new SafeTextLayer({ container, viewport: createViewport({ scale: 1.5 }), textContentSource: makeEmptyTextSource() });
 
       expect(container.style.getPropertyValue("--scale-factor")).toBe("1.5");
       expect(container.style.getPropertyValue("--total-scale-factor")).toBe("1.5");
     });
 
     it("sets CSS vars --scale-round-x and --scale-round-y to 1px", () => {
-      new SafeTextLayer({ container, viewport: createViewport(), textContentSource: {} as unknown as import("$lib/features/reader/pdf/safeTextLayer").SafeTextLayerParams["textContentSource"] });
+      new SafeTextLayer({ container, viewport: createViewport(), textContentSource: makeEmptyTextSource() });
 
       expect(container.style.getPropertyValue("--scale-round-x")).toBe("1px");
       expect(container.style.getPropertyValue("--scale-round-y")).toBe("1px");
     });
 
     it("sets container width and height from viewport dimensions", () => {
-      new SafeTextLayer({ container, viewport: createViewport({ width: 800, height: 1100 }), textContentSource: {} as any });
+      new SafeTextLayer({ container, viewport: createViewport({ width: 800, height: 1100 }), textContentSource: makeEmptyTextSource() });
 
       expect(container.style.width).toBe("800px");
       expect(container.style.height).toBe("1100px");
     });
 
     it("fixes DPR-inflated #scale back to viewport.scale", () => {
-      new SafeTextLayer({ container, viewport: createViewport({ scale: 1.5 }), textContentSource: {} as any });
+      new SafeTextLayer({ container, viewport: createViewport({ scale: 1.5 }), textContentSource: makeEmptyTextSource() });
 
       const instance = getLastMockInstance();
       expect(instance["#scale"]).toBe(1.5);
     });
 
     it("calls TextLayer constructor with container, viewport and textContentSource", () => {
-      const tcs = { on: vi.fn() };
+      const tcs = { on: vi.fn() } as unknown as SafeTextLayerParams["textContentSource"];
       new SafeTextLayer({ container, viewport: createViewport(), textContentSource: tcs });
 
       expect(mockTextLayer).toHaveBeenCalledTimes(1);
@@ -103,7 +107,7 @@ describe("SafeTextLayer", () => {
   // ── render() ─────────────────────────────────────────────
   describe("render", () => {
     it("delegates to instance.render() and awaits its promise", async () => {
-      const layer = new SafeTextLayer({ container, viewport: createViewport(), textContentSource: {} as any });
+      const layer = new SafeTextLayer({ container, viewport: createViewport(), textContentSource: makeEmptyTextSource() });
 
       await layer.render();
 
@@ -115,7 +119,7 @@ describe("SafeTextLayer", () => {
   // ── update() ─────────────────────────────────────────────
   describe("update", () => {
     it("re-sets CSS vars for the new viewport", () => {
-      const layer = new SafeTextLayer({ container, viewport: createViewport({ scale: 1.5 }), textContentSource: {} as any });
+      const layer = new SafeTextLayer({ container, viewport: createViewport({ scale: 1.5 }), textContentSource: makeEmptyTextSource() });
       const newVp = createViewport({ scale: 2.0, width: 1067, height: 1467 });
 
       layer.update({ viewport: newVp });
@@ -127,7 +131,7 @@ describe("SafeTextLayer", () => {
     });
 
     it("re-sets container dimensions for the new viewport", () => {
-      const layer = new SafeTextLayer({ container, viewport: createViewport({ width: 800, height: 1100 }), textContentSource: {} as any });
+      const layer = new SafeTextLayer({ container, viewport: createViewport({ width: 800, height: 1100 }), textContentSource: makeEmptyTextSource() });
       const newVp = createViewport({ width: 1067, height: 1467 });
 
       layer.update({ viewport: newVp });
@@ -137,7 +141,7 @@ describe("SafeTextLayer", () => {
     });
 
     it("re-patches DPR-inflated #scale after update", () => {
-      const layer = new SafeTextLayer({ container, viewport: createViewport({ scale: 1.5 }), textContentSource: {} as any });
+      const layer = new SafeTextLayer({ container, viewport: createViewport({ scale: 1.5 }), textContentSource: makeEmptyTextSource() });
       const newVp = createViewport({ scale: 2.0 });
 
       layer.update({ viewport: newVp });
@@ -147,7 +151,7 @@ describe("SafeTextLayer", () => {
     });
 
     it("delegates to instance.update() with the new viewport", () => {
-      const layer = new SafeTextLayer({ container, viewport: createViewport(), textContentSource: {} as any });
+      const layer = new SafeTextLayer({ container, viewport: createViewport(), textContentSource: makeEmptyTextSource() });
       const newVp = createViewport({ scale: 2.0 });
 
       layer.update({ viewport: newVp });
@@ -161,7 +165,7 @@ describe("SafeTextLayer", () => {
   // ── cancel() ─────────────────────────────────────────────
   describe("cancel", () => {
     it("delegates to instance.cancel()", () => {
-      const layer = new SafeTextLayer({ container, viewport: createViewport(), textContentSource: {} as any });
+      const layer = new SafeTextLayer({ container, viewport: createViewport(), textContentSource: makeEmptyTextSource() });
 
       layer.cancel();
 
@@ -173,7 +177,7 @@ describe("SafeTextLayer", () => {
       const layer = new SafeTextLayer({
         container,
         viewport: createViewport({ scale: 1.5, width: 800, height: 1100 }),
-        textContentSource: {} as any,
+        textContentSource: makeEmptyTextSource(),
       });
       const instance = getLastMockInstance();
       layer.cancel();

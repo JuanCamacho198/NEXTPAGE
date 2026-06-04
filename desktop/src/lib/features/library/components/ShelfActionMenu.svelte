@@ -45,7 +45,7 @@
     return Array.from(menuEl.querySelectorAll<HTMLButtonElement>("[data-menu-item='true']"));
   };
 
-  const focusItemAt = (index: number) => {
+  const focusItemAt = (index: number): void => {
     const items = getMenuButtons();
     if (items.length === 0) {
       return;
@@ -55,7 +55,7 @@
     items[nextIndex]?.focus();
   };
 
-  const closeMenu = (returnFocus: boolean) => {
+  const closeMenu = (returnFocus: boolean): void => {
     if (!isOpen) {
       return;
     }
@@ -66,7 +66,7 @@
     }
   };
 
-  const openMenu = (focusFirstItem: boolean) => {
+  const openMenu = (focusFirstItem: boolean): void => {
     if (isOpen) {
       return;
     }
@@ -79,7 +79,7 @@
     }
   };
 
-  const toggleMenu = () => {
+  const toggleMenu = (): void => {
     if (isOpen) {
       closeMenu(true);
       return;
@@ -93,7 +93,7 @@
     closeMenu(true);
   };
 
-  const handleTriggerKeyDown = (event: KeyboardEvent) => {
+  const handleTriggerKeyDown = (event: KeyboardEvent): void => {
     if (event.key === "ArrowDown") {
       event.preventDefault();
       openMenu(true);
@@ -119,7 +119,7 @@
     }
   };
 
-  const handleMenuKeyDown = (event: KeyboardEvent) => {
+  const handleMenuKeyDown = (event: KeyboardEvent): void => {
     const items = getMenuButtons();
     if (items.length === 0) {
       return;
@@ -162,11 +162,11 @@
     }
   };
 
-  const handleContainerMouseEnter = () => {
+  const handleContainerMouseEnter = (): void => {
     openMenu(false);
   };
 
-  const handleContainerMouseLeave = () => {
+  const handleContainerMouseLeave = (): void => {
     if (containerEl?.contains(document.activeElement)) {
       return;
     }
@@ -174,7 +174,7 @@
     closeMenu(false);
   };
 
-  const handleContainerFocusOut = (event: FocusEvent) => {
+  const handleContainerFocusOut = (event: FocusEvent): void => {
     const nextTarget = event.relatedTarget as Node | null;
     if (nextTarget && containerEl?.contains(nextTarget)) {
       return;
@@ -184,7 +184,7 @@
   };
 
   onMount(() => {
-    const handleDocumentPointerDown = (event: PointerEvent) => {
+    const handleDocumentPointerDown = (event: PointerEvent): void => {
       if (!isOpen) {
         return;
       }
@@ -194,7 +194,7 @@
       }
     };
 
-    const handleDocumentKeyDown = (event: KeyboardEvent) => {
+    const handleDocumentKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") {
         closeMenu(true);
       }

@@ -39,7 +39,7 @@
     onToggleToc,
   }: Props = $props();
 
-  async function handleGoToPage(event: Event) {
+  async function handleGoToPage(event: Event): Promise<void> {
     const target = event.target as HTMLInputElement;
     const page = Number.parseInt(target.value, 10);
     if (Number.isFinite(page) && page >= 1 && page <= totalPages) {

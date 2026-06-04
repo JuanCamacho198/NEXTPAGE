@@ -37,7 +37,7 @@
   const total = () => response?.total ?? 0;
   const hasMore = () => currentPage() * pageSize() < total();
 
-  const runSearch = (page = 1) => {
+  const runSearch = (page = 1): void => {
     if (!bookId || !query.trim()) {
       return;
     }
@@ -45,7 +45,7 @@
     onSearch?.(query.trim(), page);
   };
 
-  const jumpTo = (item: SearchResult, index: number) => {
+  const jumpTo = (item: SearchResult, index: number): void => {
     onJump?.({
       resultId: `${item.chunkId}:${index}`,
       locator: item.locator,

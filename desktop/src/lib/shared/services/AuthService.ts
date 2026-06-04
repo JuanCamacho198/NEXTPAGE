@@ -5,7 +5,7 @@ export class AuthService {
    * Initiates Google OAuth sign-in flow.
    * Redirects to the provided auth callback URL.
    */
-  static async signInWithGoogle() {
+  static async signInWithGoogle(): Promise<{ provider: string; url: string } | null> {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -29,7 +29,7 @@ export class AuthService {
   /**
    * Sign out the current user.
    */
-  static async signOut() {
+  static async signOut(): Promise<void> {
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('Sign-Out Error:', error.message);
@@ -40,7 +40,7 @@ export class AuthService {
   /**
    * Get the current session if available.
    */
-  static async getSession() {
+  static async getSession(): Promise<import("@supabase/supabase-js").Session | null> {
     const { data, error } = await supabase.auth.getSession();
     if (error) {
       console.error('Get Session Error:', error.message);

@@ -31,14 +31,14 @@
   let searchQuery = $state("");
   let debounceTimer: ReturnType<typeof setTimeout> | undefined = $state(undefined);
 
-  function handleSearchInput(e: Event) {
+  function handleSearchInput(e: Event): void {
     const target = e.target as HTMLInputElement;
     searchQuery = target.value;
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {}, 300);
   }
 
-  function clearSearch() {
+  function clearSearch(): void {
     searchQuery = "";
     clearTimeout(debounceTimer);
   }

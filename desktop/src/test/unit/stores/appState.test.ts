@@ -103,7 +103,7 @@ vi.mock("$lib/services/BulkImportService", () => {
   };
 });
 
-function resetAppState() {
+function resetAppState(): void {
   appState.route = "home";
   appState.previewBookId = null;
   appState.activeReadingBookId = null;

@@ -17,7 +17,7 @@
   let objectUrl = $state<string | null>(null);
   let error = $state(false);
 
-  const releaseObjectUrl = () => {
+  const releaseObjectUrl = (): void => {
     if (!objectUrl) {
       return;
     }
@@ -26,7 +26,7 @@
     objectUrl = null;
   };
 
-  async function loadThumbnail() {
+  async function loadThumbnail(): Promise<void> {
     if (!path || path.trim().length === 0) {
       releaseObjectUrl();
       error = true;

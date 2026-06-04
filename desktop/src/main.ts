@@ -12,7 +12,7 @@ import { createErrorEvent, type ErrorEvent } from "./lib/events/ErrorEvent";
 
 let handlersRegistered = false;
 
-const initLogger = async () => {
+const initLogger = async (): void => {
   logger.registerSink(consoleSink);
   logger.registerSink(tauriSink);
 
@@ -23,7 +23,7 @@ const initLogger = async () => {
   }
 };
 
-const handleGlobalError = (event: ErrorEvent) => {
+const handleGlobalError = (event: ErrorEvent): void => {
   const errorEvent = createErrorEvent({
     severity: "high",
     category: "runtime",
@@ -41,7 +41,7 @@ const handleGlobalError = (event: ErrorEvent) => {
   logger.error(errorEvent);
 };
 
-const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+const handleUnhandledRejection = (event: PromiseRejectionEvent): void => {
   const errorMessage = event.reason instanceof Error
     ? event.reason.message
     : String(event.reason);

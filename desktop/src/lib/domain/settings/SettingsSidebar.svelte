@@ -56,7 +56,7 @@
     | 'database'
     | 'info';
 
-  function handleTabClick(tab: SettingsTab) {
+  function handleTabClick(tab: SettingsTab): void {
     activeTab = tab;
     onTabChange?.(tab);
   }

@@ -23,7 +23,7 @@
 
   let sidebarEl: HTMLDivElement | undefined = $state();
 
-  function handleBackdropClick(e: MouseEvent) {
+  function handleBackdropClick(e: MouseEvent): void {
     if (e.target === e.currentTarget) onClose();
   }
 

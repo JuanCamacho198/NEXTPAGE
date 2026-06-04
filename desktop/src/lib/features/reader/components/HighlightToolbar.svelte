@@ -42,7 +42,7 @@
     return hasPage || hasCfi;
   }
 
-  async function handleCreateHighlight(note: string | null = null) {
+  async function handleCreateHighlight(note: string | null = null): Promise<void> {
     if (!hasResolvableSelectionContext()) {
       errorMessage = t("highlight.selectionUnavailable");
       return;
@@ -76,22 +76,22 @@
     }
   }
 
-  function handleDelete() {
+  function handleDelete(): void {
     onClose();
   }
 
-  function handleColorSelect(color: string) {
+  function handleColorSelect(color: string): void {
     selectedColor = color;
   }
 
-  function handleToggleNoteEditor() {
+  function handleToggleNoteEditor(): void {
     showNoteEditor = !showNoteEditor;
     if (!showNoteEditor) {
       noteText = "";
     }
   }
 
-  async function handleSaveWithNote() {
+  async function handleSaveWithNote(): Promise<void> {
     const trimmedNote = noteText.trim();
     if (trimmedNote.length === 0) {
       errorMessage = t("highlight.noteRequired");
@@ -101,7 +101,7 @@
     await handleCreateHighlight(trimmedNote);
   }
 
-  function handleRootKeydown(event: KeyboardEvent) {
+  function handleRootKeydown(event: KeyboardEvent): void {
     if (event.key === "Escape") {
       event.preventDefault();
       onClose();

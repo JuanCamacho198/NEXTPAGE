@@ -143,7 +143,7 @@
     progressIndicator: "percentage",
   });
 
-  const applyReaderSettingsToState = (settings: ReaderSettings) => {
+  const applyReaderSettingsToState = (settings: ReaderSettings): void => {
     readerThemeMode = settings.themeMode;
     readerBrightness = settings.brightness;
     readerContrast = settings.contrast;
@@ -180,7 +180,7 @@
     };
   };
 
-  function closePanel() {
+  function closePanel(): void {
     if (mode === "page") {
       onRequestClose?.();
       return;
@@ -189,7 +189,7 @@
     isOpen = false;
   }
 
-  async function loadAppSettings() {
+  async function loadAppSettings(): Promise<void> {
     settingsError = null;
     settingsUnavailable = null;
 
@@ -225,7 +225,7 @@
     }
   }
 
-  async function loadProfileData() {
+  async function loadProfileData(): Promise<void> {
     isProfileLoading = true;
     profileError = null;
 
@@ -242,7 +242,7 @@
     }
   }
 
-  async function saveAppSettings() {
+  async function saveAppSettings(): Promise<void> {
     isSavingSettings = true;
     settingsError = null;
     settingsUnavailable = null;
@@ -276,7 +276,7 @@
     }
   }
 
-  async function handleLocaleSelect(value: string) {
+  async function handleLocaleSelect(value: string): Promise<void> {
     const safeLocale = i18n.toSupportedLocale(value) ?? i18n.FALLBACK_LOCALE;
     locale = safeLocale;
     onLocaleChange?.(safeLocale);
@@ -295,7 +295,7 @@
     }
   }
 
-  async function handleTabChange(tab: "account" | "profile" | "reader" | "appTheme" | "about") {
+  async function handleTabChange(tab: "account" | "profile" | "reader" | "appTheme" | "about"): Promise<void> {
     activeTab = tab;
     if (tab === "profile") {
       await loadProfileData();
@@ -306,17 +306,17 @@
     }
   }
 
-  function openResetModal(tab: "account" | "reader" | "appTheme") {
+  function openResetModal(tab: "account" | "reader" | "appTheme"): void {
     pendingResetTab = tab;
     showResetModal = true;
   }
 
-  function closeResetModal() {
+  function closeResetModal(): void {
     showResetModal = false;
     pendingResetTab = null;
   }
 
-  async function confirmReset() {
+  async function confirmReset(): Promise<void> {
     if (pendingResetTab === "account") {
       preferredTheme = DEFAULT_VALUES.preferredTheme;
       preferredFontScale = DEFAULT_VALUES.preferredFontScale;

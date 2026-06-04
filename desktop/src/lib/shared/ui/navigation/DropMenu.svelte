@@ -16,7 +16,7 @@
   }
 
   function handleClickOutside(node: HTMLElement): { destroy(): void } {
-    const handle = (e: MouseEvent) => {
+    const handle = (e: MouseEvent): void => {
       if (node && !node.contains(e.target as Node)) {
         isOpen = false;
       }

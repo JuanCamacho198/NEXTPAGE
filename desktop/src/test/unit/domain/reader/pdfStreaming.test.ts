@@ -80,7 +80,7 @@ function makeMockDocument() {
   } as unknown as Record<string, unknown>;
 }
 
-function resetAllMocks() {
+function resetAllMocks(): void {
   vi.clearAllMocks();
   documentCache.clear();
   mockDestroy.mockResolvedValue(undefined);

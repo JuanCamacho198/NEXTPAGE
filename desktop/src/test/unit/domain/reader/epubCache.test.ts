@@ -18,7 +18,7 @@ import {
   epubCache,
 } from "$lib/features/reader/epub/epubCache";
 
-function resetCache() {
+function resetCache(): void {
   epubCache.clear();
 }
 

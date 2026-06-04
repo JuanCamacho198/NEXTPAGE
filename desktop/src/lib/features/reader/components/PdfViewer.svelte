@@ -240,18 +240,18 @@
   };
 
   // ── Text layer instance helper ──────────────────────────
-  const cancelTextLayer = () => {
+  const cancelTextLayer = (): void => {
     textLayerInstance?.cancel();
     textLayerInstance = null;
   };
 
-  const clearSelectionUi = () => {
+  const clearSelectionUi = (): void => {
     selectionOverlayRects = [];
     onselectionclear?.();
   };
 
   // ── Render cancellation helpers ─────────────────────────
-  const cancelActiveRenderTask = async () => {
+  const cancelActiveRenderTask = async (): void => {
     if (!activeRenderTask) return;
     const task = activeRenderTask;
     activeRenderTask = null;
@@ -261,13 +261,13 @@
 
 
 
-  const destroyActiveLoadingTask = () => {
+  const destroyActiveLoadingTask = (): void => {
     if (!activeLoadingTask) return;
     activeLoadingTask.destroy();
     activeLoadingTask = null;
   };
 
-  const destroyCurrentDocument = async () => {
+  const destroyCurrentDocument = async (): void => {
     if (!pdfDoc) return;
     const current = pdfDoc;
     pdfDoc = null;
@@ -284,12 +284,12 @@
       import.meta.url
     ).toString();
 
-    const handleFullscreenError = () => {
+    const handleFullscreenError = (): void => {
       navigationError = t("pdf.fullscreenUnsupported");
       fullscreenSupported = canUseFullscreenApi();
     };
 
-    const handleSelectionChange = () => {
+    const handleSelectionChange = (): void => {
       const selection = window.getSelection();
       const text = selection?.toString().trim();
       if (!text) {
@@ -336,7 +336,7 @@
   });
 
   // ── Session progress ────────────────────────────────────
-  const emitSessionProgress = (nextPage: number, nextTotal: number) => {
+  const emitSessionProgress = (nextPage: number, nextTotal: number): void => {
     const now = new Date();
     const nextPercent = readProgressPercent(nextPage, nextTotal);
     const startedAt = sessionStartAt;
@@ -373,7 +373,7 @@
     } catch { return null; }
   };
 
-  async function navigateToOutlineItem(item: PdfOutlineItem) {
+  async function navigateToOutlineItem(item: PdfOutlineItem): Promise<void> {
     if (!item.dest) return;
     navigationError = null;
     const page = await resolveDestinationPage(item.dest);
@@ -386,7 +386,7 @@
   }
 
   // ── Load PDF ─────────────────────────────────────────────
-  async function loadPdf() {
+  async function loadPdf(): Promise<void> {
     if (!filePath) return;
 
     const loadRequestId = ++activeLoadRequestId;
@@ -567,11 +567,11 @@
   }
 
   // ── Selection handling ───────────────────────────────────
-  function handleTextSelection() {
+  function handleTextSelection(): void {
     window.setTimeout(updateSelectionState, 10);
   }
 
-  function updateSelectionState() {
+  function updateSelectionState(): void {
     const selection = window.getSelection();
     console.log("PDF Selection Update:", selection?.toString().trim());
 
@@ -673,18 +673,18 @@
     }
   }
 
-  function hideToolbar() {
+  function hideToolbar(): void {
     clearSelectionUi();
     window.getSelection()?.removeAllRanges();
   }
 
-  function dismissHighlightManager() {
+  function dismissHighlightManager(): void {
     activeHighlightId = null;
     activeHighlightColor = "";
     highlightToolbarPos = null;
   }
 
-  function handleHighlightClick(hl: PersistedHighlight, event: MouseEvent) {
+  function handleHighlightClick(hl: PersistedHighlight, event: MouseEvent): void {
     event.stopPropagation();
     if (activeHighlightId === hl.id) { dismissHighlightManager(); return; }
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
@@ -700,14 +700,14 @@
     highlightToolbarPos = { x, y };
   }
 
-  function handleHighlightColorPick(hex: string) {
+  function handleHighlightColorPick(hex: string): void {
     if (!activeHighlightId) return;
     activeHighlightColor = hex;
     onHighlightAction?.({ highlightId: activeHighlightId, action: "updateColor", color: hex });
     dismissHighlightManager();
   }
 
-  function handleHighlightDelete() {
+  function handleHighlightDelete(): void {
     if (!activeHighlightId) return;
     const id = activeHighlightId;
     dismissHighlightManager();
@@ -731,14 +731,11 @@
       if (options?.flash) { flashSearchResult = true; window.setTimeout(() => { flashSearchResult = false; }, 900); }
       return true;
     } catch { navigationError = t("pdf.navigationFailed"); return false; }
-  };
+  };  function goToPrevPage(): void { void navigateToPage(currentPage - 1); }
 
-  function goToPrevPage() { if (currentPage <= 1 || !pdfDoc) return; navigateToPage(currentPage - 1); }
-  function goToNextPage() { if (currentPage >= totalPages || !pdfDoc) return; navigateToPage(currentPage + 1); }
+  function goToNextPage(): void { void navigateToPage(currentPage + 1); }
 
-
-
-  async function toggleFullscreen() {
+  async function toggleFullscreen(): Promise<void> {
     if (onToggleFullscreen) { onToggleFullscreen(); return; }
     if (!canUseFullscreenApi()) { fullscreenSupported = false; navigationError = t("pdf.fullscreenUnsupported"); return; }
     try {
@@ -777,7 +774,7 @@
   });
 
   // ── Wheel zoom ───────────────────────────────────────────
-  function handleViewerWheel(event: WheelEvent) {
+  function handleViewerWheel(event: WheelEvent): void {
     if (!pdfDoc) return;
     if (!event.ctrlKey && !event.metaKey) return;
     if (event.deltaY === 0) return;
@@ -793,7 +790,7 @@
   }
 
   // ── Keyboard navigation ──────────────────────────────────
-  function handleViewerKeydown(event: KeyboardEvent) {
+  function handleViewerKeydown(event: KeyboardEvent): void {
     if (!isViewerFocused) return;
     if ((event.ctrlKey || event.metaKey) && (event.key === "=" || event.key === "+" || event.key === "-")) {
       event.preventDefault();
@@ -809,7 +806,7 @@
     if (intent === "scrollDown") { event.preventDefault(); scrollByVerticalStep(VERTICAL_SCROLL_STEP_PX); }
   }
 
-  function scrollByVerticalStep(delta: number) {
+  function scrollByVerticalStep(delta: number): void {
     const primaryHost = canvasContainer;
     if (primaryHost && canScrollElementInDirection(primaryHost, delta)) {
       primaryHost.scrollBy({ top: delta, behavior: "auto" });
@@ -896,7 +893,7 @@
   export function getCurrentPage() { return currentPage; }
   export function getCurrentFilePath() { return filePath; }
 
-  const handleViewerKeydown_ = (event: KeyboardEvent) => {
+  const handleViewerKeydown_ = (event: KeyboardEvent): void => {
     if (event.key === "ArrowLeft") goToPrevPage();
     else if (event.key === "ArrowRight") goToNextPage();
   };

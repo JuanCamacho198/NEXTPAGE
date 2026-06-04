@@ -3,15 +3,16 @@
   	import { AuthService } from "$lib/services/AuthService";
 	let isLoggingIn = $state(false);
 
-	async function handleLogin() {
+	async function handleLogin(): Promise<void> {
 		try {
 			isLoggingIn = true;
 			console.log('Initiating Google login...');
 			const data = await AuthService.signInWithGoogle();
 			console.log('Google login redirect initiated:', data);
 		} catch (error: unknown) {
-			console.error('Login Error:', error.message);
-			alert(`Login failed: ${error.message}`);
+			const msg = error instanceof Error ? error.message : String(error);
+			console.error('Login Error:', msg);
+			alert(`Login failed: ${msg}`);
 		} finally {
 			isLoggingIn = false;
 		}

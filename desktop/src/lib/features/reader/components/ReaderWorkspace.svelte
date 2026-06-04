@@ -68,7 +68,7 @@
   // Debounced persistence
   let persistTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function handleTextSettingsChange(updated: ReaderSettings) {
+  function handleTextSettingsChange(updated: ReaderSettings): void {
     localReaderSettings = updated;
     if (persistTimer) clearTimeout(persistTimer);
     persistTimer = setTimeout(() => {
@@ -119,14 +119,14 @@
   // EPUB chapter tracking for bookmarks
   let currentEpubChapter = $state(0);
 
-  function handlePdfPageChange(page: number, total: number) {
+  function handlePdfPageChange(page: number, total: number): void {
     currentPdfPage = page;
     totalPdfPages = total;
     onPdfPageChange?.(page, total);
   }
 
   // Track current EPUB chapter from location changes
-  function handleEpubLocationChange(cfi: string, pct: number) {
+  function handleEpubLocationChange(cfi: string, pct: number): void {
     // Extract chapter index from "chapter:{index}" format
     const match = cfi.match(/chapter:(\d+)/);
     if (match) {
@@ -170,7 +170,7 @@
   });
 
   // Sync debug readerInfo when relevant state changes (gated)
-  function syncDebugReaderInfo() {
+  function syncDebugReaderInfo(): void {
     if (debugState.enabled) {
       debugState.readerInfo = {
         format: isPdf ? "pdf" : isEpub ? "epub" : null,
@@ -184,7 +184,7 @@
   }
 
   // Fullscreen toggle using Tauri Window API (reliable in Tauri webview)
-  async function toggleFullscreen() {
+  async function toggleFullscreen(): Promise<void> {
     try {
       await appWindow.setFullscreen(!isFullscreen);
       isFullscreen = !isFullscreen;
@@ -195,27 +195,27 @@
   }
 
   // TOC panel handlers
-  function handleTocReady(entries: TocEntry[]) {
+  function handleTocReady(entries: TocEntry[]): void {
     tocEntries = entries;
     syncDebugReaderInfo();
   }
 
-  function handleTocNavigate(entry: TocEntry) {
+  function handleTocNavigate(entry: TocEntry): void {
     tocNavigate = entry;
     showTocPanel = false;
   }
 
-  function toggleTocPanel() {
+  function toggleTocPanel(): void {
     showTocPanel = !showTocPanel;
     syncDebugReaderInfo();
   }
 
-  function toggleTextSettings() {
+  function toggleTextSettings(): void {
     showTextSettings = !showTextSettings;
     syncDebugReaderInfo();
   }
 
-  function toggleBookmarks() {
+  function toggleBookmarks(): void {
     showBookmarks = !showBookmarks;
     syncDebugReaderInfo();
   }
@@ -259,19 +259,19 @@
     showToolbar = true;
   }
 
-  function handleCopy() {
+  function handleCopy(): void {
     if (selectedText) {
       navigator.clipboard.writeText(selectedText);
     }
     dismissToolbar();
   }
 
-  function handleNote(_text: string) {
+  function handleNote(_text: string): void {
     // Future: save note to highlight
     dismissToolbar();
   }
 
-  async function handleColorSelect(color: string) {
+  async function handleColorSelect(color: string): Promise<void> {
     selectedColor = color;
 
     // Save highlight and persist it visually on the PDF
@@ -342,7 +342,7 @@
     }
   }
 
-  function dismissToolbar() {
+  function dismissToolbar(): void {
     showToolbar = false;
     selectedText = "";
     selectionBounds = null;
@@ -351,7 +351,7 @@
     window.getSelection()?.removeAllRanges();
   }
 
-  function toggleSearch() {
+  function toggleSearch(): void {
     searchPanelOpen = !searchPanelOpen;
     syncDebugReaderInfo();
   }

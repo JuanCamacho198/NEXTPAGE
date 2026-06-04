@@ -20,13 +20,13 @@
 
   let dialogEl: HTMLDivElement | undefined = $state();
 
-  const handleBackdropClick = (e: MouseEvent) => {
+  const handleBackdropClick = (e: MouseEvent): void => {
     if (e.target === e.currentTarget) {
       open = false;
     }
   };
 
-  const handleKeydown = (e: KeyboardEvent) => {
+  const handleKeydown = (e: KeyboardEvent): void => {
     if (e.key === "Escape") {
       open = false;
     }

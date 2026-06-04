@@ -42,7 +42,7 @@ function createPdfStateStore() {
   return {
     subscribe,
 
-    reset(options?: PdfStateOptions) {
+    reset(options?: PdfStateOptions): void {
       set({
         ...defaultSnapshot,
         currentPage: options?.initialPage ?? 1,
@@ -51,7 +51,7 @@ function createPdfStateStore() {
       });
     },
 
-    setDocument(doc: pdfjsLib.PDFDocumentProxy) {
+    setDocument(doc: pdfjsLib.PDFDocumentProxy): void {
       update((s) => ({
         ...s,
         pdfDocument: doc,
@@ -61,7 +61,7 @@ function createPdfStateStore() {
       }));
     },
 
-    setCurrentPage(page: number) {
+    setCurrentPage(page: number): void {
       update((s) => {
         if (page >= 1 && page <= s.totalPages) {
           return { ...s, currentPage: page };
@@ -70,7 +70,7 @@ function createPdfStateStore() {
       });
     },
 
-    setError(err: unknown) {
+    setError(err: unknown): void {
       const readerError = err instanceof ReaderError
         ? err
         : new ReaderError(
@@ -87,30 +87,30 @@ function createPdfStateStore() {
       }));
     },
 
-    setNavigationError(message: string) {
+    setNavigationError(message: string): void {
       update((s) => ({ ...s, navigationError: message }));
     },
 
-    clearNavigationError() {
+    clearNavigationError(): void {
       update((s) => ({ ...s, navigationError: null }));
     },
 
-    setScale(newScale: number) {
+    setScale(newScale: number): void {
       update((s) => ({ ...s, scale: newScale }));
     },
 
-    commitScale() {
+    commitScale(): void {
       update((s) => ({ ...s, committedScale: s.scale }));
     },
 
-    triggerSearchFlash() {
+    triggerSearchFlash(): void {
       update((s) => ({ ...s, flashSearchResult: true }));
       setTimeout(() => {
         update((s) => ({ ...s, flashSearchResult: false }));
       }, 900);
     },
 
-    setCurrentPageObj(page: pdfjsLib.PDFPageProxy | null) {
+    setCurrentPageObj(page: pdfjsLib.PDFPageProxy | null): void {
       update((s) => ({ ...s, currentPageObj: page }));
     },
 

@@ -129,7 +129,7 @@
     progressIndicator: "percentage",
   });
 
-  const applyReaderSettingsToState = (settings: ReaderSettings) => {
+  const applyReaderSettingsToState = (settings: ReaderSettings): void => {
     readerThemeMode = settings.themeMode;
     readerBrightness = settings.brightness;
     readerContrast = settings.contrast;
@@ -150,12 +150,12 @@
     return { message: fallback, recoverable: false };
   };
 
-  function closePanel() {
+  function closePanel(): void {
     if (mode === "page") { onRequestClose?.(); return; }
     isOpen = false;
   }
 
-  async function loadAppSettings() {
+  async function loadAppSettings(): Promise<void> {
     settingsError = null; settingsUnavailable = null;
     try {
       const response = await getSettings();
@@ -176,7 +176,7 @@
     }
   }
 
-  async function loadProfileData() {
+  async function loadProfileData(): Promise<void> {
     isProfileLoading = true; profileError = null;
     try {
       const session = await AuthService.getSession();
@@ -189,7 +189,7 @@
     } finally { isProfileLoading = false; }
   }
 
-  async function saveAppSettings() {
+  async function saveAppSettings(): Promise<void> {
     isSavingSettings = true; settingsError = null; settingsUnavailable = null;
     try {
       await upsertSettings([
@@ -206,7 +206,7 @@
     } finally { isSavingSettings = false; }
   }
 
-  async function handleLocaleSelect(value: string) {
+  async function handleLocaleSelect(value: string): Promise<void> {
     const safeLocale = i18n.toSupportedLocale(value) ?? i18n.FALLBACK_LOCALE;
     locale = safeLocale; onLocaleChange?.(safeLocale);
     settingsError = null; settingsUnavailable = null;
@@ -217,15 +217,17 @@
     }
   }
 
-  async function handleTabChange(tab: SettingsTab) {
+  async function handleTabChange(tab: SettingsTab): Promise<void> {
     activeTab = tab;
     if (tab === "general") await loadProfileData();
     if (tab === "appearance") await loadAppSettings();
   }
 
-  function openResetModal() { showResetModal = true; }
-  function closeResetModal() { showResetModal = false; }
-  async function confirmReset() {
+  function openResetModal(): void { showResetModal = true; }
+
+  function closeResetModal(): void { showResetModal = false; }
+
+  async function confirmReset(): Promise<void> {
     if (activeTab === "general" || activeTab === "appearance") {
       preferredTheme = DEFAULT_VALUES.preferredTheme;
       preferredFontScale = DEFAULT_VALUES.preferredFontScale;
@@ -241,7 +243,7 @@
     await saveAppSettings();
   }
 
-  async function handleClearCache() {
+  async function handleClearCache(): Promise<void> {
     isClearingCache = true;
     try {
       const keysToRemove = [];
@@ -256,9 +258,9 @@
     finally { isClearingCache = false; }
   }
 
-  function handleExportLibrary() { alert('Exportando biblioteca...'); }
+  function handleExportLibrary(): void {}
 
-  async function handleExportHighlights() {
+  async function handleExportHighlights(): Promise<void> {
     isExportingHighlights = true;
     try {
       const mockHighlights = [

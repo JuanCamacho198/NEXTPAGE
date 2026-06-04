@@ -31,7 +31,7 @@ import Modal from "../ui/layout/Modal.svelte";
     book !== null && (title !== book.title || author !== (book.author || ""))
   );
 
-  const handleSave = async () => {
+  const handleSave = async (): void => {
     if (!book || !title.trim()) {
       error = t("library.editMetadata.titleRequired");
       return;

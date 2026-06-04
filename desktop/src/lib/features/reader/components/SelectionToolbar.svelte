@@ -59,21 +59,21 @@
   const toolbarX = $derived(containerRect.left + viewerToolbarX);
   const toolbarY = $derived(containerRect.top + viewerToolbarY);
 
-  function selectColor(hex: string) {
+  function selectColor(hex: string): void {
     selectedColor = hex;
     onColorSelect(hex);
   }
 
-  function handleCopy() {
+  function handleCopy(): void {
     onCopy();
   }
 
-  function handleNoteToggle() {
+  function handleNoteToggle(): void {
     showNoteEditor = !showNoteEditor;
     if (!showNoteEditor) noteText = "";
   }
 
-  function handleSaveNote() {
+  function handleSaveNote(): void {
     if (noteText.trim()) {
       onNote(noteText.trim());
     }

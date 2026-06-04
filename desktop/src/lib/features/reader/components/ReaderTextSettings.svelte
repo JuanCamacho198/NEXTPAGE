@@ -36,7 +36,7 @@
 
   let sidebarEl: HTMLDivElement | undefined = $state();
 
-  function handleBackdropClick(e: MouseEvent) {
+  function handleBackdropClick(e: MouseEvent): void {
     if (e.target === e.currentTarget) onClose();
   }
 
@@ -51,7 +51,7 @@
 
   // ── Helpers ─────────────────────────────────────────
 
-  function changeFontSize(delta: number) {
+  function changeFontSize(delta: number): void {
     const current = readerSettings.epub.fontSize;
     const next = Math.max(80, Math.min(200, current + delta));
     if (next !== current) {
@@ -62,7 +62,7 @@
     }
   }
 
-  function cycleLineHeight() {
+  function cycleLineHeight(): void {
     const current = readerSettings.lineHeight;
     const idx = LINE_HEIGHT_PRESETS.indexOf(current);
     const next = idx >= 0 && idx < LINE_HEIGHT_PRESETS.length - 1
@@ -71,7 +71,7 @@
     onSettingsChange({ ...readerSettings, lineHeight: next });
   }
 
-  function changeLetterSpacing(delta: number) {
+  function changeLetterSpacing(delta: number): void {
     const current = readerSettings.letterSpacing;
     const next = Math.max(-2, Math.min(10, current + delta));
     if (next !== current) {
@@ -79,7 +79,7 @@
     }
   }
 
-  function cycleAlignment() {
+  function cycleAlignment(): void {
     const current = readerSettings.textAlign;
     const idx = ALIGN_CYCLE.indexOf(current);
     const next = idx >= 0 && idx < ALIGN_CYCLE.length - 1
@@ -88,7 +88,7 @@
     onSettingsChange({ ...readerSettings, textAlign: next });
   }
 
-  function cycleParagraphSpacing() {
+  function cycleParagraphSpacing(): void {
     const current = readerSettings.paragraphSpacing;
     const idx = PARAGRAPH_SPACING_PRESETS.indexOf(current);
     const next = idx >= 0 && idx < PARAGRAPH_SPACING_PRESETS.length - 1
@@ -97,7 +97,7 @@
     onSettingsChange({ ...readerSettings, paragraphSpacing: next });
   }
 
-  function cycleMargins() {
+  function cycleMargins(): void {
     const current = readerSettings.margins;
     const idx = MARGIN_PRESETS.findIndex(
       (m) => m.top === current.top && m.bottom === current.bottom && m.left === current.left && m.right === current.right,
@@ -108,7 +108,7 @@
     onSettingsChange({ ...readerSettings, margins: next });
   }
 
-  function resetToDefaults() {
+  function resetToDefaults(): void {
     const defaults = getDefaultReaderSettings();
     onSettingsChange(defaults);
   }

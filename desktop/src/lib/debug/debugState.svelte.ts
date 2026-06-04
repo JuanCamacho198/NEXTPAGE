@@ -27,7 +27,7 @@ class DebugState {
   readerInfo: DebugReaderInfo = $state(null);
   selection: DebugSelectionInfo = $state(null);
 
-  resetSelection() {
+  resetSelection(): void {
     this.selection = null;
   }
 }

@@ -12,7 +12,7 @@ function getInitialTheme(): Theme {
   return "dark";
 }
 
-function applyThemeToDom(value: Theme) {
+function applyThemeToDom(value: Theme): void {
   document.documentElement.setAttribute("data-theme", value);
   if (typeof localStorage !== "undefined") {
     localStorage.setItem(STORAGE_KEY, value);

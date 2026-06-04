@@ -35,7 +35,7 @@ export class FileSystemError extends AppError {
  * Centralized error handler for the application.
  * Processes errors, logs them, and updates the global error state for UI feedback.
  */
-export const handleError = (error: unknown, source: ErrorSource = "app_shell") => {
+export const handleError = (error: unknown, source: ErrorSource = "app_shell"): ErrorEvent => {
   let appError: AppError;
 
   if (error instanceof AppError) {

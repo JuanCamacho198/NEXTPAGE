@@ -103,6 +103,45 @@ vi.mock("$lib/services/BulkImportService", () => {
   };
 });
 
+type BookLike = {
+  id: string;
+  title?: string;
+  filePath: string;
+  format: string;
+  currentPage?: number;
+  totalPages?: number;
+  minutesRead?: number;
+  coverPath: string | null;
+  author: string;
+  collectionIds: number[];
+  progressPercentage: number;
+};
+
+type BareBook = {
+  id: string;
+  filePath?: string;
+  format?: string;
+  title?: string;
+  currentPage?: number;
+  totalPages?: number;
+};
+
+function asBook(obj: BareBook): BookLike {
+  return {
+    id: obj.id,
+    title: obj.title ?? "",
+    filePath: obj.filePath ?? "",
+    format: obj.format ?? "",
+    currentPage: obj.currentPage ?? 0,
+    totalPages: obj.totalPages ?? 0,
+    minutesRead: 0,
+    coverPath: null,
+    author: "",
+    collectionIds: [],
+    progressPercentage: 0,
+  };
+}
+
 function resetAppState(): void {
   appState.route = "home";
   appState.previewBookId = null;
@@ -149,7 +188,7 @@ describe("AppState", () => {
 
   it("startReading preloadedBytes is populated for EPUB", async () => {
     appState.preloadedBytes = { filePath: "/old.epub", data: new Uint8Array([1, 2, 3]) };
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
+    const book = asBook({ id: "b1", title: "Test", filePath: "/test.epub", format: "epub" }) as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     // The old preloadedBytes was cleared, then new preload populated it
     expect(appState.preloadedBytes).not.toBeNull();
@@ -157,26 +196,26 @@ describe("AppState", () => {
   });
 
   it("startReading sets route to reader", async () => {
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
+    const book = asBook({ id: "b1", title: "Test", filePath: "/test.epub", format: "epub" }) as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     expect(appState.route).toBe("reader");
   });
 
   it("startReading sets activeReadingBookId", async () => {
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
+    const book = asBook({ id: "b1", title: "Test", filePath: "/test.epub", format: "epub" }) as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     expect(appState.activeReadingBookId).toBe("b1");
   });
 
   it("startReading fires readFile for EPUB preload", async () => {
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
+    const book = asBook({ id: "b1", title: "Test", filePath: "/test.epub", format: "epub" }) as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     expect(mockReadFile).toHaveBeenCalledWith("/test.epub");
   });
 
   it("startReading preloadedBytes is populated asynchronously for EPUB", async () => {
     mockReadFile.mockResolvedValueOnce(new Uint8Array([10, 20, 30]));
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
+    const book = asBook({ id: "b1", title: "Test", filePath: "/test.epub", format: "epub" }) as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     await vi.waitFor(() => {
       expect(appState.preloadedBytes).not.toBeNull();
@@ -187,20 +226,20 @@ describe("AppState", () => {
 
   it("startReading preload failure does not throw for EPUB", async () => {
     mockReadFile.mockRejectedValueOnce(new Error("EPUB load failed"));
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
+    const book = asBook({ id: "b1", title: "Test", filePath: "/test.epub", format: "epub" }) as unknown as Parameters<typeof appState.startReading>[0];
     await expect(appState.startReading(book)).resolves.toBeUndefined();
     expect(appState.preloadedBytes).toBeNull();
   });
 
   it("startReading fires readFile for PDF preload", async () => {
-    const book = { id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" } as any;
+    const book = asBook({ id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" }) as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     expect(mockReadFile).toHaveBeenCalledWith("/test.pdf");
   });
 
   it("startReading preloadedBytes is populated asynchronously for PDF", async () => {
     mockReadFile.mockResolvedValueOnce(new Uint8Array([99, 98, 97]));
-    const book = { id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" } as any;
+    const book = asBook({ id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" }) as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     await vi.waitFor(() => {
       expect(appState.preloadedBytes).not.toBeNull();
@@ -211,19 +250,19 @@ describe("AppState", () => {
 
   it("startReading preload failure does not throw for PDF", async () => {
     mockReadFile.mockRejectedValueOnce(new Error("PDF load failed"));
-    const book = { id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" } as any;
+    const book = asBook({ id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" }) as unknown as Parameters<typeof appState.startReading>[0];
     await expect(appState.startReading(book)).resolves.toBeUndefined();
     expect(appState.preloadedBytes).toBeNull();
   });
 
   it("startReading with EPUB calls getProgress for location and percentage", async () => {
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
+    const book = asBook({ id: "b1", title: "Test", filePath: "/test.epub", format: "epub" }) as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     expect(mockGetProgress).toHaveBeenCalledWith("b1");
   });
 
   it("startReading with PDF does not call getProgress", async () => {
-    const book = { id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" } as any;
+    const book = asBook({ id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" }) as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     expect(mockGetProgress).not.toHaveBeenCalled();
   });
@@ -273,7 +312,7 @@ describe("AppState", () => {
 
   it("getBookById returns matching book", () => {
     appState.books = [
-      { id: "1", title: "Test Book", filePath: "", format: "pdf", currentPage: 10, totalPages: 100 } as any,
+      asBook({ id: "1", title: "Test Book", filePath: "", format: "pdf", currentPage: 10, totalPages: 100 }) as unknown as Parameters<typeof appState.startReading>[0],
     ];
     const found = appState.getBookById("1");
     expect(found).toBeTruthy();
@@ -318,7 +357,7 @@ describe("AppState", () => {
   });
 
   it("mapCommandError extracts commandError when present", () => {
-    const err = new Error("wrapped") as any;
+    const err = new Error("wrapped") as Error & { commandError?: { code: string; message: string; recoverable: boolean } };
     err.commandError = { code: "NOT_FOUND", message: "Book not found", recoverable: true };
     expect(appState.mapCommandError(err)).toEqual({
       code: "NOT_FOUND",
@@ -340,16 +379,16 @@ describe("AppState", () => {
   });
 
   it("hasResolvedCoverPath checks non-empty coverPath", () => {
-    expect(appState.hasResolvedCoverPath({ coverPath: "/path.jpg" } as any)).toBe(true);
-    expect(appState.hasResolvedCoverPath({ coverPath: "" } as any)).toBe(false);
-    expect(appState.hasResolvedCoverPath({ coverPath: "   " } as any)).toBe(false);
-    expect(appState.hasResolvedCoverPath({ coverPath: null } as any)).toBe(false);
+    expect(appState.hasResolvedCoverPath({ coverPath: "/path.jpg" })).toBe(true);
+    expect(appState.hasResolvedCoverPath({ coverPath: "" })).toBe(false);
+    expect(appState.hasResolvedCoverPath({ coverPath: "   " })).toBe(false);
+    expect(appState.hasResolvedCoverPath({ coverPath: null })).toBe(false);
   });
 
   it("shouldGeneratePdfCover only for PDFs without cover", () => {
-    const pdf = { id: "1", format: "pdf", coverPath: null, filePath: "/t.pdf" } as any;
-    const epub = { id: "2", format: "epub", coverPath: null, filePath: "/t.epub" } as any;
-    const withCover = { id: "3", format: "pdf", coverPath: "/c.jpg", filePath: "/t.pdf" } as any;
+    const pdf = asBook({ id: "1", format: "pdf", filePath: "/t.pdf" }) as unknown as Parameters<typeof appState.shouldGeneratePdfCover>[0];
+    const epub = asBook({ id: "2", format: "epub", filePath: "/t.epub" }) as unknown as Parameters<typeof appState.shouldGeneratePdfCover>[0];
+    const withCover = { ...asBook({ id: "3", format: "pdf", filePath: "/t.pdf" }), coverPath: "/c.jpg" } as unknown as Parameters<typeof appState.shouldGeneratePdfCover>[0];
     expect(appState.shouldGeneratePdfCover(pdf)).toBe(true);
     expect(appState.shouldGeneratePdfCover(epub)).toBe(false);
     expect(appState.shouldGeneratePdfCover(withCover)).toBe(false);
@@ -358,12 +397,12 @@ describe("AppState", () => {
   // ─── Shelf operations ───
 
   it("openDetails sets previewBookId", () => {
-    appState.openDetails({ id: "b1" } as any);
+    appState.openDetails(asBook({ id: "b1" }) as unknown as Parameters<typeof appState.openDetails>[0]);
     expect(appState.previewBookId).toBe("b1");
   });
 
   it("openShelfDetails sets preview and shelf details", () => {
-    appState.openShelfDetails({ id: "b1" } as any);
+    appState.openShelfDetails(asBook({ id: "b1" }) as unknown as Parameters<typeof appState.openShelfDetails>[0]);
     expect(appState.previewBookId).toBe("b1");
     expect(appState.shelfDetailsBookId).toBe("b1");
   });
@@ -392,7 +431,7 @@ describe("AppState", () => {
   });
 
   it("handleShelfQueryInput and clearShelfQuery", () => {
-    appState.handleShelfQueryInput({ target: { value: "search term" } } as any);
+    appState.handleShelfQueryInput({ target: { value: "search term" } } as unknown as Event);
     expect(appState.shelfQueryState.rawQuery).toBe("search term");
     appState.clearShelfQuery();
     expect(appState.shelfQueryState.rawQuery).toBe("");
@@ -420,8 +459,8 @@ describe("AppState", () => {
   // ─── Settings / config ───
 
   it("handleReaderSettingsChange updates settings", () => {
-    const s = { themeMode: "night", brightness: 50 } as any;
-    appState.handleReaderSettingsChange(s);
+    const s: Record<string, unknown> = { themeMode: "night", brightness: 50 };
+    appState.handleReaderSettingsChange(s as Parameters<typeof appState.handleReaderSettingsChange>[0]);
     expect(appState.readerSettings).toStrictEqual(s);
   });
 
@@ -433,7 +472,7 @@ describe("AppState", () => {
   // ─── Search ───
 
   it("handleSearchJump sets target", () => {
-    appState.handleSearchJump({ locator: "page=42" } as any);
+    appState.handleSearchJump({ locator: "page=42" } as Parameters<typeof appState.handleSearchJump>[0]);
     expect(appState.searchTargetLocator).toBe("page=42");
   });
 
@@ -460,7 +499,7 @@ describe("AppState", () => {
   // ─── i18n helper ───
 
   it("t() calls i18n.t with current locale", () => {
-    const result = appState.t("home.title" as any);
+    const result = appState.t("home.title" as Parameters<typeof appState.t>[0]);
     expect(typeof result).toBe("string");
   });
 
@@ -488,15 +527,17 @@ describe("AppState — Preload edge cases", () => {
 
   it("preloadedBytes persists across state changes until overwritten", () => {
     appState.preloadedBytes = { filePath: "/book.pdf", data: new Uint8Array([1, 2]) };
-    appState.route = "foo" as any;
+    appState.route = "foo" as AppStateRoute;
     expect(appState.preloadedBytes).toEqual({ filePath: "/book.pdf", data: new Uint8Array([1, 2]) });
   });
 
   it("startReading clears preloadedBytes even if readFile fails for EPUB", async () => {
     mockReadFile.mockRejectedValueOnce(new Error("fail"));
     appState.preloadedBytes = { filePath: "/old.epub", data: new Uint8Array([9, 9, 9]) };
-    const book = { id: "b1", filePath: "/new.epub", format: "epub" } as any;
+    const book = asBook({ id: "b1", filePath: "/new.epub", format: "epub" }) as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     expect(appState.preloadedBytes).toBeNull();
   });
 });
+
+type AppStateRoute = "home" | "library" | "stats" | "reader" | "highlights" | "settings";

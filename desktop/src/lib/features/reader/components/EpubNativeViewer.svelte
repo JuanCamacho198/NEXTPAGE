@@ -202,8 +202,11 @@
 
       await renderChapter(currentChapterIndex);
 
+      // Index EPUB text for full-text search.
+      // The Rust command `index_epub_text` (camelCase: `indexEpubText`) reads the
+      // cached chapter files and indexes into FTS5.
       invoke('indexEpubText', { bookId }).catch((err: unknown) => {
-        console.warn('Failed to index EPUB text:', err);
+        console.warn('Failed to index EPUB text for search', err);
       });
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);

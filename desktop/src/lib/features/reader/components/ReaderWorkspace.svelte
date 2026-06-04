@@ -90,9 +90,11 @@
   });
 
   // Sync from prop on initial load / external change
+  // NOTE: JSON parse/stringify instead of structuredClone because Svelte 5 $state
+  // proxies have internal slots that structuredClone cannot serialize.
   $effect(() => {
     if (readerSettings) {
-      localReaderSettings = structuredClone(readerSettings);
+      localReaderSettings = JSON.parse(JSON.stringify(readerSettings));
     }
   });
 

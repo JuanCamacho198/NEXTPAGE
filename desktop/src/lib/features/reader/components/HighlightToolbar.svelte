@@ -32,7 +32,7 @@
     selectedText.trim().length > 140 ? `${selectedText.trim().slice(0, 140)}...` : selectedText.trim()
   );
 
-  function hasResolvableSelectionContext() {
+  function hasResolvableSelectionContext(): void {
     if (!selectedText.trim() || !bookId.trim() || isSaving || !hasSelectionAnchor) {
       return false;
     }

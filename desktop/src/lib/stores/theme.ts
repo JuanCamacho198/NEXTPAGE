@@ -23,7 +23,7 @@ function applyThemeToDom(value: Theme): void {
 export const theme = writable<Theme>(getInitialTheme());
 
 /** Toggle between dark and light, persists to localStorage */
-export function toggleTheme() {
+export function toggleTheme(): void {
   theme.update((current) => {
     const next = current === "dark" ? "light" : "dark";
     applyThemeToDom(next);
@@ -32,7 +32,7 @@ export function toggleTheme() {
 }
 
 /** Call once in onMount to apply the stored theme to the DOM */
-export function initTheme() {
+export function initTheme(): void {
   theme.subscribe((value) => {
     applyThemeToDom(value);
   });

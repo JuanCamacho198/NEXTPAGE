@@ -36,7 +36,7 @@ const defaultSnapshot: PdfStateSnapshot = {
   flashSearchResult: false,
 };
 
-function createPdfStateStore() {
+function createPdfStateStore(): void {
   const { subscribe, set, update } = writable<PdfStateSnapshot>(defaultSnapshot);
 
   return {

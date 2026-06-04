@@ -8,7 +8,7 @@ export type BookmarkItem = {
   createdAt: string;
 };
 
-export function createBookmarksState() {
+export function createBookmarksState(): void {
   let bookmarksList = $state<BookmarkItem[]>([]);
   let bookmarksLoading = $state(false);
 

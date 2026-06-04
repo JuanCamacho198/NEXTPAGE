@@ -69,7 +69,7 @@ import {
   documentCache,
 } from "$lib/features/reader/pdf/pdfStreaming";
 
-function makeMockDocument() {
+function makeMockDocument(): void {
   return {
     numPages: 10,
     destroy: mockDestroy,

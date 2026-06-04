@@ -34,7 +34,7 @@ vi.mock("pdfjs-dist", () => ({
 import { SafeTextLayer, type SafeTextLayerParams } from "$lib/features/reader/pdf/safeTextLayer";
 
 // ── Helpers ───────────────────────────────────────────────
-function createViewport(overrides: Partial<{ scale: number; width: number; height: number }> = {}) {
+function createViewport(overrides: Partial<{ scale: number; width: number; height: number }> = {}): void {
   return { scale: 1.5, width: 800, height: 1100, ...overrides };
 }
 

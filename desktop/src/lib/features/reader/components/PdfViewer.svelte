@@ -821,7 +821,7 @@
   }
 
   // ── Scale ────────────────────────────────────────────────
-  export async function setScale(newScale: number) {
+  export async function setScale(newScale: number): Promise<void> {
     const nextScale = clampPdfScale(newScale);
     if (Math.abs(nextScale - scale) <= ZOOM_EPSILON) return;
     scale = nextScale;

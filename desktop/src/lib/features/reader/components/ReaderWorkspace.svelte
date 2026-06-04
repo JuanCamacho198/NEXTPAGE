@@ -15,7 +15,7 @@
   import DebugToggle from "$lib/debug/DebugToggle.svelte";
   import DebugPanel from "$lib/debug/DebugPanel.svelte";
   import { createFocusTrap } from "$lib/shared/utils/focusTrap";
-  import { createBookmarksState } from "../stores/bookmarksState.svelte";
+  import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 
   type ActiveBook = LibraryBookDto & { filePath: string };
 
@@ -155,35 +155,16 @@
     }
   }
 
-  // Fullscreen toggle
+  // Fullscreen toggle using Tauri Window API (reliable in Tauri webview)
   async function toggleFullscreen() {
-    if (!workspaceRoot) {
-      return;
-    }
-
     try {
-      if (document.fullscreenElement === workspaceRoot) {
-        await document.exitFullscreen();
-      } else {
-        await workspaceRoot.requestFullscreen();
-      }
-    } catch {
-      // Fullscreen not supported
-    }
-
-    isFullscreen = document.fullscreenElement === workspaceRoot;
-    syncDebugReaderInfo();
-  }
-
-  // Listen for fullscreen changes from browser (Esc key, etc.)
-  $effect(() => {
-    const handler = () => {
-      isFullscreen = document.fullscreenElement === workspaceRoot;
+      await appWindow.setFullscreen(!isFullscreen);
+      isFullscreen = !isFullscreen;
       syncDebugReaderInfo();
-    };
-    document.addEventListener("fullscreenchange", handler);
-    return () => document.removeEventListener("fullscreenchange", handler);
-  });
+    } catch {
+      console.warn('Tauri fullscreen API not available');
+    }
+  }
 
   // TOC panel handlers
   function handleTocReady(entries: TocEntry[]) {

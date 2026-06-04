@@ -11,6 +11,7 @@
     id: string;
     label: string;
     href: string;
+    depth?: number;
   }
 
   interface EpubMetadataExtract {
@@ -27,6 +28,7 @@
     index: number;
     html: string;
     mime: string;
+    chapterBasePath: string;
   }
 
   type Props = {
@@ -83,6 +85,8 @@
   let error = $state<string | null>(null);
   let iframeEl = $state<HTMLIFrameElement | null>(null);
   let totalChapters = $state(0);
+  let zoomLevel = $state(100);
+  let zoomContainerEl = $state<HTMLDivElement | null>(null);
 
   // Reader settings
   let fontSize = $state(100);
@@ -93,7 +97,13 @@
   // ─── Iframe selection message handler ─────────────────────
   function handleSelectionMessage(event: MessageEvent) {
     if (event.data?.type !== 'epub-selection') return;
-    if (!event.data.text) return;
+
+    // Empty text from iframe means selection was cleared → notify parent
+    if (!event.data.text) {
+      onselectionclear?.();
+      return;
+    }
+
     if (!onselection) return;
 
     onselection({
@@ -121,7 +131,7 @@
     themeMode = readerSettings.themeMode;
   });
 
-  // ─── Re-render chapter when settings or chapter changes ──
+  // ─── Re-render chapter when settings change ──
   $effect(() => {
     if (metadata && !isLoading) {
       renderChapter(currentChapterIndex);
@@ -158,12 +168,12 @@
         currentChapterIndex = Math.min(chapterGuess, totalChapters - 1);
       }
 
-      // Emit TOC entries to parent
+      // Emit TOC entries to parent with depth from backend
       if (onTocReady) {
         const entries = meta.chapters.map((ch) => ({
           id: ch.id,
           title: ch.label,
-          depth: 0,
+          depth: ch.depth ?? 0,
         }));
         onTocReady(entries);
       }
@@ -181,6 +191,16 @@
     }
   }
 
+  // ─── Parse chapter head for CSS ──────────────────────────
+  function extractChapterHead(chapterHtml: string): string {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(chapterHtml, 'text/html');
+    const headChildren = Array.from(doc.head.childNodes).filter(
+      (n) => n.nodeName === 'LINK' || n.nodeName === 'STYLE'
+    );
+    return headChildren.map((n) => (n as Element).outerHTML).join('\n');
+  }
+
   // ─── Render Chapter ──────────────────────────────────────
   async function renderChapter(index: number) {
     if (!metadata || !iframeEl) return;
@@ -193,11 +213,18 @@
 
       currentChapterIndex = index;
 
-      // Build the base URL using Tauri asset protocol
-      const baseUrl = convertFileSrc(metadata.resourcesPath) + '/';
+      // Build the base URL: combine resources root + chapter's relative directory
+      // This ensures relative URLs (../images/foo.jpg) resolve correctly
+      const resourcesUrl = convertFileSrc(metadata.resourcesPath) + '/';
+      const baseUrl = chapterData.chapterBasePath
+        ? resourcesUrl + chapterData.chapterBasePath + '/'
+        : resourcesUrl;
 
       // Build theme CSS
       const themeCss = getThemeStyles();
+
+      // Extract chapter head elements (link, style) to preserve EPUB author CSS
+      const chapterHeadCss = extractChapterHead(chapterData.html);
 
       // Build selection detection script injected into iframe
       const selectionScript = `
@@ -239,14 +266,18 @@
     }
   });
 })();
-<\/script>`;
+<\\/script>`;
 
-      // Create srcdoc with base tag + theme + content + selection script
+      // Clean the chapter body HTML: remove the original <head> content since we inject our own
+      const bodyHtml = stripHeadFromHtml(chapterData.html);
+
+      // Create srcdoc with base tag + EPUB author CSS + theme + content + selection script
       const srcdoc = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <base href="${baseUrl}">
+  ${chapterHeadCss}
   <style>
     ${themeCss}
     html { overflow-y: auto; }
@@ -263,7 +294,7 @@
   </style>
 </head>
 <body>
-  ${chapterData.html}
+  ${bodyHtml}
   ${selectionScript}
 </body>
 </html>`;
@@ -277,6 +308,17 @@
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
     }
+  }
+
+  // ─── Strip <head> from chapter HTML (keep only <body> content) ──
+  function stripHeadFromHtml(html: string): string {
+    // Simple approach: extract everything between <body> and </body>
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    if (bodyMatch && bodyMatch[1]) {
+      return bodyMatch[1];
+    }
+    // Fallback: if no body tags, return the whole HTML (the srcdoc already wraps it)
+    return html;
   }
 
   // ─── Navigation ──────────────────────────────────────────
@@ -295,6 +337,33 @@
   function goToChapter(index: number) {
     if (index >= 0 && index < totalChapters) {
       renderChapter(index);
+    }
+  }
+
+  // ─── Zoom ─────────────────────────────────────────────────
+  function changeZoom(delta: number) {
+    const newZoom = Math.max(50, Math.min(200, zoomLevel + delta));
+    if (newZoom !== zoomLevel) {
+      zoomLevel = newZoom;
+    }
+  }
+
+  function resetZoom() {
+    zoomLevel = 100;
+  }
+
+  function handleWheel(e: WheelEvent) {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -5 : 5;
+    changeZoom(delta);
+  }
+
+  function handleZoomKeydown(e: KeyboardEvent) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+' || e.key === '-')) {
+      e.preventDefault();
+      const step = e.key === '-' ? -10 : 10;
+      changeZoom(step);
     }
   }
 
@@ -350,13 +419,24 @@
       {t('epub.error')}: {error}
     </div>
   {:else}
-    <!-- Chapter iframe -->
-    <div class="flex-1 w-full h-full overflow-hidden" style="background: {getThemeBgColor()};">
-      <iframe
-        bind:this={iframeEl}
-        class="w-full h-full border-none"
-        title="chapter"
-      ></iframe>
+    <!-- Chapter iframe with zoom support -->
+    <div
+      class="flex-1 w-full h-full overflow-hidden"
+      style="background: {getThemeBgColor()};"
+      bind:this={zoomContainerEl}
+      onwheel={handleWheel}
+      onkeydown={handleZoomKeydown}
+    >
+      <div
+        class="w-full h-full origin-top-left transition-transform duration-200 ease-out"
+        style="transform: scale({zoomLevel / 100}); width: {10000 / zoomLevel}%; height: {10000 / zoomLevel}%;"
+      >
+        <iframe
+          bind:this={iframeEl}
+          class="w-full h-full border-none"
+          title="chapter"
+        ></iframe>
+      </div>
     </div>
 
     <!-- Minimal overlay navigation (bottom) -->
@@ -382,6 +462,38 @@
           class="disabled:opacity-30 cursor-pointer hover:text-(--color-accent)"
         >
           {t('epub.next')} →
+        </button>
+
+        <!-- Zoom controls -->
+        <span class="w-px h-4 bg-white/20 mx-1"></span>
+
+        <button
+          type="button"
+          onclick={() => changeZoom(-10)}
+          disabled={zoomLevel <= 50}
+          class="disabled:opacity-30 cursor-pointer hover:text-(--color-accent) font-bold"
+          title={t('pdf.zoomLevel', { level: zoomLevel })}
+        >
+          −
+        </button>
+
+        <button
+          type="button"
+          onclick={resetZoom}
+          class="cursor-pointer hover:text-(--color-accent) min-w-10 text-center"
+          title={t('pdf.zoomLevel', { level: zoomLevel })}
+        >
+          {zoomLevel}%
+        </button>
+
+        <button
+          type="button"
+          onclick={() => changeZoom(10)}
+          disabled={zoomLevel >= 200}
+          class="disabled:opacity-30 cursor-pointer hover:text-(--color-accent) font-bold"
+          title={t('pdf.zoomLevel', { level: zoomLevel })}
+        >
+          +
         </button>
       </div>
     </div>

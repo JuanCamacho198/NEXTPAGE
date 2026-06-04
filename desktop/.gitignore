@@ -10,6 +10,8 @@ Desktop.ini
 *.swo
 *.swn
 *.swn
+--project
+engram-export.json
 *~
 
 # Build

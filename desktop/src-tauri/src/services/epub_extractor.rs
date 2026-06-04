@@ -11,6 +11,7 @@ pub struct EpubChapterMeta {
     pub id: String,
     pub label: String,
     pub href: String,
+    pub depth: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,6 +33,8 @@ pub struct EpubChapterContent {
     pub index: usize,
     pub html: String,
     pub mime: String,
+    /// Relative directory path of the chapter within the resources cache, used for `<base href>`
+    pub chapter_base_path: String,
 }
 
 #[derive(Debug)]
@@ -164,10 +167,19 @@ impl EpubExtractor {
         let html = fs::read_to_string(&chapter_abs_path)
             .map_err(|e| format!("Failed to read chapter {}: {}", chapter_index, e))?;
 
+        // Compute the chapter's base path: the directory of the chapter's relative path
+        // within the resources cache. Used by the frontend to set `<base href>` so that
+        // relative URLs (../images/foo.jpg) resolve correctly.
+        let chapter_base_path = std::path::Path::new(chapter_rel_path)
+            .parent()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_default();
+
         Ok(EpubChapterContent {
             index: chapter_index,
             html,
             mime: "application/xhtml+xml".to_string(),
+            chapter_base_path,
         })
     }
 
@@ -206,10 +218,11 @@ impl EpubExtractor {
                 id: index.to_string(),
                 label: nav.label.clone(),
                 href: content_str.to_string(),
+                depth: 0,
             });
 
-            // Add children recursively — children also use the spine map
-            Self::add_child_toc(&nav.children, &mut chapters, spine_map, index + 1);
+            // Add children recursively with depth + 1
+            Self::add_child_toc(&nav.children, &mut chapters, spine_map, index + 1, 0);
         }
         chapters
     }
@@ -219,7 +232,9 @@ impl EpubExtractor {
         chapters: &mut Vec<EpubChapterMeta>,
         spine_map: &std::collections::HashMap<String, usize>,
         start_index: usize,
+        current_depth: usize,
     ) {
+        let child_depth = current_depth + 1;
         for (i, child) in children.iter().enumerate() {
             let content_str = child.content.to_string_lossy();
             let filename = std::path::Path::new(&content_str.as_ref())
@@ -235,12 +250,14 @@ impl EpubExtractor {
                 id: index.to_string(),
                 label: child.label.clone(),
                 href: content_str.to_string(),
+                depth: child_depth,
             });
             Self::add_child_toc(
                 &child.children,
                 chapters,
                 spine_map,
                 index + 1,
+                child_depth,
             );
         }
     }

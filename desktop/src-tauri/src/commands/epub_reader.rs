@@ -2,7 +2,10 @@ use std::path::PathBuf;
 
 use tauri::{AppHandle, Manager, State};
 
-use crate::services::epub_extractor::{EpubChapterContent, EpubExtractor, EpubMetadataExtract};
+use crate::models::IndexBookTextInput;
+use crate::services::epub_extractor::{
+    extract_plain_texts, EpubChapterContent, EpubExtractor, EpubMetadataExtract,
+};
 use crate::state::AppState;
 
 fn get_cache_dir(app: &AppHandle, book_id: &str) -> PathBuf {
@@ -92,4 +95,38 @@ pub async fn clear_epub_cache(
             .map_err(|e| format!("Failed to clear EPUB cache: {}", e))?;
     }
     Ok(())
+}
+
+/// Index EPUB text for FTS5 search.
+/// Reads cached chapter files, strips HTML, and indexes into FTS5.
+#[tauri::command(rename_all = "camelCase")]
+pub async fn index_epub_text(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    book_id: String,
+) -> Result<(), String> {
+    let cache_dir = get_cache_dir(&app, &book_id);
+    if !cache_dir.exists() {
+        return Err("EPUB not cached — run parse_epub first".to_string());
+    }
+
+    let chunks = extract_plain_texts(&cache_dir)?;
+    if chunks.is_empty() {
+        return Ok(()); // Nothing to index
+    }
+
+    let input = IndexBookTextInput {
+        book_id: book_id.clone(),
+        chunks: chunks
+            .into_iter()
+            .map(|(locator, text_content, chunk_index)| crate::models::IndexBookTextChunkInput {
+                locator,
+                chunk_index,
+                text_content,
+            })
+            .collect(),
+    };
+
+    let mut repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.index_book_text(input).map_err(|e| format!("{}", e))
 }

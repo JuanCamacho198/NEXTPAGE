@@ -47,7 +47,7 @@
     }
   });
 
-  function handleDismiss() {
+  function handleDismiss(): void {
     visible = false;
     timeoutId = null;
     onDismiss?.();

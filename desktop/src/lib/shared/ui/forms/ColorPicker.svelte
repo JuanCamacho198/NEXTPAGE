@@ -26,13 +26,13 @@
     "#00d2d3", // cyan
   ];
 
-  function selectColor(color: string) {
+  function selectColor(color: string): void {
     value = color;
     onchange?.({ value: color });
     isOpen = false;
   }
 
-  function handleInputChange(e: Event) {
+  function handleInputChange(e: Event): void {
     const target = e.target as HTMLInputElement;
     value = target.value;
     onchange?.({ value: target.value });

@@ -2,11 +2,11 @@
   import { errorState } from "$lib/shared/stores/errorState";
   import Button from "../forms/Button.svelte";
 
-  const handleReload = () => {
+  const handleReload = (): void => {
     window.location.reload();
   };
 
-  const handleGoHome = () => {
+  const handleGoHome = (): void => {
     errorState.clearError();
   };
 </script>

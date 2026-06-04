@@ -11,7 +11,7 @@
   import type { ReaderSettings } from "$lib/shared/types";
   import type { LibraryBookDto } from "$lib/shared/types/library";
   import { debugState } from "$lib/debug/debugState.svelte";
-  import { saveHighlight, deleteHighlight } from "$lib/api/tauriClient";
+  import { saveHighlight, deleteHighlight, upsertReaderSettings, getDefaultReaderSettings } from "$lib/api/tauriClient";
   import DebugToggle from "$lib/debug/DebugToggle.svelte";
   import DebugPanel from "$lib/debug/DebugPanel.svelte";
   import { createFocusTrap } from "$lib/shared/utils/focusTrap";
@@ -63,6 +63,34 @@
     onSearch,
     onSearchJump,
   }: Props = $props();
+
+  // ── Local reader settings state (mutable, debounce-persisted) ───
+  let localReaderSettings = $state(structuredClone(readerSettings ?? getDefaultReaderSettings()));
+
+  // Debounced persistence
+  let persistTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function handleTextSettingsChange(updated: ReaderSettings) {
+    localReaderSettings = updated;
+    if (persistTimer) clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => {
+      upsertReaderSettings(updated);
+    }, 500);
+  }
+
+  // Clean up timer on unmount
+  $effect(() => {
+    return () => {
+      if (persistTimer) clearTimeout(persistTimer);
+    };
+  });
+
+  // Sync from prop on initial load / external change
+  $effect(() => {
+    if (readerSettings) {
+      localReaderSettings = structuredClone(readerSettings);
+    }
+  });
 
   // Selection state
   let selectedText = $state("");
@@ -380,7 +408,7 @@
           initialPage={Math.max(1, activeReadingBook.currentPage || 1)}
           searchTargetLocator={searchTargetLocator}
           selectionColor={selectedColor}
-          readerSettings={readerSettings}
+          readerSettings={localReaderSettings}
           preloadedBytes={preloadedBytes?.filePath === activeReadingBook.filePath ? preloadedBytes.data : null}
           onPageChange={handlePdfPageChange}
           onSessionProgress={onPdfSessionProgress}
@@ -408,7 +436,7 @@
           filePath={activeReadingBook.filePath}
           bookId={activeReadingBook.id}
           initialPercentage={percentage}
-          readerSettings={readerSettings}
+          readerSettings={localReaderSettings}
           onLocationContext={onReaderLocationContext}
           onLocationChange={handleEpubLocationChange}
           onTocReady={handleTocReady}
@@ -471,6 +499,8 @@
 <ReaderTextSettings
   open={showTextSettings}
   format={isPdf ? "pdf" : isEpub ? "epub" : "pdf"}
+  readerSettings={localReaderSettings}
+  onSettingsChange={handleTextSettingsChange}
   onClose={() => (showTextSettings = false)}
   {t}
 />

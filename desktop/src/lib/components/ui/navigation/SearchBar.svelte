@@ -17,7 +17,7 @@
 
   let debounceTimer: ReturnType<typeof setTimeout> | undefined = $state(undefined);
 
-  function handleInput(e: Event) {
+  function handleInput(e: Event): void {
     const target = e.target as HTMLInputElement;
     value = target.value;
     clearTimeout(debounceTimer);
@@ -26,7 +26,7 @@
     }, debounce);
   }
 
-  function clear() {
+  function clear(): void {
     value = "";
     clearTimeout(debounceTimer);
     onsearch?.({ value: "" });

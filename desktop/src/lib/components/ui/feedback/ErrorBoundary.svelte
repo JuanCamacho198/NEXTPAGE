@@ -22,7 +22,7 @@
   // For now, we provide a way to manually 'catch' and report.
   // We'll also try to use the window error listener as a fallback if this is the root boundary.
 
-  function reset() {
+  function reset(): void {
     error = null;
   }
 </script>

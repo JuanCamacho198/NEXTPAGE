@@ -3,7 +3,7 @@
 
   let animating = $state(false);
 
-  function handleToggle() {
+  function handleToggle(): void {
     if (animating) return;
     animating = true;
     toggleTheme();

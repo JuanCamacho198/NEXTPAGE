@@ -30,7 +30,7 @@
       .slice(0, 2)
   );
 
-  function handleError() {
+  function handleError(): void {
     isBroken = true;
   }
 </script>

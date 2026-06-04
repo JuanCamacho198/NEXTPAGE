@@ -24,7 +24,7 @@
     }
   });
 
-  const handleDismiss = () => {
+  const handleDismiss = (): void => {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
@@ -32,7 +32,7 @@
     visible = false;
   };
 
-  const handleRetry = () => {
+  const handleRetry = (): void => {
     handleDismiss();
     window.location.reload();
   };

@@ -21,17 +21,17 @@
     oncancel,
   }: Props = $props();
 
-  function handleConfirm() {
+  function handleConfirm(): void {
     open = false;
     onconfirm?.();
   }
 
-  function handleCancel() {
+  function handleCancel(): void {
     open = false;
     oncancel?.();
   }
 
-  function handleBackdropClick(e: MouseEvent) {
+  function handleBackdropClick(e: MouseEvent): void {
     if (e.target === e.currentTarget) {
       handleCancel();
     }

@@ -356,10 +356,11 @@
   <!-- Reading area (centered, fill remaining space) -->
   <div
     class="flex flex-1"
-    class:items-center={!isFullscreen}
+    class:items-center={isPdf && !isFullscreen}
     class:justify-center={!isFullscreen}
-    class:items-stretch={isFullscreen}
+    class:items-stretch={isEpub || isFullscreen}
     class:px-10={!isFullscreen}
+    class:py-6={isEpub && !isFullscreen}
     class:p-0={isFullscreen}
   >
     {#if readerError}
@@ -400,10 +401,11 @@
     {:else if isEpub}
       <!-- White content card for EPUB -->
       <div
-        class="relative rounded-xl bg-white shadow-lg"
+        class="relative overflow-hidden bg-white flex flex-col h-full"
+        class:rounded-xl={!isFullscreen}
+        class:shadow-lg={!isFullscreen}
         class:w-200={!isFullscreen}
         class:w-full={isFullscreen}
-        class:h-full={isFullscreen}
       >
         <EpubNativeViewer
           filePath={activeReadingBook.filePath}

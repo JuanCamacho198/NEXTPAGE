@@ -244,48 +244,64 @@
 
     return themes[themeMode] || themes.paper;
   }
+
+  function getThemeBgColor(): string {
+    const bgs: Record<string, string> = {
+      paper: '#faf8f5',
+      sepia: '#f5eedd',
+      dark: '#1a1a2e',
+    };
+    return bgs[themeMode] || bgs.paper;
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'ArrowLeft') goToPrev();
+    if (e.key === 'ArrowRight') goToNext();
+  }
 </script>
 
-<div class="flex flex-col h-full bg-(--color-background) text-(--color-primary) outline-none">
+<div class="flex flex-col h-full w-full outline-none relative" tabindex="-1" role="presentation" onkeydown={handleKeydown}>
   {#if isLoading}
-    <div class="flex items-center justify-center h-full text-sm">{t('epub.loading')}</div>
+    <div class="flex items-center justify-center h-full text-sm opacity-60">{t('epub.loading')}</div>
   {:else if error}
     <div class="flex items-center justify-center h-full text-sm text-red-600 px-4 text-center">
       {t('epub.error')}: {error}
     </div>
   {:else}
-    <!-- Simple navigation bar -->
-    <div class="flex items-center justify-between px-4 py-1 border-b border-(--color-border) text-xs">
-      <button
-        type="button"
-        onclick={goToPrev}
-        disabled={currentChapterIndex <= 0}
-        class="px-2 py-1 rounded disabled:opacity-30 cursor-pointer hover:bg-(--color-border)/30"
-      >
-        ← {t('epub.previous')}
-      </button>
-
-      <span class="text-(--color-text-muted)">
-        {currentChapterIndex + 1} / {totalChapters}
-      </span>
-
-      <button
-        type="button"
-        onclick={goToNext}
-        disabled={currentChapterIndex >= totalChapters - 1}
-        class="px-2 py-1 rounded disabled:opacity-30 cursor-pointer hover:bg-(--color-border)/30"
-      >
-        {t('epub.next')} →
-      </button>
-    </div>
-
     <!-- Chapter iframe -->
-    <div class="flex-1 overflow-hidden">
+    <div class="flex-1 w-full h-full overflow-hidden" style="background: {getThemeBgColor()};">
       <iframe
         bind:this={iframeEl}
         class="w-full h-full border-none"
         title="chapter"
       ></iframe>
+    </div>
+
+    <!-- Minimal overlay navigation (bottom) -->
+    <div class="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none">
+      <div class="flex items-center gap-4 bg-black/60 backdrop-blur-md text-white px-4 py-2 rounded-full shadow-lg pointer-events-auto text-xs font-medium">
+        <button
+          type="button"
+          onclick={goToPrev}
+          disabled={currentChapterIndex <= 0}
+          class="disabled:opacity-30 cursor-pointer hover:text-(--color-accent)"
+        >
+          ← {t('epub.previous')}
+        </button>
+
+        <span class="opacity-80">
+          {currentChapterIndex + 1} / {totalChapters}
+        </span>
+
+        <button
+          type="button"
+          onclick={goToNext}
+          disabled={currentChapterIndex >= totalChapters - 1}
+          class="disabled:opacity-30 cursor-pointer hover:text-(--color-accent)"
+        >
+          {t('epub.next')} →
+        </button>
+      </div>
     </div>
   {/if}
 </div>

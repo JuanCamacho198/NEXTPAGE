@@ -37,7 +37,7 @@
     onReaderLocationContext?: (ctx: any) => void;
     onSearch?: (query: string, page: number) => void;
     onSearchJump?: (target: any) => void;
-    preloadedBytes?: { filePath: string; data: number[] } | null;
+    preloadedBytes?: { filePath: string; data: Uint8Array } | null;
   };
 
   let {

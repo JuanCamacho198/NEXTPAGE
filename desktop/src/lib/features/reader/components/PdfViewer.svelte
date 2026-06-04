@@ -87,7 +87,7 @@
     onTocReady?: (entries: TocEntry[]) => void;
     externalTocNavigate?: TocEntry | null;
     persistedHighlights?: PersistedHighlight[];
-    preloadedBytes?: number[] | null;
+    preloadedBytes?: Uint8Array | null;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 

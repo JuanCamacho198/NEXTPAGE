@@ -3,7 +3,7 @@
   import type { Book, Rendition } from 'epubjs';
   import ePub from 'epubjs';
   import type { MessageKey } from '$lib/i18n';
-  import { getFileBytes } from '$lib/api/tauriClient';
+  import { readFile } from '@tauri-apps/plugin-fs';
   import type { ReaderSettings, ReaderThemeMode } from '$lib/shared/types';
   import { resolveReaderArrowIntent } from '$lib/features/reader/epub/keyboardNav';
   import {
@@ -29,7 +29,7 @@
     searchTargetLocator?: string | null;
     onLocationContext?: (context: { locator: string; percentage: number }) => void;
     readerSettings?: ReaderSettings;
-    preloadedBytes?: number[] | null;
+    preloadedBytes?: Uint8Array | null;
     onselection?: (event: {
       text: string;
       bounds: { left: number; top: number; right: number; bottom: number };
@@ -251,11 +251,11 @@
       if (cached) {
         epubData = cached.data;
       } else if (preloadedBytes && preloadedBytes.length > 0) {
-        epubData = new Uint8Array(preloadedBytes).buffer;
+        epubData = preloadedBytes.buffer as ArrayBuffer;
         setCachedEpub(filePath, { data: epubData, toc: [], tocLoaded: false });
       } else {
-        const bytes = await getFileBytes(filePath);
-        epubData = new Uint8Array(bytes).buffer;
+        const bytes = await readFile(filePath);
+        epubData = bytes.buffer as ArrayBuffer;
         setCachedEpub(filePath, { data: epubData, toc: [], tocLoaded: false });
       }
 

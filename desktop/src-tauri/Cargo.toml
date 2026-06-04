@@ -23,6 +23,7 @@ tauri-plugin-fs = "2"
 thiserror = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
 zip = "2"
+epub = "2.1"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

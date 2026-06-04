@@ -230,6 +230,20 @@
     tryAttachSelectionListener();
   });
 
+  // --- helpers ---
+  function yieldToEventLoop(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout: ${label} exceeded ${ms}ms`)), ms),
+      ),
+    ]);
+  }
+
   // --- init ---
   async function initEpub() {
     if (!filePath) return;
@@ -245,6 +259,9 @@
         book = null;
       }
 
+      // Yield to event loop so Svelte can paint the loading state before we block
+      await yieldToEventLoop();
+
       const cached = getCachedEpub(filePath);
       let epubData: ArrayBuffer;
 
@@ -254,13 +271,29 @@
         epubData = preloadedBytes.buffer as ArrayBuffer;
         setCachedEpub(filePath, { data: epubData, toc: [], tocLoaded: false });
       } else {
-        const bytes = await readFile(filePath);
+        const bytes = await withTimeout(
+          readFile(filePath),
+          30_000,
+          'readFile',
+        );
         epubData = bytes.buffer as ArrayBuffer;
         setCachedEpub(filePath, { data: epubData, toc: [], tocLoaded: false });
       }
 
-      book = ePub(epubData) as unknown as Book;
-      const metadata = await (book as Book).loaded.metadata;
+      // ePub() is synchronous and can block the main thread for seconds.
+      // Yield before calling it so the UI has rendered the loading state.
+      await yieldToEventLoop();
+
+      book = await withTimeout(
+        Promise.resolve().then(() => ePub(epubData) as unknown as Book),
+        30_000,
+        'ePub parsing',
+      );
+      const metadata = await withTimeout(
+        (book as Book).loaded.metadata,
+        30_000,
+        'metadata loading',
+      );
       console.log('Loaded book:', metadata.title);
 
       const cachedToc = getCachedEpubToc(filePath);

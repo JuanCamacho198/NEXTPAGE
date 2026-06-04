@@ -3,6 +3,7 @@
 
 pub mod bookmarks;
 pub mod collections;
+pub mod epub_reader;
 pub mod files;
 pub mod highlights;
 pub mod library;
@@ -14,6 +15,8 @@ pub mod settings;
 pub use bookmarks::*;
 #[allow(unused_imports)]
 pub use collections::*;
+#[allow(unused_imports)]
+pub use epub_reader::*;
 #[allow(unused_imports)]
 pub use files::*;
 #[allow(unused_imports)]

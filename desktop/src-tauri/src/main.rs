@@ -109,7 +109,12 @@ fn main() {
             commands::report_error_event,
             commands::log_event,
             commands::diagnose,
-            commands::get_logs
+            commands::get_logs,
+            commands::parse_epub,
+            commands::get_epub_chapter,
+            commands::get_epub_resource,
+            commands::is_epub_cached,
+            commands::clear_epub_cache
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

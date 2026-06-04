@@ -1,2 +1,3 @@
+pub mod epub_extractor;
 pub mod job_service;
 pub mod library_service;

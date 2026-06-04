@@ -4,6 +4,7 @@
   import { convertFileSrc } from '@tauri-apps/api/core';
   import type { MessageKey } from '$lib/i18n';
   import type { ReaderSettings, ReaderThemeMode } from '$lib/shared/types';
+  import { indexEpubText } from '$lib/api/tauriClient';
 
   // ─── Types ───────────────────────────────────────────────
   interface EpubChapterMeta {
@@ -42,7 +43,12 @@
       bounds: { left: number; top: number; right: number; bottom: number };
       container: { left: number; top: number; width: number; height: number };
       placement: string;
+      rects?: Array<{ left: number; top: number; width: number; height: number }>;
+      pageNumber?: number;
     }) => void;
+    onselectionclear?: () => void;
+    isFullscreen?: boolean;
+    onToggleFullscreen?: () => void;
     onTocReady?: (entries: Array<{ id: string; title: string; depth: number }>) => void;
     externalTocNavigate?: { id: string } | null;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -62,6 +68,10 @@
       epub: { fontSize: 100, fontFamily: 'serif' },
       selectionColor: '#33bbff',
     },
+    onselection,
+    onselectionclear,
+    isFullscreen = false,
+    onToggleFullscreen,
     onTocReady,
     externalTocNavigate = null,
     t,
@@ -81,10 +91,27 @@
   let themeMode = $state<ReaderThemeMode>('paper');
 
   // ─── Lifecycle ───────────────────────────────────────────
+  // ─── Iframe selection message handler ─────────────────────
+  function handleSelectionMessage(event: MessageEvent) {
+    if (event.data?.type !== 'epub-selection') return;
+    if (!event.data.text) return;
+    if (!onselection) return;
+
+    onselection({
+      text: event.data.text,
+      bounds: event.data.bounds,
+      container: event.data.container,
+      placement: 'epub-chapter',
+      rects: event.data.rects,
+      pageNumber: currentChapterIndex,
+    });
+  }
+
   onMount(() => {
     initReader();
+    window.addEventListener('message', handleSelectionMessage);
     return () => {
-      // cleanup if needed
+      window.removeEventListener('message', handleSelectionMessage);
     };
   });
 
@@ -143,6 +170,11 @@
       }
 
       await renderChapter(currentChapterIndex);
+
+      // Index EPUB text for FTS5 search (fire-and-forget, don't block UX)
+      invoke('indexEpubText', { bookId }).catch((err: unknown) => {
+        console.warn('Failed to index EPUB text:', err);
+      });
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
     } finally {
@@ -168,7 +200,49 @@
       // Build theme CSS
       const themeCss = getThemeStyles();
 
-      // Create srcdoc with base tag + theme + content
+      // Build selection detection script injected into iframe
+      const selectionScript = `
+<script>
+(function() {
+  var timer = null;
+  document.addEventListener('mouseup', function() {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(function() {
+      var sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.toString().trim()) return;
+      var text = sel.toString().trim();
+      var range = sel.getRangeAt(0);
+      var rect = range.getBoundingClientRect();
+      var bounds = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+      var container = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+      var rects = [];
+      for (var i = 0; i < range.getClientRects().length; i++) {
+        var r = range.getClientRects()[i];
+        rects.push({ left: r.left, top: r.top, width: r.width, height: r.height });
+      }
+      window.parent.postMessage({
+        type: 'epub-selection',
+        text: text,
+        bounds: bounds,
+        container: container,
+        rects: rects,
+        pageNumber: ${currentChapterIndex}
+      }, '*');
+    }, 100);
+  });
+  document.addEventListener('selectionchange', function() {
+    var sel = window.getSelection();
+    if (!sel || sel.isCollapsed) {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function() {
+        window.parent.postMessage({ type: 'epub-selection', text: '' }, '*');
+      }, 200);
+    }
+  });
+})();
+<\/script>`;
+
+      // Create srcdoc with base tag + theme + content + selection script
       const srcdoc = `<!DOCTYPE html>
 <html>
 <head>
@@ -191,6 +265,7 @@
 </head>
 <body>
   ${chapterData.html}
+  ${selectionScript}
 </body>
 </html>`;
 
@@ -260,9 +335,17 @@
   }
 </script>
 
-<div class="flex flex-col h-full w-full outline-none relative" tabindex="-1" role="presentation" onkeydown={handleKeydown}>
+<div class="flex flex-col h-full w-full outline-none relative" tabindex="-1" role="presentation" onkeydown={handleKeydown}
+  class:w-full={isFullscreen}
+  class:h-full={isFullscreen}
+>
   {#if isLoading}
-    <div class="flex items-center justify-center h-full text-sm opacity-60">{t('epub.loading')}</div>
+    <div class="flex flex-col items-center justify-center h-full gap-4">
+      <div class="h-1 w-full max-w-48 bg-(--color-border)/20 overflow-hidden rounded-full">
+        <div class="h-full w-1/3 bg-(--color-accent) animate-pulse rounded-full"></div>
+      </div>
+      <span class="text-sm opacity-60">{t('epub.loading')}</span>
+    </div>
   {:else if error}
     <div class="flex items-center justify-center h-full text-sm text-red-600 px-4 text-center">
       {t('epub.error')}: {error}

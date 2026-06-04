@@ -87,10 +87,23 @@
   let currentPdfPage = $state(0);
   let totalPdfPages = $state(0);
 
+  // EPUB chapter tracking for bookmarks
+  let currentEpubChapter = $state(0);
+
   function handlePdfPageChange(page: number, total: number) {
     currentPdfPage = page;
     totalPdfPages = total;
     onPdfPageChange?.(page, total);
+  }
+
+  // Track current EPUB chapter from location changes
+  function handleEpubLocationChange(cfi: string, pct: number) {
+    // Extract chapter index from "chapter:{index}" format
+    const match = cfi.match(/chapter:(\d+)/);
+    if (match) {
+      currentEpubChapter = parseInt(match[1], 10);
+    }
+    onEpubLocationChange?.(cfi, pct);
   }
 
   // Search panel state
@@ -413,9 +426,13 @@
           initialPercentage={percentage}
           readerSettings={readerSettings}
           onLocationContext={onReaderLocationContext}
-          onLocationChange={onEpubLocationChange}
+          onLocationChange={handleEpubLocationChange}
           onTocReady={handleTocReady}
           externalTocNavigate={tocNavigate}
+          onselection={handlePdfSelection}
+          onselectionclear={dismissToolbar}
+          {isFullscreen}
+          onToggleFullscreen={toggleFullscreen}
           {t}
         />
       </div>
@@ -495,7 +512,7 @@
       <div class="flex items-center justify-between border-b border-[#94adce]/5 px-5 py-4">
         <h2 class="text-base font-bold text-[#f8fbff]">{t("reader.bookmark")}</h2>
         <div class="flex items-center gap-2">
-          <button type="button" onclick={() => bookmarksState.addBookmark(activeReadingBook.id, currentPdfPage || 1)} class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-[#49d4ff] text-xs font-bold text-[#0B1120] transition-colors hover:bg-[#38bdf8]" title={t("reader.bookmark")}>
+          <button type="button" onclick={() => bookmarksState.addBookmark(activeReadingBook.id, isEpub ? currentEpubChapter + 1 : currentPdfPage || 1)} class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-[#49d4ff] text-xs font-bold text-[#0B1120] transition-colors hover:bg-[#38bdf8]" title={t("reader.bookmark")}>
             +
           </button>
           <button type="button" onclick={() => (showBookmarks = false)} class="cursor-pointer text-[#8fa3bf] hover:text-white" aria-label={t("settings.close")}>

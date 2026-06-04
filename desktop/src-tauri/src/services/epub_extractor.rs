@@ -209,7 +209,7 @@ impl EpubExtractor {
             });
 
             // Add children recursively — children also use the spine map
-            Self::add_child_toc(&nav.children, &mut chapters, &spine_map, index + 1);
+            Self::add_child_toc(&nav.children, &mut chapters, spine_map, index + 1);
         }
         chapters
     }

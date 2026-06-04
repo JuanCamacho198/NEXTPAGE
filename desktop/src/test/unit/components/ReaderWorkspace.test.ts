@@ -8,11 +8,6 @@ vi.mock("$lib/features/reader/components/PdfViewer.svelte", async () => {
   return { default: mod.default };
 });
 
-vi.mock("$lib/features/reader/components/EpubViewer.svelte", async () => {
-  const mod = await import("../../mocks/MockPdfViewer.svelte");
-  return { default: mod.default };
-});
-
 import ReaderWorkspace from "$lib/features/reader/components/ReaderWorkspace.svelte";
 
 const makeBook = (overrides: Partial<{ format: string; filePath: string }> = {}) => ({

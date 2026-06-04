@@ -3,7 +3,7 @@
   import { invoke } from '@tauri-apps/api/core';
   import { convertFileSrc } from '@tauri-apps/api/core';
   import type { MessageKey } from '$lib/i18n';
-  import type { ReaderSettings, ReaderThemeMode } from '$lib/shared/types';
+  import type { ReaderSettings, ReaderThemeMode, ReaderTextAlign, ReaderDirection } from '$lib/shared/types';
 
   // ─── Types ───────────────────────────────────────────────
   interface EpubChapterMeta {
@@ -68,6 +68,18 @@
       contrast: 100,
       epub: { fontSize: 100, fontFamily: 'serif' },
       selectionColor: '#33bbff',
+      lineHeight: 1.8,
+      letterSpacing: 0,
+      paragraphSpacing: 1,
+      textAlign: 'left' as ReaderTextAlign,
+      direction: 'ltr' as ReaderDirection,
+      hyphenation: false,
+      verticalScrolling: false,
+      margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+      showHeader: true,
+      showFooter: true,
+      showPageNumbers: true,
+      progressIndicator: 'percentage',
     },
     onselection,
     onselectionclear,
@@ -88,17 +100,37 @@
   let zoomLevel = $state(100);
   let zoomContainerEl = $state<HTMLDivElement | null>(null);
 
-  // Reader settings
+  // ─── Reader settings cache (synced from prop for reactivity) ─
   let fontSize = $state(100);
   let fontFamily = $state('serif');
   let themeMode = $state<ReaderThemeMode>('paper');
+  let lineHeight = $state(1.8);
+  let letterSpacing = $state(0);
+  let paragraphSpacing = $state(1);
+  let textAlign = $state<ReaderTextAlign>('left');
+  let direction = $state<ReaderDirection>('ltr');
+  let hyphenation = $state(false);
+  let verticalScrolling = $state(false);
+  let margins = $state<ReaderSettings['margins']>({ top: 1.5, bottom: 1.5, left: 2, right: 2 });
+
+  $effect(() => {
+    fontSize = readerSettings.epub.fontSize ?? 100;
+    fontFamily = readerSettings.epub.fontFamily?.trim() || 'serif';
+    themeMode = readerSettings.themeMode;
+    lineHeight = readerSettings.lineHeight;
+    letterSpacing = readerSettings.letterSpacing;
+    paragraphSpacing = readerSettings.paragraphSpacing;
+    textAlign = readerSettings.textAlign;
+    direction = readerSettings.direction;
+    hyphenation = readerSettings.hyphenation;
+    verticalScrolling = readerSettings.verticalScrolling;
+    margins = readerSettings.margins;
+  });
 
   // ─── Lifecycle ───────────────────────────────────────────
-  // ─── Iframe selection message handler ─────────────────────
   function handleSelectionMessage(event: MessageEvent) {
     if (event.data?.type !== 'epub-selection') return;
 
-    // Empty text from iframe means selection was cleared → notify parent
     if (!event.data.text) {
       onselectionclear?.();
       return;
@@ -124,14 +156,7 @@
     };
   });
 
-  // ─── Sync reader settings ────────────────────────────────
-  $effect(() => {
-    fontSize = readerSettings.epub.fontSize ?? 100;
-    fontFamily = readerSettings.epub.fontFamily?.trim() || 'serif';
-    themeMode = readerSettings.themeMode;
-  });
-
-  // ─── Re-render chapter when settings change ──
+  // ─── Re-render chapter when any layout setting changes ──
   $effect(() => {
     if (metadata && !isLoading) {
       renderChapter(currentChapterIndex);
@@ -162,13 +187,11 @@
       metadata = meta;
       totalChapters = meta.totalChapters;
 
-      // Calculate initial chapter from percentage if available
       if (initialPercentage > 0 && initialPercentage < 100) {
         const chapterGuess = Math.floor((initialPercentage / 100) * totalChapters);
         currentChapterIndex = Math.min(chapterGuess, totalChapters - 1);
       }
 
-      // Emit TOC entries to parent with depth from backend
       if (onTocReady) {
         const entries = meta.chapters.map((ch) => ({
           id: ch.id,
@@ -180,7 +203,6 @@
 
       await renderChapter(currentChapterIndex);
 
-      // Index EPUB text for FTS5 search (fire-and-forget, don't block UX)
       invoke('indexEpubText', { bookId }).catch((err: unknown) => {
         console.warn('Failed to index EPUB text:', err);
       });
@@ -213,20 +235,14 @@
 
       currentChapterIndex = index;
 
-      // Build the base URL: combine resources root + chapter's relative directory
-      // This ensures relative URLs (../images/foo.jpg) resolve correctly
       const resourcesUrl = convertFileSrc(metadata.resourcesPath) + '/';
       const baseUrl = chapterData.chapterBasePath
         ? resourcesUrl + chapterData.chapterBasePath + '/'
         : resourcesUrl;
 
-      // Build theme CSS
       const themeCss = getThemeStyles();
-
-      // Extract chapter head elements (link, style) to preserve EPUB author CSS
       const chapterHeadCss = extractChapterHead(chapterData.html);
 
-      // Build selection detection script injected into iframe
       const selectionScript = `
 <script>
 (function() {
@@ -266,12 +282,14 @@
     }
   });
 })();
-<\\/script>`;
+<\\\\/script>`;
 
       // Clean the chapter body HTML: remove the original <head> content since we inject our own
       const bodyHtml = stripHeadFromHtml(chapterData.html);
 
-      // Create srcdoc with base tag + EPUB author CSS + theme + content + selection script
+      // Build layout CSS with all dynamic settings
+      const hyphensValue = hyphenation ? 'auto' : 'none';
+
       const srcdoc = `<!DOCTYPE html>
 <html>
 <head>
@@ -284,11 +302,16 @@
     body {
       font-size: ${fontSize}%;
       font-family: ${fontFamily}, serif;
-      line-height: 1.8;
-      padding: 1.5rem 2rem;
+      line-height: ${lineHeight};
+      letter-spacing: ${letterSpacing}px;
+      text-align: ${textAlign};
+      direction: ${direction};
+      hyphens: ${hyphensValue};
+      padding: ${margins.top}rem ${margins.right}rem ${margins.bottom}rem ${margins.left}rem;
       max-width: 38rem;
       margin: 0 auto;
     }
+    p { margin-bottom: ${paragraphSpacing}em; }
     img { max-width: 100%; height: auto; }
     a { color: inherit; }
   </style>
@@ -301,7 +324,6 @@
 
       iframeEl.srcdoc = srcdoc;
 
-      // Report progress
       const pct = ((index + 0.5) / totalChapters) * 100;
       onLocationChange?.(`chapter:${index}`, pct);
       onLocationContext?.({ locator: `chapter:${index}`, percentage: pct });
@@ -312,12 +334,10 @@
 
   // ─── Strip <head> from chapter HTML (keep only <body> content) ──
   function stripHeadFromHtml(html: string): string {
-    // Simple approach: extract everything between <body> and </body>
     const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
     if (bodyMatch && bodyMatch[1]) {
       return bodyMatch[1];
     }
-    // Fallback: if no body tags, return the whole HTML (the srcdoc already wraps it)
     return html;
   }
 
@@ -361,7 +381,6 @@
 
   // ─── Theme ────────────────────────────────────────────────
   function getThemeStyles(): string {
-    // Base themes
     const themes: Record<string, string> = {
       paper: `
         body { background: #faf8f5; color: #333; }
@@ -371,9 +390,17 @@
         body { background: #f5eedd; color: #5b4636; }
         a { color: #8b6914; }
       `,
+      night: `
+        body { background: #0f1320; color: #c8ccd8; }
+        a { color: #7bb8ff; }
+      `,
       dark: `
         body { background: #1a1a2e; color: #e0e0e0; }
         a { color: #66bbff; }
+      `,
+      blue: `
+        body { background: #1e3a5f; color: #d6e4f0; }
+        a { color: #88ccff; }
       `,
     };
 
@@ -384,7 +411,9 @@
     const bgs: Record<string, string> = {
       paper: '#faf8f5',
       sepia: '#f5eedd',
+      night: '#0f1320',
       dark: '#1a1a2e',
+      blue: '#1e3a5f',
     };
     return bgs[themeMode] || bgs.paper;
   }
@@ -392,7 +421,6 @@
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'ArrowLeft') goToPrev();
     if (e.key === 'ArrowRight') goToNext();
-    // Ctrl+ +/- zoom
     if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+' || e.key === '-')) {
       e.preventDefault();
       const step = e.key === '-' ? -10 : 10;
@@ -422,7 +450,9 @@
     <!-- Chapter iframe with zoom support -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
-      class="flex-1 w-full h-full overflow-hidden"
+      class="flex-1 w-full h-full"
+      class:overflow-hidden={!verticalScrolling}
+      class:overflow-y-auto={verticalScrolling}
       style="background: {getThemeBgColor()};"
       bind:this={zoomContainerEl}
       onwheel={handleWheel}
@@ -439,7 +469,8 @@
       </div>
     </div>
 
-    <!-- Minimal overlay navigation (bottom) -->
+    <!-- Minimal overlay navigation (bottom) — hidden in vertical scroll mode -->
+    {#if !verticalScrolling}
     <div class="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none">
       <div class="flex items-center gap-4 bg-black/60 backdrop-blur-md text-white px-4 py-2 rounded-full shadow-lg pointer-events-auto text-xs font-medium">
         <button
@@ -497,5 +528,6 @@
         </button>
       </div>
     </div>
+    {/if}
   {/if}
 </div>

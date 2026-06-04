@@ -32,6 +32,24 @@ import {
   READER_SELECTION_COLOR_SETTING_KEY,
   READER_EPUB_FONT_SIZE_SETTING_KEY,
   READER_EPUB_FONT_FAMILY_SETTING_KEY,
+  READER_LINE_HEIGHT_SETTING_KEY,
+  READER_LETTER_SPACING_SETTING_KEY,
+  READER_PARAGRAPH_SPACING_SETTING_KEY,
+  READER_TEXT_ALIGN_SETTING_KEY,
+  READER_DIRECTION_SETTING_KEY,
+  READER_HYPHENATION_SETTING_KEY,
+  READER_VERTICAL_SCROLLING_SETTING_KEY,
+  READER_MARGINS_SETTING_KEY,
+  READER_SHOW_HEADER_SETTING_KEY,
+  READER_SHOW_FOOTER_SETTING_KEY,
+  READER_SHOW_PAGE_NUMBERS_SETTING_KEY,
+  READER_PROGRESS_INDICATOR_SETTING_KEY,
+} from "$lib/types";
+
+import type {
+  ReaderTextAlign,
+  ReaderDirection,
+  ReaderProgressIndicator,
 } from "$lib/types";
 
 type MaybeCommandError = Error & { commandError?: CommandErrorDto };
@@ -250,7 +268,11 @@ const readSettingValue = (settings: AppSettingDto[], key: string): unknown => {
   }
 };
 
-const READER_THEME_MODES: ReadonlyArray<ReaderThemeMode> = ["paper", "sepia", "night"];
+const READER_THEME_MODES: ReadonlyArray<ReaderThemeMode> = ["paper", "sepia", "night", "dark", "blue"];
+const TEXT_ALIGN_MODES: ReadonlyArray<ReaderTextAlign> = ["left", "center", "right", "justify"];
+const DIRECTION_MODES: ReadonlyArray<ReaderDirection> = ["ltr", "rtl"];
+const PROGRESS_MODES: ReadonlyArray<ReaderProgressIndicator> = ["percentage", "chapter", "time"];
+
 const DEFAULT_READER_SETTINGS: ReaderSettings = {
   themeMode: "paper",
   brightness: 100,
@@ -260,6 +282,18 @@ const DEFAULT_READER_SETTINGS: ReaderSettings = {
     fontSize: 100,
     fontFamily: "serif",
   },
+  lineHeight: 1.8,
+  letterSpacing: 0,
+  paragraphSpacing: 1,
+  textAlign: "left",
+  direction: "ltr",
+  hyphenation: false,
+  verticalScrolling: false,
+  margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+  showHeader: true,
+  showFooter: true,
+  showPageNumbers: true,
+  progressIndicator: "percentage",
 };
 
 const clampInteger = (value: number, min: number, max: number): number => {
@@ -305,6 +339,50 @@ const sanitizeFontFamily = (value: unknown): string => {
   return normalized;
 };
 
+const sanitizeEnum = <T extends string>(
+  value: unknown,
+  allowed: ReadonlyArray<T>,
+  fallback: T,
+): T => {
+  if (typeof value !== "string") return fallback;
+  const normalized = value.trim().toLowerCase() as T;
+  if (!allowed.includes(normalized)) return fallback;
+  return normalized;
+};
+
+const sanitizeBoolean = (value: unknown, fallback: boolean): boolean => {
+  if (typeof value === "boolean") return value;
+  return fallback;
+};
+
+const sanitizeMargins = (
+  value: unknown,
+  fallback: ReaderSettings["margins"],
+): ReaderSettings["margins"] => {
+  if (typeof value !== "object" || value === null) return fallback;
+
+  const obj = value as Record<string, unknown>;
+  return {
+    top: sanitizeRangedFloat(obj.top, 0.5, 4, fallback.top),
+    bottom: sanitizeRangedFloat(obj.bottom, 0.5, 4, fallback.bottom),
+    left: sanitizeRangedFloat(obj.left, 0.5, 4, fallback.left),
+    right: sanitizeRangedFloat(obj.right, 0.5, 4, fallback.right),
+  };
+};
+
+const sanitizeRangedFloat = (
+  value: unknown,
+  min: number,
+  max: number,
+  fallback: number,
+): number => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  if (value < min) return min;
+  if (value > max) return max;
+  // Round to 1 decimal for float ranges
+  return Math.round(value * 10) / 10;
+};
+
 export const sanitizeReaderSettings = (
   input?: Partial<ReaderSettings> | null,
 ): ReaderSettings => {
@@ -333,6 +411,19 @@ export const sanitizeReaderSettings = (
       ),
       fontFamily: sanitizeFontFamily(next.epub?.fontFamily),
     },
+    // New layout fields
+    lineHeight: sanitizeRangedFloat(next.lineHeight, 1.0, 3.0, DEFAULT_READER_SETTINGS.lineHeight),
+    letterSpacing: sanitizeRangedNumber(next.letterSpacing, -2, 10, DEFAULT_READER_SETTINGS.letterSpacing),
+    paragraphSpacing: sanitizeRangedFloat(next.paragraphSpacing, 0, 4, DEFAULT_READER_SETTINGS.paragraphSpacing),
+    textAlign: sanitizeEnum(next.textAlign, TEXT_ALIGN_MODES, DEFAULT_READER_SETTINGS.textAlign),
+    direction: sanitizeEnum(next.direction, DIRECTION_MODES, DEFAULT_READER_SETTINGS.direction),
+    hyphenation: sanitizeBoolean(next.hyphenation, DEFAULT_READER_SETTINGS.hyphenation),
+    verticalScrolling: sanitizeBoolean(next.verticalScrolling, DEFAULT_READER_SETTINGS.verticalScrolling),
+    margins: sanitizeMargins(next.margins, DEFAULT_READER_SETTINGS.margins),
+    showHeader: sanitizeBoolean(next.showHeader, DEFAULT_READER_SETTINGS.showHeader),
+    showFooter: sanitizeBoolean(next.showFooter, DEFAULT_READER_SETTINGS.showFooter),
+    showPageNumbers: sanitizeBoolean(next.showPageNumbers, DEFAULT_READER_SETTINGS.showPageNumbers),
+    progressIndicator: sanitizeEnum(next.progressIndicator, PROGRESS_MODES, DEFAULT_READER_SETTINGS.progressIndicator),
   };
 };
 
@@ -369,6 +460,67 @@ const buildReaderSettingsPayload = (settings: ReaderSettings): AppSettingDto[] =
       valueJson: JSON.stringify(settings.epub.fontFamily),
       updatedAt: now,
     },
+    // New layout fields
+    {
+      key: READER_LINE_HEIGHT_SETTING_KEY,
+      valueJson: JSON.stringify(settings.lineHeight),
+      updatedAt: now,
+    },
+    {
+      key: READER_LETTER_SPACING_SETTING_KEY,
+      valueJson: JSON.stringify(settings.letterSpacing),
+      updatedAt: now,
+    },
+    {
+      key: READER_PARAGRAPH_SPACING_SETTING_KEY,
+      valueJson: JSON.stringify(settings.paragraphSpacing),
+      updatedAt: now,
+    },
+    {
+      key: READER_TEXT_ALIGN_SETTING_KEY,
+      valueJson: JSON.stringify(settings.textAlign),
+      updatedAt: now,
+    },
+    {
+      key: READER_DIRECTION_SETTING_KEY,
+      valueJson: JSON.stringify(settings.direction),
+      updatedAt: now,
+    },
+    {
+      key: READER_HYPHENATION_SETTING_KEY,
+      valueJson: JSON.stringify(settings.hyphenation),
+      updatedAt: now,
+    },
+    {
+      key: READER_VERTICAL_SCROLLING_SETTING_KEY,
+      valueJson: JSON.stringify(settings.verticalScrolling),
+      updatedAt: now,
+    },
+    {
+      key: READER_MARGINS_SETTING_KEY,
+      valueJson: JSON.stringify(settings.margins),
+      updatedAt: now,
+    },
+    {
+      key: READER_SHOW_HEADER_SETTING_KEY,
+      valueJson: JSON.stringify(settings.showHeader),
+      updatedAt: now,
+    },
+    {
+      key: READER_SHOW_FOOTER_SETTING_KEY,
+      valueJson: JSON.stringify(settings.showFooter),
+      updatedAt: now,
+    },
+    {
+      key: READER_SHOW_PAGE_NUMBERS_SETTING_KEY,
+      valueJson: JSON.stringify(settings.showPageNumbers),
+      updatedAt: now,
+    },
+    {
+      key: READER_PROGRESS_INDICATOR_SETTING_KEY,
+      valueJson: JSON.stringify(settings.progressIndicator),
+      updatedAt: now,
+    },
   ];
 };
 
@@ -403,10 +555,24 @@ export const getReaderSettings = async (): Promise<ReaderSettings> => {
     themeMode: readSettingValue(settings, READER_THEME_MODE_SETTING_KEY) as ReaderThemeMode,
     brightness: readSettingValue(settings, READER_BRIGHTNESS_SETTING_KEY) as number,
     contrast: readSettingValue(settings, READER_CONTRAST_SETTING_KEY) as number,
+    selectionColor: readSettingValue(settings, READER_SELECTION_COLOR_SETTING_KEY) as string,
     epub: {
       fontSize: readSettingValue(settings, READER_EPUB_FONT_SIZE_SETTING_KEY) as number,
       fontFamily: readSettingValue(settings, READER_EPUB_FONT_FAMILY_SETTING_KEY) as string,
     },
+    // New layout fields
+    lineHeight: readSettingValue(settings, READER_LINE_HEIGHT_SETTING_KEY) as number,
+    letterSpacing: readSettingValue(settings, READER_LETTER_SPACING_SETTING_KEY) as number,
+    paragraphSpacing: readSettingValue(settings, READER_PARAGRAPH_SPACING_SETTING_KEY) as number,
+    textAlign: readSettingValue(settings, READER_TEXT_ALIGN_SETTING_KEY) as ReaderTextAlign,
+    direction: readSettingValue(settings, READER_DIRECTION_SETTING_KEY) as ReaderDirection,
+    hyphenation: readSettingValue(settings, READER_HYPHENATION_SETTING_KEY) as boolean,
+    verticalScrolling: readSettingValue(settings, READER_VERTICAL_SCROLLING_SETTING_KEY) as boolean,
+    margins: readSettingValue(settings, READER_MARGINS_SETTING_KEY) as ReaderSettings["margins"],
+    showHeader: readSettingValue(settings, READER_SHOW_HEADER_SETTING_KEY) as boolean,
+    showFooter: readSettingValue(settings, READER_SHOW_FOOTER_SETTING_KEY) as boolean,
+    showPageNumbers: readSettingValue(settings, READER_SHOW_PAGE_NUMBERS_SETTING_KEY) as boolean,
+    progressIndicator: readSettingValue(settings, READER_PROGRESS_INDICATOR_SETTING_KEY) as ReaderProgressIndicator,
   });
 };
 

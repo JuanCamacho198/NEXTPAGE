@@ -1,8 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appState } from "$lib/stores/AppState.svelte";
 
-const mockGetFileBytes = vi.hoisted(() => 
-  vi.fn<(...args: unknown[]) => Promise<number[]>>().mockResolvedValue([1, 2, 3])
+const mockReadFile = vi.hoisted(() =>
+  vi.fn<(...args: unknown[]) => Promise<Uint8Array>>().mockResolvedValue(new Uint8Array([1, 2, 3]))
 );
 
 // Mock ALL AppState dependencies upfront
@@ -72,6 +72,9 @@ vi.mock("$lib/api/tauriClient", () => {
     upsertBookCover: vi.fn(function () {
       return Promise.resolve(undefined);
     }),
+    extractEpubCover: vi.fn(function () {
+      return Promise.resolve(false);
+    }),
     updateBookProgress: vi.fn(function () {
       return Promise.resolve(undefined);
     }),
@@ -81,9 +84,12 @@ vi.mock("$lib/api/tauriClient", () => {
     scanFolder: vi.fn(function () {
       return Promise.resolve({ files: [] });
     }),
-    getFileBytes: mockGetFileBytes,
   };
 });
+
+vi.mock("@tauri-apps/plugin-fs", () => ({
+  readFile: mockReadFile,
+}));
 
 vi.mock("$lib/services/BulkImportService", () => {
   const mock = {
@@ -142,7 +148,7 @@ describe("AppState", () => {
   // ─── Preload (startReading) ───
 
   it("startReading preloadedBytes is populated for EPUB", async () => {
-    appState.preloadedBytes = { filePath: "/old.epub", data: [1, 2, 3] };
+    appState.preloadedBytes = { filePath: "/old.epub", data: new Uint8Array([1, 2, 3]) };
     const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
     await appState.startReading(book);
     // The old preloadedBytes was cleared, then new preload populated it
@@ -162,49 +168,49 @@ describe("AppState", () => {
     expect(appState.activeReadingBookId).toBe("b1");
   });
 
-  it("startReading fires getFileBytes for EPUB preload", async () => {
+  it("startReading fires readFile for EPUB preload", async () => {
     const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
     await appState.startReading(book);
-    expect(mockGetFileBytes).toHaveBeenCalledWith("/test.epub");
+    expect(mockReadFile).toHaveBeenCalledWith("/test.epub");
   });
 
   it("startReading preloadedBytes is populated asynchronously for EPUB", async () => {
-    mockGetFileBytes.mockResolvedValueOnce([10, 20, 30]);
+    mockReadFile.mockResolvedValueOnce(new Uint8Array([10, 20, 30]));
     const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
     await appState.startReading(book);
     await vi.waitFor(() => {
       expect(appState.preloadedBytes).not.toBeNull();
     });
     expect(appState.preloadedBytes!.filePath).toBe("/test.epub");
-    expect(appState.preloadedBytes!.data).toEqual([10, 20, 30]);
+    expect(appState.preloadedBytes!.data).toEqual(new Uint8Array([10, 20, 30]));
   });
 
   it("startReading preload failure does not throw for EPUB", async () => {
-    mockGetFileBytes.mockRejectedValueOnce(new Error("EPUB load failed"));
+    mockReadFile.mockRejectedValueOnce(new Error("EPUB load failed"));
     const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
     await expect(appState.startReading(book)).resolves.toBeUndefined();
     expect(appState.preloadedBytes).toBeNull();
   });
 
-  it("startReading fires getFileBytes for PDF preload", async () => {
+  it("startReading fires readFile for PDF preload", async () => {
     const book = { id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" } as any;
     await appState.startReading(book);
-    expect(mockGetFileBytes).toHaveBeenCalledWith("/test.pdf");
+    expect(mockReadFile).toHaveBeenCalledWith("/test.pdf");
   });
 
   it("startReading preloadedBytes is populated asynchronously for PDF", async () => {
-    mockGetFileBytes.mockResolvedValueOnce([99, 98, 97]);
+    mockReadFile.mockResolvedValueOnce(new Uint8Array([99, 98, 97]));
     const book = { id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" } as any;
     await appState.startReading(book);
     await vi.waitFor(() => {
       expect(appState.preloadedBytes).not.toBeNull();
     });
     expect(appState.preloadedBytes!.filePath).toBe("/test.pdf");
-    expect(appState.preloadedBytes!.data).toEqual([99, 98, 97]);
+    expect(appState.preloadedBytes!.data).toEqual(new Uint8Array([99, 98, 97]));
   });
 
   it("startReading preload failure does not throw for PDF", async () => {
-    mockGetFileBytes.mockRejectedValueOnce(new Error("PDF load failed"));
+    mockReadFile.mockRejectedValueOnce(new Error("PDF load failed"));
     const book = { id: "b1", title: "Test", filePath: "/test.pdf", format: "pdf" } as any;
     await expect(appState.startReading(book)).resolves.toBeUndefined();
     expect(appState.preloadedBytes).toBeNull();
@@ -481,14 +487,14 @@ describe("AppState — Preload edge cases", () => {
   });
 
   it("preloadedBytes persists across state changes until overwritten", () => {
-    appState.preloadedBytes = { filePath: "/book.pdf", data: [1, 2] };
+    appState.preloadedBytes = { filePath: "/book.pdf", data: new Uint8Array([1, 2]) };
     appState.route = "foo" as any;
-    expect(appState.preloadedBytes).toEqual({ filePath: "/book.pdf", data: [1, 2] });
+    expect(appState.preloadedBytes).toEqual({ filePath: "/book.pdf", data: new Uint8Array([1, 2]) });
   });
 
-  it("startReading clears preloadedBytes even if getFileBytes fails for EPUB", async () => {
-    mockGetFileBytes.mockRejectedValueOnce(new Error("fail"));
-    appState.preloadedBytes = { filePath: "/old.epub", data: [9, 9, 9] };
+  it("startReading clears preloadedBytes even if readFile fails for EPUB", async () => {
+    mockReadFile.mockRejectedValueOnce(new Error("fail"));
+    appState.preloadedBytes = { filePath: "/old.epub", data: new Uint8Array([9, 9, 9]) };
     const book = { id: "b1", filePath: "/new.epub", format: "epub" } as any;
     await appState.startReading(book);
     expect(appState.preloadedBytes).toBeNull();

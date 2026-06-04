@@ -12,7 +12,7 @@ pub mod settings;
 
 use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use chrono::Utc;
@@ -887,6 +887,96 @@ impl LibraryRepository {
             "image/webp" => Some("webp"),
             _ => None,
         }
+    }
+
+    /// Extract cover image from an EPUB file and save it to the covers directory.
+    /// Returns Ok(Some(cover)) on success, Ok(None) if no cover found, Err on failure.
+    pub fn extract_epub_cover(
+        &self,
+        app: &tauri::AppHandle,
+        epub_path: &Path,
+        book_id: &str,
+    ) -> AppResult<Option<BookCoverDto>> {
+        if !epub_path.exists() {
+            return Ok(None);
+        }
+
+        let file = match std::fs::File::open(epub_path) {
+            Ok(f) => f,
+            Err(_) => return Ok(None),
+        };
+
+        let mut archive = match zip::ZipArchive::new(file) {
+            Ok(a) => a,
+            Err(_) => return Ok(None),
+        };
+
+        // Supported image extensions
+        let image_exts = ["jpg", "jpeg", "png", "webp"];
+
+        // Pass 1: Look for files with "cover" in the name (case-insensitive)
+        let mut cover_idx: Option<usize> = None;
+        let mut cover_ext: Option<String> = None;
+
+        for i in 0..archive.len() {
+            let Ok(entry) = archive.by_index(i) else { continue };
+            let name_lower = entry.name().to_ascii_lowercase();
+
+            if name_lower.contains("cover")
+                || name_lower.contains("portada")
+                || name_lower.contains("cubierta")
+            {
+                if let Some(ext) = name_lower.rsplit('.').next() {
+                    if image_exts.contains(&ext) {
+                        cover_idx = Some(i);
+                        cover_ext = Some(ext.to_string());
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Pass 2: If no cover-named file found, take the first image in the archive
+        if cover_idx.is_none() {
+            for i in 0..archive.len() {
+                let Ok(entry) = archive.by_index(i) else { continue };
+                let name_lower = entry.name().to_ascii_lowercase();
+                if let Some(ext) = name_lower.rsplit('.').next() {
+                    if image_exts.contains(&ext) {
+                        cover_idx = Some(i);
+                        cover_ext = Some(ext.to_string());
+                        break;
+                    }
+                }
+            }
+        }
+
+        let idx = match cover_idx {
+            Some(i) => i,
+            None => return Ok(None),
+        };
+
+        let ext = match &cover_ext {
+            Some(e) => e.clone(),
+            None => return Ok(None),
+        };
+
+        // Read the cover image data
+        let mut entry = match archive.by_index(idx) {
+            Ok(e) => e,
+            Err(_) => return Ok(None),
+        };
+
+        let mut data = Vec::new();
+        if entry.read_to_end(&mut data).is_err() || data.is_empty() {
+            return Ok(None);
+        }
+
+        let mime_type = Self::mime_type_from_extension(&ext);
+
+        // Save via existing upsert method
+        let cover = self.upsert_book_cover_from_bytes(app, book_id, &data, Some(mime_type))?;
+        Ok(Some(cover))
     }
 }
 

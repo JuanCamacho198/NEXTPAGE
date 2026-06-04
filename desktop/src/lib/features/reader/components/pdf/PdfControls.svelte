@@ -28,7 +28,6 @@
     scale,
     isFullscreen,
     fullscreenSupported,
-    showToc,
     isLoading,
     error,
     t,

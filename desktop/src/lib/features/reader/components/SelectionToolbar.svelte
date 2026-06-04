@@ -13,7 +13,6 @@
   };
 
   let {
-    selectedText,
     selectionBounds,
     containerRect,
     onCopy,

@@ -10,7 +10,7 @@
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
-  let { stats, isLoading = false, disabledReason = null, t }: Props = $props();
+  let { stats, isLoading = false, disabledReason = null }: Props = $props();
 
   const statItems = $derived([
     {

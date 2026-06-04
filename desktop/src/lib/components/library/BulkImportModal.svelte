@@ -1,15 +1,8 @@
 <script lang="ts">
   import Button from "../ui/forms/Button.svelte";
   import Modal from "../ui/layout/Modal.svelte";
-  import type { BulkImportSummary, ScanFolderResult } from "$lib/types";
-  import type { BulkImportProgress } from "../../services/BulkImportService";
-  import type { MessageKey } from "../../i18n";
-  import {
-    STATUS,
-    getStatusKey,
-    getStatusClass,
-    type Props,
-  } from "./bulkImportState.svelte";
+  import { STATUS, getStatusKey, getStatusClass } from "./bulkImportState.svelte";
+  import type { Props } from "./bulkImportState.svelte";
 
   let {
     open,

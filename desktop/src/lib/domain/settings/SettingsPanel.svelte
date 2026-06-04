@@ -1,5 +1,4 @@
 <script lang="ts">
-  import GoogleLoginButton from "$lib/domain/library/GoogleLoginButton.svelte";
   import Icon from "$lib/components/ui/navigation/Icon.svelte";
   import {
     getSettings,
@@ -70,7 +69,7 @@
   let settingsUnavailable = $state<string | null>(null);
   let isSavingSettings = $state(false);
   let showResetModal = $state(false);
-  let pendingResetTab = $state<SettingsTab | null>(null);
+
   let isProfileLoading = $state(false);
   let profileError = $state<string | null>(null);
   let profileAvatarBroken = $state(false);
@@ -225,7 +224,7 @@
   }
 
   function openResetModal() { showResetModal = true; }
-  function closeResetModal() { showResetModal = false; pendingResetTab = null; }
+  function closeResetModal() { showResetModal = false; }
   async function confirmReset() {
     if (activeTab === "general" || activeTab === "appearance") {
       preferredTheme = DEFAULT_VALUES.preferredTheme;

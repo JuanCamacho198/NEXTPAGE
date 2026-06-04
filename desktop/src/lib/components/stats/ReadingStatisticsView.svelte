@@ -1,13 +1,10 @@
 <script lang="ts">
   import SafeCover from "../library/SafeCover.svelte";
-  import type { LibraryBookDto, ReadingStatsSummaryDto } from "$lib/types";
   import { getSafeProgressPercentage } from "$lib/stores/homeState";
   import {
     periodLabels,
     hashNumber,
     inferGenre,
-    calculateGenreDistribution,
-    type StatsBook,
     type PeriodKey,
     type Granularity,
     type GenreKey,

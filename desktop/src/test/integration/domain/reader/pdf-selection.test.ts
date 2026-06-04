@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, cleanup, fireEvent, waitFor } from "@testing-library/svelte";
+import { describe, expect, it, vi, afterEach } from "vitest";
+import { render, cleanup } from "@testing-library/svelte";
 import PdfViewer from "$lib/features/reader/components/PdfViewer.svelte";
 
 vi.mock("$lib/stores/reader", () => ({

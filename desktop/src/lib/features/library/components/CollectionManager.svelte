@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { CollectionDto, CreateCollectionInput } from "$lib/shared/types";
+  import type { CollectionDto } from "$lib/shared/types";
   import { createCollection, deleteCollection, listCollections } from "$lib/api/tauriClient";
   import { COLLECTION_COLOR_OPTIONS } from "../state";
 
@@ -11,7 +11,6 @@
   let newColor = $state("#6366f1");
   let editingId = $state<number | null>(null);
   let editName = $state("");
-  let editColor = $state("");
 
   async function loadCollections() {
     loading = true;
@@ -45,16 +44,9 @@
     }
   }
 
-  function startEdit(collection: CollectionDto) {
-    editingId = collection.id;
-    editName = collection.name;
-    editColor = collection.color ?? "#6366f1";
-  }
-
   function cancelEdit() {
     editingId = null;
     editName = "";
-    editColor = "";
   }
 
   $effect(() => {

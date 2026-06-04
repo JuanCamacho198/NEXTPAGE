@@ -8,7 +8,7 @@
 </script>
 
 <EditMetadataModal
-  book={appState.editingBook as any}
+  book={appState.editingBook as import("$lib/types").LibraryBookDto | null}
   open={appState.editingBook !== null}
   onClose={() => {
     appState.editingBook = null;

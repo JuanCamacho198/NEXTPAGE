@@ -25,9 +25,8 @@
   type Props = {
     activeReadingBook?: ActiveBook | null;
     readerSettings?: ReaderSettings;
-    cfiLocation?: string;
     percentage?: number;
-    searchResponse?: any;
+    searchResponse?: unknown;
     searchTargetLocator?: string | null;
     isSearching?: boolean;
     searchUnavailableReason?: string | null;
@@ -35,18 +34,17 @@
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     onBackToHome: () => void;
     onPdfPageChange?: (page: number, total: number) => void;
-    onPdfSessionProgress?: (event: any) => void;
+    onPdfSessionProgress?: (event: unknown) => void;
     onEpubLocationChange?: (cfi: string, pct: number) => void;
-    onReaderLocationContext?: (ctx: any) => void;
+    onReaderLocationContext?: (ctx: unknown) => void;
     onSearch?: (query: string, page: number) => void;
-    onSearchJump?: (target: any) => void;
+    onSearchJump?: (target: unknown) => void;
     preloadedBytes?: { filePath: string; data: Uint8Array } | null;
   };
 
   let {
     activeReadingBook = null,
     readerSettings = undefined,
-    cfiLocation = "",
     percentage = 0,
     searchResponse = null,
     searchTargetLocator = null,
@@ -150,7 +148,6 @@
   // TOC data from active viewer
   let tocEntries = $state<TocEntry[]>([]);
   let tocNavigate = $state<TocEntry | null>(null);
-  let activeTocId = $state("");
 
   // Bookmarks state
   let bookmarksState = createBookmarksState();
@@ -269,7 +266,7 @@
     dismissToolbar();
   }
 
-  function handleNote(text: string) {
+  function handleNote(_text: string) {
     // Future: save note to highlight
     dismissToolbar();
   }

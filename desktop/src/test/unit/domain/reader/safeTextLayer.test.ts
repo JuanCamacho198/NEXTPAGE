@@ -55,7 +55,7 @@ describe("SafeTextLayer", () => {
   // ── Constructor ──────────────────────────────────────────
   describe("constructor", () => {
     it("sets position absolute, left 0, top 0 on container", () => {
-      new SafeTextLayer({ container, viewport: createViewport(), textContentSource: {} as any });
+      new SafeTextLayer({ container, viewport: createViewport(), textContentSource: {} as unknown as import("$lib/features/reader/pdf/safeTextLayer").SafeTextLayerParams["textContentSource"] });
 
       expect(container.style.position).toBe("absolute");
       // jsdom coerces unitless 0 → "0px"; real browsers preserve "0"
@@ -71,7 +71,7 @@ describe("SafeTextLayer", () => {
     });
 
     it("sets CSS vars --scale-round-x and --scale-round-y to 1px", () => {
-      new SafeTextLayer({ container, viewport: createViewport(), textContentSource: {} as any });
+      new SafeTextLayer({ container, viewport: createViewport(), textContentSource: {} as unknown as import("$lib/features/reader/pdf/safeTextLayer").SafeTextLayerParams["textContentSource"] });
 
       expect(container.style.getPropertyValue("--scale-round-x")).toBe("1px");
       expect(container.style.getPropertyValue("--scale-round-y")).toBe("1px");

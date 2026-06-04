@@ -50,12 +50,7 @@
 
   let baseClasses = $derived(`${sizeClasses[size]} border border-(--color-border) bg-(--color-surface) overflow-hidden`);
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (clickable && (e.key === "Enter" || e.key === " ")) {
-      e.preventDefault();
-      onclick?.();
-    }
-  }
+
 </script>
 
 {#if clickable}

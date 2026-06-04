@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import type { MessageKey } from "$lib/i18n";
-  import { Panel } from "$lib/shared/ui";
 
   type Props = {
     t: (key: MessageKey, params?: Record<string, string | number>) => string;

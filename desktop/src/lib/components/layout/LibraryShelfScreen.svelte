@@ -7,7 +7,6 @@
     FILTER_OPTIONS,
     SORT_OPTIONS,
     getSafeProgressPercentage,
-    getBookState,
     getStateLabel,
     getTimestamp,
     formatPercent,

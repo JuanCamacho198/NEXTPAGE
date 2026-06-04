@@ -9,8 +9,6 @@ import type {
   LibraryBookDto,
   ScanFolderResult,
 } from "$lib/shared/types";
-import type { MessageKey } from "$lib/i18n";
-
 // Local type (not in shared/types, preserved for backward compat)
 export type ReaderBook = LibraryBookDto & {
   filePath: string;
@@ -59,13 +57,13 @@ class LibraryStateManager {
   bulkImportSummary = $state<BulkImportSummary | null>(null);
 
   isImporting = $state(false);
-  importProgress = $state<any | null>(null);
+  importProgress = $state<BulkImportProgress | null>(null);
 
   bulkImportService = new BulkImportService();
 
   // ─── Utility functions ───
 
-  formatUpdatedAt(iso: string, t: (...args: any[]) => string): string {
+  formatUpdatedAt(iso: string, t: (...args: string[]) => string): string {
     const parsed = new Date(iso);
     if (Number.isNaN(parsed.getTime())) return t("settings.unknownBook");
     return parsed.toLocaleDateString();

@@ -147,18 +147,6 @@
     }
   };
 
-  const handleContainerMouseEnter = () => {
-    openMenu(false);
-  };
-
-  const handleContainerMouseLeave = () => {
-    if (containerEl?.contains(document.activeElement)) {
-      return;
-    }
-
-    closeMenu(false);
-  };
-
   const handleContainerFocusOut = (event: FocusEvent) => {
     const nextTarget = event.relatedTarget as Node | null;
     if (nextTarget && containerEl?.contains(nextTarget)) {

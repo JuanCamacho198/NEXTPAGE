@@ -2,8 +2,7 @@
 // Canonical state is AppState ($lib/stores/AppState.svelte).
 // This file retains the public API surface for the features/reader barrel.
 
-import type { searchBookText } from "$lib/api/tauriClient";
-import type { SearchBookTextResponse, SearchNavigationTarget } from "$lib/shared/types";
+import type { SearchBookTextResponse } from "$lib/shared/types";
 
 class ReaderStateManager {
   activeReadingBookId = $state<string | null>(null);

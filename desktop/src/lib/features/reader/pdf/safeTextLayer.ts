@@ -42,11 +42,11 @@ export class SafeTextLayer {
     this.setLayerDimensions(params.viewport);
 
     // Create the raw TextLayer instance
-    this.instance = new (pdfjsLib as any).TextLayer({
+    this.instance = new (pdfjsLib as unknown as { TextLayer: new (args: Record<string, unknown>) => Record<string, unknown> }).TextLayer({
       container: params.container,
       viewport: params.viewport,
       textContentSource: params.textContentSource,
-    }) as Record<string, unknown>;
+    });
 
     // Fix DPR inflation that pdfjs-dist applies in its constructor
     this.fixScale(params.viewport);
@@ -56,8 +56,9 @@ export class SafeTextLayer {
    * Render the text layer. Delegates to `instance.render()`.
    */
   async render(): Promise<void> {
-    if (this.instance && typeof (this.instance as any).render === "function") {
-      await (this.instance as any).render();
+    const instance = this.instance;
+    if (instance && typeof (instance as unknown as { render: () => Promise<void> }).render === "function") {
+      await (instance as unknown as { render: () => Promise<void> }).render();
     }
   }
 
@@ -72,8 +73,9 @@ export class SafeTextLayer {
     this.setLayerCssVars(params.viewport);
     this.setLayerDimensions(params.viewport);
 
-    if (this.instance && typeof (this.instance as any).update === "function") {
-      (this.instance as any).update(params);
+    const instance = this.instance;
+    if (instance && typeof (instance as unknown as { update: (p: SafeTextLayerUpdateParams) => void }).update === "function") {
+      (instance as unknown as { update: (p: SafeTextLayerUpdateParams) => void }).update(params);
     }
 
     // update() re-inflates #scale with DPR, so we patch again
@@ -86,8 +88,9 @@ export class SafeTextLayer {
    */
   cancel(): void {
     this.cancelled = true;
-    if (this.instance && typeof (this.instance as any).cancel === "function") {
-      (this.instance as any).cancel();
+    const instance = this.instance;
+    if (instance && typeof (instance as unknown as { cancel: () => void }).cancel === "function") {
+      (instance as unknown as { cancel: () => void }).cancel();
     }
   }
 

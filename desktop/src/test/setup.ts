@@ -8,7 +8,6 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 // Override structuredClone for jsdom/vitest (native Node.js version throws
 // DataCloneError on mock objects with private slots, e.g. vitest MockProxy)
-// @ts-ignore
 globalThis.structuredClone = (obj: unknown) => JSON.parse(JSON.stringify(obj));
 
 // Polyfill DOMMatrix for pdfjs-dist (not available in Node.js/jsdom/happy-dom)
@@ -63,6 +62,5 @@ if (typeof globalThis.DOMMatrix === 'undefined') {
       return `matrix(${this.a}, ${this.b}, ${this.c}, ${this.d}, ${this.e}, ${this.f})`;
     }
   }
-  // @ts-ignore
-  globalThis.DOMMatrix = DOMMatrixPolyfill;
+  globalThis.DOMMatrix = DOMMatrixPolyfill as unknown as typeof DOMMatrix;
 }

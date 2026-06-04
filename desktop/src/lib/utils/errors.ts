@@ -44,7 +44,7 @@ export const handleError = (error: unknown, source: ErrorSource = "app_shell") =
     const classification = classifyError(error);
     appError = new AppError(
       error.message,
-      (error as any).code || "UNEXPECTED_ERROR",
+      (error as Error & { code?: string }).code || "UNEXPECTED_ERROR",
       source,
       "runtime",
       { stack: error.stack },

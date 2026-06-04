@@ -5,15 +5,8 @@
   import Skeleton from "../ui/feedback/Skeleton.svelte";
   import EmptyState from "../ui/feedback/EmptyState.svelte";
   import Panel from "../ui/layout/Panel.svelte";
-  import type { LibraryBookDto, CollectionDto } from "$lib/types";
-  import type { MessageKey } from "../../i18n";
-  import {
-    LIBRARY_VIEW_MODE,
-    formatUpdatedAt,
-    formatProgress,
-    type LibraryViewMode,
-    type Props,
-  } from "./libraryState.svelte";
+  import { LIBRARY_VIEW_MODE, formatUpdatedAt, formatProgress } from "./libraryState.svelte";
+  import type { Props } from "./libraryState.svelte";
 
   let {
     books,
@@ -149,7 +142,7 @@
       </div>
     {:else if isLoading}
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {#each Array(6) as _, i}
+        {#each Array(6) as _}
           <Skeleton variant="book" class="w-full" />
         {/each}
       </div>

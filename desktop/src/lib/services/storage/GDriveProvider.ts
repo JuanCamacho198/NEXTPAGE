@@ -102,13 +102,13 @@ export class GDriveProvider implements StorageProvider {
     return new Uint8Array(buffer);
   }
 
-  async delete(remotePath: string): Promise<void> {
-    const accessToken = await this.getAccessToken();
+  async delete(_remotePath: string): Promise<void> {
+    await this.getAccessToken();
     // Implementation omitted for brevity or if not strictly required by task but part of interface
     console.warn('GDrive delete not implemented');
   }
 
-  async list(prefix: string): Promise<string[]> {
+  async list(_prefix: string): Promise<string[]> {
     const accessToken = await this.getAccessToken();
     const folderId = await this.getOrCreateFolder(accessToken);
     
@@ -118,6 +118,6 @@ export class GDriveProvider implements StorageProvider {
     });
     
     const data = await response.json();
-    return (data.files || []).map((f: any) => f.name);
+    return (data.files || []).map((f: { name: string }) => f.name);
   }
 }

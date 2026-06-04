@@ -184,7 +184,7 @@ export function normalizeOutlineItems(
     id: string;
     title: string;
     dest: string | unknown[] | null;
-    items: any[];
+    items: Array<Record<string, unknown>>;
   }> = [];
 
   items.forEach((rawItem, index) => {

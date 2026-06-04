@@ -7,11 +7,11 @@ const mockReadFile = vi.hoisted(() =>
 
 // Mock ALL AppState dependencies upfront
 vi.mock("$lib/services/BookImportService", () => {
-  const z = vi.fn() as any;
+  const z = vi.fn() as unknown as (...args: unknown[]) => Promise<unknown>;
   return { importBook: z };
 });
 vi.mock("$lib/services/FilePicker", () => {
-  const z = vi.fn() as any;
+  const z = vi.fn() as unknown as (...args: unknown[]) => Promise<unknown>;
   return { pickFile: z, pickFolder: z };
 });
 vi.mock("$lib/services/pdfThumbnail", () => ({
@@ -20,7 +20,7 @@ vi.mock("$lib/services/pdfThumbnail", () => ({
   }),
 }));
 vi.mock("$lib/stores/theme", () => {
-  const z = vi.fn() as any;
+  const z = vi.fn() as unknown as (...args: unknown[]) => unknown;
   return { initTheme: z };
 });
 vi.mock("$lib/i18n", () => ({
@@ -40,7 +40,7 @@ const mockGetReadingStats = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 vi.mock("$lib/api/tauriClient", () => {
   const rf = vi.fn(function () {
     return Promise.resolve([]);
-  }) as any;
+  }) as unknown as (...args: unknown[]) => Promise<unknown[]>;
   return {
     listLibraryBooks: rf,
     listBooks: rf,
@@ -149,7 +149,7 @@ describe("AppState", () => {
 
   it("startReading preloadedBytes is populated for EPUB", async () => {
     appState.preloadedBytes = { filePath: "/old.epub", data: new Uint8Array([1, 2, 3]) };
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     // The old preloadedBytes was cleared, then new preload populated it
     expect(appState.preloadedBytes).not.toBeNull();
@@ -157,26 +157,26 @@ describe("AppState", () => {
   });
 
   it("startReading sets route to reader", async () => {
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     expect(appState.route).toBe("reader");
   });
 
   it("startReading sets activeReadingBookId", async () => {
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     expect(appState.activeReadingBookId).toBe("b1");
   });
 
   it("startReading fires readFile for EPUB preload", async () => {
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     expect(mockReadFile).toHaveBeenCalledWith("/test.epub");
   });
 
   it("startReading preloadedBytes is populated asynchronously for EPUB", async () => {
     mockReadFile.mockResolvedValueOnce(new Uint8Array([10, 20, 30]));
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     await vi.waitFor(() => {
       expect(appState.preloadedBytes).not.toBeNull();
@@ -187,7 +187,7 @@ describe("AppState", () => {
 
   it("startReading preload failure does not throw for EPUB", async () => {
     mockReadFile.mockRejectedValueOnce(new Error("EPUB load failed"));
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
     await expect(appState.startReading(book)).resolves.toBeUndefined();
     expect(appState.preloadedBytes).toBeNull();
   });
@@ -217,7 +217,7 @@ describe("AppState", () => {
   });
 
   it("startReading with EPUB calls getProgress for location and percentage", async () => {
-    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub" } as any;
+    const book = { id: "b1", title: "Test", filePath: "/test.epub", format: "epub", currentPage: 1, totalPages: 100, minutesRead: 0, coverPath: null, author: "", collectionIds: [], progressPercentage: 0 } as unknown as Parameters<typeof appState.startReading>[0];
     await appState.startReading(book);
     expect(mockGetProgress).toHaveBeenCalledWith("b1");
   });
@@ -445,11 +445,11 @@ describe("AppState", () => {
 
   it("derived values do not throw with empty books", () => {
     expect(() => {
-      const _ = appState.continueReadingBooks;
-      const _2 = appState.myShelfBooks;
-      const _3 = appState.shelfBooks;
-      const _4 = appState.shelfWarnings;
-      const _5 = appState.shelfSortToken;
+      void appState.continueReadingBooks;
+      void appState.myShelfBooks;
+      void appState.shelfBooks;
+      void appState.shelfWarnings;
+      void appState.shelfSortToken;
     }).not.toThrow();
   });
 

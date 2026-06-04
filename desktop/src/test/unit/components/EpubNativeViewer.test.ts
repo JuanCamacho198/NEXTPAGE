@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import EpubNativeViewer from '$lib/features/reader/components/EpubNativeViewer.svelte';
 

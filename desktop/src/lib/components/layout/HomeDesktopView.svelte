@@ -29,24 +29,15 @@
     stats,
     isLoadingStats = false,
     statsUnavailableReason = null,
-    selectedBookTitle = null,
-    onRefreshStats,
     t,
-    activeRoute = "home",
-    onNavigateHome,
-    onNavigateHighlights,
-    onNavigateSettings,
     navbarActions,
     continueSection,
     shelfSection,
-    continueCount = 0,
-    shelfCount = 0,
-    statsMinutes = 0,
   }: Props = $props();
 </script>
 
 <div class="space-y-6">
-  <HomeHero {t} actions={navbarActions} />
+  <HomeHero actions={navbarActions} />
 
   <HomeStatsGrid
     {stats}

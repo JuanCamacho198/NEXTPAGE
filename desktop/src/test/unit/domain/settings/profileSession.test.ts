@@ -11,7 +11,7 @@ describe("profileSession", () => {
           avatar_url: "https://example.com/avatar.png",
         },
       },
-    } as any);
+    } as unknown as Record<string, unknown>);
 
     expect(viewModel).toEqual({
       name: "Reader Name",
@@ -27,7 +27,7 @@ describe("profileSession", () => {
         email: "local-part@example.com",
         user_metadata: {},
       },
-    } as any);
+    } as unknown as Record<string, unknown>);
 
     expect(viewModel.name).toBe("local-part");
     expect(viewModel.email).toBe("local-part@example.com");
@@ -51,7 +51,7 @@ describe("profileSession", () => {
           avatar_url: "javascript:alert('xss')",
         },
       },
-    } as any);
+    } as unknown as Record<string, unknown>);
 
     expect(viewModel.avatarUrl).toBeNull();
   });

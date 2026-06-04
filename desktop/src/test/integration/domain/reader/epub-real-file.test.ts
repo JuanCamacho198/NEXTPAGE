@@ -202,7 +202,7 @@ function parseOpf(opfXml: string): OpfResult {
   > = {};
   for (const item of manifestItems) {
     if (item.id) {
-      manifest[item.id] = item as any;
+      manifest[item.id] = item as unknown as { id: string; href: string; "media-type": string };
     }
   }
 
@@ -299,8 +299,9 @@ describe("EPUB Real Files — Archive Structure", () => {
     const zip = await JSZip.loadAsync(data);
     const mimetypeFile = zip.file("mimetype");
     expect(mimetypeFile).toBeDefined();
+    expect(mimetypeFile).not.toBeNull();
 
-    const mimetype = await mimetypeFile.async("string");
+    const mimetype = await mimetypeFile!.async("string");
     expect(mimetype.trim()).toBe("application/epub+zip");
   });
 });

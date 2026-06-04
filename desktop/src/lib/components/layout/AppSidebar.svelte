@@ -14,7 +14,7 @@
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
-  let { activeRoute, onNavigateHome, onNavigateLibrary, onNavigateStats, onNavigateHighlights, onNavigateSettings, t }: Props = $props();
+  let { activeRoute, onNavigateHome, onNavigateLibrary, onNavigateStats, onNavigateHighlights, onNavigateSettings }: Props = $props();
 
   let navItems = $derived([
     { id: "home", label: "Inicio", icon: "home" as const, action: onNavigateHome },

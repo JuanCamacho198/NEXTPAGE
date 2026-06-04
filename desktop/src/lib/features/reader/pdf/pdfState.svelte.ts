@@ -1,5 +1,4 @@
 import type { ReaderThemeMode } from "$lib/shared/types";
-import { DEFAULT_PDF_SCALE } from "$lib/features/reader/pdf/pdfNavigation";
 
 export const scaleOptions = Array.from({ length: 26 }, (_, index) => (50 + index * 10) / 100);
 

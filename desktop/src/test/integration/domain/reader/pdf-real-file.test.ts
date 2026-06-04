@@ -112,7 +112,7 @@ describe("PDF Real Files — Document Loading", () => {
     const pdf = await loadPdfFixture(fixture.path);
     expect(pdf).toBeDefined();
     expect(pdf.numPages).toBeGreaterThanOrEqual(
-      "expectedPages" in fixture ? (fixture as any).expectedPages ?? 1 : 1,
+      "expectedPages" in fixture ? (fixture as { expectedPages?: number }).expectedPages ?? 1 : 1,
     );
     // Clean up
     pdf.destroy();

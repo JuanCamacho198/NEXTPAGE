@@ -34,7 +34,6 @@ import {
   partitionHomeBooks,
   promoteBookForReading,
   reconcileHomeState,
-  getSafeProgressPercentage,
   selectShelfBooks,
   updateShelfQueryState,
 } from "$lib/stores/homeState";

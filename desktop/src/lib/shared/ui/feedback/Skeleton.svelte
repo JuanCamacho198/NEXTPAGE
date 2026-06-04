@@ -1,6 +1,4 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
-
   type SkeletonProps = {
     variant?: "text" | "circular" | "rectangular" | "rounded" | "card" | "book";
     width?: string;

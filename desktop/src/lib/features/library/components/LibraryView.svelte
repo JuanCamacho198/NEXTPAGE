@@ -169,7 +169,7 @@
       </div>
     {:else if isLoading}
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {#each Array(6) as _, i}
+        {#each Array(6) as _}
           <Skeleton variant="book" class="w-full" />
         {/each}
       </div>

@@ -84,7 +84,6 @@
     onselection,
     onselectionclear,
     isFullscreen = false,
-    onToggleFullscreen,
     onTocReady,
     externalTocNavigate = null,
     t,

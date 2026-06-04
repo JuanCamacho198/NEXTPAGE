@@ -34,7 +34,6 @@
     canScrollElementInDirection,
     isRefLike,
     flattenOutline,
-    type ScrollAnchor,
   } from "$lib/features/reader/pdf/pdfSelection";
   import { SafeTextLayer } from "$lib/features/reader/pdf/safeTextLayer";
 
@@ -116,7 +115,6 @@
 
   let {
     filePath,
-    bookId,
     initialPage = 1,
     onPageChange,
     searchTargetLocator = null,
@@ -162,14 +160,8 @@
   let pdfDoc: pdfjsLib.PDFDocumentProxy | null = null;
   let currentPageObj: pdfjsLib.PDFPageProxy | null = null;
 
-  let selectedText = $state("");
-  let selectedCfi = $state<string | null>(null);
-  let selectionHasAnchor = $state(false);
-  let selectionPosition = $state<{ x: number; y: number } | null>(null);
   let selectionPlacement = $state<"above" | "below">("above");
-  let lastSelectionBounds = $state({ left: 0, top: 0, right: 0, bottom: 0 });
   let selectionOverlayRects = $state<Array<{ left: number; top: number; width: number; height: number }>>([]);
-  let showToolbar = $state(false);
   let activeHighlightId = $state<string | null>(null);
   let activeHighlightColor = $state<string>("");
   let highlightToolbarPos = $state<{ x: number; y: number } | null>(null);
@@ -187,13 +179,7 @@
   let lastLoadedFilePath: string | null = null;
   const outlinePageCache = new Map<string, number>();
 
-  type RefLike = { num: number; gen: number };
   type PdfRefProxy = Parameters<pdfjsLib.PDFDocumentProxy["getPageIndex"]>[0];
-
-  type FlatOutlineItem = {
-    item: PdfOutlineItem;
-    depth: number;
-  };
 
   const isStaleLoad = (requestId: number) => requestId !== activeLoadRequestId;
   const isStaleNavigation = (requestId: number) => requestId !== activeNavigationRequestId;
@@ -260,11 +246,6 @@
   };
 
   const clearSelectionUi = () => {
-    showToolbar = false;
-    selectedText = "";
-    selectedCfi = null;
-    selectionHasAnchor = false;
-    selectionPosition = null;
     selectionOverlayRects = [];
     onselectionclear?.();
   };
@@ -316,11 +297,6 @@
         // Do NOT call clearSelectionUi() which triggers onselectionclear,
         // because that calls removeAllRanges() and kills the nascent
         // browser selection before click-drag can start.
-        showToolbar = false;
-        selectedText = "";
-        selectedCfi = null;
-        selectionHasAnchor = false;
-        selectionPosition = null;
         selectionOverlayRects = [];
       }
     };
@@ -348,7 +324,7 @@
   });
 
   $effect(() => {
-    viewerRoot;
+    void viewerRoot;
     fullscreenSupported = canUseFullscreenApi();
   });
 
@@ -564,13 +540,13 @@
     try {
       if (pdfjsLib.TextLayer) {
         textLayerInstance = new SafeTextLayer({
-          container: textLayer, viewport, textContentSource: textContent as any,
+          container: textLayer, viewport, textContentSource: textContent as unknown as import("$lib/features/reader/pdf/safeTextLayer").SafeTextLayerParams["textContentSource"],
         });
         await textLayerInstance.render();
       } else {
-        const task = (pdfjsLib as any).renderTextLayer?.({
+        const task = (pdfjsLib as unknown as { renderTextLayer?: (opts: Record<string, unknown>) => { promise: Promise<void> } }).renderTextLayer?.({
           container: textLayer, viewport, textDivs: [],
-          enhanceTextSelection: true, textContentSource: textContent as any,
+          enhanceTextSelection: true, textContentSource: textContent,
         });
         if (task?.promise) await task.promise;
       }
@@ -603,16 +579,12 @@
     const text = selection.toString().trim();
     if (!text) return;
 
-    selectedText = text;
     const containerRect = textLayer?.getBoundingClientRect();
 
-    selectedCfi = null;
-    let hasAnchor = false;
     let nextPosition: { x: number; y: number } | null = null;
     let selectionBounds = { left: 0, top: 0, right: 0, bottom: 0 };
     let overlayRects: SelectionOverlayRect[] = [];
     const unscaledWidth = containerRect ? containerRect.width : 0;
-    const unscaledHeight = containerRect ? containerRect.height : 0;
 
     try {
       const range = selection.getRangeAt(0);
@@ -632,7 +604,6 @@
         );
         const canPlaceAbove = top > 100;
 
-        hasAnchor = true;
         selectionPlacement = canPlaceAbove ? "above" : "below";
         nextPosition = {
           x: anchorX,
@@ -642,11 +613,9 @@
       }
     } catch (e) {
       console.error("Selection state update failed:", e);
-      hasAnchor = false;
       overlayRects = [];
     }
 
-    lastSelectionBounds = selectionBounds;
     selectionOverlayRects = overlayRects;
 
     if (!nextPosition && containerRect) {
@@ -655,10 +624,6 @@
     }
 
     if (nextPosition && containerRect) {
-      selectionPosition = { x: nextPosition.x, y: nextPosition.y };
-      selectionHasAnchor = hasAnchor;
-      showToolbar = true;
-
       let viewLeft = containerRect.left + selectionBounds.left * scale;
       let viewTop = containerRect.top + selectionBounds.top * scale;
       let viewRight = containerRect.left + selectionBounds.right * scale;

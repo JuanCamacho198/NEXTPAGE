@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { handleError } from "$lib/utils/errors";
   import type { Snippet } from "svelte";
 
   interface Props {

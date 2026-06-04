@@ -16,10 +16,6 @@ const createKeyboardEvent = (target: EventTarget | null, overrides: Partial<Keyb
   } as KeyboardEvent;
 };
 
-const PAGE_NAV_KEYS = new Set(["ArrowLeft", "ArrowRight"]);
-const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown"]);
-const ALL_ARROW_KEYS = new Set([...PAGE_NAV_KEYS, ...SCROLL_KEYS]);
-
 describe("keyboardNav", () => {
   it("maps arrows to semantic intents", () => {
     const target = document.createElement("div");

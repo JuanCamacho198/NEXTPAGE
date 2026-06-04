@@ -31,7 +31,7 @@ describe("i18n", () => {
     const mockGetLocale = getLocaleSetting as ReturnType<typeof vi.fn>;
     mockGetLocale.mockResolvedValueOnce("pt");
 
-    const { i18n }: any = await import("$lib/i18n");
+    const { i18n } = await import("$lib/i18n");
     const locale = await i18n.initializeLocale();
 
     expect(locale).toBe("en");
@@ -46,12 +46,13 @@ describe("i18n", () => {
     const mockGetLocale = getLocaleSetting as ReturnType<typeof vi.fn>;
     mockGetLocale.mockResolvedValueOnce("es");
 
-    const { i18n }: any = await import("$lib/i18n");
+    const { i18n } = await import("$lib/i18n");
     const locale = await i18n.initializeLocale();
 
     expect(i18n.t("es", "errors.commandFailure")).toBe("Fallo desconocido del comando");
     expect(i18n.t("en", "errors.commandFailure")).toBe("Unknown command failure");
     expect(i18n.t("es", "errors.settingsCommandFailed")).toBe("Fallo el comando de ajustes.");
     expect(i18n.t("en", "errors.settingsCommandFailed")).toBe("Settings command failed.");
+    void locale;
   });
 });

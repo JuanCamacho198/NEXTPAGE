@@ -9,11 +9,6 @@ type MockFn = ReturnType<typeof vi.fn>;
 export { describe, expect, it, beforeEach, afterEach, vi, beforeAll, afterAll };
 
 // Mock helper - works around missing vi.mocked in vitest 4.x
-export function mockFn<T>(fn: unknown): MockFn {
+export function mockFn(_fn: unknown): MockFn {
   return vi.fn() as MockFn;
-}
-
-// Type-safe mock for imported functions
-export function mockImport<T>(module: { default?: T; [key: string]: any }): T {
-  return module as T;
 }

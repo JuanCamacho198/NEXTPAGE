@@ -1,14 +1,11 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import type { MessageKey } from "../../i18n";
-  import Button from "../ui/forms/Button.svelte";
 
   type Props = {
-    t: (key: MessageKey, params?: Record<string, string | number>) => string;
     actions?: Snippet;
   };
 
-  let { t, actions }: Props = $props();
+  let { actions }: Props = $props();
 </script>
 
 <section class="relative overflow-hidden rounded-[24px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(18,30,47,0.92),rgba(12,20,32,0.84))] p-8 shadow-(--shadow-soft) backdrop-blur-xl">

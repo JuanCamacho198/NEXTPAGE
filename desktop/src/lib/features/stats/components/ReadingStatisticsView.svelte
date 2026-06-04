@@ -1,13 +1,10 @@
 <script lang="ts">
   import { SafeCover } from "$lib/features/library";
-  import type { LibraryBookDto, ReadingStatsSummaryDto } from "$lib/shared/types";
-import { getSafeProgressPercentage } from "$lib/shared/stores/homeState";
+  import { getSafeProgressPercentage } from "$lib/shared/stores/homeState";
   import {
     periodLabels,
     hashNumber,
     inferGenre,
-    calculateGenreDistribution,
-    type StatsBook,
     type PeriodKey,
     type Granularity,
     type GenreKey,

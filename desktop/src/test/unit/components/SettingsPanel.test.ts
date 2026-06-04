@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { invoke } from "@tauri-apps/api/core";
 import SettingsPanel from "$lib/domain/settings/SettingsPanel.svelte";
 
 const baseDictionaryEntries: Array<[string, string]> = [

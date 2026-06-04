@@ -17,15 +17,6 @@
       onPrevPage: () => void;
       onNextPage: () => void;
     };
-    pdfCallbacks?: {
-      onZoomIn?: () => void;
-      onZoomOut?: () => void;
-      onFullscreen?: () => void;
-      onSetScale?: (scale: number) => void;
-    };
-    epubCallbacks?: {
-      onFontSizeChange?: (size: number) => void;
-    };
     pdfActions?: Snippet;
     epubActions?: Snippet;
     class?: string;
@@ -36,14 +27,10 @@
     i18n,
     state,
     callbacks,
-    pdfCallbacks,
-    epubCallbacks,
     pdfActions,
     epubActions,
     class: className = ""
   }: Props = $props();
-
-  const scaleOptions = Array.from({ length: 26 }, (_, index) => (50 + index * 10) / 100);
 </script>
 
 <div class="flex flex-wrap items-center gap-3 border-b border-(--color-border) bg-(--color-surface) px-3 py-2 {className}">

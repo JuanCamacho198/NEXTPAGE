@@ -95,11 +95,6 @@ class AlertRouterImpl {
 
   private sendAlert(rule: AlertRule, event: ErrorEvent): void {
     const count = this.getCount(event.code);
-    const context: AlertContext = {
-      event,
-      timestamp: new Date(),
-      count,
-    };
 
     logger.error({
       timestamp: new Date().toISOString(),

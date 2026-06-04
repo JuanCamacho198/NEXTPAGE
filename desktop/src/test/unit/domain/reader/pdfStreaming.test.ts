@@ -39,7 +39,7 @@ const { mockDestroy, mockGetOutline, mockPdfDocument, mockGetFileBytes } =
 vi.mock("pdfjs-dist", () => {
   const getDocument = vi.fn(() => ({
     promise: Promise.resolve(mockPdfDocument),
-    onProgress: null as any,
+    onProgress: null as unknown as ((progress: { loaded: number; total: number }) => void) | null,
     destroy: vi.fn(),
   }));
 
@@ -77,7 +77,7 @@ function makeMockDocument() {
     getPage: vi.fn(),
     getDestination: vi.fn(),
     getPageIndex: vi.fn(),
-  } as any;
+  } as unknown as Record<string, unknown>;
 }
 
 function resetAllMocks() {
@@ -153,7 +153,7 @@ describe("pdfStreaming — LRU Eviction", () => {
   });
 
   it("evicts oldest entry when cache exceeds max (8)", () => {
-    const docs: any[] = [];
+    const docs: Array<Record<string, unknown>> = [];
     for (let i = 0; i < 10; i++) {
       const doc = makeMockDocument();
       docs.push(doc);

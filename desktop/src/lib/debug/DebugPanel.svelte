@@ -22,7 +22,7 @@
   });
 
   const ipcCalls = $derived.by(() => {
-    refreshTick; // force re-evaluation every 2s
+    void refreshTick; // force re-evaluation every 2s
     return metricsStore.getByName("ipc_call");
   });
 

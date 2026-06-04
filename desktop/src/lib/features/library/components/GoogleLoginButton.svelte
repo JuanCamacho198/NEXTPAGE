@@ -9,7 +9,7 @@
 			console.log('Initiating Google login...');
 			const data = await AuthService.signInWithGoogle();
 			console.log('Google login redirect initiated:', data);
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error('Login Error:', error.message);
 			alert(`Login failed: ${error.message}`);
 		} finally {

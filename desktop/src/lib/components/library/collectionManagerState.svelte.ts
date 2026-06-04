@@ -1,5 +1,3 @@
-import type { CollectionDto, CreateCollectionInput } from "$lib/types";
-
 export type Props = {
   open: boolean;
   onClose: () => void;

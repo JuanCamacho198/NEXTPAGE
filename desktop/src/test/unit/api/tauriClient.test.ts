@@ -39,6 +39,18 @@ describe("tauriClient reader settings", () => {
         fontSize: 80,
         fontFamily: "serif",
       },
+      lineHeight: 1.8,
+      letterSpacing: 0,
+      paragraphSpacing: 1,
+      textAlign: "left",
+      direction: "ltr",
+      hyphenation: false,
+      verticalScrolling: false,
+      margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+      showHeader: true,
+      showFooter: true,
+      showPageNumbers: true,
+      progressIndicator: "percentage",
     });
   });
 
@@ -47,22 +59,36 @@ describe("tauriClient reader settings", () => {
       { key: "reader.themeMode", valueJson: JSON.stringify("night"), updatedAt: "2026-01-01T00:00:00.000Z" },
       { key: "reader.brightness", valueJson: JSON.stringify(49), updatedAt: "2026-01-01T00:00:00.000Z" },
       { key: "reader.contrast", valueJson: JSON.stringify(151), updatedAt: "2026-01-01T00:00:00.000Z" },
+      { key: "reader.selectionColor", valueJson: JSON.stringify("#33bbff"), updatedAt: "2026-01-01T00:00:00.000Z" },
       { key: "reader.epub.fontSize", valueJson: JSON.stringify(150), updatedAt: "2026-01-01T00:00:00.000Z" },
       { key: "reader.epub.fontFamily", valueJson: JSON.stringify("Literata"), updatedAt: "2026-01-01T00:00:00.000Z" },
+      // New layout fields — not provided, so defaults apply
     ]);
 
     const settings = await getReaderSettings();
 
-    expect(invokeMock).toHaveBeenCalledWith("getSettings");
+    expect(invokeMock).toHaveBeenCalledWith("getSettings", undefined);
     expect(settings).toEqual({
       themeMode: "night",
       brightness: 50,
       contrast: 150,
-      selectionColor: "#3388ff",
+      selectionColor: "#33bbff",
       epub: {
         fontSize: 150,
         fontFamily: "Literata",
       },
+      lineHeight: 1.8,
+      letterSpacing: 0,
+      paragraphSpacing: 1,
+      textAlign: "left",
+      direction: "ltr",
+      hyphenation: false,
+      verticalScrolling: false,
+      margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+      showHeader: true,
+      showFooter: true,
+      showPageNumbers: true,
+      progressIndicator: "percentage",
     });
   });
 
@@ -88,12 +114,24 @@ describe("tauriClient reader settings", () => {
         fontSize: 200,
         fontFamily: "Merriweather",
       },
+      lineHeight: 1.8,
+      letterSpacing: 0,
+      paragraphSpacing: 1,
+      textAlign: "left",
+      direction: "ltr",
+      hyphenation: false,
+      verticalScrolling: false,
+      margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+      showHeader: true,
+      showFooter: true,
+      showPageNumbers: true,
+      progressIndicator: "percentage",
     });
 
     expect(invokeMock).toHaveBeenCalledTimes(1);
     const [command, args] = invokeMock.mock.calls[0] as [string, { settings: Array<{ key: string; valueJson: string }> }];
     expect(command).toBe("upsertSettings");
-    expect(args.settings).toHaveLength(6);
+    expect(args.settings).toHaveLength(18);
     expect(args.settings.find((entry) => entry.key === "reader.themeMode")?.valueJson).toBe(
       JSON.stringify("sepia"),
     );
@@ -136,6 +174,13 @@ describe("tauriClient reader settings", () => {
     );
     expect(args.settings.find((entry) => entry.key === "reader.epub.fontFamily")?.valueJson).toBe(
       JSON.stringify("serif"),
+    );
+    // Verify new layout fields are persisted
+    expect(args.settings.find((entry) => entry.key === "reader.lineHeight")?.valueJson).toBe(
+      JSON.stringify(1.8),
+    );
+    expect(args.settings.find((entry) => entry.key === "reader.textAlign")?.valueJson).toBe(
+      JSON.stringify("left"),
     );
   });
 });

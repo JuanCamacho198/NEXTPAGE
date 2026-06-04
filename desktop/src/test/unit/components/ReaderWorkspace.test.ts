@@ -3,6 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 
 const t = (key: string) => key;
 
+vi.mock('@tauri-apps/api/webviewWindow', () => ({
+  getCurrentWebviewWindow: () => ({
+    setFullscreen: vi.fn(),
+  }),
+}));
+
 vi.mock("$lib/features/reader/components/PdfViewer.svelte", async () => {
   const mod = await import("../../mocks/MockPdfViewer.svelte");
   return { default: mod.default };

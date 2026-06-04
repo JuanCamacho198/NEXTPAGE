@@ -359,14 +359,6 @@
     changeZoom(delta);
   }
 
-  function handleZoomKeydown(e: KeyboardEvent) {
-    if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+' || e.key === '-')) {
-      e.preventDefault();
-      const step = e.key === '-' ? -10 : 10;
-      changeZoom(step);
-    }
-  }
-
   // ─── Theme ────────────────────────────────────────────────
   function getThemeStyles(): string {
     // Base themes
@@ -411,7 +403,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="flex flex-col h-full w-full outline-none relative" tabindex="-1" role="presentation" onkeydown={handleKeydown}
+<div class="flex flex-col h-full w-full outline-none relative" tabindex="-1" role="presentation"
   class:w-full={isFullscreen}
   class:h-full={isFullscreen}
 >

@@ -13,7 +13,7 @@
     onchange,
   }: Props = $props();
 
-  function goTo(page: number) {
+  function goTo(page: number): void {
     if (page >= 1 && page <= total) {
       current = page;
       onchange?.({ page });

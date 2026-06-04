@@ -28,19 +28,19 @@
 
   let isOpen = $state(false);
 
-  function toggle() {
+  function toggle(): void {
     if (!disabled) {
       isOpen = !isOpen;
     }
   }
 
-  function select(opt: Option) {
+  function select(opt: Option): void {
     value = opt.value;
     isOpen = false;
     onchange?.({ value: opt.value });
   }
 
-  function handleClickOutside(node: HTMLElement) {
+  function handleClickOutside(node: HTMLElement): { destroy(): void } {
     const handle = (e: MouseEvent) => {
       if (node && !node.contains(e.target as Node)) {
         isOpen = false;

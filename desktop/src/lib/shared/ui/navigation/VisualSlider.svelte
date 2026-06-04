@@ -30,7 +30,7 @@
     size: "linear-gradient(to right, var(--color-surface) 0%, var(--color-primary) 100%)",
   };
 
-  function handleInput(e: Event) {
+  function handleInput(e: Event): void {
     const target = e.target as HTMLInputElement;
     value = Number(target.value);
     onchange?.({ value });

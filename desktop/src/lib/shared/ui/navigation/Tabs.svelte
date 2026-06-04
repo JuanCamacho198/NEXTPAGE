@@ -20,7 +20,7 @@
     class: className = ""
   }: Props = $props();
 
-  function handleTabClick(tabId: string) {
+  function handleTabClick(tabId: string): void {
     active = tabId;
   }
 </script>

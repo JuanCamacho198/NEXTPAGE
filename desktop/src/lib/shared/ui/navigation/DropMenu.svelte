@@ -11,11 +11,11 @@
 
   let isOpen = $state(false);
 
-  function toggle() {
+  function toggle(): void {
     isOpen = !isOpen;
   }
 
-  function handleClickOutside(node: HTMLElement) {
+  function handleClickOutside(node: HTMLElement): { destroy(): void } {
     const handle = (e: MouseEvent) => {
       if (node && !node.contains(e.target as Node)) {
         isOpen = false;

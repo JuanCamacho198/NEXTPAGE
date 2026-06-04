@@ -4,7 +4,6 @@
   import { convertFileSrc } from '@tauri-apps/api/core';
   import type { MessageKey } from '$lib/i18n';
   import type { ReaderSettings, ReaderThemeMode } from '$lib/shared/types';
-  import { indexEpubText } from '$lib/api/tauriClient';
 
   // ─── Types ───────────────────────────────────────────────
   interface EpubChapterMeta {
@@ -43,8 +42,8 @@
       bounds: { left: number; top: number; right: number; bottom: number };
       container: { left: number; top: number; width: number; height: number };
       placement: string;
-      rects?: Array<{ left: number; top: number; width: number; height: number }>;
-      pageNumber?: number;
+      rects: Array<{ left: number; top: number; width: number; height: number }>;
+      pageNumber: number;
     }) => void;
     onselectionclear?: () => void;
     isFullscreen?: boolean;
@@ -102,7 +101,7 @@
       bounds: event.data.bounds,
       container: event.data.container,
       placement: 'epub-chapter',
-      rects: event.data.rects,
+      rects: event.data.rects ?? [],
       pageNumber: currentChapterIndex,
     });
   }

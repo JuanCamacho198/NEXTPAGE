@@ -80,6 +80,8 @@ fn main() {
             commands::saveBookFile,
             commands::upsert_book_cover,
             commands::upsertBookCover,
+            commands::extract_epub_cover,
+            commands::extractEpubCover,
             commands::list_highlights,
             commands::listHighlights,
             commands::save_highlight,

@@ -508,6 +508,14 @@ export const upsertBookCover = async (payload: UpsertBookCoverInput): Promise<vo
   }
 };
 
+export const extractEpubCover = async (bookId: string, filePath: string): Promise<boolean> => {
+  try {
+    return await invoke<boolean>("extractEpubCover", { bookId, filePath });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
 export const listHighlights = async (bookId?: string): Promise<HighlightDto[]> => {
   try {
     const rows = await invoke<RawHighlightDto[]>("listHighlights", { bookId: bookId ?? null });

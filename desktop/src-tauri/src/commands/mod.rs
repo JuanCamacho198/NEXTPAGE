@@ -481,6 +481,33 @@ pub fn upsertBookCover(
     upsert_book_cover(app, state, payload)
 }
 
+#[tauri::command(rename_all = "camelCase")]
+pub fn extract_epub_cover(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    book_id: String,
+    file_path: String,
+) -> Result<bool, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let path = std::path::PathBuf::from(&file_path);
+    match repository.extract_epub_cover(&app, &path, &book_id) {
+        Ok(Some(_)) => Ok(true),
+        Ok(None) => Ok(false),
+        Err(e) => Err(format!("{}", e)),
+    }
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn extractEpubCover(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    book_id: String,
+    file_path: String,
+) -> Result<bool, String> {
+    extract_epub_cover(app, state, book_id, file_path)
+}
+
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
 pub async fn saveBookFile(

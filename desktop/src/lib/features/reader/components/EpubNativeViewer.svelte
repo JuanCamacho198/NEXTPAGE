@@ -400,8 +400,16 @@
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'ArrowLeft') goToPrev();
     if (e.key === 'ArrowRight') goToNext();
+    // Ctrl+ +/- zoom
+    if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+' || e.key === '-')) {
+      e.preventDefault();
+      const step = e.key === '-' ? -10 : 10;
+      changeZoom(step);
+    }
   }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="flex flex-col h-full w-full outline-none relative" tabindex="-1" role="presentation" onkeydown={handleKeydown}
   class:w-full={isFullscreen}
@@ -420,12 +428,12 @@
     </div>
   {:else}
     <!-- Chapter iframe with zoom support -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="flex-1 w-full h-full overflow-hidden"
       style="background: {getThemeBgColor()};"
       bind:this={zoomContainerEl}
       onwheel={handleWheel}
-      onkeydown={handleZoomKeydown}
     >
       <div
         class="w-full h-full origin-top-left transition-transform duration-200 ease-out"

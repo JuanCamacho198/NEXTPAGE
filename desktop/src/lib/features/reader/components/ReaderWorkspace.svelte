@@ -15,7 +15,10 @@
   import DebugToggle from "$lib/debug/DebugToggle.svelte";
   import DebugPanel from "$lib/debug/DebugPanel.svelte";
   import { createFocusTrap } from "$lib/shared/utils/focusTrap";
+  import { createBookmarksState } from "../stores/bookmarksState.svelte";
   import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+
+  const appWindow = getCurrentWebviewWindow();
 
   type ActiveBook = LibraryBookDto & { filePath: string };
 

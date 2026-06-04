@@ -22,6 +22,8 @@ pub struct EpubMetadataExtract {
     pub publisher: Option<String>,
     pub chapters: Vec<EpubChapterMeta>,
     pub total_chapters: usize,
+    /// Absolute path to the resources cache directory
+    pub resources_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,34 +61,15 @@ impl EpubExtractor {
         let total_chapters = doc.spine.len();
         let num_chapters = doc.get_num_chapters();
 
-        // --- Extract all spine chapters as files ---
-        let chapters_dir = cache_dir.join("chapters");
-        fs::create_dir_all(&chapters_dir)
-            .map_err(|e| format!("Failed to create chapters dir: {}", e))?;
-
-        for idx in 0..num_chapters {
-            if doc.set_current_chapter(idx) {
-                if let Some((html, _mime)) = doc.get_current_str() {
-                    let file_name = format!("{}.xhtml", idx);
-                    let chapter_path = chapters_dir.join(&file_name);
-                    // Write only if not already cached
-                    if !chapter_path.exists() {
-                        if let Err(e) = fs::write(&chapter_path, &html) {
-                            eprintln!("Warning: failed to write chapter {}: {}", idx, e);
-                        }
-                    }
-                }
-            }
-        }
-
-        // --- Extract all resources (CSS, images, fonts) ---
+        // --- Extract all resources (CSS, images, fonts) AND chapters ---
+        // All files saved with their original paths inside resources/
+        // This preserves relative URL structure: chapters reference ../css/foo.css etc.
         let resources_dir = cache_dir.join("resources");
         fs::create_dir_all(&resources_dir)
             .map_err(|e| format!("Failed to create resources dir: {}", e))?;
 
-        // Collect resource paths first to avoid borrow conflict
+        // First extract all resources from manifest
         let resource_paths: Vec<PathBuf> = doc.resources.values().map(|item| item.path.clone()).collect();
-
         for rel_path in &resource_paths {
             let target_path = resources_dir.join(rel_path);
             if target_path.exists() {
@@ -102,6 +85,37 @@ impl EpubExtractor {
             }
         }
 
+        // Then extract all spine chapters — save at their original resource paths
+        // so that relative URLs (../css/foo.css etc.) resolve correctly
+        let mut spine_paths: Vec<String> = Vec::new();
+        for idx in 0..num_chapters {
+            if doc.set_current_chapter(idx) {
+                if let Some((html, _mime)) = doc.get_current_str() {
+                    // Get the original path from spine
+                    if let Some(path) = doc.get_current_path() {
+                        let target_path = resources_dir.join(&path);
+                        if let Some(parent) = target_path.parent() {
+                            let _ = fs::create_dir_all(parent);
+                        }
+                        if !target_path.exists() {
+                            if let Err(e) = fs::write(&target_path, &html) {
+                                eprintln!("Warning: failed to write chapter {:?}: {}", path, e);
+                            }
+                        }
+                        spine_paths.push(path.to_string_lossy().to_string());
+                    }
+                }
+            }
+        }
+
+        // Cache spine paths for quick chapter lookup
+        let spine_path = cache_dir.join("spine.json");
+        let spine_data = serde_json::to_string(&spine_paths)
+            .map_err(|e| format!("Failed to serialize spine: {}", e))?;
+        let _ = std::fs::write(&spine_path, &spine_data);
+
+        let resources_path = resources_dir.to_string_lossy().to_string();
+
         Ok(EpubMetadataExtract {
             title,
             author,
@@ -109,34 +123,41 @@ impl EpubExtractor {
             publisher,
             chapters,
             total_chapters,
+            resources_path,
         })
     }
 
     /// Read a cached chapter from the cache directory.
-    /// Returns the HTML content with resource URIs rewritten to use `epub://` protocol
-    /// (the frontend can resolve these via `get_epub_resource`).
+    /// The HTML is returned as-is with original relative URLs — the frontend
+    /// sets a `<base>` tag pointing to the resources dir so relative paths resolve.
     pub fn get_chapter(cache_dir: &Path, chapter_index: usize) -> Result<EpubChapterContent, String> {
-        // Try reading from the cache
-        let chapter_path = cache_dir
-            .join("chapters")
-            .join(format!("{}.xhtml", chapter_index));
+        // Read spine paths to find the chapter's original location
+        let spine_path = cache_dir.join("spine.json");
+        if !spine_path.exists() {
+            return Err("EPUB not cached / no spine data".to_string());
+        }
+        let spine_data = fs::read_to_string(&spine_path)
+            .map_err(|e| format!("Failed to read spine cache: {}", e))?;
+        let spine_paths: Vec<String> = serde_json::from_str(&spine_data)
+            .map_err(|e| format!("Failed to parse spine cache: {}", e))?;
 
-        if !chapter_path.exists() {
+        let chapter_rel_path = spine_paths.get(chapter_index)
+            .ok_or_else(|| format!("Chapter index {} out of range", chapter_index))?;
+
+        let chapter_abs_path = cache_dir.join("resources").join(chapter_rel_path);
+        if !chapter_abs_path.exists() {
             return Err(format!(
-                "Chapter {} not found in cache",
-                chapter_index
+                "Chapter {} not found at {:?}",
+                chapter_index, chapter_rel_path
             ));
         }
 
-        let html = fs::read_to_string(&chapter_path)
+        let html = fs::read_to_string(&chapter_abs_path)
             .map_err(|e| format!("Failed to read chapter {}: {}", chapter_index, e))?;
-
-        // Rewrite resource URLs to use `epub-resource://` scheme that the frontend can resolve
-        let processed = Self::rewrite_resource_urls(&html, cache_dir, chapter_index);
 
         Ok(EpubChapterContent {
             index: chapter_index,
-            html: processed,
+            html,
             mime: "application/xhtml+xml".to_string(),
         })
     }
@@ -194,76 +215,5 @@ impl EpubExtractor {
                 start_index + i + 1,
             );
         }
-    }
-
-    /// Rewrite relative resource URLs in the chapter HTML to `file-path` scheme
-    /// that the frontend can resolve using `readFile` (for resources dir).
-    /// 
-    /// Relative paths like `../css/style.css` or `image/photo.jpg` are resolved
-    /// against the chapter's original location and replaced with absolute resource paths.
-    fn rewrite_resource_urls(html: &str, cache_dir: &Path, chapter_index: usize) -> String {
-        // The cache dir has resources/ with the original EPUB structure.
-        // Chapter content references resources relative to chapter location.
-        // We resolve these to absolute paths within resources/.
-        let resources_base = cache_dir.join("resources");
-        // Replace src="..." and href="..." and xlink:href="..."
-        // Captures the attribute name and the URL
-        let re = regex::Regex::new(
-            r#"(src|href|xlink:href)="([^"]+)""#
-        ).ok();
-
-        match re {
-            Some(re) => re.replace_all(html, |caps: &regex::Captures| {
-                let attr = &caps[1];
-                let url = &caps[2];
-
-                // Skip absolute URLs
-                if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("data:") || url.starts_with("#") {
-                    return format!("{}=\"{}\"", attr, url);
-                }
-
-                // Resolve relative path against resources directory
-                // The chapter is at chapters/{index}.xhtml
-                // Resources are at resources/ with original structure
-                // Chapter was originally at some path in the EPUB like OEBPS/Text/chapter.xhtml
-                // We store everything flat-ish under resources/
-                let resolved = resources_base.join(url);
-
-                if resolved.exists() {
-                    let abs = resolved.to_string_lossy();
-                    // Use absolute file path that the frontend can read
-                    format!("{}=\"{}\"", attr, abs)
-                } else {
-                    // As fallback, try to find the resource anywhere in resources/
-                    let file_name = Path::new(url).file_name().and_then(|n| n.to_str()).unwrap_or(url);
-                    // Search for the file in resources dir
-                    let found = Self::find_file(&resources_base, file_name);
-                    match found {
-                        Some(path) => format!("{}=\"{}\"", attr, path.to_string_lossy()),
-                        None => {
-                            eprintln!("Warning: resource not found: {} (from chapter {})", url, chapter_index);
-                            format!("{}=\"{}\"", attr, url)
-                        }
-                    }
-                }
-            }).to_string(),
-            None => html.to_string(),
-        }
-    }
-
-    fn find_file(dir: &Path, file_name: &str) -> Option<PathBuf> {
-        if let Ok(entries) = fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_dir() {
-                    if let Some(found) = Self::find_file(&path, file_name) {
-                        return Some(found);
-                    }
-                } else if path.file_name().and_then(|n| n.to_str()) == Some(file_name) {
-                    return Some(path);
-                }
-            }
-        }
-        None
     }
 }

@@ -1,6 +1,6 @@
 <script lang="ts">
   import PdfViewer from "./PdfViewer.svelte";
-  import EpubViewer from "./EpubViewer.svelte";
+  import EpubNativeViewer from "./EpubNativeViewer.svelte";
   import SearchPanel from "./SearchPanel.svelte";
   import SelectionToolbar from "./SelectionToolbar.svelte";
   import ReaderTextSettings from "./ReaderTextSettings.svelte";
@@ -405,13 +405,11 @@
         class:w-full={isFullscreen}
         class:h-full={isFullscreen}
       >
-        <EpubViewer
+        <EpubNativeViewer
           filePath={activeReadingBook.filePath}
-          initialLocation={cfiLocation}
+          bookId={activeReadingBook.id}
           initialPercentage={percentage}
-          searchTargetLocator={searchTargetLocator}
           readerSettings={readerSettings}
-          preloadedBytes={preloadedBytes?.filePath === activeReadingBook.filePath ? preloadedBytes.data : null}
           onLocationContext={onReaderLocationContext}
           onLocationChange={onEpubLocationChange}
           onTocReady={handleTocReady}

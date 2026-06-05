@@ -1,0 +1,308 @@
+/* ============================================
+ * DESIGN TOKENS — CSS Custom Properties
+ * Centralized semantic tokens for consistent design
+ * ============================================
+ * Usage: var(--color-primary), var(--spacing-md), etc.
+ * ============================================ */
+
+@import "tailwindcss";
+
+/* ============================================
+ * FONTS
+ * ============================================ */
+@theme {
+  --font-sans: "Manrope", "Segoe UI", Arial, sans-serif;
+  --font-serif: "Newsreader", "Times New Roman", serif;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Border radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* Transitions */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+ * ROOT CUSTOM PROPERTIES
+ * Declared here (not just in @theme) so var() works
+ * ============================================ */
+:root {
+  /* Font families — duplicado de @theme para var() */
+  --font-sans: "Manrope", "Segoe UI", Arial, sans-serif;
+  --font-serif: "Newsreader", "Times New Roman", serif;
+
+  /* Font sizes — del diseño anterior */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.5rem;
+
+  /* Font weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Border radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* Transitions */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+ * DARK THEME (default)
+ * ============================================ */
+:root,
+[data-theme="dark"] {
+  /* Core colors */
+  --color-background: #08111f;
+  --color-surface: rgba(16, 28, 44, 0.84);
+  --color-panel-accent: rgba(73, 212, 255, 0.08);
+  --color-primary: #f8fbff;
+  --color-secondary: #dbe7f6;
+  --color-tertiary: #8fa3bf;
+  --color-text: #f8fbff;
+  --color-text-muted: #8fa3bf;
+
+  /* Semantic colors */
+  --color-error: #ff7b83;
+  --color-accent-blue: #49d4ff;
+  --color-accent-soft: rgba(73, 212, 255, 0.1);
+
+  /* Borders */
+  --color-border: rgba(148, 173, 206, 0.18);
+  --color-border-strong: rgba(148, 173, 206, 0.3);
+
+  /* Shadows */
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.2);
+  --shadow-glow: 0 0 15px rgba(73, 212, 255, 0.15);
+  --shadow-glow-hover: 0 0 20px rgba(73, 212, 255, 0.3);
+
+  /* Gradient backgrounds */
+  --gradient-surface: radial-gradient(circle at top left, rgba(73, 212, 255, 0.12), transparent 26%),
+                     radial-gradient(circle at top right, rgba(245, 207, 122, 0.1), transparent 24%),
+                     linear-gradient(180deg, #07111d 0%, #09111d 45%, #08101a 100%);
+}
+
+/* ============================================
+ * LIGHT THEME
+ * ============================================ */
+[data-theme="light"] {
+  /* Core colors */
+  --color-background: #eef2f7;
+  --color-surface: rgba(255, 255, 255, 0.9);
+  --color-panel-accent: rgba(0, 110, 200, 0.06);
+  --color-primary: #111827;
+  --color-secondary: #1e3a5f;
+  --color-tertiary: #4a6888;
+  --color-text: #111827;
+  --color-text-muted: #4a6888;
+
+  /* Semantic colors */
+  --color-error: #c0392b;
+  --color-accent-blue: #006ec8;
+  --color-accent-soft: rgba(0, 110, 200, 0.12);
+
+  /* Borders */
+  --color-border: rgba(30, 58, 95, 0.15);
+  --color-border-strong: rgba(30, 58, 95, 0.28);
+
+  /* Shadows */
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 15px rgba(0, 110, 200, 0.14);
+  --shadow-glow-hover: 0 0 20px rgba(0, 110, 200, 0.26);
+
+  /* Gradient backgrounds */
+  --gradient-surface: radial-gradient(circle at top left, rgba(0, 110, 200, 0.07), transparent 28%),
+                     radial-gradient(circle at top right, rgba(255, 190, 80, 0.08), transparent 26%),
+                     linear-gradient(180deg, #e8eef6 0%, #eef2f8 50%, #f0f4fa 100%);
+}
+
+/* ============================================
+ * BASE STYLES
+ * ============================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  transition:
+    background-color var(--duration-slow) ease,
+    border-color var(--duration-slow) ease,
+    color var(--duration-normal) ease,
+    box-shadow var(--duration-normal) ease;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--gradient-surface);
+  color: var(--color-primary);
+  margin: 0;
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+/* ============================================
+ * COMPONENT TOKENS
+ * ============================================ */
+.btn {
+  font-family: var(--font-sans);
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-background);
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 16px 28px rgba(73, 212, 255, 0.18);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: 1px solid var(--color-border);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-secondary);
+}
+
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-md);
+  box-shadow: var(--shadow-soft);
+}
+
+/* ============================================
+ * UTILITIES
+ * ============================================ */
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.text-error {
+  color: var(--color-error);
+}
+
+::selection {
+  background: rgba(73, 212, 255, 0.28);
+  color: var(--color-text);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(148, 236, 255, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/* ============================================
+ * PDF.js TEXT LAYER
+ * Custom selection color for the imported text layer
+ * ============================================ */
+.textLayer {
+  contain: layout style paint;
+  pointer-events: auto;
+  z-index: 2;
+}
+
+.textLayer span::selection {
+  background: rgba(73, 212, 255, 0.28);
+  color: transparent;
+}
+
+/* ============================================
+ * SETTINGS PANEL — non-migrable CSS
+ * These can't be expressed in Tailwind utility classes
+ * ============================================ */
+
+/* Slide-in animation for overlay mode */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Range input slider thumb styling */
+.slider-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.slider-thumb::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border: none;
+}

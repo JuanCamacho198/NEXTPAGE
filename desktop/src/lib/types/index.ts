@@ -1,4 +1,2 @@
-export * from "./book";
-export * from "./reading";
-export * from "./library";
-export * from "./settings";
+// Backward compatibility - re-export from new location
+export * from '../shared/types';

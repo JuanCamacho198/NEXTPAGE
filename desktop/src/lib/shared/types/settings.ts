@@ -122,6 +122,15 @@ export interface StorageInfo {
   tempFiles: number;
 }
 
+// Diagnose result from backend health check
+export interface DiagnoseResult {
+  database: string;
+  queue: string;
+  filesystem: string;
+  logFile: string;
+  details: Record<string, unknown>;
+}
+
 // Export/Import Config
 export interface AppConfigExport {
   version: string;

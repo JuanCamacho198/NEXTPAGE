@@ -1,2 +1,2 @@
-export * from './tauriClient';
-export * from './supabase';
+// Backward compatibility - re-export from new location
+export * from '../shared/api';

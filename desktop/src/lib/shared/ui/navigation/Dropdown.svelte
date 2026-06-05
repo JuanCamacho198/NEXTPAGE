@@ -27,6 +27,7 @@
   }: Props = $props();
 
   let isOpen = $state(false);
+  let containerEl = $state<HTMLDivElement | undefined>();
 
   function toggle(): void {
     if (!disabled) {
@@ -40,26 +41,24 @@
     onchange?.({ value: opt.value });
   }
 
-  function handleClickOutside(node: HTMLElement): { destroy(): void } {
+  // Click outside handler using $effect instead of use:handleClickOutside
+  $effect(() => {
+    if (!containerEl) return;
     const handle = (e: MouseEvent): void => {
-      if (node && !node.contains(e.target as Node)) {
+      if (containerEl && !containerEl.contains(e.target as Node)) {
         isOpen = false;
       }
     };
     document.addEventListener("click", handle, true);
-    return {
-      destroy() {
-        document.removeEventListener("click", handle, true);
-      }
-    };
-  }
+    return () => document.removeEventListener("click", handle, true);
+  });
 
   const selectedLabel = $derived(
     options.find((o) => o.value === value)?.label ?? placeholder
   );
 </script>
 
-<div class="relative inline-block" use:handleClickOutside>
+<div bind:this={containerEl} class="relative inline-block">
   <button
     type="button"
     class="inline-flex items-center justify-between rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm text-(--color-primary) hover:bg-(--color-border) disabled:cursor-not-allowed disabled:opacity-50"

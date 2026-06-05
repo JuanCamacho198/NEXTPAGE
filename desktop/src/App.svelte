@@ -4,9 +4,25 @@
   import { appState } from "$lib/shared/stores/AppState.svelte";
   import AppRouter from "$lib/shared/ui/layout/AppRouter.svelte";
   import AppModals from "$lib/shared/ui/layout/AppModals.svelte";
-
   onMount(() => {
     appState.init();
+
+    // Global error handler (replaces Svelte 5's missing ErrorBoundary)
+    const handleError = (event: ErrorEvent | PromiseRejectionEvent): void => {
+      const message = event instanceof PromiseRejectionEvent
+        ? event.reason?.message ?? event.reason?.toString() ?? "Unhandled Promise rejection"
+        : event.message;
+      console.error("[App] Uncaught error:", event);
+      appState.library.readerError = message;
+    };
+
+    window.addEventListener("error", handleError);
+    window.addEventListener("unhandledrejection", handleError);
+
+    return () => {
+      window.removeEventListener("error", handleError);
+      window.removeEventListener("unhandledrejection", handleError);
+    };
   });
 
   $effect(() => {

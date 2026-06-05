@@ -3,7 +3,6 @@
   import "pdfjs-dist/web/pdf_viewer.css";
   import { onMount } from "svelte";
   import { createPdfDocument, loadPdfOutline, clearDocumentCache, removeCachedDocument, setCachedDocument } from "$lib/features/reader/pdf/pdfStreaming";
-  import ErrorBoundary from "$lib/shared/ui/feedback/ErrorBoundary.svelte";
   import type { MessageKey } from "$lib/shared/i18n";
   import type { PdfOutlineItem, ReaderSettings } from "$lib/shared/types";
   import {
@@ -901,8 +900,7 @@
 
 <svelte:window onkeydown={handleViewerKeydown} />
 
-<ErrorBoundary>
-  <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions, a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions, a11y_click_events_have_key_events -->
   <div
     class="pdf-viewer"
     bind:this={viewerRoot}
@@ -988,7 +986,6 @@
       </div>
     </div>
   </div>
-</ErrorBoundary>
 
 <style>
   canvas {

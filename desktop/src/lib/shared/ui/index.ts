@@ -2,7 +2,6 @@
 export { default as ConfirmDialog } from './feedback/ConfirmDialog.svelte';
 export { default as ErrorFallback } from './feedback/ErrorFallback.svelte';
 export { default as ErrorToast } from './feedback/ErrorToast.svelte';
-export { default as ErrorBoundary } from './feedback/ErrorBoundary.svelte';
 export { default as Skeleton } from './feedback/Skeleton.svelte';
 export { default as EmptyState } from './feedback/EmptyState.svelte';
 export { default as Progress } from './feedback/Progress.svelte';

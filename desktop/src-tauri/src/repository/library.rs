@@ -178,25 +178,25 @@ pub fn import_book(
         )?;
 
     // Try sidecar cover first (user-provided image next to the source file)
-    let has_sidecar = if let Some(cover_source_path) = LibraryRepository::find_cover_source_path(&source_path)
-    {
-        if let Err(err) = repo.upsert_book_cover_from_file(&app, &book.id, &cover_source_path) {
-            let _ = repo.log_recoverable_cover_error(
-                &app,
-                &format!(
-                    "cover_ingest_failed book_id={} source={} error={}",
-                    book.id,
-                    cover_source_path.display(),
-                    err
-                ),
-            );
-            false
+    let has_sidecar =
+        if let Some(cover_source_path) = LibraryRepository::find_cover_source_path(&source_path) {
+            if let Err(err) = repo.upsert_book_cover_from_file(&app, &book.id, &cover_source_path) {
+                let _ = repo.log_recoverable_cover_error(
+                    &app,
+                    &format!(
+                        "cover_ingest_failed book_id={} source={} error={}",
+                        book.id,
+                        cover_source_path.display(),
+                        err
+                    ),
+                );
+                false
+            } else {
+                true
+            }
         } else {
-            true
-        }
-    } else {
-        false
-    };
+            false
+        };
 
     // If no sidecar cover and the book is EPUB, extract cover from inside the EPUB
     if !has_sidecar && book.format == "epub" {

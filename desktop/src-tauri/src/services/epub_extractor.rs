@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf};
 use std::fs;
+use std::path::{Path, PathBuf};
 
 use epub::doc::EpubDoc;
 use serde::{Deserialize, Serialize};
@@ -43,19 +43,12 @@ pub struct EpubExtractor;
 impl EpubExtractor {
     /// Parse EPUB metadata and extract chapters + resources to cache dir.
     /// Returns metadata and builds a cache structure under `cache_dir`.
-    pub fn extract(
-        epub_path: &Path,
-        cache_dir: &Path,
-    ) -> Result<EpubMetadataExtract, String> {
-        let mut doc = EpubDoc::new(epub_path)
-            .map_err(|e| format!("Failed to open EPUB: {}", e))?;
+    pub fn extract(epub_path: &Path, cache_dir: &Path) -> Result<EpubMetadataExtract, String> {
+        let mut doc = EpubDoc::new(epub_path).map_err(|e| format!("Failed to open EPUB: {}", e))?;
 
         // --- Metadata ---
         let title = doc.get_title().unwrap_or_else(|| "Unknown".to_string());
-        let author = doc
-            .mdata("creator")
-            .map(|m| m.value.clone())
-            .unwrap_or_default();
+        let author = doc.mdata("creator").map(|m| m.value.clone()).unwrap_or_default();
         let language = doc.mdata("language").map(|m| m.value.clone());
         let publisher = doc.mdata("publisher").map(|m| m.value.clone());
 
@@ -70,7 +63,8 @@ impl EpubExtractor {
             .map_err(|e| format!("Failed to create resources dir: {}", e))?;
 
         // First extract all resources from manifest
-        let resource_paths: Vec<PathBuf> = doc.resources.values().map(|item| item.path.clone()).collect();
+        let resource_paths: Vec<PathBuf> =
+            doc.resources.values().map(|item| item.path.clone()).collect();
         for rel_path in &resource_paths {
             let target_path = resources_dir.join(rel_path);
             if target_path.exists() {
@@ -116,7 +110,8 @@ impl EpubExtractor {
         let _ = std::fs::write(&spine_path, &spine_data);
 
         // --- Build spine map: filename -> spine index ---
-        let mut spine_map: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        let mut spine_map: std::collections::HashMap<String, usize> =
+            std::collections::HashMap::new();
         for (idx, spine_path_entry) in spine_paths.iter().enumerate() {
             if let Some(name) = std::path::Path::new(spine_path_entry).file_name() {
                 spine_map.insert(name.to_string_lossy().to_string(), idx);
@@ -142,7 +137,10 @@ impl EpubExtractor {
     /// Read a cached chapter from the cache directory.
     /// The HTML is returned as-is with original relative URLs — the frontend
     /// sets a `<base>` tag pointing to the resources dir so relative paths resolve.
-    pub fn get_chapter(cache_dir: &Path, chapter_index: usize) -> Result<EpubChapterContent, String> {
+    pub fn get_chapter(
+        cache_dir: &Path,
+        chapter_index: usize,
+    ) -> Result<EpubChapterContent, String> {
         // Read spine paths to find the chapter's original location
         let spine_path = cache_dir.join("spine.json");
         if !spine_path.exists() {
@@ -153,15 +151,13 @@ impl EpubExtractor {
         let spine_paths: Vec<String> = serde_json::from_str(&spine_data)
             .map_err(|e| format!("Failed to parse spine cache: {}", e))?;
 
-        let chapter_rel_path = spine_paths.get(chapter_index)
+        let chapter_rel_path = spine_paths
+            .get(chapter_index)
             .ok_or_else(|| format!("Chapter index {} out of range", chapter_index))?;
 
         let chapter_abs_path = cache_dir.join("resources").join(chapter_rel_path);
         if !chapter_abs_path.exists() {
-            return Err(format!(
-                "Chapter {} not found at {:?}",
-                chapter_index, chapter_rel_path
-            ));
+            return Err(format!("Chapter {} not found at {:?}", chapter_index, chapter_rel_path));
         }
 
         let html = fs::read_to_string(&chapter_abs_path)
@@ -189,8 +185,7 @@ impl EpubExtractor {
         if !full_path.exists() {
             return Err(format!("Resource not found: {}", resource_path));
         }
-        fs::read(&full_path)
-            .map_err(|e| format!("Failed to read resource: {}", e))
+        fs::read(&full_path).map_err(|e| format!("Failed to read resource: {}", e))
     }
 
     fn build_toc(
@@ -252,20 +247,16 @@ impl EpubExtractor {
                 href: content_str.to_string(),
                 depth: child_depth,
             });
-            Self::add_child_toc(
-                &child.children,
-                chapters,
-                spine_map,
-                index + 1,
-                child_depth,
-            );
+            Self::add_child_toc(&child.children, chapters, spine_map, index + 1, child_depth);
         }
     }
 }
 
 /// Extract plain text from all cached EPUB chapters.
 /// Returns Vec of (locator, text_content, chunk_index).
-pub fn extract_plain_texts(cache_dir: &std::path::Path) -> Result<Vec<(String, String, i32)>, String> {
+pub fn extract_plain_texts(
+    cache_dir: &std::path::Path,
+) -> Result<Vec<(String, String, i32)>, String> {
     let spine_path = cache_dir.join("spine.json");
     if !spine_path.exists() {
         return Err("EPUB not cached / no spine data".to_string());
@@ -291,11 +282,7 @@ pub fn extract_plain_texts(cache_dir: &std::path::Path) -> Result<Vec<(String, S
         };
         let text = strip_html(&html);
         if !text.is_empty() {
-            chunks.push((
-                format!("chapter:{}", index),
-                text,
-                index as i32,
-            ));
+            chunks.push((format!("chapter:{}", index), text, index as i32));
         }
     }
 
@@ -347,10 +334,8 @@ pub fn strip_html(html: &str) -> String {
     }
 
     // Collapse whitespace: replace newlines/tabs with spaces, trim
-    let collapsed: String = text
-        .chars()
-        .map(|c| if c == '\n' || c == '\t' || c == '\r' { ' ' } else { c })
-        .collect();
+    let collapsed: String =
+        text.chars().map(|c| if c == '\n' || c == '\t' || c == '\r' { ' ' } else { c }).collect();
 
     // Remove multiple consecutive spaces
     let mut result = String::with_capacity(collapsed.len());
@@ -421,8 +406,13 @@ mod tests {
         std::fs::write(dir.join("spine.json"), &spine_json).unwrap();
 
         // Write chapter files
-        std::fs::write(dir.join("resources/chapter1.xhtml"), "<p>First chapter content</p>").unwrap();
-        std::fs::write(dir.join("resources/chapter2.xhtml"), "<p>Second chapter with <b>bold</b> text</p>").unwrap();
+        std::fs::write(dir.join("resources/chapter1.xhtml"), "<p>First chapter content</p>")
+            .unwrap();
+        std::fs::write(
+            dir.join("resources/chapter2.xhtml"),
+            "<p>Second chapter with <b>bold</b> text</p>",
+        )
+        .unwrap();
 
         let result = extract_plain_texts(&dir).unwrap();
         assert_eq!(result.len(), 2);
@@ -443,7 +433,8 @@ mod tests {
 
     #[test]
     fn test_toc_spine_map_lookup() {
-        let mut spine_map: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        let mut spine_map: std::collections::HashMap<String, usize> =
+            std::collections::HashMap::new();
         spine_map.insert("chapter3.xhtml".to_string(), 2usize);
         spine_map.insert("chapter1.xhtml".to_string(), 0usize);
         spine_map.insert("chapter2.xhtml".to_string(), 1usize);

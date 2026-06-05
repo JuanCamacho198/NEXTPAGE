@@ -35,15 +35,13 @@ pub async fn parse_epub(
     }
 
     // Extract and cache
-    let meta = EpubExtractor::extract(
-        std::path::Path::new(&file_path),
-        &cache_dir,
-    )?;
+    let meta = EpubExtractor::extract(std::path::Path::new(&file_path), &cache_dir)?;
 
     // Cache metadata for future calls
-    std::fs::create_dir_all(&cache_dir).map_err(|e| format!("Failed to create cache dir: {}", e))?;
-    let data = serde_json::to_string(&meta)
-        .map_err(|e| format!("Failed to serialize metadata: {}", e))?;
+    std::fs::create_dir_all(&cache_dir)
+        .map_err(|e| format!("Failed to create cache dir: {}", e))?;
+    let data =
+        serde_json::to_string(&meta).map_err(|e| format!("Failed to serialize metadata: {}", e))?;
     std::fs::write(&metadata_path, &data)
         .map_err(|e| format!("Failed to write metadata cache: {}", e))?;
 
@@ -74,10 +72,7 @@ pub async fn get_epub_resource(
 
 /// Check if an EPUB has been parsed and cached.
 #[tauri::command(rename_all = "camelCase")]
-pub async fn is_epub_cached(
-    app: AppHandle,
-    book_id: String,
-) -> Result<bool, String> {
+pub async fn is_epub_cached(app: AppHandle, book_id: String) -> Result<bool, String> {
     let cache_dir = get_cache_dir(&app, &book_id);
     let metadata_path = cache_dir.join("metadata.json");
     Ok(metadata_path.exists())
@@ -85,10 +80,7 @@ pub async fn is_epub_cached(
 
 /// Delete the EPUB cache for a book.
 #[tauri::command(rename_all = "camelCase")]
-pub async fn clear_epub_cache(
-    app: AppHandle,
-    book_id: String,
-) -> Result<(), String> {
+pub async fn clear_epub_cache(app: AppHandle, book_id: String) -> Result<(), String> {
     let cache_dir = get_cache_dir(&app, &book_id);
     if cache_dir.exists() {
         std::fs::remove_dir_all(&cache_dir)
@@ -115,17 +107,16 @@ pub async fn index_epub_text(
         return Ok(()); // Nothing to index
     }
 
-    let input = IndexBookTextInput {
-        book_id: book_id.clone(),
-        chunks: chunks
-            .into_iter()
-            .map(|(locator, text_content, chunk_index)| crate::models::IndexBookTextChunkInput {
-                locator,
-                chunk_index,
-                text_content,
-            })
-            .collect(),
-    };
+    let input =
+        IndexBookTextInput {
+            book_id: book_id.clone(),
+            chunks: chunks
+                .into_iter()
+                .map(|(locator, text_content, chunk_index)| {
+                    crate::models::IndexBookTextChunkInput { locator, chunk_index, text_content }
+                })
+                .collect(),
+        };
 
     let mut repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository.index_book_text(input).map_err(|e| format!("{}", e))

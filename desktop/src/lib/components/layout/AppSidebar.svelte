@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { AppRoute } from "../../stores/homeState";
+  import type { AppRoute } from "$lib/shared/stores/homeState";
   import type { MessageKey } from "../../i18n";
-  import ThemeToggle from "../ui/navigation/ThemeToggle.svelte";
-  import Icon from "../ui/navigation/Icon.svelte";
+  import ThemeToggle from "$lib/shared/ui/navigation/ThemeToggle.svelte";
+  import Icon from "$lib/shared/ui/navigation/Icon.svelte";
 
   type Props = {
     activeRoute: AppRoute;

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import Button from "../ui/forms/Button.svelte";
-  import DropMenu from "../ui/navigation/DropMenu.svelte";
+  import Button from "$lib/shared/ui/forms/Button.svelte";
+  import DropMenu from "$lib/shared/ui/navigation/DropMenu.svelte";
   import SafeCover from "../library/SafeCover.svelte";
-  import Icon from "../ui/navigation/Icon.svelte";
+  import Icon from "$lib/shared/ui/navigation/Icon.svelte";
   import {
     FILTER_OPTIONS,
     SORT_OPTIONS,

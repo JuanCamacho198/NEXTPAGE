@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { ReadingStatsSummaryDto } from "$lib/types";
   import type { MessageKey } from "../../i18n";
-  import Panel from "../ui/layout/Panel.svelte";
-import Button from "../ui/forms/Button.svelte";
+  import Panel from "$lib/shared/ui/layout/Panel.svelte";
+import Button from "$lib/shared/ui/forms/Button.svelte";
 
   type Props = {
     stats: ReadingStatsSummaryDto | null;

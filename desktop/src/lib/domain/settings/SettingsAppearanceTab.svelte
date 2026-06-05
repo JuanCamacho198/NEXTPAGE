@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Panel from "$lib/components/ui/layout/Panel.svelte";
-  import Button from "$lib/components/ui/forms/Button.svelte";
+  import Panel from "$lib/shared/ui/layout/Panel.svelte";
+  import Button from "$lib/shared/ui/forms/Button.svelte";
   import type { MessageKey } from "$lib/shared/i18n";
   import type { ReaderThemeMode } from "$lib/types";
 

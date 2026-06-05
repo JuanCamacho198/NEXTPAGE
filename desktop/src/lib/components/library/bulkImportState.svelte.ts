@@ -1,5 +1,5 @@
 import type { BulkImportSummary, ScanFolderResult } from "$lib/types";
-import type { BulkImportProgress } from "../../services/BulkImportService";
+import type { BulkImportProgress } from "$lib/shared/services/BulkImportService";
 import type { MessageKey } from "$lib/shared/i18n";
 
 export const STATUS = {

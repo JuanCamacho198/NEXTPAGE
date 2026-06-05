@@ -3,12 +3,12 @@
   import type { HighlightDto } from "$lib/types";
   import { listHighlights, deleteHighlight } from "$lib/shared/api/tauriClient";
   import SafeCover from "../library/SafeCover.svelte";
-  import Pagination from "../ui/navigation/Pagination.svelte";
-  import DropMenu from "../ui/navigation/DropMenu.svelte";
-  import Icon from "../ui/navigation/Icon.svelte";
-  import EmptyState from "../ui/feedback/EmptyState.svelte";
-  import Skeleton from "../ui/feedback/Skeleton.svelte";
-  import Button from "../ui/forms/Button.svelte";
+  import Pagination from "$lib/shared/ui/navigation/Pagination.svelte";
+  import DropMenu from "$lib/shared/ui/navigation/DropMenu.svelte";
+  import Icon from "$lib/shared/ui/navigation/Icon.svelte";
+  import EmptyState from "$lib/shared/ui/feedback/EmptyState.svelte";
+  import Skeleton from "$lib/shared/ui/feedback/Skeleton.svelte";
+  import Button from "$lib/shared/ui/forms/Button.svelte";
   import {
     PAGE_SIZE,
     HIGHLIGHT_COLORS,

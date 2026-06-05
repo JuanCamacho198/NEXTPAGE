@@ -2,13 +2,13 @@ import "./styles.css";
 import App from "./App.svelte";
 import { mount } from "svelte";
 import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
-import { supabase } from "./lib/api/supabase";
-import { logger } from "./lib/logger/Logger";
-import { consoleSink } from "./lib/logger/ConsoleSink";
-import { tauriSink } from "./lib/logger/TauriSink";
-import { SentrySink } from "./lib/logger/SentrySink";
-import { getSentrySettings } from "./lib/logger/sentryConfig";
-import { createErrorEvent, type ErrorEvent } from "./lib/events/ErrorEvent";
+import { supabase } from "./lib/shared/api/supabase";
+import { logger } from "./lib/shared/logger/Logger";
+import { consoleSink } from "./lib/shared/logger/ConsoleSink";
+import { tauriSink } from "./lib/shared/logger/TauriSink";
+import { SentrySink } from "./lib/shared/logger/SentrySink";
+import { getSentrySettings } from "./lib/shared/logger/sentryConfig";
+import { createErrorEvent, type ErrorEvent } from "./lib/shared/events/ErrorEvent";
 
 let handlersRegistered = false;
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ReadingStatsSummaryDto } from "$lib/types";
   import type { MessageKey } from "../../i18n";
-  import Icon from "../ui/navigation/Icon.svelte";
+  import Icon from "$lib/shared/ui/navigation/Icon.svelte";
 
   type Props = {
     stats: ReadingStatsSummaryDto | null;

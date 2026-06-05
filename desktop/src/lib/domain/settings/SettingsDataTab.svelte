@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Panel from "$lib/components/ui/layout/Panel.svelte";
+  import Panel from "$lib/shared/ui/layout/Panel.svelte";
   import type { MessageKey } from "$lib/shared/i18n";
 
   type Props = {

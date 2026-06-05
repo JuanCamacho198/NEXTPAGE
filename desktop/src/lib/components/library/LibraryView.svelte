@@ -1,10 +1,10 @@
 <script lang="ts">
   import SafeCover from "./SafeCover.svelte";
-  import DropMenu from "../ui/navigation/DropMenu.svelte";
+  import DropMenu from "$lib/shared/ui/navigation/DropMenu.svelte";
   import CollectionBadge from "./CollectionBadge.svelte";
-  import Skeleton from "../ui/feedback/Skeleton.svelte";
-  import EmptyState from "../ui/feedback/EmptyState.svelte";
-  import Panel from "../ui/layout/Panel.svelte";
+  import Skeleton from "$lib/shared/ui/feedback/Skeleton.svelte";
+  import EmptyState from "$lib/shared/ui/feedback/EmptyState.svelte";
+  import Panel from "$lib/shared/ui/layout/Panel.svelte";
   import { LIBRARY_VIEW_MODE, formatUpdatedAt, formatProgress } from "./libraryState.svelte";
   import type { Props } from "./libraryState.svelte";
 

@@ -3,8 +3,8 @@
   import EditMetadataModal from "$lib/components/library/EditMetadataModal.svelte";
   import CollectionManager from "$lib/components/library/CollectionManager.svelte";
   import BulkImportModal from "$lib/components/library/BulkImportModal.svelte";
-  import ErrorToast from "$lib/components/ui/feedback/ErrorToast.svelte";
-  import ErrorFallback from "$lib/components/ui/feedback/ErrorFallback.svelte";
+  import ErrorToast from "$lib/shared/ui/feedback/ErrorToast.svelte";
+  import ErrorFallback from "$lib/shared/ui/feedback/ErrorFallback.svelte";
 </script>
 
 <EditMetadataModal

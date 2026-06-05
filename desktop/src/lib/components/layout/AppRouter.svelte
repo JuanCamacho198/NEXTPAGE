@@ -1,7 +1,7 @@
 <script lang="ts">
   import { appState } from "$lib/shared/stores/AppState.svelte";
 
-  import Button from "$lib/components/ui/forms/Button.svelte";
+  import Button from "$lib/shared/ui/forms/Button.svelte";
   import ShelfSection from "$lib/components/layout/ShelfSection.svelte";
   import ContinueReadingSection from "$lib/components/layout/ContinueReadingSection.svelte";
   import SettingsPanel from "$lib/domain/settings/SettingsPanel.svelte";

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "$lib/components/ui/navigation/Icon.svelte";
+  import Icon from "$lib/shared/ui/navigation/Icon.svelte";
   import type { MessageKey } from "$lib/shared/i18n";
 
   type Props = {

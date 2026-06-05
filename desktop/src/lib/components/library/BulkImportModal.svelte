@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Button from "../ui/forms/Button.svelte";
-  import Modal from "../ui/layout/Modal.svelte";
+  import Button from "$lib/shared/ui/forms/Button.svelte";
+  import Modal from "$lib/shared/ui/layout/Modal.svelte";
   import { STATUS, getStatusKey, getStatusClass } from "./bulkImportState.svelte";
   import type { Props } from "./bulkImportState.svelte";
 

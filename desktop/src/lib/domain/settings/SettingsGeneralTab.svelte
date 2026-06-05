@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Panel from "$lib/components/ui/layout/Panel.svelte";
-  import Button from "$lib/components/ui/forms/Button.svelte";
+  import Panel from "$lib/shared/ui/layout/Panel.svelte";
+  import Button from "$lib/shared/ui/forms/Button.svelte";
   import GoogleLoginButton from "$lib/domain/library/GoogleLoginButton.svelte";
   import ProfileCard from "./ProfileCard.svelte";
   import KeyboardShortcutsCard from "./KeyboardShortcutsCard.svelte";

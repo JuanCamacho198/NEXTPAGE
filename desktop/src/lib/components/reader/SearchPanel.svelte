@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { SearchBookTextResponse, SearchNavigationTarget, SearchResult } from "$lib/types";
   import type { MessageKey } from "../../i18n";
-  import Panel from "../ui/layout/Panel.svelte";
+  import Panel from "$lib/shared/ui/layout/Panel.svelte";
 
   type Props = {
     bookId?: string | null;

@@ -1,5 +1,6 @@
-// TRANSITION FACADE: keep public command names stable (snake_case + camelCase aliases) during backend refactor.
-// Rollback: revert per feature module by restoring previous wrapper exports without touching invoke_handler symbols.
+// Facade cleanup: only camelCase commands remain.
+// All snake_case variants and their camelCase aliases have been merged.
+// Internal helpers (_internal suffix) kept as snake_case.
 
 pub mod bookmarks;
 pub mod collections;
@@ -52,6 +53,9 @@ use crate::state::AppState;
 
 const LIBRARY_RESPONSE_VERSION: i32 = 1;
 
+// All command functions use camelCase for IPC compatibility with the Frontend.
+// #[allow(non_snake_case)] suppresses the Rust convention warning.
+
 fn map_command_error(error: AppError) -> String {
     let dto = match error {
         AppError::InvalidInput(message) => CommandErrorDto::validation(message),
@@ -70,32 +74,23 @@ fn map_command_error(error: AppError) -> String {
     })
 }
 
+#[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn list_books(state: State<'_, AppState>) -> Result<Vec<BookDto>, String> {
+pub fn listBooks(state: State<'_, AppState>) -> Result<Vec<BookDto>, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository.list_books().map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn listBooks(state: State<'_, AppState>) -> Result<Vec<BookDto>, String> {
-    list_books(state)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn upsert_book(state: State<'_, AppState>, book: BookDto) -> Result<(), String> {
+pub fn upsertBook(state: State<'_, AppState>, book: BookDto) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository.upsert_book(book).map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn upsertBook(state: State<'_, AppState>, book: BookDto) -> Result<(), String> {
-    upsert_book(state, book)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn get_settings(state: State<'_, AppState>) -> Result<Vec<AppSettingDto>, String> {
+pub fn getSettings(state: State<'_, AppState>) -> Result<Vec<AppSettingDto>, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     // Return empty if schema not ready
     if !repository.has_desktop_parity_schema().unwrap_or(true) {
@@ -106,12 +101,7 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<Vec<AppSettingDto>, St
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn getSettings(state: State<'_, AppState>) -> Result<Vec<AppSettingDto>, String> {
-    get_settings(state)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn upsert_settings(
+pub fn upsertSettings(
     state: State<'_, AppState>,
     settings: Vec<AppSettingDto>,
 ) -> Result<(), String> {
@@ -125,29 +115,12 @@ pub fn upsert_settings(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn upsertSettings(
-    state: State<'_, AppState>,
-    settings: Vec<AppSettingDto>,
-) -> Result<(), String> {
-    upsert_settings(state, settings)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn list_library_books(
+pub fn listLibraryBooks(
     state: State<'_, AppState>,
     payload: Option<ListLibraryBooksInput>,
 ) -> Result<Vec<LibraryBookDto>, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     list_library_books_internal(&repository, payload).map_err(map_command_error)
-}
-
-#[allow(non_snake_case)]
-#[tauri::command(rename_all = "camelCase")]
-pub fn listLibraryBooks(
-    state: State<'_, AppState>,
-    payload: Option<ListLibraryBooksInput>,
-) -> Result<Vec<LibraryBookDto>, String> {
-    list_library_books(state, payload)
 }
 
 pub fn list_library_books_internal(
@@ -173,23 +146,16 @@ pub fn list_library_books_internal(
     repository.list_library_books()
 }
 
+#[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn scan_folder(
-    state: State<'_, AppState>,
-    path: String,
-) -> Result<ScanFolderResultDto, String> {
+pub fn scanFolder(state: State<'_, AppState>, path: String) -> Result<ScanFolderResultDto, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository.scan_folder(&path).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn scanFolder(state: State<'_, AppState>, path: String) -> Result<ScanFolderResultDto, String> {
-    scan_folder(state, path)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn get_progress(
+pub fn getProgress(
     state: State<'_, AppState>,
     book_id: String,
 ) -> Result<Option<ReadingProgressDto>, String> {
@@ -199,27 +165,14 @@ pub fn get_progress(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn getProgress(
-    state: State<'_, AppState>,
-    book_id: String,
-) -> Result<Option<ReadingProgressDto>, String> {
-    get_progress(state, book_id)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn save_progress(state: State<'_, AppState>, payload: SaveProgressInput) -> Result<(), String> {
+pub fn saveProgress(state: State<'_, AppState>, payload: SaveProgressInput) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository.save_progress(payload).map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn saveProgress(state: State<'_, AppState>, payload: SaveProgressInput) -> Result<(), String> {
-    save_progress(state, payload)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn upsert_progress(
+pub fn upsertProgress(
     state: State<'_, AppState>,
     progress: ReadingProgressDto,
 ) -> Result<(), String> {
@@ -229,15 +182,7 @@ pub fn upsert_progress(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn upsertProgress(
-    state: State<'_, AppState>,
-    progress: ReadingProgressDto,
-) -> Result<(), String> {
-    upsert_progress(state, progress)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn save_reading_session(
+pub fn saveReadingSession(
     state: State<'_, AppState>,
     payload: ReadingSessionInput,
 ) -> Result<(), String> {
@@ -247,15 +192,7 @@ pub fn save_reading_session(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn saveReadingSession(
-    state: State<'_, AppState>,
-    payload: ReadingSessionInput,
-) -> Result<(), String> {
-    save_reading_session(state, payload)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn get_reading_stats(
+pub fn getReadingStats(
     state: State<'_, AppState>,
     book_id: Option<String>,
 ) -> Result<ReadingStatsSummaryDto, String> {
@@ -275,15 +212,7 @@ pub fn get_reading_stats(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn getReadingStats(
-    state: State<'_, AppState>,
-    book_id: Option<String>,
-) -> Result<ReadingStatsSummaryDto, String> {
-    get_reading_stats(state, book_id)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn index_book_text(
+pub fn indexBookText(
     state: State<'_, AppState>,
     payload: IndexBookTextInput,
 ) -> Result<(), String> {
@@ -293,15 +222,7 @@ pub fn index_book_text(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn indexBookText(
-    state: State<'_, AppState>,
-    payload: IndexBookTextInput,
-) -> Result<(), String> {
-    index_book_text(state, payload)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn search_book_text(
+pub fn searchBookText(
     state: State<'_, AppState>,
     payload: SearchBookTextInput,
 ) -> Result<SearchBookTextResponse, String> {
@@ -311,15 +232,7 @@ pub fn search_book_text(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn searchBookText(
-    state: State<'_, AppState>,
-    payload: SearchBookTextInput,
-) -> Result<SearchBookTextResponse, String> {
-    search_book_text(state, payload)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub async fn import_book(
+pub async fn importBook(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
     input: BookImportInput,
@@ -330,16 +243,7 @@ pub async fn import_book(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub async fn importBook(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-    input: BookImportInput,
-) -> Result<BookDto, String> {
-    import_book(app, state, input).await
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn delete_book(
+pub fn deleteBook(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
     payload: BookDeleteInput,
@@ -348,8 +252,9 @@ pub fn delete_book(
     repository.delete_book(app, payload).map_err(map_command_error)
 }
 
+#[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn hide_book_from_library(
+pub fn hideBookFromLibrary(
     state: State<'_, AppState>,
     payload: HideBookInput,
 ) -> Result<(), String> {
@@ -359,21 +264,14 @@ pub fn hide_book_from_library(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn hideBookFromLibrary(
-    state: State<'_, AppState>,
-    payload: HideBookInput,
-) -> Result<(), String> {
-    hide_book_from_library(state, payload)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub async fn get_file_bytes(file_path: String) -> Result<Vec<u8>, String> {
+pub async fn getFileBytes(file_path: String) -> Result<Vec<u8>, String> {
     let path = PathBuf::from(&file_path);
     fs::read(&path).map_err(|err| format!("Failed to read file: {}", err))
 }
 
+#[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub async fn get_file_size(file_path: String) -> Result<u64, String> {
+pub async fn getFileSize(file_path: String) -> Result<u64, String> {
     let path = PathBuf::from(&file_path);
     let metadata =
         std::fs::metadata(&path).map_err(|err| format!("Failed to read file metadata: {}", err))?;
@@ -382,16 +280,7 @@ pub async fn get_file_size(file_path: String) -> Result<u64, String> {
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub async fn getFileSize(file_path: String) -> Result<u64, String> {
-    get_file_size(file_path).await
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub async fn read_file_range(
-    file_path: String,
-    offset: u64,
-    length: u64,
-) -> Result<Vec<u8>, String> {
+pub async fn readFileRange(file_path: String, offset: u64, length: u64) -> Result<Vec<u8>, String> {
     use std::io::{Read, Seek, SeekFrom};
     let path = PathBuf::from(&file_path);
     let mut file =
@@ -405,18 +294,7 @@ pub async fn read_file_range(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub async fn readFileRange(file_path: String, offset: u64, length: u64) -> Result<Vec<u8>, String> {
-    read_file_range(file_path, offset, length).await
-}
-
-#[allow(non_snake_case)]
-#[tauri::command(rename_all = "camelCase")]
-pub async fn getFileBytes(file_path: String) -> Result<Vec<u8>, String> {
-    get_file_bytes(file_path).await
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub async fn update_book_progress(
+pub async fn updateBookProgress(
     state: State<'_, AppState>,
     book_id: String,
     current_page: i32,
@@ -427,27 +305,13 @@ pub async fn update_book_progress(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub async fn updateBookProgress(
-    state: State<'_, AppState>,
-    book_id: String,
-    current_page: i32,
-) -> Result<(), String> {
-    update_book_progress(state, book_id, current_page).await
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub async fn file_exists(path: String) -> Result<bool, String> {
+pub async fn fileExists(path: String) -> Result<bool, String> {
     Ok(PathBuf::from(&path).exists())
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub async fn fileExists(path: String) -> Result<bool, String> {
-    file_exists(path).await
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub async fn save_book_file(
+pub async fn saveBookFile(
     state: State<'_, AppState>,
     id: String,
     data: Vec<u8>,
@@ -456,8 +320,9 @@ pub async fn save_book_file(
     repository.save_book_file(&id, &data).map_err(map_command_error)
 }
 
+#[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn upsert_book_cover(
+pub fn upsertBookCover(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
     payload: UpsertBookCoverInput,
@@ -476,16 +341,7 @@ pub fn upsert_book_cover(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn upsertBookCover(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-    payload: UpsertBookCoverInput,
-) -> Result<(), String> {
-    upsert_book_cover(app, state, payload)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn extract_epub_cover(
+pub fn extractEpubCover(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
     book_id: String,
@@ -502,27 +358,7 @@ pub fn extract_epub_cover(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn extractEpubCover(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-    book_id: String,
-    file_path: String,
-) -> Result<bool, String> {
-    extract_epub_cover(app, state, book_id, file_path)
-}
-
-#[allow(non_snake_case)]
-#[tauri::command(rename_all = "camelCase")]
-pub async fn saveBookFile(
-    state: State<'_, AppState>,
-    id: String,
-    data: Vec<u8>,
-) -> Result<(), String> {
-    save_book_file(state, id, data).await
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn list_highlights(
+pub fn listHighlights(
     state: State<'_, AppState>,
     book_id: Option<String>,
 ) -> Result<Vec<HighlightDto>, String> {
@@ -532,15 +368,7 @@ pub fn list_highlights(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn listHighlights(
-    state: State<'_, AppState>,
-    book_id: Option<String>,
-) -> Result<Vec<HighlightDto>, String> {
-    list_highlights(state, book_id)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn save_highlight(
+pub fn saveHighlight(
     state: State<'_, AppState>,
     payload: SaveHighlightInput,
 ) -> Result<HighlightDto, String> {
@@ -550,27 +378,14 @@ pub fn save_highlight(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn saveHighlight(
-    state: State<'_, AppState>,
-    highlight: SaveHighlightInput,
-) -> Result<HighlightDto, String> {
-    save_highlight(state, highlight)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn delete_highlight(state: State<'_, AppState>, id: String) -> Result<(), String> {
+pub fn deleteHighlight(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository.delete_highlight(&id).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn deleteHighlight(state: State<'_, AppState>, id: String) -> Result<(), String> {
-    delete_highlight(state, id)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn list_bookmarks(
+pub fn listBookmarks(
     state: State<'_, AppState>,
     book_id: Option<String>,
 ) -> Result<Vec<BookmarkDto>, String> {
@@ -580,15 +395,7 @@ pub fn list_bookmarks(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn listBookmarks(
-    state: State<'_, AppState>,
-    book_id: Option<String>,
-) -> Result<Vec<BookmarkDto>, String> {
-    list_bookmarks(state, book_id)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn save_bookmark(
+pub fn saveBookmark(
     state: State<'_, AppState>,
     payload: SaveBookmarkInput,
 ) -> Result<BookmarkDto, String> {
@@ -598,27 +405,14 @@ pub fn save_bookmark(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn saveBookmark(
-    state: State<'_, AppState>,
-    bookmark: SaveBookmarkInput,
-) -> Result<BookmarkDto, String> {
-    save_bookmark(state, bookmark)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn delete_bookmark(state: State<'_, AppState>, id: String) -> Result<(), String> {
+pub fn deleteBookmark(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository.delete_bookmark(&id).map_err(|e| format!("{}", e))
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn deleteBookmark(state: State<'_, AppState>, id: String) -> Result<(), String> {
-    delete_bookmark(state, id)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn create_collection(
+pub fn createCollection(
     state: State<'_, AppState>,
     payload: CreateCollectionInput,
 ) -> Result<CollectionDto, String> {
@@ -628,39 +422,21 @@ pub fn create_collection(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn createCollection(
-    state: State<'_, AppState>,
-    payload: CreateCollectionInput,
-) -> Result<CollectionDto, String> {
-    create_collection(state, payload)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn delete_collection(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+pub fn deleteCollection(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository.delete_collection(id).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn deleteCollection(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    delete_collection(state, id)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn list_collections(state: State<'_, AppState>) -> Result<Vec<CollectionDto>, String> {
+pub fn listCollections(state: State<'_, AppState>) -> Result<Vec<CollectionDto>, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository.list_collections().map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn listCollections(state: State<'_, AppState>) -> Result<Vec<CollectionDto>, String> {
-    list_collections(state)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn add_book_to_collection(
+pub fn addBookToCollection(
     state: State<'_, AppState>,
     payload: BookCollectionInput,
 ) -> Result<(), String> {
@@ -672,15 +448,7 @@ pub fn add_book_to_collection(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn addBookToCollection(
-    state: State<'_, AppState>,
-    payload: BookCollectionInput,
-) -> Result<(), String> {
-    add_book_to_collection(state, payload)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn remove_book_from_collection(
+pub fn removeBookFromCollection(
     state: State<'_, AppState>,
     payload: BookCollectionInput,
 ) -> Result<(), String> {
@@ -692,15 +460,7 @@ pub fn remove_book_from_collection(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn removeBookFromCollection(
-    state: State<'_, AppState>,
-    payload: BookCollectionInput,
-) -> Result<(), String> {
-    remove_book_from_collection(state, payload)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn get_book_collections(
+pub fn getBookCollections(
     state: State<'_, AppState>,
     book_id: String,
 ) -> Result<Vec<CollectionDto>, String> {
@@ -710,23 +470,16 @@ pub fn get_book_collections(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn getBookCollections(
-    state: State<'_, AppState>,
-    book_id: String,
-) -> Result<Vec<CollectionDto>, String> {
-    get_book_collections(state, book_id)
-}
-
-#[tauri::command(rename_all = "camelCase")]
-pub fn report_error_event(state: State<'_, AppState>, event: ErrorEventDto) -> Result<(), String> {
+pub fn reportErrorEvent(state: State<'_, AppState>, event: ErrorEventDto) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     let max_lines = get_max_log_lines_internal(&repository).unwrap_or(DEFAULT_MAX_LOG_LINES);
     let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
     logger.log_to_file(&event, max_lines)
 }
 
+#[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn log_event(state: State<'_, AppState>, event: LogEventDto) -> Result<(), String> {
+pub fn logEvent(state: State<'_, AppState>, event: LogEventDto) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     let max_lines = get_max_log_lines_internal(&repository).unwrap_or(DEFAULT_MAX_LOG_LINES);
     let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
@@ -865,8 +618,9 @@ pub fn diagnose(state: State<'_, AppState>) -> DiagnoseResult {
     }
 }
 
+#[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn get_logs(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+pub fn getLogs(state: State<'_, AppState>) -> Result<Vec<String>, String> {
     let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
     logger.read_all_logs()
 }

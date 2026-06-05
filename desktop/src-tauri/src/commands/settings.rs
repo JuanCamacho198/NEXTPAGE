@@ -1,1 +1,1 @@
-pub use super::{getSettings, get_settings, upsertSettings, upsert_settings};
+pub use super::{getSettings, upsertSettings};

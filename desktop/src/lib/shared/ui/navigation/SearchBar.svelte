@@ -33,7 +33,7 @@
   }
 </script>
 
-<div class="relative">
+<div class="relative" role="search">
   {#if icon}
     <svg
       class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-(--color-text-muted)"

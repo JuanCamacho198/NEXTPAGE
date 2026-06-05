@@ -53,7 +53,7 @@
     {i18n("pdf.previous")}
   </button>
 
-  <span class="flex items-center gap-1 text-sm text-(--color-primary)">
+  <span class="flex items-center gap-1 text-sm text-(--color-primary)" aria-live="polite" aria-atomic="true">
     {state.currentPage} / {state.totalPages}
   </span>
 

@@ -76,6 +76,7 @@ export default [
     files: ['src/test/**/*.ts', 'src/test/**/*.svelte'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
   prettier,

@@ -10,7 +10,8 @@ describe('tauri refactor cleanup and rollback readiness', () => {
     const commandsMod = readFileSync(resolve(root, 'commands/mod.rs'), 'utf8');
     const repoMod = readFileSync(resolve(root, 'repository/mod.rs'), 'utf8');
 
-    expect(commandsMod.includes('TRANSITION FACADE')).toBe(true);
+    // commands/mod.rs was cleaned up — only camelCase commands remain
+    expect(commandsMod.includes('only camelCase commands remain')).toBe(true);
     expect(repoMod.includes('TRANSITION FACADE')).toBe(true);
     expect(repoMod.includes('REMOVE ONLY AFTER VERIFY')).toBe(true);
   });

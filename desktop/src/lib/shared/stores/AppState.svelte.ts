@@ -1,34 +1,13 @@
 import { i18n, type MessageKey } from "$lib/shared/i18n";
 import { initTheme } from "$lib/shared/stores/theme";
 import { reconcileHomeState } from "$lib/shared/stores/homeState";
-import {
-  navigationState,
-  NavigationDomainState,
-} from "$lib/shared/stores/NavigationDomainState.svelte";
-import {
-  libraryState,
-  LibraryDomainState,
-} from "$lib/shared/stores/LibraryDomainState.svelte";
-import {
-  readerState,
-  ReaderDomainState,
-} from "$lib/shared/stores/ReaderDomainState.svelte";
-import {
-  searchState,
-  SearchDomainState,
-} from "$lib/shared/stores/SearchDomainState.svelte";
-import {
-  bulkImportState,
-  BulkImportDomainState,
-} from "$lib/shared/stores/BulkImportDomainState.svelte";
-import {
-  statsState,
-  StatsDomainState,
-} from "$lib/shared/stores/StatsDomainState.svelte";
-import {
-  settingsState,
-  SettingsDomainState,
-} from "$lib/shared/stores/SettingsDomainState.svelte";
+import { navigationState } from "$lib/shared/stores/NavigationDomainState.svelte";
+import { libraryState } from "$lib/shared/stores/LibraryDomainState.svelte";
+import { readerState } from "$lib/shared/stores/ReaderDomainState.svelte";
+import { searchState } from "$lib/shared/stores/SearchDomainState.svelte";
+import { bulkImportState } from "$lib/shared/stores/BulkImportDomainState.svelte";
+import { statsState } from "$lib/shared/stores/StatsDomainState.svelte";
+import { settingsState } from "$lib/shared/stores/SettingsDomainState.svelte";
 
 import type {
   CommandErrorDto,
@@ -37,10 +16,6 @@ import type {
   ReaderSettings,
   SearchNavigationTarget,
   UiLocale,
-  BulkImportSummary,
-  ScanFolderResult,
-  SearchBookTextResponse,
-  ReadingStatsSummaryDto,
 } from "$lib/shared/types";
 import { createShelfQueryState } from "$lib/shared/stores/homeState";
 

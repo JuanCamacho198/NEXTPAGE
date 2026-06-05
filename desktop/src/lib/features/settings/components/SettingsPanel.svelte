@@ -30,7 +30,6 @@
     locale,
     onLocaleChange,
     onReaderSettingsChange,
-    books = [],
     t,
   } = $props<{
     isOpen: boolean;

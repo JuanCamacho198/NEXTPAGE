@@ -42,7 +42,8 @@ allow = [
 ]
 confidence-threshold = 0.8
 exceptions = [
-    #{ allow = ["Zlib"], crate = "adler32" },
+    # epub crate uses GPL-3.0 (deprecated SPDX identifier) — needed for EPUB parsing
+    { allow = ["GPL-3.0"], crate = "epub" },
 ]
 
 #[licenses.clarify]

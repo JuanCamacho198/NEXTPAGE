@@ -38,7 +38,7 @@ describe('tauri backend refactor structure', () => {
 
   it('keeps invoke_handler commands registered and dto serde boundary', () => {
     const mainRs = readFileSync(resolve(root, 'main.rs'), 'utf8');
-    for (const symbol of ['list_books', 'listBooks', 'save_progress', 'saveProgress', 'get_file_bytes', 'getFileBytes']) {
+    for (const symbol of ['commands::listBooks', 'commands::saveProgress', 'commands::getFileBytes']) {
       expect(mainRs.includes(symbol)).toBe(true);
     }
 

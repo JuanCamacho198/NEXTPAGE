@@ -1,8 +1,6 @@
 <script lang="ts">
   import { appState } from "$lib/shared/stores/AppState.svelte";
-  import EditMetadataModal from "$lib/components/library/EditMetadataModal.svelte";
-  import CollectionManager from "$lib/components/library/CollectionManager.svelte";
-  import BulkImportModal from "$lib/components/library/BulkImportModal.svelte";
+  import { EditMetadataModal, CollectionManager, BulkImportModal } from "$lib/features/library";
   import ErrorToast from "$lib/shared/ui/feedback/ErrorToast.svelte";
   import ErrorFallback from "$lib/shared/ui/feedback/ErrorFallback.svelte";
 </script>

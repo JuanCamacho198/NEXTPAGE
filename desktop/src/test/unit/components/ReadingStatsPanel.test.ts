@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import ReadingStatsPanel from "$lib/components/stats/ReadingStatsPanel.svelte";
+import { ReadingStatsPanel } from "$lib/features/stats";
 import type { ReadingStatsSummaryDto } from "$lib/types";
 import { getReadingStats } from "$lib/shared/api/tauriClient";
 

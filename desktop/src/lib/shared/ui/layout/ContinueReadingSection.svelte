@@ -1,6 +1,6 @@
 <script lang="ts">
   import { appState } from "$lib/shared/stores/AppState.svelte";
-  import BookCard from "$lib/components/library/BookCard.svelte";
+  import { BookCard } from "$lib/features/library";
 </script>
 
 {#if appState.continueReadingBooks.length === 0}

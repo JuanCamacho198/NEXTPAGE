@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { readFile } from "@tauri-apps/plugin-fs";
 import { describe, expect, it, vi } from "vitest";
-import LibraryView from "$lib/components/library/LibraryView.svelte";
+import { LibraryView } from "$lib/features/library";
 import type { LibraryBookDto } from "$lib/types";
 import { listLibraryBooks } from "$lib/shared/api/tauriClient";
 

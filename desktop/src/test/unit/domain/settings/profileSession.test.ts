@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Session } from "@supabase/supabase-js";
-import { getProfileInitials, normalizeProfileSession } from "$lib/domain/settings/profileSession";
+import { getProfileInitials, normalizeProfileSession } from "$lib/features/settings";
 
 describe("profileSession", () => {
   it("normalizes signed-in session values", () => {

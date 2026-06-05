@@ -3,6 +3,7 @@
   import type { ReaderSettings, ReaderThemeMode, ReaderTextAlign, ReaderDirection } from "$lib/shared/types";
   import { getDefaultReaderSettings } from "$lib/shared/api/tauriClient";
   import { createFocusTrap } from "$lib/shared/utils/focusTrap";
+  import { fly } from "svelte/transition";
 
   type Props = {
     open: boolean;
@@ -35,6 +36,14 @@
   const ALIGN_CYCLE: ReaderTextAlign[] = ["left", "center", "right", "justify"];
 
   let sidebarEl: HTMLDivElement | undefined = $state();
+  let showSavedToast = $state(false);
+  let savedToastTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function notifyChange(): void {
+    showSavedToast = true;
+    clearTimeout(savedToastTimer);
+    savedToastTimer = setTimeout(() => { showSavedToast = false; }, 1200);
+  }
 
   function handleBackdropClick(e: MouseEvent): void {
     if (e.target === e.currentTarget) onClose();
@@ -59,6 +68,7 @@
         ...readerSettings,
         epub: { ...readerSettings.epub, fontSize: next },
       });
+      notifyChange();
     }
   }
 
@@ -69,6 +79,7 @@
       ? LINE_HEIGHT_PRESETS[idx + 1]
       : LINE_HEIGHT_PRESETS[0];
     onSettingsChange({ ...readerSettings, lineHeight: next });
+    notifyChange();
   }
 
   function changeLetterSpacing(delta: number): void {
@@ -76,6 +87,7 @@
     const next = Math.max(-2, Math.min(10, current + delta));
     if (next !== current) {
       onSettingsChange({ ...readerSettings, letterSpacing: next });
+      notifyChange();
     }
   }
 
@@ -86,6 +98,7 @@
       ? ALIGN_CYCLE[idx + 1]
       : ALIGN_CYCLE[0];
     onSettingsChange({ ...readerSettings, textAlign: next });
+    notifyChange();
   }
 
   function cycleParagraphSpacing(): void {
@@ -95,6 +108,7 @@
       ? PARAGRAPH_SPACING_PRESETS[idx + 1]
       : PARAGRAPH_SPACING_PRESETS[0];
     onSettingsChange({ ...readerSettings, paragraphSpacing: next });
+    notifyChange();
   }
 
   function cycleMargins(): void {
@@ -106,11 +120,13 @@
       ? MARGIN_PRESETS[idx + 1]
       : MARGIN_PRESETS[0];
     onSettingsChange({ ...readerSettings, margins: next });
+    notifyChange();
   }
 
   function resetToDefaults(): void {
     const defaults = getDefaultReaderSettings();
     onSettingsChange(defaults);
+    notifyChange();
   }
 
   // ── Alignment label ───────────────────────────────
@@ -142,7 +158,12 @@
       tabindex="0"
     >
       <!-- Sidebar Header Icons -->
-      <div class="flex items-center justify-between border-b border-[#94adce]/5 px-4 py-4">
+      <div class="flex items-center justify-between border-b border-[#94adce]/5 px-4 py-4 relative">
+        {#if showSavedToast}
+          <span class="absolute -top-2 right-4 rounded-full bg-[#49d4ff]/20 px-2.5 py-0.5 text-xs text-[#49d4ff] transition-all" transition:fly={{ y: -4, duration: 150 }}>
+            ✓ Saved
+          </span>
+        {/if}
         <!-- Close button -->
         <button type="button" onclick={onClose} class="flex cursor-pointer items-center gap-1 text-[#8fa3bf] hover:text-white" aria-label={t("settings.close")}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

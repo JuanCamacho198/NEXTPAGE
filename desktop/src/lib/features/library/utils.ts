@@ -1,4 +1,4 @@
-import type { BulkImportItemStatus, LibraryBookDto } from "$lib/shared/types";
+import type { LibraryBookDto } from "$lib/shared/types";
 
 // ─── View mode ───
 

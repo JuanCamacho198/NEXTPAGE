@@ -87,3 +87,11 @@ export type ReadingStatsSummaryDto = {
   booksCompleted: number;
   avgProgressPercentage: number;
 };
+
+export type ReaderBook = LibraryBookDto & {
+  filePath: string;
+  isFavorite?: boolean;
+  toRead?: boolean;
+  completed?: boolean;
+  shelfStatus?: "all" | "favorites" | "to_read" | "completed";
+};

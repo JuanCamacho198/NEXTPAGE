@@ -62,7 +62,7 @@ const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoi
   };
 });
 
-vi.mock("$lib/api/tauriClient", () => tauriClientMock);
+vi.mock("$lib/shared/api/tauriClient", () => tauriClientMock);
 
 vi.mock('@tauri-apps/api/webviewWindow', () => ({
   getCurrentWebviewWindow: () => ({
@@ -70,12 +70,12 @@ vi.mock('@tauri-apps/api/webviewWindow', () => ({
   }),
 }));
 
-vi.mock("$lib/services/FilePicker", () => ({
+vi.mock("$lib/shared/services/FilePicker", () => ({
   pickFile: pickFileMock,
   pickFolder: pickFolderMock,
 }));
 
-vi.mock("$lib/services/BookImportService", () => ({
+vi.mock("$lib/shared/services/BookImportService", () => ({
   importBook: importBookMock,
   BulkImportService: class {
     cancel = vi.fn();
@@ -83,7 +83,7 @@ vi.mock("$lib/services/BookImportService", () => ({
   },
 }));
 
-vi.mock("$lib/services/pdfThumbnail", () => ({
+vi.mock("$lib/shared/services/pdfThumbnail", () => ({
   extractPdfMetadata: vi.fn(async () => ({
     author: null,
     totalPages: null,
@@ -160,7 +160,7 @@ const dictionary: Record<string, string> = {
   "errors.commandFailure": "Command failed",
 };
 
-vi.mock("$lib/i18n", () => ({
+vi.mock("$lib/shared/i18n", () => ({
   i18n: {
     initializeLocale: vi.fn(async () => "en"),
     t: (locale: string, key: string, params?: Record<string, string | number>) => {

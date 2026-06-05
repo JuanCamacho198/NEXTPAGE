@@ -1,9 +1,9 @@
-import { importBook, type ImportProgress } from "$lib/services/BookImportService";
+import { importBook, type ImportProgress } from "$lib/shared/services/BookImportService";
 import {
   BulkImportService,
   type BulkImportProgress,
-} from "$lib/services/BulkImportService";
-import { pickFile, pickFolder } from "$lib/services/FilePicker";
+} from "$lib/shared/services/BulkImportService";
+import { pickFile, pickFolder } from "$lib/shared/services/FilePicker";
 import { readFile } from "@tauri-apps/plugin-fs";
 import {
   getDefaultReaderSettings,
@@ -22,11 +22,11 @@ import {
   updateBookProgress,
   listCollections,
   scanFolder,
-} from "$lib/api/tauriClient";
-import { i18n, type MessageKey } from "$lib/i18n";
-import { recordMetric } from "$lib/logger/MetricsStore";
-import { METRIC_NAMES } from "$lib/logger/metricTypes";
-import { extractPdfMetadata } from "$lib/services/pdfThumbnail";
+} from "$lib/shared/api/tauriClient";
+import { i18n, type MessageKey } from "$lib/shared/i18n";
+import { recordMetric } from "$lib/shared/logger/MetricsStore";
+import { METRIC_NAMES } from "$lib/shared/logger/metricTypes";
+import { extractPdfMetadata } from "$lib/shared/services/pdfThumbnail";
 import {
   type AppRoute,
   createShelfQueryState,
@@ -36,8 +36,8 @@ import {
   reconcileHomeState,
   selectShelfBooks,
   updateShelfQueryState,
-} from "$lib/stores/homeState";
-import { initTheme } from "$lib/stores/theme";
+} from "$lib/shared/stores/homeState";
+import { initTheme } from "$lib/shared/stores/theme";
 
 import type {
   BookDto,

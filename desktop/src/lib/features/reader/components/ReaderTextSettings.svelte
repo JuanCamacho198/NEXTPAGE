@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { MessageKey } from "$lib/i18n";
+  import type { MessageKey } from "$lib/shared/i18n";
   import type { ReaderSettings, ReaderThemeMode, ReaderTextAlign, ReaderDirection } from "$lib/shared/types";
-  import { getDefaultReaderSettings } from "$lib/api/tauriClient";
+  import { getDefaultReaderSettings } from "$lib/shared/api/tauriClient";
   import { createFocusTrap } from "$lib/shared/utils/focusTrap";
 
   type Props = {

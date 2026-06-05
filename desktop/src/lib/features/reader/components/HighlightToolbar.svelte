@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { saveHighlight } from "$lib/api/tauriClient";
-  import type { MessageKey } from "$lib/i18n";
+  import { saveHighlight } from "$lib/shared/api/tauriClient";
+  import type { MessageKey } from "$lib/shared/i18n";
 
   type Props = {
     selectedText: string;

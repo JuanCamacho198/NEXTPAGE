@@ -55,7 +55,7 @@ vi.mock("pdfjs-dist", () => {
 });
 
 // $lib/api/tauriClient mock
-vi.mock("$lib/api/tauriClient", () => ({
+vi.mock("$lib/shared/api/tauriClient", () => ({
   getFileBytes: (...args: unknown[]) => mockGetFileBytes(...args),
 }));
 

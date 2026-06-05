@@ -1,10 +1,10 @@
 import { writable } from "svelte/store";
-import { getLocaleSetting, upsertLocaleSetting } from "$lib/api/tauriClient";
+import { getLocaleSetting, upsertLocaleSetting } from "$lib/shared/api/tauriClient";
 import { SUPPORTED_UI_LOCALES, type UiLocale } from "$lib/types";
 import { messagesEn, type MessageKey } from "./messages.en";
 import { messagesEs } from "./messages.es";
-import { logger } from "$lib/logger/Logger";
-import { createErrorEvent } from "$lib/events/ErrorEvent";
+import { logger } from "$lib/shared/logger/Logger";
+import { createErrorEvent } from "$lib/shared/events/ErrorEvent";
 
 type TranslationParams = Record<string, string | number>;
 

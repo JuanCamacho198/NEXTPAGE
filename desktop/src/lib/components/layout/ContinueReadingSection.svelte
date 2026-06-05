@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { appState } from "$lib/stores/AppState.svelte";
+  import { appState } from "$lib/shared/stores/AppState.svelte";
   import BookCard from "$lib/components/library/BookCard.svelte";
 </script>
 

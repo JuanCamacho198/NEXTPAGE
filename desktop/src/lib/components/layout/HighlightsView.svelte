@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import type { HighlightDto } from "$lib/types";
-  import { listHighlights, deleteHighlight } from "$lib/api/tauriClient";
+  import { listHighlights, deleteHighlight } from "$lib/shared/api/tauriClient";
   import SafeCover from "../library/SafeCover.svelte";
   import Pagination from "../ui/navigation/Pagination.svelte";
   import DropMenu from "../ui/navigation/DropMenu.svelte";
@@ -167,7 +167,7 @@
             type="button"
             class="w-6 h-6 rounded-full border-2 border-transparent cursor-pointer transition-all hover:scale-[1.15] {selectedColor === color.key ? 'border-(--color-primary) shadow-[0_0_0_3px_rgba(73,212,255,0.25)] scale-110' : ''}"
             style="background: var(--circle-color);"
-            aria-label={t("highlight.selectColor", { color: t(`settings.color.${color.key}` as import("$lib/i18n").MessageKey) })}
+            aria-label={t("highlight.selectColor", { color: t(`settings.color.${color.key}` as import("$lib/shared/i18n").MessageKey) })}
             onclick={() => { selectedColor = selectedColor === color.key ? null : color.key; }}
           ></button>
         {/each}

@@ -1,6 +1,6 @@
 <script lang="ts">
   import SafeCover from "../library/SafeCover.svelte";
-  import { getSafeProgressPercentage } from "$lib/stores/homeState";
+  import { getSafeProgressPercentage } from "$lib/shared/stores/homeState";
   import {
     periodLabels,
     hashNumber,

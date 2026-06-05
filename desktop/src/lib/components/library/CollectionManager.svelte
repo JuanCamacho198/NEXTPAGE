@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { CollectionDto } from "$lib/types";
-  import { createCollection, deleteCollection, listCollections } from "$lib/api/tauriClient";
+  import { createCollection, deleteCollection, listCollections } from "$lib/shared/api/tauriClient";
   import { COLOR_OPTIONS, type Props } from "./collectionManagerState.svelte";
 
   let { open, onClose }: Props = $props();

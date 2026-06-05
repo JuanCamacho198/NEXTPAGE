@@ -1,7 +1,7 @@
 <script lang="ts">
   import Panel from "$lib/components/ui/layout/Panel.svelte";
   import Button from "$lib/components/ui/forms/Button.svelte";
-  import type { MessageKey } from "$lib/i18n";
+  import type { MessageKey } from "$lib/shared/i18n";
 
   type Props = {
     t: (key: MessageKey, params?: Record<string, string | number>) => string;

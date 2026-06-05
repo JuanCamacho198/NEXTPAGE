@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { errorState } from "$lib/stores/errorState";
+  import { errorState } from "$lib/shared/stores/errorState";
   import Button from "../forms/Button.svelte";
 
   let visible = $state(false);

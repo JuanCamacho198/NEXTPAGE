@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import SearchPanel from "$lib/components/reader/SearchPanel.svelte";
 import type { SearchBookTextResponse } from "$lib/types";
-import { searchBookText } from "$lib/api/tauriClient";
+import { searchBookText } from "$lib/shared/api/tauriClient";
 
 const t = (key: string) => {
   const dictionary: Record<string, string> = {
@@ -22,7 +22,7 @@ const t = (key: string) => {
   return dictionary[key] ?? key;
 };
 
-vi.mock("$lib/api/tauriClient", () => ({
+vi.mock("$lib/shared/api/tauriClient", () => ({
   searchBookText: vi.fn(),
 }));
 

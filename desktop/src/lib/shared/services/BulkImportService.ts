@@ -1,5 +1,5 @@
 import { importBook as importSingleBook } from "./BookImportService";
-import { scanFolder } from "$lib/api/tauriClient";
+import { scanFolder } from "$lib/shared/api/tauriClient";
 import {
   BULK_IMPORT_ITEM_STATUS,
   type BulkImportItemResult,

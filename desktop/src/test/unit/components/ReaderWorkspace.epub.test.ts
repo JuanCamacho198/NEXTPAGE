@@ -20,7 +20,7 @@ vi.mock('$lib/features/reader/components/EpubNativeViewer.svelte', async () => {
   return { default: mod.default };
 });
 
-vi.mock('$lib/api/tauriClient', () => ({
+vi.mock('$lib/shared/api/tauriClient', () => ({
   saveHighlight: vi.fn(),
   deleteHighlight: vi.fn(),
   getDefaultReaderSettings: vi.fn(() => ({
@@ -113,7 +113,7 @@ describe('ReaderWorkspace EPUB', () => {
   describe('EPUB Bookmarks (2.3)', () => {
     it('uses chapter index for EPUB bookmarks instead of page=1', async () => {
       const mockSaveBookmark = vi.fn();
-      const { listBookmarks, saveBookmark } = await import('$lib/api/tauriClient');
+      const { listBookmarks, saveBookmark } = await import('$lib/shared/api/tauriClient');
       (saveBookmark as ReturnType<typeof vi.fn>).mockImplementation(mockSaveBookmark);
       (listBookmarks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 

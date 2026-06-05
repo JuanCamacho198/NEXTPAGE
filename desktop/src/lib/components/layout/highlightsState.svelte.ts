@@ -1,5 +1,5 @@
 import type { HighlightDto, LibraryBookDto } from "$lib/types";
-import type { MessageKey } from "$lib/i18n";
+import type { MessageKey } from "$lib/shared/i18n";
 
 export type Props = {
   books: LibraryBookDto[];

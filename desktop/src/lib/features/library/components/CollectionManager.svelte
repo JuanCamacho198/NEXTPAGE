@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { CollectionDto } from "$lib/shared/types";
-  import { createCollection, deleteCollection, listCollections } from "$lib/api/tauriClient";
+  import { createCollection, deleteCollection, listCollections } from "$lib/shared/api/tauriClient";
   import { COLLECTION_COLOR_OPTIONS } from "../state";
 
   let { open, onClose }: { open: boolean; onClose: () => void } = $props();

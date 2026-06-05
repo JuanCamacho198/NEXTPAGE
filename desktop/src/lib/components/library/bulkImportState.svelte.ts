@@ -1,6 +1,6 @@
 import type { BulkImportSummary, ScanFolderResult } from "$lib/types";
 import type { BulkImportProgress } from "../../services/BulkImportService";
-import type { MessageKey } from "$lib/i18n";
+import type { MessageKey } from "$lib/shared/i18n";
 
 export const STATUS = {
   QUEUED: "queued",

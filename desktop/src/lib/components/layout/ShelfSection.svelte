@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { appState } from "$lib/stores/AppState.svelte";
-  import { getSafeProgressPercentage } from "$lib/stores/homeState";
+  import { appState } from "$lib/shared/stores/AppState.svelte";
+  import { getSafeProgressPercentage } from "$lib/shared/stores/homeState";
   import BookCard from "$lib/components/library/BookCard.svelte";
   import ShelfActionMenu from "$lib/components/library/ShelfActionMenu.svelte";
   import Icon from "$lib/components/ui/navigation/Icon.svelte";

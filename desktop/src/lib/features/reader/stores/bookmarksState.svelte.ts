@@ -1,4 +1,4 @@
-import { listBookmarks, saveBookmark, deleteBookmark } from "$lib/api/tauriClient";
+import { listBookmarks, saveBookmark, deleteBookmark } from "$lib/shared/api/tauriClient";
 
 export type BookmarkItem = {
   id: string;

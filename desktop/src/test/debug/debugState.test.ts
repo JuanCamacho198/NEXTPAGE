@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { debugState } from "$lib/debug/debugState.svelte";
+import { debugState } from "$lib/shared/debug/debugState.svelte";
 
 describe("DebugState", () => {
   it("defaults all properties to false/null/empty", () => {

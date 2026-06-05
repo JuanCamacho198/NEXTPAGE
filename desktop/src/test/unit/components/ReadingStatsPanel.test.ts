@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import ReadingStatsPanel from "$lib/components/stats/ReadingStatsPanel.svelte";
 import type { ReadingStatsSummaryDto } from "$lib/types";
-import { getReadingStats } from "$lib/api/tauriClient";
+import { getReadingStats } from "$lib/shared/api/tauriClient";
 
 const t = (key: string) => {
   const dictionary: Record<string, string> = {
@@ -23,7 +23,7 @@ const t = (key: string) => {
   return dictionary[key] ?? key;
 };
 
-vi.mock("$lib/api/tauriClient", () => ({
+vi.mock("$lib/shared/api/tauriClient", () => ({
   getReadingStats: vi.fn(),
 }));
 

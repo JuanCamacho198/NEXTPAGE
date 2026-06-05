@@ -2,7 +2,7 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/svelte";
 import PdfViewer from "$lib/features/reader/components/PdfViewer.svelte";
 
-vi.mock("$lib/stores/reader", () => ({
+vi.mock("$lib/shared/stores/reader", () => ({
   readerStore: {
     subscribe: vi.fn(),
     set: vi.fn(),
@@ -10,7 +10,7 @@ vi.mock("$lib/stores/reader", () => ({
   },
 }));
 
-vi.mock("$lib/stores/settings", () => ({
+vi.mock("$lib/shared/stores/settings", () => ({
   settingsStore: {
     subscribe: vi.fn(),
     set: vi.fn(),
@@ -18,7 +18,7 @@ vi.mock("$lib/stores/settings", () => ({
   },
 }));
 
-vi.mock("$lib/api/tauriClient", () => ({
+vi.mock("$lib/shared/api/tauriClient", () => ({
   getFileBytes: vi.fn().mockResolvedValue(new Uint8Array([0, 1, 2, 3])),
 }));
 

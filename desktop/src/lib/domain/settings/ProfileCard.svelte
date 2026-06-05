@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getProfileInitials, type ProfileSessionViewModel } from "./profileSession";
-  import type { MessageKey } from "$lib/i18n";
+  import type { MessageKey } from "$lib/shared/i18n";
 
   type Props = {
     profile: ProfileSessionViewModel;

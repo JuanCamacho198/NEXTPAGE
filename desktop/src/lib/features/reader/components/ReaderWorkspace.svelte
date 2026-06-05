@@ -7,13 +7,13 @@
   import ReaderTocPanel, { type TocEntry } from "./ReaderTocPanel.svelte";
   import ReaderHeader from "./ReaderHeader.svelte";
   import ReaderFooter from "./ReaderFooter.svelte";
-  import type { MessageKey } from "$lib/i18n";
+  import type { MessageKey } from "$lib/shared/i18n";
   import type { ReaderSettings, SearchBookTextResponse } from "$lib/shared/types";
   import type { LibraryBookDto } from "$lib/shared/types/library";
-  import { debugState } from "$lib/debug/debugState.svelte";
-  import { saveHighlight, deleteHighlight, upsertReaderSettings, getDefaultReaderSettings } from "$lib/api/tauriClient";
-  import DebugToggle from "$lib/debug/DebugToggle.svelte";
-  import DebugPanel from "$lib/debug/DebugPanel.svelte";
+  import { debugState } from "$lib/shared/debug/debugState.svelte";
+  import { saveHighlight, deleteHighlight, upsertReaderSettings, getDefaultReaderSettings } from "$lib/shared/api/tauriClient";
+  import DebugToggle from "$lib/shared/debug/DebugToggle.svelte";
+  import DebugPanel from "$lib/shared/debug/DebugPanel.svelte";
   import { createFocusTrap } from "$lib/shared/utils/focusTrap";
   import { createBookmarksState } from "../stores/bookmarksState.svelte";
   import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';

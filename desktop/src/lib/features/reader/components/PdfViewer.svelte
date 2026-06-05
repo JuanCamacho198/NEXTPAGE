@@ -4,7 +4,7 @@
   import { onMount } from "svelte";
   import { createPdfDocument, loadPdfOutline, clearDocumentCache, removeCachedDocument, setCachedDocument } from "$lib/features/reader/pdf/pdfStreaming";
   import ErrorBoundary from "$lib/shared/ui/feedback/ErrorBoundary.svelte";
-  import type { MessageKey } from "$lib/i18n";
+  import type { MessageKey } from "$lib/shared/i18n";
   import type { PdfOutlineItem, ReaderSettings } from "$lib/shared/types";
   import {
     adjustPdfScaleForWheel,
@@ -43,7 +43,7 @@
   import PdfTocSidebar from "./pdf/PdfTocSidebar.svelte";
 
   import type { TocEntry } from "./ReaderTocPanel.svelte";
-  import { debugState } from "$lib/debug/debugState.svelte";
+  import { debugState } from "$lib/shared/debug/debugState.svelte";
 
   type PersistedHighlight = {
     id: string;

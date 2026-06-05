@@ -1,29 +1,29 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { appState } from "$lib/stores/AppState.svelte";
+import { appState } from "$lib/shared/stores/AppState.svelte";
 
 const mockReadFile = vi.hoisted(() =>
   vi.fn<(...args: unknown[]) => Promise<Uint8Array>>().mockResolvedValue(new Uint8Array([1, 2, 3]))
 );
 
 // Mock ALL AppState dependencies upfront
-vi.mock("$lib/services/BookImportService", () => {
+vi.mock("$lib/shared/services/BookImportService", () => {
   const z = vi.fn() as unknown as (...args: unknown[]) => Promise<unknown>;
   return { importBook: z };
 });
-vi.mock("$lib/services/FilePicker", () => {
+vi.mock("$lib/shared/services/FilePicker", () => {
   const z = vi.fn() as unknown as (...args: unknown[]) => Promise<unknown>;
   return { pickFile: z, pickFolder: z };
 });
-vi.mock("$lib/services/pdfThumbnail", () => ({
+vi.mock("$lib/shared/services/pdfThumbnail", () => ({
   extractPdfMetadata: vi.fn(function () {
     return Promise.reject(new Error("no pdf"));
   }),
 }));
-vi.mock("$lib/stores/theme", () => {
+vi.mock("$lib/shared/stores/theme", () => {
   const z = vi.fn() as unknown as (...args: unknown[]) => unknown;
   return { initTheme: z };
 });
-vi.mock("$lib/i18n", () => ({
+vi.mock("$lib/shared/i18n", () => ({
   i18n: {
     t: vi.fn(function (locale: string, key: string) {
       return key;
@@ -37,7 +37,7 @@ vi.mock("$lib/i18n", () => ({
 const mockGetProgress = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 const mockGetReadingStats = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 
-vi.mock("$lib/api/tauriClient", () => {
+vi.mock("$lib/shared/api/tauriClient", () => {
   const rf = vi.fn(function () {
     return Promise.resolve([]);
   }) as unknown as (...args: unknown[]) => Promise<unknown[]>;
@@ -91,7 +91,7 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
   readFile: mockReadFile,
 }));
 
-vi.mock("$lib/services/BulkImportService", () => {
+vi.mock("$lib/shared/services/BulkImportService", () => {
   const mock = {
     importFolder: vi.fn().mockResolvedValue({ success: 0, skipped: 0, failed: 0, cancelled: 0 }),
     cancel: vi.fn(),

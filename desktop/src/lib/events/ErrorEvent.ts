@@ -36,7 +36,7 @@ export interface ErrorEventDto {
   recoverable: boolean;
 }
 
-import { metricsStore } from "$lib/logger/MetricsStore";
+import { metricsStore } from "$lib/shared/logger/MetricsStore";
 
 export const createErrorEvent = (
   params: Omit<ErrorEvent, "timestamp" | "correlationId"> & {

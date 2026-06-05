@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { convertFileSrc } from '@tauri-apps/api/core';
-  import type { MessageKey } from '$lib/i18n';
+  import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, ReaderThemeMode, ReaderTextAlign, ReaderDirection } from '$lib/shared/types';
 
   // ─── Types ───────────────────────────────────────────────

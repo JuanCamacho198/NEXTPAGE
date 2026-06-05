@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { debugState } from "./lib/debug/debugState.svelte";
-  import { appState } from "$lib/stores/AppState.svelte";
+  import { appState } from "$lib/shared/stores/AppState.svelte";
   import AppRouter from "./lib/components/layout/AppRouter.svelte";
   import AppModals from "./lib/components/layout/AppModals.svelte";
 

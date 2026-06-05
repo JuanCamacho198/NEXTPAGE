@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the tauriClient module before importing
-vi.mock("$lib/api/tauriClient", () => ({
+vi.mock("$lib/shared/api/tauriClient", () => ({
   getLocaleSetting: vi.fn().mockResolvedValue(null),
   upsertLocaleSetting: vi.fn(),
 }));
 
-import { getLocaleSetting, upsertLocaleSetting } from "$lib/api/tauriClient";
+import { getLocaleSetting, upsertLocaleSetting } from "$lib/shared/api/tauriClient";
 
 describe("i18n", () => {
   beforeEach(() => {
@@ -19,7 +19,7 @@ describe("i18n", () => {
     const mockUpsert = upsertLocaleSetting as ReturnType<typeof vi.fn>;
     mockGetLocale.mockResolvedValueOnce(null);
 
-    const { i18n } = await import("$lib/i18n");
+    const { i18n } = await import("$lib/shared/i18n");
     const locale = await i18n.initializeLocale();
 
     expect(locale).toBe("es");
@@ -31,7 +31,7 @@ describe("i18n", () => {
     const mockGetLocale = getLocaleSetting as ReturnType<typeof vi.fn>;
     mockGetLocale.mockResolvedValueOnce("pt");
 
-    const { i18n } = await import("$lib/i18n");
+    const { i18n } = await import("$lib/shared/i18n");
     const locale = await i18n.initializeLocale();
 
     expect(locale).toBe("en");
@@ -46,7 +46,7 @@ describe("i18n", () => {
     const mockGetLocale = getLocaleSetting as ReturnType<typeof vi.fn>;
     mockGetLocale.mockResolvedValueOnce("es");
 
-    const { i18n } = await import("$lib/i18n");
+    const { i18n } = await import("$lib/shared/i18n");
     const locale = await i18n.initializeLocale();
 
     expect(i18n.t("es", "errors.commandFailure")).toBe("Fallo desconocido del comando");

@@ -10,7 +10,7 @@ import {
   reconcileHomeState,
   selectShelfBooks,
   type HomeStateSnapshot,
-} from "$lib/stores/homeState";
+} from "$lib/shared/stores/homeState";
 
 type TestBook = {
   id: string;

@@ -1,6 +1,6 @@
 <script lang="ts">
   	import Button from "$lib/components/ui/forms/Button.svelte";
-  	import { AuthService } from "$lib/services/AuthService";
+  	import { AuthService } from "$lib/shared/services/AuthService";
 	let isLoggingIn = $state(false);
 
 	async function handleLogin(): Promise<void> {

@@ -1,9 +1,9 @@
 <script lang="ts">
   import { debugState } from "./debugState.svelte";
-  import { getLogs, diagnose } from "$lib/api/tauriClient";
+  import { getLogs, diagnose } from "$lib/shared/api/tauriClient";
   import { epubCache } from "$lib/features/reader/epub/epubCache";
   import { documentCache } from "$lib/features/reader/pdf/pdfStreaming";
-  import { metricsStore } from "$lib/logger/MetricsStore";
+  import { metricsStore } from "$lib/shared/logger/MetricsStore";
   import type { DiagnoseResult } from "$lib/types";
 
   let logsLoading = $state(false);

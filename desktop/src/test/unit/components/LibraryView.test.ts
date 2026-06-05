@@ -4,7 +4,7 @@ import { readFile } from "@tauri-apps/plugin-fs";
 import { describe, expect, it, vi } from "vitest";
 import LibraryView from "$lib/components/library/LibraryView.svelte";
 import type { LibraryBookDto } from "$lib/types";
-import { listLibraryBooks } from "$lib/api/tauriClient";
+import { listLibraryBooks } from "$lib/shared/api/tauriClient";
 
 vi.mock("@tauri-apps/api/core", () => ({
   convertFileSrc: vi.fn((path: string) => `asset://localhost/${path}`),
@@ -34,7 +34,7 @@ const t = (key: string, params?: Record<string, string | number>) => {
   return dictionary[key] ?? key;
 };
 
-vi.mock("$lib/api/tauriClient", () => ({
+vi.mock("$lib/shared/api/tauriClient", () => ({
   listLibraryBooks: vi.fn(),
 }));
 

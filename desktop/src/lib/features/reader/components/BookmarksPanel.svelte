@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { listBookmarks, saveBookmark, deleteBookmark } from "$lib/api/tauriClient";
+  import { listBookmarks, saveBookmark, deleteBookmark } from "$lib/shared/api/tauriClient";
 
   type Props = {
     bookId: string;

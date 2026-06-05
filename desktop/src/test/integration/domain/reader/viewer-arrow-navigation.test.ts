@@ -2,7 +2,7 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import { cleanup } from "@testing-library/svelte";
 import type { ReaderArrowIntent } from "$lib/features/reader/epub/keyboardNav";
 
-vi.mock("$lib/stores/reader", () => ({
+vi.mock("$lib/shared/stores/reader", () => ({
   readerStore: {
     subscribe: vi.fn(),
     set: vi.fn(),
@@ -10,7 +10,7 @@ vi.mock("$lib/stores/reader", () => ({
   },
 }));
 
-vi.mock("$lib/stores/settings", () => ({
+vi.mock("$lib/shared/stores/settings", () => ({
   settingsStore: {
     subscribe: vi.fn(),
     set: vi.fn(),

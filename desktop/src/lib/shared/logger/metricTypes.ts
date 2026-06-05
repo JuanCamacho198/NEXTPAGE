@@ -4,7 +4,8 @@ export type MetricName =
   | "import_start"
   | "import_complete"
   | "sync_start"
-  | "sync_complete";
+  | "sync_complete"
+  | "ipc_call";
 
 export interface MetricEvent {
   id: string;
@@ -25,4 +26,5 @@ export const METRIC_NAMES = {
   IMPORT_COMPLETE: "import_complete",
   SYNC_START: "sync_start",
   SYNC_COMPLETE: "sync_complete",
+  IPC_CALL: "ipc_call",
 } as const;

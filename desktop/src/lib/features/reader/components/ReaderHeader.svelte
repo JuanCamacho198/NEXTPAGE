@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from "$lib/components/ui/navigation/Icon.svelte";
-  import type { MessageKey } from "$lib/i18n";
+  import type { MessageKey } from "$lib/shared/i18n";
 
   type Props = {
     title: string;

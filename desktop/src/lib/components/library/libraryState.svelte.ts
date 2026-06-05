@@ -1,5 +1,5 @@
 import type { LibraryBookDto, CollectionDto } from "$lib/types";
-import type { MessageKey } from "$lib/i18n";
+import type { MessageKey } from "$lib/shared/i18n";
 
 export const LIBRARY_VIEW_MODE = {
   LIST: "list",

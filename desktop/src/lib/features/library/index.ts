@@ -12,3 +12,4 @@ export { default as LibraryView } from "./components/LibraryView.svelte";
 export { default as ShelfActionMenu } from "./components/ShelfActionMenu.svelte";
 
 export { default as GoogleLoginButton } from "./components/GoogleLoginButton.svelte";
+export * from "$lib/shared/services/FilePicker";

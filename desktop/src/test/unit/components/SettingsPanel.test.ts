@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import SettingsPanel from "$lib/domain/settings/SettingsPanel.svelte";
+import { SettingsPanel } from "$lib/features/settings";
 
 const baseDictionaryEntries: Array<[string, string]> = [
   ["settings.title", "Settings"],
@@ -205,28 +205,27 @@ describe("SettingsPanel", () => {
     expect(screen.getByText("Settings")).toBeInTheDocument();
   });
 
-  it("renders all four tab buttons", () => {
+  it("renders all five tab buttons", () => {
     render(SettingsPanel, defaultProps);
-    expect(screen.getByText("General")).toBeInTheDocument();
-    expect(screen.getByText("Appearance")).toBeInTheDocument();
-    expect(screen.getByText("Data")).toBeInTheDocument();
+    expect(screen.getByText("Account")).toBeInTheDocument();
+    expect(screen.getByText("Profile")).toBeInTheDocument();
+    expect(screen.getByText("Reader")).toBeInTheDocument();
+    expect(screen.getByText("App Theme")).toBeInTheDocument();
     expect(screen.getByText("About")).toBeInTheDocument();
   });
 
-  it("switches to appearance tab when clicked", async () => {
+  it("switches to profile tab when clicked", async () => {
     const user = userEvent.setup();
     render(SettingsPanel, defaultProps);
-    await user.click(screen.getByText("Appearance"));
-    expect(screen.getByText("App Theme")).toBeInTheDocument();
-    expect(screen.getByText("Reader settings")).toBeInTheDocument();
+    await user.click(screen.getByText("Profile"));
+    expect(screen.getByText("Keyboard Shortcuts")).toBeInTheDocument();
   });
 
-  it("switches to data tab when clicked", async () => {
+  it("switches to about tab when clicked", async () => {
     const user = userEvent.setup();
     render(SettingsPanel, defaultProps);
-    await user.click(screen.getByText("Data"));
-    expect(screen.getByText("Export library")).toBeInTheDocument();
-    expect(screen.getByText("Export highlights")).toBeInTheDocument();
+    await user.click(screen.getByText("About"));
+    expect(screen.getByText("About NextPage")).toBeInTheDocument();
   });
 
   it("switches to about tab when clicked", async () => {
@@ -271,8 +270,10 @@ describe("SettingsPanel", () => {
     expect(screen.getByText("English")).toBeInTheDocument();
   });
 
-  it("renders keyboard shortcuts section", () => {
+  it("renders keyboard shortcuts section in profile tab", async () => {
+    const user = userEvent.setup();
     render(SettingsPanel, defaultProps);
+    await user.click(screen.getByText("Profile"));
     expect(screen.getByText("Keyboard Shortcuts")).toBeInTheDocument();
   });
 });

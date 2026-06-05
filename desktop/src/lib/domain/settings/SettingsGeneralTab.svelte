@@ -1,7 +1,7 @@
 <script lang="ts">
   import Panel from "$lib/shared/ui/layout/Panel.svelte";
   import Button from "$lib/shared/ui/forms/Button.svelte";
-  import GoogleLoginButton from "$lib/domain/library/GoogleLoginButton.svelte";
+  import { GoogleLoginButton } from "$lib/features/library";
   import ProfileCard from "./ProfileCard.svelte";
   import KeyboardShortcutsCard from "./KeyboardShortcutsCard.svelte";
   import type { MessageKey } from "$lib/shared/i18n";

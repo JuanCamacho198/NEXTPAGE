@@ -2,8 +2,8 @@
   import { onMount } from "svelte";
   import { debugState } from "./lib/shared/debug/debugState.svelte";
   import { appState } from "$lib/shared/stores/AppState.svelte";
-  import AppRouter from "./lib/components/layout/AppRouter.svelte";
-  import AppModals from "./lib/components/layout/AppModals.svelte";
+  import AppRouter from "$lib/shared/ui/layout/AppRouter.svelte";
+  import AppModals from "$lib/shared/ui/layout/AppModals.svelte";
 
   onMount(() => {
     appState.init();

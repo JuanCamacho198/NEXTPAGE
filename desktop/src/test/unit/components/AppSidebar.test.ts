@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import AppSidebar from "$lib/components/layout/AppSidebar.svelte";
+import AppSidebar from "$lib/shared/ui/layout/AppSidebar.svelte";
 
 function fakeT(key: string): string {
   const labels: Record<string, string> = {

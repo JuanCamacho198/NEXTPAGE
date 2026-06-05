@@ -1,10 +1,12 @@
 <script lang="ts">
   import type { ReadingStatsSummaryDto } from "$lib/shared/types";
+  import type { MessageKey } from "$lib/shared/i18n";
 
   type Props = {
     stats: ReadingStatsSummaryDto | null;
     isLoading?: boolean;
     disabledReason?: string | null;
+    t?: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
   let { stats, isLoading = false, disabledReason = null }: Props = $props();

@@ -96,7 +96,7 @@ vi.mock("$lib/features/reader/components/PdfViewer.svelte", async () => {
   return { default: mod.default };
 });
 
-vi.mock("$lib/components/layout/HomeDesktopView.svelte", async () => {
+vi.mock("$lib/features/home/components/HomeDesktopView.svelte", async () => {
   const mod = await import("../stubs/HomeDesktopViewStub.svelte");
   return { default: mod.default };
 });

@@ -451,9 +451,7 @@
   {:else}
     <!-- Chapter iframe with zoom support -->
     <div
-      class="flex-1 w-full h-full"
-      class:overflow-hidden={!verticalScrolling}
-      class:overflow-y-auto={verticalScrolling}
+      class="flex-1 w-full h-full overflow-y-auto pb-16"
       style="background: {getThemeBgColor()};"
       bind:this={zoomContainerEl}
       onwheel={handleWheel}

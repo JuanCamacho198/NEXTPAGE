@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getProfileInitials, type ProfileSessionViewModel } from "./profileSession";
+  import { getProfileInitials, type ProfileSessionViewModel } from "../profileSession";
   import type { MessageKey } from "$lib/shared/i18n";
 
   type Props = {

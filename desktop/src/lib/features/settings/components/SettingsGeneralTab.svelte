@@ -6,7 +6,7 @@
   import KeyboardShortcutsCard from "./KeyboardShortcutsCard.svelte";
   import type { MessageKey } from "$lib/shared/i18n";
   import type { UiLocale } from "$lib/types";
-  import type { ProfileSessionViewModel } from "./profileSession";
+  import type { ProfileSessionViewModel } from "../profileSession";
 
   type ShortcutDescriptor = {
     id: string;

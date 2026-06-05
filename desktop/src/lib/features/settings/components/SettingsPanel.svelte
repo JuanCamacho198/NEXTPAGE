@@ -30,6 +30,7 @@
     locale,
     onLocaleChange,
     onReaderSettingsChange,
+    books = [],
     t,
   } = $props<{
     isOpen: boolean;
@@ -38,6 +39,7 @@
     locale: UiLocale;
     onLocaleChange?: (locale: UiLocale) => void;
     onReaderSettingsChange?: (settings: ReaderSettings) => void;
+    books?: { id: string; title: string }[];
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   }>();
 

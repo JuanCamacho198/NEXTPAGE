@@ -5,8 +5,9 @@
   import type { MessageKey } from "$lib/shared/i18n";
   import {
     BULK_IMPORT_STATUS,
-    LibraryState,
-  } from "../state";
+    getBulkImportStatusKey,
+    getBulkImportStatusClass,
+  } from "../utils";
 
   let {
     open,
@@ -124,8 +125,8 @@
             <li class="p-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <p class="truncate text-sm font-medium text-(--color-primary)">{row.file.fileName}</p>
-                <span class={`text-xs font-semibold uppercase ${LibraryState.getBulkImportStatusClass(row.status)}`}>
-                  {t(LibraryState.getBulkImportStatusKey(row.status) as import("$lib/shared/i18n").MessageKey)}
+                <span class={`text-xs font-semibold uppercase ${getBulkImportStatusClass(row.status)}`}>
+                  {t(getBulkImportStatusKey(row.status) as import("$lib/shared/i18n").MessageKey)}
                 </span>
               </div>
               <p class="text-xs text-(--color-text-muted)">{row.file.format.toUpperCase()}</p>
@@ -143,8 +144,8 @@
             <li class="p-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <p class="truncate text-sm font-medium text-(--color-primary)">{row.file.fileName}</p>
-                <span class={`text-xs font-semibold uppercase ${LibraryState.getBulkImportStatusClass(row.status)}`}>
-                  {t(LibraryState.getBulkImportStatusKey(row.status) as import("$lib/shared/i18n").MessageKey)}
+                <span class={`text-xs font-semibold uppercase ${getBulkImportStatusClass(row.status)}`}>
+                  {t(getBulkImportStatusKey(row.status) as import("$lib/shared/i18n").MessageKey)}
                 </span>
               </div>
               <p class="text-xs text-(--color-text-muted)">{row.file.format.toUpperCase()}</p>

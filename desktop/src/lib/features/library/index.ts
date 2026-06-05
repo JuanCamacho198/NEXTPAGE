@@ -1,5 +1,3 @@
-export * from "./state";
-
 // Components
 export { default as BookCard } from "./components/BookCard.svelte";
 export { default as CollectionBadge } from "./components/CollectionBadge.svelte";

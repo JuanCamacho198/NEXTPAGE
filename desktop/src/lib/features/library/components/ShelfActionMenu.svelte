@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { LibraryState } from "../state";
+  import { getShelfMenuId } from "../utils";
 
   const {
     bookId,
@@ -225,7 +225,7 @@
     aria-label={triggerLabel}
     aria-haspopup="menu"
     aria-expanded={isOpen}
-    aria-controls={LibraryState.getShelfMenuId(bookId)}
+    aria-controls={getShelfMenuId(bookId)}
     data-testid={`shelf-actions-trigger-${bookId}`}
     onclick={toggleMenu}
     onkeydown={handleTriggerKeyDown}
@@ -236,7 +236,7 @@
   {#if isOpen}
     <div
       bind:this={menuEl}
-      id={LibraryState.getShelfMenuId(bookId)}
+      id={getShelfMenuId(bookId)}
       role="menu"
       tabindex="-1"
       aria-label={triggerLabel}

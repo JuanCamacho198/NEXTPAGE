@@ -14,7 +14,7 @@
     type ShelfFilter,
     type ShelfSort,
     type ShelfView,
-  } from "$lib/features/library/state.svelte";
+  } from "$lib/features/library/utils";
 
   type Props = {
     books: ShelfBook[];

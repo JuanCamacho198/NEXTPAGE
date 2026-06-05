@@ -10,7 +10,7 @@ export type ProfileSessionViewModel = {
   isSignedIn: boolean;
 };
 
-const toEmailLocalPart = (email: string | null | undefined) => {
+const toEmailLocalPart = (email: string | null | undefined): string | null => {
   if (typeof email !== "string") {
     return null;
   }
@@ -24,7 +24,7 @@ const toEmailLocalPart = (email: string | null | undefined) => {
   return localPart?.trim().length ? localPart.trim() : null;
 };
 
-const toNonEmptyString = (value: unknown) => {
+const toNonEmptyString = (value: unknown): string | null => {
   if (typeof value !== "string") {
     return null;
   }
@@ -33,7 +33,7 @@ const toNonEmptyString = (value: unknown) => {
   return normalized.length > 0 ? normalized : null;
 };
 
-const toValidHttpUrl = (value: unknown) => {
+const toValidHttpUrl = (value: unknown): string | null => {
   const candidate = toNonEmptyString(value);
   if (!candidate) {
     return null;
@@ -73,7 +73,7 @@ export const normalizeProfileSession = (
   };
 };
 
-export const getProfileInitials = (name: string) => {
+export const getProfileInitials = (name: string): string => {
   const words = name.trim().split(/\s+/).filter((word) => word.length > 0);
   if (words.length === 0) {
     return DEFAULT_PROFILE_NAME[0];

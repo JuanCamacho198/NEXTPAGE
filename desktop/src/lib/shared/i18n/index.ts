@@ -32,7 +32,7 @@ const toSupportedLocale = (value: string | null | undefined): UiLocale | null =>
   return normalized as UiLocale;
 };
 
-const interpolate = (template: string, params?: TranslationParams) => {
+const interpolate = (template: string, params?: TranslationParams): string => {
   if (!params) {
     return template;
   }
@@ -87,7 +87,15 @@ const resolveMessage = (locale: UiLocale, key: MessageKey): string => {
   return key;
 };
 
-const createI18nStore = () => {
+const createI18nStore = (): {
+  locale: import("svelte/store").Writable<UiLocale>;
+  setLocale: (nextLocale: string | UiLocale) => Promise<void>;
+  initializeLocale: () => Promise<UiLocale>;
+  t: (locale: UiLocale, key: MessageKey, params?: TranslationParams) => string;
+  readonly DEFAULT_LOCALE: UiLocale;
+  readonly FALLBACK_LOCALE: UiLocale;
+  toSupportedLocale: (value: string | null | undefined) => UiLocale | null;
+} => {
   const localeStore = writable<UiLocale>(DEFAULT_LOCALE);
 
   const setLocale = async (nextLocale: string | UiLocale): Promise<void> => {
@@ -97,7 +105,7 @@ const createI18nStore = () => {
     await upsertLocaleSetting(safeLocale);
   };
 
-  const initializeLocale = async () => {
+  const initializeLocale = async (): Promise<UiLocale> => {
     const cachedRaw = globalThis.localStorage?.getItem(LOCALE_STORAGE_KEY);
     if (typeof cachedRaw === "string") {
       const cached = toSupportedLocale(cachedRaw);

@@ -37,7 +37,7 @@
   let triggerEl = $state<HTMLButtonElement | null>(null);
   let menuEl = $state<HTMLDivElement | null>(null);
 
-  const getMenuButtons = () => {
+  const getMenuButtons = (): HTMLButtonElement[] => {
     if (!menuEl) {
       return [] as HTMLButtonElement[];
     }
@@ -88,7 +88,7 @@
     openMenu(true);
   };
 
-  const handleAction = (action: () => void) => {
+  const handleAction = (action: () => void): void => {
     action();
     closeMenu(true);
   };

@@ -27,7 +27,7 @@ export type ImportProgress = {
   percentage?: number;
 };
 
-const normalizeSourcePath = (value: string) => {
+const normalizeSourcePath = (value: string): string => {
   const trimmed = value.trim();
   if (trimmed.startsWith("file://")) {
     try {

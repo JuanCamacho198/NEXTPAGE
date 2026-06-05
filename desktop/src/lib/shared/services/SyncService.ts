@@ -32,7 +32,7 @@ export class SyncService {
   private static progressResolver = new LastWriteWinsConflictResolver<ProgressRecord>();
   private static gdrive = new GDriveProvider();
 
-  static async syncMetadata() {
+  static async syncMetadata(): Promise<void> {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
@@ -42,7 +42,7 @@ export class SyncService {
     ]);
   }
 
-  private static async syncBooks(userId: string) {
+  private static async syncBooks(userId: string): Promise<void> {
     // 1. Fetch remote books from Supabase
     const { data: remoteBooks, error } = await supabase
       .from('books')
@@ -137,7 +137,7 @@ export class SyncService {
     }
   }
 
-  private static async syncProgress(userId: string) {
+  private static async syncProgress(userId: string): Promise<void> {
     // Similar logic for reading_progress
     const { data: remoteProgress, error } = await supabase
       .from('reading_progress')

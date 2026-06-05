@@ -15,7 +15,7 @@ const configureWorker = (): void => {
   workerConfigured = true;
 };
 
-const blobToBytes = async (blob: Blob) => {
+const blobToBytes = async (blob: Blob): Promise<Uint8Array> => {
   const buffer = await blob.arrayBuffer();
   return new Uint8Array(buffer);
 };
@@ -106,7 +106,7 @@ export const extractPdfMetadata = async (
 
 
 /** @deprecated Use extractPdfMetadata instead which is more efficient */
-export const generatePdfFirstPageThumbnail = async (filePath: string, maxWidth = 280) => {
+export const generatePdfFirstPageThumbnail = async (filePath: string, maxWidth = 280): Promise<Uint8Array> => {
   const result = await extractPdfMetadata(filePath, maxWidth);
   if (!result.thumbnailBytes) {
     throw new Error("Failed to generate PDF thumbnail");

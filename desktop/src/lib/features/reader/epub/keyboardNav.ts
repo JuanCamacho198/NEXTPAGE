@@ -9,7 +9,7 @@ const ARROW_INTENT_BY_KEY = {
 
 export type ReaderArrowIntent = (typeof ARROW_INTENT_BY_KEY)[keyof typeof ARROW_INTENT_BY_KEY];
 
-const hasEditableRole = (element: HTMLElement) => {
+const hasEditableRole = (element: HTMLElement): boolean => {
   const role = element.getAttribute("role");
   if (!role) {
     return false;
@@ -18,7 +18,7 @@ const hasEditableRole = (element: HTMLElement) => {
   return role === "textbox" || role === "searchbox" || role === "combobox";
 };
 
-const isEditableElement = (element: HTMLElement) => {
+const isEditableElement = (element: HTMLElement): boolean => {
   if (element.isContentEditable) {
     return true;
   }
@@ -39,7 +39,7 @@ const isEditableElement = (element: HTMLElement) => {
   return hasEditableRole(element);
 };
 
-const hasEditableContext = (target: HTMLElement) => {
+const hasEditableContext = (target: HTMLElement): boolean => {
   if (isEditableElement(target)) {
     return true;
   }
@@ -55,7 +55,7 @@ const hasEditableContext = (target: HTMLElement) => {
   return false;
 };
 
-export const canHandleReaderArrowNav = (event: KeyboardEvent) => {
+export const canHandleReaderArrowNav = (event: KeyboardEvent): boolean => {
   if (event.defaultPrevented) {
     return false;
   }

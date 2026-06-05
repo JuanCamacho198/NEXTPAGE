@@ -243,7 +243,7 @@
     placement: string;
     rects: Array<{ left: number; top: number; width: number; height: number }>;
     pageNumber: number;
-  }) {
+  }): void {
     selectedText = event.text;
     selectionBounds = {
       left: event.bounds.left,
@@ -320,7 +320,7 @@
     highlightId: string;
     action: "updateColor" | "delete";
     color?: string;
-  }) {
+  }): void {
     if (event.action === "updateColor" && event.color) {
       persistedHighlights = persistedHighlights.map((h) =>
         h.id === event.highlightId ? { ...h, color: event.color! } : h

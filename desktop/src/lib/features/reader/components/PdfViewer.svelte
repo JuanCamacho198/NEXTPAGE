@@ -180,8 +180,8 @@
 
   type PdfRefProxy = Parameters<pdfjsLib.PDFDocumentProxy["getPageIndex"]>[0];
 
-  const isStaleLoad = (requestId: number) => requestId !== activeLoadRequestId;
-  const isStaleNavigation = (requestId: number) => requestId !== activeNavigationRequestId;
+  const isStaleLoad = (requestId: number): boolean => requestId !== activeLoadRequestId;
+  const isStaleNavigation = (requestId: number): boolean => requestId !== activeNavigationRequestId;
 
   const readerThemePalette = $derived(resolveThemePalette(readerSettings.themeMode));
   const visualFilterStyle = $derived(
@@ -230,7 +230,7 @@
   });
 
   // ── Fullscreen API check ────────────────────────────────
-  const canUseFullscreenApi = () => {
+  const canUseFullscreenApi = (): boolean => {
     if (typeof document === "undefined") return false;
     return (
       typeof viewerRoot?.requestFullscreen === "function" &&
@@ -455,7 +455,7 @@
   async function renderPage(
     pageNum: number,
     options: { requestId?: number; renderScale?: number } = {},
-  ) {
+  ): Promise<boolean | void> {
     if (!pdfDoc || !canvas || !textLayer) return;
 
     if (typeof document !== "undefined") await document.fonts.ready;
@@ -524,7 +524,7 @@
     textContent: { items: Array<{ str: string; transform: number[]; width: number; height: number }> },
     viewport: pdfjsLib.PageViewport,
     requestId = activeNavigationRequestId,
-  ) {
+  ): Promise<void> {
     if (!textLayer) return;
     if (isStaleNavigation(requestId)) return;
 
@@ -714,7 +714,7 @@
   }
 
   // ── Navigation ───────────────────────────────────────────
-  const navigateToPage = async (targetPage: number, options?: { flash?: boolean }) => {
+  const navigateToPage = async (targetPage: number, options?: { flash?: boolean }): Promise<boolean> => {
     if (!pdfDoc || !isPageWithinBounds(targetPage, totalPages)) return false;
     hideToolbar();
     navigationError = null;
@@ -889,8 +889,8 @@
     }
   }
 
-  export function getCurrentPage() { return currentPage; }
-  export function getCurrentFilePath() { return filePath; }
+  export function getCurrentPage(): number { return currentPage; }
+  export function getCurrentFilePath(): string { return filePath; }
 
   const handleViewerKeydown_ = (event: KeyboardEvent): void => {
     if (event.key === "ArrowLeft") goToPrevPage();

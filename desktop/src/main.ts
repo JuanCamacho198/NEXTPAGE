@@ -63,7 +63,7 @@ const handleUnhandledRejection = (event: PromiseRejectionEvent): void => {
   logger.error(errorEvent);
 };
 
-const registerGlobalHandlers = async () => {
+const registerGlobalHandlers = async (): Promise<void> => {
   if (handlersRegistered) {
     return;
   }

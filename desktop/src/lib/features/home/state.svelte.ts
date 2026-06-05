@@ -23,7 +23,7 @@ class HomeStateManager {
   shelfViewMode = $state<ShelfViewMode>("grid");
   shelfRawQuery = $state<string>("");
 
-  getShelfBooks(books: LibraryBookDto[]) {
+  getShelfBooks(books: LibraryBookDto[]): LibraryBookDto[] {
     const shelfStateWithDeps: ShelfQueryState = {
       tab: this.shelfTab,
       sortKey: this.shelfSortKey,
@@ -38,21 +38,21 @@ class HomeStateManager {
     return selectShelfBooks(myShelfBooks, shelfStateWithDeps);
   }
 
-  setRoute(r: AppRoute) {
+  setRoute(r: AppRoute): void {
     this.route = r;
     this.shelfDetailsBookId = null;
   }
 
-  openDetails(bookId: string) {
+  openDetails(bookId: string): void {
     this.previewBookId = bookId;
   }
 
-  openShelfDetails(bookId: string) {
+  openShelfDetails(bookId: string): void {
     this.previewBookId = bookId;
     this.shelfDetailsBookId = bookId;
   }
 
-  closeShelfDetails() {
+  closeShelfDetails(): void {
     this.shelfDetailsBookId = null;
   }
 }

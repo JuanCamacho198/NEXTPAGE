@@ -94,7 +94,7 @@ export class BulkImportService {
   private cancelled = false;
   private static readonly CONCURRENCY = 3;
 
-  cancel() {
+  cancel(): void {
     this.cancelled = true;
   }
 

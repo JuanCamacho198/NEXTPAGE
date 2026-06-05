@@ -29,13 +29,13 @@
 
   let query = $state("");
 
-  const resultCount = () => response?.items.length ?? 0;
-  const hasResults = () => resultCount() > 0;
-  const isNoMatch = () => Boolean(response) && resultCount() === 0;
-  const currentPage = () => response?.page ?? 1;
-  const pageSize = () => response?.pageSize ?? 20;
-  const total = () => response?.total ?? 0;
-  const hasMore = () => currentPage() * pageSize() < total();
+  const resultCount = (): number => response?.items.length ?? 0;
+  const hasResults = (): boolean => resultCount() > 0;
+  const isNoMatch = (): boolean => Boolean(response) && resultCount() === 0;
+  const currentPage = (): number => response?.page ?? 1;
+  const pageSize = (): number => response?.pageSize ?? 20;
+  const total = (): number => response?.total ?? 0;
+  const hasMore = (): boolean => currentPage() * pageSize() < total();
 
   const runSearch = (page = 1): void => {
     if (!bookId || !query.trim()) {

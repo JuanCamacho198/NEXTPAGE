@@ -69,16 +69,16 @@ export type ShelfBookLike = ProgressLike & {
   shelfStatus?: ShelfTabCode | null;
 };
 
-const removeAccents = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const removeAccents = (value: string): string => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-const normalizeSearchValue = (value: string) => removeAccents(value).toLowerCase().trim();
+const normalizeSearchValue = (value: string): string => removeAccents(value).toLowerCase().trim();
 
-const getSearchTerms = (value: string) =>
+const getSearchTerms = (value: string): string[] =>
   normalizeSearchValue(value)
     .split(/\s+/)
     .filter((term) => term.length > 0);
 
-const parseDateAsMillis = (value: string | null | undefined) => {
+const parseDateAsMillis = (value: string | null | undefined): number => {
   if (typeof value !== "string") {
     return Number.NEGATIVE_INFINITY;
   }
@@ -87,7 +87,7 @@ const parseDateAsMillis = (value: string | null | undefined) => {
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
 };
 
-const toNonNegativeNumber = (value: number | null | undefined) => {
+const toNonNegativeNumber = (value: number | null | undefined): number => {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return 0;
   }
@@ -295,7 +295,7 @@ export const updateShelfQueryState = (
   };
 };
 
-export const getShelfQueryWarnings = (state: Pick<ShelfQueryState, "invalidTokens">) => {
+export const getShelfQueryWarnings = (state: Pick<ShelfQueryState, "invalidTokens">): string[] => {
   return state.invalidTokens.map((token) => token.raw);
 };
 
@@ -319,7 +319,7 @@ const getBookStatus = (book: ShelfBookLike): ShelfTabCode => {
   return "all";
 };
 
-const matchesStatusCode = (book: ShelfBookLike, statusCode: ShelfTabCode) => {
+const matchesStatusCode = (book: ShelfBookLike, statusCode: ShelfTabCode): boolean => {
   if (statusCode === "all") {
     return true;
   }
@@ -328,7 +328,7 @@ const matchesStatusCode = (book: ShelfBookLike, statusCode: ShelfTabCode) => {
   return bookStatus === statusCode;
 };
 
-const matchesSearchTerms = (haystackValue: string, terms: string[]) => {
+const matchesSearchTerms = (haystackValue: string, terms: string[]): boolean => {
   if (terms.length === 0) {
     return true;
   }
@@ -343,7 +343,7 @@ const compareWithTieBreakers = <TBook extends ShelfBookLike>(
   primary: number,
   leftIndex: number,
   rightIndex: number,
-) => {
+): number => {
   if (primary !== 0) {
     return primary;
   }
@@ -471,7 +471,7 @@ export type HomeStateSnapshot = {
   shelfDetailsBookId: string | null;
 };
 
-const clamp = (value: number, min: number, max: number) => {
+const clamp = (value: number, min: number, max: number): number => {
   if (value < min) {
     return min;
   }
@@ -483,7 +483,7 @@ const clamp = (value: number, min: number, max: number) => {
   return value;
 };
 
-export const getSafeProgressPercentage = (book: Pick<ProgressLike, "progressPercentage">) => {
+export const getSafeProgressPercentage = (book: Pick<ProgressLike, "progressPercentage">): number => {
   const raw = book.progressPercentage;
   if (typeof raw !== "number" || !Number.isFinite(raw)) {
     return 0;
@@ -492,12 +492,12 @@ export const getSafeProgressPercentage = (book: Pick<ProgressLike, "progressPerc
   return clamp(raw, 0, 100);
 };
 
-export const isBookInProgress = (book: Pick<ProgressLike, "progressPercentage">) => {
+export const isBookInProgress = (book: Pick<ProgressLike, "progressPercentage">): boolean => {
   const progress = getSafeProgressPercentage(book);
   return progress > 0 && progress < 100;
 };
 
-export const partitionHomeBooks = <TBook extends ProgressLike>(books: TBook[]) => {
+export const partitionHomeBooks = <TBook extends ProgressLike>(books: TBook[]): { continueReadingBooks: TBook[]; myShelfBooks: TBook[] } => {
   const continueReadingBooks: TBook[] = [];
   const myShelfBooks: TBook[] = [];
   const seenIds = new Set<string>();
@@ -522,7 +522,7 @@ export const partitionHomeBooks = <TBook extends ProgressLike>(books: TBook[]) =
   };
 };
 
-export const promoteBookForReading = <TBook extends ProgressLike>(books: TBook[], bookId: string) => {
+export const promoteBookForReading = <TBook extends ProgressLike>(books: TBook[], bookId: string): TBook[] => {
   let changed = false;
   const promoted = books.map((book) => {
     if (book.id !== bookId) {

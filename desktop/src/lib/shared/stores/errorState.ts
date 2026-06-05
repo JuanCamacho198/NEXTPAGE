@@ -13,7 +13,15 @@ const initialState: ErrorState = {
   showFallback: false,
 };
 
-function createErrorStateStore() {
+function createErrorStateStore(): {
+    subscribe: import("svelte/store").Readable<ErrorState>["subscribe"];
+    setError(error: ErrorEvent): void;
+    showErrorToast(error: ErrorEvent): void;
+    showErrorFallback(error: ErrorEvent): void;
+    clearError(): void;
+    dismissToast(): void;
+    reset(): void;
+  } {
   const { subscribe, set, update } = writable<ErrorState>(initialState);
 
   return {

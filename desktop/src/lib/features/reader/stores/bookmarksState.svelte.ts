@@ -8,7 +8,13 @@ export type BookmarkItem = {
   createdAt: string;
 };
 
-export function createBookmarksState() {
+export function createBookmarksState(): {
+  readonly bookmarksList: BookmarkItem[];
+  readonly bookmarksLoading: boolean;
+  loadBookmarks(bookId: string): Promise<void>;
+  addBookmark(bookId: string, pageNumber: number): Promise<void>;
+  removeBookmark(id: string, bookId: string): Promise<void>;
+} {
   let bookmarksList = $state<BookmarkItem[]>([]);
   let bookmarksLoading = $state(false);
 

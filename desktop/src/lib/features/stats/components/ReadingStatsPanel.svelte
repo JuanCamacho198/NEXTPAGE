@@ -21,7 +21,7 @@
     t,
   }: Props = $props();
 
-  const pct = (value: number) => `${Math.round(value)}%`;
+  const pct = (value: number): string => `${Math.round(value)}%`;
 </script>
 
 <Panel title={t("stats.title")}>

@@ -10,14 +10,25 @@ import { statsState } from "$lib/shared/stores/StatsDomainState.svelte";
 import { settingsState } from "$lib/shared/stores/SettingsDomainState.svelte";
 
 import type {
+  BulkImportSummary,
+  CollectionDto,
   CommandErrorDto,
   LibraryBookDto,
   ReaderBook,
   ReaderSettings,
+  ReadingStatsSummaryDto,
+  ScanFolderResult,
+  SearchBookTextResponse,
   SearchNavigationTarget,
   UiLocale,
 } from "$lib/shared/types";
-import { createShelfQueryState } from "$lib/shared/stores/homeState";
+import {
+  createShelfQueryState,
+  type AppRoute,
+  type ShelfQueryState,
+} from "$lib/shared/stores/homeState";
+import type { BulkImportProgress } from "$lib/shared/services/BulkImportService";
+import type { ImportProgress } from "$lib/shared/services/BookImportService";
 
 type MaybeCommandError = Error & { commandError?: CommandErrorDto };
 
@@ -33,40 +44,40 @@ class AppState {
   private statsDomain = statsState;
 
   // ─── Property passthrough: Navigation ───
-  get route() { return this.navigation.route; }
-  set route(v) { this.navigation.route = v; }
-  get previewBookId() { return this.navigation.previewBookId; }
-  set previewBookId(v) { this.navigation.previewBookId = v; }
-  get shelfDetailsBookId() { return this.navigation.shelfDetailsBookId; }
-  set shelfDetailsBookId(v) { this.navigation.shelfDetailsBookId = v; }
-  get libraryUnavailableReason() { return this.navigation.libraryUnavailableReason; }
-  set libraryUnavailableReason(v) { this.navigation.libraryUnavailableReason = v; }
-  get statsUnavailableReason() { return this.navigation.statsUnavailableReason; }
-  set statsUnavailableReason(v) { this.navigation.statsUnavailableReason = v; }
-  get searchUnavailableReason() { return this.navigation.searchUnavailableReason; }
-  set searchUnavailableReason(v) { this.navigation.searchUnavailableReason = v; }
+  get route(): AppRoute { return this.navigation.route; }
+  set route(v: AppRoute) { this.navigation.route = v; }
+  get previewBookId(): string | null { return this.navigation.previewBookId; }
+  set previewBookId(v: string | null) { this.navigation.previewBookId = v; }
+  get shelfDetailsBookId(): string | null { return this.navigation.shelfDetailsBookId; }
+  set shelfDetailsBookId(v: string | null) { this.navigation.shelfDetailsBookId = v; }
+  get libraryUnavailableReason(): string | null { return this.navigation.libraryUnavailableReason; }
+  set libraryUnavailableReason(v: string | null) { this.navigation.libraryUnavailableReason = v; }
+  get statsUnavailableReason(): string | null { return this.navigation.statsUnavailableReason; }
+  set statsUnavailableReason(v: string | null) { this.navigation.statsUnavailableReason = v; }
+  get searchUnavailableReason(): string | null { return this.navigation.searchUnavailableReason; }
+  set searchUnavailableReason(v: string | null) { this.navigation.searchUnavailableReason = v; }
 
   // ─── Property passthrough: Library ───
-  get books() { return this.library.books; }
-  set books(v) { this.library.books = v; }
-  get shelfQueryState() { return this.library.shelfQueryState; }
-  set shelfQueryState(v) { this.library.shelfQueryState = v; }
-  get collections() { return this.library.collections; }
-  set collections(v) { this.library.collections = v; }
-  get isLoadingLibrary() { return this.library.isLoadingLibrary; }
-  set isLoadingLibrary(v) { this.library.isLoadingLibrary = v; }
-  get readerError() { return this.library.readerError; }
-  set readerError(v) { this.library.readerError = v; }
-  get editingBook() { return this.library.editingBook; }
-  set editingBook(v) { this.library.editingBook = v; }
-  get isCollectionManagerOpen() { return this.library.isCollectionManagerOpen; }
-  set isCollectionManagerOpen(v) { this.library.isCollectionManagerOpen = v; }
+  get books(): ReaderBook[] { return this.library.books; }
+  set books(v: ReaderBook[]) { this.library.books = v; }
+  get shelfQueryState(): ShelfQueryState { return this.library.shelfQueryState; }
+  set shelfQueryState(v: ShelfQueryState) { this.library.shelfQueryState = v; }
+  get collections(): CollectionDto[] { return this.library.collections; }
+  set collections(v: CollectionDto[]) { this.library.collections = v; }
+  get isLoadingLibrary(): boolean { return this.library.isLoadingLibrary; }
+  set isLoadingLibrary(v: boolean) { this.library.isLoadingLibrary = v; }
+  get readerError(): string | null { return this.library.readerError; }
+  set readerError(v: string | null) { this.library.readerError = v; }
+  get editingBook(): ReaderBook | null { return this.library.editingBook; }
+  set editingBook(v: ReaderBook | null) { this.library.editingBook = v; }
+  get isCollectionManagerOpen(): boolean { return this.library.isCollectionManagerOpen; }
+  set isCollectionManagerOpen(v: boolean) { this.library.isCollectionManagerOpen = v; }
 
-  get continueReadingBooks() { return this.library.continueReadingBooks; }
-  get myShelfBooks() { return this.library.myShelfBooks; }
-  get shelfBooks() { return this.library.shelfBooks; }
-  get shelfWarnings() { return this.library.shelfWarnings; }
-  get shelfSortToken() { return this.library.shelfSortToken; }
+  get continueReadingBooks(): ReaderBook[] { return this.library.continueReadingBooks; }
+  get myShelfBooks(): ReaderBook[] { return this.library.myShelfBooks; }
+  get shelfBooks(): ReaderBook[] { return this.library.shelfBooks; }
+  get shelfWarnings(): string[] { return this.library.shelfWarnings; }
+  get shelfSortToken(): string | null { return this.library.shelfSortToken; }
   selectedShelfBook = $derived.by(() => {
     return this.library.myShelfBooks.find(
       (book) => book.id === this.navigation.shelfDetailsBookId,
@@ -74,58 +85,58 @@ class AppState {
   });
 
   // ─── Property passthrough: Reader ───
-  get activeReadingBookId() { return this.reader.activeReadingBookId; }
-  set activeReadingBookId(v) { this.reader.activeReadingBookId = v; }
-  get cfiLocation() { return this.reader.cfiLocation; }
-  set cfiLocation(v) { this.reader.cfiLocation = v; }
-  get percentage() { return this.reader.percentage; }
-  set percentage(v) { this.reader.percentage = v; }
-  get preloadedBytes() { return this.reader.preloadedBytes; }
-  set preloadedBytes(v) { this.reader.preloadedBytes = v; }
+  get activeReadingBookId(): string | null { return this.reader.activeReadingBookId; }
+  set activeReadingBookId(v: string | null) { this.reader.activeReadingBookId = v; }
+  get cfiLocation(): string { return this.reader.cfiLocation; }
+  set cfiLocation(v: string) { this.reader.cfiLocation = v; }
+  get percentage(): number { return this.reader.percentage; }
+  set percentage(v: number) { this.reader.percentage = v; }
+  get preloadedBytes(): { filePath: string; data: Uint8Array } | null { return this.reader.preloadedBytes; }
+  set preloadedBytes(v: { filePath: string; data: Uint8Array } | null) { this.reader.preloadedBytes = v; }
 
   // ─── Property passthrough: Search ───
-  get searchResponse() { return this.search.searchResponse; }
-  set searchResponse(v) { this.search.searchResponse = v; }
-  get searchTargetLocator() { return this.search.searchTargetLocator; }
-  set searchTargetLocator(v) { this.search.searchTargetLocator = v; }
-  get isSearching() { return this.search.isSearching; }
-  set isSearching(v) { this.search.isSearching = v; }
+  get searchResponse(): SearchBookTextResponse | null { return this.search.searchResponse; }
+  set searchResponse(v: SearchBookTextResponse | null) { this.search.searchResponse = v; }
+  get searchTargetLocator(): string | null { return this.search.searchTargetLocator; }
+  set searchTargetLocator(v: string | null) { this.search.searchTargetLocator = v; }
+  get isSearching(): boolean { return this.search.isSearching; }
+  set isSearching(v: boolean) { this.search.isSearching = v; }
 
   // ─── Property passthrough: BulkImport ───
-  get isBulkImportOpen() { return this.bulkImport.isBulkImportOpen; }
-  set isBulkImportOpen(v) { this.bulkImport.isBulkImportOpen = v; }
-  get isBulkScanning() { return this.bulkImport.isBulkScanning; }
-  set isBulkScanning(v) { this.bulkImport.isBulkScanning = v; }
-  get isBulkImporting() { return this.bulkImport.isBulkImporting; }
-  set isBulkImporting(v) { this.bulkImport.isBulkImporting = v; }
-  get bulkImportFolderPath() { return this.bulkImport.bulkImportFolderPath; }
-  set bulkImportFolderPath(v) { this.bulkImport.bulkImportFolderPath = v; }
-  get bulkImportFolderName() { return this.bulkImport.bulkImportFolderName; }
-  set bulkImportFolderName(v) { this.bulkImport.bulkImportFolderName = v; }
-  get bulkScanResult() { return this.bulkImport.bulkScanResult; }
-  set bulkScanResult(v) { this.bulkImport.bulkScanResult = v; }
-  get bulkScanError() { return this.bulkImport.bulkScanError; }
-  set bulkScanError(v) { this.bulkImport.bulkScanError = v; }
-  get bulkImportProgress() { return this.bulkImport.bulkImportProgress; }
-  set bulkImportProgress(v) { this.bulkImport.bulkImportProgress = v; }
-  get bulkImportSummary() { return this.bulkImport.bulkImportSummary; }
-  set bulkImportSummary(v) { this.bulkImport.bulkImportSummary = v; }
-  get isImporting() { return this.bulkImport.isImporting; }
-  set isImporting(v) { this.bulkImport.isImporting = v; }
-  get importProgress() { return this.bulkImport.importProgress; }
-  set importProgress(v) { this.bulkImport.importProgress = v; }
+  get isBulkImportOpen(): boolean { return this.bulkImport.isBulkImportOpen; }
+  set isBulkImportOpen(v: boolean) { this.bulkImport.isBulkImportOpen = v; }
+  get isBulkScanning(): boolean { return this.bulkImport.isBulkScanning; }
+  set isBulkScanning(v: boolean) { this.bulkImport.isBulkScanning = v; }
+  get isBulkImporting(): boolean { return this.bulkImport.isBulkImporting; }
+  set isBulkImporting(v: boolean) { this.bulkImport.isBulkImporting = v; }
+  get bulkImportFolderPath(): string | null { return this.bulkImport.bulkImportFolderPath; }
+  set bulkImportFolderPath(v: string | null) { this.bulkImport.bulkImportFolderPath = v; }
+  get bulkImportFolderName(): string | null { return this.bulkImport.bulkImportFolderName; }
+  set bulkImportFolderName(v: string | null) { this.bulkImport.bulkImportFolderName = v; }
+  get bulkScanResult(): ScanFolderResult | null { return this.bulkImport.bulkScanResult; }
+  set bulkScanResult(v: ScanFolderResult | null) { this.bulkImport.bulkScanResult = v; }
+  get bulkScanError(): string | null { return this.bulkImport.bulkScanError; }
+  set bulkScanError(v: string | null) { this.bulkImport.bulkScanError = v; }
+  get bulkImportProgress(): BulkImportProgress | null { return this.bulkImport.bulkImportProgress; }
+  set bulkImportProgress(v: BulkImportProgress | null) { this.bulkImport.bulkImportProgress = v; }
+  get bulkImportSummary(): BulkImportSummary | null { return this.bulkImport.bulkImportSummary; }
+  set bulkImportSummary(v: BulkImportSummary | null) { this.bulkImport.bulkImportSummary = v; }
+  get isImporting(): boolean { return this.bulkImport.isImporting; }
+  set isImporting(v: boolean) { this.bulkImport.isImporting = v; }
+  get importProgress(): ImportProgress | null { return this.bulkImport.importProgress; }
+  set importProgress(v: ImportProgress | null) { this.bulkImport.importProgress = v; }
 
   // ─── Property passthrough: Stats ───
-  get stats() { return this.statsDomain.stats; }
-  set stats(v) { this.statsDomain.stats = v; }
-  get isLoadingStats() { return this.statsDomain.isLoadingStats; }
-  set isLoadingStats(v) { this.statsDomain.isLoadingStats = v; }
+  get stats(): ReadingStatsSummaryDto | null { return this.statsDomain.stats; }
+  set stats(v: ReadingStatsSummaryDto | null) { this.statsDomain.stats = v; }
+  get isLoadingStats(): boolean { return this.statsDomain.isLoadingStats; }
+  set isLoadingStats(v: boolean) { this.statsDomain.isLoadingStats = v; }
 
   // ─── Property passthrough: Settings ───
-  get locale() { return this.settings.locale; }
-  set locale(v) { this.settings.locale = v; }
-  get readerSettings() { return this.settings.readerSettings; }
-  set readerSettings(v) { this.settings.readerSettings = v; }
+  get locale(): UiLocale { return this.settings.locale; }
+  set locale(v: UiLocale) { this.settings.locale = v; }
+  get readerSettings(): ReaderSettings { return this.settings.readerSettings; }
+  set readerSettings(v: ReaderSettings) { this.settings.readerSettings = v; }
 
   // ─── Constants ───
   readonly SHELF_TAB_OPTIONS = this.library.SHELF_TAB_OPTIONS;
@@ -133,7 +144,7 @@ class AppState {
   readonly DOMAIN = navigationState.DOMAIN;
 
   // ─── i18n helper ───
-  t = (key: MessageKey, params?: Record<string, string | number>) =>
+  t = (key: MessageKey, params?: Record<string, string | number>): string =>
     i18n.t(this.settings.locale, key, params);
 
   // ─── Utility ───

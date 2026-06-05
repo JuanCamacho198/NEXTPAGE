@@ -112,11 +112,11 @@
     FONT_SCALE: "reader.fontScale",
   } as const;
 
-  const clampInteger = (value: number, min: number, max: number) => {
+  const clampInteger = (value: number, min: number, max: number): number => {
     return Math.min(max, Math.max(min, Math.round(value)));
   };
 
-  const normalizeFontFamily = (value: string) => {
+  const normalizeFontFamily = (value: string): string => {
     const normalized = value.trim();
     return normalized.length > 0 ? normalized : "sans";
   };
@@ -152,7 +152,7 @@
     readerEpubFontFamily = settings.epub.fontFamily;
   };
 
-  const parseSettingValue = (settings: AppSettingDto[], key: string) => {
+  const parseSettingValue = (settings: AppSettingDto[], key: string): unknown => {
     const item = settings.find((entry) => entry.key === key);
     if (!item) {
       return null;
@@ -165,7 +165,7 @@
     }
   };
 
-  const mapCommandErrorMessage = (error: unknown) => {
+  const mapCommandErrorMessage = (error: unknown): { message: string; recoverable: boolean } => {
     const err = error as MaybeCommandError;
     const fallback = error instanceof Error ? error.message : "Settings command failed.";
     if (err.commandError) {

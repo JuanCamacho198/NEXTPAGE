@@ -29,6 +29,7 @@
     html: string;
     mime: string;
     chapterBasePath: string;
+    chapterPath: string;
   }
 
   type Props = {
@@ -98,6 +99,7 @@
   let totalChapters = $state(0);
   let zoomLevel = $state(100);
   let zoomContainerEl = $state<HTMLDivElement | null>(null);
+  let iframeContentHeight = $state(0);
 
   // ─── Reader settings cache (synced from prop for reactivity) ─
   let fontSize = $state(100);
@@ -127,7 +129,12 @@
   });
 
   // ─── Lifecycle ───────────────────────────────────────────
-  function handleSelectionMessage(event: MessageEvent): void {
+  function handleIframeMessage(event: MessageEvent): void {
+    if (event.data?.type === 'epub-resize') {
+      syncIframeHeight();
+      return;
+    }
+
     if (event.data?.type !== 'epub-selection') return;
 
     if (!event.data.text) {
@@ -147,19 +154,49 @@
     });
   }
 
+  function syncIframeHeight(): void {
+    if (!iframeEl?.contentDocument) return;
+
+    const doc = iframeEl.contentDocument;
+    const height = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+    iframeContentHeight = height > 0 ? height : 0;
+  }
+
   onMount(() => {
     initReader();
-    window.addEventListener('message', handleSelectionMessage);
+    window.addEventListener('message', handleIframeMessage);
     return () => {
-      window.removeEventListener('message', handleSelectionMessage);
+      window.removeEventListener('message', handleIframeMessage);
     };
   });
 
-  // ─── Re-render chapter when any layout setting changes ──
+  let lastRenderedChapter = $state(-1);
+
+  // ─── Render chapter or refresh styles when settings change ──
   $effect(() => {
-    if (metadata && !isLoading) {
+    if (!metadata || isLoading || !iframeEl) return;
+
+    void fontSize;
+    void fontFamily;
+    void themeMode;
+    void lineHeight;
+    void letterSpacing;
+    void paragraphSpacing;
+    void textAlign;
+    void direction;
+    void hyphenation;
+    void margins.top;
+    void margins.right;
+    void margins.bottom;
+    void margins.left;
+    void zoomLevel;
+
+    if (lastRenderedChapter !== currentChapterIndex) {
       renderChapter(currentChapterIndex);
+      return;
     }
+
+    refreshReaderStyles();
   });
 
   // ─── External TOC navigation ─────────────────────────────
@@ -200,8 +237,6 @@
         onTocReady(entries);
       }
 
-      await renderChapter(currentChapterIndex);
-
       // Index EPUB text for full-text search.
       // The Rust command `index_epub_text` (camelCase: `indexEpubText`) reads the
       // cached chapter files and indexes into FTS5.
@@ -215,14 +250,207 @@
     }
   }
 
-  // ─── Parse chapter head for CSS ──────────────────────────
-  function extractChapterHead(chapterHtml: string): string {
+  function resolveResourcePath(chapterPath: string, href: string): string {
+    const chapterDir = chapterPath.includes('/')
+      ? chapterPath.slice(0, chapterPath.lastIndexOf('/') + 1)
+      : '';
+    const parts = `${chapterDir}${href}`.split('/');
+    const resolved: string[] = [];
+
+    for (const part of parts) {
+      if (part === '..') {
+        resolved.pop();
+      } else if (part !== '.' && part !== '') {
+        resolved.push(part);
+      }
+    }
+
+    return resolved.join('/');
+  }
+
+  function toAssetUrl(resourcesPath: string, resourcePath: string): string {
+    const normalized = resourcePath.replace(/\\/g, '/');
+    const base = resourcesPath.replace(/\\/g, '/').replace(/\/$/, '');
+    return `${convertFileSrc(`${base}/${normalized}`)}`;
+  }
+
+  function buildReaderOverrideCss(): string {
+    const hyphensValue = hyphenation ? 'auto' : 'none';
+    const effectiveFontSize = (fontSize * zoomLevel) / 100;
+    const themeCss = getThemeStyles();
+
+    return `
+      ${themeCss}
+      html {
+        height: auto !important;
+        max-height: none !important;
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
+      }
+      body {
+        height: auto !important;
+        min-height: 100% !important;
+        max-height: none !important;
+        overflow: visible !important;
+        font-size: ${effectiveFontSize}% !important;
+        line-height: ${lineHeight} !important;
+        letter-spacing: ${letterSpacing}px !important;
+        text-align: ${textAlign} !important;
+        direction: ${direction} !important;
+        hyphens: ${hyphensValue} !important;
+        padding: ${margins.top}rem ${margins.right}rem ${margins.bottom}rem ${margins.left}rem !important;
+        max-width: 38rem !important;
+        margin: 0 auto !important;
+        box-sizing: border-box !important;
+      }
+      body p {
+        margin-bottom: ${paragraphSpacing}em;
+      }
+      body img {
+        max-width: 100%;
+        height: auto;
+      }
+    `;
+  }
+
+  function buildChapterSrcdoc(chapterData: EpubChapterContent, resourcesPath: string): string {
     const parser = new DOMParser();
-    const doc = parser.parseFromString(chapterHtml, 'text/html');
-    const headChildren = Array.from(doc.head.childNodes).filter(
-      (n) => n.nodeName === 'LINK' || n.nodeName === 'STYLE'
-    );
-    return headChildren.map((n) => (n as Element).outerHTML).join('\n');
+    const doc = parser.parseFromString(chapterData.html, 'text/html');
+    const chapterPath = chapterData.chapterPath.replace(/\\/g, '/');
+
+    const baseUrl = chapterData.chapterBasePath
+      ? toAssetUrl(resourcesPath, `${chapterData.chapterBasePath}/`)
+      : toAssetUrl(resourcesPath, '');
+
+    let baseEl = doc.querySelector('base');
+    if (!baseEl) {
+      baseEl = doc.createElement('base');
+      doc.head.prepend(baseEl);
+    }
+    baseEl.setAttribute('href', baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
+
+    for (const link of doc.querySelectorAll('link[rel="stylesheet"]')) {
+      const href = link.getAttribute('href');
+      if (!href || href.startsWith('http') || href.startsWith('data:')) continue;
+
+      const resourcePath = resolveResourcePath(chapterPath, href);
+      link.setAttribute('href', toAssetUrl(resourcesPath, resourcePath));
+    }
+
+    for (const styleEl of doc.querySelectorAll('style')) {
+      const cssText = styleEl.textContent ?? '';
+      if (!cssText.includes('url(')) continue;
+
+      styleEl.textContent = cssText.replace(
+        /url\(\s*(['"]?)([^'")]+)\1\s*\)/gi,
+        (_match, quote: string, rawUrl: string) => {
+          if (
+            rawUrl.startsWith('http') ||
+            rawUrl.startsWith('data:') ||
+            rawUrl.startsWith('asset:') ||
+            rawUrl.startsWith('#')
+          ) {
+            return `url(${quote}${rawUrl}${quote})`;
+          }
+
+          const resourcePath = resolveResourcePath(chapterPath, rawUrl);
+          return `url(${quote}${toAssetUrl(resourcesPath, resourcePath)}${quote})`;
+        },
+      );
+    }
+
+    let readerStyle = doc.getElementById('nextpage-reader-overrides');
+    if (!readerStyle) {
+      readerStyle = doc.createElement('style');
+      readerStyle.id = 'nextpage-reader-overrides';
+      doc.head.appendChild(readerStyle);
+    }
+    readerStyle.textContent = buildReaderOverrideCss();
+
+    const resizeScript = doc.createElement('script');
+    resizeScript.textContent = `
+      (function() {
+        function notifyResize() {
+          window.parent.postMessage({ type: 'epub-resize' }, '*');
+        }
+        window.addEventListener('load', notifyResize);
+        if (document.readyState === 'complete') notifyResize();
+        if (typeof ResizeObserver !== 'undefined') {
+          new ResizeObserver(notifyResize).observe(document.body);
+        }
+      })();
+    `;
+
+    const selectionScript = doc.createElement('script');
+    selectionScript.textContent = `
+      (function() {
+        var timer = null;
+        document.addEventListener('mouseup', function() {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(function() {
+            var sel = window.getSelection();
+            if (!sel || sel.isCollapsed || !sel.toString().trim()) return;
+            var text = sel.toString().trim();
+            var range = sel.getRangeAt(0);
+            var rect = range.getBoundingClientRect();
+            var bounds = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+            var container = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+            var rects = [];
+            for (var i = 0; i < range.getClientRects().length; i++) {
+              var r = range.getClientRects()[i];
+              rects.push({ left: r.left, top: r.top, width: r.width, height: r.height });
+            }
+            window.parent.postMessage({
+              type: 'epub-selection',
+              text: text,
+              bounds: bounds,
+              container: container,
+              rects: rects,
+              pageNumber: ${currentChapterIndex}
+            }, '*');
+          }, 100);
+        });
+        document.addEventListener('selectionchange', function() {
+          var sel = window.getSelection();
+          if (!sel || sel.isCollapsed) {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(function() {
+              window.parent.postMessage({ type: 'epub-selection', text: '' }, '*');
+            }, 200);
+          }
+        });
+      })();
+    `;
+
+    doc.body.appendChild(resizeScript);
+    doc.body.appendChild(selectionScript);
+
+    const serialized = new XMLSerializer().serializeToString(doc);
+    return `<!DOCTYPE html>${serialized}`;
+  }
+
+  function refreshReaderStyles(): void {
+    if (!iframeEl?.contentDocument) return;
+
+    const doc = iframeEl.contentDocument;
+    let readerStyle = doc.getElementById('nextpage-reader-overrides');
+    if (!readerStyle) {
+      readerStyle = doc.createElement('style');
+      readerStyle.id = 'nextpage-reader-overrides';
+      doc.head.appendChild(readerStyle);
+    }
+
+    let css = buildReaderOverrideCss();
+    const userFont = fontFamily.trim();
+    if (userFont && userFont !== 'serif') {
+      css += `
+        body {
+          font-family: ${userFont}, serif !important;
+        }
+      `;
+    }
+    readerStyle.textContent = css;
+    syncIframeHeight();
   }
 
   // ─── Render Chapter ──────────────────────────────────────
@@ -236,95 +464,18 @@
       });
 
       currentChapterIndex = index;
+      iframeContentHeight = 0;
 
-      const resourcesUrl = convertFileSrc(metadata.resourcesPath) + '/';
-      const baseUrl = chapterData.chapterBasePath
-        ? resourcesUrl + chapterData.chapterBasePath + '/'
-        : resourcesUrl;
+      const srcdoc = buildChapterSrcdoc(chapterData, metadata.resourcesPath);
 
-      const themeCss = getThemeStyles();
-      const chapterHeadCss = extractChapterHead(chapterData.html);
-
-      const selectionScript = `
-<script>
-(function() {
-  var timer = null;
-  document.addEventListener('mouseup', function() {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(function() {
-      var sel = window.getSelection();
-      if (!sel || sel.isCollapsed || !sel.toString().trim()) return;
-      var text = sel.toString().trim();
-      var range = sel.getRangeAt(0);
-      var rect = range.getBoundingClientRect();
-      var bounds = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
-      var container = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
-      var rects = [];
-      for (var i = 0; i < range.getClientRects().length; i++) {
-        var r = range.getClientRects()[i];
-        rects.push({ left: r.left, top: r.top, width: r.width, height: r.height });
-      }
-      window.parent.postMessage({
-        type: 'epub-selection',
-        text: text,
-        bounds: bounds,
-        container: container,
-        rects: rects,
-        pageNumber: ${currentChapterIndex}
-      }, '*');
-    }, 100);
-  });
-  document.addEventListener('selectionchange', function() {
-    var sel = window.getSelection();
-    if (!sel || sel.isCollapsed) {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(function() {
-        window.parent.postMessage({ type: 'epub-selection', text: '' }, '*');
-      }, 200);
-    }
-  });
-})();
-<\\\\/script>`;
-
-      // Clean the chapter body HTML: remove the original <head> content since we inject our own
-      const bodyHtml = stripHeadFromHtml(chapterData.html);
-
-      // Build layout CSS with all dynamic settings
-      const hyphensValue = hyphenation ? 'auto' : 'none';
-
-      const srcdoc = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <base href="${baseUrl}">
-  ${chapterHeadCss}
-  <style>
-    ${themeCss}
-    html { overflow-y: auto; }
-    body {
-      font-size: ${fontSize}%;
-      font-family: ${fontFamily}, serif;
-      line-height: ${lineHeight};
-      letter-spacing: ${letterSpacing}px;
-      text-align: ${textAlign};
-      direction: ${direction};
-      hyphens: ${hyphensValue};
-      padding: ${margins.top}rem ${margins.right}rem ${margins.bottom}rem ${margins.left}rem;
-      max-width: 38rem;
-      margin: 0 auto;
-    }
-    p { margin-bottom: ${paragraphSpacing}em; }
-    img { max-width: 100%; height: auto; }
-    a { color: inherit; }
-  </style>
-</head>
-<body>
-  ${bodyHtml}
-  ${selectionScript}
-</body>
-</html>`;
-
+      iframeEl.onload = () => {
+        syncIframeHeight();
+        if (zoomContainerEl) {
+          zoomContainerEl.scrollTop = 0;
+        }
+      };
       iframeEl.srcdoc = srcdoc;
+      lastRenderedChapter = index;
 
       const pct = ((index + 0.5) / totalChapters) * 100;
       onLocationChange?.(`chapter:${index}`, pct);
@@ -334,31 +485,22 @@
     }
   }
 
-  // ─── Strip <head> from chapter HTML (keep only <body> content) ──
-  function stripHeadFromHtml(html: string): string {
-    const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-    if (bodyMatch && bodyMatch[1]) {
-      return bodyMatch[1];
-    }
-    return html;
-  }
-
   // ─── Navigation ──────────────────────────────────────────
   function goToPrev(): void {
     if (currentChapterIndex > 0) {
-      renderChapter(currentChapterIndex - 1);
+      currentChapterIndex -= 1;
     }
   }
 
   function goToNext(): void {
     if (currentChapterIndex < totalChapters - 1) {
-      renderChapter(currentChapterIndex + 1);
+      currentChapterIndex += 1;
     }
   }
 
   function goToChapter(index: number): void {
     if (index >= 0 && index < totalChapters) {
-      renderChapter(index);
+      currentChapterIndex = index;
     }
   }
 
@@ -433,7 +575,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="flex flex-col h-full w-full outline-none relative" tabindex="-1" role="presentation"
+<div class="flex flex-col h-full w-full min-h-0 outline-none relative" tabindex="-1" role="presentation"
   class:w-full={isFullscreen}
   class:h-full={isFullscreen}
 >
@@ -449,23 +591,19 @@
       {t('epub.error')}: {error}
     </div>
   {:else}
-    <!-- Chapter iframe with zoom support -->
+    <!-- Chapter iframe — parent scrolls, iframe grows to content height -->
     <div
-      class="flex-1 w-full h-full overflow-y-auto pb-16"
+      class="flex-1 w-full min-h-0 overflow-y-auto pb-16"
       style="background: {getThemeBgColor()};"
       bind:this={zoomContainerEl}
       onwheel={handleWheel}
     >
-      <div
-        class="w-full h-full origin-top-left transition-transform duration-200 ease-out"
-        style="transform: scale({zoomLevel / 100}); width: {10000 / zoomLevel}%; height: {10000 / zoomLevel}%;"
-      >
-        <iframe
-          bind:this={iframeEl}
-          class="w-full h-full border-none"
-          title="chapter"
-        ></iframe>
-      </div>
+      <iframe
+        bind:this={iframeEl}
+        class="w-full border-none block"
+        style:height={iframeContentHeight > 0 ? `${iframeContentHeight}px` : 'auto'}
+        title="chapter"
+      ></iframe>
     </div>
 
     <!-- Minimal overlay navigation (bottom) — hidden in vertical scroll mode -->

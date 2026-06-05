@@ -6,7 +6,7 @@ import EpubNativeViewer from '$lib/features/reader/components/EpubNativeViewer.s
 const mockInvoke = vi.fn();
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args: unknown[]) => mockInvoke(...args),
-  convertFileSrc: vi.fn(() => 'tauri://localhost/resources/'),
+  convertFileSrc: vi.fn((path: string) => `tauri://asset.localhost/${String(path).replace(/\\/g, '/')}`),
 }));
 
 const t = (key: string) => key;
@@ -30,8 +30,13 @@ describe('EpubNativeViewer', () => {
       if (cmd === 'get_epub_chapter') {
         return Promise.resolve({
           index: 0,
-          html: '<p>Hello World</p>',
+          html: `<!DOCTYPE html><html><head>
+            <link rel="stylesheet" href="../css/book.css">
+            <style>p.title { font-weight: 700; }</style>
+          </head><body><p class="title">Hello</p><p>World</p></body></html>`,
           mime: 'application/xhtml+xml',
+          chapterBasePath: 'OEBPS/Text',
+          chapterPath: 'OEBPS/Text/chapter1.xhtml',
         });
       }
       return Promise.reject(new Error(`Unknown command: ${cmd}`));
@@ -206,6 +211,10 @@ describe('EpubNativeViewer', () => {
       expect(srcdoc).toContain('mouseup');
       expect(srcdoc).toContain('window.parent.postMessage');
       expect(srcdoc).toContain('epub-selection');
+      expect(srcdoc).toContain('epub-resize');
+      expect(srcdoc).toContain('nextpage-reader-overrides');
+      expect(srcdoc).toContain('OEBPS/css/book.css');
+      expect(srcdoc).toContain('font-weight: 700');
     });
   });
 });

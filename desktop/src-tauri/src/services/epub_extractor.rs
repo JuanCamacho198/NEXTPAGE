@@ -35,6 +35,8 @@ pub struct EpubChapterContent {
     pub mime: String,
     /// Relative directory path of the chapter within the resources cache, used for `<base href>`
     pub chapter_base_path: String,
+    /// Relative path to the chapter file within the resources cache (e.g. OEBPS/Text/ch01.xhtml)
+    pub chapter_path: String,
 }
 
 #[derive(Debug)]
@@ -171,11 +173,14 @@ impl EpubExtractor {
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default();
 
+        let chapter_path = chapter_rel_path.replace('\\', "/");
+
         Ok(EpubChapterContent {
             index: chapter_index,
             html,
             mime: "application/xhtml+xml".to_string(),
             chapter_base_path,
+            chapter_path,
         })
     }
 

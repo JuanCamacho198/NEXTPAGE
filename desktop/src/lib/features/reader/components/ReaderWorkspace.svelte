@@ -385,7 +385,7 @@
 
   <!-- Reading area (centered, fill remaining space) -->
   <div
-    class="flex flex-1"
+    class="flex flex-1 min-h-0"
     class:items-center={isPdf && !isFullscreen}
     class:justify-center={!isFullscreen}
     class:items-stretch={isEpub || isFullscreen}
@@ -431,7 +431,7 @@
     {:else if isEpub}
       <!-- White content card for EPUB -->
       <div
-        class="relative overflow-hidden bg-white flex flex-col h-full"
+        class="relative overflow-hidden bg-white flex flex-col h-full min-h-0"
         class:rounded-xl={!isFullscreen}
         class:shadow-lg={!isFullscreen}
         class:w-200={!isFullscreen}

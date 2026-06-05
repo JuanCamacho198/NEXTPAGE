@@ -1,5 +1,6 @@
 <script lang="ts">
   import { appState } from "$lib/shared/stores/AppState.svelte";
+  import { fly } from "svelte/transition";
 
   import Button from "$lib/shared/ui/forms/Button.svelte";
   import ShelfSection from "$lib/shared/ui/layout/ShelfSection.svelte";
@@ -44,9 +45,11 @@
       <p class="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">{appState.readerError}</p>
     {/if}
 
-    {#if appState.route === "home"}
-      {@const previewBook = appState.getBookById(appState.previewBookId)}
-      <HomeDesktopView
+    {#key appState.route}
+      {#if appState.route === "home"}
+        {@const previewBook = appState.getBookById(appState.previewBookId)}
+        <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
+          <HomeDesktopView
         stats={appState.stats}
         isLoadingStats={appState.isLoadingStats}
         statsUnavailableReason={appState.statsUnavailableReason}
@@ -77,7 +80,9 @@
           <ShelfSection />
         {/snippet}
       </HomeDesktopView>
-    {:else if appState.route === "library"}
+        </div>
+      {:else if appState.route === "library"}
+      <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
       <LibraryShelfScreen
         books={appState.books}
         isImporting={appState.isImporting}
@@ -99,19 +104,25 @@
           void appState.handleHideBook(book);
         }}
       />
+      </div>
     {:else if appState.route === "stats"}
+      <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
       <ReadingStatisticsView
         books={appState.books}
         stats={appState.stats}
         isLoading={appState.isLoadingStats}
         disabledReason={appState.statsUnavailableReason}
       />
+      </div>
     {:else if appState.route === "highlights"}
+      <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
       <HighlightsView
         books={appState.books}
         t={appState.t}
       />
+      </div>
     {:else if appState.route === "settings"}
+      <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
       <section class="space-y-3">
         <div class="flex justify-end">
           <Button size="sm" variant="ghost" onclick={appState.navigateToHome}>{appState.t("app.backToHome")}</Button>
@@ -127,7 +138,9 @@
           books={appState.books.map(b => ({ id: b.id, title: b.title }))}
         />
       </section>
+      </div>
     {:else}
+      <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
       <ReaderWorkspace
         activeReadingBook={appState.getBookById(appState.activeReadingBookId)}
         readerSettings={appState.readerSettings}
@@ -147,6 +160,8 @@
         onSearch={(query: string, page: number) => void appState.handleSearch(query, page)}
         onSearchJump={(target: unknown) => void appState.handleSearchJump(target as Parameters<typeof appState.handleSearchJump>[0])}
       />
+      </div>
     {/if}
+  {/key}
   </div>
 </div>

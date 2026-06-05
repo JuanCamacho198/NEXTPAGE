@@ -1,7 +1,7 @@
 /* ============================================
  * MAIN STYLES — Import tokens and add app-specific styles
  * ============================================ */
-@import "./lib/styles/tokens.css";
+@import "./lib/shared/styles/tokens.css";
 
 /* ============================================
  * APP CUSTOM STYLES

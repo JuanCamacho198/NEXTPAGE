@@ -196,10 +196,10 @@ fn commands_feature_isolation_contract_is_enforced_by_module_layout() {
     assert!(commands_mod.contains("pub mod bookmarks;"));
     assert!(commands_mod.contains("pub use bookmarks::*;"));
 
-    assert!(bookmarks_mod.contains("save_bookmark"));
-    assert!(bookmarks_mod.contains("delete_bookmark"));
-    assert!(!bookmarks_mod.contains("save_progress"));
-    assert!(!bookmarks_mod.contains("list_highlights"));
+    assert!(bookmarks_mod.contains("saveBookmark"));
+    assert!(bookmarks_mod.contains("deleteBookmark"));
+    assert!(!bookmarks_mod.contains("saveProgress"));
+    assert!(!bookmarks_mod.contains("listHighlights"));
 }
 
 #[test]

@@ -217,4 +217,65 @@ describe('EpubNativeViewer', () => {
       expect(srcdoc).toContain('font-weight: 700');
     });
   });
+
+  // ─── Task 5.2: Floating pill removed, EpubControls present ─────
+  describe('EpubControls Integration (5.2)', () => {
+    it('does NOT render floating pill overlay div', async () => {
+      render(EpubNativeViewer, {
+        filePath: '/test/book.epub',
+        bookId: 'test-book',
+        t,
+      });
+
+      await screen.findByTitle('chapter');
+
+      // The old floating pill was an overlay div at absolute bottom-4
+      const pillContainer = document.querySelector('.absolute.bottom-4');
+      expect(pillContainer).toBeFalsy();
+    });
+
+    it('renders EpubControls with TOC button in the viewer', async () => {
+      render(EpubNativeViewer, {
+        filePath: '/test/book.epub',
+        bookId: 'test-book',
+        t,
+      });
+
+      await screen.findByTitle('chapter');
+
+      // EpubControls renders a TOC button with data-testid="epub-toc"
+      const tocBtn = await screen.findByTestId('epub-toc');
+      expect(tocBtn).toBeInTheDocument();
+    });
+
+    it('renders EpubControls with prev/next/font-size controls', async () => {
+      render(EpubNativeViewer, {
+        filePath: '/test/book.epub',
+        bookId: 'test-book',
+        t,
+      });
+
+      await screen.findByTitle('chapter');
+
+      expect(screen.getByTestId('epub-prev')).toBeInTheDocument();
+      expect(screen.getByTestId('epub-next')).toBeInTheDocument();
+      expect(screen.getByTestId('epub-font-decrease')).toBeInTheDocument();
+      expect(screen.getByTestId('epub-font-increase')).toBeInTheDocument();
+    });
+
+    it('renders EpubControls with fullscreen toggle', async () => {
+      render(EpubNativeViewer, {
+        filePath: '/test/book.epub',
+        bookId: 'test-book',
+        t,
+        isFullscreen: false,
+        onToggleFullscreen: vi.fn(),
+      });
+
+      await screen.findByTitle('chapter');
+
+      const fsBtn = screen.getByTestId('epub-fullscreen');
+      expect(fsBtn).toBeInTheDocument();
+    });
+  });
 });

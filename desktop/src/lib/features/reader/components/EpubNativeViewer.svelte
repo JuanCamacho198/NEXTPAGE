@@ -4,6 +4,7 @@
   import { convertFileSrc } from '@tauri-apps/api/core';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, ReaderThemeMode, ReaderTextAlign, ReaderDirection } from '$lib/shared/types';
+  import EpubControls from './epub/EpubControls.svelte';
 
   // ─── Types ───────────────────────────────────────────────
   interface EpubChapterMeta {
@@ -53,6 +54,9 @@
     onToggleFullscreen?: () => void;
     onTocReady?: (entries: Array<{ id: string; title: string; depth: number }>) => void;
     externalTocNavigate?: { id: string } | null;
+    showToc?: boolean;
+    onToggleToc?: () => void;
+    onSettingsChange?: (settings: ReaderSettings) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
@@ -87,6 +91,10 @@
     isFullscreen = false,
     onTocReady,
     externalTocNavigate = null,
+    showToc = false,
+    onToggleFullscreen,
+    onToggleToc,
+    onSettingsChange,
     t,
   }: Props = $props();
 
@@ -111,7 +119,6 @@
   let textAlign = $state<ReaderTextAlign>('left');
   let direction = $state<ReaderDirection>('ltr');
   let hyphenation = $state(false);
-  let verticalScrolling = $state(false);
   let margins = $state<ReaderSettings['margins']>({ top: 1.5, bottom: 1.5, left: 2, right: 2 });
 
   $effect(() => {
@@ -124,7 +131,6 @@
     textAlign = readerSettings.textAlign;
     direction = readerSettings.direction;
     hyphenation = readerSettings.hyphenation;
-    verticalScrolling = readerSettings.verticalScrolling;
     margins = readerSettings.margins;
   });
 
@@ -504,16 +510,21 @@
     }
   }
 
+  async function handleGoToPage(page: number): Promise<boolean> {
+    const chapterIndex = page - 1;
+    if (chapterIndex >= 0 && chapterIndex < totalChapters) {
+      goToChapter(chapterIndex);
+      return true;
+    }
+    return false;
+  }
+
   // ─── Zoom ─────────────────────────────────────────────────
   function changeZoom(delta: number): void {
     const newZoom = Math.max(50, Math.min(200, zoomLevel + delta));
     if (newZoom !== zoomLevel) {
       zoomLevel = newZoom;
     }
-  }
-
-  function resetZoom(): void {
-    zoomLevel = 100;
   }
 
   function handleWheel(e: WheelEvent): void {
@@ -591,6 +602,30 @@
       {t('epub.error')}: {error}
     </div>
   {:else}
+    <!-- EpubControls top bar -->
+    <EpubControls
+      currentPage={currentChapterIndex + 1}
+      totalPages={totalChapters}
+      currentPercentage={((currentChapterIndex + 0.5) / totalChapters) * 100}
+      fontSize={fontSize}
+      isFullscreen={isFullscreen}
+      showToc={showToc}
+      {t}
+      onPrev={goToPrev}
+      onNext={goToNext}
+      onGoToPage={handleGoToPage}
+      onFontSizeChange={(size: number) => {
+        fontSize = size;
+        const updated: ReaderSettings = {
+          ...readerSettings,
+          epub: { ...readerSettings.epub, fontSize: size },
+        };
+        onSettingsChange?.(updated);
+      }}
+      onToggleFullscreen={() => onToggleFullscreen?.()}
+      onToggleToc={() => onToggleToc?.()}
+    />
+
     <!-- Chapter iframe — parent scrolls, iframe grows to content height -->
     <div
       class="flex-1 w-full min-h-0 overflow-y-auto pb-16"
@@ -605,66 +640,5 @@
         title="chapter"
       ></iframe>
     </div>
-
-    <!-- Minimal overlay navigation (bottom) — hidden in vertical scroll mode -->
-    {#if !verticalScrolling}
-    <div class="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none">
-      <div class="flex items-center gap-4 bg-black/60 backdrop-blur-md text-white px-4 py-2 rounded-full shadow-lg pointer-events-auto text-xs font-medium">
-        <button
-          type="button"
-          onclick={goToPrev}
-          disabled={currentChapterIndex <= 0}
-          class="disabled:opacity-30 cursor-pointer hover:text-(--color-accent)"
-        >
-          ← {t('epub.previous')}
-        </button>
-
-        <span class="opacity-80">
-          {currentChapterIndex + 1} / {totalChapters}
-        </span>
-
-        <button
-          type="button"
-          onclick={goToNext}
-          disabled={currentChapterIndex >= totalChapters - 1}
-          class="disabled:opacity-30 cursor-pointer hover:text-(--color-accent)"
-        >
-          {t('epub.next')} →
-        </button>
-
-        <!-- Zoom controls -->
-        <span class="w-px h-4 bg-white/20 mx-1"></span>
-
-        <button
-          type="button"
-          onclick={() => changeZoom(-10)}
-          disabled={zoomLevel <= 50}
-          class="disabled:opacity-30 cursor-pointer hover:text-(--color-accent) font-bold"
-          title={t('pdf.zoomLevel', { level: zoomLevel })}
-        >
-          −
-        </button>
-
-        <button
-          type="button"
-          onclick={resetZoom}
-          class="cursor-pointer hover:text-(--color-accent) min-w-10 text-center"
-          title={t('pdf.zoomLevel', { level: zoomLevel })}
-        >
-          {zoomLevel}%
-        </button>
-
-        <button
-          type="button"
-          onclick={() => changeZoom(10)}
-          disabled={zoomLevel >= 200}
-          class="disabled:opacity-30 cursor-pointer hover:text-(--color-accent) font-bold"
-          title={t('pdf.zoomLevel', { level: zoomLevel })}
-        >
-          +
-        </button>
-      </div>
-    </div>
-    {/if}
   {/if}
 </div>

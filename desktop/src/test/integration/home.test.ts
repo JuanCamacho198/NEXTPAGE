@@ -361,7 +361,12 @@ describe("App desktop home redesign QA scenarios", () => {
     render(App);
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole("button", { name: /Progress B/i }));
+    // The card content button contains "Progress B" in its accessible name;
+    // scoped to the continue section to avoid matching the ShelfActionMenu trigger
+    const continueSection = await screen.findByTestId("continue-section");
+    const cardButtons = within(continueSection).getAllByRole("button", { name: /Progress B/i });
+    // Pick the card content button (first one is the card, second is the actions menu trigger)
+    await user.click(cardButtons[0]);
 
     await waitFor(() => {
       expect(screen.getByTestId("selected-book-title")).toHaveTextContent("Progress B");

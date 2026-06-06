@@ -450,6 +450,9 @@
           onselectionclear={dismissToolbar}
           {isFullscreen}
           onToggleFullscreen={toggleFullscreen}
+          showToc={showTocPanel}
+          onToggleToc={toggleTocPanel}
+          onSettingsChange={handleTextSettingsChange}
           {t}
         />
       </div>

@@ -1,0 +1,177 @@
+import { render, screen, fireEvent } from '@testing-library/svelte';
+import { describe, expect, it, vi } from 'vitest';
+import EpubControls from '$lib/features/reader/components/epub/EpubControls.svelte';
+
+const t = (key: string) => key;
+
+function makeProps(overrides: Record<string, unknown> = {}) {
+  return {
+    currentPage: 1,
+    totalPages: 10,
+    currentPercentage: 15,
+    fontSize: 100,
+    isFullscreen: false,
+    showToc: false,
+    t,
+    onPrev: vi.fn(),
+    onNext: vi.fn(),
+    onGoToPage: vi.fn().mockResolvedValue(true),
+    onFontSizeChange: vi.fn(),
+    onToggleFullscreen: vi.fn(),
+    onToggleToc: vi.fn(),
+    ...overrides,
+  };
+}
+
+describe('EpubControls (5.1) — Button structure matching PdfControls', () => {
+  it('renders TOC button with Icon name="menu"', () => {
+    render(EpubControls, makeProps());
+    const btn = screen.getByTestId('epub-toc');
+    expect(btn).toBeInTheDocument();
+    expect(btn).toHaveAttribute('type', 'button');
+  });
+
+  it('renders prev/next navigation buttons', () => {
+    render(EpubControls, makeProps());
+    expect(screen.getByTestId('epub-prev')).toBeInTheDocument();
+    expect(screen.getByTestId('epub-next')).toBeInTheDocument();
+  });
+
+  it('renders page input with currentPage and totalPages', () => {
+    render(EpubControls, makeProps({ currentPage: 3, totalPages: 15 }));
+    const input = screen.getByTestId('epub-page-input') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+    expect(input.value).toBe('3');
+    expect(screen.getByTestId('epub-total-pages')).toHaveTextContent('/ 15');
+  });
+
+  it('renders fullscreen toggle button', () => {
+    render(EpubControls, makeProps());
+    expect(screen.getByTestId('epub-fullscreen')).toBeInTheDocument();
+  });
+
+  it('renders EPUB-specific font-size decrease/increase buttons', () => {
+    render(EpubControls, makeProps());
+    expect(screen.getByTestId('epub-font-decrease')).toBeInTheDocument();
+    expect(screen.getByTestId('epub-font-increase')).toBeInTheDocument();
+  });
+
+  it('shows font-size percentage display', () => {
+    render(EpubControls, makeProps({ fontSize: 120 }));
+    expect(screen.getByTestId('epub-font-percent')).toHaveTextContent('120%');
+  });
+
+  it('disables prev button at first chapter (page 1)', () => {
+    render(EpubControls, makeProps({ currentPage: 1 }));
+    expect(screen.getByTestId('epub-prev')).toBeDisabled();
+  });
+
+  it('disables next button at last chapter', () => {
+    render(EpubControls, makeProps({ currentPage: 10, totalPages: 10 }));
+    expect(screen.getByTestId('epub-next')).toBeDisabled();
+  });
+
+  it('enables prev/next in middle of book', () => {
+    render(EpubControls, makeProps({ currentPage: 5, totalPages: 10 }));
+    expect(screen.getByTestId('epub-prev')).not.toBeDisabled();
+    expect(screen.getByTestId('epub-next')).not.toBeDisabled();
+  });
+});
+
+describe('EpubControls (5.1) — Callback behavior', () => {
+  it('calls onPrev when prev button clicked', async () => {
+    const onPrev = vi.fn();
+    render(EpubControls, makeProps({ currentPage: 5, totalPages: 10, onPrev }));
+    await fireEvent.click(screen.getByTestId('epub-prev'));
+    expect(onPrev).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onNext when next button clicked', async () => {
+    const onNext = vi.fn();
+    render(EpubControls, makeProps({ currentPage: 5, totalPages: 10, onNext }));
+    await fireEvent.click(screen.getByTestId('epub-next'));
+    expect(onNext).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onToggleToc when TOC button clicked', async () => {
+    const onToggleToc = vi.fn();
+    render(EpubControls, makeProps({ onToggleToc }));
+    await fireEvent.click(screen.getByTestId('epub-toc'));
+    expect(onToggleToc).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onToggleFullscreen when fullscreen button clicked', async () => {
+    const onToggleFullscreen = vi.fn();
+    render(EpubControls, makeProps({ onToggleFullscreen }));
+    await fireEvent.click(screen.getByTestId('epub-fullscreen'));
+    expect(onToggleFullscreen).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onFontSizeChange with decreased size when A- clicked', async () => {
+    const onFontSizeChange = vi.fn();
+    render(EpubControls, makeProps({ fontSize: 100, onFontSizeChange }));
+    await fireEvent.click(screen.getByTestId('epub-font-decrease'));
+    expect(onFontSizeChange).toHaveBeenCalledWith(90);
+  });
+
+  it('calls onFontSizeChange with increased size when A+ clicked', async () => {
+    const onFontSizeChange = vi.fn();
+    render(EpubControls, makeProps({ fontSize: 100, onFontSizeChange }));
+    await fireEvent.click(screen.getByTestId('epub-font-increase'));
+    expect(onFontSizeChange).toHaveBeenCalledWith(110);
+  });
+
+  it('calls onGoToPage when valid page entered in input', async () => {
+    const onGoToPage = vi.fn().mockResolvedValue(true);
+    render(EpubControls, makeProps({ currentPage: 3, totalPages: 10, onGoToPage }));
+    const input = screen.getByTestId('epub-page-input');
+    await fireEvent.change(input, { target: { value: '7' } });
+    await fireEvent.blur(input);
+    // onchange fires on blur in testing-lib/svelte
+    expect(onGoToPage).toHaveBeenCalledWith(7);
+  });
+});
+
+describe('EpubControls (5.1) — Page input validation', () => {
+  it('calls onGoToPage with valid page and resets on failure', async () => {
+    const onGoToPage = vi.fn().mockResolvedValue(false);
+    render(EpubControls, makeProps({ currentPage: 3, totalPages: 10, onGoToPage }));
+    const input = screen.getByTestId('epub-page-input') as HTMLInputElement;
+    await fireEvent.change(input, { target: { value: '7' } });
+    expect(onGoToPage).toHaveBeenCalledWith(7);
+  });
+
+  it('resets to current page when value exceeds totalPages', async () => {
+    const onGoToPage = vi.fn();
+    render(EpubControls, makeProps({ currentPage: 3, totalPages: 10, onGoToPage }));
+    const input = screen.getByTestId('epub-page-input') as HTMLInputElement;
+    await fireEvent.change(input, { target: { value: '20' } });
+    // onGoToPage is NOT called for out-of-range values
+    expect(onGoToPage).not.toHaveBeenCalled();
+    expect(input.value).toBe('3');
+  });
+
+  it('resets to current page when value is non-numeric', async () => {
+    const onGoToPage = vi.fn();
+    render(EpubControls, makeProps({ currentPage: 3, totalPages: 10, onGoToPage }));
+    const input = screen.getByTestId('epub-page-input') as HTMLInputElement;
+    await fireEvent.change(input, { target: { value: 'abc' } });
+    await fireEvent.blur(input);
+    expect(input.value).toBe('3');
+    expect(onGoToPage).not.toHaveBeenCalled();
+  });
+});
+
+describe('EpubControls (5.1) — Fullscreen reflects state', () => {
+  it('shows fullscreen-enter title when not fullscreen', () => {
+    render(EpubControls, makeProps({ isFullscreen: false }));
+    const btn = screen.getByTestId('epub-fullscreen');
+    expect(btn).toHaveAttribute('title', 'pdf.fullscreenEnter');
+  });
+
+  it('shows fullscreen-exit title when fullscreen', () => {
+    render(EpubControls, makeProps({ isFullscreen: true }));
+    const btn = screen.getByTestId('epub-fullscreen');
+    expect(btn).toHaveAttribute('title', 'pdf.fullscreenExit');
+  });
+});

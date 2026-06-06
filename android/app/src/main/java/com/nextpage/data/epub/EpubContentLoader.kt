@@ -110,7 +110,7 @@ class EpubContentLoader(private val context: Context) {
                             val content = zis.bufferedReader().readText()
                             val elapsed = System.currentTimeMillis() - startTime
                             Log.d(TAG, "Chapter loaded in ${elapsed}ms: $chapterHref")
-                            return Result.success(stripHtmlToPlainText(content))
+                            return Result.success(content)
                         }
                         entry = zis.nextEntry
                     }
@@ -120,6 +120,12 @@ class EpubContentLoader(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load chapter: ${e.message}")
             Result.failure(e)
+        }
+    }
+
+    fun getChapterContentPlainText(filePath: String, chapterHref: String): Result<String> {
+        return getChapterContent(filePath, chapterHref).map { html ->
+            stripHtmlToPlainText(html)
         }
     }
 

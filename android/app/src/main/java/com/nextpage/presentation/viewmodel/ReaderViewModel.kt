@@ -32,6 +32,7 @@ data class ReaderUiState(
     val chapters: List<EpubContentLoader.Chapter> = emptyList(),
     val currentChapterIndex: Int = 0,
     val chapterContent: String = "",
+    val chapterHtmlContent: String? = null,
     val currentPdfPage: Int = 0,
     val totalPdfPages: Int = 0,
     val pdfPageBitmap: Bitmap? = null,

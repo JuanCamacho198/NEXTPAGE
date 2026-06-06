@@ -310,9 +310,9 @@ private fun LibraryBookshelfContent(
             onViewToggle = onViewToggle
         )
 
-        Spacer(modifier = Modifier.height(12.dp))            // 4. Book Grid
+        Spacer(modifier = Modifier.height(12.dp))            // 4. Book Grid - books are already filtered/sorted from parent
         BookGridSection(
-            books = sortedBooks,
+            books = books,
             readingMinutesByBook = readingMinutesByBook,
             isGridView = isGridView,
             onBookSelected = onBookSelected,

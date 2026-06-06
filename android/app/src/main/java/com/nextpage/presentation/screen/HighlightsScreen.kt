@@ -25,22 +25,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.R
-import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 
-// Category colors matching design
-private val ColorQuotes = Color(0xFF3B82F6)     // blue
-private val ColorIdeas = Color(0xFFA855F7)       // purple
-private val ColorPassages = Color(0xFF10B981)    // green
-private val ColorFavorites = Color(0xFFF59E0B)   // amber
+private val ColorQuotes = Color(0xFF3B82F6)
+private val ColorIdeas = Color(0xFFA855F7)
+private val ColorPassages = Color(0xFF10B981)
+private val ColorFavorites = Color(0xFFF59E0B)
 
-private data class TabItem(
-    val label: String,
-    val icon: ImageVector,
-    val color: Color
-)
+private data class TabItem(val label: String, val icon: ImageVector, val color: Color)
 
 private val highlightTabs = listOf(
     TabItem("Todos", Icons.Outlined.AutoAwesome, ColorQuotes),
@@ -57,6 +51,8 @@ fun HighlightsScreen(
     val highlights by viewModel.highlights.collectAsState()
     val bookmarks by viewModel.bookmarks.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
+    var showSearch by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
     LazyColumn(
         modifier = Modifier
@@ -65,7 +61,7 @@ fun HighlightsScreen(
         contentPadding = PaddingValues(horizontal = 24.dp),
         verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
     ) {
-        // ─── Header: avatar + brand + search ──────────────────────────
+        // Header: avatar + brand + search
         item {
             Row(
                 modifier = Modifier
@@ -96,7 +92,7 @@ fun HighlightsScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-                IconButton(onClick = { /* TODO: search */ }) {
+                IconButton(onClick = { showSearch = !showSearch }) {
                     Icon(
                         imageVector = Icons.Outlined.Search,
                         contentDescription = "Search",
@@ -106,7 +102,21 @@ fun HighlightsScreen(
             }
         }
 
-        // ─── Title + Subtitle ─────────────────────────────────────────
+        // Search bar (toggle)
+        if (showSearch) {
+            item {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text(stringResource(R.string.library_search_placeholder)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp)
+                )
+            }
+        }
+
+        // Title + Subtitle
         item {
             Column {
                 Text(
@@ -123,7 +133,7 @@ fun HighlightsScreen(
             }
         }
 
-        // ─── Tabs (pills with icons) ──────────────────────────────────
+        // Tabs (pills with icons)
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -158,7 +168,7 @@ fun HighlightsScreen(
             }
         }
 
-        // ─── Recent section ───────────────────────────────────────────
+        // Recent section
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -170,7 +180,7 @@ fun HighlightsScreen(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                TextButton(onClick = { /* TODO: view all */ }) {
+                TextButton(onClick = { /* TODO: view all highlights */ }) {
                     Text(text = stringResource(R.string.home_ver_todo))
                 }
             }
@@ -179,14 +189,12 @@ fun HighlightsScreen(
         // Recent cards
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Quote card
                 HighlightCard(
                     content = stringResource(R.string.highlights_quote_content),
                     attribution = stringResource(R.string.highlights_quote_author),
                     accentColor = ColorQuotes,
                     type = "quote"
                 )
-                // Idea card
                 HighlightCard(
                     content = stringResource(R.string.highlights_idea_content),
                     attribution = null,
@@ -196,7 +204,7 @@ fun HighlightsScreen(
             }
         }
 
-        // ─── Summary stats row ────────────────────────────────────────
+        // Summary stats
         item {
             Row(
                 modifier = Modifier
@@ -227,9 +235,13 @@ fun HighlightsScreen(
             }
         }
 
-        // ─── Highlights list ──────────────────────────────────────────
+        // Highlights list
         if (selectedTab == 0 && highlights.isNotEmpty()) {
-            items(highlights, key = { it.id }) { highlight ->
+            val filtered = if (searchQuery.isNotBlank()) {
+                highlights.filter { it.textContent.contains(searchQuery, ignoreCase = true) }
+            } else highlights
+
+            items(filtered, key = { it.id }) { highlight ->
                 HighlightItemCard(
                     content = "\"${highlight.textContent}\"",
                     note = highlight.note,
@@ -238,7 +250,6 @@ fun HighlightsScreen(
             }
         }
 
-        // Bottom spacer
         item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }
@@ -256,7 +267,6 @@ private fun HighlightCard(
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Row(modifier = Modifier.padding(start = 0.dp)) {
-            // Colored left border
             Box(
                 modifier = Modifier
                     .width(4.dp)

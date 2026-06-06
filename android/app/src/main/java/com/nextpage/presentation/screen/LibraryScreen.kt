@@ -99,6 +99,25 @@ fun LibraryScreen(
 
     var statusFilter by remember { mutableStateOf("all") }
     var sortBy by remember { mutableStateOf("date_added") }
+    var isGridView by remember { mutableStateOf(true) }
+    var searchQuery by remember { mutableStateOf("") }
+    var showSearch by remember { mutableStateOf(false) }
+
+    val filteredByStatus = remember(uiState.books, statusFilter, uiState.readingMinutesByBook) {
+        filterBooks(uiState.books, statusFilter, uiState.readingMinutesByBook)
+    }
+
+    val searchedBooks = remember(filteredByStatus, searchQuery) {
+        if (searchQuery.isBlank()) filteredByStatus
+        else filteredByStatus.filter {
+            it.title.contains(searchQuery, ignoreCase = true) ||
+            (it.author?.contains(searchQuery, ignoreCase = true) == true)
+        }
+    }
+
+    val sortedBooks = remember(searchedBooks, sortBy) {
+        sortBookList(searchedBooks, sortBy)
+    }
 
     val epubPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -188,6 +207,12 @@ fun LibraryScreen(
                 onStatusFilterChanged = { statusFilter = it },
                 sortBy = sortBy,
                 onSortByChanged = { sortBy = it },
+                isGridView = isGridView,
+                onViewToggle = { isGridView = !isGridView },
+                showSearch = showSearch,
+                onSearchToggle = { showSearch = !showSearch },
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
                 onBookSelected = onBookSelected,
                 onBookLongPress = { book -> viewModel.requestDeleteBook(book) },
                 onEpubClick = { epubPickerLauncher.launch(arrayOf("application/epub+zip")) },
@@ -245,26 +270,29 @@ private fun LibraryBookshelfContent(
     onStatusFilterChanged: (String) -> Unit,
     sortBy: String,
     onSortByChanged: (String) -> Unit,
+    isGridView: Boolean,
+    onViewToggle: () -> Unit,
+    showSearch: Boolean,
+    onSearchToggle: () -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
     onEpubClick: () -> Unit,
     onPdfClick: () -> Unit
 ) {
-    val filteredBooks = remember(books, statusFilter, readingMinutesByBook) {
-        filterBooks(books, statusFilter, readingMinutesByBook)
-    }
-
-    val sortedBooks = remember(filteredBooks, sortBy) {
-        sortBookList(filteredBooks, sortBy)
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
     ) {
         // 1. Header
-        LibraryHeader()
+        LibraryHeader(
+            showSearch = showSearch,
+            onSearchToggle = onSearchToggle,
+            searchQuery = searchQuery,
+            onSearchQueryChange = onSearchQueryChange
+        )
 
         // 2. Status Tabs
         StatusTabsRow(
@@ -277,15 +305,16 @@ private fun LibraryBookshelfContent(
         // 3. Sort Row
         SortRowComposable(
             sortBy = sortBy,
-            onSortByChanged = onSortByChanged
+            onSortByChanged = onSortByChanged,
+            isGridView = isGridView,
+            onViewToggle = onViewToggle
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // 4. Book Grid
+        Spacer(modifier = Modifier.height(12.dp))            // 4. Book Grid
         BookGridSection(
             books = sortedBooks,
             readingMinutesByBook = readingMinutesByBook,
+            isGridView = isGridView,
             onBookSelected = onBookSelected,
             onBookLongPress = onBookLongPress,
             onEpubClick = onEpubClick,
@@ -299,32 +328,52 @@ private fun LibraryBookshelfContent(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun LibraryHeader() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 24.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = stringResource(R.string.nav_library),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            IconButton(onClick = { /* TODO: search action */ }) {
-                Icon(
-                    imageVector = Icons.Outlined.Search,
-                    contentDescription = stringResource(R.string.library_search_placeholder)
-                )
+private fun LibraryHeader(
+    showSearch: Boolean,
+    onSearchToggle: () -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.nav_library),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                IconButton(onClick = onSearchToggle) {
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = stringResource(R.string.library_search_placeholder)
+                    )
+                }
+                IconButton(onClick = { /* TODO: filter */ }) {
+                    Icon(
+                        imageVector = Icons.Outlined.FilterList,
+                        contentDescription = stringResource(R.string.library_filter_label)
+                    )
+                }
             }
-            IconButton(onClick = { /* TODO: filter action */ }) {
-                Icon(
-                    imageVector = Icons.Outlined.FilterList,
-                    contentDescription = stringResource(R.string.library_filter_label)
-                )
-            }
+        }
+        if (showSearch) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                placeholder = { Text(stringResource(R.string.library_search_placeholder)) },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(24.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -381,7 +430,9 @@ private fun StatusTabsRow(
 @Composable
 private fun SortRowComposable(
     sortBy: String,
-    onSortByChanged: (String) -> Unit
+    onSortByChanged: (String) -> Unit,
+    isGridView: Boolean,
+    onViewToggle: () -> Unit
 ) {
     var sortMenuExpanded by remember { mutableStateOf(false) }
 
@@ -447,18 +498,20 @@ private fun SortRowComposable(
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            IconButton(onClick = { /* grid view active */ }) {
+            IconButton(onClick = { if (!isGridView) onViewToggle() }) {
                 Icon(
                     imageVector = Icons.Outlined.GridView,
                     contentDescription = "Grid view",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = if (isGridView) MaterialTheme.colorScheme.primary
+                           else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            IconButton(onClick = { /* TODO: list view toggle */ }) {
+            IconButton(onClick = { if (isGridView) onViewToggle() }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ViewList,
                     contentDescription = "List view",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (!isGridView) MaterialTheme.colorScheme.primary
+                           else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

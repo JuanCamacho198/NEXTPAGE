@@ -35,6 +35,7 @@ import com.nextpage.presentation.screen.ReaderScreen
 import com.nextpage.presentation.screen.SettingsScreen
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.HomeViewModel
+import com.nextpage.presentation.viewmodel.HomeViewModelFactory
 import com.nextpage.presentation.viewmodel.LibraryViewModel
 import com.nextpage.presentation.viewmodel.LibraryViewModelFactory
 import com.nextpage.presentation.viewmodel.ReaderViewModel
@@ -70,7 +71,9 @@ fun NextPageNavHost(appContainer: AppContainer) {
         factory = HighlightsViewModelFactory(appContainer.readerRepository)
     )
 
-    val homeViewModel: HomeViewModel = remember { HomeViewModel() }
+    val homeViewModel: HomeViewModel = viewModel(
+        factory = HomeViewModelFactory(appContainer.homeRepository)
+    )
 
     val authViewModel: AuthViewModel = remember {
         AuthViewModel(

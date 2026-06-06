@@ -137,7 +137,7 @@ private fun HomeHeaderSection(userName: String) {
             )
         }
 
-        IconButton(onClick = { /* TODO: notifications */ }) {
+        IconButton(onClick = { /* TODO: notifications screen */ }) {
             Icon(
                 imageVector = Icons.Outlined.Notifications,
                 contentDescription = "Notifications",

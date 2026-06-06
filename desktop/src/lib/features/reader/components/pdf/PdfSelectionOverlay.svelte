@@ -50,7 +50,7 @@
   {#each selectionOverlayRects as rect, index (`${rect.left}-${rect.top}-${index}`)}
     <div
       class="absolute rounded pointer-events-none"
-      style="left: {rect.left}px; top: {rect.top}px; width: {rect.width}px; height: {rect.height}px; background: color-mix(in srgb, var(--pdf-selection-color, #3388ff) 42%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--pdf-selection-color, #3388ff) 22%, transparent), 0 2px 4px rgba(0,0,0,0.1);"
+      style="left: {rect.left}px; top: {rect.top}px; width: {rect.width}px; height: {rect.height}px; background: color-mix(in srgb, var(--pdf-selection-color, var(--color-accent-blue)) 42%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--pdf-selection-color, var(--color-accent-blue)) 22%, transparent), 0 2px 4px rgba(0,0,0,0.1);"
     ></div>
   {/each}
 </div>

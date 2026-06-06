@@ -97,7 +97,7 @@
       fontSize: 100,
       fontFamily: "serif",
     },
-    selectionColor: "#33bbff",
+    selectionColor: "var(--color-accent-blue)",
     lineHeight: 1.8,
     letterSpacing: 0,
     paragraphSpacing: 1,
@@ -997,7 +997,7 @@
   }
 
   .search-hit {
-    outline: 3px solid #3b82f6;
+    outline: 3px solid var(--color-accent-blue);
     outline-offset: 6px;
     border-radius: 4px;
   }

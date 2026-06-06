@@ -72,7 +72,7 @@
       onchange={handleGoToPage}
       class="w-[50px] p-1 border border-(--color-border) rounded text-center bg-(--pdf-reader-surface-bg,var(--color-surface)) text-(--pdf-reader-text,var(--color-primary))"
     />
-    <span class="text-xs text-(--pdf-reader-text,#64748b) opacity-70">/ {totalPages}</span>
+    <span class="text-xs text-(--pdf-reader-text,var(--color-text-auxiliary)) opacity-70">/ {totalPages}</span>
   </span>
   <button
     type="button"
@@ -84,7 +84,7 @@
     <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
   </button>
   {#if debugState.enabled}
-    <span class="text-[11px] text-(--pdf-reader-text,#64748b) opacity-60 font-mono">p{currentPage}/{totalPages} | {Math.round(scale * 100)}%</span>
+    <span class="text-[11px] text-(--pdf-reader-text,var(--color-text-auxiliary)) opacity-60 font-mono">p{currentPage}/{totalPages} | {Math.round(scale * 100)}%</span>
   {/if}
   <select
     value={scale}

@@ -126,7 +126,7 @@
       <button
         type="button"
         class="shrink-0 cursor-pointer rounded-full border border-[rgba(148,163,184,0.28)] bg-white/62 p-0 text-center text-lg leading-none transition-transform duration-150 hover:-translate-y-0.5 hover:bg-white/85"
-        style="width: 28px; height: 28px; color: color-mix(in srgb, var(--pdf-reader-text, #0f172a) 86%, white 14%);"
+        style="width: 28px; height: 28px; color: color-mix(in srgb, var(--pdf-reader-text, var(--color-primary)) 86%, var(--color-text-inverse) 14%);"
         onclick={handleDelete}
         aria-label={t("highlight.cancel")}
       >
@@ -152,7 +152,7 @@
       <div class="flex flex-1 flex-wrap gap-1.5 max-sm:w-full">
         <button
           type="button"
-          class="inline-flex min-h-8.5 cursor-pointer items-center rounded-full border border-transparent bg-[#0f172a]/82 px-3 py-1.75 text-xs font-bold tracking-[0.01em] text-[#f8fafc] shadow-[0_10px_18px_rgba(15,23,42,0.2)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#020617]/88 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
+          class="inline-flex min-h-8.5 cursor-pointer items-center rounded-full border border-transparent bg-(--color-bg-deep)/82 px-3 py-1.75 text-xs font-bold tracking-[0.01em] text-(--color-text-inverse) shadow-[0_10px_18px_rgba(15,23,42,0.2)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-(--color-bg-deep)/88 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
           onclick={() => handleCreateHighlight()}
           disabled={isSaving}
         >
@@ -160,7 +160,7 @@
         </button>
         <button
           type="button"
-          class="inline-flex min-h-8.5 cursor-pointer items-center rounded-full border border-[rgba(96,165,250,0.2)] bg-[#dbeafe]/72 px-3 py-1.75 text-xs font-bold tracking-[0.01em] text-[#0c4a6e] transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#bfdbfe]/82 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
+          class="inline-flex min-h-8.5 cursor-pointer items-center rounded-full border border-[rgba(96,165,250,0.2)] bg-(--color-accent-blue)/72 px-3 py-1.75 text-xs font-bold tracking-[0.01em] text-(--color-bg-deep) transition-all duration-150 hover:-translate-y-0.5 hover:bg-(--color-accent-blue)/82 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
           onclick={handleToggleNoteEditor}
           disabled={isSaving}
           aria-expanded={showNoteEditor}
@@ -171,7 +171,7 @@
         <button
           type="button"
           class="inline-flex min-h-8.5 cursor-pointer items-center rounded-full border border-[rgba(148,163,184,0.28)] bg-white/58 px-3 py-1.75 text-xs font-bold tracking-[0.01em] transition-all duration-150 hover:-translate-y-0.5 hover:bg-white/82 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
-          style="color: color-mix(in srgb, var(--pdf-reader-text, #0f172a) 86%, white 14%);"
+          style="color: color-mix(in srgb, var(--pdf-reader-text, var(--color-primary)) 86%, var(--color-text-inverse) 14%);"
           onclick={handleDelete}
         >
           {t("highlight.cancel")}
@@ -186,13 +186,13 @@
           rows="3"
           maxlength="500"
           class="w-full min-w-0 resize-y rounded-xl border border-[rgba(148,163,184,0.3)] bg-white/82 px-3 py-2.5 text-xs font-[inherit]"
-          style="color: var(--pdf-reader-text, #0f172a);"
+          style="color: var(--pdf-reader-text, var(--color-primary));"
           placeholder={t("highlight.notePlaceholder")}
           aria-label={t("highlight.noteInputAriaLabel")}
         ></textarea>
         <button
           type="button"
-          class="inline-flex min-h-8.5 cursor-pointer items-center self-end rounded-full border border-transparent bg-[#0f172a]/82 px-3 py-1.75 text-xs font-bold tracking-[0.01em] text-[#f8fafc] shadow-[0_10px_18px_rgba(15,23,42,0.2)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#020617]/88 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          class="inline-flex min-h-8.5 cursor-pointer items-center self-end rounded-full border border-transparent bg-(--color-bg-deep)/82 px-3 py-1.75 text-xs font-bold tracking-[0.01em] text-(--color-text-inverse) shadow-[0_10px_18px_rgba(15,23,42,0.2)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-(--color-bg-deep)/88 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           onclick={handleSaveWithNote}
           disabled={isSaving}
         >

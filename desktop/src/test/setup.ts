@@ -10,6 +10,16 @@ vi.mock('@tauri-apps/api/core', () => ({
 // DataCloneError on mock objects with private slots, e.g. vitest MockProxy)
 globalThis.structuredClone = (obj: unknown) => JSON.parse(JSON.stringify(obj));
 
+// Polyfill ResizeObserver for jsdom (used by App.svelte debug panel)
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class ResizeObserverMock {
+    observe() { /* noop */ }
+    unobserve() { /* noop */ }
+    disconnect() { /* noop */ }
+  }
+  globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
+}
+
 // Polyfill DOMMatrix for pdfjs-dist (not available in Node.js/jsdom/happy-dom)
 if (typeof globalThis.DOMMatrix === 'undefined') {
   class DOMMatrixPolyfill {

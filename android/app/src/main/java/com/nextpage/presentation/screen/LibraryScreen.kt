@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
@@ -527,6 +529,35 @@ private fun SortRowComposable(
 private fun BookGridSection(
     books: List<Book>,
     readingMinutesByBook: Map<String, Long>,
+    isGridView: Boolean,
+    onBookSelected: (String, String, String) -> Unit,
+    onBookLongPress: (Book) -> Unit,
+    onEpubClick: () -> Unit,
+    onPdfClick: () -> Unit
+) {
+    if (isGridView) {
+        BookGrid(
+            books = books,
+            readingMinutesByBook = readingMinutesByBook,
+            onBookSelected = onBookSelected,
+            onBookLongPress = onBookLongPress,
+            onEpubClick = onEpubClick,
+            onPdfClick = onPdfClick
+        )
+    } else {
+        BookList(
+            books = books,
+            readingMinutesByBook = readingMinutesByBook,
+            onBookSelected = onBookSelected,
+            onBookLongPress = onBookLongPress
+        )
+    }
+}
+
+@Composable
+private fun BookGrid(
+    books: List<Book>,
+    readingMinutesByBook: Map<String, Long>,
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
     onEpubClick: () -> Unit,
@@ -554,6 +585,102 @@ private fun BookGridSection(
                 onEpubClick = onEpubClick,
                 onPdfClick = onPdfClick
             )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Book List View
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun BookList(
+    books: List<Book>,
+    readingMinutesByBook: Map<String, Long>,
+    onBookSelected: (String, String, String) -> Unit,
+    onBookLongPress: (Book) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(bottom = 16.dp)
+    ) {
+        items(books, key = { it.id }) { book ->
+            BookListCard(
+                book = book,
+                minutesRead = readingMinutesByBook[book.id] ?: 0L,
+                onClick = { onBookSelected(book.id, book.filePath, book.format) },
+                onLongPress = { onBookLongPress(book) }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BookListCard(
+    book: Book,
+    minutesRead: Long,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit
+) {
+    val progressFraction = if (minutesRead > 0L) {
+        (minutesRead.toFloat() / 300f).coerceIn(0f, 1f)
+    } else 0f
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+    ) {
+        Row(modifier = Modifier.padding(12.dp)) {
+            // Cover thumbnail
+            CoverThumbnail(
+                coverPath = book.coverPath,
+                modifier = Modifier
+                    .width(60.dp)
+                    .height(80.dp)
+                    .clip(RoundedCornerShape(8.dp))
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = book.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = book.author ?: stringResource(R.string.library_author_unknown),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (progressFraction > 0f) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { progressFraction.coerceIn(0f, 1f) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp)),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                    Text(
+                        text = stringResource(R.string.library_status_in_progress, minutesRead),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     }
 }

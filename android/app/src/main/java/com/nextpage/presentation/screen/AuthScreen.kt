@@ -1,16 +1,26 @@
 package com.nextpage.presentation.screen
 
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nextpage.R
 import com.nextpage.presentation.viewmodel.AuthFailureKind
@@ -60,11 +70,11 @@ fun AuthScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val buttonDisabledReason = resolveGoogleButtonDisabledReason(uiState)
-
     val buttonEnabled = buttonDisabledReason == GoogleButtonDisabledReason.NONE
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var showEmailAuth by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.currentSession) {
         if (uiState.currentSession != null) {
@@ -79,135 +89,211 @@ fun AuthScreen(
         )
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp)
             .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = stringResource(R.string.auth_brand_title),
-            style = MaterialTheme.typography.headlineLarge
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = stringResource(R.string.auth_sign_in_title),
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        if (!uiState.isConfigured) {
-            Text(
-                text = stringResource(R.string.auth_config_error_google_unavailable),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        Button(
-            onClick = { viewModel.startGoogleSignIn() },
-            enabled = buttonEnabled,
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (uiState.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp
-                )
-            } else {
-                Text(stringResource(R.string.auth_continue_with_google))
-            }
-        }
-
-        if (!buttonEnabled) {
-            Spacer(modifier = Modifier.height(12.dp))
-            val disabledReasonText = googleButtonDisabledReasonMessageRes(buttonDisabledReason)
-                ?.let { messageRes -> stringResource(messageRes) }
-            if (disabledReasonText != null) {
+            // ─── Logo 80dp ────────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(
-                    text = disabledReasonText,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall
+                    text = "NP",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
-        }
 
-        if (uiState.hasWiringIssue) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ─── Brand: NextPage ──────────────────────────────────────
             Text(
-                text = stringResource(R.string.auth_wiring_error_incomplete),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
+                text = stringResource(R.string.auth_brand_title),
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center
             )
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text(stringResource(R.string.auth_email_label)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
+            // ─── Subtitle ─────────────────────────────────────────────
+            Text(
+                text = stringResource(R.string.auth_subtitle),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text(stringResource(R.string.auth_password_label)) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = { viewModel.signIn(email, password) },
-                enabled = !uiState.isLoading,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(stringResource(R.string.auth_sign_in))
+            // ─── Config/Wiring error messages ─────────────────────────
+            if (!uiState.isConfigured) {
+                Text(
+                    text = stringResource(R.string.auth_config_error_google_unavailable),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
+            // ─── Google sign-in button ────────────────────────────────
             OutlinedButton(
-                onClick = { viewModel.signUp(email, password) },
-                enabled = !uiState.isLoading,
-                modifier = Modifier.weight(1f)
+                onClick = { viewModel.startGoogleSignIn() },
+                enabled = buttonEnabled,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp)
             ) {
-                Text(stringResource(R.string.auth_sign_up))
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.auth_continue_with_google),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedButton(
-            onClick = onContinueLocal,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(stringResource(R.string.auth_continue_local_dev))
-        }
+            if (!buttonEnabled) {
+                Spacer(modifier = Modifier.height(8.dp))
+                val disabledReasonText = googleButtonDisabledReasonMessageRes(buttonDisabledReason)
+                    ?.let { messageRes -> stringResource(messageRes) }
+                if (disabledReasonText != null) {
+                    Text(
+                        text = disabledReasonText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
 
-        uiState.errorMessage?.let { error ->
+            if (uiState.hasWiringIssue) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.auth_wiring_error_incomplete),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // ─── Email sign-in button ─────────────────────────────────
+            Button(
+                onClick = { showEmailAuth = !showEmailAuth },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(28.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.auth_sign_in_email),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // ─── Email/password fields (animated expand) ──────────────
+            AnimatedVisibility(
+                visible = showEmailAuth,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text(stringResource(R.string.auth_email_label)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text(stringResource(R.string.auth_password_label)) },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.signIn(email, password) },
+                            enabled = !uiState.isLoading,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(28.dp)
+                        ) {
+                            Text(stringResource(R.string.auth_sign_in))
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.signUp(email, password) },
+                            enabled = !uiState.isLoading,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(28.dp)
+                        ) {
+                            Text(stringResource(R.string.auth_sign_up))
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = authFailureMessageTemplateRes(uiState.failureKind)
-                    ?.let { messageTemplateRes -> stringResource(messageTemplateRes, error) }
-                    ?: error,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
+
+            // ─── Dev bypass ───────────────────────────────────────────
+            TextButton(
+                onClick = onContinueLocal
+            ) {
+                Text(
+                    text = stringResource(R.string.auth_continue_local_dev),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Normal
+                )
+            }
+
+            // ─── Error message ────────────────────────────────────────
+            uiState.errorMessage?.let { error ->
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = authFailureMessageTemplateRes(uiState.failureKind)
+                        ?.let { messageTemplateRes -> stringResource(messageTemplateRes, error) }
+                        ?: error,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

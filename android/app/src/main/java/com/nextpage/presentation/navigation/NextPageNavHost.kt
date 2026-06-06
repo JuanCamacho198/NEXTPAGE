@@ -243,7 +243,8 @@ fun NextPageNavHost(appContainer: AppContainer) {
 
             composable(NextPageDestination.Settings.route) {
                 SettingsScreen(
-                    contentPadding = innerPadding
+                    contentPadding = innerPadding,
+                    authSession = authState.currentSession
                 )
             }
         }

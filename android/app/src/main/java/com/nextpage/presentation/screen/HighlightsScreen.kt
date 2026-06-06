@@ -1,36 +1,26 @@
 package com.nextpage.presentation.screen
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.FormatQuote
+import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -40,7 +30,25 @@ import com.nextpage.domain.model.Highlight
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+// Category colors matching design
+private val ColorQuotes = Color(0xFF3B82F6)     // blue
+private val ColorIdeas = Color(0xFFA855F7)       // purple
+private val ColorPassages = Color(0xFF10B981)    // green
+private val ColorFavorites = Color(0xFFF59E0B)   // amber
+
+private data class TabItem(
+    val label: String,
+    val icon: ImageVector,
+    val color: Color
+)
+
+private val highlightTabs = listOf(
+    TabItem("Todos", Icons.Outlined.AutoAwesome, ColorQuotes),
+    TabItem("Citas", Icons.Outlined.FormatQuote, ColorQuotes),
+    TabItem("Ideas", Icons.Outlined.Lightbulb, ColorIdeas),
+    TabItem("Pasajes", Icons.Outlined.AutoAwesome, ColorPassages)
+)
+
 @Composable
 fun HighlightsScreen(
     contentPadding: PaddingValues,
@@ -50,149 +58,297 @@ fun HighlightsScreen(
     val bookmarks by viewModel.bookmarks.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = stringResource(R.string.tab_highlights)) }
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(contentPadding)
-        ) {
-            TabRow(selectedTabIndex = selectedTab) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text(stringResource(R.string.highlights_tab, highlights.size)) }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = { Text(stringResource(R.string.bookmarks_tab, bookmarks.size)) }
-                )
-            }
-
-            when (selectedTab) {
-                0 -> HighlightsList(highlights = highlights)
-                1 -> BookmarksList(bookmarks = bookmarks)
-            }
-        }
-    }
-}
-
-@Composable
-private fun HighlightsList(highlights: List<Highlight>) {
-    if (highlights.isEmpty()) {
-        EmptyState(message = stringResource(R.string.highlights_empty))
-    } else {
-        LazyColumn(
-            contentPadding = PaddingValues(NextPageDimens.spacingMd),
-            verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
-        ) {
-            items(highlights, key = { it.id }) { highlight ->
-                HighlightItem(highlight = highlight)
-            }
-        }
-    }
-}
-
-@Composable
-private fun HighlightItem(highlight: Highlight) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding),
+        contentPadding = PaddingValues(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
     ) {
-        Column(
-            modifier = Modifier.padding(NextPageDimens.spacingMd)
-        ) {
-            Text(
-                text = "\"${highlight.textContent}\"",
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (!highlight.note.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(NextPageDimens.spacingXs))
+        // ─── Header: avatar + brand + search ──────────────────────────
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "NP",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(R.string.home_nextpage_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                IconButton(onClick = { /* TODO: search */ }) {
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = "Search",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+
+        // ─── Title + Subtitle ─────────────────────────────────────────
+        item {
+            Column {
                 Text(
-                    text = "Note: ${highlight.note}",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = stringResource(R.string.highlights_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.highlights_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Spacer(modifier = Modifier.height(NextPageDimens.spacingXs))
-            Text(
-                text = stringResource(R.string.highlight_location, highlight.cfiRange),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
-            )
         }
+
+        // ─── Tabs (pills with icons) ──────────────────────────────────
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                highlightTabs.forEachIndexed { index, tab ->
+                    val isSelected = selectedTab == index
+                    Surface(
+                        onClick = { selectedTab = index },
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (isSelected) tab.color else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = tab.icon,
+                                contentDescription = tab.label,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = tab.label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ─── Recent section ───────────────────────────────────────────
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.highlights_recent),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                TextButton(onClick = { /* TODO: view all */ }) {
+                    Text(text = stringResource(R.string.home_ver_todo))
+                }
+            }
+        }
+
+        // Recent cards
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Quote card
+                HighlightCard(
+                    content = stringResource(R.string.highlights_quote_content),
+                    attribution = stringResource(R.string.highlights_quote_author),
+                    accentColor = ColorQuotes,
+                    type = "quote"
+                )
+                // Idea card
+                HighlightCard(
+                    content = stringResource(R.string.highlights_idea_content),
+                    attribution = null,
+                    accentColor = ColorIdeas,
+                    type = "idea"
+                )
+            }
+        }
+
+        // ─── Summary stats row ────────────────────────────────────────
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatWidget(
+                    value = "${highlights.size}",
+                    label = stringResource(R.string.highlights_summary_quotes),
+                    color = ColorQuotes
+                )
+                StatWidget(
+                    value = "${bookmarks.size}",
+                    label = stringResource(R.string.highlights_summary_ideas),
+                    color = ColorIdeas
+                )
+                StatWidget(
+                    value = "12",
+                    label = stringResource(R.string.highlights_summary_passages),
+                    color = ColorPassages
+                )
+                StatWidget(
+                    value = "8",
+                    label = stringResource(R.string.highlights_summary_favorites),
+                    color = ColorFavorites
+                )
+            }
+        }
+
+        // ─── Highlights list ──────────────────────────────────────────
+        if (selectedTab == 0 && highlights.isNotEmpty()) {
+            items(highlights, key = { it.id }) { highlight ->
+                HighlightItemCard(
+                    content = "\"${highlight.textContent}\"",
+                    note = highlight.note,
+                    accentColor = ColorQuotes
+                )
+            }
+        }
+
+        // Bottom spacer
+        item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }
 
 @Composable
-private fun BookmarksList(bookmarks: List<Bookmark>) {
-    if (bookmarks.isEmpty()) {
-        EmptyState(message = stringResource(R.string.bookmarks_empty))
-    } else {
-        LazyColumn(
-            contentPadding = PaddingValues(NextPageDimens.spacingMd),
-            verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
-        ) {
-            items(bookmarks, key = { it.id }) { bookmark ->
-                BookmarkItem(bookmark = bookmark)
+private fun HighlightCard(
+    content: String,
+    attribution: String?,
+    accentColor: Color,
+    type: String
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Row(modifier = Modifier.padding(start = 0.dp)) {
+            // Colored left border
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
+                    .background(accentColor)
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (attribution != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "— $attribution",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun BookmarkItem(bookmark: Bookmark) {
-    Card(
+private fun HighlightItemCard(
+    content: String,
+    note: String?,
+    accentColor: Color
+) {
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(NextPageDimens.spacingMd),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
+        Row(modifier = Modifier.padding(start = 0.dp)) {
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
+                    .background(accentColor)
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
                 Text(
-                    text = bookmark.titleOrSnippet,
+                    text = content,
                     style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = stringResource(R.string.bookmark_location, bookmark.cfiLocation),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
+                if (!note.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Note: $note",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun EmptyState(message: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+private fun StatWidget(
+    value: String,
+    label: String,
+    color: Color
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            text = value,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
     }
 }

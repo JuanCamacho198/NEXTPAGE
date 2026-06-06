@@ -58,6 +58,7 @@ import com.nextpage.R
 import com.nextpage.data.epub.EpubContentLoader
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.ReaderViewModel
+import com.nextpage.ui.components.molecules.EpubWebView
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -208,8 +209,8 @@ fun ReaderScreen(
                 }
 
                 uiState.chapters.isNotEmpty() -> {
-                    ReaderContent(
-                        chapterContent = uiState.chapterContent,
+                    EpubReaderContent(
+                        htmlContent = uiState.chapterHtmlContent,
                         currentChapterIndex = uiState.currentChapterIndex,
                         totalChapters = uiState.chapters.size,
                         chapters = uiState.chapters,

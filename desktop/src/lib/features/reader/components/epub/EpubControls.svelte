@@ -43,6 +43,12 @@
   onGoToPage={onGoToPage}
   onToggleFullscreen={onToggleFullscreen}
   onToggleToc={onToggleToc}
+  tocTestId="epub-toc"
+  prevTestId="epub-prev"
+  nextTestId="epub-next"
+  fullscreenTestId="epub-fullscreen"
+  pageInputTestId="epub-page-input"
+  totalPagesTestId="epub-total-pages"
 >
   {#snippet right()}
     <span class="text-xs text-(--color-text-muted) min-w-10 text-center">{Math.round(currentPercentage)}%</span>

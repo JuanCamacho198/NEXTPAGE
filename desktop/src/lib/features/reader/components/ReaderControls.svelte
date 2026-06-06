@@ -18,6 +18,18 @@
     left?: Snippet;
     center?: Snippet;
     right?: Snippet;
+    /** Optional data-testid for the TOC button */
+    tocTestId?: string;
+    /** Optional data-testid for the previous page button */
+    prevTestId?: string;
+    /** Optional data-testid for the next page button */
+    nextTestId?: string;
+    /** Optional data-testid for the fullscreen button */
+    fullscreenTestId?: string;
+    /** Optional data-testid for the page input */
+    pageInputTestId?: string;
+    /** Optional data-testid for the total pages span */
+    totalPagesTestId?: string;
   };
 
   let {
@@ -34,6 +46,12 @@
     left,
     center,
     right,
+    tocTestId,
+    prevTestId,
+    nextTestId,
+    fullscreenTestId,
+    pageInputTestId,
+    totalPagesTestId,
     ...restProps
   }: Props = $props();
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { appState } from "$lib/shared/stores/AppState.svelte";
-  import { BookCard } from "$lib/features/library";
+  import { BookCard, ShelfActionMenu } from "$lib/features/library";
 </script>
 
 {#if appState.continueReadingBooks.length === 0}
@@ -18,7 +18,32 @@
       void appState.startReading(book);
     }}
     t={appState.t}
-  />
+  >
+    {#snippet actions()}
+      <ShelfActionMenu
+        bookId={book.id}
+        isFavorite={Boolean(book.isFavorite)}
+        readLabel={appState.t("app.read")}
+        editLabel={appState.t("library.editMetadata.title")}
+        removeLabel={appState.t("library.removeFromShelf")}
+        favoriteAddLabel={appState.t("library.favoriteAdd")}
+        favoriteRemoveLabel={appState.t("library.favoriteRemove")}
+        triggerLabel={appState.t("library.optionsFor", { title: book.title })}
+        onRead={() => {
+          void appState.startReading(book);
+        }}
+        onEdit={() => {
+          appState.handleEditBook(book);
+        }}
+        onRemove={() => {
+          void appState.handleHideBook(book);
+        }}
+        onToggleFavorite={() => {
+          void appState.handleToggleFavorite(book);
+        }}
+      />
+    {/snippet}
+  </BookCard>
 {:else}
   <ul class="space-y-2">
     {#each appState.continueReadingBooks as book}
@@ -35,7 +60,29 @@
             void appState.startReading(book);
           }}
           t={appState.t}
-        />
+        >
+          {#snippet actions()}
+            <ShelfActionMenu
+              bookId={book.id}
+              isFavorite={Boolean(book.isFavorite)}
+              readLabel={appState.t("app.read")}
+              editLabel={appState.t("library.editMetadata.title")}
+              removeLabel={appState.t("library.removeFromShelf")}
+              favoriteAddLabel={appState.t("library.favoriteAdd")}
+              favoriteRemoveLabel={appState.t("library.favoriteRemove")}
+              triggerLabel={appState.t("library.optionsFor", { title: book.title })}
+              onEdit={() => {
+                appState.handleEditBook(book);
+              }}
+              onRemove={() => {
+                void appState.handleHideBook(book);
+              }}
+              onToggleFavorite={() => {
+                void appState.handleToggleFavorite(book);
+              }}
+            />
+          {/snippet}
+        </BookCard>
       </li>
     {/each}
   </ul>

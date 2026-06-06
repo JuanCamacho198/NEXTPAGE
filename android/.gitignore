@@ -1,3 +1,51 @@
-/imagenes
-*images
+# ─── Android / Gradle ───────────────────────────────────────────────
+*.iml
+.gradle/
+build/
+app/build/
+local.properties
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+*.log
+*.hprof
+
+# ─── IDE ────────────────────────────────────────────────────────────
+.idea/
+*.sublime-*
+*.swp
+*.swo
+*~
+
+# ─── Kotlin ─────────────────────────────────────────────────────────
+*.kotlin_module
+
+# ─── OS ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ─── Environment / Secrets ─────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Graphify Output ────────────────────────────────────────────────
+graphify-out/
+
+# ─── Proguard / Build Cache ────────────────────────────────────────
+proguard/
+*.mapping.txt
+*.seeds.txt
+*.usage.txt
+
+# ─── Design Tokens Cache ───────────────────────────────────────────
+design/*.pen.bak
 .*docs
+*images
+
+# ─── OpenCode / Gentle AI ──────────────────────────────────────────
+.opencode/
+!.opencode/skills/

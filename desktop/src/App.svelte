@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { debugState } from "./lib/shared/debug/debugState.svelte";
+  import DebugToggle from "$lib/shared/debug/DebugToggle.svelte";
+  import DebugPanel from "$lib/shared/debug/DebugPanel.svelte";
   import { appState } from "$lib/shared/stores/AppState.svelte";
   import AppRouter from "$lib/shared/ui/layout/AppRouter.svelte";
   import AppModals from "$lib/shared/ui/layout/AppModals.svelte";
@@ -29,6 +31,15 @@
     debugState.currentRoute = appState.route;
   });
 
+  // Track viewport for debug panel
+  $effect(() => {
+    if (typeof window === "undefined") return;
+    debugState.updateViewport();
+    const ro = new ResizeObserver(() => debugState.updateViewport());
+    ro.observe(document.body);
+    return () => ro.disconnect();
+  });
+
   // Dynamically update HTML lang attribute when locale changes
   $effect(() => {
     document.documentElement.lang = appState.locale;
@@ -45,4 +56,6 @@
   </a>
   <AppRouter />
   <AppModals />
+  <DebugToggle />
+  <DebugPanel />
 </main>

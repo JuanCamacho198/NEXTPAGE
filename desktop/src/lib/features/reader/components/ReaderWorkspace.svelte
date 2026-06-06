@@ -12,8 +12,6 @@
   import type { LibraryBookDto } from "$lib/shared/types/library";
   import { debugState } from "$lib/shared/debug/debugState.svelte";
   import { saveHighlight, deleteHighlight, upsertReaderSettings, getDefaultReaderSettings } from "$lib/shared/api/tauriClient";
-  import DebugToggle from "$lib/shared/debug/DebugToggle.svelte";
-  import DebugPanel from "$lib/shared/debug/DebugPanel.svelte";
   import { createFocusTrap } from "$lib/shared/utils/focusTrap";
   import { createBookmarksState } from "../stores/bookmarksState.svelte";
   import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
@@ -485,9 +483,6 @@
     {t}
   />
 
-  <!-- Debug tools (inside workspaceRoot so visible in fullscreen) -->
-  <DebugToggle />
-  <DebugPanel />
 </div>
 
 <!-- Search Panel overlay -->

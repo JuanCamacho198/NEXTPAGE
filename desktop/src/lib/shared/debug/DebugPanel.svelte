@@ -135,10 +135,30 @@
     role="region"
     aria-label="Debug information"
   >
-    <!-- Route -->
+    <!-- Route + Viewport -->
     <div class="border-b border-(--color-border) p-3">
-      <h4 class="mb-1 text-[10px] uppercase tracking-wider text-(--color-text-muted)">Route</h4>
-      <p class="text-sm">{debugState.currentRoute || "Unknown Route"}</p>
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0 flex-1">
+          <h4 class="mb-1 text-[10px] uppercase tracking-wider text-(--color-text-muted)">Route</h4>
+          <p class="text-sm">{debugState.currentRoute || "Unknown Route"}</p>
+        </div>
+        <button
+          type="button"
+          class="shrink-0 rounded px-2 py-0.5 text-[10px] font-medium bg-(--color-primary) text-white hover:opacity-80"
+          onclick={() => void debugState.copySnapshot()}
+          title="Copy debug state to clipboard"
+        >
+          Copy State
+        </button>
+      </div>
+      <div class="mt-2 flex items-baseline gap-3">
+        <p class="text-[10px] text-(--color-text-muted)">
+          <span class="font-semibold text-(--color-primary)">{debugState.viewportWidth}</span> × <span class="font-semibold text-(--color-primary)">{debugState.viewportHeight}</span>
+        </p>
+        <span class="rounded bg-(--color-border) px-1.5 py-0.5 text-[9px] font-mono font-semibold text-(--color-text-muted)">
+          {debugState.breakpoint}
+        </span>
+      </div>
     </div>
 
     <!-- IPC Performance -->

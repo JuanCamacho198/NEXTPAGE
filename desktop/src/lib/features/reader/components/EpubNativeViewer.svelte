@@ -609,7 +609,6 @@
       currentPercentage={((currentChapterIndex + 0.5) / totalChapters) * 100}
       fontSize={fontSize}
       isFullscreen={isFullscreen}
-      showToc={showToc}
       {t}
       onPrev={goToPrev}
       onNext={goToNext}

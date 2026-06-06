@@ -313,8 +313,8 @@ fun ReaderScreen(
 }
 
 @Composable
-private fun ReaderContent(
-    chapterContent: String,
+private fun EpubReaderContent(
+    htmlContent: String?,
     currentChapterIndex: Int,
     totalChapters: Int,
     chapters: List<EpubContentLoader.Chapter>,
@@ -327,66 +327,57 @@ private fun ReaderContent(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
+            // ── WebView content (takes remaining space) ────────────
+            Box(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(
-                    horizontal = NextPageDimens.spacingLg,
-                    vertical = NextPageDimens.spacingMd
-                ),
-                verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
+                    .fillMaxWidth()
             ) {
-                item {
-                    Text(
-                        text = chapters.getOrNull(currentChapterIndex)?.title ?: "",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(bottom = NextPageDimens.spacingMd)
+                if (htmlContent != null) {
+                    EpubWebView(
+                        htmlContent = htmlContent,
+                        modifier = Modifier.fillMaxSize()
                     )
+                } else {
+                    // Loading state while chapter content is being fetched
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
 
-                item {
-                    Text(
-                        text = chapterContent.ifEmpty { stringResource(R.string.reader_chapter_loading) },
-                        style = MaterialTheme.typography.bodyLarge,
-                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.5f
-                    )
-                }
+                // Left tap zone (30% width) — previous chapter
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(0.3f)
+                        .align(Alignment.CenterStart)
+                        .clickable { onTapZone(true) }
+                )
 
-                item {
-                    Spacer(modifier = Modifier.height(NextPageDimens.spacingXl))
-                    ChapterNavigationBar(
-                        currentChapter = currentChapterIndex,
-                        totalChapters = totalChapters,
-                        onPrevious = { if (currentChapterIndex > 0) onChapterSelect(currentChapterIndex - 1) },
-                        onNext = { if (currentChapterIndex < totalChapters - 1) onChapterSelect(currentChapterIndex + 1) },
-                        chapters = chapters
-                    )
-                }
+                // Right tap zone (30% width) — next chapter
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(0.3f)
+                        .align(Alignment.CenterEnd)
+                        .clickable { onTapZone(false) }
+                )
             }
+
+            // ── Chapter Navigation Bar ────────────────────────────
+            ChapterNavigationBar(
+                currentChapter = currentChapterIndex,
+                totalChapters = totalChapters,
+                onPrevious = { if (currentChapterIndex > 0) onChapterSelect(currentChapterIndex - 1) },
+                onNext = { if (currentChapterIndex < totalChapters - 1) onChapterSelect(currentChapterIndex + 1) },
+                chapters = chapters
+            )
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    onClick = {
-                        onTapZone(false)
-                    }
-                )
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 80.dp)
-                .clickable(
-                    onClick = {
-                        onTapZone(true)
-                    }
-                )
-        )
-
+        // ── Highlight FAB ─────────────────────────────────────────
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -394,7 +385,8 @@ private fun ReaderContent(
         ) {
             androidx.compose.material3.FloatingActionButton(
                 onClick = {
-                    selectedText = chapterContent.take(200)
+                    selectedText = htmlContent?.let { stripHtmlSimple(it).take(200) }
+                        ?: stringResource(R.string.reader_chapter_loading)
                     showHighlightDialog = true
                 }
             ) {
@@ -416,6 +408,25 @@ private fun ReaderContent(
             }
         )
     }
+}
+
+/**
+ * Quick HTML-to-plain-text strip for the highlight preview.
+ * Only used for the dialog preview — actual reading uses WebView.
+ */
+private fun stripHtmlSimple(html: String): String {
+    return html
+        .replace(Regex("<script[^>]*>.*?</script>", RegexOption.IGNORE_CASE), "")
+        .replace(Regex("<style[^>]*>.*?</style>", RegexOption.IGNORE_CASE), "")
+        .replace(Regex("<[^>]+>"), " ")
+        .replace(Regex("&nbsp;"), " ")
+        .replace(Regex("&amp;"), "&")
+        .replace(Regex("&lt;"), "<")
+        .replace(Regex("&gt;"), ">")
+        .replace(Regex("&quot;"), "\"")
+        .replace(Regex("&#\\d+;"), " ")
+        .replace(Regex("\\s+"), " ")
+        .trim()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

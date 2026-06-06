@@ -2,14 +2,12 @@
   import { appState } from "$lib/shared/stores/AppState.svelte";
   import { fly } from "svelte/transition";
 
-  import Button from "$lib/shared/ui/forms/Button.svelte";
-  import ShelfSection from "$lib/shared/ui/layout/ShelfSection.svelte";
-  import ContinueReadingSection from "$lib/shared/ui/layout/ContinueReadingSection.svelte";
+  import { Button } from "$lib/shared/ui";
+  import { ShelfSection, ContinueReadingSection, AppSidebar } from "$lib/shared/ui";
   import { SettingsPanel } from "$lib/features/settings";
   import HomeDesktopView from "$lib/features/home/components/HomeDesktopView.svelte";
-  import AppSidebar from "$lib/shared/ui/layout/AppSidebar.svelte";
   import LibraryShelfScreen from "$lib/features/library/components/LibraryShelfScreen.svelte";
-  import ReaderWorkspace from "$lib/features/reader/components/ReaderWorkspace.svelte";
+  import { ReaderWorkspace } from "$lib/features/reader";
   import HighlightsView from "$lib/features/highlights/components/HighlightsView.svelte";
   import { ReadingStatisticsView } from "$lib/features/stats";
 </script>

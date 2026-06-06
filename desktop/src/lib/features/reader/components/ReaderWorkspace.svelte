@@ -364,7 +364,7 @@
 </script>
 
 <!-- Full viewport reader layout -->
-<div class="flex h-screen flex-col bg-[#0B1120]" bind:this={workspaceRoot}>
+<div class="flex h-screen flex-col bg-(--color-bg-deep)" bind:this={workspaceRoot}>
   <ReaderHeader
     title={activeReadingBook?.title ?? ""}
     {showTocPanel}
@@ -392,7 +392,7 @@
     class:p-0={isFullscreen}
   >
     {#if readerError}
-      <p class="font-inter text-sm text-white">{readerError}</p>
+      <p class="font-inter text-sm text-(--color-text-inverse)">{readerError}</p>
     {:else if !activeReadingBook}
       <p class="font-inter text-sm text-white">{t("reader.no_book_loaded")}</p>
     {:else if isPdf}
@@ -521,16 +521,16 @@
 <!-- Bookmarks Sidebar Panel -->
 {#if showBookmarks && activeReadingBook}
   <div class="fixed inset-0 z-40" onclick={(e) => { if (e.target === e.currentTarget) showBookmarks = false; }} onkeydown={(e) => e.key === "Escape" && (showBookmarks = false)} role="presentation">
-    <div class="absolute inset-0 bg-[#101c2c]/70"></div>
-    <div bind:this={bookmarksPanelEl} class="absolute right-0 top-0 flex h-full w-65 flex-col border-l border-[#17263a] bg-[#101c2c]/70 pt-15 text-[#8fa3bf] backdrop-blur-sm" onkeydown={(e) => e.key === "Escape" && (showBookmarks = false)} role="dialog" aria-label={t("reader.bookmark")} tabindex="0">
+    <div class="absolute inset-0 bg-(--color-surface)/70"></div>
+    <div bind:this={bookmarksPanelEl} class="absolute right-0 top-0 flex h-full w-65 flex-col border-l border-(--color-border-deep) bg-(--color-surface)/70 pt-15 text-(--color-text-muted) backdrop-blur-sm" onkeydown={(e) => e.key === "Escape" && (showBookmarks = false)} role="dialog" aria-label={t("reader.bookmark")} tabindex="0">
       <!-- Header -->
-      <div class="flex items-center justify-between border-b border-[#94adce]/5 px-5 py-4">
-        <h2 class="text-base font-bold text-[#f8fbff]">{t("reader.bookmark")}</h2>
+      <div class="flex items-center justify-between border-b border-(--color-border)/5 px-5 py-4">
+        <h2 class="text-base font-bold text-(--color-primary)">{t("reader.bookmark")}</h2>
         <div class="flex items-center gap-2">
-          <button type="button" onclick={() => bookmarksState.addBookmark(activeReadingBook.id, isEpub ? currentEpubChapter + 1 : currentPdfPage || 1)} class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-[#49d4ff] text-xs font-bold text-[#0B1120] transition-colors hover:bg-[#38bdf8]" title={t("reader.bookmark")}>
+          <button type="button" onclick={() => bookmarksState.addBookmark(activeReadingBook.id, isEpub ? currentEpubChapter + 1 : currentPdfPage || 1)} class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-(--color-accent-blue) text-xs font-bold text-(--color-bg-deep) transition-colors hover:bg-(--color-accent-sky)" title={t("reader.bookmark")}>
             +
           </button>
-          <button type="button" onclick={() => (showBookmarks = false)} class="cursor-pointer text-[#8fa3bf] hover:text-white" aria-label={t("settings.close")}>
+          <button type="button" onclick={() => (showBookmarks = false)} class="cursor-pointer text-(--color-text-muted) hover:text-(--color-text-inverse)" aria-label={t("settings.close")}>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -542,17 +542,17 @@
       <!-- Content -->
       <div class="flex-1 overflow-y-auto p-4">
         {#if bookmarksState.bookmarksLoading}
-          <p class="text-center text-sm italic text-[#8fa3bf]/60">{t("settings.loadingBookmarks")}</p>
+          <p class="text-center text-sm italic text-(--color-text-muted)/60">{t("settings.loadingBookmarks")}</p>
         {:else if bookmarksState.bookmarksList.length === 0}
-          <p class="text-center text-sm italic text-[#8fa3bf]/60">{t("settings.noBookmarks")}</p>
+          <p class="text-center text-sm italic text-(--color-text-muted)/60">{t("settings.noBookmarks")}</p>
         {:else}
           <ul class="flex flex-col gap-2">
             {#each bookmarksState.bookmarksList as bookmark (bookmark.id)}
-              <li class="flex items-center gap-2 rounded-lg border border-[#17263a] bg-white/2 px-3 py-2 transition-colors hover:bg-white/5">
+              <li class="flex items-center gap-2 rounded-lg border border-(--color-border-deep) bg-(--color-text-inverse)/2 px-3 py-2 transition-colors hover:bg-(--color-text-inverse)/5">
                 <button type="button" class="flex flex-1 flex-col items-start gap-0.5 text-left" onclick={() => { showBookmarks = false; }}>
-                  <span class="text-sm font-medium text-[#f8fbff]">Page {bookmark.pageNumber}</span>
+                  <span class="text-sm font-medium text-(--color-primary)">Page {bookmark.pageNumber}</span>
                   {#if bookmark.title}
-                    <span class="text-xs text-[#8fa3bf]/60">{bookmark.title}</span>
+                    <span class="text-xs text-(--color-text-muted)/60">{bookmark.title}</span>
                   {/if}
                 </button>
                 <button type="button" onclick={() => bookmarksState.removeBookmark(bookmark.id, activeReadingBook.id)} class="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sm text-[#8fa3bf] transition-colors hover:bg-red-500/20 hover:text-red-400" title={t("settings.deleteBookmark")}>

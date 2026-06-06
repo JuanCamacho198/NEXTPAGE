@@ -22,30 +22,30 @@
   }: Props = $props();
 </script>
 
-<footer class="flex h-12 shrink-0 items-center justify-between border-t border-[#1E293B] px-8" class:hidden={isFullscreen}>
-  <span class="font-inter text-xs font-normal text-[#94A3B8]">
+<footer class="flex h-12 shrink-0 items-center justify-between border-t border-(--color-surface-strong) px-8" class:hidden={isFullscreen}>
+  <span class="font-inter text-xs font-normal text-(--color-text-auxiliary)">
     {title}
   </span>
   {#if isPdf && totalPdfPages > 0}
     <div class="flex items-center gap-3">
-      <span class="font-inter text-xs font-normal text-[#94A3B8]">{totalPdfPages - currentPdfPage} {t("pdf.pagesLeft")}</span>
-      <div class="h-2 w-50 rounded-full bg-[#1E293B]">
+      <span class="font-inter text-xs font-normal text-(--color-text-auxiliary)">{totalPdfPages - currentPdfPage} {t("pdf.pagesLeft")}</span>
+      <div class="h-2 w-50 rounded-full bg-(--color-surface-strong)">
         <div
-          class="h-full rounded-full bg-[#38BDF8] transition-all duration-300"
+          class="h-full rounded-full bg-(--color-accent-sky) transition-all duration-300"
           style="width: {Math.round((currentPdfPage / totalPdfPages) * 100)}%"
         ></div>
       </div>
-      <span class="font-inter text-xs font-normal text-[#94A3B8]">{Math.round((currentPdfPage / totalPdfPages) * 100)}%</span>
+      <span class="font-inter text-xs font-normal text-(--color-text-auxiliary)">{Math.round((currentPdfPage / totalPdfPages) * 100)}%</span>
     </div>
   {:else}
     <div class="flex items-center gap-3">
-      <div class="h-2 w-50 rounded-full bg-[#1E293B]">
+      <div class="h-2 w-50 rounded-full bg-(--color-surface-strong)">
         <div
-          class="h-full rounded-full bg-[#38BDF8] transition-all duration-300"
+          class="h-full rounded-full bg-(--color-accent-sky) transition-all duration-300"
           style="width: {bookProgress}%"
         ></div>
       </div>
-      <span class="font-inter text-xs font-normal text-[#94A3B8]">{bookProgress}%</span>
+      <span class="font-inter text-xs font-normal text-(--color-text-auxiliary)">{bookProgress}%</span>
     </div>
   {/if}
 </footer>

@@ -30,6 +30,7 @@
     <string name="home_quick_actions">Quick actions</string>
     <string name="home_action_import_epub">Import EPUB</string>
     <string name="home_action_import_pdf">Import PDF</string>
+    <string name="home_action_import_book">Importar libro</string>
     <string name="home_action_notes">Notes</string>
     <string name="home_action_stats">Stats</string>
     <string name="home_view_all">View all</string>

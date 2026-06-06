@@ -2,6 +2,8 @@ package com.nextpage.presentation.navigation
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -39,6 +41,7 @@ import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
+import java.io.File
 
 @Composable
 fun NextPageNavHost(appContainer: AppContainer) {
@@ -173,6 +176,42 @@ fun NextPageNavHost(appContainer: AppContainer) {
             }
 
             composable(NextPageDestination.Home.route) {
+                val importLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocument(),
+                    onResult = { uri: Uri? ->
+                        if (uri == null) return@rememberLauncherForActivityResult
+
+                        val fileName = uri.lastPathSegment ?: "imported_book"
+                        val mimeType = context.contentResolver.getType(uri)
+
+                        if (fileName.endsWith(".pdf", true) || mimeType == "application/pdf") {
+                            // ── Import as PDF ────────────────────────
+                            val pdfDir = File(context.filesDir, "pdfs")
+                            if (!pdfDir.exists()) pdfDir.mkdirs()
+                            val pdfFile = File(pdfDir, fileName)
+                            context.contentResolver.openInputStream(uri)?.use { input ->
+                                pdfFile.outputStream().use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                            libraryViewModel.importPdfBook(
+                                sourcePath = pdfFile.absolutePath,
+                                fallbackTitle = fileName.removeSuffix(".pdf"),
+                                pdfFile = pdfFile
+                            )
+                        } else {
+                            // ── Import as EPUB ───────────────────────
+                            libraryViewModel.importBookFromEpub(
+                                sourcePath = uri.toString(),
+                                fallbackTitle = fileName.removeSuffix(".epub"),
+                                inputStreamProvider = {
+                                    context.contentResolver.openInputStream(uri)
+                                }
+                            )
+                        }
+                    }
+                )
+
                 HomeScreen(
                     contentPadding = innerPadding,
                     viewModel = homeViewModel,
@@ -199,11 +238,8 @@ fun NextPageNavHost(appContainer: AppContainer) {
                             launchSingleTop = true
                         }
                     },
-                    onImportEpub = {
-                        // Trigger EPUB import via library
-                    },
-                    onImportPdf = {
-                        // Trigger PDF import via library
+                    onImportBook = {
+                        importLauncher.launch(arrayOf("application/epub+zip", "application/pdf"))
                     }
                 )
             }

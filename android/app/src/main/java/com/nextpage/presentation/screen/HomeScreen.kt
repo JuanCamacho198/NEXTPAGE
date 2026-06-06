@@ -43,8 +43,7 @@ fun HomeScreen(
     onNavigateToHighlights: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onBookSelected: (String, String, String) -> Unit,
-    onImportEpub: () -> Unit,
-    onImportPdf: () -> Unit
+    onImportBook: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -90,8 +89,7 @@ fun HomeScreen(
         // 6. QuickAccess
         item {
             QuickAccessSection(
-                onImportEpub = onImportEpub,
-                onImportPdf = onImportPdf,
+                onImportBook = onImportBook,
                 onHighlights = onNavigateToHighlights,
                 onSettings = onNavigateToSettings
             )
@@ -452,8 +450,7 @@ private fun BookshelfCard(
 
 @Composable
 private fun QuickAccessSection(
-    onImportEpub: () -> Unit,
-    onImportPdf: () -> Unit,
+    onImportBook: () -> Unit,
     onHighlights: () -> Unit,
     onSettings: () -> Unit
 ) {
@@ -465,41 +462,28 @@ private fun QuickAccessSection(
         )
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
 
-        Column(verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
-            ) {
-                QuickAccessButton(
-                    icon = Icons.Outlined.UploadFile,
-                    label = stringResource(R.string.home_import_epub),
-                    onClick = onImportEpub,
-                    modifier = Modifier.weight(1f)
-                )
-                QuickAccessButton(
-                    icon = Icons.Outlined.UploadFile,
-                    label = stringResource(R.string.home_import_pdf),
-                    onClick = onImportPdf,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
-            ) {
-                QuickAccessButton(
-                    icon = Icons.Outlined.Bookmark,
-                    label = stringResource(R.string.home_highlights),
-                    onClick = onHighlights,
-                    modifier = Modifier.weight(1f)
-                )
-                QuickAccessButton(
-                    icon = Icons.Outlined.Settings,
-                    label = stringResource(R.string.home_settings),
-                    onClick = onSettings,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
+        ) {
+            QuickAccessButton(
+                icon = Icons.Outlined.UploadFile,
+                label = stringResource(R.string.home_action_import_book),
+                onClick = onImportBook,
+                modifier = Modifier.weight(1f)
+            )
+            QuickAccessButton(
+                icon = Icons.Outlined.Bookmark,
+                label = stringResource(R.string.home_highlights),
+                onClick = onHighlights,
+                modifier = Modifier.weight(1f)
+            )
+            QuickAccessButton(
+                icon = Icons.Outlined.BarChart,
+                label = stringResource(R.string.home_settings),
+                onClick = onSettings,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }

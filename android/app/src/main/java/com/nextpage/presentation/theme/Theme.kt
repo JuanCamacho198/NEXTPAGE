@@ -9,31 +9,33 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 
 private val NextPageDarkColorScheme = darkColorScheme(
-    primary = ColorPrimary,
-    onPrimary = ColorNeutral,
-    secondary = ColorSecondary,
+    primary = PrimaryBlue,
+    onPrimary = TextPrimary,
+    secondary = TextSecondary,
     tertiary = ColorTertiary,
-    background = BackgroundDark,
-    surface = SurfaceDark,
+    background = BgMain,
+    surface = BgSurface,
+    surfaceVariant = BgSurface,
     outline = OutlineDark,
     error = ErrorSoft,
-    onBackground = ColorPrimary,
-    onSurface = ColorPrimary,
+    onBackground = TextPrimary,
+    onSurface = TextPrimary,
+    onSurfaceVariant = TextSecondary,
     onError = ColorNeutral
 )
 
 private val NextPageLightColorScheme = lightColorScheme(
-    primary = ColorNeutral,
-    onPrimary = ColorPrimary,
-    secondary = ColorTertiary,
-    tertiary = ColorSecondary,
-    background = ColorPrimary,
+    primary = PrimaryBlue,
+    onPrimary = TextPrimary,
+    secondary = TextSecondary,
+    tertiary = ColorTertiary,
+    background = TextPrimary,
     surface = Color(0xFFF6F8FA),
     outline = Color(0xFFD0D7DE),
     error = Color(0xFFCF222E),
     onBackground = ColorNeutral,
     onSurface = ColorNeutral,
-    onError = ColorPrimary
+    onError = TextPrimary
 )
 
 @Composable

@@ -239,14 +239,14 @@ class ReaderViewModel(
             val loader = epubContentLoader ?: return@launch
             val result = loader.getChapterContent(filePath, chapter.href)
 
-            result.onSuccess { content ->
+            result.onSuccess { htmlContent ->
                 val loadTime = System.currentTimeMillis() - startTime
                 Log.d(TAG, "Chapter ${chapterIndex} loaded in ${loadTime}ms")
 
                 mutableUiState.update {
                     it.copy(
                         currentChapterIndex = chapterIndex,
-                        chapterContent = content
+                        chapterHtmlContent = htmlContent
                     )
                 }
             }.onFailure { error ->

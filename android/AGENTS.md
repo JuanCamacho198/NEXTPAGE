@@ -179,6 +179,48 @@ import androidx.lifecycle.viewModelScope
 - **Use string resources** for all UI text
 - **Handle errors gracefully** in ViewModels and repositories
 
+## Graphify — Knowledge Graph
+
+```powershell
+# Build knowledge graph from codebase (AST + semantic extraction)
+.\graphify-out\step4_build.py          # Build graph from AST data
+.\graphify-out\step5_run.py            # Label communities + generate HTML
+
+# Outputs (gitignored):
+#   graphify-out/graph.html      — interactive graph (open in browser)
+#   graphify-out/GRAPH_REPORT.md — full audit report
+#   graphify-out/graph.json      — raw graph data (GraphRAG-ready)
+```
+
+Graphify mapea todo el código a un grafo de conocimiento con detección de comunidades. Los **God Nodes** (hubs más conectados) revelan la arquitectura real:
+- `ReaderViewModel` (degree 35) — hub central de la app
+- `SupabaseAuthRepository` (degree 19) — auth remoto
+- `AuthViewModel` (degree 19) — UI auth
+- `SupabaseSyncService` (degree 14) — sincronización
+
+## Design System
+
+El diseño de la app está en `design/nextPage-movil.pen` (Pencil, accesible via MCP).
+Incluye Design Tokens y 5 pantallas trazadas.
+
+Para inspeccionar nodos del diseño desde el MCP de Pencil:
+```powershell
+# Node IDs de las pantallas:
+# W29xCr → Welcome Screen (AuthScreen.kt)
+# WDYjT  → Home (HomeScreen.kt)
+# HQRl6  → Bookshelf (LibraryScreen.kt)
+# iSSWb  → Resaltados (HighlightsScreen.kt)
+# EQsNd  → Ajustes (SettingsScreen.kt)
+```
+
+## Project Artifacts
+
+| Archivo | Propósito |
+|---------|-----------|
+| `.gitignore` | Ignora builds, IDE, secrets, graphify-out |
+| `.docs/GENTLE_AI_ORCHESTRATOR_GUIDE.md` | Memoria técnica SDD + estado de pantallas vs diseño |
+| `graphify-out/` | Output de graphify (gitignored) |
+
 ## Gradle Notes
 
 - **Release minify enabled by default** - sets `proguard-rules.pro`

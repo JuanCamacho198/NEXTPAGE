@@ -1,6 +1,6 @@
 <script lang="ts">
   import Button from "../forms/Button.svelte";
-  import { createFocusTrap } from "$lib/shared/utils/focusTrap";
+  import Modal from "../layout/Modal.svelte";
 
   type Props = {
     open?: boolean;
@@ -22,8 +22,6 @@
     oncancel,
   }: Props = $props();
 
-  let dialogContentEl: HTMLDivElement | undefined = $state();
-
   function handleConfirm(): void {
     open = false;
     onconfirm?.();
@@ -33,49 +31,18 @@
     open = false;
     oncancel?.();
   }
-
-  function handleBackdropClick(e: MouseEvent): void {
-    if (e.target === e.currentTarget) {
-      handleCancel();
-    }
-  }
-
-  // Focus trap: trap Tab focus inside the dialog when open
-  $effect(() => {
-    if (open && dialogContentEl) {
-      const trap = createFocusTrap(dialogContentEl);
-      trap.activate();
-      return () => trap.deactivate();
-    }
-  });
 </script>
 
-{#if open}
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-    onclick={handleBackdropClick}
-    onkeydown={(e) => e.key === "Escape" && handleCancel()}
-    role="presentation"
-  >
-    <div
-      bind:this={dialogContentEl}
-      class="w-full max-w-md rounded-lg bg-(--color-surface) p-6 shadow-xl"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-dialog-title"
-    >
-      <h3 id="confirm-dialog-title" class="mb-2 text-lg font-semibold text-(--color-primary)">
-        {title}
-      </h3>
-      <p class="mb-6 text-sm text-(--color-text-muted)">{message}</p>
-      <div class="flex justify-end gap-3">
-        <Button variant="secondary" onclick={handleCancel}>
-          {cancelText}
-        </Button>
-        <Button variant="danger" onclick={handleConfirm}>
-          {confirmText}
-        </Button>
-      </div>
-    </div>
-  </div>
-{/if}
+<Modal bind:open size="sm" title={title}>
+  {#snippet children()}
+    <p class="text-sm text-(--color-text-muted)">{message}</p>
+  {/snippet}
+  {#snippet footer()}
+    <Button variant="secondary" onclick={handleCancel}>
+      {cancelText}
+    </Button>
+    <Button variant="danger" onclick={handleConfirm}>
+      {confirmText}
+    </Button>
+  {/snippet}
+</Modal>

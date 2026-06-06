@@ -2,8 +2,21 @@
   import { appState } from "$lib/shared/stores/AppState.svelte";
   import { getSafeProgressPercentage } from "$lib/shared/stores/homeState";
   import { BookCard, ShelfActionMenu } from "$lib/features/library";
+  import Modal from "$lib/shared/ui/layout/Modal.svelte";
   import Icon from "$lib/shared/ui/navigation/Icon.svelte";
   import Button from "$lib/shared/ui/forms/Button.svelte";
+
+  let showShelfModal = $state(false);
+  $effect(() => {
+    if (appState.selectedShelfBook) {
+      showShelfModal = true;
+    }
+  });
+  $effect(() => {
+    if (!showShelfModal && appState.selectedShelfBook) {
+      appState.closeShelfDetails();
+    }
+  });
 </script>
 
 <div class="space-y-3">
@@ -232,30 +245,24 @@
 
 {#if appState.selectedShelfBook}
   {@const shelfDetail = appState.selectedShelfBook}
-  <div class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={shelfDetail.title}>
-    <div class="w-full max-w-xl rounded-xl border border-(--color-border) bg-(--color-surface) p-4 shadow-xl">
-      <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0">
-          <h3 class="line-clamp-2 text-lg font-semibold text-(--color-primary)">{shelfDetail.title}</h3>
-          <p class="truncate text-sm text-(--color-text-muted)">{shelfDetail.author || appState.t("app.unknownAuthor")}</p>
-        </div>
-        <Button size="sm" variant="ghost" onclick={appState.closeShelfDetails}>{appState.t("settings.close")}</Button>
-      </div>
+  <Modal bind:open={showShelfModal} title={shelfDetail.title} noCloseButton>
+    {#snippet children()}
+      <p class="truncate text-sm text-(--color-text-muted)">{shelfDetail.author || appState.t("app.unknownAuthor")}</p>
       <div class="mt-4 space-y-1 text-sm text-(--color-text-muted)">
         <p>{shelfDetail.format.toUpperCase()}</p>
         <p>{shelfDetail.currentPage}/{shelfDetail.totalPages || "-"} · {Math.round(getSafeProgressPercentage(shelfDetail))}%</p>
       </div>
-      <div class="mt-4 flex justify-end gap-2">
-        <Button size="sm" variant="ghost" onclick={appState.closeShelfDetails}>{appState.t("settings.close")}</Button>
-        <Button
-          size="sm"
-          onclick={() => {
-            void appState.startReading(shelfDetail);
-          }}
-        >
-          {appState.t("app.read")}
-        </Button>
-      </div>
-    </div>
-  </div>
+    {/snippet}
+    {#snippet footer()}
+      <Button size="sm" variant="ghost" onclick={appState.closeShelfDetails}>{appState.t("settings.close")}</Button>
+      <Button
+        size="sm"
+        onclick={() => {
+          void appState.startReading(shelfDetail);
+        }}
+      >
+        {appState.t("app.read")}
+      </Button>
+    {/snippet}
+  </Modal>
 {/if}

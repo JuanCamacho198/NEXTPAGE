@@ -146,26 +146,26 @@
     role="presentation"
   >
     <!-- Backdrop -->
-    <div class="absolute inset-0 bg-[#101c2c]/70"></div>
+    <div class="absolute inset-0 bg-(--color-surface)/70"></div>
 
     <!-- Sidebar -->
     <div
       bind:this={sidebarEl}
-      class="absolute right-0 top-0 flex h-full w-65 flex-col overflow-y-auto border-l border-[#17263a] bg-[#101c2c]/70 pt-15 text-[#8fa3bf] backdrop-blur-sm"
+      class="absolute right-0 top-0 flex h-full w-65 flex-col overflow-y-auto border-l border-(--color-border-deep) bg-(--color-surface)/70 pt-15 text-(--color-text-muted) backdrop-blur-sm"
       onkeydown={(e) => e.key === "Escape" && onClose()}
       role="dialog"
       aria-label={t("reader.ajustes_texto")}
       tabindex="0"
     >
       <!-- Sidebar Header Icons -->
-      <div class="flex items-center justify-between border-b border-[#94adce]/5 px-4 py-4 relative">
+      <div class="flex items-center justify-between border-b border-(--color-border)/5 px-4 py-4 relative">
         {#if showSavedToast}
-          <span class="absolute -top-2 right-4 rounded-full bg-[#49d4ff]/20 px-2.5 py-0.5 text-xs text-[#49d4ff] transition-all" transition:fly={{ y: -4, duration: 150 }}>
+          <span class="absolute -top-2 right-4 rounded-full bg-(--color-accent-blue)/20 px-2.5 py-0.5 text-xs text-(--color-accent-blue) transition-all" transition:fly={{ y: -4, duration: 150 }}>
             ✓ Saved
           </span>
         {/if}
         <!-- Close button -->
-        <button type="button" onclick={onClose} class="flex cursor-pointer items-center gap-1 text-[#8fa3bf] hover:text-white" aria-label={t("settings.close")}>
+        <button type="button" onclick={onClose} class="flex cursor-pointer items-center gap-1 text-(--color-text-muted) hover:text-(--color-text-inverse)" aria-label={t("settings.close")}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -181,7 +181,7 @@
             aria-label={t("reader.alignment")}
             title={alignLabel(readerSettings.textAlign)}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-text-muted)">
               <line x1="17" y1="10" x2="3" y2="10"></line>
               <line x1="21" y1="6" x2="3" y2="6"></line>
               <line x1="21" y1="14" x2="3" y2="14"></line>
@@ -191,7 +191,7 @@
           <!-- Font increase -->
           <button
             type="button"
-            class="cursor-pointer rounded bg-[#49d4ff] p-2"
+            class="cursor-pointer rounded bg-(--color-accent-blue) p-2"
             onclick={() => changeFontSize(10)}
             aria-label={t("reader.font_increase")}
           >
@@ -212,7 +212,7 @@
             aria-label={t("reader.direction")}
             title={readerSettings.direction === "ltr" ? "LTR" : "RTL"}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-text-muted)">
               <rect x="3" y="3" width="7" height="7"></rect>
               <rect x="14" y="3" width="7" height="7"></rect>
               <rect x="14" y="14" width="7" height="7"></rect>
@@ -230,7 +230,7 @@
               type="button"
               class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110"
               class:ring-2={readerSettings.themeMode === theme.name}
-              class:ring-[#49d4ff]={readerSettings.themeMode === theme.name}
+              class:ring-(--color-accent-blue)={readerSettings.themeMode === theme.name}
               style="background-color: {theme.bg};"
               onclick={() => onSettingsChange({ ...readerSettings, themeMode: theme.name })}
               aria-label={theme.label}
@@ -262,8 +262,8 @@
               });
             }}
           >
-            <span class="text-sm font-normal text-[#49d4ff]">{readerSettings.epub.fontFamily || "Default"}</span>
-            <svg xmlns="http://www.w3.org/2000/svg" width="9" height="6" viewBox="0 0 24 24" fill="none" stroke="#49d4ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <span class="text-sm font-normal text-(--color-accent-blue)">{readerSettings.epub.fontFamily || "Default"}</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="9" height="6" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
           </button>
@@ -276,7 +276,7 @@
               onclick={() => changeFontSize(-10)}
               aria-label={t("reader.font_decrease")}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-text-muted)">
                 <polyline points="4 7 4 4 20 4 20 7"></polyline>
                 <line x1="9" y1="20" x2="15" y2="20"></line>
                 <line x1="12" y1="4" x2="12" y2="20"></line>
@@ -289,7 +289,7 @@
               aria-label={t("reader.line_spacing")}
               title={`Line height: ${readerSettings.lineHeight}`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="27" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#f8fbff]">
+              <svg xmlns="http://www.w3.org/2000/svg" width="27" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-primary)">
                 <line x1="5" y1="3" x2="19" y2="3"></line>
                 <line x1="5" y1="21" x2="19" y2="21"></line>
                 <polyline points="12 7 9 10 15 10"></polyline>
@@ -307,7 +307,7 @@
               onclick={() => changeLetterSpacing(-1)}
               aria-label={t("reader.spacing_decrease")}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-text-muted)">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
             </button>
@@ -317,7 +317,7 @@
               onclick={() => changeLetterSpacing(1)}
               aria-label={t("reader.spacing_increase")}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#8fa3bf]">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-text-muted)">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
@@ -325,7 +325,7 @@
           </div>
 
           <!-- Separator (EPUB only) -->
-          <div class="h-px w-full bg-[#94adce]/5"></div>
+          <div class="h-px w-full bg-(--color-border)"></div>
 
           <!-- Collapsible Menu Items (EPUB only) -->
           <div class="flex flex-col gap-4">
@@ -334,60 +334,60 @@
               ...readerSettings,
               direction: readerSettings.direction === "ltr" ? "rtl" as ReaderDirection : "ltr" as ReaderDirection,
             })} role="button" tabindex="0" onkeydown={(e) => e.key === "Enter" && onSettingsChange({ ...readerSettings, direction: readerSettings.direction === "ltr" ? "rtl" as ReaderDirection : "ltr" as ReaderDirection })}>
-              <span class="text-sm text-[#8fa3bf]">{t("reader.direction")}: {readerSettings.direction === "ltr" ? "LTR" : "RTL"}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#49d4ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <span class="text-sm text-(--color-text-muted)">{t("reader.direction")}: {readerSettings.direction === "ltr" ? "LTR" : "RTL"}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </div>
             <!-- Alignment -->
             <div class="flex items-center justify-between cursor-pointer" onclick={cycleAlignment} role="button" tabindex="0" onkeydown={(e) => e.key === "Enter" && cycleAlignment()}>
-              <span class="text-sm text-[#8fa3bf]">{t("reader.alignment")}: {alignLabel(readerSettings.textAlign)}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#49d4ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <span class="text-sm text-(--color-text-muted)">{t("reader.alignment")}: {alignLabel(readerSettings.textAlign)}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </div>
             <!-- Colors (info only - handled by theme swatches) -->
             <div class="flex items-center justify-between opacity-60">
-              <span class="text-sm text-[#8fa3bf]">{t("reader.colors")}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#49d4ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <span class="text-sm text-(--color-text-muted)">{t("reader.colors")}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </div>
             <!-- Margins -->
             <div class="flex items-center justify-between cursor-pointer" onclick={cycleMargins} role="button" tabindex="0" onkeydown={(e) => e.key === "Enter" && cycleMargins()}>
-              <span class="text-sm text-[#8fa3bf]">{t("reader.margins")}: {readerSettings.margins.left.toFixed(1)}rem</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#49d4ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <span class="text-sm text-(--color-text-muted)">{t("reader.margins")}: {readerSettings.margins.left.toFixed(1)}rem</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </div>
             <!-- Paragraph spacing -->
             <div class="flex items-center justify-between cursor-pointer" onclick={cycleParagraphSpacing} role="button" tabindex="0" onkeydown={(e) => e.key === "Enter" && cycleParagraphSpacing()}>
-              <span class="text-sm text-[#8fa3bf]">{t("reader.paragraph_spacing")}: {readerSettings.paragraphSpacing}em</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#49d4ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <span class="text-sm text-(--color-text-muted)">{t("reader.paragraph_spacing")}: {readerSettings.paragraphSpacing}em</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </div>
             <!-- Hyphenation -->
             <div class="flex items-center justify-between cursor-pointer" onclick={() => onSettingsChange({ ...readerSettings, hyphenation: !readerSettings.hyphenation })} role="button" tabindex="0" onkeydown={(e) => e.key === "Enter" && onSettingsChange({ ...readerSettings, hyphenation: !readerSettings.hyphenation })}>
-              <span class="text-sm text-[#8fa3bf]">{t("reader.hyphenation")}: {readerSettings.hyphenation ? "On" : "Off"}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#49d4ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <span class="text-sm text-(--color-text-muted)">{t("reader.hyphenation")}: {readerSettings.hyphenation ? "On" : "Off"}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </div>
           </div>
 
           <!-- Separator (EPUB only) -->
-          <div class="h-px w-full bg-[#94adce]/5"></div>
+          <div class="h-px w-full bg-(--color-border)"></div>
         {/if}
 
         <!-- Toggles (both formats) -->
         <div class="flex flex-col gap-4">
           <div class="flex items-center justify-between">
-            <span class="text-sm text-[#8fa3bf]">{t("settings.reading.showHeader")}</span>
+            <span class="text-sm text-(--color-text-muted)">{t("settings.reading.showHeader")}</span>
           <button
             type="button"
             class="relative flex h-5 w-10 cursor-pointer items-center rounded-full transition-colors"
-            style="background-color: {readerSettings.showHeader ? '#49d4ff' : 'rgba(148, 173, 206, 0.2)'};"
+            style="background-color: {readerSettings.showHeader ? 'var(--color-accent-blue)' : 'rgba(148, 173, 206, 0.2)'};"
             onclick={() => onSettingsChange({ ...readerSettings, showHeader: !readerSettings.showHeader })}
             role="switch"
             aria-checked={readerSettings.showHeader}
@@ -401,11 +401,11 @@
           </button>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-sm text-[#8fa3bf]">{t("settings.reading.showFooter")}</span>
+            <span class="text-sm text-(--color-text-muted)">{t("settings.reading.showFooter")}</span>
           <button
             type="button"
             class="relative flex h-5 w-10 cursor-pointer items-center rounded-full transition-colors"
-            style="background-color: {readerSettings.showFooter ? '#49d4ff' : 'rgba(148, 173, 206, 0.2)'};"
+            style="background-color: {readerSettings.showFooter ? 'var(--color-accent-blue)' : 'rgba(148, 173, 206, 0.2)'};"
             onclick={() => onSettingsChange({ ...readerSettings, showFooter: !readerSettings.showFooter })}
             role="switch"
             aria-checked={readerSettings.showFooter}
@@ -421,11 +421,11 @@
           <!-- Vertical Scrolling -->
           {#if format === "epub"}
             <div class="flex items-center justify-between">
-              <span class="text-sm text-[#8fa3bf]">{t("reader.vertical_scroll")}</span>
+              <span class="text-sm text-(--color-text-muted)">{t("reader.vertical_scroll")}</span>
               <button
                 type="button"
                 class="relative flex h-5 w-10 cursor-pointer items-center rounded-full transition-colors"
-                style="background-color: {readerSettings.verticalScrolling ? '#49d4ff' : 'rgba(148, 173, 206, 0.2)'};"
+                style="background-color: {readerSettings.verticalScrolling ? 'var(--color-accent-blue)' : 'rgba(148, 173, 206, 0.2)'};"
                 onclick={() => onSettingsChange({ ...readerSettings, verticalScrolling: !readerSettings.verticalScrolling })}
                 role="switch"
                 aria-checked={readerSettings.verticalScrolling}
@@ -447,8 +447,8 @@
           class="flex w-full items-center justify-between rounded-xl bg-white/2 px-3 py-2 cursor-pointer hover:bg-white/5"
           onclick={resetToDefaults}
         >
-          <span class="text-sm text-[#49d4ff]">{t("reader.saved_settings")}</span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="9" height="6" viewBox="0 0 24 24" fill="none" stroke="#49d4ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <span class="text-sm text-(--color-accent-blue)">{t("reader.saved_settings")}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="9" height="6" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
         </button>

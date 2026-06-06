@@ -111,7 +111,7 @@
 
 <div
   class="flex w-full flex-col gap-2.5 rounded-2xl border border-[rgba(148,163,184,0.3)] p-3 shadow-[0_20px_40px_rgba(15,23,42,0.18)] backdrop-blur-xl sm:rounded-2xl sm:p-3"
-  style="background: linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0)), color-mix(in srgb, var(--pdf-reader-surface-bg, #fff) 92%, #0f172a 8%);"
+  style="background: linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0)), color-mix(in srgb, var(--pdf-reader-surface-bg, var(--color-text-inverse)) 92%, var(--color-bg-deep) 8%);"
   role="presentation"
   onkeydown={handleRootKeydown}
 >
@@ -119,7 +119,7 @@
     <div class="flex items-start justify-between gap-3">
       <p
         class="m-0 line-clamp-3 text-xs font-semibold leading-[1.45] tracking-[0.01em]"
-        style="color: color-mix(in srgb, var(--pdf-reader-text, #0f172a) 92%, white 8%);"
+        style="color: color-mix(in srgb, var(--pdf-reader-text, var(--color-primary)) 92%, var(--color-text-inverse) 8%);"
       >
         {selectionPreview}
       </p>

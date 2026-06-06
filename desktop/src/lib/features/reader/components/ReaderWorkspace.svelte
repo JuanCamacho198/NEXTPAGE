@@ -394,7 +394,7 @@
     {#if readerError}
       <p class="font-inter text-sm text-(--color-text-inverse)">{readerError}</p>
     {:else if !activeReadingBook}
-      <p class="font-inter text-sm text-white">{t("reader.no_book_loaded")}</p>
+      <p class="font-inter text-sm text-(--color-text-inverse)">{t("reader.no_book_loaded")}</p>
     {:else if isPdf}
       <!-- White content card for PDF -->
       <div
@@ -455,7 +455,7 @@
         />
       </div>
     {:else}
-      <p class="font-inter text-sm text-white">{t("reader.formato_no_soportado")}</p>
+      <p class="font-inter text-sm text-(--color-text-inverse)">{t("reader.formato_no_soportado")}</p>
     {/if}
 
     <!-- Selection Toolbar (floating) -->
@@ -555,7 +555,7 @@
                     <span class="text-xs text-(--color-text-muted)/60">{bookmark.title}</span>
                   {/if}
                 </button>
-                <button type="button" onclick={() => bookmarksState.removeBookmark(bookmark.id, activeReadingBook.id)} class="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sm text-[#8fa3bf] transition-colors hover:bg-red-500/20 hover:text-red-400" title={t("settings.deleteBookmark")}>
+                <button type="button" onclick={() => bookmarksState.removeBookmark(bookmark.id, activeReadingBook.id)} class="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sm text-(--color-text-muted) transition-colors hover:bg-red-500/20 hover:text-red-400" title={t("settings.deleteBookmark")}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="3 6 5 6 21 6"></polyline>
                     <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>

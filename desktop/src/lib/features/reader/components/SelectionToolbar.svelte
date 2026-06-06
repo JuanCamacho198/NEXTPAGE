@@ -91,11 +91,11 @@
   <!-- Tip arrow pointing to selection -->
   <div
     class="mx-auto h-2.5 w-5"
-    style="clip-path: polygon(50% 100%, 0 0, 100% 0); background: #1E293B;"
+    style="clip-path: polygon(50% 100%, 0 0, 100% 0); background: var(--color-surface-strong);"
   ></div>
 
   <!-- Main toolbar -->
-  <div class="flex items-center gap-5 rounded-[28px] border border-[#1E293B] bg-[#1E293B] px-5 py-2.5 shadow-xl">
+  <div class="flex items-center gap-5 rounded-[28px] border border-(--color-surface-strong) bg-(--color-surface-strong) px-5 py-2.5 shadow-xl">
     <!-- Color circles -->
     {#each colors as color}
       <button
@@ -110,12 +110,12 @@
     {/each}
 
     <!-- Separator -->
-    <span class="text-base font-normal text-[#334155]">||</span>
+    <span class="text-base font-normal text-(--color-text-auxiliary)">||</span>
 
     <!-- Copy -->
     <button
       type="button"
-      class="cursor-pointer text-sm font-medium text-[#F8FAFC] hover:text-white"
+      class="cursor-pointer text-sm font-medium text-(--color-text-inverse) hover:text-(--color-text-inverse)"
       onclick={handleCopy}
     >
       {t("reader.copiar")}
@@ -124,7 +124,7 @@
     <!-- Note -->
     <button
       type="button"
-      class="cursor-pointer text-sm font-medium text-[#F8FAFC] hover:text-white"
+      class="cursor-pointer text-sm font-medium text-(--color-text-inverse) hover:text-(--color-text-inverse)"
       onclick={handleNoteToggle}
     >
       {t("reader.nota")}
@@ -133,7 +133,7 @@
     <!-- Trash -->
     <button
       type="button"
-      class="cursor-pointer text-[#EF4444] hover:text-red-400"
+      class="cursor-pointer text-(--color-error) hover:text-red-400"
       onclick={onDismiss}
       aria-label={t("reader.eliminar_destacado")}
     >
@@ -147,25 +147,25 @@
 
   <!-- Note editor (inline) -->
   {#if showNoteEditor}
-    <div class="mt-2 rounded-2xl border border-[#1E293B] bg-[#1E293B] p-3 shadow-xl">
+    <div class="mt-2 rounded-2xl border border-(--color-surface-strong) bg-(--color-surface-strong) p-3 shadow-xl">
       <textarea
         bind:value={noteText}
         rows="2"
-        class="w-full resize-none rounded-xl border border-[#334155] bg-[#0B1120] p-2 text-sm text-white placeholder-[#64748B] focus:outline-none focus:ring-1 focus:ring-[#38BDF8]"
+        class="w-full resize-none rounded-xl border border-(--color-text-auxiliary) bg-(--color-bg-deep) p-2 text-sm text-(--color-text-inverse) placeholder-(--color-text-auxiliary) focus:outline-none focus:ring-1 focus:ring-(--color-accent-sky)"
         placeholder={t("highlight.notePlaceholder")}
         maxlength="500"
       ></textarea>
       <div class="mt-2 flex justify-end gap-2">
         <button
           type="button"
-          class="cursor-pointer rounded-full px-3 py-1 text-xs font-medium text-[#94A3B8] hover:text-white"
+          class="cursor-pointer rounded-full px-3 py-1 text-xs font-medium text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
           onclick={handleNoteToggle}
         >
           {t("highlight.cancel")}
         </button>
         <button
           type="button"
-          class="cursor-pointer rounded-full bg-[#38BDF8] px-3 py-1 text-xs font-medium text-[#0B1120] hover:bg-[#7DD3FC]"
+          class="cursor-pointer rounded-full bg-(--color-accent-sky) px-3 py-1 text-xs font-medium text-(--color-bg-deep) hover:bg-(--color-accent-blue)"
           onclick={handleSaveNote}
           disabled={!noteText.trim()}
         >

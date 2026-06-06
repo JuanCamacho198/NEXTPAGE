@@ -15,6 +15,7 @@
   import { createFocusTrap } from "$lib/shared/utils/focusTrap";
   import { createBookmarksState } from "../stores/bookmarksState.svelte";
   import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+  import { getReaderError } from "$lib/stores/readerErrorState.svelte";
 
   const appWindow = getCurrentWebviewWindow();
 
@@ -28,7 +29,6 @@
     searchTargetLocator?: string | null;
     isSearching?: boolean;
     searchUnavailableReason?: string | null;
-    readerError?: string | null;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     onBackToHome: () => void;
     onPdfPageChange?: (page: number, total: number) => void;
@@ -54,7 +54,6 @@
     searchTargetLocator = null,
     isSearching = false,
     searchUnavailableReason = null,
-    readerError = null,
     preloadedBytes = null,
     t,
     onBackToHome,
@@ -391,8 +390,8 @@
     class:py-6={isEpub && !isFullscreen}
     class:p-0={isFullscreen}
   >
-    {#if readerError}
-      <p class="font-inter text-sm text-(--color-text-inverse)">{readerError}</p>
+    {#if getReaderError()}
+      <p class="font-inter text-sm text-(--color-text-inverse)">{getReaderError()}</p>
     {:else if !activeReadingBook}
       <p class="font-inter text-sm text-(--color-text-inverse)">{t("reader.no_book_loaded")}</p>
     {:else if isPdf}

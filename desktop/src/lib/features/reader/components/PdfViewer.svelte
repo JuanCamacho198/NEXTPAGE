@@ -43,6 +43,7 @@
 
   import type { TocEntry } from "./ReaderTocPanel.svelte";
   import { debugState } from "$lib/shared/debug/debugState.svelte";
+  import { setReaderError, clearReaderError } from "$lib/stores/readerErrorState.svelte";
 
   type PersistedHighlight = {
     id: string;
@@ -443,9 +444,11 @@
       lastPercent = readProgressPercent(targetPage, totalPages);
       sessionStartAt = new Date().toISOString();
       error = null;
+      clearReaderError();
     } catch (err) {
       if (isStaleLoad(loadRequestId)) return;
       error = err instanceof Error ? err.message : "Failed to load PDF";
+      setReaderError(error);
     } finally {
       if (!isStaleLoad(loadRequestId)) { isLoading = false; activeLoadingTask = null; }
     }
@@ -723,13 +726,13 @@
     if (textLayer) textLayer.innerHTML = "";
     try {
       const rendered = await renderPage(targetPage, { requestId: navRequestId, renderScale: scale });
-      if (!rendered || isStaleNavigation(navRequestId)) { navigationError = t("pdf.navigationFailed"); return false; }
+      if (!rendered || isStaleNavigation(navRequestId)) { navigationError = t("pdf.navigationFailed"); setReaderError(navigationError); return false; }
       currentPage = targetPage;
       onPageChange?.(currentPage, totalPages);
       emitSessionProgress(currentPage, totalPages);
       if (options?.flash) { flashSearchResult = true; window.setTimeout(() => { flashSearchResult = false; }, 900); }
       return true;
-    } catch { navigationError = t("pdf.navigationFailed"); return false; }
+    } catch { navigationError = t("pdf.navigationFailed"); setReaderError(navigationError); return false; }
   };  function goToPrevPage(): void { void navigateToPage(currentPage - 1); }
 
   function goToNextPage(): void { void navigateToPage(currentPage + 1); }

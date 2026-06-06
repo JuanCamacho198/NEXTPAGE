@@ -5,6 +5,7 @@
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, ReaderThemeMode, ReaderTextAlign, ReaderDirection } from '$lib/shared/types';
   import EpubControls from './epub/EpubControls.svelte';
+  import { setReaderError, clearReaderError } from "$lib/stores/readerErrorState.svelte";
 
   // ─── Types ───────────────────────────────────────────────
   interface EpubChapterMeta {
@@ -249,8 +250,10 @@
       invoke('indexEpubText', { bookId }).catch((err: unknown) => {
         console.warn('Failed to index EPUB text for search', err);
       });
+      clearReaderError();
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
+      setReaderError(error);
     } finally {
       isLoading = false;
     }
@@ -488,6 +491,7 @@
       onLocationContext?.({ locator: `chapter:${index}`, percentage: pct });
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
+      setReaderError(error);
     }
   }
 

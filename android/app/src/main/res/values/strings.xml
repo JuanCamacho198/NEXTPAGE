@@ -151,7 +151,7 @@
     <string name="reader_sleep_timer_15min">15 min</string>
     <string name="reader_sleep_timer_30min">30 min</string>
     <string name="reader_sleep_timer_cancel">Cancel</string>
-    <string name="reader_sleep_timer_finished_title">Time\'s up!</string>
+    <string name="reader_sleep_timer_finished_title">Time&apos;s up!</string>
     <string name="reader_sleep_timer_finished_message">Your reading time is over.</string>
     <string name="reader_sleep_timer_tap_to_dismiss">Tap anywhere to continue reading</string>
 </resources>

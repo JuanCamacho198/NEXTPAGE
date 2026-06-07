@@ -2,6 +2,7 @@ package com.nextpage.ui.components.molecules
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,9 +17,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.AutoGraph
 import androidx.compose.material.icons.outlined.EmojiEvents
-import androidx.compose.material.icons.outlined.LibraryBooks
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -77,7 +78,7 @@ fun NotificationSheet(
         ),
         NotificationItem(
             id = "3",
-            icon = Icons.Outlined.LibraryBooks,
+            icon = Icons.AutoMirrored.Outlined.LibraryBooks,
             title = stringResource(R.string.notifications_mock_library_title),
             body = stringResource(R.string.notifications_mock_library_body)
         )

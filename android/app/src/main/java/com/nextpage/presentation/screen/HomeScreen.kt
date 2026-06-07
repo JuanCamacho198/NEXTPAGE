@@ -20,6 +20,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,7 +63,12 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
     ) {
         // 1. Header
-        item { HomeHeaderSection(userName = uiState.userName) }
+        item {
+            HomeHeaderSection(
+                userName = uiState.userName,
+                onNotificationsClick = { showNotifications = true }
+            )
+        }
 
         // 2. Greeting
         item { GreetingSection(userName = uiState.userName) }
@@ -108,7 +116,10 @@ fun HomeScreen(
 // ─── Section 1: Header ───────────────────────────────────────────────
 
 @Composable
-private fun HomeHeaderSection(userName: String) {
+private fun HomeHeaderSection(
+    userName: String,
+    onNotificationsClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -142,7 +153,7 @@ private fun HomeHeaderSection(userName: String) {
             )
         }
 
-        IconButton(onClick = { showNotifications = true }) {
+        IconButton(onClick = onNotificationsClick) {
             Icon(
                 imageVector = Icons.Outlined.Notifications,
                 contentDescription = stringResource(R.string.notifications_title),

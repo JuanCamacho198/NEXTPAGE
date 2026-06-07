@@ -1,10 +1,12 @@
 package com.nextpage.presentation.screen
 
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.nextpage.domain.model.FontSizePreset
 import com.nextpage.domain.model.LineHeightPreset
 import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.domain.model.ReaderTheme
 import com.nextpage.ui.components.molecules.NotificationItem
+import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -21,7 +23,7 @@ class SettingsTests {
     fun `notificationItem defaults to unread`() {
         val item = NotificationItem(
             id = "test-1",
-            icon = androidx.compose.material.icons.Icons.Outlined.AutoGraph,
+            icon = mockk<ImageVector>(),
             title = "Test",
             body = "Body"
         )
@@ -35,7 +37,7 @@ class SettingsTests {
     fun `notificationItem can be created as read`() {
         val item = NotificationItem(
             id = "test-2",
-            icon = androidx.compose.material.icons.Icons.Outlined.EmojiEvents,
+            icon = mockk<ImageVector>(),
             title = "Read",
             body = "Body",
             isUnread = false

@@ -298,6 +298,7 @@ class ReaderViewModel(
 
         if (currentIndex < totalChapters - 1) {
             val newIndex = currentIndex + 1
+            mutableUiState.update { it.copy(currentChapterIndex = newIndex) }
             loadChapterContent(newIndex)
             updateProgressForChapter(newIndex)
             checkEndOfChapterTrigger()
@@ -309,6 +310,7 @@ class ReaderViewModel(
 
         if (currentIndex > 0) {
             val newIndex = currentIndex - 1
+            mutableUiState.update { it.copy(currentChapterIndex = newIndex) }
             loadChapterContent(newIndex)
             updateProgressForChapter(newIndex)
             checkEndOfChapterTrigger()
@@ -512,6 +514,7 @@ class ReaderViewModel(
     fun goToChapter(index: Int) {
         if (index in mutableUiState.value.chapters.indices) {
             if (index == mutableUiState.value.currentChapterIndex) return
+            mutableUiState.update { it.copy(currentChapterIndex = index) }
             loadChapterContent(index)
             updateProgressForChapter(index)
             checkEndOfChapterTrigger()

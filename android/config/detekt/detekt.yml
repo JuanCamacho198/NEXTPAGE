@@ -1,28 +1,32 @@
-# Configuración básica de Detekt
-# https://detekt.dev/
+# Detekt configuration for NextPage Android
+# https://detekt.dev/docs/rules/
+# Generated baseline: not used yet
 
-build:
-  maxIssues: 10
-  excludeRules: []
+config:
+  validation: true
 
 complexity:
-  ComplexMethod:
+  CyclomaticComplexMethod:
     threshold: 15
   TooManyFunctions:
     thresholdInInterfaces: 10
     thresholdInClasses: 15
 
 formatting:
-  android: true
-  autoCorrect: true
-  indentSize: 4
-  maxLineLength: 150
+  Indentation:
+    active: true
+    indentSize: 4
+  MaximumLineLength:
+    active: true
+    maxLineLength: 150
 
 style:
-  UnnecessaryAbstractClass:
-    excludeInnerClasses: true
   MagicNumber:
+    active: true
     ignoreNumbers: [-1, 0, 1, 2, 100, 1000]
     ignoreHashCodeFunction: true
   WildcardImport:
-    excludeImports: ['java.util.*', 'kotlinx.coroutines.*']
+    active: true
+    excludeImports:
+      - 'java.util.*'
+      - 'kotlinx.coroutines.*'

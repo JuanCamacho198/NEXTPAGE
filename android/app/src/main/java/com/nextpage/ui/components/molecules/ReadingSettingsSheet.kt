@@ -341,3 +341,28 @@ private fun parseColorHex(hex: String): Color {
     }
     return Color(longHex.toLong(16))
 }
+
+// ── String resource mappings ─────────────────────────────────────────
+
+private val FontSizePreset.labelRes: Int
+    get() = when (this) {
+        FontSizePreset.SMALL -> R.string.reader_font_size_small
+        FontSizePreset.MEDIUM -> R.string.reader_font_size_medium
+        FontSizePreset.LARGE -> R.string.reader_font_size_large
+        FontSizePreset.XLARGE -> R.string.reader_font_size_xlarge
+    }
+
+private val ReaderTheme.labelRes: Int
+    get() = when (this) {
+        ReaderTheme.DARK -> R.string.reader_theme_dark
+        ReaderTheme.SEPIA -> R.string.reader_theme_sepia
+        ReaderTheme.LIGHT -> R.string.reader_theme_light
+    }
+
+private val LineHeightPreset.labelRes: Int
+    get() = when (this) {
+        LineHeightPreset.TIGHT -> R.string.reader_line_height_tight
+        LineHeightPreset.NORMAL -> R.string.reader_line_height_normal
+        LineHeightPreset.COMFORTABLE -> R.string.reader_line_height_comfortable
+        LineHeightPreset.WIDE -> R.string.reader_line_height_wide
+    }

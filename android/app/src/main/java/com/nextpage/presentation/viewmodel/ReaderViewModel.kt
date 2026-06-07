@@ -42,6 +42,12 @@ data class ReaderUiState(
     val highlights: List<Highlight> = emptyList(),
     val bookmarks: List<Bookmark> = emptyList(),
     val readerSettings: ReaderSettings = ReaderSettings(),
+    // ── Sleep Timer ────────────────────────────────────────────────
+    val sleepTimerActive: Boolean = false,
+    val sleepTimerRemainingSecs: Int = 0,
+    val sleepTimerFinished: Boolean = false,
+    val sleepTimerPresetMinutes: Int? = null,
+
     val isLoading: Boolean = true,
     val loadTimeMs: Long? = null,
     val error: String? = null
@@ -70,6 +76,7 @@ class ReaderViewModel(
     private var observeHighlightsJob: Job? = null
     private var observeBookmarksJob: Job? = null
     private var readingTimeTickerJob: Job? = null
+    private var sleepTimerJob: Job? = null
     private var sessionStartTime: Long = 0L
 
     init {
@@ -486,6 +493,78 @@ class ReaderViewModel(
             loadChapterContent(index)
             updateProgressForChapter(index)
         }
+    }
+
+    // ── Sleep Timer ──────────────────────────────────────────────────
+
+    /**
+     * Start the sleep timer with the specified duration in minutes.
+     * Counts down every second and sets [ReaderUiState.sleepTimerFinished] when done.
+     */
+    fun startSleepTimer(minutes: Int) {
+        sleepTimerJob?.cancel()
+        mutableUiState.update {
+            it.copy(
+                sleepTimerActive = true,
+                sleepTimerRemainingSecs = minutes * 60,
+                sleepTimerFinished = false,
+                sleepTimerPresetMinutes = minutes
+            )
+        }
+        sleepTimerJob = viewModelScope.launch(mainDispatcher) {
+            while (isActive && mutableUiState.value.sleepTimerRemainingSecs > 0) {
+                delay(1000L)
+                val remaining = mutableUiState.value.sleepTimerRemainingSecs - 1
+                if (remaining <= 0) {
+                    mutableUiState.update {
+                        it.copy(
+                            sleepTimerActive = false,
+                            sleepTimerRemainingSecs = 0,
+                            sleepTimerFinished = true,
+                            sleepTimerPresetMinutes = null
+                        )
+                    }
+                } else {
+                    mutableUiState.update {
+                        it.copy(sleepTimerRemainingSecs = remaining)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Cancel an active sleep timer and reset all timer state.
+     */
+    fun cancelSleepTimer() {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        mutableUiState.update {
+            it.copy(
+                sleepTimerActive = false,
+                sleepTimerRemainingSecs = 0,
+                sleepTimerFinished = false,
+                sleepTimerPresetMinutes = null
+            )
+        }
+    }
+
+    /**
+     * Dismiss the "time's up" overlay so the user can continue reading.
+     */
+    fun dismissSleepTimerOverlay() {
+        mutableUiState.update {
+            it.copy(sleepTimerFinished = false)
+        }
+    }
+
+    /**
+     * Format remaining seconds as MM:SS for display.
+     */
+    fun formatSleepTimerRemaining(secs: Int): String {
+        val minutes = secs / 60
+        val seconds = secs % 60
+        return "%d:%02d".format(minutes, seconds)
     }
 
     // ── Reader Settings ──────────────────────────────────────────────

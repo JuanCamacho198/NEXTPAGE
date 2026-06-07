@@ -135,10 +135,22 @@ fun ReaderScreen(
                 },
                 actions = {
                     // Sleep Timer indicator (countdown when active)
-                    if (uiState.sleepTimerActive) {
+                    if (uiState.sleepTimerActive && !uiState.sleepTimerEndOfChapterMode) {
                         val remaining = viewModel.formatSleepTimerRemaining(uiState.sleepTimerRemainingSecs)
                         Text(
                             text = "\u23F0 $remaining",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .padding(end = 4.dp)
+                                .clickable { showSleepTimerSheet = true }
+                        )
+                    }
+                    // End-of-chapter mode indicator
+                    if (uiState.sleepTimerActive && uiState.sleepTimerEndOfChapterMode) {
+                        Text(
+                            text = "\uD83D\uDCD6 ${stringResource(R.string.reader_sleep_timer_end_of_chapter)}",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.primary,
@@ -300,7 +312,12 @@ fun ReaderScreen(
                     SleepTimerPreset("5", 5),
                     SleepTimerPreset("10", 10),
                     SleepTimerPreset("15", 15),
-                    SleepTimerPreset("30", 30)
+                    SleepTimerPreset("30", 30),
+                    SleepTimerPreset(
+                        label = stringResource(R.string.reader_sleep_timer_end_of_chapter),
+                        minutes = Int.MIN_VALUE,
+                        isEndOfChapter = true
+                    )
                 ),
                 onPresetSelected = { minutes ->
                     viewModel.startSleepTimer(minutes)

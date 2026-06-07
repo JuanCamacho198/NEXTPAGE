@@ -4,6 +4,10 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -163,7 +167,13 @@ fun NextPageNavHost(appContainer: AppContainer) {
             navController = navController,
             startDestination = startDestination
         ) {
-            composable(NextPageDestination.Auth.route) {
+            composable(
+                route = NextPageDestination.Auth.route,
+                enterTransition = { fadeIn() },
+                exitTransition = { fadeOut() },
+                popEnterTransition = { fadeIn() },
+                popExitTransition = { fadeOut() }
+            ) {
                 AuthScreen(
                     viewModel = authViewModel,
                     onAuthenticated = {
@@ -179,7 +189,13 @@ fun NextPageNavHost(appContainer: AppContainer) {
                 )
             }
 
-            composable(NextPageDestination.Home.route) {
+            composable(
+                route = NextPageDestination.Home.route,
+                enterTransition = { fadeIn() },
+                exitTransition = { fadeOut() },
+                popEnterTransition = { fadeIn() },
+                popExitTransition = { fadeOut() }
+            ) {
                 val importLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.OpenDocument(),
                     onResult = { uri: Uri? ->
@@ -248,7 +264,13 @@ fun NextPageNavHost(appContainer: AppContainer) {
                 )
             }
 
-            composable(NextPageDestination.Library.route) {
+            composable(
+                route = NextPageDestination.Library.route,
+                enterTransition = { fadeIn() },
+                exitTransition = { fadeOut() },
+                popEnterTransition = { fadeIn() },
+                popExitTransition = { fadeOut() }
+            ) {
                 LibraryScreen(
                     contentPadding = innerPadding,
                     viewModel = libraryViewModel,
@@ -263,7 +285,13 @@ fun NextPageNavHost(appContainer: AppContainer) {
                 )
             }
 
-            composable(NextPageDestination.Reader.route) {
+            composable(
+                route = NextPageDestination.Reader.route,
+                enterTransition = { slideInHorizontally { it } + fadeIn() },
+                exitTransition = { slideOutHorizontally { it } + fadeOut() },
+                popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
+                popExitTransition = { slideOutHorizontally { -it } + fadeOut() }
+            ) {
                 ReaderScreen(
                     contentPadding = innerPadding,
                     selectedBookId = selectedBookId,
@@ -274,14 +302,26 @@ fun NextPageNavHost(appContainer: AppContainer) {
                 )
             }
 
-            composable(NextPageDestination.Highlights.route) {
+            composable(
+                route = NextPageDestination.Highlights.route,
+                enterTransition = { fadeIn() },
+                exitTransition = { fadeOut() },
+                popEnterTransition = { fadeIn() },
+                popExitTransition = { fadeOut() }
+            ) {
                 HighlightsScreen(
                     contentPadding = innerPadding,
                     viewModel = highlightsViewModel
                 )
             }
 
-            composable(NextPageDestination.Settings.route) {
+            composable(
+                route = NextPageDestination.Settings.route,
+                enterTransition = { fadeIn() },
+                exitTransition = { fadeOut() },
+                popEnterTransition = { fadeIn() },
+                popExitTransition = { fadeOut() }
+            ) {
                 SettingsScreen(
                     contentPadding = innerPadding,
                     authSession = authState.currentSession

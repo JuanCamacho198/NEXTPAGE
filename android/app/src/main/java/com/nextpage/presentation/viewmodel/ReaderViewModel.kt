@@ -47,6 +47,7 @@ data class ReaderUiState(
     val sleepTimerRemainingSecs: Int = 0,
     val sleepTimerFinished: Boolean = false,
     val sleepTimerPresetMinutes: Int? = null,
+    val sleepTimerEndOfChapterMode: Boolean = false,
 
     val isLoading: Boolean = true,
     val loadTimeMs: Long? = null,
@@ -273,6 +274,24 @@ class ReaderViewModel(
         }
     }
 
+    /**
+     * Check if the sleep timer is in end-of-chapter mode and should be stopped.
+     * If so, cancels the timer and shows the finished overlay.
+     */
+    private fun checkEndOfChapterTrigger() {
+        if (mutableUiState.value.sleepTimerEndOfChapterMode) {
+            mutableUiState.update {
+                it.copy(
+                    sleepTimerActive = false,
+                    sleepTimerRemainingSecs = 0,
+                    sleepTimerFinished = true,
+                    sleepTimerPresetMinutes = null,
+                    sleepTimerEndOfChapterMode = false
+                )
+            }
+        }
+    }
+
     fun goToNextChapter() {
         val currentIndex = mutableUiState.value.currentChapterIndex
         val totalChapters = mutableUiState.value.chapters.size
@@ -281,6 +300,7 @@ class ReaderViewModel(
             val newIndex = currentIndex + 1
             loadChapterContent(newIndex)
             updateProgressForChapter(newIndex)
+            checkEndOfChapterTrigger()
         }
     }
 
@@ -291,6 +311,7 @@ class ReaderViewModel(
             val newIndex = currentIndex - 1
             loadChapterContent(newIndex)
             updateProgressForChapter(newIndex)
+            checkEndOfChapterTrigger()
         }
     }
 
@@ -490,27 +511,41 @@ class ReaderViewModel(
 
     fun goToChapter(index: Int) {
         if (index in mutableUiState.value.chapters.indices) {
+            if (index == mutableUiState.value.currentChapterIndex) return
             loadChapterContent(index)
             updateProgressForChapter(index)
+            checkEndOfChapterTrigger()
         }
     }
 
     // ── Sleep Timer ──────────────────────────────────────────────────
 
     /**
-     * Start the sleep timer with the specified duration in minutes.
-     * Counts down every second and sets [ReaderUiState.sleepTimerFinished] when done.
+     * Start the sleep timer.
+     *
+     * @param minutes Duration in minutes. Pass [Int.MIN_VALUE] to signal end-of-chapter mode.
+     * In end-of-chapter mode, the timer has no countdown — it stops when the user
+     * navigates to another chapter.
      */
     fun startSleepTimer(minutes: Int) {
         sleepTimerJob?.cancel()
+        val isEndOfChapter = minutes == Int.MIN_VALUE
+
         mutableUiState.update {
             it.copy(
                 sleepTimerActive = true,
-                sleepTimerRemainingSecs = minutes * 60,
+                sleepTimerRemainingSecs = if (isEndOfChapter) 0 else minutes * 60,
                 sleepTimerFinished = false,
-                sleepTimerPresetMinutes = minutes
+                sleepTimerPresetMinutes = if (isEndOfChapter) null else minutes,
+                sleepTimerEndOfChapterMode = isEndOfChapter
             )
         }
+
+        if (isEndOfChapter) {
+            // No countdown needed — chapter change triggers finish
+            return
+        }
+
         sleepTimerJob = viewModelScope.launch(mainDispatcher) {
             while (isActive && mutableUiState.value.sleepTimerRemainingSecs > 0) {
                 delay(1000L)
@@ -521,7 +556,8 @@ class ReaderViewModel(
                             sleepTimerActive = false,
                             sleepTimerRemainingSecs = 0,
                             sleepTimerFinished = true,
-                            sleepTimerPresetMinutes = null
+                            sleepTimerPresetMinutes = null,
+                            sleepTimerEndOfChapterMode = false
                         )
                     }
                 } else {
@@ -544,7 +580,8 @@ class ReaderViewModel(
                 sleepTimerActive = false,
                 sleepTimerRemainingSecs = 0,
                 sleepTimerFinished = false,
-                sleepTimerPresetMinutes = null
+                sleepTimerPresetMinutes = null,
+                sleepTimerEndOfChapterMode = false
             )
         }
     }

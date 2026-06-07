@@ -14,7 +14,6 @@ import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.automirrored.outlined.ShowChart
 import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
@@ -34,6 +33,7 @@ import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.HomeViewModel
+import com.nextpage.ui.components.molecules.NotificationSheet
 
 @Composable
 fun HomeScreen(
@@ -46,6 +46,11 @@ fun HomeScreen(
     onImportBook: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showNotifications by remember { mutableStateOf(false) }
+
+    if (showNotifications) {
+        NotificationSheet(onDismiss = { showNotifications = false })
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -137,10 +142,10 @@ private fun HomeHeaderSection(userName: String) {
             )
         }
 
-        IconButton(onClick = { /* TODO: notifications screen */ }) {
+        IconButton(onClick = { showNotifications = true }) {
             Icon(
                 imageVector = Icons.Outlined.Notifications,
-                contentDescription = "Notifications",
+                contentDescription = stringResource(R.string.notifications_title),
                 tint = MaterialTheme.colorScheme.onSurface
             )
         }

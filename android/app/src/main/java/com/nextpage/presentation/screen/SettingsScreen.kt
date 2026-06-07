@@ -14,6 +14,10 @@ import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.presentation.theme.NextPageDimens
+import com.nextpage.ui.components.molecules.NotificationSheet
 
 private data class PreferenceItem(
     val labelRes: Int,
@@ -42,6 +47,12 @@ fun SettingsScreen(
     contentPadding: PaddingValues,
     authSession: AuthSession?
 ) {
+    var showNotifications by remember { mutableStateOf(false) }
+
+    if (showNotifications) {
+        NotificationSheet(onDismiss = { showNotifications = false })
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -79,10 +90,10 @@ fun SettingsScreen(
                     fontWeight = FontWeight.SemiBold
                 )
             }
-            IconButton(onClick = { /* TODO: notifications */ }) {
+            IconButton(onClick = { showNotifications = true }) {
                 Icon(
                     imageVector = Icons.Outlined.Notifications,
-                    contentDescription = "Notifications",
+                    contentDescription = stringResource(R.string.notifications_title),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }

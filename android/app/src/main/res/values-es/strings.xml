@@ -40,6 +40,7 @@
     <string name="settings_pref_font_size">Tamaño de fuente</string>
     <string name="settings_pref_sync">Sincronización</string>
     <string name="settings_pref_about">Acerca de</string>
+    <string name="settings_pref_notifications">Notificaciones</string>
     <string name="settings_user_default">Usuario</string>
     <string name="settings_email_placeholder">email@ejemplo.com</string>
     <string name="home_greeting">Hola, %1$s</string>
@@ -79,8 +80,23 @@
     <string name="library_status_in_progress">%1$d min</string>
     <string name="library_status_completed">Completado</string>
 
+    <!-- Notifications -->
+    <string name="notifications_title">Notificaciones</string>
+    <string name="notifications_empty">No tenés notificaciones aún</string>
+    <string name="notifications_mock_welcome_title">¡Bienvenido a NextPage!</string>
+    <string name="notifications_mock_welcome_body">Empezá a leer tu primer libro.</string>
+    <string name="notifications_mock_streak_title">Meta de lectura</string>
+    <string name="notifications_mock_streak_body">Completaste 3 días de lectura consecutiva. ¡Seguí así!</string>
+    <string name="notifications_mock_library_title">Nuevo libro disponible</string>
+    <string name="notifications_mock_library_body">Explorá los libros en tu estantería.</string>
+    <string name="notifications_badge_content_description">Notificaciones sin leer</string>
+
     <!-- Reader / Sleep Timer -->
     <string name="reader_sleep_timer">Temporizador</string>
+    <string name="reader_sleep_timer_end_of_chapter">Fin de capítulo</string>
+    <string name="reader_sleep_timer_end_of_chapter_desc">Detiene al cambiar de capítulo</string>
+    <string name="reader_sleep_timer_finished_chapter_title">Fin del capítulo</string>
+    <string name="reader_sleep_timer_finished_chapter_body">Llegaste al final del capítulo.</string>
     <string name="reader_sleep_timer_start">Iniciar temporizador</string>
     <string name="reader_sleep_timer_5min">5 min</string>
     <string name="reader_sleep_timer_10min">10 min</string>

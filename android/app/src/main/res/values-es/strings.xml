@@ -90,4 +90,22 @@
     <string name="reader_sleep_timer_finished_title">¡Se acabó el tiempo!</string>
     <string name="reader_sleep_timer_finished_message">Tu tiempo de lectura terminó.</string>
     <string name="reader_sleep_timer_tap_to_dismiss">Toca cualquier lugar para seguir leyendo</string>
+
+    <!-- Reader / Settings Sheet -->
+    <string name="reader_settings_sheet_title">Ajustes de lectura</string>
+    <string name="reader_settings_close">Cerrar</string>
+    <string name="reader_settings_font_size_section">Tamaño de fuente</string>
+    <string name="reader_settings_theme_section">Tema de fondo</string>
+    <string name="reader_settings_line_height_section">Interlineado</string>
+    <string name="reader_font_size_small">Chico</string>
+    <string name="reader_font_size_medium">Mediano</string>
+    <string name="reader_font_size_large">Grande</string>
+    <string name="reader_font_size_xlarge">Muy grande</string>
+    <string name="reader_theme_dark">Oscuro</string>
+    <string name="reader_theme_sepia">Sepia</string>
+    <string name="reader_theme_light">Claro</string>
+    <string name="reader_line_height_tight">Apretado</string>
+    <string name="reader_line_height_normal">Normal</string>
+    <string name="reader_line_height_comfortable">Cómodo</string>
+    <string name="reader_line_height_wide">Amplio</string>
 </resources>

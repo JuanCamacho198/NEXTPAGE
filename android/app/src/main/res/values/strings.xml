@@ -154,4 +154,22 @@
     <string name="reader_sleep_timer_finished_title">Time&apos;s up!</string>
     <string name="reader_sleep_timer_finished_message">Your reading time is over.</string>
     <string name="reader_sleep_timer_tap_to_dismiss">Tap anywhere to continue reading</string>
+
+    <!-- Reader / Settings Sheet -->
+    <string name="reader_settings_sheet_title">Reading settings</string>
+    <string name="reader_settings_close">Close</string>
+    <string name="reader_settings_font_size_section">Font size</string>
+    <string name="reader_settings_theme_section">Background theme</string>
+    <string name="reader_settings_line_height_section">Line spacing</string>
+    <string name="reader_font_size_small">Small</string>
+    <string name="reader_font_size_medium">Medium</string>
+    <string name="reader_font_size_large">Large</string>
+    <string name="reader_font_size_xlarge">Extra large</string>
+    <string name="reader_theme_dark">Dark</string>
+    <string name="reader_theme_sepia">Sepia</string>
+    <string name="reader_theme_light">Light</string>
+    <string name="reader_line_height_tight">Tight</string>
+    <string name="reader_line_height_normal">Normal</string>
+    <string name="reader_line_height_comfortable">Comfortable</string>
+    <string name="reader_line_height_wide">Wide</string>
 </resources>

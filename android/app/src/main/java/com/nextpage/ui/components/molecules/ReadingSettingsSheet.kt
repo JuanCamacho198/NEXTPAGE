@@ -32,9 +32,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nextpage.R
 import com.nextpage.domain.model.FontSizePreset
 import com.nextpage.domain.model.LineHeightPreset
 import com.nextpage.domain.model.ReaderSettings
@@ -72,14 +74,14 @@ fun ReadingSettingsSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Ajustes de lectura",
+                    text = stringResource(R.string.reader_settings_sheet_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Cerrar"
+                        contentDescription = stringResource(R.string.reader_settings_close)
                     )
                 }
             }
@@ -89,7 +91,7 @@ fun ReadingSettingsSheet(
             Spacer(modifier = Modifier.height(20.dp))
 
             // ── Font Size ──────────────────────────────────────────
-            SectionLabel("Tamaño de fuente")
+            SectionLabel(stringResource(R.string.reader_settings_font_size_section))
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
@@ -99,7 +101,7 @@ fun ReadingSettingsSheet(
                 FontSizePreset.entries.forEach { preset ->
                     val isSelected = settings.fontSize == preset
                     FontSizeChip(
-                        label = preset.label,
+                        label = stringResource(preset.labelRes),
                         isSelected = isSelected,
                         previewSize = when (preset) {
                             FontSizePreset.SMALL -> 12
@@ -118,7 +120,7 @@ fun ReadingSettingsSheet(
             Spacer(modifier = Modifier.height(24.dp))
 
             // ── Theme ──────────────────────────────────────────────
-            SectionLabel("Tema de fondo")
+            SectionLabel(stringResource(R.string.reader_settings_theme_section))
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
@@ -128,7 +130,7 @@ fun ReadingSettingsSheet(
                 ReaderTheme.entries.forEach { theme ->
                     val isSelected = settings.theme == theme
                     ThemeCard(
-                        label = theme.label,
+                        label = stringResource(theme.labelRes),
                         bgColor = theme.bgHex,
                         textColor = theme.textHex,
                         isSelected = isSelected,
@@ -143,7 +145,7 @@ fun ReadingSettingsSheet(
             Spacer(modifier = Modifier.height(24.dp))
 
             // ── Line Height ─────────────────────────────────────────
-            SectionLabel("Interlineado")
+            SectionLabel(stringResource(R.string.reader_settings_line_height_section))
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
@@ -153,7 +155,7 @@ fun ReadingSettingsSheet(
                 LineHeightPreset.entries.forEach { preset ->
                     val isSelected = settings.lineHeight == preset
                     LineHeightChip(
-                        label = preset.label,
+                        label = stringResource(preset.labelRes),
                         isSelected = isSelected,
                         onClick = {
                             onSettingsChanged(settings.copy(lineHeight = preset))

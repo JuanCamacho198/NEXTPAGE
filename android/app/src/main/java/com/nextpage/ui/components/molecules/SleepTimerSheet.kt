@@ -167,14 +167,14 @@ private fun TimerPresetChip(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = label.split(" ").firstOrNull() ?: label,
+            text = label,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = if (label.contains("min")) "min" else "",
+            text = "min",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

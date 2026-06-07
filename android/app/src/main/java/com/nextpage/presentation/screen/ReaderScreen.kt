@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -59,6 +60,9 @@ import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.ui.components.molecules.EpubWebView
 import com.nextpage.ui.components.molecules.ReadingSettingsSheet
+import com.nextpage.ui.components.molecules.SleepTimerOverlay
+import com.nextpage.ui.components.molecules.SleepTimerPreset
+import com.nextpage.ui.components.molecules.SleepTimerSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,6 +80,7 @@ fun ReaderScreen(
     var goToPageInput by remember { mutableStateOf("") }
     var goToPageError by remember { mutableStateOf<String?>(null) }
     var showSettingsSheet by remember { mutableStateOf(false) }
+    var showSleepTimerSheet by remember { mutableStateOf(false) }
 
     DisposableEffect(selectedBookId) {
         viewModel.onReaderOpened()
@@ -128,6 +133,20 @@ fun ReaderScreen(
                     }
                 },
                 actions = {
+                    // Sleep Timer indicator (countdown when active)
+                    if (uiState.sleepTimerActive) {
+                        val remaining = viewModel.formatSleepTimerRemaining(uiState.sleepTimerRemainingSecs)
+                        Text(
+                            text = "\u23F0 $remaining",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .padding(end = 4.dp)
+                                .clickable { showSleepTimerSheet = true }
+                        )
+                    }
+
                     // Settings — only for EPUB (PDF has fixed layout)
                     if (uiState.chapters.isNotEmpty()) {
                         IconButton(onClick = { showSettingsSheet = true }) {
@@ -149,6 +168,13 @@ fun ReaderScreen(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = stringResource(R.string.reader_add_bookmark)
+                        )
+                    }
+                    // Sleep Timer
+                    IconButton(onClick = { showSleepTimerSheet = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Timer,
+                            contentDescription = stringResource(R.string.reader_sleep_timer)
                         )
                     }
                 }
@@ -261,6 +287,36 @@ fun ReaderScreen(
                 settings = uiState.readerSettings,
                 onSettingsChanged = { viewModel.updateReaderSettings(it) },
                 onDismiss = { showSettingsSheet = false }
+            )
+        }
+
+        // ── Sleep Timer Sheet ──────────────────────────────────────────
+        if (showSleepTimerSheet) {
+            SleepTimerSheet(
+                isActive = uiState.sleepTimerActive,
+                remainingFormatted = viewModel.formatSleepTimerRemaining(uiState.sleepTimerRemainingSecs),
+                presets = listOf(
+                    SleepTimerPreset("5", 5),
+                    SleepTimerPreset("10", 10),
+                    SleepTimerPreset("15", 15),
+                    SleepTimerPreset("30", 30)
+                ),
+                onPresetSelected = { minutes ->
+                    viewModel.startSleepTimer(minutes)
+                    showSleepTimerSheet = false
+                },
+                onCancel = {
+                    viewModel.cancelSleepTimer()
+                    showSleepTimerSheet = false
+                },
+                onDismiss = { showSleepTimerSheet = false }
+            )
+        }
+
+        // ── Sleep Timer Overlay ────────────────────────────────────────
+        if (uiState.sleepTimerFinished) {
+            SleepTimerOverlay(
+                onDismiss = { viewModel.dismissSleepTimerOverlay() }
             )
         }
 

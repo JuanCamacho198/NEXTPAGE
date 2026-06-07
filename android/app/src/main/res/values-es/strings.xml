@@ -78,4 +78,16 @@
     <string name="library_add_book">Añadir libro</string>
     <string name="library_status_in_progress">%1$d min</string>
     <string name="library_status_completed">Completado</string>
+
+    <!-- Reader / Sleep Timer -->
+    <string name="reader_sleep_timer">Temporizador</string>
+    <string name="reader_sleep_timer_start">Iniciar temporizador</string>
+    <string name="reader_sleep_timer_5min">5 min</string>
+    <string name="reader_sleep_timer_10min">10 min</string>
+    <string name="reader_sleep_timer_15min">15 min</string>
+    <string name="reader_sleep_timer_30min">30 min</string>
+    <string name="reader_sleep_timer_cancel">Cancelar</string>
+    <string name="reader_sleep_timer_finished_title">¡Se acabó el tiempo!</string>
+    <string name="reader_sleep_timer_finished_message">Tu tiempo de lectura terminó.</string>
+    <string name="reader_sleep_timer_tap_to_dismiss">Toca cualquier lugar para seguir leyendo</string>
 </resources>

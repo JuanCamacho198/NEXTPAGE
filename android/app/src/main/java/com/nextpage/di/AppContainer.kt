@@ -21,6 +21,7 @@ import com.nextpage.data.remote.supabase.SupabaseInitDiagnostic
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.SupabaseStorageSyncRemoteDataSource
 import com.nextpage.data.remote.sync.SupabaseSyncService
+import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.data.session.SessionManager
 import com.nextpage.data.session.SupabaseSessionManager
 import com.nextpage.data.session.PreferencesSessionStore
@@ -102,6 +103,8 @@ class AppContainer(context: Context) {
     init {
         Log.d(TAG, "ContentLoaders initialized in ${contentLoaderInitTime}ms")
     }
+
+    val readerPreferences: ReaderPreferences = ReaderPreferences(context.applicationContext)
 
     private val supabaseConfigProvider = SupabaseConfigProvider()
     private val supabaseConfig = supabaseConfigProvider.get()

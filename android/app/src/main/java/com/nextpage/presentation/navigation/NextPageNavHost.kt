@@ -61,6 +61,7 @@ fun NextPageNavHost(appContainer: AppContainer) {
         factory = ReaderViewModelFactory(
             readerRepository = appContainer.readerRepository,
             readingStatsRepository = appContainer.readingStatsRepository,
+            readerPreferences = appContainer.readerPreferences,
             epubContentLoader = appContainer.epubContentLoader,
             pdfContentLoader = appContainer.pdfContentLoader,
             defaultBookId = selectedBookId

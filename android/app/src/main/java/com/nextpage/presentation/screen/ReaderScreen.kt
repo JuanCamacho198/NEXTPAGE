@@ -11,19 +11,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,9 +54,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.data.epub.EpubContentLoader
+import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.ui.components.molecules.EpubWebView
+import com.nextpage.ui.components.molecules.ReadingSettingsSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +75,7 @@ fun ReaderScreen(
     var showGoToPageDialog by remember { mutableStateOf(false) }
     var goToPageInput by remember { mutableStateOf("") }
     var goToPageError by remember { mutableStateOf<String?>(null) }
+    var showSettingsSheet by remember { mutableStateOf(false) }
 
     DisposableEffect(selectedBookId) {
         viewModel.onReaderOpened()
@@ -127,6 +128,15 @@ fun ReaderScreen(
                     }
                 },
                 actions = {
+                    // Settings — only for EPUB (PDF has fixed layout)
+                    if (uiState.chapters.isNotEmpty()) {
+                        IconButton(onClick = { showSettingsSheet = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Ajustes de lectura"
+                            )
+                        }
+                    }
                     if (uiState.totalPdfPages > 0) {
                         IconButton(onClick = { showGoToPageDialog = true }) {
                             Icon(
@@ -209,11 +219,13 @@ fun ReaderScreen(
                 }
 
                 uiState.chapters.isNotEmpty() -> {
+                    val settings = uiState.readerSettings
                     EpubReaderContent(
                         htmlContent = uiState.chapterHtmlContent,
                         currentChapterIndex = uiState.currentChapterIndex,
                         totalChapters = uiState.chapters.size,
                         chapters = uiState.chapters,
+                        settings = settings,
                         onTapZone = { isLeft -> viewModel.onTapZone(isLeft) },
                         onChapterSelect = { index -> viewModel.goToChapter(index) },
                         onAddHighlight = { text, note ->
@@ -241,6 +253,15 @@ fun ReaderScreen(
                     }
                 }
             }
+        }
+
+        // ── Reading Settings Sheet ─────────────────────────────────────
+        if (showSettingsSheet && uiState.chapters.isNotEmpty()) {
+            ReadingSettingsSheet(
+                settings = uiState.readerSettings,
+                onSettingsChanged = { viewModel.updateReaderSettings(it) },
+                onDismiss = { showSettingsSheet = false }
+            )
         }
 
         if (showGoToPageDialog && uiState.totalPdfPages > 0) {
@@ -318,12 +339,14 @@ private fun EpubReaderContent(
     currentChapterIndex: Int,
     totalChapters: Int,
     chapters: List<EpubContentLoader.Chapter>,
+    settings: ReaderSettings = ReaderSettings(),
     onTapZone: (Boolean) -> Unit,
     onChapterSelect: (Int) -> Unit,
     onAddHighlight: (String, String?) -> Unit
 ) {
     var showHighlightDialog by remember { mutableStateOf(false) }
     var selectedText by remember { mutableStateOf("") }
+    val chapterLoadingText = stringResource(R.string.reader_chapter_loading)
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -336,6 +359,10 @@ private fun EpubReaderContent(
                 if (htmlContent != null) {
                     EpubWebView(
                         htmlContent = htmlContent,
+                        bgColor = settings.theme.bgHex,
+                        textColor = settings.theme.textHex,
+                        fontSizePx = settings.fontSize.sizePx,
+                        lineHeight = settings.lineHeight.value,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
@@ -386,7 +413,7 @@ private fun EpubReaderContent(
             androidx.compose.material3.FloatingActionButton(
                 onClick = {
                     selectedText = htmlContent?.let { stripHtmlSimple(it).take(200) }
-                        ?: stringResource(R.string.reader_chapter_loading)
+                        ?: chapterLoadingText
                     showHighlightDialog = true
                 }
             ) {

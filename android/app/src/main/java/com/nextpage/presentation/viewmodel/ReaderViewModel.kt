@@ -7,9 +7,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nextpage.data.epub.EpubContentLoader
 import com.nextpage.data.pdf.PdfContentLoader
+import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReadingProgress
+import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
@@ -39,6 +41,7 @@ data class ReaderUiState(
     val readingProgress: ReadingProgress? = null,
     val highlights: List<Highlight> = emptyList(),
     val bookmarks: List<Bookmark> = emptyList(),
+    val readerSettings: ReaderSettings = ReaderSettings(),
     val isLoading: Boolean = true,
     val loadTimeMs: Long? = null,
     val error: String? = null
@@ -48,6 +51,7 @@ class ReaderViewModel(
     private val readerRepository: ReaderRepository,
     private val readingStatsRepository: ReadingStatsRepository,
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
+    private val readerPreferences: ReaderPreferences? = null,
     private val epubContentLoader: EpubContentLoader? = null,
     private val pdfContentLoader: PdfContentLoader? = null,
     defaultBookId: String?,
@@ -69,6 +73,10 @@ class ReaderViewModel(
     private var sessionStartTime: Long = 0L
 
     init {
+        // Load persisted reading settings
+        val savedSettings = readerPreferences?.load() ?: ReaderSettings()
+        mutableUiState.update { it.copy(readerSettings = savedSettings) }
+
         if (!defaultBookId.isNullOrBlank()) {
             restoreProgressForBook(defaultBookId)
         } else {
@@ -480,6 +488,13 @@ class ReaderViewModel(
         }
     }
 
+    // ── Reader Settings ──────────────────────────────────────────────
+
+    fun updateReaderSettings(settings: ReaderSettings) {
+        readerPreferences?.save(settings)
+        mutableUiState.update { it.copy(readerSettings = settings) }
+    }
+
     fun onReaderOpened() {
         if (sessionStartTime > 0L) {
             return
@@ -539,6 +554,7 @@ class ReaderViewModel(
 class ReaderViewModelFactory(
     private val readerRepository: ReaderRepository,
     private val readingStatsRepository: ReadingStatsRepository,
+    private val readerPreferences: ReaderPreferences,
     private val epubContentLoader: EpubContentLoader,
     private val pdfContentLoader: PdfContentLoader,
     private val defaultBookId: String?
@@ -550,6 +566,7 @@ class ReaderViewModelFactory(
                 readerRepository = readerRepository,
                 readingStatsRepository = readingStatsRepository,
                 updateReadingProgressUseCase = UpdateReadingProgressUseCase(readerRepository),
+                readerPreferences = readerPreferences,
                 epubContentLoader = epubContentLoader,
                 pdfContentLoader = pdfContentLoader,
                 defaultBookId = defaultBookId

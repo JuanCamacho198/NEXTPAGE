@@ -6,10 +6,8 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 
 /**
@@ -167,15 +165,14 @@ fun EpubWebView(
     onTextSelected: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val css = remember(bgColor, textColor, fontSizePx, lineHeight) {
-        readerCss(bgColor, textColor, fontSizePx, lineHeight)
-    }
-    val fullHtml = remember(htmlContent, css) {
-        wrapHtmlContent(htmlContent, css)
-    }
     val jsBridge = remember(onTextSelected) {
         ReaderJsBridge(onTextSelected = onTextSelected)
+    }
+
+    // Precompute the full HTML + CSS so update only needs to load it
+    val renderedHtml = remember(htmlContent, bgColor, textColor, fontSizePx, lineHeight) {
+        val css = readerCss(bgColor, textColor, fontSizePx, lineHeight)
+        wrapHtmlContent(htmlContent, css)
     }
 
     AndroidView(
@@ -192,32 +189,18 @@ fun EpubWebView(
                 settings.displayZoomControls = false
 
                 webViewClient = object : WebViewClient() {
-                    // Prevent external links from opening in browser
                     override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
-                        return false // Let WebView handle it (we don't have links)
+                        return false
                     }
                 }
 
                 webChromeClient = WebChromeClient()
 
                 addJavascriptInterface(jsBridge, "NextPageBridge")
-
-                loadDataWithBaseURL(null, fullHtml, "text/html", "UTF-8", null)
             }
         },
         update = { webView ->
-            // Only update if HTML content changed
-            val currentHtml = wrapHtmlContent(htmlContent, css)
-            if (currentHtml != fullHtml) {
-                webView.loadDataWithBaseURL(null, currentHtml, "text/html", "UTF-8", null)
-            }
+            webView.loadDataWithBaseURL(null, renderedHtml, "text/html", "UTF-8", null)
         }
     )
-
-    // Clean up WebView resources when composable leaves composition
-    DisposableEffect(Unit) {
-        onDispose {
-            // WebView cleanup is handled by AndroidView lifecycle
-        }
-    }
 }

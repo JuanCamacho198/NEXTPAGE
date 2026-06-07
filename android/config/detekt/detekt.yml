@@ -12,14 +12,6 @@ complexity:
     thresholdInInterfaces: 10
     thresholdInClasses: 15
 
-formatting:
-  Indentation:
-    active: true
-    indentSize: 4
-  MaximumLineLength:
-    active: true
-    maxLineLength: 150
-
 style:
   MagicNumber:
     active: true

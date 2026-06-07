@@ -1,6 +1,5 @@
 package com.nextpage.presentation.screen
 
-import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.domain.model.FontSizePreset
 import com.nextpage.domain.model.LineHeightPreset
 import com.nextpage.domain.model.ReaderSettings
@@ -10,9 +9,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Unit tests for Settings-related models and persistence.
+ * Unit tests for Settings-related models.
  * SettingsScreen itself is a pure Composable with no ViewModel,
- * so we test the data layer (ReaderPreferences) and UI models.
+ * so we test the data models used by the settings UI.
  */
 class SettingsTests {
 
@@ -64,20 +63,5 @@ class SettingsTests {
         assertEquals(FontSizePreset.LARGE, settings.fontSize)
         assertEquals(ReaderTheme.SEPIA, settings.theme)
         assertEquals(LineHeightPreset.COMFORTABLE, settings.lineHeight)
-    }
-
-    // ── PreferenceItem model (used in SettingsScreen) ───────────────
-
-    @Test
-    fun `preferenceItems list has correct items`() {
-        // Verify the preference items defined in SettingsScreen
-        val expectedLabels = listOf(
-            com.nextpage.R.string.settings_pref_theme,
-            com.nextpage.R.string.settings_pref_font_size,
-            com.nextpage.R.string.settings_pref_sync,
-            com.nextpage.R.string.settings_pref_about,
-            com.nextpage.R.string.settings_pref_notifications
-        )
-        assertEquals(5, expectedLabels.size)
     }
 }

@@ -3,11 +3,11 @@ package com.nextpage.domain.model
 /**
  * Presets for the reader's font size.
  */
-enum class FontSizePreset(val label: String, val sizePx: Int) {
-    SMALL("Chico", 16),
-    MEDIUM("Mediano", 20),
-    LARGE("Grande", 24),
-    XLARGE("Muy grande", 28);
+enum class FontSizePreset(val sizePx: Int) {
+    SMALL(16),
+    MEDIUM(20),
+    LARGE(24),
+    XLARGE(28);
 
     companion object {
         fun fromPx(px: Int): FontSizePreset =
@@ -21,10 +21,10 @@ enum class FontSizePreset(val label: String, val sizePx: Int) {
 /**
  * Reading background / text color theme.
  */
-enum class ReaderTheme(val label: String, val bgHex: String, val textHex: String) {
-    DARK("Oscuro", "#0B1120", "#E2E8F0"),
-    SEPIA("Sepia", "#FBF1C7", "#3E2723"),
-    LIGHT("Claro", "#FFFFFF", "#1A1A2E");
+enum class ReaderTheme(val bgHex: String, val textHex: String) {
+    DARK("#0B1120", "#E2E8F0"),
+    SEPIA("#FBF1C7", "#3E2723"),
+    LIGHT("#FFFFFF", "#1A1A2E");
 
     companion object {
         fun fromOrdinal(ordinal: Int): ReaderTheme =
@@ -35,11 +35,11 @@ enum class ReaderTheme(val label: String, val bgHex: String, val textHex: String
 /**
  * Line spacing preset for the EPUB WebView.
  */
-enum class LineHeightPreset(val label: String, val value: Float) {
-    TIGHT("Apretado", 1.3f),
-    NORMAL("Normal", 1.6f),
-    COMFORTABLE("Cómodo", 1.8f),
-    WIDE("Amplio", 2.0f);
+enum class LineHeightPreset(val value: Float) {
+    TIGHT(1.3f),
+    NORMAL(1.6f),
+    COMFORTABLE(1.8f),
+    WIDE(2.0f);
 
     companion object {
         fun fromOrdinal(ordinal: Int): LineHeightPreset =

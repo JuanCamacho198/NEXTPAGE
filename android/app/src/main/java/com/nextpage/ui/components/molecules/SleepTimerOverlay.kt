@@ -16,10 +16,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nextpage.R
 
 /**
  * Full-screen semi-transparent overlay shown when the sleep timer finishes.
@@ -59,7 +61,7 @@ fun SleepTimerOverlay(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
-                    text = "Se acab\u00F3 el tiempo de lectura",
+                    text = stringResource(R.string.reader_sleep_timer_finished_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -69,7 +71,7 @@ fun SleepTimerOverlay(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Toc\u00E1 cualquier lugar para continuar",
+                    text = stringResource(R.string.reader_sleep_timer_tap_to_dismiss),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

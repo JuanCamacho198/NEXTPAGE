@@ -28,9 +28,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nextpage.R
 
 /**
  * Preset options for the sleep timer.
@@ -77,14 +79,14 @@ fun SleepTimerSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Temporizador de lectura",
+                    text = stringResource(R.string.reader_sleep_timer_sheet_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Cerrar"
+                        contentDescription = stringResource(R.string.reader_settings_close)
                     )
                 }
             }
@@ -96,7 +98,7 @@ fun SleepTimerSheet(
             if (isActive) {
                 // Active timer indicator
                 Text(
-                    text = "Tiempo restante: $remainingFormatted",
+                    text = "${stringResource(R.string.reader_sleep_timer_remaining_label)} $remainingFormatted",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -111,7 +113,7 @@ fun SleepTimerSheet(
 
             // Preset buttons
             Text(
-                text = if (isActive) "Cambiar duración" else "Elegí una duración",
+                text = if (isActive) stringResource(R.string.reader_sleep_timer_change_duration) else stringResource(R.string.reader_sleep_timer_choose_duration),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.SemiBold
@@ -134,7 +136,7 @@ fun SleepTimerSheet(
             if (isActive) {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Cancelar temporizador",
+                    text = stringResource(R.string.reader_sleep_timer_cancel),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.SemiBold,

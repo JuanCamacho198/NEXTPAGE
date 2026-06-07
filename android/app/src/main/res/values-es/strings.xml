@@ -86,7 +86,11 @@
     <string name="reader_sleep_timer_10min">10 min</string>
     <string name="reader_sleep_timer_15min">15 min</string>
     <string name="reader_sleep_timer_30min">30 min</string>
-    <string name="reader_sleep_timer_cancel">Cancelar</string>
+    <string name="reader_sleep_timer_cancel">Cancelar temporizador</string>
+    <string name="reader_sleep_timer_sheet_title">Temporizador de lectura</string>
+    <string name="reader_sleep_timer_remaining_label">Tiempo restante:</string>
+    <string name="reader_sleep_timer_change_duration">Cambiar duración</string>
+    <string name="reader_sleep_timer_choose_duration">Elegí una duración</string>
     <string name="reader_sleep_timer_finished_title">¡Se acabó el tiempo!</string>
     <string name="reader_sleep_timer_finished_message">Tu tiempo de lectura terminó.</string>
     <string name="reader_sleep_timer_tap_to_dismiss">Toca cualquier lugar para seguir leyendo</string>

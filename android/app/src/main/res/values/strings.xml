@@ -22,7 +22,7 @@
     <string name="auth_sign_up">Sign Up</string>
     <string name="auth_continue_local_dev">Continue in local (Dev)</string>
     <string name="home_welcome">Welcome back</string>
-    <string name="home_today_summary">Today's summary</string>
+    <string name="home_today_summary">Todays summary</string>
     <string name="home_minutes_read_today">%1$d minutes read today</string>
     <string name="home_continue_reading">Continue reading</string>
     <string name="home_no_book_in_progress">No book in progress</string>
@@ -151,7 +151,11 @@
     <string name="reader_sleep_timer_15min">15 min</string>
     <string name="reader_sleep_timer_30min">30 min</string>
     <string name="reader_sleep_timer_cancel">Cancel</string>
-    <string name="reader_sleep_timer_finished_title">Time&apos;s up!</string>
+    <string name="reader_sleep_timer_sheet_title">Reading timer</string>
+    <string name="reader_sleep_timer_remaining_label">Time remaining:</string>
+    <string name="reader_sleep_timer_change_duration">Change duration</string>
+    <string name="reader_sleep_timer_choose_duration">Choose a duration</string>
+    <string name="reader_sleep_timer_finished_title">Time is up!</string>
     <string name="reader_sleep_timer_finished_message">Your reading time is over.</string>
     <string name="reader_sleep_timer_tap_to_dismiss">Tap anywhere to continue reading</string>
 

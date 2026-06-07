@@ -15,7 +15,7 @@ complexity:
 style:
   MagicNumber:
     active: true
-    ignoreNumbers: [-1, 0, 1, 2, 100, 1000]
+    ignoreNumbers: ['-1', '0', '1', '2', '100', '1000']
     ignoreHashCodeFunction: true
   WildcardImport:
     active: true

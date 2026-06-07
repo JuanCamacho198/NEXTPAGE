@@ -36,7 +36,7 @@ class ReaderViewModelSleepTimerTest {
             defaultBookId = null,
             mainDispatcher = dispatcher
         )
-        val chapter = EpubContentLoader.Chapter("chap-1", "Chapter 1", "chapter1.xhtml")
+        val chapter = EpubContentLoader.Chapter(0, "chap-1", "Chapter 1", "chapter1.xhtml")
         setEpubState(viewModel, chapters = listOf(chapter, chapter, chapter))
 
         viewModel.startSleepTimer(Int.MIN_VALUE)
@@ -57,11 +57,10 @@ class ReaderViewModelSleepTimerTest {
             defaultBookId = null,
             mainDispatcher = dispatcher
         )
-        val chapter = EpubContentLoader.Chapter("chap-1", "Chapter 1", "chapter1.xhtml")
         val chapters = listOf(
-            EpubContentLoader.Chapter("chap-0", "Intro", "intro.xhtml"),
-            EpubContentLoader.Chapter("chap-1", "Chapter 1", "chapter1.xhtml"),
-            EpubContentLoader.Chapter("chap-2", "Chapter 2", "chapter2.xhtml")
+            EpubContentLoader.Chapter(0, "chap-0", "Intro", "intro.xhtml"),
+            EpubContentLoader.Chapter(1, "chap-1", "Chapter 1", "chapter1.xhtml"),
+            EpubContentLoader.Chapter(2, "chap-2", "Chapter 2", "chapter2.xhtml")
         )
         setEpubState(viewModel, chapters = chapters, currentChapterIndex = 0)
 
@@ -90,9 +89,9 @@ class ReaderViewModelSleepTimerTest {
             mainDispatcher = dispatcher
         )
         val chapters = listOf(
-            EpubContentLoader.Chapter("chap-0", "Intro", "intro.xhtml"),
-            EpubContentLoader.Chapter("chap-1", "Chapter 1", "chapter1.xhtml"),
-            EpubContentLoader.Chapter("chap-2", "Chapter 2", "chapter2.xhtml")
+            EpubContentLoader.Chapter(0, "chap-0", "Intro", "intro.xhtml"),
+            EpubContentLoader.Chapter(1, "chap-1", "Chapter 1", "chapter1.xhtml"),
+            EpubContentLoader.Chapter(2, "chap-2", "Chapter 2", "chapter2.xhtml")
         )
         setEpubState(viewModel, chapters = chapters, currentChapterIndex = 1)
 
@@ -118,9 +117,9 @@ class ReaderViewModelSleepTimerTest {
             mainDispatcher = dispatcher
         )
         val chapters = listOf(
-            EpubContentLoader.Chapter("chap-0", "Intro", "intro.xhtml"),
-            EpubContentLoader.Chapter("chap-1", "Chapter 1", "chapter1.xhtml"),
-            EpubContentLoader.Chapter("chap-2", "Chapter 2", "chapter2.xhtml")
+            EpubContentLoader.Chapter(0, "chap-0", "Intro", "intro.xhtml"),
+            EpubContentLoader.Chapter(1, "chap-1", "Chapter 1", "chapter1.xhtml"),
+            EpubContentLoader.Chapter(2, "chap-2", "Chapter 2", "chapter2.xhtml")
         )
         setEpubState(viewModel, chapters = chapters, currentChapterIndex = 0)
 
@@ -146,8 +145,8 @@ class ReaderViewModelSleepTimerTest {
             mainDispatcher = dispatcher
         )
         val chapters = listOf(
-            EpubContentLoader.Chapter("chap-0", "Intro", "intro.xhtml"),
-            EpubContentLoader.Chapter("chap-1", "Chapter 1", "chapter1.xhtml")
+            EpubContentLoader.Chapter(0, "chap-0", "Intro", "intro.xhtml"),
+            EpubContentLoader.Chapter(1, "chap-1", "Chapter 1", "chapter1.xhtml")
         )
         setEpubState(viewModel, chapters = chapters, currentChapterIndex = 0)
 
@@ -173,8 +172,8 @@ class ReaderViewModelSleepTimerTest {
             mainDispatcher = dispatcher
         )
         val chapters = listOf(
-            EpubContentLoader.Chapter("chap-0", "Intro", "intro.xhtml"),
-            EpubContentLoader.Chapter("chap-1", "Chapter 1", "chapter1.xhtml")
+            EpubContentLoader.Chapter(0, "chap-0", "Intro", "intro.xhtml"),
+            EpubContentLoader.Chapter(1, "chap-1", "Chapter 1", "chapter1.xhtml")
         )
         setEpubState(viewModel, chapters = chapters, currentChapterIndex = 1)
 
@@ -196,7 +195,7 @@ class ReaderViewModelSleepTimerTest {
             defaultBookId = null,
             mainDispatcher = dispatcher
         )
-        val chapter = EpubContentLoader.Chapter("chap-1", "Chapter 1", "chapter1.xhtml")
+        val chapter = EpubContentLoader.Chapter(0, "chap-1", "Chapter 1", "chapter1.xhtml")
         setEpubState(viewModel, chapters = listOf(chapter, chapter))
 
         viewModel.startSleepTimer(Int.MIN_VALUE)
@@ -222,8 +221,8 @@ class ReaderViewModelSleepTimerTest {
             mainDispatcher = dispatcher
         )
         val chapters = listOf(
-            EpubContentLoader.Chapter("chap-0", "Intro", "intro.xhtml"),
-            EpubContentLoader.Chapter("chap-1", "Chapter 1", "chapter1.xhtml")
+            EpubContentLoader.Chapter(0, "chap-0", "Intro", "intro.xhtml"),
+            EpubContentLoader.Chapter(1, "chap-1", "Chapter 1", "chapter1.xhtml")
         )
         setEpubState(viewModel, chapters = chapters, currentChapterIndex = 0)
 
@@ -264,7 +263,7 @@ class ReaderViewModelSleepTimerTest {
             defaultBookId = null,
             mainDispatcher = dispatcher
         )
-        val chapter = EpubContentLoader.Chapter("chap-1", "Chapter 1", "chapter1.xhtml")
+        val chapter = EpubContentLoader.Chapter(0, "chap-1", "Chapter 1", "chapter1.xhtml")
         setEpubState(viewModel, chapters = listOf(chapter, chapter))
 
         viewModel.startSleepTimer(5)

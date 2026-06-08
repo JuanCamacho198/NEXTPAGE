@@ -10,7 +10,16 @@ object AppDatabaseMigrations {
         }
     }
 
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE books ADD COLUMN total_pages INTEGER DEFAULT NULL")
+            db.execSQL("ALTER TABLE books ADD COLUMN user_rating INTEGER DEFAULT NULL")
+            db.execSQL("ALTER TABLE reading_progress ADD COLUMN current_page INTEGER DEFAULT NULL")
+        }
+    }
+
     val ALL = arrayOf(
-        MIGRATION_4_5
+        MIGRATION_4_5,
+        MIGRATION_5_6
     )
 }

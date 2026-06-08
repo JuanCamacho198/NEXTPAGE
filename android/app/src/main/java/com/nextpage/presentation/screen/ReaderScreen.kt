@@ -62,6 +62,7 @@ import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.ui.components.molecules.EpubWebView
 import com.nextpage.ui.components.molecules.ReadingSettingsSheet
 import com.nextpage.ui.components.molecules.SleepTimerOverlay
+import com.nextpage.ui.components.molecules.ReadingProgressBar
 import com.nextpage.ui.components.molecules.SleepTimerPreset
 import com.nextpage.ui.components.molecules.SleepTimerSheet
 
@@ -245,6 +246,8 @@ fun ReaderScreen(
                         bitmap = uiState.pdfPageBitmap,
                         currentPage = uiState.currentPdfPage,
                         totalPages = uiState.totalPdfPages,
+                        progressPercent = uiState.progressPercent,
+                        progressLabel = uiState.progressLabel,
                         onTapZone = { isLeft -> viewModel.onTapZone(isLeft) },
                         onAddHighlight = { text, note ->
                             viewModel.createHighlight(
@@ -265,6 +268,8 @@ fun ReaderScreen(
                         totalChapters = uiState.chapters.size,
                         chapters = uiState.chapters,
                         settings = settings,
+                        progressPercent = uiState.progressPercent,
+                        progressLabel = uiState.progressLabel,
                         onTapZone = { isLeft -> viewModel.onTapZone(isLeft) },
                         onChapterSelect = { index -> viewModel.goToChapter(index) },
                         onAddHighlight = { text, note ->
@@ -414,6 +419,8 @@ private fun EpubReaderContent(
     totalChapters: Int,
     chapters: List<EpubContentLoader.Chapter>,
     settings: ReaderSettings = ReaderSettings(),
+    progressPercent: Float = 0f,
+    progressLabel: String = "",
     onTapZone: (Boolean) -> Unit,
     onChapterSelect: (Int) -> Unit,
     onAddHighlight: (String, String?) -> Unit
@@ -467,6 +474,14 @@ private fun EpubReaderContent(
                         .clickable { onTapZone(false) }
                 )
             }
+
+            // ── Reading Progress Bar ───────────────────────────────
+            ReadingProgressBar(
+                progressPercent = progressPercent,
+                label = progressLabel
+            )
+
+            Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
 
             // ── Chapter Navigation Bar ────────────────────────────
             ChapterNavigationBar(
@@ -632,39 +647,53 @@ private fun HighlightDialog(
     )
 }
 
-@Suppress("UNUSED_PARAMETER")
 @Composable
 private fun PdfReaderContent(
     bitmap: Bitmap?,
     currentPage: Int,
     totalPages: Int,
+    progressPercent: Float = 0f,
+    progressLabel: String = "",
     onTapZone: (Boolean) -> Unit,
     onAddHighlight: (String, String?) -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    val isLeftZone = offset.x < size.width / 2
-                    onTapZone(isLeftZone)
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .pointerInput(Unit) {
+                    detectTapGestures { offset ->
+                        val isLeftZone = offset.x < size.width / 2
+                        onTapZone(isLeftZone)
+                    }
+                }
+        ) {
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = stringResource(R.string.pdf_page_description, currentPage + 1),
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
             }
-    ) {
-        if (bitmap != null) {
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = stringResource(R.string.pdf_page_description, currentPage + 1),
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit
-            )
-        } else {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
         }
+
+        // ── Reading Progress Bar ───────────────────────────────────
+        ReadingProgressBar(
+            progressPercent = progressPercent,
+            label = progressLabel,
+            modifier = Modifier.padding(
+                horizontal = NextPageDimens.spacingMd,
+                vertical = NextPageDimens.spacingSm
+            )
+        )
     }
 }

@@ -346,7 +346,7 @@ class SupabaseSyncServiceTest {
         }
 
         override suspend fun updateRating(bookId: String, rating: Int?) {
-            books[bookId] = books[bookId]?.copy(userRating = rating)
+            books[bookId]?.let { books[bookId] = it.copy(userRating = rating) }
         }
     }
 

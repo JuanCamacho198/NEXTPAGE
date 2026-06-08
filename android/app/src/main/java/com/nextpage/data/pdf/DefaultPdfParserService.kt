@@ -1,10 +1,13 @@
 package com.nextpage.data.pdf
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Bitmap.CompressFormat
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.File
 
 class DefaultPdfParserService(private val context: Context) : PdfParserService {
@@ -18,12 +21,28 @@ class DefaultPdfParserService(private val context: Context) : PdfParserService {
                 val author: String? = null
                 val pageCount = renderer.pageCount
                 val fileSizeBytes = file.length()
+
+                val coverBytes: ByteArray? = if (pageCount > 0) {
+                    try {
+                        renderer.openPage(0).use { page ->
+                            val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_FOR_DISPLAY)
+                            ByteArrayOutputStream().use { stream ->
+                                bitmap.compress(CompressFormat.JPEG, 80, stream)
+                                stream.toByteArray()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
+                } else null
                 
                 PdfMetadata(
                     title = title,
                     author = author,
                     pageCount = pageCount,
-                    fileSizeBytes = fileSizeBytes
+                    fileSizeBytes = fileSizeBytes,
+                    coverBytes = coverBytes
                 )
             } finally {
                 renderer.close()

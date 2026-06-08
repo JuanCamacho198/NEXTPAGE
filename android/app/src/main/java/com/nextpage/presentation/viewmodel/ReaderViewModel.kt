@@ -49,6 +49,10 @@ data class ReaderUiState(
     val sleepTimerPresetMinutes: Int? = null,
     val sleepTimerEndOfChapterMode: Boolean = false,
 
+    // ── Reading Progress ────────────────────────────────────────────
+    val progressPercent: Float = 0f,
+    val progressLabel: String = "",
+
     val isLoading: Boolean = true,
     val loadTimeMs: Long? = null,
     val error: String? = null
@@ -139,6 +143,7 @@ class ReaderViewModel(
                         loadTimeMs = loadTime
                     )
                 }
+                updateProgressDisplay()
 
                 if (book.chapters.isNotEmpty()) {
                     loadChapterContent(0)
@@ -196,6 +201,7 @@ class ReaderViewModel(
                         loadTimeMs = loadTime
                     )
                 }
+                updateProgressDisplay()
 
                 renderPdfPage(0)
                 updatePdfProgress(0, pageCount)
@@ -246,6 +252,7 @@ class ReaderViewModel(
                         error = null
                     )
                 }
+                updateProgressDisplay()
             } catch (e: Throwable) {
                 val selectedBookId = mutableUiState.value.selectedBookId
                 Log.e(
@@ -284,6 +291,7 @@ class ReaderViewModel(
                         chapterHtmlContent = htmlContent
                     )
                 }
+                updateProgressDisplay()
             }.onFailure { error ->
                 Log.e(TAG, "Failed to load chapter: ${error.message}")
                 mutableUiState.update {
@@ -414,6 +422,36 @@ class ReaderViewModel(
                     percentage = percentage
                 )
             }
+        }
+    }
+
+    /**
+     * Recalcula el porcentaje de progreso y la etiqueta según el formato actual.
+     * Para EPUB: (capítulo actual + 1) / total capítulos
+     * Para PDF: (página actual + 1) / total páginas
+     */
+    private fun updateProgressDisplay() {
+        val state = mutableUiState.value
+        val percent: Float
+        val label: String
+
+        if (state.totalPdfPages > 0) {
+            val current = state.currentPdfPage + 1
+            val total = state.totalPdfPages
+            percent = (current.toFloat() / total) * 100f
+            label = "$current / $total"
+        } else if (state.chapters.isNotEmpty()) {
+            val current = state.currentChapterIndex + 1
+            val total = state.chapters.size
+            percent = (current.toFloat() / total) * 100f
+            label = "$current / $total"
+        } else {
+            percent = 0f
+            label = ""
+        }
+
+        mutableUiState.update {
+            it.copy(progressPercent = percent, progressLabel = label)
         }
     }
 

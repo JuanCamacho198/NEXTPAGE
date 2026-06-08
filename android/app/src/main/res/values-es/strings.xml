@@ -64,6 +64,24 @@
     <string name="nav_library">Estantería</string>
     <string name="nav_highlights">Resaltados</string>
     <string name="nav_settings">Ajustes</string>
+    <string name="nav_book_detail">Detalle del libro</string>
+    <string name="book_detail_loading">Cargando...</string>
+    <string name="book_detail_error_not_found">Libro no encontrado</string>
+    <string name="book_detail_synopsis">Sinopsis</string>
+    <string name="book_detail_show_more">Ver más</string>
+    <string name="book_detail_show_less">Ver menos</string>
+    <string name="book_detail_no_synopsis">Sin sinopsis disponible</string>
+    <string name="book_detail_pages_label">Páginas</string>
+    <string name="book_detail_chapters_label">Capítulos</string>
+    <string name="book_detail_progress_label">Progreso</string>
+    <string name="book_detail_last_read_label">Última lectura</string>
+    <string name="book_detail_na">N/D</string>
+    <string name="book_detail_continue_reading">Continuar leyendo</string>
+    <string name="book_detail_start_reading">Empezar a leer</string>
+    <string name="book_detail_page_x_of_y">Página %1$d / %2$d</string>
+    <string name="book_detail_page_x">Página %1$d</string>
+    <string name="book_detail_no_pages">-- / --</string>
+    <string name="book_detail_rating_content_description">Calificar %1$d estrella(s)</string>
     <!-- Library / Bookshelf - New Pencil design -->
     <string name="library_search_placeholder">Buscar libros...</string>
     <string name="library_filter_label">Filtrar</string>

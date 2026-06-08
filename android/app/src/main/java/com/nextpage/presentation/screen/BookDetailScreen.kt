@@ -414,6 +414,7 @@ private fun ReadingProgressSection(
     }
 }
 
+@Composable
 private fun getPageDisplayText(
     progress: ReadingProgress?,
     book: Book

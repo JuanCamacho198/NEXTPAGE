@@ -124,9 +124,10 @@ class ZipEpubParserService : EpubParserService {
     private fun parseXml(bytes: ByteArray): Document {
         val factory = DocumentBuilderFactory.newInstance().apply {
             isNamespaceAware = true
-            setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
-            setFeature("http://xml.org/sax/features/external-general-entities", false)
-            setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+            // setFeature may throw on Android depending on the XML parser implementation
+            runCatching { setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true) }
+            runCatching { setFeature("http://xml.org/sax/features/external-general-entities", false) }
+            runCatching { setFeature("http://xml.org/sax/features/external-parameter-entities", false) }
         }
         return factory.newDocumentBuilder().parse(ByteArrayInputStream(bytes))
     }

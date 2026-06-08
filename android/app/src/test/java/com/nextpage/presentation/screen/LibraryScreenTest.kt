@@ -45,11 +45,11 @@ class LibraryScreenTest {
     @Test
     fun libraryUiState_withBooks_supportsGridLayout() = runTest {
         val books = listOf(
-            Book("b1", "Book 1", "Author 1", null, "/p1", "epub", 1000L),
-            Book("b2", "Book 2", "Author 2", null, "/p2", "epub", 2000L),
-            Book("b3", "Book 3", "Author 3", null, "/p3", "pdf", 3000L),
-            Book("b4", "Book 4", "Author 4", null, "/p4", "epub", 4000L),
-            Book("b5", "Book 5", "Author 5", null, "/p5", "pdf", 5000L)
+            Book("b1", "Book 1", "Author 1", null, "/p1", "epub", totalPages = null, userRating = null, updatedAtEpochMillis = 1000L),
+            Book("b2", "Book 2", "Author 2", null, "/p2", "epub", totalPages = null, userRating = null, updatedAtEpochMillis = 2000L),
+            Book("b3", "Book 3", "Author 3", null, "/p3", "pdf", totalPages = null, userRating = null, updatedAtEpochMillis = 3000L),
+            Book("b4", "Book 4", "Author 4", null, "/p4", "epub", totalPages = null, userRating = null, updatedAtEpochMillis = 4000L),
+            Book("b5", "Book 5", "Author 5", null, "/p5", "pdf", totalPages = null, userRating = null, updatedAtEpochMillis = 5000L)
         )
         val minutesByBook = mapOf(
             "b1" to 30L,

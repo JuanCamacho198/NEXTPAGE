@@ -3,6 +3,7 @@ package com.nextpage.data.repository
 import com.nextpage.data.epub.EpubMetadata
 import com.nextpage.data.epub.EpubParserService
 import com.nextpage.data.local.dao.BookDao
+import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.ReadingStatsDao
 import com.nextpage.data.local.entity.BookEntity
 import com.nextpage.data.local.entity.ReadingStatsEntity
@@ -27,6 +28,7 @@ class LibraryRepositoryImplTest {
         val fakeDao = FakeBookDao()
         val repository = LibraryRepositoryImpl(
             bookDao = fakeDao,
+            readingProgressDao = FakeReadingProgressDao(),
             readingStatsDao = FakeReadingStatsDao(),
             epubParserService = FakeEpubParserService(
                 Result.success(
@@ -64,6 +66,7 @@ class LibraryRepositoryImplTest {
         val fakeDao = FakeBookDao()
         val repository = LibraryRepositoryImpl(
             bookDao = fakeDao,
+            readingProgressDao = FakeReadingProgressDao(),
             readingStatsDao = FakeReadingStatsDao(),
             epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("Should not be called"))),
             pdfParserService = FakePdfParserService(
@@ -102,6 +105,7 @@ class LibraryRepositoryImplTest {
         val fakeDao = FakeBookDao()
         val repository = LibraryRepositoryImpl(
             bookDao = fakeDao,
+            readingProgressDao = FakeReadingProgressDao(),
             readingStatsDao = FakeReadingStatsDao(),
             epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("Should not be called"))),
             pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("Invalid PDF"))),
@@ -125,6 +129,7 @@ class LibraryRepositoryImplTest {
         val fakeReadingStatsDao = FakeReadingStatsDao()
         val repository = LibraryRepositoryImpl(
             bookDao = fakeDao,
+            readingProgressDao = FakeReadingProgressDao(),
             readingStatsDao = fakeReadingStatsDao,
             epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
             pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
@@ -143,6 +148,7 @@ class LibraryRepositoryImplTest {
         val fakeDao = FakeBookDao()
         val repository = LibraryRepositoryImpl(
             bookDao = fakeDao,
+            readingProgressDao = FakeReadingProgressDao(),
             readingStatsDao = FakeReadingStatsDao(),
             epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
             pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
@@ -196,6 +202,13 @@ class LibraryRepositoryImplTest {
         override fun getPageCount(file: java.io.File): Int = 0
     }
 
+    private class FakeReadingProgressDao : ReadingProgressDao {
+        override fun observeProgressForBook(bookId: String): Flow<com.nextpage.data.local.entity.ReadingProgressEntity?> =
+            MutableStateFlow(null)
+
+        override suspend fun upsert(progress: com.nextpage.data.local.entity.ReadingProgressEntity) = Unit
+    }
+
     private class FakeBookDao : BookDao {
         private val booksState = MutableStateFlow<List<BookEntity>>(emptyList())
         var lastUpserted: BookEntity? = null
@@ -232,6 +245,12 @@ class LibraryRepositoryImplTest {
                 } else {
                     book
                 }
+            }
+        }
+
+        override suspend fun updateRating(bookId: String, rating: Int?) {
+            booksState.value = booksState.value.map { book ->
+                if (book.id == bookId) book.copy(userRating = rating) else book
             }
         }
     }

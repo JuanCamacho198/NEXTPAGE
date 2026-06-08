@@ -217,6 +217,11 @@ class LibraryViewModelTest {
 
         override fun observeBookById(bookId: String): Flow<Book?> = MutableStateFlow(null)
 
+        override fun observeProgressForBook(bookId: String): Flow<com.nextpage.domain.model.ReadingProgress?> =
+            MutableStateFlow(null)
+
+        override suspend fun updateBookRating(bookId: String, rating: Int?) = Unit
+
         override fun observeTotalReadingTime(): Flow<Long> = MutableStateFlow(0L)
 
         override fun observeReadingTimeByBook(): Flow<Map<String, Long>> = readingMinutesByBookFlow

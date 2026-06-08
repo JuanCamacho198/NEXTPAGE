@@ -85,8 +85,8 @@ class HomeScreenTest {
     @Test
     fun homeUiState_supportsRecentBooksForMyBookshelf() = runTest {
         val books = listOf(
-            Book("b1", "Book 1", "Author 1", null, "/p1", "epub", 1000L),
-            Book("b2", "Book 2", "Author 2", null, "/p2", "epub", 2000L)
+            Book("b1", "Book 1", "Author 1", null, "/p1", "epub", totalPages = null, userRating = null, updatedAtEpochMillis = 1000L),
+            Book("b2", "Book 2", "Author 2", null, "/p2", "epub", totalPages = null, userRating = null, updatedAtEpochMillis = 2000L)
         )
         val state = HomeUiState(recentBooks = books)
 

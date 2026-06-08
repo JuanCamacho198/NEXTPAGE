@@ -344,6 +344,10 @@ class SupabaseSyncServiceTest {
                 updatedAtEpochMillis = deletedAt
             )
         }
+
+        override suspend fun updateRating(bookId: String, rating: Int?) {
+            books[bookId] = books[bookId]?.copy(userRating = rating)
+        }
     }
 
     private class FakeMappingDao : SyncFileMappingDao {

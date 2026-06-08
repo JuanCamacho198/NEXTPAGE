@@ -22,11 +22,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import com.nextpage.ui.components.molecules.BottomNavItem
 import com.nextpage.ui.components.molecules.NextPageBottomNavBar
+import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.nextpage.di.AppContainer
 import com.nextpage.presentation.screen.AuthScreen
+import com.nextpage.presentation.screen.BookDetailScreen
 import com.nextpage.presentation.screen.HighlightsScreen
 import com.nextpage.presentation.screen.HomeScreen
 import com.nextpage.presentation.screen.LibraryScreen
@@ -249,12 +252,35 @@ fun NextPageNavHost(appContainer: AppContainer) {
                         selectedBookId = bookId
                         selectedBookFilePath = filePath
                         selectedBookFormat = format
-                        navController.navigate(NextPageDestination.Reader.route) {
-                            launchSingleTop = true
-                        }
+                        navController.navigate("book_detail/$bookId")
                     },
                     onImportBook = {
                         importLauncher.launch(arrayOf("application/epub+zip", "application/pdf"))
+                    }
+                )
+            }
+
+            composable(
+                route = NextPageDestination.BookDetail.route,
+                arguments = listOf(navArgument("bookId") { type = NavType.StringType }),
+                enterTransition = { slideInHorizontally { it } + fadeIn() },
+                exitTransition = { slideOutHorizontally { it } + fadeOut() },
+                popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
+                popExitTransition = { slideOutHorizontally { -it } + fadeOut() }
+            ) { backStackEntry ->
+                val bookId = backStackEntry.arguments?.getString("bookId") ?: return@composable
+                BookDetailScreen(
+                    contentPadding = innerPadding,
+                    bookId = bookId,
+                    libraryRepository = appContainer.libraryRepository,
+                    onNavigateBack = { navController.popBackStack() },
+                    onContinueReading = { id, filePath, format ->
+                        selectedBookId = id
+                        selectedBookFilePath = filePath
+                        selectedBookFormat = format
+                        navController.navigate(NextPageDestination.Reader.route) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
@@ -273,9 +299,7 @@ fun NextPageNavHost(appContainer: AppContainer) {
                         selectedBookId = bookId
                         selectedBookFilePath = filePath
                         selectedBookFormat = format
-                        navController.navigate(NextPageDestination.Reader.route) {
-                            launchSingleTop = true
-                        }
+                        navController.navigate("book_detail/$bookId")
                     }
                 )
             }

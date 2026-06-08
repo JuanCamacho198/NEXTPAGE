@@ -15,4 +15,5 @@ sealed class NextPageDestination(
     data object Reader : NextPageDestination("reader", R.string.tab_reader, R.drawable.ic_nav_home)
     data object Highlights : NextPageDestination("highlights", R.string.nav_highlights, R.drawable.ic_nav_highlights)
     data object Settings : NextPageDestination("settings", R.string.nav_settings, R.drawable.ic_nav_settings)
+    data object BookDetail : NextPageDestination("book_detail/{bookId}", R.string.nav_book_detail, R.drawable.ic_nav_home)
 }

@@ -2,6 +2,7 @@ package com.nextpage.domain.repository
 
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.Book
+import com.nextpage.domain.model.ReadingProgress
 import kotlinx.coroutines.flow.Flow
 import java.io.InputStream
 
@@ -9,6 +10,8 @@ interface LibraryRepository {
     fun observeLibrary(): Flow<List<Book>>
 
     fun observeBookById(bookId: String): Flow<Book?>
+
+    fun observeProgressForBook(bookId: String): Flow<ReadingProgress?>
 
     fun observeTotalReadingTime(): Flow<Long>
 
@@ -25,4 +28,6 @@ interface LibraryRepository {
     ): Result<Book>
 
     suspend fun deleteBook(bookId: String): Result<Unit>
+
+    suspend fun updateBookRating(bookId: String, rating: Int?)
 }

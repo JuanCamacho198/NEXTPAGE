@@ -99,6 +99,7 @@ fun LibraryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var statusFilter by remember { mutableStateOf("all") }
@@ -123,57 +124,56 @@ fun LibraryScreen(
         sortBookList(searchedBooks, sortBy)
     }
 
-    val epubPickerLauncher = rememberLauncherForActivityResult(
+    val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri: Uri? ->
-            if (uri == null) {
+            if (uri == null) return@rememberLauncherForActivityResult
+
+            val fileName = uri.lastPathSegment ?: "imported_${System.currentTimeMillis()}"
+            val mimeType = context.contentResolver.getType(uri) ?: ""
+            val isPdf = fileName.endsWith(".pdf", true) || mimeType == "application/pdf"
+            val isEpub = fileName.endsWith(".epub", true) || mimeType == "application/epub+zip"
+
+            if (!isPdf && !isEpub) {
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        context.getString(R.string.library_import_unsupported)
+                    )
+                }
                 return@rememberLauncherForActivityResult
             }
 
-            val fileName = uri.lastPathSegment ?: "imported_${System.currentTimeMillis()}.epub"
-            val epubDir = File(context.filesDir, "epubs")
-            if (!epubDir.exists()) epubDir.mkdirs()
-            val epubFile = File(epubDir, fileName)
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                epubFile.outputStream().use { output ->
-                    input.copyTo(output)
+            if (isPdf) {
+                val pdfDir = File(context.filesDir, "pdfs")
+                if (!pdfDir.exists()) pdfDir.mkdirs()
+                val pdfFile = File(pdfDir, fileName)
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    pdfFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
                 }
-            }
-            viewModel.importBookFromEpub(
-                sourcePath = epubFile.absolutePath,
-                fallbackTitle = fileName.removeSuffix(".epub"),
-                inputStreamProvider = {
-                    epubFile.inputStream()
+                viewModel.importPdfBook(
+                    sourcePath = pdfFile.absolutePath,
+                    fallbackTitle = fileName.removeSuffix(".pdf"),
+                    pdfFile = pdfFile
+                )
+            } else {
+                val epubDir = File(context.filesDir, "epubs")
+                if (!epubDir.exists()) epubDir.mkdirs()
+                val epubFile = File(epubDir, fileName)
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    epubFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
                 }
-            )
-        }
-    )
-
-    val pdfPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-        onResult = { uri: Uri? ->
-            if (uri == null) {
-                return@rememberLauncherForActivityResult
+                viewModel.importBookFromEpub(
+                    sourcePath = epubFile.absolutePath,
+                    fallbackTitle = fileName.removeSuffix(".epub"),
+                    inputStreamProvider = {
+                        epubFile.inputStream()
+                    }
+                )
             }
-
-            val fileName = uri.lastPathSegment ?: "imported_${System.currentTimeMillis()}.pdf"
-            val pdfDir = File(context.filesDir, "pdfs")
-            if (!pdfDir.exists()) {
-                pdfDir.mkdirs()
-            }
-            val pdfFile = File(pdfDir, fileName)
-
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                pdfFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            }
-
-            viewModel.importPdfBook(
-                sourcePath = pdfFile.absolutePath,
-                fallbackTitle = fileName.removeSuffix(".pdf"),
-                pdfFile = pdfFile
-            )
         }
     )
 
@@ -208,8 +208,7 @@ fun LibraryScreen(
             EmptyLibrary(
                 contentPadding = contentPadding,
                 isImporting = uiState.isImporting,
-                onEpubClick = { epubPickerLauncher.launch(arrayOf("application/epub+zip")) },
-                onPdfClick = { pdfPickerLauncher.launch(arrayOf("application/pdf")) }
+                onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }
             )
         } else {
             LibraryBookshelfContent(
@@ -228,8 +227,7 @@ fun LibraryScreen(
                 onSearchQueryChange = { searchQuery = it },
                 onBookSelected = onBookSelected,
                 onBookLongPress = { book -> viewModel.requestDeleteBook(book) },
-                onEpubClick = { epubPickerLauncher.launch(arrayOf("application/epub+zip")) },
-                onPdfClick = { pdfPickerLauncher.launch(arrayOf("application/pdf")) }
+                onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }
             )
         }
 
@@ -291,8 +289,7 @@ private fun LibraryBookshelfContent(
     onSearchQueryChange: (String) -> Unit,
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
-    onEpubClick: () -> Unit,
-    onPdfClick: () -> Unit
+    onImportClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -330,8 +327,7 @@ private fun LibraryBookshelfContent(
             isGridView = isGridView,
             onBookSelected = onBookSelected,
             onBookLongPress = onBookLongPress,
-            onEpubClick = onEpubClick,
-            onPdfClick = onPdfClick
+            onImportClick = onImportClick
         )
     }
 }
@@ -542,8 +538,7 @@ private fun BookGridSection(
     isGridView: Boolean,
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
-    onEpubClick: () -> Unit,
-    onPdfClick: () -> Unit
+    onImportClick: () -> Unit
 ) {
     if (isGridView) {
         BookGrid(
@@ -551,8 +546,7 @@ private fun BookGridSection(
             readingMinutesByBook = readingMinutesByBook,
             onBookSelected = onBookSelected,
             onBookLongPress = onBookLongPress,
-            onEpubClick = onEpubClick,
-            onPdfClick = onPdfClick
+            onImportClick = onImportClick
         )
     } else {
         BookList(
@@ -570,8 +564,7 @@ private fun BookGrid(
     readingMinutesByBook: Map<String, Long>,
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
-    onEpubClick: () -> Unit,
-    onPdfClick: () -> Unit
+    onImportClick: () -> Unit
 ) {
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(2),
@@ -591,10 +584,7 @@ private fun BookGrid(
             )
         }
         item {
-            AddBookCard(
-                onEpubClick = onEpubClick,
-                onPdfClick = onPdfClick
-            )
+            AddBookCard(onImportClick = onImportClick)
         }
     }
 }
@@ -789,11 +779,8 @@ private fun BookGridCard(
 
 @Composable
 private fun AddBookCard(
-    onEpubClick: () -> Unit,
-    onPdfClick: () -> Unit
+    onImportClick: () -> Unit
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -806,7 +793,7 @@ private fun AddBookCard(
                 dashLength = 8.dp,
                 gapLength = 4.dp
             )
-            .clickable { showMenu = true },
+            .clickable { onImportClick() },
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -815,34 +802,19 @@ private fun AddBookCard(
         ) {
             Icon(
                 imageVector = Icons.Outlined.Add,
-                contentDescription = stringResource(R.string.library_add_book),
+                contentDescription = stringResource(R.string.library_import_book),
                 modifier = Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = stringResource(R.string.library_add_book),
+                text = stringResource(R.string.library_import_book),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary
             )
-        }
-
-        DropdownMenu(
-            expanded = showMenu,
-            onDismissRequest = { showMenu = false }
-        ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.library_import_epub)) },
-                onClick = {
-                    showMenu = false
-                    onEpubClick()
-                }
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.library_import_pdf)) },
-                onClick = {
-                    showMenu = false
-                    onPdfClick()
-                }
+            Text(
+                text = stringResource(R.string.library_import_formats),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -856,8 +828,7 @@ private fun AddBookCard(
 private fun EmptyLibrary(
     contentPadding: PaddingValues,
     isImporting: Boolean,
-    onEpubClick: () -> Unit,
-    onPdfClick: () -> Unit
+    onImportClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -872,12 +843,14 @@ private fun EmptyLibrary(
             style = MaterialTheme.typography.bodyLarge
         )
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
-        TextButton(onClick = onEpubClick, enabled = !isImporting) {
-            Text(text = stringResource(R.string.library_import_epub))
-        }
-        Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
-        TextButton(onClick = onPdfClick, enabled = !isImporting) {
-            Text(text = stringResource(R.string.library_import_pdf))
+        Text(
+            text = stringResource(R.string.library_import_formats),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(NextPageDimens.spacingMd))
+        TextButton(onClick = onImportClick, enabled = !isImporting) {
+            Text(text = stringResource(R.string.library_import_book))
         }
     }
 }

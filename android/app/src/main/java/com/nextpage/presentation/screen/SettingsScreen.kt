@@ -28,12 +28,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.data.session.AppLanguagePreferences
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.ThemeMode
 import com.nextpage.presentation.theme.NextPageDimens
@@ -62,7 +63,11 @@ fun SettingsScreen(
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showThemeMenu by remember { mutableStateOf(false) }
+    var showLanguageMenu by remember { mutableStateOf(false) }
     var showNotifications by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val langPrefs = remember { AppLanguagePreferences(context = context) }
 
     if (showNotifications) {
         NotificationSheet(onDismiss = { showNotifications = false })
@@ -93,7 +98,61 @@ fun SettingsScreen(
         )
     }
 
-    // ─── Theme mode selector dropdown ────────────────────────────
+    // ─── Language selector dialog ────────────────────────────────
+    if (showLanguageMenu) {
+        val currentLang = langPrefs.load()
+        AlertDialog(
+            onDismissRequest = { showLanguageMenu = false },
+            title = { Text(text = stringResource(R.string.settings_language_title)) },
+            text = {
+                Column {
+                    LanguageItem(
+                        label = stringResource(R.string.settings_language_spanish),
+                        code = "es",
+                        currentCode = currentLang,
+                        onClick = { code ->
+                            langPrefs.save(code)
+                            showLanguageMenu = false
+                            androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                                androidx.core.os.LocaleListCompat.forLanguageTags(code)
+                            )
+                        }
+                    )
+                    LanguageItem(
+                        label = stringResource(R.string.settings_language_english),
+                        code = "en",
+                        currentCode = currentLang,
+                        onClick = { code ->
+                            langPrefs.save(code)
+                            showLanguageMenu = false
+                            androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                                androidx.core.os.LocaleListCompat.forLanguageTags(code)
+                            )
+                        }
+                    )
+                    LanguageItem(
+                        label = stringResource(R.string.settings_language_system),
+                        code = null,
+                        currentCode = currentLang,
+                        onClick = {
+                            langPrefs.save(null)
+                            showLanguageMenu = false
+                            androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                                androidx.core.os.LocaleListCompat.getEmptyLocaleList()
+                            )
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageMenu = false }) {
+                    Text(text = stringResource(R.string.reader_cancel))
+                }
+            }
+        )
+    }
+
+    // ─── Theme mode selector dialog ──────────────────────────────
     if (showThemeMenu) {
         AlertDialog(
             onDismissRequest = { showThemeMenu = false },
@@ -151,7 +210,9 @@ fun SettingsScreen(
                     SectionItem(R.string.settings_pref_theme, Icons.Outlined.DarkMode) {
                         showThemeMenu = true
                     },
-                    SectionItem(R.string.settings_pref_language, Icons.Outlined.Language)
+                    SectionItem(R.string.settings_pref_language, Icons.Outlined.Language) {
+                        showLanguageMenu = true
+                    }
                 )
             ),
             SettingsSection(
@@ -187,22 +248,45 @@ fun SettingsScreen(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ─── Header: avatar + brand + notifications ───────
+            // ─── Header: avatar + brand + notifications ──────────
             HeaderRow(onNotificationsClick = { showNotifications = true })
 
-            // ─── Title + Subtitle ─────────────────────────────
+            // ─── Title + Subtitle ────────────────────────────────
             TitleSection()
 
-            // ─── Account section ──────────────────────────────
+            // ─── Account section ─────────────────────────────────
             AccountSection(authSession = authSession, onLogout = { showLogoutDialog = true })
 
-            // ─── Dynamic sections from list ───────────────────
+            // ─── Dynamic sections from list ──────────────────────
             sections.forEach { section ->
                 SettingsSectionBlock(section = section)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+}
+
+@Composable
+private fun LanguageItem(
+    label: String,
+    code: String?,
+    currentCode: String?,
+    onClick: (String?) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick(code) }
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(
+            selected = currentCode == code || (currentCode == null && code == null),
+            onClick = { onClick(code) }
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(text = label, style = MaterialTheme.typography.bodyLarge)
     }
 }
 

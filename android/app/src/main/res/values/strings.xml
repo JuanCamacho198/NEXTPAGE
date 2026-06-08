@@ -153,6 +153,10 @@
     <string name="settings_pref_storage">Almacenamiento</string>
     <string name="settings_pref_stats">Estadísticas</string>
     <string name="settings_info_section">Información</string>
+    <string name="settings_language_title">Idioma</string>
+    <string name="settings_language_spanish">Español</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_system">Seguir dispositivo</string>
     <string name="reader_title">Reader</string>
     <string name="reader_loaded_in">Opened in %1$d ms</string>
     <string name="reader_retry">Retry</string>

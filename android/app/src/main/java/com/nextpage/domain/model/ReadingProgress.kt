@@ -5,5 +5,6 @@ data class ReadingProgress(
     val bookId: String,
     val cfiLocation: String,
     val percentage: Float,
+    val currentPage: Int? = null,
     val updatedAtEpochMillis: Long
 )

@@ -68,7 +68,8 @@ class AppContainer(context: Context) {
         readingStatsDao = appDatabase.readingStatsDao(),
         epubParserService = ZipEpubParserService(),
         pdfParserService = pdfParserService,
-        coverStorage = coverStorage
+        coverStorage = coverStorage,
+        readingProgressDao = appDatabase.readingProgressDao()
     )
     private val epubImportInitTime = System.currentTimeMillis() - epubImportStartTime
     init {

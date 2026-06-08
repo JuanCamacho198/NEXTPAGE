@@ -121,6 +121,9 @@ fun NextPageNavHost(appContainer: AppContainer) {
         NextPageDestination.Settings
     )
 
+    // Whitelist de rutas donde el BottomNav debe mostrarse
+    val bottomNavRoutes = bottomNavDestinations.map { it.route }.toSet()
+
     val startDestination = if (!isAuthenticated) {
         NextPageDestination.Auth.route
     } else {
@@ -132,7 +135,7 @@ fun NextPageNavHost(appContainer: AppContainer) {
             if (isAuthenticated) {
                 val currentBackStack = navController.currentBackStackEntryAsState().value
                 val currentRoute = currentBackStack?.destination?.route
-                if (currentRoute != NextPageDestination.Reader.route) {
+                if (currentRoute != null && currentRoute in bottomNavRoutes) {
                     val bottomNavItems = bottomNavDestinations.map { dest ->
                         BottomNavItem(dest.route, dest.labelRes, dest.iconRes)
                     }

@@ -15,6 +15,10 @@ data class BookEntity(
     @ColumnInfo(name = "file_path")
     val filePath: String,
     val format: String,
+    @ColumnInfo(name = "total_pages")
+    val totalPages: Int? = null,
+    @ColumnInfo(name = "user_rating")
+    val userRating: Int? = null,
     @ColumnInfo(name = "updated_at")
     val updatedAtEpochMillis: Long,
     @ColumnInfo(name = "deleted_at")

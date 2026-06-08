@@ -3,10 +3,13 @@ package com.nextpage.data.repository
 import com.nextpage.data.epub.EpubParserService
 import com.nextpage.data.pdf.PdfParserService
 import com.nextpage.data.local.dao.BookDao
+import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.entity.BookEntity
+import com.nextpage.data.local.entity.ReadingProgressEntity
 import com.nextpage.data.storage.CoverStorage
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.Book
+import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.LibraryRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -18,13 +21,17 @@ class LibraryRepositoryImpl(
     private val readingStatsDao: com.nextpage.data.local.dao.ReadingStatsDao,
     private val epubParserService: EpubParserService,
     private val pdfParserService: PdfParserService,
-    private val coverStorage: CoverStorage
+    private val coverStorage: CoverStorage,
+    private val readingProgressDao: ReadingProgressDao
 ) : LibraryRepository {
     override fun observeLibrary(): Flow<List<Book>> =
         bookDao.observeAllBooks().map { books -> books.map { it.toDomain() } }
 
     override fun observeBookById(bookId: String): Flow<Book?> =
         bookDao.observeBookById(bookId).map { it?.toDomain() }
+
+    override fun observeProgressForBook(bookId: String): Flow<ReadingProgress?> =
+        readingProgressDao.observeProgressForBook(bookId).map { it?.toDomain() }
 
     override fun observeTotalReadingTime(): Flow<Long> =
         readingStatsDao.observeTotalMinutesRead().map { it ?: 0L }
@@ -55,6 +62,7 @@ class LibraryRepositoryImpl(
             coverPath = coverPath,
             filePath = request.sourcePath,
             format = EPUB_FORMAT,
+            totalPages = null,
             updatedAtEpochMillis = now
         )
 
@@ -81,6 +89,7 @@ class LibraryRepositoryImpl(
             coverPath = coverPath,
             filePath = request.sourcePath,
             format = PDF_FORMAT,
+            totalPages = metadata.pageCount,
             updatedAtEpochMillis = now
         )
 
@@ -94,6 +103,10 @@ class LibraryRepositoryImpl(
         readingStatsDao.deleteForBook(bookId)
     }
 
+    override suspend fun updateBookRating(bookId: String, rating: Int?) {
+        bookDao.updateRating(bookId, rating)
+    }
+
     private fun BookEntity.toDomain(): Book = Book(
         id = id,
         title = title,
@@ -101,6 +114,17 @@ class LibraryRepositoryImpl(
         coverPath = coverPath,
         filePath = filePath,
         format = format,
+        totalPages = totalPages,
+        userRating = userRating,
+        updatedAtEpochMillis = updatedAtEpochMillis
+    )
+
+    private fun ReadingProgressEntity.toDomain(): ReadingProgress = ReadingProgress(
+        id = id,
+        bookId = bookId,
+        cfiLocation = cfiLocation,
+        percentage = percentage,
+        currentPage = currentPage,
         updatedAtEpochMillis = updatedAtEpochMillis
     )
 
@@ -111,6 +135,8 @@ class LibraryRepositoryImpl(
         coverPath = coverPath,
         filePath = filePath,
         format = format,
+        totalPages = totalPages,
+        userRating = userRating,
         updatedAtEpochMillis = updatedAtEpochMillis
     )
 

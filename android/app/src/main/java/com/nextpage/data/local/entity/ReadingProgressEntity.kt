@@ -26,6 +26,8 @@ data class ReadingProgressEntity(
     @ColumnInfo(name = "cfi_location")
     val cfiLocation: String,
     val percentage: Float,
+    @ColumnInfo(name = "current_page")
+    val currentPage: Int? = null,
     @ColumnInfo(name = "updated_at")
     val updatedAtEpochMillis: Long
 )

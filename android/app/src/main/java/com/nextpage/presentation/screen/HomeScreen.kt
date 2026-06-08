@@ -27,8 +27,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import coil.compose.AsyncImage
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -290,22 +292,14 @@ private fun ContinueReadingSection(
                 tonalElevation = 1.dp
             ) {
                 Row(modifier = Modifier.padding(NextPageDimens.spacingMd)) {
-                    // Cover placeholder — 80x120dp rounded
-                    Box(
+                    // Cover thumbnail — 80x120dp rounded
+                    CoverThumbnail(
+                        coverPath = currentBook.coverPath,
                         modifier = Modifier
                             .width(80.dp)
                             .height(120.dp)
                             .clip(RoundedCornerShape(NextPageDimens.spacingXs))
-                            .background(MaterialTheme.colorScheme.primary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = currentBook.title.take(1),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    )
 
                     Spacer(modifier = Modifier.width(NextPageDimens.spacingMd))
 
@@ -435,21 +429,13 @@ private fun BookshelfCard(
             modifier = Modifier.padding(NextPageDimens.spacingSm),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
+            CoverThumbnail(
+                coverPath = book.coverPath,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(100.dp)
                     .clip(RoundedCornerShape(NextPageDimens.spacingXs))
-                    .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = book.title.take(1),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            )
             Spacer(modifier = Modifier.height(NextPageDimens.spacingXs))
             Text(
                 text = book.title,

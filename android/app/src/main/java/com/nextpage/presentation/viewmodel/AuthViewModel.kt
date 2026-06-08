@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 enum class AuthFailureKind {
     NONE,
@@ -166,6 +167,15 @@ class AuthViewModel(
                 pendingGoogleSignInUrl = null
             )
         }
+    }
+
+    fun continueLocally() {
+        val localSession = AuthSession(
+            userId = "local-${UUID.randomUUID()}",
+            email = null,
+            displayName = "Local User"
+        )
+        _uiState.value = _uiState.value.copy(currentSession = localSession)
     }
 
     fun clearError() {

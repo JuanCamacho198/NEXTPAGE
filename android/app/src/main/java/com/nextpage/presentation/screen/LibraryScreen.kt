@@ -130,11 +130,20 @@ fun LibraryScreen(
                 return@rememberLauncherForActivityResult
             }
 
+            val fileName = uri.lastPathSegment ?: "imported_${System.currentTimeMillis()}.epub"
+            val epubDir = File(context.filesDir, "epubs")
+            if (!epubDir.exists()) epubDir.mkdirs()
+            val epubFile = File(epubDir, fileName)
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                epubFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
             viewModel.importBookFromEpub(
-                sourcePath = uri.toString(),
-                fallbackTitle = uri.lastPathSegment,
+                sourcePath = epubFile.absolutePath,
+                fallbackTitle = fileName.removeSuffix(".epub"),
                 inputStreamProvider = {
-                    context.contentResolver.openInputStream(uri)
+                    epubFile.inputStream()
                 }
             )
         }

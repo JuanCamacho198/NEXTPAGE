@@ -72,6 +72,7 @@ import coil.request.ImageRequest
 import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageDimens
+import com.nextpage.presentation.util.getContentDisplayName
 import com.nextpage.presentation.viewmodel.LibraryImportEvent
 import com.nextpage.presentation.viewmodel.LibraryUiEvent
 import com.nextpage.presentation.viewmodel.LibraryViewModel
@@ -131,7 +132,9 @@ fun LibraryScreen(
         onResult = { uri: Uri? ->
             if (uri == null) return@rememberLauncherForActivityResult
 
-            val fileName = uri.lastPathSegment ?: "imported_${System.currentTimeMillis()}"
+            val fileName = getContentDisplayName(context, uri)
+                ?: uri.lastPathSegment
+                ?: "imported_${System.currentTimeMillis()}"
             val mimeType = context.contentResolver.getType(uri) ?: ""
             val isPdf = fileName.endsWith(".pdf", true) || mimeType == "application/pdf"
             val isEpub = fileName.endsWith(".epub", true) || mimeType == "application/epub+zip"

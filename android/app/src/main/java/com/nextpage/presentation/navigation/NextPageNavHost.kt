@@ -42,6 +42,7 @@ import com.nextpage.presentation.viewmodel.LibraryViewModel
 import com.nextpage.presentation.viewmodel.LibraryViewModelFactory
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
+import com.nextpage.presentation.util.getContentDisplayName
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
 import java.io.File
@@ -191,7 +192,9 @@ fun NextPageNavHost(appContainer: AppContainer) {
                     onResult = { uri: Uri? ->
                         if (uri == null) return@rememberLauncherForActivityResult
 
-                        val fileName = uri.lastPathSegment ?: "imported_book"
+                        val fileName = getContentDisplayName(context, uri)
+                            ?: uri.lastPathSegment
+                            ?: "imported_book"
                         val mimeType = context.contentResolver.getType(uri)
 
                         if (fileName.endsWith(".pdf", true) || mimeType == "application/pdf") {

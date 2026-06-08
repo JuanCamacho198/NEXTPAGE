@@ -26,7 +26,7 @@ class DefaultPdfParserService(private val context: Context) : PdfParserService {
                     try {
                         renderer.openPage(0).use { page ->
                             val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
-                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_FOR_DISPLAY)
+                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                             ByteArrayOutputStream().use { stream ->
                                 bitmap.compress(CompressFormat.JPEG, 80, stream)
                                 stream.toByteArray()

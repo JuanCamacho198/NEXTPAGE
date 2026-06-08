@@ -70,12 +70,15 @@ class LibraryRepositoryImpl(
         val now = System.currentTimeMillis()
         val bookId = UUID.randomUUID().toString()
 
+        val coverPath = metadata.coverBytes
+            ?.let { coverStorage.saveCover(bookId = bookId, coverBytes = it).getOrNull() }
+
         val book = Book(
             id = bookId,
             title = metadata.title?.ifBlank { request.fallbackTitle ?: "Untitled" }
                 ?: request.fallbackTitle ?: "Untitled",
             author = metadata.author,
-            coverPath = null,
+            coverPath = coverPath,
             filePath = request.sourcePath,
             format = PDF_FORMAT,
             updatedAtEpochMillis = now

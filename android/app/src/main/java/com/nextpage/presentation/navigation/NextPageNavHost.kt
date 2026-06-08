@@ -168,6 +168,7 @@ fun NextPageNavHost(appContainer: AppContainer) {
                         }
                     },
                     onContinueLocal = {
+                        authViewModel.continueLocally()
                         navController.navigate(NextPageDestination.Home.route) {
                             popUpTo(NextPageDestination.Auth.route) { inclusive = true }
                         }
@@ -207,11 +208,19 @@ fun NextPageNavHost(appContainer: AppContainer) {
                             )
                         } else {
                             // ── Import as EPUB ───────────────────────
+                            val epubDir = File(context.filesDir, "epubs")
+                            if (!epubDir.exists()) epubDir.mkdirs()
+                            val epubFile = File(epubDir, fileName)
+                            context.contentResolver.openInputStream(uri)?.use { input ->
+                                epubFile.outputStream().use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
                             libraryViewModel.importBookFromEpub(
-                                sourcePath = uri.toString(),
+                                sourcePath = epubFile.absolutePath,
                                 fallbackTitle = fileName.removeSuffix(".epub"),
                                 inputStreamProvider = {
-                                    context.contentResolver.openInputStream(uri)
+                                    epubFile.inputStream()
                                 }
                             )
                         }

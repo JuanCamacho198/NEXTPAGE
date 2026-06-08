@@ -149,4 +149,5 @@
     <string name="reader_line_height_normal">Normal</string>
     <string name="reader_line_height_comfortable">Cómodo</string>
     <string name="reader_line_height_wide">Amplio</string>
+    <string name="reader_progress_empty">-- / --</string>
 </resources>

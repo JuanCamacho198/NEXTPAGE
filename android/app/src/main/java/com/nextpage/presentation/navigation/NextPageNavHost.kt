@@ -8,12 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,10 +18,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.NavHost
+import com.nextpage.ui.components.molecules.BottomNavItem
+import com.nextpage.ui.components.molecules.NextPageBottomNavBar
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -132,33 +127,24 @@ fun NextPageNavHost(appContainer: AppContainer) {
         bottomBar = {
             if (isAuthenticated) {
                 val currentBackStack = navController.currentBackStackEntryAsState().value
-                val currentDestination = currentBackStack?.destination
-                NavigationBar {
-                    bottomNavDestinations.forEach { destination ->
-                        val selected = currentDestination
-                            ?.hierarchy
-                            ?.any { it.route == destination.route } == true
-
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(destination.route) {
-                                    launchSingleTop = true
-                                    restoreState = true
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
-                                    }
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = destination.icon,
-                                    contentDescription = stringResource(destination.labelRes)
-                                )
-                            },
-                            label = { Text(text = stringResource(destination.labelRes)) }
-                        )
+                val currentRoute = currentBackStack?.destination?.route
+                if (currentRoute != NextPageDestination.Reader.route) {
+                    val bottomNavItems = bottomNavDestinations.map { dest ->
+                        BottomNavItem(dest.route, dest.labelRes, dest.iconRes)
                     }
+                    NextPageBottomNavBar(
+                        destinations = bottomNavItems,
+                        currentRoute = currentRoute,
+                        onTabSelected = { route ->
+                            navController.navigate(route) {
+                                launchSingleTop = true
+                                restoreState = true
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                            }
+                        }
+                    )
                 }
             }
         }

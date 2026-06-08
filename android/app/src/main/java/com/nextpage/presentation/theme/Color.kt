@@ -27,6 +27,11 @@ val BgPurpleTransparent = Color(0xFF311C4A)
 val AccentBlue = Color(0xFF3B82F6)
 val BgBlueTransparent = Color(0xFF1E3A8A)
 
+// ─── Navigation Bar ──────────────────────────────────
+val NavBarActive = Color(0xFFADC6FF)
+val NavBarInactive = Color(0xFFC2C6D6)
+val NavBarOverlay = Color(0x0A4D8EFF)
+
 // ─── Legacy aliases (backward compat) ─────────────────────────────────
 val DeepDarkBlue = BgMain
 val AccentPrimary = PrimaryBlue

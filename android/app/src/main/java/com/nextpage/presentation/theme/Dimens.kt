@@ -8,4 +8,5 @@ object NextPageDimens {
     val spacingMd = 16.dp
     val spacingLg = 24.dp
     val spacingXl = 32.dp
+    val iconNavBar = 20.dp
 }

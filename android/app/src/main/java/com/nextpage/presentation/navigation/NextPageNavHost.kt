@@ -48,7 +48,11 @@ import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
 import java.io.File
 
 @Composable
-fun NextPageNavHost(appContainer: AppContainer) {
+fun NextPageNavHost(
+    appContainer: AppContainer,
+    appThemeMode: com.nextpage.domain.model.ThemeMode = com.nextpage.domain.model.ThemeMode.SYSTEM,
+    onAppThemeModeChanged: (com.nextpage.domain.model.ThemeMode) -> Unit = {}
+) {
     val context = LocalContext.current
     val navController = rememberNavController()
 
@@ -349,7 +353,15 @@ fun NextPageNavHost(appContainer: AppContainer) {
             ) {
                 SettingsScreen(
                     contentPadding = innerPadding,
-                    authSession = authState.currentSession
+                    authSession = authState.currentSession,
+                    appThemeMode = appThemeMode,
+                    onAppThemeModeChanged = onAppThemeModeChanged,
+                    onLogout = {
+                        authViewModel.signOut()
+                        navController.navigate(NextPageDestination.Auth.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
         }

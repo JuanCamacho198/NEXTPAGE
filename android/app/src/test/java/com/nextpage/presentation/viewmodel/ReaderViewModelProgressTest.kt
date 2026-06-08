@@ -1,5 +1,6 @@
 package com.nextpage.presentation.viewmodel
 
+import com.nextpage.data.epub.EpubContentLoader
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.Bookmark
@@ -168,6 +169,131 @@ class ReaderViewModelProgressTest {
         advanceUntilIdle()
 
         assertEquals("PDF content loader is unavailable", viewModel.uiState.value.error)
+    }
+
+    // ── Progress Display Tests ─────────────────────────────────────
+
+    @Test
+    fun `progressPercent updates correctly when navigating EPUB chapters`() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val repository = FakeReaderRepository()
+        val viewModel = ReaderViewModel(
+            readerRepository = repository,
+            readingStatsRepository = FakeReadingStatsRepository(),
+            updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
+            defaultBookId = null,
+            mainDispatcher = dispatcher
+        )
+        val chapters = listOf(
+            EpubContentLoader.Chapter(0, "c1", "Ch 1", "ch1.xhtml"),
+            EpubContentLoader.Chapter(1, "c2", "Ch 2", "ch2.xhtml"),
+            EpubContentLoader.Chapter(2, "c3", "Ch 3", "ch3.xhtml"),
+            EpubContentLoader.Chapter(3, "c4", "Ch 4", "ch4.xhtml"),
+            EpubContentLoader.Chapter(4, "c5", "Ch 5", "ch5.xhtml")
+        )
+        setEpubStateWithChapters(viewModel, chapters = chapters, currentChapterIndex = 0)
+
+        // Chapter 0/5 → 20%
+        assertEquals(20f, viewModel.uiState.value.progressPercent, 0.01f)
+        assertEquals("1 / 5", viewModel.uiState.value.progressLabel)
+
+        // Navigate to chapter 2/5 → 60%
+        setEpubStateWithChapters(viewModel, chapters = chapters, currentChapterIndex = 2)
+        assertEquals(60f, viewModel.uiState.value.progressPercent, 0.01f)
+        assertEquals("3 / 5", viewModel.uiState.value.progressLabel)
+
+        // Last chapter 4/5 → 100%
+        setEpubStateWithChapters(viewModel, chapters = chapters, currentChapterIndex = 4)
+        assertEquals(100f, viewModel.uiState.value.progressPercent, 0.01f)
+        assertEquals("5 / 5", viewModel.uiState.value.progressLabel)
+    }
+
+    @Test
+    fun `progressPercent updates correctly when navigating PDF pages`() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val repository = FakeReaderRepository()
+        val viewModel = ReaderViewModel(
+            readerRepository = repository,
+            readingStatsRepository = FakeReadingStatsRepository(),
+            updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
+            defaultBookId = null,
+            mainDispatcher = dispatcher
+        )
+
+        // 10 pages, on page 0 → 10%
+        setPdfStateWithPages(viewModel, totalPages = 10, currentPage = 0)
+        assertEquals(10f, viewModel.uiState.value.progressPercent, 0.01f)
+        assertEquals("1 / 10", viewModel.uiState.value.progressLabel)
+
+        // Page 4/10 → 50%
+        setPdfStateWithPages(viewModel, totalPages = 10, currentPage = 4)
+        assertEquals(50f, viewModel.uiState.value.progressPercent, 0.01f)
+        assertEquals("5 / 10", viewModel.uiState.value.progressLabel)
+
+        // Last page 9/10 → 100%
+        setPdfStateWithPages(viewModel, totalPages = 10, currentPage = 9)
+        assertEquals(100f, viewModel.uiState.value.progressPercent, 0.01f)
+        assertEquals("10 / 10", viewModel.uiState.value.progressLabel)
+    }
+
+    @Test
+    fun `progressPercent is 0 when no chapters or pages loaded`() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val repository = FakeReaderRepository()
+        val viewModel = ReaderViewModel(
+            readerRepository = repository,
+            readingStatsRepository = FakeReadingStatsRepository(),
+            updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
+            defaultBookId = null,
+            mainDispatcher = dispatcher
+        )
+
+        assertEquals(0f, viewModel.uiState.value.progressPercent, 0.01f)
+        assertEquals("", viewModel.uiState.value.progressLabel)
+    }
+
+    private fun setEpubStateWithChapters(
+        viewModel: ReaderViewModel,
+        chapters: List<EpubContentLoader.Chapter>,
+        currentChapterIndex: Int
+    ) {
+        val field = ReaderViewModel::class.java.getDeclaredField("mutableUiState")
+        field.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val state = field.get(viewModel) as MutableStateFlow<ReaderUiState>
+        state.value = state.value.copy(
+            bookFormat = "epub",
+            chapters = chapters,
+            currentChapterIndex = currentChapterIndex,
+            totalPdfPages = 0
+        )
+        // Trigger progress recalculation
+        viewModel::class.java.getDeclaredMethod("updateProgressDisplay").apply {
+            isAccessible = true
+            invoke(viewModel)
+        }
+    }
+
+    private fun setPdfStateWithPages(
+        viewModel: ReaderViewModel,
+        totalPages: Int,
+        currentPage: Int
+    ) {
+        val field = ReaderViewModel::class.java.getDeclaredField("mutableUiState")
+        field.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val state = field.get(viewModel) as MutableStateFlow<ReaderUiState>
+        state.value = state.value.copy(
+            bookFormat = "pdf",
+            chapters = emptyList(),
+            currentPdfPage = currentPage,
+            totalPdfPages = totalPages
+        )
+        // Trigger progress recalculation
+        viewModel::class.java.getDeclaredMethod("updateProgressDisplay").apply {
+            isAccessible = true
+            invoke(viewModel)
+        }
     }
 
     private fun setPdfState(

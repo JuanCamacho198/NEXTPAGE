@@ -9,4 +9,6 @@ object NextPageDimens {
     val spacingLg = 24.dp
     val spacingXl = 32.dp
     val iconNavBar = 20.dp
+    val cardCornerRadius = 12.dp
+    val progressBarHeight = 8.dp
 }

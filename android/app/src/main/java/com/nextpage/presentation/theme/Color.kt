@@ -7,6 +7,12 @@ val BgMain = Color(0xFF0B1120)          // $bg_main: Dark, almost black blue
 val BgSurface = Color(0xFF161F33)       // $bg_surface: Card/surface background
 val BgCardHover = Color(0xFF1E293B)     // $bg-card-hover
 
+// ─── Design Tokens - Borders ─────────────────────────
+val BorderSubtle = Color(0xFF242A3A)
+
+// ─── Design Tokens - Surfaces ────────────────────────
+val BgHeader = Color(0xFF0D1322)
+
 // ─── Design Tokens - Primary / Brand ──────────────────────────────────
 val PrimaryBlue = Color(0xFF3B82F6)     // $primary: Main brand color, buttons, accents
 val PrimaryBlueHover = Color(0xFF2563EB) // $primary-blue-hover

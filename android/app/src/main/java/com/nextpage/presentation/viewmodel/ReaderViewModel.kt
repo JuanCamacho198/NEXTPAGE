@@ -172,7 +172,18 @@ class ReaderViewModel(
             }
 
             try {
-                loader.load(java.io.File(filePath))
+                val file = java.io.File(filePath)
+                if (!file.exists()) {
+                    mutableUiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "File not found. Try importing the book again."
+                        )
+                    }
+                    return@launch
+                }
+
+                loader.load(file)
                 val pageCount = loader.getPageCount()
                 val loadTime = System.currentTimeMillis() - startTime
                 Log.d(TAG, "PDF loaded in ${loadTime}ms, $pageCount pages")
@@ -190,16 +201,22 @@ class ReaderViewModel(
                 updatePdfProgress(0, pageCount)
                 startObservingHighlights(bookId)
                 startObservingBookmarks(bookId)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e(
                     TAG,
                     "Failed to load PDF for bookId=$bookId, filePath=$filePath: ${e.message}",
                     e
                 )
+                val userMessage = when (e) {
+                    is OutOfMemoryError -> "The PDF is too large to display on this device."
+                    is java.io.FileNotFoundException -> "PDF file not found. Try importing the book again."
+                    is java.lang.SecurityException -> "Cannot access the PDF file."
+                    else -> e.message ?: "Failed to load PDF"
+                }
                 mutableUiState.update {
                     it.copy(
                         isLoading = false,
-                        error = e.message ?: "Failed to load PDF"
+                        error = userMessage
                     )
                 }
             }
@@ -229,17 +246,19 @@ class ReaderViewModel(
                         error = null
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 val selectedBookId = mutableUiState.value.selectedBookId
                 Log.e(
                     TAG,
                     "Failed to render PDF page index=$pageIndex for bookId=$selectedBookId: ${e.message}",
                     e
                 )
+                val userMessage = when (e) {
+                    is OutOfMemoryError -> "Page too large to display on this device."
+                    else -> e.message ?: "Failed to render PDF page"
+                }
                 mutableUiState.update {
-                    it.copy(
-                        error = e.message ?: "Failed to render PDF page"
-                    )
+                    it.copy(error = userMessage)
                 }
             }
         }

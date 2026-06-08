@@ -10,6 +10,8 @@ import java.io.File
 class PdfRendererWrapper(private val context: Context) {
     companion object {
         private const val TAG = "PdfRendererWrapper"
+        private const val MAX_RENDER_WIDTH = 1080
+        private const val MAX_RENDER_HEIGHT = 1920
     }
 
     private var pdfRenderer: PdfRenderer? = null
@@ -19,6 +21,9 @@ class PdfRendererWrapper(private val context: Context) {
     
     fun open(file: File) {
         synchronized(lock) {
+            if (!file.exists()) {
+                throw java.io.FileNotFoundException("PDF file not found: ${file.absolutePath}")
+            }
             closeLocked()
             fileDescriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
             pdfRenderer = PdfRenderer(fileDescriptor!!)
@@ -29,7 +34,7 @@ class PdfRendererWrapper(private val context: Context) {
         pdfRenderer?.pageCount ?: 0
     }
     
-    fun renderPage(pageIndex: Int, width: Int): Bitmap? {
+    fun renderPage(pageIndex: Int, width: Int = MAX_RENDER_WIDTH): Bitmap? {
         synchronized(lock) {
             val renderer = pdfRenderer ?: return null
 
@@ -39,9 +44,18 @@ class PdfRendererWrapper(private val context: Context) {
 
             val page = renderer.openPage(pageIndex)
             try {
+                val clampedWidth = width.coerceIn(100, MAX_RENDER_WIDTH)
                 val aspectRatio = page.width.toFloat() / page.height.toFloat()
-                val height = (width / aspectRatio).toInt()
-                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                val height = (clampedWidth / aspectRatio).toInt().coerceIn(100, MAX_RENDER_HEIGHT)
+                val bitmap = try {
+                    Bitmap.createBitmap(clampedWidth, height, Bitmap.Config.ARGB_8888)
+                } catch (oom: OutOfMemoryError) {
+                    Log.e(TAG, "OOM creating bitmap ${clampedWidth}x$height", oom)
+                    System.gc()
+                    val fallbackWidth = (clampedWidth / 2).coerceAtLeast(100)
+                    val fallbackHeight = (height / 2).coerceAtLeast(100)
+                    Bitmap.createBitmap(fallbackWidth, fallbackHeight, Bitmap.Config.ARGB_8888)
+                }
 
                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
 

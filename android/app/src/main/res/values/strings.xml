@@ -103,6 +103,9 @@
     <string name="library_sort_author">Autor</string>
     <string name="library_sort_last_read">Última lectura</string>
     <string name="library_add_book">Añadir libro</string>
+    <string name="library_import_book">Importar libro</string>
+    <string name="library_import_formats">Formatos soportados: EPUB, PDF</string>
+    <string name="library_import_unsupported">Formato no soportado. Solo se permiten archivos EPUB y PDF.</string>
     <string name="library_status_in_progress">%1$d min</string>
     <string name="library_status_completed">Completado</string>
     <string name="reader_placeholder">Reader rendering engine is coming soon.</string>

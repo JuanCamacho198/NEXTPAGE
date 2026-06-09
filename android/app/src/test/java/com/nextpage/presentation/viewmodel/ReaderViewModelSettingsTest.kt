@@ -43,7 +43,7 @@ class ReaderViewModelSettingsTest {
         )
 
         val settings = viewModel.uiState.value.readerSettings
-        assertEquals(FontSizePreset.MEDIUM, settings.fontSize)
+        assertEquals(FontSizePreset.M, settings.fontSize)
         assertEquals(ReaderTheme.DARK, settings.theme)
         assertEquals(LineHeightPreset.NORMAL, settings.lineHeight)
     }
@@ -60,7 +60,7 @@ class ReaderViewModelSettingsTest {
         )
 
         val newSettings = ReaderSettings(
-            fontSize = FontSizePreset.LARGE,
+            fontSize = FontSizePreset.XL,
             theme = ReaderTheme.SEPIA,
             lineHeight = LineHeightPreset.COMFORTABLE
         )
@@ -68,7 +68,7 @@ class ReaderViewModelSettingsTest {
         viewModel.updateReaderSettings(newSettings)
 
         val state = viewModel.uiState.value
-        assertEquals(FontSizePreset.LARGE, state.readerSettings.fontSize)
+        assertEquals(FontSizePreset.XL, state.readerSettings.fontSize)
         assertEquals(ReaderTheme.SEPIA, state.readerSettings.theme)
         assertEquals(LineHeightPreset.COMFORTABLE, state.readerSettings.lineHeight)
     }
@@ -85,7 +85,7 @@ class ReaderViewModelSettingsTest {
         )
 
         val newSettings = ReaderSettings(
-            fontSize = FontSizePreset.XLARGE,
+            fontSize = FontSizePreset.XXL,
             theme = ReaderTheme.LIGHT,
             lineHeight = LineHeightPreset.WIDE
         )
@@ -99,7 +99,7 @@ class ReaderViewModelSettingsTest {
     @Test
     fun `settings are loaded from preferences on ViewModel init`() = runTest {
         val persistedSettings = ReaderSettings(
-            fontSize = FontSizePreset.SMALL,
+            fontSize = FontSizePreset.SM,
             theme = ReaderTheme.LIGHT,
             lineHeight = LineHeightPreset.TIGHT
         )
@@ -115,7 +115,7 @@ class ReaderViewModelSettingsTest {
         )
 
         val settings = viewModel.uiState.value.readerSettings
-        assertEquals(FontSizePreset.SMALL, settings.fontSize)
+        assertEquals(FontSizePreset.SM, settings.fontSize)
         assertEquals(ReaderTheme.LIGHT, settings.theme)
         assertEquals(LineHeightPreset.TIGHT, settings.lineHeight)
     }
@@ -134,14 +134,14 @@ class ReaderViewModelSettingsTest {
         // Change only font size — copy with defaults for the rest
         viewModel.updateReaderSettings(
             ReaderSettings(
-                fontSize = FontSizePreset.XLARGE,
+                fontSize = FontSizePreset.XXL,
                 theme = ReaderTheme.DARK,
                 lineHeight = LineHeightPreset.NORMAL
             )
         )
 
         val state = viewModel.uiState.value
-        assertEquals(FontSizePreset.XLARGE, state.readerSettings.fontSize)
+        assertEquals(FontSizePreset.XXL, state.readerSettings.fontSize)
         assertEquals(ReaderTheme.DARK, state.readerSettings.theme)
         assertEquals(LineHeightPreset.NORMAL, state.readerSettings.lineHeight)
     }

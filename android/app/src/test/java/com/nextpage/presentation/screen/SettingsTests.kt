@@ -50,7 +50,7 @@ class SettingsTests {
     @Test
     fun `readerSettings uses defaults`() {
         val settings = ReaderSettings()
-        assertEquals(FontSizePreset.MEDIUM, settings.fontSize)
+        assertEquals(FontSizePreset.M, settings.fontSize)
         assertEquals(ReaderTheme.DARK, settings.theme)
         assertEquals(LineHeightPreset.NORMAL, settings.lineHeight)
     }
@@ -58,11 +58,11 @@ class SettingsTests {
     @Test
     fun `readerSettings can be customized`() {
         val settings = ReaderSettings(
-            fontSize = FontSizePreset.LARGE,
+            fontSize = FontSizePreset.XL,
             theme = ReaderTheme.SEPIA,
             lineHeight = LineHeightPreset.COMFORTABLE
         )
-        assertEquals(FontSizePreset.LARGE, settings.fontSize)
+        assertEquals(FontSizePreset.XL, settings.fontSize)
         assertEquals(ReaderTheme.SEPIA, settings.theme)
         assertEquals(LineHeightPreset.COMFORTABLE, settings.lineHeight)
     }

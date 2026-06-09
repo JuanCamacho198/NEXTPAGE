@@ -289,4 +289,5 @@
     <string name="reader_author_placeholder">Author</string>
     <string name="reader_toc">Table of contents</string>
     <string name="reader_bookmark">Bookmark</string>
+    <string name="reader_typography">Typography</string>
 </resources>

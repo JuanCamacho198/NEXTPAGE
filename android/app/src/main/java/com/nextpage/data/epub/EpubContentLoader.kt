@@ -233,7 +233,7 @@ class EpubContentLoader(private val context: Context) {
         return baseParts.joinToString("/")
     }
 
-    private fun stripHtmlToPlainText(html: String): String {
+    fun stripHtmlToPlainText(html: String): String {
         return html
             .replace(Regex("<script[^>]*>.*?</script>", RegexOption.IGNORE_CASE), "")
             .replace(Regex("<style[^>]*>.*?</style>", RegexOption.IGNORE_CASE), "")
@@ -321,6 +321,29 @@ class EpubContentLoader(private val context: Context) {
         }
 
         return results
+    }
+
+    /**
+     * Read raw entry bytes from an EPUB ZIP by entry path.
+     * Used by [EpubWebView] to serve embedded images via shouldInterceptRequest.
+     */
+    fun getEntryBytes(filePath: String, entryPath: String): Result<ByteArray> {
+        return try {
+            java.io.FileInputStream(filePath).use { fis ->
+                java.util.zip.ZipInputStream(fis).use { zis ->
+                    var entry = zis.nextEntry
+                    while (entry != null) {
+                        if (entry.name == entryPath) {
+                            return Result.success(zis.readBytes())
+                        }
+                        entry = zis.nextEntry
+                    }
+                }
+            }
+            Result.failure(Exception("Entry not found in EPUB: $entryPath"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     fun clearCache() {

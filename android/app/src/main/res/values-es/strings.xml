@@ -202,11 +202,13 @@
     <string name="aa_section_margins">Márgenes</string>
     <string name="aa_section_direction">Dirección</string>
     <string name="aa_section_audio">Audio</string>
+    <string name="aa_close_settings">Cerrar</string>
     <string name="aa_justification_left">Izquierda</string>
+    <string name="aa_justification_center">Centrar</string>
+    <string name="aa_justification_right">Derecha</string>
     <string name="aa_justification_justify">Justificar</string>
-    <string name="aa_margins_narrow">Estrecho</string>
-    <string name="aa_margins_normal">Normal</string>
-    <string name="aa_margins_wide">Amplio</string>
+    <string name="aa_margin_left">Margen izquierdo</string>
+    <string name="aa_margin_right">Margen derecho</string>
     <string name="aa_direction_ltr">Izquierda a derecha</string>
     <string name="aa_audio_coming_soon">Reproducción de audio próximamente</string>
     <string name="font_name_georgia">Georgia</string>

@@ -19,8 +19,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
+import androidx.compose.material.icons.automirrored.filled.FormatAlignRight
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.FontDownload
+import androidx.compose.material.icons.filled.FormatAlignCenter
+import androidx.compose.material.icons.filled.FormatAlignJustify
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -28,6 +33,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -70,6 +76,7 @@ import com.nextpage.domain.model.ScrollMode
 @Composable
 fun SplitSettingsSheet(
     settings: ReaderSettings,
+    previewText: String,
     onSettingsChanged: (ReaderSettings) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -79,6 +86,19 @@ fun SplitSettingsSheet(
     var showMarginsSection by remember { mutableStateOf(false) }
     var showDirectionSection by remember { mutableStateOf(false) }
     var showAudioSection by remember { mutableStateOf(false) }
+
+    val previewFontFamily = when (settings.fontName) {
+        "Arial" -> androidx.compose.ui.text.font.FontFamily.SansSerif
+        "Merriweather" -> androidx.compose.ui.text.font.FontFamily.Serif
+        else -> androidx.compose.ui.text.font.FontFamily.Default
+    }
+
+    val previewAlignment = when (settings.layoutPrefs.alignment) {
+        LayoutPreferences.Alignment.LEFT -> androidx.compose.ui.text.style.TextAlign.Left
+        LayoutPreferences.Alignment.CENTER -> androidx.compose.ui.text.style.TextAlign.Center
+        LayoutPreferences.Alignment.RIGHT -> androidx.compose.ui.text.style.TextAlign.Right
+        LayoutPreferences.Alignment.JUSTIFY -> androidx.compose.ui.text.style.TextAlign.Justify
+    }
 
     Column(
         modifier = modifier
@@ -90,12 +110,17 @@ fun SplitSettingsSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(0.4f)
-                .background(Color(0xFF0D1322))
-                .padding(20.dp),
+                .background(parseColorHex(settings.theme.bgHex))
+                .padding(
+                    start = settings.layoutPrefs.leftMargin.dp,
+                    end = settings.layoutPrefs.rightMargin.dp,
+                    top = 20.dp,
+                    bottom = 20.dp
+                ),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = stringResource(R.string.aa_preview_text),
+                text = previewText.ifBlank { stringResource(R.string.aa_preview_text) },
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = when (settings.fontSize) {
                         FontSizePreset.XS -> 12.sp
@@ -112,9 +137,11 @@ fun SplitSettingsSheet(
                         com.nextpage.domain.model.LineHeightPreset.NORMAL -> 22.sp
                         com.nextpage.domain.model.LineHeightPreset.COMFORTABLE -> 26.sp
                         com.nextpage.domain.model.LineHeightPreset.WIDE -> 30.sp
-                    }
+                    },
+                    fontFamily = previewFontFamily
                 ),
-                color = parseColorHex(settings.theme.textHex)
+                color = parseColorHex(settings.theme.textHex),
+                textAlign = previewAlignment
             )
         }
 
@@ -141,6 +168,31 @@ fun SplitSettingsSheet(
                     .background(Color(0xFF4A5568))
                     .align(Alignment.CenterHorizontally)
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Header Row with Close Button ───────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.reader_typography),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color(0xFFDDE2F8),
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(
+                    onClick = onDismiss
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.aa_close_settings),
+                        tint = Color(0xFF718096)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -313,34 +365,41 @@ fun SplitSettingsSheet(
                 isExpanded = showJustificationSection,
                 onToggle = { showJustificationSection = !showJustificationSection },
                 content = {
-                Column {
-                    listOf(
-                        stringResource(R.string.aa_justification_left) to LayoutPreferences.Alignment.LEFT,
-                        stringResource(R.string.aa_justification_justify) to LayoutPreferences.Alignment.JUSTIFY
-                    ).forEach { (label, alignment) ->
-                        val isSelected = settings.layoutPrefs.alignment == alignment
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) Color(0xFF2F3445) else Color.Transparent)
-                                .clickable {
-                                    onSettingsChanged(
-                                        settings.copy(
-                                            layoutPrefs = settings.layoutPrefs.copy(alignment = alignment)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        val alignmentOptions = listOf(
+                            LayoutPreferences.Alignment.LEFT to Icons.AutoMirrored.Filled.FormatAlignLeft,
+                            LayoutPreferences.Alignment.CENTER to Icons.Default.FormatAlignCenter,
+                            LayoutPreferences.Alignment.RIGHT to Icons.AutoMirrored.Filled.FormatAlignRight,
+                            LayoutPreferences.Alignment.JUSTIFY to Icons.Default.FormatAlignJustify
+                        )
+                        alignmentOptions.forEach { (alignment, icon) ->
+                            val isSelected = settings.layoutPrefs.alignment == alignment
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) Color(0xFF2F3445) else Color.Transparent)
+                                    .border(1.dp, if (isSelected) Color(0xFFADC6FF) else Color(0xFF4A5568), RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        onSettingsChanged(
+                                            settings.copy(
+                                                layoutPrefs = settings.layoutPrefs.copy(alignment = alignment)
+                                            )
                                         )
-                                    )
-                                }
-                                .padding(12.dp)
-                        ) {
-                            Text(
-                                text = label,
-                                color = if (isSelected) Color(0xFFADC6FF) else Color(0xFFDDE2F8),
-                                fontSize = 14.sp
-                            )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = alignment.name,
+                                    tint = if (isSelected) Color(0xFFADC6FF) else Color(0xFF718096)
+                                )
+                            }
                         }
                     }
-                }
                 } // end content
             ) // end ExpandableSection
 
@@ -349,41 +408,51 @@ fun SplitSettingsSheet(
                 isExpanded = showMarginsSection,
                 onToggle = { showMarginsSection = !showMarginsSection },
                 content = {
-                Column {
-                    data class MarginPreset(val label: String, val left: Int, val right: Int)
-                    val marginPresets = listOf(
-                        MarginPreset(stringResource(R.string.aa_margins_narrow), 8, 8),
-                        MarginPreset(stringResource(R.string.aa_margins_normal), 16, 16),
-                        MarginPreset(stringResource(R.string.aa_margins_wide), 24, 24)
-                    )
-                    marginPresets.forEach { preset ->
-                        val isSelected = settings.layoutPrefs.leftMargin == preset.left &&
-                            settings.layoutPrefs.rightMargin == preset.right
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) Color(0xFF2F3445) else Color.Transparent)
-                                .clickable {
-                                    onSettingsChanged(
-                                        settings.copy(
-                                            layoutPrefs = settings.layoutPrefs.copy(
-                                                leftMargin = preset.left,
-                                                rightMargin = preset.right
-                                            )
-                                        )
+                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                        Text(
+                            text = stringResource(R.string.aa_margin_left) + ": ${settings.layoutPrefs.leftMargin}px",
+                            color = Color(0xFFDDE2F8),
+                            fontSize = 12.sp
+                        )
+                        Slider(
+                            value = settings.layoutPrefs.leftMargin.toFloat(),
+                            onValueChange = { value ->
+                                onSettingsChanged(
+                                    settings.copy(
+                                        layoutPrefs = settings.layoutPrefs.copy(leftMargin = value.toInt())
                                     )
-                                }
-                                .padding(12.dp)
-                        ) {
-                            Text(
-                                text = preset.label,
-                                color = if (isSelected) Color(0xFFADC6FF) else Color(0xFFDDE2F8),
-                                fontSize = 14.sp
+                                )
+                            },
+                            valueRange = 0f..40f,
+                            colors = SliderDefaults.colors(
+                                thumbColor = Color(0xFFADC6FF),
+                                activeTrackColor = Color(0xFFADC6FF),
+                                inactiveTrackColor = Color(0xFF2F3445)
                             )
-                        }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.aa_margin_right) + ": ${settings.layoutPrefs.rightMargin}px",
+                            color = Color(0xFFDDE2F8),
+                            fontSize = 12.sp
+                        )
+                        Slider(
+                            value = settings.layoutPrefs.rightMargin.toFloat(),
+                            onValueChange = { value ->
+                                onSettingsChanged(
+                                    settings.copy(
+                                        layoutPrefs = settings.layoutPrefs.copy(rightMargin = value.toInt())
+                                    )
+                                )
+                            },
+                            valueRange = 0f..40f,
+                            colors = SliderDefaults.colors(
+                                thumbColor = Color(0xFFADC6FF),
+                                activeTrackColor = Color(0xFFADC6FF),
+                                inactiveTrackColor = Color(0xFF2F3445)
+                            )
+                        )
                     }
-                }
                 } // end content
             ) // end ExpandableSection
 

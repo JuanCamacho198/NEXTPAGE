@@ -241,6 +241,7 @@ fun ReaderScreen(
             if (uiState.showSplitSettings && uiState.chapters.isNotEmpty()) {
                 SplitSettingsSheet(
                     settings = uiState.readerSettings,
+                    previewText = uiState.previewText,
                     onSettingsChanged = { viewModel.updateReaderSettings(it) },
                     onDismiss = { viewModel.onToggleSplitSettings() }
                 )

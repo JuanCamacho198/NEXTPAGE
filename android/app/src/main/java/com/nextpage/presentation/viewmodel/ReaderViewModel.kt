@@ -40,6 +40,7 @@ data class ReaderUiState(
     val currentChapterIndex: Int = 0,
     val chapterContent: String = "",
     val chapterHtmlContent: String? = null,
+    val previewText: String = "",
     val currentPdfPage: Int = 0,
     val totalPdfPages: Int = 0,
     val pdfPageBitmap: Bitmap? = null,
@@ -315,10 +316,12 @@ class ReaderViewModel(
                 val loadTime = System.currentTimeMillis() - startTime
                 Log.d(TAG, "Chapter ${chapterIndex} loaded in ${loadTime}ms")
 
+                val preview = loader.stripHtmlToPlainText(htmlContent).take(200)
                 mutableUiState.update {
                     it.copy(
                         currentChapterIndex = chapterIndex,
-                        chapterHtmlContent = htmlContent
+                        chapterHtmlContent = htmlContent,
+                        previewText = preview
                     )
                 }
                 updateProgressDisplay()

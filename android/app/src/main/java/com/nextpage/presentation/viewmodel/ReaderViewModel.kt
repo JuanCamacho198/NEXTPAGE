@@ -22,6 +22,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -361,12 +362,14 @@ class ReaderViewModel(
             val state = mutableUiState.value
             val filePath = state.bookFilePath ?: return@launch
 
-            val results = when (state.bookFormat) {
-                "pdf" -> {
-                    pdfContentLoader?.searchText(query) ?: emptyList()
-                }
-                else -> {
-                    epubContentLoader?.searchAllChapters(filePath, query) ?: emptyList()
+            val results = withContext(Dispatchers.IO) {
+                when (state.bookFormat) {
+                    "pdf" -> {
+                        pdfContentLoader?.searchText(query) ?: emptyList()
+                    }
+                    else -> {
+                        epubContentLoader?.searchAllChapters(filePath, query) ?: emptyList()
+                    }
                 }
             }
 
@@ -408,6 +411,18 @@ class ReaderViewModel(
     }
 
     // ── Text Selection (Gap 4) ──────────────────────────────────────
+
+    @Suppress("UNUSED_PARAMETER")
+    fun onHighlightTapped(highlightId: String, text: String, left: Float, top: Float, right: Float, bottom: Float) {
+        mutableUiState.update {
+            it.copy(
+                selectedText = text,
+                selectionRect = Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt()),
+                showColorPicker = false,
+                showContextMenu = true
+            )
+        }
+    }
 
     fun onTextSelection(text: String, rect: Rect) {
         mutableUiState.update {

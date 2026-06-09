@@ -1,16 +1,24 @@
 package com.nextpage.ui.components.molecules
 
 import android.annotation.SuppressLint
+import android.annotation.TargetApi
 import android.graphics.Rect
+import android.view.ActionMode
+import android.view.Menu
+import android.view.MenuItem
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import com.nextpage.data.epub.EpubContentLoader
 import org.json.JSONArray
+import java.io.ByteArrayInputStream
 
 /**
  * Injects NextPage's reader CSS into the chapter HTML for beautiful rendering.
@@ -20,7 +28,9 @@ fun readerCss(
     bgColor: String = "#0D1322",
     textColor: String = "#DDE2F8",
     fontSizePx: Int = 20,
-    lineHeight: Float = 1.6f
+    lineHeight: Float = 1.6f,
+    leftMarginPx: Int = 16,
+    rightMarginPx: Int = 16
 ): String {
     return """
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -30,7 +40,7 @@ fun readerCss(
             font-size: ${fontSizePx}px;
             line-height: $lineHeight;
             font-family: 'Georgia', 'Noto Serif', serif;
-            padding: 20px 16px;
+            padding: 20px ${rightMarginPx}px 20px ${leftMarginPx}px;
             max-width: 100%;
             word-wrap: break-word;
             overflow-x: hidden;
@@ -133,7 +143,8 @@ class ReaderJsBridge(
     private val onTextSelected: (String) -> Unit = {},
     private val onScrollChanged: (Int, Int) -> Unit = { _, _ -> },
     private val onTextSelectionEvent: (text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _ -> },
-    private val onSearchResults: (String) -> Unit = {}
+    private val onSearchResults: (String) -> Unit = {},
+    private val onHighlightTapped: (highlightId: String, text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _, _ -> }
 ) {
     @JavascriptInterface
     fun onTextSelected(text: String) {
@@ -158,6 +169,11 @@ class ReaderJsBridge(
     @JavascriptInterface
     fun onChapterEndReached() {
         // Can be used for auto-advance to next chapter
+    }
+
+    @JavascriptInterface
+    fun onHighlightTapped(highlightId: String, text: String, left: Float, top: Float, right: Float, bottom: Float) {
+        onHighlightTapped(highlightId, text, left, top, right, bottom)
     }
 }
 
@@ -223,6 +239,25 @@ internal fun injectSelectionJs(): String {
 }
 
 /**
+ * JavaScript for detecting taps on [data-highlight-id] elements.
+ * Fires NextPageBridge.onHighlightTapped with the highlight's bounding rect.
+ */
+internal fun injectHighlightTapJs(): String {
+    return """
+        (function() {
+            document.addEventListener('click', function(e) {
+                var target = e.target.closest('[data-highlight-id]');
+                if (!target) return;
+                e.stopPropagation();
+                var rect = target.getBoundingClientRect();
+                var id = target.getAttribute('data-highlight-id');
+                NextPageBridge.onHighlightTapped(id, target.textContent, rect.left, rect.top, rect.right, rect.bottom);
+            });
+        })();
+    """.trimIndent()
+}
+
+/**
  * JavaScript for applying highlight color to selected text in the WebView.
  * Surrounds the current selection with a <span> styled with the given color.
  */
@@ -266,6 +301,10 @@ internal fun injectHighlightCss(highlightColor: String, highlightId: String): St
 @Composable
 fun EpubWebView(
     htmlContent: String,
+    filePath: String? = null,
+    epubContentLoader: EpubContentLoader? = null,
+    leftMarginPx: Int = 16,
+    rightMarginPx: Int = 16,
     bgColor: String = "#0D1322",
     textColor: String = "#DDE2F8",
     fontSizePx: Int = 20,
@@ -273,19 +312,21 @@ fun EpubWebView(
     onTextSelected: (String) -> Unit = {},
     onTextSelectionEvent: (text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _ -> },
     onSearchResults: (String) -> Unit = {},
+    onHighlightTapped: (highlightId: String, text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
-    val jsBridge = remember(onTextSelected, onTextSelectionEvent, onSearchResults) {
+    val jsBridge = remember(onTextSelected, onTextSelectionEvent, onSearchResults, onHighlightTapped) {
         ReaderJsBridge(
             onTextSelected = onTextSelected,
             onTextSelectionEvent = onTextSelectionEvent,
-            onSearchResults = onSearchResults
+            onSearchResults = onSearchResults,
+            onHighlightTapped = onHighlightTapped
         )
     }
 
     // Precompute the full HTML + CSS so update only needs to load it
-    val renderedHtml = remember(htmlContent, bgColor, textColor, fontSizePx, lineHeight) {
-        val css = readerCss(bgColor, textColor, fontSizePx, lineHeight)
+    val renderedHtml = remember(htmlContent, bgColor, textColor, fontSizePx, lineHeight, leftMarginPx, rightMarginPx) {
+        val css = readerCss(bgColor, textColor, fontSizePx, lineHeight, leftMarginPx, rightMarginPx)
         wrapHtmlContent(htmlContent, css)
     }
 
@@ -307,16 +348,79 @@ fun EpubWebView(
                     override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
                         return false
                     }
+
+                    @Suppress("OVERRIDE_DEPRECATION")
+                    override fun shouldInterceptRequest(view: WebView, url: String): WebResourceResponse? {
+                        return handleInterceptRequest(url, filePath, epubContentLoader)
+                    }
+
+                    @TargetApi(21)
+                    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                        return handleInterceptRequest(request.url.toString(), filePath, epubContentLoader)
+                    }
                 }
 
                 webChromeClient = WebChromeClient()
+
+                // Suppress native ActionMode via reflection (API 23+)
+                @Suppress("DEPRECATION")
+                val suppressionCallback = object : ActionMode.Callback {
+                    override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean = false
+                    override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
+                    override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean = false
+                    override fun onDestroyActionMode(mode: ActionMode) {}
+                }
+                try {
+                    val method = WebView::class.java.getMethod(
+                        "setCustomSelectionActionModeCallback",
+                        ActionMode.Callback::class.java
+                    )
+                    method.invoke(this, suppressionCallback)
+                } catch (_: Exception) {
+                    // Fallback: allow default ActionMode
+                }
 
                 addJavascriptInterface(jsBridge, "NextPageBridge")
             }
         },
         update = { webView ->
-            webView.loadDataWithBaseURL(null, renderedHtml, "text/html", "UTF-8", null)
+            webView.loadDataWithBaseURL("epub://local/", renderedHtml, "text/html", "UTF-8", null)
             webView.evaluateJavascript(injectSelectionJs(), null)
+            webView.evaluateJavascript(injectHighlightTapJs(), null)
         }
+    )
+}
+
+/**
+ * Handle an intercepted request for the epub://local/ scheme.
+ * Reads the requested entry from the EPUB ZIP via [EpubContentLoader.getEntryBytes]
+ * and returns a [WebResourceResponse] with the image bytes.
+ */
+private fun handleInterceptRequest(
+    url: String,
+    filePath: String?,
+    loader: EpubContentLoader?
+): WebResourceResponse? {
+    if (!url.startsWith("epub://local/")) return null
+    val fp = filePath ?: return null
+    val contentLoader = loader ?: return null
+
+    val entryPath = url.removePrefix("epub://local/")
+    if (entryPath.isBlank()) return null
+
+    val result = contentLoader.getEntryBytes(fp, entryPath)
+    return result.fold(
+        onSuccess = { bytes ->
+            val mimeType = when {
+                entryPath.endsWith(".png", ignoreCase = true) -> "image/png"
+                entryPath.endsWith(".jpg", ignoreCase = true) || entryPath.endsWith(".jpeg", ignoreCase = true) -> "image/jpeg"
+                entryPath.endsWith(".gif", ignoreCase = true) -> "image/gif"
+                entryPath.endsWith(".svg", ignoreCase = true) -> "image/svg+xml"
+                entryPath.endsWith(".webp", ignoreCase = true) -> "image/webp"
+                else -> "image/*"
+            }
+            WebResourceResponse(mimeType, null, ByteArrayInputStream(bytes))
+        },
+        onFailure = { null }
     )
 }

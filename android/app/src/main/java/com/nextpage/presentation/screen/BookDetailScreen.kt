@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,6 +51,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.ReadingProgress
@@ -187,8 +190,20 @@ private fun BookHeroSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Cover image
+        val context = LocalContext.current
+        val imageRequest = remember(book.coverPath) {
+            ImageRequest.Builder(context)
+                .data(book.coverPath?.takeIf { it.isNotBlank() })
+                .placeholder(R.drawable.cover_placeholder)
+                .error(R.drawable.cover_error)
+                .fallback(R.drawable.cover_placeholder)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .crossfade(true)
+                .build()
+        }
         AsyncImage(
-            model = book.coverPath?.takeIf { it.isNotBlank() },
+            model = imageRequest,
             contentDescription = stringResource(R.string.library_cover_content_description),
             modifier = Modifier
                 .width(128.dp)

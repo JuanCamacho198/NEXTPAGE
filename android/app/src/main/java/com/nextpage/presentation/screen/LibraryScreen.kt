@@ -382,7 +382,7 @@ private fun BookGrid(
         verticalItemSpacing = 16.dp,
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
-        items(books, key = { it.id }) { book ->
+        items(books, key = { it.id }, contentType = { "book" }) { book ->
             BookGridCard(
                 book = book,
                 minutesRead = readingMinutesByBook[book.id] ?: 0L,
@@ -390,7 +390,7 @@ private fun BookGrid(
                 onLongPress = { onBookLongPress(book) }
             )
         }
-        item {
+        item(key = "add_book", contentType = { "add" }) {
             AddBookCard(onImportClick = onImportClick)
         }
     }

@@ -255,6 +255,7 @@ fun HighlightsScreen(
 }
 
 @Composable
+@Suppress("UNUSED_PARAMETER")
 private fun HighlightCard(
     content: String,
     attribution: String?,

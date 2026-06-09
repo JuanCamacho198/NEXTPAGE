@@ -95,8 +95,6 @@ fun NextPageNavHost(
     val authState by authViewModel.uiState.collectAsState()
     val isAuthenticated = authState.currentSession != null
 
-    val libraryState by libraryViewModel.uiState.collectAsState()
-
     LaunchedEffect(appContainer, authViewModel) {
         appContainer.authCallbackEvents.collect { callbackUri ->
             authViewModel.onGoogleAuthCallback(callbackUri)

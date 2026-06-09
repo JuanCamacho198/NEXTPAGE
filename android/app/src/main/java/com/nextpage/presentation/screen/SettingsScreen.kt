@@ -10,7 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.ExitToApp
+import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Notifications
@@ -423,7 +423,7 @@ private fun AccountSection(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.ExitToApp,
+                        imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
                         contentDescription = stringResource(R.string.settings_logout),
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(24.dp)

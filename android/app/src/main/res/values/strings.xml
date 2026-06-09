@@ -231,4 +231,62 @@
     <string name="reader_line_height_comfortable">Comfortable</string>
     <string name="reader_line_height_wide">Wide</string>
     <string name="reader_progress_empty">-- / --</string>
+
+    <!-- Reader / Search -->
+    <string name="search_input_hint">Search in book…</string>
+    <string name="search_clear">Clear search</string>
+    <string name="search_results_count">Results (%1$d)</string>
+    <string name="search_no_results">No results</string>
+    <string name="search_error_retry">Search failed. Try again.</string>
+    <string name="search_result_chapter">Chapter %1$d</string>
+    <string name="search_label">Search</string>
+
+    <!-- Reader / Highlights Panel -->
+    <string name="highlight_filter_all">All</string>
+    <string name="highlight_filter_yellow">Yellow</string>
+    <string name="highlight_filter_green">Green</string>
+    <string name="highlight_filter_pink">Pink</string>
+    <string name="highlight_filter_blue">Blue</string>
+    <string name="highlight_filter_purple">Purple</string>
+
+    <!-- Reader / Text Selection -->
+    <string name="text_selection_copy">Copy</string>
+    <string name="context_menu_color">Color</string>
+    <string name="context_menu_tag">Tag</string>
+    <string name="context_menu_note">Note</string>
+    <string name="context_menu_comment">Comment</string>
+    <string name="context_menu_share">Share</string>
+    <string name="context_menu_delete">Delete</string>
+
+    <!-- Reader / aA Settings -->
+    <string name="aa_preview_text">The quick brown fox jumps over the lazy dog. This is a preview of the current reading settings.</string>
+    <string name="aa_expand">Expand</string>
+    <string name="aa_collapse">Collapse</string>
+    <string name="aa_section_justification">Justification</string>
+    <string name="aa_section_margins">Margins</string>
+    <string name="aa_section_direction">Direction</string>
+    <string name="aa_section_audio">Audio</string>
+    <string name="aa_justification_left">Left</string>
+    <string name="aa_justification_justify">Justify</string>
+    <string name="aa_margins_narrow">Narrow</string>
+    <string name="aa_margins_normal">Normal</string>
+    <string name="aa_margins_wide">Wide</string>
+    <string name="aa_direction_ltr">Left to right</string>
+    <string name="aa_audio_coming_soon">Audio playback coming soon</string>
+    <string name="font_name_georgia">Georgia</string>
+    <string name="font_name_arial">Arial</string>
+    <string name="font_name_merriweather">Merriweather</string>
+    <string name="theme_oled">OLED</string>
+    <string name="scroll_mode_vertical">Vertical</string>
+    <string name="scroll_mode_paginated">Paginated</string>
+    <string name="editor_values">Editor values</string>
+    <string name="vertical_scroll">Vertical scroll</string>
+    <string name="fullscreen_enter">Enter fullscreen</string>
+    <string name="fullscreen_exit">Exit fullscreen</string>
+
+    <!-- Reader / Header -->
+    <string name="reader_back">Back</string>
+    <string name="reader_author_placeholder">Author</string>
+    <string name="reader_toc">Table of contents</string>
+    <string name="reader_bookmark">Bookmark</string>
 </resources>

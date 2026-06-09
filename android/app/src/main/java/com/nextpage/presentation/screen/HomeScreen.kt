@@ -12,8 +12,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
@@ -64,50 +66,84 @@ fun HomeScreen(
             .padding(horizontal = 24.dp),
         verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
     ) {
-        // 1. Header
-        item {
-            HomeHeaderSection(
-                userName = uiState.userName,
-                onNotificationsClick = { showNotifications = true }
-            )
+        // Search Bar (always at top when visible)
+        if (uiState.showSearch) {
+            item {
+                SearchBarSection(
+                    searchQuery = uiState.searchQuery,
+                    onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
+                    onCloseSearch = { viewModel.onToggleSearch() }
+                )
+            }
+
+            // Search Results
+            if (uiState.searchResults.isNotEmpty()) {
+                item {
+                    SearchResultsList(
+                        results = uiState.searchResults,
+                        onBookSelected = onBookSelected
+                    )
+                }
+            } else if (uiState.searchQuery.isNotBlank()) {
+                item {
+                    Text(
+                        text = stringResource(R.string.library_search_no_results),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 24.dp)
+                    )
+                }
+            }
         }
 
-        // 2. Greeting
-        item { GreetingSection(userName = uiState.userName) }
+        // Only show regular content when search is hidden
+        if (!uiState.showSearch) {
+            // 1. Header
+            item {
+                HomeHeaderSection(
+                    userName = uiState.userName,
+                    onSearchClick = { viewModel.onToggleSearch() },
+                    onNotificationsClick = { showNotifications = true }
+                )
+            }
 
-        // 3. TodaySummary
-        item {
-            TodaySummarySection(
-                minutesRead = uiState.minutesReadToday,
-                sessionsToday = uiState.sessionsToday,
-                dailyProgressPercent = uiState.dailyProgressPercent
-            )
-        }
+            // 2. Greeting
+            item { GreetingSection(userName = uiState.userName) }
 
-        // 4. ContinueReading
-        item {
-            ContinueReadingSection(
-                currentBook = uiState.currentBook,
-                onBookSelected = onBookSelected
-            )
-        }
+            // 3. TodaySummary
+            item {
+                TodaySummarySection(
+                    minutesRead = uiState.minutesReadToday,
+                    sessionsToday = uiState.sessionsToday,
+                    dailyProgressPercent = uiState.dailyProgressPercent
+                )
+            }
 
-        // 5. MyBookshelf
-        item {
-            MyBookshelfSection(
-                books = uiState.recentBooks,
-                onViewAll = onNavigateToLibrary,
-                onBookSelected = onBookSelected
+            // 4. ContinueReading
+            item {
+                ContinueReadingSection(
+                    currentBook = uiState.currentBook,
+                    onBookSelected = onBookSelected
             )
-        }
+            }
 
-        // 6. QuickAccess
-        item {
-            QuickAccessSection(
-                onImportBook = onImportBook,
-                onHighlights = onNavigateToHighlights,
-                onSettings = onNavigateToSettings
-            )
+            // 5. MyBookshelf
+            item {
+                MyBookshelfSection(
+                    books = uiState.recentBooks,
+                    onViewAll = onNavigateToLibrary,
+                    onBookSelected = onBookSelected
+                )
+            }
+
+            // 6. QuickAccess
+            item {
+                QuickAccessSection(
+                    onImportBook = onImportBook,
+                    onHighlights = onNavigateToHighlights,
+                    onSettings = onNavigateToSettings
+                )
+            }
         }
 
         // 7. Bottom spacer
@@ -120,6 +156,7 @@ fun HomeScreen(
 @Composable
 private fun HomeHeaderSection(
     userName: String,
+    onSearchClick: () -> Unit,
     onNotificationsClick: () -> Unit
 ) {
     Row(
@@ -155,12 +192,21 @@ private fun HomeHeaderSection(
             )
         }
 
-        IconButton(onClick = onNotificationsClick) {
-            Icon(
-                imageVector = Icons.Outlined.Notifications,
-                contentDescription = stringResource(R.string.notifications_title),
-                tint = MaterialTheme.colorScheme.onSurface
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            IconButton(onClick = onSearchClick) {
+                Icon(
+                    imageVector = Icons.Outlined.Search,
+                    contentDescription = stringResource(R.string.library_search_placeholder),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            IconButton(onClick = onNotificationsClick) {
+                Icon(
+                    imageVector = Icons.Outlined.Notifications,
+                    contentDescription = stringResource(R.string.notifications_title),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }
@@ -486,6 +532,99 @@ private fun QuickAccessSection(
                 onClick = onSettings,
                 modifier = Modifier.weight(1f)
             )
+        }
+    }
+}
+
+// ─── Search Bar Section ────────────────────────────────────────────────
+
+@Composable
+private fun SearchBarSection(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onCloseSearch: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            placeholder = { Text(stringResource(R.string.library_search_placeholder)) },
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(24.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        IconButton(onClick = onCloseSearch) {
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = "Cerrar búsqueda"
+            )
+        }
+    }
+}
+
+// ─── Search Results List ─────────────────────────────────────────────
+
+@Composable
+private fun SearchResultsList(
+    results: List<Book>,
+    onBookSelected: (String, String, String) -> Unit
+) {
+    Column {
+        Text(
+            text = stringResource(R.string.home_search_results),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        results.forEach { book ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        onBookSelected(book.id, book.filePath, book.format)
+                    },
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CoverThumbnail(
+                        coverPath = book.coverPath,
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = book.title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        book.author?.let { author ->
+                            Text(
+                                text = author,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }

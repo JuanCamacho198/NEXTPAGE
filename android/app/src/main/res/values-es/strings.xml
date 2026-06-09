@@ -77,6 +77,7 @@
     <string name="home_no_current_book">Sin libro en curso</string>
     <string name="home_today_summary_title">Resumen de hoy</string>
     <string name="home_nextpage_title">NextPage</string>
+    <string name="home_search_results">Resultados</string>
     <string name="nav_home">Inicio</string>
     <string name="nav_library">Estantería</string>
     <string name="nav_highlights">Resaltados</string>
@@ -119,6 +120,7 @@
     <string name="library_status_completed">Completado</string>
     <string name="library_filter_format_label">Formato</string>
     <string name="library_filter_format_all">Todos</string>
+    <string name="library_search_no_results">Sin resultados</string>
 
     <!-- Notifications -->
     <string name="notifications_title">Notificaciones</string>

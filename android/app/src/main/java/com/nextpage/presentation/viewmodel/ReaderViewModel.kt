@@ -1,6 +1,7 @@
 package com.nextpage.presentation.viewmodel
 
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -10,8 +11,10 @@ import com.nextpage.data.pdf.PdfContentLoader
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
+import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.model.ReaderSettings
+import com.nextpage.domain.model.SearchResult
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
@@ -25,6 +28,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import java.util.UUID
 
 data class ReaderUiState(
@@ -53,6 +57,27 @@ data class ReaderUiState(
     val progressPercent: Float = 0f,
     val progressLabel: String = "",
 
+    // ── Search (Gap 3) ──────────────────────────────────────────────
+    val isSearchActive: Boolean = false,
+    val searchQuery: String = "",
+    val searchResults: List<SearchResult> = emptyList(),
+    val isSearching: Boolean = false,
+
+    // ── Text Selection (Gap 4) ──────────────────────────────────────
+    val selectedText: String? = null,
+    val selectionRect: Rect? = null,
+    val showColorPicker: Boolean = false,
+    val showContextMenu: Boolean = false,
+
+    // ── Highlights Panel (Gap 5) ────────────────────────────────────
+    val showHighlightsSheet: Boolean = false,
+
+    // ── aA Settings (Gap 6) ─────────────────────────────────────────
+    val showSplitSettings: Boolean = false,
+
+    // ── Fullscreen (Gap 7) ──────────────────────────────────────────
+    val isFullscreen: Boolean = false,
+
     val isLoading: Boolean = true,
     val loadTimeMs: Long? = null,
     val error: String? = null
@@ -70,6 +95,7 @@ class ReaderViewModel(
 ) : ViewModel() {
     companion object {
         private const val TAG = "ReaderViewModel"
+        private const val SEARCH_DEBOUNCE_MS = 300L
     }
 
     private val mutableUiState = MutableStateFlow(
@@ -82,6 +108,7 @@ class ReaderViewModel(
     private var observeBookmarksJob: Job? = null
     private var readingTimeTickerJob: Job? = null
     private var sleepTimerJob: Job? = null
+    private var searchJob: Job? = null
     private var sessionStartTime: Long = 0L
 
     init {
@@ -105,7 +132,9 @@ class ReaderViewModel(
                 bookFilePath = filePath,
                 bookFormat = format,
                 isLoading = true,
-                error = null
+                error = null,
+                // Reset fullscreen on new book load
+                isFullscreen = false
             )
         }
 
@@ -301,10 +330,201 @@ class ReaderViewModel(
         }
     }
 
-    /**
-     * Check if the sleep timer is in end-of-chapter mode and should be stopped.
-     * If so, cancels the timer and shows the finished overlay.
-     */
+    // ── Search (Gap 3) ──────────────────────────────────────────────
+
+    fun onToggleSearch() {
+        mutableUiState.update {
+            it.copy(
+                isSearchActive = !it.isSearchActive,
+                searchQuery = "",
+                searchResults = emptyList(),
+                isSearching = false
+            )
+        }
+    }
+
+    fun onSearchQuery(query: String) {
+        mutableUiState.update { it.copy(searchQuery = query) }
+
+        searchJob?.cancel()
+        if (query.isBlank()) {
+            mutableUiState.update {
+                it.copy(searchResults = emptyList(), isSearching = false)
+            }
+            return
+        }
+
+        searchJob = viewModelScope.launch {
+            delay(SEARCH_DEBOUNCE_MS)
+            mutableUiState.update { it.copy(isSearching = true) }
+
+            val state = mutableUiState.value
+            val filePath = state.bookFilePath ?: return@launch
+
+            val results = when (state.bookFormat) {
+                "pdf" -> {
+                    pdfContentLoader?.searchText(query) ?: emptyList()
+                }
+                else -> {
+                    epubContentLoader?.searchAllChapters(filePath, query) ?: emptyList()
+                }
+            }
+
+            mutableUiState.update {
+                it.copy(searchResults = results, isSearching = false)
+            }
+        }
+    }
+
+    fun onClearSearch() {
+        mutableUiState.update {
+            it.copy(searchQuery = "", searchResults = emptyList(), isSearching = false)
+        }
+        searchJob?.cancel()
+    }
+
+    fun onDismissSearch() {
+        mutableUiState.update {
+            it.copy(
+                isSearchActive = false,
+                searchQuery = "",
+                searchResults = emptyList(),
+                isSearching = false
+            )
+        }
+        searchJob?.cancel()
+    }
+
+    fun onSearchResultSelected(result: SearchResult) {
+        val state = mutableUiState.value
+        if (state.bookFormat == "pdf") {
+            goToPdfPage(result.page.toInt())
+        } else {
+            if (result.chapterIndex != state.currentChapterIndex) {
+                goToChapter(result.chapterIndex)
+            }
+        }
+        onDismissSearch()
+    }
+
+    // ── Text Selection (Gap 4) ──────────────────────────────────────
+
+    fun onTextSelection(text: String, rect: Rect) {
+        mutableUiState.update {
+            it.copy(
+                selectedText = text,
+                selectionRect = rect,
+                showColorPicker = true,
+                showContextMenu = false
+            )
+        }
+    }
+
+    fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) {
+        onTextSelection(text, Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt()))
+    }
+
+    fun onSelectHighlightColor(color: String) {
+        val state = mutableUiState.value
+        val bookId = state.selectedBookId ?: return
+        val text = state.selectedText ?: return
+
+        val cfiRange = if (state.bookFormat == "pdf") {
+            "pdfpage:${state.currentPdfPage}"
+        } else {
+            "epubcfi(/6/${state.currentChapterIndex + 1})"
+        }
+
+        createHighlight(
+            bookId = bookId,
+            cfiRange = cfiRange,
+            textContent = text,
+            color = color
+        )
+
+        mutableUiState.update {
+            it.copy(
+                showColorPicker = false,
+                showContextMenu = false,
+                selectedText = null,
+                selectionRect = null
+            )
+        }
+    }
+
+    fun onCopySelectedText() {
+        if (mutableUiState.value.selectedText == null) return
+        // Clipboard copy handled in View layer
+        mutableUiState.update {
+            it.copy(
+                showColorPicker = false,
+                showContextMenu = false,
+                selectedText = null,
+                selectionRect = null
+            )
+        }
+    }
+
+    fun onShowContextMenu() {
+        mutableUiState.update {
+            it.copy(showColorPicker = false, showContextMenu = true)
+        }
+    }
+
+    fun onDismissContextMenu() {
+        mutableUiState.update {
+            it.copy(
+                showColorPicker = false,
+                showContextMenu = false,
+                selectedText = null,
+                selectionRect = null
+            )
+        }
+    }
+
+    // ── Highlights Panel (Gap 5) ────────────────────────────────────
+
+    fun onToggleHighlightsPanel() {
+        mutableUiState.update {
+            it.copy(showHighlightsSheet = !it.showHighlightsSheet)
+        }
+    }
+
+    fun onHighlightSelected(highlight: Highlight) {
+        // Navigate to highlight position
+        val cfi = highlight.cfiRange
+        if (cfi.startsWith("pdfpage:")) {
+            val page = cfi.removePrefix("pdfpage:").toIntOrNull()
+            if (page != null) goToPdfPage(page)
+        } else {
+            // EPUB CFI: extract chapter index
+            val chapterMatch = Regex("/6/(\\d+)").find(cfi)
+            val chapterIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+            if (chapterIndex != null && chapterIndex - 1 != mutableUiState.value.currentChapterIndex) {
+                goToChapter(chapterIndex - 1)
+            }
+        }
+        mutableUiState.update { it.copy(showHighlightsSheet = false) }
+    }
+
+    // ── aA Settings (Gap 6) ─────────────────────────────────────────
+
+    fun onToggleSplitSettings() {
+        mutableUiState.update {
+            it.copy(showSplitSettings = !it.showSplitSettings)
+        }
+    }
+
+    // ── Fullscreen (Gap 7) ──────────────────────────────────────────
+
+    fun onToggleFullscreen() {
+        mutableUiState.update {
+            it.copy(isFullscreen = !it.isFullscreen)
+        }
+    }
+
+    // ── Existing methods (unchanged) ────────────────────────────────
+
     private fun checkEndOfChapterTrigger() {
         if (mutableUiState.value.sleepTimerEndOfChapterMode) {
             mutableUiState.update {
@@ -426,9 +646,7 @@ class ReaderViewModel(
     }
 
     /**
-     * Recalcula el porcentaje de progreso y la etiqueta según el formato actual.
-     * Para EPUB: (capítulo actual + 1) / total capítulos
-     * Para PDF: (página actual + 1) / total páginas
+     * Updates the progress percentage and label according to the current format.
      */
     private fun updateProgressDisplay() {
         val state = mutableUiState.value
@@ -492,7 +710,7 @@ class ReaderViewModel(
         cfiRange: String,
         textContent: String,
         note: String? = null,
-        color: String = "yellow"
+        color: String = HighlightColor.YELLOW.hex
     ) {
         viewModelScope.launch(mainDispatcher) {
             val highlight = Highlight(
@@ -580,13 +798,6 @@ class ReaderViewModel(
 
     // ── Sleep Timer ──────────────────────────────────────────────────
 
-    /**
-     * Start the sleep timer.
-     *
-     * @param minutes Duration in minutes. Pass [Int.MIN_VALUE] to signal end-of-chapter mode.
-     * In end-of-chapter mode, the timer has no countdown — it stops when the user
-     * navigates to another chapter.
-     */
     fun startSleepTimer(minutes: Int) {
         sleepTimerJob?.cancel()
         val isEndOfChapter = minutes == Int.MIN_VALUE
@@ -602,7 +813,6 @@ class ReaderViewModel(
         }
 
         if (isEndOfChapter) {
-            // No countdown needed — chapter change triggers finish
             return
         }
 
@@ -629,9 +839,6 @@ class ReaderViewModel(
         }
     }
 
-    /**
-     * Cancel an active sleep timer and reset all timer state.
-     */
     fun cancelSleepTimer() {
         sleepTimerJob?.cancel()
         sleepTimerJob = null
@@ -646,18 +853,12 @@ class ReaderViewModel(
         }
     }
 
-    /**
-     * Dismiss the "time's up" overlay so the user can continue reading.
-     */
     fun dismissSleepTimerOverlay() {
         mutableUiState.update {
             it.copy(sleepTimerFinished = false)
         }
     }
 
-    /**
-     * Format remaining seconds as MM:SS for display.
-     */
     fun formatSleepTimerRemaining(secs: Int): String {
         val minutes = secs / 60
         val seconds = secs % 60
@@ -669,6 +870,30 @@ class ReaderViewModel(
     fun updateReaderSettings(settings: ReaderSettings) {
         readerPreferences?.save(settings)
         mutableUiState.update { it.copy(readerSettings = settings) }
+    }
+
+    // ── Progress drag ────────────────────────────────────────────────
+
+    fun onProgressChange(percent: Float) {
+        val clamped = percent.coerceIn(0f, 100f)
+        mutableUiState.update {
+            it.copy(progressPercent = clamped)
+        }
+
+        if (mutableUiState.value.selectedBookId == null) return
+
+        if (mutableUiState.value.totalPdfPages > 0) {
+            val pageIndex = ((clamped / 100f) * mutableUiState.value.totalPdfPages).toInt()
+                .coerceIn(0, mutableUiState.value.totalPdfPages - 1)
+            renderPdfPage(pageIndex)
+            updatePdfProgress(pageIndex, mutableUiState.value.totalPdfPages)
+        } else if (mutableUiState.value.chapters.isNotEmpty()) {
+            val chapterIndex = ((clamped / 100f) * mutableUiState.value.chapters.size).toInt()
+                .coerceIn(0, mutableUiState.value.chapters.size - 1)
+            if (chapterIndex != mutableUiState.value.currentChapterIndex) {
+                goToChapter(chapterIndex)
+            }
+        }
     }
 
     fun onReaderOpened() {

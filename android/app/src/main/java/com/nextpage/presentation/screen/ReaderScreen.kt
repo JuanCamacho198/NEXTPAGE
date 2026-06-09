@@ -37,20 +37,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.presentation.viewmodel.ReaderViewModel
+import com.nextpage.ui.components.molecules.HighlightsSheet
+import com.nextpage.ui.components.molecules.PdfWebView
 import com.nextpage.ui.components.molecules.ReadingProgressBar
 import com.nextpage.ui.components.molecules.SearchBottomSheet
-import com.nextpage.ui.components.molecules.HighlightsSheet
-import com.nextpage.ui.components.molecules.SplitSettingsSheet
 import com.nextpage.ui.components.molecules.SleepTimerOverlay
 import com.nextpage.ui.components.molecules.SleepTimerPreset
 import com.nextpage.ui.components.molecules.SleepTimerSheet
+import com.nextpage.ui.components.molecules.SplitSettingsSheet
 
 /**
  * Reader screen dispatcher.
  *
  * Orchestrates the reader UI by wiring the [ReaderViewModel] state and
  * events into the structural [ReaderChrome] layout and format-specific
- * content composables ([EpubReaderContent], [PdfReaderContent]).
+ * content composables ([EpubReaderContent], [PdfWebView]).
  *
  * Responsibilities:
  * - Effects: fullscreen insets, reader lifecycle, book loading
@@ -173,11 +174,18 @@ fun ReaderScreen(
                 }
 
                 uiState.totalPdfPages > 0 -> {
-                    PdfReaderContent(
-                        bitmap = uiState.pdfPageBitmap,
+                    PdfWebView(
+                        filePath = bookFilePath ?: "",
                         currentPage = uiState.currentPdfPage,
-                        totalPages = uiState.totalPdfPages,
-                        onTapZone = { isLeft -> viewModel.onTapZone(isLeft) }
+                        searchQuery = uiState.searchQuery,
+                        highlights = uiState.highlights,
+                        onPageChanged = { page -> viewModel.goToPdfPage(page - 1) },
+                        onDocumentLoaded = { pages -> viewModel.onPdfDocumentLoaded(pages) },
+                        onTextSelectionEvent = { text, left, top, right, bottom ->
+                            viewModel.onTextSelectionEvent(text, left, top, right, bottom)
+                        },
+                        onSearchResults = { json -> viewModel.onPdfSearchResults(json) },
+                        onHighlightTapped = viewModel::onHighlightTapped
                     )
                 }
 

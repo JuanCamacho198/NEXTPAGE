@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PDF Viewer</title>
+    <script src="pdf.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0D1322;
+        }
+        #viewerContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+        }
+        #pageContainer {
+            position: relative;
+            margin: 0 auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        #pdfCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        #textLayerDiv {
+            position: absolute;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            opacity: 0.25;
+            line-height: 1;
+            -webkit-text-size-adjust: none;
+            text-size-adjust: none;
+            z-index: 2;
+            pointer-events: none;
+        }
+        #textLayerDiv span {
+            position: absolute;
+            white-space: pre;
+            cursor: text;
+            transform-origin: 0% 0%;
+            color: transparent;
+            pointer-events: auto;
+            font-size: 0;
+        }
+        #textLayerDiv ::selection {
+            background-color: rgba(59, 130, 246, 0.4);
+        }
+        /* Loading indicator */
+        #loadingIndicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ADC6FF;
+            font-family: system-ui, sans-serif;
+            font-size: 14px;
+        }
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(173, 198, 255, 0.2);
+            border-top-color: #ADC6FF;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* Highlight spans */
+        .pdf-highlight {
+            border-radius: 2px;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+        /* Search highlight */
+        .pdf-search-highlight {
+            background-color: rgba(255, 255, 0, 0.3);
+            border-radius: 2px;
+        }
+        .pdf-search-highlight-active {
+            background-color: rgba(255, 165, 0, 0.5);
+            border-radius: 2px;
+        }
+        /* Error state */
+        #errorMessage {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #EF4444;
+            font-family: system-ui, sans-serif;
+            font-size: 16px;
+            text-align: center;
+            max-width: 80%;
+        }
+    </style>
+</head>
+<body>
+<div id="viewerContainer">
+    <div id="loadingIndicator">
+        <div class="spinner"></div>
+        <span>Loading PDF...</span>
+    </div>
+    <div id="pageContainer" style="display:none;">
+        <canvas id="pdfCanvas"></canvas>
+        <div id="textLayerDiv"></div>
+    </div>
+    <div id="errorMessage"></div>
+</div>
+
+<script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.js';
+
+    // ── State ────────────────────────────────────────────────────────
+    var pdfDoc = null;
+    var currentPageNumber = 1;
+    var pageCount = 0;
+    var scale = 1.5;
+    var pendingHighlights = []; // highlights to restore per page
+    var searchResults = [];
+    var currentSearchResultIdx = -1;
+
+    // ── Page Rendering ───────────────────────────────────────────────
+
+    function renderPage(num) {
+        if (!pdfDoc) return;
+
+        pdfDoc.getPage(num).then(function(page) {
+            var dpr = window.devicePixelRatio || 1;
+            var viewport = page.getViewport({scale: scale});
+
+            var canvas = document.getElementById('pdfCanvas');
+            var context = canvas.getContext('2d');
+
+            // HiDPI: buffer en píxeles físicos, display en CSS pixels
+            canvas.width = Math.round(viewport.width * dpr);
+            canvas.height = Math.round(viewport.height * dpr);
+            canvas.style.width = viewport.width + 'px';
+            canvas.style.height = viewport.height + 'px';
+
+            // Escalar contexto para HiDPI (el viewport NO incluye DPR)
+            context.save();
+            context.scale(dpr, dpr);
+
+            // Render page to canvas (viewport en CSS pixels, sin DPR)
+            // page.render() es async — restore debe ir en .promise.then()
+            page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise.then(function() {
+                context.restore();
+            });
+
+            // Build text layer en CSS pixels (mismo sistema que canvas.style)
+            page.getTextContent().then(function(textContent) {
+                var textLayer = document.getElementById('textLayerDiv');
+                textLayer.innerHTML = '';
+                textLayer.style.width = viewport.width + 'px';
+                textLayer.style.height = viewport.height + 'px';
+
+                textContent.items.forEach(function(item) {
+                    var tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+                    var span = document.createElement('span');
+                    span.textContent = item.str;
+                    span.style.left = tx[4] + 'px';
+                    span.style.top = tx[5] + 'px';
+                    span.style.fontSize = Math.sqrt(tx[0] * tx[0] + tx[1] * tx[1]) + 'px';
+                    span.style.fontFamily = item.fontName || 'sans-serif';
+                    textLayer.appendChild(span);
+                });
+
+                // Restore highlights for this page
+                restorePageHighlights(num, textLayer);
+            });
+
+            // Hide loading, show content
+            document.getElementById('loadingIndicator').style.display = 'none';
+            document.getElementById('pageContainer').style.display = 'block';
+
+            // Notify Kotlin of page change
+            try {
+                NextPageBridge.onPageChanged(num);
+            } catch(e) {}
+        }).catch(function(err) {
+            showError('Failed to render page: ' + err.message);
+        });
+    }
+
+    // ── PDF Loading ──────────────────────────────────────────────────
+
+    function loadPdfData(uint8Array) {
+        pdfjsLib.getDocument({data: uint8Array}).promise.then(function(pdf) {
+            pdfDoc = pdf;
+            pageCount = pdf.numPages;
+            currentPageNumber = 1;
+            try {
+                NextPageBridge.onDocumentLoaded(pageCount);
+            } catch(e) {}
+            renderPage(1);
+        }).catch(function(err) {
+            showError('Failed to load PDF: ' + err.message);
+        });
+    }
+
+    // ── Navigation ───────────────────────────────────────────────────
+
+    function goToPage(num) {
+        num = Math.max(1, Math.min(num, pageCount));
+        if (num === currentPageNumber && pdfDoc) return;
+        currentPageNumber = num;
+        renderPage(num);
+    }
+
+    function nextPage() {
+        if (currentPageNumber < pageCount) goToPage(currentPageNumber + 1);
+    }
+
+    function previousPage() {
+        if (currentPageNumber > 1) goToPage(currentPageNumber - 1);
+    }
+
+    // ── Text Selection ───────────────────────────────────────────────
+
+    document.addEventListener('selectionchange', function() {
+        var sel = window.getSelection();
+        if (!sel || sel.isCollapsed || sel.toString().trim() === '') return;
+        var range = sel.getRangeAt(0);
+        var rect = range.getBoundingClientRect();
+        clearTimeout(window._selTimeout);
+        window._selTimeout = setTimeout(function() {
+            try {
+                NextPageBridge.onTextSelectionEvent(
+                    sel.toString(),
+                    rect.left, rect.top, rect.right, rect.bottom
+                );
+            } catch(e) {}
+        }, 300);
+    });
+
+    // ── Highlight Tap ────────────────────────────────────────────────
+
+    document.addEventListener('click', function(e) {
+        var target = e.target.closest('[data-highlight-id]');
+        if (!target) return;
+        e.stopPropagation();
+        var rect = target.getBoundingClientRect();
+        var id = target.getAttribute('data-highlight-id');
+        try {
+            NextPageBridge.onHighlightTapped(
+                id,
+                target.textContent,
+                rect.left, rect.top, rect.right, rect.bottom
+            );
+        } catch(e) {}
+    });
+
+    // ── Search ───────────────────────────────────────────────────────
+
+    function executeSearch(query) {
+        if (!pdfDoc) return;
+        var results = [];
+
+        // Collect all text content pages (search first 50 pages max for performance)
+        var pagesToSearch = Math.min(pageCount, 50);
+        var promises = [];
+        for (var i = 1; i <= pagesToSearch; i++) {
+            promises.push(pdfDoc.getPage(i).then(function(page) {
+                return page.getTextContent();
+            }).then(function(textContent) {
+                return textContent;
+            }));
+        }
+
+        Promise.all(promises).then(function(pagesText) {
+            var queryLower = query.toLowerCase();
+            for (var p = 0; p < pagesText.length; p++) {
+                var pageNum = p + 1;
+                var textContent = pagesText[p];
+                var fullText = textContent.items.map(function(item) { return item.str; }).join(' ');
+                var idx = fullText.toLowerCase().indexOf(queryLower);
+                if (idx !== -1) {
+                    var snippetStart = Math.max(0, idx - 30);
+                    var snippetEnd = Math.min(fullText.length, idx + query.length + 30);
+                    var snippet = fullText.substring(snippetStart, snippetEnd);
+                    results.push({
+                        page: pageNum,
+                        text: snippet,
+                        offset: idx
+                    });
+                }
+            }
+
+            searchResults = results;
+            currentSearchResultIdx = -1;
+
+            // Clear previous search highlights
+            document.querySelectorAll('.pdf-search-highlight, .pdf-search-highlight-active').forEach(function(el) {
+                el.classList.remove('pdf-search-highlight', 'pdf-search-highlight-active');
+                el.style.backgroundColor = '';
+            });
+
+            try {
+                NextPageBridge.onSearchResults(JSON.stringify(results));
+            } catch(e) {}
+
+            // Highlight matches on current page
+            highlightSearchResults(query, currentPageNumber);
+        });
+    }
+
+    function highlightSearchResults(query, pageNum) {
+        if (!pdfDoc) return;
+        pdfDoc.getPage(pageNum).then(function(page) {
+            return page.getTextContent();
+        }).then(function(textContent) {
+            var textLayer = document.getElementById('textLayerDiv');
+            if (!textLayer) return;
+            var queryLower = query.toLowerCase();
+            var spans = textLayer.querySelectorAll('span');
+            spans.forEach(function(span) {
+                var text = span.textContent || '';
+                var idx = text.toLowerCase().indexOf(queryLower);
+                if (idx !== -1) {
+                    span.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                    span.classList.add('pdf-search-highlight');
+                }
+            });
+        });
+    }
+
+    function clearSearch() {
+        searchResults = [];
+        currentSearchResultIdx = -1;
+        document.querySelectorAll('.pdf-search-highlight, .pdf-search-highlight-active').forEach(function(el) {
+            el.classList.remove('pdf-search-highlight', 'pdf-search-highlight-active');
+            el.style.backgroundColor = '';
+        });
+    }
+
+    function navigateSearchResult(index) {
+        if (index < 0 || index >= searchResults.length) return;
+        currentSearchResultIdx = index;
+        var result = searchResults[index];
+
+        // Navigate to page
+        if (result.page !== currentPageNumber) {
+            goToPage(result.page);
+            // Navigation will re-render, give time then re-highlight
+            setTimeout(function() {
+                highlightSearchResults(document.querySelector('input') ? document.querySelector('input').value : '', result.page);
+            }, 500);
+        }
+
+        // Scroll to position approximation
+        var container = document.getElementById('viewerContainer');
+        container.scrollTop = container.scrollHeight * ((result.page - 1) / pageCount);
+    }
+
+    // ── Highlights ───────────────────────────────────────────────────
+
+    function applyHighlight(highlightId, color) {
+        var sel = window.getSelection();
+        if (!sel || sel.isCollapsed) return;
+        var range = sel.getRangeAt(0);
+
+        var span = document.createElement('span');
+        span.style.backgroundColor = color;
+        span.style.color = 'inherit';
+        span.style.borderRadius = '2px';
+        span.className = 'pdf-highlight';
+        span.setAttribute('data-highlight-id', highlightId);
+
+        try {
+            range.surroundContents(span);
+        } catch(e) {
+            // Fallback for partial selections across elements
+            var fragment = range.extractContents();
+            span.appendChild(fragment);
+            range.insertNode(span);
+        }
+        sel.removeAllRanges();
+    }
+
+    function setPendingHighlights(highlightsJson) {
+        try {
+            pendingHighlights = JSON.parse(highlightsJson);
+        } catch(e) {
+            pendingHighlights = [];
+        }
+        // If we're on a page, restore highlights now
+        if (currentPageNumber > 0) {
+            var textLayer = document.getElementById('textLayerDiv');
+            if (textLayer) restorePageHighlights(currentPageNumber, textLayer);
+        }
+    }
+
+    function restorePageHighlights(pageNum, textLayer) {
+        var pageHighlights = pendingHighlights.filter(function(h) {
+            return h.pageNumber === pageNum;
+        });
+        if (pageHighlights.length === 0) return;
+
+        var spans = textLayer.querySelectorAll('span');
+        pageHighlights.forEach(function(hl) {
+            var snippet = hl.textSnippet ? hl.textSnippet.trim().toLowerCase() : '';
+            // Normalize whitespace in snippet for matching
+            snippet = snippet.replace(/\s+/g, ' ');
+            if (!snippet || snippet.length < 3) return; // skip too-short snippets
+            for (var i = 0; i < spans.length; i++) {
+                var spanText = (spans[i].textContent || '').replace(/\s+/g, ' ').toLowerCase();
+                if (spanText.includes(snippet)) {
+                    spans[i].style.backgroundColor = hl.color || '#FFD700';
+                    spans[i].style.borderRadius = '2px';
+                    spans[i].classList.add('pdf-highlight');
+                    spans[i].setAttribute('data-highlight-id', hl.id);
+                    break;
+                }
+            }
+        });
+    }
+
+    // ── Utility ──────────────────────────────────────────────────────
+
+    function showError(message) {
+        document.getElementById('loadingIndicator').style.display = 'none';
+        var errorEl = document.getElementById('errorMessage');
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+    }
+
+    // Export functions for Kotlin injection
+    window.loadPdfData = loadPdfData;
+    window.goToPage = goToPage;
+    window.nextPage = nextPage;
+    window.previousPage = previousPage;
+    window.executeSearch = executeSearch;
+    window.clearSearch = clearSearch;
+    window.navigateSearchResult = navigateSearchResult;
+    window.applyHighlight = applyHighlight;
+    window.setPendingHighlights = setPendingHighlights;
+</script>
+</body>
+</html>

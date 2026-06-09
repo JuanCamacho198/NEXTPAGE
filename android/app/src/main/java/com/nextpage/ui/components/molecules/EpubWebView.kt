@@ -144,7 +144,9 @@ class ReaderJsBridge(
     private val onScrollChanged: (Int, Int) -> Unit = { _, _ -> },
     private val onTextSelectionEvent: (text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _ -> },
     private val onSearchResults: (String) -> Unit = {},
-    private val onHighlightTapped: (highlightId: String, text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _, _ -> }
+    private val onHighlightTapped: (highlightId: String, text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _, _ -> },
+    private val onPageChanged: (page: Int) -> Unit = {},
+    private val onDocumentLoaded: (totalPages: Int) -> Unit = {}
 ) {
     @JavascriptInterface
     fun onTextSelected(text: String) {
@@ -174,6 +176,16 @@ class ReaderJsBridge(
     @JavascriptInterface
     fun onHighlightTapped(highlightId: String, text: String, left: Float, top: Float, right: Float, bottom: Float) {
         onHighlightTapped(highlightId, text, left, top, right, bottom)
+    }
+
+    @JavascriptInterface
+    fun onPageChanged(page: Int) {
+        onPageChanged(page)
+    }
+
+    @JavascriptInterface
+    fun onDocumentLoaded(totalPages: Int) {
+        onDocumentLoaded(totalPages)
     }
 }
 

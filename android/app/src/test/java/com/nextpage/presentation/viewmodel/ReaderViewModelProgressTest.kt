@@ -153,7 +153,9 @@ class ReaderViewModelProgressTest {
     }
 
     @Test
-    fun goToPdfPage_setsUiErrorWhenPdfLoaderUnavailable_insteadOfCrashing() = runTest(StandardTestDispatcher()) {
+    fun goToPdfPage_updatesPageWithoutRenderer() = runTest(StandardTestDispatcher()) {
+        // With the PDF.js-based architecture, goToPdfPage only manages state.
+        // Rendering is handled by PdfWebView, not the ViewModel.
         val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = FakeReaderRepository()
         val viewModel = ReaderViewModel(
@@ -168,7 +170,8 @@ class ReaderViewModelProgressTest {
         viewModel.goToPdfPage(2)
         advanceUntilIdle()
 
-        assertEquals("PDF content loader is unavailable", viewModel.uiState.value.error)
+        assertEquals(2, viewModel.uiState.value.currentPdfPage)
+        assertEquals("pdfpage:2", repository.lastUpserted?.cfiLocation)
     }
 
     // ── Progress Display Tests ─────────────────────────────────────

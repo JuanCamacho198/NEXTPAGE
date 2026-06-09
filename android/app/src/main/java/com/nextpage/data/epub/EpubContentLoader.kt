@@ -9,6 +9,7 @@ import java.util.zip.ZipInputStream
 class EpubContentLoader(private val context: Context) {
     companion object {
         private const val TAG = "EpubContentLoader"
+        private const val MAX_CACHED_BOOKS = 20
     }
 
     data class Chapter(
@@ -24,7 +25,11 @@ class EpubContentLoader(private val context: Context) {
         val opfPath: String
     )
 
-    private val cachedBook: MutableMap<String, EpubBook> = mutableMapOf()
+    private val cachedBook: MutableMap<String, EpubBook> = object : LinkedHashMap<String, EpubBook>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, EpubBook>): Boolean {
+            return size > MAX_CACHED_BOOKS
+        }
+    }
 
     fun loadEpub(filePath: String): Result<EpubBook> {
         return try {
@@ -329,18 +334,12 @@ class EpubContentLoader(private val context: Context) {
      */
     fun getEntryBytes(filePath: String, entryPath: String): Result<ByteArray> {
         return try {
-            java.io.FileInputStream(filePath).use { fis ->
-                java.util.zip.ZipInputStream(fis).use { zis ->
-                    var entry = zis.nextEntry
-                    while (entry != null) {
-                        if (entry.name == entryPath) {
-                            return Result.success(zis.readBytes())
-                        }
-                        entry = zis.nextEntry
-                    }
-                }
+            val file = java.io.File(filePath)
+            java.util.zip.ZipFile(file).use { zipFile ->
+                val entry = zipFile.getEntry(entryPath)
+                    ?: return Result.failure(Exception("Entry not found in EPUB: $entryPath"))
+                zipFile.getInputStream(entry).use { it.readBytes() }.let { Result.success(it) }
             }
-            Result.failure(Exception("Entry not found in EPUB: $entryPath"))
         } catch (e: Exception) {
             Result.failure(e)
         }

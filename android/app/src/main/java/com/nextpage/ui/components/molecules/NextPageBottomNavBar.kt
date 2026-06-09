@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.sp
 import com.nextpage.presentation.theme.BgSurface
 import com.nextpage.presentation.theme.NavBarActive
 import com.nextpage.presentation.theme.NavBarInactive
-import com.nextpage.presentation.theme.NavBarOverlay
 import com.nextpage.presentation.theme.NextPageDimens
 
 data class BottomNavItem(
@@ -73,25 +72,14 @@ fun NextPageBottomNavBar(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // Active overlay background (only when selected)
-                    Box(
+                    Icon(
+                        painter = painterResource(id = dest.iconRes),
+                        contentDescription = stringResource(id = dest.labelRes),
+                        tint = iconTint,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(9999.dp))
-                            .background(
-                                if (isSelected) NavBarOverlay else Color.Transparent
-                            )
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(id = dest.iconRes),
-                            contentDescription = stringResource(id = dest.labelRes),
-                            tint = iconTint,
-                            modifier = Modifier
-                                .height(NextPageDimens.iconNavBar)
-                                .width(IntrinsicSize.Min)
-                        )
-                    }
+                            .height(NextPageDimens.iconNavBar)
+                            .width(IntrinsicSize.Min)
+                    )
 
                     Spacer(modifier = Modifier.height(4.dp))
 

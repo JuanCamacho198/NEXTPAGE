@@ -4,17 +4,28 @@ package com.nextpage.domain.model
  * Presets for the reader's font size.
  */
 enum class FontSizePreset(val sizePx: Int) {
-    SMALL(16),
-    MEDIUM(20),
-    LARGE(24),
-    XLARGE(28);
+    XS(12),
+    S(14),
+    SM(16),
+    M(18),
+    ML(20),
+    L(22),
+    XL(24),
+    XXL(28);
 
     companion object {
         fun fromPx(px: Int): FontSizePreset =
-            entries.find { it.sizePx == px } ?: MEDIUM
+            entries.find { it.sizePx == px } ?: M
 
         fun fromOrdinal(ordinal: Int): FontSizePreset =
-            entries.getOrElse(ordinal) { MEDIUM }
+            entries.getOrElse(ordinal) { M }
+
+        /**
+         * Safe lookup by enum name, used for migration from old 4-value names to new 8-value names.
+         * Old names (SMALL, MEDIUM, LARGE, XLARGE) will not match and fall back to [M].
+         */
+        fun safeValueOf(name: String): FontSizePreset =
+            entries.find { it.name == name } ?: M
     }
 }
 
@@ -61,17 +72,14 @@ enum class ScrollMode {
  * Layout preferences for margins and alignment.
  */
 data class LayoutPreferences(
-    val margins: Margins = Margins.NORMAL,
+    val leftMargin: Int = 16,
+    val rightMargin: Int = 16,
     val alignment: Alignment = Alignment.JUSTIFY
 ) {
-    enum class Margins {
-        NARROW,
-        NORMAL,
-        WIDE
-    }
-
     enum class Alignment {
         LEFT,
+        CENTER,
+        RIGHT,
         JUSTIFY
     }
 }
@@ -87,7 +95,7 @@ data class LayoutPreferences(
  * - [verticalScroll]: whether vertical scroll mode is active
  */
 data class ReaderSettings(
-    val fontSize: FontSizePreset = FontSizePreset.MEDIUM,
+    val fontSize: FontSizePreset = FontSizePreset.M,
     val theme: ReaderTheme = ReaderTheme.DARK,
     val lineHeight: LineHeightPreset = LineHeightPreset.NORMAL,
     val fontName: String = "Georgia",

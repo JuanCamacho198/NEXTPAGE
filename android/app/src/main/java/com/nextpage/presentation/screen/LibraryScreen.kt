@@ -89,6 +89,11 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
+import com.nextpage.ui.components.molecules.FilterBottomSheet
+import com.nextpage.ui.components.molecules.LibraryHeader
+import com.nextpage.ui.components.molecules.StatusChipRow
+import com.nextpage.ui.components.molecules.SortControlRow
+import com.nextpage.ui.components.molecules.AddBookCard
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Screen Composable
@@ -105,27 +110,7 @@ fun LibraryScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var statusFilter by remember { mutableStateOf("all") }
-    var sortBy by remember { mutableStateOf("date_added") }
-    var isGridView by remember { mutableStateOf(true) }
-    var searchQuery by remember { mutableStateOf("") }
-    var showSearch by remember { mutableStateOf(false) }
-
-    val filteredByStatus = remember(uiState.books, statusFilter, uiState.readingMinutesByBook) {
-        filterBooks(uiState.books, statusFilter, uiState.readingMinutesByBook)
-    }
-
-    val searchedBooks = remember(filteredByStatus, searchQuery) {
-        if (searchQuery.isBlank()) filteredByStatus
-        else filteredByStatus.filter {
-            it.title.contains(searchQuery, ignoreCase = true) ||
-            (it.author?.contains(searchQuery, ignoreCase = true) == true)
-        }
-    }
-
-    val sortedBooks = remember(searchedBooks, sortBy) {
-        sortBookList(searchedBooks, sortBy)
-    }
+    val searchedBooks = uiState.searchedBooks
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -218,18 +203,19 @@ fun LibraryScreen(
         } else {
             LibraryBookshelfContent(
                 contentPadding = contentPadding,
-                books = sortedBooks,
+                books = searchedBooks,
                 readingMinutesByBook = uiState.readingMinutesByBook,
-                statusFilter = statusFilter,
-                onStatusFilterChanged = { statusFilter = it },
-                sortBy = sortBy,
-                onSortByChanged = { sortBy = it },
-                isGridView = isGridView,
-                onViewToggle = { isGridView = !isGridView },
-                showSearch = showSearch,
-                onSearchToggle = { showSearch = !showSearch },
-                searchQuery = searchQuery,
-                onSearchQueryChange = { searchQuery = it },
+                statusFilter = uiState.statusFilter,
+                onStatusFilterChanged = { viewModel.onStatusFilterChanged(it) },
+                sortBy = uiState.sortBy,
+                onSortByChanged = { viewModel.onSortByChanged(it) },
+                isGridView = uiState.isGridView,
+                onViewToggle = { viewModel.onToggleView() },
+                showSearch = uiState.showSearch,
+                onSearchToggle = { viewModel.onToggleSearch() },
+                searchQuery = uiState.searchQuery,
+                onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
+                onFilterToggle = { viewModel.onToggleFilterSheet() },
                 onBookSelected = onBookSelected,
                 onBookLongPress = { book -> viewModel.requestDeleteBook(book) },
                 onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }
@@ -264,6 +250,15 @@ fun LibraryScreen(
             )
         }
 
+        // ── Filter Bottom Sheet ──
+        if (uiState.showFilterSheet) {
+            FilterBottomSheet(
+                selectedFormat = uiState.filterFormat,
+                onFormatSelected = { viewModel.onFilterFormatChanged(it) },
+                onDismiss = { viewModel.onToggleFilterSheet() }
+            )
+        }
+
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
@@ -292,6 +287,7 @@ private fun LibraryBookshelfContent(
     onSearchToggle: () -> Unit,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
+    onFilterToggle: () -> Unit,
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
     onImportClick: () -> Unit
@@ -306,11 +302,12 @@ private fun LibraryBookshelfContent(
             showSearch = showSearch,
             onSearchToggle = onSearchToggle,
             searchQuery = searchQuery,
-            onSearchQueryChange = onSearchQueryChange
+            onSearchQueryChange = onSearchQueryChange,
+            onFilterToggle = onFilterToggle
         )
 
         // 2. Status Tabs
-        StatusTabsRow(
+        StatusChipRow(
             selectedTab = statusFilter,
             onTabSelected = onStatusFilterChanged
         )
@@ -318,7 +315,7 @@ private fun LibraryBookshelfContent(
         Spacer(modifier = Modifier.height(12.dp))
 
         // 3. Sort Row
-        SortRowComposable(
+        SortControlRow(
             sortBy = sortBy,
             onSortByChanged = onSortByChanged,
             isGridView = isGridView,
@@ -334,201 +331,6 @@ private fun LibraryBookshelfContent(
             onBookLongPress = onBookLongPress,
             onImportClick = onImportClick
         )
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Section 1: Header
-// ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun LibraryHeader(
-    showSearch: Boolean,
-    onSearchToggle: () -> Unit,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.nav_library),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                IconButton(onClick = onSearchToggle) {
-                    Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = stringResource(R.string.library_search_placeholder)
-                    )
-                }
-                IconButton(onClick = { /* TODO: filter */ }) {
-                    Icon(
-                        imageVector = Icons.Outlined.FilterList,
-                        contentDescription = stringResource(R.string.library_filter_label)
-                    )
-                }
-            }
-        }
-        if (showSearch) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = onSearchQueryChange,
-                placeholder = { Text(stringResource(R.string.library_search_placeholder)) },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(24.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Section 2: Status Tabs
-// ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun StatusTabsRow(
-    selectedTab: String,
-    onTabSelected: (String) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        val tabs = listOf(
-            "all" to R.string.library_tab_all,
-            "reading" to R.string.library_tab_reading,
-            "pending" to R.string.library_tab_pending,
-            "completed" to R.string.library_tab_completed
-        )
-        tabs.forEach { (tabId, labelRes) ->
-            val isSelected = selectedTab == tabId
-            AssistChip(
-                onClick = { onTabSelected(tabId) },
-                label = {
-                    Text(
-                        text = stringResource(labelRes),
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                        else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                shape = RoundedCornerShape(16.dp),
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = if (isSelected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.surfaceVariant,
-                    labelColor = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                border = null
-            )
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Section 3: Sort Row
-// ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun SortRowComposable(
-    sortBy: String,
-    onSortByChanged: (String) -> Unit,
-    isGridView: Boolean,
-    onViewToggle: () -> Unit
-) {
-    var sortMenuExpanded by remember { mutableStateOf(false) }
-
-    val sortLabelRes = when (sortBy) {
-        "title" -> R.string.library_sort_title
-        "author" -> R.string.library_sort_author
-        "last_read" -> R.string.library_sort_last_read
-        else -> R.string.library_sort_date_added
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringResource(R.string.library_sort_label),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Box {
-                TextButton(onClick = { sortMenuExpanded = true }) {
-                    Text(text = stringResource(sortLabelRes))
-                }
-                DropdownMenu(
-                    expanded = sortMenuExpanded,
-                    onDismissRequest = { sortMenuExpanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.library_sort_date_added)) },
-                        onClick = {
-                            onSortByChanged("date_added")
-                            sortMenuExpanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.library_sort_title)) },
-                        onClick = {
-                            onSortByChanged("title")
-                            sortMenuExpanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.library_sort_author)) },
-                        onClick = {
-                            onSortByChanged("author")
-                            sortMenuExpanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.library_sort_last_read)) },
-                        onClick = {
-                            onSortByChanged("last_read")
-                            sortMenuExpanded = false
-                        }
-                    )
-                }
-            }
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            IconButton(onClick = { if (!isGridView) onViewToggle() }) {
-                Icon(
-                    imageVector = Icons.Outlined.GridView,
-                    contentDescription = "Grid view",
-                    tint = if (isGridView) MaterialTheme.colorScheme.primary
-                           else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            IconButton(onClick = { if (isGridView) onViewToggle() }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ViewList,
-                    contentDescription = "List view",
-                    tint = if (!isGridView) MaterialTheme.colorScheme.primary
-                           else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
     }
 }
 
@@ -632,7 +434,7 @@ private fun BookListCard(
     onLongPress: () -> Unit
 ) {
     val progressFraction = if (minutesRead > 0L) {
-        (minutesRead.toFloat() / 300f).coerceIn(0f, 1f)
+        (minutesRead.toFloat() / READING_TARGET_MINUTES).coerceIn(0f, 1f)
     } else 0f
 
     Surface(
@@ -703,7 +505,7 @@ private fun BookGridCard(
     onLongPress: () -> Unit
 ) {
     val progressFraction = if (minutesRead > 0L) {
-        (minutesRead.toFloat() / 300f).coerceIn(0f, 1f)
+        (minutesRead.toFloat() / READING_TARGET_MINUTES).coerceIn(0f, 1f)
     } else 0f
 
     val statusText = when {
@@ -779,54 +581,7 @@ private fun BookGridCard(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Add Book Card
-// ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun AddBookCard(
-    onImportClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(280.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .dashedBorder(
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                strokeWidth = 1.5.dp,
-                cornerRadius = 12.dp,
-                dashLength = 8.dp,
-                gapLength = 4.dp
-            )
-            .clickable { onImportClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Add,
-                contentDescription = stringResource(R.string.library_import_book),
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = stringResource(R.string.library_import_book),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = stringResource(R.string.library_import_formats),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Empty Library (preserved)
+// Empty Library
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -897,73 +652,5 @@ internal fun CoverThumbnail(
     )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
+private const val READING_TARGET_MINUTES = 300L
 
-private fun filterBooks(
-    books: List<Book>,
-    statusFilter: String,
-    readingMinutesByBook: Map<String, Long>
-): List<Book> {
-    return when (statusFilter) {
-        "reading" -> books.filter {
-            (readingMinutesByBook[it.id] ?: 0L) > 0L
-        }
-        "pending" -> books.filter {
-            (readingMinutesByBook[it.id] ?: 0L) == 0L
-        }
-        "completed" -> books.filter {
-            (readingMinutesByBook[it.id] ?: 0L) >= 300L
-        }
-        else -> books
-    }
-}
-
-private fun sortBookList(
-    books: List<Book>,
-    sortBy: String
-): List<Book> {
-    return when (sortBy) {
-        "title" -> books.sortedBy { it.title }
-        "author" -> books.sortedBy { it.author ?: "" }
-        "last_read" -> books.sortedByDescending { it.updatedAtEpochMillis }
-        else -> books // "date_added" — already in insertion order
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Dashed Border Modifier
-// ─────────────────────────────────────────────────────────────────────────────
-
-private fun Modifier.dashedBorder(
-    color: Color,
-    strokeWidth: Dp = 1.dp,
-    cornerRadius: Dp = 12.dp,
-    dashLength: Dp = 8.dp,
-    gapLength: Dp = 4.dp
-) = this.drawBehind {
-    val rect = androidx.compose.ui.geometry.Rect(
-        offset = androidx.compose.ui.geometry.Offset.Zero,
-        size = size
-    )
-    val path = Path().apply {
-        addRoundRect(
-            androidx.compose.ui.geometry.RoundRect(
-                rect = rect,
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius.toPx())
-            )
-        )
-    }
-    drawPath(
-        path = path,
-        color = color,
-        style = Stroke(
-            width = strokeWidth.toPx(),
-            pathEffect = PathEffect.dashPathEffect(
-                floatArrayOf(dashLength.toPx(), gapLength.toPx()),
-                0f
-            )
-        )
-    )
-}

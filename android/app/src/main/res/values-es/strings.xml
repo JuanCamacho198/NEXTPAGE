@@ -117,6 +117,8 @@
     <string name="library_import_unsupported">Formato no soportado. Solo se permiten archivos EPUB y PDF.</string>
     <string name="library_status_in_progress">%1$d min</string>
     <string name="library_status_completed">Completado</string>
+    <string name="library_filter_format_label">Formato</string>
+    <string name="library_filter_format_all">Todos</string>
 
     <!-- Notifications -->
     <string name="notifications_title">Notificaciones</string>

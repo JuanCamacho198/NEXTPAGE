@@ -108,6 +108,8 @@
     <string name="library_import_unsupported">Formato no soportado. Solo se permiten archivos EPUB y PDF.</string>
     <string name="library_status_in_progress">%1$d min</string>
     <string name="library_status_completed">Completado</string>
+    <string name="library_filter_format_label">Formato</string>
+    <string name="library_filter_format_all">Todos</string>
     <string name="reader_placeholder">Reader rendering engine is coming soon.</string>
     <string name="reader_selected_book">Book: %1$s</string>
     <string name="reader_no_progress">No local progress yet for this book.</string>

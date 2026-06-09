@@ -5,7 +5,7 @@
         android:allowBackup="true"
         android:label="NextPage"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+        android:theme="@style/Theme.NextPage">
         <activity
             android:name=".MainActivity"
             android:exported="true">

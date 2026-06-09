@@ -61,11 +61,15 @@ class AuthViewModel(
             val sessionResult = authRepository.getCurrentSession()
             val session = sessionResult.getOrNull()
             session?.let { triggerSyncForSession(it) }
-            _uiState.value = _uiState.value.copy(
-                currentSession = session,
-                errorMessage = sessionResult.exceptionOrNull()?.message,
-                failureKind = classifyFailure(sessionResult.exceptionOrNull())
-            )
+            // Only restore if no session was already set (e.g. by continueLocally())
+            // This prevents a slow restoreSession() from overwriting a local session.
+            if (_uiState.value.currentSession == null) {
+                _uiState.value = _uiState.value.copy(
+                    currentSession = session,
+                    errorMessage = sessionResult.exceptionOrNull()?.message,
+                    failureKind = classifyFailure(sessionResult.exceptionOrNull())
+                )
+            }
         }
     }
 

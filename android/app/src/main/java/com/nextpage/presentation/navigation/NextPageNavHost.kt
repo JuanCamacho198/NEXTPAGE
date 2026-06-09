@@ -15,8 +15,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -46,6 +46,9 @@ import com.nextpage.presentation.util.getContentDisplayName
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun NextPageNavHost(
@@ -55,6 +58,7 @@ fun NextPageNavHost(
 ) {
     val context = LocalContext.current
     val navController = rememberNavController()
+    val scope = rememberCoroutineScope()
 
     var selectedBookId by remember { mutableStateOf("") }
     var selectedBookFilePath by remember { mutableStateOf<String?>(null) }
@@ -110,11 +114,8 @@ fun NextPageNavHost(
         authViewModel.consumePendingGoogleSignInUrl()
     }
 
-    LaunchedEffect(selectedBookId) {
-        if (selectedBookId.isNotBlank()) {
-            readerViewModel.restoreProgressForBook(selectedBookId)
-        }
-    }
+    // NOTE: Book loading is handled directly by ReaderScreen via LaunchedEffect(selectedBookId, bookFilePath, bookFormat).
+    // No need to pre-load here; restoreProgressForBook is called inside loadBook flow.
 
     val bottomNavDestinations = listOf(
         NextPageDestination.Home,
@@ -202,38 +203,45 @@ fun NextPageNavHost(
                             ?: "imported_book"
                         val mimeType = context.contentResolver.getType(uri)
 
-                        if (fileName.endsWith(".pdf", true) || mimeType == "application/pdf") {
-                            // ── Import as PDF ────────────────────────
-                            val pdfDir = File(context.filesDir, "pdfs")
-                            if (!pdfDir.exists()) pdfDir.mkdirs()
-                            val pdfFile = File(pdfDir, fileName)
-                            context.contentResolver.openInputStream(uri)?.use { input ->
-                                pdfFile.outputStream().use { output ->
-                                    input.copyTo(output)
+                        // ── Run file copy on IO thread to avoid blocking the UI ──
+                        scope.launch {
+                            if (fileName.endsWith(".pdf", true) || mimeType == "application/pdf") {
+                                // ── Import as PDF ────────────────────────
+                                val pdfDir = File(context.filesDir, "pdfs")
+                                if (!pdfDir.exists()) pdfDir.mkdirs()
+                                val pdfFile = File(pdfDir, fileName)
+                                withContext(Dispatchers.IO) {
+                                    context.contentResolver.openInputStream(uri)?.use { input ->
+                                        pdfFile.outputStream().use { output ->
+                                            input.copyTo(output)
+                                        }
+                                    }
                                 }
+                                libraryViewModel.importPdfBook(
+                                    sourcePath = pdfFile.absolutePath,
+                                    fallbackTitle = fileName.removeSuffix(".pdf"),
+                                    pdfFile = pdfFile
+                                )
+                            } else {
+                                // ── Import as EPUB ───────────────────────
+                                val epubDir = File(context.filesDir, "epubs")
+                                if (!epubDir.exists()) epubDir.mkdirs()
+                                val epubFile = File(epubDir, fileName)
+                                withContext(Dispatchers.IO) {
+                                    context.contentResolver.openInputStream(uri)?.use { input ->
+                                        epubFile.outputStream().use { output ->
+                                            input.copyTo(output)
+                                        }
+                                    }
+                                }
+                                libraryViewModel.importBookFromEpub(
+                                    sourcePath = epubFile.absolutePath,
+                                    fallbackTitle = fileName.removeSuffix(".epub"),
+                                    inputStreamProvider = {
+                                        epubFile.inputStream()
+                                    }
+                                )
                             }
-                            libraryViewModel.importPdfBook(
-                                sourcePath = pdfFile.absolutePath,
-                                fallbackTitle = fileName.removeSuffix(".pdf"),
-                                pdfFile = pdfFile
-                            )
-                        } else {
-                            // ── Import as EPUB ───────────────────────
-                            val epubDir = File(context.filesDir, "epubs")
-                            if (!epubDir.exists()) epubDir.mkdirs()
-                            val epubFile = File(epubDir, fileName)
-                            context.contentResolver.openInputStream(uri)?.use { input ->
-                                epubFile.outputStream().use { output ->
-                                    input.copyTo(output)
-                                }
-                            }
-                            libraryViewModel.importBookFromEpub(
-                                sourcePath = epubFile.absolutePath,
-                                fallbackTitle = fileName.removeSuffix(".epub"),
-                                inputStreamProvider = {
-                                    epubFile.inputStream()
-                                }
-                            )
                         }
                     }
                 )
@@ -286,8 +294,12 @@ fun NextPageNavHost(
                         selectedBookId = id
                         selectedBookFilePath = filePath
                         selectedBookFormat = format
+                        // Pop any previous Reader entry before pushing a new one so:
+                        // 1. Back press returns to BookDetail (not a stale Reader instance).
+                        // 2. A fresh ReaderScreen composable is created so LaunchedEffect
+                        //    fires and loads the new book correctly.
                         navController.navigate(NextPageDestination.Reader.route) {
-                            launchSingleTop = true
+                            popUpTo(NextPageDestination.Reader.route) { inclusive = true }
                         }
                     }
                 )

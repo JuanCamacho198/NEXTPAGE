@@ -443,7 +443,7 @@ private fun BookListCard(
             .clip(RoundedCornerShape(12.dp))
             .combinedClickable(onClick = onClick, onLongClick = onLongPress),
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SURFACE_ALPHA)
     ) {
         Row(modifier = Modifier.padding(12.dp)) {
             // Cover thumbnail
@@ -518,7 +518,7 @@ private fun BookGridCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SURFACE_ALPHA))
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongPress
@@ -653,4 +653,5 @@ internal fun CoverThumbnail(
 }
 
 private const val READING_TARGET_MINUTES = 300L
+private const val SURFACE_ALPHA = 0.3f
 

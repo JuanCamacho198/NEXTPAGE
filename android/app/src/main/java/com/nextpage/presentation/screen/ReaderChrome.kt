@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.TextIncrease
 import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -95,6 +96,7 @@ fun ReaderHeader(
     onToggleSearch: () -> Unit,
     onToggleHighlights: () -> Unit,
     onCreateBookmark: () -> Unit,
+    onToggleSplitSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -166,6 +168,13 @@ fun ReaderHeader(
                 icon = Icons.Default.Search,
                 contentDescription = stringResource(R.string.search_label),
                 onClick = onToggleSearch
+            )
+
+            // aA Typography
+            HeaderActionButton(
+                icon = Icons.Default.TextIncrease,
+                contentDescription = stringResource(R.string.reader_typography),
+                onClick = onToggleSplitSettings
             )
 
             // Index / TOC

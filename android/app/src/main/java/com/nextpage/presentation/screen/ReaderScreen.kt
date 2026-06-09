@@ -134,7 +134,8 @@ fun ReaderScreen(
                 onToggleFullscreen = { viewModel.onToggleFullscreen() },
                 onToggleSearch = { viewModel.onToggleSearch() },
                 onToggleHighlights = { viewModel.onToggleHighlightsPanel() },
-                onCreateBookmark = { viewModel.createBookmarkFromCurrentPosition() }
+                onCreateBookmark = { viewModel.createBookmarkFromCurrentPosition() },
+                onToggleSplitSettings = { viewModel.onToggleSplitSettings() }
             )
         },
         footer = {
@@ -207,7 +208,8 @@ fun ReaderScreen(
                             }
                         },
                         onShowContextMenu = { viewModel.onShowContextMenu() },
-                        onDismissContextMenu = { viewModel.onDismissContextMenu() }
+                        onDismissContextMenu = { viewModel.onDismissContextMenu() },
+                        onHighlightTapped = viewModel::onHighlightTapped
                     )
                 }
             }

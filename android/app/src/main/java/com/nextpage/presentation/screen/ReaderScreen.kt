@@ -672,7 +672,7 @@ private fun PdfReaderContent(
             if (bitmap != null) {
                 Image(
                     bitmap = bitmap.asImageBitmap(),
-                    contentDescription = stringResource(R.string.pdf_page_description, currentPage + 1),
+                    contentDescription = stringResource(R.string.pdf_page_description, currentPage + 1, totalPages),
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit
                 )

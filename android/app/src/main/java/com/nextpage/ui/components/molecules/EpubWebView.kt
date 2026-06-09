@@ -1,6 +1,7 @@
 package com.nextpage.ui.components.molecules
 
 import android.annotation.SuppressLint
+import android.graphics.Rect
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -9,14 +10,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import org.json.JSONArray
 
 /**
  * Injects NextPage's reader CSS into the chapter HTML for beautiful rendering.
- * Colors match the design tokens: dark bg (#0B1120), light text (#E2E8F0).
+ * Colors match the design tokens.
  */
 fun readerCss(
-    bgColor: String = "#0B1120",
-    textColor: String = "#E2E8F0",
+    bgColor: String = "#0D1322",
+    textColor: String = "#DDE2F8",
     fontSizePx: Int = 20,
     lineHeight: Float = 1.6f
 ): String {
@@ -108,7 +110,7 @@ fun readerCss(
 /**
  * Wraps HTML content in a full document with viewport meta and injected CSS.
  */
-private fun wrapHtmlContent(htmlContent: String, css: String): String {
+internal fun wrapHtmlContent(htmlContent: String, css: String): String {
     return """
         <!DOCTYPE html>
         <html>
@@ -124,10 +126,14 @@ private fun wrapHtmlContent(htmlContent: String, css: String): String {
 
 /**
  * JavaScript interface bridge for communication from WebView to Kotlin.
+ *
+ * Enhanced with text selection and search callbacks.
  */
 class ReaderJsBridge(
-    private val onTextSelected: (String) -> Unit,
-    private val onScrollChanged: (Int, Int) -> Unit = { _, _ -> }
+    private val onTextSelected: (String) -> Unit = {},
+    private val onScrollChanged: (Int, Int) -> Unit = { _, _ -> },
+    private val onTextSelectionEvent: (text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _ -> },
+    private val onSearchResults: (String) -> Unit = {}
 ) {
     @JavascriptInterface
     fun onTextSelected(text: String) {
@@ -140,33 +146,141 @@ class ReaderJsBridge(
     }
 
     @JavascriptInterface
+    fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) {
+        onTextSelectionEvent(text, left, top, right, bottom)
+    }
+
+    @JavascriptInterface
+    fun onSearchResults(jsonResults: String) {
+        onSearchResults(jsonResults)
+    }
+
+    @JavascriptInterface
     fun onChapterEndReached() {
         // Can be used for auto-advance to next chapter
     }
 }
 
 /**
+ * JavaScript for text search within the WebView.
+ * Uses a TreeWalker to scan all text nodes, finds matches,
+ * and sends results back via NextPageBridge.onSearchResults().
+ */
+internal fun injectSearchJs(query: String): String {
+    val escapedQuery = query.replace("'", "\\'")
+    return """
+        (function() {
+            const query = '$escapedQuery';
+            const results = [];
+            const walker = document.createTreeWalker(document.body, 4, null, false);
+            let node;
+            while (node = walker.nextNode()) {
+                const text = node.textContent;
+                let idx = text.toLowerCase().indexOf(query.toLowerCase());
+                while (idx !== -1) {
+                    const range = document.createRange();
+                    range.setStart(node, idx);
+                    range.setEnd(node, idx + query.length);
+                    const rect = range.getBoundingClientRect();
+                    results.push(JSON.stringify({
+                        text: text.substring(Math.max(0, idx - 30), idx + query.length + 30),
+                        offset: idx,
+                        page: window.pageYOffset + rect.top,
+                        chapterIndex: 0,
+                        rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }
+                    }));
+                    idx = text.indexOf(query.toLowerCase(), idx + 1);
+                }
+            }
+            NextPageBridge.onSearchResults('[' + results.join(',') + ']');
+        })();
+    """.trimIndent()
+}
+
+/**
+ * JavaScript for detecting text selection in the WebView.
+ * Listens for selectionchange events, debounces at 300ms,
+ * and sends selection details via NextPageBridge.onTextSelectionEvent().
+ */
+internal fun injectSelectionJs(): String {
+    return """
+        (function() {
+            document.addEventListener('selectionchange', function() {
+                const sel = window.getSelection();
+                if (!sel || sel.isCollapsed || sel.toString().trim() === '') return;
+                const range = sel.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                clearTimeout(window._selTimeout);
+                window._selTimeout = setTimeout(function() {
+                    NextPageBridge.onTextSelectionEvent(
+                        sel.toString(),
+                        rect.left, rect.top, rect.right, rect.bottom
+                    );
+                }, 300);
+            });
+        })();
+    """.trimIndent()
+}
+
+/**
+ * JavaScript for applying highlight color to selected text in the WebView.
+ * Surrounds the current selection with a <span> styled with the given color.
+ */
+internal fun injectHighlightCss(highlightColor: String, highlightId: String): String {
+    return """
+        (function() {
+            const sel = window.getSelection();
+            if (!sel || sel.isCollapsed) return;
+            const range = sel.getRangeAt(0);
+            const span = document.createElement('span');
+            span.style.backgroundColor = '$highlightColor';
+            span.style.color = 'inherit';
+            span.style.borderRadius = '2px';
+            span.setAttribute('data-highlight-id', '$highlightId');
+            try {
+                range.surroundContents(span);
+            } catch(e) {
+                // Fallback: wrap contents
+                const fragment = range.extractContents();
+                span.appendChild(fragment);
+                range.insertNode(span);
+            }
+            sel.removeAllRanges();
+        })();
+    """.trimIndent()
+}
+
+/**
  * EpubWebView renders EPUB chapter HTML using Android's WebView with
  * NextPage's custom CSS for an optimal reading experience.
  *
- * Features:
+ * Enhanced features:
  * - Injects CSS for dark theme, font size, line height
  * - JavaScript bridge for text selection and scroll events
+ * - Search JS injection for in-book text search
+ * - Text selection injection for detecting selected text + position
+ * - Highlight CSS injection for applying highlight colors
  * - Responsive to settings changes via recomposition
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun EpubWebView(
     htmlContent: String,
-    bgColor: String = "#0B1120",
-    textColor: String = "#E2E8F0",
+    bgColor: String = "#0D1322",
+    textColor: String = "#DDE2F8",
     fontSizePx: Int = 20,
     lineHeight: Float = 1.6f,
     onTextSelected: (String) -> Unit = {},
+    onTextSelectionEvent: (text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _ -> },
+    onSearchResults: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val jsBridge = remember(onTextSelected) {
-        ReaderJsBridge(onTextSelected = onTextSelected)
+    val jsBridge = remember(onTextSelected, onTextSelectionEvent, onSearchResults) {
+        ReaderJsBridge(
+            onTextSelected = onTextSelected,
+            onTextSelectionEvent = onTextSelectionEvent,
+            onSearchResults = onSearchResults
+        )
     }
 
     // Precompute the full HTML + CSS so update only needs to load it
@@ -189,6 +303,7 @@ fun EpubWebView(
                 settings.displayZoomControls = false
 
                 webViewClient = object : WebViewClient() {
+                    @Suppress("OVERRIDE_DEPRECATION")
                     override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
                         return false
                     }
@@ -201,6 +316,7 @@ fun EpubWebView(
         },
         update = { webView ->
             webView.loadDataWithBaseURL(null, renderedHtml, "text/html", "UTF-8", null)
+            webView.evaluateJavascript(injectSelectionJs(), null)
         }
     )
 }

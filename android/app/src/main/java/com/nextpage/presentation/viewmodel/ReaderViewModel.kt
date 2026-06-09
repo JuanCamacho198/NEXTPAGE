@@ -1,6 +1,5 @@
 package com.nextpage.presentation.viewmodel
 
-import android.graphics.Bitmap
 import android.graphics.Rect
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -31,6 +30,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONArray
+import org.json.JSONObject
 import java.util.UUID
 
 data class ReaderUiState(
@@ -44,7 +44,6 @@ data class ReaderUiState(
     val previewText: String = "",
     val currentPdfPage: Int = 0,
     val totalPdfPages: Int = 0,
-    val pdfPageBitmap: Bitmap? = null,
     val readingProgress: ReadingProgress? = null,
     val highlights: List<Highlight> = emptyList(),
     val bookmarks: List<Bookmark> = emptyList(),
@@ -250,8 +249,6 @@ class ReaderViewModel(
                     )
                 }
                 updateProgressDisplay()
-
-                renderPdfPage(0)
                 updatePdfProgress(0, pageCount)
                 startObservingHighlights(bookId)
                 startObservingBookmarks(bookId)
@@ -277,45 +274,11 @@ class ReaderViewModel(
         }
     }
 
-    private fun renderPdfPage(pageIndex: Int) {
-        viewModelScope.launch(mainDispatcher) {
-            val loader = pdfContentLoader
-            if (loader == null) {
-                mutableUiState.update {
-                    it.copy(
-                        currentPdfPage = pageIndex,
-                        pdfPageBitmap = null,
-                        error = "PDF content loader is unavailable"
-                    )
-                }
-                return@launch
-            }
-
-            try {
-                val bitmap = loader.getPage(pageIndex, 1080)
-                mutableUiState.update {
-                    it.copy(
-                        currentPdfPage = pageIndex,
-                        pdfPageBitmap = bitmap,
-                        error = null
-                    )
-                }
-                updateProgressDisplay()
-            } catch (e: Throwable) {
-                val selectedBookId = mutableUiState.value.selectedBookId
-                Log.e(
-                    TAG,
-                    "Failed to render PDF page index=$pageIndex for bookId=$selectedBookId: ${e.message}",
-                    e
-                )
-                val userMessage = when (e) {
-                    is OutOfMemoryError -> "Page too large to display on this device."
-                    else -> e.message ?: "Failed to render PDF page"
-                }
-                mutableUiState.update {
-                    it.copy(error = userMessage)
-                }
-            }
+    fun onPdfDocumentLoaded(pages: Int) {
+        val currentPages = mutableUiState.value.totalPdfPages
+        if (currentPages != pages) {
+            mutableUiState.update { it.copy(totalPdfPages = pages) }
+            updateProgressDisplay()
         }
     }
 
@@ -380,17 +343,16 @@ class ReaderViewModel(
             mutableUiState.update { it.copy(isSearching = true) }
 
             val state = mutableUiState.value
-            val filePath = state.bookFilePath ?: return@launch
+            if (state.bookFormat == "pdf") {
+                // PDF search is handled by PdfWebView via JS bridge.
+                // Results arrive via onSearchResults callback → onPdfSearchResults()
+                mutableUiState.update { it.copy(isSearching = false) }
+                return@launch
+            }
 
+            val filePath = state.bookFilePath ?: return@launch
             val results = withContext(Dispatchers.IO) {
-                when (state.bookFormat) {
-                    "pdf" -> {
-                        pdfContentLoader?.searchText(query) ?: emptyList()
-                    }
-                    else -> {
-                        epubContentLoader?.searchAllChapters(filePath, query) ?: emptyList()
-                    }
-                }
+                epubContentLoader?.searchAllChapters(filePath, query) ?: emptyList()
             }
 
             mutableUiState.update {
@@ -416,6 +378,28 @@ class ReaderViewModel(
             )
         }
         searchJob?.cancel()
+    }
+
+    fun onPdfSearchResults(json: String) {
+        try {
+            val array = JSONArray(json)
+            val results = mutableListOf<SearchResult>()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                results.add(
+                    SearchResult(
+                        text = obj.getString("text"),
+                        page = obj.getInt("page").toFloat(),
+                        offset = obj.optInt("offset", 0),
+                        chapterIndex = 0
+                    )
+                )
+            }
+            mutableUiState.update { it.copy(searchResults = results, isSearching = false) }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse PDF search results: ${e.message}", e)
+            mutableUiState.update { it.copy(searchResults = emptyList(), isSearching = false) }
+        }
     }
 
     fun onSearchResultSelected(result: SearchResult) {
@@ -599,8 +583,9 @@ class ReaderViewModel(
 
         if (currentPage < totalPages - 1) {
             val newPage = currentPage + 1
-            renderPdfPage(newPage)
+            mutableUiState.update { it.copy(currentPdfPage = newPage) }
             updatePdfProgress(newPage, totalPages)
+            updateProgressDisplay()
         }
     }
 
@@ -609,8 +594,9 @@ class ReaderViewModel(
 
         if (currentPage > 0) {
             val newPage = currentPage - 1
-            renderPdfPage(newPage)
+            mutableUiState.update { it.copy(currentPdfPage = newPage) }
             updatePdfProgress(newPage, mutableUiState.value.totalPdfPages)
+            updateProgressDisplay()
         }
     }
 
@@ -618,16 +604,18 @@ class ReaderViewModel(
         val totalPages = mutableUiState.value.totalPdfPages
         if (pageNumber in 1..totalPages) {
             val newPage = pageNumber - 1
-            renderPdfPage(newPage)
+            mutableUiState.update { it.copy(currentPdfPage = newPage) }
             updatePdfProgress(newPage, totalPages)
+            updateProgressDisplay()
         }
     }
 
     fun goToPdfPage(pageIndex: Int) {
         val totalPages = mutableUiState.value.totalPdfPages
         if (pageIndex in 0 until totalPages) {
-            renderPdfPage(pageIndex)
+            mutableUiState.update { it.copy(currentPdfPage = pageIndex) }
             updatePdfProgress(pageIndex, totalPages)
+            updateProgressDisplay()
         }
     }
 
@@ -847,8 +835,9 @@ class ReaderViewModel(
         if (mutableUiState.value.totalPdfPages > 0) {
             val pageIndex = ((clamped / 100f) * mutableUiState.value.totalPdfPages).toInt()
                 .coerceIn(0, mutableUiState.value.totalPdfPages - 1)
-            renderPdfPage(pageIndex)
+            mutableUiState.update { it.copy(currentPdfPage = pageIndex) }
             updatePdfProgress(pageIndex, mutableUiState.value.totalPdfPages)
+            updateProgressDisplay()
         } else if (mutableUiState.value.chapters.isNotEmpty()) {
             val chapterIndex = ((clamped / 100f) * mutableUiState.value.chapters.size).toInt()
                 .coerceIn(0, mutableUiState.value.chapters.size - 1)

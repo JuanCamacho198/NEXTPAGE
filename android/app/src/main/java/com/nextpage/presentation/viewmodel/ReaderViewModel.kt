@@ -18,6 +18,7 @@ import com.nextpage.domain.model.SearchResult
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
+import com.nextpage.presentation.viewmodel.reader.SleepTimerManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -105,11 +106,12 @@ class ReaderViewModel(
     )
     val uiState: StateFlow<ReaderUiState> = mutableUiState.asStateFlow()
 
+    val sleepTimerManager = SleepTimerManager(viewModelScope)
+
     private var observeProgressJob: Job? = null
     private var observeHighlightsJob: Job? = null
     private var observeBookmarksJob: Job? = null
     private var readingTimeTickerJob: Job? = null
-    private var sleepTimerJob: Job? = null
     private var searchJob: Job? = null
     private var sessionStartTime: Long = 0L
 
@@ -117,6 +119,21 @@ class ReaderViewModel(
         // Load persisted reading settings
         val savedSettings = readerPreferences?.load() ?: ReaderSettings()
         mutableUiState.update { it.copy(readerSettings = savedSettings) }
+
+        // Merge sleep timer state into ReaderUiState
+        viewModelScope.launch(mainDispatcher) {
+            sleepTimerManager.state.collect { timerState ->
+                mutableUiState.update { current ->
+                    current.copy(
+                        sleepTimerActive = timerState.isActive,
+                        sleepTimerRemainingSecs = timerState.remainingSecs,
+                        sleepTimerFinished = timerState.isFinished,
+                        sleepTimerPresetMinutes = timerState.presetMinutes,
+                        sleepTimerEndOfChapterMode = timerState.isEndOfChapter
+                    )
+                }
+            }
+        }
 
         if (!defaultBookId.isNullOrBlank()) {
             restoreProgressForBook(defaultBookId)
@@ -541,21 +558,7 @@ class ReaderViewModel(
         }
     }
 
-    // ── Existing methods (unchanged) ────────────────────────────────
-
-    private fun checkEndOfChapterTrigger() {
-        if (mutableUiState.value.sleepTimerEndOfChapterMode) {
-            mutableUiState.update {
-                it.copy(
-                    sleepTimerActive = false,
-                    sleepTimerRemainingSecs = 0,
-                    sleepTimerFinished = true,
-                    sleepTimerPresetMinutes = null,
-                    sleepTimerEndOfChapterMode = false
-                )
-            }
-        }
-    }
+    // ── Chapter Navigation ─────────────────────────────────────────
 
     fun goToNextChapter() {
         val currentIndex = mutableUiState.value.currentChapterIndex
@@ -566,7 +569,7 @@ class ReaderViewModel(
             mutableUiState.update { it.copy(currentChapterIndex = newIndex) }
             loadChapterContent(newIndex)
             updateProgressForChapter(newIndex)
-            checkEndOfChapterTrigger()
+            sleepTimerManager.onChapterChanged()
         }
     }
 
@@ -578,7 +581,7 @@ class ReaderViewModel(
             mutableUiState.update { it.copy(currentChapterIndex = newIndex) }
             loadChapterContent(newIndex)
             updateProgressForChapter(newIndex)
-            checkEndOfChapterTrigger()
+            sleepTimerManager.onChapterChanged()
         }
     }
 
@@ -810,78 +813,19 @@ class ReaderViewModel(
             mutableUiState.update { it.copy(currentChapterIndex = index) }
             loadChapterContent(index)
             updateProgressForChapter(index)
-            checkEndOfChapterTrigger()
+            sleepTimerManager.onChapterChanged()
         }
     }
 
-    // ── Sleep Timer ──────────────────────────────────────────────────
+    // ── Sleep Timer (delegated to SleepTimerManager) ─────────────────
 
-    fun startSleepTimer(minutes: Int) {
-        sleepTimerJob?.cancel()
-        val isEndOfChapter = minutes == Int.MIN_VALUE
+    fun startSleepTimer(minutes: Int) = sleepTimerManager.startTimer(minutes)
 
-        mutableUiState.update {
-            it.copy(
-                sleepTimerActive = true,
-                sleepTimerRemainingSecs = if (isEndOfChapter) 0 else minutes * 60,
-                sleepTimerFinished = false,
-                sleepTimerPresetMinutes = if (isEndOfChapter) null else minutes,
-                sleepTimerEndOfChapterMode = isEndOfChapter
-            )
-        }
+    fun cancelSleepTimer() = sleepTimerManager.cancel()
 
-        if (isEndOfChapter) {
-            return
-        }
+    fun dismissSleepTimerOverlay() = sleepTimerManager.dismissOverlay()
 
-        sleepTimerJob = viewModelScope.launch(mainDispatcher) {
-            while (isActive && mutableUiState.value.sleepTimerRemainingSecs > 0) {
-                delay(1000L)
-                val remaining = mutableUiState.value.sleepTimerRemainingSecs - 1
-                if (remaining <= 0) {
-                    mutableUiState.update {
-                        it.copy(
-                            sleepTimerActive = false,
-                            sleepTimerRemainingSecs = 0,
-                            sleepTimerFinished = true,
-                            sleepTimerPresetMinutes = null,
-                            sleepTimerEndOfChapterMode = false
-                        )
-                    }
-                } else {
-                    mutableUiState.update {
-                        it.copy(sleepTimerRemainingSecs = remaining)
-                    }
-                }
-            }
-        }
-    }
-
-    fun cancelSleepTimer() {
-        sleepTimerJob?.cancel()
-        sleepTimerJob = null
-        mutableUiState.update {
-            it.copy(
-                sleepTimerActive = false,
-                sleepTimerRemainingSecs = 0,
-                sleepTimerFinished = false,
-                sleepTimerPresetMinutes = null,
-                sleepTimerEndOfChapterMode = false
-            )
-        }
-    }
-
-    fun dismissSleepTimerOverlay() {
-        mutableUiState.update {
-            it.copy(sleepTimerFinished = false)
-        }
-    }
-
-    fun formatSleepTimerRemaining(secs: Int): String {
-        val minutes = secs / 60
-        val seconds = secs % 60
-        return "%d:%02d".format(minutes, seconds)
-    }
+    fun formatSleepTimerRemaining(secs: Int): String = sleepTimerManager.formatRemaining(secs)
 
     // ── Reader Settings ──────────────────────────────────────────────
 

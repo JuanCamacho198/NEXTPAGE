@@ -50,3 +50,10 @@ design/*.pen.bak
 # ─── OpenCode / Gentle AI ──────────────────────────────────────────
 .opencode/
 !.opencode/skills/
+
+# ─── Windows PowerShell ─────────────────────────────────────────
+*.ps1
+# zip
+*.zip
+
+

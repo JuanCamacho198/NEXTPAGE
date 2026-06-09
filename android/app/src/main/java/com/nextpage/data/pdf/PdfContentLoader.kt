@@ -3,11 +3,15 @@ package com.nextpage.data.pdf
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import com.nextpage.domain.model.SearchResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-class PdfContentLoader(private val context: Context) {
+class PdfContentLoader(
+    private val context: Context,
+    private val searchHelper: PdfSearchHelper = NoopPdfSearchHelper()
+) {
     companion object {
         private const val TAG = "PdfContentLoader"
     }
@@ -45,6 +49,14 @@ class PdfContentLoader(private val context: Context) {
                 pdfRenderer?.renderPage(pageIndex, width)
             }
         }
+    }
+
+    /**
+     * Search the loaded PDF for [query].
+     * Delegates to [PdfSearchHelper] which may be a stub returning empty results.
+     */
+    suspend fun searchText(query: String): List<SearchResult> {
+        return searchHelper.searchText(query)
     }
 
     fun close() {

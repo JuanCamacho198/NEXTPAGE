@@ -1,7 +1,9 @@
 package com.nextpage.data.epub
 
 import android.content.Context
+import android.graphics.Rect
 import android.util.Log
+import com.nextpage.domain.model.SearchResult
 import java.util.zip.ZipInputStream
 
 class EpubContentLoader(private val context: Context) {
@@ -244,6 +246,81 @@ class EpubContentLoader(private val context: Context) {
             .replace(Regex("&#\\d+;"), "")
             .replace(Regex("\\n\\s*\\n"), "\n\n")
             .trim()
+    }
+
+    /**
+     * Search within a single chapter for the given [query].
+     * Scans the stripped plain text of the chapter and returns matches
+     * with surrounding context snippets.
+     */
+    fun searchChapterText(filePath: String, chapterIndex: Int, query: String): Result<List<SearchResult>> {
+        val chapter = cachedBook[filePath]?.chapters?.getOrNull(chapterIndex)
+            ?: return Result.failure(Exception("Chapter not found: $chapterIndex"))
+
+        return getChapterContentPlainText(filePath, chapter.href).map { plainText ->
+            searchInText(plainText, query, chapterIndex)
+        }
+    }
+
+    /**
+     * Search across all chapters in the book for the given [query].
+     * Returns a flat list of results from all chapters.
+     * Chapters that fail to load are silently skipped.
+     */
+    fun searchAllChapters(filePath: String, query: String): List<SearchResult> {
+        val book = cachedBook[filePath] ?: return emptyList()
+        val results = mutableListOf<SearchResult>()
+
+        book.chapters.forEachIndexed { index, chapter ->
+            val contentResult = getChapterContentPlainText(filePath, chapter.href)
+            contentResult.onSuccess { plainText ->
+                results.addAll(searchInText(plainText, query, index))
+            }
+        }
+
+        return results
+    }
+
+    /**
+     * Perform a case-insensitive text search in [plainText] for [query].
+     * Returns [SearchResult] items with surrounding context snippets.
+     */
+    private fun searchInText(plainText: String, query: String, chapterIndex: Int): List<SearchResult> {
+        if (query.isBlank()) return emptyList()
+
+        val lowerText = plainText.lowercase()
+        val lowerQuery = query.lowercase()
+        val results = mutableListOf<SearchResult>()
+        val contextChars = 40
+        var idx = 0
+
+        while (true) {
+            idx = lowerText.indexOf(lowerQuery, idx)
+            if (idx == -1) break
+
+            val snippetStart = (idx - contextChars).coerceAtLeast(0)
+            val snippetEnd = (idx + query.length + contextChars).coerceAtMost(plainText.length)
+            val snippet = buildString {
+                if (snippetStart > 0) append("...")
+                append(plainText.substring(snippetStart, snippetEnd))
+                if (snippetEnd < plainText.length) append("...")
+            }
+
+            results.add(
+                SearchResult(
+                    text = snippet,
+                    offset = idx,
+                    page = 0f,
+                    chapterIndex = chapterIndex,
+                    rect = null
+                )
+            )
+
+            idx += query.length
+            if (idx >= lowerText.length) break
+        }
+
+        return results
     }
 
     fun clearCache() {

@@ -98,10 +98,14 @@ fun SplitSettingsSheet(
                 text = stringResource(R.string.aa_preview_text),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = when (settings.fontSize) {
-                        FontSizePreset.SMALL -> 14.sp
-                        FontSizePreset.MEDIUM -> 16.sp
-                        FontSizePreset.LARGE -> 20.sp
-                        FontSizePreset.XLARGE -> 24.sp
+                        FontSizePreset.XS -> 12.sp
+                        FontSizePreset.S -> 13.sp
+                        FontSizePreset.SM -> 14.sp
+                        FontSizePreset.M -> 16.sp
+                        FontSizePreset.ML -> 18.sp
+                        FontSizePreset.L -> 20.sp
+                        FontSizePreset.XL -> 22.sp
+                        FontSizePreset.XXL -> 26.sp
                     },
                     lineHeight = when (settings.lineHeight) {
                         com.nextpage.domain.model.LineHeightPreset.TIGHT -> 18.sp
@@ -346,12 +350,15 @@ fun SplitSettingsSheet(
                 onToggle = { showMarginsSection = !showMarginsSection },
                 content = {
                 Column {
-                    listOf(
-                        stringResource(R.string.aa_margins_narrow) to LayoutPreferences.Margins.NARROW,
-                        stringResource(R.string.aa_margins_normal) to LayoutPreferences.Margins.NORMAL,
-                        stringResource(R.string.aa_margins_wide) to LayoutPreferences.Margins.WIDE
-                    ).forEach { (label, margin) ->
-                        val isSelected = settings.layoutPrefs.margins == margin
+                    data class MarginPreset(val label: String, val left: Int, val right: Int)
+                    val marginPresets = listOf(
+                        MarginPreset(stringResource(R.string.aa_margins_narrow), 8, 8),
+                        MarginPreset(stringResource(R.string.aa_margins_normal), 16, 16),
+                        MarginPreset(stringResource(R.string.aa_margins_wide), 24, 24)
+                    )
+                    marginPresets.forEach { preset ->
+                        val isSelected = settings.layoutPrefs.leftMargin == preset.left &&
+                            settings.layoutPrefs.rightMargin == preset.right
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -360,14 +367,17 @@ fun SplitSettingsSheet(
                                 .clickable {
                                     onSettingsChanged(
                                         settings.copy(
-                                            layoutPrefs = settings.layoutPrefs.copy(margins = margin)
+                                            layoutPrefs = settings.layoutPrefs.copy(
+                                                leftMargin = preset.left,
+                                                rightMargin = preset.right
+                                            )
                                         )
                                     )
                                 }
                                 .padding(12.dp)
                         ) {
                             Text(
-                                text = label,
+                                text = preset.label,
                                 color = if (isSelected) Color(0xFFADC6FF) else Color(0xFFDDE2F8),
                                 fontSize = 14.sp
                             )

@@ -126,7 +126,7 @@ fun ReaderScreen(
 
     // ── Render via ReaderChrome ─────────────────────────────────────
     ReaderChrome(
-        isFullscreen = uiState.isFullscreen,
+        isFullscreen = uiState.isFullscreen || uiState.isLoading,
         contentPadding = contentPadding,
         header = {
             ReaderHeader(
@@ -185,7 +185,8 @@ fun ReaderScreen(
                             viewModel.onTextSelectionEvent(text, left, top, right, bottom)
                         },
                         onSearchResults = { json -> viewModel.onPdfSearchResults(json) },
-                        onHighlightTapped = viewModel::onHighlightTapped
+                        onHighlightTapped = viewModel::onHighlightTapped,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
 
@@ -221,7 +222,8 @@ fun ReaderScreen(
                         },
                         onShowContextMenu = { viewModel.onShowContextMenu() },
                         onDismissContextMenu = { viewModel.onDismissContextMenu() },
-                        onHighlightTapped = viewModel::onHighlightTapped
+                        onHighlightTapped = viewModel::onHighlightTapped,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }

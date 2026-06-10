@@ -190,9 +190,13 @@ fun ReaderScreen(
                 }
 
                 uiState.chapters.isNotEmpty() -> {
+                    val currentChapter = uiState.chapters.getOrNull(uiState.currentChapterIndex)
                     EpubReaderContent(
                         htmlContent = uiState.chapterHtmlContent,
                         settings = uiState.readerSettings,
+                        filePath = bookFilePath,
+                        epubContentLoader = viewModel.epubContentLoader,
+                        chapterHref = currentChapter?.href,
                         showColorPicker = uiState.showColorPicker,
                         showContextMenu = uiState.showContextMenu,
                         selectionRect = uiState.selectionRect,

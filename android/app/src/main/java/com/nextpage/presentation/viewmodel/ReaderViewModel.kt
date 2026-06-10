@@ -90,7 +90,7 @@ class ReaderViewModel(
     private val readingStatsRepository: ReadingStatsRepository,
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
     private val readerPreferences: ReaderPreferences? = null,
-    private val epubContentLoader: EpubContentLoader? = null,
+    val epubContentLoader: EpubContentLoader? = null,
     private val pdfContentLoader: PdfContentLoader? = null,
     defaultBookId: String?,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main

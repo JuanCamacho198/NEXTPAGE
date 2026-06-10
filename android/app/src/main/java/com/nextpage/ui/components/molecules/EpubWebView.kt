@@ -1,8 +1,6 @@
 package com.nextpage.ui.components.molecules
 
 import android.annotation.SuppressLint
-import android.annotation.TargetApi
-import android.graphics.Rect
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
@@ -16,9 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.webkit.WebViewAssetLoader
 import com.nextpage.data.epub.EpubContentLoader
-import org.json.JSONArray
-import java.io.ByteArrayInputStream
 
 /**
  * Injects NextPage's reader CSS into the chapter HTML for beautiful rendering.
@@ -308,6 +305,10 @@ internal fun injectHighlightCss(highlightColor: String, highlightId: String): St
  * - Text selection injection for detecting selected text + position
  * - Highlight CSS injection for applying highlight colors
  * - Responsive to settings changes via recomposition
+ *
+ * Image handling:
+ * EPUB images are served via [WebViewAssetLoader] with a custom [EpubFileHandler].
+ * The [chapterHref] determines the base URL so relative image paths resolve correctly.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -315,6 +316,7 @@ fun EpubWebView(
     htmlContent: String,
     filePath: String? = null,
     epubContentLoader: EpubContentLoader? = null,
+    chapterHref: String? = null,
     leftMarginPx: Int = 16,
     rightMarginPx: Int = 16,
     bgColor: String = "#0D1322",
@@ -336,10 +338,23 @@ fun EpubWebView(
         )
     }
 
+    val epubHandler = remember { EpubFileHandler() }
+
+    // Compute the base URL from the chapter's directory so relative image paths resolve
+    val chapterDir = remember(chapterHref) {
+        chapterHref?.substringBeforeLast("/", "") ?: ""
+    }
+    val baseUrl = "https://appassets.androidplatform.net/epub/$chapterDir/"
+
     // Precompute the full HTML + CSS so update only needs to load it
     val renderedHtml = remember(htmlContent, bgColor, textColor, fontSizePx, lineHeight, leftMarginPx, rightMarginPx) {
         val css = readerCss(bgColor, textColor, fontSizePx, lineHeight, leftMarginPx, rightMarginPx)
         wrapHtmlContent(htmlContent, css)
+    }
+
+    // Sync handler file path — re-run when filePath or loader changes
+    remember(filePath, epubContentLoader) {
+        epubHandler.setLoader(filePath, epubContentLoader)
     }
 
     AndroidView(
@@ -355,20 +370,22 @@ fun EpubWebView(
                 settings.builtInZoomControls = false
                 settings.displayZoomControls = false
 
+                val assetLoader = WebViewAssetLoader.Builder()
+                    .addPathHandler("/epub/", epubHandler)
+                    .build()
+
                 webViewClient = object : WebViewClient() {
                     @Suppress("OVERRIDE_DEPRECATION")
                     override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
                         return false
                     }
 
-                    @Suppress("OVERRIDE_DEPRECATION")
-                    override fun shouldInterceptRequest(view: WebView, url: String): WebResourceResponse? {
-                        return handleInterceptRequest(url, filePath, epubContentLoader)
-                    }
-
-                    @TargetApi(21)
-                    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                        return handleInterceptRequest(request.url.toString(), filePath, epubContentLoader)
+                    override fun shouldInterceptRequest(
+                        view: WebView,
+                        request: WebResourceRequest
+                    ): WebResourceResponse? {
+                        if (request.url.host != "appassets.androidplatform.net") return null
+                        return assetLoader.shouldInterceptRequest(request.url)
                     }
                 }
 
@@ -396,43 +413,9 @@ fun EpubWebView(
             }
         },
         update = { webView ->
-            webView.loadDataWithBaseURL("epub://local/", renderedHtml, "text/html", "UTF-8", null)
+            webView.loadDataWithBaseURL(baseUrl, renderedHtml, "text/html", "UTF-8", null)
             webView.evaluateJavascript(injectSelectionJs(), null)
             webView.evaluateJavascript(injectHighlightTapJs(), null)
         }
-    )
-}
-
-/**
- * Handle an intercepted request for the epub://local/ scheme.
- * Reads the requested entry from the EPUB ZIP via [EpubContentLoader.getEntryBytes]
- * and returns a [WebResourceResponse] with the image bytes.
- */
-private fun handleInterceptRequest(
-    url: String,
-    filePath: String?,
-    loader: EpubContentLoader?
-): WebResourceResponse? {
-    if (!url.startsWith("epub://local/")) return null
-    val fp = filePath ?: return null
-    val contentLoader = loader ?: return null
-
-    val entryPath = url.removePrefix("epub://local/")
-    if (entryPath.isBlank()) return null
-
-    val result = contentLoader.getEntryBytes(fp, entryPath)
-    return result.fold(
-        onSuccess = { bytes ->
-            val mimeType = when {
-                entryPath.endsWith(".png", ignoreCase = true) -> "image/png"
-                entryPath.endsWith(".jpg", ignoreCase = true) || entryPath.endsWith(".jpeg", ignoreCase = true) -> "image/jpeg"
-                entryPath.endsWith(".gif", ignoreCase = true) -> "image/gif"
-                entryPath.endsWith(".svg", ignoreCase = true) -> "image/svg+xml"
-                entryPath.endsWith(".webp", ignoreCase = true) -> "image/webp"
-                else -> "image/*"
-            }
-            WebResourceResponse(mimeType, null, ByteArrayInputStream(bytes))
-        },
-        onFailure = { null }
     )
 }

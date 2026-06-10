@@ -28,7 +28,8 @@ class PdfFileHandler : WebViewAssetLoader.PathHandler {
         if (!file.exists()) return null
 
         return try {
-            WebResourceResponse("application/pdf", null, FileInputStream(file))
+            val headers = mapOf("Access-Control-Allow-Origin" to "*")
+            WebResourceResponse("application/pdf", null, 200, "OK", headers, FileInputStream(file))
         } catch (e: Exception) {
             null
         }

@@ -157,6 +157,8 @@ class AuthViewModelTest {
 
         override suspend fun signOut(): Result<Unit> = signOutResult
 
+        override suspend fun signInLocally(): Result<AuthSession> = Result.failure(UnsupportedOperationException())
+
         override suspend fun getCurrentSession(): Result<AuthSession?> = currentSessionResult
     }
 

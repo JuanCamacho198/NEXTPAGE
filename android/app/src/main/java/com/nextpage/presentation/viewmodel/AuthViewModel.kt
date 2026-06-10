@@ -174,12 +174,15 @@ class AuthViewModel(
     }
 
     fun continueLocally() {
-        val localSession = AuthSession(
-            userId = "local-${UUID.randomUUID()}",
-            email = null,
-            displayName = "Local User"
-        )
-        _uiState.value = _uiState.value.copy(currentSession = localSession)
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            val result = authRepository.signInLocally()
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                currentSession = result.getOrNull(),
+                errorMessage = result.exceptionOrNull()?.message
+            )
+        }
     }
 
     fun clearError() {

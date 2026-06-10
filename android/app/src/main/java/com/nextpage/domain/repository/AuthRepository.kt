@@ -15,4 +15,5 @@ interface AuthRepository {
     suspend fun signUp(email: String, password: String): Result<AuthSession>
     suspend fun signOut(): Result<Unit>
     suspend fun getCurrentSession(): Result<AuthSession?>
+    suspend fun signInLocally(): Result<AuthSession>
 }

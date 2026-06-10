@@ -139,6 +139,15 @@ class SupabaseAuthRepository(
         return sessionManager.getCurrentSession()
     }
 
+    override suspend fun signInLocally(): Result<AuthSession> {
+        val session = AuthSession(
+            userId = "local-${UUID.randomUUID()}",
+            email = null,
+            displayName = "Local User"
+        )
+        return sessionManager.setCurrentSession(session).map { session }
+    }
+
     private fun isExpectedCallback(uri: URI): Boolean {
         return uri.scheme.equals(redirectScheme, ignoreCase = true) &&
             uri.host.equals(redirectHost, ignoreCase = true) &&

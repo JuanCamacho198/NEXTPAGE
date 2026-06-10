@@ -232,4 +232,14 @@
     <string name="reader_toc">Índice</string>
     <string name="reader_bookmark">Marcador</string>
     <string name="reader_typography">Tipografía</string>
+
+    <!-- Global Error Messages -->
+    <string name="error_network">Error de red. Verificá tu conexión e intentá de nuevo.</string>
+    <string name="error_auth">Error de autenticación. Iniciá sesión de nuevo.</string>
+    <string name="error_validation">Datos inválidos. Revisá los datos ingresados.</string>
+    <string name="error_not_found">No encontrado. El elemento solicitado no se pudo ubicar.</string>
+    <string name="error_storage">Error de almacenamiento. No se pudo acceder al almacenamiento del dispositivo.</string>
+    <string name="error_config">Error de configuración. Algunas funciones pueden no estar disponibles.</string>
+    <string name="error_wiring">Error interno de configuración. Reiniciá la aplicación.</string>
+    <string name="error_unknown">Error inesperado. Intentá de nuevo.</string>
 </resources>

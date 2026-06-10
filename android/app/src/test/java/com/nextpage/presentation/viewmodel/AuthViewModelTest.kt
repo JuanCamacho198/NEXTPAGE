@@ -6,7 +6,6 @@ import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.repository.AuthRepository
-import com.nextpage.domain.repository.GoogleSignInOutcome
 import com.nextpage.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -72,7 +71,7 @@ class AuthViewModelTest {
     @Test
     fun onGoogleAuthCallback_setsSession_onSuccess() = runTest {
         val session = AuthSession(userId = "u1", email = "u1@test.com")
-        val repository = FakeAuthRepository(completeGoogleOutcome = GoogleSignInOutcome.Success(session))
+        val repository = FakeAuthRepository(completeGoogleResult = Result.success(session))
         val syncService = FakeSyncService()
         val viewModel = AuthViewModel(
             authRepository = repository,
@@ -113,7 +112,7 @@ class AuthViewModelTest {
     @Test
     fun onGoogleAuthCallback_setsWiringFailureKind_onFailure() = runTest {
         val repository = FakeAuthRepository(
-            completeGoogleOutcome = GoogleSignInOutcome.Failure(
+            completeGoogleResult = Result.failure(
                 AppError(
                     category = ErrorCategory.WIRING_ERROR,
                     code = "GOOGLE_AUTH_CALLBACK_MISMATCH",
@@ -139,13 +138,13 @@ class AuthViewModelTest {
 
     private class FakeAuthRepository(
         private val startGoogleResult: Result<String> = Result.failure(IllegalStateException("not set")),
-        private val completeGoogleOutcome: GoogleSignInOutcome = GoogleSignInOutcome.Cancelled,
+        private val completeGoogleResult: Result<AuthSession?> = Result.success(null),
         private val currentSessionResult: Result<AuthSession?> = Result.success(null),
         private val signOutResult: Result<Unit> = Result.success(Unit)
     ) : AuthRepository {
         override suspend fun startGoogleSignIn(): Result<String> = startGoogleResult
 
-        override suspend fun completeGoogleSignIn(callbackUri: String): GoogleSignInOutcome = completeGoogleOutcome
+        override suspend fun completeGoogleSignIn(callbackUri: String): Result<AuthSession?> = completeGoogleResult
 
         override suspend fun signIn(email: String, password: String): Result<AuthSession> {
             return Result.failure(UnsupportedOperationException())

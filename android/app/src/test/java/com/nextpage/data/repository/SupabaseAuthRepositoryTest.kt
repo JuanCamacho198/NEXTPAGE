@@ -4,10 +4,11 @@ import com.nextpage.data.session.SessionManager
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.model.AuthSession
-import com.nextpage.domain.repository.GoogleSignInOutcome
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -37,7 +38,7 @@ class SupabaseAuthRepositoryTest {
     }
 
     @Test
-    fun completeGoogleSignIn_returnsCancelled_whenGoogleReturnsAccessDenied() = runTest {
+    fun completeGoogleSignIn_returnsFailure_whenGoogleReturnsAccessDenied() = runTest {
         val sessionManager = FakeSessionManager()
         val repository = SupabaseAuthRepository(
             client = null,
@@ -50,11 +51,14 @@ class SupabaseAuthRepositoryTest {
             isClientAvailable = true
         )
 
-        val outcome = repository.completeGoogleSignIn(
+        val result = repository.completeGoogleSignIn(
             "nextpage://auth/callback?error=access_denied&error_description=user_cancelled"
         )
 
-        assertEquals(GoogleSignInOutcome.Cancelled, outcome)
+        assertTrue(result.isFailure)
+        val error = result.exceptionOrNull() as AppError
+        assertEquals(ErrorCategory.AUTH, error.category)
+        assertEquals("cancelled", error.code)
     }
 
     @Test
@@ -70,12 +74,12 @@ class SupabaseAuthRepositoryTest {
             isClientAvailable = true
         )
 
-        val outcome = repository.completeGoogleSignIn(
+        val result = repository.completeGoogleSignIn(
             "nextpage://auth/callback?error=server_error&error_description=oauth_failed"
         )
 
-        assertTrue(outcome is GoogleSignInOutcome.Failure)
-        val error = (outcome as GoogleSignInOutcome.Failure).error as AppError
+        assertTrue(result.isFailure)
+        val error = result.exceptionOrNull() as AppError
         assertEquals(ErrorCategory.WIRING_ERROR, error.category)
         assertEquals("GOOGLE_AUTH_CALLBACK_ERROR", error.code)
         assertEquals("oauth_failed", error.message)
@@ -95,13 +99,14 @@ class SupabaseAuthRepositoryTest {
             isClientAvailable = true
         )
 
-        val outcome = repository.completeGoogleSignIn(
+        val result = repository.completeGoogleSignIn(
             "nextpage://auth/callback?access_token=abc&user_id=user-7&email=user7%40mail.com"
         )
 
-        assertTrue(outcome is GoogleSignInOutcome.Success)
-        val session = (outcome as GoogleSignInOutcome.Success).session
-        assertEquals("user-7", session.userId)
+        assertTrue(result.isSuccess)
+        val session = result.getOrNull()
+        assertNotNull(session)
+        assertEquals("user-7", session!!.userId)
         assertEquals("user7@mail.com", session.email)
         assertEquals("user-7", sessionManager.latestSession?.userId)
     }
@@ -119,10 +124,10 @@ class SupabaseAuthRepositoryTest {
             isClientAvailable = true
         )
 
-        val outcome = repository.completeGoogleSignIn("nextpage://auth/wrong?access_token=t")
+        val result = repository.completeGoogleSignIn("nextpage://auth/wrong?access_token=t")
 
-        assertTrue(outcome is GoogleSignInOutcome.Failure)
-        val error = (outcome as GoogleSignInOutcome.Failure).error as AppError
+        assertTrue(result.isFailure)
+        val error = result.exceptionOrNull() as AppError
         assertEquals(ErrorCategory.WIRING_ERROR, error.category)
         assertEquals("GOOGLE_AUTH_CALLBACK_MISMATCH", error.code)
     }

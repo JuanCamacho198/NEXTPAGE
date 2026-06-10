@@ -1,9 +1,11 @@
 package com.nextpage.ui.components.molecules
 
 import android.annotation.SuppressLint
+import android.graphics.Rect
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -391,13 +393,20 @@ fun EpubWebView(
 
                 webChromeClient = WebChromeClient()
 
-                // Suppress native ActionMode via reflection (API 23+)
+                // Suppress the default Android floating selection toolbar
+                // (Copy / Share / Select All) using Callback2 which handles
+                // FloatingActionMode on API 23+ (our minSdk 26).
+                // Reflection is required because Kotlin 1.9 can't synthesize
+                // a property from the deprecated Java getter/setter methods.
                 @Suppress("DEPRECATION")
-                val suppressionCallback = object : ActionMode.Callback {
+                val suppressionCallback = object : ActionMode.Callback2() {
                     override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean = false
                     override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
                     override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean = false
                     override fun onDestroyActionMode(mode: ActionMode) {}
+                    override fun onGetContentRect(mode: ActionMode, view: View?, outRect: Rect?) {
+                        outRect?.set(0, 0, 0, 0)
+                    }
                 }
                 try {
                     val method = WebView::class.java.getMethod(

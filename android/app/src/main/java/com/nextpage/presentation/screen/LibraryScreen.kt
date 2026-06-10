@@ -2,7 +2,9 @@ package com.nextpage.presentation.screen
 
 import android.net.Uri
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -117,52 +119,62 @@ fun LibraryScreen(
         onResult = { uri: Uri? ->
             if (uri == null) return@rememberLauncherForActivityResult
 
-            val fileName = getContentDisplayName(context, uri)
-                ?: uri.lastPathSegment
-                ?: "imported_${System.currentTimeMillis()}"
-            val mimeType = context.contentResolver.getType(uri) ?: ""
-            val isPdf = fileName.endsWith(".pdf", true) || mimeType == "application/pdf"
-            val isEpub = fileName.endsWith(".epub", true) || mimeType == "application/epub+zip"
+            scope.launch {
+                runCatching {
+                    val fileName = getContentDisplayName(context, uri)
+                        ?: uri.lastPathSegment
+                        ?: "imported_${System.currentTimeMillis()}"
+                    val mimeType = context.contentResolver.getType(uri) ?: ""
+                    val isPdf = fileName.endsWith(".pdf", true) || mimeType == "application/pdf"
+                    val isEpub = fileName.endsWith(".epub", true) || mimeType == "application/epub+zip"
 
-            if (!isPdf && !isEpub) {
-                scope.launch {
+                    if (!isPdf && !isEpub) {
+                        snackbarHostState.showSnackbar(
+                            context.getString(R.string.library_import_unsupported)
+                        )
+                        return@runCatching
+                    }
+
+                    if (isPdf) {
+                        val pdfDir = File(context.filesDir, "pdfs")
+                        if (!pdfDir.exists()) pdfDir.mkdirs()
+                        val pdfFile = File(pdfDir, fileName)
+                        withContext(Dispatchers.IO) {
+                            context.contentResolver.openInputStream(uri)?.use { input ->
+                                pdfFile.outputStream().use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                        }
+                        viewModel.importPdfBook(
+                            sourcePath = pdfFile.absolutePath,
+                            fallbackTitle = fileName.removeSuffix(".pdf"),
+                            pdfFile = pdfFile
+                        )
+                    } else {
+                        val epubDir = File(context.filesDir, "epubs")
+                        if (!epubDir.exists()) epubDir.mkdirs()
+                        val epubFile = File(epubDir, fileName)
+                        withContext(Dispatchers.IO) {
+                            context.contentResolver.openInputStream(uri)?.use { input ->
+                                epubFile.outputStream().use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                        }
+                        viewModel.importBookFromEpub(
+                            sourcePath = epubFile.absolutePath,
+                            fallbackTitle = fileName.removeSuffix(".epub"),
+                            inputStreamProvider = {
+                                epubFile.inputStream()
+                            }
+                        )
+                    }
+                }.onFailure { error ->
                     snackbarHostState.showSnackbar(
-                        context.getString(R.string.library_import_unsupported)
+                        context.getString(R.string.library_import_failure, error.message ?: "Unknown error")
                     )
                 }
-                return@rememberLauncherForActivityResult
-            }
-
-            if (isPdf) {
-                val pdfDir = File(context.filesDir, "pdfs")
-                if (!pdfDir.exists()) pdfDir.mkdirs()
-                val pdfFile = File(pdfDir, fileName)
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    pdfFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                viewModel.importPdfBook(
-                    sourcePath = pdfFile.absolutePath,
-                    fallbackTitle = fileName.removeSuffix(".pdf"),
-                    pdfFile = pdfFile
-                )
-            } else {
-                val epubDir = File(context.filesDir, "epubs")
-                if (!epubDir.exists()) epubDir.mkdirs()
-                val epubFile = File(epubDir, fileName)
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    epubFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                viewModel.importBookFromEpub(
-                    sourcePath = epubFile.absolutePath,
-                    fallbackTitle = fileName.removeSuffix(".epub"),
-                    inputStreamProvider = {
-                        epubFile.inputStream()
-                    }
-                )
             }
         }
     )

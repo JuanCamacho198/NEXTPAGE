@@ -25,12 +25,15 @@ class DefaultPdfParserService(private val context: Context) : PdfParserService {
                 val coverBytes: ByteArray? = if (pageCount > 0) {
                     try {
                         renderer.openPage(0).use { page ->
+                            // Fill with white bg — PdfRenderer leaves transparent pixels
+                            // which become black when saved as JPEG (no alpha support)
                             val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
-                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                            bitmap.eraseColor(android.graphics.Color.WHITE)
+                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
                             ByteArrayOutputStream().use { stream ->
                                 bitmap.compress(CompressFormat.JPEG, 80, stream)
                                 stream.toByteArray()
-                            }
+                            }.also { bitmap.recycle() }
                         }
                     } catch (e: Exception) {
                         null

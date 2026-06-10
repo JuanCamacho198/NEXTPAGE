@@ -719,12 +719,32 @@ class ReaderViewModel(
 
         observeProgressJob = viewModelScope.launch(mainDispatcher) {
             readerRepository.observeProgress(bookId).collect { progress ->
-                mutableUiState.update {
-                    it.copy(
+                mutableUiState.update { state ->
+                    var newState = state.copy(
                         readingProgress = progress,
                         isLoading = false
                     )
+
+                    // Restore current position from progress if available
+                    if (progress != null) {
+                        val cfi = progress.cfiLocation
+                        if (cfi.startsWith("pdfpage:")) {
+                            val page = cfi.removePrefix("pdfpage:").toIntOrNull()
+                            if (page != null) {
+                                newState = newState.copy(currentPdfPage = page)
+                            }
+                        } else if (cfi.startsWith("epubcfi(")) {
+                            // EPUB CFI: extract chapter index
+                            val chapterMatch = Regex("/6/(\\d+)").find(cfi)
+                            val chapterIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+                            if (chapterIndex != null) {
+                                newState = newState.copy(currentChapterIndex = chapterIndex - 1)
+                            }
+                        }
+                    }
+                    newState
                 }
+                updateProgressDisplay()
             }
         }
     }

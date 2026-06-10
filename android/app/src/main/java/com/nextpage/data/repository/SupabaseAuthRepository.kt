@@ -5,7 +5,6 @@ import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.repository.AuthRepository
-import com.nextpage.domain.repository.GoogleSignInOutcome
 import io.github.jan.supabase.SupabaseClient
 import java.net.URI
 import java.net.URLDecoder
@@ -44,10 +43,10 @@ class SupabaseAuthRepository(
         return Result.success(authUrl)
     }
 
-    override suspend fun completeGoogleSignIn(callbackUri: String): GoogleSignInOutcome {
+    override suspend fun completeGoogleSignIn(callbackUri: String): Result<AuthSession?> {
         val parsed = runCatching { URI(callbackUri) }
             .getOrElse {
-                return GoogleSignInOutcome.Failure(
+                return Result.failure(
                     AppError(
                         category = ErrorCategory.WIRING_ERROR,
                         code = "GOOGLE_AUTH_CALLBACK_INVALID_URI",
@@ -58,7 +57,7 @@ class SupabaseAuthRepository(
             }
         val query = queryParams(parsed.rawQuery.orEmpty())
         if (!isExpectedCallback(parsed)) {
-            return GoogleSignInOutcome.Failure(
+            return Result.failure(
                 AppError(
                     category = ErrorCategory.WIRING_ERROR,
                     code = "GOOGLE_AUTH_CALLBACK_MISMATCH",
@@ -71,9 +70,17 @@ class SupabaseAuthRepository(
         val error = query["error"]
         if (error != null) {
             return if (error == "access_denied") {
-                GoogleSignInOutcome.Cancelled
+                // User cancelled — treat as failure so it flows through UiEvent pipeline
+                Result.failure(
+                    AppError(
+                        category = ErrorCategory.AUTH,
+                        code = "cancelled",
+                        message = "Sign in cancelled by user",
+                        component = COMPONENT
+                    )
+                )
             } else {
-                GoogleSignInOutcome.Failure(
+                Result.failure(
                     AppError(
                         category = ErrorCategory.WIRING_ERROR,
                         code = "GOOGLE_AUTH_CALLBACK_ERROR",
@@ -88,7 +95,7 @@ class SupabaseAuthRepository(
         val returnedState = query["state"]
         val expectedState = pendingOAuthState
         if (expectedState != null && returnedState != null && expectedState != returnedState) {
-            return GoogleSignInOutcome.Failure(
+            return Result.failure(
                 AppError(
                     category = ErrorCategory.WIRING_ERROR,
                     code = "GOOGLE_AUTH_STATE_MISMATCH",
@@ -100,7 +107,7 @@ class SupabaseAuthRepository(
 
         val accessToken = query["access_token"]
         if (accessToken.isNullOrBlank()) {
-            return GoogleSignInOutcome.Failure(
+            return Result.failure(
                 AppError(
                     category = ErrorCategory.WIRING_ERROR,
                     code = "GOOGLE_AUTH_CALLBACK_INCOMPLETE",
@@ -115,7 +122,7 @@ class SupabaseAuthRepository(
         val session = AuthSession(userId = userId, email = email)
         pendingOAuthState = null
         sessionManager.setCurrentSession(session)
-        return GoogleSignInOutcome.Success(session)
+        return Result.success(session)
     }
 
     override suspend fun signIn(email: String, password: String): Result<AuthSession> {

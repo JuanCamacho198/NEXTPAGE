@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.repository.LibraryRepository
+import com.nextpage.presentation.UiEvent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import com.nextpage.domain.usecase.ImportEpubBookUseCase
@@ -97,11 +98,6 @@ sealed interface LibraryImportEvent {
     data class Failure(val message: String) : LibraryImportEvent
 }
 
-sealed interface LibraryUiEvent {
-    data class Success(val message: String) : LibraryUiEvent
-    data class Failure(val message: String) : LibraryUiEvent
-}
-
 class LibraryViewModel(
     private val libraryRepository: LibraryRepository,
     private val importEpubBookUseCase: ImportEpubBookUseCase,
@@ -117,8 +113,8 @@ class LibraryViewModel(
     private val mutableImportEvents = MutableSharedFlow<LibraryImportEvent>()
     val importEvents: SharedFlow<LibraryImportEvent> = mutableImportEvents.asSharedFlow()
 
-    private val mutableUiEvents = MutableSharedFlow<LibraryUiEvent>()
-    val uiEvents: SharedFlow<LibraryUiEvent> = mutableUiEvents.asSharedFlow()
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
     init {
         viewModelScope.launch(mainDispatcher) {
@@ -279,14 +275,12 @@ class LibraryViewModel(
 
             result.fold(
                 onSuccess = {
-                    mutableUiEvents.emit(LibraryUiEvent.Success("Deleted \"${book.title}\""))
+                    val message = "Deleted \"${book.title}\""
+                    _uiEvent.emit(UiEvent.ShowSnackbar(message))
                 },
                 onFailure = { error ->
-                    mutableUiEvents.emit(
-                        LibraryUiEvent.Failure(
-                            error.message ?: "Failed to delete book"
-                        )
-                    )
+                    val message = error.message ?: "Failed to delete book"
+                    _uiEvent.emit(UiEvent.ShowSnackbar(message))
                 }
             )
         }

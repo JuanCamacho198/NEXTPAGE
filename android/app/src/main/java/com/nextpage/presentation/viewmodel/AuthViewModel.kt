@@ -9,9 +9,12 @@ import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.repository.AuthRepository
-import com.nextpage.domain.repository.GoogleSignInOutcome
+import com.nextpage.presentation.UiEvent
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -46,6 +49,9 @@ class AuthViewModel(
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
     init {
         _uiState.value = _uiState.value.copy(
@@ -97,39 +103,30 @@ class AuthViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             logDiagnostics("onGoogleAuthCallback:loading")
-            when (val outcome = authRepository.completeGoogleSignIn(callbackUri)) {
-                is GoogleSignInOutcome.Success -> {
-                    triggerSyncForSession(outcome.session)
+            val result = authRepository.completeGoogleSignIn(callbackUri)
+            result.fold(
+                onSuccess = { session ->
+                    session?.let { triggerSyncForSession(it) }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        currentSession = outcome.session,
+                        currentSession = session,
                         errorMessage = null,
                         failureKind = AuthFailureKind.NONE,
                         pendingGoogleSignInUrl = null
                     )
                     logDiagnostics("onGoogleAuthCallback:success")
-                }
-
-                GoogleSignInOutcome.Cancelled -> {
+                },
+                onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = "Google sign-in was cancelled.",
-                        failureKind = AuthFailureKind.NONE,
+                        errorMessage = error.message,
+                        failureKind = classifyFailure(error),
                         pendingGoogleSignInUrl = null
                     )
-                    logDiagnostics("onGoogleAuthCallback:cancelled")
-                }
-
-                is GoogleSignInOutcome.Failure -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = outcome.error.message,
-                        failureKind = classifyFailure(outcome.error),
-                        pendingGoogleSignInUrl = null
-                    )
+                    _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Authentication failed"))
                     logDiagnostics("onGoogleAuthCallback:failure")
                 }
-            }
+            )
         }
     }
 
@@ -146,6 +143,9 @@ class AuthViewModel(
                 currentSession = result.getOrNull(),
                 errorMessage = result.exceptionOrNull()?.message
             )
+            result.exceptionOrNull()?.let {
+                _uiEvent.emit(UiEvent.ShowSnackbar(it.message ?: "Sign up failed"))
+            }
         }
     }
 
@@ -158,6 +158,9 @@ class AuthViewModel(
                 currentSession = result.getOrNull(),
                 errorMessage = result.exceptionOrNull()?.message
             )
+            result.exceptionOrNull()?.let {
+                _uiEvent.emit(UiEvent.ShowSnackbar(it.message ?: "Sign in failed"))
+            }
         }
     }
 
@@ -170,6 +173,9 @@ class AuthViewModel(
                 failureKind = classifyFailure(result.exceptionOrNull()),
                 pendingGoogleSignInUrl = null
             )
+            result.exceptionOrNull()?.let {
+                _uiEvent.emit(UiEvent.ShowSnackbar(it.message ?: "Sign out failed"))
+            }
         }
     }
 
@@ -182,6 +188,9 @@ class AuthViewModel(
                 currentSession = result.getOrNull(),
                 errorMessage = result.exceptionOrNull()?.message
             )
+            result.exceptionOrNull()?.let {
+                _uiEvent.emit(UiEvent.ShowSnackbar(it.message ?: "Failed to continue locally"))
+            }
         }
     }
 
@@ -203,7 +212,7 @@ class AuthViewModel(
         return when ((error as? AppError)?.category) {
             ErrorCategory.CONFIG_ERROR -> AuthFailureKind.CONFIG_ERROR
             ErrorCategory.WIRING_ERROR -> AuthFailureKind.WIRING_ERROR
-            null -> if (error == null) AuthFailureKind.NONE else AuthFailureKind.UNKNOWN
+            else -> if (error == null) AuthFailureKind.NONE else AuthFailureKind.UNKNOWN
         }
     }
 

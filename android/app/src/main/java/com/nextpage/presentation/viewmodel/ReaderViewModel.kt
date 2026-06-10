@@ -17,14 +17,18 @@ import com.nextpage.domain.model.SearchResult
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
+import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.viewmodel.reader.SleepTimerManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -107,6 +111,9 @@ class ReaderViewModel(
 
     val sleepTimerManager = SleepTimerManager(viewModelScope)
 
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
+
     private var observeProgressJob: Job? = null
     private var observeHighlightsJob: Job? = null
     private var observeBookmarksJob: Job? = null
@@ -151,7 +158,16 @@ class ReaderViewModel(
                 bookFormat = format,
                 isLoading = true,
                 error = null,
-                // Reset fullscreen on new book load
+                // Reset all book-specific state
+                chapters = emptyList(),
+                currentChapterIndex = 0,
+                chapterHtmlContent = null,
+                currentPdfPage = 0,
+                totalPdfPages = 0,
+                progressPercent = 0f,
+                progressLabel = "",
+                highlights = emptyList(),
+                bookmarks = emptyList(),
                 isFullscreen = false
             )
         }
@@ -166,12 +182,14 @@ class ReaderViewModel(
         viewModelScope.launch(mainDispatcher) {
             val loader = epubContentLoader
             if (loader == null) {
+                val message = "Reader content loader is unavailable"
                 mutableUiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "Reader content loader is unavailable"
+                        error = message
                     )
                 }
+                _uiEvent.emit(UiEvent.ShowSnackbar(message))
                 return@launch
             }
 
@@ -200,12 +218,14 @@ class ReaderViewModel(
                 startObservingBookmarks(bookId)
             }.onFailure { error ->
                 Log.e(TAG, "Failed to load book: ${error.message}")
+                val message = error.message ?: "Failed to load book"
                 mutableUiState.update {
                     it.copy(
                         isLoading = false,
-                        error = error.message ?: "Failed to load book"
+                        error = message
                     )
                 }
+                _uiEvent.emit(UiEvent.ShowSnackbar(message))
             }
         }
     }
@@ -214,24 +234,28 @@ class ReaderViewModel(
         viewModelScope.launch(mainDispatcher) {
             val loader = pdfContentLoader
             if (loader == null) {
+                val message = "PDF content loader is unavailable"
                 mutableUiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "PDF content loader is unavailable"
+                        error = message
                     )
                 }
+                _uiEvent.emit(UiEvent.ShowSnackbar(message))
                 return@launch
             }
 
             try {
                 val file = java.io.File(filePath)
                 if (!file.exists()) {
+                    val message = "File not found. Try importing the book again."
                     mutableUiState.update {
                         it.copy(
                             isLoading = false,
-                            error = "File not found. Try importing the book again."
+                            error = message
                         )
                     }
+                    _uiEvent.emit(UiEvent.ShowSnackbar(message))
                     return@launch
                 }
 
@@ -270,6 +294,7 @@ class ReaderViewModel(
                         error = userMessage
                     )
                 }
+                _uiEvent.emit(UiEvent.ShowSnackbar(userMessage))
             }
         }
     }

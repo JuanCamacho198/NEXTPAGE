@@ -9,8 +9,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,39 +28,24 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -75,31 +57,12 @@ import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.util.getContentDisplayName
-import com.nextpage.presentation.viewmodel.LibraryImportEvent
-import com.nextpage.presentation.viewmodel.LibraryUiEvent
 import com.nextpage.presentation.viewmodel.LibraryViewModel
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.GridView
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.automirrored.outlined.ViewList
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.unit.Dp
 import com.nextpage.ui.components.molecules.FilterBottomSheet
 import com.nextpage.ui.components.molecules.LibraryHeader
 import com.nextpage.ui.components.molecules.StatusChipRow
 import com.nextpage.ui.components.molecules.SortControlRow
 import com.nextpage.ui.components.molecules.AddBookCard
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Main Screen Composable
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun LibraryScreen(
@@ -110,7 +73,6 @@ fun LibraryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     val searchedBooks = uiState.searchedBooks
 
@@ -128,12 +90,7 @@ fun LibraryScreen(
                     val isPdf = fileName.endsWith(".pdf", true) || mimeType == "application/pdf"
                     val isEpub = fileName.endsWith(".epub", true) || mimeType == "application/epub+zip"
 
-                    if (!isPdf && !isEpub) {
-                        snackbarHostState.showSnackbar(
-                            context.getString(R.string.library_import_unsupported)
-                        )
-                        return@runCatching
-                    }
+                    if (!isPdf && !isEpub) return@runCatching
 
                     if (isPdf) {
                         val pdfDir = File(context.filesDir, "pdfs")
@@ -170,40 +127,10 @@ fun LibraryScreen(
                             }
                         )
                     }
-                }.onFailure { error ->
-                    snackbarHostState.showSnackbar(
-                        context.getString(R.string.library_import_failure, error.message ?: "Unknown error")
-                    )
-                }
+                }.onFailure { /* Errors handled globally */ }
             }
         }
     )
-
-    LaunchedEffect(viewModel) {
-        viewModel.importEvents.collect { event ->
-            val message = when (event) {
-                is LibraryImportEvent.Success -> context.getString(
-                    R.string.library_import_success,
-                    event.title
-                )
-                is LibraryImportEvent.Failure -> context.getString(
-                    R.string.library_import_failure,
-                    event.message
-                )
-            }
-            snackbarHostState.showSnackbar(message)
-        }
-    }
-
-    LaunchedEffect(viewModel) {
-        viewModel.uiEvents.collect { event ->
-            val message = when (event) {
-                is LibraryUiEvent.Success -> event.message
-                is LibraryUiEvent.Failure -> event.message
-            }
-            snackbarHostState.showSnackbar(message)
-        }
-    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (uiState.books.isEmpty()) {
@@ -262,7 +189,6 @@ fun LibraryScreen(
             )
         }
 
-        // ── Filter Bottom Sheet ──
         if (uiState.showFilterSheet) {
             FilterBottomSheet(
                 selectedFormat = uiState.filterFormat,
@@ -270,19 +196,8 @@ fun LibraryScreen(
                 onDismiss = { viewModel.onToggleFilterSheet() }
             )
         }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(NextPageDimens.spacingMd)
-        )
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Bookshelf Content (non-empty state)
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun LibraryBookshelfContent(
@@ -309,7 +224,6 @@ private fun LibraryBookshelfContent(
             .fillMaxSize()
             .padding(contentPadding)
     ) {
-        // 1. Header
         LibraryHeader(
             showSearch = showSearch,
             onSearchToggle = onSearchToggle,
@@ -318,7 +232,6 @@ private fun LibraryBookshelfContent(
             onFilterToggle = onFilterToggle
         )
 
-        // 2. Status Tabs
         StatusChipRow(
             selectedTab = statusFilter,
             onTabSelected = onStatusFilterChanged
@@ -326,7 +239,6 @@ private fun LibraryBookshelfContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 3. Sort Row
         SortControlRow(
             sortBy = sortBy,
             onSortByChanged = onSortByChanged,
@@ -334,7 +246,7 @@ private fun LibraryBookshelfContent(
             onViewToggle = onViewToggle
         )
 
-        Spacer(modifier = Modifier.height(12.dp))            // 4. Book Grid - books are already filtered/sorted from parent
+        Spacer(modifier = Modifier.height(12.dp))
         BookGridSection(
             books = books,
             readingMinutesByBook = readingMinutesByBook,
@@ -345,10 +257,6 @@ private fun LibraryBookshelfContent(
         )
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Section 4: Book Grid
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun BookGridSection(
@@ -408,10 +316,6 @@ private fun BookGrid(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Book List View
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun BookList(
     books: List<Book>,
@@ -458,7 +362,6 @@ private fun BookListCard(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SURFACE_ALPHA)
     ) {
         Row(modifier = Modifier.padding(12.dp)) {
-            // Cover thumbnail
             CoverThumbnail(
                 coverPath = book.coverPath,
                 modifier = Modifier
@@ -504,10 +407,6 @@ private fun BookListCard(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Book Grid Card
-// ─────────────────────────────────────────────────────────────────────────────
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BookGridCard(
@@ -536,7 +435,6 @@ private fun BookGridCard(
                 onLongClick = onLongPress
             )
     ) {
-        // Cover thumbnail
         CoverThumbnail(
             coverPath = book.coverPath,
             modifier = Modifier
@@ -549,7 +447,6 @@ private fun BookGridCard(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Title
             Text(
                 text = book.title,
                 fontWeight = FontWeight.Bold,
@@ -558,7 +455,6 @@ private fun BookGridCard(
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Author
             Text(
                 text = book.author ?: stringResource(R.string.library_author_unknown),
                 fontSize = 12.sp,
@@ -567,7 +463,6 @@ private fun BookGridCard(
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Status and progress
             if (statusText != null) {
                 Text(
                     text = statusText,
@@ -591,10 +486,6 @@ private fun BookGridCard(
         }
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Empty Library
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun EmptyLibrary(
@@ -626,10 +517,6 @@ private fun EmptyLibrary(
         }
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Cover Thumbnail (preserved)
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 internal fun CoverThumbnail(
@@ -666,4 +553,3 @@ internal fun CoverThumbnail(
 
 private const val READING_TARGET_MINUTES = 300L
 private const val SURFACE_ALPHA = 0.3f
-

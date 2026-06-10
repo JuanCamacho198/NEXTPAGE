@@ -18,6 +18,8 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.runtime.Composable
@@ -56,6 +58,8 @@ import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
 import com.nextpage.presentation.util.getContentDisplayName
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
+import com.nextpage.data.remote.sync.SyncState
+import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.debug.DebugPanel
 import com.nextpage.presentation.debug.DebugViewModel
 import com.nextpage.BuildConfig
@@ -74,6 +78,7 @@ fun NextPageNavHost(
     val context = LocalContext.current
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var selectedBookId by rememberSaveable { mutableStateOf("") }
     var selectedBookFilePath by rememberSaveable { mutableStateOf<String?>(null) }
@@ -119,6 +124,44 @@ fun NextPageNavHost(
 
     val authState by authViewModel.uiState.collectAsState()
     val isAuthenticated = authState.currentSession != null
+
+    // ── Global Error/UI Event Collection ───────────────────────────
+    listOf(
+        libraryViewModel.uiEvent,
+        readerViewModel.uiEvent,
+        highlightsViewModel.uiEvent,
+        homeViewModel.uiEvent,
+        authViewModel.uiEvent
+    ).forEach { flow ->
+        LaunchedEffect(flow) {
+            flow.collect { event ->
+                when (event) {
+                    is UiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                    is UiEvent.ShowToast -> android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(libraryViewModel.importEvents) {
+        libraryViewModel.importEvents.collect { event ->
+            val message = when (event) {
+                is com.nextpage.presentation.viewmodel.LibraryImportEvent.Success -> 
+                    context.getString(com.nextpage.R.string.library_import_success, event.title)
+                is com.nextpage.presentation.viewmodel.LibraryImportEvent.Failure -> 
+                    context.getString(com.nextpage.R.string.library_import_failure, event.message)
+            }
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    LaunchedEffect(appContainer.syncService) {
+        appContainer.syncService.syncState.collect { state ->
+            if (state is com.nextpage.data.remote.sync.SyncState.Error) {
+                snackbarHostState.showSnackbar("Sync error: ${state.message}")
+            }
+        }
+    }
 
     LaunchedEffect(appContainer, authViewModel) {
         appContainer.authCallbackEvents.collect { callbackUri ->

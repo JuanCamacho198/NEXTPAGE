@@ -49,6 +49,7 @@ import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.saveable.rememberSaveable
 
 @Composable
 fun NextPageNavHost(
@@ -60,9 +61,9 @@ fun NextPageNavHost(
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
 
-    var selectedBookId by remember { mutableStateOf("") }
-    var selectedBookFilePath by remember { mutableStateOf<String?>(null) }
-    var selectedBookFormat by remember { mutableStateOf("epub") }
+    var selectedBookId by rememberSaveable { mutableStateOf("") }
+    var selectedBookFilePath by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedBookFormat by rememberSaveable { mutableStateOf("epub") }
 
     val libraryViewModel: LibraryViewModel = viewModel(
         factory = LibraryViewModelFactory(appContainer.libraryRepository)
@@ -87,14 +88,14 @@ fun NextPageNavHost(
         factory = HomeViewModelFactory(appContainer.homeRepository)
     )
 
-    val authViewModel: AuthViewModel = remember {
-        AuthViewModel(
+    val authViewModel: AuthViewModel = viewModel(
+        factory = AuthViewModel.Factory(
             authRepository = appContainer.authRepository,
             syncService = appContainer.syncService,
             isSupabaseConfigured = !appContainer.isSupabaseConfigError,
             hasSupabaseWiringIssue = appContainer.isSupabaseWiringError
         )
-    }
+    )
 
     val authState by authViewModel.uiState.collectAsState()
     val isAuthenticated = authState.currentSession != null

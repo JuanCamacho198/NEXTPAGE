@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -67,7 +66,6 @@ fun ReaderChrome(
         modifier = Modifier
             .fillMaxSize()
             .background(READER_BG)
-            .statusBarsPadding()
             .padding(contentPadding)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {

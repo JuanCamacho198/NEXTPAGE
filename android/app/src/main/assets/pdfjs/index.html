@@ -214,6 +214,16 @@
         });
     }
 
+    function loadPdfBase64(base64) {
+        var binaryString = window.atob(base64);
+        var len = binaryString.length;
+        var bytes = new Uint8Array(len);
+        for (var i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        loadPdfData(bytes);
+    }
+
     // ── Navigation ───────────────────────────────────────────────────
 
     function goToPage(num) {
@@ -442,6 +452,7 @@
 
     // Export functions for Kotlin injection
     window.loadPdfData = loadPdfData;
+    window.loadPdfBase64 = loadPdfBase64;
     window.goToPage = goToPage;
     window.nextPage = nextPage;
     window.previousPage = previousPage;

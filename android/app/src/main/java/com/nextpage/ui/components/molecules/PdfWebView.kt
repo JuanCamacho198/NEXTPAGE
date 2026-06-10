@@ -1,6 +1,7 @@
 package com.nextpage.ui.components.molecules
 
 import android.annotation.SuppressLint
+import android.util.Base64
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -67,8 +68,8 @@ fun PdfWebView(
         if (!file.exists()) return@LaunchedEffect
 
         val bytes = withContext(Dispatchers.IO) { file.readBytes() }
-        val jsArray = bytes.joinToString(",") { it.toInt().toString() }
-        view.evaluateJavascript("loadPdfData(new Uint8Array([$jsArray]))", null)
+        val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+        view.evaluateJavascript("loadPdfBase64('$base64')", null)
     }
 
     // Sync highlights with JS when page or highlights change
@@ -156,7 +157,20 @@ fun PdfWebView(
                 }
 
                 addJavascriptInterface(jsBridge, "NextPageBridge")
-                loadUrl("https://appassets.androidplatform.net/pdfjs/index.html")
+
+                // Load HTML from assets string — WebViewAssetLoader cannot intercept
+                // the initial main-frame navigation in modern Chromium WebViews,
+                // so loadUrl("https://appassets.androidplatform.net/...") triggers
+                // a real HTTPS request → ERR_INVALID_RESPONSE.
+                // loadDataWithBaseURL provides a virtual base URL so relative
+                // subresource paths (pdf.js, pdf.worker.js) are intercepted correctly.
+                val html = ctx.assets.open("pdfjs/index.html")
+                    .bufferedReader()
+                    .use { it.readText() }
+                loadDataWithBaseURL(
+                    "https://appassets.androidplatform.net/pdfjs/",
+                    html, "text/html", "UTF-8", null
+                )
                 webView = this
             }
         },

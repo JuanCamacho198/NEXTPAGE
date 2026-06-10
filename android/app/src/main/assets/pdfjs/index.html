@@ -92,6 +92,15 @@
             background-color: rgba(255, 165, 0, 0.5);
             border-radius: 2px;
         }
+        /* Disable native text selection entirely — programmatic selection
+           via window.getSelection().addRange() works regardless of CSS.
+           The native floating toolbar is triggered by user-initiated
+           selection, so disabling it here prevents the system toolbar
+           from appearing when our JS long-press handler selects text. */
+        body, #textLayerDiv, #textLayerDiv span {
+            -webkit-user-select: none;
+            user-select: none;
+        }
         /* Error state */
         #errorMessage {
             display: none;
@@ -198,6 +207,23 @@
         });
     }
 
+    // ── PDF Data Injection (Base64 chunks from Kotlin) ────────────────
+
+    var pdfChunks = [];
+    function addPdfChunk(b64) {
+        pdfChunks.push(b64);
+    }
+    function finalizePdf() {
+        var combined = pdfChunks.join('');
+        pdfChunks = [];
+        var binaryStr = atob(combined);
+        var bytes = new Uint8Array(binaryStr.length);
+        for (var i = 0; i < binaryStr.length; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+        }
+        loadPdfData(bytes);
+    }
+
     // ── PDF Loading ──────────────────────────────────────────────────
 
     function loadPdfData(uint8Array) {
@@ -244,22 +270,35 @@
         if (currentPageNumber > 1) goToPage(currentPageNumber - 1);
     }
 
-    // ── Text Selection ───────────────────────────────────────────────
+    // ── Text Selection (custom via long-press) ────────────────────────
+    // Native selection is disabled via CSS (user-select: none on body).
+    // Instead, we detect long-press on text layer spans and programmatically
+    // select the word, then notify Kotlin to show the custom context menu.
 
-    document.addEventListener('selectionchange', function() {
-        var sel = window.getSelection();
-        if (!sel || sel.isCollapsed || sel.toString().trim() === '') return;
-        var range = sel.getRangeAt(0);
-        var rect = range.getBoundingClientRect();
-        clearTimeout(window._selTimeout);
-        window._selTimeout = setTimeout(function() {
+    var longPressTimer = null;
+    document.addEventListener('touchstart', function(e) {
+        var target = e.target.closest('#textLayerDiv span');
+        if (!target) return;
+        longPressTimer = setTimeout(function() {
+            var sel = window.getSelection();
+            var range = document.createRange();
+            range.selectNodeContents(target);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            var rect = range.getBoundingClientRect();
             try {
                 NextPageBridge.onTextSelectionEvent(
                     sel.toString(),
                     rect.left, rect.top, rect.right, rect.bottom
                 );
             } catch(e) {}
-        }, 300);
+        }, 400);
+    });
+    document.addEventListener('touchend', function() {
+        clearTimeout(longPressTimer);
+    });
+    document.addEventListener('touchmove', function() {
+        clearTimeout(longPressTimer);
     });
 
     // ── Highlight Tap ────────────────────────────────────────────────

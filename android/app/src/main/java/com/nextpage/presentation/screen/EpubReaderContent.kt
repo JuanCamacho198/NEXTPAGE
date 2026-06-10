@@ -6,22 +6,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
 import com.nextpage.data.epub.EpubContentLoader
 import com.nextpage.domain.model.Highlight
-import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.ui.components.molecules.EpubWebView
-import com.nextpage.ui.components.molecules.FloatingContextMenu
-import com.nextpage.ui.components.molecules.TextSelectionMenu
+import com.nextpage.ui.components.molecules.SelectionOverlay
 
 /**
  * EPUB-specific reader content.
@@ -108,51 +102,20 @@ fun EpubReaderContent(
         }
 
         // ── Text Selection Overlay ───────────────────────────────
-        if (showColorPicker && selectionRect != null) {
-            val defaultColor = selectedText?.let {
-                highlights.lastOrNull()?.color?.let { color ->
-                    HighlightColor.fromHex(color)?.hex
-                } ?: HighlightColor.YELLOW.hex
-            } ?: HighlightColor.YELLOW.hex
-
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset(selectionRect.left, (selectionRect.top - 120).coerceAtLeast(0)) }
-                    .padding(8.dp)
-            ) {
-                TextSelectionMenu(
-                    selectedColor = defaultColor,
-                    onColorSelected = onColorSelected,
-                    onCopy = onCopy,
-                    onExpand = onShowContextMenu
-                )
-            }
-        }
-
-        // ── Floating Context Menu ────────────────────────────────
-        if (showContextMenu && selectionRect != null) {
-            Box(
-                modifier = Modifier
-                    .offset {
-                        IntOffset(
-                            selectionRect.left,
-                            (selectionRect.top - 300).coerceAtLeast(0)
-                        )
-                    }
-                    .padding(8.dp)
-            ) {
-                FloatingContextMenu(
-                    selectedColor = HighlightColor.YELLOW.hex,
-                    onColorSelected = onColorSelected,
-                    onCopy = onCopy,
-                    onAddTag = onAddTag,
-                    onAddNote = onAddNote,
-                    onAddComment = onAddComment,
-                    onShare = onShare,
-                    onDelete = onDismissContextMenu,
-                    onDismiss = onDismissContextMenu
-                )
-            }
-        }
+        SelectionOverlay(
+            showColorPicker = showColorPicker,
+            showContextMenu = showContextMenu,
+            selectionRect = selectionRect,
+            selectedText = selectedText,
+            highlights = highlights,
+            onColorSelected = onColorSelected,
+            onCopy = onCopy,
+            onShowContextMenu = onShowContextMenu,
+            onDismissContextMenu = onDismissContextMenu,
+            onAddTag = onAddTag,
+            onAddNote = onAddNote,
+            onAddComment = onAddComment,
+            onShare = onShare
+        )
     }
 }

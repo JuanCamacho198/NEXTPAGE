@@ -41,6 +41,7 @@ import com.nextpage.ui.components.molecules.HighlightsSheet
 import com.nextpage.ui.components.molecules.PdfWebView
 import com.nextpage.ui.components.molecules.ReadingProgressBar
 import com.nextpage.ui.components.molecules.SearchBottomSheet
+import com.nextpage.ui.components.molecules.SelectionOverlay
 import com.nextpage.ui.components.molecules.SleepTimerOverlay
 import com.nextpage.ui.components.molecules.SleepTimerPreset
 import com.nextpage.ui.components.molecules.SleepTimerSheet
@@ -174,20 +175,44 @@ fun ReaderScreen(
                 }
 
                 uiState.totalPdfPages > 0 -> {
-                    PdfWebView(
-                        filePath = bookFilePath ?: "",
-                        currentPage = uiState.currentPdfPage,
-                        searchQuery = uiState.searchQuery,
-                        highlights = uiState.highlights,
-                        onPageChanged = { page -> viewModel.goToPdfPage(page - 1) },
-                        onDocumentLoaded = { pages -> viewModel.onPdfDocumentLoaded(pages) },
-                        onTextSelectionEvent = { text, left, top, right, bottom ->
-                            viewModel.onTextSelectionEvent(text, left, top, right, bottom)
-                        },
-                        onSearchResults = { json -> viewModel.onPdfSearchResults(json) },
-                        onHighlightTapped = viewModel::onHighlightTapped,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        PdfWebView(
+                            filePath = bookFilePath ?: "",
+                            currentPage = uiState.currentPdfPage,
+                            searchQuery = uiState.searchQuery,
+                            highlights = uiState.highlights,
+                            onPageChanged = { page -> viewModel.goToPdfPage(page - 1) },
+                            onDocumentLoaded = { pages -> viewModel.onPdfDocumentLoaded(pages) },
+                            onTextSelectionEvent = { text, left, top, right, bottom ->
+                                viewModel.onTextSelectionEvent(text, left, top, right, bottom)
+                            },
+                            onSearchResults = { json -> viewModel.onPdfSearchResults(json) },
+                            onHighlightTapped = viewModel::onHighlightTapped,
+                            modifier = Modifier.fillMaxSize()
+                        )
+
+                        SelectionOverlay(
+                            showColorPicker = uiState.showColorPicker,
+                            showContextMenu = uiState.showContextMenu,
+                            selectionRect = uiState.selectionRect,
+                            selectedText = uiState.selectedText,
+                            highlights = uiState.highlights,
+                            onColorSelected = { color -> viewModel.onSelectHighlightColor(color) },
+                            onCopy = {
+                                viewModel.onCopySelectedText()
+                                uiState.selectedText?.let { text ->
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("highlight", text))
+                                }
+                            },
+                            onShowContextMenu = { viewModel.onShowContextMenu() },
+                            onDismissContextMenu = { viewModel.onDismissContextMenu() },
+                            onAddTag = {},
+                            onAddNote = {},
+                            onAddComment = {},
+                            onShare = {}
+                        )
+                    }
                 }
 
                 uiState.chapters.isNotEmpty() -> {

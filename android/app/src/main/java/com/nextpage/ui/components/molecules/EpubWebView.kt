@@ -232,18 +232,18 @@ internal fun injectSearchJs(query: String): String {
 internal fun injectSelectionJs(): String {
     return """
         (function() {
+            if (window.__selectionListenerInstalled) return;
+            window.__selectionListenerInstalled = true;
             document.addEventListener('selectionchange', function() {
-                const sel = window.getSelection();
-                if (!sel || sel.isCollapsed || sel.toString().trim() === '') return;
-                const range = sel.getRangeAt(0);
-                const rect = range.getBoundingClientRect();
-                clearTimeout(window._selTimeout);
-                window._selTimeout = setTimeout(function() {
+                var sel = window.getSelection();
+                if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+                    var range = sel.getRangeAt(0);
+                    var rect = range.getBoundingClientRect();
                     NextPageBridge.onTextSelectionEvent(
                         sel.toString(),
                         rect.left, rect.top, rect.right, rect.bottom
                     );
-                }, 300);
+                }
             });
         })();
     """.trimIndent()

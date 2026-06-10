@@ -2,6 +2,7 @@ package com.nextpage.ui.components.molecules
 
 import android.annotation.SuppressLint
 import android.graphics.Rect
+import android.util.Base64
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
@@ -20,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
 import com.nextpage.domain.model.Highlight
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -28,10 +31,11 @@ import java.io.File
  * PdfWebView renders a PDF document using PDF.js in a WebView with a
  * selectable text layer, search support, and highlight capabilities.
  *
- * Architecture mirrors [EpubWebView]:
+ * Architecture:
  * - PDF.js assets are served via [WebViewAssetLoader] from `assets/pdfjs/`
- * - The PDF file is served via a custom [PdfFileHandler] over the same asset
- *   domain — PDF.js loads it with `fetch()` instead of inline Base64.
+ * - The PDF file data is injected as Base64 chunks through the JavaScript
+ *   bridge instead of using fetch() — this avoids all CORS and
+ *   WebViewAssetLoader interception issues that occur with loadDataWithBaseURL.
  * - Communication uses [ReaderJsBridge] for text selection, search, and highlights
  * - Page navigation is controlled via JS injection
  */
@@ -52,8 +56,7 @@ fun PdfWebView(
     var webView by remember { mutableStateOf<WebView?>(null) }
     var pageLoaded by remember { mutableStateOf(false) }
     var lastSearchQuery by remember { mutableStateOf("") }
-
-    val pdfHandler = remember { PdfFileHandler() }
+    var pdfLoaded by remember { mutableStateOf(false) }
 
     val jsBridge = remember(onTextSelectionEvent, onSearchResults, onHighlightTapped, onPageChanged, onDocumentLoaded) {
         ReaderJsBridge(
@@ -65,16 +68,31 @@ fun PdfWebView(
         )
     }
 
-    // Load PDF when WebView finishes loading index.html
+    // Inject PDF data as Base64 chunks when page finishes loading
     LaunchedEffect(filePath, pageLoaded) {
-        if (!pageLoaded) return@LaunchedEffect
+        if (!pageLoaded || pdfLoaded) return@LaunchedEffect
         val view = webView ?: return@LaunchedEffect
         val file = File(filePath)
         if (!file.exists()) return@LaunchedEffect
 
-        // Tell the handler which file to serve, then tell JS to fetch it
-        pdfHandler.setFile(file)
-        view.evaluateJavascript("loadPdfFromUrl('http://appassets.androidplatform.net/pdf/current.pdf')", null)
+        pdfLoaded = true
+
+        // Read file and send as chunks via JS bridge
+        // Chunk size 512KB keeps each evaluateJavascript call well under the ~2MB limit
+        val chunkSize = 512 * 1024
+        val fileBytes = withContext(Dispatchers.IO) { file.readBytes() }
+        val totalChunks = (fileBytes.size + chunkSize - 1) / chunkSize
+
+        for (i in 0 until totalChunks) {
+            val start = i * chunkSize
+            val end = minOf(start + chunkSize, fileBytes.size)
+            val b64 = Base64.encodeToString(
+                fileBytes.copyOfRange(start, end),
+                Base64.NO_WRAP
+            )
+            view.evaluateJavascript("addPdfChunk('$b64')", null)
+        }
+        view.evaluateJavascript("finalizePdf()", null)
     }
 
     // Sync highlights with JS when page or highlights change
@@ -102,7 +120,6 @@ fun PdfWebView(
                 }
                 jsonArr.put(obj)
             }
-            // Safe JSON passing via JSON.stringify to avoid injection
             val jsonStr = jsonArr.toString()
                 .replace("\\", "\\\\")
                 .replace("'", "\\'")
@@ -141,9 +158,9 @@ fun PdfWebView(
                 settings.builtInZoomControls = false
                 settings.displayZoomControls = false
 
+                // WebViewAssetLoader only serves pdf.js assets — no /pdf/ handler needed
                 val assetLoader = WebViewAssetLoader.Builder()
                     .addPathHandler("/pdfjs/", WebViewAssetLoader.AssetsPathHandler(ctx))
-                    .addPathHandler("/pdf/", pdfHandler)
                     .build()
 
                 webViewClient = object : WebViewClient() {
@@ -151,7 +168,6 @@ fun PdfWebView(
                         view: WebView,
                         request: WebResourceRequest
                     ): WebResourceResponse? {
-                        // Only allow requests to our asset domain
                         if (request.url.host != "appassets.androidplatform.net") return null
                         return assetLoader.shouldInterceptRequest(request.url)
                     }
@@ -163,8 +179,6 @@ fun PdfWebView(
                 }
 
                 // Suppress the default Android floating selection toolbar
-                // (Copy / Share / Select All) using Callback2 which handles
-                // FloatingActionMode on API 23+ (our minSdk 26).
                 @Suppress("DEPRECATION")
                 val suppressionCallback = object : ActionMode.Callback2() {
                     override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean = false
@@ -187,16 +201,8 @@ fun PdfWebView(
 
                 addJavascriptInterface(jsBridge, "NextPageBridge")
 
-                // Use loadDataWithBaseURL with http:// scheme (not https://) so:
-                // 1. The page origin is http://appassets.androidplatform.net
-                // 2. Subresource requests (pdf.js, pdf.worker.js) are intercepted
-                //    by WebViewAssetLoader (handles both http and https schemes)
-                // 3. fetch() to http://appassets.androidplatform.net/pdf/current.pdf
-                //    is SAME-ORIGIN → no CORS issues
-                //
-                // loadUrl() with a virtual https:// domain doesn't work on some
-                // WebView versions because shouldInterceptRequest is not called
-                // for the main-frame navigation, causing ERR_INVALID_RESPONSE.
+                // Load index.html — the PDF data will be injected via JS bridge
+                // after the page finishes loading (see LaunchedEffect above).
                 val html = ctx.assets.open("pdfjs/index.html")
                     .bufferedReader()
                     .use { it.readText() }

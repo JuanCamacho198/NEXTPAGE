@@ -1,7 +1,6 @@
 package com.nextpage.ui.components.molecules
 
 import android.annotation.SuppressLint
-import android.util.Base64
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -16,8 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
 import com.nextpage.domain.model.Highlight
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -28,7 +25,8 @@ import java.io.File
  *
  * Architecture mirrors [EpubWebView]:
  * - PDF.js assets are served via [WebViewAssetLoader] from `assets/pdfjs/`
- * - PDF bytes are injected as a Uint8Array after the page loads
+ * - The PDF file is served via a custom [PdfFileHandler] over the same asset
+ *   domain — PDF.js loads it with `fetch()` instead of inline Base64.
  * - Communication uses [ReaderJsBridge] for text selection, search, and highlights
  * - Page navigation is controlled via JS injection
  */
@@ -50,6 +48,8 @@ fun PdfWebView(
     var pageLoaded by remember { mutableStateOf(false) }
     var lastSearchQuery by remember { mutableStateOf("") }
 
+    val pdfHandler = remember { PdfFileHandler() }
+
     val jsBridge = remember(onTextSelectionEvent, onSearchResults, onHighlightTapped, onPageChanged, onDocumentLoaded) {
         ReaderJsBridge(
             onTextSelectionEvent = onTextSelectionEvent,
@@ -67,9 +67,9 @@ fun PdfWebView(
         val file = File(filePath)
         if (!file.exists()) return@LaunchedEffect
 
-        val bytes = withContext(Dispatchers.IO) { file.readBytes() }
-        val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-        view.evaluateJavascript("loadPdfBase64('$base64')", null)
+        // Tell the handler which file to serve, then tell JS to fetch it
+        pdfHandler.setFile(file)
+        view.evaluateJavascript("loadPdfFromUrl('https://appassets.androidplatform.net/pdf/current.pdf')", null)
     }
 
     // Sync highlights with JS when page or highlights change
@@ -138,6 +138,7 @@ fun PdfWebView(
 
                 val assetLoader = WebViewAssetLoader.Builder()
                     .addPathHandler("/pdfjs/", WebViewAssetLoader.AssetsPathHandler(ctx))
+                    .addPathHandler("/pdf/", pdfHandler)
                     .build()
 
                 webViewClient = object : WebViewClient() {

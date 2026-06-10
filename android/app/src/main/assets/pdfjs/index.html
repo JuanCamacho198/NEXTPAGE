@@ -214,14 +214,17 @@
         });
     }
 
-    function loadPdfBase64(base64) {
-        var binaryString = window.atob(base64);
-        var len = binaryString.length;
-        var bytes = new Uint8Array(len);
-        for (var i = 0; i < len; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        loadPdfData(bytes);
+    function loadPdfFromUrl(url) {
+        fetch(url).then(function(response) {
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            return response.arrayBuffer();
+        }).then(function(buffer) {
+            loadPdfData(new Uint8Array(buffer));
+        }).catch(function(err) {
+            showError('Failed to fetch PDF: ' + err.message);
+        });
     }
 
     // ── Navigation ───────────────────────────────────────────────────
@@ -452,7 +455,7 @@
 
     // Export functions for Kotlin injection
     window.loadPdfData = loadPdfData;
-    window.loadPdfBase64 = loadPdfBase64;
+    window.loadPdfFromUrl = loadPdfFromUrl;
     window.goToPage = goToPage;
     window.nextPage = nextPage;
     window.previousPage = previousPage;

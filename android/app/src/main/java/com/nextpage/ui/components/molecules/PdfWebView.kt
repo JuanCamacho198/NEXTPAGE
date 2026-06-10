@@ -1,6 +1,11 @@
 package com.nextpage.ui.components.molecules
 
 import android.annotation.SuppressLint
+import android.graphics.Rect
+import android.view.ActionMode
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -69,7 +74,7 @@ fun PdfWebView(
 
         // Tell the handler which file to serve, then tell JS to fetch it
         pdfHandler.setFile(file)
-        view.evaluateJavascript("loadPdfFromUrl('https://appassets.androidplatform.net/pdf/current.pdf')", null)
+        view.evaluateJavascript("loadPdfFromUrl('http://appassets.androidplatform.net/pdf/current.pdf')", null)
     }
 
     // Sync highlights with JS when page or highlights change
@@ -157,19 +162,46 @@ fun PdfWebView(
                     }
                 }
 
+                // Suppress the default Android floating selection toolbar
+                // (Copy / Share / Select All) using Callback2 which handles
+                // FloatingActionMode on API 23+ (our minSdk 26).
+                @Suppress("DEPRECATION")
+                val suppressionCallback = object : ActionMode.Callback2() {
+                    override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean = false
+                    override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
+                    override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean = false
+                    override fun onDestroyActionMode(mode: ActionMode) {}
+                    override fun onGetContentRect(mode: ActionMode, view: View?, outRect: Rect?) {
+                        outRect?.set(0, 0, 0, 0)
+                    }
+                }
+                try {
+                    val method = WebView::class.java.getMethod(
+                        "setCustomSelectionActionModeCallback",
+                        ActionMode.Callback::class.java
+                    )
+                    method.invoke(this, suppressionCallback)
+                } catch (_: Exception) {
+                    // Fallback: allow default ActionMode
+                }
+
                 addJavascriptInterface(jsBridge, "NextPageBridge")
 
-                // Load HTML from assets string — WebViewAssetLoader cannot intercept
-                // the initial main-frame navigation in modern Chromium WebViews,
-                // so loadUrl("https://appassets.androidplatform.net/...") triggers
-                // a real HTTPS request → ERR_INVALID_RESPONSE.
-                // loadDataWithBaseURL provides a virtual base URL so relative
-                // subresource paths (pdf.js, pdf.worker.js) are intercepted correctly.
+                // Use loadDataWithBaseURL with http:// scheme (not https://) so:
+                // 1. The page origin is http://appassets.androidplatform.net
+                // 2. Subresource requests (pdf.js, pdf.worker.js) are intercepted
+                //    by WebViewAssetLoader (handles both http and https schemes)
+                // 3. fetch() to http://appassets.androidplatform.net/pdf/current.pdf
+                //    is SAME-ORIGIN → no CORS issues
+                //
+                // loadUrl() with a virtual https:// domain doesn't work on some
+                // WebView versions because shouldInterceptRequest is not called
+                // for the main-frame navigation, causing ERR_INVALID_RESPONSE.
                 val html = ctx.assets.open("pdfjs/index.html")
                     .bufferedReader()
                     .use { it.readText() }
                 loadDataWithBaseURL(
-                    "https://appassets.androidplatform.net/pdfjs/",
+                    "http://appassets.androidplatform.net/pdfjs/",
                     html, "text/html", "UTF-8", null
                 )
                 webView = this

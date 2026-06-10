@@ -348,6 +348,8 @@ class SupabaseSyncServiceTest {
         override suspend fun updateRating(bookId: String, rating: Int?) {
             books[bookId]?.let { books[bookId] = it.copy(userRating = rating) }
         }
+
+        override suspend fun count(): Int = books.size
     }
 
     private class FakeMappingDao : SyncFileMappingDao {

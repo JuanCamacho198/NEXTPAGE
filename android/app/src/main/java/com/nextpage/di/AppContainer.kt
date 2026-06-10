@@ -10,6 +10,11 @@ import com.nextpage.data.pdf.DefaultPdfParserService
 import com.nextpage.data.pdf.PdfContentLoader
 import com.nextpage.data.local.AppDatabase
 import com.nextpage.data.local.AppDatabaseMigrations
+import com.nextpage.data.local.dao.BookDao
+import com.nextpage.data.local.dao.BookmarkDao
+import com.nextpage.data.local.dao.HighlightDao
+import com.nextpage.data.local.dao.ReadingProgressDao
+import com.nextpage.data.local.dao.ReadingSessionDao
 import com.nextpage.data.repository.HomeRepositoryImpl
 import com.nextpage.data.repository.LibraryRepositoryImpl
 import com.nextpage.data.repository.ReaderRepositoryImpl
@@ -169,6 +174,25 @@ class AppContainer(context: Context) {
     private val totalInitTime = System.currentTimeMillis() - startTime
     init {
         Log.i(TAG, "AppContainer fully initialized in ${totalInitTime}ms")
+    }
+
+    // ── Init timing exposure (debug) ────────────────────────────────
+    val dbInitTimeMs: Long get() = dbInitTime
+    val epubImportInitTimeMs: Long get() = epubImportInitTime
+    val readerRepoInitTimeMs: Long get() = readerRepoInitTime
+    val contentLoaderInitTimeMs: Long get() = contentLoaderInitTime
+    val totalInitTimeMs: Long get() = totalInitTime
+
+    // ── DAO exposure (debug) ────────────────────────────────────────
+    val bookDao: BookDao get() = appDatabase.bookDao()
+    val highlightDao: HighlightDao get() = appDatabase.highlightDao()
+    val bookmarkDao: BookmarkDao get() = appDatabase.bookmarkDao()
+    val readingSessionDao: ReadingSessionDao get() = appDatabase.readingSessionDao()
+    val readingProgressDao: ReadingProgressDao get() = appDatabase.readingProgressDao()
+
+    // ── Debug actions ───────────────────────────────────────────────
+    fun clearAllData() {
+        appDatabase.clearAllTables()
     }
 
     private data object NoopStorageSyncRemoteDataSource : com.nextpage.data.remote.sync.StorageSyncRemoteDataSource {

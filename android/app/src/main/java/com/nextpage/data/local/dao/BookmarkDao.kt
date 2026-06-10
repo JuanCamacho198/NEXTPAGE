@@ -22,4 +22,7 @@ interface BookmarkDao {
 
     @Upsert
     suspend fun upsert(bookmark: BookmarkEntity)
+
+    @Query("SELECT COUNT(*) FROM bookmarks")
+    suspend fun count(): Int
 }

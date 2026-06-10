@@ -207,6 +207,8 @@ class LibraryRepositoryImplTest {
             MutableStateFlow(null)
 
         override suspend fun upsert(progress: com.nextpage.data.local.entity.ReadingProgressEntity) = Unit
+
+        override suspend fun count(): Int = 0
     }
 
     private class FakeBookDao : BookDao {
@@ -253,6 +255,8 @@ class LibraryRepositoryImplTest {
                 if (book.id == bookId) book.copy(userRating = rating) else book
             }
         }
+
+        override suspend fun count(): Int = booksState.value.size
     }
 
     private class FakeCoverStorage : CoverStorage {

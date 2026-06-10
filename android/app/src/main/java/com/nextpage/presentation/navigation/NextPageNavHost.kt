@@ -8,7 +8,18 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,6 +56,9 @@ import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
 import com.nextpage.presentation.util.getContentDisplayName
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
+import com.nextpage.presentation.debug.DebugPanel
+import com.nextpage.presentation.debug.DebugViewModel
+import com.nextpage.BuildConfig
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -97,6 +111,12 @@ fun NextPageNavHost(
         )
     )
 
+    val debugViewModel: DebugViewModel = viewModel(
+        factory = DebugViewModel.Factory(appContainer)
+    )
+
+    var showDebugSheet by remember { mutableStateOf(false) }
+
     val authState by authViewModel.uiState.collectAsState()
     val isAuthenticated = authState.currentSession != null
 
@@ -134,247 +154,280 @@ fun NextPageNavHost(
         NextPageDestination.Home.route
     }
 
-    Scaffold(
-        bottomBar = {
-            if (isAuthenticated) {
-                val currentBackStack = navController.currentBackStackEntryAsState().value
-                val currentRoute = currentBackStack?.destination?.route
-                if (currentRoute != null && currentRoute in bottomNavRoutes) {
-                    val bottomNavItems = bottomNavDestinations.map { dest ->
-                        BottomNavItem(dest.route, dest.labelRes, dest.iconRes)
-                    }
-                    NextPageBottomNavBar(
-                        destinations = bottomNavItems,
-                        currentRoute = currentRoute,
-                        onTabSelected = { route ->
-                            navController.navigate(route) {
-                                launchSingleTop = true
-                                restoreState = true
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            bottomBar = {
+                if (isAuthenticated) {
+                    val currentBackStack = navController.currentBackStackEntryAsState().value
+                    val currentRoute = currentBackStack?.destination?.route
+                    if (currentRoute != null && currentRoute in bottomNavRoutes) {
+                        val bottomNavItems = bottomNavDestinations.map { dest ->
+                            BottomNavItem(dest.route, dest.labelRes, dest.iconRes)
+                        }
+                        NextPageBottomNavBar(
+                            destinations = bottomNavItems,
+                            currentRoute = currentRoute,
+                            onTabSelected = { route ->
+                                navController.navigate(route) {
+                                    launchSingleTop = true
+                                    restoreState = true
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
                                 }
+                            }
+                        )
+                    }
+                }
+            }
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = startDestination
+            ) {
+                composable(
+                    route = NextPageDestination.Auth.route,
+                    enterTransition = { fadeIn() },
+                    exitTransition = { fadeOut() },
+                    popEnterTransition = { fadeIn() },
+                    popExitTransition = { fadeOut() }
+                ) {
+                    AuthScreen(
+                        viewModel = authViewModel,
+                        onAuthenticated = {
+                            navController.navigate(NextPageDestination.Home.route) {
+                                popUpTo(NextPageDestination.Auth.route) { inclusive = true }
+                            }
+                        },
+                        onContinueLocal = {
+                            authViewModel.continueLocally()
+                            navController.navigate(NextPageDestination.Home.route) {
+                                popUpTo(NextPageDestination.Auth.route) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+
+                composable(
+                    route = NextPageDestination.Home.route,
+                    enterTransition = { fadeIn() },
+                    exitTransition = { fadeOut() },
+                    popEnterTransition = { fadeIn() },
+                    popExitTransition = { fadeOut() }
+                ) {
+                    val importLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.OpenDocument(),
+                        onResult = { uri: Uri? ->
+                            if (uri == null) return@rememberLauncherForActivityResult
+
+                            scope.launch {
+                                runCatching {
+                                    val fileName = getContentDisplayName(context, uri)
+                                        ?: uri.lastPathSegment
+                                        ?: "imported_book"
+                                    val mimeType = context.contentResolver.getType(uri)
+
+                                    if (fileName.endsWith(".pdf", true) || mimeType == "application/pdf") {
+                                        val pdfDir = File(context.filesDir, "pdfs")
+                                        if (!pdfDir.exists()) pdfDir.mkdirs()
+                                        val pdfFile = File(pdfDir, fileName)
+                                        withContext(Dispatchers.IO) {
+                                            context.contentResolver.openInputStream(uri)?.use { input ->
+                                                pdfFile.outputStream().use { output ->
+                                                    input.copyTo(output)
+                                                }
+                                            }
+                                        }
+                                        libraryViewModel.importPdfBook(
+                                            sourcePath = pdfFile.absolutePath,
+                                            fallbackTitle = fileName.removeSuffix(".pdf"),
+                                            pdfFile = pdfFile
+                                        )
+                                    } else {
+                                        val epubDir = File(context.filesDir, "epubs")
+                                        if (!epubDir.exists()) epubDir.mkdirs()
+                                        val epubFile = File(epubDir, fileName)
+                                        withContext(Dispatchers.IO) {
+                                            context.contentResolver.openInputStream(uri)?.use { input ->
+                                                epubFile.outputStream().use { output ->
+                                                    input.copyTo(output)
+                                                }
+                                            }
+                                        }
+                                        libraryViewModel.importBookFromEpub(
+                                            sourcePath = epubFile.absolutePath,
+                                            fallbackTitle = fileName.removeSuffix(".epub"),
+                                            inputStreamProvider = {
+                                                epubFile.inputStream()
+                                            }
+                                        )
+                                    }
+                                }.onFailure { error ->
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Import failed: ${error.message}",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
+                    )
+
+                    HomeScreen(
+                        contentPadding = innerPadding,
+                        viewModel = homeViewModel,
+                        onNavigateToLibrary = {
+                            navController.navigate(NextPageDestination.Library.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToHighlights = {
+                            navController.navigate(NextPageDestination.Highlights.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToSettings = {
+                            navController.navigate(NextPageDestination.Settings.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onBookSelected = { bookId, filePath, format ->
+                            selectedBookId = bookId
+                            selectedBookFilePath = filePath
+                            selectedBookFormat = format
+                            navController.navigate("book_detail/$bookId")
+                        },
+                        onImportBook = {
+                            importLauncher.launch(arrayOf("application/epub+zip", "application/pdf"))
+                        }
+                    )
+                }
+
+                composable(
+                    route = NextPageDestination.BookDetail.route,
+                    arguments = listOf(navArgument("bookId") { type = NavType.StringType }),
+                    enterTransition = { slideInHorizontally { it } + fadeIn() },
+                    exitTransition = { slideOutHorizontally { it } + fadeOut() },
+                    popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
+                    popExitTransition = { slideOutHorizontally { -it } + fadeOut() }
+                ) { backStackEntry ->
+                    val bookId = backStackEntry.arguments?.getString("bookId") ?: return@composable
+                    BookDetailScreen(
+                        contentPadding = innerPadding,
+                        bookId = bookId,
+                        libraryRepository = appContainer.libraryRepository,
+                        onNavigateBack = { navController.popBackStack() },
+                        onContinueReading = { id, filePath, format ->
+                            selectedBookId = id
+                            selectedBookFilePath = filePath
+                            selectedBookFormat = format
+                            navController.navigate(NextPageDestination.Reader.route) {
+                                popUpTo(NextPageDestination.Reader.route) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+
+                composable(
+                    route = NextPageDestination.Library.route,
+                    enterTransition = { fadeIn() },
+                    exitTransition = { fadeOut() },
+                    popEnterTransition = { fadeIn() },
+                    popExitTransition = { fadeOut() }
+                ) {
+                    LibraryScreen(
+                        contentPadding = innerPadding,
+                        viewModel = libraryViewModel,
+                        onBookSelected = { bookId, filePath, format ->
+                            selectedBookId = bookId
+                            selectedBookFilePath = filePath
+                            selectedBookFormat = format
+                            navController.navigate("book_detail/$bookId")
+                        }
+                    )
+                }
+
+                composable(
+                    route = NextPageDestination.Reader.route,
+                    enterTransition = { slideInHorizontally { it } + fadeIn() },
+                    exitTransition = { slideOutHorizontally { it } + fadeOut() },
+                    popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
+                    popExitTransition = { slideOutHorizontally { -it } + fadeOut() }
+                ) {
+                    ReaderScreen(
+                        contentPadding = innerPadding,
+                        selectedBookId = selectedBookId,
+                        bookFilePath = selectedBookFilePath,
+                        bookFormat = selectedBookFormat,
+                        viewModel = readerViewModel,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(
+                    route = NextPageDestination.Highlights.route,
+                    enterTransition = { fadeIn() },
+                    exitTransition = { fadeOut() },
+                    popEnterTransition = { fadeIn() },
+                    popExitTransition = { fadeOut() }
+                ) {
+                    HighlightsScreen(
+                        contentPadding = innerPadding,
+                        viewModel = highlightsViewModel
+                    )
+                }
+
+                composable(
+                    route = NextPageDestination.Settings.route,
+                    enterTransition = { fadeIn() },
+                    exitTransition = { fadeOut() },
+                    popEnterTransition = { fadeIn() },
+                    popExitTransition = { fadeOut() }
+                ) {
+                    SettingsScreen(
+                        contentPadding = innerPadding,
+                        authSession = authState.currentSession,
+                        appThemeMode = appThemeMode,
+                        onAppThemeModeChanged = onAppThemeModeChanged,
+                        onLogout = {
+                            authViewModel.signOut()
+                            navController.navigate(NextPageDestination.Auth.route) {
+                                popUpTo(0) { inclusive = true }
                             }
                         }
                     )
                 }
             }
         }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = startDestination
-        ) {
-            composable(
-                route = NextPageDestination.Auth.route,
-                enterTransition = { fadeIn() },
-                exitTransition = { fadeOut() },
-                popEnterTransition = { fadeIn() },
-                popExitTransition = { fadeOut() }
+
+        // ── Debug FAB ──────────────────────────────────────────────────
+        val showDebugFab = BuildConfig.DEBUG &&
+            authState.currentSession?.userId?.startsWith("local-") == true
+
+        if (showDebugFab) {
+            FloatingActionButton(
+                onClick = { showDebugSheet = true },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer
             ) {
-                AuthScreen(
-                    viewModel = authViewModel,
-                    onAuthenticated = {
-                        navController.navigate(NextPageDestination.Home.route) {
-                            popUpTo(NextPageDestination.Auth.route) { inclusive = true }
-                        }
-                    },
-                    onContinueLocal = {
-                        authViewModel.continueLocally()
-                        navController.navigate(NextPageDestination.Home.route) {
-                            popUpTo(NextPageDestination.Auth.route) { inclusive = true }
-                        }
-                    }
+                Icon(
+                    imageVector = Icons.Default.BugReport,
+                    contentDescription = "Debug"
                 )
             }
+        }
 
-            composable(
-                route = NextPageDestination.Home.route,
-                enterTransition = { fadeIn() },
-                exitTransition = { fadeOut() },
-                popEnterTransition = { fadeIn() },
-                popExitTransition = { fadeOut() }
-            ) {
-                val importLauncher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.OpenDocument(),
-                    onResult = { uri: Uri? ->
-                        if (uri == null) return@rememberLauncherForActivityResult
-
-                        val fileName = getContentDisplayName(context, uri)
-                            ?: uri.lastPathSegment
-                            ?: "imported_book"
-                        val mimeType = context.contentResolver.getType(uri)
-
-                        // ── Run file copy on IO thread to avoid blocking the UI ──
-                        scope.launch {
-                            if (fileName.endsWith(".pdf", true) || mimeType == "application/pdf") {
-                                // ── Import as PDF ────────────────────────
-                                val pdfDir = File(context.filesDir, "pdfs")
-                                if (!pdfDir.exists()) pdfDir.mkdirs()
-                                val pdfFile = File(pdfDir, fileName)
-                                withContext(Dispatchers.IO) {
-                                    context.contentResolver.openInputStream(uri)?.use { input ->
-                                        pdfFile.outputStream().use { output ->
-                                            input.copyTo(output)
-                                        }
-                                    }
-                                }
-                                libraryViewModel.importPdfBook(
-                                    sourcePath = pdfFile.absolutePath,
-                                    fallbackTitle = fileName.removeSuffix(".pdf"),
-                                    pdfFile = pdfFile
-                                )
-                            } else {
-                                // ── Import as EPUB ───────────────────────
-                                val epubDir = File(context.filesDir, "epubs")
-                                if (!epubDir.exists()) epubDir.mkdirs()
-                                val epubFile = File(epubDir, fileName)
-                                withContext(Dispatchers.IO) {
-                                    context.contentResolver.openInputStream(uri)?.use { input ->
-                                        epubFile.outputStream().use { output ->
-                                            input.copyTo(output)
-                                        }
-                                    }
-                                }
-                                libraryViewModel.importBookFromEpub(
-                                    sourcePath = epubFile.absolutePath,
-                                    fallbackTitle = fileName.removeSuffix(".epub"),
-                                    inputStreamProvider = {
-                                        epubFile.inputStream()
-                                    }
-                                )
-                            }
-                        }
-                    }
-                )
-
-                HomeScreen(
-                    contentPadding = innerPadding,
-                    viewModel = homeViewModel,
-                    onNavigateToLibrary = {
-                        navController.navigate(NextPageDestination.Library.route) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onNavigateToHighlights = {
-                        navController.navigate(NextPageDestination.Highlights.route) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onNavigateToSettings = {
-                        navController.navigate(NextPageDestination.Settings.route) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onBookSelected = { bookId, filePath, format ->
-                        selectedBookId = bookId
-                        selectedBookFilePath = filePath
-                        selectedBookFormat = format
-                        navController.navigate("book_detail/$bookId")
-                    },
-                    onImportBook = {
-                        importLauncher.launch(arrayOf("application/epub+zip", "application/pdf"))
-                    }
-                )
-            }
-
-            composable(
-                route = NextPageDestination.BookDetail.route,
-                arguments = listOf(navArgument("bookId") { type = NavType.StringType }),
-                enterTransition = { slideInHorizontally { it } + fadeIn() },
-                exitTransition = { slideOutHorizontally { it } + fadeOut() },
-                popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
-                popExitTransition = { slideOutHorizontally { -it } + fadeOut() }
-            ) { backStackEntry ->
-                val bookId = backStackEntry.arguments?.getString("bookId") ?: return@composable
-                BookDetailScreen(
-                    contentPadding = innerPadding,
-                    bookId = bookId,
-                    libraryRepository = appContainer.libraryRepository,
-                    onNavigateBack = { navController.popBackStack() },
-                    onContinueReading = { id, filePath, format ->
-                        selectedBookId = id
-                        selectedBookFilePath = filePath
-                        selectedBookFormat = format
-                        // Pop any previous Reader entry before pushing a new one so:
-                        // 1. Back press returns to BookDetail (not a stale Reader instance).
-                        // 2. A fresh ReaderScreen composable is created so LaunchedEffect
-                        //    fires and loads the new book correctly.
-                        navController.navigate(NextPageDestination.Reader.route) {
-                            popUpTo(NextPageDestination.Reader.route) { inclusive = true }
-                        }
-                    }
-                )
-            }
-
-            composable(
-                route = NextPageDestination.Library.route,
-                enterTransition = { fadeIn() },
-                exitTransition = { fadeOut() },
-                popEnterTransition = { fadeIn() },
-                popExitTransition = { fadeOut() }
-            ) {
-                LibraryScreen(
-                    contentPadding = innerPadding,
-                    viewModel = libraryViewModel,
-                    onBookSelected = { bookId, filePath, format ->
-                        selectedBookId = bookId
-                        selectedBookFilePath = filePath
-                        selectedBookFormat = format
-                        navController.navigate("book_detail/$bookId")
-                    }
-                )
-            }
-
-            composable(
-                route = NextPageDestination.Reader.route,
-                enterTransition = { slideInHorizontally { it } + fadeIn() },
-                exitTransition = { slideOutHorizontally { it } + fadeOut() },
-                popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
-                popExitTransition = { slideOutHorizontally { -it } + fadeOut() }
-            ) {
-                ReaderScreen(
-                    contentPadding = innerPadding,
-                    selectedBookId = selectedBookId,
-                    bookFilePath = selectedBookFilePath,
-                    bookFormat = selectedBookFormat,
-                    viewModel = readerViewModel,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(
-                route = NextPageDestination.Highlights.route,
-                enterTransition = { fadeIn() },
-                exitTransition = { fadeOut() },
-                popEnterTransition = { fadeIn() },
-                popExitTransition = { fadeOut() }
-            ) {
-                HighlightsScreen(
-                    contentPadding = innerPadding,
-                    viewModel = highlightsViewModel
-                )
-            }
-
-            composable(
-                route = NextPageDestination.Settings.route,
-                enterTransition = { fadeIn() },
-                exitTransition = { fadeOut() },
-                popEnterTransition = { fadeIn() },
-                popExitTransition = { fadeOut() }
-            ) {
-                SettingsScreen(
-                    contentPadding = innerPadding,
-                    authSession = authState.currentSession,
-                    appThemeMode = appThemeMode,
-                    onAppThemeModeChanged = onAppThemeModeChanged,
-                    onLogout = {
-                        authViewModel.signOut()
-                        navController.navigate(NextPageDestination.Auth.route) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
-                )
-            }
+        // ── Debug Panel Sheet ──────────────────────────────────────────
+        if (showDebugSheet) {
+            DebugPanel(
+                viewModel = debugViewModel,
+                authViewModel = authViewModel,
+                readerViewModel = readerViewModel,
+                syncService = appContainer.syncService,
+                onDismiss = { showDebugSheet = false }
+            )
         }
     }
 }

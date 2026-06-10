@@ -29,4 +29,7 @@ interface ReadingSessionDao {
 
     @Query("DELETE FROM reading_sessions WHERE book_id = :bookId")
     suspend fun deleteSessionsForBook(bookId: String)
+
+    @Query("SELECT COUNT(*) FROM reading_sessions")
+    suspend fun count(): Int
 }

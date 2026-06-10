@@ -22,4 +22,7 @@ interface HighlightDao {
 
     @Upsert
     suspend fun upsert(highlight: HighlightEntity)
+
+    @Query("SELECT COUNT(*) FROM highlights")
+    suspend fun count(): Int
 }

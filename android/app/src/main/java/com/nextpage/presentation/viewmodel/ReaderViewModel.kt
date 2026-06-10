@@ -332,9 +332,11 @@ class ReaderViewModel(
                 updateProgressDisplay()
             }.onFailure { error ->
                 Log.e(TAG, "Failed to load chapter: ${error.message}")
+                val message = error.message ?: "Failed to load chapter"
                 mutableUiState.update {
-                    it.copy(error = error.message ?: "Failed to load chapter")
+                    it.copy(error = message)
                 }
+                _uiEvent.emit(UiEvent.ShowSnackbar(message))
             }
         }
     }

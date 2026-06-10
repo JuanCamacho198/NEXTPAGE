@@ -2,7 +2,13 @@ package com.nextpage.domain.error
 
 enum class ErrorCategory {
     CONFIG_ERROR,
-    WIRING_ERROR
+    WIRING_ERROR,
+    NETWORK,
+    AUTH,
+    VALIDATION,
+    NOT_FOUND,
+    STORAGE,
+    UNKNOWN
 }
 
 data class AppError(

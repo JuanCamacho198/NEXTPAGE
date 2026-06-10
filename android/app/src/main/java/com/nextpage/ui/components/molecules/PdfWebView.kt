@@ -128,8 +128,8 @@ fun PdfWebView(
             WebView(ctx).apply {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
-                settings.allowFileAccess = true
-                settings.allowContentAccess = true
+                settings.allowFileAccess = false
+                settings.allowContentAccess = false
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
                 settings.builtInZoomControls = false
@@ -144,6 +144,8 @@ fun PdfWebView(
                         view: WebView,
                         request: WebResourceRequest
                     ): WebResourceResponse? {
+                        // Only allow requests to our asset domain
+                        if (request.url.host != "appassets.androidplatform.net") return null
                         return assetLoader.shouldInterceptRequest(request.url)
                     }
 

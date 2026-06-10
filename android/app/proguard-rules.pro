@@ -20,3 +20,9 @@
 
 # Optional SLF4J backend not packaged on Android
 -dontwarn org.slf4j.impl.StaticLoggerBinder
+
+# Security: strip debug logs from release builds
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+}

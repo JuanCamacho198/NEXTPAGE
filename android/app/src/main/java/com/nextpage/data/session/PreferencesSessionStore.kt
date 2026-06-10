@@ -1,10 +1,28 @@
 package com.nextpage.data.session
 
 import android.content.Context
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import com.nextpage.domain.model.AuthSession
 
+/**
+ * Session store backed by EncryptedSharedPreferences (AES-256 GCM).
+ *
+ * Uses Android Keystore-backed MasterKey to encrypt both keys and values.
+ * Data at rest is not readable even with filesystem access.
+ */
 class PreferencesSessionStore(context: Context) : SessionStore {
-    private val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+    private val preferences = EncryptedSharedPreferences.create(
+        context,
+        PREFS_NAME,
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
 
     override fun read(): AuthSession? {
         val userId = preferences.getString(KEY_USER_ID, null) ?: return null

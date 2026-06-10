@@ -159,6 +159,7 @@ class AppContainer(context: Context) {
         _authCallbackEvents.tryEmit(uri)
     }
 
+
     val isSupabaseConfigError: Boolean
         get() = supabaseDiagnostic.status == SupabaseInitDiagnostic.Status.CONFIG_ERROR
 

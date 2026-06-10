@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Force HTTPS for Supabase; pin-set requires user-provided certificate hashes -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">xshgfrwqiddaaecqmicy.supabase.co</domain>
+    </domain-config>
+</network-security-config>

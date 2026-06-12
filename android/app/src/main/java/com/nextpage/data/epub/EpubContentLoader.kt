@@ -10,6 +10,10 @@ class EpubContentLoader(private val context: Context) {
     companion object {
         private const val TAG = "EpubContentLoader"
         private const val MAX_CACHED_BOOKS = 20
+        private val IMG_SRC_REGEX = Regex(
+            """<img\s[^>]*src\s*=\s*["']([^"']+)["'][^>]*>""",
+            RegexOption.IGNORE_CASE
+        )
     }
 
     data class Chapter(
@@ -117,7 +121,11 @@ class EpubContentLoader(private val context: Context) {
                             val content = zis.bufferedReader().readText()
                             val elapsed = System.currentTimeMillis() - startTime
                             Log.d(TAG, "Chapter loaded in ${elapsed}ms: $chapterHref")
-                            return Result.success(content)
+
+                            // Inline local images as base64 data URIs to avoid
+                            // depending on WebViewAssetLoader for image serving.
+                            val inlined = inlineChapterImages(content, filePath, chapterHref)
+                            return Result.success(inlined)
                         }
                         entry = zis.nextEntry
                     }
@@ -128,6 +136,64 @@ class EpubContentLoader(private val context: Context) {
             Log.e(TAG, "Failed to load chapter: ${e.message}")
             Result.failure(e)
         }
+    }
+
+    /**
+     * Replaces local [img] src attributes with inline base64 data URIs.
+     *
+     * Scans the chapter HTML for `<img src="...">` tags pointing to local files
+     * (relative paths), reads the image bytes from the EPUB ZIP, and replaces
+     * the src with a `data:image/...;base64,...` URI.
+     *
+     * External URLs (http/https), data URIs, and blob URIs are left untouched.
+     * Images that fail to load fall back to their original src.
+     *
+     * This is more reliable than WebViewAssetLoader for images served via
+     * loadDataWithBaseURL, which has null-origin CORS issues on some WebViews.
+     */
+    internal fun inlineChapterImages(html: String, filePath: String, chapterHref: String): String {
+        val chapterDir = chapterHref.substringBeforeLast("/", "")
+        val cache = mutableMapOf<String, String?>()
+
+        return html.replace(IMG_SRC_REGEX) { match ->
+            val originalSrc = match.groupValues[1]
+
+            // Skip external URLs, data URIs, and blob URIs
+            if (originalSrc.startsWith("http://") ||
+                originalSrc.startsWith("https://") ||
+                originalSrc.startsWith("data:") ||
+                originalSrc.startsWith("blob:")
+            ) return@replace match.value
+
+            val resolvedPath = resolveRelativePath(chapterDir, originalSrc)
+            val dataUri = cache.getOrPut(resolvedPath) {
+                getEntryBytes(filePath, resolvedPath).fold(
+                    onSuccess = { bytes ->
+                        val mimeType = guessImageMimeType(resolvedPath)
+                        val b64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                        "data:$mimeType;base64,$b64"
+                    },
+                    onFailure = { null }
+                )
+            }
+
+            if (dataUri != null) {
+                match.value.replace("""src="$originalSrc"""", """src="$dataUri"""")
+                    .replace("""src='$originalSrc'""", """src='$dataUri'""")
+            } else {
+                // Keep original src if image couldn't be loaded
+                match.value
+            }
+        }
+    }
+
+    private fun guessImageMimeType(path: String): String = when {
+        path.endsWith(".png", ignoreCase = true) -> "image/png"
+        path.endsWith(".jpg", ignoreCase = true) || path.endsWith(".jpeg", ignoreCase = true) -> "image/jpeg"
+        path.endsWith(".gif", ignoreCase = true) -> "image/gif"
+        path.endsWith(".svg", ignoreCase = true) -> "image/svg+xml"
+        path.endsWith(".webp", ignoreCase = true) -> "image/webp"
+        else -> "application/octet-stream"
     }
 
     fun getChapterContentPlainText(filePath: String, chapterHref: String): Result<String> {

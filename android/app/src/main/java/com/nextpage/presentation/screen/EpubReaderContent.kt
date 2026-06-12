@@ -36,7 +36,9 @@ fun EpubReaderContent(
     selectionRect: Rect?,
     selectedText: String?,
     highlights: List<Highlight>,
+    isFullscreen: Boolean = false,
     onTapZone: (Boolean) -> Unit,
+    onToggleFullscreen: () -> Unit = {},
     onTextSelectionEvent: (text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _ -> },
     onSearchResults: (String) -> Unit = {},
     onHighlightTapped: (highlightId: String, text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _, _ -> },
@@ -82,23 +84,34 @@ fun EpubReaderContent(
                 }
             }
 
-            // Left tap zone (30% width) — previous page/chapter
+            // Left tap zone (15% width) — previous page/chapter
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .fillMaxWidth(0.3f)
+                    .fillMaxWidth(0.15f)
                     .align(Alignment.CenterStart)
                     .clickable { onTapZone(true) }
             )
 
-            // Right tap zone (30% width) — next page/chapter
+            // Right tap zone (15% width) — next page/chapter
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .fillMaxWidth(0.3f)
+                    .fillMaxWidth(0.15f)
                     .align(Alignment.CenterEnd)
                     .clickable { onTapZone(false) }
             )
+
+            // Center tap zone (70% width) — toggle chrome when fullscreen
+            if (isFullscreen) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(0.7f)
+                        .align(Alignment.Center)
+                        .clickable { onToggleFullscreen() }
+                )
+            }
         }
 
         // ── Text Selection Overlay ───────────────────────────────

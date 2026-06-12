@@ -228,7 +228,9 @@ fun ReaderScreen(
                         selectionRect = uiState.selectionRect,
                         selectedText = uiState.selectedText,
                         highlights = uiState.highlights,
+                        isFullscreen = uiState.isFullscreen,
                         onTapZone = { isLeft -> viewModel.onTapZone(isLeft) },
+                        onToggleFullscreen = { viewModel.onToggleFullscreen() },
                         onTextSelectionEvent = { text, left, top, right, bottom ->
                             viewModel.onTextSelectionEvent(text, left, top, right, bottom)
                         },

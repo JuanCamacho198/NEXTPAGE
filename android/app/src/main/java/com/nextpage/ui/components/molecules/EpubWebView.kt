@@ -1,6 +1,7 @@
 package com.nextpage.ui.components.molecules
 
 import android.annotation.SuppressLint
+import android.util.Log
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuInflater
@@ -139,6 +140,7 @@ internal fun wrapHtmlContent(htmlContent: String, css: String): String {
  * Enhanced with text selection and search callbacks.
  */
 class ReaderJsBridge(
+    private val tag: String = "ReaderJsBridge",
     private val onTextSelected: (String) -> Unit = {},
     private val onScrollChanged: (Int, Int) -> Unit = { _, _ -> },
     private val onTextSelectionEvent: (text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _ -> },
@@ -149,6 +151,7 @@ class ReaderJsBridge(
 ) {
     @JavascriptInterface
     fun onTextSelected(text: String) {
+        Log.d(tag, "onTextSelected: \"${text.take(50)}\"")
         onTextSelected(text)
     }
 
@@ -159,6 +162,7 @@ class ReaderJsBridge(
 
     @JavascriptInterface
     fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) {
+        Log.d(tag, "onTextSelectionEvent: \"${text.take(50)}\" rect=($left,$top,$right,$bottom)")
         onTextSelectionEvent(text, left, top, right, bottom)
     }
 

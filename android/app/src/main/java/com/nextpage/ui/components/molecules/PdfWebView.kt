@@ -7,6 +7,9 @@ import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.util.Log
+import android.webkit.ConsoleMessage
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -168,13 +171,44 @@ fun PdfWebView(
                         view: WebView,
                         request: WebResourceRequest
                     ): WebResourceResponse? {
-                        if (request.url.host != "appassets.androidplatform.net") return null
-                        return assetLoader.shouldInterceptRequest(request.url)
+                        Log.d("PdfWebView-INT", "Request: ${request.url} (method=${request.method})")
+                        if (request.url.host != "appassets.androidplatform.net") {
+                            Log.d("PdfWebView-INT", "  → SKIP: host mismatch (${request.url.host})")
+                            return null
+                        }
+                        val response = assetLoader.shouldInterceptRequest(request.url)
+                        if (response == null) {
+                            Log.w("PdfWebView-INT", "  → NULL response from assetLoader for: ${request.url}")
+                        } else {
+                            Log.d("PdfWebView-INT", "  → OK: ${response.mimeType} (${response.data?.available() ?: "stream?"} bytes)")
+                        }
+                        return response
                     }
 
                     override fun onPageFinished(view: WebView, url: String) {
                         super.onPageFinished(view, url)
+                        Log.d("PdfWebView-INT", "onPageFinished: $url")
                         pageLoaded = true
+                    }
+
+                    override fun onReceivedHttpError(
+                        view: WebView,
+                        request: WebResourceRequest,
+                        errorResponse: WebResourceResponse
+                    ) {
+                        super.onReceivedHttpError(view, request, errorResponse)
+                        Log.w("PdfWebView-INT", "HTTP ERROR: ${request.url} → ${errorResponse.statusCode}")
+                    }
+                }
+
+                // WebChromeClient to expose JS console.log to Logcat
+                webChromeClient = object : WebChromeClient() {
+                    override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+                        Log.d(
+                            "PdfWebView-JS",
+                            "[${message.messageLevel()}] (${message.sourceId()}:${message.lineNumber()}) ${message.message()}"
+                        )
+                        return super.onConsoleMessage(message)
                     }
                 }
 
@@ -203,12 +237,24 @@ fun PdfWebView(
 
                 // Load index.html — the PDF data will be injected via JS bridge
                 // after the page finishes loading (see LaunchedEffect above).
+                // NOTE: pdf.js and pdf.worker.js are inlined as data URIs because
+                // WebViewAssetLoader.AssetsPathHandler returns null for files
+                // >~100KB on some WebView versions.
                 val html = ctx.assets.open("pdfjs/index.html")
                     .bufferedReader()
                     .use { it.readText() }
+                val pdfJs = ctx.assets.open("pdfjs/pdf.js")
+                    .bufferedReader()
+                    .use { it.readText() }
+                val workerBytes = ctx.assets.open("pdfjs/pdf.worker.js")
+                    .use { it.readBytes() }
+                val workerB64 = Base64.encodeToString(workerBytes, Base64.NO_WRAP)
+                val finalHtml = html
+                    .replace("<script src=\"pdf.js\"></script>", "<script>$pdfJs</script>")
+                    .replace("__PDF_WORKER_DATA_URI__", "data:application/javascript;base64,$workerB64")
                 loadDataWithBaseURL(
                     "http://appassets.androidplatform.net/pdfjs/",
-                    html, "text/html", "UTF-8", null
+                    finalHtml, "text/html", "UTF-8", null
                 )
                 webView = this
             }

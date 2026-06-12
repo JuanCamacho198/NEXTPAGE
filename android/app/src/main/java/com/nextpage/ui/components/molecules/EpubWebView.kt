@@ -1,11 +1,11 @@
 package com.nextpage.ui.components.molecules
 
 import android.annotation.SuppressLint
-import android.graphics.Rect
 import android.view.ActionMode
 import android.view.Menu
-import android.view.MenuItem
+import android.view.MenuInflater
 import android.view.View
+import android.widget.PopupMenu
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -362,7 +362,18 @@ fun EpubWebView(
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
-            WebView(ctx).apply {
+            object : WebView(ctx) {
+                override fun startActionMode(callback: ActionMode.Callback?, type: Int): ActionMode? {
+                    // Return a non-null dummy ActionMode to keep native selection
+                    // handles (blue pins) but suppress the floating toolbar entirely.
+                    // Returning null would cause Chromium to cancel the selection.
+                    return DummyActionMode(type, ctx)
+                }
+
+                override fun startActionMode(callback: ActionMode.Callback?): ActionMode? {
+                    return DummyActionMode(ActionMode.TYPE_FLOATING, ctx)
+                }
+            }.apply {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.allowFileAccess = false
@@ -393,31 +404,6 @@ fun EpubWebView(
 
                 webChromeClient = WebChromeClient()
 
-                // Suppress the default Android floating selection toolbar
-                // (Copy / Share / Select All) using Callback2 which handles
-                // FloatingActionMode on API 23+ (our minSdk 26).
-                // Reflection is required because Kotlin 1.9 can't synthesize
-                // a property from the deprecated Java getter/setter methods.
-                @Suppress("DEPRECATION")
-                val suppressionCallback = object : ActionMode.Callback2() {
-                    override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean = false
-                    override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
-                    override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean = false
-                    override fun onDestroyActionMode(mode: ActionMode) {}
-                    override fun onGetContentRect(mode: ActionMode, view: View?, outRect: Rect?) {
-                        outRect?.set(0, 0, 0, 0)
-                    }
-                }
-                try {
-                    val method = WebView::class.java.getMethod(
-                        "setCustomSelectionActionModeCallback",
-                        ActionMode.Callback::class.java
-                    )
-                    method.invoke(this, suppressionCallback)
-                } catch (_: Exception) {
-                    // Fallback: allow default ActionMode
-                }
-
                 addJavascriptInterface(jsBridge, "NextPageBridge")
             }
         },
@@ -427,4 +413,42 @@ fun EpubWebView(
             webView.evaluateJavascript(injectHighlightTapJs(), null)
         }
     )
+}
+
+// ── Dummy ActionMode — suppresses floating toolbar, keeps selection handles ──
+
+/**
+ * A no-op [ActionMode] that satisfies Chromium's requirement for a non-null
+ * ActionMode to keep text selection active, but renders no visual toolbar.
+ *
+ * Chromium cancels the selection entirely if [WebView.startActionMode] returns
+ * null. By returning this dummy (non-null), the native selection handles
+ * (blue pins) remain interactive while the system floating toolbar
+ * (Copy/Share/Select All) is never shown, allowing our own [SelectionOverlay]
+ * to be the only selection UI.
+ *
+ * See https://stackoverflow.com/questions/36088057/
+ */
+internal class DummyActionMode(
+    private val type: Int,
+    private val context: android.content.Context
+) : ActionMode() {
+
+    private val emptyMenu: Menu = PopupMenu(context, View(context)).menu
+    private val inflater: MenuInflater = MenuInflater(context)
+
+    override fun setTitle(title: CharSequence?) {}
+    override fun setTitle(resId: Int) {}
+    override fun setSubtitle(subtitle: CharSequence?) {}
+    override fun setSubtitle(resId: Int) {}
+    override fun setCustomView(view: View?) {}
+    override fun invalidate() {}
+    override fun finish() {}
+
+    override fun getMenu(): Menu = emptyMenu
+    override fun getMenuInflater(): MenuInflater = inflater
+    override fun getTitle(): CharSequence? = null
+    override fun getSubtitle(): CharSequence? = null
+    override fun getCustomView(): View? = null
+    override fun getType(): Int = type
 }

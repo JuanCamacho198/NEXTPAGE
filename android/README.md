@@ -88,10 +88,6 @@ Soporta **EPUB** y **PDF** con una experiencia de lectura customizable, sincroni
 .\gradlew.bat verifyAuthScreenNoHardcodedStrings
 ```
 
-### APK pre-built
-
-El APK debug más reciente está en `.apks/nextpage-latest.apk`.
-
 ### Configuración de Supabase (opcional)
 
 Si querés sincronización con Supabase, agregá las keys en `local.properties`:

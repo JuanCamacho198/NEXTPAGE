@@ -130,7 +130,9 @@
 </div>
 
 <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.js';
+    // Worker served as data URI because WebViewAssetLoader can't serve
+    // large assets (>~100KB) on some WebView versions.
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '__PDF_WORKER_DATA_URI__';
 
     // ── State ────────────────────────────────────────────────────────
     var pdfDoc = null;
@@ -144,13 +146,20 @@
     // ── Page Rendering ───────────────────────────────────────────────
 
     function renderPage(num) {
-        if (!pdfDoc) return;
+        console.log('renderPage called for page ' + num + ', pdfDoc=' + (pdfDoc !== null));
+        if (!pdfDoc) {
+            console.warn('renderPage: pdfDoc is null, cannot render page ' + num);
+            return;
+        }
 
         pdfDoc.getPage(num).then(function(page) {
             var dpr = window.devicePixelRatio || 1;
             var viewport = page.getViewport({scale: scale});
+            console.log('renderPage: viewport=' + viewport.width + 'x' + viewport.height + ', dpr=' + dpr + ', scale=' + scale);
+            console.log('renderPage: window=' + window.innerWidth + 'x' + window.innerHeight);
 
             var canvas = document.getElementById('pdfCanvas');
+            console.log('renderPage: canvas BEFORE=' + canvas.width + 'x' + canvas.height + ', display=' + canvas.style.display + ', visibility=' + canvas.style.visibility);
             var context = canvas.getContext('2d');
 
             // HiDPI: buffer en píxeles físicos, display en CSS pixels
@@ -158,6 +167,7 @@
             canvas.height = Math.round(viewport.height * dpr);
             canvas.style.width = viewport.width + 'px';
             canvas.style.height = viewport.height + 'px';
+            console.log('renderPage: canvas AFTER=' + canvas.width + 'x' + canvas.height + ', css=' + canvas.style.width + 'x' + canvas.style.height);
 
             // Escalar contexto para HiDPI (el viewport NO incluye DPR)
             context.save();
@@ -165,11 +175,20 @@
 
             // Render page to canvas (viewport en CSS pixels, sin DPR)
             // page.render() es async — restore debe ir en .promise.then()
+            // Fill white bg first so any transparent PDF pages are visible
+            context.fillStyle = '#FFFFFF';
+            context.fillRect(0, 0, viewport.width, viewport.height);
             page.render({
                 canvasContext: context,
                 viewport: viewport
             }).promise.then(function() {
                 context.restore();
+                console.log('renderPage: page.render completed for page ' + num);
+                // TEST overlay: draw red border to confirm canvas is visible
+                context.strokeStyle = '#FF0000';
+                context.lineWidth = 10;
+                context.strokeRect(0, 0, canvas.width, canvas.height);
+                console.log('renderPage: RED border drawn on canvas AFTER render');
             });
 
             // Build text layer en CSS pixels (mismo sistema que canvas.style)
@@ -196,7 +215,14 @@
 
             // Hide loading, show content
             document.getElementById('loadingIndicator').style.display = 'none';
-            document.getElementById('pageContainer').style.display = 'block';
+            var pc = document.getElementById('pageContainer');
+            pc.style.display = 'block';
+            // Force container height to match canvas — CSS width:100% + height:auto
+            // on canvas doesn't propagate height to the relative-positioned parent
+            // on some WebView rendering configurations.
+            pc.style.height = viewport.height + 'px';
+            pc.style.width = viewport.width + 'px';
+            console.log('renderPage: pageContainer display=' + pc.style.display + ', cssSize=' + pc.style.width + 'x' + pc.style.height + ', offsetSize=' + pc.offsetWidth + 'x' + pc.offsetHeight);
 
             // Notify Kotlin of page change
             try {
@@ -209,33 +235,59 @@
 
     // ── PDF Data Injection (Base64 chunks from Kotlin) ────────────────
 
-    var pdfChunks = [];
+    var pdfBinaryParts = [];
     function addPdfChunk(b64) {
-        pdfChunks.push(b64);
+        // Decode each chunk individually to avoid Base64 padding issues
+        // when concatenating chunk-level Base64 strings (512KB chunks are
+        // not multiples of 3 bytes, so each has trailing = padding).
+        try {
+            var binaryStr = atob(b64);
+            pdfBinaryParts.push(binaryStr);
+            console.log('addPdfChunk: chunk decoded (' + binaryStr.length + ' bytes, total=' + getTotalBinaryLen() + ' bytes)');
+        } catch (err) {
+            console.error('addPdfChunk: atob ERROR - ' + err.message);
+        }
+    }
+    function getTotalBinaryLen() {
+        var len = 0;
+        for (var i = 0; i < pdfBinaryParts.length; i++) {
+            len += pdfBinaryParts[i].length;
+        }
+        return len;
     }
     function finalizePdf() {
-        var combined = pdfChunks.join('');
-        pdfChunks = [];
-        var binaryStr = atob(combined);
-        var bytes = new Uint8Array(binaryStr.length);
-        for (var i = 0; i < binaryStr.length; i++) {
-            bytes[i] = binaryStr.charCodeAt(i);
+        console.log('finalizePdf: assembling ' + pdfBinaryParts.length + ' binary parts');
+        try {
+            var combined = pdfBinaryParts.join('');
+            pdfBinaryParts = [];
+            console.log('finalizePdf: combined binary length = ' + combined.length + ' bytes');
+            var bytes = new Uint8Array(combined.length);
+            for (var i = 0; i < combined.length; i++) {
+                bytes[i] = combined.charCodeAt(i);
+            }
+            console.log('finalizePdf: Uint8Array created, calling loadPdfData');
+            loadPdfData(bytes);
+        } catch (err) {
+            console.error('finalizePdf: ERROR - ' + err.message);
+            showError('Failed to decode PDF data: ' + err.message);
         }
-        loadPdfData(bytes);
     }
 
     // ── PDF Loading ──────────────────────────────────────────────────
 
     function loadPdfData(uint8Array) {
+        console.log('loadPdfData: calling pdfjsLib.getDocument with ' + uint8Array.length + ' bytes');
         pdfjsLib.getDocument({data: uint8Array}).promise.then(function(pdf) {
             pdfDoc = pdf;
             pageCount = pdf.numPages;
             currentPageNumber = 1;
+            console.log('loadPdfData: SUCCESS - ' + pageCount + ' pages, worker=' + (pdfjsLib.disableWorker ? 'disabled' : 'enabled'));
             try {
                 NextPageBridge.onDocumentLoaded(pageCount);
             } catch(e) {}
             renderPage(1);
         }).catch(function(err) {
+            console.error('loadPdfData: ERROR - ' + err.message);
             showError('Failed to load PDF: ' + err.message);
         });
     }
@@ -486,6 +538,7 @@
     // ── Utility ──────────────────────────────────────────────────────
 
     function showError(message) {
+        console.error('showError: ' + message);
         document.getElementById('loadingIndicator').style.display = 'none';
         var errorEl = document.getElementById('errorMessage');
         errorEl.textContent = message;

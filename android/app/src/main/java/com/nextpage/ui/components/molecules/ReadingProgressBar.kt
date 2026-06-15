@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -67,6 +69,7 @@ fun ReadingProgressBar(
     onProgressChange: ((Float) -> Unit)? = null,
     onPreviousChapter: (() -> Unit)? = null,
     onNextChapter: (() -> Unit)? = null,
+    onRotateScreen: (() -> Unit)? = null,
     canGoPrevious: Boolean = true,
     canGoNext: Boolean = true,
     modifier: Modifier = Modifier
@@ -153,6 +156,23 @@ fun ReadingProgressBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Rotation button
+            if (onRotateScreen != null) {
+                IconButton(
+                    onClick = onRotateScreen,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ScreenRotation,
+                        contentDescription = stringResource(R.string.reader_rotate_screen),
+                        tint = Color(0xFF718096),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.size(36.dp))
+            }
+
             // Previous chapter
             IconButton(
                 onClick = { onPreviousChapter?.invoke() },

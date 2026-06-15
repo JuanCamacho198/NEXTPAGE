@@ -14,7 +14,10 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
@@ -163,6 +166,7 @@ class ReaderJsBridge(
     @JavascriptInterface
     fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) {
         Log.d(tag, "onTextSelectionEvent: \"${text.take(50)}\" rect=($left,$top,$right,$bottom)")
+        Log.d(tag, "Invoking onTextSelectionEvent lambda: $onTextSelectionEvent")
         onTextSelectionEvent(text, left, top, right, bottom)
     }
 
@@ -238,16 +242,20 @@ internal fun injectSelectionJs(): String {
         (function() {
             if (window.__selectionListenerInstalled) return;
             window.__selectionListenerInstalled = true;
+            var __selectionTimer = null;
             document.addEventListener('selectionchange', function() {
-                var sel = window.getSelection();
-                if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
-                    var range = sel.getRangeAt(0);
-                    var rect = range.getBoundingClientRect();
-                    NextPageBridge.onTextSelectionEvent(
-                        sel.toString(),
-                        rect.left, rect.top, rect.right, rect.bottom
-                    );
-                }
+                if (__selectionTimer) clearTimeout(__selectionTimer);
+                __selectionTimer = setTimeout(function() {
+                    var sel = window.getSelection();
+                    if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+                        var range = sel.getRangeAt(0);
+                        var rect = range.getBoundingClientRect();
+                        NextPageBridge.onTextSelectionEvent(
+                            sel.toString(),
+                            rect.left, rect.top, rect.right, rect.bottom
+                        );
+                    }
+                }, 300);
             });
         })();
     """.trimIndent()
@@ -260,6 +268,8 @@ internal fun injectSelectionJs(): String {
 internal fun injectHighlightTapJs(): String {
     return """
         (function() {
+            if (window.__highlightTapInstalled) return;
+            window.__highlightTapInstalled = true;
             document.addEventListener('click', function(e) {
                 var target = e.target.closest('[data-highlight-id]');
                 if (!target) return;
@@ -335,7 +345,10 @@ fun EpubWebView(
     onHighlightTapped: (highlightId: String, text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
-    val jsBridge = remember(onTextSelected, onTextSelectionEvent, onSearchResults, onHighlightTapped) {
+    // Stable bridge — only created once. The lambdas captured at creation time
+    // forward to the current ViewModel methods (which are stable refs pointing
+    // to the same instance). Avoids remember key churn from lambda recomposition.
+    val jsBridge = remember {
         ReaderJsBridge(
             onTextSelected = onTextSelected,
             onTextSelectionEvent = onTextSelectionEvent,
@@ -362,6 +375,9 @@ fun EpubWebView(
     remember(filePath, epubContentLoader) {
         epubHandler.setLoader(filePath, epubContentLoader)
     }
+
+    // Track last loaded HTML to avoid reloading on every recomposition.
+    var lastLoadedHtml by remember { mutableStateOf<String?>(null) }
 
     AndroidView(
         modifier = modifier,
@@ -404,6 +420,16 @@ fun EpubWebView(
                         if (request.url.host != "appassets.androidplatform.net") return null
                         return assetLoader.shouldInterceptRequest(request.url)
                     }
+
+                    override fun onPageFinished(view: WebView, url: String) {
+                        Log.d("EpubWebView", "onPageFinished called — injecting JS")
+                        // Inject JS AFTER the page finishes loading —
+                        // evaluateJavascript in update() runs before the
+                        // async loadDataWithBaseURL completes, so the JS
+                        // would execute on the blank/old page instead.
+                        view.evaluateJavascript(injectSelectionJs(), null)
+                        view.evaluateJavascript(injectHighlightTapJs(), null)
+                    }
                 }
 
                 webChromeClient = WebChromeClient()
@@ -412,9 +438,13 @@ fun EpubWebView(
             }
         },
         update = { webView ->
-            webView.loadDataWithBaseURL(baseUrl, renderedHtml, "text/html", "UTF-8", null)
-            webView.evaluateJavascript(injectSelectionJs(), null)
-            webView.evaluateJavascript(injectHighlightTapJs(), null)
+            if (renderedHtml != lastLoadedHtml) {
+                Log.d("EpubWebView", "update: loading HTML content (${renderedHtml.length} chars)")
+                lastLoadedHtml = renderedHtml
+                webView.loadDataWithBaseURL(baseUrl, renderedHtml, "text/html", "UTF-8", null)
+            } else {
+                Log.d("EpubWebView", "update: skipped — same content")
+            }
         }
     )
 }

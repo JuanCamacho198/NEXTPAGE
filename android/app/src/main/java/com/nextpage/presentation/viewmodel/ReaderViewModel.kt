@@ -456,6 +456,7 @@ class ReaderViewModel(
     }
 
     fun onTextSelection(text: String, rect: Rect) {
+        Log.d("ReaderVM", "onTextSelection: \"${text.take(50)}\" rect=$rect")
         mutableUiState.update {
             it.copy(
                 selectedText = text,

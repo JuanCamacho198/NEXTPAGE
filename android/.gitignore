@@ -46,6 +46,7 @@ proguard/
 design/*.pen.bak
 .*docs
 *images
+*_*exports
 
 # ─── OpenCode / Gentle AI ──────────────────────────────────────────
 .opencode/

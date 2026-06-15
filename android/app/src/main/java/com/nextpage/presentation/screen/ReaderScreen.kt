@@ -1,8 +1,10 @@
 package com.nextpage.presentation.screen
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.ActivityInfo
 import android.view.WindowInsetsController
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -128,6 +130,7 @@ fun ReaderScreen(
     // ── Render via ReaderChrome ─────────────────────────────────────
     ReaderChrome(
         isFullscreen = uiState.isFullscreen || uiState.isLoading,
+        onToggleFullscreen = { viewModel.onToggleFullscreen() },
         contentPadding = contentPadding,
         header = {
             ReaderHeader(
@@ -144,6 +147,12 @@ fun ReaderScreen(
             ReadingProgressBar(
                 progressPercent = uiState.progressPercent,
                 label = uiState.progressLabel,
+                onRotateScreen = {
+                    val activity = context as Activity
+                    val portrait = activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
+                    activity.requestedOrientation = if (portrait) ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                },
                 onProgressChange = { viewModel.onProgressChange(it) },
                 onPreviousChapter = {
                     if (uiState.totalPdfPages > 0) viewModel.goToPreviousPdfPage()
@@ -228,9 +237,7 @@ fun ReaderScreen(
                         selectionRect = uiState.selectionRect,
                         selectedText = uiState.selectedText,
                         highlights = uiState.highlights,
-                        isFullscreen = uiState.isFullscreen,
                         onTapZone = { isLeft -> viewModel.onTapZone(isLeft) },
-                        onToggleFullscreen = { viewModel.onToggleFullscreen() },
                         onTextSelectionEvent = { text, left, top, right, bottom ->
                             viewModel.onTextSelectionEvent(text, left, top, right, bottom)
                         },

@@ -1,6 +1,7 @@
 package com.nextpage.presentation.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -13,9 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Search
@@ -56,6 +59,7 @@ private val BUTTON_BG = Color(0xFF2F3445)
 @Composable
 fun ReaderChrome(
     isFullscreen: Boolean,
+    onToggleFullscreen: () -> Unit,
     contentPadding: PaddingValues,
     header: @Composable () -> Unit,
     footer: @Composable () -> Unit,
@@ -80,6 +84,27 @@ fun ReaderChrome(
             }
 
             if (!isFullscreen) footer()
+        }
+
+        // Floating close button — visible only in fullscreen mode
+        if (isFullscreen) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 12.dp, end = 12.dp)
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0x992F3445))
+                    .clickable { onToggleFullscreen() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.fullscreen_exit),
+                    tint = HEADER_FG,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
 
         overlays()

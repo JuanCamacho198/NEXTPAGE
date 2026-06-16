@@ -245,4 +245,53 @@
     <string name="error_config">Error de configuración. Algunas funciones pueden no estar disponibles.</string>
     <string name="error_wiring">Error interno de configuración. Reiniciá la aplicación.</string>
     <string name="error_unknown">Error inesperado. Intentá de nuevo.</string>
+
+    <!-- Debug Panel (solo en debug) -->
+    <string name="debug_panel_title">DEBUG</string>
+    <string name="debug_close">Cerrar</string>
+    <string name="debug_section_selection">Estado de selección</string>
+    <string name="debug_section_action_mode">ActionMode</string>
+    <string name="debug_section_highlight">Toque en resaltado</string>
+    <string name="debug_section_log">Registro de eventos</string>
+    <string name="debug_action_force_color">Forzar cnVL6</string>
+    <string name="debug_action_force_context">Forzar FaPN3</string>
+    <string name="debug_action_simulate_tap">Simular toque</string>
+    <string name="debug_action_clear_log">Limpiar registro</string>
+    <string name="debug_action_copy_log">Copiar registro</string>
+    <string name="debug_action_inspect_html">Inspeccionar HTML</string>
+    <string name="debug_action_log_webview">Log de WebView</string>
+    <string name="debug_section_decorations">Decoraciones</string>
+    <string name="debug_decorations_listener_registered">Listener registrado</string>
+    <string name="debug_decorations_activation_count">Activaciones</string>
+    <string name="debug_decorations_last_id">Último id</string>
+    <string name="debug_decorations_last_rect">Último rect</string>
+    <string name="debug_decorations_last_group">Último grupo</string>
+    <string name="debug_decorations_last_applied">Último aplicadas</string>
+    <string name="debug_decorations_active">Activas</string>
+    <string name="debug_chip_label">DEBUG</string>
+    <string name="debug_kv_selected_text">texto seleccionado</string>
+    <string name="debug_kv_selection_rect">rect de selección</string>
+    <string name="debug_kv_show_color_picker">mostrar color picker</string>
+    <string name="debug_kv_show_context_menu">mostrar menú</string>
+    <string name="debug_kv_active_highlight_id">id resaltado activo</string>
+    <string name="debug_kv_debounce_remaining_ms">debounce (ms)</string>
+    <string name="debug_kv_am_installed">instalado</string>
+    <string name="debug_kv_am_last_event">último evento</string>
+    <string name="debug_kv_am_last_type">tipo</string>
+    <string name="debug_kv_am_suppressed">suprimidos</string>
+    <string name="debug_kv_hl_registered">listener registrado</string>
+    <string name="debug_kv_hl_last_id">último id</string>
+    <string name="debug_kv_hl_last_rect">último rect</string>
+    <string name="debug_kv_hl_activations">activaciones</string>
+    <string name="debug_no_highlights">No hay resaltados para simular</string>
+    <string name="debug_log_copied">Registro copiado al portapapeles</string>
+
+    <!-- Debug: notificación de crash + detalle -->
+    <string name="debug_crash_channel_name">Reportes de crash (debug)</string>
+    <string name="debug_crash_channel_description">Notifica cuando la app crasheó en un inicio anterior</string>
+    <string name="debug_crash_notification_title">NextPage crasheó (debug)</string>
+    <string name="debug_crash_notification_body">Toca para ver el stacktrace</string>
+    <string name="debug_crash_detail_title">Último crash</string>
+    <string name="debug_crash_copy">Copiar al portapapeles</string>
+    <string name="debug_crash_share">Compartir</string>
 </resources>

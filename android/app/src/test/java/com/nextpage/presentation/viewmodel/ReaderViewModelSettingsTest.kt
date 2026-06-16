@@ -1,6 +1,5 @@
 package com.nextpage.presentation.viewmodel
 
-import com.nextpage.data.epub.EpubContentLoader
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.FontSizePreset

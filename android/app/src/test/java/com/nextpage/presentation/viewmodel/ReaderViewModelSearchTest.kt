@@ -1,6 +1,5 @@
 package com.nextpage.presentation.viewmodel
 
-import com.nextpage.data.epub.EpubContentLoader
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReadingProgress
@@ -85,9 +84,9 @@ class ReaderViewModelSearchTest {
         setEpubState(
             viewModel,
             chapters = listOf(
-                EpubContentLoader.Chapter(0, "c1", "Ch 1", "ch1.xhtml"),
-                EpubContentLoader.Chapter(1, "c2", "Ch 2", "ch2.xhtml"),
-                EpubContentLoader.Chapter(2, "c3", "Ch 3", "ch3.xhtml")
+                BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
+                BookChapter(1, "c2", "Ch 2", "ch2.xhtml"),
+                BookChapter(2, "c3", "Ch 3", "ch3.xhtml")
             ),
             currentChapterIndex = 0,
             bookFilePath = "/test/book.epub"
@@ -122,8 +121,8 @@ class ReaderViewModelSearchTest {
         setEpubState(
             viewModel,
             chapters = listOf(
-                EpubContentLoader.Chapter(0, "c1", "Ch 1", "ch1.xhtml"),
-                EpubContentLoader.Chapter(1, "c2", "Ch 2", "ch2.xhtml")
+                BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
+                BookChapter(1, "c2", "Ch 2", "ch2.xhtml")
             ),
             currentChapterIndex = 1,
             bookFilePath = "/test/book.epub"
@@ -156,7 +155,7 @@ class ReaderViewModelSearchTest {
 
     private fun setEpubState(
         viewModel: ReaderViewModel,
-        chapters: List<EpubContentLoader.Chapter>,
+        chapters: List<BookChapter>,
         currentChapterIndex: Int,
         bookFilePath: String
     ) {

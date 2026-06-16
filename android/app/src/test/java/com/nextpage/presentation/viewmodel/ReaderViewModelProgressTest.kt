@@ -1,6 +1,5 @@
 package com.nextpage.presentation.viewmodel
 
-import com.nextpage.data.epub.EpubContentLoader
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.Bookmark
@@ -188,11 +187,11 @@ class ReaderViewModelProgressTest {
             mainDispatcher = dispatcher
         )
         val chapters = listOf(
-            EpubContentLoader.Chapter(0, "c1", "Ch 1", "ch1.xhtml"),
-            EpubContentLoader.Chapter(1, "c2", "Ch 2", "ch2.xhtml"),
-            EpubContentLoader.Chapter(2, "c3", "Ch 3", "ch3.xhtml"),
-            EpubContentLoader.Chapter(3, "c4", "Ch 4", "ch4.xhtml"),
-            EpubContentLoader.Chapter(4, "c5", "Ch 5", "ch5.xhtml")
+            BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
+            BookChapter(1, "c2", "Ch 2", "ch2.xhtml"),
+            BookChapter(2, "c3", "Ch 3", "ch3.xhtml"),
+            BookChapter(3, "c4", "Ch 4", "ch4.xhtml"),
+            BookChapter(4, "c5", "Ch 5", "ch5.xhtml")
         )
         setEpubStateWithChapters(viewModel, chapters = chapters, currentChapterIndex = 0)
 
@@ -257,7 +256,7 @@ class ReaderViewModelProgressTest {
 
     private fun setEpubStateWithChapters(
         viewModel: ReaderViewModel,
-        chapters: List<EpubContentLoader.Chapter>,
+        chapters: List<BookChapter>,
         currentChapterIndex: Int
     ) {
         val field = ReaderViewModel::class.java.getDeclaredField("mutableUiState")

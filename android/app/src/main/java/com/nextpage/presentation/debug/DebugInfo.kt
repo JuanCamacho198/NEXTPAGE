@@ -22,7 +22,6 @@ data class InitTimingsSection(
     val dbInitMs: Long = 0,
     val epubImportInitMs: Long = 0,
     val readerRepoInitMs: Long = 0,
-    val contentLoaderInitMs: Long = 0,
     val totalInitMs: Long = 0
 )
 

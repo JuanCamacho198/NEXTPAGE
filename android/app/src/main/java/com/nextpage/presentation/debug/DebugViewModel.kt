@@ -35,7 +35,6 @@ class DebugViewModel(
             dbInitMs = appContainer.dbInitTimeMs,
             epubImportInitMs = appContainer.epubImportInitTimeMs,
             readerRepoInitMs = appContainer.readerRepoInitTimeMs,
-            contentLoaderInitMs = appContainer.contentLoaderInitTimeMs,
             totalInitMs = appContainer.totalInitTimeMs
         )
         _debugInfo.update { it.copy(initTimings = timings) }

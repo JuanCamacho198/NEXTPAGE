@@ -199,10 +199,6 @@ fun DebugPanel(
             DebugRow(label = "epubImportInit", value = "${debugInfo.initTimings.epubImportInitMs}ms")
             DebugRow(label = "readerRepoInit", value = "${debugInfo.initTimings.readerRepoInitMs}ms")
             DebugRow(
-                label = "contentLoaderInit",
-                value = "${debugInfo.initTimings.contentLoaderInitMs}ms"
-            )
-            DebugRow(
                 label = "totalInit",
                 value = "${debugInfo.initTimings.totalInitMs}ms",
                 isBold = true

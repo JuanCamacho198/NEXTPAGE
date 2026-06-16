@@ -320,6 +320,10 @@ class ReaderViewModel(
      * new [Locator].  Uses [Publication.linkWithHref] to find the
      * matching reading-order entry, then updates chapter index and
      * progression percentage.
+     *
+     * Uses Readium's [Locator.locations.totalProgression] (0.0 to ~1.0)
+     * for the real overall document percentage, NOT chapter-based math.
+     * Saves the progression to the database via [updateReadingProgressUseCase].
      */
     fun onReadiumLocatorChanged(locator: Locator) {
         val publication = mutableUiState.value.readiumPublication ?: return
@@ -327,14 +331,27 @@ class ReaderViewModel(
         val index = publication.readingOrder.indexOf(matchingLink)
         if (index >= 0) {
             val totalProgression = locator.locations.totalProgression?.toFloat() ?: 0f
+            val progressPercent = (totalProgression * 100f).coerceIn(0f, 100f)
             mutableUiState.update {
                 it.copy(
                     currentChapterIndex = index,
                     readiumLocator = locator,
-                    progressPercent = totalProgression * 100f
+                    progressPercent = progressPercent
                 )
             }
             updateProgressDisplay()
+
+            // Persist real progression from Readium locator
+            val bookId = mutableUiState.value.selectedBookId ?: return
+            val locatorJson = CfiMigrator.locatorToJson(locator)
+            viewModelScope.launch(mainDispatcher) {
+                updateReadingProgressUseCase(
+                    bookId = bookId,
+                    cfiLocation = "readium:${locator.href}",
+                    percentage = progressPercent,
+                    locatorJson = locatorJson
+                )
+            }
         }
     }
 
@@ -968,7 +985,8 @@ class ReaderViewModel(
         val bookId = mutableUiState.value.selectedBookId ?: return
 
         if (totalPages > 0) {
-            val percentage = ((currentPage + 1).toFloat() / totalPages) * 100
+            val percentage = (((currentPage + 1).toFloat() / totalPages) * 100f)
+                .coerceIn(0f, 100f)
             val cfiLocation = "pdfpage:$currentPage"
 
             viewModelScope.launch(mainDispatcher) {
@@ -986,7 +1004,10 @@ class ReaderViewModel(
         val totalChapters = mutableUiState.value.chapters.size
 
         if (totalChapters > 0) {
-            val percentage = ((chapterIndex + 1).toFloat() / totalChapters) * 100
+            // Chapter-based percentage: cap at 99% so the last chapter doesn't show 100%
+            // until Readium's locator totalProgression confirms it.
+            val percentage = (((chapterIndex + 1).toFloat() / totalChapters) * 100f)
+                .coerceIn(0f, 99f)
             val cfiLocation = "epubcfi(/6/${chapterIndex + 1})"
 
             viewModelScope.launch(mainDispatcher) {
@@ -1001,6 +1022,11 @@ class ReaderViewModel(
 
     /**
      * Updates the progress percentage and label according to the current format.
+     *
+     * Priority:
+     * 1. PDF → (currentPage+1)/totalPages
+     * 2. EPUB + Readium locator available → totalProgression from locator (most accurate)
+     * 3. EPUB fallback → chapter-based (capped at 99%)
      */
     private fun updateProgressDisplay() {
         val state = mutableUiState.value
@@ -1010,12 +1036,19 @@ class ReaderViewModel(
         if (state.totalPdfPages > 0) {
             val current = state.currentPdfPage + 1
             val total = state.totalPdfPages
-            percent = (current.toFloat() / total) * 100f
+            percent = ((current.toFloat() / total) * 100f).coerceIn(0f, 100f)
+            label = "$current / $total"
+        } else if (state.readiumLocator != null) {
+            // Use Readium's totalProgression for real overall percentage
+            val totalProgression = state.readiumLocator.locations.totalProgression?.toFloat() ?: 0f
+            percent = (totalProgression * 100f).coerceIn(0f, 100f)
+            val current = state.currentChapterIndex + 1
+            val total = state.chapters.size.coerceAtLeast(1)
             label = "$current / $total"
         } else if (state.chapters.isNotEmpty()) {
             val current = state.currentChapterIndex + 1
             val total = state.chapters.size
-            percent = (current.toFloat() / total) * 100f
+            percent = ((current.toFloat() / total) * 100f).coerceIn(0f, 99f)
             label = "$current / $total"
         } else {
             percent = 0f

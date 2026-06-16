@@ -82,7 +82,8 @@ class LibraryRepositoryImpl(
             coverPath = coverPath,
             filePath = request.sourcePath,
             format = EPUB_FORMAT,
-            totalPages = metadata.chapterCount.takeIf { it > 0 },
+            totalPages = metadata.estimatedPageCount,
+            chapterCount = metadata.chapterCount.takeIf { it > 0 },
             updatedAtEpochMillis = now
         )
 
@@ -207,6 +208,7 @@ class LibraryRepositoryImpl(
         filePath = filePath,
         format = format,
         totalPages = totalPages,
+        chapterCount = chapterCount,
         userRating = userRating,
         updatedAtEpochMillis = updatedAtEpochMillis
     )

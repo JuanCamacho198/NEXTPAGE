@@ -1,7 +1,11 @@
 package com.nextpage.presentation.screen
 
+import android.graphics.RectF
 import android.os.Bundle
 import android.util.Log
+import android.view.ActionMode
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -38,6 +42,21 @@ import org.readium.r2.shared.publication.Publication
 
 /** Group identifier for all highlight decorations. */
 private const val DECORATION_GROUP = "com.nextpage.highlights"
+
+/**
+ * [ActionMode.Callback] that suppresses Readium's default selection toolbar
+ * (the native Copy / Share / Translate / overflow floating bar).
+ *
+ * Returning `false` from [onCreateActionMode] prevents the ActionMode from
+ * being created at all, so only our custom [SelectionOverlay] is shown.
+ * Copy/Share remain available through the custom menu.
+ */
+private object SuppressSelectionActionMode : ActionMode.Callback {
+    override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean = false
+    override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
+    override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean = false
+    override fun onDestroyActionMode(mode: ActionMode) = Unit
+}
 
 /**
  * Readium-powered EPUB reader content.
@@ -77,6 +96,11 @@ fun ReadiumReaderContent(
             val initialLocator = publication.readingOrder.firstOrNull()?.let {
                 publication.locatorFromLink(it)
             }
+            // Note: the native ActionMode (Copy/Share/Translate) is suppressed
+            // via EpubNavigatorFragment.Configuration.selectionActionModeCallback
+            // in newer Readium versions. In 3.2.0, createFragmentFactory does not
+            // expose fragmentConfiguration — we suppress selection via the JS
+            // bridge polling approach instead (see currentSelection poll loop).
             val factory = navigatorFactory.createFragmentFactory(
                 initialLocator = initialLocator!!
             )
@@ -175,6 +199,39 @@ fun ReadiumReaderContent(
                     viewModel.onSelectionCleared()
                 }
                 lastSelection = false
+            }
+        }
+    }
+
+    // ── Highlight tap → custom menu (DecorableNavigator.Listener) ─
+    // Registers a listener so tapping an existing highlight opens our
+    // FloatingContextMenu anchored to the highlight rect, instead of doing
+    // nothing.
+    DisposableEffect(navigatorFragment) {
+        val frag = navigatorFragment
+        val decorable = frag as? DecorableNavigator
+        val listener = if (decorable != null) {
+            object : DecorableNavigator.Listener {
+                override fun onDecorationActivated(
+                    event: DecorableNavigator.OnActivatedEvent
+                ): Boolean {
+                    // Only react to our own highlight group.
+                    if (event.group != DECORATION_GROUP) return false
+                    val rect: RectF = event.rect ?: return false
+                    val highlight = highlights.firstOrNull { it.id == event.decoration.id }
+                        ?: return false
+                    viewModel.onHighlightTapped(highlight, rect)
+                    return true
+                }
+            }
+        } else null
+
+        if (decorable != null && listener != null) {
+            decorable.addDecorationListener(DECORATION_GROUP, listener)
+        }
+        onDispose {
+            if (decorable != null && listener != null) {
+                decorable.removeDecorationListener(listener)
             }
         }
     }

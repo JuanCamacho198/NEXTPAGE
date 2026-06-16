@@ -17,6 +17,8 @@ data class BookEntity(
     val format: String,
     @ColumnInfo(name = "total_pages")
     val totalPages: Int? = null,
+    @ColumnInfo(name = "chapter_count")
+    val chapterCount: Int? = null,
     val description: String? = null,
     @ColumnInfo(name = "user_rating")
     val userRating: Int? = null,

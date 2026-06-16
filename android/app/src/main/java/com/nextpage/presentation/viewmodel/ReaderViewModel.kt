@@ -95,6 +95,9 @@ data class ReaderUiState(
     val selectionRect: Rect? = null,
     val showColorPicker: Boolean = false,
     val showContextMenu: Boolean = false,
+    /** When non-null, the menu is acting on an existing highlight (tap to
+     *  edit). Color/delete actions target this id instead of creating new. */
+    val activeHighlightId: String? = null,
 
     // ── Highlights Panel (Gap 5) ────────────────────────────────────
     val showHighlightsSheet: Boolean = false,
@@ -650,12 +653,30 @@ class ReaderViewModel(
 
     // ── Text Selection (Gap 4) ──────────────────────────────────────
 
-    @Suppress("UNUSED_PARAMETER")
-    fun onHighlightTapped(highlightId: String, text: String, left: Float, top: Float, right: Float, bottom: Float) {
+    /**
+     * Called by [ReadiumReaderContent] when the user taps an existing
+     * highlight decoration. Opens the [FloatingContextMenu] anchored to the
+     * highlight rect, so the user can change color, copy, or delete it.
+     *
+     * @param highlight the tapped highlight (id matches the decoration id)
+     * @param rect the highlight rect in viewport pixels (px)
+     */
+    fun onHighlightTapped(highlight: Highlight, rect: RectF) {
+        // Restore the selection locator from the stored JSON so color/delete
+        // actions operate on the right highlight.
+        val locator = highlight.locatorJson?.let { CfiMigrator.jsonToLocator(it) }
+        val selectionRect = Rect(
+            rect.left.toInt(),
+            rect.top.toInt(),
+            rect.right.toInt(),
+            rect.bottom.toInt()
+        )
         mutableUiState.update {
             it.copy(
-                selectedText = text,
-                selectionRect = Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt()),
+                selectedText = highlight.textContent,
+                selectionRect = selectionRect,
+                readiumSelectionLocator = locator,
+                activeHighlightId = highlight.id,
                 showColorPicker = false,
                 showContextMenu = true
             )
@@ -743,7 +764,8 @@ class ReaderViewModel(
                 showColorPicker = false,
                 showContextMenu = false,
                 selectedText = null,
-                selectionRect = null
+                selectionRect = null,
+                activeHighlightId = null
             )
         }
     }
@@ -799,6 +821,7 @@ class ReaderViewModel(
                     showContextMenu = false,
                     selectedText = null,
                     selectionRect = null,
+                    activeHighlightId = null,
                     debugForceMenu = false
                 )
             }
@@ -819,8 +842,18 @@ class ReaderViewModel(
         val bookId = state.selectedBookId ?: return
         val locator = state.readiumSelectionLocator ?: return
         val text = state.selectedText ?: return
-        val locatorJson = CfiMigrator.locatorToJson(locator)
 
+        // Editing an existing highlight (user tapped it → changed color).
+        val activeId = state.activeHighlightId
+        if (activeId != null) {
+            onReadiumUpdateHighlightColor(activeId, color)
+            mutableUiState.update {
+                it.copy(showColorPicker = false, showContextMenu = false)
+            }
+            return
+        }
+
+        val locatorJson = CfiMigrator.locatorToJson(locator)
         createHighlight(
             bookId = bookId,
             cfiRange = "readium:${locator.href}",

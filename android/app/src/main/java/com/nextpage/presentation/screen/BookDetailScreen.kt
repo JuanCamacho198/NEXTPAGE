@@ -318,20 +318,21 @@ private fun MetadataGridCard(
 
 @Composable
 private fun getPagesDisplayText(book: Book): String {
-    return if (book.format == "pdf" && book.totalPages != null) {
-        // PDF has real page count from the document
-        book.totalPages.toString()
-    } else {
-        // EPUB is reflowable — no concept of pages, show placeholder
-        stringResource(R.string.book_detail_na)
+    return when {
+        book.format == "pdf" && book.totalPages != null ->
+            book.totalPages.toString() // PDF has real page count
+        book.format == "epub" && book.totalPages != null ->
+            // EPUB estimated pages with ≈ prefix
+            stringResource(R.string.book_detail_estimated_pages, book.totalPages)
+        else ->
+            stringResource(R.string.book_detail_na)
     }
 }
 
 @Composable
 private fun getChaptersDisplayText(book: Book): String {
-    return if (book.totalPages != null && book.format == "epub") {
-        // For EPUB, totalPages = spine item count ≈ chapters
-        book.totalPages.toString()
+    return if (book.format == "epub" && book.chapterCount != null) {
+        book.chapterCount.toString()
     } else {
         stringResource(R.string.book_detail_na)
     }

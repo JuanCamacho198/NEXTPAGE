@@ -185,6 +185,9 @@ fun ReaderScreen(
                             selectionRect = uiState.selectionRect,
                             selectedText = uiState.selectedText,
                             highlights = uiState.highlights,
+                            activeHighlightColor = uiState.activeHighlightId?.let { id ->
+                                uiState.highlights.firstOrNull { it.id == id }?.color
+                            },
                             onColorSelected = { color -> viewModel.onReadiumHighlightColorSelected(color) },
                             onCopy = {
                                 viewModel.onCopySelectedText()
@@ -195,6 +198,9 @@ fun ReaderScreen(
                             },
                             onShowContextMenu = { viewModel.onShowContextMenu() },
                             onDismissContextMenu = { viewModel.onDismissContextMenu() },
+                            onDelete = {
+                                uiState.activeHighlightId?.let { viewModel.onReadiumDeleteHighlight(it) }
+                            },
                             onAddTag = {},
                             onAddNote = {},
                             onAddComment = {},
@@ -220,6 +226,9 @@ fun ReaderScreen(
                             selectionRect = uiState.selectionRect,
                             selectedText = uiState.selectedText,
                             highlights = uiState.highlights,
+                            activeHighlightColor = uiState.activeHighlightId?.let { id ->
+                                uiState.highlights.firstOrNull { it.id == id }?.color
+                            },
                             onColorSelected = { color -> viewModel.onReadiumHighlightColorSelected(color) },
                             onCopy = {
                                 viewModel.onCopySelectedText()
@@ -230,6 +239,9 @@ fun ReaderScreen(
                             },
                             onShowContextMenu = { viewModel.onShowContextMenu() },
                             onDismissContextMenu = { viewModel.onDismissContextMenu() },
+                            onDelete = {
+                                uiState.activeHighlightId?.let { viewModel.onReadiumDeleteHighlight(it) }
+                            },
                             onAddTag = {},
                             onAddNote = {},
                             onAddComment = {},

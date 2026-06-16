@@ -66,6 +66,7 @@
     <string name="book_detail_progress_label">Progress</string>
     <string name="book_detail_last_read_label">Last read</string>
     <string name="book_detail_na">N/A</string>
+    <string name="book_detail_estimated_pages">≈%1$d</string>
     <string name="book_detail_continue_reading">Continue Reading</string>
     <string name="book_detail_start_reading">Start Reading</string>
     <string name="book_detail_page_x_of_y">Page %1$d / %2$d</string>

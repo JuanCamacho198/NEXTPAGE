@@ -29,11 +29,20 @@ class ZipEpubParserService : EpubParserService {
             }
             ?.let { coverPath -> readZipEntryBytes(zipBytes, coverPath) }
 
+        // ── Page estimation ──────────────────────────────────────
+        val estimatedPageCount = estimatePages(
+            zipBytes = zipBytes,
+            rootFilePath = rootFilePath,
+            spineItemRefs = parsed.spineItemRefs,
+            manifestById = parsed.manifestById
+        )
+
         EpubMetadata(
             title = title,
             author = parsed.author?.takeIf { it.isNotBlank() },
             description = parsed.description?.takeIf { it.isNotBlank() },
             chapterCount = parsed.spineItemCount,
+            estimatedPageCount = estimatedPageCount,
             coverImageBytes = coverBytes
         )
     }
@@ -59,7 +68,7 @@ class ZipEpubParserService : EpubParserService {
         val manifestById = mutableMapOf<String, String>()
         val allElements = document.getElementsByTagName("*")
         var coverItemId: String? = null
-        var spineItemCount = 0
+        val spineItemRefs = mutableListOf<String>()
 
         for (index in 0 until allElements.length) {
             val node = allElements.item(index)
@@ -79,7 +88,8 @@ class ZipEpubParserService : EpubParserService {
                     }
                 }
                 "itemref" -> {
-                    spineItemCount++
+                    val idref = node.getAttribute("idref").takeIf { it.isNotBlank() }
+                    if (idref != null) spineItemRefs.add(idref)
                 }
             }
         }
@@ -89,7 +99,9 @@ class ZipEpubParserService : EpubParserService {
             author = author,
             description = description,
             coverHref = coverItemId?.let(manifestById::get),
-            spineItemCount = spineItemCount
+            spineItemCount = spineItemRefs.size,
+            spineItemRefs = spineItemRefs,
+            manifestById = manifestById
         )
     }
 
@@ -162,8 +174,35 @@ class ZipEpubParserService : EpubParserService {
         val author: String?,
         val description: String? = null,
         val coverHref: String?,
-        val spineItemCount: Int = 0
+        val spineItemCount: Int = 0,
+        val spineItemRefs: List<String> = emptyList(),
+        val manifestById: Map<String, String> = emptyMap()
     )
+
+    /**
+     * Estimates page count for an EPUB by summing raw byte size of each
+     * spine-referenced manifest entry, then applying:
+     * ~5 chars/word, ~250 words/page.
+     */
+    private fun estimatePages(
+        zipBytes: ByteArray,
+        rootFilePath: String,
+        spineItemRefs: List<String>,
+        manifestById: Map<String, String>
+    ): Int? {
+        if (spineItemRefs.isEmpty()) return null
+        var totalChars = 0
+        for (idref in spineItemRefs) {
+            val href = manifestById[idref] ?: continue
+            val resolvedPath = resolvePath(rootFilePath, href)
+            val entryBytes = readZipEntryBytes(zipBytes, resolvedPath) ?: continue
+            totalChars += entryBytes.size
+        }
+        if (totalChars == 0) return null
+        val estimatedWords = totalChars / 5
+        val estimatedPages = estimatedWords / 250
+        return estimatedPages.coerceAtLeast(1)
+    }
 
     private companion object {
         const val CONTAINER_XML_PATH = "META-INF/container.xml"

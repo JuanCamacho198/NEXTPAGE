@@ -5,5 +5,6 @@ data class EpubMetadata(
     val author: String?,
     val description: String? = null,
     val chapterCount: Int = 0,
+    val estimatedPageCount: Int? = null,
     val coverImageBytes: ByteArray?
 )

@@ -32,10 +32,11 @@ import com.nextpage.domain.model.HighlightColor
  * - `FaPN3` → [FloatingContextMenu] (horizontal pill: Color Picker | Copy
  *   | Tag | Note | Comment | Share | Delete)
  *
- * Coordinate handling: [selectionRect] arrives in dp (CSS pixels from the
- * WebView's `getBoundingClientRect()`, where `width=device-width` makes
- * CSS px == dp). We convert dp→px via [LocalDensity] and clamp the menu
- * to the viewport so it never hides under the header or overflows an edge.
+ * Coordinate handling: [selectionRect] arrives in **pixels (px)** — it is
+ * Readium's viewport-space [android.graphics.RectF] (from `Selection.rect`
+ * or a decoration activation rect) cast to [Rect]. We therefore use it
+ * directly for [IntOffset] positioning and only convert dp→px for the gap
+ * and header/footer reserves.
  */
 @Composable
 fun SelectionOverlay(
@@ -44,10 +45,12 @@ fun SelectionOverlay(
     selectionRect: Rect?,
     selectedText: String?,
     highlights: List<Highlight>,
+    activeHighlightColor: String?,
     onColorSelected: (String) -> Unit,
     onCopy: () -> Unit,
     onShowContextMenu: () -> Unit,
     onDismissContextMenu: () -> Unit,
+    onDelete: () -> Unit,
     onAddTag: () -> Unit,
     onAddNote: () -> Unit,
     onAddComment: () -> Unit,
@@ -56,15 +59,9 @@ fun SelectionOverlay(
 ) {
     if (selectionRect == null) return
 
-    // selectionRect is in dp (CSS px). Convert to px for IntOffset.
+    // selectionRect is already in px (Readium viewport coordinates).
     val density = LocalDensity.current
-    val dpr = density.density
-    val selectionRectPx = Rect(
-        (selectionRect.left * dpr).toInt(),
-        (selectionRect.top * dpr).toInt(),
-        (selectionRect.right * dpr).toInt(),
-        (selectionRect.bottom * dpr).toInt()
-    )
+    val selectionRectPx = selectionRect
 
     // ── Viewport (for clamping + flip-above/below) ────────────────
     val viewportWidth = LocalView.current.width
@@ -135,14 +132,14 @@ fun SelectionOverlay(
                 .padding(8.dp)
         ) {
             FloatingContextMenu(
-                selectedColor = HighlightColor.YELLOW.hex,
+                selectedColor = activeHighlightColor ?: HighlightColor.YELLOW.hex,
                 onColorSelected = onColorSelected,
                 onCopy = onCopy,
                 onAddTag = onAddTag,
                 onAddNote = onAddNote,
                 onAddComment = onAddComment,
                 onShare = onShare,
-                onDelete = onDismissContextMenu,
+                onDelete = onDelete,
                 onDismiss = onDismissContextMenu
             )
         }

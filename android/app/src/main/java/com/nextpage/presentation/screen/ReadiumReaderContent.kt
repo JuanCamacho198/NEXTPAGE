@@ -270,9 +270,10 @@ fun ReadiumReaderContent(
                     val rect: RectF = event.rect ?: return false
                     val highlight = highlights.firstOrNull { it.id == event.decoration.id }
                     if (highlight == null) {
+                        val knownIds = highlights.map { it.id }
                         DebugLog.warn(
                             "Readium",
-                            "onDecorationActivated: no highlight found for id=${event.decoration.id}"
+                            "onDecorationActivated: no highlight found for id=${event.decoration.id} — known IDs: $knownIds"
                         )
                         return false
                     }

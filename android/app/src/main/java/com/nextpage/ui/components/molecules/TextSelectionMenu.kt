@@ -52,10 +52,10 @@ fun TextSelectionMenu(
 
     Row(
         modifier = modifier
-            .shadow(8.dp, RoundedCornerShape(9999))
+            .shadow(8.dp, RoundedCornerShape(9999.dp))
             .background(
                 color = Color(0xFF161F33),
-                shape = RoundedCornerShape(9999)
+                shape = RoundedCornerShape(9999.dp)
             )
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,

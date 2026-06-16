@@ -98,6 +98,7 @@
     <string name="book_detail_start_reading">Empezar a leer</string>
     <string name="book_detail_page_x_of_y">Página %1$d / %2$d</string>
     <string name="book_detail_page_x">Página %1$d</string>
+    <string name="book_detail_progress_percent">%1$d%% completado</string>
     <string name="book_detail_no_pages">-- / --</string>
     <string name="book_detail_rating_content_description">Calificar %1$d estrella(s)</string>
     <!-- Library / Bookshelf - New Pencil design -->

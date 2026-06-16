@@ -319,18 +319,18 @@ private fun MetadataGridCard(
 @Composable
 private fun getPagesDisplayText(book: Book): String {
     return if (book.format == "pdf" && book.totalPages != null) {
-        book.totalPages.toString()
-    } else if (book.format == "epub" && book.totalPages != null) {
-        // For EPUB, totalPages represents the number of reading order items
+        // PDF has real page count from the document
         book.totalPages.toString()
     } else {
+        // EPUB is reflowable — no concept of pages, show placeholder
         stringResource(R.string.book_detail_na)
     }
 }
 
 @Composable
 private fun getChaptersDisplayText(book: Book): String {
-    return if (book.totalPages != null) {
+    return if (book.totalPages != null && book.format == "epub") {
+        // For EPUB, totalPages = spine item count ≈ chapters
         book.totalPages.toString()
     } else {
         stringResource(R.string.book_detail_na)
@@ -456,6 +456,16 @@ private fun getPageDisplayText(
     progress: ReadingProgress?,
     book: Book
 ): String {
+    if (book.format == "epub") {
+        // EPUB is reflowable — show progress percentage instead of page numbers
+        val pct = progress?.percentage?.toInt()
+        return if (pct != null) {
+            stringResource(R.string.book_detail_progress_percent, pct)
+        } else {
+            stringResource(R.string.book_detail_no_pages)
+        }
+    }
+    // PDF: show page X of Y
     val page = progress?.currentPage
     val total = book.totalPages
     return when {

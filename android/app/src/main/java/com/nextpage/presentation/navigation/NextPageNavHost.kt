@@ -340,6 +340,14 @@ fun NextPageNavHost(
                             selectedBookFormat = format
                             navController.navigate("book_detail/$bookId")
                         },
+                        onContinueReading = { bookId, filePath, format ->
+                            selectedBookId = bookId
+                            selectedBookFilePath = filePath
+                            selectedBookFormat = format
+                            navController.navigate(NextPageDestination.Reader.route) {
+                                popUpTo(NextPageDestination.Reader.route) { inclusive = true }
+                            }
+                        },
                         onImportBook = {
                             importLauncher.launch(arrayOf("application/epub+zip", "application/pdf"))
                         }

@@ -50,6 +50,7 @@ fun HomeScreen(
     onNavigateToHighlights: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onBookSelected: (String, String, String) -> Unit,
+    onContinueReading: (String, String?, String) -> Unit,
     onImportBook: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -123,7 +124,8 @@ fun HomeScreen(
             item {
                 ContinueReadingSection(
                     currentBook = uiState.currentBook,
-                    onBookSelected = onBookSelected
+                    onBookSelected = onBookSelected,
+                    onContinueReading = onContinueReading
             )
             }
 
@@ -316,7 +318,8 @@ private fun StatCard(
 @Composable
 private fun ContinueReadingSection(
     currentBook: Book?,
-    onBookSelected: (String, String, String) -> Unit
+    onBookSelected: (String, String, String) -> Unit,
+    onContinueReading: (String, String?, String) -> Unit
 ) {
     Column {
         Text(
@@ -381,7 +384,7 @@ private fun ContinueReadingSection(
 
                         Button(
                             onClick = {
-                                onBookSelected(currentBook.id, currentBook.filePath, currentBook.format)
+                                onContinueReading(currentBook.id, currentBook.filePath, currentBook.format)
                             },
                             modifier = Modifier.height(36.dp),
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)

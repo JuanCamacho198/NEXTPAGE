@@ -227,12 +227,38 @@ fun ReaderScreen(
                 }
 
                 uiState.chapters.isNotEmpty() && uiState.readiumPublication != null -> {
-                    ReadiumReaderContent(
-                        publication = uiState.readiumPublication!!,
-                        navigatorConfig = buildNavigatorConfig(uiState.readerSettings),
-                        viewModel = viewModel,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        ReadiumReaderContent(
+                            publication = uiState.readiumPublication!!,
+                            navigatorConfig = buildNavigatorConfig(uiState.readerSettings),
+                            highlights = uiState.highlights,
+                            readerSettings = uiState.readerSettings,
+                            viewModel = viewModel,
+                            modifier = Modifier.fillMaxSize()
+                        )
+
+                        SelectionOverlay(
+                            showColorPicker = uiState.showColorPicker,
+                            showContextMenu = uiState.showContextMenu,
+                            selectionRect = uiState.selectionRect,
+                            selectedText = uiState.selectedText,
+                            highlights = uiState.highlights,
+                            onColorSelected = { color -> viewModel.onReadiumHighlightColorSelected(color) },
+                            onCopy = {
+                                viewModel.onCopySelectedText()
+                                uiState.selectedText?.let { text ->
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("highlight", text))
+                                }
+                            },
+                            onShowContextMenu = { viewModel.onShowContextMenu() },
+                            onDismissContextMenu = { viewModel.onDismissContextMenu() },
+                            onAddTag = {},
+                            onAddNote = {},
+                            onAddComment = {},
+                            onShare = {}
+                        )
+                    }
                 }
             }
         },

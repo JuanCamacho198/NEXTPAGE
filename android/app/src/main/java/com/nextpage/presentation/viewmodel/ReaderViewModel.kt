@@ -2,6 +2,7 @@ package com.nextpage.presentation.viewmodel
 
 import android.app.Application
 import android.graphics.Rect
+import android.graphics.RectF
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
@@ -106,6 +107,8 @@ data class ReaderUiState(
     // ── Readium (Phase 1+) ─────────────────────────────────────────
     val readiumPublication: Publication? = null,
     val readiumLocator: Locator? = null,
+    val readiumSelectionLocator: Locator? = null,
+    val readiumViewportHeight: Int = 0,
 
     // ── Debug ──────────────────────────────────────────────────────
     val debugForceMenu: Boolean = false,
@@ -139,6 +142,9 @@ class ReaderViewModel(
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
+
+    private val _navigateToLocator = MutableSharedFlow<Locator>()
+    val navigateToLocator: SharedFlow<Locator> = _navigateToLocator.asSharedFlow()
 
     private var observeProgressJob: Job? = null
     private var observeHighlightsJob: Job? = null
@@ -329,6 +335,14 @@ class ReaderViewModel(
             }
             updateProgressDisplay()
         }
+    }
+
+    /**
+     * Called by [ReadiumReaderContent] to report the viewport height so
+     * selection rects can be derived from [Locator.locations.progression].
+     */
+    fun onReadiumViewportChanged(height: Int) {
+        mutableUiState.update { it.copy(readiumViewportHeight = height) }
     }
 
     /**

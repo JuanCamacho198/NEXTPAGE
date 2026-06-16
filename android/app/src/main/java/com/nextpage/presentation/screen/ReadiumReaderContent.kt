@@ -10,20 +10,32 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.commit
+import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReaderSettings
+import com.nextpage.presentation.viewmodel.CfiMigrator
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+import org.readium.r2.navigator.DecorableNavigator
+import org.readium.r2.navigator.Decoration
+import org.readium.r2.navigator.SelectableNavigator
 import org.readium.r2.navigator.epub.EpubDefaults
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
+import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.preferences.FontFamily as ReadiumFontFamily
+import org.readium.r2.navigator.preferences.Theme as ReadiumTheme
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
+
+/** Group identifier for all highlight decorations. */
+private const val DECORATION_GROUP = "com.nextpage.highlights"
 
 /**
  * Readium-powered EPUB reader content.
@@ -32,14 +44,13 @@ import org.readium.r2.shared.publication.Publication
  * via [AndroidView].  Creates an [EpubNavigatorFactory] from the
  * [Publication] and uses its [EpubNavigatorFactory.createFragmentFactory]
  * to set up the fragment so it can render EPUB content natively.
- *
- * Phase 1 — basic rendering only.  Selection wiring and decoration API
- * for highlights will be added in later phases.
  */
 @Composable
 fun ReadiumReaderContent(
     publication: Publication,
     navigatorConfig: EpubNavigatorFactory.Configuration,
+    highlights: List<Highlight>,
+    readerSettings: ReaderSettings,
     viewModel: ReaderViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -55,18 +66,15 @@ fun ReadiumReaderContent(
     var navigatorFragment by remember { mutableStateOf<EpubNavigatorFragment?>(null) }
     var containerReady by remember { mutableStateOf(false) }
 
-    // Commit EpubNavigatorFragment once the FragmentContainerView is laid out
+    // ── Commit EpubNavigatorFragment ──────────────────────────────
     LaunchedEffect(containerReady) {
         if (!containerReady) return@LaunchedEffect
         val tag = "ReadiumNavigator"
         val existing = fragmentManager.findFragmentByTag(tag)
         if (existing == null) {
-            // Start at the first reading-order resource
             val initialLocator = publication.readingOrder.firstOrNull()?.let {
                 publication.locatorFromLink(it)
             }
-            // Set the FragmentFactory so EpubNavigatorFragment can be
-            // instantiated with the correct constructor parameters.
             val factory = navigatorFactory.createFragmentFactory(
                 initialLocator = initialLocator!!
             )
@@ -75,12 +83,11 @@ fun ReadiumReaderContent(
                 add(containerId, EpubNavigatorFragment::class.java, Bundle(), tag)
             }
         }
-        // Give the fragment time to initialise its navigator
         delay(200)
         navigatorFragment = fragmentManager.findFragmentByTag(tag) as? EpubNavigatorFragment
     }
 
-    // Wire the navigator's currentLocator flow → ViewModel
+    // ── currentLocator → ViewModel ────────────────────────────────
     LaunchedEffect(navigatorFragment) {
         val frag = navigatorFragment ?: return@LaunchedEffect
         try {
@@ -89,13 +96,74 @@ fun ReadiumReaderContent(
             locatorFlow.collect { locator ->
                 viewModel.onReadiumLocatorChanged(locator)
             }
-        } catch (_: Exception) {
-            // Navigator interfaces may not be ready yet — will retry on
-            // next recomposition when navigatorFragment is non-null
+        } catch (_: Exception) { }
+    }
+
+    // ── currentSelection (poll) → ViewModel ───────────────────────
+    // Readium 3.2.0: currentSelection() is a suspend function, not a Flow.
+    // We poll every 250ms and call the VM when selection state changes.
+    LaunchedEffect(navigatorFragment) {
+        val frag = navigatorFragment ?: return@LaunchedEffect
+        val selectable = frag as? SelectableNavigator ?: return@LaunchedEffect
+        while (true) {
+            delay(250)
+            try {
+                val sel = selectable.currentSelection()
+                if (sel != null) {
+                    val selRect = sel.rect ?: continue
+                    // Extract selected text via JS evaluation in the WebView
+                    val text = try {
+                        frag.evaluateJavascript(
+                            "(function(){var s=window.getSelection();return s?s.toString():'';})()"
+                        ) ?: ""
+                    } catch (_: Exception) { "" }
+                    viewModel.onReadiumSelection(
+                        locator = sel.locator,
+                        rect = selRect,
+                        text = text
+                    )
+                } else {
+                    viewModel.onSelectionCleared()
+                }
+            } catch (_: Exception) { }
         }
     }
 
-    // Clean up when this composable leaves composition
+    // ── Decoration sync (highlights → decorations) ────────────────
+    // Reapplies ALL decorations whenever the highlights list changes (HL-5).
+    LaunchedEffect(highlights, navigatorFragment) {
+        val frag = navigatorFragment ?: return@LaunchedEffect
+        val decorable = frag as? DecorableNavigator ?: return@LaunchedEffect
+        if (highlights.isEmpty()) {
+            decorable.applyDecorations(emptyList(), DECORATION_GROUP)
+            return@LaunchedEffect
+        }
+        val decorations = highlightsToDecorations(highlights)
+        decorable.applyDecorations(decorations, DECORATION_GROUP)
+    }
+
+    // ── Settings sync (readerSettings → EpubPreferences) ──────────
+    // Debounced 300ms to avoid rapid-setting flicker (D3).
+    LaunchedEffect(readerSettings) {
+        delay(300)
+        val frag = navigatorFragment ?: return@LaunchedEffect
+        try {
+            val prefs = readerSettings.toEpubPreferences()
+            frag.submitPreferences(prefs)
+        } catch (_: Exception) { }
+    }
+
+    // ── navigateToLocator event flow → navigator.go() (SEA-2) ────
+    LaunchedEffect(navigatorFragment) {
+        val frag = navigatorFragment ?: return@LaunchedEffect
+        viewModel.navigateToLocator.collect { locator ->
+            try {
+                frag.go(locator, animated = false)
+            } catch (_: Exception) { }
+        }
+    }
+
+    // ── Clean up ──────────────────────────────────────────────────
     DisposableEffect(Unit) {
         onDispose {
             val frag = navigatorFragment
@@ -109,16 +177,70 @@ fun ReadiumReaderContent(
         factory = { ctx ->
             FragmentContainerView(ctx).also { it.id = containerId; containerReady = true }
         },
-        modifier = modifier
+        modifier = modifier.onGloballyPositioned { coordinates ->
+            viewModel.onReadiumViewportChanged(coordinates.size.height)
+        }
+    )
+}
+
+// ── Utilities ──────────────────────────────────────────────────────
+
+/**
+ * Maps a [Highlight] list to a [Decoration] list for Readium's
+ * [DecorableNavigator.applyDecorations].
+ */
+private fun highlightsToDecorations(highlights: List<Highlight>): List<Decoration> {
+    return highlights.mapNotNull { h ->
+        val json = h.locatorJson ?: return@mapNotNull null
+        val locator = CfiMigrator.jsonToLocator(json) ?: return@mapNotNull null
+        val tint = try {
+            android.graphics.Color.parseColor(h.color)
+        } catch (_: Exception) {
+            android.graphics.Color.YELLOW
+        }
+        Decoration(
+            id = h.id,
+            locator = locator,
+            style = Decoration.Style.Highlight(tint = tint, isActive = true)
+        )
+    }
+}
+
+/**
+ * Maps [ReaderSettings] to Readium's [EpubPreferences] for
+ * [EpubNavigatorFragment.submitPreferences].
+ */
+private fun ReaderSettings.toEpubPreferences(): EpubPreferences {
+    return EpubPreferences(
+        fontSize = when (fontSize) {
+            com.nextpage.domain.model.FontSizePreset.XS -> 0.75
+            com.nextpage.domain.model.FontSizePreset.S -> 0.875
+            com.nextpage.domain.model.FontSizePreset.SM -> 1.0
+            com.nextpage.domain.model.FontSizePreset.M -> 1.125
+            com.nextpage.domain.model.FontSizePreset.ML -> 1.25
+            com.nextpage.domain.model.FontSizePreset.L -> 1.5
+            com.nextpage.domain.model.FontSizePreset.XL -> 1.75
+            com.nextpage.domain.model.FontSizePreset.XXL -> 2.0
+        },
+        fontFamily = when (fontName.lowercase()) {
+            "serif" -> ReadiumFontFamily.SERIF
+            "sans-serif", "arial" -> ReadiumFontFamily.SANS_SERIF
+            else -> ReadiumFontFamily.SERIF
+        },
+        theme = when (theme) {
+            com.nextpage.domain.model.ReaderTheme.DARK -> ReadiumTheme.DARK
+            com.nextpage.domain.model.ReaderTheme.SEPIA -> ReadiumTheme.SEPIA
+            com.nextpage.domain.model.ReaderTheme.LIGHT, com.nextpage.domain.model.ReaderTheme.OLED -> ReadiumTheme.LIGHT
+        },
+        lineHeight = lineHeight.value.toDouble(),
+        scroll = scrollMode == com.nextpage.domain.model.ScrollMode.VERTICAL || verticalScroll,
+        publisherStyles = true,
+        pageMargins = 1.4
     )
 }
 
 /**
  * Builds a [EpubNavigatorFactory.Configuration] from [ReaderSettings].
- *
- * Phase 1 — minimal mapping.  Only [pageMargins] is set via [EpubDefaults].
- * More properties (background, font-size, line-height, scroll mode) will
- * be mapped in later phases via UserProperties.
  */
 fun buildNavigatorConfig(settings: ReaderSettings): EpubNavigatorFactory.Configuration {
     return EpubNavigatorFactory.Configuration(

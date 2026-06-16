@@ -68,9 +68,9 @@ fun HighlightsSheet(
         color.name to when (color) {
             HighlightColor.YELLOW -> stringResource(R.string.highlight_filter_yellow)
             HighlightColor.GREEN -> stringResource(R.string.highlight_filter_green)
-            HighlightColor.PINK -> stringResource(R.string.highlight_filter_pink)
+            HighlightColor.ORANGE -> stringResource(R.string.highlight_filter_orange)
             HighlightColor.BLUE -> stringResource(R.string.highlight_filter_blue)
-            HighlightColor.PURPLE -> stringResource(R.string.highlight_filter_purple)
+            HighlightColor.RED -> stringResource(R.string.highlight_filter_red)
         }
     }
 
@@ -194,7 +194,7 @@ private fun HighlightCard(
     modifier: Modifier = Modifier
 ) {
     val colorHex = highlight.color.let { colorStr ->
-        HighlightColor.fromHex(colorStr)?.hex ?: "#FDE047"
+        HighlightColor.fromHex(colorStr)?.hex ?: HighlightColor.YELLOW.hex
     }
 
     Row(

@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
+import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.SearchResult
 import kotlinx.coroutines.delay
 
@@ -191,7 +192,13 @@ fun SearchBottomSheet(
                             .height(320.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        val colorMarkers = listOf("#FDE047", "#86EFAC", "#F9A8D4", "#93C5FD", "#D8B4FE")
+                        val colorMarkers = listOf(
+                            HighlightColor.YELLOW.hex,
+                            HighlightColor.GREEN.hex,
+                            HighlightColor.BLUE.hex,
+                            HighlightColor.ORANGE.hex,
+                            HighlightColor.RED.hex
+                        )
 
                         items(results, key = { "${it.chapterIndex}-${it.offset}" }) { result ->
                             val markerColor = colorMarkers[result.chapterIndex % colorMarkers.size]

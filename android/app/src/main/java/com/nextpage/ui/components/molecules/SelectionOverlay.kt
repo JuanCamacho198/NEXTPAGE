@@ -1,6 +1,9 @@
 package com.nextpage.ui.components.molecules
 
 import android.graphics.Rect
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -27,6 +30,9 @@ import com.nextpage.domain.model.HighlightColor
  * [FloatingContextMenu] (expanded context menu) anchored above the
  * [selectionRect].
  *
+ * A transparent tap-away overlay is rendered behind the menus when
+ * either menu is visible — tapping it calls [onDismissContextMenu].
+ *
  * Design matches Pencil Node IDs:
  * - `cnVL6` → [TextSelectionMenu] (5 color circles + Copy)
  * - `FaPN3` → [FloatingContextMenu] (horizontal pill: Color Picker | Copy
@@ -42,10 +48,12 @@ import com.nextpage.domain.model.HighlightColor
 fun SelectionOverlay(
     showColorPicker: Boolean,
     showContextMenu: Boolean,
+    showColorPickerPopover: Boolean = false,
     selectionRect: Rect?,
     selectedText: String?,
     highlights: List<Highlight>,
     activeHighlightColor: String?,
+    customHighlightColors: List<String>? = null,
     onColorSelected: (String) -> Unit,
     onCopy: () -> Unit,
     onShowContextMenu: () -> Unit,
@@ -55,6 +63,8 @@ fun SelectionOverlay(
     onAddNote: () -> Unit,
     onAddComment: () -> Unit,
     onShare: () -> Unit,
+    onShowColorPickerPopover: () -> Unit = {},
+    onDismissColorPickerPopover: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (selectionRect == null) return
@@ -66,6 +76,22 @@ fun SelectionOverlay(
     // ── Viewport (for clamping + flip-above/below) ────────────────
     val viewportWidth = LocalView.current.width
     val viewportHeight = LocalView.current.height
+
+    val anyMenuVisible = showColorPicker || showContextMenu
+
+    // ── Tap-away dismiss overlay (behind menus) ──────────────────
+    if (anyMenuVisible) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) {
+                    onDismissContextMenu()
+                }
+        )
+    }
 
     // ── Color Picker (cnVL6) ──────────────────────────────────────
     if (showColorPicker) {
@@ -140,9 +166,33 @@ fun SelectionOverlay(
                 onAddComment = onAddComment,
                 onShare = onShare,
                 onDelete = onDelete,
-                onDismiss = onDismissContextMenu
+                onDismiss = onDismissContextMenu,
+                onShowColorPicker = onShowColorPickerPopover,
+                hasActiveHighlight = activeHighlightColor != null
             )
         }
+    }
+
+    // ── kixeV Colour Picker Popover ───────────────────────────────
+    if (showColorPickerPopover) {
+        val anchorCenterX = selectionRectPx.left + selectionRectPx.width() / 2
+        val anchorBelowY = selectionRectPx.bottom + with(density) { 12.dp.toPx() }.toInt()
+
+        HighlightColorPickerPopover(
+            customColors = customHighlightColors,
+            onColorSelected = { color ->
+                onColorSelected(color)
+                onDismissColorPickerPopover()
+            },
+            onDismiss = onDismissColorPickerPopover,
+            anchorX = anchorCenterX,
+            anchorY = anchorBelowY,
+            modifier = Modifier.offset {
+                // Centre horizontally, position below selection rect
+                val x = (anchorCenterX - 110.dp.toPx().toInt()).coerceAtLeast(0)
+                IntOffset(x, anchorBelowY)
+            }
+        )
     }
 }
 

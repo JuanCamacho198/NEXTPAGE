@@ -47,11 +47,14 @@ import com.nextpage.domain.model.HighlightColor
  *
  * @param selectedColor currently active highlight color (drives the
  *  ring on the Palette icon)
- * @param onColorSelected invoked with the chosen [HighlightColor.hex]
+ * @param onColorSelected invoked with the chosen [HighlightColor.hex] (legacy;
+ *  currently only used by the colour picker bar [cnVL6]).
  * @param onCopy copy to clipboard
  * @param onAddTag / onAddNote / onAddComment / onShare annotation actions
  * @param onDelete delete the selected highlight
  * @param onDismiss dismiss the menu
+ * @param onShowColorPicker opens the kixeV colour picker popover from the
+ *  Palette button (replaces the old behaviour of re-applying the current colour).
  */
 @Suppress("UNUSED_PARAMETER")
 @Composable
@@ -66,6 +69,8 @@ fun FloatingContextMenu(
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
     onShowColorRow: () -> Unit = {},
+    onShowColorPicker: () -> Unit = {},
+    hasActiveHighlight: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -84,7 +89,7 @@ fun FloatingContextMenu(
             icon = Icons.Default.Palette,
             contentDescription = stringResource(R.string.context_menu_color),
             tint = parseColorHex(selectedColor),
-            onClick = { onColorSelected(selectedColor) }
+            onClick = onShowColorPicker
         )
         MenuDivider()
 
@@ -99,6 +104,8 @@ fun FloatingContextMenu(
         ContextIconAction(
             icon = Icons.AutoMirrored.Filled.Label,
             contentDescription = stringResource(R.string.context_menu_tag),
+            tint = if (hasActiveHighlight) Color(0xFFDDE2F8) else Color(0xFF4A5568),
+            enabled = hasActiveHighlight,
             onClick = onAddTag
         )
 
@@ -106,6 +113,8 @@ fun FloatingContextMenu(
         ContextIconAction(
             icon = Icons.Default.NoteAlt,
             contentDescription = stringResource(R.string.context_menu_note),
+            tint = if (hasActiveHighlight) Color(0xFFDDE2F8) else Color(0xFF4A5568),
+            enabled = hasActiveHighlight,
             onClick = onAddNote
         )
 
@@ -113,6 +122,8 @@ fun FloatingContextMenu(
         ContextIconAction(
             icon = Icons.AutoMirrored.Filled.Comment,
             contentDescription = stringResource(R.string.context_menu_comment),
+            tint = if (hasActiveHighlight) Color(0xFFDDE2F8) else Color(0xFF4A5568),
+            enabled = hasActiveHighlight,
             onClick = onAddComment
         )
         MenuDivider()
@@ -121,6 +132,8 @@ fun FloatingContextMenu(
         ContextIconAction(
             icon = Icons.Default.Share,
             contentDescription = stringResource(R.string.context_menu_share),
+            tint = if (hasActiveHighlight) Color(0xFFDDE2F8) else Color(0xFF4A5568),
+            enabled = hasActiveHighlight,
             onClick = onShare
         )
 
@@ -128,7 +141,8 @@ fun FloatingContextMenu(
         ContextIconAction(
             icon = Icons.Default.Delete,
             contentDescription = stringResource(R.string.context_menu_delete),
-            tint = Color(0xFFEF4444),
+            tint = if (hasActiveHighlight) Color(0xFFEF4444) else Color(0xFF4A5568),
+            enabled = hasActiveHighlight,
             onClick = onDelete
         )
     }
@@ -141,13 +155,14 @@ private fun ContextIconAction(
     contentDescription: String,
     onClick: () -> Unit,
     tint: Color = Color(0xFFDDE2F8),
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .size(40.dp)
             .clip(CircleShape)
-            .clickable(onClick = onClick),
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(

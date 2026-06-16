@@ -163,7 +163,7 @@ private fun BookDetailContent(
         )
 
         // Section 3: Synopsis
-        SynopsisSection()
+        SynopsisSection(synopsis = book.description)
 
         // Section 4: Reading Progress
         ReadingProgressSection(
@@ -288,17 +288,16 @@ private fun MetadataGridCard(
         ) {
             MetadataCell(
                 label = stringResource(R.string.book_detail_pages_label),
-                value = book.totalPages?.toString()
-                    ?: stringResource(R.string.book_detail_na)
+                value = getPagesDisplayText(book)
             )
             MetadataCell(
                 label = stringResource(R.string.book_detail_chapters_label),
-                value = stringResource(R.string.book_detail_na)
+                value = getChaptersDisplayText(book)
             )
             MetadataCell(
                 label = stringResource(R.string.book_detail_progress_label),
                 value = if (progress != null) {
-                    "${(progress.percentage * 100).toInt()}%"
+                    "${progress.percentage.toInt()}%"
                 } else {
                     "0%"
                 }
@@ -314,6 +313,27 @@ private fun MetadataGridCard(
                 }
             )
         }
+    }
+}
+
+@Composable
+private fun getPagesDisplayText(book: Book): String {
+    return if (book.format == "pdf" && book.totalPages != null) {
+        book.totalPages.toString()
+    } else if (book.format == "epub" && book.totalPages != null) {
+        // For EPUB, totalPages represents the number of reading order items
+        book.totalPages.toString()
+    } else {
+        stringResource(R.string.book_detail_na)
+    }
+}
+
+@Composable
+private fun getChaptersDisplayText(book: Book): String {
+    return if (book.totalPages != null) {
+        book.totalPages.toString()
+    } else {
+        stringResource(R.string.book_detail_na)
     }
 }
 
@@ -341,7 +361,7 @@ private fun MetadataCell(
 // ─── Section 3: Synopsis ───────────────────────────────────────────────
 
 @Composable
-private fun SynopsisSection() {
+private fun SynopsisSection(synopsis: String?) {
     var expanded by remember { mutableStateOf(false) }
 
     Column {
@@ -353,20 +373,22 @@ private fun SynopsisSection() {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = stringResource(R.string.book_detail_no_synopsis),
+            text = synopsis ?: stringResource(R.string.book_detail_no_synopsis),
             style = MaterialTheme.typography.bodyMedium,
             color = TextSecondary,
             maxLines = if (expanded) Int.MAX_VALUE else 4,
             overflow = TextOverflow.Ellipsis
         )
-        TextButton(onClick = { expanded = !expanded }) {
-            Text(
-                text = if (expanded) {
-                    stringResource(R.string.book_detail_show_less)
-                } else {
-                    stringResource(R.string.book_detail_show_more)
-                }
-            )
+        if (synopsis != null && synopsis.length > 200) {
+            TextButton(onClick = { expanded = !expanded }) {
+                Text(
+                    text = if (expanded) {
+                        stringResource(R.string.book_detail_show_less)
+                    } else {
+                        stringResource(R.string.book_detail_show_more)
+                    }
+                )
+            }
         }
     }
 }
@@ -396,9 +418,9 @@ private fun ReadingProgressSection(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Progress bar
+        // Progress bar (percentage is stored as 0-100, convert to 0-1 for Compose)
         LinearProgressIndicator(
-            progress = { progress?.percentage ?: 0f },
+            progress = { (progress?.percentage ?: 0f) / 100f },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(NextPageDimens.progressBarHeight)

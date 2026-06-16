@@ -32,6 +32,8 @@ class ZipEpubParserService : EpubParserService {
         EpubMetadata(
             title = title,
             author = parsed.author?.takeIf { it.isNotBlank() },
+            description = parsed.description?.takeIf { it.isNotBlank() },
+            chapterCount = parsed.spineItemCount,
             coverImageBytes = coverBytes
         )
     }
@@ -53,9 +55,11 @@ class ZipEpubParserService : EpubParserService {
         val document = parseXml(opfBytes)
         val title = firstElementTextByLocalName(document, "title")
         val author = firstElementTextByLocalName(document, "creator")
+        val description = firstElementTextByLocalName(document, "description")
         val manifestById = mutableMapOf<String, String>()
         val allElements = document.getElementsByTagName("*")
         var coverItemId: String? = null
+        var spineItemCount = 0
 
         for (index in 0 until allElements.length) {
             val node = allElements.item(index)
@@ -74,13 +78,18 @@ class ZipEpubParserService : EpubParserService {
                         manifestById[id] = href
                     }
                 }
+                "itemref" -> {
+                    spineItemCount++
+                }
             }
         }
 
         return ParsedPackageDocument(
             title = title,
             author = author,
-            coverHref = coverItemId?.let(manifestById::get)
+            description = description,
+            coverHref = coverItemId?.let(manifestById::get),
+            spineItemCount = spineItemCount
         )
     }
 
@@ -151,7 +160,9 @@ class ZipEpubParserService : EpubParserService {
     private data class ParsedPackageDocument(
         val title: String?,
         val author: String?,
-        val coverHref: String?
+        val description: String? = null,
+        val coverHref: String?,
+        val spineItemCount: Int = 0
     )
 
     private companion object {

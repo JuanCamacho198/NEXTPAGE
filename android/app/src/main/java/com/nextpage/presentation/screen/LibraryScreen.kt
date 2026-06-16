@@ -29,11 +29,13 @@ import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -54,10 +56,12 @@ import coil.compose.AsyncImagePainter
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.nextpage.R
+import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.util.getContentDisplayName
 import com.nextpage.presentation.viewmodel.LibraryViewModel
+import com.nextpage.ui.components.atoms.SyncStatusIndicator
 import com.nextpage.ui.components.molecules.FilterBottomSheet
 import com.nextpage.ui.components.molecules.LibraryHeader
 import com.nextpage.ui.components.molecules.StatusChipRow
@@ -140,25 +144,31 @@ fun LibraryScreen(
                 onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }
             )
         } else {
-            LibraryBookshelfContent(
-                contentPadding = contentPadding,
-                books = searchedBooks,
-                readingMinutesByBook = uiState.readingMinutesByBook,
-                statusFilter = uiState.statusFilter,
-                onStatusFilterChanged = { viewModel.onStatusFilterChanged(it) },
-                sortBy = uiState.sortBy,
-                onSortByChanged = { viewModel.onSortByChanged(it) },
-                isGridView = uiState.isGridView,
-                onViewToggle = { viewModel.onToggleView() },
-                showSearch = uiState.showSearch,
-                onSearchToggle = { viewModel.onToggleSearch() },
-                searchQuery = uiState.searchQuery,
-                onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
-                onFilterToggle = { viewModel.onToggleFilterSheet() },
-                onBookSelected = onBookSelected,
-                onBookLongPress = { book -> viewModel.requestDeleteBook(book) },
-                onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }
-            )
+            PullToRefreshBox(
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = { viewModel.onPullToRefresh() },
+                modifier = Modifier.fillMaxSize()
+            ) {
+                LibraryBookshelfContent(
+                    contentPadding = contentPadding,
+                    books = searchedBooks,
+                    readingMinutesByBook = uiState.readingMinutesByBook,
+                    statusFilter = uiState.statusFilter,
+                    onStatusFilterChanged = { viewModel.onStatusFilterChanged(it) },
+                    sortBy = uiState.sortBy,
+                    onSortByChanged = { viewModel.onSortByChanged(it) },
+                    isGridView = uiState.isGridView,
+                    onViewToggle = { viewModel.onToggleView() },
+                    showSearch = uiState.showSearch,
+                    onSearchToggle = { viewModel.onToggleSearch() },
+                    searchQuery = uiState.searchQuery,
+                    onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
+                    onFilterToggle = { viewModel.onToggleFilterSheet() },
+                    onBookSelected = onBookSelected,
+                    onBookLongPress = { book -> viewModel.requestDeleteBook(book) },
+                    onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }
+                )
+            }
         }
 
         uiState.bookToDelete?.let { selectedBook ->
@@ -182,6 +192,20 @@ fun LibraryScreen(
                 }
             )
         }
+
+        // ── Sync status indicator (top-right) ────────────────
+        val syncState = when {
+            uiState.syncError != null -> SyncState.Error(uiState.syncError!!)
+            uiState.isSyncing -> SyncState.Running
+            else -> SyncState.Idle
+        }
+        SyncStatusIndicator(
+            syncState = syncState,
+            pendingCount = uiState.pendingCount,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 8.dp, end = 16.dp)
+        )
 
         if (uiState.isImporting) {
             CircularProgressIndicator(

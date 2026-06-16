@@ -6,7 +6,6 @@ import androidx.room.Room
 import com.nextpage.BuildConfig
 import com.nextpage.data.epub.ZipEpubParserService
 import com.nextpage.data.pdf.DefaultPdfParserService
-import com.nextpage.data.pdf.PdfContentLoader
 import com.nextpage.data.local.AppDatabase
 import com.nextpage.data.local.AppDatabaseMigrations
 import com.nextpage.data.local.dao.BookDao
@@ -102,7 +101,6 @@ class AppContainer(context: Context) {
         readingSessionDao = appDatabase.readingSessionDao()
     )
 
-    val pdfContentLoader: PdfContentLoader = PdfContentLoader(context.applicationContext)
     val readerPreferences: ReaderPreferences = ReaderPreferences(context.applicationContext)
 
     private val supabaseConfigProvider = SupabaseConfigProvider()

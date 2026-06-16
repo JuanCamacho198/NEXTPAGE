@@ -94,7 +94,6 @@ fun NextPageNavHost(
             readerRepository = appContainer.readerRepository,
             readingStatsRepository = appContainer.readingStatsRepository,
             readerPreferences = appContainer.readerPreferences,
-            pdfContentLoader = appContainer.pdfContentLoader,
             defaultBookId = selectedBookId
         )
     )

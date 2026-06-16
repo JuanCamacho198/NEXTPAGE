@@ -8,7 +8,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.nextpage.data.pdf.PdfContentLoader
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
@@ -46,6 +45,7 @@ import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.http.DefaultHttpClient
 import org.readium.r2.streamer.PublicationOpener
 import org.readium.r2.streamer.parser.DefaultPublicationParser
+import org.readium.adapter.pdfium.document.PdfiumDocumentFactory
 import java.io.File
 import java.util.UUID
 
@@ -125,7 +125,6 @@ class ReaderViewModel(
     private val readingStatsRepository: ReadingStatsRepository,
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
     private val readerPreferences: ReaderPreferences? = null,
-    private val pdfContentLoader: PdfContentLoader? = null,
     defaultBookId: String?,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) : AndroidViewModel(application) {
@@ -412,71 +411,85 @@ class ReaderViewModel(
 
 
 
+    /**
+     * Opens a PDF via Readium's [PublicationOpener] with [PdfiumDocumentFactory].
+     *
+     * Follows the same Readium open pattern as [loadEpubBook], using a PDF-specific
+     * parser factory so the [Publication] is available for the composable layer
+     * ([ReadiumPdfReaderContent]).
+     */
     private fun loadPdfBook(bookId: String, filePath: String, startTime: Long) {
         viewModelScope.launch(mainDispatcher) {
-            val loader = pdfContentLoader
-            if (loader == null) {
-                val message = "PDF content loader is unavailable"
-                mutableUiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = message
-                    )
-                }
-                _uiEvent.emit(UiEvent.ShowSnackbar(message))
-                return@launch
-            }
-
             try {
-                val file = java.io.File(filePath)
+                val app = getApplication<Application>()
+                val file = File(filePath)
                 if (!file.exists()) {
                     val message = "File not found. Try importing the book again."
-                    mutableUiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = message
-                        )
-                    }
+                    mutableUiState.update { it.copy(isLoading = false, error = message) }
                     _uiEvent.emit(UiEvent.ShowSnackbar(message))
                     return@launch
                 }
 
-                loader.load(file)
-                val pageCount = loader.getPageCount()
-                val loadTime = System.currentTimeMillis() - startTime
-                Log.d(TAG, "PDF loaded in ${loadTime}ms, $pageCount pages")
+                val fileUri = android.net.Uri.fromFile(file).toString()
+                val httpClient = DefaultHttpClient()
+                val assetRetriever = AssetRetriever(app.contentResolver, httpClient)
+                val url = AbsoluteUrl(fileUri)
+                    ?: throw Exception("Invalid file URI: $fileUri")
+                val retrieveResult = withContext(Dispatchers.IO) {
+                    assetRetriever.retrieve(url)
+                }
+                val asset = retrieveResult.getOrNull()
+                    ?: throw Exception("Failed to retrieve PDF asset")
 
-                mutableUiState.update { state ->
-                    state.copy(
-                        currentPdfPage = 0,
-                        totalPdfPages = pageCount,
+                val parser = DefaultPublicationParser(
+                    context = app,
+                    httpClient = httpClient,
+                    assetRetriever = assetRetriever,
+                    pdfFactory = PdfiumDocumentFactory(app)
+                )
+                val opener = PublicationOpener(parser)
+                val openResult = withContext(Dispatchers.IO) {
+                    opener.open(asset, allowUserInteraction = false)
+                }
+                val publication: Publication = openResult.fold(
+                    onSuccess = { it },
+                    onFailure = { error ->
+                        throw Exception("Readium PDF open failed: ${error.message}")
+                    }
+                )
+
+                val loadTime = System.currentTimeMillis() - startTime
+                Log.d(TAG, "Readium loaded PDF in ${loadTime}ms")
+
+                val chapters = publication.readingOrder.mapIndexed { index, link ->
+                    BookChapter(
+                        index = index,
+                        id = link.href.toString(),
+                        title = link.title ?: "Page ${index + 1}",
+                        href = link.href.toString()
+                    )
+                }
+
+                mutableUiState.update {
+                    it.copy(
+                        readiumPublication = publication,
+                        chapters = chapters,
+                        currentChapterIndex = 0,
                         isLoading = false,
                         loadTimeMs = loadTime
                     )
                 }
                 updateProgressDisplay()
-                updatePdfProgress(0, pageCount)
                 startObservingHighlights(bookId)
                 startObservingBookmarks(bookId)
-            } catch (e: Throwable) {
-                Log.e(
-                    TAG,
-                    "Failed to load PDF for bookId=$bookId, filePath=$filePath: ${e.message}",
-                    e
-                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Readium failed to open PDF", e)
                 val userMessage = when (e) {
                     is OutOfMemoryError -> "The PDF is too large to display on this device."
-                    is java.io.FileNotFoundException -> "PDF file not found. Try importing the book again."
-                    is java.lang.SecurityException -> "Cannot access the PDF file."
-                    else -> e.message ?: "Failed to load PDF"
+                    else -> e.message ?: "Failed to open PDF with Readium"
                 }
-                mutableUiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = userMessage
-                    )
-                }
-                _uiEvent.emit(UiEvent.ShowSnackbar(userMessage))
+                mutableUiState.update { it.copy(isLoading = false, error = userMessage) }
+                _uiEvent.tryEmit(UiEvent.ShowSnackbar(userMessage))
             }
         }
     }
@@ -519,7 +532,7 @@ class ReaderViewModel(
 
             val state = mutableUiState.value
             if (state.bookFormat == "pdf") {
-                // PDF search is handled by PdfWebView via JS bridge.
+                // PDF search is not supported via Readium's API yet.
                 // Results arrive via onSearchResults callback → onPdfSearchResults()
                 mutableUiState.update { it.copy(isSearching = false) }
                 return@launch
@@ -656,7 +669,7 @@ class ReaderViewModel(
     }
 
     /**
-     * Called from [PdfWebView] JS bridge with raw selection coordinates.
+     * Called from the reader content composable with raw selection coordinates.
      * Delegates to [onTextSelection] for state update.
      */
     fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) {
@@ -1307,7 +1320,6 @@ class ReaderViewModelFactory(
     private val readerRepository: ReaderRepository,
     private val readingStatsRepository: ReadingStatsRepository,
     private val readerPreferences: ReaderPreferences,
-    private val pdfContentLoader: PdfContentLoader,
     private val defaultBookId: String?
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
@@ -1319,7 +1331,6 @@ class ReaderViewModelFactory(
                 readingStatsRepository = readingStatsRepository,
                 updateReadingProgressUseCase = UpdateReadingProgressUseCase(readerRepository),
                 readerPreferences = readerPreferences,
-                pdfContentLoader = pdfContentLoader,
                 defaultBookId = defaultBookId
             ) as T
         }

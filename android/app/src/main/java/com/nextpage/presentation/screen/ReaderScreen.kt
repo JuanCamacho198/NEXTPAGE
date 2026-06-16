@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.ui.components.molecules.HighlightsSheet
-import com.nextpage.ui.components.molecules.PdfWebView
 import com.nextpage.ui.components.molecules.ReadingProgressBar
 import com.nextpage.ui.components.molecules.SearchBottomSheet
 import com.nextpage.ui.components.molecules.SelectionOverlay
@@ -54,7 +53,7 @@ import com.nextpage.ui.components.molecules.SplitSettingsSheet
  *
  * Orchestrates the reader UI by wiring the [ReaderViewModel] state and
  * events into the structural [ReaderChrome] layout and format-specific
- * content composables ([ReadiumReaderContent], [PdfWebView]).
+ * content composables ([ReadiumReaderContent], [ReadiumPdfReaderContent]).
  *
  * Responsibilities:
  * - Effects: fullscreen insets, reader lifecycle, book loading
@@ -115,17 +114,9 @@ fun ReaderScreen(
         }
     }
 
-    // ── Footer navigation state ─────────────────────────────────────
-    val canGoPrev = if (uiState.totalPdfPages > 0) {
-        uiState.currentPdfPage > 0
-    } else {
-        uiState.currentChapterIndex > 0
-    }
-    val canGoNext = if (uiState.totalPdfPages > 0) {
-        uiState.currentPdfPage < uiState.totalPdfPages - 1
-    } else {
-        uiState.currentChapterIndex < uiState.chapters.size - 1
-    }
+    // ── Footer navigation state (uses chapters for EPUB and PDF) ────
+    val canGoPrev = uiState.currentChapterIndex > 0
+    val canGoNext = uiState.currentChapterIndex < uiState.chapters.size - 1
 
     // ── Render via ReaderChrome ─────────────────────────────────────
     ReaderChrome(
@@ -155,14 +146,8 @@ fun ReaderScreen(
                     else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                 },
                 onProgressChange = { viewModel.onProgressChange(it) },
-                onPreviousChapter = {
-                    if (uiState.totalPdfPages > 0) viewModel.goToPreviousPdfPage()
-                    else viewModel.goToPreviousChapter()
-                },
-                onNextChapter = {
-                    if (uiState.totalPdfPages > 0) viewModel.goToNextPdfPage()
-                    else viewModel.goToNextChapter()
-                },
+                onPreviousChapter = { viewModel.goToPreviousChapter() },
+                onNextChapter = { viewModel.goToNextChapter() },
                 canGoPrevious = canGoPrev,
                 canGoNext = canGoNext
             )
@@ -184,21 +169,13 @@ fun ReaderScreen(
                     )
                 }
 
-                uiState.totalPdfPages > 0 -> {
+                uiState.bookFormat == "pdf" && uiState.readiumPublication != null -> {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        PdfWebView(
-                            filePath = bookFilePath ?: "",
-                            currentPage = uiState.currentPdfPage,
-                            searchQuery = uiState.searchQuery,
+                        ReadiumPdfReaderContent(
+                            publication = uiState.readiumPublication!!,
                             highlights = uiState.highlights,
-                            onPageChanged = { page -> viewModel.goToPdfPage(page - 1) },
-                            onDocumentLoaded = { pages -> viewModel.onPdfDocumentLoaded(pages) },
-                            onTextSelectionEvent = { text, left, top, right, bottom ->
-                                viewModel.onTextSelectionEvent(text, left, top, right, bottom)
-                            },
-                            onSearchResults = { json -> viewModel.onPdfSearchResults(json) },
-                        onHighlightTapped = viewModel::onHighlightTapped,
-                        onSelectionCleared = { viewModel.onSelectionCleared() },
+                            readerSettings = uiState.readerSettings,
+                            viewModel = viewModel,
                             modifier = Modifier.fillMaxSize()
                         )
 
@@ -208,7 +185,7 @@ fun ReaderScreen(
                             selectionRect = uiState.selectionRect,
                             selectedText = uiState.selectedText,
                             highlights = uiState.highlights,
-                            onColorSelected = { color -> viewModel.onSelectHighlightColor(color) },
+                            onColorSelected = { color -> viewModel.onReadiumHighlightColorSelected(color) },
                             onCopy = {
                                 viewModel.onCopySelectedText()
                                 uiState.selectedText?.let { text ->

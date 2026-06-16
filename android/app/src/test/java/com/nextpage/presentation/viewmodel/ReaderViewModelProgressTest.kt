@@ -153,8 +153,8 @@ class ReaderViewModelProgressTest {
 
     @Test
     fun goToPdfPage_updatesPageWithoutRenderer() = runTest(StandardTestDispatcher()) {
-        // With the PDF.js-based architecture, goToPdfPage only manages state.
-        // Rendering is handled by PdfWebView, not the ViewModel.
+        // With the Readium-based PDF architecture, goToPdfPage only manages state.
+        // Rendering is handled by the reader content composable, not the ViewModel.
         val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = FakeReaderRepository()
         val viewModel = ReaderViewModel(

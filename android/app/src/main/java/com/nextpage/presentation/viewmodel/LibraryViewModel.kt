@@ -36,6 +36,7 @@ data class LibraryUiState(
     val readingMinutesByBook: Map<String, Long> = emptyMap(),
     // ── Sync state ──
     val isSyncing: Boolean = false,
+    val isRefreshing: Boolean = false,
     val pendingCount: Int = 0,
     val syncError: String? = null,
     // ── UI State (filters, sort, search) ──
@@ -153,7 +154,8 @@ class LibraryViewModel(
                 mutableUiState.update {
                     it.copy(
                         isSyncing = state is SyncState.Running,
-                        syncError = (state as? SyncState.Error)?.message
+                        syncError = (state as? SyncState.Error)?.message,
+                        isRefreshing = if (state !is SyncState.Running) false else it.isRefreshing
                     )
                 }
             }
@@ -316,6 +318,7 @@ class LibraryViewModel(
     // ── Sync ────────────────────────────────────────────────────────
 
     fun onPullToRefresh() {
+        mutableUiState.update { it.copy(isRefreshing = true) }
         viewModelScope.launch(mainDispatcher) {
             syncService.schedulePull()
         }

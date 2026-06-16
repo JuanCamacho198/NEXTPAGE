@@ -757,20 +757,53 @@ class ReaderViewModel(
      * viewport-space [RectF].
      */
     fun onReadiumSelection(locator: Locator, rect: RectF, text: String) {
-        val selectionRect = Rect(
-            rect.left.toInt(),
-            rect.top.toInt(),
-            rect.right.toInt(),
-            rect.bottom.toInt()
-        )
-        mutableUiState.update {
-            it.copy(
-                readiumSelectionLocator = locator,
-                selectedText = text,
-                selectionRect = selectionRect,
-                showColorPicker = true,
-                showContextMenu = false
+        Log.d("SelectionDebug", "VM.onReadiumSelection: text='${text.take(50)}', " +
+            "rect=[${rect.left},${rect.top},${rect.right},${rect.bottom}], " +
+            "locator.href=${locator.href}")
+        val selectionRect = try {
+            Rect(
+                rect.left.toInt(),
+                rect.top.toInt(),
+                rect.right.toInt(),
+                rect.bottom.toInt()
             )
+        } catch (e: Throwable) {
+            Log.e("SelectionDebug", "Rect creation THREW: ${e::class.simpleName}: ${e.message}", e)
+            Rect(0, 0, 100, 50) // Safe fallback rect
+        }
+        try {
+            mutableUiState.update {
+                it.copy(
+                    readiumSelectionLocator = locator,
+                    selectedText = text,
+                    selectionRect = selectionRect,
+                    showColorPicker = true,
+                    showContextMenu = false
+                )
+            }
+            Log.d("SelectionDebug", "VM.onReadiumSelection state update OK")
+        } catch (e: Throwable) {
+            Log.e("SelectionDebug", "VM.onReadiumSelection state update THREW: ${e::class.simpleName}: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Called by [ReadiumReaderContent] when selection is cleared.
+     */
+    fun onSelectionCleared() {
+        Log.d("SelectionDebug", "VM.onSelectionCleared — resetting selection state")
+        try {
+            mutableUiState.update {
+                it.copy(
+                    showColorPicker = false,
+                    showContextMenu = false,
+                    selectedText = null,
+                    selectionRect = null,
+                    debugForceMenu = false
+                )
+            }
+        } catch (e: Throwable) {
+            Log.e("SelectionDebug", "VM.onSelectionCleared THREW: ${e::class.simpleName}: ${e.message}", e)
         }
     }
 
@@ -833,19 +866,6 @@ class ReaderViewModel(
         )
         viewModelScope.launch(mainDispatcher) {
             readerRepository.upsertHighlight(updated)
-        }
-    }
-
-    fun onSelectionCleared() {
-        Log.d(TAG, "onSelectionCleared — dismissing selection overlay")
-        mutableUiState.update {
-            it.copy(
-                showColorPicker = false,
-                showContextMenu = false,
-                selectedText = null,
-                selectionRect = null,
-                debugForceMenu = false
-            )
         }
     }
 

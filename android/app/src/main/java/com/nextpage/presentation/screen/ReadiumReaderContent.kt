@@ -1,6 +1,7 @@
 package com.nextpage.presentation.screen
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -100,41 +101,77 @@ fun ReadiumReaderContent(
         } catch (_: Exception) { }
     }
 
-    // ── currentSelection (poll + diff) → ViewModel ───────────────
-    // Readium 3.2.0: currentSelection() is a suspend function, not a Flow.
-    // We poll every 300ms and only call the VM when selection state actually
-    // changes (avoiding rapid state cycles that could crash composition).
+    // ── currentSelection (poll + diff + debug) → ViewModel ──────
+    // DEBUG: run `adb logcat -s SelectionDebug` to trace the pipeline
     LaunchedEffect(navigatorFragment) {
         val frag = navigatorFragment ?: return@LaunchedEffect
-        val selectable = frag as? SelectableNavigator ?: return@LaunchedEffect
+        Log.d("SelectionDebug", "navigatorFragment acquired, casting to SelectableNavigator...")
+        val selectable = frag as? SelectableNavigator
+        if (selectable == null) {
+            Log.e("SelectionDebug", "CAST FAILED: EpubNavigatorFragment is NOT a SelectableNavigator")
+            return@LaunchedEffect
+        }
+        Log.d("SelectionDebug", "CAST OK: SelectableNavigator=${selectable.hashCode()}")
         var lastSelection: Boolean = false
+        var pollCount = 0
         while (isActive) {
             delay(300)
-            val sel = runCatching { selectable.currentSelection() }.getOrNull()
+            pollCount++
+            Log.d("SelectionDebug", "Poll #$pollCount — calling currentSelection()...")
+            val sel: org.readium.r2.navigator.Selection? = try {
+                selectable.currentSelection()
+            } catch (e: Throwable) {
+                Log.e("SelectionDebug", "currentSelection() THREW: ${e::class.simpleName}: ${e.message}", e)
+                null
+            }
+            Log.d("SelectionDebug", "Poll #$pollCount — currentSelection() returned: ${if (sel != null) "non-null (locator=${sel.locator.href})" else "null"}")
             if (sel != null) {
-                val selRect = sel.rect ?: run {
-                    if (lastSelection) viewModel.onSelectionCleared()
+                Log.d("SelectionDebug", "sel.rect=${sel.rect}, sel.locator.locations.totalProgression=${sel.locator.locations.totalProgression}")
+                val selRect = sel.rect
+                if (selRect == null) {
+                    Log.w("SelectionDebug", "sel.rect is null — skipping")
+                    if (lastSelection) {
+                        Log.d("SelectionDebug", "Clearing previous selection (rect was null)")
+                        viewModel.onSelectionCleared()
+                    }
                     lastSelection = false
                     continue
                 }
-                // Extract selected text — avoids evaluateJavascript which can
-                // crash on some Readium 3.2.0 builds. Fallback: derive text
-                // from the locator's text context.
-                val text = runCatching {
-                    frag.evaluateJavascript(
+                // Extract selected text
+                Log.d("SelectionDebug", "Attempting evaluateJavascript...")
+                val text: String = try {
+                    val jsResult = frag.evaluateJavascript(
                         "(function(){var s=window.getSelection();return s?s.toString():'';})()"
-                    ) ?: sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
-                }.getOrElse {
-                    sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
+                    )
+                    Log.d("SelectionDebug", "evaluateJavascript result: '$jsResult'")
+                    if (jsResult.isNullOrBlank()) {
+                        val fallback = sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
+                        Log.d("SelectionDebug", "JS result empty, using locator.text fallback: '$fallback'")
+                        fallback
+                    } else {
+                        jsResult
+                    }
+                } catch (e: Throwable) {
+                    Log.e("SelectionDebug", "evaluateJavascript THREW: ${e::class.simpleName}: ${e.message}", e)
+                    val fallback = sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
+                    Log.d("SelectionDebug", "Using locator.text fallback after exception: '$fallback'")
+                    fallback
                 }
-                viewModel.onReadiumSelection(
-                    locator = sel.locator,
-                    rect = selRect,
-                    text = text
-                )
+                Log.d("SelectionDebug", "Calling viewModel.onReadiumSelection(text='${text.take(50)}', rect=$selRect)")
+                try {
+                    viewModel.onReadiumSelection(
+                        locator = sel.locator,
+                        rect = selRect,
+                        text = text
+                    )
+                    Log.d("SelectionDebug", "viewModel.onReadiumSelection OK")
+                } catch (e: Throwable) {
+                    Log.e("SelectionDebug", "viewModel.onReadiumSelection THREW: ${e::class.simpleName}: ${e.message}", e)
+                }
                 lastSelection = true
             } else {
                 if (lastSelection) {
+                    Log.d("SelectionDebug", "Selection cleared (user tapped away)")
                     viewModel.onSelectionCleared()
                 }
                 lastSelection = false

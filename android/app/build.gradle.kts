@@ -1,4 +1,7 @@
 import java.util.Properties
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.Date
 
 plugins {
     id("com.android.application")
@@ -62,6 +65,16 @@ android {
         buildConfigField("String", "AUTH_REDIRECT_HOST", "\"$authRedirectHost\"")
         buildConfigField("String", "AUTH_REDIRECT_PATH", "\"$authRedirectPath\"")
         buildConfigField("String", "SUPABASE_STORAGE_BOOKS_BUCKET", "\"$storageBooksBucket\"")
+
+        // Git SHA (short) — injected at build time so every APK has a unique fingerprint
+        val gitSha = providers.exec {
+            commandLine("git", "rev-parse", "--short", "HEAD")
+            workingDir = rootProject.projectDir
+        }.standardOutput.asText.get().trim()
+
+        buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
+        val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+        buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
     }
 
     buildTypes {

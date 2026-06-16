@@ -106,6 +106,9 @@ data class ReaderUiState(
      * isn't immediately overwritten by the currentSelection() poll loop.
      */
     val highlightTapDebounceUntil: Long = 0L,
+    /** Set to [SystemClock.elapsedRealtime()] when any menu-closing action occurs.
+     *  [onReadiumSelection] ignores selection events for [MENU_CLOSE_IGNORE_MS] after this. */
+    val menuJustClosedAt: Long = 0L,
 
     // ── Highlights Panel (Gap 5) ────────────────────────────────────
     val showHighlightsSheet: Boolean = false,
@@ -143,7 +146,7 @@ class ReaderViewModel(
         private const val TAG = "ReaderViewModel"
         private const val SEARCH_DEBOUNCE_MS = 300L
         private const val HIGHLIGHT_TAP_DEBOUNCE_MS = 2000L
-        private const val POST_COLOR_DEBOUNCE_MS = 1500L
+        private const val MENU_CLOSE_IGNORE_MS = 1500L
     }
 
     private val mutableUiState = MutableStateFlow(
@@ -742,14 +745,19 @@ class ReaderViewModel(
             color = color
         )
 
-        debugToast("STEP 3: FaPN3 activado -> showContextMenu=true")
-        // Show FaPN3 over the highlighted text — keep selectedText and
-        // selectionRect so the context menu (tag/note/comment/share/delete)
-        // positions correctly over the now-highlighted span.
+        // After picking a color on a fresh selection, close both menus and
+        // clear the selection — the user does not want the FaPN3 context menu
+        // (tag/note/comment/share/delete) to appear over the new highlight.
         mutableUiState.update {
             it.copy(
                 showColorPicker = false,
-                showContextMenu = true
+                showContextMenu = false,
+                selectedText = null,
+                selectionRect = null,
+                readiumSelectionLocator = null,
+                activeHighlightId = null,
+                highlightTapDebounceUntil = 0L,
+                menuJustClosedAt = SystemClock.elapsedRealtime()
             )
         }
     }
@@ -765,7 +773,8 @@ class ReaderViewModel(
                 selectedText = null,
                 selectionRect = null,
                 activeHighlightId = null,
-                highlightTapDebounceUntil = 0L
+                highlightTapDebounceUntil = 0L,
+                menuJustClosedAt = SystemClock.elapsedRealtime()
             )
         }
     }
@@ -785,7 +794,8 @@ class ReaderViewModel(
                 selectedText = null,
                 selectionRect = null,
                 activeHighlightId = null,
-                highlightTapDebounceUntil = 0L
+                highlightTapDebounceUntil = 0L,
+                menuJustClosedAt = SystemClock.elapsedRealtime()
             )
         }
     }
@@ -805,6 +815,38 @@ class ReaderViewModel(
 
         val state = mutableUiState.value
         val now = SystemClock.elapsedRealtime()
+
+        // Guard: ignore selection events that arrive right after a menu-closing
+        // action (color pick, copy, dismiss, selection-cleared). The WebView
+        // still has the text selected after the menu closes; the polling
+        // currentSelection() fires, the text matches the just-created highlight,
+        // and onHighlightTapped would otherwise re-open the FaPN3 context menu.
+        if (now - state.menuJustClosedAt < MENU_CLOSE_IGNORE_MS) {
+            Log.d("SelectionDebug", "Ignoring selection after menu close (${now - state.menuJustClosedAt}ms ago)")
+            return
+        }
+
+        // Check if the current selection sits inside an existing highlight.
+        // When the user taps an existing highlight, the WebView creates a text
+        // selection over the highlighted text; the currentSelection() poll
+        // detects it and fires here BEFORE onDecorationActivated reaches
+        // onHighlightTapped. If we don't intercept, this call would set
+        // showColorPicker = true and overwrite the FaPN3 context menu the
+        // decoration listener is about to open. By matching the selection
+        // text against highlight.textContent, we route these selections to
+        // onHighlightTapped directly.
+        val matchingHighlight = state.highlights.firstOrNull { highlight ->
+            highlight.textContent.isNotBlank() &&
+                (text == highlight.textContent ||
+                    text.contains(highlight.textContent) ||
+                    highlight.textContent.contains(text))
+        }
+        if (matchingHighlight != null) {
+            DebugLog.info(TAG, "Selection inside existing highlight: id=${matchingHighlight.id}, opening FaPN3")
+            onHighlightTapped(matchingHighlight, rect)
+            return
+        }
+
         if (now < state.highlightTapDebounceUntil && state.activeHighlightId != null) {
             Log.d("SelectionDebug", "Ignoring selection during highlight-tap debounce")
             DebugLog.warn(TAG, "onReadiumSelection IGNORED (debounce active until=${state.highlightTapDebounceUntil}, now=$now)")
@@ -863,7 +905,8 @@ class ReaderViewModel(
                     selectionRect = null,
                     activeHighlightId = null,
                     highlightTapDebounceUntil = 0L,
-                    debugForceMenu = false
+                    debugForceMenu = false,
+                    menuJustClosedAt = SystemClock.elapsedRealtime()
                 )
             }
         } catch (e: Throwable) {
@@ -890,12 +933,19 @@ class ReaderViewModel(
         // Editing an existing highlight (user tapped it → changed color).
         if (activeId != null) {
             onReadiumUpdateHighlightColor(activeId, color)
+            // After re-coloring an existing highlight, close both menus and
+            // clear the selection — the user does not want the FaPN3 context
+            // menu to appear over the edited highlight.
             mutableUiState.update {
                 it.copy(
                     showColorPicker = false,
                     showContextMenu = false,
+                    selectedText = null,
+                    selectionRect = null,
+                    readiumSelectionLocator = null,
                     activeHighlightId = null,
-                    highlightTapDebounceUntil = 0L
+                    highlightTapDebounceUntil = 0L,
+                    menuJustClosedAt = SystemClock.elapsedRealtime()
                 )
             }
             return
@@ -910,19 +960,21 @@ class ReaderViewModel(
             locatorJson = locatorJson
         )
 
-        // ADD: set debounce so the polling loop does not overwrite showContextMenu
-        // with showColorPicker. We synthesize a transient activeHighlightId
-        // pointing to nothing (the highlight gets its real id from the DB flow
-        // asynchronously), so the polling's debounce check passes.
-        val debounceUntil = SystemClock.elapsedRealtime() + POST_COLOR_DEBOUNCE_MS
-        DebugLog.info(TAG, "Color selected: $color, debounce set for ${POST_COLOR_DEBOUNCE_MS}ms")
+        // After picking a color on a fresh selection, close both menus and
+        // clear the selection — the user does not want the FaPN3 context menu
+        // (tag/note/comment/share/delete) to appear over the new highlight.
+        DebugLog.info(TAG, "Color selected: $color, menu closed")
 
         mutableUiState.update {
             it.copy(
                 showColorPicker = false,
-                showContextMenu = true,
-                activeHighlightId = activeId, // keep whatever was there
-                highlightTapDebounceUntil = debounceUntil
+                showContextMenu = false,
+                selectedText = null,
+                selectionRect = null,
+                readiumSelectionLocator = null,
+                activeHighlightId = null,
+                highlightTapDebounceUntil = 0L,
+                menuJustClosedAt = SystemClock.elapsedRealtime()
             )
         }
     }

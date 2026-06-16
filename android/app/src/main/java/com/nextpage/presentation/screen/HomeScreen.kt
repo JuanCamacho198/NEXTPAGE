@@ -150,6 +150,29 @@ fun HomeScreen(
 
         // 7. Bottom spacer
         item { Spacer(modifier = Modifier.height(NextPageDimens.spacingMd)) }
+
+        // 8. Debug version label (debug builds only)
+        if (com.nextpage.BuildConfig.DEBUG) {
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "v${com.nextpage.BuildConfig.VERSION_NAME} • ${com.nextpage.BuildConfig.GIT_SHA} • ${com.nextpage.BuildConfig.BUILD_TIME}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+            item {
+                Text(
+                    text = stringResource(R.string.debug_version_label),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)
+                )
+            }
+        }
     }
 }
 

@@ -294,4 +294,7 @@
     <string name="debug_crash_detail_title">Último crash</string>
     <string name="debug_crash_copy">Copiar al portapapeles</string>
     <string name="debug_crash_share">Compartir</string>
+
+    <!-- Debug version label -->
+    <string name="debug_version_label">(build de desarrollo)</string>
 </resources>

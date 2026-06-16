@@ -358,4 +358,7 @@
     <string name="debug_crash_detail_title">Last crash</string>
     <string name="debug_crash_copy">Copy to clipboard</string>
     <string name="debug_crash_share">Share</string>
+
+    <!-- Debug version label -->
+    <string name="debug_version_label">(debug build — for development only)</string>
 </resources>

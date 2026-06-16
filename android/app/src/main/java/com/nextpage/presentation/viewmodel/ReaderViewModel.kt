@@ -3,12 +3,14 @@ package com.nextpage.presentation.viewmodel
 import android.app.Application
 import android.graphics.Rect
 import android.graphics.RectF
+import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nextpage.data.session.ReaderPreferences
+import com.nextpage.debug.DebugLog
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
@@ -98,6 +100,12 @@ data class ReaderUiState(
     /** When non-null, the menu is acting on an existing highlight (tap to
      *  edit). Color/delete actions target this id instead of creating new. */
     val activeHighlightId: String? = null,
+    /**
+     * Time (via [SystemClock.elapsedRealtime]) until which selection events
+     * should be ignored after a highlight tap, so the FaPN3 context menu
+     * isn't immediately overwritten by the currentSelection() poll loop.
+     */
+    val highlightTapDebounceUntil: Long = 0L,
 
     // ── Highlights Panel (Gap 5) ────────────────────────────────────
     val showHighlightsSheet: Boolean = false,
@@ -134,6 +142,8 @@ class ReaderViewModel(
     companion object {
         private const val TAG = "ReaderViewModel"
         private const val SEARCH_DEBOUNCE_MS = 300L
+        private const val HIGHLIGHT_TAP_DEBOUNCE_MS = 2000L
+        private const val POST_COLOR_DEBOUNCE_MS = 1500L
     }
 
     private val mutableUiState = MutableStateFlow(
@@ -662,6 +672,7 @@ class ReaderViewModel(
      * @param rect the highlight rect in viewport pixels (px)
      */
     fun onHighlightTapped(highlight: Highlight, rect: RectF) {
+        DebugLog.info(TAG, "onHighlightTapped id=${highlight.id} t=${SystemClock.elapsedRealtime()}")
         // Restore the selection locator from the stored JSON so color/delete
         // actions operate on the right highlight.
         val locator = highlight.locatorJson?.let { CfiMigrator.jsonToLocator(it) }
@@ -671,6 +682,8 @@ class ReaderViewModel(
             rect.right.toInt(),
             rect.bottom.toInt()
         )
+        val debounceUntil = SystemClock.elapsedRealtime() + HIGHLIGHT_TAP_DEBOUNCE_MS
+        DebugLog.info(TAG, "Highlight tapped: id=${highlight.id}, rect=$selectionRect")
         mutableUiState.update {
             it.copy(
                 selectedText = highlight.textContent,
@@ -678,9 +691,11 @@ class ReaderViewModel(
                 readiumSelectionLocator = locator,
                 activeHighlightId = highlight.id,
                 showColorPicker = false,
-                showContextMenu = true
+                showContextMenu = true,
+                highlightTapDebounceUntil = debounceUntil
             )
         }
+        DebugLog.info(TAG, "onHighlightTapped: debounce until=$debounceUntil, showContextMenu=true")
     }
 
     /** @suppress debug — shows toast at each pipeline stage */
@@ -741,13 +756,16 @@ class ReaderViewModel(
 
     fun onCopySelectedText() {
         if (mutableUiState.value.selectedText == null) return
+        DebugLog.info(TAG, "Copy selected text")
         // Clipboard copy handled in View layer
         mutableUiState.update {
             it.copy(
                 showColorPicker = false,
                 showContextMenu = false,
                 selectedText = null,
-                selectionRect = null
+                selectionRect = null,
+                activeHighlightId = null,
+                highlightTapDebounceUntil = 0L
             )
         }
     }
@@ -759,13 +777,15 @@ class ReaderViewModel(
     }
 
     fun onDismissContextMenu() {
+        DebugLog.info(TAG, "Menu dismissed")
         mutableUiState.update {
             it.copy(
                 showColorPicker = false,
                 showContextMenu = false,
                 selectedText = null,
                 selectionRect = null,
-                activeHighlightId = null
+                activeHighlightId = null,
+                highlightTapDebounceUntil = 0L
             )
         }
     }
@@ -782,6 +802,15 @@ class ReaderViewModel(
         Log.d("SelectionDebug", "VM.onReadiumSelection: text='${text.take(50)}', " +
             "rect=[${rect.left},${rect.top},${rect.right},${rect.bottom}], " +
             "locator.href=${locator.href}")
+
+        val state = mutableUiState.value
+        val now = SystemClock.elapsedRealtime()
+        if (now < state.highlightTapDebounceUntil && state.activeHighlightId != null) {
+            Log.d("SelectionDebug", "Ignoring selection during highlight-tap debounce")
+            DebugLog.warn(TAG, "onReadiumSelection IGNORED (debounce active until=${state.highlightTapDebounceUntil}, now=$now)")
+            return
+        }
+
         val selectionRect = try {
             Rect(
                 rect.left.toInt(),
@@ -800,9 +829,12 @@ class ReaderViewModel(
                     selectedText = text,
                     selectionRect = selectionRect,
                     showColorPicker = true,
-                    showContextMenu = false
+                    showContextMenu = false,
+                    activeHighlightId = null,
+                    highlightTapDebounceUntil = 0L
                 )
             }
+            DebugLog.info(TAG, "onReadiumSelection: showColorPicker=true (debounce not active)")
             Log.d("SelectionDebug", "VM.onReadiumSelection state update OK")
         } catch (e: Throwable) {
             Log.e("SelectionDebug", "VM.onReadiumSelection state update THREW: ${e::class.simpleName}: ${e.message}", e)
@@ -815,6 +847,14 @@ class ReaderViewModel(
     fun onSelectionCleared() {
         Log.d("SelectionDebug", "VM.onSelectionCleared — resetting selection state")
         try {
+            val state = mutableUiState.value
+            val now = SystemClock.elapsedRealtime()
+            if (now < state.highlightTapDebounceUntil && state.activeHighlightId != null) {
+                Log.d("SelectionDebug", "Ignoring selection-clear during highlight-tap debounce")
+                DebugLog.warn(TAG, "onSelectionCleared IGNORED (debounce active until=${state.highlightTapDebounceUntil}, now=$now)")
+                return
+            }
+            DebugLog.info(TAG, "onSelectionCleared (debounce not active)")
             mutableUiState.update {
                 it.copy(
                     showColorPicker = false,
@@ -822,6 +862,7 @@ class ReaderViewModel(
                     selectedText = null,
                     selectionRect = null,
                     activeHighlightId = null,
+                    highlightTapDebounceUntil = 0L,
                     debugForceMenu = false
                 )
             }
@@ -842,13 +883,20 @@ class ReaderViewModel(
         val bookId = state.selectedBookId ?: return
         val locator = state.readiumSelectionLocator ?: return
         val text = state.selectedText ?: return
+        val activeId = state.activeHighlightId
+
+        DebugLog.info(TAG, "Color selected: $color for id=${activeId ?: "<new>"}")
 
         // Editing an existing highlight (user tapped it → changed color).
-        val activeId = state.activeHighlightId
         if (activeId != null) {
             onReadiumUpdateHighlightColor(activeId, color)
             mutableUiState.update {
-                it.copy(showColorPicker = false, showContextMenu = false)
+                it.copy(
+                    showColorPicker = false,
+                    showContextMenu = false,
+                    activeHighlightId = null,
+                    highlightTapDebounceUntil = 0L
+                )
             }
             return
         }
@@ -862,10 +910,19 @@ class ReaderViewModel(
             locatorJson = locatorJson
         )
 
+        // ADD: set debounce so the polling loop does not overwrite showContextMenu
+        // with showColorPicker. We synthesize a transient activeHighlightId
+        // pointing to nothing (the highlight gets its real id from the DB flow
+        // asynchronously), so the polling's debounce check passes.
+        val debounceUntil = SystemClock.elapsedRealtime() + POST_COLOR_DEBOUNCE_MS
+        DebugLog.info(TAG, "Color selected: $color, debounce set for ${POST_COLOR_DEBOUNCE_MS}ms")
+
         mutableUiState.update {
             it.copy(
                 showColorPicker = false,
-                showContextMenu = true
+                showContextMenu = true,
+                activeHighlightId = activeId, // keep whatever was there
+                highlightTapDebounceUntil = debounceUntil
             )
         }
     }
@@ -923,6 +980,30 @@ class ReaderViewModel(
                 selectionRect = Rect(200, 200, 600, 250),
                 showColorPicker = false,
                 showContextMenu = true,
+                debugForceMenu = true
+            )
+        }
+    }
+
+    /**
+     * Debug-only: force the color-picker (cnVL6) overlay with a hardcoded
+     * rect, so the [SelectionOverlay] / [TextSelectionMenu] rendering can be
+     * tested independently of the Readium selection pipeline.
+     */
+    fun onDebugForceColorPicker() {
+        val current = mutableUiState.value.debugForceMenu
+        if (current) {
+            onSelectionCleared()
+            return
+        }
+        debugToast("DEBUG: Forzando color picker cnVL6 con rect hardcodeado")
+        DebugLog.info(TAG, "DEBUG: forcing color picker cnVL6")
+        mutableUiState.update {
+            it.copy(
+                selectedText = "Texto de prueba debug",
+                selectionRect = Rect(200, 200, 600, 250),
+                showColorPicker = true,
+                showContextMenu = false,
                 debugForceMenu = true
             )
         }

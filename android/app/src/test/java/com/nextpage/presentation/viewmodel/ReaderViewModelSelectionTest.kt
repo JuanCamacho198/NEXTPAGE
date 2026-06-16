@@ -1,6 +1,8 @@
 package com.nextpage.presentation.viewmodel
 
+import android.app.Application
 import android.graphics.Rect
+import android.graphics.RectF
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
@@ -14,8 +16,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestCoroutineScheduler
+import io.mockk.mockk
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -23,6 +27,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.readium.r2.shared.publication.Locator
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderViewModelSelectionTest {
@@ -133,6 +138,60 @@ class ReaderViewModelSelectionTest {
         assertNull(state.selectionRect)
     }
 
+    @Test
+    fun `onHighlightTapped opens context menu and sets active highlight`() = runTest {
+        val viewModel = createViewModel(testScheduler)
+        val highlight = createHighlight()
+        val rect = RectF(100f, 200f, 300f, 250f)
+
+        viewModel.onHighlightTapped(highlight, rect)
+
+        val state = viewModel.uiState.value
+        assertEquals(highlight.textContent, state.selectedText)
+        assertNotNull(state.selectionRect)
+        assertEquals(rect.left.toInt(), state.selectionRect!!.left)
+        assertEquals(rect.top.toInt(), state.selectionRect!!.top)
+        assertEquals(rect.right.toInt(), state.selectionRect!!.right)
+        assertEquals(rect.bottom.toInt(), state.selectionRect!!.bottom)
+        assertEquals(highlight.id, state.activeHighlightId)
+        assertFalse(state.showColorPicker)
+        assertTrue(state.showContextMenu)
+    }
+
+    @Test
+    fun `onReadiumSelection within highlight debounce does not clear context menu`() = runTest {
+        val viewModel = createViewModel(testScheduler)
+        val highlight = createHighlight()
+        val highlightRect = RectF(100f, 200f, 300f, 250f)
+        viewModel.onHighlightTapped(highlight, highlightRect)
+
+        val locator = createLocator()
+        val selectionRect = RectF(110f, 210f, 310f, 260f)
+        viewModel.onReadiumSelection(locator, selectionRect, "new selection")
+
+        val state = viewModel.uiState.value
+        assertEquals(highlight.textContent, state.selectedText)
+        assertEquals(highlight.id, state.activeHighlightId)
+        assertFalse(state.showColorPicker)
+        assertTrue(state.showContextMenu)
+    }
+
+    @Test
+    fun `onSelectionCleared within highlight debounce does not clear context menu`() = runTest {
+        val viewModel = createViewModel(testScheduler)
+        val highlight = createHighlight()
+        val highlightRect = RectF(100f, 200f, 300f, 250f)
+        viewModel.onHighlightTapped(highlight, highlightRect)
+
+        viewModel.onSelectionCleared()
+
+        val state = viewModel.uiState.value
+        assertEquals(highlight.textContent, state.selectedText)
+        assertEquals(highlight.id, state.activeHighlightId)
+        assertFalse(state.showColorPicker)
+        assertTrue(state.showContextMenu)
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────
 
     @Suppress("UNCHECKED_CAST")
@@ -142,9 +201,40 @@ class ReaderViewModelSelectionTest {
         return field.get(viewModel) as MutableStateFlow<ReaderUiState>
     }
 
+    private fun createHighlight(): Highlight {
+        return Highlight(
+            id = "highlight-1",
+            bookId = "book-1",
+            cfiRange = "epubcfi(/6/2!/4/1)",
+            textContent = "highlighted text",
+            note = null,
+            color = HighlightColor.YELLOW.hex,
+            updatedAtEpochMillis = 0L,
+            deletedAtEpochMillis = null,
+            locatorJson = createLocatorJson()
+        )
+    }
+
+    private fun createLocator(): Locator {
+        return Locator.fromJSON(JSONObject(createLocatorJson()))
+            ?: throw IllegalStateException("Failed to create Locator")
+    }
+
+    private fun createLocatorJson(): String {
+        return """
+            {
+              "href": "xhtml/chapter1.xhtml",
+              "type": "application/xhtml+xml",
+              "locations": { "progression": 0.5, "totalProgression": 0.1 },
+              "text": { "before": "before ", "highlight": "text", "after": " after" }
+            }
+        """.trimIndent()
+    }
+
     private fun createViewModel(scheduler: TestCoroutineScheduler): ReaderViewModel {
         val dispatcher = UnconfinedTestDispatcher(scheduler)
         return ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = FakeReaderRepository(),
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),
@@ -156,12 +246,15 @@ class ReaderViewModelSelectionTest {
     private class FakeReaderRepository : ReaderRepository {
         override fun observeProgress(bookId: String): Flow<ReadingProgress?> = MutableStateFlow(null)
         override suspend fun upsertProgress(progress: ReadingProgress) = Unit
+        override suspend fun getProgressForBook(bookId: String): ReadingProgress? = null
         override fun observeAllHighlights(): Flow<List<Highlight>> = MutableStateFlow(emptyList())
         override fun observeHighlights(bookId: String): Flow<List<Highlight>> = MutableStateFlow(emptyList())
         override suspend fun upsertHighlight(highlight: Highlight) = Unit
+        override suspend fun getHighlightsForBook(bookId: String): List<Highlight> = emptyList()
         override fun observeAllBookmarks(): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
         override fun observeBookmarks(bookId: String): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
         override suspend fun upsertBookmark(bookmark: Bookmark) = Unit
+        override suspend fun getBookmarksForBook(bookId: String): List<Bookmark> = emptyList()
     }
 
     private class FakeReadingStatsRepository : ReadingStatsRepository {

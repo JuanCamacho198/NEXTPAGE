@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.view.WindowInsetsController
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,12 +15,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,8 +39,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.nextpage.BuildConfig
 import com.nextpage.R
+import com.nextpage.debug.DebugLog
+import com.nextpage.debug.DebugPanel
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.ui.components.molecules.HighlightsSheet
 import com.nextpage.ui.components.molecules.ReadingProgressBar
@@ -47,6 +55,7 @@ import com.nextpage.ui.components.molecules.SleepTimerOverlay
 import com.nextpage.ui.components.molecules.SleepTimerPreset
 import com.nextpage.ui.components.molecules.SleepTimerSheet
 import com.nextpage.ui.components.molecules.SplitSettingsSheet
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
  * Reader screen dispatcher.
@@ -78,6 +87,11 @@ fun ReaderScreen(
     var goToPageInput by remember { mutableStateOf("") }
     var goToPageError by remember { mutableStateOf<String?>(null) }
     var showSleepTimerSheet by remember { mutableStateOf(false) }
+    var debugPanelVisible by remember { mutableStateOf(false) }
+
+    // ── Debug action triggers: panel button → ReadiumReaderContent ──
+    val inspectHighlightsHtmlTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
+    val logWebViewTreeTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
 
     // ── Fullscreen: apply WindowInsetsController when state changes ──
     DisposableEffect(uiState.isFullscreen) {
@@ -119,7 +133,8 @@ fun ReaderScreen(
     val canGoNext = uiState.currentChapterIndex < uiState.chapters.size - 1
 
     // ── Render via ReaderChrome ─────────────────────────────────────
-    ReaderChrome(
+    Box(modifier = Modifier.fillMaxSize()) {
+        ReaderChrome(
         isFullscreen = uiState.isFullscreen || uiState.isLoading,
         onToggleFullscreen = { viewModel.onToggleFullscreen() },
         contentPadding = contentPadding,
@@ -217,6 +232,8 @@ fun ReaderScreen(
                             highlights = uiState.highlights,
                             readerSettings = uiState.readerSettings,
                             viewModel = viewModel,
+                            inspectHighlightsHtmlTrigger = inspectHighlightsHtmlTrigger,
+                            logWebViewTreeTrigger = logWebViewTreeTrigger,
                             modifier = Modifier.fillMaxSize()
                         )
 
@@ -398,6 +415,68 @@ fun ReaderScreen(
             }
         }
     )
+
+        // ── Debug chip (top-end, debug builds only) ──────────────
+        if (BuildConfig.DEBUG) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 56.dp, end = 12.dp)
+                    .clickable { debugPanelVisible = !debugPanelVisible },
+                color = Color(0xFFEF4444),
+                shape = RoundedCornerShape(6.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.debug_chip_label),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+
+        // ── Debug panel (debug builds only) ──────────────────────
+        if (BuildConfig.DEBUG) {
+            DebugPanel(
+                visible = debugPanelVisible,
+                state = uiState,
+                onClose = { debugPanelVisible = false },
+                onForceColorPicker = { viewModel.onDebugForceColorPicker() },
+                onForceContextMenu = { viewModel.onDebugForceMenu() },
+                onSimulateHighlightTap = {
+                    val first = uiState.highlights.firstOrNull { it.locatorJson != null }
+                    if (first == null) {
+                        DebugLog.warn("Debug", "Simulate-tap: no highlights to simulate")
+                    } else {
+                        val fakeRect = android.graphics.RectF(
+                            uiState.selectionRect?.left?.toFloat() ?: 200f,
+                            uiState.selectionRect?.top?.toFloat() ?: 200f,
+                            (uiState.selectionRect?.right ?: 600).toFloat(),
+                            (uiState.selectionRect?.bottom ?: 250).toFloat()
+                        )
+                        DebugLog.info(
+                            "Debug",
+                            "Simulate-tap: forcing onHighlightTapped for id=${first.id}"
+                        )
+                        viewModel.onHighlightTapped(first, fakeRect)
+                    }
+                },
+                onClearLog = { DebugLog.clear() },
+                onCopyLog = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("debug_log", DebugLog.toText()))
+                    DebugLog.success("Debug", "Log copied to clipboard")
+                },
+                onInspectHighlightsHtml = {
+                    inspectHighlightsHtmlTrigger.tryEmit(Unit)
+                },
+                onLogWebViewTree = {
+                    logWebViewTreeTrigger.tryEmit(Unit)
+                }
+            )
+        }
+    }
 }
 
 // ── Loading Content ─────────────────────────────────────────────────

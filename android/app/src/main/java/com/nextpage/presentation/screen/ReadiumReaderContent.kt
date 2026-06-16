@@ -7,6 +7,8 @@ import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
+import android.webkit.WebView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -21,13 +23,18 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.commit
+import com.nextpage.debug.DebugLog
+import com.nextpage.debug.DebugStateHolder
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.presentation.viewmodel.CfiMigrator
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
+import org.json.JSONArray
 import org.readium.r2.navigator.DecorableNavigator
 import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.SelectableNavigator
@@ -73,6 +80,8 @@ fun ReadiumReaderContent(
     highlights: List<Highlight>,
     readerSettings: ReaderSettings,
     viewModel: ReaderViewModel,
+    inspectHighlightsHtmlTrigger: SharedFlow<Unit> = MutableSharedFlow(),
+    logWebViewTreeTrigger: SharedFlow<Unit> = MutableSharedFlow(),
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current as FragmentActivity
@@ -97,10 +106,10 @@ fun ReadiumReaderContent(
                 publication.locatorFromLink(it)
             }
             // Note: the native ActionMode (Copy/Share/Translate) is suppressed
-            // via EpubNavigatorFragment.Configuration.selectionActionModeCallback
-            // in newer Readium versions. In 3.2.0, createFragmentFactory does not
-            // expose fragmentConfiguration — we suppress selection via the JS
-            // bridge polling approach instead (see currentSelection poll loop).
+            // by installing [SuppressSelectionActionMode] on the underlying
+            // WebView once the fragment view is created (see below). In newer
+            // Readium versions this can be done via fragment configuration,
+            // but 3.2.0 does not expose that hook.
             val factory = navigatorFactory.createFragmentFactory(
                 initialLocator = initialLocator!!
             )
@@ -111,6 +120,23 @@ fun ReadiumReaderContent(
         }
         delay(200)
         navigatorFragment = fragmentManager.findFragmentByTag(tag) as? EpubNavigatorFragment
+    }
+
+    // ── Suppress native ActionMode on the WebView ─────────────────
+    LaunchedEffect(navigatorFragment) {
+        val frag = navigatorFragment ?: return@LaunchedEffect
+        // Retry briefly until the fragment view is ready.
+        repeat(20) {
+            val view = frag.view
+            if (view != null) {
+                installActionModeCallback(view)
+                DebugStateHolder.setActionModeInstalled(true)
+                return@LaunchedEffect
+            }
+            delay(50)
+        }
+        Log.d("ReadiumReaderContent", "WebView not ready for action-mode suppression")
+        DebugLog.warn("Readium", "WebView not ready for action-mode suppression after 1s")
     }
 
     // ── currentLocator → ViewModel ────────────────────────────────
@@ -133,9 +159,11 @@ fun ReadiumReaderContent(
         val selectable = frag as? SelectableNavigator
         if (selectable == null) {
             Log.e("SelectionDebug", "CAST FAILED: EpubNavigatorFragment is NOT a SelectableNavigator")
+            DebugLog.error("Readium", "CAST FAILED: EpubNavigatorFragment is NOT a SelectableNavigator")
             return@LaunchedEffect
         }
         Log.d("SelectionDebug", "CAST OK: SelectableNavigator=${selectable.hashCode()}")
+        DebugLog.info("Readium", "SelectableNavigator acquired (hash=${selectable.hashCode()})")
         var lastSelection: Boolean = false
         var pollCount = 0
         while (isActive) {
@@ -146,7 +174,14 @@ fun ReadiumReaderContent(
                 selectable.currentSelection()
             } catch (e: Throwable) {
                 Log.e("SelectionDebug", "currentSelection() THREW: ${e::class.simpleName}: ${e.message}", e)
+                DebugLog.error("Readium", "currentSelection() threw: ${e::class.simpleName}: ${e.message}")
                 null
+            }
+            if (pollCount % 10 == 0) {
+                DebugLog.info(
+                    "Readium",
+                    "Poll #$pollCount: ${if (sel != null) "selection present" else "no selection"}"
+                )
             }
             Log.d("SelectionDebug", "Poll #$pollCount — currentSelection() returned: ${if (sel != null) "non-null (locator=${sel.locator.href})" else "null"}")
             if (sel != null) {
@@ -215,11 +250,33 @@ fun ReadiumReaderContent(
                 override fun onDecorationActivated(
                     event: DecorableNavigator.OnActivatedEvent
                 ): Boolean {
+                    val rectString = event.rect?.toString() ?: "null"
+                    DebugLog.info(
+                        "Readium",
+                        "onDecorationActivated: group=${event.group}, id=${event.decoration.id}, rect=$rectString"
+                    )
+                    // Diagnostic instrumentation: record every activation,
+                    // regardless of whether the group matches.
+                    DebugStateHolder.recordDecorationEvent(
+                        event.decoration.id,
+                        event.group,
+                        event.rect
+                    )
                     // Only react to our own highlight group.
-                    if (event.group != DECORATION_GROUP) return false
+                    if (event.group != DECORATION_GROUP) {
+                        DebugLog.warn("Readium", "Decoration group mismatch (got ${event.group})")
+                        return false
+                    }
                     val rect: RectF = event.rect ?: return false
                     val highlight = highlights.firstOrNull { it.id == event.decoration.id }
-                        ?: return false
+                    if (highlight == null) {
+                        DebugLog.warn(
+                            "Readium",
+                            "onDecorationActivated: no highlight found for id=${event.decoration.id}"
+                        )
+                        return false
+                    }
+                    DebugStateHolder.recordHighlightActivation(event.decoration.id, rectString)
                     viewModel.onHighlightTapped(highlight, rect)
                     return true
                 }
@@ -228,11 +285,43 @@ fun ReadiumReaderContent(
 
         if (decorable != null && listener != null) {
             decorable.addDecorationListener(DECORATION_GROUP, listener)
+            DebugStateHolder.setHighlightListenerRegistered(true)
+            DebugStateHolder.setListenerRegistered(true)
+            DebugLog.info("Readium", "Decoration listener registered for group=$DECORATION_GROUP")
+        } else {
+            DebugStateHolder.setHighlightListenerRegistered(false)
+            DebugStateHolder.setListenerRegistered(false)
         }
         onDispose {
             if (decorable != null && listener != null) {
                 decorable.removeDecorationListener(listener)
+                DebugStateHolder.setHighlightListenerRegistered(false)
+                DebugStateHolder.setListenerRegistered(false)
+                DebugLog.info("Readium", "Decoration listener removed")
             }
+        }
+    }
+
+    // ── Force a re-apply of decorations after the listener is registered ─
+    // Hypothesis: Readium fires onDecorationActivated only when decorations
+    // are applied/changed AFTER the listener is registered. The standard
+    // applyDecorations LaunchedEffect below handles the high-level sync; this
+    // separate one-shot kick is a defensive nudge to trigger activation on
+    // existing decorations once the listener is live.
+    LaunchedEffect(navigatorFragment) {
+        val frag = navigatorFragment ?: return@LaunchedEffect
+        val decorable = frag as? DecorableNavigator ?: return@LaunchedEffect
+        // Wait one frame so the DisposableEffect above finishes registering.
+        delay(100)
+        try {
+            val currentDecorations = highlightsToDecorations(highlights)
+            decorable.applyDecorations(currentDecorations, DECORATION_GROUP)
+            DebugLog.info(
+                "Readium",
+                "Post-listener re-apply: pushed ${currentDecorations.size} decorations"
+            )
+        } catch (t: Throwable) {
+            DebugLog.error("Readium", "Post-listener re-apply failed: ${t.message}")
         }
     }
 
@@ -243,10 +332,12 @@ fun ReadiumReaderContent(
         val decorable = frag as? DecorableNavigator ?: return@LaunchedEffect
         if (highlights.isEmpty()) {
             decorable.applyDecorations(emptyList(), DECORATION_GROUP)
+            DebugStateHolder.recordApplied(0)
             return@LaunchedEffect
         }
         val decorations = highlightsToDecorations(highlights)
         decorable.applyDecorations(decorations, DECORATION_GROUP)
+        DebugStateHolder.recordApplied(decorations.size)
     }
 
     // ── Settings sync (readerSettings → EpubPreferences) ──────────
@@ -258,6 +349,121 @@ fun ReadiumReaderContent(
             val prefs = readerSettings.toEpubPreferences()
             frag.submitPreferences(prefs)
         } catch (_: Exception) { }
+    }
+
+    // ── Diagnostic: Inspect highlights HTML ──────────────────────
+    // Runs a JS query that collects every <span>/<a>/<mark> with a non-transparent
+    // backgroundColor, then logs the tag, computed bg, attributes, and first 50
+    // chars of text. Triggered from the debug panel.
+    LaunchedEffect(navigatorFragment) {
+        inspectHighlightsHtmlTrigger.collect {
+            val frag = navigatorFragment
+            if (frag == null) {
+                DebugLog.warn("InspectHL", "No navigator fragment available")
+                return@collect
+            }
+            val js = """
+                (function(){
+                    var results = [];
+                    var spans = document.querySelectorAll('span, a, mark');
+                    for (var i = 0; i < spans.length; i++) {
+                        var el = spans[i];
+                        var style = window.getComputedStyle(el);
+                        var bg = style.backgroundColor;
+                        if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+                            var attrs = {};
+                            for (var j = 0; j < el.attributes.length; j++) {
+                                var a = el.attributes[j];
+                                attrs[a.name] = a.value;
+                            }
+                            results.push({tag: el.tagName, bg: bg, attrs: attrs, text: el.textContent.substring(0, 50)});
+                        }
+                    }
+                    return JSON.stringify(results);
+                })()
+            """.trimIndent()
+            try {
+                val result = frag.evaluateJavascript(js)
+                if (result.isNullOrBlank()) {
+                    DebugLog.info("InspectHL", "Found 0 highlighted elements (empty result)")
+                    return@collect
+                }
+                // Strip surrounding quotes that WebView wraps on the result.
+                val trimmed = result.trim().removeSurrounding("\"")
+                    .replace("\\\"", "\"")
+                    .replace("\\n", "\n")
+                val arr = JSONArray(trimmed)
+                val count = arr.length()
+                DebugLog.info("InspectHL", "Found $count highlighted elements")
+                for (i in 0 until count) {
+                    val obj = arr.optJSONObject(i) ?: continue
+                    val tag = obj.optString("tag")
+                    val bg = obj.optString("bg")
+                    val text = obj.optString("text")
+                    val attrs = obj.optJSONObject("attrs")
+                    val attrsStr = attrs?.toString() ?: "{}"
+                    DebugLog.info(
+                        "InspectHL",
+                        "tag=$tag, bg=$bg, attrs=$attrsStr, text=$text"
+                    )
+                }
+            } catch (t: Throwable) {
+                DebugLog.error("InspectHL", "Failed: ${t::class.simpleName}: ${t.message}")
+            }
+        }
+    }
+
+    // ── Diagnostic: Log WebView view hierarchy ──────────────────
+    // Traverses the WebView's view tree and logs every View with class name,
+    // id, visibility, and clickable state. Long trees are split into multiple
+    // log entries (30 lines per chunk) to keep each line bounded.
+    LaunchedEffect(navigatorFragment) {
+        logWebViewTreeTrigger.collect {
+            val frag = navigatorFragment
+            val rootView = frag?.view
+            if (rootView == null) {
+                DebugLog.warn("WebViewTree", "No fragment view available")
+                return@collect
+            }
+            val webView = rootView.findWebView()
+            if (webView == null) {
+                DebugLog.warn("WebViewTree", "No WebView found in fragment hierarchy")
+                return@collect
+            }
+            val sb = StringBuilder()
+            fun dumpView(v: View, depth: Int) {
+                sb.append("  ".repeat(depth))
+                    .append(v::class.java.simpleName)
+                    .append(" id=").append(v.id)
+                    .append(" visible=").append(v.visibility)
+                    .append(" clickable=").append(v.isClickable)
+                    .append('\n')
+                if (v is ViewGroup) {
+                    for (i in 0 until v.childCount) {
+                        val child = v.getChildAt(i) ?: continue
+                        dumpView(child, depth + 1)
+                    }
+                }
+            }
+            dumpView(webView, 0)
+            val full = sb.toString()
+            val lines = full.lines()
+            DebugLog.info("WebViewTree", "Dumped ${lines.size} lines from WebView root")
+            val chunkSize = 30
+            if (lines.size <= chunkSize) {
+                DebugLog.info("WebViewTree", full.trimEnd())
+            } else {
+                var chunkIndex = 0
+                var i = 0
+                while (i < lines.size) {
+                    val end = (i + chunkSize).coerceAtMost(lines.size)
+                    val chunk = lines.subList(i, end).joinToString("\n")
+                    DebugLog.info("WebViewTree", "[chunk $chunkIndex]\n$chunk")
+                    chunkIndex++
+                    i = end
+                }
+            }
+        }
     }
 
     // ── navigateToLocator event flow → navigator.go() (SEA-2) ────
@@ -355,4 +561,90 @@ fun buildNavigatorConfig(settings: ReaderSettings): EpubNavigatorFactory.Configu
             pageMargins = 1.4
         )
     )
+}
+
+/**
+ * Recursively searches [root] for a [WebView].
+ */
+private fun View.findWebView(): WebView? {
+    if (this is WebView) return this
+    if (this is ViewGroup) {
+        for (i in 0 until childCount) {
+            getChildAt(i)?.findWebView()?.let { return it }
+        }
+    }
+    return null
+}
+
+/**
+ * Installs [SuppressSelectionActionMode] on the first [WebView] found under
+ * [root]. Returning `false` from [ActionMode.Callback.onCreateActionMode]
+ * prevents the native Copy/Share/Select All floating bar from appearing,
+ * so only our custom [SelectionOverlay] is shown.
+ *
+ * Also registers attach/layout listeners to re-install the callback if
+ * Readium swaps the WebView instance under us (it has been observed to do
+ * so on configuration changes / chapter changes). And blocks the long-press
+ * context menu so the system can't show a fallback menu either.
+ */
+private fun installActionModeCallback(root: View) {
+    val webView = root.findWebView() ?: run {
+        Log.d("ReadiumReaderContent", "No WebView found in navigator fragment")
+        DebugLog.warn("ActionMode", "No WebView found in EPUB navigator")
+        return
+    }
+    installActionModeCallbackOnWebView(webView)
+
+    // Re-install the callback whenever the view is attached or the layout
+    // changes — defensive against Readium recreating or swapping the WebView.
+    val attachListener = object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) {
+            DebugLog.info("Readium", "WebView attached — re-installing callback")
+            installActionModeCallbackOnWebView(v as? WebView ?: return)
+        }
+        override fun onViewDetachedFromWindow(v: View) {
+            // no-op
+        }
+    }
+    val layoutListener = android.view.ViewTreeObserver.OnGlobalLayoutListener {
+        if (webView.parent == null) return@OnGlobalLayoutListener
+        val current = try {
+            webView::class.java
+                .getMethod("getCustomSelectionActionModeCallback")
+                .invoke(webView)
+        } catch (_: Throwable) { null }
+        if (current !== SuppressSelectionActionMode) {
+            DebugLog.warn("Readium", "WebView callback lost — re-installing")
+            installActionModeCallbackOnWebView(webView)
+        }
+    }
+    webView.addOnAttachStateChangeListener(attachListener)
+    webView.viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
+}
+
+private fun installActionModeCallbackOnWebView(webView: WebView) {
+    try {
+        val method = try {
+            // First try the actual runtime class (handles R2WebView overrides)
+            webView.javaClass.getMethod(
+                "setCustomSelectionActionModeCallback",
+                ActionMode.Callback::class.java
+            )
+        } catch (e: NoSuchMethodException) {
+            // Fallback to the public WebView class
+            WebView::class.java.getMethod(
+                "setCustomSelectionActionModeCallback",
+                ActionMode.Callback::class.java
+            )
+        }
+        method.invoke(webView, SuppressSelectionActionMode)
+        // Also block the long-press context menu as a defensive layer.
+        runCatching { webView.isLongClickable = false }
+        runCatching { webView.setOnLongClickListener { true } }
+        Log.d("ReadiumReaderContent", "Installed custom selection ActionMode callback on ${webView.javaClass.simpleName}")
+        DebugLog.success("ActionMode", "Callback installed on ${webView.javaClass.simpleName}")
+    } catch (e: Throwable) {
+        Log.e("ReadiumReaderContent", "Failed to install ActionMode callback", e)
+        DebugLog.error("ActionMode", "Failed to install callback: ${e::class.java.simpleName}: ${e.message}")
+    }
 }

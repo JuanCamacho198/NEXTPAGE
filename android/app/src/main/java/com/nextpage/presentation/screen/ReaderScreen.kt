@@ -54,7 +54,7 @@ import com.nextpage.ui.components.molecules.SplitSettingsSheet
  *
  * Orchestrates the reader UI by wiring the [ReaderViewModel] state and
  * events into the structural [ReaderChrome] layout and format-specific
- * content composables ([EpubReaderContent], [PdfWebView]).
+ * content composables ([ReadiumReaderContent], [PdfWebView]).
  *
  * Responsibilities:
  * - Effects: fullscreen insets, reader lifecycle, book loading
@@ -226,39 +226,11 @@ fun ReaderScreen(
                     }
                 }
 
-                uiState.chapters.isNotEmpty() -> {
-                    val currentChapter = uiState.chapters.getOrNull(uiState.currentChapterIndex)
-                    EpubReaderContent(
-                        htmlContent = uiState.chapterHtmlContent,
-                        settings = uiState.readerSettings,
-                        filePath = bookFilePath,
-                        epubContentLoader = viewModel.epubContentLoader,
-                        chapterHref = currentChapter?.href,
-                        showColorPicker = uiState.showColorPicker,
-                        showContextMenu = uiState.showContextMenu,
-                        selectionRect = uiState.selectionRect,
-                        selectedText = uiState.selectedText,
-                        highlights = uiState.highlights,
-                        onTapZone = { isLeft -> viewModel.onTapZone(isLeft) },
-                        onTextSelectionEvent = { text, left, top, right, bottom ->
-                            viewModel.onTextSelectionEvent(text, left, top, right, bottom)
-                        },
-                        onColorSelected = { color ->
-                            viewModel.onSelectHighlightColor(color)
-                        },
-                        onCopy = {
-                            viewModel.onCopySelectedText()
-                            uiState.selectedText?.let { text ->
-                                val clipboard =
-                                    context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(
-                                    ClipData.newPlainText("highlight", text)
-                                )
-                            }
-                        },
-                        onShowContextMenu = { viewModel.onShowContextMenu() },
-                        onDismissContextMenu = { viewModel.onDismissContextMenu() },
-                        onHighlightTapped = viewModel::onHighlightTapped,
+                uiState.chapters.isNotEmpty() && uiState.readiumPublication != null -> {
+                    ReadiumReaderContent(
+                        publication = uiState.readiumPublication!!,
+                        navigatorConfig = buildNavigatorConfig(uiState.readerSettings),
+                        viewModel = viewModel,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

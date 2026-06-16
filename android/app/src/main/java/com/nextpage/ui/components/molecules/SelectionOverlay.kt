@@ -20,7 +20,7 @@ import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
 
 /**
- * Shared floating selection overlay used by both [EpubReaderContent] and
+ * Shared floating selection overlay used by both the EPUB reader and
  * the PDF rendering path in [ReaderScreen].
  *
  * Positions the [TextSelectionMenu] (color picker bar) or

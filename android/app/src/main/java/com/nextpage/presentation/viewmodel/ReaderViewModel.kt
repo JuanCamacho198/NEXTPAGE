@@ -1,11 +1,12 @@
 package com.nextpage.presentation.viewmodel
 
+import android.app.Application
 import android.graphics.Rect
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.nextpage.data.epub.EpubContentLoader
 import com.nextpage.data.pdf.PdfContentLoader
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.domain.model.Bookmark
@@ -35,16 +36,34 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import org.readium.r2.shared.publication.Link
+import org.readium.r2.shared.publication.Locator
+import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.util.AbsoluteUrl
+import org.readium.r2.shared.util.asset.AssetRetriever
+import org.readium.r2.shared.util.http.DefaultHttpClient
+import org.readium.r2.streamer.PublicationOpener
+import org.readium.r2.streamer.parser.DefaultPublicationParser
+import java.io.File
 import java.util.UUID
+
+/**
+ * Represents a single chapter in the reader's chapter list.
+ * Replaces [com.nextpage.data.epub.EpubContentLoader.Chapter] after Phase 2 cleanup.
+ */
+data class BookChapter(
+    val index: Int,
+    val id: String,
+    val title: String,
+    val href: String
+)
 
 data class ReaderUiState(
     val selectedBookId: String? = null,
     val bookFilePath: String? = null,
     val bookFormat: String? = null,
-    val chapters: List<EpubContentLoader.Chapter> = emptyList(),
+    val chapters: List<BookChapter> = emptyList(),
     val currentChapterIndex: Int = 0,
-    val chapterContent: String = "",
-    val chapterHtmlContent: String? = null,
     val previewText: String = "",
     val currentPdfPage: Int = 0,
     val totalPdfPages: Int = 0,
@@ -84,6 +103,10 @@ data class ReaderUiState(
     // ── Fullscreen (Gap 7) ──────────────────────────────────────────
     val isFullscreen: Boolean = false,
 
+    // ── Readium (Phase 1+) ─────────────────────────────────────────
+    val readiumPublication: Publication? = null,
+    val readiumLocator: Locator? = null,
+
     // ── Debug ──────────────────────────────────────────────────────
     val debugForceMenu: Boolean = false,
 
@@ -93,15 +116,15 @@ data class ReaderUiState(
 )
 
 class ReaderViewModel(
+    application: Application,
     private val readerRepository: ReaderRepository,
     private val readingStatsRepository: ReadingStatsRepository,
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
     private val readerPreferences: ReaderPreferences? = null,
-    val epubContentLoader: EpubContentLoader? = null,
     private val pdfContentLoader: PdfContentLoader? = null,
     defaultBookId: String?,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
-) : ViewModel() {
+) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "ReaderViewModel"
         private const val SEARCH_DEBOUNCE_MS = 300L
@@ -164,9 +187,44 @@ class ReaderViewModel(
                 // Reset all book-specific state
                 chapters = emptyList(),
                 currentChapterIndex = 0,
-                chapterHtmlContent = null,
                 currentPdfPage = 0,
                 totalPdfPages = 0,
+                progressPercent = 0f,
+                progressLabel = "",
+                highlights = emptyList(),
+                bookmarks = emptyList(),
+                isFullscreen = false,
+                readiumPublication = null,
+                readiumLocator = null
+            )
+        }
+
+        when (format.lowercase()) {
+            "pdf" -> loadPdfBook(bookId, filePath, startTime)
+            else -> loadEpubBook(bookId, filePath)
+        }
+    }
+
+    /**
+     * Opens an EPUB via Readium's [PublicationOpener] and stores the
+     * resulting [Publication] in [ReaderUiState.readiumPublication].
+     *
+     * This is the primary EPUB loading path (replaces the old WebView-based
+     * [loadEpubBook] after Phase 2).
+     */
+    fun loadEpubBook(bookId: String, filePath: String) {
+        val startTime = System.currentTimeMillis()
+        mutableUiState.update {
+            it.copy(
+                selectedBookId = bookId,
+                bookFilePath = filePath,
+                bookFormat = "epub",
+                isLoading = true,
+                error = null,
+                chapters = emptyList(),
+                currentChapterIndex = 0,
+                readiumPublication = null,
+                readiumLocator = null,
                 progressPercent = 0f,
                 progressLabel = "",
                 highlights = emptyList(),
@@ -175,63 +233,152 @@ class ReaderViewModel(
             )
         }
 
-        when (format.lowercase()) {
-            "pdf" -> loadPdfBook(bookId, filePath, startTime)
-            else -> loadEpubBook(bookId, filePath, startTime)
-        }
-    }
-
-    private fun loadEpubBook(bookId: String, filePath: String, startTime: Long) {
         viewModelScope.launch(mainDispatcher) {
-            val loader = epubContentLoader
-            if (loader == null) {
-                val message = "Reader content loader is unavailable"
-                mutableUiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = message
+            try {
+                val app = getApplication<Application>()
+                val file = File(filePath)
+                val fileUri = android.net.Uri.fromFile(file).toString()
+
+                // Step 1: create HttpClient and AssetRetriever
+                val httpClient = DefaultHttpClient()
+                val assetRetriever = AssetRetriever(app.contentResolver, httpClient)
+
+                // Step 2: retrieve the Asset from the absolute file URL
+                val url = AbsoluteUrl(fileUri)
+                    ?: throw Exception("Invalid file URI: $fileUri")
+                val retrieveResult = withContext(Dispatchers.IO) {
+                    assetRetriever.retrieve(url)
+                }
+                val asset = retrieveResult.getOrNull()
+                    ?: throw Exception("Failed to retrieve EPUB asset")
+
+                // Step 3: open a Publication from the Asset
+                val parser = DefaultPublicationParser(
+                    context = app,
+                    httpClient = httpClient,
+                    assetRetriever = assetRetriever,
+                    pdfFactory = null
+                )
+                val opener = PublicationOpener(parser)
+                val openResult = withContext(Dispatchers.IO) {
+                    opener.open(asset, allowUserInteraction = false)
+                }
+                val publication: Publication = openResult.fold(
+                    onSuccess = { it },
+                    onFailure = { error ->
+                        throw Exception("Readium open failed: ${error.message}")
+                    }
+                )
+
+                val loadTime = System.currentTimeMillis() - startTime
+                Log.d(TAG, "Readium loaded EPUB in ${loadTime}ms")
+
+                val chapters = publication.readingOrder.mapIndexed { index, link ->
+                    BookChapter(
+                        index = index,
+                        id = link.href.toString(),
+                        title = link.title ?: "Chapter ${index + 1}",
+                        href = link.href.toString()
                     )
                 }
-                _uiEvent.emit(UiEvent.ShowSnackbar(message))
-                return@launch
-            }
 
-            val result = loader.loadEpub(filePath)
-
-            result.onSuccess { book ->
-                val loadTime = System.currentTimeMillis() - startTime
-                Log.d(TAG, "Book loaded in ${loadTime}ms, ${book.chapters.size} chapters")
-
-                mutableUiState.update { state ->
-                    state.copy(
-                        chapters = book.chapters,
-                        currentChapterIndex = 0,
-                        chapterContent = "",
+                mutableUiState.update {
+                    it.copy(
+                        readiumPublication = publication,
+                        chapters = chapters,
                         isLoading = false,
                         loadTimeMs = loadTime
                     )
                 }
-                updateProgressDisplay()
-
-                if (book.chapters.isNotEmpty()) {
-                    loadChapterContent(0)
+                // Migrate legacy CFI data to Readium Locator format (idempotent)
+                withContext(Dispatchers.IO) {
+                    migrateCfiDataForBook(bookId, publication.readingOrder)
                 }
-
+                updateProgressDisplay()
                 startObservingHighlights(bookId)
                 startObservingBookmarks(bookId)
-            }.onFailure { error ->
-                Log.e(TAG, "Failed to load book: ${error.message}")
-                val message = error.message ?: "Failed to load book"
+            } catch (e: Exception) {
+                Log.e(TAG, "Readium failed to open EPUB", e)
+                val message = e.message ?: "Failed to open EPUB with Readium"
                 mutableUiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = message
-                    )
+                    it.copy(isLoading = false, error = message)
                 }
-                _uiEvent.emit(UiEvent.ShowSnackbar(message))
+                _uiEvent.tryEmit(UiEvent.ShowSnackbar(message))
             }
         }
     }
+
+    /**
+     * Called by [ReadiumReaderContent] when the navigator reports a
+     * new [Locator].  Uses [Publication.linkWithHref] to find the
+     * matching reading-order entry, then updates chapter index and
+     * progression percentage.
+     */
+    fun onReadiumLocatorChanged(locator: Locator) {
+        val publication = mutableUiState.value.readiumPublication ?: return
+        val matchingLink = publication.linkWithHref(locator.href) ?: return
+        val index = publication.readingOrder.indexOf(matchingLink)
+        if (index >= 0) {
+            val totalProgression = locator.locations.totalProgression?.toFloat() ?: 0f
+            mutableUiState.update {
+                it.copy(
+                    currentChapterIndex = index,
+                    readiumLocator = locator,
+                    progressPercent = totalProgression * 100f
+                )
+            }
+            updateProgressDisplay()
+        }
+    }
+
+    /**
+     * Migrates legacy CFI data for a book to Readium Locator JSON format.
+     *
+     * Only migrates records that have a CFI string but no [locatorJson] yet.
+     * This is idempotent — already-migrated records are skipped.
+     */
+    private suspend fun migrateCfiDataForBook(bookId: String, readingOrder: List<Link>) {
+        val readingOrderLinks = readingOrder
+        if (readingOrderLinks.isEmpty()) return
+
+        // ── Migrate highlights ──────────────────────────────────────────
+        val highlights = readerRepository.getHighlightsForBook(bookId)
+        for (highlight in highlights) {
+            if (highlight.cfiRange.startsWith("epubcfi(") && highlight.locatorJson == null) {
+                val locator = CfiMigrator.migrateCfiToLocator(highlight.cfiRange, readingOrderLinks)
+                if (locator != null) {
+                    val migrated = highlight.copy(locatorJson = CfiMigrator.locatorToJson(locator))
+                    readerRepository.upsertHighlight(migrated)
+                }
+            }
+        }
+
+        // ── Migrate bookmarks ───────────────────────────────────────────
+        val bookmarks = readerRepository.getBookmarksForBook(bookId)
+        for (bookmark in bookmarks) {
+            if (bookmark.cfiLocation.startsWith("epubcfi(") && bookmark.locatorJson == null) {
+                val locator = CfiMigrator.migrateCfiToLocator(bookmark.cfiLocation, readingOrderLinks)
+                if (locator != null) {
+                    val migrated = bookmark.copy(locatorJson = CfiMigrator.locatorToJson(locator))
+                    readerRepository.upsertBookmark(migrated)
+                }
+            }
+        }
+
+        // ── Migrate reading progress ────────────────────────────────────
+        val progress = readerRepository.getProgressForBook(bookId)
+        if (progress != null && progress.cfiLocation.startsWith("epubcfi(") && progress.locatorJson == null) {
+            val locator = CfiMigrator.migrateCfiToLocator(progress.cfiLocation, readingOrderLinks)
+            if (locator != null) {
+                val migrated = progress.copy(locatorJson = CfiMigrator.locatorToJson(locator))
+                readerRepository.upsertProgress(migrated)
+            }
+        }
+
+        Log.d(TAG, "CFI migration complete for book $bookId")
+    }
+
+
 
     private fun loadPdfBook(bookId: String, filePath: String, startTime: Long) {
         viewModelScope.launch(mainDispatcher) {
@@ -310,40 +457,6 @@ class ReaderViewModel(
         }
     }
 
-    private fun loadChapterContent(chapterIndex: Int) {
-        val filePath = mutableUiState.value.bookFilePath ?: return
-        val chapter = mutableUiState.value.chapters.getOrNull(chapterIndex) ?: return
-
-        val startTime = System.currentTimeMillis()
-
-        viewModelScope.launch(mainDispatcher) {
-            val loader = epubContentLoader ?: return@launch
-            val result = loader.getChapterContent(filePath, chapter.href)
-
-            result.onSuccess { htmlContent ->
-                val loadTime = System.currentTimeMillis() - startTime
-                Log.d(TAG, "Chapter ${chapterIndex} loaded in ${loadTime}ms")
-
-                val preview = loader.stripHtmlToPlainText(htmlContent).take(200)
-                mutableUiState.update {
-                    it.copy(
-                        currentChapterIndex = chapterIndex,
-                        chapterHtmlContent = htmlContent,
-                        previewText = preview
-                    )
-                }
-                updateProgressDisplay()
-            }.onFailure { error ->
-                Log.e(TAG, "Failed to load chapter: ${error.message}")
-                val message = error.message ?: "Failed to load chapter"
-                mutableUiState.update {
-                    it.copy(error = message)
-                }
-                _uiEvent.emit(UiEvent.ShowSnackbar(message))
-            }
-        }
-    }
-
     // ── Search (Gap 3) ──────────────────────────────────────────────
 
     fun onToggleSearch() {
@@ -380,10 +493,9 @@ class ReaderViewModel(
                 return@launch
             }
 
-            val filePath = state.bookFilePath ?: return@launch
-            val results = withContext(Dispatchers.IO) {
-                epubContentLoader?.searchAllChapters(filePath, query) ?: emptyList()
-            }
+            // EPUB search through Readium's navigator is not yet wired.
+            // Returns empty until search is integrated with the navigator API.
+            val results = emptyList<SearchResult>()
 
             mutableUiState.update {
                 it.copy(searchResults = results, isSearching = false)
@@ -464,8 +576,15 @@ class ReaderViewModel(
         _uiEvent.tryEmit(UiEvent.ShowToast("🐛 $msg"))
     }
 
+    /**
+     * Called from [PdfWebView] JS bridge with raw selection coordinates.
+     * Delegates to [onTextSelection] for state update.
+     */
+    fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) {
+        onTextSelection(text, Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt()))
+    }
+
     fun onTextSelection(text: String, rect: Rect) {
-        debugToast("STEP 2: VM recibió selección \"${text.take(20)}\" rect=$rect")
         Log.d("ReaderVM", "onTextSelection: \"${text.take(50)}\" rect=$rect")
         mutableUiState.update {
             it.copy(
@@ -475,15 +594,6 @@ class ReaderViewModel(
                 showContextMenu = false
             )
         }
-    }
-
-    fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) {
-        if (text == "JS_ALIVE") {
-            debugToast("JS PING OK — injection funciona")
-            return
-        }
-        debugToast("STEP 1: Bridge recibe texto=\"${text.take(20)}\"")
-        onTextSelection(text, Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt()))
     }
 
     fun onSelectHighlightColor(color: String) {
@@ -635,7 +745,6 @@ class ReaderViewModel(
         if (currentIndex < totalChapters - 1) {
             val newIndex = currentIndex + 1
             mutableUiState.update { it.copy(currentChapterIndex = newIndex) }
-            loadChapterContent(newIndex)
             updateProgressForChapter(newIndex)
             sleepTimerManager.onChapterChanged()
         }
@@ -647,7 +756,6 @@ class ReaderViewModel(
         if (currentIndex > 0) {
             val newIndex = currentIndex - 1
             mutableUiState.update { it.copy(currentChapterIndex = newIndex) }
-            loadChapterContent(newIndex)
             updateProgressForChapter(newIndex)
             sleepTimerManager.onChapterChanged()
         }
@@ -906,7 +1014,6 @@ class ReaderViewModel(
         if (index in mutableUiState.value.chapters.indices) {
             if (index == mutableUiState.value.currentChapterIndex) return
             mutableUiState.update { it.copy(currentChapterIndex = index) }
-            loadChapterContent(index)
             updateProgressForChapter(index)
             sleepTimerManager.onChapterChanged()
         }
@@ -1011,10 +1118,10 @@ class ReaderViewModel(
 }
 
 class ReaderViewModelFactory(
+    private val application: Application,
     private val readerRepository: ReaderRepository,
     private val readingStatsRepository: ReadingStatsRepository,
     private val readerPreferences: ReaderPreferences,
-    private val epubContentLoader: EpubContentLoader,
     private val pdfContentLoader: PdfContentLoader,
     private val defaultBookId: String?
 ) : ViewModelProvider.Factory {
@@ -1022,11 +1129,11 @@ class ReaderViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ReaderViewModel::class.java)) {
             return ReaderViewModel(
+                application = application,
                 readerRepository = readerRepository,
                 readingStatsRepository = readingStatsRepository,
                 updateReadingProgressUseCase = UpdateReadingProgressUseCase(readerRepository),
                 readerPreferences = readerPreferences,
-                epubContentLoader = epubContentLoader,
                 pdfContentLoader = pdfContentLoader,
                 defaultBookId = defaultBookId
             ) as T

@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import androidx.room.Room
 import com.nextpage.BuildConfig
-import com.nextpage.data.epub.EpubContentLoader
 import com.nextpage.data.epub.ZipEpubParserService
 import com.nextpage.data.pdf.DefaultPdfParserService
 import com.nextpage.data.pdf.PdfContentLoader
@@ -102,14 +101,7 @@ class AppContainer(context: Context) {
         readingSessionDao = appDatabase.readingSessionDao()
     )
 
-    private val contentLoaderStartTime = System.currentTimeMillis()
-    val epubContentLoader: EpubContentLoader = EpubContentLoader(context.applicationContext)
     val pdfContentLoader: PdfContentLoader = PdfContentLoader(context.applicationContext)
-    private val contentLoaderInitTime = System.currentTimeMillis() - contentLoaderStartTime
-    init {
-        Log.d(TAG, "ContentLoaders initialized in ${contentLoaderInitTime}ms")
-    }
-
     val readerPreferences: ReaderPreferences = ReaderPreferences(context.applicationContext)
 
     private val supabaseConfigProvider = SupabaseConfigProvider()
@@ -180,7 +172,6 @@ class AppContainer(context: Context) {
     val dbInitTimeMs: Long get() = dbInitTime
     val epubImportInitTimeMs: Long get() = epubImportInitTime
     val readerRepoInitTimeMs: Long get() = readerRepoInitTime
-    val contentLoaderInitTimeMs: Long get() = contentLoaderInitTime
     val totalInitTimeMs: Long get() = totalInitTime
 
     // ── DAO exposure (debug) ────────────────────────────────────────

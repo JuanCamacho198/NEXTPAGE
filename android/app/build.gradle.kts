@@ -151,8 +151,9 @@ dependencies {
     implementation("org.readium.kotlin-toolkit:readium-shared:3.2.0")
     implementation("org.readium.kotlin-toolkit:readium-streamer:3.2.0")
     implementation("org.readium.kotlin-toolkit:readium-navigator:3.2.0")
-    implementation("org.readium.kotlin-toolkit:readium-navigator-pdf:3.2.0")
-    implementation("org.readium.kotlin-toolkit:readium-adapter-pdfium:3.2.0")
+    implementation("org.readium.kotlin-toolkit:readium-adapter-pdfium:3.2.0") {
+        exclude(group = "androidx.appcompat")
+    }
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

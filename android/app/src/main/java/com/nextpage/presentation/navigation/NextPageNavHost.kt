@@ -85,7 +85,7 @@ fun NextPageNavHost(
     var selectedBookFormat by rememberSaveable { mutableStateOf("epub") }
 
     val libraryViewModel: LibraryViewModel = viewModel(
-        factory = LibraryViewModelFactory(appContainer.libraryRepository)
+        factory = LibraryViewModelFactory(appContainer.libraryRepository, appContainer.syncService)
     )
 
     val readerViewModel: ReaderViewModel = viewModel(

@@ -15,6 +15,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -95,6 +96,11 @@ fun ReadiumReaderContent(
 
     var navigatorFragment by remember { mutableStateOf<EpubNavigatorFragment?>(null) }
     var containerReady by remember { mutableStateOf(false) }
+    // Keep highlights fresh inside the DisposableEffect so the decoration
+    // listener always sees the latest list — the effect only restarts when
+    // navigatorFragment changes, so without this it would capture a stale
+    // empty list.
+    val latestHighlights by rememberUpdatedState(highlights)
 
     // ── Commit EpubNavigatorFragment ──────────────────────────────
     LaunchedEffect(containerReady) {
@@ -268,9 +274,9 @@ fun ReadiumReaderContent(
                         return false
                     }
                     val rect: RectF = event.rect ?: return false
-                    val highlight = highlights.firstOrNull { it.id == event.decoration.id }
+                    val highlight = latestHighlights.firstOrNull { it.id == event.decoration.id }
                     if (highlight == null) {
-                        val knownIds = highlights.map { it.id }
+                        val knownIds = latestHighlights.map { it.id }
                         DebugLog.warn(
                             "Readium",
                             "onDecorationActivated: no highlight found for id=${event.decoration.id} — known IDs: $knownIds"

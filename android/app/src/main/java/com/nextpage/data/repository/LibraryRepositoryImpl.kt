@@ -59,10 +59,11 @@ class LibraryRepositoryImpl(
             id = bookId,
             title = metadata.title.ifBlank { request.fallbackTitle ?: "Untitled" },
             author = metadata.author,
+            description = metadata.description,
             coverPath = coverPath,
             filePath = request.sourcePath,
             format = EPUB_FORMAT,
-            totalPages = null,
+            totalPages = metadata.chapterCount.takeIf { it > 0 },
             updatedAtEpochMillis = now
         )
 
@@ -111,6 +112,7 @@ class LibraryRepositoryImpl(
         id = id,
         title = title,
         author = author,
+        description = description,
         coverPath = coverPath,
         filePath = filePath,
         format = format,
@@ -132,6 +134,7 @@ class LibraryRepositoryImpl(
         id = id,
         title = title,
         author = author,
+        description = description,
         coverPath = coverPath,
         filePath = filePath,
         format = format,

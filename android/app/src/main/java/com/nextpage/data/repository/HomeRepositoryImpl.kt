@@ -74,9 +74,12 @@ class HomeRepositoryImpl(
         id = id,
         title = title,
         author = author,
+        description = description,
         coverPath = coverPath,
         filePath = filePath,
         format = format,
+        totalPages = totalPages,
+        userRating = userRating,
         updatedAtEpochMillis = updatedAtEpochMillis
     )
 }

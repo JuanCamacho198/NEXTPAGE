@@ -3,6 +3,8 @@ package com.nextpage.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nextpage.data.remote.sync.SyncService
+import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.repository.LibraryRepository
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -31,6 +34,10 @@ data class LibraryUiState(
     val bookToDelete: Book? = null,
     val totalMinutesRead: Long = 0L,
     val readingMinutesByBook: Map<String, Long> = emptyMap(),
+    // ── Sync state ──
+    val isSyncing: Boolean = false,
+    val pendingCount: Int = 0,
+    val syncError: String? = null,
     // ── UI State (filters, sort, search) ──
     val statusFilter: String = "all",
     val sortBy: String = "date_added",
@@ -101,6 +108,7 @@ sealed interface LibraryImportEvent {
 class LibraryViewModel(
     private val libraryRepository: LibraryRepository,
     private val importEpubBookUseCase: ImportEpubBookUseCase,
+    private val syncService: SyncService,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) : ViewModel() {
     companion object {
@@ -138,6 +146,25 @@ class LibraryViewModel(
             libraryRepository.observeReadingTimeByBook().collect { readingMinutesByBook ->
                 mutableUiState.update { it.copy(readingMinutesByBook = readingMinutesByBook) }
             }
+        }
+
+        viewModelScope.launch(mainDispatcher) {
+            syncService.syncState.collect { state ->
+                mutableUiState.update {
+                    it.copy(
+                        isSyncing = state is SyncState.Running,
+                        syncError = (state as? SyncState.Error)?.message
+                    )
+                }
+            }
+        }
+
+        viewModelScope.launch(mainDispatcher) {
+            syncService.pendingCount
+                .distinctUntilChanged()
+                .collect { count ->
+                    mutableUiState.update { it.copy(pendingCount = count) }
+                }
         }
     }
 
@@ -285,17 +312,27 @@ class LibraryViewModel(
             )
         }
     }
+
+    // ── Sync ────────────────────────────────────────────────────────
+
+    fun onPullToRefresh() {
+        viewModelScope.launch(mainDispatcher) {
+            syncService.schedulePull()
+        }
+    }
 }
 
 class LibraryViewModelFactory(
-    private val libraryRepository: LibraryRepository
+    private val libraryRepository: LibraryRepository,
+    private val syncService: SyncService
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LibraryViewModel::class.java)) {
             return LibraryViewModel(
                 libraryRepository = libraryRepository,
-                importEpubBookUseCase = ImportEpubBookUseCase(libraryRepository)
+                importEpubBookUseCase = ImportEpubBookUseCase(libraryRepository),
+                syncService = syncService
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

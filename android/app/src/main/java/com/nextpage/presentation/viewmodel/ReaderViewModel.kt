@@ -41,6 +41,7 @@ import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.AbsoluteUrl
+import org.readium.r2.shared.util.resource.Resource
 import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.http.DefaultHttpClient
 import org.readium.r2.streamer.PublicationOpener
@@ -507,9 +508,8 @@ class ReaderViewModel(
                 return@launch
             }
 
-            // EPUB search through Readium's navigator is not yet wired.
-            // Returns empty until search is integrated with the navigator API.
-            val results = emptyList<SearchResult>()
+            // EPUB search through Readium publication resources
+            val results = searchReadiumPublication(query)
 
             mutableUiState.update {
                 it.copy(searchResults = results, isSearching = false)
@@ -558,11 +558,59 @@ class ReaderViewModel(
         }
     }
 
+    /**
+     * Searches EPUB publication content by iterating reading-order resources.
+     * SPIKE result: [Publication.content()] does NOT exist in Readium 3.2.0.
+     * Fallback: use [Publication.get] → [Resource.read] to extract text.
+     */
+    private suspend fun searchReadiumPublication(query: String): List<SearchResult> {
+        val publication = mutableUiState.value.readiumPublication ?: return emptyList()
+        val results = mutableListOf<SearchResult>()
+        val lowerQuery = query.lowercase()
+
+        for ((index, link) in publication.readingOrder.withIndex()) {
+            try {
+                val resource = publication.get(link) ?: continue
+                val readResult = resource.read()
+                val bytes = readResult.getOrNull() ?: continue
+                val content = bytes.decodeToString()
+                val lowerContent = content.lowercase()
+
+                var offset = 0
+                while (true) {
+                    val matchIndex = lowerContent.indexOf(lowerQuery, offset)
+                    if (matchIndex < 0) break
+                    val start = maxOf(0, matchIndex - 60)
+                    val end = minOf(content.length, matchIndex + query.length + 60)
+                    val snippet = content.substring(start, end)
+                    results.add(
+                        SearchResult(
+                            text = snippet.trim(),
+                            offset = matchIndex,
+                            chapterIndex = index,
+                            page = 0f
+                        )
+                    )
+                    offset = matchIndex + 1
+                }
+            } catch (_: Exception) {
+                // Skip resources that can't be read
+            }
+        }
+        return results
+    }
+
     fun onSearchResultSelected(result: SearchResult) {
         val state = mutableUiState.value
         if (state.bookFormat == "pdf") {
             goToPdfPage(result.page.toInt())
+        } else if (state.readiumPublication != null) {
+            // Readium path: emit locator for the composable → navigator.go()
+            val link = state.readiumPublication!!.readingOrder.getOrNull(result.chapterIndex) ?: return
+            val locator = state.readiumPublication!!.locatorFromLink(link) ?: return
+            viewModelScope.launch { _navigateToLocator.emit(locator) }
         } else {
+            // Legacy EPUB fallback
             if (result.chapterIndex != state.currentChapterIndex) {
                 goToChapter(result.chapterIndex)
             }
@@ -667,6 +715,94 @@ class ReaderViewModel(
                 selectedText = null,
                 selectionRect = null
             )
+        }
+    }
+
+    // ── Readium Selection (Phase 2+) ───────────────────────────────
+
+    /**
+     * Called by [ReadiumReaderContent] when the [SelectableNavigator]
+     * returns a non-null [Selection]. Stores the locator (needed for
+     * highlight creation) and derives a Compose-friendly [Rect] from the
+     * viewport-space [RectF].
+     */
+    fun onReadiumSelection(locator: Locator, rect: RectF, text: String) {
+        val selectionRect = Rect(
+            rect.left.toInt(),
+            rect.top.toInt(),
+            rect.right.toInt(),
+            rect.bottom.toInt()
+        )
+        mutableUiState.update {
+            it.copy(
+                readiumSelectionLocator = locator,
+                selectedText = text,
+                selectionRect = selectionRect,
+                showColorPicker = true,
+                showContextMenu = false
+            )
+        }
+    }
+
+    // ── Readium Highlights (Phase 3+) ──────────────────────────────
+
+    /**
+     * Called when the user picks a highlight colour for the current
+     * [readiumSelectionLocator]. Builds a fresh [Locator] from the stored
+     * locator, serialises it to JSON, and persists via [createHighlight].
+     */
+    fun onReadiumHighlightColorSelected(color: String) {
+        val state = mutableUiState.value
+        val bookId = state.selectedBookId ?: return
+        val locator = state.readiumSelectionLocator ?: return
+        val text = state.selectedText ?: return
+        val locatorJson = CfiMigrator.locatorToJson(locator)
+
+        createHighlight(
+            bookId = bookId,
+            cfiRange = "readium:${locator.href}",
+            textContent = text,
+            color = color,
+            locatorJson = locatorJson
+        )
+
+        mutableUiState.update {
+            it.copy(
+                showColorPicker = false,
+                showContextMenu = true
+            )
+        }
+    }
+
+    /**
+     * Soft-deletes a highlight by setting [Highlight.deletedAtEpochMillis].
+     * The Room flow emission triggers the decoration reapply cycle.
+     */
+    fun onReadiumDeleteHighlight(highlightId: String) {
+        val state = mutableUiState.value
+        val existing = state.highlights.find { it.id == highlightId } ?: return
+        val updated = existing.copy(
+            deletedAtEpochMillis = System.currentTimeMillis(),
+            updatedAtEpochMillis = System.currentTimeMillis()
+        )
+        viewModelScope.launch(mainDispatcher) {
+            readerRepository.upsertHighlight(updated)
+        }
+    }
+
+    /**
+     * Updates the colour of an existing highlight in-place.
+     * Reapply is triggered reactively via the highlights Flow.
+     */
+    fun onReadiumUpdateHighlightColor(highlightId: String, color: String) {
+        val state = mutableUiState.value
+        val existing = state.highlights.find { it.id == highlightId } ?: return
+        val updated = existing.copy(
+            color = color,
+            updatedAtEpochMillis = System.currentTimeMillis()
+        )
+        viewModelScope.launch(mainDispatcher) {
+            readerRepository.upsertHighlight(updated)
         }
     }
 
@@ -948,7 +1084,8 @@ class ReaderViewModel(
         cfiRange: String,
         textContent: String,
         note: String? = null,
-        color: String = HighlightColor.YELLOW.hex
+        color: String = HighlightColor.YELLOW.hex,
+        locatorJson: String? = null
     ) {
         viewModelScope.launch(mainDispatcher) {
             val highlight = Highlight(
@@ -959,7 +1096,8 @@ class ReaderViewModel(
                 note = note,
                 color = color,
                 updatedAtEpochMillis = System.currentTimeMillis(),
-                deletedAtEpochMillis = null
+                deletedAtEpochMillis = null,
+                locatorJson = locatorJson
             )
             readerRepository.upsertHighlight(highlight)
             Log.d(TAG, "Highlight created: ${highlight.id}")

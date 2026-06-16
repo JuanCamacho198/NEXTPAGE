@@ -186,10 +186,10 @@
     <!-- Reader / Highlights Panel -->
     <string name="highlight_filter_all">Todos</string>
     <string name="highlight_filter_yellow">Amarillo</string>
+    <string name="highlight_filter_orange">Naranja</string>
+    <string name="highlight_filter_red">Rojo</string>
     <string name="highlight_filter_green">Verde</string>
-    <string name="highlight_filter_pink">Rosa</string>
     <string name="highlight_filter_blue">Azul</string>
-    <string name="highlight_filter_purple">Púrpura</string>
 
     <!-- Reader / Text Selection -->
     <string name="text_selection_copy">Copiar</string>
@@ -199,6 +199,20 @@
     <string name="context_menu_comment">Comentario</string>
     <string name="context_menu_share">Compartir</string>
     <string name="context_menu_delete">Eliminar</string>
+    <string name="color_picker_confirm">Tocá un preset o escribí un hex</string>
+    <string name="note_modal_title">Nueva Nota</string>
+    <string name="comment_modal_title">Nuevo Comentario</string>
+    <string name="annotation_textarea_note_hint">Escribí tu nota…</string>
+    <string name="annotation_textarea_comment_hint">Escribí tu comentario…</string>
+    <string name="annotation_snippet_label">Texto seleccionado</string>
+    <string name="annotation_modal_close">Cerrar</string>
+    <string name="tag_dialog_title">Etiqueta</string>
+    <string name="tag_dialog_label">Etiqueta</string>
+    <string name="share_no_text">No hay texto seleccionado</string>
+    <string name="palette_section_title">Paleta de colores</string>
+    <string name="palette_section_subtitle">Personalizá los 5 colores de resaltado</string>
+    <string name="palette_reset">Restablecer valores predeterminados</string>
+    <string name="palette_pick_color">Elegir color</string>
 
     <!-- Reader / aA Settings -->
     <string name="aa_preview_text">El veloz murciélago hindú comía feliz cardillo y kiwi. Esta es una vista previa de la configuración actual de lectura.</string>
@@ -297,4 +311,8 @@
 
     <!-- Debug version label -->
     <string name="debug_version_label">(build de desarrollo)</string>
+
+    <!-- Debug mode toggle -->
+    <string name="debug_mode_title">Modo debug</string>
+    <string name="debug_mode_subtitle">Mostrar herramientas de desarrollo</string>
 </resources>

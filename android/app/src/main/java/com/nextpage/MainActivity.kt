@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import com.nextpage.data.session.AppThemePreferences
 import com.nextpage.debug.CrashNotificationHelper
 import com.nextpage.debug.DebugLog
+import com.nextpage.debug.DebugPrefs
 import com.nextpage.debug.DebugStateHolder
 import com.nextpage.di.AppContainer
 import com.nextpage.domain.model.ThemeMode
@@ -41,7 +42,7 @@ class MainActivity : AppCompatActivity() {
 
         // Debug-only: capture pending crash from previous run, ensure the
         // notification channel exists, and request POST_NOTIFICATIONS on 33+.
-        if (BuildConfig.DEBUG) {
+        if (BuildConfig.DEBUG && DebugPrefs.isEnabled(this)) {
             CrashNotificationHelper.ensureChannel(this)
             CrashNotificationHelper.showCrashNotificationIfAny(this)
             maybeRequestNotificationPermission()

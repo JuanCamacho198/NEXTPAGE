@@ -250,10 +250,10 @@
     <!-- Reader / Highlights Panel -->
     <string name="highlight_filter_all">All</string>
     <string name="highlight_filter_yellow">Yellow</string>
+    <string name="highlight_filter_orange">Orange</string>
+    <string name="highlight_filter_red">Red</string>
     <string name="highlight_filter_green">Green</string>
-    <string name="highlight_filter_pink">Pink</string>
     <string name="highlight_filter_blue">Blue</string>
-    <string name="highlight_filter_purple">Purple</string>
 
     <!-- Reader / Text Selection -->
     <string name="text_selection_copy">Copy</string>
@@ -263,6 +263,20 @@
     <string name="context_menu_comment">Comment</string>
     <string name="context_menu_share">Share</string>
     <string name="context_menu_delete">Delete</string>
+    <string name="color_picker_confirm">Tap a preset or hex to confirm</string>
+    <string name="note_modal_title">Nueva Nota</string>
+    <string name="comment_modal_title">Nuevo Comentario</string>
+    <string name="annotation_textarea_note_hint">Escribí tu nota…</string>
+    <string name="annotation_textarea_comment_hint">Escribí tu comentario…</string>
+    <string name="annotation_snippet_label">Texto seleccionado</string>
+    <string name="annotation_modal_close">Cerrar</string>
+    <string name="tag_dialog_title">Etiqueta</string>
+    <string name="tag_dialog_label">Etiqueta</string>
+    <string name="share_no_text">No hay texto seleccionado</string>
+    <string name="palette_section_title">Paleta de colores</string>
+    <string name="palette_section_subtitle">Personalizá los 5 colores de resaltado</string>
+    <string name="palette_reset">Restablecer valores predeterminados</string>
+    <string name="palette_pick_color">Elegir color</string>
 
     <!-- Reader / aA Settings -->
     <string name="aa_preview_text">The quick brown fox jumps over the lazy dog. This is a preview of the current reading settings.</string>
@@ -361,4 +375,8 @@
 
     <!-- Debug version label -->
     <string name="debug_version_label">(debug build — for development only)</string>
+
+    <!-- Debug mode toggle -->
+    <string name="debug_mode_title">Debug mode</string>
+    <string name="debug_mode_subtitle">Show development tools</string>
 </resources>

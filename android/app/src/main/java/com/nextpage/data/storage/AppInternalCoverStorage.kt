@@ -22,6 +22,15 @@ class AppInternalCoverStorage(
         }
     }
 
+    override suspend fun deleteCover(bookId: String): Result<Unit> = runCatching {
+        withContext(Dispatchers.IO) {
+            val coverFile = File(coversDir, "$bookId.jpg")
+            if (coverFile.exists()) {
+                coverFile.delete()
+            }
+        }
+    }
+
     private companion object {
         const val COVERS_DIR_NAME = "covers"
     }

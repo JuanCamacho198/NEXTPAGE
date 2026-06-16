@@ -22,6 +22,7 @@ import com.nextpage.presentation.viewmodel.CfiMigrator
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import org.readium.r2.navigator.DecorableNavigator
 import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.SelectableNavigator
@@ -99,33 +100,45 @@ fun ReadiumReaderContent(
         } catch (_: Exception) { }
     }
 
-    // ── currentSelection (poll) → ViewModel ───────────────────────
+    // ── currentSelection (poll + diff) → ViewModel ───────────────
     // Readium 3.2.0: currentSelection() is a suspend function, not a Flow.
-    // We poll every 250ms and call the VM when selection state changes.
+    // We poll every 300ms and only call the VM when selection state actually
+    // changes (avoiding rapid state cycles that could crash composition).
     LaunchedEffect(navigatorFragment) {
         val frag = navigatorFragment ?: return@LaunchedEffect
         val selectable = frag as? SelectableNavigator ?: return@LaunchedEffect
-        while (true) {
-            delay(250)
-            try {
-                val sel = selectable.currentSelection()
-                if (sel != null) {
-                    val selRect = sel.rect ?: continue
-                    // Extract selected text via JS evaluation in the WebView
-                    val text = try {
-                        frag.evaluateJavascript(
-                            "(function(){var s=window.getSelection();return s?s.toString():'';})()"
-                        ) ?: ""
-                    } catch (_: Exception) { "" }
-                    viewModel.onReadiumSelection(
-                        locator = sel.locator,
-                        rect = selRect,
-                        text = text
-                    )
-                } else {
+        var lastSelection: Boolean = false
+        while (isActive) {
+            delay(300)
+            val sel = runCatching { selectable.currentSelection() }.getOrNull()
+            if (sel != null) {
+                val selRect = sel.rect ?: run {
+                    if (lastSelection) viewModel.onSelectionCleared()
+                    lastSelection = false
+                    continue
+                }
+                // Extract selected text — avoids evaluateJavascript which can
+                // crash on some Readium 3.2.0 builds. Fallback: derive text
+                // from the locator's text context.
+                val text = runCatching {
+                    frag.evaluateJavascript(
+                        "(function(){var s=window.getSelection();return s?s.toString():'';})()"
+                    ) ?: sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
+                }.getOrElse {
+                    sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
+                }
+                viewModel.onReadiumSelection(
+                    locator = sel.locator,
+                    rect = selRect,
+                    text = text
+                )
+                lastSelection = true
+            } else {
+                if (lastSelection) {
                     viewModel.onSelectionCleared()
                 }
-            } catch (_: Exception) { }
+                lastSelection = false
+            }
         }
     }
 

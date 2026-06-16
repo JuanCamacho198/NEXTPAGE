@@ -25,6 +25,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.nextpage.BuildConfig
+import com.nextpage.debug.DebugPrefs
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +41,7 @@ import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.ThemeMode
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.ui.components.molecules.NotificationSheet
+import com.nextpage.ui.components.molecules.HighlightPaletteSection
 
 // ─── Data models for sections ────────────────────────────────────────
 
@@ -59,18 +62,35 @@ fun SettingsScreen(
     authSession: AuthSession?,
     appThemeMode: ThemeMode = ThemeMode.SYSTEM,
     onAppThemeModeChanged: (ThemeMode) -> Unit = {},
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    customHighlightColors: List<String>? = null,
+    onUpdateCustomHighlightColor: (Int, String) -> Unit = { _, _ -> },
+    onResetCustomHighlightColors: () -> Unit = {}
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showThemeMenu by remember { mutableStateOf(false) }
     var showLanguageMenu by remember { mutableStateOf(false) }
     var showNotifications by remember { mutableStateOf(false) }
+    var showPaletteSection by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val langPrefs = remember { AppLanguagePreferences(context = context) }
 
     if (showNotifications) {
         NotificationSheet(onDismiss = { showNotifications = false })
+    }
+
+    if (showPaletteSection) {
+        HighlightPaletteSection(
+            customColors = customHighlightColors,
+            onUpdateColor = { index, hex ->
+                onUpdateCustomHighlightColor(index, hex)
+            },
+            onReset = {
+                onResetCustomHighlightColors()
+                showPaletteSection = false
+            }
+        )
     }
 
     // ─── Logout confirmation dialog ──────────────────────────────
@@ -201,7 +221,10 @@ fun SettingsScreen(
                 items = listOf(
                     SectionItem(R.string.settings_pref_reading_theme, Icons.Outlined.Palette),
                     SectionItem(R.string.settings_pref_font_size, Icons.Outlined.TextFields),
-                    SectionItem(R.string.settings_pref_line_height, Icons.Outlined.TextFields)
+                    SectionItem(R.string.settings_pref_line_height, Icons.Outlined.TextFields),
+                    SectionItem(R.string.palette_section_title, Icons.Outlined.Palette) {
+                        showPaletteSection = true
+                    }
                 )
             ),
             SettingsSection(
@@ -260,6 +283,11 @@ fun SettingsScreen(
             // ─── Dynamic sections from list ──────────────────────
             sections.forEach { section ->
                 SettingsSectionBlock(section = section)
+            }
+
+            // ── Debug mode toggle (debug builds only) ──────────────────
+            if (BuildConfig.DEBUG) {
+                DebugModeSection(context = context)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -454,6 +482,52 @@ private fun SettingsSectionBlock(section: SettingsSection) {
                 label = stringResource(item.labelRes),
                 onClick = item.onClick
             )
+        }
+    }
+}
+
+@Composable
+private fun DebugModeSection(context: android.content.Context) {
+    var debugEnabled by remember { mutableStateOf(DebugPrefs.isEnabled(context)) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Debug",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.debug_mode_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = stringResource(R.string.debug_mode_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = debugEnabled,
+                    onCheckedChange = { enabled ->
+                        debugEnabled = enabled
+                        DebugPrefs.setEnabled(context, enabled)
+                    }
+                )
+            }
         }
     }
 }

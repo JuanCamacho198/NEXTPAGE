@@ -46,8 +46,11 @@ import com.nextpage.BuildConfig
 import com.nextpage.R
 import com.nextpage.debug.DebugLog
 import com.nextpage.debug.DebugPanel
+import com.nextpage.debug.DebugPrefs
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.ui.components.molecules.HighlightsSheet
+import com.nextpage.ui.components.molecules.HighlightAnnotationModal
+import com.nextpage.ui.components.molecules.HighlightTagDialog
 import com.nextpage.ui.components.molecules.ReadingProgressBar
 import com.nextpage.ui.components.molecules.SearchBottomSheet
 import com.nextpage.ui.components.molecules.SelectionOverlay
@@ -92,6 +95,18 @@ fun ReaderScreen(
     // ── Debug action triggers: panel button → ReadiumReaderContent ──
     val inspectHighlightsHtmlTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
     val logWebViewTreeTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
+
+    // ── Collect UiEvents (toasts) ──────────────────
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is com.nextpage.presentation.UiEvent.ShowToast -> {
+                    android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_SHORT).show()
+                }
+                else -> {}
+            }
+        }
+    }
 
     // ── Fullscreen: apply WindowInsetsController when state changes ──
     DisposableEffect(uiState.isFullscreen) {
@@ -197,12 +212,14 @@ fun ReaderScreen(
                         SelectionOverlay(
                             showColorPicker = uiState.showColorPicker,
                             showContextMenu = uiState.showContextMenu,
+                            showColorPickerPopover = uiState.showColorPickerPopover,
                             selectionRect = uiState.selectionRect,
                             selectedText = uiState.selectedText,
                             highlights = uiState.highlights,
                             activeHighlightColor = uiState.activeHighlightId?.let { id ->
                                 uiState.highlights.firstOrNull { it.id == id }?.color
                             },
+                            customHighlightColors = uiState.readerSettings.customHighlightColors,
                             onColorSelected = { color -> viewModel.onReadiumHighlightColorSelected(color) },
                             onCopy = {
                                 viewModel.onCopySelectedText()
@@ -216,10 +233,12 @@ fun ReaderScreen(
                             onDelete = {
                                 uiState.activeHighlightId?.let { viewModel.onReadiumDeleteHighlight(it) }
                             },
-                            onAddTag = {},
-                            onAddNote = {},
-                            onAddComment = {},
-                            onShare = {}
+                            onAddTag = { viewModel.onShowTagDialog() },
+                            onAddNote = { viewModel.onShowNoteModal() },
+                            onAddComment = { viewModel.onShowCommentModal() },
+                            onShare = { viewModel.onShareSelectedText() },
+                            onShowColorPickerPopover = { viewModel.onShowColorPickerPopover() },
+                            onDismissColorPickerPopover = { viewModel.onDismissColorPickerPopover() }
                         )
                     }
                 }
@@ -240,12 +259,14 @@ fun ReaderScreen(
                         SelectionOverlay(
                             showColorPicker = uiState.showColorPicker,
                             showContextMenu = uiState.showContextMenu,
+                            showColorPickerPopover = uiState.showColorPickerPopover,
                             selectionRect = uiState.selectionRect,
                             selectedText = uiState.selectedText,
                             highlights = uiState.highlights,
                             activeHighlightColor = uiState.activeHighlightId?.let { id ->
                                 uiState.highlights.firstOrNull { it.id == id }?.color
                             },
+                            customHighlightColors = uiState.readerSettings.customHighlightColors,
                             onColorSelected = { color -> viewModel.onReadiumHighlightColorSelected(color) },
                             onCopy = {
                                 viewModel.onCopySelectedText()
@@ -259,10 +280,12 @@ fun ReaderScreen(
                             onDelete = {
                                 uiState.activeHighlightId?.let { viewModel.onReadiumDeleteHighlight(it) }
                             },
-                            onAddTag = {},
-                            onAddNote = {},
-                            onAddComment = {},
-                            onShare = {}
+                            onAddTag = { viewModel.onShowTagDialog() },
+                            onAddNote = { viewModel.onShowNoteModal() },
+                            onAddComment = { viewModel.onShowCommentModal() },
+                            onShare = { viewModel.onShareSelectedText() },
+                            onShowColorPickerPopover = { viewModel.onShowColorPickerPopover() },
+                            onDismissColorPickerPopover = { viewModel.onDismissColorPickerPopover() }
                         )
                     }
                 }
@@ -335,6 +358,41 @@ fun ReaderScreen(
             if (uiState.sleepTimerFinished) {
                 SleepTimerOverlay(
                     onDismiss = { viewModel.dismissSleepTimerOverlay() }
+                )
+            }
+
+            // ── Note Modal (GshXP) ──────────────────────────────
+            if (uiState.showNoteModal) {
+                HighlightAnnotationModal(
+                    titleRes = R.string.note_modal_title,
+                    hintRes = R.string.annotation_textarea_note_hint,
+                    snippetLabelRes = R.string.annotation_snippet_label,
+                    selectedText = uiState.selectedText,
+                    initialText = uiState.activeNoteText,
+                    onSave = { viewModel.onSaveNote(it) },
+                    onDismiss = { viewModel.onDismissNoteModal() }
+                )
+            }
+
+            // ── Comment Modal (GshXP) ───────────────────────────
+            if (uiState.showCommentModal) {
+                HighlightAnnotationModal(
+                    titleRes = R.string.comment_modal_title,
+                    hintRes = R.string.annotation_textarea_comment_hint,
+                    snippetLabelRes = R.string.annotation_snippet_label,
+                    selectedText = uiState.selectedText,
+                    initialText = uiState.activeCommentText,
+                    onSave = { viewModel.onSaveComment(it) },
+                    onDismiss = { viewModel.onDismissCommentModal() }
+                )
+            }
+
+            // ── Tag Dialog ──────────────────────────────────────
+            if (uiState.showTagDialog) {
+                HighlightTagDialog(
+                    initialTag = uiState.activeTagText,
+                    onSave = { viewModel.onSaveTag(it) },
+                    onDismiss = { viewModel.onDismissTagDialog() }
                 )
             }
 
@@ -416,12 +474,12 @@ fun ReaderScreen(
         }
     )
 
-        // ── Debug chip (top-end, debug builds only) ──────────────
-        if (BuildConfig.DEBUG) {
+        // ── Debug chip (bottom-end, debug builds only) ────────────
+        if (BuildConfig.DEBUG && DebugPrefs.isEnabled(context)) {
             Surface(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 56.dp, end = 12.dp)
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 16.dp, end = 12.dp)
                     .clickable { debugPanelVisible = !debugPanelVisible },
                 color = Color(0xFFEF4444),
                 shape = RoundedCornerShape(6.dp)
@@ -437,7 +495,7 @@ fun ReaderScreen(
         }
 
         // ── Debug panel (debug builds only) ──────────────────────
-        if (BuildConfig.DEBUG) {
+        if (BuildConfig.DEBUG && DebugPrefs.isEnabled(context)) {
             DebugPanel(
                 visible = debugPanelVisible,
                 state = uiState,

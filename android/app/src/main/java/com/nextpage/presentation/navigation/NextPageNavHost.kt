@@ -63,6 +63,7 @@ import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.debug.DebugPanel
 import com.nextpage.presentation.debug.DebugViewModel
 import com.nextpage.BuildConfig
+import com.nextpage.debug.DebugPrefs
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -137,6 +138,18 @@ fun NextPageNavHost(
                 when (event) {
                     is UiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                     is UiEvent.ShowToast -> android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_SHORT).show()
+                    is UiEvent.ShareText -> {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, event.text)
+                        }
+                        context.startActivity(
+                            Intent.createChooser(
+                                shareIntent,
+                                context.getString(com.nextpage.R.string.context_menu_share)
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -444,6 +457,20 @@ fun NextPageNavHost(
                             navController.navigate(NextPageDestination.Auth.route) {
                                 popUpTo(0) { inclusive = true }
                             }
+                        },
+                        customHighlightColors = appContainer.readerPreferences.load().customHighlightColors,
+                        onUpdateCustomHighlightColor = { index, hex ->
+                            val prefs = appContainer.readerPreferences
+                            val current = prefs.load()
+                            val colors = current.customHighlightColors?.toMutableList()
+                                ?: com.nextpage.domain.model.HighlightColor.defaultHexList().toMutableList()
+                            if (index in colors.indices) colors[index] = hex
+                            prefs.save(current.copy(customHighlightColors = colors))
+                        },
+                        onResetCustomHighlightColors = {
+                            val prefs = appContainer.readerPreferences
+                            val current = prefs.load()
+                            prefs.save(current.copy(customHighlightColors = null))
                         }
                     )
                 }
@@ -452,13 +479,14 @@ fun NextPageNavHost(
 
         // ── Debug FAB ──────────────────────────────────────────────────
         val showDebugFab = BuildConfig.DEBUG &&
+            DebugPrefs.isEnabled(context) &&
             authState.currentSession?.userId?.startsWith("local-") == true
 
         if (showDebugFab) {
             FloatingActionButton(
                 onClick = { showDebugSheet = true },
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
+                    .align(Alignment.TopEnd)
                     .padding(16.dp),
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer
             ) {

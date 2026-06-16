@@ -128,6 +128,15 @@ data class ReaderUiState(
     // ── Debug ──────────────────────────────────────────────────────
     val debugForceMenu: Boolean = false,
 
+    // ── Annotation Modals (Phase 3) ───────────────────────────────
+    val showColorPickerPopover: Boolean = false,
+    val showNoteModal: Boolean = false,
+    val showCommentModal: Boolean = false,
+    val showTagDialog: Boolean = false,
+    val activeNoteText: String = "",
+    val activeCommentText: String = "",
+    val activeTagText: String = "",
+
     val isLoading: Boolean = true,
     val loadTimeMs: Long? = null,
     val error: String? = null
@@ -348,6 +357,12 @@ class ReaderViewModel(
         val matchingLink = publication.linkWithHref(locator.href) ?: return
         val index = publication.readingOrder.indexOf(matchingLink)
         if (index >= 0) {
+            // ── Dismiss floating context menu on page-change ───────
+            val previousHref = mutableUiState.value.readiumLocator?.href
+            if (previousHref != null && previousHref != locator.href) {
+                onSelectionCleared()
+            }
+
             val totalProgression = locator.locations.totalProgression?.toFloat() ?: 0f
             val progressPercent = (totalProgression * 100f).coerceIn(0f, 100f)
             mutableUiState.update {
@@ -796,6 +811,13 @@ class ReaderViewModel(
             it.copy(
                 showColorPicker = false,
                 showContextMenu = false,
+                showColorPickerPopover = false,
+                showNoteModal = false,
+                showCommentModal = false,
+                showTagDialog = false,
+                activeNoteText = "",
+                activeCommentText = "",
+                activeTagText = "",
                 selectedText = null,
                 selectionRect = null,
                 activeHighlightId = null,
@@ -803,6 +825,171 @@ class ReaderViewModel(
                 menuJustClosedAt = SystemClock.elapsedRealtime()
             )
         }
+    }
+
+    // ── Colour Picker Popover (Phase 2) ───────────────────────────
+
+    fun onShowColorPickerPopover() {
+        mutableUiState.update {
+            it.copy(showColorPickerPopover = true, showColorPicker = false)
+        }
+    }
+
+    fun onDismissColorPickerPopover() {
+        mutableUiState.update {
+            it.copy(showColorPickerPopover = false)
+        }
+    }
+
+    // ── Note Modal (Phase 3) ─────────────────────────────────────
+
+    /** Opens the note modal. Pre-fills text from the active highlight's
+     *  [Highlight.note] if one exists. No-op when no highlight is active. */
+    fun onShowNoteModal() {
+        val state = mutableUiState.value
+        val activeId = state.activeHighlightId ?: return
+        val existingText = state.highlights.find { it.id == activeId }?.note ?: ""
+        mutableUiState.update {
+            it.copy(
+                showNoteModal = true,
+                activeNoteText = existingText,
+                showCommentModal = false,
+                showTagDialog = false
+            )
+        }
+    }
+
+    fun onDismissNoteModal() {
+        mutableUiState.update { it.copy(showNoteModal = false) }
+    }
+
+    /** Persists the note to the active highlight and dismisses the modal. */
+    fun onSaveNote(text: String) {
+        val state = mutableUiState.value
+        val activeId = state.activeHighlightId ?: return
+        val existing = state.highlights.find { it.id == activeId } ?: return
+        val updated = existing.copy(
+            note = text.ifBlank { null },
+            updatedAtEpochMillis = System.currentTimeMillis()
+        )
+        viewModelScope.launch(mainDispatcher) {
+            readerRepository.upsertHighlight(updated)
+        }
+        mutableUiState.update {
+            it.copy(showNoteModal = false, activeNoteText = "")
+        }
+    }
+
+    // ── Comment Modal (Phase 3) ──────────────────────────────────
+
+    fun onShowCommentModal() {
+        val state = mutableUiState.value
+        val activeId = state.activeHighlightId ?: return
+        val existingText = state.highlights.find { it.id == activeId }?.comment ?: ""
+        mutableUiState.update {
+            it.copy(
+                showCommentModal = true,
+                activeCommentText = existingText,
+                showNoteModal = false,
+                showTagDialog = false
+            )
+        }
+    }
+
+    fun onDismissCommentModal() {
+        mutableUiState.update { it.copy(showCommentModal = false) }
+    }
+
+    /** Persists the comment to the active highlight and dismisses the modal. */
+    fun onSaveComment(text: String) {
+        val state = mutableUiState.value
+        val activeId = state.activeHighlightId ?: return
+        val existing = state.highlights.find { it.id == activeId } ?: return
+        val updated = existing.copy(
+            comment = text.ifBlank { null },
+            updatedAtEpochMillis = System.currentTimeMillis()
+        )
+        viewModelScope.launch(mainDispatcher) {
+            readerRepository.upsertHighlight(updated)
+        }
+        mutableUiState.update {
+            it.copy(showCommentModal = false, activeCommentText = "")
+        }
+    }
+
+    // ── Tag Dialog (Phase 3) ─────────────────────────────────────
+
+    fun onShowTagDialog() {
+        val state = mutableUiState.value
+        val activeId = state.activeHighlightId ?: return
+        val existingTag = state.highlights.find { it.id == activeId }?.tag ?: ""
+        mutableUiState.update {
+            it.copy(
+                showTagDialog = true,
+                activeTagText = existingTag,
+                showNoteModal = false,
+                showCommentModal = false
+            )
+        }
+    }
+
+    fun onDismissTagDialog() {
+        mutableUiState.update { it.copy(showTagDialog = false) }
+    }
+
+    /** Persists the tag to the active highlight (null if empty) and dismisses. */
+    fun onSaveTag(text: String) {
+        val state = mutableUiState.value
+        val activeId = state.activeHighlightId ?: return
+        val existing = state.highlights.find { it.id == activeId } ?: return
+        val updated = existing.copy(
+            tag = text.ifBlank { null },
+            updatedAtEpochMillis = System.currentTimeMillis()
+        )
+        viewModelScope.launch(mainDispatcher) {
+            readerRepository.upsertHighlight(updated)
+        }
+        mutableUiState.update {
+            it.copy(showTagDialog = false, activeTagText = "")
+        }
+    }
+
+    // ── Share (Phase 4) ──────────────────────────────────────────
+
+    /** Emits a [UiEvent] that the ReaderScreen will use to launch
+     *  [android.content.Intent.ACTION_SEND] with the selected text. */
+    fun onShareSelectedText() {
+        val text = mutableUiState.value.selectedText
+        if (text.isNullOrBlank()) {
+            _uiEvent.tryEmit(UiEvent.ShowToast("No text selected"))
+            return
+        }
+        // Dispatch via UiEvent — ReaderScreen handles the intent
+        _uiEvent.tryEmit(UiEvent.ShareText(text))
+    }
+
+    // ── Custom Highlight Palette (Phase 4) ───────────────────────
+
+    /** Updates a single slot in the custom highlight colour palette
+     *  and persists via [ReaderPreferences]. */
+    fun onUpdateCustomHighlightColor(index: Int, hex: String) {
+        val current = mutableUiState.value.readerSettings
+        val colors = current.customHighlightColors?.toMutableList()
+            ?: HighlightColor.defaultHexList().toMutableList()
+        if (index in colors.indices) {
+            colors[index] = hex
+        }
+        val updated = current.copy(customHighlightColors = colors)
+        readerPreferences?.save(updated)
+        mutableUiState.update { it.copy(readerSettings = updated) }
+    }
+
+    /** Resets the custom highlight palette to [HighlightColor] enum defaults. */
+    fun onResetCustomHighlightColors() {
+        val current = mutableUiState.value.readerSettings
+        val updated = current.copy(customHighlightColors = null)
+        readerPreferences?.save(updated)
+        mutableUiState.update { it.copy(readerSettings = updated) }
     }
 
     // ── Readium Selection (Phase 2+) ───────────────────────────────
@@ -906,6 +1093,13 @@ class ReaderViewModel(
                 it.copy(
                     showColorPicker = false,
                     showContextMenu = false,
+                    showColorPickerPopover = false,
+                    showNoteModal = false,
+                    showCommentModal = false,
+                    showTagDialog = false,
+                    activeNoteText = "",
+                    activeCommentText = "",
+                    activeTagText = "",
                     selectedText = null,
                     selectionRect = null,
                     activeHighlightId = null,

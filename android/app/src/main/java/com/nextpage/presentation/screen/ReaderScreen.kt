@@ -140,7 +140,8 @@ fun ReaderScreen(
                 onToggleSearch = { viewModel.onToggleSearch() },
                 onToggleHighlights = { viewModel.onToggleHighlightsPanel() },
                 onCreateBookmark = { viewModel.createBookmarkFromCurrentPosition() },
-                onToggleSplitSettings = { viewModel.onToggleSplitSettings() }
+                onToggleSplitSettings = { viewModel.onToggleSplitSettings() },
+                onDebugToggle = { viewModel.onDebugForceMenu() }
             )
         },
         footer = {
@@ -196,7 +197,8 @@ fun ReaderScreen(
                                 viewModel.onTextSelectionEvent(text, left, top, right, bottom)
                             },
                             onSearchResults = { json -> viewModel.onPdfSearchResults(json) },
-                            onHighlightTapped = viewModel::onHighlightTapped,
+                        onHighlightTapped = viewModel::onHighlightTapped,
+                        onSelectionCleared = { viewModel.onSelectionCleared() },
                             modifier = Modifier.fillMaxSize()
                         )
 

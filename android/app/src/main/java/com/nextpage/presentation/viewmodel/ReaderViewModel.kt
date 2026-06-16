@@ -84,6 +84,9 @@ data class ReaderUiState(
     // ── Fullscreen (Gap 7) ──────────────────────────────────────────
     val isFullscreen: Boolean = false,
 
+    // ── Debug ──────────────────────────────────────────────────────
+    val debugForceMenu: Boolean = false,
+
     val isLoading: Boolean = true,
     val loadTimeMs: Long? = null,
     val error: String? = null
@@ -455,7 +458,14 @@ class ReaderViewModel(
         }
     }
 
+    /** @suppress debug — shows toast at each pipeline stage */
+    private fun debugToast(msg: String) {
+        Log.d(TAG, "DEBUG: $msg")
+        _uiEvent.tryEmit(UiEvent.ShowToast("🐛 $msg"))
+    }
+
     fun onTextSelection(text: String, rect: Rect) {
+        debugToast("STEP 2: VM recibió selección \"${text.take(20)}\" rect=$rect")
         Log.d("ReaderVM", "onTextSelection: \"${text.take(50)}\" rect=$rect")
         mutableUiState.update {
             it.copy(
@@ -468,6 +478,11 @@ class ReaderViewModel(
     }
 
     fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) {
+        if (text == "JS_ALIVE") {
+            debugToast("JS PING OK — injection funciona")
+            return
+        }
+        debugToast("STEP 1: Bridge recibe texto=\"${text.take(20)}\"")
         onTextSelection(text, Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt()))
     }
 
@@ -489,12 +504,14 @@ class ReaderViewModel(
             color = color
         )
 
+        debugToast("STEP 3: FaPN3 activado -> showContextMenu=true")
+        // Show FaPN3 over the highlighted text — keep selectedText and
+        // selectionRect so the context menu (tag/note/comment/share/delete)
+        // positions correctly over the now-highlighted span.
         mutableUiState.update {
             it.copy(
                 showColorPicker = false,
-                showContextMenu = false,
-                selectedText = null,
-                selectionRect = null
+                showContextMenu = true
             )
         }
     }
@@ -525,6 +542,45 @@ class ReaderViewModel(
                 showContextMenu = false,
                 selectedText = null,
                 selectionRect = null
+            )
+        }
+    }
+
+    fun onSelectionCleared() {
+        Log.d(TAG, "onSelectionCleared — dismissing selection overlay")
+        mutableUiState.update {
+            it.copy(
+                showColorPicker = false,
+                showContextMenu = false,
+                selectedText = null,
+                selectionRect = null,
+                debugForceMenu = false
+            )
+        }
+    }
+
+    // ── Debug: Force menu visibility ──────────────────────────────
+    //
+    // Long-press the reader header to toggle this. If the menu still
+    // doesn't appear, the bug is in SelectionOverlay or FloatingContextMenu.
+    // If it DOES appear, the bug is in the JS→bridge→VM pipeline.
+    //
+    fun onDebugForceMenu() {
+        val current = mutableUiState.value.debugForceMenu
+        if (current) {
+            // Toggle off — clear everything
+            onSelectionCleared()
+            return
+        }
+        debugToast("DEBUG: Forzando menú FaPN3 con rect hardcodeado")
+        mutableUiState.update {
+            it.copy(
+                selectedText = "Texto de prueba debug",
+                // Center-ish of a 1080px-wide viewport
+                selectionRect = Rect(200, 200, 600, 250),
+                showColorPicker = false,
+                showContextMenu = true,
+                debugForceMenu = true
             )
         }
     }
@@ -598,6 +654,9 @@ class ReaderViewModel(
     }
 
     fun onTapZone(isLeftZone: Boolean) {
+        // Always dismiss selection overlay before navigating
+        onSelectionCleared()
+
         val format = mutableUiState.value.bookFormat
         when (format) {
             "pdf" -> if (isLeftZone) goToPreviousPdfPage() else goToNextPdfPage()

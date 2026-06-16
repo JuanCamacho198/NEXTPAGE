@@ -1,7 +1,9 @@
 package com.nextpage.presentation.screen
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -17,13 +19,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Toc
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.TextIncrease
-import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -113,6 +117,7 @@ fun ReaderChrome(
 
 // ── Header Component ──────────────────────────────────────────────
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ReaderHeader(
     uiState: ReaderUiState,
@@ -122,6 +127,7 @@ fun ReaderHeader(
     onToggleHighlights: () -> Unit,
     onCreateBookmark: () -> Unit,
     onToggleSplitSettings: () -> Unit = {},
+    onDebugToggle: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -150,9 +156,15 @@ fun ReaderHeader(
         }
 
         // Title + Author centered
+        // Long-press on title toggles debug force-menu (shows FaPN3
+        // with hardcoded rect to test overlay independently of JS pipeline)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = onDebugToggle
+                )
         ) {
             Text(
                 text = stringResource(R.string.reader_title),

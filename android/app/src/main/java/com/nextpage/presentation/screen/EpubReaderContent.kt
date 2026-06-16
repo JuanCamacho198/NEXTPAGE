@@ -1,11 +1,8 @@
 package com.nextpage.presentation.screen
 
 import android.graphics.Rect
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -44,6 +41,7 @@ fun EpubReaderContent(
     onCopy: () -> Unit,
     onShowContextMenu: () -> Unit,
     onDismissContextMenu: () -> Unit,
+    onSelectionCleared: () -> Unit = {},
     onAddTag: () -> Unit = {},
     onAddNote: () -> Unit = {},
     onAddComment: () -> Unit = {},
@@ -51,55 +49,35 @@ fun EpubReaderContent(
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-        ) {
-            if (htmlContent != null) {
-                EpubWebView(
-                    htmlContent = htmlContent,
-                    filePath = filePath,
-                    epubContentLoader = epubContentLoader,
-                    chapterHref = chapterHref,
-                    leftMarginPx = settings.layoutPrefs.leftMargin,
-                    rightMarginPx = settings.layoutPrefs.rightMargin,
-                    bgColor = settings.theme.bgHex,
-                    textColor = settings.theme.textHex,
-                    fontSizePx = settings.fontSize.sizePx,
-                    lineHeight = settings.lineHeight.value,
-                    onTextSelectionEvent = onTextSelectionEvent,
-                    onSearchResults = onSearchResults,
-                    onHighlightTapped = onHighlightTapped,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = Color(0xFFADC6FF))
-                }
+        if (htmlContent != null) {
+            EpubWebView(
+                htmlContent = htmlContent,
+                filePath = filePath,
+                epubContentLoader = epubContentLoader,
+                chapterHref = chapterHref,
+                leftMarginPx = settings.layoutPrefs.leftMargin,
+                rightMarginPx = settings.layoutPrefs.rightMargin,
+                bgColor = settings.theme.bgHex,
+                textColor = settings.theme.textHex,
+                fontSizePx = settings.fontSize.sizePx,
+                lineHeight = settings.lineHeight.value,
+                onTextSelectionEvent = onTextSelectionEvent,
+                onSearchResults = onSearchResults,
+                onHighlightTapped = onHighlightTapped,
+                // Tap-zones are handled inside the WebView via JS so the
+                // WebView owns every touch — Compose overlays previously
+                // stole touches in the edge regions and broke selection.
+                onNavTap = onTapZone,
+                onSelectionCleared = onSelectionCleared,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color(0xFFADC6FF))
             }
-
-            // Left tap zone (15% width) — previous page/chapter
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(0.15f)
-                    .align(Alignment.CenterStart)
-                    .clickable { onTapZone(true) }
-            )
-
-            // Right tap zone (15% width) — next page/chapter
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(0.15f)
-                    .align(Alignment.CenterEnd)
-                    .clickable { onTapZone(false) }
-            )
-
         }
 
         // ── Text Selection Overlay ───────────────────────────────

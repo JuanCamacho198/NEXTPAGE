@@ -4,23 +4,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Comment
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.NoteAlt
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,18 +26,32 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
 
 /**
- * Full floating context menu that appears when user expands the color picker.
+ * Horizontal floating context menu shown when the user expands the
+ * selection menu.
  *
- * Design: 7 action rows grouped: Color Picker + Copy | Tag | Note | Comment
- * | Share | Delete, with vertical dividers between groups.
- * Background #161F33FF, shadow, rounded corners.
+ * Design node `FaPN3` — a single pill (`cornerRadius = 9999`,
+ * background `#161F33`, 6dp padding) of icon buttons separated by
+ * thin vertical dividers:
+ *
+ *     [Palette] | [Copy] | [Tag] | [Note] | [Comment] | [Share] | [Delete]
+ *
+ * Each action is a 40dp circular icon button. The leading Palette button
+ * toggles the inline color row (delegates to [onShowColorRow] if a
+ * collapse behavior is desired; otherwise it is a no-op placeholder that
+ * the parent can wire up later).
+ *
+ * @param selectedColor currently active highlight color (drives the
+ *  ring on the Palette icon)
+ * @param onColorSelected invoked with the chosen [HighlightColor.hex]
+ * @param onCopy copy to clipboard
+ * @param onAddTag / onAddNote / onAddComment / onShare annotation actions
+ * @param onDelete delete the selected highlight
+ * @param onDismiss dismiss the menu
  */
 @Suppress("UNUSED_PARAMETER")
 @Composable
@@ -53,142 +65,110 @@ fun FloatingContextMenu(
     onShare: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
+    onShowColorRow: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Row(
         modifier = modifier
-            .shadow(12.dp, RoundedCornerShape(16.dp))
+            .shadow(12.dp, RoundedCornerShape(50))
             .background(
                 color = Color(0xFF161F33),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(50)
             )
-            .padding(vertical = 12.dp)
+            .padding(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // ── Group 1: Color Picker ──────────────────────────────────
-        Text(
-            text = stringResource(R.string.context_menu_color),
-            style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
-            color = Color(0xFF718096),
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+        // ── Palette (highlight color) ─────────────────────────────
+        ContextIconAction(
+            icon = Icons.Default.Palette,
+            contentDescription = stringResource(R.string.context_menu_color),
+            tint = parseColorHex(selectedColor),
+            onClick = { onColorSelected(selectedColor) }
         )
+        MenuDivider()
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            HighlightColor.entries.forEach { highlightColor ->
-                val isActive = selectedColor.equals(highlightColor.hex, ignoreCase = true)
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(parseColorHex(highlightColor.hex))
-                        .then(
-                            if (isActive) Modifier
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.3f), CircleShape)
-                            else Modifier
-                        )
-                        .clickable { onColorSelected(highlightColor.hex) }
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Copy icon
-            Icon(
-                imageVector = Icons.Default.ContentCopy,
-                contentDescription = stringResource(R.string.text_selection_copy),
-                tint = Color(0xFFADC6FF),
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable { onCopy() }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider(color = Color(0xFF2F3445))
-
-        // ── Group 2: Tag / Note / Comment ──────────────────────────
-        ContextMenuAction(
+        // ── Copy ──────────────────────────────────────────────────
+        ContextIconAction(
             icon = Icons.Default.ContentCopy,
-            label = stringResource(R.string.text_selection_copy),
+            contentDescription = stringResource(R.string.text_selection_copy),
             onClick = onCopy
         )
-        HorizontalDivider(color = Color(0xFF2F3445))
 
-        ContextMenuAction(
-            label = stringResource(R.string.context_menu_tag),
+        // ── Tag ───────────────────────────────────────────────────
+        ContextIconAction(
+            icon = Icons.AutoMirrored.Filled.Label,
+            contentDescription = stringResource(R.string.context_menu_tag),
             onClick = onAddTag
         )
-        HorizontalDivider(color = Color(0xFF2F3445))
 
-        ContextMenuAction(
-            label = stringResource(R.string.context_menu_note),
+        // ── Note ──────────────────────────────────────────────────
+        ContextIconAction(
+            icon = Icons.Default.NoteAlt,
+            contentDescription = stringResource(R.string.context_menu_note),
             onClick = onAddNote
         )
-        HorizontalDivider(color = Color(0xFF2F3445))
 
-        ContextMenuAction(
-            label = stringResource(R.string.context_menu_comment),
+        // ── Comment ───────────────────────────────────────────────
+        ContextIconAction(
+            icon = Icons.AutoMirrored.Filled.Comment,
+            contentDescription = stringResource(R.string.context_menu_comment),
             onClick = onAddComment
         )
+        MenuDivider()
 
-        Spacer(modifier = Modifier.height(4.dp))
-        HorizontalDivider(color = Color(0xFF2F3445))
-
-        // ── Group 3: Share / Delete ────────────────────────────────
-        ContextMenuAction(
+        // ── Share ─────────────────────────────────────────────────
+        ContextIconAction(
             icon = Icons.Default.Share,
-            label = stringResource(R.string.context_menu_share),
+            contentDescription = stringResource(R.string.context_menu_share),
             onClick = onShare
         )
-        HorizontalDivider(color = Color(0xFF2F3445))
 
-        ContextMenuAction(
+        // ── Delete (destructive — red tint) ───────────────────────
+        ContextIconAction(
             icon = Icons.Default.Delete,
-            label = stringResource(R.string.context_menu_delete),
+            contentDescription = stringResource(R.string.context_menu_delete),
             tint = Color(0xFFEF4444),
             onClick = onDelete
         )
     }
 }
 
+/** 40dp circular icon button matching the design's action buttons. */
 @Composable
-private fun ContextMenuAction(
-    label: String,
+private fun ContextIconAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
     onClick: () -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     tint: Color = Color(0xFFDDE2F8),
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Box(
         modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .size(40.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = tint,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-        }
-        Text(
-            text = label,
-            color = tint,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Normal
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(20.dp)
         )
     }
+}
+
+/** Thin vertical divider between menu groups (matches design `#42475440`). */
+@Composable
+private fun MenuDivider() {
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 2.dp)
+            .width(1.dp)
+            .size(20.dp)
+            .background(Color(0x42475440))
+    )
 }
 
 private fun parseColorHex(hex: String): Color {

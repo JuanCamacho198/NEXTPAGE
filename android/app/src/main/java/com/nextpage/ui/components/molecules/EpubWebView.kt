@@ -19,9 +19,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
 import com.nextpage.data.epub.EpubContentLoader
+import java.io.File
 
 /**
  * Injects NextPage's reader CSS into the chapter HTML for beautiful rendering.
@@ -121,15 +123,18 @@ fun readerCss(
 }
 
 /**
- * Wraps HTML content in a full document with viewport meta and injected CSS.
+ * Wraps HTML content in a full document with viewport meta, injected CSS,
+ * and an optional `<base href>` so relative image paths resolve against
+ * [baseUrl] even when the page is loaded from a local file.
  */
-internal fun wrapHtmlContent(htmlContent: String, css: String): String {
+internal fun wrapHtmlContent(htmlContent: String, css: String, baseHref: String = ""): String {
+    val baseTag = if (baseHref.isNotBlank()) "\n<base href=\"$baseHref\">" else ""
     return """
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">$baseTag
             <style>$css</style>
         </head>
         <body>$htmlContent</body>
@@ -150,7 +155,9 @@ class ReaderJsBridge(
     private val onSearchResults: (String) -> Unit = {},
     private val onHighlightTapped: (highlightId: String, text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _, _ -> },
     private val onPageChanged: (page: Int) -> Unit = {},
-    private val onDocumentLoaded: (totalPages: Int) -> Unit = {}
+    private val onDocumentLoaded: (totalPages: Int) -> Unit = {},
+    private val onNavTap: (Boolean) -> Unit = {},
+    private val onSelectionCleared: () -> Unit = {}
 ) {
     @JavascriptInterface
     fun onTextSelected(text: String) {
@@ -194,6 +201,17 @@ class ReaderJsBridge(
     fun onDocumentLoaded(totalPages: Int) {
         onDocumentLoaded(totalPages)
     }
+
+    @JavascriptInterface
+    fun onNavTap(isLeft: Boolean) {
+        onNavTap(isLeft)
+    }
+
+    @JavascriptInterface
+    fun onSelectionCleared() {
+        Log.d(tag, "onSelectionCleared")
+        onSelectionCleared()
+    }
 }
 
 /**
@@ -236,26 +254,40 @@ internal fun injectSearchJs(query: String): String {
  * JavaScript for detecting text selection in the WebView.
  * Listens for selectionchange events, debounces at 300ms,
  * and sends selection details via NextPageBridge.onTextSelectionEvent().
+ *
+ * When the selection collapses or disappears, sends
+ * [NextPageBridge.onSelectionCleared] after a 400ms debounce so the
+ * Kotlin side can dismiss the overlay menus.
  */
 internal fun injectSelectionJs(): String {
     return """
         (function() {
             if (window.__selectionListenerInstalled) return;
             window.__selectionListenerInstalled = true;
+            // @debug — ping to confirm JS→bridge→VM pipeline works
+            try { NextPageBridge.onTextSelectionEvent('JS_ALIVE', 0, 0, 0, 0); } catch(e) {}
             var __selectionTimer = null;
+            var __clearTimer = null;
             document.addEventListener('selectionchange', function() {
                 if (__selectionTimer) clearTimeout(__selectionTimer);
-                __selectionTimer = setTimeout(function() {
-                    var sel = window.getSelection();
-                    if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+                if (__clearTimer) clearTimeout(__clearTimer);
+                var sel = window.getSelection();
+                if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+                    __selectionTimer = setTimeout(function() {
                         var range = sel.getRangeAt(0);
                         var rect = range.getBoundingClientRect();
                         NextPageBridge.onTextSelectionEvent(
                             sel.toString(),
                             rect.left, rect.top, rect.right, rect.bottom
                         );
-                    }
-                }, 300);
+                    }, 300);
+                } else {
+                    // Selection collapsed — notify after a short delay
+                    // to avoid flickering during handle-adjusted selections.
+                    __clearTimer = setTimeout(function() {
+                        NextPageBridge.onSelectionCleared();
+                    }, 400);
+                }
             });
         })();
     """.trimIndent()
@@ -278,6 +310,73 @@ internal fun injectHighlightTapJs(): String {
                 var id = target.getAttribute('data-highlight-id');
                 NextPageBridge.onHighlightTapped(id, target.textContent, rect.left, rect.top, rect.right, rect.bottom);
             });
+        })();
+    """.trimIndent()
+}
+
+/**
+ * JavaScript for page navigation taps.
+ *
+ * Uses touch events (not click) so we can distinguish a tap from a
+ * selection drag.  A touch is treated as a nav-tap ONLY when:
+ * 1. Movement is < 10px (not a drag)
+ * 2. Duration is < 300ms (not a long-press)
+ * 3. No `selectionchange` event fired in the last 600ms
+ * 4. No active text selection exists
+ *
+ * The leftmost [edgeFraction] fires `onNavTap(true)` (previous page),
+ * the rightmost fires `onNavTap(false)` (next page).  Taps in the
+ * centre are ignored so text selection works everywhere.
+ *
+ * Runs entirely inside the WebView (no Compose overlay), so it never
+ * steals touches away from the selection handles.
+ */
+internal fun injectNavTapJs(edgeFraction: Float = 0.15f): String {
+    val edgePct = (edgeFraction * 100).toInt().coerceIn(5, 45)
+    return """
+        (function() {
+            if (window.__navTapInstalled) return;
+            window.__navTapInstalled = true;
+
+            var EDGE_PCT = $edgePct;
+            var _touchStartX = 0, _touchStartY = 0, _touchStartTime = 0;
+            var _lastSelChange = 0;
+
+            document.addEventListener('touchstart', function(e) {
+                if (e.touches.length !== 1) return;
+                _touchStartX = e.touches[0].clientX;
+                _touchStartY = e.touches[0].clientY;
+                _touchStartTime = Date.now();
+            }, { passive: true });
+
+            document.addEventListener('selectionchange', function() {
+                _lastSelChange = Date.now();
+            });
+
+            document.addEventListener('touchend', function(e) {
+                var touch = e.changedTouches[0];
+                var dx = Math.abs(touch.clientX - _touchStartX);
+                var dy = Math.abs(touch.clientY - _touchStartY);
+                var dt = Date.now() - _touchStartTime;
+
+                // Must be a real tap — not a drag, not a long-press
+                if (dx > 10 || dy > 10 || dt > 300) return;
+
+                // Ignore if a selection change happened recently
+                if (Date.now() - _lastSelChange < 600) return;
+
+                // Don't navigate while text is selected
+                var sel = window.getSelection();
+                if (sel && !sel.isCollapsed && sel.rangeCount > 0) return;
+
+                var vw = window.innerWidth;
+                var x = touch.clientX;
+                if (x < vw * EDGE_PCT / 100) {
+                    NextPageBridge.onNavTap(true);
+                } else if (x > vw * (100 - EDGE_PCT) / 100) {
+                    NextPageBridge.onNavTap(false);
+                }
+            }, { passive: true });
         })();
     """.trimIndent()
 }
@@ -343,6 +442,8 @@ fun EpubWebView(
     onTextSelectionEvent: (text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _ -> },
     onSearchResults: (String) -> Unit = {},
     onHighlightTapped: (highlightId: String, text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _, _ -> },
+    onNavTap: (isLeft: Boolean) -> Unit = {},
+    onSelectionCleared: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // Stable bridge — only created once. The lambdas captured at creation time
@@ -353,7 +454,9 @@ fun EpubWebView(
             onTextSelected = onTextSelected,
             onTextSelectionEvent = onTextSelectionEvent,
             onSearchResults = onSearchResults,
-            onHighlightTapped = onHighlightTapped
+            onHighlightTapped = onHighlightTapped,
+            onNavTap = onNavTap,
+            onSelectionCleared = onSelectionCleared
         )
     }
 
@@ -365,10 +468,12 @@ fun EpubWebView(
     }
     val baseUrl = "https://appassets.androidplatform.net/epub/$chapterDir/"
 
-    // Precompute the full HTML + CSS so update only needs to load it
-    val renderedHtml = remember(htmlContent, bgColor, textColor, fontSizePx, lineHeight, leftMarginPx, rightMarginPx) {
+    // Precompute the full HTML + CSS so update only needs to load it.
+    // baseHref ensures relative image references (e.g. ../Images/cover.jpg)
+    // resolve against the EPUB asset host even when loaded from a local file.
+    val renderedHtml = remember(htmlContent, bgColor, textColor, fontSizePx, lineHeight, leftMarginPx, rightMarginPx, baseUrl) {
         val css = readerCss(bgColor, textColor, fontSizePx, lineHeight, leftMarginPx, rightMarginPx)
-        wrapHtmlContent(htmlContent, css)
+        wrapHtmlContent(htmlContent, css, baseHref = baseUrl)
     }
 
     // Sync handler file path — re-run when filePath or loader changes
@@ -376,8 +481,13 @@ fun EpubWebView(
         epubHandler.setLoader(filePath, epubContentLoader)
     }
 
-    // Track last loaded HTML to avoid reloading on every recomposition.
-    var lastLoadedHtml by remember { mutableStateOf<String?>(null) }
+    // Cache dir for temp HTML files serving as WebView document roots.
+    val context = LocalContext.current
+    val epubCacheDir = remember { File(context.cacheDir, "epub_cache").also { it.mkdirs() } }
+
+    // Track last loaded content identity (html hash) to avoid reloads.
+    var lastLoadedKey by remember { mutableStateOf<String?>(null) }
+    val contentKey = remember(renderedHtml) { renderedHtml.hashCode().toUInt().toString(16) }
 
     AndroidView(
         modifier = modifier,
@@ -396,8 +506,9 @@ fun EpubWebView(
             }.apply {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
-                settings.allowFileAccess = false
-                settings.allowContentAccess = false
+                // Required for loadUrl("file:///...") to work
+                settings.allowFileAccess = true
+                settings.allowContentAccess = true
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
                 settings.builtInZoomControls = false
@@ -423,12 +534,12 @@ fun EpubWebView(
 
                     override fun onPageFinished(view: WebView, url: String) {
                         Log.d("EpubWebView", "onPageFinished called — injecting JS")
-                        // Inject JS AFTER the page finishes loading —
-                        // evaluateJavascript in update() runs before the
-                        // async loadDataWithBaseURL completes, so the JS
-                        // would execute on the blank/old page instead.
+                        // Inject JS AFTER the page finishes loading.
+                        // With loadUrl(file://) this fires RELIABLY —
+                        // unlike loadDataWithBaseURL which often skips it.
                         view.evaluateJavascript(injectSelectionJs(), null)
                         view.evaluateJavascript(injectHighlightTapJs(), null)
+                        view.evaluateJavascript(injectNavTapJs(), null)
                     }
                 }
 
@@ -438,10 +549,19 @@ fun EpubWebView(
             }
         },
         update = { webView ->
-            if (renderedHtml != lastLoadedHtml) {
-                Log.d("EpubWebView", "update: loading HTML content (${renderedHtml.length} chars)")
-                lastLoadedHtml = renderedHtml
-                webView.loadDataWithBaseURL(baseUrl, renderedHtml, "text/html", "UTF-8", null)
+            if (contentKey != lastLoadedKey) {
+                lastLoadedKey = contentKey
+                Log.d("EpubWebView", "update: writing HTML to temp file (${renderedHtml.length} chars)")
+
+                // Write HTML to a temp file so we can load via loadUrl(file://).
+                // onPageFinished is reliable with loadUrl, enabling JS injection.
+                val tempFile = File(epubCacheDir, "${contentKey}.html")
+                tempFile.writeText(renderedHtml)
+
+                // Clean up stale cache files (keep only the current one)
+                epubCacheDir.listFiles()?.forEach { if (it != tempFile) it.delete() }
+
+                webView.loadUrl("file:///${tempFile.absolutePath}")
             } else {
                 Log.d("EpubWebView", "update: skipped — same content")
             }

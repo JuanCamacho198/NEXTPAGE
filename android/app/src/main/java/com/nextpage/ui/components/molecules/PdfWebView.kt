@@ -54,6 +54,7 @@ fun PdfWebView(
     onTextSelectionEvent: (text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _ -> },
     onSearchResults: (String) -> Unit = {},
     onHighlightTapped: (highlightId: String, text: String, left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _, _, _ -> },
+    onSelectionCleared: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var webView by remember { mutableStateOf<WebView?>(null) }
@@ -61,13 +62,14 @@ fun PdfWebView(
     var lastSearchQuery by remember { mutableStateOf("") }
     var pdfLoaded by remember { mutableStateOf(false) }
 
-    val jsBridge = remember(onTextSelectionEvent, onSearchResults, onHighlightTapped, onPageChanged, onDocumentLoaded) {
+    val jsBridge = remember(onTextSelectionEvent, onSearchResults, onHighlightTapped, onPageChanged, onDocumentLoaded, onSelectionCleared) {
         ReaderJsBridge(
             onTextSelectionEvent = onTextSelectionEvent,
             onSearchResults = onSearchResults,
             onHighlightTapped = onHighlightTapped,
             onPageChanged = onPageChanged,
-            onDocumentLoaded = onDocumentLoaded
+            onDocumentLoaded = onDocumentLoaded,
+            onSelectionCleared = onSelectionCleared
         )
     }
 

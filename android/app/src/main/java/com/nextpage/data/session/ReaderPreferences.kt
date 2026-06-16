@@ -6,6 +6,7 @@ import com.nextpage.domain.model.LayoutPreferences
 import com.nextpage.domain.model.LineHeightPreset
 import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.domain.model.ReaderTheme
+import org.json.JSONArray
 
 /**
  * Persists reader settings (font size, theme, line height) to SharedPreferences.
@@ -31,6 +32,14 @@ class ReaderPreferences(context: Context) {
         val leftMargin = prefs.getInt(KEY_LEFT_MARGIN, 16)
         val rightMargin = prefs.getInt(KEY_RIGHT_MARGIN, 16)
 
+        val customColorsJson = prefs.getString(KEY_PALETTE, null)
+        val customColors: List<String>? = if (customColorsJson != null) {
+            try {
+                val arr = JSONArray(customColorsJson)
+                (0 until arr.length()).map { arr.getString(it) }
+            } catch (_: Exception) { null }
+        } else null
+
         return ReaderSettings(
             fontSize = safeValueOf(FontSizePreset.entries, fontSizeName, FontSizePreset.M),
             theme = safeValueOf(ReaderTheme.entries, themeName, ReaderTheme.DARK),
@@ -43,7 +52,8 @@ class ReaderPreferences(context: Context) {
                     alignmentName,
                     LayoutPreferences.Alignment.JUSTIFY
                 )
-            )
+            ),
+            customHighlightColors = customColors
         )
     }
 
@@ -51,14 +61,23 @@ class ReaderPreferences(context: Context) {
      * Persist settings.
      */
     fun save(settings: ReaderSettings) {
-        prefs.edit()
+        val editor = prefs.edit()
             .putString(KEY_FONT_SIZE, settings.fontSize.name)
             .putString(KEY_THEME, settings.theme.name)
             .putString(KEY_LINE_HEIGHT, settings.lineHeight.name)
             .putString(KEY_ALIGNMENT, settings.layoutPrefs.alignment.name)
             .putInt(KEY_LEFT_MARGIN, settings.layoutPrefs.leftMargin)
             .putInt(KEY_RIGHT_MARGIN, settings.layoutPrefs.rightMargin)
-            .apply()
+
+        if (settings.customHighlightColors != null) {
+            val arr = JSONArray()
+            for (color in settings.customHighlightColors) arr.put(color)
+            editor.putString(KEY_PALETTE, arr.toString())
+        } else {
+            editor.remove(KEY_PALETTE)
+        }
+
+        editor.apply()
     }
 
     /**
@@ -80,5 +99,6 @@ class ReaderPreferences(context: Context) {
         private const val KEY_ALIGNMENT = "alignment"
         private const val KEY_LEFT_MARGIN = "left_margin"
         private const val KEY_RIGHT_MARGIN = "right_margin"
+        private const val KEY_PALETTE = "highlight_palette"
     }
 }

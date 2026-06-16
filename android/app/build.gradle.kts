@@ -147,10 +147,12 @@ dependencies {
     // Security: encrypted storage (database encryption requires Kotlin 2.0+ upgrade)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
-    // Readium Kotlin Toolkit (EPUB rendering)
+    // Readium Kotlin Toolkit (EPUB + PDF rendering)
     implementation("org.readium.kotlin-toolkit:readium-shared:3.2.0")
     implementation("org.readium.kotlin-toolkit:readium-streamer:3.2.0")
     implementation("org.readium.kotlin-toolkit:readium-navigator:3.2.0")
+    implementation("org.readium.kotlin-toolkit:readium-navigator-pdf:3.2.0")
+    implementation("org.readium.kotlin-toolkit:readium-adapter-pdfium:3.2.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

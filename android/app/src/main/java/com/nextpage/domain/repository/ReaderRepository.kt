@@ -8,12 +8,15 @@ import kotlinx.coroutines.flow.Flow
 interface ReaderRepository {
     fun observeProgress(bookId: String): Flow<ReadingProgress?>
     suspend fun upsertProgress(progress: ReadingProgress)
+    suspend fun getProgressForBook(bookId: String): ReadingProgress?
 
     fun observeAllHighlights(): Flow<List<Highlight>>
     fun observeHighlights(bookId: String): Flow<List<Highlight>>
     suspend fun upsertHighlight(highlight: Highlight)
+    suspend fun getHighlightsForBook(bookId: String): List<Highlight>
 
     fun observeAllBookmarks(): Flow<List<Bookmark>>
     fun observeBookmarks(bookId: String): Flow<List<Bookmark>>
     suspend fun upsertBookmark(bookmark: Bookmark)
+    suspend fun getBookmarksForBook(bookId: String): List<Bookmark>
 }

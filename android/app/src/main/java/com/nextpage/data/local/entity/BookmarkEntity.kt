@@ -30,5 +30,7 @@ data class BookmarkEntity(
     @ColumnInfo(name = "updated_at")
     val updatedAtEpochMillis: Long,
     @ColumnInfo(name = "deleted_at")
-    val deletedAtEpochMillis: Long?
+    val deletedAtEpochMillis: Long?,
+    @ColumnInfo(name = "locator_json")
+    val locatorJson: String? = null
 )

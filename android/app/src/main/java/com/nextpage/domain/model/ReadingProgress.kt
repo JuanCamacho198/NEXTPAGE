@@ -6,5 +6,6 @@ data class ReadingProgress(
     val cfiLocation: String,
     val percentage: Float,
     val currentPage: Int? = null,
-    val updatedAtEpochMillis: Long
+    val updatedAtEpochMillis: Long,
+    val locatorJson: String? = null
 )

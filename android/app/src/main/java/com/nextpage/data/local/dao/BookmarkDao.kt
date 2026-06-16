@@ -20,8 +20,14 @@ interface BookmarkDao {
     @Query("DELETE FROM bookmarks WHERE id = :id")
     suspend fun deleteById(id: String)
 
+    @Query("SELECT * FROM bookmarks WHERE book_id = :bookId")
+    suspend fun getBookmarksForBook(bookId: String): List<BookmarkEntity>
+
     @Upsert
     suspend fun upsert(bookmark: BookmarkEntity)
+
+    @Upsert
+    suspend fun upsertAll(bookmarks: List<BookmarkEntity>)
 
     @Query("SELECT COUNT(*) FROM bookmarks")
     suspend fun count(): Int

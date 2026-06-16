@@ -20,8 +20,14 @@ interface HighlightDao {
     @Query("DELETE FROM highlights WHERE id = :id")
     suspend fun deleteById(id: String)
 
+    @Query("SELECT * FROM highlights WHERE book_id = :bookId")
+    suspend fun getHighlightsForBook(bookId: String): List<HighlightEntity>
+
     @Upsert
     suspend fun upsert(highlight: HighlightEntity)
+
+    @Upsert
+    suspend fun upsertAll(highlights: List<HighlightEntity>)
 
     @Query("SELECT COUNT(*) FROM highlights")
     suspend fun count(): Int

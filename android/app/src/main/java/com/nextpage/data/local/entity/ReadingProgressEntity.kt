@@ -29,5 +29,7 @@ data class ReadingProgressEntity(
     @ColumnInfo(name = "current_page")
     val currentPage: Int? = null,
     @ColumnInfo(name = "updated_at")
-    val updatedAtEpochMillis: Long
+    val updatedAtEpochMillis: Long,
+    @ColumnInfo(name = "locator_json")
+    val locatorJson: String? = null
 )

@@ -6,5 +6,6 @@ data class Bookmark(
     val cfiLocation: String,
     val titleOrSnippet: String,
     val updatedAtEpochMillis: Long,
-    val deletedAtEpochMillis: Long?
+    val deletedAtEpochMillis: Long?,
+    val locatorJson: String? = null
 )

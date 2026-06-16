@@ -32,5 +32,6 @@ data class Highlight(
     val updatedAtEpochMillis: Long,
     val deletedAtEpochMillis: Long?,
     val tag: String? = null,
-    val comment: String? = null
+    val comment: String? = null,
+    val locatorJson: String? = null
 )

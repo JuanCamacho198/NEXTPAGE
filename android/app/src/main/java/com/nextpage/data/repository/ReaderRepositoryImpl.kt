@@ -27,6 +27,9 @@ class ReaderRepositoryImpl(
         readingProgressDao.upsert(progress.toEntity())
     }
 
+    override suspend fun getProgressForBook(bookId: String): ReadingProgress? =
+        readingProgressDao.getProgressForBook(bookId)?.toDomain()
+
     override fun observeAllHighlights(): Flow<List<Highlight>> =
         highlightDao
             .observeAllHighlights()
@@ -40,6 +43,9 @@ class ReaderRepositoryImpl(
     override suspend fun upsertHighlight(highlight: Highlight) {
         highlightDao.upsert(highlight.toEntity())
     }
+
+    override suspend fun getHighlightsForBook(bookId: String): List<Highlight> =
+        highlightDao.getHighlightsForBook(bookId).map { it.toDomain() }
 
     override fun observeAllBookmarks(): Flow<List<Bookmark>> =
         bookmarkDao
@@ -55,12 +61,17 @@ class ReaderRepositoryImpl(
         bookmarkDao.upsert(bookmark.toEntity())
     }
 
+    override suspend fun getBookmarksForBook(bookId: String): List<Bookmark> =
+        bookmarkDao.getBookmarksForBook(bookId).map { it.toDomain() }
+
     private fun ReadingProgressEntity.toDomain(): ReadingProgress = ReadingProgress(
         id = id,
         bookId = bookId,
         cfiLocation = cfiLocation,
         percentage = percentage,
-        updatedAtEpochMillis = updatedAtEpochMillis
+        currentPage = currentPage,
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        locatorJson = locatorJson
     )
 
     private fun ReadingProgress.toEntity(): ReadingProgressEntity = ReadingProgressEntity(
@@ -68,7 +79,9 @@ class ReaderRepositoryImpl(
         bookId = bookId,
         cfiLocation = cfiLocation,
         percentage = percentage,
-        updatedAtEpochMillis = updatedAtEpochMillis
+        currentPage = currentPage,
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        locatorJson = locatorJson
     )
 
     private fun HighlightEntity.toDomain(): Highlight = Highlight(
@@ -79,7 +92,8 @@ class ReaderRepositoryImpl(
         note = note,
         color = color,
         updatedAtEpochMillis = updatedAtEpochMillis,
-        deletedAtEpochMillis = deletedAtEpochMillis
+        deletedAtEpochMillis = deletedAtEpochMillis,
+        locatorJson = locatorJson
     )
 
     private fun Highlight.toEntity(): HighlightEntity = HighlightEntity(
@@ -90,7 +104,8 @@ class ReaderRepositoryImpl(
         note = note,
         color = color,
         updatedAtEpochMillis = updatedAtEpochMillis,
-        deletedAtEpochMillis = deletedAtEpochMillis
+        deletedAtEpochMillis = deletedAtEpochMillis,
+        locatorJson = locatorJson
     )
 
     private fun BookmarkEntity.toDomain(): Bookmark = Bookmark(
@@ -99,7 +114,8 @@ class ReaderRepositoryImpl(
         cfiLocation = cfiLocation,
         titleOrSnippet = titleOrSnippet,
         updatedAtEpochMillis = updatedAtEpochMillis,
-        deletedAtEpochMillis = deletedAtEpochMillis
+        deletedAtEpochMillis = deletedAtEpochMillis,
+        locatorJson = locatorJson
     )
 
     private fun Bookmark.toEntity(): BookmarkEntity = BookmarkEntity(
@@ -108,6 +124,7 @@ class ReaderRepositoryImpl(
         cfiLocation = cfiLocation,
         titleOrSnippet = titleOrSnippet,
         updatedAtEpochMillis = updatedAtEpochMillis,
-        deletedAtEpochMillis = deletedAtEpochMillis
+        deletedAtEpochMillis = deletedAtEpochMillis,
+        locatorJson = locatorJson
     )
 }

@@ -162,6 +162,9 @@ class ReaderViewModel(
     private val _navigateToLocator = MutableSharedFlow<Locator>()
     val navigateToLocator: SharedFlow<Locator> = _navigateToLocator.asSharedFlow()
 
+    /** Emitted when the WebView selection should be cleared (after picking a color, copying, etc.). */
+    val clearSelectionEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
     private var observeProgressJob: Job? = null
     private var observeHighlightsJob: Job? = null
     private var observeBookmarksJob: Job? = null
@@ -760,6 +763,7 @@ class ReaderViewModel(
                 menuJustClosedAt = SystemClock.elapsedRealtime()
             )
         }
+        clearSelectionEvent.tryEmit(Unit)
     }
 
     fun onCopySelectedText() {
@@ -777,6 +781,7 @@ class ReaderViewModel(
                 menuJustClosedAt = SystemClock.elapsedRealtime()
             )
         }
+        clearSelectionEvent.tryEmit(Unit)
     }
 
     fun onShowContextMenu() {
@@ -948,6 +953,7 @@ class ReaderViewModel(
                     menuJustClosedAt = SystemClock.elapsedRealtime()
                 )
             }
+            clearSelectionEvent.tryEmit(Unit)
             return
         }
 
@@ -977,6 +983,7 @@ class ReaderViewModel(
                 menuJustClosedAt = SystemClock.elapsedRealtime()
             )
         }
+        clearSelectionEvent.tryEmit(Unit)
     }
 
     /**

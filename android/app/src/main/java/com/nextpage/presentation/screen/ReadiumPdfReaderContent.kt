@@ -221,7 +221,15 @@ fun ReadiumPdfReaderContent(
 
     AndroidView(
         factory = { ctx ->
-            FragmentContainerView(ctx).also { it.id = containerId; containerReady = true }
+            FragmentContainerView(ctx).also { view ->
+                view.id = containerId
+                view.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
+                    override fun onViewAttachedToWindow(v: android.view.View) {
+                        containerReady = true
+                    }
+                    override fun onViewDetachedFromWindow(v: android.view.View) {}
+                })
+            }
         },
         modifier = modifier.onGloballyPositioned { coordinates ->
             viewModel.onReadiumViewportChanged(coordinates.size.height)

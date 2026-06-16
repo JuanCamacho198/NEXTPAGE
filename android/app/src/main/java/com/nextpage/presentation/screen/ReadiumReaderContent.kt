@@ -476,6 +476,21 @@ fun ReadiumReaderContent(
         }
     }
 
+    // ── Clear WebView selection when user picks color / copies ─────
+    LaunchedEffect(navigatorFragment) {
+        val frag = navigatorFragment ?: return@LaunchedEffect
+        viewModel.clearSelectionEvent.collect {
+            try {
+                frag.evaluateJavascript(
+                    "(function(){var s=window.getSelection();if(s)s.removeAllRanges();})()"
+                )
+                Log.d("SelectionDebug", "WebView selection cleared via JS")
+            } catch (e: Throwable) {
+                Log.e("SelectionDebug", "Failed to clear WebView selection", e)
+            }
+        }
+    }
+
     // ── Clean up ──────────────────────────────────────────────────
     DisposableEffect(Unit) {
         onDispose {
@@ -488,7 +503,15 @@ fun ReadiumReaderContent(
 
     AndroidView(
         factory = { ctx ->
-            FragmentContainerView(ctx).also { it.id = containerId; containerReady = true }
+            FragmentContainerView(ctx).also { view ->
+                view.id = containerId
+                view.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
+                    override fun onViewAttachedToWindow(v: android.view.View) {
+                        containerReady = true
+                    }
+                    override fun onViewDetachedFromWindow(v: android.view.View) {}
+                })
+            }
         },
         modifier = modifier.onGloballyPositioned { coordinates ->
             viewModel.onReadiumViewportChanged(coordinates.size.height)

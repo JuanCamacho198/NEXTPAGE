@@ -92,7 +92,8 @@ class AppContainer(context: Context) {
     }
 
     val readingStatsRepository: ReadingStatsRepository = ReadingStatsRepositoryImpl(
-        readingStatsDao = appDatabase.readingStatsDao()
+        readingStatsDao = appDatabase.readingStatsDao(),
+        readingSessionDao = appDatabase.readingSessionDao()
     )
     
     val homeRepository: HomeRepository = HomeRepositoryImpl(

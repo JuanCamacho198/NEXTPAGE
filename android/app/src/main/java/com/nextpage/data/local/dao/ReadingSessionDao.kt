@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.nextpage.data.local.entity.ReadingSessionEntity
+import com.nextpage.data.local.model.DailyReadingMinutes
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -32,4 +33,10 @@ interface ReadingSessionDao {
 
     @Query("SELECT COUNT(*) FROM reading_sessions")
     suspend fun count(): Int
+
+    @Query("SELECT date, COALESCE(SUM(duration_minutes), 0) as total_minutes FROM reading_sessions GROUP BY date ORDER BY date DESC")
+    fun observeDailyMinutes(): Flow<List<DailyReadingMinutes>>
+
+    @Query("SELECT date, COALESCE(SUM(duration_minutes), 0) as total_minutes FROM reading_sessions WHERE date >= :startDate GROUP BY date ORDER BY date ASC")
+    fun observeDailyMinutesFromDate(startDate: Long): Flow<List<DailyReadingMinutes>>
 }

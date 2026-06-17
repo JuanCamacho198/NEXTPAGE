@@ -41,6 +41,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.nextpage.di.AppContainer
+import com.nextpage.domain.usecase.GetStatisticsUseCase
 import com.nextpage.presentation.screen.AuthScreen
 import com.nextpage.presentation.screen.BookDetailScreen
 import com.nextpage.presentation.screen.HighlightsScreen
@@ -48,6 +49,7 @@ import com.nextpage.presentation.screen.HomeScreen
 import com.nextpage.presentation.screen.LibraryScreen
 import com.nextpage.presentation.screen.ReaderScreen
 import com.nextpage.presentation.screen.SettingsScreen
+import com.nextpage.presentation.screen.StatisticsScreen
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.HomeViewModel
 import com.nextpage.presentation.viewmodel.HomeViewModelFactory
@@ -58,6 +60,8 @@ import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
 import com.nextpage.presentation.util.getContentDisplayName
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
+import com.nextpage.presentation.viewmodel.StatisticsViewModel
+import com.nextpage.presentation.viewmodel.StatisticsViewModelFactory
 import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.debug.DebugPanel
@@ -100,7 +104,19 @@ fun NextPageNavHost(
     )
 
     val highlightsViewModel: HighlightsViewModel = viewModel(
-        factory = HighlightsViewModelFactory(appContainer.readerRepository)
+        factory = HighlightsViewModelFactory(
+            readerRepository = appContainer.readerRepository,
+            homeRepository = appContainer.homeRepository
+        )
+    )
+
+    val statisticsViewModel: StatisticsViewModel = viewModel(
+        factory = StatisticsViewModelFactory(
+            GetStatisticsUseCase(
+                readingStatsRepository = appContainer.readingStatsRepository,
+                homeRepository = appContainer.homeRepository
+            )
+        )
     )
 
     val homeViewModel: HomeViewModel = viewModel(
@@ -130,6 +146,7 @@ fun NextPageNavHost(
         libraryViewModel.uiEvent,
         readerViewModel.uiEvent,
         highlightsViewModel.uiEvent,
+        statisticsViewModel.uiEvent,
         homeViewModel.uiEvent,
         authViewModel.uiEvent
     ).forEach { flow ->
@@ -197,7 +214,7 @@ fun NextPageNavHost(
         NextPageDestination.Home,
         NextPageDestination.Library,
         NextPageDestination.Highlights,
-        NextPageDestination.Settings
+        NextPageDestination.Statistics
     )
 
     // Whitelist de rutas donde el BottomNav debe mostrarse
@@ -437,6 +454,19 @@ fun NextPageNavHost(
                     HighlightsScreen(
                         contentPadding = innerPadding,
                         viewModel = highlightsViewModel
+                    )
+                }
+
+                composable(
+                    route = NextPageDestination.Statistics.route,
+                    enterTransition = { fadeIn() },
+                    exitTransition = { fadeOut() },
+                    popEnterTransition = { fadeIn() },
+                    popExitTransition = { fadeOut() }
+                ) {
+                    StatisticsScreen(
+                        contentPadding = innerPadding,
+                        viewModel = statisticsViewModel
                     )
                 }
 

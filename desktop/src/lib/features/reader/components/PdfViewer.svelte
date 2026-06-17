@@ -192,10 +192,9 @@
     `width: ${viewportWidth ? viewportWidth + 'px' : 'auto'}; height: ${viewportHeight ? viewportHeight + 'px' : 'auto'};`
   );
 
-  // Dynamic padding from readerSettings margins (in rem units)
-  const canvasContainerPaddingStyle = $derived(
-    `${readerSettings.margins.top}rem ${readerSettings.margins.right}rem ${readerSettings.margins.bottom}rem ${readerSettings.margins.left}rem`
-  );
+  // PDF renders at its intrinsic size — EPUB text margins are inappropriate here.
+  // Set padding to 0 so the PDF uses the full available space.
+  const canvasContainerPaddingStyle = $derived("0");
 
   // Reactively apply line-height and letter-spacing to the text layer
   // so changes take effect immediately without requiring a page re-render
@@ -432,6 +431,21 @@
 
       pdfDoc = loadedDoc;
       totalPages = loadedDoc.numPages;
+
+      // Compute fit-to-width scale so PDF fills the available container width
+      if (canvasContainer) {
+        try {
+          const firstPage = await loadedDoc.getPage(1);
+          const defaultViewport = firstPage.getViewport({ scale: 1 });
+          const containerWidth = canvasContainer.clientWidth;
+          if (containerWidth > 0 && defaultViewport.width > 0) {
+            const fitScale = containerWidth / defaultViewport.width;
+            scale = Math.max(0.5, Math.min(3.0, fitScale));
+          }
+        } catch {
+          // Fall back to default scale if page dimensions aren't available
+        }
+      }
 
       const requestedPage = Math.max(1, initialPage || 1);
       const targetPage = Math.min(requestedPage, totalPages);

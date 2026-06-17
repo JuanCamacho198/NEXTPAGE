@@ -40,6 +40,10 @@ import {
   READER_HYPHENATION_SETTING_KEY,
   READER_VERTICAL_SCROLLING_SETTING_KEY,
   READER_MARGINS_SETTING_KEY,
+  READER_MARGIN_TOP_SETTING_KEY,
+  READER_MARGIN_BOTTOM_SETTING_KEY,
+  READER_MARGIN_LEFT_SETTING_KEY,
+  READER_MARGIN_RIGHT_SETTING_KEY,
   READER_SHOW_HEADER_SETTING_KEY,
   READER_SHOW_FOOTER_SETTING_KEY,
   READER_SHOW_PAGE_NUMBERS_SETTING_KEY,
@@ -497,8 +501,23 @@ const buildReaderSettingsPayload = (settings: ReaderSettings): AppSettingDto[] =
       updatedAt: now,
     },
     {
-      key: READER_MARGINS_SETTING_KEY,
-      valueJson: JSON.stringify(settings.margins),
+      key: READER_MARGIN_TOP_SETTING_KEY,
+      valueJson: JSON.stringify(settings.margins.top),
+      updatedAt: now,
+    },
+    {
+      key: READER_MARGIN_BOTTOM_SETTING_KEY,
+      valueJson: JSON.stringify(settings.margins.bottom),
+      updatedAt: now,
+    },
+    {
+      key: READER_MARGIN_LEFT_SETTING_KEY,
+      valueJson: JSON.stringify(settings.margins.left),
+      updatedAt: now,
+    },
+    {
+      key: READER_MARGIN_RIGHT_SETTING_KEY,
+      valueJson: JSON.stringify(settings.margins.right),
       updatedAt: now,
     },
     {
@@ -568,7 +587,13 @@ export const getReaderSettings = async (): Promise<ReaderSettings> => {
     direction: readSettingValue(settings, READER_DIRECTION_SETTING_KEY) as ReaderDirection,
     hyphenation: readSettingValue(settings, READER_HYPHENATION_SETTING_KEY) as boolean,
     verticalScrolling: readSettingValue(settings, READER_VERTICAL_SCROLLING_SETTING_KEY) as boolean,
-    margins: readSettingValue(settings, READER_MARGINS_SETTING_KEY) as ReaderSettings["margins"],
+    margins: readSettingValue(settings, READER_MARGINS_SETTING_KEY) as ReaderSettings["margins"]
+      || {
+        top: (readSettingValue(settings, READER_MARGIN_TOP_SETTING_KEY) as number) ?? 1.5,
+        bottom: (readSettingValue(settings, READER_MARGIN_BOTTOM_SETTING_KEY) as number) ?? 1.5,
+        left: (readSettingValue(settings, READER_MARGIN_LEFT_SETTING_KEY) as number) ?? 2,
+        right: (readSettingValue(settings, READER_MARGIN_RIGHT_SETTING_KEY) as number) ?? 2,
+      },
     showHeader: readSettingValue(settings, READER_SHOW_HEADER_SETTING_KEY) as boolean,
     showFooter: readSettingValue(settings, READER_SHOW_FOOTER_SETTING_KEY) as boolean,
     showPageNumbers: readSettingValue(settings, READER_SHOW_PAGE_NUMBERS_SETTING_KEY) as boolean,

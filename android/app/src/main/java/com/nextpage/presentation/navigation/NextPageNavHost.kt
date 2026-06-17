@@ -49,7 +49,7 @@ import com.nextpage.presentation.screen.HomeScreen
 import com.nextpage.presentation.screen.LibraryScreen
 import com.nextpage.presentation.screen.ReaderScreen
 import com.nextpage.presentation.screen.SettingsScreen
-import com.nextpage.presentation.screen.StatisticsScreen
+import com.nextpage.ui.components.atoms.NextPageSnackbar
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.HomeViewModel
 import com.nextpage.presentation.viewmodel.HomeViewModelFactory
@@ -214,7 +214,7 @@ fun NextPageNavHost(
         NextPageDestination.Home,
         NextPageDestination.Library,
         NextPageDestination.Highlights,
-        NextPageDestination.Statistics
+        NextPageDestination.Settings
     )
 
     // Whitelist de rutas donde el BottomNav debe mostrarse
@@ -228,6 +228,11 @@ fun NextPageNavHost(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState) { data ->
+                    NextPageSnackbar(snackbarData = data)
+                }
+            },
             bottomBar = {
                 if (isAuthenticated) {
                     val currentBackStack = navController.currentBackStackEntryAsState().value
@@ -458,19 +463,6 @@ fun NextPageNavHost(
                 }
 
                 composable(
-                    route = NextPageDestination.Statistics.route,
-                    enterTransition = { fadeIn() },
-                    exitTransition = { fadeOut() },
-                    popEnterTransition = { fadeIn() },
-                    popExitTransition = { fadeOut() }
-                ) {
-                    StatisticsScreen(
-                        contentPadding = innerPadding,
-                        viewModel = statisticsViewModel
-                    )
-                }
-
-                composable(
                     route = NextPageDestination.Settings.route,
                     enterTransition = { fadeIn() },
                     exitTransition = { fadeOut() },
@@ -501,7 +493,8 @@ fun NextPageNavHost(
                             val prefs = appContainer.readerPreferences
                             val current = prefs.load()
                             prefs.save(current.copy(customHighlightColors = null))
-                        }
+                        },
+                        statisticsViewModel = statisticsViewModel
                     )
                 }
             }

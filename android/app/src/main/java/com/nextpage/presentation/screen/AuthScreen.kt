@@ -26,6 +26,9 @@ import com.nextpage.R
 import com.nextpage.presentation.viewmodel.AuthFailureKind
 import com.nextpage.presentation.viewmodel.AuthUiState
 import com.nextpage.presentation.viewmodel.AuthViewModel
+import com.nextpage.ui.components.atoms.NextPageButton
+import com.nextpage.ui.components.atoms.NextPageButtonVariant
+import com.nextpage.ui.components.atoms.NextPageTextField
 
 private const val AUTH_SCREEN_TAG = "AuthScreen"
 
@@ -152,11 +155,12 @@ fun AuthScreen(
             }
 
             // ─── Google sign-in button ────────────────────────────────
-            OutlinedButton(
+            NextPageButton(
                 onClick = { viewModel.startGoogleSignIn() },
                 enabled = buttonEnabled,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp)
+                variant = NextPageButtonVariant.OUTLINED,
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
@@ -198,12 +202,14 @@ fun AuthScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             // ─── Email sign-in button ─────────────────────────────────
-            Button(
+            NextPageButton(
                 onClick = { showEmailAuth = !showEmailAuth },
+                variant = NextPageButtonVariant.FILLED,
+                shape = RoundedCornerShape(28.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(28.dp)
+                    .height(48.dp)
             ) {
                 Text(
                     text = stringResource(R.string.auth_sign_in_email),
@@ -223,20 +229,20 @@ fun AuthScreen(
                         .padding(top = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    OutlinedTextField(
+                    NextPageTextField(
                         value = email,
                         onValueChange = { email = it },
-                        label = { Text(stringResource(R.string.auth_email_label)) },
+                        label = stringResource(R.string.auth_email_label),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    OutlinedTextField(
+                    NextPageTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text(stringResource(R.string.auth_password_label)) },
+                        label = stringResource(R.string.auth_password_label),
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth()
@@ -248,20 +254,22 @@ fun AuthScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Button(
+                        NextPageButton(
                             onClick = { viewModel.signIn(email, password) },
                             enabled = !uiState.isLoading,
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(28.dp)
+                            variant = NextPageButtonVariant.FILLED,
+                            shape = RoundedCornerShape(28.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
                             Text(stringResource(R.string.auth_sign_in))
                         }
 
-                        OutlinedButton(
+                        NextPageButton(
                             onClick = { viewModel.signUp(email, password) },
                             enabled = !uiState.isLoading,
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(28.dp)
+                            variant = NextPageButtonVariant.OUTLINED,
+                            shape = RoundedCornerShape(28.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
                             Text(stringResource(R.string.auth_sign_up))
                         }
@@ -272,8 +280,9 @@ fun AuthScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // ─── Dev bypass ───────────────────────────────────────────
-            TextButton(
-                onClick = onContinueLocal
+            NextPageButton(
+                onClick = onContinueLocal,
+                variant = NextPageButtonVariant.TEXT
             ) {
                 Text(
                     text = stringResource(R.string.auth_continue_local_dev),

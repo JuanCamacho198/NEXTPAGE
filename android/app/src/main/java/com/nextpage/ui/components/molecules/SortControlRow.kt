@@ -13,7 +13,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.ui.components.atoms.NextPageButton
+import com.nextpage.ui.components.atoms.NextPageButtonVariant
 
 @Composable
 fun SortControlRow(
@@ -71,7 +72,10 @@ fun SortControlRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.width(4.dp))
-            TextButton(onClick = { showSortSelector = true }) {
+            NextPageButton(
+                onClick = { showSortSelector = true },
+                variant = NextPageButtonVariant.TEXT
+            ) {
                 Text(text = stringResource(selectedSortLabel))
             }
         }

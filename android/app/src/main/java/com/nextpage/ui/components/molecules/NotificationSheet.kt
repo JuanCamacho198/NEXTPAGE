@@ -21,7 +21,6 @@ import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.AutoGraph
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.ui.components.atoms.NextPageDivider
 
 /**
  * A notification item model for display in [NotificationSheet].
@@ -117,7 +117,7 @@ fun NotificationSheet(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider()
+            NextPageDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
             if (mockNotifications.isEmpty()) {
@@ -131,9 +131,8 @@ fun NotificationSheet(
                 mockNotifications.forEach { notification ->
                     NotificationRow(item = notification)
                     if (notification != mockNotifications.last()) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 4.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        NextPageDivider(
+                            modifier = Modifier.padding(vertical = 4.dp)
                         )
                     }
                 }

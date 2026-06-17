@@ -30,7 +30,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -60,12 +59,14 @@ import com.nextpage.presentation.theme.BgHeader
 import com.nextpage.presentation.theme.BgMain
 import com.nextpage.presentation.theme.BgSurface
 import com.nextpage.presentation.theme.BorderSubtle
+import com.nextpage.presentation.theme.NextPageColors
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.domain.repository.LibraryRepository
-import com.nextpage.presentation.theme.PrimaryBlue
 import com.nextpage.presentation.theme.TextPrimary
 import com.nextpage.presentation.theme.TextSecondary
 import com.nextpage.presentation.viewmodel.BookDetailViewModel
+import com.nextpage.ui.components.atoms.NextPageButton
+import com.nextpage.ui.components.atoms.NextPageButtonVariant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +87,10 @@ fun BookDetailScreen(
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    NextPageButton(
+                        onClick = onNavigateBack,
+                        variant = NextPageButtonVariant.ICON
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.reader_cancel)
@@ -381,7 +385,10 @@ private fun SynopsisSection(synopsis: String?) {
             overflow = TextOverflow.Ellipsis
         )
         if (synopsis != null && synopsis.length > 200) {
-            TextButton(onClick = { expanded = !expanded }) {
+            NextPageButton(
+                onClick = { expanded = !expanded },
+                variant = NextPageButtonVariant.TEXT
+            ) {
                 Text(
                     text = if (expanded) {
                         stringResource(R.string.book_detail_show_less)
@@ -426,20 +433,21 @@ private fun ReadingProgressSection(
                 .fillMaxWidth()
                 .height(NextPageDimens.progressBarHeight)
                 .clip(RoundedCornerShape(9999.dp)),
-            color = PrimaryBlue,
+            color = NextPageColors.primary,
             trackColor = BorderSubtle,
         )
         Spacer(modifier = Modifier.height(16.dp))
 
         // Continue/Start button
-        androidx.compose.material3.Button(
+        NextPageButton(
             onClick = {
                 onContinueReading(book.id, book.filePath, book.format)
             },
+            variant = NextPageButtonVariant.FILLED,
+            shape = RoundedCornerShape(NextPageDimens.cardCornerRadius),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
-            shape = RoundedCornerShape(NextPageDimens.cardCornerRadius)
+                .height(48.dp)
         ) {
             Text(
                 text = if (progress != null && progress.percentage > 0f) {

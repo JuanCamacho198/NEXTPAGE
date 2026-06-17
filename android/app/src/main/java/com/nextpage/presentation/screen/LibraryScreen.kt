@@ -27,6 +27,8 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,7 +36,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -61,6 +62,9 @@ import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.util.getContentDisplayName
 import com.nextpage.presentation.viewmodel.LibraryViewModel
+import com.nextpage.ui.components.atoms.NextPageButton
+import com.nextpage.ui.components.atoms.NextPageButtonVariant
+import com.nextpage.ui.components.atoms.NextPageEmptyState
 import com.nextpage.ui.components.atoms.SyncStatusIndicator
 import com.nextpage.ui.components.molecules.FilterBottomSheet
 import com.nextpage.ui.components.molecules.LibraryHeader
@@ -181,12 +185,18 @@ fun LibraryScreen(
                     )
                 },
                 confirmButton = {
-                    TextButton(onClick = { viewModel.confirmDeleteBook() }) {
+                    NextPageButton(
+                        onClick = { viewModel.confirmDeleteBook() },
+                        variant = NextPageButtonVariant.TEXT
+                    ) {
                         Text(text = stringResource(R.string.library_delete_confirm))
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { viewModel.dismissDeleteDialog() }) {
+                    NextPageButton(
+                        onClick = { viewModel.dismissDeleteDialog() },
+                        variant = NextPageButtonVariant.TEXT
+                    ) {
                         Text(text = stringResource(R.string.reader_cancel))
                     }
                 }
@@ -517,28 +527,27 @@ private fun EmptyLibrary(
     isImporting: Boolean,
     onImportClick: () -> Unit
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(contentPadding)
-            .padding(NextPageDimens.spacingLg),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(contentPadding),
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = stringResource(R.string.library_empty),
-            style = MaterialTheme.typography.bodyLarge
+        NextPageEmptyState(
+            icon = Icons.AutoMirrored.Outlined.LibraryBooks,
+            title = stringResource(R.string.library_empty),
+            subtitle = stringResource(R.string.library_import_formats),
+            modifier = Modifier.padding(NextPageDimens.spacingLg),
+            action = {
+                NextPageButton(
+                    onClick = onImportClick,
+                    enabled = !isImporting,
+                    variant = NextPageButtonVariant.TEXT
+                ) {
+                    Text(text = stringResource(R.string.library_import_book))
+                }
+            }
         )
-        Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
-        Text(
-            text = stringResource(R.string.library_import_formats),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(NextPageDimens.spacingMd))
-        TextButton(onClick = onImportClick, enabled = !isImporting) {
-            Text(text = stringResource(R.string.library_import_book))
-        }
     }
 }
 

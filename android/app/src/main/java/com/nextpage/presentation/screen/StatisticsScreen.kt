@@ -46,6 +46,7 @@ import com.nextpage.domain.model.DailyReadingActivity
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.StatisticsUiState
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
+import com.nextpage.ui.components.atoms.NextPageEmptyState
 import com.nextpage.ui.components.atoms.NextPageErrorState
 import com.nextpage.ui.components.atoms.NextPageLoadingIndicator
 import com.nextpage.ui.components.molecules.NextPageHeader
@@ -335,10 +336,10 @@ private fun FavoriteGenresSection(genres: List<String>) {
         NextPageSectionHeader(title = stringResource(R.string.statistics_favorite_genres))
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
         if (genres.isEmpty()) {
-            Text(
-                text = stringResource(R.string.statistics_no_genres),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            NextPageEmptyState(
+                icon = androidx.compose.material.icons.Icons.Outlined.BarChart,
+                title = stringResource(R.string.statistics_no_genres),
+                subtitle = stringResource(R.string.statistics_no_genres_subtitle)
             )
         } else {
             Row(

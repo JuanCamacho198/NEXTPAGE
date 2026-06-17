@@ -40,6 +40,10 @@ import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.HomeViewModel
+import com.nextpage.ui.components.atoms.NextPageButton
+import com.nextpage.ui.components.atoms.NextPageButtonVariant
+import com.nextpage.ui.components.atoms.NextPageEmptyState
+import com.nextpage.ui.components.atoms.NextPageTextField
 import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.components.molecules.NotificationSheet
 
@@ -88,12 +92,18 @@ fun HomeScreen(
                 }
             } else if (uiState.searchQuery.isNotBlank()) {
                 item {
-                    Text(
-                        text = stringResource(R.string.library_search_no_results),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 24.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        NextPageEmptyState(
+                            icon = Icons.Outlined.Search,
+                            title = stringResource(R.string.library_search_no_results),
+                            subtitle = stringResource(R.string.library_search_empty_subtitle)
+                        )
+                    }
                 }
             }
         }
@@ -352,12 +362,13 @@ private fun ContinueReadingSection(
 
                         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
 
-                        Button(
+                        NextPageButton(
                             onClick = {
                                 onContinueReading(currentBook.id, currentBook.filePath, currentBook.format)
                             },
-                            modifier = Modifier.height(36.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
+                            variant = NextPageButtonVariant.FILLED,
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                            modifier = Modifier.height(36.dp)
                         ) {
                             Text(
                                 text = stringResource(R.string.home_continuar),
@@ -402,7 +413,10 @@ private fun MyBookshelfSection(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
-            TextButton(onClick = onViewAll) {
+            NextPageButton(
+                onClick = onViewAll,
+                variant = NextPageButtonVariant.TEXT
+            ) {
                 Text(text = stringResource(R.string.home_ver_todo))
             }
         }
@@ -421,10 +435,10 @@ private fun MyBookshelfSection(
                 }
             }
         } else {
-            Text(
-                text = stringResource(R.string.library_empty),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            NextPageEmptyState(
+                icon = Icons.Outlined.Bookmark,
+                title = stringResource(R.string.home_bookshelf_empty_title),
+                subtitle = stringResource(R.string.home_bookshelf_empty_subtitle),
                 modifier = Modifier.padding(vertical = NextPageDimens.spacingMd)
             )
         }
@@ -523,16 +537,19 @@ private fun SearchBarSection(
             .padding(top = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        OutlinedTextField(
+        NextPageTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChange,
-            placeholder = { Text(stringResource(R.string.library_search_placeholder)) },
+            placeholder = stringResource(R.string.library_search_placeholder),
             singleLine = true,
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(24.dp)
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.weight(1f)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        IconButton(onClick = onCloseSearch) {
+        NextPageButton(
+            onClick = onCloseSearch,
+            variant = NextPageButtonVariant.ICON
+        ) {
             Icon(
                 imageVector = Icons.Outlined.Close,
                 contentDescription = stringResource(R.string.home_close_search)

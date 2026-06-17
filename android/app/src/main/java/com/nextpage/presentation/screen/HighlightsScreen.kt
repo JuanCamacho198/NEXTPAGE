@@ -25,9 +25,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -37,7 +35,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -48,8 +45,13 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
+import com.nextpage.presentation.theme.NextPageColors
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
+import com.nextpage.ui.components.atoms.NextPageButton
+import com.nextpage.ui.components.atoms.NextPageButtonVariant
+import com.nextpage.ui.components.atoms.NextPageEmptyState
+import com.nextpage.ui.components.atoms.NextPageTextField
 import com.nextpage.ui.components.molecules.FilterTab
 import com.nextpage.ui.components.molecules.NextPageFilterTabs
 import com.nextpage.ui.components.molecules.NextPageHeader
@@ -58,10 +60,10 @@ import com.nextpage.ui.components.molecules.NextPageSectionHeader
 import com.nextpage.ui.components.molecules.NextPageSelector
 import com.nextpage.ui.components.molecules.SelectorOption
 
-private val ColorQuotes = Color(0xFF3B82F6)
-private val ColorIdeas = Color(0xFFA855F7)
-private val ColorPassages = Color(0xFF10B981)
-private val ColorFavorites = Color(0xFFF59E0B)
+private val ColorQuotes = NextPageColors.accentBlue
+private val ColorIdeas = NextPageColors.accentPurple
+private val ColorPassages = NextPageColors.accentGreen
+private val ColorFavorites = NextPageColors.accentYellow
 
 @Composable
 fun HighlightsScreen(
@@ -149,21 +151,15 @@ fun HighlightsScreen(
 
         if (showSearch) {
             item {
-                OutlinedTextField(
+                NextPageTextField(
                     value = uiState.searchQuery,
                     onValueChange = { viewModel.onSearchQueryChanged(it) },
-                    placeholder = { Text(stringResource(R.string.highlights_search)) },
+                    placeholder = stringResource(R.string.highlights_search),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
-                    trailingIcon = {
-                        IconButton(onClick = { showSearch = false }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Close,
-                                contentDescription = stringResource(R.string.reader_settings_close)
-                            )
-                        }
-                    }
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = Icons.Outlined.Close,
+                    trailingIconContentDescription = stringResource(R.string.reader_settings_close)
                 )
             }
         }
@@ -230,13 +226,13 @@ fun HighlightsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp),
+                        .height(200.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = stringResource(R.string.highlights_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    NextPageEmptyState(
+                        icon = Icons.Outlined.FormatQuote,
+                        title = stringResource(R.string.highlights_empty),
+                        subtitle = stringResource(R.string.highlights_empty_subtitle)
                     )
                 }
             }

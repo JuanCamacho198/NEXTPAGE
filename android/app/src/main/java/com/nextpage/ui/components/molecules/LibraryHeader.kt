@@ -14,7 +14,6 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.ui.components.atoms.NextPageTextField
 
 @Composable
 fun LibraryHeader(
@@ -61,15 +61,15 @@ fun LibraryHeader(
             }
         }
         if (showSearch) {
-            OutlinedTextField(
+            NextPageTextField(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
-                placeholder = { Text(stringResource(R.string.library_search_placeholder)) },
+                placeholder = stringResource(R.string.library_search_placeholder),
                 singleLine = true,
+                shape = RoundedCornerShape(24.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(24.dp)
+                    .padding(horizontal = 16.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
         }

@@ -34,7 +34,8 @@
   }
 </script>
 
-<div class="space-y-2">
+<fieldset class="space-y-2 border-0 p-0 m-0">
+  <legend class="sr-only">Colecciones</legend>
   {#each collections as collection}
     <label class="flex items-center gap-2 cursor-pointer">
       <input
@@ -54,4 +55,4 @@
   {#if collections.length === 0}
     <p class="text-sm text-(--color-text-muted)">No collections available</p>
   {/if}
-</div>
+</fieldset>

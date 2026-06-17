@@ -101,7 +101,7 @@
 </script>
 
 <section class="space-y-5">
-  <div class="rounded-[28px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-[0_24px_80px_rgba(3,10,20,0.38)]">
+  <header class="rounded-[28px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-[0_24px_80px_rgba(3,10,20,0.38)]">
     <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
       <div class="space-y-2">
         <div>
@@ -147,23 +147,26 @@
         </div>
       </div>
     </div>
-  </div>
+  </header>
 
-  <div class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_20px_64px_rgba(2,10,18,0.28)]">
+  <section class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_20px_64px_rgba(2,10,18,0.28)]">
     <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-      <div class="flex flex-wrap gap-2">
-        {#each FILTER_OPTIONS as option}
-          <button
-            type="button"
-            class={`rounded-2xl border px-3 py-2 text-xs font-medium transition ${activeFilter === option.key ? "border-[rgba(82,143,255,0.4)] bg-[rgba(78,140,255,0.22)] text-(--color-primary)" : "border-(--color-border) bg-[rgba(255,255,255,0.02)] text-(--color-text-muted) hover:text-(--color-primary)"}`}
-            onclick={() => {
-              activeFilter = option.key;
-            }}
-          >
-            {option.label}
-          </button>
-        {/each}
-      </div>
+      <fieldset class="border-0 p-0 m-0">
+        <legend class="sr-only">Filtrar por estado</legend>
+        <div class="flex flex-wrap gap-2">
+          {#each FILTER_OPTIONS as option}
+            <button
+              type="button"
+              class={`rounded-2xl border px-3 py-2 text-xs font-medium transition ${activeFilter === option.key ? "border-[rgba(82,143,255,0.4)] bg-[rgba(78,140,255,0.22)] text-(--color-primary)" : "border-(--color-border) bg-[rgba(255,255,255,0.02)] text-(--color-text-muted) hover:text-(--color-primary)"}`}
+              onclick={() => {
+                activeFilter = option.key;
+              }}
+            >
+              {option.label}
+            </button>
+          {/each}
+        </div>
+      </fieldset>
 
       <div class="flex flex-col gap-3 md:flex-row md:items-center">
         <label class="flex items-center gap-2 rounded-2xl border border-(--color-border) bg-[rgba(255,255,255,0.02)] px-3 py-2 text-xs text-(--color-text-muted)">
@@ -178,7 +181,8 @@
           </select>
         </label>
 
-        <div class="inline-flex rounded-2xl border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-1">
+        <fieldset class="inline-flex rounded-2xl border-(--color-border) bg-[rgba(255,255,255,0.02)] p-1 border-0">
+          <legend class="sr-only">Vista de estantería</legend>
           <button
             type="button"
             class={`flex h-9 w-10 items-center justify-center rounded-xl ${activeView === "grid" ? "bg-[rgba(78,140,255,0.2)] text-(--color-primary)" : "text-(--color-text-muted)"}`}
@@ -199,183 +203,191 @@
           >
             <Icon name="list" size="sm" title="Lista" />
           </button>
-        </div>
+        </fieldset>
       </div>
     </div>
-  </div>
+  </section>
 
   {#if activeView === "grid"}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
+    <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5 list-none p-0 m-0">
       {#each filteredBooks as book}
-        <article class="group flex min-h-[360px] flex-col rounded-[24px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.22)]">
-          <div class="mb-3 flex items-start justify-between gap-3">
-            <span class="rounded-full border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-(--color-text-muted)">
-              {getStateLabel(book)}
-            </span>
-            <DropMenu position="bottom-right">
-              {#snippet trigger()}
-                <button
-                  type="button"
-                  class="flex h-9 w-9 items-center justify-center rounded-xl border border-(--color-border) bg-[rgba(20,32,49,0.92)] text-(--color-text-muted)"
-                  aria-label={`Opciones para ${book.title}`}
-                >
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="5" cy="12" r="1.8"></circle>
-                    <circle cx="12" cy="12" r="1.8"></circle>
-                    <circle cx="19" cy="12" r="1.8"></circle>
-                  </svg>
+        <li>
+          <article class="group flex min-h-[360px] flex-col rounded-[24px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.22)]">
+            <div class="mb-3 flex items-start justify-between gap-3">
+              <span class="rounded-full border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-(--color-text-muted)">
+                {getStateLabel(book)}
+              </span>
+              <DropMenu position="bottom-right">
+                {#snippet trigger()}
+                  <button
+                    type="button"
+                    class="flex h-9 w-9 items-center justify-center rounded-xl border border-(--color-border) bg-[rgba(20,32,49,0.92)] text-(--color-text-muted)"
+                    aria-label={`Opciones para ${book.title}`}
+                  >
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="5" cy="12" r="1.8"></circle>
+                      <circle cx="12" cy="12" r="1.8"></circle>
+                      <circle cx="19" cy="12" r="1.8"></circle>
+                    </svg>
+                  </button>
+                {/snippet}
+                <button class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onOpenBook?.(book)}>Abrir libro</button>
+                <button class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onToggleFavorite?.(book)}>
+                  {book.isFavorite ? "Quitar de favoritos" : "Marcar como favorito"}
                 </button>
-              {/snippet}
-              <button class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onOpenBook?.(book)}>Abrir libro</button>
-              <button class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onToggleFavorite?.(book)}>
-                {book.isFavorite ? "Quitar de favoritos" : "Marcar como favorito"}
-              </button>
-              <button class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onMarkCompleted?.(book)}>Marcar como completado</button>
-              <button class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onViewDetails?.(book)}>Ver detalles</button>
-              <button class="w-full px-4 py-2.5 text-left text-sm text-[#ff9fa5] hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onRemoveBook?.(book)}>Eliminar de la biblioteca</button>
-            </DropMenu>
-          </div>
-
-          <div class="relative mb-4 aspect-[0.72] overflow-hidden rounded-[20px] bg-[rgba(255,255,255,0.03)]">
-            <SafeCover path={book.coverPath ?? ""} alt={`Portada de ${book.title}`} className="h-full w-full object-cover">
-              {#snippet fallback()}
-                <div class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] px-6 text-center text-xs uppercase tracking-[0.18em] text-(--color-primary)">
-                  Sin portada
-                </div>
-              {/snippet}
-            </SafeCover>
-          </div>
-
-          <div class="space-y-1">
-            <h3 class="line-clamp-2 text-sm font-semibold text-(--color-primary)">{book.title}</h3>
-            <p class="line-clamp-1 text-xs text-(--color-text-muted)">{book.author || "Autor desconocido"}</p>
-          </div>
-
-          <div class="mt-4 space-y-2">
-            <div class="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
-              <div
-                class="h-full rounded-full bg-[linear-gradient(90deg,#4e8cff,#49d4ff)]"
-                style={`width: ${formatPercent(book)};`}
-              ></div>
+                <button class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onMarkCompleted?.(book)}>Marcar como completado</button>
+                <button class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onViewDetails?.(book)}>Ver detalles</button>
+                <button class="w-full px-4 py-2.5 text-left text-sm text-[#ff9fa5] hover:bg-[rgba(255,255,255,0.08)]" onclick={() => onRemoveBook?.(book)}>Eliminar de la biblioteca</button>
+              </DropMenu>
             </div>
-            <div class="flex items-center justify-between text-xs text-(--color-text-muted)">
-              <span>{formatPercent(book)} leido</span>
-              <span>{book.minutesRead} min</span>
-            </div>
-          </div>
 
-          <div class="mt-auto grid grid-cols-2 gap-2 pt-4">
-            <Button variant="secondary" size="sm" class="rounded-xl" onclick={() => onOpenBook?.(book)}>
-              Abrir libro
-            </Button>
-            <Button size="sm" class="rounded-xl bg-[linear-gradient(135deg,#4e8cff,#49d4ff)] !text-[#07111d]" onclick={() => onContinueReading?.(book)}>
-              {getSafeProgressPercentage(book) > 0 ? "Continuar" : "Empezar"}
-            </Button>
-          </div>
-        </article>
-      {/each}
-
-      <button
-        type="button"
-        class="flex min-h-[360px] flex-col items-center justify-center gap-4 rounded-[24px] border border-dashed border-(--color-border-strong) bg-[rgba(255,255,255,0.02)] p-6 text-center text-(--color-text-muted) transition hover:border-[rgba(78,140,255,0.5)] hover:text-(--color-primary)"
-        onclick={onImportBook}
-      >
-        <div class="flex h-16 w-16 items-center justify-center rounded-full border border-(--color-border) bg-[rgba(255,255,255,0.03)]">
-          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M12 5V19"></path>
-            <path d="M5 12H19"></path>
-          </svg>
-        </div>
-        <div>
-          <p class="text-sm font-semibold text-(--color-primary)">Añadir libro</p>
-          <p class="mt-1 text-xs">Importa un nuevo archivo a tu biblioteca.</p>
-        </div>
-      </button>
-    </div>
-  {:else}
-    <div class="space-y-3">
-      {#each filteredBooks as book}
-        <article class="flex flex-col gap-4 rounded-[24px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.18)] md:flex-row md:items-center">
-          <div class="flex items-start gap-4 md:min-w-0 md:flex-1">
-            <div class="h-28 w-20 shrink-0 overflow-hidden rounded-[18px] bg-[rgba(255,255,255,0.03)]">
+            <div class="relative mb-4 aspect-[0.72] overflow-hidden rounded-[20px] bg-[rgba(255,255,255,0.03)]">
               <SafeCover path={book.coverPath ?? ""} alt={`Portada de ${book.title}`} className="h-full w-full object-cover">
                 {#snippet fallback()}
-                  <div class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] px-2 text-center text-[10px] uppercase tracking-[0.16em] text-(--color-primary)">
+                  <div class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] px-6 text-center text-xs uppercase tracking-[0.18em] text-(--color-primary)">
                     Sin portada
                   </div>
                 {/snippet}
               </SafeCover>
             </div>
 
-            <div class="min-w-0 flex-1">
-              <div class="flex flex-wrap items-center gap-2">
-                <h3 class="line-clamp-1 text-base font-semibold text-(--color-primary)">{book.title}</h3>
-                <span class="rounded-full border border-(--color-border) px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-(--color-text-muted)">
-                  {getStateLabel(book)}
-                </span>
-              </div>
-              <p class="mt-1 text-sm text-(--color-text-muted)">{book.author || "Autor desconocido"}</p>
+            <div class="space-y-1">
+              <h3 class="line-clamp-2 text-sm font-semibold text-(--color-primary)">{book.title}</h3>
+              <p class="line-clamp-1 text-xs text-(--color-text-muted)">{book.author || "Autor desconocido"}</p>
+            </div>
 
-              <div class="mt-4 max-w-xl space-y-2">
-                <div class="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
-                  <div class="h-full rounded-full bg-[linear-gradient(90deg,#4e8cff,#49d4ff)]" style={`width: ${formatPercent(book)};`}></div>
+            <div class="mt-4 space-y-2" role="progressbar" aria-valuenow={getSafeProgressPercentage(book)} aria-valuemin="0" aria-valuemax="100">
+              <div class="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
+                <div
+                  class="h-full rounded-full bg-[linear-gradient(90deg,#4e8cff,#49d4ff)]"
+                  style={`width: ${formatPercent(book)};`}
+                ></div>
+              </div>
+              <div class="flex items-center justify-between text-xs text-(--color-text-muted)">
+                <span>{formatPercent(book)} leido</span>
+                <span>{book.minutesRead} min</span>
+              </div>
+            </div>
+
+            <div class="mt-auto grid grid-cols-2 gap-2 pt-4">
+              <Button variant="secondary" size="sm" class="rounded-xl" onclick={() => onOpenBook?.(book)}>
+                Abrir libro
+              </Button>
+              <Button size="sm" class="rounded-xl bg-[linear-gradient(135deg,#4e8cff,#49d4ff)] !text-[#07111d]" onclick={() => onContinueReading?.(book)}>
+                {getSafeProgressPercentage(book) > 0 ? "Continuar" : "Empezar"}
+              </Button>
+            </div>
+          </article>
+        </li>
+      {/each}
+
+      <li>
+        <button
+          type="button"
+          class="flex min-h-[360px] flex-col items-center justify-center gap-4 rounded-[24px] border border-dashed border-(--color-border-strong) bg-[rgba(255,255,255,0.02)] p-6 text-center text-(--color-text-muted) transition hover:border-[rgba(78,140,255,0.5)] hover:text-(--color-primary)"
+          onclick={onImportBook}
+        >
+          <div class="flex h-16 w-16 items-center justify-center rounded-full border border-(--color-border) bg-[rgba(255,255,255,0.03)]">
+            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M12 5V19"></path>
+              <path d="M5 12H19"></path>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-(--color-primary)">Añadir libro</p>
+            <p class="mt-1 text-xs">Importa un nuevo archivo a tu biblioteca.</p>
+          </div>
+        </button>
+      </li>
+    </ul>
+  {:else}
+    <ul class="space-y-3 list-none p-0 m-0">
+      {#each filteredBooks as book}
+        <li>
+          <article class="flex flex-col gap-4 rounded-[24px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.18)] md:flex-row md:items-center">
+            <div class="flex items-start gap-4 md:min-w-0 md:flex-1">
+              <div class="h-28 w-20 shrink-0 overflow-hidden rounded-[18px] bg-[rgba(255,255,255,0.03)]">
+                <SafeCover path={book.coverPath ?? ""} alt={`Portada de ${book.title}`} className="h-full w-full object-cover">
+                  {#snippet fallback()}
+                    <div class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] px-2 text-center text-[10px] uppercase tracking-[0.16em] text-(--color-primary)">
+                      Sin portada
+                    </div>
+                  {/snippet}
+                </SafeCover>
+              </div>
+
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h3 class="line-clamp-1 text-base font-semibold text-(--color-primary)">{book.title}</h3>
+                  <span class="rounded-full border border-(--color-border) px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-(--color-text-muted)">
+                    {getStateLabel(book)}
+                  </span>
                 </div>
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
-                  <span>{formatPercent(book)} leido</span>
-                  <span>{book.minutesRead} min registrados</span>
-                  <span>{book.currentPage}/{book.totalPages || "-"}</span>
+                <p class="mt-1 text-sm text-(--color-text-muted)">{book.author || "Autor desconocido"}</p>
+
+                <div class="mt-4 max-w-xl space-y-2" role="progressbar" aria-valuenow={getSafeProgressPercentage(book)} aria-valuemin="0" aria-valuemax="100">
+                  <div class="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
+                    <div class="h-full rounded-full bg-[linear-gradient(90deg,#4e8cff,#49d4ff)]" style={`width: ${formatPercent(book)};`}></div>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
+                    <span>{formatPercent(book)} leido</span>
+                    <span>{book.minutesRead} min registrados</span>
+                    <span>{book.currentPage}/{book.totalPages || "-"}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="flex flex-wrap items-center gap-2 md:justify-end">
-            <Button variant="secondary" size="sm" class="rounded-xl" onclick={() => onOpenBook?.(book)}>Abrir</Button>
-            <Button size="sm" class="rounded-xl bg-[linear-gradient(135deg,#4e8cff,#49d4ff)] !text-[#07111d]" onclick={() => onContinueReading?.(book)}>
-              {getSafeProgressPercentage(book) > 0 ? "Continuar lectura" : "Empezar lectura"}
-            </Button>
-            <DropMenu position="bottom-right">
-              {#snippet trigger()}
-                <button
-                  type="button"
-                  class="flex h-10 w-10 items-center justify-center rounded-xl border border-(--color-border) bg-[rgba(255,255,255,0.03)] text-(--color-text-muted)"
-                  aria-label={`Opciones para ${book.title}`}
-                >
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="5" cy="12" r="1.8"></circle>
-                    <circle cx="12" cy="12" r="1.8"></circle>
-                    <circle cx="19" cy="12" r="1.8"></circle>
-                  </svg>
+            <div class="flex flex-wrap items-center gap-2 md:justify-end">
+              <Button variant="secondary" size="sm" class="rounded-xl" onclick={() => onOpenBook?.(book)}>Abrir</Button>
+              <Button size="sm" class="rounded-xl bg-[linear-gradient(135deg,#4e8cff,#49d4ff)] !text-[#07111d]" onclick={() => onContinueReading?.(book)}>
+                {getSafeProgressPercentage(book) > 0 ? "Continuar lectura" : "Empezar lectura"}
+              </Button>
+              <DropMenu position="bottom-right">
+                {#snippet trigger()}
+                  <button
+                    type="button"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-(--color-border) bg-[rgba(255,255,255,0.03)] text-(--color-text-muted)"
+                    aria-label={`Opciones para ${book.title}`}
+                  >
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="5" cy="12" r="1.8"></circle>
+                      <circle cx="12" cy="12" r="1.8"></circle>
+                      <circle cx="19" cy="12" r="1.8"></circle>
+                    </svg>
+                  </button>
+                {/snippet}
+                <button class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)" onclick={() => onOpenBook?.(book)}>Abrir libro</button>
+                <button class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)" onclick={() => onToggleFavorite?.(book)}>
+                  {book.isFavorite ? "Quitar de favoritos" : "Marcar como favorito"}
                 </button>
-              {/snippet}
-              <button class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)" onclick={() => onOpenBook?.(book)}>Abrir libro</button>
-              <button class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)" onclick={() => onToggleFavorite?.(book)}>
-                {book.isFavorite ? "Quitar de favoritos" : "Marcar como favorito"}
-              </button>
-              <button class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)" onclick={() => onMarkCompleted?.(book)}>Marcar como completado</button>
-              <button class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)" onclick={() => onViewDetails?.(book)}>Ver detalles</button>
-              <button class="w-full px-4 py-2 text-left text-sm text-[#ff9fa5] hover:bg-(--color-border)" onclick={() => onRemoveBook?.(book)}>Eliminar de la biblioteca</button>
-            </DropMenu>
-          </div>
-        </article>
+                <button class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)" onclick={() => onMarkCompleted?.(book)}>Marcar como completado</button>
+                <button class="w-full px-4 py-2 text-left text-sm text-(--color-border)" onclick={() => onViewDetails?.(book)}>Ver detalles</button>
+                <button class="w-full px-4 py-2 text-left text-sm text-[#ff9fa5] hover:bg-(--color-border)" onclick={() => onRemoveBook?.(book)}>Eliminar de la biblioteca</button>
+              </DropMenu>
+            </div>
+          </article>
+        </li>
       {/each}
 
-      <button
-        type="button"
-        class="flex min-h-[120px] items-center justify-center gap-4 rounded-[24px] border border-dashed border-(--color-border-strong) bg-[rgba(255,255,255,0.02)] p-6 text-left text-(--color-text-muted) transition hover:border-[rgba(78,140,255,0.5)] hover:text-(--color-primary)"
-        onclick={onImportBook}
-      >
-        <div class="flex h-14 w-14 items-center justify-center rounded-full border border-(--color-border) bg-[rgba(255,255,255,0.03)]">
-          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M12 5V19"></path>
-            <path d="M5 12H19"></path>
-          </svg>
-        </div>
-        <div>
-          <p class="text-sm font-semibold text-(--color-primary)">Añadir libro</p>
-          <p class="mt-1 text-xs">Importa nuevos archivos y manten tu biblioteca al dia.</p>
-        </div>
-      </button>
-    </div>
+      <li>
+        <button
+          type="button"
+          class="flex min-h-[120px] items-center justify-center gap-4 rounded-[24px] border border-dashed border-(--color-border-strong) bg-[rgba(255,255,255,0.02)] p-6 text-left text-(--color-text-muted) transition hover:border-[rgba(78,140,255,0.5)] hover:text-(--color-primary)"
+          onclick={onImportBook}
+        >
+          <div class="flex h-14 w-14 items-center justify-center rounded-full border border-(--color-border) bg-[rgba(255,255,255,0.03)]">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M12 5V19"></path>
+              <path d="M5 12H19"></path>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-(--color-primary)">Añadir libro</p>
+            <p class="mt-1 text-xs">Importa nuevos archivos y manten tu biblioteca al dia.</p>
+          </div>
+        </button>
+      </li>
+    </ul>
   {/if}
 </section>

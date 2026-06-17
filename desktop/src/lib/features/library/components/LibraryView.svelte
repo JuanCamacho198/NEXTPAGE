@@ -87,7 +87,7 @@
 
 <Panel title={t("library.title")} variant="default" padding="md">
   {#snippet children()}
-    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <header class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div class="flex flex-wrap items-center gap-3">
         {#if collections.length > 0}
           <select
@@ -162,7 +162,7 @@
           </button>
         </div>
       </div>
-    </div>
+    </header>
 
     {#if disabledReason}
       <div class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">

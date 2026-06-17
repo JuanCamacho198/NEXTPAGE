@@ -4,13 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
+import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Notifications
@@ -25,8 +24,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import com.nextpage.BuildConfig
-import com.nextpage.debug.DebugPrefs
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,19 +32,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.nextpage.BuildConfig
 import com.nextpage.R
 import com.nextpage.data.session.AppLanguagePreferences
+import com.nextpage.debug.DebugPrefs
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.ThemeMode
 import com.nextpage.presentation.theme.NextPageDimens
-import com.nextpage.ui.components.molecules.NotificationSheet
 import com.nextpage.ui.components.molecules.HighlightPaletteSection
+import com.nextpage.ui.components.molecules.NextPageHeader
+import com.nextpage.ui.components.molecules.NextPagePreferenceItem
+import com.nextpage.ui.components.molecules.NextPageSelector
+import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
+import com.nextpage.ui.components.molecules.NotificationSheet
+import com.nextpage.ui.components.molecules.SelectorOption
 
 // ─── Data models for sections ────────────────────────────────────────
 
 private data class SectionItem(
     val labelRes: Int,
     val icon: ImageVector,
+    val value: String? = null,
     val onClick: () -> Unit = {}
 )
 
@@ -68,10 +73,10 @@ fun SettingsScreen(
     onResetCustomHighlightColors: () -> Unit = {}
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
-    var showThemeMenu by remember { mutableStateOf(false) }
-    var showLanguageMenu by remember { mutableStateOf(false) }
+    var showThemeSelector by remember { mutableStateOf(false) }
+    var showLanguageSelector by remember { mutableStateOf(false) }
     var showNotifications by remember { mutableStateOf(false) }
-    var showPaletteSection by remember { mutableStateOf(false) }
+    var showPaletteSubPage by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val langPrefs = remember { AppLanguagePreferences(context = context) }
@@ -80,20 +85,24 @@ fun SettingsScreen(
         NotificationSheet(onDismiss = { showNotifications = false })
     }
 
-    if (showPaletteSection) {
-        HighlightPaletteSection(
-            customColors = customHighlightColors,
-            onUpdateColor = { index, hex ->
-                onUpdateCustomHighlightColor(index, hex)
-            },
-            onReset = {
-                onResetCustomHighlightColors()
-                showPaletteSection = false
-            }
-        )
+    if (showPaletteSubPage) {
+        NextPageSettingsSubPage(
+            title = stringResource(R.string.palette_section_title),
+            onBack = { showPaletteSubPage = false }
+        ) {
+            HighlightPaletteSection(
+                customColors = customHighlightColors,
+                onUpdateColor = { index, hex ->
+                    onUpdateCustomHighlightColor(index, hex)
+                },
+                onReset = {
+                    onResetCustomHighlightColors()
+                    showPaletteSubPage = false
+                }
+            )
+        }
     }
 
-    // ─── Logout confirmation dialog ──────────────────────────────
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
@@ -118,142 +127,107 @@ fun SettingsScreen(
         )
     }
 
-    // ─── Language selector dialog ────────────────────────────────
-    if (showLanguageMenu) {
+    if (showThemeSelector) {
+        NextPageSelector(
+            title = stringResource(R.string.settings_pref_theme),
+            options = listOf(
+                SelectorOption(ThemeMode.LIGHT.name, R.string.settings_theme_light),
+                SelectorOption(ThemeMode.DARK.name, R.string.settings_theme_dark),
+                SelectorOption(ThemeMode.SYSTEM.name, R.string.settings_theme_system)
+            ),
+            selectedOptionId = appThemeMode.name,
+            onOptionSelected = { option ->
+                ThemeMode.entries.find { it.name == option.id }?.let {
+                    onAppThemeModeChanged(it)
+                }
+                showThemeSelector = false
+            },
+            onDismiss = { showThemeSelector = false }
+        )
+    }
+
+    if (showLanguageSelector) {
         val currentLang = langPrefs.load()
-        AlertDialog(
-            onDismissRequest = { showLanguageMenu = false },
-            title = { Text(text = stringResource(R.string.settings_language_title)) },
-            text = {
-                Column {
-                    LanguageItem(
-                        label = stringResource(R.string.settings_language_spanish),
-                        code = "es",
-                        currentCode = currentLang,
-                        onClick = { code ->
-                            langPrefs.save(code)
-                            showLanguageMenu = false
-                            androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
-                                androidx.core.os.LocaleListCompat.forLanguageTags(code)
-                            )
-                        }
+        NextPageSelector(
+            title = stringResource(R.string.settings_language_title),
+            options = listOf(
+                SelectorOption("es", R.string.settings_language_spanish),
+                SelectorOption("en", R.string.settings_language_english),
+                SelectorOption("system", R.string.settings_language_system)
+            ),
+            selectedOptionId = currentLang ?: "system",
+            onOptionSelected = { option ->
+                val code = if (option.id == "system") null else option.id
+                langPrefs.save(code)
+                if (code != null) {
+                    androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                        androidx.core.os.LocaleListCompat.forLanguageTags(code)
                     )
-                    LanguageItem(
-                        label = stringResource(R.string.settings_language_english),
-                        code = "en",
-                        currentCode = currentLang,
-                        onClick = { code ->
-                            langPrefs.save(code)
-                            showLanguageMenu = false
-                            androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
-                                androidx.core.os.LocaleListCompat.forLanguageTags(code)
-                            )
-                        }
-                    )
-                    LanguageItem(
-                        label = stringResource(R.string.settings_language_system),
-                        code = null,
-                        currentCode = currentLang,
-                        onClick = {
-                            langPrefs.save(null)
-                            showLanguageMenu = false
-                            androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
-                                androidx.core.os.LocaleListCompat.getEmptyLocaleList()
-                            )
-                        }
+                } else {
+                    androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                        androidx.core.os.LocaleListCompat.getEmptyLocaleList()
                     )
                 }
+                showLanguageSelector = false
             },
-            confirmButton = {
-                TextButton(onClick = { showLanguageMenu = false }) {
-                    Text(text = stringResource(R.string.reader_cancel))
-                }
-            }
+            onDismiss = { showLanguageSelector = false }
         )
     }
 
-    // ─── Theme mode selector dialog ──────────────────────────────
-    if (showThemeMenu) {
-        AlertDialog(
-            onDismissRequest = { showThemeMenu = false },
-            title = { Text(text = stringResource(R.string.settings_pref_theme)) },
-            text = {
-                Column {
-                    ThemeMode.entries.forEach { mode ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onAppThemeModeChanged(mode)
-                                    showThemeMenu = false
-                                }
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = appThemeMode == mode,
-                                onClick = {
-                                    onAppThemeModeChanged(mode)
-                                    showThemeMenu = false
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = mode.label,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showThemeMenu = false }) {
-                    Text(text = stringResource(R.string.reader_cancel))
-                }
-            }
-        )
+    val currentLanguageLabel = when (langPrefs.load()) {
+        "es" -> R.string.settings_language_spanish
+        "en" -> R.string.settings_language_english
+        else -> R.string.settings_language_system
     }
 
-    val sections = remember {
-        listOf(
-            SettingsSection(
-                titleRes = R.string.settings_lectura_section,
-                items = listOf(
-                    SectionItem(R.string.settings_pref_reading_theme, Icons.Outlined.Palette),
-                    SectionItem(R.string.settings_pref_font_size, Icons.Outlined.TextFields),
-                    SectionItem(R.string.settings_pref_line_height, Icons.Outlined.TextFields),
-                    SectionItem(R.string.palette_section_title, Icons.Outlined.Palette) {
-                        showPaletteSection = true
-                    }
-                )
-            ),
-            SettingsSection(
-                titleRes = R.string.settings_apariencia_section,
-                items = listOf(
-                    SectionItem(R.string.settings_pref_theme, Icons.Outlined.DarkMode) {
-                        showThemeMenu = true
-                    },
-                    SectionItem(R.string.settings_pref_language, Icons.Outlined.Language) {
-                        showLanguageMenu = true
-                    }
-                )
-            ),
-            SettingsSection(
-                titleRes = R.string.settings_datos_section,
-                items = listOf(
-                    SectionItem(R.string.settings_pref_sync, Icons.Outlined.Sync),
-                    SectionItem(R.string.settings_pref_storage, Icons.Outlined.Storage),
-                    SectionItem(R.string.settings_pref_stats, Icons.Outlined.Timeline)
-                )
-            ),
-            SettingsSection(
-                titleRes = R.string.settings_info_section,
-                items = listOf(
-                    SectionItem(R.string.settings_pref_about, Icons.Outlined.Info)
+    val currentThemeLabel = when (appThemeMode) {
+        ThemeMode.LIGHT -> R.string.settings_theme_light
+        ThemeMode.DARK -> R.string.settings_theme_dark
+        ThemeMode.SYSTEM -> R.string.settings_theme_system
+    }
+
+    val sections = listOf(
+        SettingsSection(
+            titleRes = R.string.settings_lectura_section,
+            items = listOf(
+                SectionItem(R.string.settings_pref_reading_theme, Icons.Outlined.Palette),
+                SectionItem(R.string.settings_pref_font_size, Icons.Outlined.TextFields),
+                SectionItem(R.string.settings_pref_line_height, Icons.Outlined.TextFields),
+                SectionItem(R.string.palette_section_title, Icons.Outlined.Palette, onClick = { showPaletteSubPage = true })
+            )
+        ),
+        SettingsSection(
+            titleRes = R.string.settings_apariencia_section,
+            items = listOf(
+                SectionItem(
+                    labelRes = R.string.settings_pref_theme,
+                    icon = Icons.Outlined.DarkMode,
+                    value = stringResource(currentThemeLabel),
+                    onClick = { showThemeSelector = true }
+                ),
+                SectionItem(
+                    labelRes = R.string.settings_pref_language,
+                    icon = Icons.Outlined.Language,
+                    value = stringResource(currentLanguageLabel),
+                    onClick = { showLanguageSelector = true }
                 )
             )
+        ),
+        SettingsSection(
+            titleRes = R.string.settings_datos_section,
+            items = listOf(
+                SectionItem(R.string.settings_pref_sync, Icons.Outlined.Sync),
+                SectionItem(R.string.settings_pref_storage, Icons.Outlined.Storage),
+                SectionItem(R.string.settings_pref_stats, Icons.Outlined.Timeline)
+            )
+        ),
+        SettingsSection(
+            titleRes = R.string.settings_info_section,
+            items = listOf(
+                SectionItem(R.string.settings_pref_about, Icons.Outlined.Info)
+            )
         )
-    }
+    )
 
     Column(
         modifier = Modifier
@@ -271,90 +245,25 @@ fun SettingsScreen(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ─── Header: avatar + brand + notifications ──────────
-            HeaderRow(onNotificationsClick = { showNotifications = true })
+            NextPageHeader(
+                title = stringResource(R.string.home_nextpage_title),
+                avatarInitials = stringResource(R.string.app_logo_initials),
+                onNotificationsClick = { showNotifications = true }
+            )
 
-            // ─── Title + Subtitle ────────────────────────────────
             TitleSection()
 
-            // ─── Account section ─────────────────────────────────
             AccountSection(authSession = authSession, onLogout = { showLogoutDialog = true })
 
-            // ─── Dynamic sections from list ──────────────────────
             sections.forEach { section ->
                 SettingsSectionBlock(section = section)
             }
 
-            // ── Debug mode toggle (debug builds only) ──────────────────
             if (BuildConfig.DEBUG) {
                 DebugModeSection(context = context)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-private fun LanguageItem(
-    label: String,
-    code: String?,
-    currentCode: String?,
-    onClick: (String?) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick(code) }
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        RadioButton(
-            selected = currentCode == code || (currentCode == null && code == null),
-            onClick = { onClick(code) }
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
-    }
-}
-
-@Composable
-private fun HeaderRow(onNotificationsClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "NP",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = stringResource(R.string.home_nextpage_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-        IconButton(onClick = onNotificationsClick) {
-            Icon(
-                imageVector = Icons.Outlined.Notifications,
-                contentDescription = stringResource(R.string.notifications_title),
-                tint = MaterialTheme.colorScheme.onSurface
-            )
         }
     }
 }
@@ -388,7 +297,6 @@ private fun AccountSection(
             fontWeight = FontWeight.SemiBold
         )
 
-        // ─── Account card ───────────────────────────────────────
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -431,7 +339,6 @@ private fun AccountSection(
             }
         }
 
-        // ─── Logout button ──────────────────────────────────────
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -477,9 +384,10 @@ private fun SettingsSectionBlock(section: SettingsSection) {
         )
 
         section.items.forEach { item ->
-            PreferenceListItem(
+            NextPagePreferenceItem(
                 icon = item.icon,
                 label = stringResource(item.labelRes),
+                value = item.value,
                 onClick = item.onClick
             )
         }
@@ -528,52 +436,6 @@ private fun DebugModeSection(context: android.content.Context) {
                     }
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun PreferenceListItem(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit = {}
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            Icon(
-                imageVector = Icons.Outlined.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
         }
     }
 }

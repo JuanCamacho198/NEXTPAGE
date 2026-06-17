@@ -2,6 +2,7 @@
   import { appState } from "$lib/shared/stores/AppState.svelte";
   import { getSafeProgressPercentage } from "$lib/shared/stores/homeState";
   import { BookCard, ShelfActionMenu } from "$lib/features/library";
+  import SafeCover from "$lib/features/library/components/SafeCover.svelte";
   import Modal from "$lib/shared/ui/layout/Modal.svelte";
   import Icon from "$lib/shared/ui/navigation/Icon.svelte";
   import Button from "$lib/shared/ui/forms/Button.svelte";
@@ -17,6 +18,32 @@
       appState.closeShelfDetails();
     }
   });
+
+  function formatMinutes(minutes: number): string {
+    if (minutes < 1) return "< 1 min";
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m} min`;
+  }
+
+  function formatRelativeDate(iso: string): string {
+    try {
+      const date = new Date(iso);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays === 0) return "Hoy";
+      if (diffDays === 1) return "Ayer";
+      if (diffDays < 7) return `Hace ${diffDays} días`;
+      if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} sem.`;
+      if (diffDays < 365) return `Hace ${Math.floor(diffDays / 30)} meses`;
+      return `Hace ${Math.floor(diffDays / 365)} años`;
+    } catch {
+      return "";
+    }
+  }
 </script>
 
 <div class="space-y-3">
@@ -245,12 +272,65 @@
 
 {#if appState.selectedShelfBook}
   {@const shelfDetail = appState.selectedShelfBook}
-  <Modal bind:open={showShelfModal} title={shelfDetail.title} noCloseButton>
+  {@const progressPct = Math.round(getSafeProgressPercentage(shelfDetail))}
+  <Modal bind:open={showShelfModal} title={shelfDetail.title} size="lg" noCloseButton>
     {#snippet children()}
-      <p class="truncate text-sm text-(--color-text-muted)">{shelfDetail.author || appState.t("app.unknownAuthor")}</p>
-      <div class="mt-4 space-y-1 text-sm text-(--color-text-muted)">
-        <p>{shelfDetail.format.toUpperCase()}</p>
-        <p>{shelfDetail.currentPage}/{shelfDetail.totalPages || "-"} · {Math.round(getSafeProgressPercentage(shelfDetail))}%</p>
+      <div class="flex flex-col gap-6 sm:flex-row">
+        <!-- Cover column -->
+        <div class="shrink-0 mx-auto sm:mx-0">
+          {#if shelfDetail.coverPath}
+            <SafeCover
+              path={shelfDetail.coverPath}
+              alt={shelfDetail.title}
+              className="w-36 h-52 object-cover rounded-lg shadow-md border border-(--color-border)"
+            >
+              {#snippet fallback()}
+                <div class="w-36 h-52 rounded-lg bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3 flex items-center justify-center border border-(--color-border) shadow-md">
+                  <span class="text-4xl font-bold text-(--color-primary)/30">{shelfDetail.title.trim()[0]?.toUpperCase() || "?"}</span>
+                </div>
+              {/snippet}
+            </SafeCover>
+          {:else}
+            <div class="w-36 h-52 rounded-lg bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3 flex items-center justify-center border border-(--color-border) shadow-md">
+              <span class="text-4xl font-bold text-(--color-primary)/30">{shelfDetail.title.trim()[0]?.toUpperCase() || "?"}</span>
+            </div>
+          {/if}
+        </div>
+
+        <!-- Info column -->
+        <div class="flex-1 min-w-0 space-y-3">
+          {#if shelfDetail.author}
+            <p class="text-sm text-(--color-text-muted)">{shelfDetail.author}</p>
+          {/if}
+
+          <!-- Format badge -->
+          <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border uppercase {shelfDetail.format === 'epub' ? 'bg-(--color-primary)/8 text-(--color-primary) border-(--color-primary)/25' : 'bg-amber-500/8 text-amber-600 border-amber-500/25'}">
+            {shelfDetail.format}
+          </span>
+
+          <!-- Progress -->
+          {#if shelfDetail.totalPages > 0}
+            <div class="space-y-1">
+              <div class="flex justify-between text-xs text-(--color-text-muted)">
+                <span>Progreso</span>
+                <span>{shelfDetail.currentPage}/{shelfDetail.totalPages} · {progressPct}%</span>
+              </div>
+              <div class="h-1.5 w-full rounded-full bg-(--color-border)">
+                <div class="h-1.5 rounded-full bg-(--color-primary) transition-all" style="width: {progressPct}%"></div>
+              </div>
+            </div>
+          {/if}
+
+          <!-- Metadata -->
+          <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
+            {#if shelfDetail.minutesRead > 0}
+              <span>{formatMinutes(shelfDetail.minutesRead)} leídos</span>
+            {/if}
+            {#if shelfDetail.updatedAt}
+              <span>{formatRelativeDate(shelfDetail.updatedAt)}</span>
+            {/if}
+          </div>
+        </div>
       </div>
     {/snippet}
     {#snippet footer()}

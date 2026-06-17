@@ -71,7 +71,7 @@
           {#each entries as entry (entry.id)}
             <button
               type="button"
-              class="flex w-full cursor-pointer items-start px-5 py-2 text-left transition-colors hover:bg-white/5"
+              class="flex w-full cursor-pointer items-start px-5 py-2 text-left transition-colors hover:bg-(--color-border)"
               class:border-l-2={entry.id === activeId}
               class:border-(--color-accent-blue)={entry.id === activeId}
               style="background-color: {entry.id === activeId ? 'rgba(73, 212, 255, 0.05)' : 'transparent'};"

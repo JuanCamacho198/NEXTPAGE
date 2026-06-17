@@ -170,7 +170,7 @@
         </button>
         <button
           type="button"
-          class="inline-flex min-h-8.5 cursor-pointer items-center rounded-full border border-[rgba(148,163,184,0.28)] bg-white/58 px-3 py-1.75 text-xs font-bold tracking-[0.01em] transition-all duration-150 hover:-translate-y-0.5 hover:bg-white/82 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
+          class="inline-flex min-h-8.5 cursor-pointer items-center rounded-full border border-[rgba(148,163,184,0.28)] bg-(--color-surface) px-3 py-1.75 text-xs font-bold tracking-[0.01em] transition-all duration-150 hover:-translate-y-0.5 hover:bg-(--color-border) disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none max-sm:flex-1 max-sm:justify-center"
           style="color: color-mix(in srgb, var(--pdf-reader-text, var(--color-primary)) 86%, var(--color-text-inverse) 14%);"
           onclick={handleDelete}
         >

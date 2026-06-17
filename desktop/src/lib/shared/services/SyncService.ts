@@ -1,222 +1,214 @@
-import { invoke } from '@tauri-apps/api/core';
-import { supabase } from '$lib/shared/api/supabase';
-import { LastWriteWinsConflictResolver } from '../sync/ConflictResolver';
+/**
+ * SyncService — syncs local SQLite state with Google Drive.
+ * Replaces Supabase table sync with Drive JSON state files (GoogleDriveStateSync)
+ * and Drive file sync (GDriveProvider). LWW conflict resolution via ConflictResolver.
+ */
+import { authState } from '$lib/stores/authState.svelte';
 import { GDriveProvider } from './storage/GDriveProvider';
-import type { VersionedSyncRecord } from './storage/StorageProvider';
+import { GoogleDriveStateSync } from './GoogleDriveStateSync';
+import type {
+  ProgressStateJson,
+  HighlightStateJson,
+  BookmarkStateJson,
+} from './GoogleDriveStateSync';
 import * as tauri from '$lib/shared/api/tauriClient';
 
-export interface BookRecord extends VersionedSyncRecord {
-  id: string;
-  title: string;
-  author: string;
-  file_path: string;
-  format: string;
-  created_at: string;
-  updated_at_iso: string;
-  updatedAtEpochMillis: number;
-  deletedAtEpochMillis: number | null;
-}
-
-export interface ProgressRecord extends VersionedSyncRecord {
-  id: string;
-  book_id: string;
-  cfi_location: string;
-  percentage: number;
-  updated_at_iso: string;
-  updatedAtEpochMillis: number;
-  deletedAtEpochMillis: number | null;
-}
-
 export class SyncService {
-  private static bookResolver = new LastWriteWinsConflictResolver<BookRecord>();
-  private static progressResolver = new LastWriteWinsConflictResolver<ProgressRecord>();
   private static gdrive = new GDriveProvider();
 
   static async syncMetadata(): Promise<void> {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!authState.isSignedIn) return;
 
-    await Promise.all([
-      this.syncBooks(session.user.id),
-      this.syncProgress(session.user.id)
-    ]);
+    await Promise.all([this.syncBooks(), this.syncState()]);
   }
 
-  private static async syncBooks(userId: string): Promise<void> {
-    // 1. Fetch remote books from Supabase
-    const { data: remoteBooks, error } = await supabase
-      .from('books')
-      .select('*')
-      .eq('user_id', userId);
+  /**
+   * Sync book files with Drive — download missing files, upload local-only files.
+   * Book metadata (title, author) stays local-only (no table sync).
+   */
+  private static async syncBooks(): Promise<void> {
+    // 1. List remote book files from Drive
+    const remoteFiles = await this.gdrive.list('');
+    const remoteBookFiles = remoteFiles.filter((f) => !f.endsWith('_state.json'));
 
-    if (error) throw error;
+    // 2. Get local books from SQLite
+    const localBooks = await tauri.listBooks();
 
-    // 2. Fetch local books from Tauri
-    const localBooksRaw = await tauri.listBooks();
-    const localBooks: BookRecord[] = localBooksRaw.map(b => ({
-      id: b.id,
-      recordId: b.id,
-      title: b.title,
-      author: b.author,
-      file_path: b.filePath,
-      format: b.format,
-      created_at: b.createdAt,
-      updated_at_iso: b.updatedAt,
-      updatedAtEpochMillis: new Date(b.updatedAt).getTime(),
-      deletedAtEpochMillis: null
-    }));
+    // 3. Download book files that are on Drive but missing locally
+    for (const remoteFile of remoteBookFiles) {
+      const localBook = localBooks.find((b) => {
+        const ext = b.format || 'epub';
+        return remoteFile === `${b.id}.${ext}` || remoteFile.startsWith(b.id);
+      });
 
-    // 3. Resolve conflicts
-    for (const remote of remoteBooks) {
-      const remoteRecord: BookRecord = {
-        id: remote.id,
-        recordId: remote.id,
-        title: remote.title,
-        author: remote.author,
-        file_path: remote.file_path,
-        format: remote.format,
-        created_at: remote.created_at,
-        updated_at_iso: remote.updated_at,
-        updatedAtEpochMillis: new Date(remote.updated_at).getTime(),
-        deletedAtEpochMillis: remote.deleted_at ? new Date(remote.deleted_at).getTime() : null
-      };
-
-      const local = localBooks.find(b => b.id === remote.id);
-      const resolved = this.bookResolver.resolve(local, remoteRecord);
-
-      if (resolved === remoteRecord) {
-        // Remote won or no local, update local metadata
-        await tauri.upsertBook({
-          id: resolved.id,
-          title: resolved.title,
-          author: resolved.author,
-          filePath: resolved.file_path,
-          format: resolved.format
-        });
-
-        // Trigger file sync if file is missing locally
-        const existsLocally = await invoke<boolean>('file_exists', { path: resolved.file_path });
+      if (localBook) {
+        const existsLocally = await tauri.fileExists(localBook.filePath);
         if (!existsLocally) {
           try {
-            console.log(`Syncing missing file for book: ${resolved.id}`);
-            const fileData = await this.gdrive.download(resolved.id);
-            await invoke('save_book_file', { id: resolved.id, data: Array.from(fileData) });
+            console.log(`Syncing missing file for book: ${localBook.id}`);
+            const fileData = await this.gdrive.download(remoteFile);
+            await tauri.saveBookFile(localBook.id, Array.from(fileData));
           } catch (e) {
-            console.error(`Failed to sync book file for ${resolved.id}:`, e);
+            console.error(`Failed to sync book file for ${localBook.id}:`, e);
           }
         }
-      } else if (local && resolved === local) {
-        // Local won, update remote
-        await supabase.from('books').upsert({
-          id: local.id,
-          user_id: userId,
-          title: local.title,
-          author: local.author,
-          file_path: local.file_path,
-          format: local.format,
-          created_at: local.created_at,
-          updated_at: local.updated_at_iso,
-          deleted_at: local.deletedAtEpochMillis ? new Date(local.deletedAtEpochMillis).toISOString() : null
-        });
       }
     }
 
-    // 4. Push local-only books to remote
-    const localOnly = localBooks.filter(lb => !remoteBooks.find(rb => rb.id === lb.id));
-    for (const local of localOnly) {
-      await supabase.from('books').upsert({
-        id: local.id,
-        user_id: userId,
-        title: local.title,
-        author: local.author,
-        file_path: local.file_path,
-        format: local.format,
-        created_at: local.created_at,
-        updated_at: local.updated_at_iso
-      });
+    // 4. Upload local-only books to Drive (file only, not metadata)
+    const remoteFileIds = new Set(remoteBookFiles);
+    for (const localBook of localBooks) {
+      const ext = localBook.format || 'epub';
+      const expectedName = `${localBook.id}.${ext}`;
+      if (!remoteFileIds.has(expectedName)) {
+        try {
+          const existsLocally = await tauri.fileExists(localBook.filePath);
+          if (existsLocally) {
+            const fileBytes = await tauri.getFileBytes(localBook.filePath);
+            await this.gdrive.upload(
+              expectedName,
+              new Uint8Array(fileBytes),
+              expectedName,
+            );
+          }
+        } catch (e) {
+          console.error(`Failed to upload book file for ${localBook.id}:`, e);
+        }
+      }
     }
   }
 
-  private static async syncProgress(userId: string): Promise<void> {
-    // Similar logic for reading_progress
-    const { data: remoteProgress, error } = await supabase
-      .from('reading_progress')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (error) throw error;
-
+  /**
+   * Sync reading state (progress, highlights, bookmarks) via state.json in Drive.
+   * Uses GoogleDriveStateSync for push/pull with LWW conflict resolution.
+   */
+  private static async syncState(): Promise<void> {
     const localBooks = await tauri.listBooks();
+
     for (const book of localBooks) {
-      const localP = await tauri.getProgress(book.id);
-      if (!localP) continue;
+      try {
+        // ---- Gather local state ----
+        const localProgressDto = await tauri.getProgress(book.id);
+        const localHighlightsDto = await tauri.listHighlights(book.id);
+        const localBookmarksDto = await tauri.listBookmarks(book.id);
 
-      const localRecord: ProgressRecord = {
-        id: localP.id,
-        recordId: localP.id,
-        book_id: localP.bookId,
-        cfi_location: localP.cfiLocation,
-        percentage: localP.percentage,
-        updated_at_iso: localP.updatedAt,
-        updatedAtEpochMillis: new Date(localP.updatedAt).getTime(),
-        deletedAtEpochMillis: null
-      };
+        // Map to state JSON types
+        const localProgress: ProgressStateJson | null = localProgressDto
+          ? {
+              id: localProgressDto.id,
+              book_id: localProgressDto.bookId,
+              cfi_location: localProgressDto.cfiLocation,
+              percentage: localProgressDto.percentage,
+              updated_at: new Date(localProgressDto.updatedAt).getTime(),
+            }
+          : null;
 
-      const remote = remoteProgress.find(rp => rp.book_id === book.id);
-      if (remote) {
-        const remoteRecord: ProgressRecord = {
-          id: remote.id,
-          recordId: remote.id,
-          book_id: remote.book_id,
-          cfi_location: remote.cfi_location,
-          percentage: remote.percentage,
-          updated_at_iso: remote.updated_at,
-          updatedAtEpochMillis: new Date(remote.updated_at).getTime(),
-          deletedAtEpochMillis: remote.deleted_at ? new Date(remote.deleted_at).getTime() : null
-        };
+        const localHighlights: HighlightStateJson[] = localHighlightsDto.map((h) => ({
+          id: h.id,
+          book_id: h.bookId,
+          cfi_range: '', // HighlightDto doesn't have CFI — filled from state sync
+          text_content: h.text,
+          note: h.note ?? null,
+          color: h.color,
+          updated_at: new Date(h.createdAt).getTime(),
+          deleted_at: null,
+          recordId: h.id,
+          updatedAtEpochMillis: new Date(h.createdAt).getTime(),
+          deletedAtEpochMillis: null,
+        }));
 
-        const resolved = this.progressResolver.resolve(localRecord, remoteRecord);
-        if (resolved === remoteRecord) {
+        const localBookmarks: BookmarkStateJson[] = localBookmarksDto.map((b) => ({
+          id: b.id,
+          book_id: b.bookId,
+          cfi_location: '', // BookmarkDto doesn't have CFI
+          title_or_snippet: b.title ?? '',
+          updated_at: new Date(b.createdAt).getTime(),
+          deleted_at: null,
+          recordId: b.id,
+          updatedAtEpochMillis: new Date(b.createdAt).getTime(),
+          deletedAtEpochMillis: null,
+        }));
+
+        // ---- Push local state to Drive ----
+        await GoogleDriveStateSync.pushState(
+          book.id,
+          localProgress,
+          localHighlights,
+          localBookmarks,
+        );
+
+        // ---- Pull remote state and merge ----
+        const remote = await GoogleDriveStateSync.pullState(
+          book.id,
+          localProgress,
+          localHighlights,
+          localBookmarks,
+        );
+
+        // ---- Apply resolved state to local SQLite ----
+        if (remote.progress) {
           await tauri.upsertProgress({
-            id: resolved.id,
-            bookId: resolved.book_id,
-            cfiLocation: resolved.cfi_location,
-            percentage: resolved.percentage,
-            updatedAt: resolved.updated_at_iso
-          });
-        } else {
-          await supabase.from('reading_progress').upsert({
-            id: localRecord.id,
-            user_id: userId,
-            book_id: localRecord.book_id,
-            cfi_location: localRecord.cfi_location,
-            percentage: localRecord.percentage,
-            updated_at: localRecord.updated_at_iso
+            id: remote.progress.id,
+            bookId: remote.progress.book_id,
+            cfiLocation: remote.progress.cfi_location,
+            percentage: remote.progress.percentage,
+            updatedAt: new Date(remote.progress.updated_at).toISOString(),
           });
         }
-      } else {
-        // Push local to remote
-        await supabase.from('reading_progress').upsert({
-          id: localRecord.id,
-          user_id: userId,
-          book_id: localRecord.book_id,
-          cfi_location: localRecord.cfi_location,
-          percentage: localRecord.percentage,
-          updated_at: localRecord.updated_at_iso
-        });
-      }
-    }
 
-    // Pull remote-only progress
-    const remoteOnly = remoteProgress.filter(rp => !localBooks.find(lb => lb.id === rp.book_id));
-    for (const remote of remoteOnly) {
-       await tauri.upsertProgress({
-          id: remote.id,
-          bookId: remote.book_id,
-          cfiLocation: remote.cfi_location,
-          percentage: remote.percentage,
-          updatedAt: remote.updated_at
-       });
+        // Apply highlights: only those that differ from local
+        for (const h of remote.highlights) {
+          const localMatch = localHighlights.find((lh) => lh.id === h.id);
+          if (!localMatch || h.updatedAtEpochMillis > localMatch.updatedAtEpochMillis) {
+            // Check if soft-deleted
+            if (h.deletedAtEpochMillis !== null) {
+              try {
+                await tauri.deleteHighlight(h.id);
+              } catch {
+                // Highlight may not exist locally — ignore
+              }
+            } else {
+              await tauri.saveHighlight({
+                id: h.id,
+                bookId: h.book_id,
+                text: h.text_content,
+                color: h.color,
+                pageNumber: 0, // CFI-based highlights don't have page numbers
+                rectLeft: 0,
+                rectRight: 0,
+                rectTop: 0,
+                rectBottom: 0,
+                cfi: h.cfi_range || null,
+                note: h.note,
+              });
+            }
+          }
+        }
+
+        // Apply bookmarks: only those that differ from local
+        for (const b of remote.bookmarks) {
+          const localMatch = localBookmarks.find((lb) => lb.id === b.id);
+          if (!localMatch || b.updatedAtEpochMillis > localMatch.updatedAtEpochMillis) {
+            if (b.deletedAtEpochMillis !== null) {
+              try {
+                await tauri.deleteBookmark(b.id);
+              } catch {
+                // Bookmark may not exist locally — ignore
+              }
+            } else {
+              await tauri.saveBookmark({
+                id: b.id,
+                bookId: b.book_id,
+                pageNumber: 0, // CFI-based bookmarks
+                title: b.title_or_snippet || undefined,
+                createdAt: new Date(b.updated_at).toISOString(),
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.error(`Failed to sync state for book ${book.id}:`, e);
+      }
     }
   }
 }

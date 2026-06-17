@@ -5,7 +5,7 @@ export interface VersionedSyncRecord {
 }
 
 export interface StorageProvider {
-  upload(id: string, file: Uint8Array): Promise<string>;
+  upload(id: string, file: Uint8Array, name?: string): Promise<string>;
   download(remotePath: string): Promise<Uint8Array>;
   delete(remotePath: string): Promise<void>;
   list(prefix: string): Promise<string[]>;

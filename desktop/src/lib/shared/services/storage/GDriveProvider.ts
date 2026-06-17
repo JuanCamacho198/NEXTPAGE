@@ -1,4 +1,4 @@
-import { supabase } from '$lib/shared/api/supabase';
+import { getValidAccessToken } from '$lib/shared/services/GoogleOAuthService';
 import type { StorageProvider } from './StorageProvider';
 
 export class GDriveProvider implements StorageProvider {
@@ -6,11 +6,7 @@ export class GDriveProvider implements StorageProvider {
   private static readonly FOLDER_NAME = 'NextPage/Books';
 
   private async getAccessToken(): Promise<string> {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session || !session.provider_token) {
-      throw new Error('No Google provider token found in session. Ensure Google Sign-in is active.');
-    }
-    return session.provider_token;
+    return getValidAccessToken();
   }
 
   private async getOrCreateFolder(accessToken: string): Promise<string> {
@@ -43,12 +39,12 @@ export class GDriveProvider implements StorageProvider {
     return createData.id;
   }
 
-  async upload(id: string, file: Uint8Array): Promise<string> {
+  async upload(id: string, file: Uint8Array, name?: string): Promise<string> {
     const accessToken = await this.getAccessToken();
     const folderId = await this.getOrCreateFolder(accessToken);
 
     const metadata = {
-      name: id,
+      name: name || id,
       parents: [folderId]
     };
 

@@ -28,7 +28,6 @@
   },
   "dependencies": {
     "@sentry/browser": "^10.53.1",
-    "@supabase/supabase-js": "^2.103.0",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-deep-link": "^2.4.8",
     "@tauri-apps/plugin-dialog": "^2.7.0",

@@ -1,18 +1,40 @@
 package com.nextpage.presentation.screen
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FormatQuote
 import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,36 +45,76 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.R
 import com.nextpage.domain.model.Highlight
+import com.nextpage.domain.model.HighlightColor
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
+import com.nextpage.ui.components.molecules.FilterTab
+import com.nextpage.ui.components.molecules.NextPageFilterTabs
+import com.nextpage.ui.components.molecules.NextPageHeader
+import com.nextpage.ui.components.molecules.NextPageHighlightCard
+import com.nextpage.ui.components.molecules.NextPageSectionHeader
+import com.nextpage.ui.components.molecules.NextPageSelector
+import com.nextpage.ui.components.molecules.SelectorOption
 
 private val ColorQuotes = Color(0xFF3B82F6)
 private val ColorIdeas = Color(0xFFA855F7)
 private val ColorPassages = Color(0xFF10B981)
 private val ColorFavorites = Color(0xFFF59E0B)
 
-private data class TabItem(val label: String, val icon: ImageVector, val color: Color)
-
-private val highlightTabs = listOf(
-    TabItem("Todos", Icons.Outlined.AutoAwesome, ColorQuotes),
-    TabItem("Citas", Icons.Outlined.FormatQuote, ColorQuotes),
-    TabItem("Ideas", Icons.Outlined.Lightbulb, ColorIdeas),
-    TabItem("Pasajes", Icons.Outlined.AutoAwesome, ColorPassages)
-)
-
 @Composable
 fun HighlightsScreen(
     contentPadding: PaddingValues,
-    viewModel: HighlightsViewModel = viewModel()
+    viewModel: HighlightsViewModel
 ) {
-    val highlights by viewModel.highlights.collectAsState()
-    val bookmarks by viewModel.bookmarks.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val uiState by viewModel.uiState.collectAsState()
     var showSearch by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
+    var showBookSelector by remember { mutableStateOf(false) }
+    var showColorSelector by remember { mutableStateOf(false) }
+
+    val typeTabs = listOf(
+        FilterTab("all", R.string.highlights_tab_all, Icons.Outlined.AutoAwesome),
+        FilterTab("quotes", R.string.highlights_tab_quotes, Icons.Outlined.FormatQuote),
+        FilterTab("ideas", R.string.highlights_tab_ideas, Icons.Outlined.Lightbulb),
+        FilterTab("passages", R.string.highlights_tab_passages, Icons.Outlined.AutoAwesome)
+    )
+
+    val bookOptions = listOf(
+        SelectorOption("all", R.string.highlights_filter_all_books, icon = Icons.Outlined.Book)
+    ) + uiState.books.map { SelectorOption(it.id, labelRes = null, label = it.title) }
+
+    val colorOptions = listOf(
+        SelectorOption("all", R.string.highlights_filter_all_colors, icon = Icons.Outlined.Palette)
+    ) + HighlightColor.entries.map {
+        SelectorOption(it.hex, labelRes = null, label = it.name.lowercase().replaceFirstChar { c -> c.uppercase() })
+    }
+
+    if (showBookSelector) {
+        NextPageSelector(
+            title = stringResource(R.string.highlights_filter_book),
+            options = bookOptions,
+            selectedOptionId = uiState.bookFilter ?: "all",
+            onOptionSelected = { option ->
+                viewModel.onBookFilterChanged(if (option.id == "all") null else option.id)
+                showBookSelector = false
+            },
+            onDismiss = { showBookSelector = false }
+        )
+    }
+
+    if (showColorSelector) {
+        NextPageSelector(
+            title = stringResource(R.string.highlights_filter_color),
+            options = colorOptions,
+            selectedOptionId = uiState.colorFilter ?: "all",
+            onOptionSelected = { option ->
+                viewModel.onColorFilterChanged(if (option.id == "all") null else option.id)
+                showColorSelector = false
+            },
+            onDismiss = { showColorSelector = false }
+        )
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -61,62 +123,14 @@ fun HighlightsScreen(
         contentPadding = PaddingValues(horizontal = 24.dp),
         verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
     ) {
-        // Header: avatar + brand + search
         item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "NP",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = stringResource(R.string.home_nextpage_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-                IconButton(onClick = { showSearch = !showSearch }) {
-                    Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = "Search",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
+            NextPageHeader(
+                title = stringResource(R.string.home_nextpage_title),
+                avatarInitials = stringResource(R.string.app_logo_initials),
+                onSearchClick = { showSearch = !showSearch }
+            )
         }
 
-        // Search bar (toggle)
-        if (showSearch) {
-            item {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text(stringResource(R.string.library_search_placeholder)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp)
-                )
-            }
-        }
-
-        // Title + Subtitle
         item {
             Column {
                 Text(
@@ -133,78 +147,54 @@ fun HighlightsScreen(
             }
         }
 
-        // Tabs (pills with icons)
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                highlightTabs.forEachIndexed { index, tab ->
-                    val isSelected = selectedTab == index
-                    Surface(
-                        onClick = { selectedTab = index },
-                        shape = RoundedCornerShape(20.dp),
-                        color = if (isSelected) tab.color else MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
+        if (showSearch) {
+            item {
+                OutlinedTextField(
+                    value = uiState.searchQuery,
+                    onValueChange = { viewModel.onSearchQueryChanged(it) },
+                    placeholder = { Text(stringResource(R.string.highlights_search)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    trailingIcon = {
+                        IconButton(onClick = { showSearch = false }) {
                             Icon(
-                                imageVector = tab.icon,
-                                contentDescription = tab.label,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = tab.label,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                imageVector = Icons.Outlined.Close,
+                                contentDescription = stringResource(R.string.reader_settings_close)
                             )
                         }
                     }
-                }
+                )
             }
         }
 
-        // Recent section
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.highlights_recent),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                TextButton(onClick = { /* TODO: view all highlights */ }) {
-                    Text(text = stringResource(R.string.home_ver_todo))
-                }
-            }
+            NextPageFilterTabs(
+                tabs = typeTabs,
+                selectedTabId = uiState.typeFilter,
+                onTabSelected = { viewModel.onTypeFilterChanged(it) }
+            )
         }
 
-        // Recent cards
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                HighlightCard(
-                    content = stringResource(R.string.highlights_quote_content),
-                    attribution = stringResource(R.string.highlights_quote_author),
-                    accentColor = ColorQuotes,
-                    type = "quote"
-                )
-                HighlightCard(
-                    content = stringResource(R.string.highlights_idea_content),
-                    attribution = null,
-                    accentColor = ColorIdeas,
-                    type = "idea"
-                )
-            }
+            FilterControlsRow(
+                bookFilterTitle = uiState.bookFilter?.let { bookId ->
+                    uiState.books.find { it.id == bookId }?.title
+                },
+                colorFilter = uiState.colorFilter,
+                onBookFilterClick = { showBookSelector = true },
+                onColorFilterClick = { showColorSelector = true }
+            )
         }
 
-        // Summary stats
+        item {
+            NextPageSectionHeader(
+                title = stringResource(R.string.highlights_recent),
+                actionLabel = stringResource(R.string.home_ver_todo),
+                onActionClick = { }
+            )
+        }
+
         item {
             Row(
                 modifier = Modifier
@@ -213,40 +203,51 @@ fun HighlightsScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 StatWidget(
-                    value = "${highlights.size}",
+                    value = "${uiState.highlights.count { it.type == "quote" }}",
                     label = stringResource(R.string.highlights_summary_quotes),
                     color = ColorQuotes
                 )
                 StatWidget(
-                    value = "${bookmarks.size}",
+                    value = "${uiState.highlights.count { it.type == "idea" }}",
                     label = stringResource(R.string.highlights_summary_ideas),
                     color = ColorIdeas
                 )
                 StatWidget(
-                    value = "12",
+                    value = "${uiState.highlights.count { it.type == "passage" }}",
                     label = stringResource(R.string.highlights_summary_passages),
                     color = ColorPassages
                 )
                 StatWidget(
-                    value = "8",
+                    value = "${uiState.bookmarks.size}",
                     label = stringResource(R.string.highlights_summary_favorites),
                     color = ColorFavorites
                 )
             }
         }
 
-        // Highlights list
-        if (selectedTab == 0 && highlights.isNotEmpty()) {
-            val filtered = if (searchQuery.isNotBlank()) {
-                highlights.filter { it.textContent.contains(searchQuery, ignoreCase = true) }
-            } else highlights
-
-            items(filtered, key = { it.id }) { highlight ->
-                HighlightItemCard(
+        if (uiState.filteredHighlights.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.highlights_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            items(uiState.filteredHighlights, key = { it.id }) { highlight ->
+                NextPageHighlightCard(
                     content = "\"${highlight.textContent}\"",
-                    note = highlight.note,
-                    accentColor = ColorQuotes
+                    accentColor = parseHighlightColor(highlight.color),
+                    note = highlight.note
                 )
+                Spacer(modifier = Modifier.height(12.dp))
             }
         }
 
@@ -255,90 +256,39 @@ fun HighlightsScreen(
 }
 
 @Composable
-@Suppress("UNUSED_PARAMETER")
-private fun HighlightCard(
-    content: String,
-    attribution: String?,
-    accentColor: Color,
-    type: String
+private fun FilterControlsRow(
+    bookFilterTitle: String?,
+    colorFilter: String?,
+    onBookFilterClick: () -> Unit,
+    onColorFilterClick: () -> Unit
 ) {
-    Surface(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(modifier = Modifier.padding(start = 0.dp)) {
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
-                    .background(accentColor)
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                if (attribution != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "— $attribution",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun HighlightItemCard(
-    content: String,
-    note: String?,
-    accentColor: Color
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
-    ) {
-        Row(modifier = Modifier.padding(start = 0.dp)) {
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
-                    .background(accentColor)
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (!note.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Note: $note",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
+        FilterChip(
+            selected = bookFilterTitle != null,
+            onClick = onBookFilterClick,
+            label = { Text(bookFilterTitle ?: stringResource(R.string.highlights_filter_book)) },
+            colors = FilterChipDefaults.filterChipColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            ),
+            modifier = Modifier.weight(1f)
+        )
+        FilterChip(
+            selected = colorFilter != null,
+            onClick = onColorFilterClick,
+            label = {
+                val label = colorFilter?.let { hex ->
+                    HighlightColor.entries.find { it.hex.equals(hex, ignoreCase = true) }?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
+                } ?: stringResource(R.string.highlights_filter_color)
+                Text(label)
+            },
+            colors = FilterChipDefaults.filterChipColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            ),
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -361,5 +311,19 @@ private fun StatWidget(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
+    }
+}
+
+private fun parseHighlightColor(hex: String): Color {
+    return try {
+        val sanitized = hex.removePrefix("#").trim()
+        val longHex = when (sanitized.length) {
+            6 -> "FF$sanitized"
+            8 -> sanitized
+            else -> "FF000000"
+        }
+        Color(longHex.toLong(16))
+    } catch (_: Exception) {
+        Color.Gray
     }
 }

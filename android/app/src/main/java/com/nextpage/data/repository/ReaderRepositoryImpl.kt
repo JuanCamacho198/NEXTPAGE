@@ -93,7 +93,8 @@ class ReaderRepositoryImpl(
         color = color,
         updatedAtEpochMillis = updatedAtEpochMillis,
         deletedAtEpochMillis = deletedAtEpochMillis,
-        locatorJson = locatorJson
+        locatorJson = locatorJson,
+        type = type
     )
 
     private fun Highlight.toEntity(): HighlightEntity = HighlightEntity(
@@ -105,7 +106,8 @@ class ReaderRepositoryImpl(
         color = color,
         updatedAtEpochMillis = updatedAtEpochMillis,
         deletedAtEpochMillis = deletedAtEpochMillis,
-        locatorJson = locatorJson
+        locatorJson = locatorJson,
+        type = type
     )
 
     private fun BookmarkEntity.toDomain(): Bookmark = Bookmark(

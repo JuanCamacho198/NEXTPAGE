@@ -34,5 +34,7 @@ data class HighlightEntity(
     @ColumnInfo(name = "deleted_at")
     val deletedAtEpochMillis: Long?,
     @ColumnInfo(name = "locator_json")
-    val locatorJson: String? = null
+    val locatorJson: String? = null,
+    @ColumnInfo(name = "type")
+    val type: String? = null
 )

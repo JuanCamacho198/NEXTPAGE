@@ -387,7 +387,7 @@
     class:justify-center={!isFullscreen}
     class:items-stretch={isEpub || isFullscreen}
     class:px-10={!isFullscreen}
-    class:py-6={isEpub && !isFullscreen}
+    class:py-6={!isFullscreen}
     class:p-0={isFullscreen}
   >
     {#if getReaderError()}

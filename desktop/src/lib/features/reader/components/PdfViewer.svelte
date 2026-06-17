@@ -432,14 +432,19 @@
       pdfDoc = loadedDoc;
       totalPages = loadedDoc.numPages;
 
-      // Compute fit-to-width scale so PDF fills the available container width
+      // Compute fit-to-page scale so the whole PDF page fits inside the viewport.
+      // We use the smaller of width/height ratios to keep the page fully visible
+      // without clipping, then clamp between 0.5 and 3.0 to keep text readable.
       if (canvasContainer) {
         try {
           const firstPage = await loadedDoc.getPage(1);
           const defaultViewport = firstPage.getViewport({ scale: 1 });
           const containerWidth = canvasContainer.clientWidth;
-          if (containerWidth > 0 && defaultViewport.width > 0) {
-            const fitScale = containerWidth / defaultViewport.width;
+          const containerHeight = canvasContainer.clientHeight;
+          if (containerWidth > 0 && containerHeight > 0 && defaultViewport.width > 0 && defaultViewport.height > 0) {
+            const scaleX = containerWidth / defaultViewport.width;
+            const scaleY = containerHeight / defaultViewport.height;
+            const fitScale = Math.min(scaleX, scaleY);
             scale = Math.max(0.5, Math.min(3.0, fitScale));
           }
         } catch {
@@ -973,7 +978,7 @@
           onNavigate={(item) => navigateToOutlineItem(item)}
         />
       {/if}
-      <div class="flex-1 overflow-auto flex justify-center bg-(--pdf-reader-root-bg,var(--color-background))" bind:this={canvasContainer} onwheel={handleViewerWheel} style="padding: {canvasContainerPaddingStyle};">
+      <div class="flex-1 overflow-auto flex items-center justify-center bg-(--pdf-reader-root-bg,var(--color-background))" bind:this={canvasContainer} onwheel={handleViewerWheel} style="padding: {canvasContainerPaddingStyle};">
         <div class="relative inline-block" class:search-hit={flashSearchResult} style="isolation: isolate; {canvasWrapperStyle}">
           <canvas bind:this={canvas} style="filter: {visualFilterStyle};"></canvas>
 

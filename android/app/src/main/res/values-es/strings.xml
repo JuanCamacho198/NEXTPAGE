@@ -351,6 +351,16 @@
     <string name="settings_theme_dark">Oscuro</string>
     <string name="settings_theme_system">Predeterminado del sistema</string>
     <string name="settings_palette">Paleta de colores</string>
+    <string name="settings_account_title">Cuenta</string>
+    <string name="settings_data_storage_title">Datos y almacenamiento</string>
+    <string name="settings_notifications_title">Notificaciones</string>
+    <string name="settings_theme_title">Tema</string>
+    <string name="settings_about_title">Acerca de</string>
+    <string name="settings_statistics_title">Estadísticas</string>
+    <string name="settings_storage">Almacenamiento</string>
+    <string name="settings_sync">Sincronización</string>
+    <string name="settings_about_version">Versión %1$s</string>
+    <string name="settings_about_build">Compilación %1$s</string>
 
     <!-- Statistics -->
     <string name="statistics_title">Estadísticas</string>

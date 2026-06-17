@@ -344,6 +344,16 @@
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_theme_system">System default</string>
     <string name="settings_palette">Color palette</string>
+    <string name="settings_account_title">Account</string>
+    <string name="settings_data_storage_title">Data &amp; Storage</string>
+    <string name="settings_notifications_title">Notifications</string>
+    <string name="settings_theme_title">Theme</string>
+    <string name="settings_about_title">About</string>
+    <string name="settings_statistics_title">Statistics</string>
+    <string name="settings_storage">Storage</string>
+    <string name="settings_sync">Sync</string>
+    <string name="settings_about_version">Version %1$s</string>
+    <string name="settings_about_build">Build %1$s</string>
 
     <!-- Statistics -->
     <string name="statistics_title">Statistics</string>

@@ -15,8 +15,8 @@
   let { shortcuts, t }: Props = $props();
 </script>
 
-<div class="mt-3 rounded-xl border border-(--color-border) bg-(--color-surface,#fff) p-3">
-  <h4 class="mt-0 mb-2 text-sm font-semibold text-neutral-300">
+<section class="mt-3 rounded-xl border border-(--color-border) bg-(--color-surface,#fff) p-3" aria-labelledby="shortcuts-heading">
+  <h4 id="shortcuts-heading" class="mt-0 mb-2 text-sm font-semibold text-neutral-300">
     {t("settings.shortcuts.title")}
   </h4>
   <p class="text-xs text-(--color-text-muted) mb-3">{t("settings.shortcuts.description")}</p>
@@ -28,4 +28,4 @@
       </li>
     {/each}
   </ul>
-</div>
+</section>

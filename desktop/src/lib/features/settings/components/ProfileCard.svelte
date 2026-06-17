@@ -31,7 +31,7 @@
   </p>
 {/if}
 
-<div class="flex gap-3 items-start rounded-xl border border-(--color-border) bg-(--color-surface,#fff) p-3">
+<article class="flex gap-3 items-start rounded-xl border border-(--color-border) bg-(--color-surface,#fff) p-3">
   <div class="w-14 h-14 shrink-0">
     {#if profile.avatarUrl && !avatarBroken}
       <img
@@ -58,4 +58,4 @@
       <p class="m-0 mt-1.5 text-xs text-(--color-text-muted,#6b7280)">{t("settings.profile.signInPrompt")}</p>
     {/if}
   </div>
-</div>
+</article>

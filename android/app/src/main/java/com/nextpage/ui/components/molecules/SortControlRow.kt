@@ -1,7 +1,6 @@
 package com.nextpage.ui.components.molecules
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,8 +9,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.GridView
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,13 +32,29 @@ fun SortControlRow(
     isGridView: Boolean,
     onViewToggle: () -> Unit
 ) {
-    var sortMenuExpanded by remember { mutableStateOf(false) }
+    var showSortSelector by remember { mutableStateOf(false) }
 
-    val sortLabelRes = when (sortBy) {
-        "title" -> R.string.library_sort_title
-        "author" -> R.string.library_sort_author
-        "last_read" -> R.string.library_sort_last_read
-        else -> R.string.library_sort_date_added
+    val sortOptions = listOf(
+        SelectorOption("date_added", R.string.library_sort_date_added),
+        SelectorOption("title", R.string.library_sort_title),
+        SelectorOption("author", R.string.library_sort_author),
+        SelectorOption("last_read", R.string.library_sort_last_read)
+    )
+
+    val selectedSortLabel = sortOptions.find { it.id == sortBy }?.labelRes
+        ?: R.string.library_sort_date_added
+
+    if (showSortSelector) {
+        NextPageSelector(
+            title = stringResource(R.string.library_sort_label),
+            options = sortOptions,
+            selectedOptionId = sortBy,
+            onOptionSelected = { option ->
+                onSortByChanged(option.id)
+                showSortSelector = false
+            },
+            onDismiss = { showSortSelector = false }
+        )
     }
 
     Row(
@@ -58,43 +71,8 @@ fun SortControlRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.width(4.dp))
-            Box {
-                TextButton(onClick = { sortMenuExpanded = true }) {
-                    Text(text = stringResource(sortLabelRes))
-                }
-                DropdownMenu(
-                    expanded = sortMenuExpanded,
-                    onDismissRequest = { sortMenuExpanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.library_sort_date_added)) },
-                        onClick = {
-                            onSortByChanged("date_added")
-                            sortMenuExpanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.library_sort_title)) },
-                        onClick = {
-                            onSortByChanged("title")
-                            sortMenuExpanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.library_sort_author)) },
-                        onClick = {
-                            onSortByChanged("author")
-                            sortMenuExpanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.library_sort_last_read)) },
-                        onClick = {
-                            onSortByChanged("last_read")
-                            sortMenuExpanded = false
-                        }
-                    )
-                }
+            TextButton(onClick = { showSortSelector = true }) {
+                Text(text = stringResource(selectedSortLabel))
             }
         }
 
@@ -102,7 +80,7 @@ fun SortControlRow(
             IconButton(onClick = { if (!isGridView) onViewToggle() }) {
                 Icon(
                     imageVector = Icons.Outlined.GridView,
-                    contentDescription = "Grid view",
+                    contentDescription = stringResource(R.string.library_view_grid),
                     tint = if (isGridView) MaterialTheme.colorScheme.primary
                            else MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -110,7 +88,7 @@ fun SortControlRow(
             IconButton(onClick = { if (isGridView) onViewToggle() }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ViewList,
-                    contentDescription = "List view",
+                    contentDescription = stringResource(R.string.library_view_list),
                     tint = if (!isGridView) MaterialTheme.colorScheme.primary
                            else MaterialTheme.colorScheme.onSurfaceVariant
                 )

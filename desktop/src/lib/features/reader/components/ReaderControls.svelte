@@ -85,6 +85,7 @@
       type="button"
       onclick={onToggleToc}
       class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
+      aria-label={t("reader.tabla_contenidos")}
     >
       <Icon name="menu" size="sm" />
     </button>
@@ -94,6 +95,7 @@
     onclick={onPrev}
     disabled={currentPage <= 1}
     class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
+    aria-label={t("reader.prev_page")}
     {...restProps}
   >
     <Icon name="chevron-left" size="sm" />
@@ -103,6 +105,7 @@
     onclick={onNext}
     disabled={currentPage >= totalPages}
     class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
+    aria-label={t("reader.next_page")}
   >
     <Icon name="arrow-right" size="sm" />
   </button>
@@ -114,6 +117,7 @@
       value={pageValue}
       onchange={handlePageInput}
       class="w-[50px] p-1 border border-(--color-border) rounded text-center bg-(--color-surface) text-(--color-primary)"
+      aria-label={t("reader.page_input")}
     />
     <span class="text-xs text-(--color-text-muted) opacity-70">/ {totalPages}</span>
   </span>
@@ -122,6 +126,7 @@
     onclick={onToggleFullscreen}
     title={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}
     class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
+    aria-label={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}
   >
     <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
   </button>

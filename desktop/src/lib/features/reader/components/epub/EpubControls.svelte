@@ -59,6 +59,7 @@
         onclick={() => onFontSizeChange(fontSize - 10)}
         title={t('pdf.zoomLevel', { level: fontSize })}
         class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
+        aria-label={t("reader.font_decrease")}
       >
         A-
       </button>
@@ -69,6 +70,7 @@
         onclick={() => onFontSizeChange(fontSize + 10)}
         title={t('pdf.zoomLevel', { level: fontSize })}
         class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
+        aria-label={t("reader.font_increase")}
       >
         A+
       </button>

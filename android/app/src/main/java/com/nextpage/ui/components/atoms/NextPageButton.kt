@@ -11,7 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Shape
 
 enum class NextPageButtonVariant {
     FILLED,
@@ -27,6 +27,7 @@ fun NextPageButton(
     modifier: Modifier = Modifier,
     variant: NextPageButtonVariant = NextPageButtonVariant.FILLED,
     enabled: Boolean = true,
+    shape: Shape = MaterialTheme.shapes.small,
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
     content: @Composable () -> Unit
 ) {
@@ -36,7 +37,7 @@ fun NextPageButton(
                 onClick = onClick,
                 modifier = modifier,
                 enabled = enabled,
-                shape = MaterialTheme.shapes.small,
+                shape = shape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -51,7 +52,7 @@ fun NextPageButton(
                 onClick = onClick,
                 modifier = modifier,
                 enabled = enabled,
-                shape = MaterialTheme.shapes.small,
+                shape = shape,
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.primary
                 ),
@@ -75,7 +76,7 @@ fun NextPageButton(
                 onClick = onClick,
                 modifier = modifier,
                 enabled = enabled,
-                shape = MaterialTheme.shapes.small,
+                shape = shape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer

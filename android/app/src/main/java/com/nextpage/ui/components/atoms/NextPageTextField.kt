@@ -8,7 +8,9 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.input.VisualTransformation
 
 @Composable
 fun NextPageTextField(
@@ -22,7 +24,9 @@ fun NextPageTextField(
     trailingIconContentDescription: String? = null,
     singleLine: Boolean = true,
     enabled: Boolean = true,
-    readOnly: Boolean = false
+    readOnly: Boolean = false,
+    shape: Shape? = null,
+    visualTransformation: VisualTransformation = VisualTransformation.None
 ) {
     val isError = !errorMessage.isNullOrBlank()
 
@@ -45,6 +49,8 @@ fun NextPageTextField(
             }
         },
         supportingText = errorMessage?.let { { Text(it) } },
+        visualTransformation = visualTransformation,
+        shape = shape ?: OutlinedTextFieldDefaults.shape,
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
             unfocusedBorderColor = MaterialTheme.colorScheme.outline,

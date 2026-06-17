@@ -114,7 +114,7 @@ fun HighlightPaletteSection(
                             .size(48.dp)
                             .clip(CircleShape)
                             .background(parseColorHex(editorHex))
-                            .border(2.dp, Color.White, CircleShape)
+                            .border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
                             .align(Alignment.CenterHorizontally)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -180,7 +180,8 @@ private fun PaletteSwatchRow(
                     .size(32.dp)
                     .clip(CircleShape)
                     .background(parseColorHex(hex))
-                    .border(2.dp, Color.White.copy(alpha = 0.3f), CircleShape)
+                            .border(2.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), CircleShape)
+
             )
             Text(
                 text = hex.uppercase(),
@@ -192,6 +193,7 @@ private fun PaletteSwatchRow(
 }
 
 /** Parses a hex colour string (with or without #) to a Compose [Color]. */
+@Composable
 private fun parseColorHex(hex: String): Color {
     val sanitized = hex.removePrefix("#").trim()
     val longHex = when (sanitized.length) {
@@ -202,6 +204,6 @@ private fun parseColorHex(hex: String): Color {
     return try {
         Color(longHex.toLong(16))
     } catch (_: Exception) {
-        Color.Gray
+        MaterialTheme.colorScheme.outline
     }
 }

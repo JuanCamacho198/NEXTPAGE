@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NextPage</string>
+    <string name="app_logo_initials">NP</string>
     <string name="tab_auth">Auth</string>
     <string name="tab_reader">Reader</string>
     <string name="tab_highlights">Highlights</string>
     <string name="tab_settings">Settings</string>
+    <string name="tab_statistics">Statistics</string>
+
+    <!-- Auth -->
     <string name="auth_brand_title">NextPage</string>
     <string name="auth_sign_in_title">Sign in</string>
     <string name="auth_subtitle">Your library, everywhere</string>
@@ -21,6 +25,10 @@
     <string name="auth_sign_in">Sign In</string>
     <string name="auth_sign_up">Sign Up</string>
     <string name="auth_continue_local_dev">Continue in local (Dev)</string>
+    <string name="auth_failure_config_error_with_details">Configuration error: %1$s. Continue in local mode until config is fixed.</string>
+    <string name="auth_failure_wiring_error_with_details">Wiring error: %1$s. Continue in local mode while wiring is fixed.</string>
+
+    <!-- Home -->
     <string name="home_welcome">Welcome back</string>
     <string name="home_today_summary">Today\'s summary</string>
     <string name="home_minutes_read_today">%1$d minutes read today</string>
@@ -30,31 +38,39 @@
     <string name="home_quick_actions">Quick actions</string>
     <string name="home_action_import_epub">Import EPUB</string>
     <string name="home_action_import_pdf">Import PDF</string>
-    <string name="home_action_import_book">Importar libro</string>
+    <string name="home_action_import_book">Import book</string>
     <string name="home_action_notes">Notes</string>
     <string name="home_action_stats">Stats</string>
     <string name="home_view_all">View all</string>
-    <string name="home_greeting">Hola, %1$s</string>
-    <string name="home_subtitle">¿Qué vas a leer hoy?</string>
-    <string name="home_continuar">Continuar</string>
-    <string name="home_sessions">Sesiones</string>
-    <string name="home_progress">Progreso</string>
-    <string name="home_minutes">Minutos</string>
-    <string name="home_my_bookshelf_title">Mi estantería</string>
-    <string name="home_ver_todo">Ver todo</string>
+    <string name="home_greeting">Hello, %1$s</string>
+    <string name="home_subtitle">What will you read today?</string>
+    <string name="home_continuar">Continue</string>
+    <string name="home_sessions">Sessions</string>
+    <string name="home_progress">Progress</string>
+    <string name="home_minutes">Minutes</string>
+    <string name="home_my_bookshelf_title">My bookshelf</string>
+    <string name="home_ver_todo">View all</string>
     <string name="home_import_epub">Import EPUB</string>
     <string name="home_import_pdf">Import PDF</string>
-    <string name="home_highlights">Resaltados</string>
-    <string name="home_settings">Ajustes</string>
-    <string name="home_no_current_book">Sin libro en curso</string>
-    <string name="home_today_summary_title">Resumen de hoy</string>
+    <string name="home_highlights">Highlights</string>
+    <string name="home_settings">Settings</string>
+    <string name="home_no_current_book">No current book</string>
+    <string name="home_today_summary_title">Today\'s summary</string>
     <string name="home_nextpage_title">NextPage</string>
-    <string name="home_search_results">Resultados</string>
-    <string name="nav_home">Inicio</string>
-    <string name="nav_library">Estantería</string>
-    <string name="nav_highlights">Resaltados</string>
-    <string name="nav_settings">Ajustes</string>
+    <string name="home_search_results">Results</string>
+    <string name="home_close_search">Close search</string>
+    <string name="home_version_format">v%1$s \u2022 %2$s \u2022 %3$s</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_library">Library</string>
+    <string name="nav_highlights">Highlights</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_statistics">Statistics</string>
     <string name="nav_book_detail">Book Detail</string>
+    <string name="nav_back">Back</string>
+
+    <!-- Book detail -->
     <string name="book_detail_loading">Loading...</string>
     <string name="book_detail_error_not_found">Book not found</string>
     <string name="book_detail_synopsis">Synopsis</string>
@@ -66,7 +82,7 @@
     <string name="book_detail_progress_label">Progress</string>
     <string name="book_detail_last_read_label">Last read</string>
     <string name="book_detail_na">N/A</string>
-    <string name="book_detail_estimated_pages">≈%1$d</string>
+    <string name="book_detail_estimated_pages">\u2248%1$d</string>
     <string name="book_detail_continue_reading">Continue Reading</string>
     <string name="book_detail_start_reading">Start Reading</string>
     <string name="book_detail_page_x_of_y">Page %1$d / %2$d</string>
@@ -74,8 +90,8 @@
     <string name="book_detail_progress_percent">%1$d%% complete</string>
     <string name="book_detail_no_pages">-- / --</string>
     <string name="book_detail_rating_content_description">Rate %1$d star(s)</string>
-    <string name="auth_failure_config_error_with_details">Configuration error: %1$s. Continue in local mode until config is fixed.</string>
-    <string name="auth_failure_wiring_error_with_details">Wiring error: %1$s. Continue in local mode while wiring is fixed.</string>
+
+    <!-- Library -->
     <string name="library_empty">No local books yet.</string>
     <string name="library_import_epub">Import EPUB</string>
     <string name="library_import_pdf">Import PDF</string>
@@ -93,27 +109,42 @@
     <string name="library_delete_title">Delete book</string>
     <string name="library_delete_message">Are you sure you want to delete &quot;%1$s&quot;?</string>
     <string name="library_delete_confirm">Delete</string>
-    <!-- Library / Bookshelf - New Pencil design -->
-    <string name="library_search_placeholder">Buscar libros...</string>
-    <string name="library_filter_label">Filtrar</string>
-    <string name="library_tab_all">Todos</string>
-    <string name="library_tab_reading">Leyendo</string>
-    <string name="library_tab_pending">Pendientes</string>
-    <string name="library_tab_completed">Completados</string>
-    <string name="library_sort_label">Ordenar por:</string>
-    <string name="library_sort_date_added">Fecha agregada</string>
-    <string name="library_sort_title">Título</string>
-    <string name="library_sort_author">Autor</string>
-    <string name="library_sort_last_read">Última lectura</string>
-    <string name="library_add_book">Añadir libro</string>
-    <string name="library_import_book">Importar libro</string>
-    <string name="library_import_formats">Formatos soportados: EPUB, PDF</string>
-    <string name="library_import_unsupported">Formato no soportado. Solo se permiten archivos EPUB y PDF.</string>
+    <string name="library_search_placeholder">Search books...</string>
+    <string name="library_filter_label">Filter</string>
+    <string name="library_tab_all">All</string>
+    <string name="library_tab_reading">Reading</string>
+    <string name="library_tab_pending">Pending</string>
+    <string name="library_tab_completed">Completed</string>
+    <string name="library_sort_label">Sort by:</string>
+    <string name="library_sort_date_added">Date added</string>
+    <string name="library_sort_title">Title</string>
+    <string name="library_sort_author">Author</string>
+    <string name="library_sort_last_read">Last read</string>
+    <string name="library_add_book">Add book</string>
+    <string name="library_import_book">Import book</string>
+    <string name="library_import_formats">Supported formats: EPUB, PDF</string>
+    <string name="library_import_unsupported">Unsupported format. Only EPUB and PDF files are allowed.</string>
     <string name="library_status_in_progress">%1$d min</string>
-    <string name="library_status_completed">Completado</string>
-    <string name="library_filter_format_label">Formato</string>
-    <string name="library_filter_format_all">Todos</string>
-    <string name="library_search_no_results">Sin resultados</string>
+    <string name="library_status_completed">Completed</string>
+    <string name="library_filter_format_label">Format</string>
+    <string name="library_filter_format_all">All</string>
+    <string name="library_search_no_results">No results</string>
+    <string name="library_view_grid">Grid view</string>
+    <string name="library_view_list">List view</string>
+
+    <!-- Book card -->
+    <string name="book_card_options">Options</string>
+    <string name="book_card_edit_metadata">Edit metadata</string>
+    <string name="book_card_remove_from_library">Remove from library</string>
+
+    <!-- Sync -->
+    <string name="sync_status_synced">Synced</string>
+    <string name="sync_status_off">Sync off</string>
+    <string name="sync_status_syncing">Syncing\u2026</string>
+    <string name="sync_status_error">Sync error</string>
+    <string name="sync_pending_badge">%1$d pending items</string>
+
+    <!-- Reader -->
     <string name="reader_placeholder">Reader rendering engine is coming soon.</string>
     <string name="reader_selected_book">Book: %1$s</string>
     <string name="reader_no_progress">No local progress yet for this book.</string>
@@ -121,90 +152,54 @@
     <string name="reader_progress_percent">Progress: %1$.1f%%</string>
     <string name="reader_mark_quarter">Mark 25%%</string>
     <string name="reader_mark_three_quarter">Mark 75%%</string>
-    <string name="highlights_title">Resaltados</string>
-    <string name="highlights_subtitle">Tus notas y pasajes destacados</string>
-    <string name="highlights_tab_all">Todos</string>
-    <string name="highlights_tab_quotes">Citas</string>
+
+    <!-- Highlights -->
+    <string name="highlights_title">Highlights</string>
+    <string name="highlights_subtitle">Your notes and highlighted passages</string>
+    <string name="highlights_tab_all">All</string>
+    <string name="highlights_tab_quotes">Quotes</string>
     <string name="highlights_tab_ideas">Ideas</string>
-    <string name="highlights_tab_passages">Pasajes</string>
-    <string name="highlights_recent">Recientes</string>
-    <string name="highlights_summary_quotes">Citas</string>
+    <string name="highlights_tab_passages">Passages</string>
+    <string name="highlights_recent">Recent</string>
+    <string name="highlights_summary_quotes">Quotes</string>
     <string name="highlights_summary_ideas">Ideas</string>
-    <string name="highlights_summary_passages">Pasajes</string>
-    <string name="highlights_summary_favorites">Favoritos</string>
-    <string name="highlights_quote_content">"El conocimiento es poder."</string>
-    <string name="highlights_quote_author">Francis Bacon</string>
-    <string name="highlights_idea_content">La consistencia diaria construye resultados.</string>
-    <string name="settings_title">Ajustes</string>
-    <string name="settings_subtitle">Personaliza tu experiencia en NextPage.</string>
-    <string name="settings_account_section">Cuenta</string>
-    <string name="settings_preferences_section">Preferencias</string>
-    <string name="settings_pref_theme">Tema</string>
-    <string name="settings_pref_font_size">Tamaño de fuente</string>
-    <string name="settings_pref_sync">Sincronización</string>
-    <string name="settings_pref_about">Acerca de</string>
-    <string name="settings_pref_notifications">Notificaciones</string>
-    <string name="settings_user_default">Usuario</string>
-    <string name="settings_email_placeholder">email@ejemplo.com</string>
-    <string name="settings_logout">Cerrar sesión</string>
-    <string name="settings_logout_title">Cerrar sesión</string>
-    <string name="settings_logout_message">¿Estás seguro de que deseas cerrar sesión? Los datos no sincronizados podrían perderse.</string>
-    <string name="settings_logout_confirm">Cerrar sesión</string>
-    <string name="settings_lectura_section">Lectura</string>
-    <string name="settings_pref_reading_theme">Tema de lectura</string>
-    <string name="settings_pref_line_height">Interlineado</string>
-    <string name="settings_apariencia_section">Apariencia</string>
-    <string name="settings_pref_language">Idioma</string>
-    <string name="settings_datos_section">Datos</string>
-    <string name="settings_pref_storage">Almacenamiento</string>
-    <string name="settings_pref_stats">Estadísticas</string>
-    <string name="settings_info_section">Información</string>
-    <string name="settings_language_title">Idioma</string>
-    <string name="settings_language_spanish">Español</string>
-    <string name="settings_language_english">English</string>
-    <string name="settings_language_system">Seguir dispositivo</string>
-    <string name="reader_title">Reader</string>
-    <string name="reader_loaded_in">Opened in %1$d ms</string>
-    <string name="reader_retry">Retry</string>
-    <string name="reader_no_content">No content available</string>
-    <string name="reader_chapter_loading">Loading chapter...</string>
-    <string name="reader_add_bookmark">Add Bookmark</string>
-    <string name="reader_go_to_page">Go to page</string>
-    <string name="reader_go_to_page_input_label">Page number</string>
-    <string name="reader_go_to_page_input_hint">Enter a value between 1 and %1$d</string>
-    <string name="reader_go">Go</string>
-    <string name="reader_previous_chapter">Previous Chapter</string>
-    <string name="reader_next_chapter">Next Chapter</string>
-    <string name="reader_add_highlight">Add Highlight</string>
-    <string name="reader_highlight_note">Note (optional)</string>
-    <string name="reader_save">Save</string>
-    <string name="reader_cancel">Cancel</string>
-    <string name="highlights_tab">Highlights (%1$d)</string>
-    <string name="bookmarks_tab">Bookmarks (%1$d)</string>
+    <string name="highlights_summary_passages">Passages</string>
+    <string name="highlights_summary_favorites">Favorites</string>
     <string name="highlights_empty">No highlights yet</string>
-    <string name="bookmarks_empty">No bookmarks yet</string>
+    <string name="highlights_search">Search highlights</string>
+    <string name="highlights_filter_book">Filter by book</string>
+    <string name="highlights_filter_color">Filter by color</string>
+    <string name="highlights_filter_all_books">All books</string>
+    <string name="highlights_filter_all_colors">All colors</string>
+    <string name="highlights_clear_filters">Clear filters</string>
     <string name="highlight_location">Location: %1$s</string>
+
+    <!-- Bookmarks -->
+    <string name="bookmarks_tab">Bookmarks (%1$d)</string>
+    <string name="bookmarks_empty">No bookmarks yet</string>
     <string name="bookmark_location">Location: %1$s</string>
+
+    <!-- PDF -->
     <string name="pdf_page_description">Page %1$d of %2$d</string>
     <string name="pdf_loading">Loading PDF...</string>
 
     <!-- Notifications -->
-    <string name="notifications_title">Notificaciones</string>
-    <string name="notifications_empty">No tienes notificaciones aún</string>
-    <string name="notifications_mock_welcome_title">¡Bienvenido a NextPage!</string>
-    <string name="notifications_mock_welcome_body">Empezá a leer tu primer libro.</string>
-    <string name="notifications_mock_streak_title">Meta de lectura</string>
-    <string name="notifications_mock_streak_body">Completaste 3 días de lectura consecutiva. ¡Seguí así!</string>
-    <string name="notifications_mock_library_title">Nuevo libro disponible</string>
-    <string name="notifications_mock_library_body">Explorá los libros en tu estantería.</string>
-    <string name="notifications_badge_content_description">Notificaciones sin leer</string>
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_empty">You have no notifications yet</string>
+    <string name="notifications_mock_welcome_title">Welcome to NextPage!</string>
+    <string name="notifications_mock_welcome_body">Start reading your first book.</string>
+    <string name="notifications_mock_streak_title">Reading goal</string>
+    <string name="notifications_mock_streak_body">You completed 3 consecutive reading days. Keep it up!</string>
+    <string name="notifications_mock_library_title">New book available</string>
+    <string name="notifications_mock_library_body">Explore the books on your bookshelf.</string>
+    <string name="notifications_badge_content_description">Unread notifications</string>
 
     <!-- Reader / Sleep Timer -->
     <string name="reader_sleep_timer">Sleep Timer</string>
-    <string name="reader_sleep_timer_end_of_chapter">Fin de capítulo</string>
-    <string name="reader_sleep_timer_end_of_chapter_desc">Detiene al cambiar de capítulo</string>
-    <string name="reader_sleep_timer_finished_chapter_title">Fin del capítulo</string>
-    <string name="reader_sleep_timer_finished_chapter_body">Llegaste al final del capítulo.</string>
+    <string name="reader_sleep_timer_end_of_chapter">End of chapter</string>
+    <string name="reader_sleep_timer_end_of_chapter_desc">Stops when changing chapters</string>
+    <string name="reader_sleep_timer_finished_chapter_title">End of chapter</string>
+    <string name="reader_sleep_timer_finished_chapter_body">You reached the end of the chapter.</string>
     <string name="reader_sleep_timer_start">Start Sleep Timer</string>
     <string name="reader_sleep_timer_5min">5 min</string>
     <string name="reader_sleep_timer_10min">10 min</string>
@@ -239,7 +234,7 @@
     <string name="reader_progress_empty">-- / --</string>
 
     <!-- Reader / Search -->
-    <string name="search_input_hint">Search in book…</string>
+    <string name="search_input_hint">Search in book\u2026</string>
     <string name="search_clear">Clear search</string>
     <string name="search_results_count">Results (%1$d)</string>
     <string name="search_no_results">No results</string>
@@ -264,19 +259,21 @@
     <string name="context_menu_share">Share</string>
     <string name="context_menu_delete">Delete</string>
     <string name="color_picker_confirm">Tap a preset or hex to confirm</string>
-    <string name="note_modal_title">Nueva Nota</string>
-    <string name="comment_modal_title">Nuevo Comentario</string>
-    <string name="annotation_textarea_note_hint">Escribí tu nota…</string>
-    <string name="annotation_textarea_comment_hint">Escribí tu comentario…</string>
-    <string name="annotation_snippet_label">Texto seleccionado</string>
-    <string name="annotation_modal_close">Cerrar</string>
-    <string name="tag_dialog_title">Etiqueta</string>
-    <string name="tag_dialog_label">Etiqueta</string>
-    <string name="share_no_text">No hay texto seleccionado</string>
-    <string name="palette_section_title">Paleta de colores</string>
-    <string name="palette_section_subtitle">Personalizá los 5 colores de resaltado</string>
-    <string name="palette_reset">Restablecer valores predeterminados</string>
-    <string name="palette_pick_color">Elegir color</string>
+    <string name="note_modal_title">New Note</string>
+    <string name="comment_modal_title">New Comment</string>
+    <string name="annotation_textarea_note_hint">Write your note\u2026</string>
+    <string name="annotation_textarea_comment_hint">Write your comment\u2026</string>
+    <string name="annotation_snippet_label">Selected text</string>
+    <string name="annotation_modal_close">Close</string>
+    <string name="tag_dialog_title">Tag</string>
+    <string name="tag_dialog_label">Tag</string>
+    <string name="share_no_text">No text selected</string>
+
+    <!-- Palette -->
+    <string name="palette_section_title">Color palette</string>
+    <string name="palette_section_subtitle">Customize the 5 highlight colors</string>
+    <string name="palette_reset">Reset to defaults</string>
+    <string name="palette_pick_color">Pick a color</string>
 
     <!-- Reader / aA Settings -->
     <string name="aa_preview_text">The quick brown fox jumps over the lazy dog. This is a preview of the current reading settings.</string>
@@ -314,6 +311,58 @@
     <string name="reader_bookmark">Bookmark</string>
     <string name="reader_typography">Typography</string>
 
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_subtitle">Customize your NextPage experience.</string>
+    <string name="settings_account_section">Account</string>
+    <string name="settings_preferences_section">Preferences</string>
+    <string name="settings_pref_theme">Theme</string>
+    <string name="settings_pref_font_size">Font size</string>
+    <string name="settings_pref_sync">Sync</string>
+    <string name="settings_pref_about">About</string>
+    <string name="settings_pref_notifications">Notifications</string>
+    <string name="settings_user_default">User</string>
+    <string name="settings_email_placeholder">email@example.com</string>
+    <string name="settings_logout">Log out</string>
+    <string name="settings_logout_title">Log out</string>
+    <string name="settings_logout_message">Are you sure you want to log out? Unsynced data may be lost.</string>
+    <string name="settings_logout_confirm">Log out</string>
+    <string name="settings_lectura_section">Reading</string>
+    <string name="settings_pref_reading_theme">Reading theme</string>
+    <string name="settings_pref_line_height">Line spacing</string>
+    <string name="settings_apariencia_section">Appearance</string>
+    <string name="settings_pref_language">Language</string>
+    <string name="settings_datos_section">Data</string>
+    <string name="settings_pref_storage">Storage</string>
+    <string name="settings_pref_stats">Statistics</string>
+    <string name="settings_info_section">Information</string>
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_spanish">Spanish</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_system">Follow device</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_system">System default</string>
+    <string name="settings_palette">Color palette</string>
+
+    <!-- Statistics -->
+    <string name="statistics_title">Statistics</string>
+    <string name="statistics_subtitle">Your reading activity</string>
+    <string name="statistics_summary">Summary</string>
+    <string name="statistics_total_reading_time">Total reading time</string>
+    <string name="statistics_current_streak">Current streak</string>
+    <string name="statistics_books_read">Books read</string>
+    <string name="statistics_days">days</string>
+    <string name="statistics_minutes">min</string>
+    <string name="statistics_reading_activity">Reading activity</string>
+    <string name="statistics_last_7_days">Last 7 days</string>
+    <string name="statistics_goals">Goals</string>
+    <string name="statistics_daily_goal">Daily goal</string>
+    <string name="statistics_favorite_genres">Favorite genres</string>
+    <string name="statistics_no_genres">No genre data yet</string>
+    <string name="statistics_empty_title">No reading data yet</string>
+    <string name="statistics_empty_subtitle">Start reading to see your statistics.</string>
+
     <!-- Global Error Messages -->
     <string name="error_network">Network error. Check your connection and try again.</string>
     <string name="error_auth">Authentication error. Please sign in again.</string>
@@ -342,8 +391,8 @@
     <string name="debug_decorations_listener_registered">Listener registered</string>
     <string name="debug_decorations_activation_count">Activation count</string>
     <string name="debug_decorations_last_id">Last event id</string>
-    <string name="debug_decorations_last_rect">Last event rect</string>
-    <string name="debug_decorations_last_group">Last event group</string>
+    <string name="debug_decorations_last_rect">Last rect</string>
+    <string name="debug_decorations_last_group">Last group</string>
     <string name="debug_decorations_last_applied">Last applied count</string>
     <string name="debug_decorations_active">Active count</string>
     <string name="debug_chip_label">DEBUG</string>
@@ -379,4 +428,14 @@
     <!-- Debug mode toggle -->
     <string name="debug_mode_title">Debug mode</string>
     <string name="debug_mode_subtitle">Show development tools</string>
+    <string name="reader_cancel">Cancel</string>
+    <string name="reader_save">Save</string>
+    <string name="reader_title">Reader</string>
+    <string name="reader_add_bookmark">Add Bookmark</string>
+    <string name="reader_go_to_page">Go to page</string>
+    <string name="reader_go_to_page_input_label">Page number</string>
+    <string name="reader_go_to_page_input_hint">Enter a value between 1 and %1$d</string>
+    <string name="reader_go">Go</string>
+    <string name="reader_loaded_in">Opened in %1$d ms</string>
+    <string name="reader_retry">Retry</string>
 </resources>

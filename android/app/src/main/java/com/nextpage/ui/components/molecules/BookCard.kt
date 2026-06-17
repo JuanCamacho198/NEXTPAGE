@@ -11,7 +11,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageProgressBar
 import com.nextpage.ui.components.atoms.NextPageTypography
 
@@ -74,7 +76,7 @@ fun BookCard(
         ) {
             Icon(
                 imageVector = Icons.Filled.MoreVert,
-                contentDescription = "Opciones",
+                contentDescription = stringResource(R.string.book_card_options),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -85,14 +87,14 @@ fun BookCard(
             onDismissRequest = { showMenu = false }
         ) {
             DropdownMenuItem(
-                text = { Text("Editar metadatos") },
+                text = { Text(stringResource(R.string.book_card_edit_metadata)) },
                 onClick = {
                     showMenu = false
                     // TODO: Navigate to edit screen
                 }
             )
             DropdownMenuItem(
-                text = { Text("Eliminar de estantería") },
+                text = { Text(stringResource(R.string.book_card_remove_from_library)) },
                 onClick = {
                     showMenu = false
                     onDeleteClick()

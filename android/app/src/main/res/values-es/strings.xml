@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_logo_initials">NP</string>
     <string name="auth_brand_title">NextPage</string>
     <string name="auth_sign_in_title">Iniciar sesion</string>
     <string name="auth_subtitle">Tu biblioteca, en todas partes</string>
@@ -315,4 +316,67 @@
     <!-- Debug mode toggle -->
     <string name="debug_mode_title">Modo debug</string>
     <string name="debug_mode_subtitle">Mostrar herramientas de desarrollo</string>
+
+    <!-- Navegación y nuevas keys -->
+    <string name="tab_statistics">Estadísticas</string>
+    <string name="nav_statistics">Estadísticas</string>
+    <string name="nav_back">Volver</string>
+    <string name="home_close_search">Cerrar búsqueda</string>
+    <string name="home_version_format">v%1$s \u2022 %2$s \u2022 %3$s</string>
+    <string name="library_view_grid">Vista de cuadrícula</string>
+    <string name="library_view_list">Vista de lista</string>
+
+    <!-- Book card -->
+    <string name="book_card_options">Opciones</string>
+    <string name="book_card_edit_metadata">Editar metadatos</string>
+    <string name="book_card_remove_from_library">Eliminar de estantería</string>
+
+    <!-- Sync -->
+    <string name="sync_status_synced">Sincronizado</string>
+    <string name="sync_status_off">Sinc. desactivada</string>
+    <string name="sync_status_syncing">Sincronizando\u2026</string>
+    <string name="sync_status_error">Error de sinc.</string>
+    <string name="sync_pending_badge">%1$d elementos pendientes</string>
+
+    <!-- Highlights filtros -->
+    <string name="highlights_search">Buscar resaltados</string>
+    <string name="highlights_filter_book">Filtrar por libro</string>
+    <string name="highlights_filter_color">Filtrar por color</string>
+    <string name="highlights_filter_all_books">Todos los libros</string>
+    <string name="highlights_filter_all_colors">Todos los colores</string>
+    <string name="highlights_clear_filters">Borrar filtros</string>
+
+    <!-- Settings -->
+    <string name="settings_theme_light">Claro</string>
+    <string name="settings_theme_dark">Oscuro</string>
+    <string name="settings_theme_system">Predeterminado del sistema</string>
+    <string name="settings_palette">Paleta de colores</string>
+
+    <!-- Statistics -->
+    <string name="statistics_title">Estadísticas</string>
+    <string name="statistics_subtitle">Tu actividad de lectura</string>
+    <string name="statistics_summary">Resumen</string>
+    <string name="statistics_total_reading_time">Tiempo total de lectura</string>
+    <string name="statistics_current_streak">Racha actual</string>
+    <string name="statistics_books_read">Libros leídos</string>
+    <string name="statistics_days">días</string>
+    <string name="statistics_minutes">min</string>
+    <string name="statistics_reading_activity">Actividad de lectura</string>
+    <string name="statistics_last_7_days">Últimos 7 días</string>
+    <string name="statistics_goals">Metas</string>
+    <string name="statistics_daily_goal">Meta diaria</string>
+    <string name="statistics_favorite_genres">Géneros favoritos</string>
+    <string name="statistics_no_genres">Aún no hay datos de géneros</string>
+    <string name="statistics_empty_title">Aún no hay datos de lectura</string>
+    <string name="statistics_empty_subtitle">Empezá a leer para ver tus estadísticas.</string>
+    <string name="reader_cancel">Cancelar</string>
+    <string name="reader_save">Guardar</string>
+    <string name="reader_title">Lector</string>
+    <string name="reader_add_bookmark">Añadir marcador</string>
+    <string name="reader_go_to_page">Ir a página</string>
+    <string name="reader_go_to_page_input_label">Número de página</string>
+    <string name="reader_go_to_page_input_hint">Ingresá un valor entre 1 y %1$d</string>
+    <string name="reader_go">Ir</string>
+    <string name="reader_loaded_in">Abierto en %1$d ms</string>
+    <string name="reader_retry">Reintentar</string>
 </resources>

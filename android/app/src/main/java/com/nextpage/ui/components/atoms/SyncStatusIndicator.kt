@@ -17,7 +17,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.nextpage.R
 import com.nextpage.data.remote.sync.SyncState
 
 /**
@@ -32,12 +34,13 @@ fun SyncStatusIndicator(
     pendingCount: Int,
     modifier: Modifier = Modifier
 ) {
-    val (dotColor, label) = when (syncState) {
-        is SyncState.Idle -> Color(0xFF4ADE80) to "Synced"
-        is SyncState.Disabled -> Color(0xFF9CA3AF) to "Sync off"
-        is SyncState.Running -> Color(0xFF60A5FA) to "Syncing…"
-        is SyncState.Error -> Color(0xFFF87171) to "Sync error"
+    val (dotColor, labelRes) = when (syncState) {
+        is SyncState.Idle -> Color(0xFF4ADE80) to R.string.sync_status_synced
+        is SyncState.Disabled -> Color(0xFF9CA3AF) to R.string.sync_status_off
+        is SyncState.Running -> Color(0xFF60A5FA) to R.string.sync_status_syncing
+        is SyncState.Error -> Color(0xFFF87171) to R.string.sync_status_error
     }
+    val label = stringResource(labelRes)
 
     Row(
         modifier = modifier

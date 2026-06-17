@@ -110,7 +110,7 @@ fun AuthScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "NP",
+                    text = stringResource(R.string.app_logo_initials),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimary

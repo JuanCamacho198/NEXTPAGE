@@ -59,6 +59,8 @@
     <string name="home_nextpage_title">NextPage</string>
     <string name="home_search_results">Results</string>
     <string name="home_close_search">Close search</string>
+    <string name="home_bookshelf_empty_title">Your bookshelf is empty</string>
+    <string name="home_bookshelf_empty_subtitle">Import a book to start your library.</string>
     <string name="home_version_format">v%1$s \u2022 %2$s \u2022 %3$s</string>
 
     <!-- Navigation -->
@@ -129,6 +131,7 @@
     <string name="library_filter_format_label">Format</string>
     <string name="library_filter_format_all">All</string>
     <string name="library_search_no_results">No results</string>
+    <string name="library_search_empty_subtitle">Try a different search term.</string>
     <string name="library_view_grid">Grid view</string>
     <string name="library_view_list">List view</string>
 
@@ -166,6 +169,7 @@
     <string name="highlights_summary_passages">Passages</string>
     <string name="highlights_summary_favorites">Favorites</string>
     <string name="highlights_empty">No highlights yet</string>
+    <string name="highlights_empty_subtitle">Save passages, ideas, and quotes as you read.</string>
     <string name="highlights_search">Search highlights</string>
     <string name="highlights_filter_book">Filter by book</string>
     <string name="highlights_filter_color">Filter by color</string>
@@ -370,6 +374,7 @@
     <string name="statistics_daily_goal">Daily goal</string>
     <string name="statistics_favorite_genres">Favorite genres</string>
     <string name="statistics_no_genres">No genre data yet</string>
+    <string name="statistics_no_genres_subtitle">Add highlights and notes to see what you read most.</string>
     <string name="statistics_empty_title">No reading data yet</string>
     <string name="statistics_empty_subtitle">Start reading to see your statistics.</string>
 

@@ -76,6 +76,8 @@
     <string name="home_highlights">Resaltados</string>
     <string name="home_settings">Ajustes</string>
     <string name="home_no_current_book">Sin libro en curso</string>
+    <string name="home_bookshelf_empty_title">Tu estanter\u00eda est\u00e1 vac\u00eda</string>
+    <string name="home_bookshelf_empty_subtitle">Import\u00e1 un libro para empezar tu biblioteca.</string>
     <string name="home_today_summary_title">Resumen de hoy</string>
     <string name="home_nextpage_title">NextPage</string>
     <string name="home_search_results">Resultados</string>
@@ -124,6 +126,7 @@
     <string name="library_filter_format_label">Formato</string>
     <string name="library_filter_format_all">Todos</string>
     <string name="library_search_no_results">Sin resultados</string>
+    <string name="library_search_empty_subtitle">Prob\u00e1 con otro t\u00e9rmino de b\u00fasqueda.</string>
 
     <!-- Notifications -->
     <string name="notifications_title">Notificaciones</string>
@@ -340,6 +343,8 @@
 
     <!-- Highlights filtros -->
     <string name="highlights_search">Buscar resaltados</string>
+    <string name="highlights_empty">A\u00fan no hay resaltados</string>
+    <string name="highlights_empty_subtitle">Guard\u00e1 pasajes, ideas y citas mientras le\u00e9s.</string>
     <string name="highlights_filter_book">Filtrar por libro</string>
     <string name="highlights_filter_color">Filtrar por color</string>
     <string name="highlights_filter_all_books">Todos los libros</string>
@@ -377,6 +382,7 @@
     <string name="statistics_daily_goal">Meta diaria</string>
     <string name="statistics_favorite_genres">Géneros favoritos</string>
     <string name="statistics_no_genres">Aún no hay datos de géneros</string>
+    <string name="statistics_no_genres_subtitle">Agregá resaltados y notas para ver qué leés más.</string>
     <string name="statistics_empty_title">Aún no hay datos de lectura</string>
     <string name="statistics_empty_subtitle">Empezá a leer para ver tus estadísticas.</string>
     <string name="reader_cancel">Cancelar</string>

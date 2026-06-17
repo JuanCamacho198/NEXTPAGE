@@ -32,15 +32,14 @@ data class AuthUiState(
     val hasWiringIssue: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val failureKind: AuthFailureKind = AuthFailureKind.NONE,
-    val pendingGoogleSignInUrl: String? = null
+    val failureKind: AuthFailureKind = AuthFailureKind.NONE
 )
 
 class AuthViewModel(
     private val authRepository: AuthRepository,
     private val syncService: SyncService,
-    private val isSupabaseConfigured: Boolean,
-    private val hasSupabaseWiringIssue: Boolean
+    private val isAuthConfigured: Boolean,
+    private val hasAuthWiringIssue: Boolean
 ) : ViewModel() {
 
     companion object {
@@ -55,8 +54,8 @@ class AuthViewModel(
 
     init {
         _uiState.value = _uiState.value.copy(
-            isConfigured = isSupabaseConfigured,
-            hasWiringIssue = hasSupabaseWiringIssue
+            isConfigured = isAuthConfigured,
+            hasWiringIssue = hasAuthWiringIssue
         )
         logDiagnostics("init")
         restoreSessionOnStart()
@@ -67,8 +66,6 @@ class AuthViewModel(
             val sessionResult = authRepository.getCurrentSession()
             val session = sessionResult.getOrNull()
             session?.let { triggerSyncForSession(it) }
-            // Only restore if no session was already set (e.g. by continueLocally())
-            // This prevents a slow restoreSession() from overwriting a local session.
             if (_uiState.value.currentSession == null) {
                 _uiState.value = _uiState.value.copy(
                     currentSession = session,
@@ -79,59 +76,46 @@ class AuthViewModel(
         }
     }
 
+    /**
+     * Initiates Google sign-in via Credential Manager One Tap (native bottom sheet).
+     * No browser redirect — the One Tap result is handled directly.
+     */
     fun startGoogleSignIn() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 errorMessage = null,
-                failureKind = AuthFailureKind.NONE,
-                pendingGoogleSignInUrl = null
+                failureKind = AuthFailureKind.NONE
             )
             logDiagnostics("startGoogleSignIn:loading")
-            val result = authRepository.startGoogleSignIn()
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                pendingGoogleSignInUrl = result.getOrNull(),
-                errorMessage = result.exceptionOrNull()?.message,
-                failureKind = classifyFailure(result.exceptionOrNull())
-            )
-            logDiagnostics("startGoogleSignIn:result")
-        }
-    }
-
-    fun onGoogleAuthCallback(callbackUri: String) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            logDiagnostics("onGoogleAuthCallback:loading")
-            val result = authRepository.completeGoogleSignIn(callbackUri)
+            val result = authRepository.signInWithGoogle()
             result.fold(
                 onSuccess = { session ->
-                    session?.let { triggerSyncForSession(it) }
+                    triggerSyncForSession(session)
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         currentSession = session,
                         errorMessage = null,
-                        failureKind = AuthFailureKind.NONE,
-                        pendingGoogleSignInUrl = null
+                        failureKind = AuthFailureKind.NONE
                     )
-                    logDiagnostics("onGoogleAuthCallback:success")
+                    logDiagnostics("startGoogleSignIn:success")
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = error.message,
-                        failureKind = classifyFailure(error),
-                        pendingGoogleSignInUrl = null
+                        failureKind = classifyFailure(error)
                     )
                     _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Authentication failed"))
-                    logDiagnostics("onGoogleAuthCallback:failure")
+                    logDiagnostics("startGoogleSignIn:failure")
                 }
             )
         }
     }
 
-    fun consumePendingGoogleSignInUrl() {
-        _uiState.value = _uiState.value.copy(pendingGoogleSignInUrl = null)
+    @Deprecated("One Tap handles auth directly; OAuth callback flow is no longer used.")
+    fun onGoogleAuthCallback(callbackUri: String) {
+        // No-op: One Tap no longer uses browser callback
     }
 
     fun signUp(email: String, password: String) {
@@ -170,8 +154,7 @@ class AuthViewModel(
             _uiState.value = _uiState.value.copy(
                 currentSession = if (result.isSuccess) null else _uiState.value.currentSession,
                 errorMessage = result.exceptionOrNull()?.message,
-                failureKind = classifyFailure(result.exceptionOrNull()),
-                pendingGoogleSignInUrl = null
+                failureKind = classifyFailure(result.exceptionOrNull())
             )
             result.exceptionOrNull()?.let {
                 _uiEvent.emit(UiEvent.ShowSnackbar(it.message ?: "Sign out failed"))
@@ -228,16 +211,16 @@ class AuthViewModel(
     class Factory(
         private val authRepository: AuthRepository,
         private val syncService: SyncService,
-        private val isSupabaseConfigured: Boolean,
-        private val hasSupabaseWiringIssue: Boolean
+        private val isAuthConfigured: Boolean,
+        private val hasAuthWiringIssue: Boolean
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return AuthViewModel(
                 authRepository = authRepository,
                 syncService = syncService,
-                isSupabaseConfigured = isSupabaseConfigured,
-                hasSupabaseWiringIssue = hasSupabaseWiringIssue
+                isAuthConfigured = isAuthConfigured,
+                hasAuthWiringIssue = hasAuthWiringIssue
             ) as T
         }
     }

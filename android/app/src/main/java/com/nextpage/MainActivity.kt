@@ -1,7 +1,6 @@
 package com.nextpage
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -38,7 +37,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         appContainer = AppContainer(context = this)
-        handleAuthIntent(intent)
 
         // Debug-only: capture pending crash from previous run, ensure the
         // notification channel exists, and request POST_NOTIFICATIONS on 33+.
@@ -81,19 +79,6 @@ class MainActivity : AppCompatActivity() {
             runCatching {
                 requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
-        }
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        handleAuthIntent(intent)
-    }
-
-    private fun handleAuthIntent(intent: Intent?) {
-        val data = intent?.data ?: return
-        if (data.scheme == "nextpage" && data.host == "auth" && data.path == "/callback") {
-            appContainer.submitAuthCallback(data.toString())
         }
     }
 

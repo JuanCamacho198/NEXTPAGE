@@ -1,5 +1,9 @@
 package com.nextpage.data.remote.sync
+
 import com.nextpage.data.local.dao.BookDao
+import com.nextpage.data.local.dao.BookmarkDao
+import com.nextpage.data.local.dao.HighlightDao
+import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.SyncFileMappingDao
 import com.nextpage.data.local.dao.SyncOutboxDao
 import com.nextpage.data.local.entity.BookEntity
@@ -9,25 +13,32 @@ import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.session.SessionManager
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
-import io.github.jan.supabase.exceptions.HttpRequestException
-import io.github.jan.supabase.exceptions.RestException
-import io.ktor.client.plugins.HttpRequestTimeoutException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.IOException
 
-class SupabaseSyncService(
+/**
+ * Implements [SyncService] using Google Drive REST API v3 for file storage
+ * and [GoogleDriveJsonStateSync] for reading progress, highlights, and bookmark sync.
+ *
+ * Handles all 4 outbox types: BOOK, READING_PROGRESS, HIGHLIGHT, BOOKMARK.
+ */
+class GoogleDriveSyncService(
     private val outboxDao: SyncOutboxDao,
     private val bookDao: BookDao,
     private val mappingDao: SyncFileMappingDao,
+    private val readingProgressDao: ReadingProgressDao,
+    private val highlightDao: HighlightDao,
+    private val bookmarkDao: BookmarkDao,
     private val sessionManager: SessionManager,
     private val remoteDataSource: StorageSyncRemoteDataSource,
     private val localBooksDir: File,
     private val isEnabled: Boolean,
     private val diagnosticError: AppError? = null,
-    private val maxRetries: Int = DEFAULT_MAX_RETRIES
+    private val maxRetries: Int = DEFAULT_MAX_RETRIES,
+    private val jsonStateSync: GoogleDriveJsonStateSync = GoogleDriveJsonStateSync(remoteDataSource)
 ) : SyncService {
 
     private val state = MutableStateFlow<SyncState>(if (isEnabled) SyncState.Idle else SyncState.Disabled)
@@ -40,7 +51,7 @@ class SupabaseSyncService(
             val disabledError = diagnosticError ?: AppError(
                 category = ErrorCategory.CONFIG_ERROR,
                 code = "SYNC_DISABLED",
-                message = "Sync service is disabled due to Supabase configuration.",
+                message = "Sync service is disabled due to Google Drive configuration.",
                 component = COMPONENT
             )
             state.value = SyncState.Disabled
@@ -68,7 +79,7 @@ class SupabaseSyncService(
             val disabledError = diagnosticError ?: AppError(
                 category = ErrorCategory.CONFIG_ERROR,
                 code = "SYNC_DISABLED",
-                message = "Sync service is disabled due to Supabase configuration.",
+                message = "Sync service is disabled due to Google Drive configuration.",
                 component = COMPONENT
             )
             state.value = SyncState.Disabled
@@ -84,64 +95,106 @@ class SupabaseSyncService(
         val pendingItems = outboxDao.getPendingItems()
 
         for (item in pendingItems) {
-            if (item.entityType != SyncEntityType.BOOK.name) {
-                continue
+            when (item.entityType) {
+                SyncEntityType.BOOK.name -> {
+                    val pushResult = pushBook(item, session.userId)
+                    if (pushResult.isFailure) {
+                        val mapped = mapError(pushResult.exceptionOrNull(), defaultCode = "SYNC_BOOK_PUSH_FAILED")
+                        outboxDao.incrementRetryCount(item.id, mapped.message)
+                        outboxDao.pruneFailedItems(maxRetries)
+                        state.value = SyncState.Error(mapped.message)
+                        return Result.failure(mapped)
+                    }
+                    outboxDao.deleteById(item.id)
+                }
+                SyncEntityType.READING_PROGRESS.name,
+                SyncEntityType.HIGHLIGHT.name,
+                SyncEntityType.BOOKMARK.name -> {
+                    val pushResult = pushState(item, session.userId)
+                    if (pushResult.isFailure) {
+                        val mapped = mapError(pushResult.exceptionOrNull(), defaultCode = "SYNC_STATE_PUSH_FAILED")
+                        outboxDao.incrementRetryCount(item.id, mapped.message)
+                        outboxDao.pruneFailedItems(maxRetries)
+                        state.value = SyncState.Error(mapped.message)
+                        return Result.failure(mapped)
+                    }
+                    outboxDao.deleteById(item.id)
+                }
+                else -> {
+                    // Unknown types are silently skipped and removed
+                    outboxDao.deleteById(item.id)
+                }
             }
-            if (item.operation == SyncOperation.DELETE.name) {
-                outboxDao.deleteById(item.id)
-                continue
-            }
+        }
 
-            val book = bookDao.getBookById(item.entityId)
-            if (book == null) {
-                outboxDao.deleteById(item.id)
-                continue
-            }
-            if (book.deletedAtEpochMillis != null) {
-                outboxDao.deleteById(item.id)
-                continue
-            }
+        state.value = SyncState.Idle
+        return Result.success(Unit)
+    }
 
-            val localFile = File(book.filePath)
-            if (!localFile.exists()) {
-                val missingError = AppError(
+    private suspend fun pushBook(item: com.nextpage.data.local.entity.SyncOutboxEntity, userId: String): Result<Unit> {
+        if (item.operation == SyncOperation.DELETE.name) {
+            // DELETE ops for books are handled by removing the outbox entry;
+            // the actual Drive file can be cleaned up lazily.
+            return Result.success(Unit)
+        }
+
+        val book = bookDao.getBookById(item.entityId)
+            ?: return Result.success(Unit) // Book deleted locally, skip
+
+        if (book.deletedAtEpochMillis != null) {
+            return Result.success(Unit)
+        }
+
+        val localFile = File(book.filePath)
+        if (!localFile.exists()) {
+            return Result.failure(
+                AppError(
                     category = ErrorCategory.WIRING_ERROR,
                     code = "SYNC_LOCAL_FILE_MISSING",
                     message = "Local file is missing for book ${book.id}.",
                     component = COMPONENT
                 )
-                outboxDao.incrementRetryCount(item.id, missingError.message)
-                outboxDao.pruneFailedItems(maxRetries)
-                state.value = SyncState.Error(missingError.message)
-                return Result.failure(missingError)
-            }
-
-            val remotePath = remotePathFor(session.userId, book.id, extensionFor(book))
-            val uploadResult = retryable {
-                remoteDataSource.upload(remotePath, localFile.readBytes())
-            }
-
-            if (uploadResult.isFailure) {
-                val mapped = mapError(uploadResult.exceptionOrNull(), defaultCode = "SYNC_UPLOAD_FAILED")
-                outboxDao.incrementRetryCount(item.id, mapped.message)
-                outboxDao.pruneFailedItems(maxRetries)
-                state.value = SyncState.Error(mapped.message)
-                return Result.failure(mapped)
-            }
-
-            mappingDao.upsert(
-                SyncFileMappingEntity(
-                    remotePath = remotePath,
-                    userId = session.userId,
-                    bookId = book.id,
-                    localPath = book.filePath,
-                    updatedAtEpochMillis = System.currentTimeMillis()
-                )
             )
-            outboxDao.deleteById(item.id)
         }
 
-        state.value = SyncState.Idle
+        val drivePath = drivePathFor(userId, book.id, extensionFor(book))
+        val uploadResult = retryable {
+            remoteDataSource.upload(drivePath, localFile.readBytes())
+        }
+
+        if (uploadResult.isFailure) {
+            return uploadResult.map { }
+        }
+
+        // Look up existing mapping to get driveFileId, or use the path as ID
+        val existingMapping = mappingDao.getByDriveFileId(drivePath)
+        val driveFileId = existingMapping?.driveFileId ?: drivePath
+
+        mappingDao.upsert(
+            SyncFileMappingEntity(
+                driveFileId = driveFileId,
+                userId = userId,
+                bookId = book.id,
+                localPath = book.filePath,
+                updatedAtEpochMillis = System.currentTimeMillis()
+            )
+        )
+        return Result.success(Unit)
+    }
+
+    private suspend fun pushState(item: com.nextpage.data.local.entity.SyncOutboxEntity, userId: String): Result<Unit> {
+        val bookId = item.entityId
+        val progress = readingProgressDao.getProgressForBook(bookId)?.toDomain()
+        val highlights = highlightDao.getHighlightsForBook(bookId).map { it.toDomain() }
+        val bookmarks = bookmarkDao.getBookmarksForBook(bookId).map { it.toDomain() }
+
+        val pushResult = retryable {
+            jsonStateSync.pushState(userId, bookId, progress, highlights, bookmarks)
+        }
+
+        if (pushResult.isFailure) {
+            return pushResult.map { }
+        }
         return Result.success(Unit)
     }
 
@@ -150,7 +203,7 @@ class SupabaseSyncService(
             val disabledError = diagnosticError ?: AppError(
                 category = ErrorCategory.CONFIG_ERROR,
                 code = "SYNC_DISABLED",
-                message = "Sync service is disabled due to Supabase configuration.",
+                message = "Sync service is disabled due to Google Drive configuration.",
                 component = COMPONENT
             )
             state.value = SyncState.Disabled
@@ -172,8 +225,13 @@ class SupabaseSyncService(
             }
 
         for (remotePath in remotePaths.distinct()) {
-            val mapping = mappingDao.getByRemotePath(remotePath)
-            val parsed = parseRemotePath(remotePath)
+            if (remotePath.endsWith("/state.json")) {
+                // State JSON files are handled via pullState below
+                continue
+            }
+
+            val mapping = mappingDao.getByDriveFileId(remotePath)
+            val parsed = parseDrivePath(remotePath)
                 ?: continue
             val bookId = mapping?.bookId ?: parsed.bookId
             val extension = parsed.extension
@@ -204,13 +262,38 @@ class SupabaseSyncService(
             bookDao.upsert(mergedBook)
             mappingDao.upsert(
                 SyncFileMappingEntity(
-                    remotePath = remotePath,
+                    driveFileId = remotePath,
                     userId = session.userId,
                     bookId = bookId,
                     localPath = localFile.absolutePath,
                     updatedAtEpochMillis = System.currentTimeMillis()
                 )
             )
+        }
+
+        // Pull state JSON for each known book
+        val allMappings = mappingDao.getByUserId(session.userId)
+        val bookIds = allMappings.map { it.bookId }.distinct()
+        for (bookId in bookIds) {
+            val localProgress = readingProgressDao.getProgressForBook(bookId)?.toDomain()
+            val localHighlights = highlightDao.getHighlightsForBook(bookId).map { it.toDomain() }
+            val localBookmarks = bookmarkDao.getBookmarksForBook(bookId).map { it.toDomain() }
+
+            val pullResult = retryable {
+                jsonStateSync.pullState(session.userId, bookId, localProgress, localHighlights, localBookmarks)
+            }
+
+            if (pullResult.isSuccess) {
+                val innerResult = pullResult.getOrThrow()
+                if (innerResult.isSuccess) {
+                    val resolved = innerResult.getOrThrow()
+                    if (resolved.progress != null) {
+                        readingProgressDao.upsert(resolved.progress.toEntity())
+                    }
+                    resolved.highlights.forEach { highlightDao.upsert(it.toEntity()) }
+                    resolved.bookmarks.forEach { bookmarkDao.upsert(it.toEntity()) }
+                }
+            }
         }
 
         state.value = SyncState.Idle
@@ -263,8 +346,7 @@ class SupabaseSyncService(
 
     private fun isTransient(error: Throwable?): Boolean {
         return error is IOException ||
-            error is HttpRequestException ||
-            error is HttpRequestTimeoutException
+            error is AppError
     }
 
     private fun mapError(error: Throwable?, defaultCode: String): AppError {
@@ -275,9 +357,6 @@ class SupabaseSyncService(
             null -> ErrorCategory.WIRING_ERROR
             is IllegalStateException -> ErrorCategory.WIRING_ERROR
             is IllegalArgumentException -> ErrorCategory.CONFIG_ERROR
-            is RestException,
-            is HttpRequestException,
-            is HttpRequestTimeoutException,
             is IOException -> ErrorCategory.WIRING_ERROR
             else -> ErrorCategory.WIRING_ERROR
         }
@@ -289,7 +368,7 @@ class SupabaseSyncService(
         )
     }
 
-    private fun remotePathFor(userId: String, bookId: String, extension: String): String {
+    private fun drivePathFor(userId: String, bookId: String, extension: String): String {
         val userToken = sanitizeIdToken(userId)
         val bookToken = sanitizeIdToken(bookId)
         return "books/$userToken/$bookToken.$extension"
@@ -311,8 +390,8 @@ class SupabaseSyncService(
         return if (sanitized.isBlank()) "unknown" else sanitized
     }
 
-    private fun parseRemotePath(remotePath: String): ParsedRemotePath? {
-        val segments = remotePath.split('/')
+    private fun parseDrivePath(drivePath: String): ParsedDrivePath? {
+        val segments = drivePath.split('/')
         if (segments.size != 3 || segments.first() != "books") {
             return null
         }
@@ -323,16 +402,16 @@ class SupabaseSyncService(
         }
         val bookId = fileName.substring(0, dotIndex)
         val extension = fileName.substring(dotIndex + 1)
-        return ParsedRemotePath(bookId = bookId, extension = sanitizeToken(extension).ifBlank { DEFAULT_EXTENSION })
+        return ParsedDrivePath(bookId = bookId, extension = sanitizeToken(extension).ifBlank { DEFAULT_EXTENSION })
     }
 
-    private data class ParsedRemotePath(
+    private data class ParsedDrivePath(
         val bookId: String,
         val extension: String
     )
 
-    private companion object {
-        const val COMPONENT = "SupabaseSyncService"
+    companion object {
+        const val COMPONENT = "GoogleDriveSyncService"
         const val DEFAULT_EXTENSION = "bin"
         const val MAX_ATTEMPTS = 3
         const val DEFAULT_MAX_RETRIES = 3
@@ -340,3 +419,78 @@ class SupabaseSyncService(
         val NON_PATH_SAFE_REGEX = Regex("[^a-z0-9_-]")
     }
 }
+
+// Extension functions for Entity ↔ Domain conversion used in state sync
+// These mirror the conversions in ReaderRepositoryImpl
+
+private fun com.nextpage.data.local.entity.ReadingProgressEntity.toDomain(): com.nextpage.domain.model.ReadingProgress =
+    com.nextpage.domain.model.ReadingProgress(
+        id = id,
+        bookId = bookId,
+        cfiLocation = cfiLocation,
+        percentage = percentage,
+        currentPage = currentPage,
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        locatorJson = locatorJson
+    )
+
+private fun com.nextpage.domain.model.ReadingProgress.toEntity(): com.nextpage.data.local.entity.ReadingProgressEntity =
+    com.nextpage.data.local.entity.ReadingProgressEntity(
+        id = id,
+        bookId = bookId,
+        cfiLocation = cfiLocation,
+        percentage = percentage,
+        currentPage = currentPage,
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        locatorJson = locatorJson
+    )
+
+private fun com.nextpage.data.local.entity.HighlightEntity.toDomain(): com.nextpage.domain.model.Highlight =
+    com.nextpage.domain.model.Highlight(
+        id = id,
+        bookId = bookId,
+        cfiRange = cfiRange,
+        textContent = textContent,
+        note = note,
+        color = color,
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        deletedAtEpochMillis = deletedAtEpochMillis,
+        locatorJson = locatorJson,
+        type = type
+    )
+
+private fun com.nextpage.domain.model.Highlight.toEntity(): com.nextpage.data.local.entity.HighlightEntity =
+    com.nextpage.data.local.entity.HighlightEntity(
+        id = id,
+        bookId = bookId,
+        cfiRange = cfiRange,
+        textContent = textContent,
+        note = note,
+        color = color,
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        deletedAtEpochMillis = deletedAtEpochMillis,
+        locatorJson = locatorJson,
+        type = type
+    )
+
+private fun com.nextpage.data.local.entity.BookmarkEntity.toDomain(): com.nextpage.domain.model.Bookmark =
+    com.nextpage.domain.model.Bookmark(
+        id = id,
+        bookId = bookId,
+        cfiLocation = cfiLocation,
+        titleOrSnippet = titleOrSnippet,
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        deletedAtEpochMillis = deletedAtEpochMillis,
+        locatorJson = locatorJson
+    )
+
+private fun com.nextpage.domain.model.Bookmark.toEntity(): com.nextpage.data.local.entity.BookmarkEntity =
+    com.nextpage.data.local.entity.BookmarkEntity(
+        id = id,
+        bookId = bookId,
+        cfiLocation = cfiLocation,
+        titleOrSnippet = titleOrSnippet,
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        deletedAtEpochMillis = deletedAtEpochMillis,
+        locatorJson = locatorJson
+    )

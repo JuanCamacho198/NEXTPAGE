@@ -5,12 +5,12 @@
     <string name="auth_sign_in_title">Iniciar sesion</string>
     <string name="auth_subtitle">Tu biblioteca, en todas partes</string>
     <string name="auth_sign_in_email">Iniciar sesión con Email</string>
-    <string name="auth_config_error_google_unavailable">Error de configuracion: la sincronizacion con Google no esta disponible porque SUPABASE_URL o SUPABASE_ANON_KEY no es valido. Puedes continuar usando funciones de biblioteca local.</string>
+    <string name="auth_config_error_google_unavailable">Error de configuracion: el inicio de sesion con Google no esta disponible porque el ID de cliente OAuth no esta configurado. Podes continuar usando funciones de biblioteca local.</string>
     <string name="auth_continue_with_google">Continuar con Google</string>
     <string name="auth_google_disabled_loading">El inicio de sesion con Google esta en progreso.</string>
-    <string name="auth_google_disabled_config_error">El inicio de sesion con Google esta deshabilitado por un error de configuracion (SUPABASE_URL o SUPABASE_ANON_KEY).</string>
-    <string name="auth_google_disabled_wiring_error">El inicio de sesion con Google esta deshabilitado por un error de conexion del callback OAuth.</string>
-    <string name="auth_wiring_error_incomplete">Error de conexion: la conexion del callback OAuth de Google esta incompleta. Verifica redireccion y manejo del callback. La lectura local sigue disponible.</string>
+    <string name="auth_google_disabled_config_error">El inicio de sesion con Google esta deshabilitado por un error de configuracion (falta el ID de cliente OAuth).</string>
+    <string name="auth_google_disabled_wiring_error">El inicio de sesion con Google esta deshabilitado por un error de configuracion.</string>
+    <string name="auth_wiring_error_incomplete">Error de configuracion: la configuracion OAuth de Google esta incompleta. Verifica la configuracion OAuth. La lectura local sigue disponible.</string>
     <string name="auth_continue_local_mode">Continuar en modo local</string>
     <string name="auth_email_label">Correo electrónico</string>
     <string name="auth_password_label">Contraseña</string>

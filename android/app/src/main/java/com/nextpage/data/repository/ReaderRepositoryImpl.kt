@@ -3,20 +3,26 @@ package com.nextpage.data.repository
 import com.nextpage.data.local.dao.BookmarkDao
 import com.nextpage.data.local.dao.HighlightDao
 import com.nextpage.data.local.dao.ReadingProgressDao
+import com.nextpage.data.local.dao.SyncOutboxDao
 import com.nextpage.data.local.entity.BookmarkEntity
 import com.nextpage.data.local.entity.HighlightEntity
 import com.nextpage.data.local.entity.ReadingProgressEntity
+import com.nextpage.data.local.entity.SyncEntityType
+import com.nextpage.data.local.entity.SyncOperation
+import com.nextpage.data.local.entity.SyncOutboxEntity
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.ReaderRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.UUID
 
 class ReaderRepositoryImpl(
     private val readingProgressDao: ReadingProgressDao,
     private val highlightDao: HighlightDao,
-    private val bookmarkDao: BookmarkDao
+    private val bookmarkDao: BookmarkDao,
+    private val outboxDao: SyncOutboxDao? = null
 ) : ReaderRepository {
     override fun observeProgress(bookId: String): Flow<ReadingProgress?> =
         readingProgressDao
@@ -25,6 +31,16 @@ class ReaderRepositoryImpl(
 
     override suspend fun upsertProgress(progress: ReadingProgress) {
         readingProgressDao.upsert(progress.toEntity())
+        outboxDao?.insert(
+            SyncOutboxEntity(
+                id = "outbox-${UUID.randomUUID()}",
+                entityType = SyncEntityType.READING_PROGRESS.name,
+                entityId = progress.bookId,
+                operation = SyncOperation.UPDATE.name,
+                payloadJson = "{}",
+                createdAtEpochMillis = System.currentTimeMillis()
+            )
+        )
     }
 
     override suspend fun getProgressForBook(bookId: String): ReadingProgress? =
@@ -42,6 +58,16 @@ class ReaderRepositoryImpl(
 
     override suspend fun upsertHighlight(highlight: Highlight) {
         highlightDao.upsert(highlight.toEntity())
+        outboxDao?.insert(
+            SyncOutboxEntity(
+                id = "outbox-${UUID.randomUUID()}",
+                entityType = SyncEntityType.HIGHLIGHT.name,
+                entityId = highlight.bookId,
+                operation = SyncOperation.UPDATE.name,
+                payloadJson = "{}",
+                createdAtEpochMillis = System.currentTimeMillis()
+            )
+        )
     }
 
     override suspend fun getHighlightsForBook(bookId: String): List<Highlight> =
@@ -59,6 +85,16 @@ class ReaderRepositoryImpl(
 
     override suspend fun upsertBookmark(bookmark: Bookmark) {
         bookmarkDao.upsert(bookmark.toEntity())
+        outboxDao?.insert(
+            SyncOutboxEntity(
+                id = "outbox-${UUID.randomUUID()}",
+                entityType = SyncEntityType.BOOKMARK.name,
+                entityId = bookmark.bookId,
+                operation = SyncOperation.UPDATE.name,
+                payloadJson = "{}",
+                createdAtEpochMillis = System.currentTimeMillis()
+            )
+        )
     }
 
     override suspend fun getBookmarksForBook(bookId: String): List<Bookmark> =

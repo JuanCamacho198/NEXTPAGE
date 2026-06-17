@@ -8,6 +8,8 @@ import com.nextpage.domain.repository.ReadingStatsData
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import com.nextpage.testutil.MainDispatcherRule
+import android.app.Application
+import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +33,7 @@ class ReaderViewModelProgressTest {
         val repository = FakeReaderRepository()
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = repository,
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
@@ -58,6 +61,7 @@ class ReaderViewModelProgressTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = FakeReaderRepository()
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = repository,
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
@@ -87,6 +91,7 @@ class ReaderViewModelProgressTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = FakeReaderRepository()
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = repository,
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
@@ -107,6 +112,7 @@ class ReaderViewModelProgressTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = FakeReaderRepository()
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = repository,
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
@@ -136,6 +142,7 @@ class ReaderViewModelProgressTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = FakeReaderRepository()
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = repository,
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
@@ -158,6 +165,7 @@ class ReaderViewModelProgressTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = FakeReaderRepository()
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = repository,
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
@@ -180,6 +188,7 @@ class ReaderViewModelProgressTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val repository = FakeReaderRepository()
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = repository,
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
@@ -215,6 +224,7 @@ class ReaderViewModelProgressTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val repository = FakeReaderRepository()
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = repository,
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
@@ -243,6 +253,7 @@ class ReaderViewModelProgressTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val repository = FakeReaderRepository()
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = repository,
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),

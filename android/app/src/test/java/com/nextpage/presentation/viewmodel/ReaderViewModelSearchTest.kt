@@ -10,6 +10,8 @@ import com.nextpage.domain.repository.ReadingStatsData
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import com.nextpage.testutil.MainDispatcherRule
+import android.app.Application
+import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,6 +75,7 @@ class ReaderViewModelSearchTest {
     fun `onSearchResultSelected with different chapter navigates and dismisses`() = runTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = FakeReaderRepository(),
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),
@@ -111,6 +114,7 @@ class ReaderViewModelSearchTest {
     fun `onSearchResultSelected with same chapter dismisses without navigation`() = runTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = FakeReaderRepository(),
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),
@@ -145,6 +149,7 @@ class ReaderViewModelSearchTest {
     private fun createViewModel(scheduler: kotlinx.coroutines.test.TestCoroutineScheduler): ReaderViewModel {
         val dispatcher = UnconfinedTestDispatcher(scheduler)
         return ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = FakeReaderRepository(),
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),

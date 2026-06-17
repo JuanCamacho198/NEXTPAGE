@@ -13,12 +13,12 @@
     <string name="auth_sign_in_title">Sign in</string>
     <string name="auth_subtitle">Your library, everywhere</string>
     <string name="auth_sign_in_email">Sign in with Email</string>
-    <string name="auth_config_error_google_unavailable">Configuration error: Google sync is unavailable because SUPABASE_URL or SUPABASE_ANON_KEY is invalid. You can continue using local library features.</string>
+    <string name="auth_config_error_google_unavailable">Configuration error: Google sign-in unavailable because the OAuth client ID is not configured. You can continue using local library features.</string>
     <string name="auth_continue_with_google">Continue with Google</string>
     <string name="auth_google_disabled_loading">Google sign-in is currently in progress.</string>
-    <string name="auth_google_disabled_config_error">Google sign-in is disabled due to a configuration error (SUPABASE_URL or SUPABASE_ANON_KEY).</string>
-    <string name="auth_google_disabled_wiring_error">Google sign-in is disabled due to an OAuth callback wiring error.</string>
-    <string name="auth_wiring_error_incomplete">Wiring error: Google OAuth callback wiring is incomplete. Verify redirect and callback handling. Local reading still works.</string>
+    <string name="auth_google_disabled_config_error">Google sign-in is disabled due to a configuration error (missing OAuth client ID).</string>
+    <string name="auth_google_disabled_wiring_error">Google sign-in is disabled due to a setup error.</string>
+    <string name="auth_wiring_error_incomplete">Setup error: Google sign-in setup is incomplete. Verify OAuth configuration. Local reading still works.</string>
     <string name="auth_continue_local_mode">Continue in local mode</string>
     <string name="auth_email_label">Email</string>
     <string name="auth_password_label">Password</string>

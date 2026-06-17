@@ -13,6 +13,8 @@ import com.nextpage.domain.repository.ReadingStatsData
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import com.nextpage.testutil.MainDispatcherRule
+import android.app.Application
+import io.mockk.mockk
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -34,6 +36,7 @@ class ReaderViewModelSettingsTest {
     @Test
     fun `default settings are applied on init`() = runTest {
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = FakeReaderRepository(),
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),
@@ -51,6 +54,7 @@ class ReaderViewModelSettingsTest {
     fun `updateReaderSettings updates UIState`() = runTest {
         val mockPrefs = mockk<ReaderPreferences>(relaxed = true)
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = FakeReaderRepository(),
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),
@@ -76,6 +80,7 @@ class ReaderViewModelSettingsTest {
     fun `updateReaderSettings persists via ReaderPreferences`() = runTest {
         val mockPrefs = mockk<ReaderPreferences>(relaxed = true)
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = FakeReaderRepository(),
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),
@@ -106,6 +111,7 @@ class ReaderViewModelSettingsTest {
         every { mockPrefs.load() } returns persistedSettings
 
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = FakeReaderRepository(),
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),
@@ -123,6 +129,7 @@ class ReaderViewModelSettingsTest {
     fun `updateReaderSettings with partial change preserves other settings`() = runTest {
         val mockPrefs = mockk<ReaderPreferences>(relaxed = true)
         val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
             readerRepository = FakeReaderRepository(),
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),

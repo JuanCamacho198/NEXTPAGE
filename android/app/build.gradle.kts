@@ -52,19 +52,8 @@ android {
             useSupportLibrary = true
         }
 
-        val supabaseUrl = (localProperties.getProperty("supabase.url") ?: "").escapeForBuildConfig()
-        val supabaseAnonKey = (localProperties.getProperty("supabase.anonkey") ?: "").escapeForBuildConfig()
-        val authRedirectScheme = (localProperties.getProperty("supabase.auth.redirect.scheme") ?: "nextpage").escapeForBuildConfig()
-        val authRedirectHost = (localProperties.getProperty("supabase.auth.redirect.host") ?: "auth").escapeForBuildConfig()
-        val authRedirectPath = (localProperties.getProperty("supabase.auth.redirect.path") ?: "/callback").escapeForBuildConfig()
-        val storageBooksBucket = (localProperties.getProperty("supabase.storage.books.bucket") ?: "books").escapeForBuildConfig()
-
-        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
-        buildConfigField("String", "AUTH_REDIRECT_SCHEME", "\"$authRedirectScheme\"")
-        buildConfigField("String", "AUTH_REDIRECT_HOST", "\"$authRedirectHost\"")
-        buildConfigField("String", "AUTH_REDIRECT_PATH", "\"$authRedirectPath\"")
-        buildConfigField("String", "SUPABASE_STORAGE_BOOKS_BUCKET", "\"$storageBooksBucket\"")
+        val googleOAuthClientId = (localProperties.getProperty("google.oauth.client.id") ?: "").escapeForBuildConfig()
+        buildConfigField("String", "GOOGLE_OAUTH_CLIENT_ID", "\"$googleOAuthClientId\"")
 
         // Git SHA (short) — injected at build time so every APK has a unique fingerprint
         val gitSha = providers.exec {
@@ -109,6 +98,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/INDEX.LIST"
+            excludes += "/META-INF/DEPENDENCIES"
         }
     }
 
@@ -118,7 +109,6 @@ android {
 }
 
 dependencies {
-    val supabaseVersion = "2.6.1"
     val composeBom = platform("androidx.compose:compose-bom:2026.05.01")
     val coilVersion = "2.7.0"
 
@@ -148,12 +138,14 @@ dependencies {
     ksp("androidx.room:room-compiler:2.8.4")
     androidTestImplementation("androidx.room:room-testing:2.8.4")
 
-    implementation("io.github.jan-tennert.supabase:supabase-kt:$supabaseVersion")
-    implementation("io.github.jan-tennert.supabase:gotrue-kt:$supabaseVersion")
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:$supabaseVersion")
-    implementation("io.github.jan-tennert.supabase:storage-kt:$supabaseVersion")
-    implementation("io.github.jan-tennert.supabase:realtime-kt:$supabaseVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    // Google Drive REST API + Credential Manager
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
+    implementation("com.google.api-client:google-api-client-android:2.7.2")
+    implementation("com.google.apis:google-api-services-drive:v3-rev20260428-2.0.0")
+    implementation("com.google.http-client:google-http-client-gson:1.45.3")
+    implementation("androidx.credentials:credentials:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 

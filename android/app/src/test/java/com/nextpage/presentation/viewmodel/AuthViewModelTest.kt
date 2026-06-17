@@ -41,8 +41,8 @@ class AuthViewModelTest {
         val viewModel = AuthViewModel(
             authRepository = repository,
             syncService = FakeSyncService(),
-            isSupabaseConfigured = false,
-            hasSupabaseWiringIssue = false
+            isAuthConfigured = false,
+            hasAuthWiringIssue = false
         )
 
         advanceUntilIdle()
@@ -52,99 +52,84 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun startGoogleSignIn_setsPendingUrl_whenRepositoryReturnsUrl() = runTest {
-        val repository = FakeAuthRepository(startGoogleResult = Result.success("https://example/auth"))
+    fun startGoogleSignIn_setsSession_whenSignInWithGoogleSucceeds() = runTest {
+        val session = AuthSession(userId = "u1", email = "u1@test.com")
+        val repository = FakeAuthRepository(
+            signInWithGoogleResult = Result.success(session)
+        )
         val viewModel = AuthViewModel(
             authRepository = repository,
             syncService = FakeSyncService(),
-            isSupabaseConfigured = true,
-            hasSupabaseWiringIssue = false
+            isAuthConfigured = true,
+            hasAuthWiringIssue = false
         )
         advanceUntilIdle()
 
         viewModel.startGoogleSignIn()
         advanceUntilIdle()
 
-        assertEquals("https://example/auth", viewModel.uiState.value.pendingGoogleSignInUrl)
-    }
-
-    @Test
-    fun onGoogleAuthCallback_setsSession_onSuccess() = runTest {
-        val session = AuthSession(userId = "u1", email = "u1@test.com")
-        val repository = FakeAuthRepository(completeGoogleResult = Result.success(session))
-        val syncService = FakeSyncService()
-        val viewModel = AuthViewModel(
-            authRepository = repository,
-            syncService = syncService,
-            isSupabaseConfigured = true,
-            hasSupabaseWiringIssue = false
-        )
-        advanceUntilIdle()
-
-        viewModel.onGoogleAuthCallback("nextpage://auth/callback?access_token=t")
-        advanceUntilIdle()
-
         assertEquals(session, viewModel.uiState.value.currentSession)
-        assertNull(viewModel.uiState.value.errorMessage)
-        assertEquals(listOf("bootstrap:u1", "pull", "push"), syncService.events)
     }
 
     @Test
-    fun init_restoresSession_andTriggersSync_whenSessionExists() = runTest {
+    fun startGoogleSignIn_setsError_whenSignInWithGoogleFails() = runTest {
         val repository = FakeAuthRepository(
-            currentSessionResult = Result.success(AuthSession(userId = "u2", email = "u2@test.com"))
-        )
-        val syncService = FakeSyncService()
-
-        val viewModel = AuthViewModel(
-            authRepository = repository,
-            syncService = syncService,
-            isSupabaseConfigured = true,
-            hasSupabaseWiringIssue = false
-        )
-
-        advanceUntilIdle()
-
-        assertEquals("u2", viewModel.uiState.value.currentSession?.userId)
-        assertEquals(listOf("bootstrap:u2", "pull", "push"), syncService.events)
-    }
-
-    @Test
-    fun onGoogleAuthCallback_setsWiringFailureKind_onFailure() = runTest {
-        val repository = FakeAuthRepository(
-            completeGoogleResult = Result.failure(
+            signInWithGoogleResult = Result.failure(
                 AppError(
-                    category = ErrorCategory.WIRING_ERROR,
-                    code = "GOOGLE_AUTH_CALLBACK_MISMATCH",
-                    message = "Mismatch",
-                    component = "Auth"
+                    category = ErrorCategory.AUTH,
+                    code = "GOOGLE_AUTH_CANCELLED",
+                    message = "User cancelled",
+                    component = "GoogleAuthRepository"
                 )
             )
         )
         val viewModel = AuthViewModel(
             authRepository = repository,
             syncService = FakeSyncService(),
-            isSupabaseConfigured = true,
-            hasSupabaseWiringIssue = true
+            isAuthConfigured = true,
+            hasAuthWiringIssue = false
         )
         advanceUntilIdle()
 
-        viewModel.onGoogleAuthCallback("nextpage://auth/wrong")
+        viewModel.startGoogleSignIn()
         advanceUntilIdle()
 
-        assertEquals(AuthFailureKind.WIRING_ERROR, viewModel.uiState.value.failureKind)
-        assertEquals("Mismatch", viewModel.uiState.value.errorMessage)
+        assertNull(viewModel.uiState.value.currentSession)
+        assertEquals("User cancelled", viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun signOut_clearsSession() = runTest {
+        val session = AuthSession(userId = "u1", email = "u1@test.com")
+        val repository = FakeAuthRepository(
+            currentSessionResult = Result.success(session)
+        )
+        val viewModel = AuthViewModel(
+            authRepository = repository,
+            syncService = FakeSyncService(),
+            isAuthConfigured = true,
+            hasAuthWiringIssue = true
+        )
+        advanceUntilIdle()
+
+        viewModel.signOut()
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.currentSession)
     }
 
     private class FakeAuthRepository(
         private val startGoogleResult: Result<String> = Result.failure(IllegalStateException("not set")),
         private val completeGoogleResult: Result<AuthSession?> = Result.success(null),
+        private val signInWithGoogleResult: Result<AuthSession> = Result.failure(IllegalStateException("not set")),
         private val currentSessionResult: Result<AuthSession?> = Result.success(null),
         private val signOutResult: Result<Unit> = Result.success(Unit)
     ) : AuthRepository {
         override suspend fun startGoogleSignIn(): Result<String> = startGoogleResult
 
         override suspend fun completeGoogleSignIn(callbackUri: String): Result<AuthSession?> = completeGoogleResult
+
+        override suspend fun signInWithGoogle(): Result<AuthSession> = signInWithGoogleResult
 
         override suspend fun signIn(email: String, password: String): Result<AuthSession> {
             return Result.failure(UnsupportedOperationException())

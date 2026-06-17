@@ -7,8 +7,8 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "sync_file_mappings")
 data class SyncFileMappingEntity(
     @PrimaryKey
-    @ColumnInfo(name = "remote_path")
-    val remotePath: String,
+    @ColumnInfo(name = "drive_file_id")
+    val driveFileId: String,
     @ColumnInfo(name = "user_id")
     val userId: String,
     @ColumnInfo(name = "book_id")

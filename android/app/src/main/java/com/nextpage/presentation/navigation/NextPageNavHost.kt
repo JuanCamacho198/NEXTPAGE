@@ -127,8 +127,8 @@ fun NextPageNavHost(
         factory = AuthViewModel.Factory(
             authRepository = appContainer.authRepository,
             syncService = appContainer.syncService,
-            isSupabaseConfigured = !appContainer.isSupabaseConfigError,
-            hasSupabaseWiringIssue = appContainer.isSupabaseWiringError
+            isAuthConfigured = !appContainer.isAuthConfigError,
+            hasAuthWiringIssue = appContainer.isAuthWiringError
         )
     )
 
@@ -192,20 +192,8 @@ fun NextPageNavHost(
         }
     }
 
-    LaunchedEffect(appContainer, authViewModel) {
-        appContainer.authCallbackEvents.collect { callbackUri ->
-            authViewModel.onGoogleAuthCallback(callbackUri)
-        }
-    }
-
-    LaunchedEffect(authState.pendingGoogleSignInUrl) {
-        val url = authState.pendingGoogleSignInUrl ?: return@LaunchedEffect
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
-        authViewModel.consumePendingGoogleSignInUrl()
-    }
+    // NOTE: One Tap sign-in is handled directly by Credential Manager (no browser callback).
+    // The authCallbackEvents flow and pendingGoogleSignInUrl are no longer needed.
 
     // NOTE: Book loading is handled directly by ReaderScreen via LaunchedEffect(selectedBookId, bookFilePath, bookFormat).
     // No need to pre-load here; restoreProgressForBook is called inside loadBook flow.

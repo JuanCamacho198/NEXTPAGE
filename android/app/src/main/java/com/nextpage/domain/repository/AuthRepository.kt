@@ -5,6 +5,9 @@ import com.nextpage.domain.model.AuthSession
 interface AuthRepository {
     suspend fun startGoogleSignIn(): Result<String>
     suspend fun completeGoogleSignIn(callbackUri: String): Result<AuthSession?>
+    suspend fun signInWithGoogle(): Result<AuthSession> {
+        return Result.failure(UnsupportedOperationException("Not implemented"))
+    }
     suspend fun signIn(email: String, password: String): Result<AuthSession>
     suspend fun signUp(email: String, password: String): Result<AuthSession>
     suspend fun signOut(): Result<Unit>

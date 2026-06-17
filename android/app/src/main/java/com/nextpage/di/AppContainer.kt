@@ -17,16 +17,16 @@ import com.nextpage.data.repository.HomeRepositoryImpl
 import com.nextpage.data.repository.LibraryRepositoryImpl
 import com.nextpage.data.repository.ReaderRepositoryImpl
 import com.nextpage.data.repository.ReadingStatsRepositoryImpl
-import com.nextpage.data.repository.SupabaseAuthRepository
-import com.nextpage.data.remote.supabase.SupabaseClientProvider
-import com.nextpage.data.remote.supabase.SupabaseConfigProvider
-import com.nextpage.data.remote.supabase.SupabaseInitDiagnostic
+import com.nextpage.data.repository.GoogleAuthRepository
+import com.nextpage.data.remote.google.GoogleDriveConfig
+import com.nextpage.data.remote.google.GoogleDriveClientProvider
+import com.nextpage.data.remote.google.GoogleDriveInitDiagnostic
 import com.nextpage.data.remote.sync.SyncService
-import com.nextpage.data.remote.sync.SupabaseStorageSyncRemoteDataSource
-import com.nextpage.data.remote.sync.SupabaseSyncService
+import com.nextpage.data.remote.sync.GoogleDriveStorageRemoteDataSource
+import com.nextpage.data.remote.sync.GoogleDriveSyncService
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.data.session.SessionManager
-import com.nextpage.data.session.SupabaseSessionManager
+import com.nextpage.data.session.GoogleSessionManager
 import com.nextpage.data.session.PreferencesSessionStore
 import com.nextpage.data.storage.AppInternalCoverStorage
 import com.nextpage.domain.repository.AuthRepository
@@ -34,8 +34,6 @@ import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
 
 class AppContainer(context: Context) {
     companion object {
@@ -84,7 +82,8 @@ class AppContainer(context: Context) {
     val readerRepository: ReaderRepository = ReaderRepositoryImpl(
         readingProgressDao = appDatabase.readingProgressDao(),
         highlightDao = appDatabase.highlightDao(),
-        bookmarkDao = appDatabase.bookmarkDao()
+        bookmarkDao = appDatabase.bookmarkDao(),
+        outboxDao = appDatabase.syncOutboxDao()
     )
     private val readerRepoInitTime = System.currentTimeMillis() - readerRepoStartTime
     init {
@@ -104,64 +103,79 @@ class AppContainer(context: Context) {
 
     val readerPreferences: ReaderPreferences = ReaderPreferences(context.applicationContext)
 
-    private val supabaseConfigProvider = SupabaseConfigProvider()
-    private val supabaseConfig = supabaseConfigProvider.get()
-    val supabaseClientProvider = SupabaseClientProvider(supabaseConfig)
-    val supabaseDiagnostic = supabaseClientProvider.initDiagnostic
+    // ── Google Drive backend ────────────────────────────────────────
+
+    private val googleDriveConfig = GoogleDriveConfig(
+        oauthClientId = BuildConfig.GOOGLE_OAUTH_CLIENT_ID
+    )
+    private val googleDriveClientProvider = GoogleDriveClientProvider(googleDriveConfig)
+    private val googleDriveDiagnostic = googleDriveClientProvider.initDiagnostic
+
+    private val googleSignInClient by lazy {
+        if (googleDriveClientProvider.isConfigured) {
+            com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(
+                context.applicationContext,
+                com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder()
+                    .requestIdToken(BuildConfig.GOOGLE_OAUTH_CLIENT_ID)
+                    .requestEmail()
+                    .requestProfile()
+                    .requestScopes(
+                        com.google.android.gms.common.api.Scope(
+                            com.google.api.services.drive.DriveScopes.DRIVE_APPDATA
+                        )
+                    )
+                    .build()
+            )
+        } else null
+    }
 
     val sessionManager: SessionManager by lazy {
-        SupabaseSessionManager(
-            client = supabaseClientProvider.client,
-            diagnosticError = supabaseDiagnostic.error,
+        GoogleSessionManager(
+            googleSignInClient = googleSignInClient,
+            diagnosticError = googleDriveDiagnostic.error,
             sessionStore = PreferencesSessionStore(context.applicationContext)
         )
     }
 
     val authRepository: AuthRepository by lazy {
-        SupabaseAuthRepository(
-            client = supabaseClientProvider.client,
+        GoogleAuthRepository(
+            context = context.applicationContext,
             sessionManager = sessionManager,
-            supabaseUrl = supabaseConfig.url,
-            redirectScheme = BuildConfig.AUTH_REDIRECT_SCHEME,
-            redirectHost = BuildConfig.AUTH_REDIRECT_HOST,
-            redirectPath = BuildConfig.AUTH_REDIRECT_PATH,
-            diagnosticError = supabaseDiagnostic.error
+            clientId = BuildConfig.GOOGLE_OAUTH_CLIENT_ID,
+            diagnosticError = googleDriveDiagnostic.error,
+            isClientAvailable = googleDriveClientProvider.isConfigured
         )
     }
 
     val syncService: SyncService by lazy {
-        val client = supabaseClientProvider.client
-        val remoteDataSource = client?.let {
-            SupabaseStorageSyncRemoteDataSource(
-                client = it,
-                bucket = BuildConfig.SUPABASE_STORAGE_BOOKS_BUCKET
-            )
-        }
-        SupabaseSyncService(
+        val driveService = googleDriveClientProvider.driveService
+        val remoteDataSource = if (driveService != null) {
+            GoogleDriveStorageRemoteDataSource(driveService)
+        } else null
+        GoogleDriveSyncService(
             outboxDao = appDatabase.syncOutboxDao(),
             bookDao = appDatabase.bookDao(),
             mappingDao = appDatabase.syncFileMappingDao(),
+            readingProgressDao = appDatabase.readingProgressDao(),
+            highlightDao = appDatabase.highlightDao(),
+            bookmarkDao = appDatabase.bookmarkDao(),
             sessionManager = sessionManager,
             remoteDataSource = remoteDataSource ?: NoopStorageSyncRemoteDataSource,
             localBooksDir = context.applicationContext.filesDir.resolve("books"),
-            isEnabled = supabaseClientProvider.isConfigured && remoteDataSource != null,
-            diagnosticError = supabaseDiagnostic.error
+            isEnabled = googleDriveClientProvider.isConfigured && remoteDataSource != null,
+            diagnosticError = googleDriveDiagnostic.error
         )
     }
 
-    private val _authCallbackEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val authCallbackEvents: SharedFlow<String> = _authCallbackEvents
+    // ── Diagnostic properties ───────────────────────────────────────
 
-    fun submitAuthCallback(uri: String) {
-        _authCallbackEvents.tryEmit(uri)
-    }
+    val isAuthConfigError: Boolean
+        get() = googleDriveDiagnostic.status == GoogleDriveInitDiagnostic.Status.CONFIG_ERROR
 
+    val isAuthWiringError: Boolean
+        get() = googleDriveDiagnostic.status == GoogleDriveInitDiagnostic.Status.WIRING_ERROR
 
-    val isSupabaseConfigError: Boolean
-        get() = supabaseDiagnostic.status == SupabaseInitDiagnostic.Status.CONFIG_ERROR
-
-    val isSupabaseWiringError: Boolean
-        get() = supabaseDiagnostic.status == SupabaseInitDiagnostic.Status.WIRING_ERROR
+    // ── Init timing ─────────────────────────────────────────────────
 
     private val totalInitTime = System.currentTimeMillis() - startTime
     init {

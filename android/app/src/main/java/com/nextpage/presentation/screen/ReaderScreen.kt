@@ -5,8 +5,10 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.ActivityInfo
+import android.os.SystemClock
 import android.view.WindowInsetsController
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,12 +32,15 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -48,6 +53,7 @@ import com.nextpage.debug.DebugLog
 import com.nextpage.debug.DebugPanel
 import com.nextpage.debug.DebugPrefs
 import com.nextpage.presentation.viewmodel.ReaderViewModel
+import com.nextpage.ui.components.molecules.ChaptersSheet
 import com.nextpage.ui.components.molecules.HighlightsSheet
 import com.nextpage.ui.components.molecules.HighlightAnnotationModal
 import com.nextpage.ui.components.molecules.HighlightTagDialog
@@ -58,7 +64,11 @@ import com.nextpage.ui.components.molecules.SleepTimerOverlay
 import com.nextpage.ui.components.molecules.SleepTimerPreset
 import com.nextpage.ui.components.molecules.SleepTimerSheet
 import com.nextpage.ui.components.molecules.SplitSettingsSheet
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+
+/** Time of inactivity (ms) before the fullscreen chrome auto-hides. */
+private const val FULLSCREEN_AUTOHIDE_MS = 3_000L
 
 /**
  * Reader screen dispatcher.
@@ -91,6 +101,37 @@ fun ReaderScreen(
     var goToPageError by remember { mutableStateOf<String?>(null) }
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var debugPanelVisible by remember { mutableStateOf(false) }
+    var lastBookmarkTrigger by remember { mutableLongStateOf(0L) }
+    var bookmarkRibbonVisible by remember { mutableStateOf(false) }
+
+    // ── Auto-hide chrome after inactivity (only meaningful in fullscreen) ──
+    var controlsVisible by remember(uiState.isFullscreen) {
+        // Reset to visible when entering / leaving fullscreen.
+        mutableStateOf(true)
+    }
+    var lastInteractionAt by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
+
+    // Helper: any UI surface that owns touch input while open.
+    val isSelectionActive = uiState.selectedText != null ||
+        uiState.showColorPicker ||
+        uiState.showContextMenu ||
+        uiState.showColorPickerPopover
+
+    val onUserInteraction: () -> Unit = {
+        lastInteractionAt = SystemClock.elapsedRealtime()
+    }
+
+    val onContentTap: () -> Unit = tap@{
+        if (!uiState.isFullscreen) return@tap
+        if (isSelectionActive) return@tap
+        controlsVisible = !controlsVisible
+        lastInteractionAt = SystemClock.elapsedRealtime()
+    }
+
+    // Keep the latest onContentTap reachable from the long-lived
+    // pointerInput block without restarting the gesture detector on
+    // every recomposition.
+    val currentOnContentTap by rememberUpdatedState(onContentTap)
 
     // ── Debug action triggers: panel button → ReadiumReaderContent ──
     val inspectHighlightsHtmlTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
@@ -143,9 +184,32 @@ fun ReaderScreen(
         }
     }
 
-    // ── Footer navigation state (uses chapters for EPUB and PDF) ────
-    val canGoPrev = uiState.currentChapterIndex > 0
-    val canGoNext = uiState.currentChapterIndex < uiState.chapters.size - 1
+    // ── Inactivity auto-hide (fullscreen only) ─────────────────────
+    LaunchedEffect(uiState.isFullscreen, lastInteractionAt) {
+        if (!uiState.isFullscreen) return@LaunchedEffect
+        val snapshot = lastInteractionAt
+        delay(FULLSCREEN_AUTOHIDE_MS)
+        // If no new interaction registered since the timer started, hide.
+        if (lastInteractionAt == snapshot && uiState.isFullscreen) {
+            controlsVisible = false
+        }
+    }
+
+    // ── Reset inactivity timer on page turn (chapter / PDF page) ──
+    LaunchedEffect(uiState.currentChapterIndex, uiState.currentPdfPage) {
+        if (uiState.isFullscreen) {
+            lastInteractionAt = SystemClock.elapsedRealtime()
+        }
+    }
+
+    // ── Bookmark ribbon feedback animation ──────────────────────
+    LaunchedEffect(lastBookmarkTrigger) {
+        if (lastBookmarkTrigger != 0L) {
+            bookmarkRibbonVisible = true
+            delay(2_200L)
+            bookmarkRibbonVisible = false
+        }
+    }
 
     // ── Render via ReaderChrome ─────────────────────────────────────
     Box(modifier = Modifier.fillMaxSize()) {
@@ -153,6 +217,14 @@ fun ReaderScreen(
         isFullscreen = uiState.isFullscreen || uiState.isLoading,
         onToggleFullscreen = { viewModel.onToggleFullscreen() },
         contentPadding = contentPadding,
+        controlsVisible = controlsVisible,
+        contentModifier = Modifier.pointerInput(uiState.isFullscreen) {
+            // Tap-to-show / tap-to-hide controls. Only meaningful in
+            // fullscreen and when no selection menu is open. The gesture
+            // detector does not consume the down event, so the WebView
+            // still receives long-press + drag for text selection.
+            detectTapGestures(onTap = { currentOnContentTap() })
+        },
         header = {
             ReaderHeader(
                 uiState = uiState,
@@ -160,8 +232,12 @@ fun ReaderScreen(
                 onToggleFullscreen = { viewModel.onToggleFullscreen() },
                 onToggleSearch = { viewModel.onToggleSearch() },
                 onToggleHighlights = { viewModel.onToggleHighlightsPanel() },
-                onCreateBookmark = { viewModel.createBookmarkFromCurrentPosition() },
+                onCreateBookmark = {
+                    viewModel.createBookmarkFromCurrentPosition()
+                    lastBookmarkTrigger = SystemClock.elapsedRealtime()
+                },
                 onToggleSplitSettings = { viewModel.onToggleSplitSettings() },
+                onToggleToc = { viewModel.onToggleTocSheet() },
                 onDebugToggle = { viewModel.onDebugForceMenu() }
             )
         },
@@ -175,11 +251,7 @@ fun ReaderScreen(
                     activity.requestedOrientation = if (portrait) ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                     else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                 },
-                onProgressChange = { viewModel.onProgressChange(it) },
-                onPreviousChapter = { viewModel.goToPreviousChapter() },
-                onNextChapter = { viewModel.goToNextChapter() },
-                canGoPrevious = canGoPrev,
-                canGoNext = canGoNext
+                onProgressChange = { viewModel.onProgressChange(it) }
             )
         },
         content = {
@@ -292,6 +364,28 @@ fun ReaderScreen(
             }
         },
         overlays = {
+            // ── Fullscreen side arrows (page nav) ───────────────
+            // Hidden while a selection is active so the arrow hit areas
+            // do not steal the selection drag gesture.
+            if (uiState.isFullscreen && !isSelectionActive) {
+                ReaderFullscreenArrows(
+                    onPrevious = {
+                        onUserInteraction()
+                        viewModel.onTapZone(isLeftZone = true)
+                    },
+                    onNext = {
+                        onUserInteraction()
+                        viewModel.onTapZone(isLeftZone = false)
+                    }
+                )
+            }
+
+            // ── Bookmark ribbon feedback (animated, transient) ──
+            BookmarkRibbonOverlay(
+                visible = bookmarkRibbonVisible,
+                onAnimationEnd = { bookmarkRibbonVisible = false }
+            )
+
             // ── Search Bottom Sheet ─────────────────────────────
             if (uiState.isSearchActive) {
                 SearchBottomSheet(
@@ -311,6 +405,16 @@ fun ReaderScreen(
                     highlights = uiState.highlights,
                     onHighlightSelected = { viewModel.onHighlightSelected(it) },
                     onDismiss = { viewModel.onToggleHighlightsPanel() }
+                )
+            }
+
+            // ── Chapters / TOC Sheet ───────────────────────────
+            if (uiState.showTocSheet) {
+                ChaptersSheet(
+                    chapters = uiState.chapters,
+                    currentChapterIndex = uiState.currentChapterIndex,
+                    onChapterSelected = { idx -> viewModel.goToChapter(idx) },
+                    onDismiss = { viewModel.onToggleTocSheet() }
                 )
             }
 

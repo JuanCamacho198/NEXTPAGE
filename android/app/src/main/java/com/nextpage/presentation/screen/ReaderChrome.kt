@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.nextpage.R
 import com.nextpage.presentation.viewmodel.ReaderUiState
 
@@ -59,6 +61,13 @@ private val BUTTON_BG = Color(0xFF2F3445)
  * Renders the header, content slot (format-specific), footer,
  * and overlays (search, highlights, settings, sleep timer, etc.)
  * on top of the dark reader background.
+ *
+ * @param isFullscreen when true, header and footer are hidden (immersive).
+ * @param controlsVisible when true (and [isFullscreen] is true), the
+ *   floating close button is rendered. Auto-hidden after inactivity by the
+ *   caller. Has no effect when [isFullscreen] is false.
+ * @param contentModifier Modifier applied to the content Box (useful for
+ *   attaching tap / gesture handlers that observe content taps).
  */
 @Composable
 fun ReaderChrome(
@@ -69,6 +78,8 @@ fun ReaderChrome(
     footer: @Composable () -> Unit,
     content: @Composable () -> Unit,
     overlays: @Composable BoxScope.() -> Unit = {},
+    controlsVisible: Boolean = true,
+    contentModifier: Modifier = Modifier,
 ) {
     Box(
         modifier = Modifier
@@ -83,6 +94,11 @@ fun ReaderChrome(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
+                    // zIndex lifts the content slot above the footer Box in
+                    // the Column, so the SelectionOverlay (and its color
+                    // picker popover) render on top of the progress bar.
+                    .zIndex(1f)
+                    .then(contentModifier)
             ) {
                 content()
             }
@@ -90,8 +106,9 @@ fun ReaderChrome(
             if (!isFullscreen) footer()
         }
 
-        // Floating close button — visible only in fullscreen mode
-        if (isFullscreen) {
+        // Floating close button — visible only in fullscreen mode and
+        // while controls are not auto-hidden.
+        if (isFullscreen && controlsVisible) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -127,6 +144,7 @@ fun ReaderHeader(
     onToggleHighlights: () -> Unit,
     onCreateBookmark: () -> Unit,
     onToggleSplitSettings: () -> Unit = {},
+    onToggleToc: () -> Unit = {},
     onDebugToggle: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -214,10 +232,19 @@ fun ReaderHeader(
                 onClick = onToggleSplitSettings
             )
 
-            // Index / TOC
+            // Index / TOC — hidden for books with no chapter list
+            if (uiState.chapters.isNotEmpty()) {
+                HeaderActionButton(
+                    icon = Icons.AutoMirrored.Filled.Toc,
+                    contentDescription = stringResource(R.string.reader_toc),
+                    onClick = onToggleToc
+                )
+            }
+
+            // Highlights (new dedicated button)
             HeaderActionButton(
-                icon = Icons.AutoMirrored.Filled.Toc,
-                contentDescription = stringResource(R.string.reader_toc),
+                icon = Icons.AutoMirrored.Filled.FormatListBulleted,
+                contentDescription = stringResource(R.string.reader_highlights_button),
                 onClick = onToggleHighlights
             )
 

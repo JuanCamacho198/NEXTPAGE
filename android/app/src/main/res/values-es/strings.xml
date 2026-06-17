@@ -245,6 +245,8 @@
     <string name="vertical_scroll">Desplazamiento vertical</string>
     <string name="fullscreen_enter">Pantalla completa</string>
     <string name="fullscreen_exit">Salir de pantalla completa</string>
+    <string name="fullscreen_prev_page">Página anterior</string>
+    <string name="fullscreen_next_page">Página siguiente</string>
     <string name="reader_rotate_screen">Rotar pantalla</string>
 
     <!-- Reader / Header -->
@@ -253,6 +255,9 @@
     <string name="reader_toc">Índice</string>
     <string name="reader_bookmark">Marcador</string>
     <string name="reader_typography">Tipografía</string>
+    <string name="reader_chapters_title">Capítulos</string>
+    <string name="reader_highlights_button">Resaltados</string>
+    <string name="bookmark_ribbon_announcement">Marcador guardado</string>
 
     <!-- Global Error Messages -->
     <string name="error_network">Error de red. Verificá tu conexión e intentá de nuevo.</string>

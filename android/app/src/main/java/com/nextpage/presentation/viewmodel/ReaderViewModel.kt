@@ -113,6 +113,9 @@ data class ReaderUiState(
     // ── Highlights Panel (Gap 5) ────────────────────────────────────
     val showHighlightsSheet: Boolean = false,
 
+    // ── Chapters / TOC sheet ────────────────────────────────────────
+    val showTocSheet: Boolean = false,
+
     // ── aA Settings (Gap 6) ─────────────────────────────────────────
     val showSplitSettings: Boolean = false,
 
@@ -1270,18 +1273,34 @@ class ReaderViewModel(
         }
     }
 
+    fun onToggleTocSheet() {
+        mutableUiState.update {
+            it.copy(showTocSheet = !it.showTocSheet)
+        }
+    }
+
     fun onHighlightSelected(highlight: Highlight) {
-        // Navigate to highlight position
         val cfi = highlight.cfiRange
         if (cfi.startsWith("pdfpage:")) {
             val page = cfi.removePrefix("pdfpage:").toIntOrNull()
             if (page != null) goToPdfPage(page)
         } else {
-            // EPUB CFI: extract chapter index
-            val chapterMatch = Regex("/6/(\\d+)").find(cfi)
-            val chapterIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
-            if (chapterIndex != null && chapterIndex - 1 != mutableUiState.value.currentChapterIndex) {
-                goToChapter(chapterIndex - 1)
+            // EPUB path: prefer the persisted Readium Locator (precise CFI/position)
+            // over the legacy chapter-only CFI fallback.
+            val locatorJson = highlight.locatorJson
+            val locator = locatorJson?.let { CfiMigrator.jsonToLocator(it) }
+            if (locator != null) {
+                viewModelScope.launch(mainDispatcher) {
+                    _navigateToLocator.emit(locator)
+                }
+            } else {
+                // Legacy CFI without a stored locator: extract chapter index and
+                // navigate to the chapter start.
+                val chapterMatch = Regex("/6/(\\d+)").find(cfi)
+                val chapterIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+                if (chapterIndex != null) {
+                    goToChapter(chapterIndex - 1)
+                }
             }
         }
         mutableUiState.update { it.copy(showHighlightsSheet = false) }

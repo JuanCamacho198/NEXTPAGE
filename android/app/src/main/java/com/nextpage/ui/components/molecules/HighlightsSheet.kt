@@ -1,5 +1,6 @@
 package com.nextpage.ui.components.molecules
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -36,7 +38,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -120,30 +126,34 @@ fun HighlightsSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Color Filter Chips ─────────────────────────────────
+            // ── Color Filter Chips (colored circles, no text) ──────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 colorFilterLabels.forEach { (filterValue, label) ->
                     val isSelected = selectedColorFilter == filterValue
+                    val colorName = label
                     FilterChip(
                         selected = isSelected,
                         onClick = { selectedColorFilter = filterValue },
                         label = {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (isSelected) Color(0xFF0D1322) else Color(0xFFDDE2F8)
+                            ColorFilterCircle(
+                                filterValue = filterValue,
+                                isSelected = isSelected
                             )
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Color(0xFF2F3445),
-                            selectedContainerColor = Color(0xFFADC6FF)
+                            containerColor = Color.Transparent,
+                            selectedContainerColor = Color.Transparent
                         ),
-                        shape = RoundedCornerShape(20.dp)
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.semantics {
+                            contentDescription = colorName
+                        }
                     )
                 }
             }
@@ -243,4 +253,44 @@ private fun parseColorHex(hex: String): Color {
         else -> "FF000000"
     }
     return Color(longHex.toLong(16))
+}
+
+@Composable
+private fun ColorFilterCircle(
+    filterValue: String?,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val borderColor = if (isSelected) Color.White else Color(0xFF4A5568)
+    val borderWidth = if (isSelected) 1.5.dp else 1.dp
+
+    Box(
+        modifier = modifier.size(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (filterValue == null) {
+            // "All" — dashed stroked circle (no fill)
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val stroke = Stroke(
+                    width = borderWidth.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f), 0f)
+                )
+                drawCircle(
+                    color = borderColor,
+                    radius = size.minDimension / 2f - borderWidth.toPx() / 2f,
+                    style = stroke
+                )
+            }
+        } else {
+            // Specific color — filled circle with border
+            val fillColor = parseColorHex(filterValue)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(fillColor)
+                    .border(width = borderWidth, color = borderColor, shape = CircleShape)
+            )
+        }
+    }
 }

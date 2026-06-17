@@ -306,6 +306,8 @@
     <string name="vertical_scroll">Vertical scroll</string>
     <string name="fullscreen_enter">Enter fullscreen</string>
     <string name="fullscreen_exit">Exit fullscreen</string>
+    <string name="fullscreen_prev_page">Previous page</string>
+    <string name="fullscreen_next_page">Next page</string>
     <string name="reader_rotate_screen">Rotate screen</string>
 
     <!-- Reader / Header -->
@@ -314,6 +316,9 @@
     <string name="reader_toc">Table of contents</string>
     <string name="reader_bookmark">Bookmark</string>
     <string name="reader_typography">Typography</string>
+    <string name="reader_chapters_title">Chapters</string>
+    <string name="reader_highlights_button">Highlights</string>
+    <string name="bookmark_ribbon_announcement">Bookmark saved</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

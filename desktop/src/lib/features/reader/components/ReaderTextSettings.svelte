@@ -35,7 +35,7 @@
   ];
   const ALIGN_CYCLE: ReaderTextAlign[] = ["left", "center", "right", "justify"];
 
-  let sidebarEl: HTMLDivElement | undefined = $state();
+  let sidebarEl: HTMLElement | undefined = $state();
   let showSavedToast = $state(false);
   let savedToastTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -158,7 +158,7 @@
       tabindex="0"
     >
       <!-- Sidebar Header Icons -->
-      <div class="flex items-center justify-between border-b border-(--color-border)/5 px-4 py-4 relative">
+      <header class="flex items-center justify-between border-b border-(--color-border)/5 px-4 py-4 relative">
         {#if showSavedToast}
           <span class="absolute -top-2 right-4 rounded-full bg-(--color-accent-blue)/20 px-2.5 py-0.5 text-xs text-(--color-accent-blue) transition-all" transition:fly={{ y: -4, duration: 150 }}>
             ✓ Saved
@@ -220,9 +220,9 @@
             </svg>
           </button>
         {/if}
-      </div>
+      </header>
 
-      <div class="flex flex-col gap-6 p-4">
+      <section class="flex flex-col gap-6 p-4">
         <!-- Theme Swatches (both formats) -->
         <div class="flex items-center justify-between px-1">
           {#each themes as theme}
@@ -381,7 +381,7 @@
         {/if}
 
         <!-- Toggles (both formats) -->
-        <div class="flex flex-col gap-4">
+        <section class="flex flex-col gap-4">
           <div class="flex items-center justify-between">
             <span class="text-sm text-(--color-text-muted)">{t("settings.reading.showHeader")}</span>
           <button
@@ -439,7 +439,7 @@
               </button>
             </div>
           {/if}
-        </div>
+        </section>
 
         <!-- Saved Settings (reset to defaults) -->
         <button
@@ -452,7 +452,7 @@
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
         </button>
-      </div>
+      </section>
     </div>
   </div>
 {/if}

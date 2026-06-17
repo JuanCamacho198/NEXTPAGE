@@ -76,7 +76,7 @@
 </Panel>
 
 <Panel title={t("settings.localPreferences")} subtitle={t("settings.localPreferencesDescription")}>
-  <div class="grid grid-cols-2 gap-4 mb-4">
+  <section class="grid grid-cols-2 gap-4 mb-4">
     <!-- Language selector -->
     <div class="bg-(--color-surface) border border-(--color-border) rounded-xl p-4" role="group" aria-label={t("settings.language")}>
       <span class="block text-xs font-medium text-(--color-text-muted) mb-3">{t("settings.language")}</span>
@@ -144,10 +144,10 @@
         </button>
       </div>
     </div>
-  </div>
+  </section>
 
   <!-- Font scale -->
-  <div class="bg-(--color-surface) border border-(--color-border) rounded-xl p-4 mb-4">
+  <section class="bg-(--color-surface) border border-(--color-border) rounded-xl p-4 mb-4">
     <label class="block text-xs font-medium text-(--color-text-muted) mb-3" for="general-font-scale">{t("settings.fontScale")}: {preferredFontScale}%</label>
     <input
       type="range"
@@ -161,7 +161,7 @@
     <div class="flex items-center justify-center h-12 bg-(--color-background) border border-(--color-border) rounded-lg text-(--color-primary) font-medium" style="font-size: {preferredFontScale * 0.14}px">
       Aa
     </div>
-  </div>
+  </section>
 
   <div class="flex gap-2 mt-4">
     <Button onclick={onSaveSettings} disabled={isSavingSettings} size="sm">

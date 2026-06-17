@@ -45,7 +45,7 @@
 </Panel>
 
 <Panel title={t("settings.data.exportHighlights")} subtitle={t("settings.data.exportHighlightsDescription")}>
-  <div class="flex flex-col gap-2 p-3 bg-(--color-background) border border-(--color-border) rounded-lg">
+  <section class="flex flex-col gap-2 p-3 bg-(--color-background) border border-(--color-border) rounded-lg">
     <div class="flex gap-2">
       <select
         value={selectedExportBook}
@@ -77,7 +77,7 @@
         <span>{isExportingHighlights ? t("settings.data.exporting") : t("settings.data.download")}</span>
       </button>
     </div>
-  </div>
+  </section>
 </Panel>
 
 <Panel title={t("settings.data.clearCache")} subtitle={t("settings.data.clearCacheDescription")}>

@@ -46,6 +46,8 @@ import com.nextpage.domain.model.DailyReadingActivity
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.StatisticsUiState
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
+import com.nextpage.ui.components.atoms.NextPageErrorState
+import com.nextpage.ui.components.atoms.NextPageLoadingIndicator
 import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.components.molecules.NextPageSectionHeader
 import java.text.SimpleDateFormat
@@ -91,23 +93,22 @@ fun StatisticsScreen(
         when {
             uiState.isLoading -> {
                 item {
-                    Box(
+                    NextPageLoadingIndicator(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
+                            .height(200.dp)
+                    )
                 }
             }
 
             uiState.errorMessage != null -> {
                 item {
-                    Text(
-                        text = uiState.errorMessage ?: stringResource(R.string.error_unknown),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
+                    NextPageErrorState(
+                        title = stringResource(R.string.error_unknown),
+                        message = uiState.errorMessage ?: stringResource(R.string.error_unknown),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
                     )
                 }
             }

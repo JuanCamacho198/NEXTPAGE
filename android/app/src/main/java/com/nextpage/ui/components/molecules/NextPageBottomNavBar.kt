@@ -21,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.ui.res.painterResource
@@ -29,9 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nextpage.presentation.theme.BgSurface
-import com.nextpage.presentation.theme.NavBarActive
-import com.nextpage.presentation.theme.NavBarInactive
+import com.nextpage.presentation.theme.NextPageColors
 import com.nextpage.presentation.theme.NextPageDimens
 
 data class BottomNavItem(
@@ -51,7 +48,7 @@ fun NextPageBottomNavBar(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding(),
-        color = BgSurface
+        color = NextPageColors.surface
     ) {
         Row(
             modifier = Modifier
@@ -63,7 +60,7 @@ fun NextPageBottomNavBar(
         ) {
             destinations.forEach { dest ->
                 val isSelected = currentRoute == dest.route
-                val iconTint = if (isSelected) NavBarActive else NavBarInactive
+                val iconTint = if (isSelected) NextPageColors.navBarActive else NextPageColors.navBarInactive
 
                 Column(
                     modifier = Modifier

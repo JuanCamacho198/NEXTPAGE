@@ -18,7 +18,7 @@
   {#if showLabel}
     <span class="text-xs text-(--color-text-muted)">{percentage}%</span>
   {/if}
-  <div class="h-1.5 w-full overflow-hidden rounded bg-(--color-border)">
+  <div class="h-1.5 w-full overflow-hidden rounded bg-(--color-border)" role="progressbar" aria-valuenow={percentage} aria-valuemin="0" aria-valuemax="100">
     <div
       class="h-full rounded bg-(--color-primary) transition-all"
       style="width: {percentage}%"

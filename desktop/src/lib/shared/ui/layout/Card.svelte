@@ -60,9 +60,9 @@
     onclick={onclick}
   >
     {#if media}
-      <div class="media">
+      <figure class="media">
         {@render media()}
-      </div>
+      </figure>
     {/if}
 
     <div class={paddingClasses[padding]}>
@@ -78,9 +78,9 @@
       {/if}
 
       {#if content}
-        <div class="content">
+        <section class="content">
           {@render content()}
-        </div>
+        </section>
       {/if}
     </div>
 
@@ -93,9 +93,9 @@
 {:else}
   <div class="{baseClasses} {variantClasses[variant]} {className}">
     {#if media}
-      <div class="media">
+      <figure class="media">
         {@render media()}
-      </div>
+      </figure>
     {/if}
 
     <div class={paddingClasses[padding]}>
@@ -111,9 +111,9 @@
       {/if}
 
       {#if content}
-        <div class="content">
+        <section class="content">
           {@render content()}
-        </div>
+        </section>
       {/if}
     </div>
 

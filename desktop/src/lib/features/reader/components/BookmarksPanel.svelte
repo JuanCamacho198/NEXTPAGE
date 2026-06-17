@@ -67,8 +67,8 @@
   }
 </script>
 
-<div class="flex flex-col h-full">
-  <div class="flex items-center justify-between px-3 py-2 border-b border-zinc-200">
+<section class="flex flex-col h-full">
+  <header class="flex items-center justify-between px-3 py-2 border-b border-zinc-200">
     <h3 class="m-0 text-sm font-semibold text-zinc-700">Bookmarks</h3>
     <button
       type="button"
@@ -79,7 +79,7 @@
     >
       +
     </button>
-  </div>
+    </header>
 
   {#if isLoading}
     <div class="p-6 text-center text-xs text-zinc-500">Loading bookmarks...</div>
@@ -111,4 +111,4 @@
       {/each}
     </ul>
   {/if}
-</div>
+</section>

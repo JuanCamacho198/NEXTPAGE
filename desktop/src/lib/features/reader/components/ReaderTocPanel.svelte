@@ -21,7 +21,7 @@
 
   let { open, entries, activeId, t, onNavigate, onClose }: Props = $props();
 
-  let sidebarEl: HTMLDivElement | undefined = $state();
+  let sidebarEl: HTMLElement | undefined = $state();
 
   function handleBackdropClick(e: MouseEvent): void {
     if (e.target === e.currentTarget) onClose();
@@ -57,9 +57,9 @@
       tabindex="0"
     >
       <!-- Heading -->
-      <div class="border-b border-(--color-border)/5 px-5 py-4">
+      <header class="border-b border-(--color-border)/5 px-5 py-4">
         <h2 class="text-base font-bold text-(--color-primary)">{t("reader.tabla_contenidos")}</h2>
-      </div>
+      </header>
 
       <!-- Chapter List -->
       {#if entries.length === 0}

@@ -46,8 +46,8 @@
   }
 </script>
 
-<div class="space-y-3">
-  <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+<section class="space-y-3">
+  <header class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
     <div class="flex flex-wrap items-center gap-2" data-testid="shelf-tabs">
       {#each appState.SHELF_TAB_OPTIONS as tabOption}
         <button
@@ -80,7 +80,8 @@
         {/each}
       </select>
 
-      <div class="inline-flex rounded-md border border-(--color-border) bg-(--color-background) p-1" data-testid="shelf-view-toggle">
+      <fieldset class="inline-flex rounded-md border-(--color-border) bg-(--color-background) p-1 border-0" data-testid="shelf-view-toggle">
+        <legend class="sr-only">Vista de estantería</legend>
         <button
           type="button"
           class={`flex h-7 w-8 items-center justify-center rounded px-0 py-1 text-xs font-medium ${appState.shelfQueryState.viewMode === "grid" ? "bg-(--color-surface) text-(--color-primary)" : "text-(--color-text-muted)"}`}
@@ -101,7 +102,7 @@
         >
           <Icon name="grid" size="sm" />
         </button>
-      </div>
+      </fieldset>
 
       <div class="relative min-w-[220px] flex-1 lg:min-w-[280px]">
         <input
@@ -124,7 +125,7 @@
         {/if}
       </div>
     </div>
-  </div>
+  </header>
 
   {#if appState.shelfSortToken}
     <p class="text-xs text-(--color-text-muted)">{appState.t("home.shelfSortFromQuery", { value: appState.shelfSortToken })}</p>
@@ -138,7 +139,7 @@
   {/if}
 
   <p class="text-xs text-(--color-text-muted)">{appState.t("home.shelfResults", { count: appState.shelfBooks.length, total: appState.myShelfBooks.length })}</p>
-</div>
+</section>
 
 {#if appState.myShelfBooks.length === 0}
   <p class="text-sm text-(--color-text-muted)">{appState.t("home.myShelfPlaceholder")}</p>
@@ -322,14 +323,16 @@
           {/if}
 
           <!-- Metadata -->
-          <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
+          <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
             {#if shelfDetail.minutesRead > 0}
-              <span>{formatMinutes(shelfDetail.minutesRead)} leídos</span>
+              <dt class="sr-only">Tiempo de lectura</dt>
+              <dd>{formatMinutes(shelfDetail.minutesRead)} leídos</dd>
             {/if}
             {#if shelfDetail.updatedAt}
-              <span>{formatRelativeDate(shelfDetail.updatedAt)}</span>
+              <dt class="sr-only">Última actividad</dt>
+              <dd>{formatRelativeDate(shelfDetail.updatedAt)}</dd>
             {/if}
-          </div>
+          </dl>
         </div>
       </div>
     {/snippet}

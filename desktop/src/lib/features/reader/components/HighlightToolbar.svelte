@@ -134,7 +134,7 @@
       </button>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2.5 sm:items-center max-sm:items-stretch">
+    <div class="flex flex-wrap items-center gap-2.5 sm:items-center max-sm:items-stretch" role="toolbar" aria-label="Highlight tools">
       <div class="flex gap-1.5 rounded-full bg-[rgba(148,163,184,0.12)] p-1.5 max-sm:w-full max-sm:justify-center">
         {#each colors as color}
           <button

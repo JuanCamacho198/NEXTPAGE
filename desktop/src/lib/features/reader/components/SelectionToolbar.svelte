@@ -95,7 +95,7 @@
   ></div>
 
   <!-- Main toolbar -->
-  <div class="flex items-center gap-5 rounded-[28px] border border-(--color-surface-strong) bg-(--color-surface-strong) px-5 py-2.5 shadow-xl">
+  <div class="flex items-center gap-5 rounded-[28px] border border-(--color-surface-strong) bg-(--color-surface-strong) px-5 py-2.5 shadow-xl" role="toolbar" aria-label="Selection tools">
     <!-- Color circles -->
     {#each colors as color}
       <button

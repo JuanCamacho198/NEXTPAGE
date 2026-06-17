@@ -257,6 +257,7 @@
     <string name="reader_bookmark">Marcador</string>
     <string name="reader_typography">Tipografía</string>
     <string name="reader_chapters_title">Capítulos</string>
+    <string name="reader_chapter_fallback">Capítulo %1$d</string>
     <string name="reader_highlights_button">Resaltados</string>
     <string name="bookmark_ribbon_announcement">Marcador guardado</string>
 

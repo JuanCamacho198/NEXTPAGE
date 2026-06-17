@@ -638,19 +638,25 @@ class ReaderViewModel(
      */
     private suspend fun searchReadiumPublication(query: String): List<SearchResult> {
         val publication = mutableUiState.value.readiumPublication ?: return emptyList()
+        val lowerQuery = query.lowercase().trim()
+        if (lowerQuery.isEmpty()) return emptyList()
         val results = mutableListOf<SearchResult>()
-        val lowerQuery = query.lowercase()
 
         for ((index, link) in publication.readingOrder.withIndex()) {
             try {
                 val resource = publication.get(link) ?: continue
                 val readResult = resource.read()
                 val bytes = readResult.getOrNull() ?: continue
-                val content = bytes.decodeToString()
+                if (bytes.isEmpty()) continue
+                val content = try {
+                    bytes.decodeToString()
+                } catch (_: Exception) {
+                    continue
+                }
                 val lowerContent = content.lowercase()
 
                 var offset = 0
-                while (true) {
+                while (offset < lowerContent.length) {
                     val matchIndex = lowerContent.indexOf(lowerQuery, offset)
                     if (matchIndex < 0) break
                     val start = maxOf(0, matchIndex - 60)
@@ -665,6 +671,8 @@ class ReaderViewModel(
                         )
                     )
                     offset = matchIndex + 1
+                    // Safety: prevent infinite loop on pathological resources
+                    if (results.size > 200) break
                 }
             } catch (_: Exception) {
                 // Skip resources that can't be read

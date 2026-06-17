@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -143,23 +145,26 @@ private fun ChapterRow(
             .clip(RoundedCornerShape(8.dp))
             .background(rowBg)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "${index + 1}.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isCurrent) Color(0xFFADC6FF) else Color(0xFF718096),
-            fontWeight = weight
+        // Current chapter indicator dot
+        Box(
+            modifier = Modifier
+                .padding(end = 12.dp)
+                .size(if (isCurrent) 8.dp else 0.dp)
+                .clip(CircleShape)
+                .background(if (isCurrent) Color(0xFFADC6FF) else Color.Transparent)
         )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyMedium,
-            color = titleColor,
-            fontWeight = weight,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title.ifBlank { stringResource(R.string.reader_chapter_fallback, index + 1) },
+                style = MaterialTheme.typography.bodyMedium,
+                color = titleColor,
+                fontWeight = weight,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }

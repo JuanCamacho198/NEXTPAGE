@@ -32,7 +32,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,7 +45,6 @@ import androidx.compose.ui.unit.sp
 import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.SearchResult
-import kotlinx.coroutines.delay
 
 /**
  * Bottom sheet for in-book text search.
@@ -67,13 +65,6 @@ fun SearchBottomSheet(
     modifier: Modifier = Modifier
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    // Debounce 300ms
-    LaunchedEffect(query) {
-        if (query.isNotBlank()) {
-            delay(300)
-        }
-    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,

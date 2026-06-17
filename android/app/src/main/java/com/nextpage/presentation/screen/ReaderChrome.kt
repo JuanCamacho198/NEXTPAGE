@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Image
@@ -243,7 +244,7 @@ fun ReaderHeader(
 
             // Highlights (new dedicated button)
             HeaderActionButton(
-                icon = Icons.AutoMirrored.Filled.FormatListBulleted,
+                icon = Icons.Default.Create,
                 contentDescription = stringResource(R.string.reader_highlights_button),
                 onClick = onToggleHighlights
             )

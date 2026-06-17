@@ -54,6 +54,7 @@ fun HomeScreen(
     onNavigateToLibrary: () -> Unit,
     onNavigateToHighlights: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToStatistics: () -> Unit,
     onBookSelected: (String, String, String) -> Unit,
     onContinueReading: (String, String?, String) -> Unit,
     onImportBook: () -> Unit
@@ -136,6 +137,7 @@ fun HomeScreen(
             item {
                 ContinueReadingSection(
                     currentBook = uiState.currentBook,
+                    progress = uiState.currentBookProgress,
                     onBookSelected = onBookSelected,
                     onContinueReading = onContinueReading
             )
@@ -155,6 +157,7 @@ fun HomeScreen(
                 QuickAccessSection(
                     onImportBook = onImportBook,
                     onHighlights = onNavigateToHighlights,
+                    onStatistics = onNavigateToStatistics,
                     onSettings = onNavigateToSettings
                 )
             }
@@ -298,6 +301,7 @@ private fun StatCard(
 @Composable
 private fun ContinueReadingSection(
     currentBook: Book?,
+    progress: Float = 0f,
     onBookSelected: (String, String, String) -> Unit,
     onContinueReading: (String, String?, String) -> Unit
 ) {
@@ -354,7 +358,7 @@ private fun ContinueReadingSection(
 
                         // Progress bar
                         LinearProgressIndicator(
-                            progress = { 0.33f }, // placeholder until we have real progress
+                            progress = { progress / 100f },
                             modifier = Modifier.fillMaxWidth(),
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.surfaceVariant
@@ -487,6 +491,7 @@ private fun BookshelfCard(
 private fun QuickAccessSection(
     onImportBook: () -> Unit,
     onHighlights: () -> Unit,
+    onStatistics: () -> Unit,
     onSettings: () -> Unit
 ) {
     Column {
@@ -497,28 +502,41 @@ private fun QuickAccessSection(
         )
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
-        ) {
-            QuickAccessButton(
-                icon = Icons.Outlined.UploadFile,
-                label = stringResource(R.string.home_action_import_book),
-                onClick = onImportBook,
-                modifier = Modifier.weight(1f)
-            )
-            QuickAccessButton(
-                icon = Icons.Outlined.Bookmark,
-                label = stringResource(R.string.home_highlights),
-                onClick = onHighlights,
-                modifier = Modifier.weight(1f)
-            )
-            QuickAccessButton(
-                icon = Icons.Outlined.BarChart,
-                label = stringResource(R.string.home_settings),
-                onClick = onSettings,
-                modifier = Modifier.weight(1f)
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
+            ) {
+                QuickAccessButton(
+                    icon = Icons.Outlined.UploadFile,
+                    label = stringResource(R.string.home_action_import_book),
+                    onClick = onImportBook,
+                    modifier = Modifier.weight(1f)
+                )
+                QuickAccessButton(
+                    icon = Icons.Outlined.Bookmark,
+                    label = stringResource(R.string.home_highlights),
+                    onClick = onHighlights,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
+            ) {
+                QuickAccessButton(
+                    icon = Icons.Outlined.BarChart,
+                    label = stringResource(R.string.home_action_stats),
+                    onClick = onStatistics,
+                    modifier = Modifier.weight(1f)
+                )
+                QuickAccessButton(
+                    icon = Icons.Outlined.Settings,
+                    label = stringResource(R.string.home_settings),
+                    onClick = onSettings,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }

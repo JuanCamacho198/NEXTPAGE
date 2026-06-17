@@ -319,10 +319,16 @@ class ReaderViewModel(
                     )
                 }
 
+                // ── Restore saved position ──────────────────────────────
+                val savedProgress = readerRepository.getProgressForBook(bookId)
+                val initialLocator: Locator? = savedProgress?.locatorJson
+                    ?.let { CfiMigrator.jsonToLocator(it) }
+
                 mutableUiState.update {
                     it.copy(
                         readiumPublication = publication,
                         chapters = chapters,
+                        readiumLocator = initialLocator,
                         isLoading = false,
                         loadTimeMs = loadTime
                     )

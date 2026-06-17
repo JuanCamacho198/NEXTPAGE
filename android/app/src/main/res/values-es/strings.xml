@@ -73,6 +73,7 @@
     <string name="home_import_epub">Importar EPUB</string>
     <string name="home_import_pdf">Importar PDF</string>
     <string name="home_action_import_book">Importar libro</string>
+    <string name="home_action_stats">Estadísticas</string>
     <string name="home_highlights">Resaltados</string>
     <string name="home_settings">Ajustes</string>
     <string name="home_no_current_book">Sin libro en curso</string>

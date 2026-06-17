@@ -28,6 +28,7 @@ data class HomeUiState(
     val sessionsToday: Int = 0,
     val dailyProgressPercent: Float = 0f,
     val currentBook: Book? = null,
+    val currentBookProgress: Float = 0f,
     val recentBooks: List<Book> = emptyList(),
     val isLoading: Boolean = true,
     // Search
@@ -73,6 +74,15 @@ class HomeViewModel(
                 .catch { e -> _uiEvent.emit(UiEvent.ShowSnackbar(e.message ?: "Failed to load current book")) }
                 .collect { book ->
                     _uiState.value = _uiState.value.copy(currentBook = book)
+                }
+        }
+
+        // Collect current book progress
+        viewModelScope.launch {
+            homeRepository.observeCurrentBookProgress()
+                .catch { e -> _uiEvent.emit(UiEvent.ShowSnackbar(e.message ?: "Failed to load progress")) }
+                .collect { progress ->
+                    _uiState.value = _uiState.value.copy(currentBookProgress = progress)
                 }
         }
 

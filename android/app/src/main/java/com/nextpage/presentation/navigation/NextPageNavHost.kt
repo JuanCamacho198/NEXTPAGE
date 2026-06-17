@@ -49,6 +49,7 @@ import com.nextpage.presentation.screen.HomeScreen
 import com.nextpage.presentation.screen.LibraryScreen
 import com.nextpage.presentation.screen.ReaderScreen
 import com.nextpage.presentation.screen.SettingsScreen
+import com.nextpage.presentation.screen.StatisticsScreen
 import com.nextpage.ui.components.atoms.NextPageSnackbar
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.HomeViewModel
@@ -356,6 +357,9 @@ fun NextPageNavHost(
                                 launchSingleTop = true
                             }
                         },
+                        onNavigateToStatistics = {
+                            navController.navigate(NextPageDestination.Statistics.route)
+                        },
                         onBookSelected = { bookId, filePath, format ->
                             selectedBookId = bookId
                             selectedBookFilePath = filePath
@@ -447,6 +451,19 @@ fun NextPageNavHost(
                     HighlightsScreen(
                         contentPadding = innerPadding,
                         viewModel = highlightsViewModel
+                    )
+                }
+
+                composable(
+                    route = NextPageDestination.Statistics.route,
+                    enterTransition = { fadeIn() },
+                    exitTransition = { fadeOut() },
+                    popEnterTransition = { fadeIn() },
+                    popExitTransition = { fadeOut() }
+                ) {
+                    StatisticsScreen(
+                        contentPadding = innerPadding,
+                        viewModel = statisticsViewModel
                     )
                 }
 

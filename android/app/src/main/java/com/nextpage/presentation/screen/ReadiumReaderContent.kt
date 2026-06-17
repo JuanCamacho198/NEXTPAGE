@@ -81,6 +81,7 @@ fun ReadiumReaderContent(
     highlights: List<Highlight>,
     readerSettings: ReaderSettings,
     viewModel: ReaderViewModel,
+    initialLocator: Locator? = null,
     inspectHighlightsHtmlTrigger: SharedFlow<Unit> = MutableSharedFlow(),
     logWebViewTreeTrigger: SharedFlow<Unit> = MutableSharedFlow(),
     modifier: Modifier = Modifier
@@ -108,16 +109,18 @@ fun ReadiumReaderContent(
         val tag = "ReadiumNavigator"
         val existing = fragmentManager.findFragmentByTag(tag)
         if (existing == null) {
-            val initialLocator = publication.readingOrder.firstOrNull()?.let {
-                publication.locatorFromLink(it)
-            }
+            val resolvedLocator = initialLocator
+                ?: publication.readingOrder.firstOrNull()?.let {
+                    publication.locatorFromLink(it)
+                }
+            if (resolvedLocator == null) return@LaunchedEffect
             // Note: the native ActionMode (Copy/Share/Translate) is suppressed
             // by installing [SuppressSelectionActionMode] on the underlying
             // WebView once the fragment view is created (see below). In newer
             // Readium versions this can be done via fragment configuration,
             // but 3.2.0 does not expose that hook.
             val factory = navigatorFactory.createFragmentFactory(
-                initialLocator = initialLocator!!
+                initialLocator = resolvedLocator
             )
             fragmentManager.fragmentFactory = factory
             fragmentManager.commit {

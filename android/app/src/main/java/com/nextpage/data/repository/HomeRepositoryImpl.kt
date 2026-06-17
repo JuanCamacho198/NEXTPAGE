@@ -6,11 +6,15 @@ import com.nextpage.data.local.dao.ReadingSessionDao
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.ReadingStats
 import com.nextpage.domain.repository.HomeRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import java.util.Calendar
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HomeRepositoryImpl(
     private val bookDao: BookDao,
     private val readingProgressDao: ReadingProgressDao,
@@ -32,6 +36,16 @@ class HomeRepositoryImpl(
         // (simplified: use the most recently updated book)
         bookDao.observeAllBooks().map { entities ->
             entities.maxByOrNull { it.updatedAtEpochMillis }?.toBook()
+        }
+
+    override fun observeCurrentBookProgress(): Flow<Float> =
+        observeCurrentBook().flatMapLatest { book ->
+            if (book != null) {
+                readingProgressDao.observeProgressForBook(book.id)
+                    .map { it?.percentage ?: 0f }
+            } else {
+                flowOf(0f)
+            }
         }
 
     override fun observeDailyStats(): Flow<ReadingStats> {

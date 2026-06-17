@@ -323,6 +323,7 @@ fun ReaderScreen(
                             highlights = uiState.highlights,
                             readerSettings = uiState.readerSettings,
                             viewModel = viewModel,
+                            initialLocator = uiState.readiumLocator,
                             inspectHighlightsHtmlTrigger = inspectHighlightsHtmlTrigger,
                             logWebViewTreeTrigger = logWebViewTreeTrigger,
                             modifier = Modifier.fillMaxSize()

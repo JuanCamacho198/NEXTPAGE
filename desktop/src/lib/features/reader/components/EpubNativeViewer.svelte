@@ -346,6 +346,16 @@
       link.setAttribute('href', toAssetUrl(resourcesPath, resourcePath));
     }
 
+    // Process images, SVG images, and media elements — convert relative/absolute paths to asset URLs
+    for (const el of doc.querySelectorAll('img, image, video, audio, source, object')) {
+      const attrName = el.tagName.toLowerCase() === 'image' ? 'href' : 'src';
+      const src = el.getAttribute(attrName);
+      if (!src || src.startsWith('http') || src.startsWith('data:') || src.startsWith('asset:')) continue;
+
+      const resourcePath = resolveResourcePath(chapterPath, src);
+      el.setAttribute(attrName, toAssetUrl(resourcesPath, resourcePath));
+    }
+
     for (const styleEl of doc.querySelectorAll('style')) {
       const cssText = styleEl.textContent ?? '';
       if (!cssText.includes('url(')) continue;
@@ -434,8 +444,15 @@
     doc.body.appendChild(resizeScript);
     doc.body.appendChild(selectionScript);
 
-    const serialized = new XMLSerializer().serializeToString(doc);
-    return `<!DOCTYPE html>${serialized}`;
+    // Strip untrusted <script> tags from EPUB content before serialization
+    for (const script of doc.querySelectorAll('script')) {
+      script.remove();
+    }
+
+    // Use outerHTML instead of XMLSerializer for HTML5-compliant serialization
+    // XMLSerializer produces XHTML self-closing tags that break HTML5 parsing
+    const serialized = doc.documentElement.outerHTML;
+    return `<!DOCTYPE html>\n${serialized}`;
   }
 
   function refreshReaderStyles(): void {

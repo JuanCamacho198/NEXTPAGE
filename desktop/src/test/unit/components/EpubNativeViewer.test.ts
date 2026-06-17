@@ -39,6 +39,9 @@ describe('EpubNativeViewer', () => {
           chapterPath: 'OEBPS/Text/chapter1.xhtml',
         });
       }
+      if (cmd === 'index_epub_text') {
+        return Promise.resolve();
+      }
       return Promise.reject(new Error(`Unknown command: ${cmd}`));
     });
   });

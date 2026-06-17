@@ -20,6 +20,26 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 }
 
+// Polyfill Element.animate for jsdom (used by Svelte transitions in Modal.svelte)
+if (typeof globalThis.Element !== 'undefined' && !globalThis.Element.prototype.animate) {
+  globalThis.Element.prototype.animate = function () {
+    return {
+      play() { /* noop */ },
+      pause() { /* noop */ },
+      finish() { /* noop */ },
+      cancel() { /* noop */ },
+      reverse() { /* noop */ },
+      addEventListener() { /* noop */ },
+      removeEventListener() { /* noop */ },
+      currentTime: null,
+      playbackRate: 1,
+      playState: 'finished',
+      finished: Promise.resolve(),
+      ready: Promise.resolve(),
+    } as unknown as globalThis.Animation;
+  };
+}
+
 // Polyfill DOMMatrix for pdfjs-dist (not available in Node.js/jsdom/happy-dom)
 if (typeof globalThis.DOMMatrix === 'undefined') {
   class DOMMatrixPolyfill {

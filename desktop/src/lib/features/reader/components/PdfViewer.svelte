@@ -919,7 +919,7 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
   <div
-    class="pdf-viewer"
+    class="pdf-viewer h-full flex flex-col min-h-0"
     bind:this={viewerRoot}
     tabindex="0"
     role="region"

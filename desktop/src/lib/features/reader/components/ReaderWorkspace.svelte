@@ -397,7 +397,7 @@
     {:else if isPdf}
       <!-- White content card for PDF -->
       <div
-        class="relative overflow-hidden bg-white"
+        class="relative bg-white flex flex-col min-h-0"
         class:rounded-xl={!isFullscreen}
         class:shadow-lg={!isFullscreen}
         class:w-200={!isFullscreen}

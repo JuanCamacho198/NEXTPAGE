@@ -40,6 +40,7 @@ import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.HomeViewModel
+import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.components.molecules.NotificationSheet
 
 @Composable
@@ -101,8 +102,9 @@ fun HomeScreen(
         if (!uiState.showSearch) {
             // 1. Header
             item {
-                HomeHeaderSection(
-                    userName = uiState.userName,
+                NextPageHeader(
+                    title = stringResource(R.string.home_nextpage_title),
+                    avatarInitials = uiState.userName.take(1).uppercase(),
                     onSearchClick = { viewModel.onToggleSearch() },
                     onNotificationsClick = { showNotifications = true }
                 )
@@ -156,7 +158,12 @@ fun HomeScreen(
             item {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "v${com.nextpage.BuildConfig.VERSION_NAME} • ${com.nextpage.BuildConfig.GIT_SHA} • ${com.nextpage.BuildConfig.BUILD_TIME}",
+                    text = stringResource(
+                        R.string.home_version_format,
+                        com.nextpage.BuildConfig.VERSION_NAME,
+                        com.nextpage.BuildConfig.GIT_SHA,
+                        com.nextpage.BuildConfig.BUILD_TIME
+                    ),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     textAlign = TextAlign.Center,
@@ -170,66 +177,6 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)
-                )
-            }
-        }
-    }
-}
-
-// ─── Section 1: Header ───────────────────────────────────────────────
-
-@Composable
-private fun HomeHeaderSection(
-    userName: String,
-    onSearchClick: () -> Unit,
-    onNotificationsClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = NextPageDimens.spacingMd),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Avatar placeholder — 48dp circle with first letter
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = userName.take(1).uppercase(),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Text(
-                text = stringResource(R.string.home_nextpage_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            IconButton(onClick = onSearchClick) {
-                Icon(
-                    imageVector = Icons.Outlined.Search,
-                    contentDescription = stringResource(R.string.library_search_placeholder),
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            IconButton(onClick = onNotificationsClick) {
-                Icon(
-                    imageVector = Icons.Outlined.Notifications,
-                    contentDescription = stringResource(R.string.notifications_title),
-                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -588,7 +535,7 @@ private fun SearchBarSection(
         IconButton(onClick = onCloseSearch) {
             Icon(
                 imageVector = Icons.Outlined.Close,
-                contentDescription = "Cerrar búsqueda"
+                contentDescription = stringResource(R.string.home_close_search)
             )
         }
     }

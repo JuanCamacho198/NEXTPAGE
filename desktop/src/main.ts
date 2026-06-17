@@ -2,7 +2,7 @@ import "./styles.css";
 import App from "./App.svelte";
 import { mount } from "svelte";
 import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
-import { supabase } from "./lib/shared/api/supabase";
+import { handleCallback } from "./lib/shared/services/GoogleOAuthService";
 import { logger } from "./lib/shared/logger/Logger";
 import { consoleSink } from "./lib/shared/logger/ConsoleSink";
 import { tauriSink } from "./lib/shared/logger/TauriSink";
@@ -96,21 +96,25 @@ onOpenUrl((urls) => {
   for (const url of urls) {
     if (url.includes("auth-callback")) {
       console.log("Handling auth-callback...");
-      const hash = url.split("#")[1];
-      if (hash) {
-        const params = new URLSearchParams(hash);
-        const accessToken = params.get("access_token");
-        const refreshToken = params.get("refresh_token");
+      try {
+        const parsedUrl = new URL(url);
+        const code = parsedUrl.searchParams.get("code");
+        const error = parsedUrl.searchParams.get("error");
 
-        if (accessToken && refreshToken) {
-          supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          }).then(({ data, error }) => {
-            if (error) console.error("Error completing session:", error.message);
-            else console.log("Session completed for user:", data.user?.email);
+        if (error) {
+          console.error("OAuth error:", error);
+          return;
+        }
+
+        if (code) {
+          handleCallback(code).then(() => {
+            console.log("Google OAuth session completed");
+          }).catch((err: unknown) => {
+            console.error("Error completing OAuth session:", err);
           });
         }
+      } catch (e) {
+        console.error("Error parsing auth callback URL:", e);
       }
     }
   }

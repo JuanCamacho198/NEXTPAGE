@@ -1,18 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { Session } from "@supabase/supabase-js";
-import { getProfileInitials, normalizeProfileSession } from "$lib/features/settings";
+import { getProfileInitials, normalizeProfileSession, type GoogleUser } from "$lib/features/settings";
 
 describe("profileSession", () => {
   it("normalizes signed-in session values", () => {
     const viewModel = normalizeProfileSession({
-      user: {
-        email: "reader@example.com",
-        user_metadata: {
-          name: "Reader Name",
-          avatar_url: "https://example.com/avatar.png",
-        },
-      },
-    } as unknown as Session | null);
+      email: "reader@example.com",
+      name: "Reader Name",
+      picture: "https://example.com/avatar.png",
+    });
 
     expect(viewModel).toEqual({
       name: "Reader Name",
@@ -24,11 +19,8 @@ describe("profileSession", () => {
 
   it("falls back to email local-part when name is missing", () => {
     const viewModel = normalizeProfileSession({
-      user: {
-        email: "local-part@example.com",
-        user_metadata: {},
-      },
-    } as unknown as Session | null);
+      email: "local-part@example.com",
+    } as GoogleUser | null);
 
     expect(viewModel.name).toBe("local-part");
     expect(viewModel.email).toBe("local-part@example.com");
@@ -46,13 +38,9 @@ describe("profileSession", () => {
 
   it("rejects non-http avatar urls", () => {
     const viewModel = normalizeProfileSession({
-      user: {
-        email: "reader@example.com",
-        user_metadata: {
-          avatar_url: "javascript:alert('xss')",
-        },
-      },
-    } as unknown as Session | null);
+      email: "reader@example.com",
+      picture: "javascript:alert('xss')",
+    });
 
     expect(viewModel.avatarUrl).toBeNull();
   });

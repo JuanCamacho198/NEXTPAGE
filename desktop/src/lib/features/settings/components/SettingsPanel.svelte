@@ -8,11 +8,12 @@
     getReaderSettings,
     upsertReaderSettings,
   } from "$lib/shared/api/tauriClient";
-  import { AuthService } from "$lib/shared/services/AuthService";
+
   import { i18n, type MessageKey } from "$lib/shared/i18n";
   import {
     getProfileInitials,
     normalizeProfileSession,
+    profileSessionFromAuthState,
     type ProfileSessionViewModel,
   } from "../profileSession";
   import type {
@@ -59,7 +60,7 @@
   let isProfileLoading = $state(false);
   let profileError = $state<string | null>(null);
   let profileAvatarBroken = $state(false);
-  let profile = $state<ProfileSessionViewModel>(normalizeProfileSession(null));
+  let profile = $state<ProfileSessionViewModel>(profileSessionFromAuthState());
 
   type ShortcutDescriptor = {
     id: string;
@@ -231,8 +232,7 @@
     profileError = null;
 
     try {
-      const session = await AuthService.getSession();
-      profile = normalizeProfileSession(session);
+      profile = profileSessionFromAuthState();
       profileAvatarBroken = false;
     } catch (error) {
       profile = normalizeProfileSession(null);

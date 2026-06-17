@@ -1,7 +1,15 @@
-import type { Session } from "@supabase/supabase-js";
+import { authState } from '$lib/stores/authState.svelte';
 
-const DEFAULT_PROFILE_NAME = "Reader";
-const DEFAULT_PROFILE_EMAIL = "No email available";
+const DEFAULT_PROFILE_NAME = 'Reader';
+const DEFAULT_PROFILE_EMAIL = 'No email available';
+
+/** Lightweight user profile extracted from Google id_token or authState. */
+export type GoogleUser = {
+  email?: string | null;
+  name?: string | null;
+  picture?: string | null;
+  sub?: string | null;
+};
 
 export type ProfileSessionViewModel = {
   name: string;
@@ -11,7 +19,7 @@ export type ProfileSessionViewModel = {
 };
 
 const toEmailLocalPart = (email: string | null | undefined): string | null => {
-  if (typeof email !== "string") {
+  if (typeof email !== 'string') {
     return null;
   }
 
@@ -20,12 +28,12 @@ const toEmailLocalPart = (email: string | null | undefined): string | null => {
     return null;
   }
 
-  const [localPart] = normalized.split("@");
+  const [localPart] = normalized.split('@');
   return localPart?.trim().length ? localPart.trim() : null;
 };
 
 const toNonEmptyString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return null;
   }
 
@@ -41,7 +49,7 @@ const toValidHttpUrl = (value: unknown): string | null => {
 
   try {
     const parsed = new URL(candidate);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
       return parsed.toString();
     }
   } catch {
@@ -51,27 +59,39 @@ const toValidHttpUrl = (value: unknown): string | null => {
   return null;
 };
 
+/**
+ * Normalize a user profile from GoogleUser fields.
+ * Reads email, name, and picture directly (flat structure, no user_metadata nesting).
+ */
 export const normalizeProfileSession = (
-  session: Session | null | undefined,
+  user: GoogleUser | null | undefined,
 ): ProfileSessionViewModel => {
-  const user = session?.user;
-  const metadata = user?.user_metadata as Record<string, unknown> | undefined;
-
   const email = toNonEmptyString(user?.email) ?? DEFAULT_PROFILE_EMAIL;
   const localPart = toEmailLocalPart(user?.email);
   const name =
-    toNonEmptyString(metadata?.name) ??
-    toNonEmptyString(metadata?.full_name) ??
+    toNonEmptyString(user?.name) ??
     localPart ??
     DEFAULT_PROFILE_NAME;
 
   return {
     name,
     email,
-    avatarUrl: toValidHttpUrl(metadata?.avatar_url),
-    isSignedIn: Boolean(user),
+    avatarUrl: toValidHttpUrl(user?.picture),
+    isSignedIn: Boolean(user?.email),
   };
 };
+
+/**
+ * Convenience function that reads profile directly from reactive authState.
+ * Use this for the new Google OAuth PKCE flow.
+ */
+export function profileSessionFromAuthState(): ProfileSessionViewModel {
+  return normalizeProfileSession({
+    email: authState.email,
+    name: authState.displayName,
+    picture: authState.photoUrl,
+  });
+}
 
 export const getProfileInitials = (name: string): string => {
   const words = name.trim().split(/\s+/).filter((word) => word.length > 0);

@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { Button } from "$lib/shared/ui";
-	import { AuthService } from "$lib/shared/services/AuthService";
+	import { startAuth } from "$lib/shared/services/GoogleOAuthService";
 	let isLoggingIn = $state(false);
 
 	async function handleLogin(): Promise<void> {
 		try {
 			isLoggingIn = true;
-			console.log('Initiating Google login...');
-			const data = await AuthService.signInWithGoogle();
-			console.log('Google login redirect initiated:', data);
+			console.log('Initiating Google PKCE login...');
+			await startAuth();
 		} catch (error: unknown) {
 			const msg = error instanceof Error ? error.message : String(error);
 			console.error('Login Error:', msg);

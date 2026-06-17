@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import io.mockk.mockk
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -27,6 +28,7 @@ class LibraryRepositoryImplTest {
     fun importBookFromEpub_persistsMetadataIntoBookDao() = runBlocking {
         val fakeDao = FakeBookDao()
         val repository = LibraryRepositoryImpl(
+            appContext = mockk(),
             bookDao = fakeDao,
             readingProgressDao = FakeReadingProgressDao(),
             readingStatsDao = FakeReadingStatsDao(),
@@ -65,6 +67,7 @@ class LibraryRepositoryImplTest {
     fun importBookFromPdf_persistsMetadataIntoBookDao() = runBlocking {
         val fakeDao = FakeBookDao()
         val repository = LibraryRepositoryImpl(
+            appContext = mockk(),
             bookDao = fakeDao,
             readingProgressDao = FakeReadingProgressDao(),
             readingStatsDao = FakeReadingStatsDao(),
@@ -104,6 +107,7 @@ class LibraryRepositoryImplTest {
     fun importBookFromPdf_returnsFailureWhenMetadataExtractionFails() = runBlocking {
         val fakeDao = FakeBookDao()
         val repository = LibraryRepositoryImpl(
+            appContext = mockk(),
             bookDao = fakeDao,
             readingProgressDao = FakeReadingProgressDao(),
             readingStatsDao = FakeReadingStatsDao(),
@@ -128,6 +132,7 @@ class LibraryRepositoryImplTest {
         val fakeDao = FakeBookDao()
         val fakeReadingStatsDao = FakeReadingStatsDao()
         val repository = LibraryRepositoryImpl(
+            appContext = mockk(),
             bookDao = fakeDao,
             readingProgressDao = FakeReadingProgressDao(),
             readingStatsDao = fakeReadingStatsDao,
@@ -147,6 +152,7 @@ class LibraryRepositoryImplTest {
     fun observeLibrary_excludesSoftDeletedBooks() = runBlocking {
         val fakeDao = FakeBookDao()
         val repository = LibraryRepositoryImpl(
+            appContext = mockk(),
             bookDao = fakeDao,
             readingProgressDao = FakeReadingProgressDao(),
             readingStatsDao = FakeReadingStatsDao(),
@@ -208,6 +214,8 @@ class LibraryRepositoryImplTest {
 
         override suspend fun upsert(progress: com.nextpage.data.local.entity.ReadingProgressEntity) = Unit
 
+        override suspend fun getProgressForBook(bookId: String): com.nextpage.data.local.entity.ReadingProgressEntity? = null
+
         override suspend fun count(): Int = 0
     }
 
@@ -263,6 +271,8 @@ class LibraryRepositoryImplTest {
         override suspend fun saveCover(bookId: String, coverBytes: ByteArray): Result<String> {
             return Result.success("/tmp/$bookId.jpg")
         }
+
+        override suspend fun deleteCover(bookId: String): Result<Unit> = Result.success(Unit)
     }
 
     private class FakeReadingStatsDao : ReadingStatsDao {

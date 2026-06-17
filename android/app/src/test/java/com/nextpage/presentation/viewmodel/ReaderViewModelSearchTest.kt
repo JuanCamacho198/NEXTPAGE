@@ -181,6 +181,9 @@ class ReaderViewModelSearchTest {
         override fun observeAllBookmarks(): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
         override fun observeBookmarks(bookId: String): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
         override suspend fun upsertBookmark(bookmark: Bookmark) = Unit
+        override suspend fun getProgressForBook(bookId: String): com.nextpage.domain.model.ReadingProgress? = null
+        override suspend fun getHighlightsForBook(bookId: String): List<com.nextpage.domain.model.Highlight> = emptyList()
+        override suspend fun getBookmarksForBook(bookId: String): List<com.nextpage.domain.model.Bookmark> = emptyList()
     }
 
     private class FakeReadingStatsRepository : ReadingStatsRepository {
@@ -188,5 +191,9 @@ class ReaderViewModelSearchTest {
         override fun observeTotalTime(): Flow<Long> = MutableStateFlow(0L)
         override suspend fun updateReadingTime(bookId: String, additionalMinutes: Long) = Unit
         override suspend fun deleteStats(bookId: String) = Unit
+        override fun observeBookStats(): kotlinx.coroutines.flow.Flow<List<com.nextpage.domain.repository.ReadingStatsData>> =
+            kotlinx.coroutines.flow.MutableStateFlow(emptyList())
+        override fun observeDailyActivity(): kotlinx.coroutines.flow.Flow<List<com.nextpage.domain.model.DailyReadingActivity>> =
+            kotlinx.coroutines.flow.MutableStateFlow(emptyList())
     }
 }

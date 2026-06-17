@@ -262,5 +262,9 @@ class ReaderViewModelSelectionTest {
         override fun observeTotalTime(): Flow<Long> = MutableStateFlow(0L)
         override suspend fun updateReadingTime(bookId: String, additionalMinutes: Long) = Unit
         override suspend fun deleteStats(bookId: String) = Unit
+        override fun observeBookStats(): kotlinx.coroutines.flow.Flow<List<com.nextpage.domain.repository.ReadingStatsData>> =
+            kotlinx.coroutines.flow.MutableStateFlow(emptyList())
+        override fun observeDailyActivity(): kotlinx.coroutines.flow.Flow<List<com.nextpage.domain.model.DailyReadingActivity>> =
+            kotlinx.coroutines.flow.MutableStateFlow(emptyList())
     }
 }

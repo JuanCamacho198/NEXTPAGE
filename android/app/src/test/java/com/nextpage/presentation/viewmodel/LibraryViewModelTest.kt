@@ -1,12 +1,16 @@
 package com.nextpage.presentation.viewmodel
 
+import com.nextpage.data.remote.sync.SyncService
+import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.usecase.ImportEpubBookUseCase
+import com.nextpage.presentation.UiEvent
 import com.nextpage.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -34,6 +38,7 @@ class LibraryViewModelTest {
         val viewModel = LibraryViewModel(
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            syncService = FakeSyncService(),
             mainDispatcher = dispatcher
         )
 
@@ -65,6 +70,7 @@ class LibraryViewModelTest {
         val viewModel = LibraryViewModel(
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            syncService = FakeSyncService(),
             mainDispatcher = dispatcher
         )
 
@@ -95,6 +101,7 @@ class LibraryViewModelTest {
         val viewModel = LibraryViewModel(
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            syncService = FakeSyncService(),
             mainDispatcher = dispatcher
         )
 
@@ -126,12 +133,13 @@ class LibraryViewModelTest {
         val viewModel = LibraryViewModel(
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            syncService = FakeSyncService(),
             mainDispatcher = dispatcher
         )
 
-        var emittedEvent: LibraryUiEvent? = null
+        var emittedEvent: UiEvent? = null
         val collectJob = launch {
-            viewModel.uiEvents.collect { emittedEvent = it }
+            viewModel.uiEvent.collect { emittedEvent = it }
         }
         advanceUntilIdle()
 
@@ -148,7 +156,7 @@ class LibraryViewModelTest {
         viewModel.confirmDeleteBook()
         advanceUntilIdle()
 
-        assertTrue(emittedEvent is LibraryUiEvent.Success)
+        assertTrue(emittedEvent is UiEvent.ShowSnackbar)
         assertEquals(null, viewModel.uiState.value.bookToDelete)
 
         collectJob.cancel()
@@ -161,12 +169,13 @@ class LibraryViewModelTest {
         val viewModel = LibraryViewModel(
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            syncService = FakeSyncService(),
             mainDispatcher = dispatcher
         )
 
-        var emittedEvent: LibraryUiEvent? = null
+        var emittedEvent: UiEvent? = null
         val collectJob = launch {
-            viewModel.uiEvents.collect { emittedEvent = it }
+            viewModel.uiEvent.collect { emittedEvent = it }
         }
         advanceUntilIdle()
 
@@ -183,7 +192,7 @@ class LibraryViewModelTest {
         viewModel.confirmDeleteBook()
         advanceUntilIdle()
 
-        assertTrue(emittedEvent is LibraryUiEvent.Failure)
+        assertTrue(emittedEvent is UiEvent.ShowSnackbar)
         assertEquals(null, viewModel.uiState.value.bookToDelete)
 
         collectJob.cancel()
@@ -196,6 +205,7 @@ class LibraryViewModelTest {
         val viewModel = LibraryViewModel(
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            syncService = FakeSyncService(),
             mainDispatcher = dispatcher
         )
 
@@ -276,5 +286,13 @@ class LibraryViewModelTest {
         fun emitReadingMinutesByBook(readingMinutesByBook: Map<String, Long>) {
             readingMinutesByBookFlow.value = readingMinutesByBook
         }
+    }
+
+    private class FakeSyncService : SyncService {
+        override val syncState: Flow<SyncState> = MutableStateFlow(SyncState.Idle)
+        override val pendingCount: Flow<Int> = MutableStateFlow(0)
+        override suspend fun bootstrap(userId: String): Result<Unit> = Result.success(Unit)
+        override suspend fun schedulePush(): Result<Unit> = Result.success(Unit)
+        override suspend fun schedulePull(): Result<Unit> = Result.success(Unit)
     }
 }

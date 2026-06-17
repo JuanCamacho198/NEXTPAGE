@@ -51,5 +51,11 @@ class UpdateReadingProgressUseCaseTest {
         override fun observeBookmarks(bookId: String): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
 
         override suspend fun upsertBookmark(bookmark: Bookmark) = Unit
+
+        override suspend fun getProgressForBook(bookId: String): ReadingProgress? = null
+
+        override suspend fun getHighlightsForBook(bookId: String): List<Highlight> = emptyList()
+
+        override suspend fun getBookmarksForBook(bookId: String): List<Bookmark> = emptyList()
     }
 }

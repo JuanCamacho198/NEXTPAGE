@@ -415,6 +415,9 @@ export const messagesEn = {
   "reader.columns": "Columns",
   "reader.publisher_defaults": "Publisher defaults",
   "reader.vertical_scroll": "Vertical scroll",
+  "reader.prev_page": "Previous page",
+  "reader.next_page": "Next page",
+  "reader.page_input": "Go to page",
   "reader.saved_settings": "Saved settings",
 
   "settings.localPreferences": "Local preferences",

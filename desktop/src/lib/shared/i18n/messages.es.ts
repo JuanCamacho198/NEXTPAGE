@@ -423,5 +423,8 @@ export const messagesEs: Record<MessageKey, string> = {
   "reader.columns": "Columnas",
   "reader.publisher_defaults": "Valores del editor",
   "reader.vertical_scroll": "Desplazamiento vertical",
+  "reader.prev_page": "Página anterior",
+  "reader.next_page": "Página siguiente",
+  "reader.page_input": "Ir a la página",
   "reader.saved_settings": "Ajustes guardados",
 };

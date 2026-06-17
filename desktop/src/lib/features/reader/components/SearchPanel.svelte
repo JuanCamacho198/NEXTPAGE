@@ -100,7 +100,7 @@
           {/each}
         </ul>
 
-        <div class="mt-3 flex items-center justify-between text-xs text-(--color-text-muted)">
+        <nav class="mt-3 flex items-center justify-between text-xs text-(--color-text-muted)" aria-label="Search pagination">
           <span>{t("search.page")} {currentPage()} · {Math.min(total(), pageSize() * currentPage())} / {total()} {t("search.matches")}</span>
           <div class="flex gap-1">
             <button
@@ -120,7 +120,7 @@
               {t("search.next")}
             </button>
           </div>
-        </div>
+        </nav>
       {:else if isNoMatch()}
         <p class="text-sm text-(--color-text-muted)">{t("search.noMatches")}</p>
       {/if}

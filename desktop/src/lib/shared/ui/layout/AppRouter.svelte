@@ -24,7 +24,7 @@
   />
 {/if}
 
-<div id="main-content" tabindex="-1" class="flex-1 overflow-y-auto relative" class:p-4={appState.route !== "reader"} class:md:p-6={appState.route !== "reader"}>
+<main id="main-content" tabindex="-1" class="flex-1 overflow-y-auto relative" class:p-4={appState.route !== "reader"} class:md:p-6={appState.route !== "reader"}>
   <!-- aria-live region for screen reader announcements of dynamic content -->
   <div aria-live="polite" aria-atomic="true" class="sr-only">
     {#if appState.importProgress}
@@ -161,4 +161,4 @@
     {/if}
   {/key}
   </div>
-</div>
+</main>

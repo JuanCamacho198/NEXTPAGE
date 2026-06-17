@@ -148,7 +148,7 @@
   let showTocPanel = $state(false);
   let showBookmarks = $state(false);
   let isFullscreen = $state(false);
-  let workspaceRoot: HTMLDivElement | null = $state(null);
+  let workspaceRoot: HTMLElement | null = $state(null);
 
   // TOC data from active viewer
   let tocEntries = $state<TocEntry[]>([]);
@@ -363,7 +363,7 @@
 </script>
 
 <!-- Full viewport reader layout -->
-<div class="flex h-screen flex-col bg-(--color-bg-deep)" bind:this={workspaceRoot}>
+<section class="flex h-screen flex-col bg-(--color-bg-deep)" bind:this={workspaceRoot}>
   <ReaderHeader
     title={activeReadingBook?.title ?? ""}
     {showTocPanel}
@@ -482,7 +482,7 @@
     {t}
   />
 
-</div>
+</section>
 
 <!-- Search Panel overlay -->
 {#if searchPanelOpen && activeReadingBook}

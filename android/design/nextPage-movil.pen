@@ -23692,7 +23692,6 @@
                       "gap": 16,
                       "padding": 16,
                       "alignItems": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "frame",
@@ -23793,7 +23792,6 @@
                       "gap": 8,
                       "padding": 16,
                       "justifyContent": "space_between",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "frame",
@@ -23883,7 +23881,6 @@
                       "gap": 8,
                       "padding": 16,
                       "justifyContent": "space_between",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "frame",
@@ -24021,7 +24018,6 @@
                   "layout": "vertical",
                   "gap": 24,
                   "padding": 16,
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "frame",
@@ -24494,7 +24490,6 @@
                       "padding": 16,
                       "justifyContent": "space_between",
                       "alignItems": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "frame",
@@ -24739,7 +24734,6 @@
                             12
                           ],
                           "alignItems": "center",
-                          "layoutIncludeStroke": true,
                           "children": [
                             {
                               "type": "rectangle",
@@ -24784,7 +24778,6 @@
                             12
                           ],
                           "alignItems": "center",
-                          "layoutIncludeStroke": true,
                           "children": [
                             {
                               "type": "rectangle",
@@ -24829,7 +24822,6 @@
                             12
                           ],
                           "alignItems": "center",
-                          "layoutIncludeStroke": true,
                           "children": [
                             {
                               "type": "rectangle",
@@ -24875,7 +24867,6 @@
                             12
                           ],
                           "alignItems": "center",
-                          "layoutIncludeStroke": true,
                           "children": [
                             {
                               "type": "rectangle",
@@ -25347,7 +25338,6 @@
                     14,
                     48
                   ],
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "frame",
@@ -26189,7 +26179,6 @@
                   "layout": "vertical",
                   "gap": 16,
                   "padding": 16,
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "frame",
@@ -26700,7 +26689,6 @@
                           "layout": "vertical",
                           "gap": 12,
                           "padding": 16,
-                          "layoutIncludeStroke": true,
                           "children": [
                             {
                               "type": "frame",
@@ -26773,7 +26761,6 @@
                           "layout": "vertical",
                           "gap": 12,
                           "padding": 16,
-                          "layoutIncludeStroke": true,
                           "children": [
                             {
                               "type": "frame",
@@ -26846,7 +26833,6 @@
                           "layout": "vertical",
                           "gap": 12,
                           "padding": 16,
-                          "layoutIncludeStroke": true,
                           "children": [
                             {
                               "type": "frame",
@@ -26919,7 +26905,6 @@
                           "layout": "vertical",
                           "gap": 12,
                           "padding": 16,
-                          "layoutIncludeStroke": true,
                           "children": [
                             {
                               "type": "frame",
@@ -26992,7 +26977,6 @@
                           "layout": "vertical",
                           "gap": 12,
                           "padding": 16,
-                          "layoutIncludeStroke": true,
                           "children": [
                             {
                               "type": "frame",
@@ -27065,7 +27049,6 @@
                           "layout": "vertical",
                           "gap": 12,
                           "padding": 16,
-                          "layoutIncludeStroke": true,
                           "children": [
                             {
                               "type": "frame",
@@ -27143,7 +27126,6 @@
               "padding": 16,
               "justifyContent": "center",
               "alignItems": "center",
-              "layoutIncludeStroke": true,
               "children": [
                 {
                   "type": "frame",
@@ -27403,7 +27385,6 @@
                         12
                       ],
                       "alignItems": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "frame",
@@ -27496,7 +27477,6 @@
                       "padding": 12,
                       "justifyContent": "center",
                       "alignItems": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "frame",
@@ -27603,7 +27583,6 @@
                       "padding": 12,
                       "justifyContent": "center",
                       "alignItems": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "frame",
@@ -27710,7 +27689,6 @@
                       "padding": 12,
                       "justifyContent": "center",
                       "alignItems": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "frame",
@@ -27814,7 +27792,6 @@
                           "layout": "vertical",
                           "padding": 4,
                           "justifyContent": "center",
-                          "layoutIncludeStroke": true,
                           "children": [
                             {
                               "type": "frame",
@@ -27852,7 +27829,6 @@
                             9,
                             4
                           ],
-                          "layoutIncludeStroke": true,
                           "children": [
                             {
                               "type": "path",
@@ -27973,7 +27949,6 @@
                   "layout": "vertical",
                   "gap": 12,
                   "padding": 16,
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "frame",
@@ -27995,7 +27970,6 @@
                           "strokeAlignment": "inner",
                           "justifyContent": "center",
                           "alignItems": "center",
-                          "layoutIncludeStroke": true,
                           "children": [
                             {
                               "type": "frame",
@@ -28283,7 +28257,6 @@
                               },
                               "justifyContent": "center",
                               "alignItems": "center",
-                              "layoutIncludeStroke": true,
                               "children": [
                                 {
                                   "type": "frame",
@@ -28448,7 +28421,6 @@
                               },
                               "justifyContent": "center",
                               "alignItems": "center",
-                              "layoutIncludeStroke": true,
                               "children": [
                                 {
                                   "type": "frame",
@@ -28613,7 +28585,6 @@
                               },
                               "justifyContent": "center",
                               "alignItems": "center",
-                              "layoutIncludeStroke": true,
                               "children": [
                                 {
                                   "type": "frame",
@@ -28773,7 +28744,6 @@
                               "strokeAlignment": "inner",
                               "justifyContent": "center",
                               "alignItems": "center",
-                              "layoutIncludeStroke": true,
                               "children": [
                                 {
                                   "type": "frame",
@@ -28899,7 +28869,6 @@
             31.75
           ],
           "alignItems": "center",
-          "layoutIncludeStroke": true,
           "children": [
             {
               "type": "frame",
@@ -29447,7 +29416,6 @@
                     8,
                     0
                   ],
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "text",
@@ -30067,7 +30035,6 @@
                     8,
                     0
                   ],
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "text",
@@ -30414,7 +30381,6 @@
                     8,
                     0
                   ],
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "text",
@@ -30731,6 +30697,1199 @@
                           ]
                         }
                       ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "iv8dZ",
+      "x": 4048,
+      "y": 1787,
+      "name": "Perfil Account",
+      "width": 390,
+      "fill": [
+        "#ffffffff",
+        "#0d1322ff"
+      ],
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "kvRCe",
+          "name": "Main Content Canvas",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 32,
+          "padding": [
+            32,
+            20,
+            128,
+            20
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "MtQmI",
+              "name": "Section - Identity Header",
+              "width": "fill_container",
+              "height": 242,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "MKz4c",
+                  "x": 122.72000122070312,
+                  "y": 176,
+                  "name": "Heading 1:margin",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    0,
+                    8,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "RFFnn",
+                      "name": "Heading 1 → Alex Reader",
+                      "fill": "#dde2f8ff",
+                      "content": "Alex Reader",
+                      "lineHeight": 1.3333333333333333,
+                      "textAlignVertical": "middle",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Cxw5X",
+                  "x": 101.87999725341797,
+                  "y": 208,
+                  "name": "Overlay+Border",
+                  "fill": "#4d8eff0a",
+                  "cornerRadius": 9999,
+                  "stroke": "#adc6ff17",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "padding": [
+                    6.5,
+                    16,
+                    5.5,
+                    16
+                  ],
+                  "layoutIncludeStroke": true,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "W7hZ7",
+                      "name": "Text",
+                      "fill": "#adc6ffff",
+                      "content": "Bibliófilo de Oro",
+                      "lineHeight": 1.4285714285714286,
+                      "textAlignVertical": "middle",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600",
+                      "letterSpacing": 0.2800000011920929
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jUTTq",
+                  "x": 111,
+                  "y": 32,
+                  "name": "Margin",
+                  "width": 128,
+                  "height": 144,
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    0,
+                    16,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "GBBDe",
+                      "name": "Overlay+Border+Shadow",
+                      "clip": true,
+                      "width": 128,
+                      "height": 128,
+                      "fill": "#ffffff00",
+                      "cornerRadius": 9999,
+                      "stroke": "#242a3aff",
+                      "strokeWidth": 4,
+                      "strokeAlignment": "inner",
+                      "effect": [
+                        {
+                          "type": "shadow",
+                          "shadowType": "outer",
+                          "color": "#0000001a",
+                          "offset": {
+                            "x": 0,
+                            "y": 4
+                          },
+                          "blur": 5.25,
+                          "spread": -4
+                        },
+                        {
+                          "type": "shadow",
+                          "shadowType": "outer",
+                          "color": "#0000001a",
+                          "offset": {
+                            "x": 0,
+                            "y": 10
+                          },
+                          "blur": 13.125,
+                          "spread": -3
+                        }
+                      ],
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "layoutIncludeStroke": true,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Skm17",
+                          "name": "AB6AXuD7RNKa7wwrOvo6EIo5pbgYXYYWnGHsf_T8qWngikhsH-Yirhac2OthbK4sM8KuoviXBVGMmIHMVTNL-JQE9jizN1tqO1FON6R7sZiy3k80DiL5cZj7j3cSRd_luzeOJnq8-Ttfz-k_Yfy7F-c9Z_joATwY3VlVNre160GoOKD3BPplmJJconpEhMHG5lk1OV1myszWkP-iGKsq6KxCttRV8q0d_Q-nPP_l6oPMuHBK2rFpxf8eDjL_8u-eYI77OOCXvSwdAgtnwP8",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "mode": "stretch"
+                          },
+                          "layout": "none"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "khlIf",
+              "name": "Section - Quick Stats Grid",
+              "width": "fill_container",
+              "height": 244,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "YmcNz",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Stat Card 1",
+                  "width": 167,
+                  "fill": "#191f2fff",
+                  "cornerRadius": 12,
+                  "stroke": "#ffffff01",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 16,
+                  "layoutIncludeStroke": true,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "b13CA",
+                      "name": "Container",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "VGmV9",
+                          "name": "Container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "lwc5m",
+                              "name": "Icon",
+                              "geometry": "M4.70833 10.02083l-4.70833-4.70833 1.1875-1.16667 3.54167 3.54167 0 0 1.16666 1.16667-1.1875 1.16666 0 0m4.70834 0l-4.70834-4.70833 1.16667-1.1875 3.54167 3.54167 7.66666-7.66667 1.16667 1.1875-8.83333 8.83333 0 0m0-4.70833l-1.1875-1.16667 4.125-4.125 1.1875 1.16667-4.125 4.125 0 0",
+                              "fill": "#c2c6d6ff",
+                              "width": 18.25,
+                              "height": 10.020833015441895
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "yAtGX",
+                          "name": "Container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            6.800000190734863,
+                            0,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "B2Bp41",
+                              "name": "Text",
+                              "fill": "#c2c6d6ff",
+                              "content": "LIBROS\nCOMPLETADOS",
+                              "lineHeight": 1.3333333333333333,
+                              "textAlignVertical": "middle",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500",
+                              "letterSpacing": 0.6000000238418579
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "MdSSf",
+                      "name": "Container",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "dQ94E",
+                          "name": "Text",
+                          "fill": "#dde2f8ff",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "12",
+                          "lineHeight": 1.25,
+                          "textAlignVertical": "middle",
+                          "fontFamily": "Inter",
+                          "fontSize": 32,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "U49Bcm",
+                  "x": 183,
+                  "y": 0,
+                  "name": "Stat Card 2",
+                  "width": 167,
+                  "fill": "#191f2fff",
+                  "cornerRadius": 12,
+                  "stroke": "#ffffff01",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 16,
+                  "layoutIncludeStroke": true,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "HWlGn",
+                      "name": "Container",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Zgr7H",
+                          "name": "Container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "dDmis",
+                              "name": "Icon",
+                              "geometry": "M5 1.66667l0-1.66667 5 0 0 1.66667-5 0 0 0m1.66667 9.16666l1.66666 0 0-5-1.66666 0 0 5 0 0m0.83333 6.66667c-1.02778 0-1.99653-0.19792-2.90625-0.59375-0.90972-0.39583-1.70486-0.93403-2.38542-1.61458-0.68056-0.68056-1.21875-1.47569-1.61458-2.38542-0.39583-0.90972-0.59375-1.87847-0.59375-2.90625 0-1.02778 0.19792-1.99653 0.59375-2.90625 0.39583-0.90972 0.93403-1.70486 1.61458-2.38542 0.68056-0.68056 1.47569-1.21875 2.38542-1.61458 0.90972-0.39583 1.87847-0.59375 2.90625-0.59375 0.86111 0 1.6875 0.13889 2.47917 0.41667 0.79167 0.27778 1.53472 0.68056 2.22916 1.20833l1.16667-1.16667 1.16667 1.16667-1.16667 1.16667c0.52778 0.69444 0.93056 1.4375 1.20833 2.22916 0.27778 0.79167 0.41667 1.61806 0.41667 2.47917 0 1.02778-0.19792 1.99653-0.59375 2.90625-0.39583 0.90972-0.93403 1.70486-1.61458 2.38542-0.68056 0.68056-1.47569 1.21875-2.38542 1.61458-0.90972 0.39583-1.87847 0.59375-2.90625 0.59375l0 0",
+                              "fill": "#c2c6d6ff",
+                              "width": 15,
+                              "height": 17.5
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "F1vwg",
+                          "name": "Container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            44.189998626708984,
+                            0,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ysURe",
+                              "name": "Text",
+                              "fill": "#c2c6d6ff",
+                              "content": "MINUTOS\nTOTALES",
+                              "lineHeight": 1.3333333333333333,
+                              "textAlignVertical": "middle",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500",
+                              "letterSpacing": 0.6000000238418579
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "VY1cQ",
+                      "name": "Container",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "rj3vU",
+                          "name": "Text",
+                          "fill": "#dde2f8ff",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "7,455m",
+                          "lineHeight": 1.25,
+                          "textAlignVertical": "middle",
+                          "fontFamily": "Inter",
+                          "fontSize": 32,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qTEOg",
+                  "x": 0,
+                  "y": 130,
+                  "name": "Stat Card 3",
+                  "width": 167,
+                  "fill": "#191f2fff",
+                  "cornerRadius": 12,
+                  "stroke": "#ffffff01",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": [
+                    16,
+                    16,
+                    20,
+                    16
+                  ],
+                  "layoutIncludeStroke": true,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "dv2wf",
+                      "name": "Container",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "c1Jo9",
+                          "name": "Container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "dewR6",
+                              "name": "Icon",
+                              "geometry": "M0 9.16667c0-1.45833 0.34722-2.75694 1.04167-3.89584 0.69444-1.13889 1.45833-2.09722 2.29166-2.875 0.83333-0.77778 1.59722-1.37153 2.29167-1.78125 0.69444-0.40972 1.04167-0.61458 1.04167-0.61458l0 2.75c0 0.51389 0.17361 0.92014 0.52083 1.21875 0.34722 0.29861 0.73611 0.44792 1.16667 0.44792 0.23611 0 0.46181-0.04861 0.67708-0.14584 0.21528-0.09722 0.41319-0.25694 0.59375-0.47916l0.375-0.45834c1 0.58333 1.80556 1.39236 2.41667 2.42709 0.61111 1.03472 0.91667 2.17014 0.91666 3.40625 0 1.22222-0.29861 2.33681-0.89583 3.34375-0.59722 1.00694-1.38194 1.80208-2.35417 2.38541 0.23611-0.33333 0.42014-0.69792 0.55209-1.09375 0.13194-0.39583 0.19792-0.81597 0.19791-1.26041 0-0.55556-0.10417-1.07986-0.3125-1.57292-0.20833-0.49306-0.50694-0.93403-0.89583-1.32292l-2.95833-2.89583-2.9375 2.89583c-0.40278 0.40278-0.70833 0.84722-0.91667 1.33334-0.20833 0.48611-0.3125 1.00694-0.3125 1.5625 0 0.44444 0.06597 0.86458 0.19792 1.26041 0.13194 0.39583 0.31597 0.76042 0.55208 1.09375-0.97222-0.58333-1.75694-1.37847-2.35417-2.38541-0.59722-1.00694-0.89583-2.12153-0.89583-3.34375l0 0m6.66667-0.08334l1.77083 1.72917c0.23611 0.23611 0.41667 0.5 0.54167 0.79167 0.125 0.29167 0.1875 0.60417 0.1875 0.9375 0 0.68056-0.24306 1.26042-0.72917 1.73958-0.48611 0.47917-1.07639 0.71875-1.77083 0.71875-0.69444 0-1.28472-0.23958-1.77084-0.71875-0.48611-0.47917-0.72917-1.05903-0.72916-1.73958 0-0.31944 0.0625-0.62847 0.1875-0.92709 0.125-0.29861 0.30556-0.56597 0.54166-0.80208l1.77084-1.72917 0 0",
+                              "fill": "#c2c6d6ff",
+                              "width": 13.333333015441895,
+                              "height": 15
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "sSAJS",
+                          "name": "Container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ucrKw",
+                              "name": "Text",
+                              "fill": "#c2c6d6ff",
+                              "content": "RACHA ACTUAL",
+                              "lineHeight": 1.3333333333333333,
+                              "textAlignVertical": "middle",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500",
+                              "letterSpacing": 0.6000000238418579
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "J9ya9",
+                      "name": "Container",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "nZoeS",
+                          "name": "Text",
+                          "fill": "#dde2f8ff",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "15 días",
+                          "lineHeight": 1.25,
+                          "textAlignVertical": "middle",
+                          "fontFamily": "Inter",
+                          "fontSize": 32,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "W6PzSX",
+                  "x": 183,
+                  "y": 130,
+                  "name": "Stat Card 4",
+                  "width": 167,
+                  "fill": "#191f2fff",
+                  "cornerRadius": 12,
+                  "stroke": "#ffffff01",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 16,
+                  "layoutIncludeStroke": true,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "kotiL",
+                      "name": "Container",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "gDTkf",
+                          "name": "Container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "V90xU",
+                              "name": "Icon",
+                              "geometry": "M3.33333 11.66667l1.66667 0 0-4.16667-1.66667 0 0 4.16667 0 0m6.66667 0l1.66667 0 0-8.33334-1.66667 0 0 8.33334 0 0m-3.33333 0l1.66666 0 0-2.5-1.66666 0 0 2.5 0 0m0-4.16667l1.66666 0 0-1.66667-1.66666 0 0 1.66667 0 0m-5 7.5c-0.45833 0-0.85069-0.16319-1.17709-0.48958-0.32639-0.32639-0.48958-0.71875-0.48958-1.17709l0-11.66666c0-0.45833 0.16319-0.85069 0.48958-1.17709 0.32639-0.32639 0.71875-0.48958 1.17709-0.48958l11.66666 0c0.45833 0 0.85069 0.16319 1.17709 0.48958 0.32639 0.32639 0.48958 0.71875 0.48958 1.17709l0 11.66666c0 0.45833-0.16319 0.85069-0.48958 1.17709-0.32639 0.32639-0.71875 0.48958-1.17709 0.48958l-11.66666 0 0 0",
+                              "fill": "#c2c6d6ff",
+                              "width": 15,
+                              "height": 15
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "cjJrN",
+                          "name": "Container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            36.20000076293945,
+                            0,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "iK2QI",
+                              "name": "Text",
+                              "fill": "#c2c6d6ff",
+                              "content": "PROMEDIO\nDIARIO",
+                              "lineHeight": 1.3333333333333333,
+                              "textAlignVertical": "middle",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500",
+                              "letterSpacing": 0.6000000238418579
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "q8IsO",
+                      "name": "Container",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "f6F0mF",
+                          "name": "Text",
+                          "fill": "#dde2f8ff",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "45 min",
+                          "lineHeight": 1.25,
+                          "textAlignVertical": "middle",
+                          "fontFamily": "Inter",
+                          "fontSize": 32,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "AY1Xp",
+              "name": "Section - Account Actions List",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "kUUzN",
+                  "name": "Button",
+                  "width": "fill_container",
+                  "fill": "#191f2fff",
+                  "cornerRadius": 12,
+                  "stroke": "#00000000",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 119.95999908447266,
+                  "padding": 16,
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "layoutIncludeStroke": true,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "jMwX4",
+                      "name": "Container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "nKXhB",
+                          "name": "Container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "c5e6u",
+                              "name": "Icon",
+                              "geometry": "M8 12l-5-5 1.4-1.45 2.6 2.6 0-8.15 2 0 0 8.15 2.6-2.6 1.4 1.45-5 5 0 0m-6 4c-0.55 0-1.02083-0.19583-1.4125-0.5875-0.39167-0.39167-0.5875-0.8625-0.5875-1.4125l0-3 2 0 0 3 0 0 0 0 12 0 0 0 0 0 0-3 2 0 0 3c0 0.55-0.19583 1.02083-0.5875 1.4125-0.39167 0.39167-0.8625 0.5875-1.4125 0.5875l-12 0 0 0",
+                              "fill": "#adc6ffff",
+                              "width": 16,
+                              "height": 16
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "of25C",
+                          "name": "Container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "YtGSh",
+                              "name": "Text",
+                              "fill": "#dde2f8ff",
+                              "content": "Descargar mis datos",
+                              "lineHeight": 1.4285714285714286,
+                              "textAlignVertical": "middle",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "P7EU8",
+                      "name": "Container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "path",
+                          "id": "j6H2Nu",
+                          "name": "Icon",
+                          "geometry": "M4.6 6l-4.6-4.6 1.4-1.4 6 6-6 6-1.4-1.4 4.6-4.6 0 0",
+                          "fill": "#c2c6d6ff",
+                          "width": 7.400000095367432,
+                          "height": 12
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "AWe3H",
+                  "name": "Button",
+                  "width": "fill_container",
+                  "fill": "#191f2fff",
+                  "cornerRadius": 12,
+                  "stroke": "#00000000",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 122.51000213623047,
+                  "padding": 16,
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "layoutIncludeStroke": true,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Nry6F",
+                      "name": "Container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "sbd9E",
+                          "name": "Container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "QiuUK",
+                              "name": "Icon",
+                              "geometry": "M10 20c-1.38333 0-2.68333-0.2625-3.9-0.7875-1.21667-0.525-2.275-1.2375-3.175-2.1375-0.9-0.9-1.6125-1.95833-2.1375-3.175-0.525-1.21667-0.7875-2.51667-0.7875-3.9l2 0c0 1.1 0.20833 2.1375 0.625 3.1125 0.41667 0.975 0.9875 1.825 1.7125 2.55 0.725 0.725 1.575 1.3 2.55 1.725 0.975 0.425 2.0125 0.6375 3.1125 0.6375 2.23333 0 4.125-0.775 5.675-2.325 1.55-1.55 2.325-3.44167 2.325-5.675 0-2.23333-0.775-4.125-2.325-5.675-1.55-1.55-3.44167-2.325-5.675-2.325-1.48333 0-2.82917 0.3625-4.0375 1.0875-1.20833 0.725-2.1625 1.6875-2.8625 2.8875l2.9 0 0 2-6 0 0-6 2 0 0 2c0.91667-1.21667 2.06667-2.1875 3.45-2.9125 1.38333-0.725 2.9-1.0875 4.55-1.0875 1.38333 0 2.68333 0.2625 3.9 0.7875 1.21667 0.525 2.275 1.2375 3.175 2.1375 0.9 0.9 1.6125 1.95833 2.1375 3.175 0.525 1.21667 0.7875 2.51667 0.7875 3.9 0 1.38333-0.2625 2.68333-0.7875 3.9-0.525 1.21667-1.2375 2.275-2.1375 3.175-0.9 0.9-1.95833 1.6125-3.175 2.1375-1.21667 0.525-2.51667 0.7875-3.9 0.7875l0 0m-2-6c-0.28333 0-0.52083-0.09583-0.7125-0.2875-0.19167-0.19167-0.2875-0.42917-0.2875-0.7125l0-3c0-0.28333 0.09583-0.52083 0.2875-0.7125 0.19167-0.19167 0.42917-0.2875 0.7125-0.2875l0-1c0-0.55 0.19583-1.02083 0.5875-1.4125 0.39167-0.39167 0.8625-0.5875 1.4125-0.5875 0.55 0 1.02083 0.19583 1.4125 0.5875 0.39167 0.39167 0.5875 0.8625 0.5875 1.4125l0 1c0.28333 0 0.52083 0.09583 0.7125 0.2875 0.19167 0.19167 0.2875 0.42917 0.2875 0.7125l0 3c0 0.28333-0.09583 0.52083-0.2875 0.7125-0.19167 0.19167-0.42917 0.2875-0.7125 0.2875l-4 0 0 0m1-5l2 0 0-1c0-0.28333-0.09583-0.52083-0.2875-0.7125-0.19167-0.19167-0.42917-0.2875-0.7125-0.2875-0.28333 0-0.52083 0.09583-0.7125 0.2875-0.19167 0.19167-0.2875 0.42917-0.2875 0.7125l0 1 0 0",
+                              "fill": "#adc6ffff",
+                              "width": 20,
+                              "height": 20
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "oMP02",
+                          "name": "Container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "uArh3",
+                              "name": "Text",
+                              "fill": "#dde2f8ff",
+                              "content": "Cambiar contraseña",
+                              "lineHeight": 1.4285714285714286,
+                              "textAlignVertical": "middle",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZDNtH",
+                      "name": "Container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "path",
+                          "id": "tMEqx",
+                          "name": "Icon",
+                          "geometry": "M4.6 6l-4.6-4.6 1.4-1.4 6 6-6 6-1.4-1.4 4.6-4.6 0 0",
+                          "fill": "#c2c6d6ff",
+                          "width": 7.400000095367432,
+                          "height": 12
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ssyvM",
+                  "name": "Button:margin",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    16,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "jlHRD",
+                      "name": "Button",
+                      "width": "fill_container",
+                      "fill": "#191f2fff",
+                      "cornerRadius": 12,
+                      "stroke": "#00000000",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": 16,
+                      "alignItems": "center",
+                      "layoutIncludeStroke": true,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "LmkdR",
+                          "name": "Container",
+                          "gap": 12,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "wcrNe",
+                              "name": "Container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "ySjJP",
+                                  "name": "Icon",
+                                  "geometry": "M2 18c-0.55 0-1.02083-0.19583-1.4125-0.5875-0.39167-0.39167-0.5875-0.8625-0.5875-1.4125l0-14c0-0.55 0.19583-1.02083 0.5875-1.4125 0.39167-0.39167 0.8625-0.5875 1.4125-0.5875l7 0 0 2-7 0 0 0 0 0 0 14 0 0 0 0 7 0 0 2-7 0 0 0m11-4l-1.375-1.45 2.55-2.55-8.175 0 0-2 8.175 0-2.55-2.55 1.375-1.45 5 5-5 5 0 0",
+                                  "fill": "#c2c6d6ff",
+                                  "width": 18,
+                                  "height": 18
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "I91D0",
+                              "name": "Container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Anws5",
+                                  "name": "Text",
+                                  "fill": "#c2c6d6ff",
+                                  "content": "Cerrar sesión",
+                                  "lineHeight": 1.4285714285714286,
+                                  "textAlignVertical": "middle",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "d9HaXJ",
+                  "name": "Button:margin",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    8,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "vbxCD",
+                      "name": "Button",
+                      "width": "fill_container",
+                      "fill": "#191f2fff",
+                      "cornerRadius": 12,
+                      "stroke": "#00000000",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": 16,
+                      "alignItems": "center",
+                      "layoutIncludeStroke": true,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "EDAC5",
+                          "name": "Container",
+                          "gap": 12,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "h75IjL",
+                              "name": "Container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "anyZ4",
+                                  "name": "Icon",
+                                  "geometry": "M5.4 13.5l2.6-2.6 2.6 2.6 1.4-1.4-2.6-2.6 2.6-2.6-1.4-1.4-2.6 2.6-2.6-2.6-1.4 1.4 2.6 2.6-2.6 2.6 1.4 1.4 0 0m-2.4 4.5c-0.55 0-1.02083-0.19583-1.4125-0.5875-0.39167-0.39167-0.5875-0.8625-0.5875-1.4125l0-13-1 0 0-2 5 0 0-1 6 0 0 1 5 0 0 2-1 0 0 13c0 0.55-0.19583 1.02083-0.5875 1.4125-0.39167 0.39167-0.8625 0.5875-1.4125 0.5875l-10 0 0 0m10-15l-10 0 0 13 0 0 0 0 10 0 0 0 0 0 0-13 0 0m-10 0l0 0 0 13 0 0 0 0 0 0 0 0 0 0 0-13 0 0",
+                                  "fill": "#ffb4abff",
+                                  "width": 16,
+                                  "height": 18
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "RWnZf",
+                              "name": "Container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "BG95O",
+                                  "name": "Text",
+                                  "fill": "#ffb4abff",
+                                  "content": "Eliminar cuenta",
+                                  "lineHeight": 1.4285714285714286,
+                                  "textAlignVertical": "middle",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "bo147",
+          "layoutPosition": "absolute",
+          "x": 0,
+          "y": 906,
+          "name": "BottomNavBar",
+          "width": 390,
+          "fill": "#191f2fff",
+          "gap": 25.5,
+          "padding": [
+            8,
+            30.350000381469727,
+            16,
+            28.75
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "dkXmZ",
+              "name": "Link - Tab 1: Inicio (Inactive)",
+              "width": 64,
+              "layout": "vertical",
+              "padding": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Gmpv0",
+                  "name": "Margin",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "fGuaN",
+                      "name": "Icon",
+                      "geometry": "M2 16l3 0 0-6 6 0 0 6 3 0 0-9-6-4.5-6 4.5 0 9 0 0m-2 2l0-12 8-6 8 6 0 12-7 0 0-6-2 0 0 6-7 0 0 0m8-8.75l0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+                      "fill": "#9db2ffff",
+                      "width": 16,
+                      "height": 18
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "N1OYF",
+                  "name": "Container",
+                  "clip": true,
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "DmSM2",
+                      "name": "Text",
+                      "fill": "#9db2ffff",
+                      "content": "Inicio",
+                      "lineHeight": 1.3333333333333333,
+                      "textAlign": "center",
+                      "textAlignVertical": "middle",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "m1WPW",
+              "name": "Link - Tab 2: Estantería (Inactive)",
+              "width": 64,
+              "layout": "vertical",
+              "padding": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "EmQj6",
+                  "name": "Margin",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "N9HXHo",
+                      "name": "Icon",
+                      "geometry": "M8 12l4 0 0-2-4 0 0 2 0 0m0-3l8 0 0-2-8 0 0 2 0 0m0-3l8 0 0-2-8 0 0 2 0 0m-2 10c-0.55 0-1.02083-0.19583-1.4125-0.5875-0.39167-0.39167-0.5875-0.8625-0.5875-1.4125l0-12c0-0.55 0.19583-1.02083 0.5875-1.4125 0.39167-0.39167 0.8625-0.5875 1.4125-0.5875l12 0c0.55 0 1.02083 0.19583 1.4125 0.5875 0.39167 0.39167 0.5875 0.8625 0.5875 1.4125l0 12c0 0.55-0.19583 1.02083-0.5875 1.4125-0.39167 0.39167-0.8625 0.5875-1.4125 0.5875l-12 0 0 0m0-2l12 0 0 0 0 0 0-12 0 0 0 0-12 0 0 0 0 0 0 12 0 0 0 0 0 0m-4 6c-0.55 0-1.02083-0.19583-1.4125-0.5875-0.39167-0.39167-0.5875-0.8625-0.5875-1.4125l0-14 2 0 0 14 0 0 0 0 14 0 0 2-14 0 0 0m4-18l0 0 0 0 0 0 0 12 0 0 0 0 0 0 0 0 0 0 0-12 0 0 0 0 0 0",
+                      "fill": "#9db2ffff",
+                      "width": 20,
+                      "height": 20
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "RwQqa",
+                  "name": "Container",
+                  "clip": true,
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    1.2300000190734863,
+                    0,
+                    0
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "v5BeU",
+                      "name": "Text",
+                      "fill": "#9db2ffff",
+                      "content": "Estantería",
+                      "lineHeight": 1.3333333333333333,
+                      "textAlign": "center",
+                      "textAlignVertical": "middle",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "zwYXf",
+              "name": "Link - Tab 3: Explorar (Inactive)",
+              "width": 64,
+              "layout": "vertical",
+              "padding": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "U6XK5O",
+                  "name": "Margin",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "v3H2gP",
+                      "name": "Icon",
+                      "geometry": "M5.5 14.5l7-2 2-7-7 2-2 7 0 0m4.5-3c-0.41667 0-0.77083-0.14583-1.0625-0.4375-0.29167-0.29167-0.4375-0.64583-0.4375-1.0625 0-0.41667 0.14583-0.77083 0.4375-1.0625 0.29167-0.29167 0.64583-0.4375 1.0625-0.4375 0.41667 0 0.77083 0.14583 1.0625 0.4375 0.29167 0.29167 0.4375 0.64583 0.4375 1.0625 0 0.41667-0.14583 0.77083-0.4375 1.0625-0.29167 0.29167-0.64583 0.4375-1.0625 0.4375l0 0m0 8.5c-1.38333 0-2.68333-0.2625-3.9-0.7875-1.21667-0.525-2.275-1.2375-3.175-2.1375-0.9-0.9-1.6125-1.95833-2.1375-3.175-0.525-1.21667-0.7875-2.51667-0.7875-3.9 0-1.38333 0.2625-2.68333 0.7875-3.9 0.525-1.21667 1.2375-2.275 2.1375-3.175 0.9-0.9 1.95833-1.6125 3.175-2.1375 1.21667-0.525 2.51667-0.7875 3.9-0.7875 1.38333 0 2.68333 0.2625 3.9 0.7875 1.21667 0.525 2.275 1.2375 3.175 2.1375 0.9 0.9 1.6125 1.95833 2.1375 3.175 0.525 1.21667 0.7875 2.51667 0.7875 3.9 0 1.38333-0.2625 2.68333-0.7875 3.9-0.525 1.21667-1.2375 2.275-2.1375 3.175-0.9 0.9-1.95833 1.6125-3.175 2.1375-1.21667 0.525-2.51667 0.7875-3.9 0.7875l0 0m0-2c2.21667 0 4.10417-0.77917 5.6625-2.3375 1.55833-1.55833 2.3375-3.44583 2.3375-5.6625 0-2.21667-0.77917-4.10417-2.3375-5.6625-1.55833-1.55833-3.44583-2.3375-5.6625-2.3375-2.21667 0-4.10417 0.77917-5.6625 2.3375-1.55833 1.55833-2.3375 3.44583-2.3375 5.6625 0 2.21667 0.77917 4.10417 2.3375 5.6625 1.55833 1.55833 3.44583 2.3375 5.6625 2.3375l0 0m0-8l0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+                      "fill": "#9db2ffff",
+                      "width": 20,
+                      "height": 20
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "LNTZg",
+                  "name": "Container",
+                  "clip": true,
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "LTaXK",
+                      "name": "Text",
+                      "fill": "#9db2ffff",
+                      "content": "Explorar",
+                      "lineHeight": 1.3333333333333333,
+                      "textAlign": "center",
+                      "textAlignVertical": "middle",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "V5uvU",
+              "name": "Link - Tab 4: Ajustes (Active):css-transform",
+              "height": 60,
+              "layout": "vertical",
+              "padding": [
+                1.5,
+                1.4210854715202004e-14,
+                1.5,
+                1.600000023841858
+              ],
+              "justifyContent": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "sOoDF",
+                  "name": "Link - Tab 4: Ajustes (Active)",
+                  "width": 64,
+                  "fill": "#4d8effff",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": -0.21052631735801697,
+                  "padding": 8,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ZfEft",
+                      "name": "Margin",
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        0,
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "path",
+                          "id": "xEEsO",
+                          "name": "Icon",
+                          "geometry": "M8 8c-1.1 0-2.04167-0.39167-2.825-1.175-0.78333-0.78333-1.175-1.725-1.175-2.825 0-1.1 0.39167-2.04167 1.175-2.825 0.78333-0.78333 1.725-1.175 2.825-1.175 1.1 0 2.04167 0.39167 2.825 1.175 0.78333 0.78333 1.175 1.725 1.175 2.825 0 1.1-0.39167 2.04167-1.175 2.825-0.78333 0.78333-1.725 1.175-2.825 1.175l0 0m-8 8l0-2.8c0-0.56667 0.14583-1.0875 0.4375-1.5625 0.29167-0.475 0.67917-0.8375 1.1625-1.0875 1.03333-0.51667 2.08333-0.90417 3.15-1.1625 1.06667-0.25833 2.15-0.3875 3.25-0.3875 1.1 0 2.18333 0.12917 3.25 0.3875 1.06667 0.25833 2.11667 0.64583 3.15 1.1625 0.48333 0.25 0.87083 0.6125 1.1625 1.0875 0.29167 0.475 0.4375 0.99583 0.4375 1.5625l0 2.8-16 0 0 0",
+                          "fill": "#00285dff",
+                          "width": 16,
+                          "height": 16
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ehmvz",
+                      "name": "Container",
+                      "clip": true,
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "T2sevb",
+                          "name": "Text",
+                          "fill": "#00285dff",
+                          "content": "Ajustes",
+                          "lineHeight": 1.3333333333333333,
+                          "textAlign": "center",
+                          "textAlignVertical": "middle",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 9999,
+                      "id": "lzeDT",
+                      "layoutPosition": "absolute",
+                      "x": 56,
+                      "y": -4,
+                      "name": "Background+Border",
+                      "fill": "#ffb4abff",
+                      "width": 12,
+                      "height": 12,
+                      "stroke": "#191f2fff",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner"
                     }
                   ]
                 }

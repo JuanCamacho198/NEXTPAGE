@@ -456,7 +456,8 @@ private fun com.nextpage.data.local.entity.HighlightEntity.toDomain(): com.nextp
         updatedAtEpochMillis = updatedAtEpochMillis,
         deletedAtEpochMillis = deletedAtEpochMillis,
         locatorJson = locatorJson,
-        type = type
+        type = type,
+        tag = tag
     )
 
 private fun com.nextpage.domain.model.Highlight.toEntity(): com.nextpage.data.local.entity.HighlightEntity =
@@ -470,7 +471,8 @@ private fun com.nextpage.domain.model.Highlight.toEntity(): com.nextpage.data.lo
         updatedAtEpochMillis = updatedAtEpochMillis,
         deletedAtEpochMillis = deletedAtEpochMillis,
         locatorJson = locatorJson,
-        type = type
+        type = type,
+        tag = tag
     )
 
 private fun com.nextpage.data.local.entity.BookmarkEntity.toDomain(): com.nextpage.domain.model.Bookmark =

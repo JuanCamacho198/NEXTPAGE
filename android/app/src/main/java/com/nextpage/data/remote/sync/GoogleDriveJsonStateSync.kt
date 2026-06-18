@@ -45,7 +45,8 @@ data class HighlightStateJson(
     @SerializedName("updated_at")
     override val updatedAtEpochMillis: Long,
     @SerializedName("deleted_at")
-    override val deletedAtEpochMillis: Long? = null
+    override val deletedAtEpochMillis: Long? = null,
+    val tag: String? = null
 ) : VersionedSyncRecord {
     override val recordId: String get() = id
 }
@@ -222,7 +223,8 @@ private fun Highlight.toStateJson(): HighlightStateJson = HighlightStateJson(
     note = note,
     color = color,
     updatedAtEpochMillis = updatedAtEpochMillis,
-    deletedAtEpochMillis = deletedAtEpochMillis
+    deletedAtEpochMillis = deletedAtEpochMillis,
+    tag = tag
 )
 
 private fun HighlightStateJson.toDomain(bookId: String): Highlight = Highlight(
@@ -233,7 +235,8 @@ private fun HighlightStateJson.toDomain(bookId: String): Highlight = Highlight(
     note = note,
     color = color,
     updatedAtEpochMillis = updatedAtEpochMillis,
-    deletedAtEpochMillis = deletedAtEpochMillis
+    deletedAtEpochMillis = deletedAtEpochMillis,
+    tag = tag
 )
 
 private fun Bookmark.toStateJson(): BookmarkStateJson = BookmarkStateJson(

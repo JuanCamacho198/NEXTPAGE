@@ -443,4 +443,26 @@
     <string name="context_menu_dictionary">Agregar al diccionario</string>
     <string name="reader_add_to_dictionary">Agregado al diccionario</string>
     <string name="reader_already_in_dictionary">Ya está en el diccionario</string>
+
+    <!-- Library Context Menu -->
+    <string name="library_menu_mark_completed">Marcar como leído</string>
+    <string name="library_menu_mark_plan_to_read">Planeo leer</string>
+    <string name="library_menu_share">Compartir archivo</string>
+
+    <!-- Edit Metadata -->
+    <string name="edit_metadata_title">Editar metadatos</string>
+    <string name="edit_metadata_field_title">Título</string>
+    <string name="edit_metadata_field_author">Autor</string>
+    <string name="edit_metadata_field_synopsis">Sinopsis</string>
+    <string name="edit_metadata_field_cover">Portada</string>
+    <string name="edit_metadata_change_cover">Cambiar portada</string>
+    <string name="edit_metadata_save">Guardar</string>
+
+    <!-- Library Snackbars -->
+    <string name="library_snackbar_marked_completed">Marcado como leído</string>
+    <string name="library_snackbar_marked_plan_to_read">Marcado como Planeo leer</string>
+    <string name="library_snackbar_metadata_saved">Metadatos actualizados</string>
+
+    <!-- Share -->
+    <string name="library_share_chooser_title">Compartir libro</string>
 </resources>

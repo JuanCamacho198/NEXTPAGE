@@ -500,4 +500,26 @@
     <string name="context_menu_dictionary">Add to Dictionary</string>
     <string name="reader_add_to_dictionary">Added to dictionary</string>
     <string name="reader_already_in_dictionary">Already in dictionary</string>
+
+    <!-- Library Context Menu -->
+    <string name="library_menu_mark_completed">Mark as read</string>
+    <string name="library_menu_mark_plan_to_read">Plan to Read</string>
+    <string name="library_menu_share">Share file</string>
+
+    <!-- Edit Metadata -->
+    <string name="edit_metadata_title">Edit metadata</string>
+    <string name="edit_metadata_field_title">Title</string>
+    <string name="edit_metadata_field_author">Author</string>
+    <string name="edit_metadata_field_synopsis">Synopsis</string>
+    <string name="edit_metadata_field_cover">Cover</string>
+    <string name="edit_metadata_change_cover">Change cover</string>
+    <string name="edit_metadata_save">Save</string>
+
+    <!-- Library Snackbars -->
+    <string name="library_snackbar_marked_completed">Marked as read</string>
+    <string name="library_snackbar_marked_plan_to_read">Marked as Plan to Read</string>
+    <string name="library_snackbar_metadata_saved">Metadata updated</string>
+
+    <!-- Share -->
+    <string name="library_share_chooser_title">Share book</string>
 </resources>

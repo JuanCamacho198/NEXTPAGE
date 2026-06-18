@@ -6,6 +6,7 @@
   import type { ReaderSettings, ReaderThemeMode, ReaderTextAlign, ReaderDirection } from '$lib/shared/types';
   import EpubControls from './epub/EpubControls.svelte';
   import { setReaderError, clearReaderError } from "$lib/stores/readerErrorState.svelte";
+  import { debugState } from "$lib/shared/debug/debugState.svelte";
 
   // ─── Types ───────────────────────────────────────────────
   interface EpubChapterMeta {
@@ -92,7 +93,6 @@
     isFullscreen = false,
     onTocReady,
     externalTocNavigate = null,
-    showToc = false,
     onToggleFullscreen,
     onToggleToc,
     onSettingsChange,
@@ -247,9 +247,12 @@
       // Index EPUB text for full-text search.
       // The Rust command `index_epub_text` (camelCase: `indexEpubText`) reads the
       // cached chapter files and indexes into FTS5.
-      invoke('indexEpubText', { bookId }).catch((err: unknown) => {
-        console.warn('Failed to index EPUB text for search', err);
-      });
+      // NOTE: hidden behind debug flag since the command is not yet implemented in Rust.
+      if (debugState.enabled) {
+        invoke('indexEpubText', { bookId }).catch((err: unknown) => {
+          console.warn('Failed to index EPUB text for search', err);
+        });
+      }
       clearReaderError();
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);

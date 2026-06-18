@@ -121,13 +121,6 @@ fun NextPageNavHost(
         )
     )
 
-    val homeViewModel: HomeViewModel = viewModel(
-        factory = HomeViewModelFactory(
-            homeRepository = appContainer.homeRepository,
-            authSession = authState.currentSession
-        )
-    )
-
     val authViewModel: AuthViewModel = viewModel(
         factory = AuthViewModel.Factory(
             authRepository = appContainer.authRepository,
@@ -137,14 +130,21 @@ fun NextPageNavHost(
         )
     )
 
+    val authState by authViewModel.uiState.collectAsState()
+    val isAuthenticated = authState.currentSession != null
+
+    val homeViewModel: HomeViewModel = viewModel(
+        factory = HomeViewModelFactory(
+            homeRepository = appContainer.homeRepository,
+            authSession = authState.currentSession
+        )
+    )
+
     val debugViewModel: DebugViewModel = viewModel(
         factory = DebugViewModel.Factory(appContainer)
     )
 
     var showDebugSheet by remember { mutableStateOf(false) }
-
-    val authState by authViewModel.uiState.collectAsState()
-    val isAuthenticated = authState.currentSession != null
 
     // ── Global Error/UI Event Collection ───────────────────────────
     listOf(

@@ -286,6 +286,8 @@ class LibraryRepositoryImplTest {
 
         override fun observeTotalMinutesRead(): Flow<Long?> = totalMinutesState
 
+        override fun observeTotalMinutesReadForUser(userId: String): Flow<Long?> = totalMinutesState
+
         override suspend fun deleteForBook(bookId: String) = Unit
     }
 }

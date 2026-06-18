@@ -166,8 +166,7 @@
   let activeHighlightColor = $state<string>("");
   let highlightToolbarPos = $state<{ x: number; y: number } | null>(null);
 
-  let viewportWidth = $state(0);
-  let viewportHeight = $state(0);
+
 
   let activeLoadRequestId = 0;
   let activeNavigationRequestId = 0;
@@ -189,7 +188,9 @@
     `brightness(${clamp(readerSettings.brightness, 50, 150)}%) contrast(${clamp(readerSettings.contrast, 50, 150)}%)`,
   );
   const canvasWrapperStyle = $derived(
-    `width: ${viewportWidth ? viewportWidth + 'px' : 'auto'}; height: ${viewportHeight ? viewportHeight + 'px' : 'auto'};`
+    // Don't constrain wrapper to viewport — let the canvas dictate size.
+    // overflow-auto on .pdf-canvas-container handles scrolling when zoomed in.
+    `` // empty: canvas's own style.width / style.height drive the layout
   );
 
   // PDF renders at its intrinsic size — EPUB text margins are inappropriate here.
@@ -497,9 +498,6 @@
     canvas.style.width = `${viewport.width}px`;
     canvas.style.height = `${viewport.height}px`;
 
-    viewportWidth = viewport.width;
-    viewportHeight = viewport.height;
-
     if (debugState.enabled) {
       debugState.readerInfo = {
         format: "pdf", isTocOpen: showToc, isSearchOpen: false,
@@ -594,7 +592,9 @@
 
   function updateSelectionState(): void {
     const selection = window.getSelection();
-    console.log("PDF Selection Update:", selection?.toString().trim());
+    if (debugState.enabled) {
+      console.debug("PDF Selection Update:", selection?.toString().trim());
+    }
 
     if (!selection || selection.rangeCount === 0) { clearSelectionUi(); return; }
     const text = selection.toString().trim();
@@ -863,9 +863,6 @@
         canvas.style.width = `${viewport.width}px`;
         canvas.style.height = `${viewport.height}px`;
 
-        viewportWidth = viewport.width;
-        viewportHeight = viewport.height;
-
         const context = canvas.getContext("2d");
         if (!context) return;
         context.setTransform(1, 0, 0, 1, 0, 0);
@@ -978,32 +975,34 @@
           onNavigate={(item) => navigateToOutlineItem(item)}
         />
       {/if}
-      <div class="flex-1 overflow-auto flex items-center justify-center bg-(--pdf-reader-root-bg,var(--color-background))" bind:this={canvasContainer} onwheel={handleViewerWheel} style="padding: {canvasContainerPaddingStyle};">
-        <div class="relative inline-block" class:search-hit={flashSearchResult} style="isolation: isolate; {canvasWrapperStyle}">
-          <canvas bind:this={canvas} style="filter: {visualFilterStyle};"></canvas>
+      <div class="flex-1 overflow-auto bg-(--pdf-reader-root-bg,var(--color-background))" bind:this={canvasContainer} onwheel={handleViewerWheel} style="padding: {canvasContainerPaddingStyle};">
+        <div class="flex min-h-full items-center justify-center">
+          <div class="relative inline-block" class:search-hit={flashSearchResult} style="isolation: isolate; {canvasWrapperStyle}">
+            <canvas bind:this={canvas} style="filter: {visualFilterStyle};"></canvas>
 
-          <PdfSelectionOverlay
-            selectionOverlayRects={selectionOverlayRects}
-            {persistedHighlights}
-            {currentPage}
-            {scale}
-            {activeHighlightId}
-            {activeHighlightColor}
-            {highlightToolbarPos}
-            onHighlightClick={handleHighlightClick}
-            onHighlightColorPick={handleHighlightColorPick}
-            onHighlightDelete={handleHighlightDelete}
-            onDismissHighlightManager={dismissHighlightManager}
-          />
+            <PdfSelectionOverlay
+              selectionOverlayRects={selectionOverlayRects}
+              {persistedHighlights}
+              {currentPage}
+              {scale}
+              {activeHighlightId}
+              {activeHighlightColor}
+              {highlightToolbarPos}
+              onHighlightClick={handleHighlightClick}
+              onHighlightColorPick={handleHighlightColorPick}
+              onHighlightDelete={handleHighlightDelete}
+              onDismissHighlightManager={dismissHighlightManager}
+            />
 
-          <div
-            bind:this={textLayer}
-            class="textLayer"
-            draggable="false"
-            role="presentation"
-            ondragstart={(e) => e.preventDefault()}
-          ></div>
+            <div
+              bind:this={textLayer}
+              class="textLayer"
+              draggable="false"
+              role="presentation"
+              ondragstart={(e) => e.preventDefault()}
+            ></div>
 
+          </div>
         </div>
       </div>
     </div>

@@ -49,6 +49,9 @@ class HighlightsViewModel(
     private val bookFilter = MutableStateFlow<String?>(null)
     private val colorFilter = MutableStateFlow<String?>(null)
     private val searchQuery = MutableStateFlow("")
+    private val _highlightToEdit = MutableStateFlow<Highlight?>(null)
+    private val _highlightToDelete = MutableStateFlow<Highlight?>(null)
+    private val _editNoteText = MutableStateFlow("")
 
     val uiState: StateFlow<HighlightsUiState> = combine(
         readerRepository.observeAllHighlights(),
@@ -57,7 +60,10 @@ class HighlightsViewModel(
         typeFilter,
         bookFilter,
         colorFilter,
-        searchQuery
+        searchQuery,
+        _highlightToEdit,
+        _highlightToDelete,
+        _editNoteText
     ) { values ->
         val highlights = values[0] as List<Highlight>
         val bookmarks = values[1] as List<Bookmark>
@@ -66,6 +72,9 @@ class HighlightsViewModel(
         val book = values[4] as String?
         val color = values[5] as String?
         val query = values[6] as String
+        val highlightToEdit = values[7] as Highlight?
+        val highlightToDelete = values[8] as Highlight?
+        val editNoteText = values[9] as String
         HighlightsUiState(
             highlights = highlights,
             bookmarks = bookmarks,
@@ -75,6 +84,9 @@ class HighlightsViewModel(
             colorFilter = color,
             searchQuery = query,
             filteredHighlights = applyFilters(highlights, type, book, color, query),
+            highlightToEdit = highlightToEdit,
+            highlightToDelete = highlightToDelete,
+            editNoteText = editNoteText,
             isLoading = false
         )
     }
@@ -101,22 +113,17 @@ class HighlightsViewModel(
     }
 
     fun onEditHighlightNote(highlight: Highlight) {
-        mutableUiState.update {
-            it.copy(
-                highlightToEdit = highlight,
-                editNoteText = highlight.note ?: ""
-            )
-        }
+        _highlightToEdit.update { highlight }
+        _editNoteText.update { highlight.note ?: "" }
     }
 
     fun dismissEditHighlight() {
-        mutableUiState.update {
-            it.copy(highlightToEdit = null, editNoteText = "")
-        }
+        _highlightToEdit.update { null }
+        _editNoteText.update { "" }
     }
 
     fun onSaveHighlightNote(text: String) {
-        val highlight = mutableUiState.value.highlightToEdit ?: return
+        val highlight = _highlightToEdit.value ?: return
         val updated = highlight.copy(
             note = text.ifBlank { null },
             updatedAtEpochMillis = System.currentTimeMillis()
@@ -124,21 +131,20 @@ class HighlightsViewModel(
         viewModelScope.launch {
             readerRepository.upsertHighlight(updated)
         }
-        mutableUiState.update {
-            it.copy(highlightToEdit = null, editNoteText = "")
-        }
+        _highlightToEdit.update { null }
+        _editNoteText.update { "" }
     }
 
     fun onDeleteHighlight(highlight: Highlight) {
-        mutableUiState.update { it.copy(highlightToDelete = highlight) }
+        _highlightToDelete.update { highlight }
     }
 
     fun dismissDeleteHighlightDialog() {
-        mutableUiState.update { it.copy(highlightToDelete = null) }
+        _highlightToDelete.update { null }
     }
 
     fun confirmDeleteHighlight() {
-        val highlight = mutableUiState.value.highlightToDelete ?: return
+        val highlight = _highlightToDelete.value ?: return
         val updated = highlight.copy(
             deletedAtEpochMillis = System.currentTimeMillis(),
             updatedAtEpochMillis = System.currentTimeMillis()
@@ -147,7 +153,7 @@ class HighlightsViewModel(
             readerRepository.upsertHighlight(updated)
             _uiEvent.emit(UiEvent.ShowSnackbar("Highlight deleted"))
         }
-        mutableUiState.update { it.copy(highlightToDelete = null) }
+        _highlightToDelete.update { null }
     }
 
     private fun applyFilters(

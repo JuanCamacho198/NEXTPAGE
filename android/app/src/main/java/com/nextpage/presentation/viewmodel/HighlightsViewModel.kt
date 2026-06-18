@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.util.UUID
 
 data class HighlightsUiState(
     val highlights: List<Highlight> = emptyList(),
@@ -29,7 +31,10 @@ data class HighlightsUiState(
     val searchQuery: String = "",
     val filteredHighlights: List<Highlight> = emptyList(),
     val isLoading: Boolean = true,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val highlightToEdit: Highlight? = null,
+    val highlightToDelete: Highlight? = null,
+    val editNoteText: String = ""
 )
 
 class HighlightsViewModel(
@@ -93,6 +98,56 @@ class HighlightsViewModel(
 
     fun onSearchQueryChanged(query: String) {
         searchQuery.update { query }
+    }
+
+    fun onEditHighlightNote(highlight: Highlight) {
+        mutableUiState.update {
+            it.copy(
+                highlightToEdit = highlight,
+                editNoteText = highlight.note ?: ""
+            )
+        }
+    }
+
+    fun dismissEditHighlight() {
+        mutableUiState.update {
+            it.copy(highlightToEdit = null, editNoteText = "")
+        }
+    }
+
+    fun onSaveHighlightNote(text: String) {
+        val highlight = mutableUiState.value.highlightToEdit ?: return
+        val updated = highlight.copy(
+            note = text.ifBlank { null },
+            updatedAtEpochMillis = System.currentTimeMillis()
+        )
+        viewModelScope.launch {
+            readerRepository.upsertHighlight(updated)
+        }
+        mutableUiState.update {
+            it.copy(highlightToEdit = null, editNoteText = "")
+        }
+    }
+
+    fun onDeleteHighlight(highlight: Highlight) {
+        mutableUiState.update { it.copy(highlightToDelete = highlight) }
+    }
+
+    fun dismissDeleteHighlightDialog() {
+        mutableUiState.update { it.copy(highlightToDelete = null) }
+    }
+
+    fun confirmDeleteHighlight() {
+        val highlight = mutableUiState.value.highlightToDelete ?: return
+        val updated = highlight.copy(
+            deletedAtEpochMillis = System.currentTimeMillis(),
+            updatedAtEpochMillis = System.currentTimeMillis()
+        )
+        viewModelScope.launch {
+            readerRepository.upsertHighlight(updated)
+            _uiEvent.emit(UiEvent.ShowSnackbar("Highlight deleted"))
+        }
+        mutableUiState.update { it.copy(highlightToDelete = null) }
     }
 
     private fun applyFilters(

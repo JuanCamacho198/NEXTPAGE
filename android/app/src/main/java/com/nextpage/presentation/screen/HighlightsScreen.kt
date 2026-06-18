@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.FormatQuote
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -53,6 +54,7 @@ import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageEmptyState
 import com.nextpage.ui.components.atoms.NextPageTextField
 import com.nextpage.ui.components.molecules.FilterTab
+import com.nextpage.ui.components.molecules.HighlightAnnotationModal
 import com.nextpage.ui.components.molecules.NextPageFilterTabs
 import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.components.molecules.NextPageHighlightCard
@@ -239,15 +241,64 @@ fun HighlightsScreen(
         } else {
             items(uiState.filteredHighlights, key = { it.id }) { highlight ->
                 NextPageHighlightCard(
-                    content = "\"${highlight.textContent}\"",
+                    content = highlight.textContent,
                     accentColor = parseHighlightColor(highlight.color),
-                    note = highlight.note
+                    note = highlight.note,
+                    colorLabel = HighlightColor.fromHex(highlight.color)?.name?.lowercase()
+                        ?.replaceFirstChar { c -> c.uppercase() },
+                    onEditNote = { viewModel.onEditHighlightNote(highlight) },
+                    onDelete = { viewModel.onDeleteHighlight(highlight) }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
 
         item { Spacer(modifier = Modifier.height(16.dp)) }
+    }
+
+    // ── Note Edit Modal ────────────────────────────────────────
+    uiState.highlightToEdit?.let { highlight ->
+        HighlightAnnotationModal(
+            titleRes = R.string.note_modal_title,
+            hintRes = R.string.annotation_textarea_note_hint,
+            snippetLabelRes = R.string.annotation_snippet_label,
+            selectedText = highlight.textContent,
+            initialText = uiState.editNoteText,
+            onSave = { viewModel.onSaveHighlightNote(it) },
+            onDismiss = { viewModel.dismissEditHighlight() }
+        )
+    }
+
+    // ── Delete Confirmation Dialog ─────────────────────────────
+    uiState.highlightToDelete?.let { highlight ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDeleteHighlightDialog() },
+            title = { Text(text = stringResource(R.string.highlights_delete_title)) },
+            text = {
+                Text(
+                    text = stringResource(
+                        R.string.highlights_delete_message,
+                        highlight.textContent.take(60)
+                    )
+                )
+            },
+            confirmButton = {
+                NextPageButton(
+                    onClick = { viewModel.confirmDeleteHighlight() },
+                    variant = NextPageButtonVariant.TEXT
+                ) {
+                    Text(text = stringResource(R.string.highlights_delete_confirm))
+                }
+            },
+            dismissButton = {
+                NextPageButton(
+                    onClick = { viewModel.dismissDeleteHighlightDialog() },
+                    variant = NextPageButtonVariant.TEXT
+                ) {
+                    Text(text = stringResource(R.string.reader_cancel))
+                }
+            }
+        )
     }
 }
 

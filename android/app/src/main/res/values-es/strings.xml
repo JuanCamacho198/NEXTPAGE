@@ -402,4 +402,39 @@
     <string name="reader_go">Ir</string>
     <string name="reader_loaded_in">Abierto en %1$d ms</string>
     <string name="reader_retry">Reintentar</string>
+
+    <!-- Highlights -->
+    <string name="highlights_menu_edit_note">Editar nota</string>
+    <string name="highlights_menu_delete">Eliminar resaltado</string>
+    <string name="highlights_delete_title">Eliminar resaltado</string>
+    <string name="highlights_delete_message">¿Estás seguro de eliminar este resaltado? "%1$s"</string>
+    <string name="highlights_delete_confirm">Eliminar</string>
+    <string name="highlights_deleted_snackbar">Resaltado eliminado</string>
+
+    <!-- Library -->
+    <string name="library_menu_edit_metadata">Editar metadatos</string>
+    <string name="library_menu_remove">Quitar de la biblioteca</string>
+
+    <!-- Context Menu -->
+    <string name="context_menu_more">Más opciones</string>
+
+    <!-- Dictionary -->
+    <string name="dictionary_title">Diccionario</string>
+    <string name="dictionary_subtitle">Palabras y definiciones guardadas</string>
+    <string name="dictionary_add_word">Agregar palabra</string>
+    <string name="dictionary_add_word_hint">Escribí una palabra</string>
+    <string name="dictionary_add_confirm">Agregar</string>
+    <string name="dictionary_search_placeholder">Buscar palabras…</string>
+    <string name="dictionary_empty">Sin palabras</string>
+    <string name="dictionary_empty_subtitle">Tocá + para guardar tu primera palabra.</string>
+    <string name="dictionary_delete_title">Eliminar palabra</string>
+    <string name="dictionary_delete_message">¿Estás seguro de eliminar &quot;%1$s&quot;?</string>
+    <string name="dictionary_delete_confirm">Eliminar</string>
+    <string name="dictionary_duplicate">"%1$s" ya está en tu diccionario.</string>
+    <string name="dictionary_added">"%1$s" agregado a tu diccionario.</string>
+    <string name="dictionary_word_count">%1$d palabras</string>
+    <string name="settings_dictionary_label">Diccionario</string>
+    <string name="context_menu_dictionary">Agregar al diccionario</string>
+    <string name="reader_add_to_dictionary">Agregado al diccionario</string>
+    <string name="reader_already_in_dictionary">Ya está en el diccionario</string>
 </resources>

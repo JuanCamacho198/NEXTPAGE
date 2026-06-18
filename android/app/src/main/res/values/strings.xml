@@ -459,4 +459,39 @@
     <string name="reader_go">Go</string>
     <string name="reader_loaded_in">Opened in %1$d ms</string>
     <string name="reader_retry">Retry</string>
+
+    <!-- Highlights -->
+    <string name="highlights_menu_edit_note">Edit Note</string>
+    <string name="highlights_menu_delete">Delete Highlight</string>
+    <string name="highlights_delete_title">Delete highlight</string>
+    <string name="highlights_delete_message">Are you sure you want to delete this highlight? "%1$s"</string>
+    <string name="highlights_delete_confirm">Delete</string>
+    <string name="highlights_deleted_snackbar">Highlight deleted</string>
+
+    <!-- Library -->
+    <string name="library_menu_edit_metadata">Edit Metadata</string>
+    <string name="library_menu_remove">Remove from Library</string>
+
+    <!-- Context Menu -->
+    <string name="context_menu_more">More options</string>
+
+    <!-- Dictionary -->
+    <string name="dictionary_title">Dictionary</string>
+    <string name="dictionary_subtitle">Your saved words and definitions</string>
+    <string name="dictionary_add_word">Add word</string>
+    <string name="dictionary_add_word_hint">Enter a word</string>
+    <string name="dictionary_add_confirm">Add</string>
+    <string name="dictionary_search_placeholder">Search words…</string>
+    <string name="dictionary_empty">No words yet</string>
+    <string name="dictionary_empty_subtitle">Tap + to save your first word.</string>
+    <string name="dictionary_delete_title">Delete word</string>
+    <string name="dictionary_delete_message">Are you sure you want to delete &quot;%1$s&quot;?</string>
+    <string name="dictionary_delete_confirm">Delete</string>
+    <string name="dictionary_duplicate">"%1$s" is already in your dictionary.</string>
+    <string name="dictionary_added">"%1$s" added to your dictionary.</string>
+    <string name="dictionary_word_count">%1$d words</string>
+    <string name="settings_dictionary_label">Dictionary</string>
+    <string name="context_menu_dictionary">Add to Dictionary</string>
+    <string name="reader_add_to_dictionary">Added to dictionary</string>
+    <string name="reader_already_in_dictionary">Already in dictionary</string>
 </resources>

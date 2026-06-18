@@ -1,13 +1,16 @@
 package com.nextpage.presentation.viewmodel
 
+import android.content.Context
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.SyncState
+import com.nextpage.data.storage.CoverStorage
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.usecase.ImportEpubBookUseCase
 import com.nextpage.presentation.UiEvent
 import com.nextpage.testutil.MainDispatcherRule
+import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -39,6 +42,8 @@ class LibraryViewModelTest {
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
             syncService = FakeSyncService(),
+            coverStorage = mockk<CoverStorage>(),
+            appContext = mockk<Context>(),
             mainDispatcher = dispatcher
         )
 
@@ -71,6 +76,8 @@ class LibraryViewModelTest {
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
             syncService = FakeSyncService(),
+            coverStorage = mockk<CoverStorage>(),
+            appContext = mockk<Context>(),
             mainDispatcher = dispatcher
         )
 
@@ -102,6 +109,8 @@ class LibraryViewModelTest {
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
             syncService = FakeSyncService(),
+            coverStorage = mockk<CoverStorage>(),
+            appContext = mockk<Context>(),
             mainDispatcher = dispatcher
         )
 
@@ -134,6 +143,8 @@ class LibraryViewModelTest {
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
             syncService = FakeSyncService(),
+            coverStorage = mockk<CoverStorage>(),
+            appContext = mockk<Context>(),
             mainDispatcher = dispatcher
         )
 
@@ -170,6 +181,8 @@ class LibraryViewModelTest {
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
             syncService = FakeSyncService(),
+            coverStorage = mockk<CoverStorage>(),
+            appContext = mockk<Context>(),
             mainDispatcher = dispatcher
         )
 
@@ -206,6 +219,8 @@ class LibraryViewModelTest {
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
             syncService = FakeSyncService(),
+            coverStorage = mockk<CoverStorage>(),
+            appContext = mockk<Context>(),
             mainDispatcher = dispatcher
         )
 
@@ -272,6 +287,20 @@ class LibraryViewModelTest {
                     updatedAtEpochMillis = 1L
                 )
             )
+        }
+
+        override suspend fun updateBookStatus(bookId: String, status: String?): Result<Unit> {
+            return Result.success(Unit)
+        }
+
+        override suspend fun updateBookMetadata(
+            bookId: String,
+            title: String,
+            author: String?,
+            description: String?,
+            coverPath: String?
+        ): Result<Unit> {
+            return Result.success(Unit)
         }
 
         override suspend fun deleteBook(bookId: String): Result<Unit> {

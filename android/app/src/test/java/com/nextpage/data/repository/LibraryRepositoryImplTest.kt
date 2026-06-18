@@ -264,6 +264,31 @@ class LibraryRepositoryImplTest {
             }
         }
 
+        override suspend fun updateStatus(bookId: String, status: String?, updatedAt: Long) {
+            booksState.value = booksState.value.map { book ->
+                if (book.id == bookId) book.copy(status = status, updatedAtEpochMillis = updatedAt) else book
+            }
+        }
+
+        override suspend fun updateMetadata(
+            bookId: String,
+            title: String,
+            author: String?,
+            description: String?,
+            coverPath: String?,
+            updatedAt: Long
+        ) {
+            booksState.value = booksState.value.map { book ->
+                if (book.id == bookId) book.copy(
+                    title = title,
+                    author = author,
+                    description = description,
+                    coverPath = coverPath,
+                    updatedAtEpochMillis = updatedAt
+                ) else book
+            }
+        }
+
         override suspend fun count(): Int = booksState.value.size
     }
 

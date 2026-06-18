@@ -204,7 +204,10 @@
     <string name="context_menu_comment">Comentario</string>
     <string name="context_menu_share">Compartir</string>
     <string name="context_menu_delete">Eliminar</string>
+    <string name="context_menu_annotate">Anotar</string>
     <string name="color_picker_confirm">Tocá un preset o escribí un hex</string>
+    <string name="tag_input_hint">Etiqueta</string>
+    <string name="definition_input_hint">Definición (opcional)</string>
     <string name="note_modal_title">Nueva Nota</string>
     <string name="comment_modal_title">Nuevo Comentario</string>
     <string name="annotation_textarea_note_hint">Escribí tu nota…</string>
@@ -354,8 +357,10 @@
     <string name="highlights_empty_subtitle">Guard\u00e1 pasajes, ideas y citas mientras le\u00e9s.</string>
     <string name="highlights_filter_book">Filtrar por libro</string>
     <string name="highlights_filter_color">Filtrar por color</string>
+    <string name="highlights_filter_tag">Filtrar por etiqueta</string>
     <string name="highlights_filter_all_books">Todos los libros</string>
     <string name="highlights_filter_all_colors">Todos los colores</string>
+    <string name="highlights_filter_all_tags">Todas las etiquetas</string>
     <string name="highlights_clear_filters">Borrar filtros</string>
 
     <!-- Settings -->
@@ -423,6 +428,7 @@
     <string name="dictionary_subtitle">Palabras y definiciones guardadas</string>
     <string name="dictionary_add_word">Agregar palabra</string>
     <string name="dictionary_add_word_hint">Escribí una palabra</string>
+    <string name="dictionary_add_definition_hint">Definición (opcional)</string>
     <string name="dictionary_add_confirm">Agregar</string>
     <string name="dictionary_search_placeholder">Buscar palabras…</string>
     <string name="dictionary_empty">Sin palabras</string>

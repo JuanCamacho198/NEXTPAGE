@@ -31,4 +31,7 @@ interface HighlightDao {
 
     @Query("SELECT COUNT(*) FROM highlights")
     suspend fun count(): Int
+
+    @Query("SELECT DISTINCT tag FROM highlights WHERE tag IS NOT NULL AND tag != '' AND deleted_at IS NULL ORDER BY tag ASC")
+    fun observeAllTags(): Flow<List<String>>
 }

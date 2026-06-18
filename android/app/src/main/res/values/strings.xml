@@ -173,8 +173,10 @@
     <string name="highlights_search">Search highlights</string>
     <string name="highlights_filter_book">Filter by book</string>
     <string name="highlights_filter_color">Filter by color</string>
+    <string name="highlights_filter_tag">Filter by tag</string>
     <string name="highlights_filter_all_books">All books</string>
     <string name="highlights_filter_all_colors">All colors</string>
+    <string name="highlights_filter_all_tags">All tags</string>
     <string name="highlights_clear_filters">Clear filters</string>
     <string name="highlight_location">Location: %1$s</string>
 
@@ -262,7 +264,10 @@
     <string name="context_menu_comment">Comment</string>
     <string name="context_menu_share">Share</string>
     <string name="context_menu_delete">Delete</string>
+    <string name="context_menu_annotate">Annotate</string>
     <string name="color_picker_confirm">Tap a preset or hex to confirm</string>
+    <string name="tag_input_hint">Tag</string>
+    <string name="definition_input_hint">Definition (optional)</string>
     <string name="note_modal_title">New Note</string>
     <string name="comment_modal_title">New Comment</string>
     <string name="annotation_textarea_note_hint">Write your note\u2026</string>
@@ -480,6 +485,7 @@
     <string name="dictionary_subtitle">Your saved words and definitions</string>
     <string name="dictionary_add_word">Add word</string>
     <string name="dictionary_add_word_hint">Enter a word</string>
+    <string name="dictionary_add_definition_hint">Definition (optional)</string>
     <string name="dictionary_add_confirm">Add</string>
     <string name="dictionary_search_placeholder">Search words…</string>
     <string name="dictionary_empty">No words yet</string>

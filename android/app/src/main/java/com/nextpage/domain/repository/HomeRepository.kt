@@ -9,6 +9,6 @@ interface HomeRepository {
     fun observeRecentBooks(limit: Int = 5): Flow<List<Book>>
     fun observeCurrentBook(): Flow<Book?>
     fun observeCurrentBookProgress(): Flow<Float>
-    fun observeDailyStats(): Flow<ReadingStats>
+    fun observeDailyStats(userId: String? = null): Flow<ReadingStats>
     suspend fun deleteBook(bookId: String): Result<Unit>
 }

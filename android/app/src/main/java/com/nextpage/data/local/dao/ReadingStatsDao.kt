@@ -21,6 +21,9 @@ interface ReadingStatsDao {
     @Query("SELECT SUM(totalMinutesRead) FROM reading_stats")
     fun observeTotalMinutesRead(): Flow<Long?>
     
+    @Query("SELECT SUM(totalMinutesRead) FROM reading_stats WHERE userId = :userId OR userId = ''")
+    fun observeTotalMinutesReadForUser(userId: String): Flow<Long?>
+    
     @Query("DELETE FROM reading_stats WHERE bookId = :bookId")
     suspend fun deleteForBook(bookId: String)
 }

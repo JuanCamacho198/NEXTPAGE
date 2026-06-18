@@ -9,5 +9,6 @@ data class ReadingStatsEntity(
     val bookId: String,
     val totalMinutesRead: Long = 0,
     val lastReadDateEpochMillis: Long = 0,
-    val sessionsCount: Int = 0
+    val sessionsCount: Int = 0,
+    val userId: String = ""
 )

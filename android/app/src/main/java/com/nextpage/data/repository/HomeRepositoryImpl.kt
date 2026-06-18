@@ -48,17 +48,30 @@ class HomeRepositoryImpl(
             }
         }
 
-    override fun observeDailyStats(): Flow<ReadingStats> {
+    override fun observeDailyStats(userId: String?): Flow<ReadingStats> {
         val todayStart = getTodayStartMillis()
-        return combine(
-            readingSessionDao.getTotalMinutesForDate(todayStart),
-            readingSessionDao.getSessionCountForDate(todayStart)
-        ) { minutes, sessions ->
-            ReadingStats(
-                minutesRead = minutes,
-                sessionCount = sessions,
-                dailyProgressPercent = calculateProgress(minutes)
-            )
+        return if (userId != null && userId.isNotBlank()) {
+            combine(
+                readingSessionDao.getTotalMinutesForDateAndUser(todayStart, userId),
+                readingSessionDao.getSessionCountForDateAndUser(todayStart, userId)
+            ) { minutes, sessions ->
+                ReadingStats(
+                    minutesRead = minutes,
+                    sessionCount = sessions,
+                    dailyProgressPercent = calculateProgress(minutes)
+                )
+            }
+        } else {
+            combine(
+                readingSessionDao.getTotalMinutesForDate(todayStart),
+                readingSessionDao.getSessionCountForDate(todayStart)
+            ) { minutes, sessions ->
+                ReadingStats(
+                    minutesRead = minutes,
+                    sessionCount = sessions,
+                    dailyProgressPercent = calculateProgress(minutes)
+                )
+            }
         }
     }
 

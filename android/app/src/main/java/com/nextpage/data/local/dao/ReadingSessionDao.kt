@@ -16,6 +16,9 @@ interface ReadingSessionDao {
     @Query("SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions WHERE date = :date")
     fun getTotalMinutesForDate(date: Long): Flow<Int>
 
+    @Query("SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions WHERE date = :date AND (userId = :userId OR userId = '')")
+    fun getTotalMinutesForDateAndUser(date: Long, userId: String): Flow<Int>
+
     @Query("SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions")
     fun getTotalMinutes(): Flow<Int>
 
@@ -24,6 +27,9 @@ interface ReadingSessionDao {
 
     @Query("SELECT COUNT(*) FROM reading_sessions WHERE date = :date")
     fun getSessionCountForDate(date: Long): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM reading_sessions WHERE date = :date AND (userId = :userId OR userId = '')")
+    fun getSessionCountForDateAndUser(date: Long, userId: String): Flow<Int>
 
     @Query("SELECT * FROM reading_sessions WHERE book_id = :bookId ORDER BY start_time DESC")
     fun observeSessionsForBook(bookId: String): Flow<List<ReadingSessionEntity>>

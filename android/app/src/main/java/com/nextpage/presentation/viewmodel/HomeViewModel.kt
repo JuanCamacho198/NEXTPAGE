@@ -3,6 +3,7 @@ package com.nextpage.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.presentation.UiEvent
@@ -24,6 +25,7 @@ import kotlinx.coroutines.launch
 
 data class HomeUiState(
     val userName: String = "Reader",
+    val avatarUrl: String? = null,
     val minutesReadToday: Int = 0,
     val sessionsToday: Int = 0,
     val dailyProgressPercent: Float = 0f,
@@ -39,10 +41,16 @@ data class HomeUiState(
 ) 
 
 class HomeViewModel(
-    private val homeRepository: HomeRepository
+    private val homeRepository: HomeRepository,
+    private val authSession: AuthSession? = null
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HomeUiState())
+    private val _uiState = MutableStateFlow(
+        HomeUiState(
+            userName = authSession?.displayName ?: "Reader",
+            avatarUrl = authSession?.photoUrl
+        )
+    )
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
@@ -54,9 +62,11 @@ class HomeViewModel(
     private var searchJob: Job? = null
 
     init {
+        val userId = authSession?.userId
+
         // Collect daily stats
         viewModelScope.launch {
-            homeRepository.observeDailyStats()
+            homeRepository.observeDailyStats(userId)
                 .catch { e -> _uiEvent.emit(UiEvent.ShowSnackbar(e.message ?: "Failed to load daily stats")) }
                 .collect { stats ->
                     _uiState.value = _uiState.value.copy(
@@ -136,12 +146,13 @@ class HomeViewModel(
 }
 
 class HomeViewModelFactory(
-    private val homeRepository: HomeRepository
+    private val homeRepository: HomeRepository,
+    private val authSession: AuthSession? = null
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
-            return HomeViewModel(homeRepository) as T
+            return HomeViewModel(homeRepository, authSession) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

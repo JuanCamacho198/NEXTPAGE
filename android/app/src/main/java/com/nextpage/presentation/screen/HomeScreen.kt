@@ -115,6 +115,7 @@ fun HomeScreen(
             item {
                 NextPageHeader(
                     title = stringResource(R.string.home_nextpage_title),
+                    avatarImageUrl = uiState.avatarUrl,
                     avatarInitials = uiState.userName.take(1).uppercase(),
                     onSearchClick = { viewModel.onToggleSearch() },
                     onNotificationsClick = { showNotifications = true }

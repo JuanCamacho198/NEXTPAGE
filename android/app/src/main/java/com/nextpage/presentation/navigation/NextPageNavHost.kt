@@ -121,7 +121,10 @@ fun NextPageNavHost(
     )
 
     val homeViewModel: HomeViewModel = viewModel(
-        factory = HomeViewModelFactory(appContainer.homeRepository)
+        factory = HomeViewModelFactory(
+            homeRepository = appContainer.homeRepository,
+            authSession = authState.currentSession
+        )
     )
 
     val authViewModel: AuthViewModel = viewModel(

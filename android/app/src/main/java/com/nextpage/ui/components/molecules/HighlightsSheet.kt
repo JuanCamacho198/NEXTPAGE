@@ -227,7 +227,7 @@ private fun HighlightCard(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = highlight.textContent,
+                text = highlight.textContent.replace("\\n", " ").replace("\n", " "),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFFDDE2F8),
                 maxLines = 2,
@@ -235,7 +235,7 @@ private fun HighlightCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = highlight.note?.take(60)?.let { "\"$it\"" } ?: "",
+                text =                 highlight.note?.take(60) ?: "",
                 style = MaterialTheme.typography.labelSmall,
                 color = Color(0xFF718096),
                 maxLines = 1,

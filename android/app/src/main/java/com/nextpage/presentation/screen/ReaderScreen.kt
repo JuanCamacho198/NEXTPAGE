@@ -56,7 +56,6 @@ import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.ui.components.molecules.ChaptersSheet
 import com.nextpage.ui.components.molecules.HighlightsSheet
 import com.nextpage.ui.components.molecules.HighlightAnnotationModal
-import com.nextpage.ui.components.molecules.HighlightTagDialog
 import com.nextpage.ui.components.molecules.ReadingProgressBar
 import com.nextpage.ui.components.molecules.SearchBottomSheet
 import com.nextpage.ui.components.molecules.SelectionOverlay
@@ -112,9 +111,9 @@ fun ReaderScreen(
     var lastInteractionAt by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
 
     // Helper: any UI surface that owns touch input while open.
-    val isSelectionActive = uiState.selectedText != null ||
-        uiState.showColorPicker ||
-        uiState.showContextMenu ||
+    val isSelectionActive = uiState.selectionState != com.nextpage.presentation.viewmodel.ReaderSelectionState.None ||
+        uiState.showTagInput ||
+        uiState.showDefinitionInput ||
         uiState.showColorPickerPopover
 
     val onUserInteraction: () -> Unit = {
@@ -282,9 +281,13 @@ fun ReaderScreen(
                         )
 
                         SelectionOverlay(
-                            showColorPicker = uiState.showColorPicker,
-                            showContextMenu = uiState.showContextMenu,
+                            selectionState = uiState.selectionState,
                             showColorPickerPopover = uiState.showColorPickerPopover,
+                            showTagInput = uiState.showTagInput,
+                            tagSuggestions = uiState.tagSuggestions,
+                            activeTagText = uiState.activeTagText,
+                            showDefinitionInput = uiState.showDefinitionInput,
+                            activeDefinitionText = uiState.activeDefinitionText,
                             selectionRect = uiState.selectionRect,
                             selectedText = uiState.selectedText,
                             highlights = uiState.highlights,
@@ -300,18 +303,22 @@ fun ReaderScreen(
                                     clipboard.setPrimaryClip(ClipData.newPlainText("highlight", text))
                                 }
                             },
-                            onShowContextMenu = { viewModel.onShowContextMenu() },
                             onDismissContextMenu = { viewModel.onDismissContextMenu() },
                             onDelete = {
                                 uiState.activeHighlightId?.let { viewModel.onReadiumDeleteHighlight(it) }
                             },
-                            onAddTag = { viewModel.onShowTagDialog() },
-                            onAddNote = { viewModel.onShowNoteModal() },
-                            onAddComment = { viewModel.onShowCommentModal() },
+                            onAddTag = { viewModel.onShowTagInput() },
+                            onAnnotate = { viewModel.onAnnotate() },
                             onShare = { viewModel.onShareSelectedText() },
+                            onDictionary = { viewModel.onAddToDictionary() },
                             onShowColorPickerPopover = { viewModel.onShowColorPickerPopover() },
                             onDismissColorPickerPopover = { viewModel.onDismissColorPickerPopover() },
-                            onAddToDictionary = { viewModel.onAddToDictionary() }
+                            onTagTextChanged = { viewModel.onTagTextChanged(it) },
+                            onSaveTag = { viewModel.onSaveTag(uiState.activeTagText) },
+                            onDismissTagInput = { viewModel.onDismissTagInput() },
+                            onDefinitionTextChanged = { viewModel.onDefinitionTextChanged(it) },
+                            onSaveDefinition = { viewModel.onSaveDefinition(uiState.activeDefinitionText) },
+                            onDismissDefinitionInput = { viewModel.onDismissDefinitionInput() }
                         )
                     }
                 }
@@ -331,9 +338,13 @@ fun ReaderScreen(
                         )
 
                         SelectionOverlay(
-                            showColorPicker = uiState.showColorPicker,
-                            showContextMenu = uiState.showContextMenu,
+                            selectionState = uiState.selectionState,
                             showColorPickerPopover = uiState.showColorPickerPopover,
+                            showTagInput = uiState.showTagInput,
+                            tagSuggestions = uiState.tagSuggestions,
+                            activeTagText = uiState.activeTagText,
+                            showDefinitionInput = uiState.showDefinitionInput,
+                            activeDefinitionText = uiState.activeDefinitionText,
                             selectionRect = uiState.selectionRect,
                             selectedText = uiState.selectedText,
                             highlights = uiState.highlights,
@@ -349,18 +360,22 @@ fun ReaderScreen(
                                     clipboard.setPrimaryClip(ClipData.newPlainText("highlight", text))
                                 }
                             },
-                            onShowContextMenu = { viewModel.onShowContextMenu() },
                             onDismissContextMenu = { viewModel.onDismissContextMenu() },
                             onDelete = {
                                 uiState.activeHighlightId?.let { viewModel.onReadiumDeleteHighlight(it) }
                             },
-                            onAddTag = { viewModel.onShowTagDialog() },
-                            onAddNote = { viewModel.onShowNoteModal() },
-                            onAddComment = { viewModel.onShowCommentModal() },
+                            onAddTag = { viewModel.onShowTagInput() },
+                            onAnnotate = { viewModel.onAnnotate() },
                             onShare = { viewModel.onShareSelectedText() },
+                            onDictionary = { viewModel.onAddToDictionary() },
                             onShowColorPickerPopover = { viewModel.onShowColorPickerPopover() },
                             onDismissColorPickerPopover = { viewModel.onDismissColorPickerPopover() },
-                            onAddToDictionary = { viewModel.onAddToDictionary() }
+                            onTagTextChanged = { viewModel.onTagTextChanged(it) },
+                            onSaveTag = { viewModel.onSaveTag(uiState.activeTagText) },
+                            onDismissTagInput = { viewModel.onDismissTagInput() },
+                            onDefinitionTextChanged = { viewModel.onDefinitionTextChanged(it) },
+                            onSaveDefinition = { viewModel.onSaveDefinition(uiState.activeDefinitionText) },
+                            onDismissDefinitionInput = { viewModel.onDismissDefinitionInput() }
                         )
                     }
                 }
@@ -478,28 +493,6 @@ fun ReaderScreen(
                     initialText = uiState.activeNoteText,
                     onSave = { viewModel.onSaveNote(it) },
                     onDismiss = { viewModel.onDismissNoteModal() }
-                )
-            }
-
-            // ── Comment Modal (GshXP) ───────────────────────────
-            if (uiState.showCommentModal) {
-                HighlightAnnotationModal(
-                    titleRes = R.string.comment_modal_title,
-                    hintRes = R.string.annotation_textarea_comment_hint,
-                    snippetLabelRes = R.string.annotation_snippet_label,
-                    selectedText = uiState.selectedText,
-                    initialText = uiState.activeCommentText,
-                    onSave = { viewModel.onSaveComment(it) },
-                    onDismiss = { viewModel.onDismissCommentModal() }
-                )
-            }
-
-            // ── Tag Dialog ──────────────────────────────────────
-            if (uiState.showTagDialog) {
-                HighlightTagDialog(
-                    initialTag = uiState.activeTagText,
-                    onSave = { viewModel.onSaveTag(it) },
-                    onDismiss = { viewModel.onDismissTagDialog() }
                 )
             }
 

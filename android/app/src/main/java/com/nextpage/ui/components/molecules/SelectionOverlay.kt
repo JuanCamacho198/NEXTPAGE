@@ -3,9 +3,9 @@ package com.nextpage.ui.components.molecules
 import android.graphics.Rect
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,34 +21,37 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
+import com.nextpage.presentation.viewmodel.ReaderSelectionState
 
 /**
  * Shared floating selection overlay used by both the EPUB reader and
  * the PDF rendering path in [ReaderScreen].
  *
- * Positions the [TextSelectionMenu] (color picker bar) or
- * [FloatingContextMenu] (expanded context menu) anchored above the
- * [selectionRect].
+ * Positions the appropriate floating UI near the selection based on
+ * [ReaderSelectionState]:
+ * - [ReaderSelectionState.New] → [TextSelectionMenu]
+ * - [ReaderSelectionState.Existing] → [FloatingContextMenu]
+ * - tag input → [AnchoredTagInput]
+ * - definition input → [AnchoredDefinitionInput]
+ * - colour picker popover → [HighlightColorPickerPopover]
  *
  * A transparent tap-away overlay is rendered behind the menus when
- * either menu is visible — tapping it calls [onDismissContextMenu].
- *
- * Design matches Pencil Node IDs:
- * - `cnVL6` → [TextSelectionMenu] (5 color circles + Copy)
- * - `FaPN3` → [FloatingContextMenu] (horizontal pill: Color Picker | Copy
- *   | Tag | Note | Comment | Share | Delete)
+ * any surface is visible — tapping it calls [onDismissContextMenu].
  *
  * Coordinate handling: [selectionRect] arrives in **pixels (px)** — it is
- * Readium's viewport-space [android.graphics.RectF] (from `Selection.rect`
- * or a decoration activation rect) cast to [Rect]. We therefore use it
- * directly for [IntOffset] positioning and only convert dp→px for the gap
- * and header/footer reserves.
+ * Readium's viewport-space [android.graphics.RectF] cast to [Rect]. We
+ * therefore use it directly for [IntOffset] positioning and only convert
+ * dp→px for the gap and header/footer reserves.
  */
 @Composable
 fun SelectionOverlay(
-    showColorPicker: Boolean,
-    showContextMenu: Boolean,
+    selectionState: ReaderSelectionState,
     showColorPickerPopover: Boolean = false,
+    showTagInput: Boolean = false,
+    tagSuggestions: List<String> = emptyList(),
+    activeTagText: String = "",
+    showDefinitionInput: Boolean = false,
+    activeDefinitionText: String = "",
     selectionRect: Rect?,
     selectedText: String?,
     highlights: List<Highlight>,
@@ -56,29 +59,33 @@ fun SelectionOverlay(
     customHighlightColors: List<String>? = null,
     onColorSelected: (String) -> Unit,
     onCopy: () -> Unit,
-    onShowContextMenu: () -> Unit,
     onDismissContextMenu: () -> Unit,
     onDelete: () -> Unit,
     onAddTag: () -> Unit,
-    onAddNote: () -> Unit,
-    onAddComment: () -> Unit,
+    onAnnotate: () -> Unit,
     onShare: () -> Unit,
+    onDictionary: () -> Unit,
     onShowColorPickerPopover: () -> Unit = {},
     onDismissColorPickerPopover: () -> Unit = {},
-    onAddToDictionary: (() -> Unit)? = null,
+    onTagTextChanged: (String) -> Unit = {},
+    onSaveTag: () -> Unit = {},
+    onDismissTagInput: () -> Unit = {},
+    onDefinitionTextChanged: (String) -> Unit = {},
+    onSaveDefinition: () -> Unit = {},
+    onDismissDefinitionInput: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val anyMenuVisible = selectionState != ReaderSelectionState.None ||
+        showColorPickerPopover ||
+        showTagInput ||
+        showDefinitionInput
+
     if (selectionRect == null) return
 
-    // selectionRect is already in px (Readium viewport coordinates).
     val density = LocalDensity.current
     val selectionRectPx = selectionRect
-
-    // ── Viewport (for clamping + flip-above/below) ────────────────
     val viewportWidth = LocalView.current.width
     val viewportHeight = LocalView.current.height
-
-    val anyMenuVisible = showColorPicker || showContextMenu
 
     // ── Tap-away dismiss overlay (behind menus) ──────────────────
     if (anyMenuVisible) {
@@ -94,15 +101,8 @@ fun SelectionOverlay(
         )
     }
 
-    // ── Color Picker (cnVL6) ──────────────────────────────────────
-    if (showColorPicker) {
-        val defaultColor = selectedText?.let {
-            highlights.lastOrNull()?.color?.let { color ->
-                HighlightColor.fromHex(color)?.hex
-            } ?: HighlightColor.YELLOW.hex
-        } ?: HighlightColor.YELLOW.hex
-
-        // Measure the menu so we can position + clamp it precisely.
+    // ── Text selection menu (new selection) ──────────────────────
+    if (selectionState is ReaderSelectionState.New && !showTagInput && !showDefinitionInput && !showColorPickerPopover) {
         var menuWidthPx by remember { mutableIntStateOf(0) }
         var menuHeightPx by remember { mutableIntStateOf(0) }
 
@@ -125,17 +125,25 @@ fun SelectionOverlay(
                 }
                 .padding(8.dp)
         ) {
+            val defaultColor = selectedText?.let {
+                highlights.lastOrNull()?.color?.let { color ->
+                    HighlightColor.fromHex(color)?.hex
+                } ?: HighlightColor.YELLOW.hex
+            } ?: HighlightColor.YELLOW.hex
+
             TextSelectionMenu(
-                selectedColor = defaultColor,
-                onColorSelected = onColorSelected,
+                selectedColor = activeHighlightColor ?: defaultColor,
+                onColorSelected = onShowColorPickerPopover,
                 onCopy = onCopy,
-                onExpand = onShowContextMenu
+                onDictionary = onDictionary,
+                onShare = onShare,
+                onAnnotate = onAnnotate
             )
         }
     }
 
-    // ── Expanded Context Menu (FaPN3) ─────────────────────────────
-    if (showContextMenu) {
+    // ── Existing-highlight context menu ──────────────────────────
+    if (selectionState is ReaderSelectionState.Existing && !showTagInput && !showDefinitionInput && !showColorPickerPopover) {
         var menuWidthPx by remember { mutableIntStateOf(0) }
         var menuHeightPx by remember { mutableIntStateOf(0) }
 
@@ -160,22 +168,89 @@ fun SelectionOverlay(
         ) {
             FloatingContextMenu(
                 selectedColor = activeHighlightColor ?: HighlightColor.YELLOW.hex,
-                onColorSelected = onColorSelected,
+                onColorSelected = onShowColorPickerPopover,
                 onCopy = onCopy,
                 onAddTag = onAddTag,
-                onAddNote = onAddNote,
-                onAddComment = onAddComment,
+                onAnnotate = onAnnotate,
                 onShare = onShare,
-                onDelete = onDelete,
-                onDismiss = onDismissContextMenu,
-                onShowColorPicker = onShowColorPickerPopover,
-                hasActiveHighlight = activeHighlightColor != null,
-                onAddToDictionary = onAddToDictionary
+                onDelete = onDelete
             )
         }
     }
 
-    // ── kixeV Colour Picker Popover ───────────────────────────────
+    // ── Anchored tag input ───────────────────────────────────────
+    if (showTagInput) {
+        var menuWidthPx by remember { mutableIntStateOf(0) }
+        var menuHeightPx by remember { mutableIntStateOf(0) }
+
+        val anchor = computeAnchor(
+            selectionRectPx = selectionRectPx,
+            menuWidthPx = menuWidthPx,
+            menuHeightPx = menuHeightPx,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+            gapDp = 8,
+            density = density
+        )
+
+        Box(
+            modifier = modifier
+                .offset { anchor }
+                .onGloballyPositioned { coords ->
+                    menuWidthPx = coords.size.width
+                    menuHeightPx = coords.size.height
+                }
+                .padding(8.dp)
+        ) {
+            AnchoredTagInput(
+                tag = activeTagText,
+                suggestions = tagSuggestions,
+                onTagChange = onTagTextChanged,
+                onSuggestionClick = { tag ->
+                    onTagTextChanged(tag)
+                    onSaveTag()
+                },
+                onSave = onSaveTag,
+                onDismiss = onDismissTagInput
+            )
+        }
+    }
+
+    // ── Anchored definition input ────────────────────────────────
+    if (showDefinitionInput) {
+        var menuWidthPx by remember { mutableIntStateOf(0) }
+        var menuHeightPx by remember { mutableIntStateOf(0) }
+
+        val anchor = computeAnchor(
+            selectionRectPx = selectionRectPx,
+            menuWidthPx = menuWidthPx,
+            menuHeightPx = menuHeightPx,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+            gapDp = 8,
+            density = density
+        )
+
+        Box(
+            modifier = modifier
+                .offset { anchor }
+                .onGloballyPositioned { coords ->
+                    menuWidthPx = coords.size.width
+                    menuHeightPx = coords.size.height
+                }
+                .padding(8.dp)
+        ) {
+            AnchoredDefinitionInput(
+                word = selectedText ?: "",
+                definition = activeDefinitionText,
+                onDefinitionChange = onDefinitionTextChanged,
+                onSave = onSaveDefinition,
+                onDismiss = onDismissDefinitionInput
+            )
+        }
+    }
+
+    // ── Colour picker popover ────────────────────────────────────
     if (showColorPickerPopover) {
         val anchorCenterX = selectionRectPx.left + selectionRectPx.width() / 2
         val anchorBelowY = selectionRectPx.bottom + with(density) { 12.dp.toPx() }.toInt()
@@ -190,7 +265,6 @@ fun SelectionOverlay(
             anchorX = anchorCenterX,
             anchorY = anchorBelowY,
             modifier = Modifier.offset {
-                // Centre horizontally, position below selection rect
                 val x = (anchorCenterX - 110.dp.toPx().toInt()).coerceAtLeast(0)
                 IntOffset(x, anchorBelowY)
             }

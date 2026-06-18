@@ -113,10 +113,14 @@ fun DebugPanel(
                     state.selectedText?.take(50) ?: "—")
                 DebugKeyValue(stringResource(R.string.debug_kv_selection_rect),
                     state.selectionRect?.toString() ?: "—")
-                DebugKeyValue(stringResource(R.string.debug_kv_show_color_picker),
-                    state.showColorPicker.toString())
-                DebugKeyValue(stringResource(R.string.debug_kv_show_context_menu),
-                    state.showContextMenu.toString())
+                DebugKeyValue(
+                    "selectionState",
+                    state.selectionState::class.simpleName ?: "—"
+                )
+                DebugKeyValue(
+                    "showColorPickerPopover",
+                    state.showColorPickerPopover.toString()
+                )
                 DebugKeyValue(stringResource(R.string.debug_kv_active_highlight_id),
                     state.activeHighlightId ?: "—")
                 DebugKeyValue(stringResource(R.string.debug_kv_debounce_remaining_ms),

@@ -25,5 +25,7 @@ data class BookEntity(
     @ColumnInfo(name = "updated_at")
     val updatedAtEpochMillis: Long,
     @ColumnInfo(name = "deleted_at")
-    val deletedAtEpochMillis: Long? = null
+    val deletedAtEpochMillis: Long? = null,
+    @ColumnInfo(name = "status")
+    val status: String? = null
 )

@@ -36,5 +36,7 @@ data class HighlightEntity(
     @ColumnInfo(name = "locator_json")
     val locatorJson: String? = null,
     @ColumnInfo(name = "type")
-    val type: String? = null
+    val type: String? = null,
+    @ColumnInfo(name = "tag")
+    val tag: String? = null
 )

@@ -1,5 +1,6 @@
 package com.nextpage.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -8,5 +9,7 @@ data class DictionaryWordEntity(
     @PrimaryKey
     val id: String,
     val word: String,
-    val addedAtEpochMillis: Long
+    val addedAtEpochMillis: Long,
+    @ColumnInfo(name = "definition")
+    val definition: String? = null
 )

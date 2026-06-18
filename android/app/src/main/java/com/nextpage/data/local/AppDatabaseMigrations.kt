@@ -4,6 +4,18 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 object AppDatabaseMigrations {
+    val MIGRATION_13_14 = object : Migration(13, 14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE dictionary_words ADD COLUMN definition TEXT DEFAULT NULL")
+        }
+    }
+
+    val MIGRATION_12_13 = object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE highlights ADD COLUMN tag TEXT DEFAULT NULL")
+        }
+    }
+
     val MIGRATION_11_12 = object : Migration(11, 12) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE reading_stats ADD COLUMN userId TEXT NOT NULL DEFAULT ''")
@@ -72,6 +84,8 @@ object AppDatabaseMigrations {
         MIGRATION_8_9,
         MIGRATION_9_10,
         MIGRATION_10_11,
-        MIGRATION_11_12
+        MIGRATION_11_12,
+        MIGRATION_12_13,
+        MIGRATION_13_14
     )
 }

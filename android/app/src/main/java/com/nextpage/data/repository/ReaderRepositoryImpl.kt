@@ -56,6 +56,9 @@ class ReaderRepositoryImpl(
             .observeHighlightsForBook(bookId)
             .map { list -> list.map { it.toDomain() } }
 
+    override fun observeAllTags(): Flow<List<String>> =
+        highlightDao.observeAllTags()
+
     override suspend fun upsertHighlight(highlight: Highlight) {
         highlightDao.upsert(highlight.toEntity())
         outboxDao?.insert(
@@ -130,7 +133,8 @@ class ReaderRepositoryImpl(
         updatedAtEpochMillis = updatedAtEpochMillis,
         deletedAtEpochMillis = deletedAtEpochMillis,
         locatorJson = locatorJson,
-        type = type
+        type = type,
+        tag = tag
     )
 
     private fun Highlight.toEntity(): HighlightEntity = HighlightEntity(
@@ -143,7 +147,8 @@ class ReaderRepositoryImpl(
         updatedAtEpochMillis = updatedAtEpochMillis,
         deletedAtEpochMillis = deletedAtEpochMillis,
         locatorJson = locatorJson,
-        type = type
+        type = type,
+        tag = tag
     )
 
     private fun BookmarkEntity.toDomain(): Bookmark = Bookmark(

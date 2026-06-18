@@ -67,8 +67,7 @@ enum class HighlightColor(val hex: String) {
 /**
  * A highlight or annotation within a book.
  *
- * @property tag Optional user-defined tag for categorising highlights
- * @property comment Optional longer-form comment / annotation
+ * @property tag Optional user-defined tag for categorising highlights.
  */
 data class Highlight(
     val id: String,
@@ -80,7 +79,6 @@ data class Highlight(
     val updatedAtEpochMillis: Long,
     val deletedAtEpochMillis: Long?,
     val tag: String? = null,
-    val comment: String? = null,
     val locatorJson: String? = null,
     val type: String? = null
 )

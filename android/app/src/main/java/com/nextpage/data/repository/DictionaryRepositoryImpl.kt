@@ -22,12 +22,15 @@ class DictionaryRepositoryImpl(
             entities.map { it.toDomain() }
         }
 
-    override suspend fun save(word: String): Result<DictionaryWord> = runCatching {
+    override suspend fun save(word: String): Result<DictionaryWord> = save(word, null)
+
+    override suspend fun save(word: String, definition: String?): Result<DictionaryWord> = runCatching {
         val trimmed = word.trim()
         val entity = DictionaryWordEntity(
             id = UUID.randomUUID().toString(),
             word = trimmed,
-            addedAtEpochMillis = System.currentTimeMillis()
+            addedAtEpochMillis = System.currentTimeMillis(),
+            definition = definition?.trim()?.takeIf { it.isNotBlank() }
         )
         dao.insert(entity)
         entity.toDomain()
@@ -44,6 +47,7 @@ class DictionaryRepositoryImpl(
     private fun DictionaryWordEntity.toDomain() = DictionaryWord(
         id = id,
         word = word,
-        addedAtEpochMillis = addedAtEpochMillis
+        addedAtEpochMillis = addedAtEpochMillis,
+        definition = definition
     )
 }

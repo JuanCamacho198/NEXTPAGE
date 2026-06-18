@@ -28,8 +28,10 @@ data class HighlightsUiState(
     val typeFilter: String = "all",
     val bookFilter: String? = null,
     val colorFilter: String? = null,
+    val tagFilter: String? = null,
     val searchQuery: String = "",
     val filteredHighlights: List<Highlight> = emptyList(),
+    val availableTags: List<String> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     val highlightToEdit: Highlight? = null,
@@ -48,6 +50,7 @@ class HighlightsViewModel(
     private val typeFilter = MutableStateFlow("all")
     private val bookFilter = MutableStateFlow<String?>(null)
     private val colorFilter = MutableStateFlow<String?>(null)
+    private val tagFilter = MutableStateFlow<String?>(null)
     private val searchQuery = MutableStateFlow("")
     private val _highlightToEdit = MutableStateFlow<Highlight?>(null)
     private val _highlightToDelete = MutableStateFlow<Highlight?>(null)
@@ -60,6 +63,7 @@ class HighlightsViewModel(
         typeFilter,
         bookFilter,
         colorFilter,
+        tagFilter,
         searchQuery,
         _highlightToEdit,
         _highlightToDelete,
@@ -71,10 +75,16 @@ class HighlightsViewModel(
         val type = values[3] as String
         val book = values[4] as String?
         val color = values[5] as String?
-        val query = values[6] as String
-        val highlightToEdit = values[7] as Highlight?
-        val highlightToDelete = values[8] as Highlight?
-        val editNoteText = values[9] as String
+        val tag = values[6] as String?
+        val query = values[7] as String
+        val highlightToEdit = values[8] as Highlight?
+        val highlightToDelete = values[9] as Highlight?
+        val editNoteText = values[10] as String
+        val availableTags = highlights
+            .mapNotNull { it.tag }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
         HighlightsUiState(
             highlights = highlights,
             bookmarks = bookmarks,
@@ -82,8 +92,10 @@ class HighlightsViewModel(
             typeFilter = type,
             bookFilter = book,
             colorFilter = color,
+            tagFilter = tag,
             searchQuery = query,
-            filteredHighlights = applyFilters(highlights, type, book, color, query),
+            filteredHighlights = applyFilters(highlights, type, book, color, tag, query),
+            availableTags = availableTags,
             highlightToEdit = highlightToEdit,
             highlightToDelete = highlightToDelete,
             editNoteText = editNoteText,
@@ -106,6 +118,10 @@ class HighlightsViewModel(
 
     fun onColorFilterChanged(color: String?) {
         colorFilter.update { color }
+    }
+
+    fun onTagFilterChanged(tag: String?) {
+        tagFilter.update { tag }
     }
 
     fun onSearchQueryChanged(query: String) {
@@ -161,6 +177,7 @@ class HighlightsViewModel(
         type: String,
         book: String?,
         color: String?,
+        tag: String?,
         query: String
     ): List<Highlight> {
         return highlights.filter { highlight ->
@@ -172,10 +189,11 @@ class HighlightsViewModel(
             }
             val matchesBook = book == null || highlight.bookId == book
             val matchesColor = color == null || highlight.color.equals(color, ignoreCase = true)
+            val matchesTag = tag == null || highlight.tag.equals(tag, ignoreCase = true)
             val matchesSearch = query.isBlank() ||
                 highlight.textContent.contains(query, ignoreCase = true) ||
                 highlight.note?.contains(query, ignoreCase = true) == true
-            matchesType && matchesBook && matchesColor && matchesSearch
+            matchesType && matchesBook && matchesColor && matchesTag && matchesSearch
         }
     }
 }

@@ -76,6 +76,7 @@ fun HighlightsScreen(
     var showSearch by remember { mutableStateOf(false) }
     var showBookSelector by remember { mutableStateOf(false) }
     var showColorSelector by remember { mutableStateOf(false) }
+    var showTagSelector by remember { mutableStateOf(false) }
 
     val typeTabs = listOf(
         FilterTab("all", R.string.highlights_tab_all, Icons.Outlined.AutoAwesome),
@@ -117,6 +118,23 @@ fun HighlightsScreen(
                 showColorSelector = false
             },
             onDismiss = { showColorSelector = false }
+        )
+    }
+
+    val tagOptions = listOf(
+        SelectorOption("all", R.string.highlights_filter_all_tags)
+    ) + uiState.availableTags.map { SelectorOption(it, labelRes = null, label = it) }
+
+    if (showTagSelector) {
+        NextPageSelector(
+            title = stringResource(R.string.highlights_filter_tag),
+            options = tagOptions,
+            selectedOptionId = uiState.tagFilter ?: "all",
+            onOptionSelected = { option ->
+                viewModel.onTagFilterChanged(if (option.id == "all") null else option.id)
+                showTagSelector = false
+            },
+            onDismiss = { showTagSelector = false }
         )
     }
 
@@ -180,8 +198,10 @@ fun HighlightsScreen(
                     uiState.books.find { it.id == bookId }?.title
                 },
                 colorFilter = uiState.colorFilter,
+                tagFilter = uiState.tagFilter,
                 onBookFilterClick = { showBookSelector = true },
-                onColorFilterClick = { showColorSelector = true }
+                onColorFilterClick = { showColorSelector = true },
+                onTagFilterClick = { showTagSelector = true }
             )
         }
 
@@ -241,13 +261,15 @@ fun HighlightsScreen(
         } else {
             items(uiState.filteredHighlights, key = { it.id }) { highlight ->
                 NextPageHighlightCard(
-                    content = highlight.textContent,
+                    content = highlight.textContent.replace("\\n", " ").replace("\n", " "),
                     accentColor = parseHighlightColor(highlight.color),
                     note = highlight.note,
+                    tag = highlight.tag,
                     colorLabel = HighlightColor.fromHex(highlight.color)?.name?.lowercase()
                         ?.replaceFirstChar { c -> c.uppercase() },
                     onEditNote = { viewModel.onEditHighlightNote(highlight) },
-                    onDelete = { viewModel.onDeleteHighlight(highlight) }
+                    onDelete = { viewModel.onDeleteHighlight(highlight) },
+                    onTagClick = { tag -> viewModel.onTagFilterChanged(tag) }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -262,7 +284,7 @@ fun HighlightsScreen(
             titleRes = R.string.note_modal_title,
             hintRes = R.string.annotation_textarea_note_hint,
             snippetLabelRes = R.string.annotation_snippet_label,
-            selectedText = highlight.textContent,
+                    selectedText = highlight.textContent.replace("\\n", " ").replace("\n", " "),
             initialText = uiState.editNoteText,
             onSave = { viewModel.onSaveHighlightNote(it) },
             onDismiss = { viewModel.dismissEditHighlight() }
@@ -278,7 +300,7 @@ fun HighlightsScreen(
                 Text(
                     text = stringResource(
                         R.string.highlights_delete_message,
-                        highlight.textContent.take(60)
+                        highlight.textContent.replace("\\n", " ").replace("\n", " ").take(60)
                     )
                 )
             },
@@ -306,8 +328,10 @@ fun HighlightsScreen(
 private fun FilterControlsRow(
     bookFilterTitle: String?,
     colorFilter: String?,
+    tagFilter: String?,
     onBookFilterClick: () -> Unit,
-    onColorFilterClick: () -> Unit
+    onColorFilterClick: () -> Unit,
+    onTagFilterClick: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -331,6 +355,15 @@ private fun FilterControlsRow(
                 } ?: stringResource(R.string.highlights_filter_color)
                 Text(label)
             },
+            colors = FilterChipDefaults.filterChipColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            ),
+            modifier = Modifier.weight(1f)
+        )
+        FilterChip(
+            selected = tagFilter != null,
+            onClick = onTagFilterClick,
+            label = { Text(tagFilter ?: stringResource(R.string.highlights_filter_tag)) },
             colors = FilterChipDefaults.filterChipColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             ),

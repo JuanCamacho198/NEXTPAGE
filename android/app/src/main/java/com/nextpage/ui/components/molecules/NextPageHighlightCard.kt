@@ -1,6 +1,8 @@
 package com.nextpage.ui.components.molecules
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,9 +45,11 @@ fun NextPageHighlightCard(
     modifier: Modifier = Modifier,
     attribution: String? = null,
     note: String? = null,
+    tag: String? = null,
     colorLabel: String? = null,
     onEditNote: (() -> Unit)? = null,
-    onDelete: (() -> Unit)? = null
+    onDelete: (() -> Unit)? = null,
+    onTagClick: ((String) -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val hasMenu = onEditNote != null || onDelete != null
@@ -74,20 +78,45 @@ fun NextPageHighlightCard(
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                if (colorLabel != null) {
+                if (colorLabel != null || tag != null) {
                     Spacer(modifier = Modifier.height(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(accentColor.copy(alpha = 0.15f))
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = colorLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = accentColor,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (colorLabel != null) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(accentColor.copy(alpha = 0.15f))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = colorLabel,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = accentColor,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                        if (tag != null) {
+                            val clickable = onTagClick != null
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .then(
+                                        if (clickable) {
+                                            Modifier.clickable { onTagClick.invoke(tag) }
+                                        } else Modifier
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = tag,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
                     }
                 }
                 if (!attribution.isNullOrBlank()) {

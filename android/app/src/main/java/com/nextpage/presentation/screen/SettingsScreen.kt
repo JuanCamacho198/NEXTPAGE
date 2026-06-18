@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.ThemeMode
+import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.screen.settings.SettingsAboutScreen
 import com.nextpage.presentation.screen.settings.SettingsAccountScreen
@@ -21,6 +22,7 @@ import com.nextpage.presentation.screen.settings.SettingsNotificationsScreen
 import com.nextpage.presentation.screen.settings.SettingsPaletteScreen
 import com.nextpage.presentation.screen.settings.SettingsStatisticsScreen
 import com.nextpage.presentation.screen.settings.SettingsThemeScreen
+import com.nextpage.presentation.viewmodel.DictionaryViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
 
 @Composable
@@ -33,9 +35,13 @@ fun SettingsScreen(
     customHighlightColors: List<String>? = null,
     onUpdateCustomHighlightColor: (Int, String) -> Unit = { _, _ -> },
     onResetCustomHighlightColors: () -> Unit = {},
-    statisticsViewModel: StatisticsViewModel
+    statisticsViewModel: StatisticsViewModel,
+    dictionaryRepository: DictionaryRepository? = null
 ) {
     val nestedNavController = rememberNavController()
+    val dictionaryViewModel = remember(dictionaryRepository) {
+        dictionaryRepository?.let { DictionaryViewModel(it) }
+    }
 
     Column(
         modifier = Modifier
@@ -71,6 +77,9 @@ fun SettingsScreen(
                     },
                     onNavigateToAbout = {
                         nestedNavController.navigate(NextPageDestination.SettingsAbout.route)
+                    },
+                    onNavigateToDictionary = {
+                        nestedNavController.navigate(NextPageDestination.SettingsDictionary.route)
                     }
                 )
             }
@@ -132,6 +141,15 @@ fun SettingsScreen(
                     viewModel = statisticsViewModel,
                     onBack = { nestedNavController.popBackStack() }
                 )
+            }
+
+            composable(route = NextPageDestination.SettingsDictionary.route) {
+                dictionaryViewModel?.let { vm ->
+                    DictionaryScreen(
+                        viewModel = vm,
+                        onNavigateBack = { nestedNavController.popBackStack() }
+                    )
+                }
             }
         }
     }

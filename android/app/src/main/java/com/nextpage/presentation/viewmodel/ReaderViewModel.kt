@@ -17,6 +17,7 @@ import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.domain.model.SearchResult
+import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
@@ -152,6 +153,7 @@ class ReaderViewModel(
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
     private val readerPreferences: ReaderPreferences? = null,
     defaultBookId: String?,
+    private val dictionaryRepository: DictionaryRepository? = null,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) : AndroidViewModel(application) {
     companion object {
@@ -985,6 +987,32 @@ class ReaderViewModel(
         _uiEvent.tryEmit(UiEvent.ShareText(text))
     }
 
+    // ── Dictionary (Gap 8) ─────────────────────────────────────
+
+    /** Saves the selected text to the dictionary with duplicate prevention. */
+    fun onAddToDictionary() {
+        val repo = dictionaryRepository ?: return
+        val text = mutableUiState.value.selectedText?.trim()
+        if (text.isNullOrBlank()) return
+
+        viewModelScope.launch(mainDispatcher) {
+            if (repo.exists(text)) {
+                _uiEvent.emit(UiEvent.ShowSnackbar("Already in dictionary"))
+            } else {
+                repo.save(text).fold(
+                    onSuccess = {
+                        _uiEvent.emit(UiEvent.ShowSnackbar("Added to dictionary"))
+                    },
+                    onFailure = { e ->
+                        _uiEvent.emit(UiEvent.ShowSnackbar(
+                            e.message ?: "Failed to add to dictionary"
+                        ))
+                    }
+                )
+            }
+        }
+    }
+
     // ── Custom Highlight Palette (Phase 4) ───────────────────────
 
     /** Updates a single slot in the custom highlight colour palette
@@ -1740,7 +1768,8 @@ class ReaderViewModelFactory(
     private val readerRepository: ReaderRepository,
     private val readingStatsRepository: ReadingStatsRepository,
     private val readerPreferences: ReaderPreferences,
-    private val defaultBookId: String?
+    private val defaultBookId: String?,
+    private val dictionaryRepository: DictionaryRepository? = null
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -1751,7 +1780,8 @@ class ReaderViewModelFactory(
                 readingStatsRepository = readingStatsRepository,
                 updateReadingProgressUseCase = UpdateReadingProgressUseCase(readerRepository),
                 readerPreferences = readerPreferences,
-                defaultBookId = defaultBookId
+                defaultBookId = defaultBookId,
+                dictionaryRepository = dictionaryRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

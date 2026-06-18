@@ -10,13 +10,16 @@ import com.nextpage.data.local.AppDatabase
 import com.nextpage.data.local.AppDatabaseMigrations
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.BookmarkDao
+import com.nextpage.data.local.dao.DictionaryWordDao
 import com.nextpage.data.local.dao.HighlightDao
 import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.ReadingSessionDao
+import com.nextpage.data.local.dao.ReadingStatsDao
 import com.nextpage.data.repository.HomeRepositoryImpl
 import com.nextpage.data.repository.LibraryRepositoryImpl
 import com.nextpage.data.repository.ReaderRepositoryImpl
 import com.nextpage.data.repository.ReadingStatsRepositoryImpl
+import com.nextpage.data.repository.DictionaryRepositoryImpl
 import com.nextpage.data.repository.GoogleAuthRepository
 import com.nextpage.data.remote.google.GoogleDriveConfig
 import com.nextpage.data.remote.google.GoogleDriveClientProvider
@@ -30,6 +33,7 @@ import com.nextpage.data.session.GoogleSessionManager
 import com.nextpage.data.session.PreferencesSessionStore
 import com.nextpage.data.storage.AppInternalCoverStorage
 import com.nextpage.domain.repository.AuthRepository
+import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
@@ -102,6 +106,10 @@ class AppContainer(context: Context) {
     )
 
     val readerPreferences: ReaderPreferences = ReaderPreferences(context.applicationContext)
+
+    val dictionaryRepository: DictionaryRepository = DictionaryRepositoryImpl(
+        dao = appDatabase.dictionaryWordDao()
+    )
 
     // ── Google Drive backend ────────────────────────────────────────
 

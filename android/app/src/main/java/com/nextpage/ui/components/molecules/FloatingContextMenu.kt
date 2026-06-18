@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -71,6 +72,7 @@ fun FloatingContextMenu(
     onShowColorRow: () -> Unit = {},
     onShowColorPicker: () -> Unit = {},
     hasActiveHighlight: Boolean = true,
+    onAddToDictionary: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -126,6 +128,18 @@ fun FloatingContextMenu(
             enabled = hasActiveHighlight,
             onClick = onAddComment
         )
+
+        // ── Dictionary ────────────────────────────────────────────
+        onAddToDictionary?.let { dictCb ->
+            ContextIconAction(
+                icon = Icons.Outlined.MenuBook,
+                contentDescription = stringResource(R.string.context_menu_dictionary),
+                tint = Color(0xFFDDE2F8),
+                enabled = true,
+                onClick = dictCb
+            )
+        }
+
         MenuDivider()
 
         // ── Share ─────────────────────────────────────────────────

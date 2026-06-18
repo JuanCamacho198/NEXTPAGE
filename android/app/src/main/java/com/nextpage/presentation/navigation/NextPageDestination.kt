@@ -28,4 +28,5 @@ sealed class NextPageDestination(
     data object SettingsPalette : NextPageDestination("settings/palette")
     data object SettingsAbout : NextPageDestination("settings/about")
     data object SettingsStatistics : NextPageDestination("settings/data/statistics")
+    data object SettingsDictionary : NextPageDestination("settings/dictionary")
 }

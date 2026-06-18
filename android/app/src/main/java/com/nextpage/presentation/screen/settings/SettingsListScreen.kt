@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Person
@@ -73,7 +74,8 @@ fun SettingsListScreen(
     onNavigateToPalette: () -> Unit,
     onNavigateToDataStorage: () -> Unit,
     onNavigateToNotifications: () -> Unit,
-    onNavigateToAbout: () -> Unit
+    onNavigateToAbout: () -> Unit,
+    onNavigateToDictionary: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val langPrefs = androidx.compose.runtime.remember { AppLanguagePreferences(context = context) }
@@ -135,6 +137,11 @@ fun SettingsListScreen(
                     labelRes = R.string.settings_pref_notifications,
                     icon = Icons.Outlined.Notifications,
                     onClick = onNavigateToNotifications
+                ),
+                SettingsRow(
+                    labelRes = R.string.settings_dictionary_label,
+                    icon = Icons.Outlined.LibraryBooks,
+                    onClick = onNavigateToDictionary
                 )
             )
         ),

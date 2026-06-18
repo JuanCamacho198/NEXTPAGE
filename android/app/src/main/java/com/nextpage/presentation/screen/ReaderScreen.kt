@@ -310,7 +310,8 @@ fun ReaderScreen(
                             onAddComment = { viewModel.onShowCommentModal() },
                             onShare = { viewModel.onShareSelectedText() },
                             onShowColorPickerPopover = { viewModel.onShowColorPickerPopover() },
-                            onDismissColorPickerPopover = { viewModel.onDismissColorPickerPopover() }
+                            onDismissColorPickerPopover = { viewModel.onDismissColorPickerPopover() },
+                            onAddToDictionary = { viewModel.onAddToDictionary() }
                         )
                     }
                 }
@@ -358,7 +359,8 @@ fun ReaderScreen(
                             onAddComment = { viewModel.onShowCommentModal() },
                             onShare = { viewModel.onShareSelectedText() },
                             onShowColorPickerPopover = { viewModel.onShowColorPickerPopover() },
-                            onDismissColorPickerPopover = { viewModel.onDismissColorPickerPopover() }
+                            onDismissColorPickerPopover = { viewModel.onDismissColorPickerPopover() },
+                            onAddToDictionary = { viewModel.onAddToDictionary() }
                         )
                     }
                 }

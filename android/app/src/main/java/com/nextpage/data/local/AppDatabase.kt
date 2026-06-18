@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.BookmarkDao
+import com.nextpage.data.local.dao.DictionaryWordDao
 import com.nextpage.data.local.dao.HighlightDao
 import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.ReadingSessionDao
@@ -12,6 +13,7 @@ import com.nextpage.data.local.dao.SyncOutboxDao
 import com.nextpage.data.local.dao.SyncFileMappingDao
 import com.nextpage.data.local.entity.BookEntity
 import com.nextpage.data.local.entity.BookmarkEntity
+import com.nextpage.data.local.entity.DictionaryWordEntity
 import com.nextpage.data.local.entity.HighlightEntity
 import com.nextpage.data.local.entity.ReadingProgressEntity
 import com.nextpage.data.local.entity.ReadingSessionEntity
@@ -28,7 +30,8 @@ import com.nextpage.data.local.entity.SyncOutboxEntity
         HighlightEntity::class,
         BookmarkEntity::class,
         SyncOutboxEntity::class,
-        SyncFileMappingEntity::class
+        SyncFileMappingEntity::class,
+        DictionaryWordEntity::class
     ],
     version = 12,
     exportSchema = true
@@ -42,4 +45,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun bookmarkDao(): BookmarkDao
     abstract fun syncOutboxDao(): SyncOutboxDao
     abstract fun syncFileMappingDao(): SyncFileMappingDao
+    abstract fun dictionaryWordDao(): DictionaryWordDao
 }

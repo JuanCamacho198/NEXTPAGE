@@ -100,7 +100,8 @@ fun NextPageNavHost(
             readerRepository = appContainer.readerRepository,
             readingStatsRepository = appContainer.readingStatsRepository,
             readerPreferences = appContainer.readerPreferences,
-            defaultBookId = selectedBookId
+            defaultBookId = selectedBookId,
+            dictionaryRepository = appContainer.dictionaryRepository
         )
     )
 
@@ -502,7 +503,8 @@ fun NextPageNavHost(
                             val current = prefs.load()
                             prefs.save(current.copy(customHighlightColors = null))
                         },
-                        statisticsViewModel = statisticsViewModel
+                        statisticsViewModel = statisticsViewModel,
+                        dictionaryRepository = appContainer.dictionaryRepository
                     )
                 }
             }

@@ -65,6 +65,7 @@ fun SelectionOverlay(
     onShare: () -> Unit,
     onShowColorPickerPopover: () -> Unit = {},
     onDismissColorPickerPopover: () -> Unit = {},
+    onAddToDictionary: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     if (selectionRect == null) return
@@ -168,7 +169,8 @@ fun SelectionOverlay(
                 onDelete = onDelete,
                 onDismiss = onDismissContextMenu,
                 onShowColorPicker = onShowColorPickerPopover,
-                hasActiveHighlight = activeHighlightColor != null
+                hasActiveHighlight = activeHighlightColor != null,
+                onAddToDictionary = onAddToDictionary
             )
         }
     }

@@ -91,7 +91,12 @@ fun NextPageNavHost(
     var selectedBookFormat by rememberSaveable { mutableStateOf("epub") }
 
     val libraryViewModel: LibraryViewModel = viewModel(
-        factory = LibraryViewModelFactory(appContainer.libraryRepository, appContainer.syncService)
+        factory = LibraryViewModelFactory(
+            libraryRepository = appContainer.libraryRepository,
+            syncService = appContainer.syncService,
+            coverStorage = appContainer.coverStorage,
+            appContext = context.applicationContext
+        )
     )
 
     val readerViewModel: ReaderViewModel = viewModel(
@@ -169,6 +174,25 @@ fun NextPageNavHost(
                             Intent.createChooser(
                                 shareIntent,
                                 context.getString(com.nextpage.R.string.context_menu_share)
+                            )
+                        )
+                    }
+                    is UiEvent.ShareFile -> {
+                        val file = java.io.File(event.filePath)
+                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            file
+                        )
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = event.mimeType
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(
+                            Intent.createChooser(
+                                shareIntent,
+                                context.getString(com.nextpage.R.string.library_share_chooser_title)
                             )
                         )
                     }

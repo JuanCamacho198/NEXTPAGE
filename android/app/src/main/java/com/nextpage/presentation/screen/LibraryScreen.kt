@@ -33,8 +33,6 @@ import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,11 +72,13 @@ import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageEmptyState
 import com.nextpage.ui.components.atoms.SyncStatusIndicator
+import com.nextpage.ui.components.molecules.AddBookCard
+import com.nextpage.ui.components.molecules.BookContextMenu
+import com.nextpage.ui.components.molecules.EditBookMetadataDialog
 import com.nextpage.ui.components.molecules.FilterBottomSheet
 import com.nextpage.ui.components.molecules.LibraryHeader
 import com.nextpage.ui.components.molecules.StatusChipRow
 import com.nextpage.ui.components.molecules.SortControlRow
-import com.nextpage.ui.components.molecules.AddBookCard
 
 @Composable
 fun LibraryScreen(
@@ -91,6 +91,14 @@ fun LibraryScreen(
     val scope = rememberCoroutineScope()
 
     val searchedBooks = uiState.searchedBooks
+
+    var editCoverUri by remember { mutableStateOf<Uri?>(null) }
+
+    val coverPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        editCoverUri = uri
+    }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -178,7 +186,11 @@ fun LibraryScreen(
                     onFilterToggle = { viewModel.onToggleFilterSheet() },
                     onBookSelected = onBookSelected,
                     onBookLongPress = { book -> viewModel.requestDeleteBook(book) },
-                    onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }
+                    onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) },
+                    onEdit = { book -> viewModel.requestEditBook(book) },
+                    onMarkCompleted = { book -> viewModel.onMenuMarkCompleted(book) },
+                    onMarkPlanToRead = { book -> viewModel.onMenuMarkPlanToRead(book) },
+                    onShare = { book -> viewModel.onMenuShare(book) }
                 )
             }
         }
@@ -208,6 +220,34 @@ fun LibraryScreen(
                         Text(text = stringResource(R.string.reader_cancel))
                     }
                 }
+            )
+        }
+
+        uiState.bookToEdit?.let { book ->
+            EditBookMetadataDialog(
+                book = book,
+                selectedCoverUri = editCoverUri,
+                onDismiss = { viewModel.dismissEditDialog() },
+                onSave = { title, author, description ->
+                    scope.launch {
+                        val coverBytes = editCoverUri?.let { uri ->
+                            withContext(Dispatchers.IO) {
+                                context.contentResolver.openInputStream(uri)?.use { input ->
+                                    input.readBytes()
+                                }
+                            }
+                        }
+                        editCoverUri = null
+                        viewModel.confirmEditBook(
+                            book = book,
+                            title = title,
+                            author = author,
+                            description = description,
+                            coverBytes = coverBytes
+                        )
+                    }
+                },
+                onChangeCover = { coverPickerLauncher.launch("image/*") }
             )
         }
 
@@ -259,7 +299,11 @@ private fun LibraryBookshelfContent(
     onFilterToggle: () -> Unit,
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
-    onImportClick: () -> Unit
+    onImportClick: () -> Unit,
+    onEdit: (Book) -> Unit,
+    onMarkCompleted: (Book) -> Unit,
+    onMarkPlanToRead: (Book) -> Unit,
+    onShare: (Book) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -295,7 +339,11 @@ private fun LibraryBookshelfContent(
             isGridView = isGridView,
             onBookSelected = onBookSelected,
             onBookLongPress = onBookLongPress,
-            onImportClick = onImportClick
+            onImportClick = onImportClick,
+            onEdit = onEdit,
+            onMarkCompleted = onMarkCompleted,
+            onMarkPlanToRead = onMarkPlanToRead,
+            onShare = onShare
         )
     }
 }
@@ -307,7 +355,11 @@ private fun BookGridSection(
     isGridView: Boolean,
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
-    onImportClick: () -> Unit
+    onImportClick: () -> Unit,
+    onEdit: (Book) -> Unit,
+    onMarkCompleted: (Book) -> Unit,
+    onMarkPlanToRead: (Book) -> Unit,
+    onShare: (Book) -> Unit
 ) {
     if (isGridView) {
         BookGrid(
@@ -315,14 +367,22 @@ private fun BookGridSection(
             readingMinutesByBook = readingMinutesByBook,
             onBookSelected = onBookSelected,
             onBookLongPress = onBookLongPress,
-            onImportClick = onImportClick
+            onImportClick = onImportClick,
+            onEdit = onEdit,
+            onMarkCompleted = onMarkCompleted,
+            onMarkPlanToRead = onMarkPlanToRead,
+            onShare = onShare
         )
     } else {
         BookList(
             books = books,
             readingMinutesByBook = readingMinutesByBook,
             onBookSelected = onBookSelected,
-            onBookLongPress = onBookLongPress
+            onBookLongPress = onBookLongPress,
+            onEdit = onEdit,
+            onMarkCompleted = onMarkCompleted,
+            onMarkPlanToRead = onMarkPlanToRead,
+            onShare = onShare
         )
     }
 }
@@ -333,7 +393,11 @@ private fun BookGrid(
     readingMinutesByBook: Map<String, Long>,
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
-    onImportClick: () -> Unit
+    onImportClick: () -> Unit,
+    onEdit: (Book) -> Unit,
+    onMarkCompleted: (Book) -> Unit,
+    onMarkPlanToRead: (Book) -> Unit,
+    onShare: (Book) -> Unit
 ) {
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(2),
@@ -349,7 +413,11 @@ private fun BookGrid(
                 book = book,
                 minutesRead = readingMinutesByBook[book.id] ?: 0L,
                 onClick = { onBookSelected(book.id, book.filePath, book.format) },
-                onLongPress = { onBookLongPress(book) }
+                onLongPress = { onBookLongPress(book) },
+                onEdit = { onEdit(book) },
+                onMarkCompleted = { onMarkCompleted(book) },
+                onMarkPlanToRead = { onMarkPlanToRead(book) },
+                onShare = { onShare(book) }
             )
         }
         item(key = "add_book", contentType = { "add" }) {
@@ -363,7 +431,11 @@ private fun BookList(
     books: List<Book>,
     readingMinutesByBook: Map<String, Long>,
     onBookSelected: (String, String, String) -> Unit,
-    onBookLongPress: (Book) -> Unit
+    onBookLongPress: (Book) -> Unit,
+    onEdit: (Book) -> Unit,
+    onMarkCompleted: (Book) -> Unit,
+    onMarkPlanToRead: (Book) -> Unit,
+    onShare: (Book) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -377,7 +449,11 @@ private fun BookList(
                 book = book,
                 minutesRead = readingMinutesByBook[book.id] ?: 0L,
                 onClick = { onBookSelected(book.id, book.filePath, book.format) },
-                onLongPress = { onBookLongPress(book) }
+                onLongPress = { onBookLongPress(book) },
+                onEdit = { onEdit(book) },
+                onMarkCompleted = { onMarkCompleted(book) },
+                onMarkPlanToRead = { onMarkPlanToRead(book) },
+                onShare = { onShare(book) }
             )
         }
     }
@@ -389,7 +465,11 @@ private fun BookListCard(
     book: Book,
     minutesRead: Long,
     onClick: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onEdit: () -> Unit,
+    onMarkCompleted: () -> Unit,
+    onMarkPlanToRead: () -> Unit,
+    onShare: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val progressFraction = if (minutesRead > 0L) {
@@ -458,30 +538,15 @@ private fun BookListCard(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                DropdownMenu(
+                BookContextMenu(
                     expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.library_menu_edit_metadata)) },
-                        onClick = {
-                            showMenu = false
-                            // TODO: Edit Metadata placeholder
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(R.string.library_menu_remove),
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        },
-                        onClick = {
-                            showMenu = false
-                            onLongPress()
-                        }
-                    )
-                }
+                    onDismissRequest = { showMenu = false },
+                    onEdit = onEdit,
+                    onMarkCompleted = onMarkCompleted,
+                    onMarkPlanToRead = onMarkPlanToRead,
+                    onShare = onShare,
+                    onDelete = onLongPress
+                )
             }
         }
     }
@@ -493,7 +558,11 @@ private fun BookGridCard(
     book: Book,
     minutesRead: Long,
     onClick: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onEdit: () -> Unit,
+    onMarkCompleted: () -> Unit,
+    onMarkPlanToRead: () -> Unit,
+    onShare: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val progressFraction = if (minutesRead > 0L) {
@@ -540,30 +609,15 @@ private fun BookGridCard(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                DropdownMenu(
+                BookContextMenu(
                     expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.library_menu_edit_metadata)) },
-                        onClick = {
-                            showMenu = false
-                            // TODO: Edit Metadata placeholder
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(R.string.library_menu_remove),
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        },
-                        onClick = {
-                            showMenu = false
-                            onLongPress()
-                        }
-                    )
-                }
+                    onDismissRequest = { showMenu = false },
+                    onEdit = onEdit,
+                    onMarkCompleted = onMarkCompleted,
+                    onMarkPlanToRead = onMarkPlanToRead,
+                    onShare = onShare,
+                    onDelete = onLongPress
+                )
             }
         }
 

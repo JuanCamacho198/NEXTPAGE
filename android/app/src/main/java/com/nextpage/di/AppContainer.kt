@@ -63,7 +63,7 @@ class AppContainer(context: Context) {
         Log.d(TAG, "Database initialized in ${dbInitTime}ms")
     }
 
-    private val coverStorage = AppInternalCoverStorage(context.applicationContext)
+    val coverStorage = AppInternalCoverStorage(context.applicationContext)
 
     private val pdfParserService = DefaultPdfParserService(context.applicationContext)
 

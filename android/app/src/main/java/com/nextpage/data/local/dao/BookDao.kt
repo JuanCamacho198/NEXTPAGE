@@ -29,6 +29,19 @@ interface BookDao {
     @Query("UPDATE books SET user_rating = :rating WHERE id = :bookId")
     suspend fun updateRating(bookId: String, rating: Int?)
 
+    @Query("UPDATE books SET status = :status, updated_at = :updatedAt WHERE id = :bookId")
+    suspend fun updateStatus(bookId: String, status: String?, updatedAt: Long)
+
+    @Query("UPDATE books SET title = :title, author = :author, description = :description, cover_path = :coverPath, updated_at = :updatedAt WHERE id = :bookId")
+    suspend fun updateMetadata(
+        bookId: String,
+        title: String,
+        author: String?,
+        description: String?,
+        coverPath: String?,
+        updatedAt: Long
+    )
+
     @Query("SELECT COUNT(*) FROM books")
     suspend fun count(): Int
 }

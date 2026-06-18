@@ -1,12 +1,17 @@
 package com.nextpage.presentation.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nextpage.R
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.SyncState
+import com.nextpage.data.storage.CoverStorage
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.Book
+import com.nextpage.domain.model.BookStatus
+import com.nextpage.domain.model.effectiveStatus
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.presentation.UiEvent
 import kotlinx.coroutines.CoroutineDispatcher
@@ -32,6 +37,8 @@ data class LibraryUiState(
     val isLoading: Boolean = true,
     val isImporting: Boolean = false,
     val bookToDelete: Book? = null,
+    val bookToEdit: Book? = null,
+    val bookToShare: Book? = null,
     val totalMinutesRead: Long = 0L,
     val readingMinutesByBook: Map<String, Long> = emptyMap(),
     // ── Sync state ──
@@ -75,14 +82,16 @@ data class LibraryUiState(
     ): List<Book> {
         return when (statusFilter) {
             "reading" -> books.filter {
-                (readingMinutesByBook[it.id] ?: 0L) > 0L &&
-                (readingMinutesByBook[it.id] ?: 0L) < READING_TARGET_MINUTES
+                val eff = it.effectiveStatus(readingMinutesByBook[it.id] ?: 0L)
+                eff == BookStatus.READING
             }
             "pending" -> books.filter {
-                (readingMinutesByBook[it.id] ?: 0L) == 0L
+                val eff = it.effectiveStatus(readingMinutesByBook[it.id] ?: 0L)
+                eff == "pending" || eff == BookStatus.PLAN_TO_READ
             }
             "completed" -> books.filter {
-                (readingMinutesByBook[it.id] ?: 0L) >= READING_TARGET_MINUTES
+                val eff = it.effectiveStatus(readingMinutesByBook[it.id] ?: 0L)
+                eff == BookStatus.COMPLETED
             }
             else -> books
         }
@@ -110,6 +119,8 @@ class LibraryViewModel(
     private val libraryRepository: LibraryRepository,
     private val importEpubBookUseCase: ImportEpubBookUseCase,
     private val syncService: SyncService,
+    private val coverStorage: CoverStorage,
+    private val appContext: Context,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) : ViewModel() {
     companion object {
@@ -323,11 +334,91 @@ class LibraryViewModel(
             syncService.schedulePull()
         }
     }
+
+    // ── Context Menu actions ────────────────────────────────────────
+
+    fun onMenuMarkCompleted(book: Book) {
+        updateBookStatus(book, BookStatus.COMPLETED, R.string.library_snackbar_marked_completed)
+    }
+
+    fun onMenuMarkPlanToRead(book: Book) {
+        updateBookStatus(book, BookStatus.PLAN_TO_READ, R.string.library_snackbar_marked_plan_to_read)
+    }
+
+    private fun updateBookStatus(book: Book, status: String, successMessageRes: Int) {
+        viewModelScope.launch(mainDispatcher) {
+            val result = libraryRepository.updateBookStatus(book.id, status)
+            result.fold(
+                onSuccess = {
+                    _uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(successMessageRes)))
+                },
+                onFailure = { error ->
+                    _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to update status"))
+                }
+            )
+        }
+    }
+
+    fun onMenuShare(book: Book) {
+        mutableUiState.update { it.copy(bookToShare = book) }
+        val mimeType = when (book.format.lowercase()) {
+            "pdf" -> "application/pdf"
+            "epub" -> "application/epub+zip"
+            else -> "*/*"
+        }
+        viewModelScope.launch(mainDispatcher) {
+            _uiEvent.emit(UiEvent.ShareFile(filePath = book.filePath, mimeType = mimeType))
+            mutableUiState.update { it.copy(bookToShare = null) }
+        }
+    }
+
+    fun requestEditBook(book: Book) {
+        mutableUiState.update { it.copy(bookToEdit = book) }
+    }
+
+    fun dismissEditDialog() {
+        mutableUiState.update { it.copy(bookToEdit = null) }
+    }
+
+    fun confirmEditBook(
+        book: Book,
+        title: String,
+        author: String?,
+        description: String?,
+        coverBytes: ByteArray?
+    ) {
+        viewModelScope.launch(mainDispatcher) {
+            val coverPath = coverBytes?.let { bytes ->
+                coverStorage.saveCover(bookId = book.id, coverBytes = bytes).getOrNull()
+            } ?: book.coverPath
+
+            val result = libraryRepository.updateBookMetadata(
+                bookId = book.id,
+                title = title.trim().ifBlank { book.title },
+                author = author?.trim()?.ifBlank { null },
+                description = description?.trim()?.ifBlank { null },
+                coverPath = coverPath
+            )
+
+            mutableUiState.update { it.copy(bookToEdit = null) }
+
+            result.fold(
+                onSuccess = {
+                    _uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(R.string.library_snackbar_metadata_saved)))
+                },
+                onFailure = { error ->
+                    _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to update metadata"))
+                }
+            )
+        }
+    }
 }
 
 class LibraryViewModelFactory(
     private val libraryRepository: LibraryRepository,
-    private val syncService: SyncService
+    private val syncService: SyncService,
+    private val coverStorage: CoverStorage,
+    private val appContext: Context
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -335,7 +426,9 @@ class LibraryViewModelFactory(
             return LibraryViewModel(
                 libraryRepository = libraryRepository,
                 importEpubBookUseCase = ImportEpubBookUseCase(libraryRepository),
-                syncService = syncService
+                syncService = syncService,
+                coverStorage = coverStorage,
+                appContext = appContext
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

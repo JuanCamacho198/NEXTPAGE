@@ -130,6 +130,27 @@ class LibraryRepositoryImpl(
         bookDao.updateRating(bookId, rating)
     }
 
+    override suspend fun updateBookStatus(bookId: String, status: String?): Result<Unit> = runCatching {
+        bookDao.updateStatus(bookId, status, System.currentTimeMillis())
+    }
+
+    override suspend fun updateBookMetadata(
+        bookId: String,
+        title: String,
+        author: String?,
+        description: String?,
+        coverPath: String?
+    ): Result<Unit> = runCatching {
+        bookDao.updateMetadata(
+            bookId = bookId,
+            title = title,
+            author = author,
+            description = description,
+            coverPath = coverPath,
+            updatedAt = System.currentTimeMillis()
+        )
+    }
+
     /**
      * Attempts to extract cover image bytes using Readium's [Publication.cover]
      * extension (from [CoverService]).  Falls back to returning null, letting
@@ -187,7 +208,8 @@ class LibraryRepositoryImpl(
         format = format,
         totalPages = totalPages,
         userRating = userRating,
-        updatedAtEpochMillis = updatedAtEpochMillis
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        status = status
     )
 
     private fun ReadingProgressEntity.toDomain(): ReadingProgress = ReadingProgress(
@@ -210,7 +232,8 @@ class LibraryRepositoryImpl(
         totalPages = totalPages,
         chapterCount = chapterCount,
         userRating = userRating,
-        updatedAtEpochMillis = updatedAtEpochMillis
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        status = status
     )
 
     private companion object {

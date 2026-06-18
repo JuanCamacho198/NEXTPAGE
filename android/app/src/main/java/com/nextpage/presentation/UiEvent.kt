@@ -6,4 +6,7 @@ sealed interface UiEvent {
     /** Emitted when the user taps Share in the context menu.
      *  [ReaderScreen] handles the intent launch. */
     data class ShareText(val text: String) : UiEvent
+    /** Emitted to share a book file (EPUB/PDF) via ACTION_SEND.
+     *  The host resolves the FileProvider URI and launches the chooser. */
+    data class ShareFile(val filePath: String, val mimeType: String) : UiEvent
 }

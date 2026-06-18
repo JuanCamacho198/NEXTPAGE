@@ -30,4 +30,14 @@ interface LibraryRepository {
     suspend fun deleteBook(bookId: String): Result<Unit>
 
     suspend fun updateBookRating(bookId: String, rating: Int?)
+
+    suspend fun updateBookStatus(bookId: String, status: String?): Result<Unit>
+
+    suspend fun updateBookMetadata(
+        bookId: String,
+        title: String,
+        author: String?,
+        description: String?,
+        coverPath: String?
+    ): Result<Unit>
 }

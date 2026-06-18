@@ -107,6 +107,7 @@ class HomeRepositoryImpl(
         format = format,
         totalPages = totalPages,
         userRating = userRating,
-        updatedAtEpochMillis = updatedAtEpochMillis
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        status = status
     )
 }

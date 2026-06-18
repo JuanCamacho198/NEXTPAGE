@@ -136,6 +136,15 @@ fun DictionaryScreen(
                                         style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = FontWeight.Medium
                                     )
+                                    if (!word.definition.isNullOrBlank()) {
+                                        Text(
+                                            text = word.definition,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                     Text(
                                         text = formatDate(word.addedAtEpochMillis),
                                         style = MaterialTheme.typography.labelSmall,
@@ -189,6 +198,18 @@ fun DictionaryScreen(
                                 Text(stringResource(R.string.dictionary_add_word_hint))
                             },
                             singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = uiState.addDefinitionText,
+                            onValueChange = { viewModel.onAddDefinitionTextChanged(it) },
+                            placeholder = {
+                                Text(stringResource(R.string.dictionary_add_definition_hint))
+                            },
+                            singleLine = false,
+                            minLines = 2,
+                            maxLines = 4,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

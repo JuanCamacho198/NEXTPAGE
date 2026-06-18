@@ -22,7 +22,8 @@ data class DictionaryUiState(
     val isLoading: Boolean = true,
     val wordToDelete: DictionaryWord? = null,
     val showAddDialog: Boolean = false,
-    val addWordText: String = ""
+    val addWordText: String = "",
+    val addDefinitionText: String = ""
 )
 
 class DictionaryViewModel(
@@ -62,20 +63,25 @@ class DictionaryViewModel(
     }
 
     fun onShowAddDialog() {
-        _uiState.update { it.copy(showAddDialog = true, addWordText = "") }
+        _uiState.update { it.copy(showAddDialog = true, addWordText = "", addDefinitionText = "") }
     }
 
     fun onDismissAddDialog() {
-        _uiState.update { it.copy(showAddDialog = false, addWordText = "") }
+        _uiState.update { it.copy(showAddDialog = false, addWordText = "", addDefinitionText = "") }
     }
 
     fun onAddWordTextChanged(text: String) {
         _uiState.update { it.copy(addWordText = text) }
     }
 
+    fun onAddDefinitionTextChanged(text: String) {
+        _uiState.update { it.copy(addDefinitionText = text) }
+    }
+
     fun onAddWordConfirm() {
         val text = _uiState.value.addWordText.trim()
         if (text.isBlank()) return
+        val definition = _uiState.value.addDefinitionText.trim().takeIf { it.isNotBlank() }
 
         viewModelScope.launch {
             if (dictionaryRepository.exists(text)) {
@@ -83,7 +89,7 @@ class DictionaryViewModel(
                     "Already in dictionary"
                 ))
             } else {
-                dictionaryRepository.save(text).fold(
+                dictionaryRepository.save(text, definition).fold(
                     onSuccess = {
                         _uiEvent.emit(UiEvent.ShowSnackbar(
                             "\"$text\" added to your dictionary."
@@ -96,7 +102,7 @@ class DictionaryViewModel(
                     }
                 )
             }
-            _uiState.update { it.copy(showAddDialog = false, addWordText = "") }
+            _uiState.update { it.copy(showAddDialog = false, addWordText = "", addDefinitionText = "") }
         }
     }
 

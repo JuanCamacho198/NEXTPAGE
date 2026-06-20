@@ -16,5 +16,7 @@ data class SearchResult(
     val offset: Int,
     val page: Float = 0f,
     val chapterIndex: Int = 0,
-    val rect: Rect? = null
+    val rect: Rect? = null,
+    val chapterTitle: String = "",
+    val cfi: String = ""
 )

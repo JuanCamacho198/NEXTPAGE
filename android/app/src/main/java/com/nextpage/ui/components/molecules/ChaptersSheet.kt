@@ -32,7 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
-import com.nextpage.presentation.viewmodel.BookChapter
+import com.nextpage.presentation.viewmodel.reader.BookChapter
 
 /**
  * Bottom sheet listing the book's chapters.

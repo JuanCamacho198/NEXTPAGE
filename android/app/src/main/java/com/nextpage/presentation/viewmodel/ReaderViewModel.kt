@@ -3,17 +3,14 @@ package com.nextpage.presentation.viewmodel
 import android.app.Application
 import android.graphics.Rect
 import android.graphics.RectF
-import android.os.SystemClock
-import android.util.Log
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nextpage.data.session.ReaderPreferences
-import com.nextpage.debug.DebugLog
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
-import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.domain.model.SearchResult
@@ -22,48 +19,39 @@ import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import com.nextpage.presentation.UiEvent
+import com.nextpage.presentation.viewmodel.reader.FullscreenManager
+import com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder
+import com.nextpage.presentation.viewmodel.reader.ReaderLifecycleStateHolder
+import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
+import com.nextpage.presentation.viewmodel.reader.ReaderSettingsManager
+import com.nextpage.presentation.viewmodel.reader.SearchStateHolder
 import com.nextpage.presentation.viewmodel.reader.SleepTimerManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
-import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
-import org.readium.r2.shared.util.AbsoluteUrl
-import org.readium.r2.shared.util.resource.Resource
-import org.readium.r2.shared.util.asset.AssetRetriever
-import org.readium.r2.shared.util.http.DefaultHttpClient
-import org.readium.r2.streamer.PublicationOpener
-import org.readium.r2.streamer.parser.DefaultPublicationParser
-import org.readium.adapter.pdfium.document.PdfiumDocumentFactory
-import java.io.File
-import java.util.UUID
+
+typealias BookChapter = com.nextpage.presentation.viewmodel.reader.BookChapter
 
 /**
- * Represents a single chapter in the reader's chapter list.
- * Replaces [com.nextpage.data.epub.EpubContentLoader.Chapter] after Phase 2 cleanup.
+ * UI state for the Reader screen.
+ *
+ * NOTE: Not a `data class` because [selectionRect] is an Android [Rect]
+ * whose `equals()` is not available in JVM unit tests. Custom
+ * [equals]/[hashCode]/[toString] skip [selectionRect] — the rect is
+ * transient UI-positioning data that should not influence state-flow
+ * deduplication.
  */
-data class BookChapter(
-    val index: Int,
-    val id: String,
-    val title: String,
-    val href: String
-)
-
-data class ReaderUiState(
+class ReaderUiState(
     val selectedBookId: String? = null,
     val bookFilePath: String? = null,
     val bookFormat: String? = null,
@@ -76,6 +64,7 @@ data class ReaderUiState(
     val highlights: List<Highlight> = emptyList(),
     val bookmarks: List<Bookmark> = emptyList(),
     val readerSettings: ReaderSettings = ReaderSettings(),
+
     // ── Sleep Timer ────────────────────────────────────────────────
     val sleepTimerActive: Boolean = false,
     val sleepTimerRemainingSecs: Int = 0,
@@ -97,17 +86,11 @@ data class ReaderUiState(
     val selectionState: ReaderSelectionState = ReaderSelectionState.None,
     val selectedText: String? = null,
     val selectionRect: Rect? = null,
-    /** When non-null, the menu is acting on an existing highlight (tap to
-     *  edit). Color/delete actions target this id instead of creating new. */
+    /** Managed internally by SelectionCoordinator — set to null in combine. */
     val activeHighlightId: String? = null,
-    /**
-     * Time (via [SystemClock.elapsedRealtime]) until which selection events
-     * should be ignored after a highlight tap, so the FaPN3 context menu
-     * isn't immediately overwritten by the currentSelection() poll loop.
-     */
+    /** Managed internally by SelectionCoordinator — set to 0L in combine. */
     val highlightTapDebounceUntil: Long = 0L,
-    /** Set to [SystemClock.elapsedRealtime()] when any menu-closing action occurs.
-     *  [onReadiumSelection] ignores selection events for [MENU_CLOSE_IGNORE_MS] after this. */
+    /** Managed internally by SelectionCoordinator — set to 0L in combine. */
     val menuJustClosedAt: Long = 0L,
 
     // ── Highlights Panel (Gap 5) ────────────────────────────────────
@@ -144,7 +127,271 @@ data class ReaderUiState(
     val isLoading: Boolean = true,
     val loadTimeMs: Long? = null,
     val error: String? = null
-)
+) {
+    fun copy(
+        selectedBookId: String? = this.selectedBookId,
+        bookFilePath: String? = this.bookFilePath,
+        bookFormat: String? = this.bookFormat,
+        chapters: List<BookChapter> = this.chapters,
+        currentChapterIndex: Int = this.currentChapterIndex,
+        previewText: String = this.previewText,
+        currentPdfPage: Int = this.currentPdfPage,
+        totalPdfPages: Int = this.totalPdfPages,
+        readingProgress: ReadingProgress? = this.readingProgress,
+        highlights: List<Highlight> = this.highlights,
+        bookmarks: List<Bookmark> = this.bookmarks,
+        readerSettings: ReaderSettings = this.readerSettings,
+        sleepTimerActive: Boolean = this.sleepTimerActive,
+        sleepTimerRemainingSecs: Int = this.sleepTimerRemainingSecs,
+        sleepTimerFinished: Boolean = this.sleepTimerFinished,
+        sleepTimerPresetMinutes: Int? = this.sleepTimerPresetMinutes,
+        sleepTimerEndOfChapterMode: Boolean = this.sleepTimerEndOfChapterMode,
+        progressPercent: Float = this.progressPercent,
+        progressLabel: String = this.progressLabel,
+        isSearchActive: Boolean = this.isSearchActive,
+        searchQuery: String = this.searchQuery,
+        searchResults: List<SearchResult> = this.searchResults,
+        isSearching: Boolean = this.isSearching,
+        selectionState: ReaderSelectionState = this.selectionState,
+        selectedText: String? = this.selectedText,
+        selectionRect: Rect? = this.selectionRect,
+        activeHighlightId: String? = this.activeHighlightId,
+        highlightTapDebounceUntil: Long = this.highlightTapDebounceUntil,
+        menuJustClosedAt: Long = this.menuJustClosedAt,
+        showHighlightsSheet: Boolean = this.showHighlightsSheet,
+        showTocSheet: Boolean = this.showTocSheet,
+        showSplitSettings: Boolean = this.showSplitSettings,
+        isFullscreen: Boolean = this.isFullscreen,
+        readiumPublication: Publication? = this.readiumPublication,
+        readiumLocator: Locator? = this.readiumLocator,
+        readiumSelectionLocator: Locator? = this.readiumSelectionLocator,
+        readiumViewportHeight: Int = this.readiumViewportHeight,
+        debugForceMenu: Boolean = this.debugForceMenu,
+        showColorPickerPopover: Boolean = this.showColorPickerPopover,
+        showNoteModal: Boolean = this.showNoteModal,
+        activeNoteText: String = this.activeNoteText,
+        showTagInput: Boolean = this.showTagInput,
+        activeTagText: String = this.activeTagText,
+        tagSuggestions: List<String> = this.tagSuggestions,
+        showDefinitionInput: Boolean = this.showDefinitionInput,
+        activeDefinitionText: String = this.activeDefinitionText,
+        isLoading: Boolean = this.isLoading,
+        loadTimeMs: Long? = this.loadTimeMs,
+        error: String? = this.error
+    ): ReaderUiState {
+        return ReaderUiState(
+            selectedBookId = selectedBookId,
+            bookFilePath = bookFilePath,
+            bookFormat = bookFormat,
+            chapters = chapters,
+            currentChapterIndex = currentChapterIndex,
+            previewText = previewText,
+            currentPdfPage = currentPdfPage,
+            totalPdfPages = totalPdfPages,
+            readingProgress = readingProgress,
+            highlights = highlights,
+            bookmarks = bookmarks,
+            readerSettings = readerSettings,
+            sleepTimerActive = sleepTimerActive,
+            sleepTimerRemainingSecs = sleepTimerRemainingSecs,
+            sleepTimerFinished = sleepTimerFinished,
+            sleepTimerPresetMinutes = sleepTimerPresetMinutes,
+            sleepTimerEndOfChapterMode = sleepTimerEndOfChapterMode,
+            progressPercent = progressPercent,
+            progressLabel = progressLabel,
+            isSearchActive = isSearchActive,
+            searchQuery = searchQuery,
+            searchResults = searchResults,
+            isSearching = isSearching,
+            selectionState = selectionState,
+            selectedText = selectedText,
+            selectionRect = selectionRect,
+            activeHighlightId = activeHighlightId,
+            highlightTapDebounceUntil = highlightTapDebounceUntil,
+            menuJustClosedAt = menuJustClosedAt,
+            showHighlightsSheet = showHighlightsSheet,
+            showTocSheet = showTocSheet,
+            showSplitSettings = showSplitSettings,
+            isFullscreen = isFullscreen,
+            readiumPublication = readiumPublication,
+            readiumLocator = readiumLocator,
+            readiumSelectionLocator = readiumSelectionLocator,
+            readiumViewportHeight = readiumViewportHeight,
+            debugForceMenu = debugForceMenu,
+            showColorPickerPopover = showColorPickerPopover,
+            showNoteModal = showNoteModal,
+            activeNoteText = activeNoteText,
+            showTagInput = showTagInput,
+            activeTagText = activeTagText,
+            tagSuggestions = tagSuggestions,
+            showDefinitionInput = showDefinitionInput,
+            activeDefinitionText = activeDefinitionText,
+            isLoading = isLoading,
+            loadTimeMs = loadTimeMs,
+            error = error
+        )
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ReaderUiState) return false
+        return selectedBookId == other.selectedBookId &&
+            bookFilePath == other.bookFilePath &&
+            bookFormat == other.bookFormat &&
+            chapters == other.chapters &&
+            currentChapterIndex == other.currentChapterIndex &&
+            previewText == other.previewText &&
+            currentPdfPage == other.currentPdfPage &&
+            totalPdfPages == other.totalPdfPages &&
+            readingProgress == other.readingProgress &&
+            highlights == other.highlights &&
+            bookmarks == other.bookmarks &&
+            readerSettings == other.readerSettings &&
+            sleepTimerActive == other.sleepTimerActive &&
+            sleepTimerRemainingSecs == other.sleepTimerRemainingSecs &&
+            sleepTimerFinished == other.sleepTimerFinished &&
+            sleepTimerPresetMinutes == other.sleepTimerPresetMinutes &&
+            sleepTimerEndOfChapterMode == other.sleepTimerEndOfChapterMode &&
+            progressPercent == other.progressPercent &&
+            progressLabel == other.progressLabel &&
+            isSearchActive == other.isSearchActive &&
+            searchQuery == other.searchQuery &&
+            searchResults == other.searchResults &&
+            isSearching == other.isSearching &&
+            selectionState == other.selectionState &&
+            selectedText == other.selectedText &&
+            activeHighlightId == other.activeHighlightId &&
+            highlightTapDebounceUntil == other.highlightTapDebounceUntil &&
+            menuJustClosedAt == other.menuJustClosedAt &&
+            showHighlightsSheet == other.showHighlightsSheet &&
+            showTocSheet == other.showTocSheet &&
+            showSplitSettings == other.showSplitSettings &&
+            isFullscreen == other.isFullscreen &&
+            readiumPublication == other.readiumPublication &&
+            readiumLocator == other.readiumLocator &&
+            readiumSelectionLocator == other.readiumSelectionLocator &&
+            readiumViewportHeight == other.readiumViewportHeight &&
+            debugForceMenu == other.debugForceMenu &&
+            showColorPickerPopover == other.showColorPickerPopover &&
+            showNoteModal == other.showNoteModal &&
+            activeNoteText == other.activeNoteText &&
+            showTagInput == other.showTagInput &&
+            activeTagText == other.activeTagText &&
+            tagSuggestions == other.tagSuggestions &&
+            showDefinitionInput == other.showDefinitionInput &&
+            activeDefinitionText == other.activeDefinitionText &&
+            isLoading == other.isLoading &&
+            loadTimeMs == other.loadTimeMs &&
+            error == other.error
+        // selectionRect intentionally omitted — not mockable in JVM unit tests
+    }
+
+    override fun hashCode(): Int {
+        var result = selectedBookId?.hashCode() ?: 0
+        result = 31 * result + (bookFilePath?.hashCode() ?: 0)
+        result = 31 * result + (bookFormat?.hashCode() ?: 0)
+        result = 31 * result + chapters.hashCode()
+        result = 31 * result + currentChapterIndex
+        result = 31 * result + previewText.hashCode()
+        result = 31 * result + currentPdfPage
+        result = 31 * result + totalPdfPages
+        result = 31 * result + (readingProgress?.hashCode() ?: 0)
+        result = 31 * result + highlights.hashCode()
+        result = 31 * result + bookmarks.hashCode()
+        result = 31 * result + readerSettings.hashCode()
+        result = 31 * result + sleepTimerActive.hashCode()
+        result = 31 * result + sleepTimerRemainingSecs
+        result = 31 * result + sleepTimerFinished.hashCode()
+        result = 31 * result + (sleepTimerPresetMinutes ?: 0)
+        result = 31 * result + sleepTimerEndOfChapterMode.hashCode()
+        result = 31 * result + progressPercent.hashCode()
+        result = 31 * result + progressLabel.hashCode()
+        result = 31 * result + isSearchActive.hashCode()
+        result = 31 * result + searchQuery.hashCode()
+        result = 31 * result + searchResults.hashCode()
+        result = 31 * result + isSearching.hashCode()
+        result = 31 * result + selectionState.hashCode()
+        result = 31 * result + (selectedText?.hashCode() ?: 0)
+        result = 31 * result + (activeHighlightId?.hashCode() ?: 0)
+        result = 31 * result + highlightTapDebounceUntil.hashCode()
+        result = 31 * result + menuJustClosedAt.hashCode()
+        result = 31 * result + showHighlightsSheet.hashCode()
+        result = 31 * result + showTocSheet.hashCode()
+        result = 31 * result + showSplitSettings.hashCode()
+        result = 31 * result + isFullscreen.hashCode()
+        result = 31 * result + (readiumPublication?.hashCode() ?: 0)
+        result = 31 * result + (readiumLocator?.hashCode() ?: 0)
+        result = 31 * result + (readiumSelectionLocator?.hashCode() ?: 0)
+        result = 31 * result + readiumViewportHeight
+        result = 31 * result + debugForceMenu.hashCode()
+        result = 31 * result + showColorPickerPopover.hashCode()
+        result = 31 * result + showNoteModal.hashCode()
+        result = 31 * result + activeNoteText.hashCode()
+        result = 31 * result + showTagInput.hashCode()
+        result = 31 * result + activeTagText.hashCode()
+        result = 31 * result + tagSuggestions.hashCode()
+        result = 31 * result + showDefinitionInput.hashCode()
+        result = 31 * result + activeDefinitionText.hashCode()
+        result = 31 * result + isLoading.hashCode()
+        result = 31 * result + (loadTimeMs?.hashCode() ?: 0)
+        result = 31 * result + (error?.hashCode() ?: 0)
+        return result
+    }
+
+    override fun toString(): String {
+        return "ReaderUiState(" +
+            "selectedBookId='$selectedBookId', " +
+            "bookFilePath='$bookFilePath', " +
+            "bookFormat='$bookFormat', " +
+            "chapters.size=${chapters.size}, " +
+            "currentChapterIndex=$currentChapterIndex, " +
+            "previewText='$previewText', " +
+            "currentPdfPage=$currentPdfPage, " +
+            "totalPdfPages=$totalPdfPages, " +
+            "readingProgress=$readingProgress, " +
+            "highlights.size=${highlights.size}, " +
+            "bookmarks.size=${bookmarks.size}, " +
+            "readerSettings=$readerSettings, " +
+            "sleepTimerActive=$sleepTimerActive, " +
+            "sleepTimerRemainingSecs=$sleepTimerRemainingSecs, " +
+            "sleepTimerFinished=$sleepTimerFinished, " +
+            "sleepTimerPresetMinutes=$sleepTimerPresetMinutes, " +
+            "sleepTimerEndOfChapterMode=$sleepTimerEndOfChapterMode, " +
+            "progressPercent=$progressPercent, " +
+            "progressLabel='$progressLabel', " +
+            "isSearchActive=$isSearchActive, " +
+            "searchQuery='$searchQuery', " +
+            "searchResults.size=${searchResults.size}, " +
+            "isSearching=$isSearching, " +
+            "selectionState=$selectionState, " +
+            "selectedText='$selectedText', " +
+            "selectionRect=$selectionRect, " +
+            "activeHighlightId=$activeHighlightId, " +
+            "highlightTapDebounceUntil=$highlightTapDebounceUntil, " +
+            "menuJustClosedAt=$menuJustClosedAt, " +
+            "showHighlightsSheet=$showHighlightsSheet, " +
+            "showTocSheet=$showTocSheet, " +
+            "showSplitSettings=$showSplitSettings, " +
+            "isFullscreen=$isFullscreen, " +
+            "readiumPublication=$readiumPublication, " +
+            "readiumLocator=$readiumLocator, " +
+            "readiumSelectionLocator=$readiumSelectionLocator, " +
+            "readiumViewportHeight=$readiumViewportHeight, " +
+            "debugForceMenu=$debugForceMenu, " +
+            "showColorPickerPopover=$showColorPickerPopover, " +
+            "showNoteModal=$showNoteModal, " +
+            "activeNoteText='$activeNoteText', " +
+            "showTagInput=$showTagInput, " +
+            "activeTagText='$activeTagText', " +
+            "tagSuggestions=$tagSuggestions, " +
+            "showDefinitionInput=$showDefinitionInput, " +
+            "activeDefinitionText='$activeDefinitionText', " +
+            "isLoading=$isLoading, " +
+            "loadTimeMs=$loadTimeMs, " +
+            "error='$error'" +
+            ")"
+    }
+}
 
 class ReaderViewModel(
     application: Application,
@@ -169,20 +416,69 @@ class ReaderViewModel(
     private val _navigateToLocator = MutableSharedFlow<Locator>()
     val navigateToLocator: SharedFlow<Locator> = _navigateToLocator.asSharedFlow()
 
-    /** Emitted when the WebView selection should be cleared (after picking a color, copying, etc.). */
-    val clearSelectionEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    // ── Cluster C state holders (extracted responsibilities) ──────────
 
-    private var observeProgressJob: Job? = null
-    private var observeHighlightsJob: Job? = null
-    private var observeBookmarksJob: Job? = null
-    private var readingTimeTickerJob: Job? = null
-    private var searchJob: Job? = null
-    private var sessionStartTime: Long = 0L
+    private val searchStateHolder = SearchStateHolder(
+        scope = viewModelScope,
+        onNavigateToLocator = { loc -> viewModelScope.launch { _navigateToLocator.emit(loc) } },
+        onGoToChapter = { this.goToChapter(it) },
+        onGoToPdfPage = { this.goToPdfPage(it) }
+    )
+    private val fullscreenManager = FullscreenManager()
+    private val settingsManager = ReaderSettingsManager(readerPreferences)
+
+    // ── Cluster A state holder ────────────────────────────────────────
+
+    @VisibleForTesting
+    internal val lifecycleHolder = ReaderLifecycleStateHolder(
+        application = application,
+        readerRepository = readerRepository,
+        updateReadingProgressUseCase = updateReadingProgressUseCase,
+        readingStatsRepository = readingStatsRepository,
+        scope = viewModelScope,
+        onChapterChanged = { sleepTimerManager.onChapterChanged() },
+        onErrorEvent = { _uiEvent.tryEmit(it) },
+        onSelectionCleared = { interactionHolder.onSelectionClearedFromLifecycle() },
+        onNavigateToLocator = { loc -> viewModelScope.launch { _navigateToLocator.emit(loc) } },
+        onBookLoaded = { bookId -> interactionHolder.observeBook(bookId) },
+        mainDispatcher = mainDispatcher
+    )
+
+    // ── Cluster B state holder ────────────────────────────────────────
+
+    private val interactionHolder = ReaderInteractionStateHolder(
+        readerRepository = readerRepository,
+        dictionaryRepository = dictionaryRepository,
+        scope = viewModelScope,
+        onEvent = { _uiEvent.tryEmit(it) },
+        mainDispatcher = mainDispatcher
+    )
+
+    /** Emitted when the WebView selection should be cleared. Delegated to interaction holder. */
+    val clearSelectionEvent: SharedFlow<Unit> = interactionHolder.clearSelectionEvent
 
     init {
-        // Load persisted reading settings
-        val savedSettings = readerPreferences?.load() ?: ReaderSettings()
-        mutableUiState.update { it.copy(readerSettings = savedSettings) }
+        // Merge Cluster C state holders into ReaderUiState
+        viewModelScope.launch(mainDispatcher) {
+            combine(
+                searchStateHolder.state,
+                fullscreenManager.state,
+                settingsManager.state
+            ) { search, fs, s -> Triple(search, fs, s) }
+                .collect { (search, fs, s) ->
+                    mutableUiState.update { current ->
+                        current.copy(
+                            isSearchActive = search.isSearchActive,
+                            searchQuery = search.searchQuery,
+                            searchResults = search.searchResults,
+                            isSearching = search.isSearching,
+                            isFullscreen = fs.isFullscreen,
+                            readerSettings = s.readerSettings,
+                            showSplitSettings = s.showSplitSettings
+                        )
+                    }
+                }
+        }
 
         // Merge sleep timer state into ReaderUiState
         viewModelScope.launch(mainDispatcher) {
@@ -200,1245 +496,251 @@ class ReaderViewModel(
         }
 
         if (!defaultBookId.isNullOrBlank()) {
-            restoreProgressForBook(defaultBookId)
+            lifecycleHolder.restoreProgressForBook(defaultBookId)
         } else {
             mutableUiState.update { it.copy(isLoading = false) }
         }
+
+        // Merge Cluster A lifecycle state into ReaderUiState
+        viewModelScope.launch(mainDispatcher) {
+            lifecycleHolder.state.collect { lifecycle ->
+                mutableUiState.update { current ->
+                    current.copy(
+                        selectedBookId = lifecycle.selectedBookId,
+                        bookFilePath = lifecycle.bookFilePath,
+                        bookFormat = lifecycle.bookFormat,
+                        chapters = lifecycle.chapters,
+                        currentChapterIndex = lifecycle.currentChapterIndex,
+                        currentPdfPage = lifecycle.currentPdfPage,
+                        totalPdfPages = lifecycle.totalPdfPages,
+                        readingProgress = lifecycle.readingProgress,
+                        readiumPublication = lifecycle.readiumPublication,
+                        readiumLocator = lifecycle.readiumLocator,
+                        readiumViewportHeight = lifecycle.readiumViewportHeight,
+                        readiumSelectionLocator = lifecycle.readiumSelectionLocator,
+                        progressPercent = lifecycle.progressPercent,
+                        progressLabel = lifecycle.progressLabel,
+                        showTocSheet = lifecycle.showTocSheet,
+                        previewText = lifecycle.previewText,
+                        isLoading = lifecycle.isLoading,
+                        loadTimeMs = lifecycle.loadTimeMs,
+                        error = lifecycle.error
+                    )
+                }
+            }
+        }
+
+        // Merge Cluster B interaction state into ReaderUiState
+        viewModelScope.launch(mainDispatcher) {
+            interactionHolder.state.collect { interaction ->
+                mutableUiState.update { current ->
+                    current.copy(
+                        highlights = interaction.highlights,
+                        bookmarks = interaction.bookmarks,
+                        selectionState = interaction.selectionState,
+                        selectedText = interaction.selectedText,
+                        selectionRect = interaction.selectionRect,
+                        showColorPickerPopover = interaction.showColorPickerPopover,
+                        showNoteModal = interaction.showNoteModal,
+                        activeNoteText = interaction.activeNoteText,
+                        showTagInput = interaction.showTagInput,
+                        activeTagText = interaction.activeTagText,
+                        tagSuggestions = interaction.tagSuggestions,
+                        showDefinitionInput = interaction.showDefinitionInput,
+                        activeDefinitionText = interaction.activeDefinitionText,
+                        showHighlightsSheet = interaction.showHighlightsSheet,
+                        debugForceMenu = interaction.debugForceMenu,
+                        // These fields are managed internally by SelectionCoordinator
+                        activeHighlightId = null,
+                        highlightTapDebounceUntil = 0L,
+                        menuJustClosedAt = 0L
+                    )
+                }
+            }
+        }
     }
+
+    // ── Book Loading ──────────────────────────────────────────────────
 
     fun loadBook(bookId: String, filePath: String, format: String = "epub") {
-        val startTime = System.currentTimeMillis()
-
         mutableUiState.update {
             it.copy(
-                selectedBookId = bookId,
-                bookFilePath = filePath,
-                bookFormat = format,
-                isLoading = true,
-                error = null,
-                // Reset all book-specific state
-                chapters = emptyList(),
-                currentChapterIndex = 0,
-                currentPdfPage = 0,
-                totalPdfPages = 0,
-                progressPercent = 0f,
-                progressLabel = "",
-                highlights = emptyList(),
-                bookmarks = emptyList(),
-                isFullscreen = false,
-                readiumPublication = null,
-                readiumLocator = null
-            )
-        }
-
-        when (format.lowercase()) {
-            "pdf" -> loadPdfBook(bookId, filePath, startTime)
-            else -> loadEpubBook(bookId, filePath)
-        }
-    }
-
-    /**
-     * Opens an EPUB via Readium's [PublicationOpener] and stores the
-     * resulting [Publication] in [ReaderUiState.readiumPublication].
-     *
-     * This is the primary EPUB loading path (replaces the old WebView-based
-     * [loadEpubBook] after Phase 2).
-     */
-    fun loadEpubBook(bookId: String, filePath: String) {
-        val startTime = System.currentTimeMillis()
-        mutableUiState.update {
-            it.copy(
-                selectedBookId = bookId,
-                bookFilePath = filePath,
-                bookFormat = "epub",
-                isLoading = true,
-                error = null,
-                chapters = emptyList(),
-                currentChapterIndex = 0,
-                readiumPublication = null,
-                readiumLocator = null,
-                progressPercent = 0f,
-                progressLabel = "",
                 highlights = emptyList(),
                 bookmarks = emptyList(),
                 isFullscreen = false
             )
         }
-
-        viewModelScope.launch(mainDispatcher) {
-            try {
-                val app = getApplication<Application>()
-                val file = File(filePath)
-                val fileUri = android.net.Uri.fromFile(file).toString()
-
-                // Step 1: create HttpClient and AssetRetriever
-                val httpClient = DefaultHttpClient()
-                val assetRetriever = AssetRetriever(app.contentResolver, httpClient)
-
-                // Step 2: retrieve the Asset from the absolute file URL
-                val url = AbsoluteUrl(fileUri)
-                    ?: throw Exception("Invalid file URI: $fileUri")
-                val retrieveResult = withContext(Dispatchers.IO) {
-                    assetRetriever.retrieve(url)
-                }
-                val asset = retrieveResult.getOrNull()
-                    ?: throw Exception("Failed to retrieve EPUB asset")
-
-                // Step 3: open a Publication from the Asset
-                val parser = DefaultPublicationParser(
-                    context = app,
-                    httpClient = httpClient,
-                    assetRetriever = assetRetriever,
-                    pdfFactory = null
-                )
-                val opener = PublicationOpener(parser)
-                val openResult = withContext(Dispatchers.IO) {
-                    opener.open(asset, allowUserInteraction = false)
-                }
-                val publication: Publication = openResult.fold(
-                    onSuccess = { it },
-                    onFailure = { error ->
-                        throw Exception("Readium open failed: ${error.message}")
-                    }
-                )
-
-                val loadTime = System.currentTimeMillis() - startTime
-                Log.d(TAG, "Readium loaded EPUB in ${loadTime}ms")
-
-                val chapters = publication.readingOrder.mapIndexed { index, link ->
-                    BookChapter(
-                        index = index,
-                        id = link.href.toString(),
-                        title = link.title ?: "Chapter ${index + 1}",
-                        href = link.href.toString()
-                    )
-                }
-
-                // ── Restore saved position ──────────────────────────────
-                val savedProgress = readerRepository.getProgressForBook(bookId)
-                val initialLocator: Locator? = savedProgress?.locatorJson
-                    ?.let { CfiMigrator.jsonToLocator(it) }
-
-                mutableUiState.update {
-                    it.copy(
-                        readiumPublication = publication,
-                        chapters = chapters,
-                        readiumLocator = initialLocator,
-                        isLoading = false,
-                        loadTimeMs = loadTime
-                    )
-                }
-                // Migrate legacy CFI data to Readium Locator format (idempotent)
-                withContext(Dispatchers.IO) {
-                    migrateCfiDataForBook(bookId, publication.readingOrder)
-                }
-                updateProgressDisplay()
-                startObservingHighlights(bookId)
-                startObservingBookmarks(bookId)
-            } catch (e: Exception) {
-                Log.e(TAG, "Readium failed to open EPUB", e)
-                val message = e.message ?: "Failed to open EPUB with Readium"
-                mutableUiState.update {
-                    it.copy(isLoading = false, error = message)
-                }
-                _uiEvent.tryEmit(UiEvent.ShowSnackbar(message))
-            }
-        }
+        fullscreenManager.reset()
+        lifecycleHolder.loadBook(bookId, filePath, format)
     }
 
-    /**
-     * Called by [ReadiumReaderContent] when the navigator reports a
-     * new [Locator].  Uses [Publication.linkWithHref] to find the
-     * matching reading-order entry, then updates chapter index and
-     * progression percentage.
-     *
-     * Uses Readium's [Locator.locations.totalProgression] (0.0 to ~1.0)
-     * for the real overall document percentage, NOT chapter-based math.
-     * Saves the progression to the database via [updateReadingProgressUseCase].
-     */
+    // ── Readium Bridge ──────────────────────────────────────────────
+
     fun onReadiumLocatorChanged(locator: Locator) {
-        val publication = mutableUiState.value.readiumPublication ?: return
-        val matchingLink = publication.linkWithHref(locator.href) ?: return
-        val index = publication.readingOrder.indexOf(matchingLink)
-        if (index >= 0) {
-            // ── Dismiss floating context menu on page-change ───────
-            val previousHref = mutableUiState.value.readiumLocator?.href
-            if (previousHref != null && previousHref != locator.href) {
-                onSelectionCleared()
-            }
-
-            val totalProgression = locator.locations.totalProgression?.toFloat() ?: 0f
-            val progressPercent = (totalProgression * 100f).coerceIn(0f, 100f)
-            mutableUiState.update {
-                it.copy(
-                    currentChapterIndex = index,
-                    readiumLocator = locator,
-                    progressPercent = progressPercent
-                )
-            }
-            updateProgressDisplay()
-
-            // Persist real progression from Readium locator
-            val bookId = mutableUiState.value.selectedBookId ?: return
-            val locatorJson = CfiMigrator.locatorToJson(locator)
-            viewModelScope.launch(mainDispatcher) {
-                updateReadingProgressUseCase(
-                    bookId = bookId,
-                    cfiLocation = "readium:${locator.href}",
-                    percentage = progressPercent,
-                    locatorJson = locatorJson
-                )
-            }
-        }
+        lifecycleHolder.onReadiumLocatorChanged(locator)
     }
 
-    /**
-     * Called by [ReadiumReaderContent] to report the viewport height so
-     * selection rects can be derived from [Locator.locations.progression].
-     */
     fun onReadiumViewportChanged(height: Int) {
-        mutableUiState.update { it.copy(readiumViewportHeight = height) }
-    }
-
-    /**
-     * Migrates legacy CFI data for a book to Readium Locator JSON format.
-     *
-     * Only migrates records that have a CFI string but no [locatorJson] yet.
-     * This is idempotent — already-migrated records are skipped.
-     */
-    private suspend fun migrateCfiDataForBook(bookId: String, readingOrder: List<Link>) {
-        val readingOrderLinks = readingOrder
-        if (readingOrderLinks.isEmpty()) return
-
-        // ── Migrate highlights ──────────────────────────────────────────
-        val highlights = readerRepository.getHighlightsForBook(bookId)
-        for (highlight in highlights) {
-            if (highlight.cfiRange.startsWith("epubcfi(") && highlight.locatorJson == null) {
-                val locator = CfiMigrator.migrateCfiToLocator(highlight.cfiRange, readingOrderLinks)
-                if (locator != null) {
-                    val migrated = highlight.copy(locatorJson = CfiMigrator.locatorToJson(locator))
-                    readerRepository.upsertHighlight(migrated)
-                }
-            }
-        }
-
-        // ── Migrate bookmarks ───────────────────────────────────────────
-        val bookmarks = readerRepository.getBookmarksForBook(bookId)
-        for (bookmark in bookmarks) {
-            if (bookmark.cfiLocation.startsWith("epubcfi(") && bookmark.locatorJson == null) {
-                val locator = CfiMigrator.migrateCfiToLocator(bookmark.cfiLocation, readingOrderLinks)
-                if (locator != null) {
-                    val migrated = bookmark.copy(locatorJson = CfiMigrator.locatorToJson(locator))
-                    readerRepository.upsertBookmark(migrated)
-                }
-            }
-        }
-
-        // ── Migrate reading progress ────────────────────────────────────
-        val progress = readerRepository.getProgressForBook(bookId)
-        if (progress != null && progress.cfiLocation.startsWith("epubcfi(") && progress.locatorJson == null) {
-            val locator = CfiMigrator.migrateCfiToLocator(progress.cfiLocation, readingOrderLinks)
-            if (locator != null) {
-                val migrated = progress.copy(locatorJson = CfiMigrator.locatorToJson(locator))
-                readerRepository.upsertProgress(migrated)
-            }
-        }
-
-        Log.d(TAG, "CFI migration complete for book $bookId")
-    }
-
-
-
-    /**
-     * Opens a PDF via Readium's [PublicationOpener] with [PdfiumDocumentFactory].
-     *
-     * Follows the same Readium open pattern as [loadEpubBook], using a PDF-specific
-     * parser factory so the [Publication] is available for the composable layer
-     * ([ReadiumPdfReaderContent]).
-     */
-    private fun loadPdfBook(bookId: String, filePath: String, startTime: Long) {
-        viewModelScope.launch(mainDispatcher) {
-            try {
-                val app = getApplication<Application>()
-                val file = File(filePath)
-                if (!file.exists()) {
-                    val message = "File not found. Try importing the book again."
-                    mutableUiState.update { it.copy(isLoading = false, error = message) }
-                    _uiEvent.emit(UiEvent.ShowSnackbar(message))
-                    return@launch
-                }
-
-                val fileUri = android.net.Uri.fromFile(file).toString()
-                val httpClient = DefaultHttpClient()
-                val assetRetriever = AssetRetriever(app.contentResolver, httpClient)
-                val url = AbsoluteUrl(fileUri)
-                    ?: throw Exception("Invalid file URI: $fileUri")
-                val retrieveResult = withContext(Dispatchers.IO) {
-                    assetRetriever.retrieve(url)
-                }
-                val asset = retrieveResult.getOrNull()
-                    ?: throw Exception("Failed to retrieve PDF asset")
-
-                val parser = DefaultPublicationParser(
-                    context = app,
-                    httpClient = httpClient,
-                    assetRetriever = assetRetriever,
-                    pdfFactory = PdfiumDocumentFactory(app)
-                )
-                val opener = PublicationOpener(parser)
-                val openResult = withContext(Dispatchers.IO) {
-                    opener.open(asset, allowUserInteraction = false)
-                }
-                val publication: Publication = openResult.fold(
-                    onSuccess = { it },
-                    onFailure = { error ->
-                        throw Exception("Readium PDF open failed: ${error.message}")
-                    }
-                )
-
-                val loadTime = System.currentTimeMillis() - startTime
-                Log.d(TAG, "Readium loaded PDF in ${loadTime}ms")
-
-                val chapters = publication.readingOrder.mapIndexed { index, link ->
-                    BookChapter(
-                        index = index,
-                        id = link.href.toString(),
-                        title = link.title ?: "Page ${index + 1}",
-                        href = link.href.toString()
-                    )
-                }
-
-                mutableUiState.update {
-                    it.copy(
-                        readiumPublication = publication,
-                        chapters = chapters,
-                        currentChapterIndex = 0,
-                        isLoading = false,
-                        loadTimeMs = loadTime
-                    )
-                }
-                updateProgressDisplay()
-                startObservingHighlights(bookId)
-                startObservingBookmarks(bookId)
-            } catch (e: Exception) {
-                Log.e(TAG, "Readium failed to open PDF", e)
-                val userMessage = when (e) {
-                    is OutOfMemoryError -> "The PDF is too large to display on this device."
-                    else -> e.message ?: "Failed to open PDF with Readium"
-                }
-                mutableUiState.update { it.copy(isLoading = false, error = userMessage) }
-                _uiEvent.tryEmit(UiEvent.ShowSnackbar(userMessage))
-            }
-        }
+        lifecycleHolder.onReadiumViewportChanged(height)
     }
 
     fun onPdfDocumentLoaded(pages: Int) {
-        val currentPages = mutableUiState.value.totalPdfPages
-        if (currentPages != pages) {
-            mutableUiState.update { it.copy(totalPdfPages = pages) }
-            updateProgressDisplay()
-        }
+        lifecycleHolder.onPdfDocumentLoaded(pages)
     }
 
     // ── Search (Gap 3) ──────────────────────────────────────────────
 
-    fun onToggleSearch() {
-        mutableUiState.update {
-            it.copy(
-                isSearchActive = !it.isSearchActive,
-                searchQuery = "",
-                searchResults = emptyList(),
-                isSearching = false
-            )
-        }
-    }
+    fun onToggleSearch() = searchStateHolder.onToggleSearch()
 
     fun onSearchQuery(query: String) {
-        mutableUiState.update { it.copy(searchQuery = query) }
-
-        searchJob?.cancel()
-        if (query.isBlank()) {
-            mutableUiState.update {
-                it.copy(searchResults = emptyList(), isSearching = false)
-            }
-            return
-        }
-
-        searchJob = viewModelScope.launch {
-            delay(SEARCH_DEBOUNCE_MS)
-            mutableUiState.update { it.copy(isSearching = true) }
-
-            val state = mutableUiState.value
-            if (state.bookFormat == "pdf") {
-                // PDF search is not supported via Readium's API yet.
-                // Results arrive via onSearchResults callback → onPdfSearchResults()
-                mutableUiState.update { it.copy(isSearching = false) }
-                return@launch
-            }
-
-            // EPUB search through Readium publication resources
-            val results = searchReadiumPublication(query)
-
-            mutableUiState.update {
-                it.copy(searchResults = results, isSearching = false)
-            }
-        }
+        val state = mutableUiState.value
+        searchStateHolder.onSearchQuery(query, state.readiumPublication, state.bookFormat)
     }
 
-    fun onClearSearch() {
-        mutableUiState.update {
-            it.copy(searchQuery = "", searchResults = emptyList(), isSearching = false)
-        }
-        searchJob?.cancel()
-    }
+    fun onClearSearch() = searchStateHolder.onClearSearch()
 
-    fun onDismissSearch() {
-        mutableUiState.update {
-            it.copy(
-                isSearchActive = false,
-                searchQuery = "",
-                searchResults = emptyList(),
-                isSearching = false
-            )
-        }
-        searchJob?.cancel()
-    }
+    fun onDismissSearch() = searchStateHolder.onDismissSearch()
 
-    fun onPdfSearchResults(json: String) {
-        try {
-            val array = JSONArray(json)
-            val results = mutableListOf<SearchResult>()
-            for (i in 0 until array.length()) {
-                val obj = array.getJSONObject(i)
-                results.add(
-                    SearchResult(
-                        text = obj.getString("text"),
-                        page = obj.getInt("page").toFloat(),
-                        offset = obj.optInt("offset", 0),
-                        chapterIndex = 0
-                    )
-                )
-            }
-            mutableUiState.update { it.copy(searchResults = results, isSearching = false) }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse PDF search results: ${e.message}", e)
-            mutableUiState.update { it.copy(searchResults = emptyList(), isSearching = false) }
-        }
-    }
-
-    /**
-     * Searches EPUB publication content by iterating reading-order resources.
-     * SPIKE result: [Publication.content()] does NOT exist in Readium 3.2.0.
-     * Fallback: use [Publication.get] → [Resource.read] to extract text.
-     */
-    private suspend fun searchReadiumPublication(query: String): List<SearchResult> {
-        val publication = mutableUiState.value.readiumPublication ?: return emptyList()
-        val lowerQuery = query.lowercase().trim()
-        if (lowerQuery.isEmpty()) return emptyList()
-        val results = mutableListOf<SearchResult>()
-
-        for ((index, link) in publication.readingOrder.withIndex()) {
-            try {
-                val resource = publication.get(link) ?: continue
-                val readResult = resource.read()
-                val bytes = readResult.getOrNull() ?: continue
-                if (bytes.isEmpty()) continue
-                val content = try {
-                    bytes.decodeToString()
-                } catch (_: Exception) {
-                    continue
-                }
-                val lowerContent = content.lowercase()
-
-                var offset = 0
-                while (offset < lowerContent.length) {
-                    val matchIndex = lowerContent.indexOf(lowerQuery, offset)
-                    if (matchIndex < 0) break
-                    val start = maxOf(0, matchIndex - 60)
-                    val end = minOf(content.length, matchIndex + query.length + 60)
-                    val snippet = content.substring(start, end)
-                    results.add(
-                        SearchResult(
-                            text = snippet.trim(),
-                            offset = matchIndex,
-                            chapterIndex = index,
-                            page = 0f
-                        )
-                    )
-                    offset = matchIndex + 1
-                    // Safety: prevent infinite loop on pathological resources
-                    if (results.size > 200) break
-                }
-            } catch (_: Exception) {
-                // Skip resources that can't be read
-            }
-        }
-        return results
-    }
+    fun onPdfSearchResults(json: String) = searchStateHolder.onPdfSearchResults(json)
 
     fun onSearchResultSelected(result: SearchResult) {
         val state = mutableUiState.value
-        if (state.bookFormat == "pdf") {
-            goToPdfPage(result.page.toInt())
-        } else if (state.readiumPublication != null) {
-            // Readium path: emit locator for the composable → navigator.go()
-            val link = state.readiumPublication!!.readingOrder.getOrNull(result.chapterIndex) ?: return
-            val locator = state.readiumPublication!!.locatorFromLink(link) ?: return
-            viewModelScope.launch { _navigateToLocator.emit(locator) }
-        } else {
-            // Legacy EPUB fallback
-            if (result.chapterIndex != state.currentChapterIndex) {
-                goToChapter(result.chapterIndex)
-            }
-        }
-        onDismissSearch()
-    }
-
-    // ── Text Selection (Gap 4) ──────────────────────────────────────
-
-    /**
-     * Called by [ReadiumReaderContent] when the user taps an existing
-     * highlight decoration. Opens the [FloatingContextMenu] anchored to the
-     * highlight rect, so the user can change color, copy, or delete it.
-     *
-     * @param highlight the tapped highlight (id matches the decoration id)
-     * @param rect the highlight rect in viewport pixels (px)
-     */
-    fun onHighlightTapped(highlight: Highlight, rect: RectF) {
-        DebugLog.info(TAG, "onHighlightTapped id=${highlight.id} t=${SystemClock.elapsedRealtime()}")
-        // Restore the selection locator from the stored JSON so color/delete
-        // actions operate on the right highlight.
-        val locator = highlight.locatorJson?.let { CfiMigrator.jsonToLocator(it) }
-        val selectionRect = Rect(
-            rect.left.toInt(),
-            rect.top.toInt(),
-            rect.right.toInt(),
-            rect.bottom.toInt()
+        searchStateHolder.onSearchResultSelected(
+            result = result,
+            publication = state.readiumPublication,
+            bookFormat = state.bookFormat,
+            currentChapterIndex = state.currentChapterIndex
         )
-        val debounceUntil = SystemClock.elapsedRealtime() + HIGHLIGHT_TAP_DEBOUNCE_MS
-        DebugLog.info(TAG, "Highlight tapped: id=${highlight.id}, rect=[${selectionRect.left},${selectionRect.top},${selectionRect.right},${selectionRect.bottom}]")
-        mutableUiState.update {
-            it.copy(
-                selectionState = ReaderSelectionState.Existing(highlight, selectionRect),
-                selectedText = highlight.textContent,
-                selectionRect = selectionRect,
-                readiumSelectionLocator = locator,
-                activeHighlightId = highlight.id,
-                highlightTapDebounceUntil = debounceUntil
-            )
-        }
-        DebugLog.info(TAG, "onHighlightTapped: debounce until=$debounceUntil, selectionState=Existing")
     }
 
-    /** @suppress debug — shows toast at each pipeline stage */
-    private fun debugToast(msg: String) {
-        Log.d(TAG, "DEBUG: $msg")
-        _uiEvent.tryEmit(UiEvent.ShowToast("🐛 $msg"))
-    }
+    // ── Text Selection (Gap 4) — delegated to Cluster B ─────────────
 
-    /**
-     * Called from the reader content composable with raw selection coordinates.
-     * Delegates to [onTextSelection] for state update.
-     */
-    fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) {
-        onTextSelection(text, Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt()))
-    }
+    fun onHighlightTapped(highlight: Highlight, rect: RectF) =
+        interactionHolder.onHighlightTapped(highlight, rect)
 
-    fun onTextSelection(text: String, rect: Rect) {
-        Log.d("ReaderVM", "onTextSelection: \"${text.take(50)}\" rect=$rect")
-        mutableUiState.update {
-            it.copy(
-                selectionState = ReaderSelectionState.New(rect, text, null),
-                selectedText = text,
-                selectionRect = rect,
-                activeHighlightId = null,
-                readiumSelectionLocator = null
-            )
-        }
-    }
+    fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) =
+        interactionHolder.onTextSelectionEvent(text, left, top, right, bottom)
+
+    fun onTextSelection(text: String, rect: Rect) =
+        interactionHolder.onTextSelection(text, rect)
 
     fun onSelectHighlightColor(color: String) {
         val state = mutableUiState.value
-        val activeId = state.activeHighlightId
-
-        if (activeId != null) {
-            onReadiumUpdateHighlightColor(activeId, color)
-        } else {
-            val bookId = state.selectedBookId ?: return
-            val text = state.selectedText ?: return
-            val cfiRange = if (state.bookFormat == "pdf") {
-                "pdfpage:${state.currentPdfPage}"
-            } else {
-                "epubcfi(/6/${state.currentChapterIndex + 1})"
-            }
-            createHighlight(
-                bookId = bookId,
-                cfiRange = cfiRange,
-                textContent = text,
-                color = color
-            )
-        }
-
-        // After picking a color, clear selection state so the menu doesn't
-        // reappear over the new/edited highlight.
-        mutableUiState.update {
-            it.copy(
-                selectionState = ReaderSelectionState.None,
-                selectedText = null,
-                selectionRect = null,
-                readiumSelectionLocator = null,
-                activeHighlightId = null,
-                showColorPickerPopover = false,
-                highlightTapDebounceUntil = 0L,
-                menuJustClosedAt = SystemClock.elapsedRealtime()
-            )
-        }
-        clearSelectionEvent.tryEmit(Unit)
+        interactionHolder.onSelectHighlightColor(
+            color = color,
+            selectedBookId = state.selectedBookId,
+            readiumSelectionLocator = state.readiumSelectionLocator,
+            selectedText = state.selectedText,
+            bookFormat = state.bookFormat,
+            currentPdfPage = state.currentPdfPage,
+            currentChapterIndex = state.currentChapterIndex
+        )
     }
 
-    fun onCopySelectedText() {
-        if (mutableUiState.value.selectedText == null) return
-        DebugLog.info(TAG, "Copy selected text")
-        _uiEvent.tryEmit(UiEvent.ShowSnackbar("Copiado al portapapeles"))
-        // Clipboard copy handled in View layer
-        mutableUiState.update {
-            it.copy(
-                selectionState = ReaderSelectionState.None,
-                selectedText = null,
-                selectionRect = null,
-                activeHighlightId = null,
-                highlightTapDebounceUntil = 0L,
-                menuJustClosedAt = SystemClock.elapsedRealtime()
-            )
-        }
-        clearSelectionEvent.tryEmit(Unit)
+    fun onCopySelectedText() = interactionHolder.onCopySelectedText()
+
+    fun onDismissContextMenu() = interactionHolder.onDismissContextMenu()
+
+    fun onReadiumSelection(locator: Locator, rect: RectF, text: String) {
+        val state = mutableUiState.value
+        interactionHolder.onReadiumSelection(
+            locator, rect, text,
+            existingHighlights = state.highlights,
+            currentActiveHighlightId = state.activeHighlightId,
+            currentHighlightTapDebounceUntil = state.highlightTapDebounceUntil,
+            currentMenuJustClosedAt = state.menuJustClosedAt
+        )
     }
 
-    fun onDismissContextMenu() {
-        DebugLog.info(TAG, "Menu dismissed")
-        mutableUiState.update {
-            it.copy(
-                selectionState = ReaderSelectionState.None,
-                selectedText = null,
-                selectionRect = null,
-                activeHighlightId = null,
-                showColorPickerPopover = false,
-                showNoteModal = false,
-                showTagInput = false,
-                showDefinitionInput = false,
-                activeNoteText = "",
-                activeTagText = "",
-                activeDefinitionText = "",
-                tagSuggestions = emptyList(),
-                highlightTapDebounceUntil = 0L,
-                menuJustClosedAt = SystemClock.elapsedRealtime()
-            )
-        }
-        clearSelectionEvent.tryEmit(Unit)
+    fun onSelectionCleared() {
+        interactionHolder.onSelectionCleared()
     }
 
     // ── Colour Picker Popover (Phase 2) ───────────────────────────
 
-    fun onShowColorPickerPopover() {
-        mutableUiState.update {
-            it.copy(showColorPickerPopover = true)
-        }
-    }
+    fun onShowColorPickerPopover() = interactionHolder.onShowColorPickerPopover()
 
-    fun onDismissColorPickerPopover() {
-        mutableUiState.update {
-            it.copy(showColorPickerPopover = false)
-        }
-    }
+    fun onDismissColorPickerPopover() = interactionHolder.onDismissColorPickerPopover()
 
     // ── Note Modal ───────────────────────────────────────────────
 
-    /** Opens the note modal. Pre-fills text from the active highlight's
-     *  [Highlight.note] if one exists. No-op when no highlight is active. */
-    fun onShowNoteModal() {
-        val state = mutableUiState.value
-        val activeId = state.activeHighlightId ?: return
-        val existingText = state.highlights.find { it.id == activeId }?.note ?: ""
-        mutableUiState.update {
-            it.copy(
-                showNoteModal = true,
-                activeNoteText = existingText,
-                showTagInput = false,
-                showDefinitionInput = false
-            )
-        }
-    }
+    fun onShowNoteModal() = interactionHolder.onShowNoteModal()
 
-    fun onDismissNoteModal() {
-        mutableUiState.update { it.copy(showNoteModal = false, activeNoteText = "") }
-    }
+    fun onDismissNoteModal() = interactionHolder.onDismissNoteModal()
 
-    /** Persists the note to the active highlight and dismisses the modal. */
-    fun onSaveNote(text: String) {
-        val state = mutableUiState.value
-        val activeId = state.activeHighlightId ?: return
-        val existing = state.highlights.find { it.id == activeId } ?: return
-        val updated = existing.copy(
-            note = text.ifBlank { null },
-            updatedAtEpochMillis = System.currentTimeMillis()
-        )
-        viewModelScope.launch(mainDispatcher) {
-            readerRepository.upsertHighlight(updated)
-        }
-        mutableUiState.update {
-            it.copy(
-                selectionState = ReaderSelectionState.None,
-                showNoteModal = false,
-                activeNoteText = "",
-                selectedText = null,
-                selectionRect = null,
-                activeHighlightId = null,
-                menuJustClosedAt = SystemClock.elapsedRealtime()
-            )
-        }
-    }
+    fun onSaveNote(text: String) = interactionHolder.onSaveNote(text)
 
     // ── Annotate (unified note/comment) ──────────────────────────
 
-    /** Handles the unified "Anotar" action.
-     *
-     * For an existing highlight it opens the note modal. For a new text
-     * selection it first creates a default highlight and then opens the modal.
-     */
     fun onAnnotate() {
         val state = mutableUiState.value
-        when (val selection = state.selectionState) {
-            is ReaderSelectionState.Existing -> onShowNoteModal()
-            is ReaderSelectionState.New -> {
-                val bookId = state.selectedBookId ?: return
-                val text = selection.text
-                val locatorJson = selection.locator?.let { CfiMigrator.locatorToJson(it) }
-                val cfiRange = if (state.bookFormat == "pdf") {
-                    "pdfpage:${state.currentPdfPage}"
-                } else {
-                    "readium:${selection.locator?.href ?: "epubcfi(/6/${state.currentChapterIndex + 1})"}"
-                }
-                val newId = UUID.randomUUID().toString()
-                val highlight = Highlight(
-                    id = newId,
-                    bookId = bookId,
-                    cfiRange = cfiRange,
-                    textContent = text,
-                    note = null,
-                    color = HighlightColor.YELLOW.hex,
-                    updatedAtEpochMillis = System.currentTimeMillis(),
-                    deletedAtEpochMillis = null,
-                    locatorJson = locatorJson
-                )
-                viewModelScope.launch(mainDispatcher) {
-                    readerRepository.upsertHighlight(highlight)
-                }
-                mutableUiState.update {
-                    it.copy(
-                        selectionState = ReaderSelectionState.Existing(highlight, selection.rect),
-                        activeHighlightId = newId,
-                        selectedText = text,
-                        selectionRect = selection.rect,
-                        readiumSelectionLocator = selection.locator
-                    )
-                }
-                onShowNoteModal()
-            }
-            else -> {}
-        }
+        interactionHolder.onAnnotate(
+            selectedBookId = state.selectedBookId,
+            bookFormat = state.bookFormat,
+            currentChapterIndex = state.currentChapterIndex,
+            currentPdfPage = state.currentPdfPage,
+            chapters = state.chapters
+        )
     }
 
     // ── Anchored Tag Input ───────────────────────────────────────
 
-    fun onShowTagInput() {
-        val state = mutableUiState.value
-        val activeId = state.activeHighlightId ?: return
-        val existingTag = state.highlights.find { it.id == activeId }?.tag ?: ""
-        val existingTags = state.highlights
-            .mapNotNull { it.tag }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .sorted()
-        val suggestions = (DEFAULT_TAG_SUGGESTIONS + existingTags)
-            .distinct()
-            .filter { it != existingTag }
-        mutableUiState.update {
-            it.copy(
-                showTagInput = true,
-                activeTagText = existingTag,
-                tagSuggestions = suggestions,
-                showNoteModal = false,
-                showDefinitionInput = false
-            )
-        }
-    }
+    fun onShowTagInput() = interactionHolder.onShowTagInput()
 
-    fun onDismissTagInput() {
-        mutableUiState.update { it.copy(showTagInput = false, activeTagText = "", tagSuggestions = emptyList()) }
-    }
+    fun onDismissTagInput() = interactionHolder.onDismissTagInput()
 
-    fun onTagTextChanged(text: String) {
-        mutableUiState.update { it.copy(activeTagText = text) }
-    }
+    fun onTagTextChanged(text: String) = interactionHolder.onTagTextChanged(text)
 
-    /** Persists the tag to the active highlight (null if empty) and dismisses. */
-    fun onSaveTag(text: String) {
-        val state = mutableUiState.value
-        val activeId = state.activeHighlightId ?: return
-        val existing = state.highlights.find { it.id == activeId } ?: return
-        val updated = existing.copy(
-            tag = text.ifBlank { null },
-            updatedAtEpochMillis = System.currentTimeMillis()
-        )
-        viewModelScope.launch(mainDispatcher) {
-            readerRepository.upsertHighlight(updated)
-        }
-        mutableUiState.update {
-            it.copy(
-                selectionState = ReaderSelectionState.None,
-                showTagInput = false,
-                activeTagText = "",
-                tagSuggestions = emptyList(),
-                selectedText = null,
-                selectionRect = null,
-                activeHighlightId = null,
-                menuJustClosedAt = SystemClock.elapsedRealtime()
-            )
-        }
-        clearSelectionEvent.tryEmit(Unit)
-    }
+    fun onSaveTag(text: String) = interactionHolder.onSaveTag(text)
 
     // ── Anchored Definition Input ─────────────────────────────────
 
-    fun onShowDefinitionInput() {
-        mutableUiState.update {
-            it.copy(
-                showDefinitionInput = true,
-                activeDefinitionText = "",
-                showNoteModal = false,
-                showTagInput = false
-            )
-        }
-    }
+    fun onShowDefinitionInput() = interactionHolder.onShowDefinitionInput()
 
-    fun onDismissDefinitionInput() {
-        mutableUiState.update { it.copy(showDefinitionInput = false, activeDefinitionText = "") }
-    }
+    fun onDismissDefinitionInput() = interactionHolder.onDismissDefinitionInput()
 
-    fun onDefinitionTextChanged(text: String) {
-        mutableUiState.update { it.copy(activeDefinitionText = text) }
-    }
+    fun onDefinitionTextChanged(text: String) = interactionHolder.onDefinitionTextChanged(text)
 
-    fun onSaveDefinition(definition: String) {
-        val repo = dictionaryRepository ?: return
-        val text = mutableUiState.value.selectedText?.trim()
-        if (text.isNullOrBlank()) return
+    fun onSaveDefinition(definition: String) = interactionHolder.onSaveDefinition(definition)
 
-        val trimmedDefinition = definition.trim().takeIf { it.isNotBlank() }
-        viewModelScope.launch(mainDispatcher) {
-            if (repo.exists(text)) {
-                _uiEvent.emit(UiEvent.ShowSnackbar("Already in dictionary"))
-            } else {
-                repo.save(text, trimmedDefinition).fold(
-                    onSuccess = {
-                        _uiEvent.emit(UiEvent.ShowSnackbar("Added to dictionary"))
-                    },
-                    onFailure = { e ->
-                        _uiEvent.emit(UiEvent.ShowSnackbar(
-                            e.message ?: "Failed to add to dictionary"
-                        ))
-                    }
-                )
-            }
-        }
-        mutableUiState.update {
-            it.copy(
-                selectionState = ReaderSelectionState.None,
-                showDefinitionInput = false,
-                activeDefinitionText = "",
-                selectedText = null,
-                selectionRect = null,
-                activeHighlightId = null,
-                menuJustClosedAt = SystemClock.elapsedRealtime()
-            )
-        }
-        clearSelectionEvent.tryEmit(Unit)
-    }
+    fun onAddToDictionary() = interactionHolder.onAddToDictionary()
 
     // ── Share ────────────────────────────────────────────────────
 
-    /** Emits a [UiEvent] that the ReaderScreen will use to launch
-     *  [android.content.Intent.ACTION_SEND] with the selected text. */
     fun onShareSelectedText() {
-        val text = mutableUiState.value.selectedText
-        if (text.isNullOrBlank()) {
-            _uiEvent.tryEmit(UiEvent.ShowToast("No text selected"))
-            return
-        }
-        // Dispatch via UiEvent — ReaderScreen handles the intent
-        _uiEvent.tryEmit(UiEvent.ShareText(text))
-        mutableUiState.update {
-            it.copy(
-                selectionState = ReaderSelectionState.None,
-                selectedText = null,
-                selectionRect = null,
-                activeHighlightId = null,
-                menuJustClosedAt = SystemClock.elapsedRealtime()
-            )
-        }
-        clearSelectionEvent.tryEmit(Unit)
-    }
-
-    // ── Dictionary ───────────────────────────────────────────────
-
-    /** Opens the anchored definition input so the user can save the selected
-     *  word with an optional definition. */
-    fun onAddToDictionary() {
-        onShowDefinitionInput()
-    }
-
-    companion object {
-        private const val TAG = "ReaderViewModel"
-        private const val SEARCH_DEBOUNCE_MS = 300L
-        private const val HIGHLIGHT_TAP_DEBOUNCE_MS = 2000L
-        private const val MENU_CLOSE_IGNORE_MS = 1500L
-
-        private val DEFAULT_TAG_SUGGESTIONS = listOf(
-            "cita", "pasaje", "idea", "ficción", "no-ficción", "favoritos"
-        )
-    }
-
-    // ── Custom Highlight Palette (Phase 4) ───────────────────────
-
-    /** Updates a single slot in the custom highlight colour palette
-     *  and persists via [ReaderPreferences]. */
-    fun onUpdateCustomHighlightColor(index: Int, hex: String) {
-        val current = mutableUiState.value.readerSettings
-        val colors = current.customHighlightColors?.toMutableList()
-            ?: HighlightColor.defaultHexList().toMutableList()
-        if (index in colors.indices) {
-            colors[index] = hex
-        }
-        val updated = current.copy(customHighlightColors = colors)
-        readerPreferences?.save(updated)
-        mutableUiState.update { it.copy(readerSettings = updated) }
-    }
-
-    /** Resets the custom highlight palette to [HighlightColor] enum defaults. */
-    fun onResetCustomHighlightColors() {
-        val current = mutableUiState.value.readerSettings
-        val updated = current.copy(customHighlightColors = null)
-        readerPreferences?.save(updated)
-        mutableUiState.update { it.copy(readerSettings = updated) }
-    }
-
-    // ── Readium Selection (Phase 2+) ───────────────────────────────
-
-    /**
-     * Called by [ReadiumReaderContent] when the [SelectableNavigator]
-     * returns a non-null [Selection]. Stores the locator (needed for
-     * highlight creation) and derives a Compose-friendly [Rect] from the
-     * viewport-space [RectF].
-     */
-    fun onReadiumSelection(locator: Locator, rect: RectF, text: String) {
-        Log.d("SelectionDebug", "VM.onReadiumSelection: text='${text.take(50)}', " +
-            "rect=[${rect.left},${rect.top},${rect.right},${rect.bottom}], " +
-            "locator.href=${locator.href}")
-
-        val state = mutableUiState.value
-        val now = SystemClock.elapsedRealtime()
-
-        // Guard: ignore selection events that arrive right after a menu-closing
-        // action (color pick, copy, dismiss, selection-cleared). The WebView
-        // still has the text selected after the menu closes; the polling
-        // currentSelection() fires, the text matches the just-created highlight,
-        // and onHighlightTapped would otherwise re-open the FaPN3 context menu.
-        if (now - state.menuJustClosedAt < MENU_CLOSE_IGNORE_MS) {
-            Log.d("SelectionDebug", "Ignoring selection after menu close (${now - state.menuJustClosedAt}ms ago)")
-            return
-        }
-
-        // Check if the current selection sits inside an existing highlight.
-        // When the user taps an existing highlight, the WebView creates a text
-        // selection over the highlighted text; the currentSelection() poll
-        // detects it and fires here BEFORE onDecorationActivated reaches
-        // onHighlightTapped. If we don't intercept, this call would set
-        // showColorPicker = true and overwrite the FaPN3 context menu the
-        // decoration listener is about to open. By matching the selection
-        // text against highlight.textContent, we route these selections to
-        // onHighlightTapped directly.
-        val matchingHighlight = state.highlights.firstOrNull { highlight ->
-            highlight.textContent.isNotBlank() &&
-                (text == highlight.textContent ||
-                    text.contains(highlight.textContent) ||
-                    highlight.textContent.contains(text))
-        }
-        if (matchingHighlight != null) {
-            DebugLog.info(TAG, "Selection inside existing highlight: id=${matchingHighlight.id}, opening FaPN3")
-            onHighlightTapped(matchingHighlight, rect)
-            return
-        }
-
-        if (now < state.highlightTapDebounceUntil && state.activeHighlightId != null) {
-            Log.d("SelectionDebug", "Ignoring selection during highlight-tap debounce")
-            DebugLog.warn(TAG, "onReadiumSelection IGNORED (debounce active until=${state.highlightTapDebounceUntil}, now=$now)")
-            return
-        }
-
-        val selectionRect = try {
-            Rect(
-                rect.left.toInt(),
-                rect.top.toInt(),
-                rect.right.toInt(),
-                rect.bottom.toInt()
-            )
-        } catch (e: Throwable) {
-            Log.e("SelectionDebug", "Rect creation THREW: ${e::class.simpleName}: ${e.message}", e)
-            Rect(0, 0, 100, 50) // Safe fallback rect
-        }
-        try {
-            val normalizedText = text.trim().replace(Regex("\\s+"), " ")
-            mutableUiState.update {
-                it.copy(
-                    readiumSelectionLocator = locator,
-                    selectedText = normalizedText,
-                    selectionRect = selectionRect,
-                    selectionState = ReaderSelectionState.New(
-                        rect = selectionRect,
-                        text = normalizedText,
-                        locator = locator
-                    ),
-                    activeHighlightId = null,
-                    highlightTapDebounceUntil = 0L
-                )
-            }
-            DebugLog.info(TAG, "onReadiumSelection: selectionState=New (debounce not active)")
-            Log.d("SelectionDebug", "VM.onReadiumSelection state update OK")
-        } catch (e: Throwable) {
-            Log.e("SelectionDebug", "VM.onReadiumSelection state update THREW: ${e::class.simpleName}: ${e.message}", e)
-        }
-    }
-
-    /**
-     * Called by [ReadiumReaderContent] when selection is cleared.
-     */
-    fun onSelectionCleared() {
-        Log.d("SelectionDebug", "VM.onSelectionCleared — resetting selection state")
-        try {
-            val state = mutableUiState.value
-            val now = SystemClock.elapsedRealtime()
-            if (now < state.highlightTapDebounceUntil && state.activeHighlightId != null) {
-                Log.d("SelectionDebug", "Ignoring selection-clear during highlight-tap debounce")
-                DebugLog.warn(TAG, "onSelectionCleared IGNORED (debounce active until=${state.highlightTapDebounceUntil}, now=$now)")
-                return
-            }
-            DebugLog.info(TAG, "onSelectionCleared (debounce not active)")
-            mutableUiState.update {
-                it.copy(
-                    selectionState = ReaderSelectionState.None,
-                    selectedText = null,
-                    selectionRect = null,
-                    activeHighlightId = null,
-                    showColorPickerPopover = false,
-                    showNoteModal = false,
-                    showTagInput = false,
-                    showDefinitionInput = false,
-                    activeNoteText = "",
-                    activeTagText = "",
-                    activeDefinitionText = "",
-                    tagSuggestions = emptyList(),
-                    highlightTapDebounceUntil = 0L,
-                    debugForceMenu = false,
-                    menuJustClosedAt = SystemClock.elapsedRealtime()
-                )
-            }
-        } catch (e: Throwable) {
-            Log.e("SelectionDebug", "VM.onSelectionCleared THREW: ${e::class.simpleName}: ${e.message}", e)
-        }
+        interactionHolder.onShareSelectedText(mutableUiState.value.selectedText)
     }
 
     // ── Readium Highlights (Phase 3+) ──────────────────────────────
 
-    /**
-     * Called when the user picks a highlight colour for the current
-     * [readiumSelectionLocator]. Builds a fresh [Locator] from the stored
-     * locator, serialises it to JSON, and persists via [createHighlight].
-     */
     fun onReadiumHighlightColorSelected(color: String) {
         val state = mutableUiState.value
-        val bookId = state.selectedBookId ?: return
-        val locator = state.readiumSelectionLocator ?: return
-        val text = state.selectedText ?: return
-        val activeId = state.activeHighlightId
-
-        DebugLog.info(TAG, "Color selected: $color for id=${activeId ?: "<new>"}")
-
-        // Editing an existing highlight (user tapped it → changed color).
-        if (activeId != null) {
-            onReadiumUpdateHighlightColor(activeId, color)
-            // After re-coloring an existing highlight, close both menus and
-            // clear the selection — the user does not want the FaPN3 context
-            // menu to appear over the edited highlight.
-            mutableUiState.update {
-                it.copy(
-                    selectionState = ReaderSelectionState.None,
-                    selectedText = null,
-                    selectionRect = null,
-                    readiumSelectionLocator = null,
-                    activeHighlightId = null,
-                    highlightTapDebounceUntil = 0L,
-                    menuJustClosedAt = SystemClock.elapsedRealtime()
-                )
-            }
-            clearSelectionEvent.tryEmit(Unit)
-            return
-        }
-
-        val locatorJson = CfiMigrator.locatorToJson(locator)
-        createHighlight(
-            bookId = bookId,
-            cfiRange = "readium:${locator.href}",
-            textContent = text,
+        interactionHolder.onReadiumHighlightColorSelected(
             color = color,
-            locatorJson = locatorJson
+            selectedBookId = state.selectedBookId,
+            readiumSelectionLocator = state.readiumSelectionLocator,
+            selectedText = state.selectedText,
+            bookFormat = state.bookFormat,
+            currentPdfPage = state.currentPdfPage,
+            currentChapterIndex = state.currentChapterIndex
         )
-
-        // After picking a color on a fresh selection, close both menus and
-        // clear the selection — the user does not want the FaPN3 context menu
-        // (tag/note/comment/share/delete) to appear over the new highlight.
-        DebugLog.info(TAG, "Color selected: $color, menu closed")
-
-        mutableUiState.update {
-            it.copy(
-                selectionState = ReaderSelectionState.None,
-                selectedText = null,
-                selectionRect = null,
-                readiumSelectionLocator = null,
-                activeHighlightId = null,
-                highlightTapDebounceUntil = 0L,
-                menuJustClosedAt = SystemClock.elapsedRealtime()
-            )
-        }
-        clearSelectionEvent.tryEmit(Unit)
     }
 
-    /**
-     * Soft-deletes a highlight by setting [Highlight.deletedAtEpochMillis].
-     * The Room flow emission triggers the decoration reapply cycle.
-     */
-    fun onReadiumDeleteHighlight(highlightId: String) {
-        val state = mutableUiState.value
-        val existing = state.highlights.find { it.id == highlightId } ?: return
-        val updated = existing.copy(
-            deletedAtEpochMillis = System.currentTimeMillis(),
-            updatedAtEpochMillis = System.currentTimeMillis()
-        )
-        viewModelScope.launch(mainDispatcher) {
-            readerRepository.upsertHighlight(updated)
-        }
-        mutableUiState.update {
-            it.copy(
-                selectionState = ReaderSelectionState.None,
-                selectedText = null,
-                selectionRect = null,
-                activeHighlightId = null,
-                highlightTapDebounceUntil = 0L,
-                menuJustClosedAt = SystemClock.elapsedRealtime()
-            )
-        }
-        clearSelectionEvent.tryEmit(Unit)
-    }
+    fun onReadiumDeleteHighlight(highlightId: String) =
+        interactionHolder.onReadiumDeleteHighlight(highlightId)
 
-    /**
-     * Updates the colour of an existing highlight in-place.
-     * Reapply is triggered reactively via the highlights Flow.
-     */
-    fun onReadiumUpdateHighlightColor(highlightId: String, color: String) {
-        val state = mutableUiState.value
-        val existing = state.highlights.find { it.id == highlightId } ?: return
-        val updated = existing.copy(
-            color = color,
-            updatedAtEpochMillis = System.currentTimeMillis()
-        )
-        viewModelScope.launch(mainDispatcher) {
-            readerRepository.upsertHighlight(updated)
-        }
-    }
+    fun onReadiumUpdateHighlightColor(highlightId: String, color: String) =
+        interactionHolder.onReadiumUpdateHighlightColor(highlightId, color)
 
     // ── Debug: Force menu visibility ──────────────────────────────
-    //
-    // Long-press the reader header to toggle this. If the menu still
-    // doesn't appear, the bug is in SelectionOverlay or FloatingContextMenu.
-    // If it DOES appear, the bug is in the JS→bridge→VM pipeline.
-    //
-    fun onDebugForceMenu() {
-        val current = mutableUiState.value.debugForceMenu
-        if (current) {
-            // Toggle off — clear everything
-            onSelectionCleared()
-            return
-        }
-        debugToast("DEBUG: Forzando menú FaPN3 con rect hardcodeado")
-        val rect = Rect(200, 200, 600, 250)
-        mutableUiState.update {
-            it.copy(
-                selectedText = "Texto de prueba debug",
-                // Center-ish of a 1080px-wide viewport
-                selectionRect = rect,
-                selectionState = ReaderSelectionState.Existing(
-                    Highlight(
-                        id = "debug-highlight",
-                        bookId = it.selectedBookId ?: "debug-book",
-                        cfiRange = "epubcfi(/6/1)",
-                        textContent = "Texto de prueba debug",
-                        note = null,
-                        color = HighlightColor.YELLOW.hex,
-                        updatedAtEpochMillis = System.currentTimeMillis(),
-                        deletedAtEpochMillis = null
-                    ),
-                    rect
-                ),
-                activeHighlightId = "debug-highlight",
-                debugForceMenu = true
-            )
-        }
-    }
 
-    /**
-     * Debug-only: force the color-picker (cnVL6) overlay with a hardcoded
-     * rect, so the [SelectionOverlay] / [TextSelectionMenu] rendering can be
-     * tested independently of the Readium selection pipeline.
-     */
-    fun onDebugForceColorPicker() {
-        val current = mutableUiState.value.debugForceMenu
-        if (current) {
-            onSelectionCleared()
-            return
-        }
-        debugToast("DEBUG: Forzando color picker cnVL6 con rect hardcodeado")
-        DebugLog.info(TAG, "DEBUG: forcing color picker cnVL6")
-        val rect = Rect(200, 200, 600, 250)
-        mutableUiState.update {
-            it.copy(
-                selectedText = "Texto de prueba debug",
-                selectionRect = rect,
-                selectionState = ReaderSelectionState.New(
-                    rect = rect,
-                    text = "Texto de prueba debug",
-                    locator = null
-                ),
-                debugForceMenu = true
-            )
-        }
-    }
+    fun onDebugForceMenu() = interactionHolder.onDebugForceMenu()
+
+    fun onDebugForceColorPicker() = interactionHolder.onDebugForceColorPicker()
 
     // ── Highlights Panel (Gap 5) ────────────────────────────────────
 
-    fun onToggleHighlightsPanel() {
-        mutableUiState.update {
-            it.copy(showHighlightsSheet = !it.showHighlightsSheet)
-        }
-    }
+    fun onToggleHighlightsPanel() = interactionHolder.onToggleHighlightsPanel()
 
     fun onToggleTocSheet() {
         mutableUiState.update {
@@ -1473,322 +775,40 @@ class ReaderViewModel(
         mutableUiState.update { it.copy(showHighlightsSheet = false) }
     }
 
-    // ── aA Settings (Gap 6) ─────────────────────────────────────────
+    // ── Bookmarks ─────────────────────────────────────────────────
 
-    fun onToggleSplitSettings() {
-        mutableUiState.update {
-            it.copy(showSplitSettings = !it.showSplitSettings)
-        }
-    }
-
-    // ── Fullscreen (Gap 7) ──────────────────────────────────────────
-
-    fun onToggleFullscreen() {
-        mutableUiState.update {
-            it.copy(isFullscreen = !it.isFullscreen)
-        }
-    }
-
-    // ── Chapter Navigation ─────────────────────────────────────────
-
-    fun goToNextChapter() {
-        val currentIndex = mutableUiState.value.currentChapterIndex
-        val totalChapters = mutableUiState.value.chapters.size
-
-        if (currentIndex < totalChapters - 1) {
-            val newIndex = currentIndex + 1
-            mutableUiState.update { it.copy(currentChapterIndex = newIndex) }
-            updateProgressForChapter(newIndex)
-            sleepTimerManager.onChapterChanged()
-        }
-    }
-
-    fun goToPreviousChapter() {
-        val currentIndex = mutableUiState.value.currentChapterIndex
-
-        if (currentIndex > 0) {
-            val newIndex = currentIndex - 1
-            mutableUiState.update { it.copy(currentChapterIndex = newIndex) }
-            updateProgressForChapter(newIndex)
-            sleepTimerManager.onChapterChanged()
-        }
-    }
-
-    fun onTapZone(isLeftZone: Boolean) {
-        // Always dismiss selection overlay before navigating
-        onSelectionCleared()
-
-        val format = mutableUiState.value.bookFormat
-        when (format) {
-            "pdf" -> if (isLeftZone) goToPreviousPdfPage() else goToNextPdfPage()
-            else -> if (isLeftZone) goToPreviousChapter() else goToNextChapter()
-        }
-    }
-
-    fun goToNextPdfPage() {
-        val currentPage = mutableUiState.value.currentPdfPage
-        val totalPages = mutableUiState.value.totalPdfPages
-
-        if (currentPage < totalPages - 1) {
-            val newPage = currentPage + 1
-            mutableUiState.update { it.copy(currentPdfPage = newPage) }
-            updatePdfProgress(newPage, totalPages)
-            updateProgressDisplay()
-        }
-    }
-
-    fun goToPreviousPdfPage() {
-        val currentPage = mutableUiState.value.currentPdfPage
-
-        if (currentPage > 0) {
-            val newPage = currentPage - 1
-            mutableUiState.update { it.copy(currentPdfPage = newPage) }
-            updatePdfProgress(newPage, mutableUiState.value.totalPdfPages)
-            updateProgressDisplay()
-        }
-    }
-
-    fun goToPage(pageNumber: Int) {
-        val totalPages = mutableUiState.value.totalPdfPages
-        if (pageNumber in 1..totalPages) {
-            val newPage = pageNumber - 1
-            mutableUiState.update { it.copy(currentPdfPage = newPage) }
-            updatePdfProgress(newPage, totalPages)
-            updateProgressDisplay()
-        }
-    }
-
-    fun goToPdfPage(pageIndex: Int) {
-        val totalPages = mutableUiState.value.totalPdfPages
-        if (pageIndex in 0 until totalPages) {
-            mutableUiState.update { it.copy(currentPdfPage = pageIndex) }
-            updatePdfProgress(pageIndex, totalPages)
-            updateProgressDisplay()
-        }
-    }
-
-    private fun updatePdfProgress(currentPage: Int, totalPages: Int) {
-        val bookId = mutableUiState.value.selectedBookId ?: return
-
-        if (totalPages > 0) {
-            val percentage = (((currentPage + 1).toFloat() / totalPages) * 100f)
-                .coerceIn(0f, 100f)
-            val cfiLocation = "pdfpage:$currentPage"
-
-            viewModelScope.launch(mainDispatcher) {
-                updateReadingProgressUseCase(
-                    bookId = bookId,
-                    cfiLocation = cfiLocation,
-                    percentage = percentage
-                )
-            }
-        }
-    }
-
-    private fun updateProgressForChapter(chapterIndex: Int) {
-        val bookId = mutableUiState.value.selectedBookId ?: return
-        val totalChapters = mutableUiState.value.chapters.size
-
-        if (totalChapters > 0) {
-            // Chapter-based percentage: cap at 99% so the last chapter doesn't show 100%
-            // until Readium's locator totalProgression confirms it.
-            val percentage = (((chapterIndex + 1).toFloat() / totalChapters) * 100f)
-                .coerceIn(0f, 99f)
-            val cfiLocation = "epubcfi(/6/${chapterIndex + 1})"
-
-            viewModelScope.launch(mainDispatcher) {
-                updateReadingProgressUseCase(
-                    bookId = bookId,
-                    cfiLocation = cfiLocation,
-                    percentage = percentage
-                )
-            }
-        }
-    }
-
-    /**
-     * Updates the progress percentage and label according to the current format.
-     *
-     * Priority:
-     * 1. PDF → (currentPage+1)/totalPages
-     * 2. EPUB + Readium locator available → totalProgression from locator (most accurate)
-     * 3. EPUB fallback → chapter-based (capped at 99%)
-     */
-    private fun updateProgressDisplay() {
-        val state = mutableUiState.value
-        val percent: Float
-        val label: String
-
-        if (state.totalPdfPages > 0) {
-            val current = state.currentPdfPage + 1
-            val total = state.totalPdfPages
-            percent = ((current.toFloat() / total) * 100f).coerceIn(0f, 100f)
-            label = "$current / $total"
-        } else if (state.readiumLocator != null) {
-            // Use Readium's totalProgression for real overall percentage
-            val totalProgression = state.readiumLocator.locations.totalProgression?.toFloat() ?: 0f
-            percent = (totalProgression * 100f).coerceIn(0f, 100f)
-            val current = state.currentChapterIndex + 1
-            val total = state.chapters.size.coerceAtLeast(1)
-            label = "$current / $total"
-        } else if (state.chapters.isNotEmpty()) {
-            val current = state.currentChapterIndex + 1
-            val total = state.chapters.size
-            percent = ((current.toFloat() / total) * 100f).coerceIn(0f, 99f)
-            label = "$current / $total"
-        } else {
-            percent = 0f
-            label = ""
-        }
-
-        mutableUiState.update {
-            it.copy(progressPercent = percent, progressLabel = label)
-        }
-    }
-
-    fun restoreProgressForBook(bookId: String) {
-        observeProgressJob?.cancel()
-
-        mutableUiState.update {
-            it.copy(
-                selectedBookId = bookId,
-                isLoading = true
-            )
-        }
-
-        observeProgressJob = viewModelScope.launch(mainDispatcher) {
-            readerRepository.observeProgress(bookId).collect { progress ->
-                mutableUiState.update { state ->
-                    var newState = state.copy(
-                        readingProgress = progress,
-                        isLoading = false
-                    )
-
-                    // Restore current position from progress if available
-                    if (progress != null) {
-                        val cfi = progress.cfiLocation
-                        if (cfi.startsWith("pdfpage:")) {
-                            val page = cfi.removePrefix("pdfpage:").toIntOrNull()
-                            if (page != null) {
-                                newState = newState.copy(currentPdfPage = page)
-                            }
-                        } else if (cfi.startsWith("epubcfi(")) {
-                            // EPUB CFI: extract chapter index
-                            val chapterMatch = Regex("/6/(\\d+)").find(cfi)
-                            val chapterIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
-                            if (chapterIndex != null) {
-                                newState = newState.copy(currentChapterIndex = chapterIndex - 1)
-                            }
-                        }
-                    }
-                    newState
-                }
-                updateProgressDisplay()
-            }
-        }
-    }
-
-    fun updateProgress(bookId: String, cfiLocation: String, percentage: Float) {
-        viewModelScope.launch(mainDispatcher) {
-            updateReadingProgressUseCase(
-                bookId = bookId,
-                cfiLocation = cfiLocation,
-                percentage = percentage.coerceIn(0f, 100f)
-            )
-        }
-    }
-
-    fun createHighlight(
-        bookId: String,
-        cfiRange: String,
-        textContent: String,
-        note: String? = null,
-        color: String = HighlightColor.YELLOW.hex,
-        locatorJson: String? = null
-    ) {
-        viewModelScope.launch(mainDispatcher) {
-            val highlight = Highlight(
-                id = UUID.randomUUID().toString(),
-                bookId = bookId,
-                cfiRange = cfiRange,
-                textContent = textContent,
-                note = note,
-                color = color,
-                updatedAtEpochMillis = System.currentTimeMillis(),
-                deletedAtEpochMillis = null,
-                locatorJson = locatorJson
-            )
-            readerRepository.upsertHighlight(highlight)
-            Log.d(TAG, "Highlight created: ${highlight.id}")
-        }
-    }
-
-    fun createBookmark(bookId: String, cfiLocation: String, titleOrSnippet: String) {
-        viewModelScope.launch(mainDispatcher) {
-            val bookmark = Bookmark(
-                id = UUID.randomUUID().toString(),
-                bookId = bookId,
-                cfiLocation = cfiLocation,
-                titleOrSnippet = titleOrSnippet,
-                updatedAtEpochMillis = System.currentTimeMillis(),
-                deletedAtEpochMillis = null
-            )
-            readerRepository.upsertBookmark(bookmark)
-            Log.d(TAG, "Bookmark created: ${bookmark.id}")
-        }
-    }
+    fun createBookmark(bookId: String, cfiLocation: String, titleOrSnippet: String) =
+        interactionHolder.createBookmark(bookId, cfiLocation, titleOrSnippet)
 
     fun createBookmarkFromCurrentPosition() {
-        val bookId = mutableUiState.value.selectedBookId ?: return
-        val format = mutableUiState.value.bookFormat
-
-        when (format) {
-            "pdf" -> {
-                val currentPage = mutableUiState.value.currentPdfPage
-                val cfiLocation = "pdfpage:$currentPage"
-                val titleOrSnippet = "Page ${currentPage + 1}"
-                createBookmark(bookId, cfiLocation, titleOrSnippet)
-            }
-            else -> {
-                val chapter = mutableUiState.value.chapters.getOrNull(mutableUiState.value.currentChapterIndex)
-                    ?: return
-                val cfiLocation = "epubcfi(/6/${mutableUiState.value.currentChapterIndex + 1})"
-                val titleOrSnippet = "Chapter ${mutableUiState.value.currentChapterIndex + 1}: ${chapter.title}"
-                createBookmark(bookId, cfiLocation, titleOrSnippet)
-            }
-        }
+        val state = mutableUiState.value
+        interactionHolder.createBookmarkFromCurrentPosition(
+            selectedBookId = state.selectedBookId,
+            bookFormat = state.bookFormat,
+            currentPdfPage = state.currentPdfPage,
+            chapters = state.chapters,
+            currentChapterIndex = state.currentChapterIndex
+        )
     }
 
-    private fun startObservingHighlights(bookId: String) {
-        observeHighlightsJob?.cancel()
-        observeHighlightsJob = viewModelScope.launch(mainDispatcher) {
-            readerRepository.observeHighlights(bookId).collect { highlights ->
-                mutableUiState.update {
-                    it.copy(highlights = highlights)
-                }
-            }
-        }
+    companion object {
+        private const val TAG = "ReaderViewModel"
     }
 
-    private fun startObservingBookmarks(bookId: String) {
-        observeBookmarksJob?.cancel()
-        observeBookmarksJob = viewModelScope.launch(mainDispatcher) {
-            readerRepository.observeBookmarks(bookId).collect { bookmarks ->
-                mutableUiState.update {
-                    it.copy(bookmarks = bookmarks)
-                }
-            }
-        }
-    }
+    // ── aA Settings ──────────────────────────────────────────────────
 
-    fun goToChapter(index: Int) {
-        if (index in mutableUiState.value.chapters.indices) {
-            if (index == mutableUiState.value.currentChapterIndex) return
-            mutableUiState.update { it.copy(currentChapterIndex = index) }
-            updateProgressForChapter(index)
-            sleepTimerManager.onChapterChanged()
-        }
-    }
+    fun onToggleSplitSettings() = settingsManager.onToggleSplitSettings()
+
+    // ── Fullscreen ───────────────────────────────────────────────────
+
+    fun onToggleFullscreen() = fullscreenManager.onToggleFullscreen()
+
+    // ── Custom Highlight Palette (Phase 4) ───────────────────────
+
+    fun onUpdateCustomHighlightColor(index: Int, hex: String) =
+        settingsManager.onUpdateCustomHighlightColor(index, hex)
+
+    fun onResetCustomHighlightColors() = settingsManager.onResetCustomHighlightColors()
 
     // ── Sleep Timer (delegated to SleepTimerManager) ─────────────────
 
@@ -1802,89 +822,42 @@ class ReaderViewModel(
 
     // ── Reader Settings ──────────────────────────────────────────────
 
-    fun updateReaderSettings(settings: ReaderSettings) {
-        readerPreferences?.save(settings)
-        mutableUiState.update { it.copy(readerSettings = settings) }
-    }
+    fun updateReaderSettings(settings: ReaderSettings) = settingsManager.updateReaderSettings(settings)
 
-    // ── Progress drag ────────────────────────────────────────────────
+    // ── Cluster A — Delegated to ReaderLifecycleStateHolder ─────────
 
-    fun onProgressChange(percent: Float) {
-        val clamped = percent.coerceIn(0f, 100f)
-        mutableUiState.update {
-            it.copy(progressPercent = clamped)
-        }
+    fun goToNextChapter() = lifecycleHolder.goToNextChapter()
 
-        if (mutableUiState.value.selectedBookId == null) return
+    fun goToPreviousChapter() = lifecycleHolder.goToPreviousChapter()
 
-        if (mutableUiState.value.totalPdfPages > 0) {
-            val pageIndex = ((clamped / 100f) * mutableUiState.value.totalPdfPages).toInt()
-                .coerceIn(0, mutableUiState.value.totalPdfPages - 1)
-            mutableUiState.update { it.copy(currentPdfPage = pageIndex) }
-            updatePdfProgress(pageIndex, mutableUiState.value.totalPdfPages)
-            updateProgressDisplay()
-        } else if (mutableUiState.value.chapters.isNotEmpty()) {
-            val chapterIndex = ((clamped / 100f) * mutableUiState.value.chapters.size).toInt()
-                .coerceIn(0, mutableUiState.value.chapters.size - 1)
-            if (chapterIndex != mutableUiState.value.currentChapterIndex) {
-                goToChapter(chapterIndex)
-            }
-        }
-    }
+    fun goToChapter(index: Int) = lifecycleHolder.goToChapter(index)
 
-    fun onReaderOpened() {
-        if (sessionStartTime > 0L) {
-            return
-        }
-        sessionStartTime = System.currentTimeMillis()
-        readingTimeTickerJob?.cancel()
-        readingTimeTickerJob = viewModelScope.launch(mainDispatcher) {
-            while (isActive) {
-                delay(60_000L)
-                flushReadingTime(minimumMinutes = 1L)
-            }
-        }
-    }
+    fun goToNextPdfPage() = lifecycleHolder.goToNextPdfPage()
 
-    fun onReaderPaused() {
-        readingTimeTickerJob?.cancel()
-        readingTimeTickerJob = null
-        flushReadingTime(minimumMinutes = 1L)
-    }
+    fun goToPreviousPdfPage() = lifecycleHolder.goToPreviousPdfPage()
 
-    fun onReaderBackgrounded() {
-        onReaderPaused()
-    }
+    fun goToPage(pageNumber: Int) = lifecycleHolder.goToPage(pageNumber)
+
+    fun goToPdfPage(pageIndex: Int) = lifecycleHolder.goToPdfPage(pageIndex)
+
+    fun onTapZone(isLeftZone: Boolean) = lifecycleHolder.onTapZone(isLeftZone)
+
+    fun onProgressChange(percent: Float) = lifecycleHolder.onProgressChange(percent)
+
+    fun restoreProgressForBook(bookId: String) = lifecycleHolder.restoreProgressForBook(bookId)
+
+    fun updateProgress(bookId: String, cfiLocation: String, percentage: Float) =
+        lifecycleHolder.updateProgress(bookId, cfiLocation, percentage)
+
+    fun onReaderOpened() = lifecycleHolder.onReaderOpened()
+
+    fun onReaderPaused() = lifecycleHolder.onReaderPaused()
+
+    fun onReaderBackgrounded() = lifecycleHolder.onReaderBackgrounded()
 
     override fun onCleared() {
-        onReaderPaused()
+        lifecycleHolder.onCleared()
         super.onCleared()
-    }
-
-    private fun flushReadingTime(minimumMinutes: Long = 0L) {
-        val bookId = mutableUiState.value.selectedBookId ?: return
-        if (sessionStartTime <= 0L) {
-            return
-        }
-
-        val now = System.currentTimeMillis()
-        val elapsedMs = now - sessionStartTime
-        val computedMinutes = elapsedMs / 60000L
-        val additionalMinutes = if (minimumMinutes > 0L) {
-            computedMinutes.coerceAtLeast(minimumMinutes)
-        } else {
-            computedMinutes
-        }
-
-        if (additionalMinutes <= 0L) {
-            return
-        }
-
-        viewModelScope.launch(mainDispatcher) {
-            readingStatsRepository.updateReadingTime(bookId, additionalMinutes)
-            Log.d(TAG, "Recorded $additionalMinutes minutes for book $bookId")
-        }
-        sessionStartTime = now
     }
 }
 

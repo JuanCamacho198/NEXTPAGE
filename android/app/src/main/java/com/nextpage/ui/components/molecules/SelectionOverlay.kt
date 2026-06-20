@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
-import com.nextpage.presentation.viewmodel.ReaderSelectionState
+import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 
 /**
  * Shared floating selection overlay used by both the EPUB reader and

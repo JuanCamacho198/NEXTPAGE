@@ -111,7 +111,7 @@ fun ReaderScreen(
     var lastInteractionAt by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
 
     // Helper: any UI surface that owns touch input while open.
-    val isSelectionActive = uiState.selectionState != com.nextpage.presentation.viewmodel.ReaderSelectionState.None ||
+    val isSelectionActive = uiState.selectionState != com.nextpage.presentation.viewmodel.reader.ReaderSelectionState.None ||
         uiState.showTagInput ||
         uiState.showDefinitionInput ||
         uiState.showColorPickerPopover

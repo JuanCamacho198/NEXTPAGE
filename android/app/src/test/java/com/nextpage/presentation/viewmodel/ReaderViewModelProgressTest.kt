@@ -7,6 +7,7 @@ import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsData
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
+import com.nextpage.presentation.viewmodel.reader.BookChapter
 import com.nextpage.testutil.MainDispatcherRule
 import android.app.Application
 import io.mockk.mockk
@@ -213,9 +214,9 @@ class ReaderViewModelProgressTest {
         assertEquals(60f, viewModel.uiState.value.progressPercent, 0.01f)
         assertEquals("3 / 5", viewModel.uiState.value.progressLabel)
 
-        // Last chapter 4/5 → 100%
+        // Last chapter 4/5 → 99% (capped — real overall % requires Readium locator)
         setEpubStateWithChapters(viewModel, chapters = chapters, currentChapterIndex = 4)
-        assertEquals(100f, viewModel.uiState.value.progressPercent, 0.01f)
+        assertEquals(99f, viewModel.uiState.value.progressPercent, 0.01f)
         assertEquals("5 / 5", viewModel.uiState.value.progressLabel)
     }
 
@@ -270,21 +271,10 @@ class ReaderViewModelProgressTest {
         chapters: List<BookChapter>,
         currentChapterIndex: Int
     ) {
-        val field = ReaderViewModel::class.java.getDeclaredField("mutableUiState")
-        field.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        val state = field.get(viewModel) as MutableStateFlow<ReaderUiState>
-        state.value = state.value.copy(
-            bookFormat = "epub",
+        viewModel.lifecycleHolder.setEpubStateForTest(
             chapters = chapters,
-            currentChapterIndex = currentChapterIndex,
-            totalPdfPages = 0
+            currentChapterIndex = currentChapterIndex
         )
-        // Trigger progress recalculation
-        viewModel::class.java.getDeclaredMethod("updateProgressDisplay").apply {
-            isAccessible = true
-            invoke(viewModel)
-        }
     }
 
     private fun setPdfStateWithPages(
@@ -292,21 +282,10 @@ class ReaderViewModelProgressTest {
         totalPages: Int,
         currentPage: Int
     ) {
-        val field = ReaderViewModel::class.java.getDeclaredField("mutableUiState")
-        field.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        val state = field.get(viewModel) as MutableStateFlow<ReaderUiState>
-        state.value = state.value.copy(
-            bookFormat = "pdf",
-            chapters = emptyList(),
-            currentPdfPage = currentPage,
-            totalPdfPages = totalPages
+        viewModel.lifecycleHolder.setPdfStateForTest(
+            totalPages = totalPages,
+            currentPage = currentPage
         )
-        // Trigger progress recalculation
-        viewModel::class.java.getDeclaredMethod("updateProgressDisplay").apply {
-            isAccessible = true
-            invoke(viewModel)
-        }
     }
 
     private fun setPdfState(
@@ -315,15 +294,10 @@ class ReaderViewModelProgressTest {
         totalPdfPages: Int,
         currentPdfPage: Int = 0
     ) {
-        val field = ReaderViewModel::class.java.getDeclaredField("mutableUiState")
-        field.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        val state = field.get(viewModel) as MutableStateFlow<ReaderUiState>
-        state.value = state.value.copy(
+        viewModel.lifecycleHolder.setPdfStateForTest(
             selectedBookId = selectedBookId,
-            bookFormat = "pdf",
-            currentPdfPage = currentPdfPage,
-            totalPdfPages = totalPdfPages
+            totalPages = totalPdfPages,
+            currentPage = currentPdfPage
         )
     }
 

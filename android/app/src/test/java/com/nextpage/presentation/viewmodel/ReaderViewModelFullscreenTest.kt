@@ -9,7 +9,10 @@ import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import com.nextpage.testutil.MainDispatcherRule
 import android.app.Application
+import android.util.Log
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,6 +67,12 @@ class ReaderViewModelFullscreenTest {
 
     @Test
     fun `fullscreen resets on new book load`() = runTest {
+        mockkStatic(Log::class)
+        every { Log.e(any(), any()) } returns 0
+        every { Log.e(any(), any(), any()) } returns 0
+        every { Log.d(any(), any()) } returns 0
+        every { Log.d(any(), any(), any()) } returns 0
+
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val viewModel = ReaderViewModel(
             application = mockk<Application>(relaxed = true),

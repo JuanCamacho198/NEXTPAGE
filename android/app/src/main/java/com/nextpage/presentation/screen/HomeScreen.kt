@@ -40,6 +40,7 @@ import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.HomeViewModel
+import com.nextpage.ui.components.atoms.CoverThumbnail
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageEmptyState

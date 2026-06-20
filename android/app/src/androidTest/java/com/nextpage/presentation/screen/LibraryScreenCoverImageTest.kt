@@ -1,6 +1,7 @@
 package com.nextpage.presentation.screen
 
 import android.graphics.Bitmap
+import com.nextpage.ui.components.atoms.CoverThumbnail
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule

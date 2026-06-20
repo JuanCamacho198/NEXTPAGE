@@ -4,27 +4,26 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.nextpage.R
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.data.storage.CoverStorage
-import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.BookStatus
 import com.nextpage.domain.model.effectiveStatus
 import com.nextpage.domain.repository.LibraryRepository
+import com.nextpage.domain.usecase.ImportEpubBookUseCase
 import com.nextpage.presentation.UiEvent
+import com.nextpage.presentation.viewmodel.library.BookActionStateHolder
+import com.nextpage.presentation.viewmodel.library.BookFilterStateHolder
+import com.nextpage.presentation.viewmodel.library.BookImportStateHolder
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import com.nextpage.domain.usecase.ImportEpubBookUseCase
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
@@ -123,28 +122,71 @@ class LibraryViewModel(
     private val appContext: Context,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) : ViewModel() {
-    companion object {
-        private const val SEARCH_DEBOUNCE_MS = 300L
-    }
 
     private val mutableUiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = mutableUiState.asStateFlow()
 
-    private val mutableImportEvents = MutableSharedFlow<LibraryImportEvent>()
+    private val mutableImportEvents = MutableSharedFlow<LibraryImportEvent>(extraBufferCapacity = 1)
     val importEvents: SharedFlow<LibraryImportEvent> = mutableImportEvents.asSharedFlow()
 
-    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    private val _uiEvent = MutableSharedFlow<UiEvent>(extraBufferCapacity = 1)
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
+    // ── Holders ────────────────────────────────────────────────────────
+
+    private val bookFilterStateHolder = BookFilterStateHolder(
+        scope = viewModelScope,
+        mainDispatcher = mainDispatcher,
+        onStateChanged = { filter ->
+            mutableUiState.update { current ->
+                current.copy(
+                    statusFilter = filter.statusFilter,
+                    sortBy = filter.sortBy,
+                    isGridView = filter.isGridView,
+                    searchQuery = filter.searchQuery,
+                    debouncedSearchQuery = filter.debouncedSearchQuery,
+                    showSearch = filter.showSearch,
+                    showFilterSheet = filter.showFilterSheet,
+                    filterFormat = filter.filterFormat
+                )
+            }
+        }
+    )
+
+    private val bookImportStateHolder = BookImportStateHolder(
+        importEpubBookUseCase = importEpubBookUseCase,
+        libraryRepository = libraryRepository,
+        scope = viewModelScope,
+        onImportEvent = { mutableImportEvents.tryEmit(it) },
+        mainDispatcher = mainDispatcher,
+        onStateChanged = { importState ->
+            mutableUiState.update { it.copy(isImporting = importState.isImporting) }
+        }
+    )
+
+    private val bookActionStateHolder = BookActionStateHolder(
+        libraryRepository = libraryRepository,
+        coverStorage = coverStorage,
+        appContext = appContext,
+        scope = viewModelScope,
+        onUiEvent = { _uiEvent.tryEmit(it) },
+        mainDispatcher = mainDispatcher,
+        onStateChanged = { action ->
+            mutableUiState.update { current ->
+                current.copy(
+                    bookToDelete = action.bookToDelete,
+                    bookToEdit = action.bookToEdit,
+                    bookToShare = action.bookToShare
+                )
+            }
+        }
+    )
+
     init {
+        // ── Lifecycle observations (Room flows) ──
         viewModelScope.launch(mainDispatcher) {
             libraryRepository.observeLibrary().collect { books ->
-                mutableUiState.update {
-                    it.copy(
-                        books = books,
-                        isLoading = false
-                    )
-                }
+                mutableUiState.update { it.copy(books = books, isLoading = false) }
             }
         }
 
@@ -160,6 +202,7 @@ class LibraryViewModel(
             }
         }
 
+        // ── Sync service observations ──
         viewModelScope.launch(mainDispatcher) {
             syncService.syncState.collect { state ->
                 mutableUiState.update {
@@ -181,235 +224,54 @@ class LibraryViewModel(
         }
     }
 
+    // ── Delegation: Filter / Sort / Search ─────────────────────────────
+
+    fun onStatusFilterChanged(filter: String) = bookFilterStateHolder.onStatusFilterChanged(filter)
+    fun onSortByChanged(sort: String) = bookFilterStateHolder.onSortByChanged(sort)
+    fun onToggleView() = bookFilterStateHolder.onToggleView()
+    fun onToggleSearch() = bookFilterStateHolder.onToggleSearch()
+    fun onSearchQueryChanged(query: String) = bookFilterStateHolder.onSearchQueryChanged(query)
+    fun onToggleFilterSheet() = bookFilterStateHolder.onToggleFilterSheet()
+    fun onFilterFormatChanged(format: String) = bookFilterStateHolder.onFilterFormatChanged(format)
+
+    // ── Delegation: Import ─────────────────────────────────────────────
+
     fun importBookFromEpub(
         sourcePath: String,
         fallbackTitle: String?,
         inputStreamProvider: suspend () -> InputStream?
-    ) {
-        mutableUiState.update { it.copy(isImporting = true) }
-
-        viewModelScope.launch(mainDispatcher) {
-            val result = importEpubBookUseCase(
-                request = BookImportRequest(
-                    sourcePath = sourcePath,
-                    fallbackTitle = fallbackTitle
-                ),
-                inputStreamProvider = inputStreamProvider
-            )
-
-            mutableUiState.update { it.copy(isImporting = false) }
-
-            result.fold(
-                onSuccess = { book ->
-                    mutableImportEvents.emit(LibraryImportEvent.Success(book.title))
-                },
-                onFailure = { error ->
-                    mutableImportEvents.emit(
-                        LibraryImportEvent.Failure(
-                            error.message ?: "Failed to import EPUB"
-                        )
-                    )
-                }
-            )
-        }
-    }
+    ) = bookImportStateHolder.importBookFromEpub(sourcePath, fallbackTitle, inputStreamProvider)
 
     fun importPdfBook(
         sourcePath: String,
         fallbackTitle: String?,
         pdfFile: File
-    ) {
-        mutableUiState.update { it.copy(isImporting = true) }
+    ) = bookImportStateHolder.importPdfBook(sourcePath, fallbackTitle, pdfFile)
 
-        viewModelScope.launch(mainDispatcher) {
-            val result = libraryRepository.importBookFromPdf(
-                request = BookImportRequest(
-                    sourcePath = sourcePath,
-                    fallbackTitle = fallbackTitle
-                ),
-                file = pdfFile
-            )
+    // ── Delegation: Actions (Delete / Edit / Share / Status) ──────────
 
-            mutableUiState.update { it.copy(isImporting = false) }
-
-            result.fold(
-                onSuccess = { book ->
-                    mutableImportEvents.emit(LibraryImportEvent.Success(book.title))
-                },
-                onFailure = { error ->
-                    mutableImportEvents.emit(
-                        LibraryImportEvent.Failure(
-                            error.message ?: "Failed to import PDF"
-                        )
-                    )
-                }
-            )
-        }
-    }
-
-    // ── UI State mutations ─────────────────────────────────────────
-
-    private var searchJob: Job? = null
-
-    fun onStatusFilterChanged(filter: String) {
-        mutableUiState.update { it.copy(statusFilter = filter) }
-    }
-
-    fun onSortByChanged(sort: String) {
-        mutableUiState.update { it.copy(sortBy = sort) }
-    }
-
-    fun onToggleView() {
-        mutableUiState.update { it.copy(isGridView = !it.isGridView) }
-    }
-
-    fun onToggleSearch() {
-        mutableUiState.update {
-            it.copy(
-                showSearch = !it.showSearch,
-                searchQuery = "",
-                debouncedSearchQuery = ""
-            )
-        }
-    }
-
-    fun onSearchQueryChanged(query: String) {
-        mutableUiState.update { it.copy(searchQuery = query) }
-
-        searchJob?.cancel()
-        if (query.isBlank()) {
-            mutableUiState.update { it.copy(debouncedSearchQuery = "") }
-            return
-        }
-
-        searchJob = viewModelScope.launch {
-            delay(SEARCH_DEBOUNCE_MS)
-            mutableUiState.update { it.copy(debouncedSearchQuery = query) }
-        }
-    }
-
-    fun onToggleFilterSheet() {
-        mutableUiState.update { it.copy(showFilterSheet = !it.showFilterSheet) }
-    }
-
-    fun onFilterFormatChanged(format: String) {
-        mutableUiState.update { it.copy(filterFormat = format, showFilterSheet = false) }
-    }
-
-    // ── Delete ──────────────────────────────────────────────────────
-
-    fun requestDeleteBook(book: Book) {
-        mutableUiState.update { it.copy(bookToDelete = book) }
-    }
-
-    fun dismissDeleteDialog() {
-        mutableUiState.update { it.copy(bookToDelete = null) }
-    }
-
-    fun confirmDeleteBook() {
-        val book = mutableUiState.value.bookToDelete ?: return
-
-        viewModelScope.launch(mainDispatcher) {
-            val result = libraryRepository.deleteBook(book.id)
-            mutableUiState.update { it.copy(bookToDelete = null) }
-
-            result.fold(
-                onSuccess = {
-                    val message = "Deleted \"${book.title}\""
-                    _uiEvent.emit(UiEvent.ShowSnackbar(message))
-                },
-                onFailure = { error ->
-                    val message = error.message ?: "Failed to delete book"
-                    _uiEvent.emit(UiEvent.ShowSnackbar(message))
-                }
-            )
-        }
-    }
-
-    // ── Sync ────────────────────────────────────────────────────────
-
-    fun onPullToRefresh() {
-        mutableUiState.update { it.copy(isRefreshing = true) }
-        viewModelScope.launch(mainDispatcher) {
-            syncService.schedulePull()
-        }
-    }
-
-    // ── Context Menu actions ────────────────────────────────────────
-
-    fun onMenuMarkCompleted(book: Book) {
-        updateBookStatus(book, BookStatus.COMPLETED, R.string.library_snackbar_marked_completed)
-    }
-
-    fun onMenuMarkPlanToRead(book: Book) {
-        updateBookStatus(book, BookStatus.PLAN_TO_READ, R.string.library_snackbar_marked_plan_to_read)
-    }
-
-    private fun updateBookStatus(book: Book, status: String, successMessageRes: Int) {
-        viewModelScope.launch(mainDispatcher) {
-            val result = libraryRepository.updateBookStatus(book.id, status)
-            result.fold(
-                onSuccess = {
-                    _uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(successMessageRes)))
-                },
-                onFailure = { error ->
-                    _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to update status"))
-                }
-            )
-        }
-    }
-
-    fun onMenuShare(book: Book) {
-        mutableUiState.update { it.copy(bookToShare = book) }
-        val mimeType = when (book.format.lowercase()) {
-            "pdf" -> "application/pdf"
-            "epub" -> "application/epub+zip"
-            else -> "*/*"
-        }
-        viewModelScope.launch(mainDispatcher) {
-            _uiEvent.emit(UiEvent.ShareFile(filePath = book.filePath, mimeType = mimeType))
-            mutableUiState.update { it.copy(bookToShare = null) }
-        }
-    }
-
-    fun requestEditBook(book: Book) {
-        mutableUiState.update { it.copy(bookToEdit = book) }
-    }
-
-    fun dismissEditDialog() {
-        mutableUiState.update { it.copy(bookToEdit = null) }
-    }
-
+    fun requestDeleteBook(book: Book) = bookActionStateHolder.requestDeleteBook(book)
+    fun dismissDeleteDialog() = bookActionStateHolder.dismissDeleteDialog()
+    fun confirmDeleteBook() = bookActionStateHolder.confirmDeleteBook()
+    fun requestEditBook(book: Book) = bookActionStateHolder.requestEditBook(book)
+    fun dismissEditDialog() = bookActionStateHolder.dismissEditDialog()
     fun confirmEditBook(
         book: Book,
         title: String,
         author: String?,
         description: String?,
         coverBytes: ByteArray?
-    ) {
+    ) = bookActionStateHolder.confirmEditBook(book, title, author, description, coverBytes)
+    fun onMenuMarkCompleted(book: Book) = bookActionStateHolder.onMenuMarkCompleted(book)
+    fun onMenuMarkPlanToRead(book: Book) = bookActionStateHolder.onMenuMarkPlanToRead(book)
+    fun onMenuShare(book: Book) = bookActionStateHolder.onMenuShare(book)
+
+    // ── Sync (stays in ViewModel — cross-cutting concern) ──────────────
+
+    fun onPullToRefresh() {
+        mutableUiState.update { it.copy(isRefreshing = true) }
         viewModelScope.launch(mainDispatcher) {
-            val coverPath = coverBytes?.let { bytes ->
-                coverStorage.saveCover(bookId = book.id, coverBytes = bytes).getOrNull()
-            } ?: book.coverPath
-
-            val result = libraryRepository.updateBookMetadata(
-                bookId = book.id,
-                title = title.trim().ifBlank { book.title },
-                author = author?.trim()?.ifBlank { null },
-                description = description?.trim()?.ifBlank { null },
-                coverPath = coverPath
-            )
-
-            mutableUiState.update { it.copy(bookToEdit = null) }
-
-            result.fold(
-                onSuccess = {
-                    _uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(R.string.library_snackbar_metadata_saved)))
-                },
-                onFailure = { error ->
-                    _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to update metadata"))
-                }
-            )
+            syncService.schedulePull()
         }
     }
 }

@@ -2,9 +2,13 @@ package com.nextpage.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "books")
+@Entity(
+    tableName = "books",
+    indices = [Index(value = ["deleted_at", "updated_at"], orders = [Index.Order.ASC, Index.Order.DESC])]
+)
 data class BookEntity(
     @PrimaryKey
     val id: String,

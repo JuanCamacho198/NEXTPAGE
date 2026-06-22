@@ -2,9 +2,20 @@ package com.nextpage.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "sync_file_mappings")
+@Entity(
+    tableName = "sync_file_mappings",
+    foreignKeys = [
+        ForeignKey(
+            entity = BookEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["book_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
 data class SyncFileMappingEntity(
     @PrimaryKey
     @ColumnInfo(name = "drive_file_id")

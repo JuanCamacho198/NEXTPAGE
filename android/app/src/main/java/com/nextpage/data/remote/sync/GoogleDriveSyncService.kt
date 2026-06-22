@@ -138,7 +138,11 @@ class GoogleDriveSyncService(
             return Result.success(Unit)
         }
 
-        val book = bookDao.getBookById(item.entityId)
+        // entityId is nullable: FK is ON DELETE SET NULL, so a deleted book leaves the outbox
+        // row with a null entity_id. Treat that as "nothing to push" and ack the row.
+        val entityId = item.entityId ?: return Result.success(Unit)
+
+        val book = bookDao.getBookById(entityId)
             ?: return Result.success(Unit) // Book deleted locally, skip
 
         if (book.deletedAtEpochMillis != null) {
@@ -183,7 +187,10 @@ class GoogleDriveSyncService(
     }
 
     private suspend fun pushState(item: com.nextpage.data.local.entity.SyncOutboxEntity, userId: String): Result<Unit> {
-        val bookId = item.entityId
+        // entityId is nullable: FK is ON DELETE SET NULL, so a deleted book leaves the outbox
+        // row with a null entity_id. State (progress/highlights/bookmarks) is keyed by bookId,
+        // so without a bookId there's nothing meaningful to push — ack the row.
+        val bookId = item.entityId ?: return Result.success(Unit)
         val progress = readingProgressDao.getProgressForBook(bookId)?.toDomain()
         val highlights = highlightDao.getHighlightsForBook(bookId).map { it.toDomain() }
         val bookmarks = bookmarkDao.getBookmarksForBook(bookId).map { it.toDomain() }

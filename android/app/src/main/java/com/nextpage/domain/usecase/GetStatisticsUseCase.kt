@@ -5,18 +5,28 @@ import com.nextpage.domain.model.Statistics
 import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flatMapLatest
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class GetStatisticsUseCase(
     private val readingStatsRepository: ReadingStatsRepository,
     private val homeRepository: HomeRepository
 ) {
+    private val refreshTrigger = MutableStateFlow(Unit)
+
+    fun refresh() {
+        refreshTrigger.value = Unit
+    }
+
     operator fun invoke(): Flow<Statistics> = combine(
         readingStatsRepository.observeTotalTime(),
         readingStatsRepository.observeBookStats(),
-        readingStatsRepository.observeDailyActivity(),
+        refreshTrigger.flatMapLatest { flow { emit(readingStatsRepository.getDailyActivity()) } },
         homeRepository.observeBooks()
     ) { totalMinutes, bookStats, dailyActivity, books ->
         val todayStart = getTodayStartMillis()

@@ -314,6 +314,9 @@ class ReaderViewModelProgressTest {
 
         override fun observeAllHighlights(): Flow<List<Highlight>> = MutableStateFlow(emptyList())
 
+        override fun observeAllHighlightsPaged(): Flow<androidx.paging.PagingData<Highlight>> =
+            kotlinx.coroutines.flow.flowOf(androidx.paging.PagingData.empty())
+
         override fun observeHighlights(bookId: String): Flow<List<Highlight>> = MutableStateFlow(emptyList())
 
         override suspend fun upsertHighlight(highlight: Highlight) = Unit
@@ -338,7 +341,6 @@ class ReaderViewModelProgressTest {
         override suspend fun deleteStats(bookId: String) = Unit
         override fun observeBookStats(): kotlinx.coroutines.flow.Flow<List<com.nextpage.domain.repository.ReadingStatsData>> =
             kotlinx.coroutines.flow.MutableStateFlow(emptyList())
-        override fun observeDailyActivity(): kotlinx.coroutines.flow.Flow<List<com.nextpage.domain.model.DailyReadingActivity>> =
-            kotlinx.coroutines.flow.MutableStateFlow(emptyList())
+        override suspend fun getDailyActivity(): List<com.nextpage.domain.model.DailyReadingActivity> = emptyList()
     }
 }

@@ -16,7 +16,7 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["book_id"]), Index(value = ["date"])]
+    indices = [Index(value = ["book_id"]), Index(value = ["date"]), Index(value = ["date", "userId"])]
 )
 data class ReadingSessionEntity(
     @PrimaryKey

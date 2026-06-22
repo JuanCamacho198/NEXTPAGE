@@ -57,6 +57,10 @@ class StatisticsViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = StatisticsUiState()
         )
+
+    fun refresh() {
+        getStatisticsUseCase.refresh()
+    }
 }
 
 class StatisticsViewModelFactory(

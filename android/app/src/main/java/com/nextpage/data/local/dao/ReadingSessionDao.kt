@@ -41,8 +41,8 @@ interface ReadingSessionDao {
     suspend fun count(): Int
 
     @Query("SELECT date, COALESCE(SUM(duration_minutes), 0) as total_minutes FROM reading_sessions GROUP BY date ORDER BY date DESC")
-    fun observeDailyMinutes(): Flow<List<DailyReadingMinutes>>
+    suspend fun getDailyMinutes(): List<DailyReadingMinutes>
 
     @Query("SELECT date, COALESCE(SUM(duration_minutes), 0) as total_minutes FROM reading_sessions WHERE date >= :startDate GROUP BY date ORDER BY date ASC")
-    fun observeDailyMinutesFromDate(startDate: Long): Flow<List<DailyReadingMinutes>>
+    suspend fun getDailyMinutesFromDate(startDate: Long): List<DailyReadingMinutes>
 }

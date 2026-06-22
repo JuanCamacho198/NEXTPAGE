@@ -2,16 +2,27 @@ package com.nextpage.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "sync_outbox")
+@Entity(
+    tableName = "sync_outbox",
+    foreignKeys = [
+        ForeignKey(
+            entity = BookEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["entity_id"],
+            onDelete = ForeignKey.SET_NULL
+        )
+    ]
+)
 data class SyncOutboxEntity(
     @PrimaryKey
     val id: String,
     @ColumnInfo(name = "entity_type")
     val entityType: String,
     @ColumnInfo(name = "entity_id")
-    val entityId: String,
+    val entityId: String?,
     @ColumnInfo(name = "operation")
     val operation: String,
     @ColumnInfo(name = "payload")

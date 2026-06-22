@@ -3,6 +3,7 @@ package com.nextpage.di
 import android.content.Context
 import android.util.Log
 import androidx.room.Room
+import coil.ImageLoader
 import com.nextpage.BuildConfig
 import com.nextpage.data.epub.ZipEpubParserService
 import com.nextpage.data.pdf.DefaultPdfParserService
@@ -38,6 +39,7 @@ import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
+import com.nextpage.presentation.theme.CoilModule
 
 class AppContainer(context: Context) {
     companion object {
@@ -64,6 +66,8 @@ class AppContainer(context: Context) {
     }
 
     val coverStorage = AppInternalCoverStorage(context.applicationContext)
+
+    val coilImageLoader: ImageLoader = CoilModule.imageLoader(context.applicationContext)
 
     private val pdfParserService = DefaultPdfParserService(context.applicationContext)
 

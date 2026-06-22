@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -53,10 +54,10 @@ class AuthViewModel(
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
     init {
-        _uiState.value = _uiState.value.copy(
+        _uiState.update { it.copy(
             isConfigured = isAuthConfigured,
             hasWiringIssue = hasAuthWiringIssue
-        )
+        ) }
         logDiagnostics("init")
         restoreSessionOnStart()
     }
@@ -67,11 +68,11 @@ class AuthViewModel(
             val session = sessionResult.getOrNull()
             session?.let { triggerSyncForSession(it) }
             if (_uiState.value.currentSession == null) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     currentSession = session,
                     errorMessage = sessionResult.exceptionOrNull()?.message,
                     failureKind = classifyFailure(sessionResult.exceptionOrNull())
-                )
+                ) }
             }
         }
     }
@@ -82,30 +83,30 @@ class AuthViewModel(
      */
     fun startGoogleSignIn() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
+            _uiState.update { it.copy(
                 isLoading = true,
                 errorMessage = null,
                 failureKind = AuthFailureKind.NONE
-            )
+            ) }
             logDiagnostics("startGoogleSignIn:loading")
             val result = authRepository.signInWithGoogle()
             result.fold(
                 onSuccess = { session ->
                     triggerSyncForSession(session)
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         isLoading = false,
                         currentSession = session,
                         errorMessage = null,
                         failureKind = AuthFailureKind.NONE
-                    )
+                    ) }
                     logDiagnostics("startGoogleSignIn:success")
                 },
                 onFailure = { error ->
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         isLoading = false,
                         errorMessage = error.message,
                         failureKind = classifyFailure(error)
-                    )
+                    ) }
                     _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Authentication failed"))
                     logDiagnostics("startGoogleSignIn:failure")
                 }
@@ -120,13 +121,13 @@ class AuthViewModel(
 
     fun signUp(email: String, password: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val result = authRepository.signUp(email, password)
-            _uiState.value = _uiState.value.copy(
+            _uiState.update { it.copy(
                 isLoading = false,
                 currentSession = result.getOrNull(),
                 errorMessage = result.exceptionOrNull()?.message
-            )
+            ) }
             result.exceptionOrNull()?.let {
                 _uiEvent.emit(UiEvent.ShowSnackbar(it.message ?: "Sign up failed"))
             }
@@ -135,13 +136,13 @@ class AuthViewModel(
 
     fun signIn(email: String, password: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val result = authRepository.signIn(email, password)
-            _uiState.value = _uiState.value.copy(
+            _uiState.update { it.copy(
                 isLoading = false,
                 currentSession = result.getOrNull(),
                 errorMessage = result.exceptionOrNull()?.message
-            )
+            ) }
             result.exceptionOrNull()?.let {
                 _uiEvent.emit(UiEvent.ShowSnackbar(it.message ?: "Sign in failed"))
             }
@@ -151,11 +152,11 @@ class AuthViewModel(
     fun signOut() {
         viewModelScope.launch {
             val result = authRepository.signOut()
-            _uiState.value = _uiState.value.copy(
-                currentSession = if (result.isSuccess) null else _uiState.value.currentSession,
+            _uiState.update { it.copy(
+                currentSession = if (result.isSuccess) null else it.currentSession,
                 errorMessage = result.exceptionOrNull()?.message,
                 failureKind = classifyFailure(result.exceptionOrNull())
-            )
+            ) }
             result.exceptionOrNull()?.let {
                 _uiEvent.emit(UiEvent.ShowSnackbar(it.message ?: "Sign out failed"))
             }
@@ -164,13 +165,13 @@ class AuthViewModel(
 
     fun continueLocally() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.update { it.copy(isLoading = true) }
             val result = authRepository.signInLocally()
-            _uiState.value = _uiState.value.copy(
+            _uiState.update { it.copy(
                 isLoading = false,
                 currentSession = result.getOrNull(),
                 errorMessage = result.exceptionOrNull()?.message
-            )
+            ) }
             result.exceptionOrNull()?.let {
                 _uiEvent.emit(UiEvent.ShowSnackbar(it.message ?: "Failed to continue locally"))
             }
@@ -178,7 +179,7 @@ class AuthViewModel(
     }
 
     fun clearError() {
-        _uiState.value = _uiState.value.copy(errorMessage = null, failureKind = AuthFailureKind.NONE)
+        _uiState.update { it.copy(errorMessage = null, failureKind = AuthFailureKind.NONE) }
     }
 
     private fun logDiagnostics(context: String) {

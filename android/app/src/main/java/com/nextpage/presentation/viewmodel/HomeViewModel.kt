@@ -69,12 +69,12 @@ class HomeViewModel(
             homeRepository.observeDailyStats(userId)
                 .catch { e -> _uiEvent.emit(UiEvent.ShowSnackbar(e.message ?: "Failed to load daily stats")) }
                 .collect { stats ->
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         minutesReadToday = stats.minutesRead,
                         sessionsToday = stats.sessionCount,
                         dailyProgressPercent = stats.dailyProgressPercent,
                         isLoading = false
-                    )
+                    ) }
                 }
         }
 
@@ -83,7 +83,7 @@ class HomeViewModel(
             homeRepository.observeCurrentBook()
                 .catch { e -> _uiEvent.emit(UiEvent.ShowSnackbar(e.message ?: "Failed to load current book")) }
                 .collect { book ->
-                    _uiState.value = _uiState.value.copy(currentBook = book)
+                    _uiState.update { it.copy(currentBook = book) }
                 }
         }
 
@@ -92,7 +92,7 @@ class HomeViewModel(
             homeRepository.observeCurrentBookProgress()
                 .catch { e -> _uiEvent.emit(UiEvent.ShowSnackbar(e.message ?: "Failed to load progress")) }
                 .collect { progress ->
-                    _uiState.value = _uiState.value.copy(currentBookProgress = progress)
+                    _uiState.update { it.copy(currentBookProgress = progress) }
                 }
         }
 
@@ -101,7 +101,7 @@ class HomeViewModel(
             homeRepository.observeRecentBooks(5)
                 .catch { e -> _uiEvent.emit(UiEvent.ShowSnackbar(e.message ?: "Failed to load recent books")) }
                 .collect { books ->
-                    _uiState.value = _uiState.value.copy(recentBooks = books)
+                    _uiState.update { it.copy(recentBooks = books) }
                 }
         }
 
@@ -110,7 +110,7 @@ class HomeViewModel(
             homeRepository.observeBooks()
                 .catch { e -> _uiEvent.emit(UiEvent.ShowSnackbar(e.message ?: "Failed to load books")) }
                 .collect { books ->
-                    _uiState.value = _uiState.value.copy(allBooks = books)
+                    _uiState.update { it.copy(allBooks = books) }
                 }
         }
     }

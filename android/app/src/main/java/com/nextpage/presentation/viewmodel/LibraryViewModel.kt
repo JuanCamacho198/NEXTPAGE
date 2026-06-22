@@ -21,11 +21,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -55,57 +59,49 @@ data class LibraryUiState(
     val showFilterSheet: Boolean = false,
     val filterFormat: String = "all"
 ) {
-    /** Books filtered by status, format, and search query, then sorted. */
-    val searchedBooks: List<Book>
-        get() {
-            val byStatus = filterBooks(books, statusFilter, readingMinutesByBook)
-            val byFormat = if (filterFormat == "all") byStatus
-                else byStatus.filter { it.format == filterFormat }
-            val bySearch = if (debouncedSearchQuery.isBlank()) byFormat
-                else byFormat.filter {
-                    it.title.contains(debouncedSearchQuery, ignoreCase = true) ||
-                    it.author?.contains(debouncedSearchQuery, ignoreCase = true) == true
-                }
-            return sortBookList(bySearch, sortBy)
-        }
-
     companion object {
         /** Minutes of reading considered "completed". */
         const val READING_TARGET_MINUTES = 300L
     }
+}
 
-    private fun filterBooks(
-        books: List<Book>,
-        statusFilter: String,
-        readingMinutesByBook: Map<String, Long>
-    ): List<Book> {
-        return when (statusFilter) {
-            "reading" -> books.filter {
-                val eff = it.effectiveStatus(readingMinutesByBook[it.id] ?: 0L)
-                eff == BookStatus.READING
-            }
-            "pending" -> books.filter {
-                val eff = it.effectiveStatus(readingMinutesByBook[it.id] ?: 0L)
-                eff == "pending" || eff == BookStatus.PLAN_TO_READ
-            }
-            "completed" -> books.filter {
-                val eff = it.effectiveStatus(readingMinutesByBook[it.id] ?: 0L)
-                eff == BookStatus.COMPLETED
-            }
-            else -> books
+/**
+ * Filters [books] by [statusFilter] using [readingMinutesByBook] for derived status.
+ */
+private fun filterBooks(
+    books: List<Book>,
+    statusFilter: String,
+    readingMinutesByBook: Map<String, Long>
+): List<Book> {
+    return when (statusFilter) {
+        "reading" -> books.filter {
+            val eff = it.effectiveStatus(readingMinutesByBook[it.id] ?: 0L)
+            eff == BookStatus.READING
         }
+        "pending" -> books.filter {
+            val eff = it.effectiveStatus(readingMinutesByBook[it.id] ?: 0L)
+            eff == "pending" || eff == BookStatus.PLAN_TO_READ
+        }
+        "completed" -> books.filter {
+            val eff = it.effectiveStatus(readingMinutesByBook[it.id] ?: 0L)
+            eff == BookStatus.COMPLETED
+        }
+        else -> books
     }
+}
 
-    private fun sortBookList(
-        books: List<Book>,
-        sortBy: String
-    ): List<Book> {
-        return when (sortBy) {
-            "title" -> books.sortedBy { it.title }
-            "author" -> books.sortedBy { it.author ?: "" }
-            "last_read" -> books.sortedByDescending { it.updatedAtEpochMillis }
-            else -> books // "date_added" — already in insertion order
-        }
+/**
+ * Sorts [books] by [sortBy] criteria.
+ */
+private fun sortBookList(
+    books: List<Book>,
+    sortBy: String
+): List<Book> {
+    return when (sortBy) {
+        "title" -> books.sortedBy { it.title }
+        "author" -> books.sortedBy { it.author ?: "" }
+        "last_read" -> books.sortedByDescending { it.updatedAtEpochMillis }
+        else -> books // "date_added" — already in insertion order
     }
 }
 
@@ -125,6 +121,26 @@ class LibraryViewModel(
 
     private val mutableUiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = mutableUiState.asStateFlow()
+
+    /** Memoized searched/filtered/sorted books derived from [mutableUiState]. */
+    val searchedBooks: StateFlow<List<Book>> = combine(
+        mutableUiState.map { it.books },
+        mutableUiState.map { it.statusFilter },
+        mutableUiState.map { it.filterFormat },
+        mutableUiState.map { it.debouncedSearchQuery },
+        mutableUiState.map { it.sortBy },
+        mutableUiState.map { it.readingMinutesByBook }
+    ) { books, statusFilter, filterFormat, searchQuery, sortBy, readingMinutesByBook ->
+        val byStatus = filterBooks(books, statusFilter, readingMinutesByBook)
+        val byFormat = if (filterFormat == "all") byStatus
+            else byStatus.filter { it.format == filterFormat }
+        val bySearch = if (searchQuery.isBlank()) byFormat
+            else byFormat.filter {
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                it.author?.contains(searchQuery, ignoreCase = true) == true
+            }
+        sortBookList(bySearch, sortBy)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val mutableImportEvents = MutableSharedFlow<LibraryImportEvent>(extraBufferCapacity = 1)
     val importEvents: SharedFlow<LibraryImportEvent> = mutableImportEvents.asSharedFlow()

@@ -50,10 +50,9 @@ fun LibraryScreen(
     onBookSelected: (String, String, String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val searchedBooks by viewModel.searchedBooks.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    val searchedBooks = uiState.searchedBooks
 
     var editCoverUri by remember { mutableStateOf<Uri?>(null) }
 
@@ -196,19 +195,8 @@ fun LibraryScreen(
             onChangeCover = { coverPickerLauncher.launch("image/*") }
         )
 
-        // ── Sync status indicator (top-right) ────────────────
-        val syncState = when {
-            uiState.syncError != null -> SyncState.Error(uiState.syncError!!)
-            uiState.isSyncing -> SyncState.Running
-            else -> SyncState.Idle
-        }
-        SyncStatusIndicator(
-            syncState = syncState,
-            pendingCount = uiState.pendingCount,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 8.dp, end = 16.dp)
-        )
+        // ── Sync status indicator (top-right; collects own state) ──
+        LibrarySyncStatus(viewModel = viewModel)
 
         if (uiState.isImporting) {
             CircularProgressIndicator(
@@ -223,6 +211,27 @@ fun LibraryScreen(
             onDismiss = { viewModel.onToggleFilterSheet() }
         )
     }
+}
+
+/**
+ * Sync status indicator that collects its own state from [viewModel],
+ * isolating recomposition to only the indicator when sync state changes.
+ */
+@Composable
+private fun LibrarySyncStatus(viewModel: LibraryViewModel) {
+    val uiState by viewModel.uiState.collectAsState()
+    val syncState = when {
+        uiState.syncError != null -> SyncState.Error(uiState.syncError!!)
+        uiState.isSyncing -> SyncState.Running
+        else -> SyncState.Idle
+    }
+    SyncStatusIndicator(
+        syncState = syncState,
+        pendingCount = uiState.pendingCount,
+        modifier = Modifier
+            .align(Alignment.TopEnd)
+            .padding(top = 8.dp, end = 16.dp)
+    )
 }
 
 @Composable

@@ -4,6 +4,9 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.RawQuery
+import androidx.sqlite.db.SimpleSQLiteQuery
+import androidx.sqlite.db.SupportSQLiteQuery
 import com.nextpage.data.local.entity.DictionaryWordEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -23,4 +26,14 @@ interface DictionaryWordDao {
 
     @Query("SELECT COUNT(*) FROM dictionary_words WHERE word = :word")
     suspend fun countByWord(word: String): Int
+
+    @RawQuery(observedEntities = [DictionaryWordEntity::class])
+    suspend fun searchFtsRaw(query: SupportSQLiteQuery): List<DictionaryWordEntity>
+
+    /** Search dictionary words using FTS5 MATCH via prepared query. */
+    suspend fun searchFts(query: String): List<DictionaryWordEntity> =
+        searchFtsRaw(SimpleSQLiteQuery(
+            "SELECT * FROM dictionary_words WHERE rowid IN (SELECT rowid FROM dictionary_words_fts WHERE dictionary_words_fts MATCH ?)",
+            arrayOf(query)
+        ))
 }

@@ -1,5 +1,6 @@
 package com.nextpage.data.local.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
@@ -10,6 +11,9 @@ import kotlinx.coroutines.flow.Flow
 interface HighlightDao {
     @Query("SELECT * FROM highlights WHERE deleted_at IS NULL ORDER BY updated_at DESC")
     fun observeAllHighlights(): Flow<List<HighlightEntity>>
+
+    @Query("SELECT * FROM highlights WHERE deleted_at IS NULL ORDER BY updated_at DESC")
+    fun observeAllHighlightsPaged(): PagingSource<Int, HighlightEntity>
 
     @Query("SELECT * FROM highlights WHERE book_id = :bookId AND deleted_at IS NULL ORDER BY updated_at DESC")
     fun observeHighlightsForBook(bookId: String): Flow<List<HighlightEntity>>

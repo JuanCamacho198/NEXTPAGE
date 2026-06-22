@@ -1,5 +1,6 @@
 package com.nextpage.data.local.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
@@ -10,6 +11,9 @@ import kotlinx.coroutines.flow.Flow
 interface BookDao {
     @Query("SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC")
     fun observeAllBooks(): Flow<List<BookEntity>>
+
+    @Query("SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC")
+    fun observeAllBooksPaged(): PagingSource<Int, BookEntity>
 
     @Upsert
     suspend fun upsert(book: BookEntity)

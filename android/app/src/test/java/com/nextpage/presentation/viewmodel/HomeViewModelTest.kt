@@ -21,15 +21,18 @@ class HomeViewModelTest {
 
     private fun createViewModel(): HomeViewModel {
         val mockRepo = mockk<HomeRepository>(relaxed = true)
-        // Wire flows to avoid NPE when collecting
+        // Wire flows to avoid NPE when collecting (all 5 needed for R9 combine)
         val dailyStatsFlow = MutableStateFlow(ReadingStats())
         val currentBookFlow = MutableStateFlow<Book?>(null)
+        val progressFlow = MutableStateFlow(0f)
         val recentBooksFlow = MutableStateFlow<List<Book>>(emptyList())
+        val allBooksFlow = MutableStateFlow<List<Book>>(emptyList())
 
-        // Use every block to set up the mock
         io.mockk.every { mockRepo.observeDailyStats() } returns dailyStatsFlow
         io.mockk.every { mockRepo.observeCurrentBook() } returns currentBookFlow
+        io.mockk.every { mockRepo.observeCurrentBookProgress() } returns progressFlow
         io.mockk.every { mockRepo.observeRecentBooks(any()) } returns recentBooksFlow
+        io.mockk.every { mockRepo.observeBooks() } returns allBooksFlow
 
         return HomeViewModel(mockRepo)
     }
@@ -79,9 +82,38 @@ class HomeViewModelTest {
     @Test
     fun homeUiState_isLoading_defaultsToFalse() = runTest {
         val viewModel = createViewModel()
-        // Wait a bit for init to collect
+        // Wait a bit for init to collect (combine fires once all 5 flows have initial value)
         kotlinx.coroutines.delay(100)
         val state = viewModel.uiState.value
         assertEquals("isLoading should default to false", false, state.isLoading)
+    }
+
+    @Test
+    fun combine_emitsCorrectState_whenAllFlowsEmit() = runTest {
+        val mockRepo = mockk<HomeRepository>(relaxed = true)
+        val dailyStatsFlow = MutableStateFlow(ReadingStats(minutesRead = 30, sessionCount = 2, dailyProgressPercent = 0.5f))
+        val currentBookFlow = MutableStateFlow<Book?>(
+            Book(id = "b1", title = "Test", author = "Author", coverPath = null, filePath = "/path", format = "epub", totalPages = 200, updatedAtEpochMillis = 1L)
+        )
+        val progressFlow = MutableStateFlow(0.75f)
+        val recentBooksFlow = MutableStateFlow<List<Book>>(emptyList())
+        val allBooksFlow = MutableStateFlow<List<Book>>(emptyList())
+
+        io.mockk.every { mockRepo.observeDailyStats() } returns dailyStatsFlow
+        io.mockk.every { mockRepo.observeCurrentBook() } returns currentBookFlow
+        io.mockk.every { mockRepo.observeCurrentBookProgress() } returns progressFlow
+        io.mockk.every { mockRepo.observeRecentBooks(any()) } returns recentBooksFlow
+        io.mockk.every { mockRepo.observeBooks() } returns allBooksFlow
+
+        val viewModel = HomeViewModel(mockRepo)
+        kotlinx.coroutines.delay(100)
+
+        val state = viewModel.uiState.value
+        assertEquals("combine should set minutesReadToday", 30, state.minutesReadToday)
+        assertEquals("combine should set sessionsToday", 2, state.sessionsToday)
+        assertEquals("combine should set dailyProgressPercent", 0.5f, state.dailyProgressPercent, 0.001f)
+        assertEquals("combine should set currentBook id", "b1", state.currentBook?.id)
+        assertEquals("combine should set currentBookProgress", 0.75f, state.currentBookProgress, 0.001f)
+        assertEquals("combine should set isLoading to false", false, state.isLoading)
     }
 }

@@ -231,6 +231,47 @@ class LibraryViewModelTest {
         assertEquals(5L, viewModel.uiState.value.readingMinutesByBook["book-2"])
     }
 
+    @Test
+    fun searchedBooks_emitsFilteredBooks_whenSearchQueryChanges() = runTest(StandardTestDispatcher()) {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = FakeLibraryRepository()
+        val viewModel = LibraryViewModel(
+            libraryRepository = repository,
+            importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            syncService = FakeSyncService(),
+            coverStorage = mockk<CoverStorage>(),
+            appContext = mockk<Context>(),
+            mainDispatcher = dispatcher
+        )
+
+        // searchedBooks uses WhileSubscribed(5000) — subscribe in background
+        // so the upstream combine starts collecting immediately.
+        backgroundScope.launch {
+            viewModel.searchedBooks.collect()
+        }
+
+        repository.emitBooks(
+            listOf(
+                Book(id = "b1", title = "Kotlin Guide", author = "Author A", coverPath = null, filePath = "/a.epub", format = "epub", updatedAtEpochMillis = 1L),
+                Book(id = "b2", title = "Java Guide", author = "Author B", coverPath = null, filePath = "/b.epub", format = "epub", updatedAtEpochMillis = 2L),
+                Book(id = "b3", title = "Kotlin Coroutines", author = "Author C", coverPath = null, filePath = "/c.epub", format = "epub", updatedAtEpochMillis = 3L)
+            )
+        )
+        advanceUntilIdle()
+
+        // Initial state — all books returned
+        assertEquals(3, viewModel.searchedBooks.value.size)
+
+        // Simulate search query via the filter state holder (triggers debouncedSearchQuery)
+        viewModel.onSearchQueryChanged("Kotlin")
+        advanceUntilIdle()
+
+        // After debounce + filter: 2 books match "Kotlin"
+        assertEquals(2, viewModel.searchedBooks.value.size)
+        assertEquals("b1", viewModel.searchedBooks.value[0].id)
+        assertEquals("b3", viewModel.searchedBooks.value[1].id)
+    }
+
     private class FakeLibraryRepository(
         private val importFailure: Throwable? = null,
         private val deleteFailure: Throwable? = null

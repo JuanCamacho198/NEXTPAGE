@@ -1,0 +1,26 @@
+# Baseline Profile for NextPage — AOT-compiled startup paths
+# These rules ensure critical user-facing screens are pre-compiled
+# on first install, reducing cold-start JIT overhead.
+#
+# Generated manually (macrobenchmark:generateBaselineProfile pending).
+# Format: HSPL<classname> (HSPL = Hot Startup Path Loaded)
+
+# LibraryScreen — first screen most users see
+HSPLcom/nextpage/presentation/screen/LibraryScreen
+HSPLcom/nextpage/presentation/screen/library/BookGridSection
+HSPLcom/nextpage/presentation/screen/library/FilterSheetContent
+HSPLcom/nextpage/presentation/screen/library/LibraryDialogs
+HSPLcom/nextpage/presentation/screen/library/LibraryToolbar
+HSPLcom/nextpage/presentation/viewmodel/LibraryViewModel
+
+# HomeScreen — dashboard after auth or cold start
+HSPLcom/nextpage/presentation/screen/HomeScreen
+HSPLcom/nextpage/presentation/viewmodel/HomeViewModel
+
+# ReaderScreen — reading experience
+HSPLcom/nextpage/presentation/screen/ReaderScreen
+HSPLcom/nextpage/presentation/viewmodel/ReaderViewModel
+
+# AuthScreen — login/register
+HSPLcom/nextpage/presentation/screen/AuthScreen
+HSPLcom/nextpage/presentation/viewmodel/AuthViewModel

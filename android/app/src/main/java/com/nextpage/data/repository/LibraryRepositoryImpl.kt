@@ -35,6 +35,8 @@ import java.io.File
 import java.io.InputStream
 import java.util.UUID
 
+// TODO: make PagingConfig config-driven (pageSize, prefetchDistance) — currently pageSize=20
+// is hardcoded in RepositoryImpl. Derive from screen metrics or server page size (R13).
 class LibraryRepositoryImpl(
     private val appContext: Context,
     private val bookDao: BookDao,

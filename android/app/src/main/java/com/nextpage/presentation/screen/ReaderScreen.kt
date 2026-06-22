@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -131,6 +132,44 @@ fun ReaderScreen(
     // pointerInput block without restarting the gesture detector on
     // every recomposition.
     val currentOnContentTap by rememberUpdatedState(onContentTap)
+
+    // ── SelectionOverlay: stabilized callbacks (R5,R6) ──────────────
+    // R7: derivedStateOf prevents O(n) highlight lookup on every frame
+    val activeOverlayHighlightColor by remember(uiState.highlights, uiState.activeHighlightId) {
+        derivedStateOf {
+            uiState.activeHighlightId?.let { id ->
+                uiState.highlights.firstOrNull { it.id == id }?.color
+            }
+        }
+    }
+    val onSelectionColorSelected = remember(viewModel) { { color: String -> viewModel.onReadiumHighlightColorSelected(color) } }
+    val onSelectionCopy = remember(viewModel, context) { {
+        viewModel.onCopySelectedText()
+        uiState.selectedText?.let { text ->
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("highlight", text))
+        }
+        @Suppress("UNUSED_EXPRESSION")
+        Unit
+    } }
+    val onSelectionDismiss = remember(viewModel) { { viewModel.onDismissContextMenu() } }
+    val onSelectionDelete = remember(viewModel) { {
+        uiState.activeHighlightId?.let { viewModel.onReadiumDeleteHighlight(it) }
+        @Suppress("UNUSED_EXPRESSION")
+        Unit
+    } }
+    val onSelectionAddTag = remember(viewModel) { { viewModel.onShowTagInput() } }
+    val onSelectionAnnotate = remember(viewModel) { { viewModel.onAnnotate() } }
+    val onSelectionShare = remember(viewModel) { { viewModel.onShareSelectedText() } }
+    val onSelectionDictionary = remember(viewModel) { { viewModel.onAddToDictionary() } }
+    val onSelectionShowColorPicker = remember(viewModel) { { viewModel.onShowColorPickerPopover() } }
+    val onSelectionDismissColorPicker = remember(viewModel) { { viewModel.onDismissColorPickerPopover() } }
+    val onSelectionTagTextChanged = remember(viewModel) { { text: String -> viewModel.onTagTextChanged(text) } }
+    val onSelectionSaveTag = remember(viewModel) { { viewModel.onSaveTag(uiState.activeTagText) } }
+    val onSelectionDismissTag = remember(viewModel) { { viewModel.onDismissTagInput() } }
+    val onSelectionDefTextChanged = remember(viewModel) { { text: String -> viewModel.onDefinitionTextChanged(text) } }
+    val onSelectionSaveDef = remember(viewModel) { { viewModel.onSaveDefinition(uiState.activeDefinitionText) } }
+    val onSelectionDismissDef = remember(viewModel) { { viewModel.onDismissDefinitionInput() } }
 
     // ── Debug action triggers: panel button → ReadiumReaderContent ──
     val inspectHighlightsHtmlTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
@@ -280,6 +319,7 @@ fun ReaderScreen(
                             modifier = Modifier.fillMaxSize()
                         )
 
+                        // SelectionOverlay with stabilized callbacks (R5,R6,R7)
                         SelectionOverlay(
                             selectionState = uiState.selectionState,
                             showColorPickerPopover = uiState.showColorPickerPopover,
@@ -291,34 +331,24 @@ fun ReaderScreen(
                             selectionRect = uiState.selectionRect,
                             selectedText = uiState.selectedText,
                             highlights = uiState.highlights,
-                            activeHighlightColor = uiState.activeHighlightId?.let { id ->
-                                uiState.highlights.firstOrNull { it.id == id }?.color
-                            },
+                            activeHighlightColor = activeOverlayHighlightColor,
                             customHighlightColors = uiState.readerSettings.customHighlightColors,
-                            onColorSelected = { color -> viewModel.onReadiumHighlightColorSelected(color) },
-                            onCopy = {
-                                viewModel.onCopySelectedText()
-                                uiState.selectedText?.let { text ->
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("highlight", text))
-                                }
-                            },
-                            onDismissContextMenu = { viewModel.onDismissContextMenu() },
-                            onDelete = {
-                                uiState.activeHighlightId?.let { viewModel.onReadiumDeleteHighlight(it) }
-                            },
-                            onAddTag = { viewModel.onShowTagInput() },
-                            onAnnotate = { viewModel.onAnnotate() },
-                            onShare = { viewModel.onShareSelectedText() },
-                            onDictionary = { viewModel.onAddToDictionary() },
-                            onShowColorPickerPopover = { viewModel.onShowColorPickerPopover() },
-                            onDismissColorPickerPopover = { viewModel.onDismissColorPickerPopover() },
-                            onTagTextChanged = { viewModel.onTagTextChanged(it) },
-                            onSaveTag = { viewModel.onSaveTag(uiState.activeTagText) },
-                            onDismissTagInput = { viewModel.onDismissTagInput() },
-                            onDefinitionTextChanged = { viewModel.onDefinitionTextChanged(it) },
-                            onSaveDefinition = { viewModel.onSaveDefinition(uiState.activeDefinitionText) },
-                            onDismissDefinitionInput = { viewModel.onDismissDefinitionInput() }
+                            onColorSelected = onSelectionColorSelected,
+                            onCopy = onSelectionCopy,
+                            onDismissContextMenu = onSelectionDismiss,
+                            onDelete = onSelectionDelete,
+                            onAddTag = onSelectionAddTag,
+                            onAnnotate = onSelectionAnnotate,
+                            onShare = onSelectionShare,
+                            onDictionary = onSelectionDictionary,
+                            onShowColorPickerPopover = onSelectionShowColorPicker,
+                            onDismissColorPickerPopover = onSelectionDismissColorPicker,
+                            onTagTextChanged = onSelectionTagTextChanged,
+                            onSaveTag = onSelectionSaveTag,
+                            onDismissTagInput = onSelectionDismissTag,
+                            onDefinitionTextChanged = onSelectionDefTextChanged,
+                            onSaveDefinition = onSelectionSaveDef,
+                            onDismissDefinitionInput = onSelectionDismissDef
                         )
                     }
                 }
@@ -337,6 +367,7 @@ fun ReaderScreen(
                             modifier = Modifier.fillMaxSize()
                         )
 
+                        // SelectionOverlay with stabilized callbacks (R5,R6,R7)
                         SelectionOverlay(
                             selectionState = uiState.selectionState,
                             showColorPickerPopover = uiState.showColorPickerPopover,
@@ -348,34 +379,24 @@ fun ReaderScreen(
                             selectionRect = uiState.selectionRect,
                             selectedText = uiState.selectedText,
                             highlights = uiState.highlights,
-                            activeHighlightColor = uiState.activeHighlightId?.let { id ->
-                                uiState.highlights.firstOrNull { it.id == id }?.color
-                            },
+                            activeHighlightColor = activeOverlayHighlightColor,
                             customHighlightColors = uiState.readerSettings.customHighlightColors,
-                            onColorSelected = { color -> viewModel.onReadiumHighlightColorSelected(color) },
-                            onCopy = {
-                                viewModel.onCopySelectedText()
-                                uiState.selectedText?.let { text ->
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("highlight", text))
-                                }
-                            },
-                            onDismissContextMenu = { viewModel.onDismissContextMenu() },
-                            onDelete = {
-                                uiState.activeHighlightId?.let { viewModel.onReadiumDeleteHighlight(it) }
-                            },
-                            onAddTag = { viewModel.onShowTagInput() },
-                            onAnnotate = { viewModel.onAnnotate() },
-                            onShare = { viewModel.onShareSelectedText() },
-                            onDictionary = { viewModel.onAddToDictionary() },
-                            onShowColorPickerPopover = { viewModel.onShowColorPickerPopover() },
-                            onDismissColorPickerPopover = { viewModel.onDismissColorPickerPopover() },
-                            onTagTextChanged = { viewModel.onTagTextChanged(it) },
-                            onSaveTag = { viewModel.onSaveTag(uiState.activeTagText) },
-                            onDismissTagInput = { viewModel.onDismissTagInput() },
-                            onDefinitionTextChanged = { viewModel.onDefinitionTextChanged(it) },
-                            onSaveDefinition = { viewModel.onSaveDefinition(uiState.activeDefinitionText) },
-                            onDismissDefinitionInput = { viewModel.onDismissDefinitionInput() }
+                            onColorSelected = onSelectionColorSelected,
+                            onCopy = onSelectionCopy,
+                            onDismissContextMenu = onSelectionDismiss,
+                            onDelete = onSelectionDelete,
+                            onAddTag = onSelectionAddTag,
+                            onAnnotate = onSelectionAnnotate,
+                            onShare = onSelectionShare,
+                            onDictionary = onSelectionDictionary,
+                            onShowColorPickerPopover = onSelectionShowColorPicker,
+                            onDismissColorPickerPopover = onSelectionDismissColorPicker,
+                            onTagTextChanged = onSelectionTagTextChanged,
+                            onSaveTag = onSelectionSaveTag,
+                            onDismissTagInput = onSelectionDismissTag,
+                            onDefinitionTextChanged = onSelectionDefTextChanged,
+                            onSaveDefinition = onSelectionSaveDef,
+                            onDismissDefinitionInput = onSelectionDismissDef
                         )
                     }
                 }

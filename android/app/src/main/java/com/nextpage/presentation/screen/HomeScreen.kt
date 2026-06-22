@@ -123,17 +123,11 @@ fun HomeScreen(
                 )
             }
 
-            // 2. Greeting
-            item { GreetingSection(userName = uiState.userName) }
+            // 2. Greeting — collects own state
+            item { GreetingSection(viewModel = viewModel) }
 
-            // 3. TodaySummary
-            item {
-                TodaySummarySection(
-                    minutesRead = uiState.minutesReadToday,
-                    sessionsToday = uiState.sessionsToday,
-                    dailyProgressPercent = uiState.dailyProgressPercent
-                )
-            }
+            // 3. TodaySummary — collects own state
+            item { TodaySummarySection(viewModel = viewModel) }
 
             // 4. ContinueReading
             item {
@@ -201,10 +195,11 @@ fun HomeScreen(
 // ─── Section 2: Greeting ─────────────────────────────────────────────
 
 @Composable
-private fun GreetingSection(userName: String) {
+private fun GreetingSection(viewModel: HomeViewModel) {
+    val uiState by viewModel.uiState.collectAsState()
     Column {
         Text(
-            text = stringResource(R.string.home_greeting, userName),
+            text = stringResource(R.string.home_greeting, uiState.userName),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
@@ -220,11 +215,8 @@ private fun GreetingSection(userName: String) {
 // ─── Section 3: Today Summary ────────────────────────────────────────
 
 @Composable
-private fun TodaySummarySection(
-    minutesRead: Int,
-    sessionsToday: Int,
-    dailyProgressPercent: Float
-) {
+private fun TodaySummarySection(viewModel: HomeViewModel) {
+    val uiState by viewModel.uiState.collectAsState()
     Column {
         Text(
             text = stringResource(R.string.home_today_summary_title),
@@ -238,19 +230,19 @@ private fun TodaySummarySection(
         ) {
             StatCard(
                 icon = Icons.Outlined.Schedule,
-                value = "$minutesRead",
+                value = "${uiState.minutesReadToday}",
                 label = stringResource(R.string.home_minutes),
                 modifier = Modifier.weight(1f)
             )
             StatCard(
                 icon = Icons.AutoMirrored.Outlined.ShowChart,
-                value = "$sessionsToday",
+                value = "${uiState.sessionsToday}",
                 label = stringResource(R.string.home_sessions),
                 modifier = Modifier.weight(1f)
             )
             StatCard(
                 icon = Icons.Outlined.BarChart,
-                value = "${(dailyProgressPercent * 100).toInt()}%",
+                value = "${(uiState.dailyProgressPercent * 100).toInt()}%",
                 label = stringResource(R.string.home_progress),
                 modifier = Modifier.weight(1f)
             )
@@ -431,7 +423,7 @@ private fun MyBookshelfSection(
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
             ) {
-                items(books) { book ->
+                items(books, key = { it.id }) { book ->
                     BookshelfCard(
                         book = book,
                         onClick = {

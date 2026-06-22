@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "books",
-    indices = [Index(value = ["deleted_at", "updated_at"])]
+    indices = [Index(value = ["deleted_at", "updated_at"], orders = [Index.Order.ASC, Index.Order.DESC])]
 )
 data class BookEntity(
     @PrimaryKey

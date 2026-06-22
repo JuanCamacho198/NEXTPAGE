@@ -1,5 +1,7 @@
 package com.nextpage.domain.model
 
+import androidx.compose.runtime.Immutable
+
 /**
  * Presets for the reader's font size.
  */
@@ -71,6 +73,7 @@ enum class ScrollMode {
 /**
  * Layout preferences for margins and alignment.
  */
+@Immutable
 data class LayoutPreferences(
     val leftMargin: Int = 16,
     val rightMargin: Int = 16,
@@ -94,6 +97,7 @@ data class LayoutPreferences(
  * - [editorValues]: whether to apply editor CSS values
  * - [verticalScroll]: whether vertical scroll mode is active
  */
+@Immutable
 data class ReaderSettings(
     val fontSize: FontSizePreset = FontSizePreset.M,
     val theme: ReaderTheme = ReaderTheme.DARK,

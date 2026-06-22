@@ -431,7 +431,7 @@ private fun MyBookshelfSection(
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
             ) {
-                items(books) { book ->
+                items(books, key = { it.id }) { book ->
                     BookshelfCard(
                         book = book,
                         onClick = {

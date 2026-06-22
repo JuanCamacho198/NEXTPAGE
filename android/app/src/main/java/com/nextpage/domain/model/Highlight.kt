@@ -1,5 +1,7 @@
 package com.nextpage.domain.model
 
+import androidx.compose.runtime.Immutable
+
 /**
  * Color options for highlights matching the Pencil kixeV design palette.
  *
@@ -69,6 +71,7 @@ enum class HighlightColor(val hex: String) {
  *
  * @property tag Optional user-defined tag for categorising highlights.
  */
+@Immutable
 data class Highlight(
     val id: String,
     val bookId: String,

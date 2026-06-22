@@ -6,6 +6,7 @@ import android.graphics.RectF
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nextpage.data.session.ReaderPreferences
@@ -51,6 +52,7 @@ typealias BookChapter = com.nextpage.presentation.viewmodel.reader.BookChapter
  * transient UI-positioning data that should not influence state-flow
  * deduplication.
  */
+@Immutable
 class ReaderUiState(
     val selectedBookId: String? = null,
     val bookFilePath: String? = null,

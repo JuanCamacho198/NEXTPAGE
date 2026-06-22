@@ -1,6 +1,7 @@
 package com.nextpage.domain.model
 
 import android.graphics.Rect
+import androidx.compose.runtime.Immutable
 
 /**
  * A single search result found within a book's content.
@@ -11,6 +12,7 @@ import android.graphics.Rect
  * @property chapterIndex Index of the chapter (EPUB) or zero (PDF)
  * @property rect Optional bounding rectangle in WebView coordinates (EPUB only)
  */
+@Immutable
 data class SearchResult(
     val text: String,
     val offset: Int,

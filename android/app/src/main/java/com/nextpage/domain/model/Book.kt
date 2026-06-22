@@ -1,5 +1,8 @@
 package com.nextpage.domain.model
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class Book(
     val id: String,
     val title: String,

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.Book
+import com.nextpage.domain.model.ReadingStats
 import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.presentation.UiEvent
 import kotlinx.coroutines.Job
@@ -17,9 +18,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -64,54 +62,35 @@ class HomeViewModel(
     init {
         val userId = authSession?.userId
 
-        // Collect daily stats
+        // Single combine: all 5 flows merged into one state emission
         viewModelScope.launch {
-            homeRepository.observeDailyStats(userId)
-                .catch { e -> _uiEvent.emit(UiEvent.ShowSnackbar(e.message ?: "Failed to load daily stats")) }
-                .collect { stats ->
-                    _uiState.update { it.copy(
-                        minutesReadToday = stats.minutesRead,
-                        sessionsToday = stats.sessionCount,
-                        dailyProgressPercent = stats.dailyProgressPercent,
-                        isLoading = false
-                    ) }
-                }
-        }
-
-        // Collect current book
-        viewModelScope.launch {
-            homeRepository.observeCurrentBook()
-                .catch { e -> _uiEvent.emit(UiEvent.ShowSnackbar(e.message ?: "Failed to load current book")) }
-                .collect { book ->
-                    _uiState.update { it.copy(currentBook = book) }
-                }
-        }
-
-        // Collect current book progress
-        viewModelScope.launch {
-            homeRepository.observeCurrentBookProgress()
-                .catch { e -> _uiEvent.emit(UiEvent.ShowSnackbar(e.message ?: "Failed to load progress")) }
-                .collect { progress ->
-                    _uiState.update { it.copy(currentBookProgress = progress) }
-                }
-        }
-
-        // Collect recent books
-        viewModelScope.launch {
-            homeRepository.observeRecentBooks(5)
-                .catch { e -> _uiEvent.emit(UiEvent.ShowSnackbar(e.message ?: "Failed to load recent books")) }
-                .collect { books ->
-                    _uiState.update { it.copy(recentBooks = books) }
-                }
-        }
-
-        // Collect all books for search
-        viewModelScope.launch {
-            homeRepository.observeBooks()
-                .catch { e -> _uiEvent.emit(UiEvent.ShowSnackbar(e.message ?: "Failed to load books")) }
-                .collect { books ->
-                    _uiState.update { it.copy(allBooks = books) }
-                }
+            combine(
+                homeRepository.observeDailyStats(userId)
+                    .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load daily stats")); emit(ReadingStats()) },
+                homeRepository.observeCurrentBook()
+                    .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load current book")); emit(null) },
+                homeRepository.observeCurrentBookProgress()
+                    .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load progress")); emit(0f) },
+                homeRepository.observeRecentBooks(5)
+                    .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load recent books")); emit(emptyList()) },
+                homeRepository.observeBooks()
+                    .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load books")); emit(emptyList()) }
+            ) { stats, book, progress, recent, allBooks ->
+                HomeUiState(
+                    userName = authSession?.displayName ?: "Reader",
+                    avatarUrl = authSession?.photoUrl,
+                    minutesReadToday = stats.minutesRead,
+                    sessionsToday = stats.sessionCount,
+                    dailyProgressPercent = stats.dailyProgressPercent,
+                    currentBook = book,
+                    currentBookProgress = progress,
+                    recentBooks = recent,
+                    allBooks = allBooks,
+                    isLoading = false
+                )
+            }.collect { newState ->
+                _uiState.update { newState }
+            }
         }
     }
 

@@ -41,17 +41,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import coil.request.CachePolicy
-import coil.request.ImageRequest
 import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.ReadingProgress
@@ -65,6 +60,7 @@ import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.presentation.theme.TextPrimary
 import com.nextpage.presentation.theme.TextSecondary
 import com.nextpage.presentation.viewmodel.BookDetailViewModel
+import com.nextpage.ui.components.atoms.CoverThumbnail
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
 
@@ -194,26 +190,12 @@ private fun BookHeroSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Cover image
-        val context = LocalContext.current
-        val imageRequest = remember(book.coverPath) {
-            ImageRequest.Builder(context)
-                .data(book.coverPath?.takeIf { it.isNotBlank() })
-                .placeholder(R.drawable.cover_placeholder)
-                .error(R.drawable.cover_error)
-                .fallback(R.drawable.cover_placeholder)
-                .memoryCachePolicy(CachePolicy.ENABLED)
-                .diskCachePolicy(CachePolicy.ENABLED)
-                .crossfade(true)
-                .build()
-        }
-        AsyncImage(
-            model = imageRequest,
-            contentDescription = stringResource(R.string.library_cover_content_description),
+        CoverThumbnail(
+            coverPath = book.coverPath,
             modifier = Modifier
                 .width(128.dp)
                 .height(180.dp)
-                .clip(RoundedCornerShape(NextPageDimens.cardCornerRadius)),
-            contentScale = ContentScale.Crop
+                .clip(RoundedCornerShape(NextPageDimens.cardCornerRadius))
         )
 
         // Title

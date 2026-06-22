@@ -149,10 +149,14 @@ fun ReaderScreen(
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("highlight", text))
         }
+        @Suppress("UNUSED_EXPRESSION")
+        Unit
     } }
     val onSelectionDismiss = remember(viewModel) { { viewModel.onDismissContextMenu() } }
     val onSelectionDelete = remember(viewModel) { {
         uiState.activeHighlightId?.let { viewModel.onReadiumDeleteHighlight(it) }
+        @Suppress("UNUSED_EXPRESSION")
+        Unit
     } }
     val onSelectionAddTag = remember(viewModel) { { viewModel.onShowTagInput() } }
     val onSelectionAnnotate = remember(viewModel) { { viewModel.onAnnotate() } }

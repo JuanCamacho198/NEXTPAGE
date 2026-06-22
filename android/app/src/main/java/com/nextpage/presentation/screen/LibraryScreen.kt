@@ -225,13 +225,15 @@ private fun LibrarySyncStatus(viewModel: LibraryViewModel) {
         uiState.isSyncing -> SyncState.Running
         else -> SyncState.Idle
     }
-    SyncStatusIndicator(
-        syncState = syncState,
-        pendingCount = uiState.pendingCount,
-        modifier = Modifier
-            .align(Alignment.TopEnd)
-            .padding(top = 8.dp, end = 16.dp)
-    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        SyncStatusIndicator(
+            syncState = syncState,
+            pendingCount = uiState.pendingCount,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 8.dp, end = 16.dp)
+        )
+    }
 }
 
 @Composable

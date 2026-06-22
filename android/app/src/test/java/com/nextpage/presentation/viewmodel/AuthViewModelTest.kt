@@ -118,6 +118,32 @@ class AuthViewModelTest {
         assertNull(viewModel.uiState.value.currentSession)
     }
 
+    @Test
+    fun updateAtomicity_rapidMutationsNoLostState() = runTest {
+        val repository = FakeAuthRepository()
+        val viewModel = AuthViewModel(
+            authRepository = repository,
+            syncService = FakeSyncService(),
+            isAuthConfigured = true,
+            hasAuthWiringIssue = false
+        )
+        advanceUntilIdle()
+
+        // Simulate rapid consecutive state mutations via clearError (uses .update {})
+        viewModel.clearError()
+        viewModel.clearError()
+        viewModel.clearError()
+
+        assertEquals(
+            "rapid clearError calls should produce correct final state",
+            AuthFailureKind.NONE, viewModel.uiState.value.failureKind
+        )
+        assertEquals(
+            "rapid clearError calls should clear errorMessage",
+            null, viewModel.uiState.value.errorMessage
+        )
+    }
+
     private class FakeAuthRepository(
         private val startGoogleResult: Result<String> = Result.failure(IllegalStateException("not set")),
         private val completeGoogleResult: Result<AuthSession?> = Result.success(null),

@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -85,14 +86,18 @@ fun HighlightsScreen(
         FilterTab("passages", R.string.highlights_tab_passages, Icons.Outlined.AutoAwesome)
     )
 
-    val bookOptions = listOf(
-        SelectorOption("all", R.string.highlights_filter_all_books, icon = Icons.Outlined.Book)
-    ) + uiState.books.map { SelectorOption(it.id, labelRes = null, label = it.title) }
+    val bookOptions = remember(uiState.books) {
+        listOf(
+            SelectorOption("all", R.string.highlights_filter_all_books, icon = Icons.Outlined.Book)
+        ) + uiState.books.map { SelectorOption(it.id, labelRes = null, label = it.title) }
+    }
 
-    val colorOptions = listOf(
-        SelectorOption("all", R.string.highlights_filter_all_colors, icon = Icons.Outlined.Palette)
-    ) + HighlightColor.entries.map {
-        SelectorOption(it.hex, labelRes = null, label = it.name.lowercase().replaceFirstChar { c -> c.uppercase() })
+    val colorOptions = remember {
+        listOf(
+            SelectorOption("all", R.string.highlights_filter_all_colors, icon = Icons.Outlined.Palette)
+        ) + HighlightColor.entries.map {
+            SelectorOption(it.hex, labelRes = null, label = it.name.lowercase().replaceFirstChar { c -> c.uppercase() })
+        }
     }
 
     if (showBookSelector) {
@@ -121,9 +126,11 @@ fun HighlightsScreen(
         )
     }
 
-    val tagOptions = listOf(
-        SelectorOption("all", R.string.highlights_filter_all_tags)
-    ) + uiState.availableTags.map { SelectorOption(it, labelRes = null, label = it) }
+    val tagOptions = remember(uiState.availableTags) {
+        listOf(
+            SelectorOption("all", R.string.highlights_filter_all_tags)
+        ) + uiState.availableTags.map { SelectorOption(it, labelRes = null, label = it) }
+    }
 
     if (showTagSelector) {
         NextPageSelector(
@@ -137,6 +144,16 @@ fun HighlightsScreen(
             onDismiss = { showTagSelector = false }
         )
     }
+
+    val filterBookTitle = remember(uiState.books, uiState.bookFilter) {
+        uiState.bookFilter?.let { bookId ->
+            uiState.books.find { it.id == bookId }?.title
+        }
+    }
+    val quoteCount by remember { derivedStateOf { uiState.highlights.count { it.type == "quote" } } }
+    val ideaCount by remember { derivedStateOf { uiState.highlights.count { it.type == "idea" } } }
+    val passageCount by remember { derivedStateOf { uiState.highlights.count { it.type == "passage" } } }
+    val bookmarkCount by remember { derivedStateOf { uiState.bookmarks.size } }
 
     LazyColumn(
         modifier = Modifier
@@ -194,9 +211,7 @@ fun HighlightsScreen(
 
         item {
             FilterControlsRow(
-                bookFilterTitle = uiState.bookFilter?.let { bookId ->
-                    uiState.books.find { it.id == bookId }?.title
-                },
+                bookFilterTitle = filterBookTitle,
                 colorFilter = uiState.colorFilter,
                 tagFilter = uiState.tagFilter,
                 onBookFilterClick = { showBookSelector = true },
@@ -221,22 +236,22 @@ fun HighlightsScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 StatWidget(
-                    value = "${uiState.highlights.count { it.type == "quote" }}",
+                    value = "${quoteCount}",
                     label = stringResource(R.string.highlights_summary_quotes),
                     color = ColorQuotes
                 )
                 StatWidget(
-                    value = "${uiState.highlights.count { it.type == "idea" }}",
+                    value = "${ideaCount}",
                     label = stringResource(R.string.highlights_summary_ideas),
                     color = ColorIdeas
                 )
                 StatWidget(
-                    value = "${uiState.highlights.count { it.type == "passage" }}",
+                    value = "${passageCount}",
                     label = stringResource(R.string.highlights_summary_passages),
                     color = ColorPassages
                 )
                 StatWidget(
-                    value = "${uiState.bookmarks.size}",
+                    value = "${bookmarkCount}",
                     label = stringResource(R.string.highlights_summary_favorites),
                     color = ColorFavorites
                 )
@@ -350,10 +365,13 @@ private fun FilterControlsRow(
             selected = colorFilter != null,
             onClick = onColorFilterClick,
             label = {
-                val label = colorFilter?.let { hex ->
-                    HighlightColor.entries.find { it.hex.equals(hex, ignoreCase = true) }?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
-                } ?: stringResource(R.string.highlights_filter_color)
-                Text(label)
+                val defaultLabel = stringResource(R.string.highlights_filter_color)
+                val resolvedLabel = remember(colorFilter) {
+                    colorFilter?.let { hex ->
+                        HighlightColor.entries.find { it.hex.equals(hex, ignoreCase = true) }?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
+                    }
+                }
+                Text(resolvedLabel ?: defaultLabel)
             },
             colors = FilterChipDefaults.filterChipColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant

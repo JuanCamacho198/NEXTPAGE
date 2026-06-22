@@ -123,24 +123,19 @@ class LibraryViewModel(
     val uiState: StateFlow<LibraryUiState> = mutableUiState.asStateFlow()
 
     /** Memoized searched/filtered/sorted books derived from [mutableUiState]. */
-    val searchedBooks: StateFlow<List<Book>> = combine(
-        mutableUiState.map { it.books },
-        mutableUiState.map { it.statusFilter },
-        mutableUiState.map { it.filterFormat },
-        mutableUiState.map { it.debouncedSearchQuery },
-        mutableUiState.map { it.sortBy },
-        mutableUiState.map { it.readingMinutesByBook }
-    ) { books, statusFilter, filterFormat, searchQuery, sortBy, readingMinutesByBook ->
-        val byStatus = filterBooks(books, statusFilter, readingMinutesByBook)
-        val byFormat = if (filterFormat == "all") byStatus
-            else byStatus.filter { it.format == filterFormat }
-        val bySearch = if (searchQuery.isBlank()) byFormat
-            else byFormat.filter {
-                it.title.contains(searchQuery, ignoreCase = true) ||
-                it.author?.contains(searchQuery, ignoreCase = true) == true
-            }
-        sortBookList(bySearch, sortBy)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val searchedBooks: StateFlow<List<Book>> = mutableUiState
+        .map { state ->
+            val byStatus = filterBooks(state.books, state.statusFilter, state.readingMinutesByBook)
+            val byFormat = if (state.filterFormat == "all") byStatus
+                else byStatus.filter { it.format == state.filterFormat }
+            val bySearch = if (state.debouncedSearchQuery.isBlank()) byFormat
+                else byFormat.filter {
+                    it.title.contains(state.debouncedSearchQuery, ignoreCase = true) ||
+                    it.author?.contains(state.debouncedSearchQuery, ignoreCase = true) == true
+                }
+            sortBookList(bySearch, state.sortBy)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val mutableImportEvents = MutableSharedFlow<LibraryImportEvent>(extraBufferCapacity = 1)
     val importEvents: SharedFlow<LibraryImportEvent> = mutableImportEvents.asSharedFlow()

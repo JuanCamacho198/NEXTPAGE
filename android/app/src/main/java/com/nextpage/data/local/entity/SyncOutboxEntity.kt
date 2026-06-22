@@ -22,7 +22,7 @@ data class SyncOutboxEntity(
     @ColumnInfo(name = "entity_type")
     val entityType: String,
     @ColumnInfo(name = "entity_id")
-    val entityId: String,
+    val entityId: String?,
     @ColumnInfo(name = "operation")
     val operation: String,
     @ColumnInfo(name = "payload")

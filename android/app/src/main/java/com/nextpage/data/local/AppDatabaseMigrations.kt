@@ -120,10 +120,10 @@ object AppDatabaseMigrations {
             db.execSQL("DROP INDEX IF EXISTS index_highlights_book_id")
             db.execSQL("DROP INDEX IF EXISTS index_bookmarks_book_id")
 
-            db.execSQL("CREATE INDEX IF NOT EXISTS idx_books_deleted_at_updated_at ON books(deleted_at, updated_at DESC)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS idx_highlights_book_id_deleted_at ON highlights(book_id, deleted_at)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS idx_bookmarks_book_id_deleted_at ON bookmarks(book_id, deleted_at)")
-            db.execSQL("CREATE INDEX IF NOT EXISTS idx_reading_sessions_date_userId ON reading_sessions(date, userId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_books_deleted_at_updated_at ON books(deleted_at, updated_at DESC)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_highlights_book_id_deleted_at ON highlights(book_id, deleted_at)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_bookmarks_book_id_deleted_at ON bookmarks(book_id, deleted_at)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_reading_sessions_date_userId ON reading_sessions(date, userId)")
 
             // ── Phase 5: FTS5 virtual table + triggers for dictionary_words ──
             db.execSQL("""

@@ -41,9 +41,9 @@ class ReadingStatsRepositoryImpl(
             }
         }
 
-    override fun observeDailyActivity(): Flow<List<DailyReadingActivity>> =
-        readingSessionDao.observeDailyMinutes().map { list ->
-            list.map { DailyReadingActivity(dateEpochMillis = it.dateEpochMillis, minutesRead = it.totalMinutes) }
+    override suspend fun getDailyActivity(): List<DailyReadingActivity> =
+        readingSessionDao.getDailyMinutes().map {
+            DailyReadingActivity(dateEpochMillis = it.dateEpochMillis, minutesRead = it.totalMinutes)
         }
 
     override suspend fun updateReadingTime(bookId: String, additionalMinutes: Long) {

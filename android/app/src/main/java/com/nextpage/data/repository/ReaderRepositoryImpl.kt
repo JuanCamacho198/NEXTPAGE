@@ -1,5 +1,10 @@
 package com.nextpage.data.repository
 
+import androidx.paging.ExperimentalPagingApi
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import com.nextpage.data.local.dao.BookmarkDao
 import com.nextpage.data.local.dao.HighlightDao
 import com.nextpage.data.local.dao.ReadingProgressDao
@@ -50,6 +55,15 @@ class ReaderRepositoryImpl(
         highlightDao
             .observeAllHighlights()
             .map { list -> list.map { it.toDomain() } }
+
+    @OptIn(ExperimentalPagingApi::class)
+    override fun observeAllHighlightsPaged(): Flow<PagingData<Highlight>> =
+        Pager(
+            config = PagingConfig(pageSize = 20),
+            pagingSourceFactory = { highlightDao.observeAllHighlightsPaged() }
+        ).flow.map { pagingData ->
+            pagingData.map { it.toDomain() }
+        }
 
     override fun observeHighlights(bookId: String): Flow<List<Highlight>> =
         highlightDao

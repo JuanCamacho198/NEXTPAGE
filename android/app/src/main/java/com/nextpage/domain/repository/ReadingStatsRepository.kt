@@ -10,7 +10,7 @@ interface ReadingStatsRepository {
 
     fun observeBookStats(): Flow<List<ReadingStatsData>>
 
-    fun observeDailyActivity(): Flow<List<DailyReadingActivity>>
+    suspend fun getDailyActivity(): List<DailyReadingActivity>
 
     suspend fun updateReadingTime(bookId: String, additionalMinutes: Long)
 

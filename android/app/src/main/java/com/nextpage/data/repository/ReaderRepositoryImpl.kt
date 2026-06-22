@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 
+// TODO: make PagingConfig config-driven (pageSize, prefetchDistance) — currently pageSize=20
+// is hardcoded in RepositoryImpl. Derive from screen metrics or server page size (R13).
 class ReaderRepositoryImpl(
     private val readingProgressDao: ReadingProgressDao,
     private val highlightDao: HighlightDao,

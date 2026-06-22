@@ -7,7 +7,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.CachePolicy
@@ -22,14 +24,19 @@ fun CoverThumbnail(
     onImageState: ((AsyncImagePainter.State) -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
     val coverFile = remember(coverPath) {
         coverPath
             ?.takeIf { it.isNotBlank() }
             ?.let(::File)
     }
-    val imageRequest = remember(context, coverFile, coverPath) {
+    val imageRequest = remember(context, density, coverFile, coverPath) {
         ImageRequest.Builder(context)
             .data(coverFile)
+            .size(
+                width = with(density) { 80.dp.toPx().toInt() },
+                height = with(density) { 120.dp.toPx().toInt() }
+            )
             .placeholder(R.drawable.cover_placeholder)
             .error(R.drawable.cover_error)
             .fallback(R.drawable.cover_placeholder)

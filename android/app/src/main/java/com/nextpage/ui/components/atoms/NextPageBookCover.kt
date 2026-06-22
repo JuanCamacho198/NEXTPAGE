@@ -11,14 +11,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.nextpage.R
 
@@ -29,6 +32,8 @@ fun NextPageBookCover(
     modifier: Modifier = Modifier,
     isLoading: Boolean = false
 ) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
     val contentDescription = title ?: stringResource(R.string.library_cover_content_description)
 
     Box(
@@ -45,11 +50,23 @@ fun NextPageBookCover(
                 )
             }
             !coverUrl.isNullOrBlank() -> {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
+                val imageRequest = remember(context, density, coverUrl) {
+                    ImageRequest.Builder(context)
                         .data(coverUrl)
+                        .size(
+                            width = with(density) { 128.dp.toPx().toInt() },
+                            height = with(density) { 180.dp.toPx().toInt() }
+                        )
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .placeholder(R.drawable.cover_placeholder)
+                        .error(R.drawable.cover_error)
+                        .fallback(R.drawable.cover_placeholder)
                         .crossfade(true)
-                        .build(),
+                        .build()
+                }
+                AsyncImage(
+                    model = imageRequest,
                     contentDescription = contentDescription,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

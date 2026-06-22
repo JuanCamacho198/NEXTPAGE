@@ -240,6 +240,9 @@ class LibraryViewModelTest {
 
         override fun observeLibrary(): Flow<List<Book>> = booksFlow
 
+        override fun observeLibraryPaged(): Flow<androidx.paging.PagingData<Book>> =
+            kotlinx.coroutines.flow.flowOf(androidx.paging.PagingData.empty())
+
         override fun observeBookById(bookId: String): Flow<Book?> = MutableStateFlow(null)
 
         override fun observeProgressForBook(bookId: String): Flow<com.nextpage.domain.model.ReadingProgress?> =

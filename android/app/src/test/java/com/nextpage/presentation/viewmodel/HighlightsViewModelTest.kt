@@ -196,6 +196,8 @@ class HighlightsViewModelTest {
         override suspend fun upsertProgress(progress: com.nextpage.domain.model.ReadingProgress) = Unit
         override suspend fun getProgressForBook(bookId: String): com.nextpage.domain.model.ReadingProgress? = null
         override fun observeAllHighlights(): Flow<List<Highlight>> = highlightsFlow
+        override fun observeAllHighlightsPaged(): Flow<androidx.paging.PagingData<Highlight>> =
+            kotlinx.coroutines.flow.flowOf(androidx.paging.PagingData.empty())
         override fun observeHighlights(bookId: String): Flow<List<Highlight>> = highlightsFlow
         override suspend fun upsertHighlight(highlight: Highlight) = Unit
         override suspend fun getHighlightsForBook(bookId: String): List<Highlight> = highlights

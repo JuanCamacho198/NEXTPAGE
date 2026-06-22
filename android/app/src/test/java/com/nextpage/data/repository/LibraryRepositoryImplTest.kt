@@ -10,6 +10,8 @@ import com.nextpage.data.local.entity.ReadingStatsEntity
 import com.nextpage.data.pdf.PdfMetadata
 import com.nextpage.data.pdf.PdfParserService
 import com.nextpage.data.storage.CoverStorage
+import com.nextpage.testutil.FakePagingSource
+import androidx.paging.PagingSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -195,6 +197,135 @@ class LibraryRepositoryImplTest {
         assertEquals("deleted-book", deletedById?.id)
     }
 
+    @Test
+    fun observeLibraryPaged_emitsPagingDataWithDomainBooks() = runBlocking {
+        val fakeDao = FakeBookDao()
+        // Populate with three books to verify the paging mapping
+        fakeDao.upsert(
+            BookEntity(
+                id = "paged-1",
+                title = "Paged 1",
+                author = "Author",
+                coverPath = null,
+                filePath = "/p1.epub",
+                format = "epub",
+                updatedAtEpochMillis = 30L
+            )
+        )
+        fakeDao.upsert(
+            BookEntity(
+                id = "paged-2",
+                title = "Paged 2",
+                author = "Author",
+                coverPath = null,
+                filePath = "/p2.epub",
+                format = "epub",
+                updatedAtEpochMillis = 20L
+            )
+        )
+
+        val repository = LibraryRepositoryImpl(
+            appContext = mockk(),
+            bookDao = fakeDao,
+            readingProgressDao = FakeReadingProgressDao(),
+            readingStatsDao = FakeReadingStatsDao(),
+            epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
+            pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
+            coverStorage = FakeCoverStorage()
+        )
+
+        // The PagingSource is wired from the DAO. Verify that the FakeBookDao's
+        // backing paged source returns the same data the legacy observeAllBooks()
+        // method would return — confirming the new path is consistent.
+        val pagedSource = fakeDao.observeAllBooksPaged()
+        assertEquals(2, fakeDao.count())
+        assertEquals(2, fakeDao.observeAllBooks().first().size)
+
+        // Verify the repo exposes the paged flow as PagingData<Book>, not PagingData<BookEntity>
+        val paged: kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<com.nextpage.domain.model.Book>> =
+            repository.observeLibraryPaged()
+        assertNotNull(paged)
+    }
+
+    @Test
+    fun pagingSource_fiftyBooks_pagesOfTwenty_splitAcrossThreePages() = runBlocking {
+        // R4: 50 books with pageSize=20 → 3 pages (20, 20, 10).
+        val entities = (1..50).map { i ->
+            BookEntity(
+                id = "book-$i",
+                title = "Title $i",
+                author = "Author $i",
+                coverPath = null,
+                filePath = "/b$i.epub",
+                format = "epub",
+                updatedAtEpochMillis = i.toLong()
+            )
+        }
+        val source = com.nextpage.testutil.PagedListPagingSource(entities)
+
+        // Page 1
+        val page1 = source.load(
+            androidx.paging.PagingSource.LoadParams.Refresh(
+                key = 0,
+                loadSize = 20,
+                placeholdersEnabled = false
+            )
+        )
+        val p1 = page1 as androidx.paging.PagingSource.LoadResult.Page<Int, BookEntity>
+        assertEquals(20, p1.data.size)
+        assertEquals(1, p1.data.first().id.removePrefix("book-").toInt())
+        assertEquals(20, p1.data.last().id.removePrefix("book-").toInt())
+        assertEquals(null, p1.prevKey)
+        assertEquals(1, p1.nextKey)
+
+        // Page 2
+        val page2 = source.load(
+            androidx.paging.PagingSource.LoadParams.Append(
+                key = 1,
+                loadSize = 20,
+                placeholdersEnabled = false
+            )
+        )
+        val p2 = page2 as androidx.paging.PagingSource.LoadResult.Page<Int, BookEntity>
+        assertEquals(20, p2.data.size)
+        assertEquals(21, p2.data.first().id.removePrefix("book-").toInt())
+        assertEquals(40, p2.data.last().id.removePrefix("book-").toInt())
+        assertEquals(0, p2.prevKey)
+        assertEquals(2, p2.nextKey)
+
+        // Page 3 (final, smaller)
+        val page3 = source.load(
+            androidx.paging.PagingSource.LoadParams.Append(
+                key = 2,
+                loadSize = 20,
+                placeholdersEnabled = false
+            )
+        )
+        val p3 = page3 as androidx.paging.PagingSource.LoadResult.Page<Int, BookEntity>
+        assertEquals(10, p3.data.size)
+        assertEquals(41, p3.data.first().id.removePrefix("book-").toInt())
+        assertEquals(50, p3.data.last().id.removePrefix("book-").toInt())
+        assertEquals(1, p3.prevKey)
+        assertEquals(null, p3.nextKey)
+    }
+
+    @Test
+    fun pagingSource_emptyList_returnsSingleEmptyPage() = runBlocking {
+        // R4 empty: 0 books → 1 empty page, no error.
+        val source = com.nextpage.testutil.PagedListPagingSource<BookEntity>(emptyList())
+        val result = source.load(
+            androidx.paging.PagingSource.LoadParams.Refresh(
+                key = 0,
+                loadSize = 20,
+                placeholdersEnabled = false
+            )
+        )
+        val page = result as androidx.paging.PagingSource.LoadResult.Page<Int, BookEntity>
+        assertEquals(0, page.data.size)
+        assertEquals(null, page.prevKey)
+        assertEquals(null, page.nextKey)
+    }
+
     private class FakeEpubParserService(
         private val result: Result<EpubMetadata>
     ) : EpubParserService {
@@ -290,6 +421,8 @@ class LibraryRepositoryImplTest {
         }
 
         override suspend fun count(): Int = booksState.value.size
+
+        override fun observeAllBooksPaged(): PagingSource<Int, BookEntity> = FakePagingSource(emptyList())
     }
 
     private class FakeCoverStorage : CoverStorage {

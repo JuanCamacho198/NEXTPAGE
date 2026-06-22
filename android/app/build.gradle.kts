@@ -128,6 +128,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("io.coil-kt:coil:$coilVersion")
     implementation("io.coil-kt:coil-compose:$coilVersion")
+    implementation("io.coil-kt:coil-network-okhttp:$coilVersion")
     implementation("androidx.webkit:webkit:1.12.1")
 
     implementation("androidx.navigation:navigation-compose:2.8.2")

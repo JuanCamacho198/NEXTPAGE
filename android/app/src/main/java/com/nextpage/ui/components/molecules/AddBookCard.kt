@@ -27,6 +27,24 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 
+/**
+ * Placeholder card shown in the library grid/list to trigger the
+ * "import a book" flow. A 280dp-tall box with a dashed 12dp rounded
+ * border, a centered add icon, and two short labels.
+ *
+ * @param onImportClick Invoked when the user taps anywhere on the
+ *   card. The caller is expected to launch the file picker.
+ *
+ * **Visual**: full-width 280dp box. Dashed border (`outline` at 50%
+ *   alpha, 1.5dp stroke, 8dp/4dp dash/gap pattern) clipped to a 12dp
+ *   rounded shape. Centered column: 40dp `Add` icon in `primary`,
+ *   `bodyMedium` primary label (`R.string.library_import_book`),
+ *   `bodySmall` muted subtitle (`R.string.library_import_formats`),
+ *   all with 8dp vertical spacing.
+ * **Behavior**: tap anywhere on the card → [onImportClick]. The
+ *   whole box is the touch target. No internal state.
+ * **Recomposition**: recomposes only when [onImportClick] changes.
+ */
 @Composable
 fun AddBookCard(
     onImportClick: () -> Unit

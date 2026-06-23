@@ -15,6 +15,30 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+/**
+ * Full-screen empty state: a decorative vector icon, title, optional
+ * subtitle, and an optional `action` slot. Mirrors the layout of
+ * [NextPageErrorState] but with a neutral icon and `onSurfaceVariant`
+ * tint instead of the error color.
+ *
+ * @param icon Vector icon rendered above the title. Decorative —
+ *   `contentDescription` is `null`.
+ * @param title Headline text rendered in `titleMedium` semibold
+ *   (`colorScheme` inherited from the surface).
+ * @param modifier Modifier applied to the outer `Column`.
+ * @param subtitle Optional secondary text rendered in `bodyMedium`
+ *   `colorScheme.onSurfaceVariant`. Hidden when `null` or blank.
+ * @param action Optional composable (typically a button) rendered
+ *   below the subtitle with 16dp top spacing. Pass `null` to hide it.
+ *
+ * **Visual**: 64dp icon in `colorScheme.onSurfaceVariant`, 16dp gap,
+ * title, 8dp gap + subtitle (if present), 16dp gap + action (if
+ * present). All text is center-aligned.
+ * **Behavior**: pure rendering. The icon is decorative — title carries
+ * the meaning for assistive tech.
+ * **Recomposition**: recomposes when `icon`, `title`, `subtitle`, or
+ * `action` change.
+ */
 @Composable
 fun NextPageEmptyState(
     icon: ImageVector,

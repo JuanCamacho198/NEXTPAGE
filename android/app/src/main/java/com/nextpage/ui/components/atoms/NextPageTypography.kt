@@ -9,6 +9,34 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 
+/**
+ * Thin, opinionated wrapper over Material 3 `Text`. Centralizes the
+ * `maxLines`/`overflow` defaults and surfaces a `Color.Unspecified`
+ * default that follows the ambient `LocalContentColor` (i.e. inherits
+ * from the surrounding `Surface`/`Button` etc.).
+ *
+ * @param text The string to display.
+ * @param modifier Modifier applied to the underlying `Text`.
+ * @param color Text color. `Color.Unspecified` (default) means "inherit
+ *   the ambient `LocalContentColor`" rather than forcing `Color.Black`.
+ * @param style Text style. Defaults to `LocalTextStyle.current`, which
+ *   inside a Material 3 theme is typically the `bodyLarge` typography
+ *   slot.
+ * @param textAlign Horizontal alignment. `null` (default) lets the
+ *   platform default apply (`TextAlign.Start` in LTR locales).
+ * @param maxLines Maximum number of lines to render. Default
+ *   `Int.MAX_VALUE` (no limit).
+ * @param overflow Truncation behavior when the text exceeds [maxLines].
+ *   Default `TextOverflow.Clip` (hard cut at the end). Use
+ *   `TextOverflow.Ellipsis` to show "…".
+ *
+ * **Visual**: identical to Material 3 `Text`; this composable exists
+ * to enforce consistent overflow/line defaults across the app and to
+ * avoid `Color.Unspecified` vs `Color.Black` foot-guns.
+ * **Behavior**: none — pure rendering.
+ * **Recomposition**: recomposes when `text`, `color`, `style`,
+ * `textAlign`, `maxLines`, or `overflow` change.
+ */
 @Composable
 fun NextPageTypography(
     text: String,

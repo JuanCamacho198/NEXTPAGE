@@ -5,6 +5,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
+/**
+ * Determinate linear progress indicator (Material 3
+ * `LinearProgressIndicator`) pre-colored to the NextPage theme.
+ *
+ * @param progress Current progress in the range `[0f, 1f]`. Values
+ *   outside this range are clamped by Material 3.
+ * @param modifier Modifier applied to the underlying indicator. Use it
+ *   to set width/height (default height comes from the Material
+ *   indicator itself).
+ *
+ * **Visual**: horizontal bar. Fill uses `colorScheme.primary`; track
+ * uses `colorScheme.surfaceVariant`.
+ * **Behavior**: pure rendering — no animation. For an indeterminate
+ * spinner use [NextPageLoadingIndicator] instead.
+ * **Recomposition**: recomposes when `progress` or `modifier` change.
+ */
 @Composable
 fun NextPageProgressBar(
     progress: Float,

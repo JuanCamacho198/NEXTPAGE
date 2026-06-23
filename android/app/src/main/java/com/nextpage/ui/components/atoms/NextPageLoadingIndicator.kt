@@ -14,6 +14,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+/**
+ * Centered indeterminate loading state: a 48dp `CircularProgressIndicator`
+ * with an optional `bodyMedium` label below it.
+ *
+ * @param modifier Modifier applied to the outer `Column`. Useful for
+ *   `fillMaxSize` when the indicator is the only content on screen.
+ * @param label Optional text rendered below the spinner. When `null` or
+ *   blank, only the spinner is shown. The label is hidden — not just
+ *   blanked — in the blank case (no empty `Text` is composed).
+ *
+ * **Visual**: spinner is `colorScheme.primary`, 48dp. Label uses
+ * `colorScheme.onSurfaceVariant` and `bodyMedium`. Both are
+ * center-aligned.
+ * **Behavior**: pure rendering. The spinner is indeterminate (Material 3
+ * default).
+ * **Recomposition**: recomposes when `label` changes.
+ */
 @Composable
 fun NextPageLoadingIndicator(
     modifier: Modifier = Modifier,

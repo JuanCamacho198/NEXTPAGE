@@ -23,10 +23,33 @@ import com.nextpage.R
 import com.nextpage.data.remote.sync.SyncState
 
 /**
- * A compact sync status indicator atom.
+ * Compact pill that surfaces the current cloud-sync state and the
+ * number of pending operations. Used in toolbars/headers to give the
+ * user at-a-glance feedback on background sync activity.
  *
- * Shows a colored dot + label reflecting the current [SyncState],
- * and an optional numeric badge for [pendingCount].
+ * Mapping (color, label) is hard-coded by [syncState]:
+ * - `Idle` → green (`#4ADE80`) + `R.string.sync_status_synced`
+ * - `Disabled` → gray (`#9CA3AF`) + `R.string.sync_status_off`
+ * - `Running` → blue (`#60A5FA`) + `R.string.sync_status_syncing`
+ * - `Error` → red (`#F87171`) + `R.string.sync_status_error`
+ *
+ * @param syncState Current sync state. See `data.remote.sync.SyncState`.
+ * @param pendingCount Number of pending operations. The badge is
+ *   rendered only when `pendingCount > 0`, with text capped at `"99+"`
+ *   to keep the pill narrow.
+ * @param modifier Modifier applied to the outer `Row`.
+ *
+ * **Visual**: 8dp circular dot, `labelSmall` label, optional 8dp-rounded
+ * badge with `colorScheme.errorContainer` background and
+ * `colorScheme.onErrorContainer` text. The pill itself uses
+ * `surfaceVariant` at 60% alpha and 12dp corner radius. Internal
+ * spacing: 6dp between elements, 10dp horizontal × 4dp vertical padding.
+ * **Behavior**: pure rendering. The dot color is a hard-coded hex
+ * value (not from the theme) so the meaning is consistent across
+ * themes — green/gray/blue/red are universally read as
+ * ok/off/active/error.
+ * **Recomposition**: recomposes when `syncState` or `pendingCount`
+ * change.
  */
 @Composable
 fun SyncStatusIndicator(

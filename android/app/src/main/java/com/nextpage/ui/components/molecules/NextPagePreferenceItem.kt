@@ -19,6 +19,29 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
+/**
+ * Settings-list row: leading icon + label on the left, optional
+ * value text and a right chevron on the right. Tapping the row
+ * invokes [onClick] (e.g. to open a sub-page or show a dialog).
+ *
+ * @param icon Leading icon (24dp) rendered in `colorScheme.onSurface`.
+ *   Decorative — `contentDescription` is `null`.
+ * @param label Primary text rendered in `bodyLarge`
+ *   `colorScheme.onSurface`.
+ * @param modifier Modifier applied to the outer `Surface`.
+ * @param value Optional secondary text shown before the chevron (e.g.
+ *   the current value of the preference). When `null` or blank, the
+ *   value column is hidden and only the chevron is shown.
+ * @param onClick Invoked on tap. Default no-op.
+ *
+ * **Visual**: full-width `surfaceVariant` row with `shapes.medium`
+ *   corners, 16dp internal padding. Left: 24dp icon + 16dp gap +
+ *   label. Right: value (1-line, ellipsized) + 4dp gap + 20dp
+ *   right-pointing chevron, both in `colorScheme.onSurfaceVariant`.
+ * **Behavior**: tap → [onClick]. No internal state.
+ * **Recomposition**: recomposes when `icon`, `label`, `value`, or
+ *   `onClick` change.
+ */
 @Composable
 fun NextPagePreferenceItem(
     icon: ImageVector,

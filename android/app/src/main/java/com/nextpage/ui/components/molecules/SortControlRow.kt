@@ -26,6 +26,40 @@ import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
 
+/**
+ * Row shown above the library list: a sort-by label and selector
+ * button on the left, and a grid/list view toggle on the right.
+ *
+ * Owns the [showSortSelector] state internally; when the user taps
+ * the sort label, an inline [NextPageSelector] bottom sheet opens
+ * with the four hard-coded options (date added, title, author, last
+ * read).
+ *
+ * @param sortBy Currently selected sort id (one of `"date_added"`,
+ *   `"title"`, `"author"`, `"last_read"`). If the id is unknown the
+ *   selector falls back to "date added" for the display label only;
+ *   the underlying [sortBy] value is preserved.
+ * @param onSortByChanged Invoked with the new sort id after the user
+ *   confirms a selection. The bottom sheet auto-dismisses.
+ * @param isGridView `true` when the library is in grid layout,
+ *   `false` for list layout. Drives the active tint on the toggle
+ *   icons.
+ * @param onViewToggle Invoked when the user taps the inactive
+ *   toggle. Tapping the active toggle is a no-op (the `if` guard
+ *   prevents redundant calls).
+ *
+ * **Visual**: row with 16dp horizontal padding. Left side: small
+ * `bodyMedium` "Sort by" label followed by a `TEXT`-variant
+ * [NextPageButton] showing the active option's localized label.
+ * Right side: two `IconButton`s for grid/list; the active one is
+ * tinted `colorScheme.primary`, the inactive one is
+ * `colorScheme.onSurfaceVariant`.
+ * **Behavior**: tap the sort label → opens a modal selector sheet
+ * that auto-dismisses on selection. Tap the inactive view icon →
+ * calls [onViewToggle]. Tapping the active icon is a no-op.
+ * **Recomposition**: recomposes when `sortBy`, `isGridView`, or any
+ * callback changes.
+ */
 @Composable
 fun SortControlRow(
     sortBy: String,

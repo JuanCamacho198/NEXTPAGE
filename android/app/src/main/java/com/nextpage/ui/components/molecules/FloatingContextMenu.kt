@@ -24,23 +24,41 @@ import androidx.compose.ui.graphics.Color
 import com.nextpage.R
 
 /**
- * Horizontal floating context menu shown when the user taps an existing highlight.
+ * Horizontal pill of icon actions shown when the user taps an
+ * existing highlight. Sibling of [TextSelectionMenu] but with a
+ * different action set: color, copy, tag, annotate, share, delete
+ * (the "new selection" menu has Dictionary + no Tag/Delete).
  *
- * Design node `FaPN3` — a single pill of icon actions separated by thin
- * vertical dividers:
+ * Design node `FaPN3` — single pill with thin vertical dividers
+ * between action groups:
+ * ```
+ * [Palette] | [Copy] | [Tag] | [Annotate] | [Share] | [Delete]
+ * ```
+ * All colors come from [MaterialTheme.colorScheme] so the menu
+ * adapts to light/dark themes.
  *
- *     [Palette] | [Copy] | [Tag] | [Annotate] | [Share] | [Delete]
+ * @param selectedColor Currently active highlight color (hex with or
+ *   without `#`). Drives the Palette icon tint via
+ *   [parseColorHex]. Bad hex strings resolve to opaque black.
+ * @param onColorSelected Invoked when the Palette icon is tapped.
+ *   Typically opens the [HighlightColorPickerPopover].
+ * @param onCopy Copy the highlight text to the clipboard.
+ * @param onAddTag Open the [AnchoredTagInput] for this highlight.
+ * @param onAnnotate Open the [HighlightAnnotationModal] for this
+ *   highlight.
+ * @param onShare Share the highlight text via the system share sheet.
+ * @param onDelete Delete this highlight. The Delete icon is tinted
+ *   `colorScheme.error` to signal destructive intent.
+ * @param modifier Modifier applied to the outer `Row`.
  *
- * Colours are derived from [MaterialTheme.colorScheme] so the menu works in
- * both light and dark themes.
- *
- * @param selectedColor currently active highlight color (drives the Palette icon tint)
- * @param onColorSelected called when the Palette action is tapped
- * @param onCopy copy to clipboard
- * @param onAddTag open the anchored tag input
- * @param onAnnotate open the note modal
- * @param onShare share the highlight text
- * @param onDelete delete the selected highlight
+ * **Visual**: pill-shaped `Row` with 12dp shadow, 6dp padding,
+ *   50%-radius corners. Each icon is 40dp clickable circle; vertical
+ *   dividers (1dp × 20dp) are placed between the Palette group and
+ *   the Share group. Delete icon uses `colorScheme.error` tint.
+ * **Behavior**: each icon calls its respective callback. No internal
+ *   state, no animation.
+ * **Recomposition**: recomposes when `selectedColor` or any callback
+ *   changes.
  */
 @Composable
 fun FloatingContextMenu(

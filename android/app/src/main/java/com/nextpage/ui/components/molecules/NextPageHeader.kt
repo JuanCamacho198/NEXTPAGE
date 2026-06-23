@@ -22,6 +22,38 @@ import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageAvatar
 import com.nextpage.ui.components.atoms.NextPageIconButton
 
+/**
+ * Top app header: avatar (or initials) + title on the left, optional
+ * search and notifications icon buttons on the right, followed by any
+ * caller-supplied trailing action icons.
+ *
+ * @param title Header text rendered next to the avatar in
+ *   `titleMedium` semibold.
+ * @param modifier Modifier applied to the outer `Row`.
+ * @param avatarImageUrl Remote avatar URL. When `null`/blank, the
+ *   [avatarInitials] fallback is used. Default `null`.
+ * @param avatarInitials Two-character fallback for the avatar circle
+ *   (e.g. `"JS"`). Default `"NP"`. Will be uppercased and truncated
+ *   to 2 chars by [NextPageAvatar].
+ * @param onSearchClick Optional search-button callback. When `null`,
+ *   the search icon is not rendered.
+ * @param onNotificationsClick Optional notifications-button callback.
+ *   When `null`, the bell icon is not rendered.
+ * @param trailingActions Additional icon buttons rendered after the
+ *   built-in search/notifications buttons. Each pair is
+ *   `(icon, onClick)`. The `contentDescription` for these is
+ *   intentionally `""` (decorative — pair with an a11y label outside
+ *   the header if needed).
+ *
+ * **Visual**: 40dp avatar + 12dp gap + title on the left. On the
+ *   right: search icon (if [onSearchClick]), notifications icon (if
+ *   [onNotificationsClick]), then any [trailingActions] — all 40dp
+ *   [NextPageIconButton]s with 4dp spacing. 16dp top padding.
+ * **Behavior**: each visible icon calls its respective callback. No
+ *   internal state.
+ * **Recomposition**: recomposes when `title`, `avatarImageUrl`,
+ *   `avatarInitials`, or any callback/action changes.
+ */
 @Composable
 fun NextPageHeader(
     title: String,

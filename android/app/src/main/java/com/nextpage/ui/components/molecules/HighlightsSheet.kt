@@ -51,11 +51,38 @@ import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
 
 /**
- * Bottom sheet showing all book highlights with color filter chips.
+ * Modal bottom sheet that lists all highlights for the current book
+ * with a horizontal color-filter chip row. Tapping a highlight
+ * invokes [onHighlightSelected]; the sheet does NOT auto-dismiss
+ * (the parent typically navigates instead).
  *
- * Design: drag handle, header "Resaltados", scrollable color filter chips
- * (Todos / Amarillo / Verde / etc.), highlights list as cards with color
- * marker border + text preview + location. Tap navigates + closes sheet.
+ * Visual design is locked to the dark reader theme (background
+ * `#161F33`, text `#DDE2F8`, accent `#ADC6FF`) — this sheet is
+ * intended to be shown on top of the dark reading surface.
+ *
+ * @param highlights All highlights for the book, in the order they
+ *   should be displayed. Filtered in-memory by the active color
+ *   filter; not re-queried.
+ * @param onHighlightSelected Invoked with the tapped [Highlight] when
+ *   the user taps a row. The sheet stays open; the caller is
+ *   expected to close it after navigation completes.
+ * @param onDismiss Invoked on swipe-down, scrim-tap, or back-press.
+ * @param modifier Modifier applied to the inner `Column`.
+ *
+ * **Visual**: dark `ModalBottomSheet` (24dp top corners). Drag
+ *   handle, "Highlights" `titleLarge` bold header, a horizontal-
+ *   scrolling row of color filter `FilterChip`s (one "All" chip
+ *   shown as a dashed stroked circle, the rest as filled colored
+ *   circles), a `HorizontalDivider`, then a 360dp `LazyColumn` of
+ *   `HighlightCard`s. Each card: 4dp left color marker + 2-line
+ *   text preview + 1-line note preview.
+ * **Behavior**: filter chips update `selectedColorFilter` locally
+ *   (no parent round-trip). `filteredHighlights` is recomputed on
+ *   each composition. Tapping a chip or highlight does NOT call
+ *   [onDismiss] — the parent is in charge. The empty state shows
+ *   `R.string.highlights_empty` when no highlights match the filter.
+ * **Recomposition**: recomposes when `highlights` or callbacks
+ *   change. Internal filter state is `remember`-ed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

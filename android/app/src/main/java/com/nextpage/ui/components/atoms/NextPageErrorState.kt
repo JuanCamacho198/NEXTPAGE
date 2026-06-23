@@ -18,6 +18,28 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 
+/**
+ * Full-screen error state: error icon, title, message, and an optional
+ * `retryAction` slot. The icon is decorative (no `contentDescription`).
+ *
+ * @param title Headline text rendered in `titleMedium` semibold
+ *   `colorScheme.onSurface`.
+ * @param message Supporting text rendered in `bodyMedium`
+ *   `colorScheme.onSurfaceVariant`.
+ * @param modifier Modifier applied to the outer `Column`.
+ * @param retryAction Optional composable (typically a button) rendered
+ *   below the message with 16dp top spacing. Pass `null` to hide the
+ *   action area entirely.
+ *
+ * **Visual**: 64dp outlined `ErrorOutline` icon in `colorScheme.error`,
+ * 16dp gap, title, 8dp gap, message, optional 16dp gap + action.
+ * All text is center-aligned.
+ * **Behavior**: pure rendering. The icon is intentionally
+ * content-description-less because the title communicates the same
+ * meaning to assistive tech.
+ * **Recomposition**: recomposes when `title`, `message`, or
+ * `retryAction` change.
+ */
 @Composable
 fun NextPageErrorState(
     title: String,
@@ -58,6 +80,23 @@ fun NextPageErrorState(
     }
 }
 
+/**
+ * Single-message convenience overload of [NextPageErrorState]. The
+ * title is resolved from `R.string.error_unknown` via `stringResource`.
+ *
+ * @param message Supporting text rendered in `bodyMedium`
+ *   `colorScheme.onSurfaceVariant`.
+ * @param modifier Modifier applied to the outer `Column`.
+ * @param retryAction Optional composable (typically a button) rendered
+ *   below the message. Pass `null` to hide the action area.
+ *
+ * **Visual**: identical to the full overload, with a localized default
+ * title.
+ * **Behavior**: pure rendering. Reads the title string at composition
+ * time — will not update if the locale changes without a
+ * configuration change.
+ * **Recomposition**: recomposes when `message` or `retryAction` change.
+ */
 @Composable
 fun NextPageErrorState(
     message: String,

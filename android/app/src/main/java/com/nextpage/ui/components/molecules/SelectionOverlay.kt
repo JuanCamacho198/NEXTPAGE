@@ -24,24 +24,102 @@ import com.nextpage.domain.model.HighlightColor
 import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 
 /**
- * Shared floating selection overlay used by both the EPUB reader and
- * the PDF rendering path in [ReaderScreen].
+ * Shared floating-selection overlay used by both the EPUB reader
+ * (Readium) and the PDF rendering path inside the reader screen.
+ * Renders exactly one of the following near the selection, based
+ * on the input flags and the current [ReaderSelectionState]:
  *
- * Positions the appropriate floating UI near the selection based on
- * [ReaderSelectionState]:
- * - [ReaderSelectionState.New] → [TextSelectionMenu]
- * - [ReaderSelectionState.Existing] → [FloatingContextMenu]
- * - tag input → [AnchoredTagInput]
- * - definition input → [AnchoredDefinitionInput]
- * - colour picker popover → [HighlightColorPickerPopover]
+ * | State                           | Surface                       |
+ * |---------------------------------|-------------------------------|
+ * | [ReaderSelectionState.New]      | [TextSelectionMenu]           |
+ * | [ReaderSelectionState.Existing] | [FloatingContextMenu]         |
+ * | `showColorPickerPopover=true`   | [HighlightColorPickerPopover] |
+ * | `showTagInput=true`             | [AnchoredTagInput]            |
+ * | `showDefinitionInput=true`      | [AnchoredDefinitionInput]     |
  *
- * A transparent tap-away overlay is rendered behind the menus when
- * any surface is visible — tapping it calls [onDismissContextMenu].
+ * When any surface is visible, a transparent tap-away backdrop is
+ * rendered behind it; tapping the backdrop invokes
+ * [onDismissContextMenu].
  *
- * Coordinate handling: [selectionRect] arrives in **pixels (px)** — it is
- * Readium's viewport-space [android.graphics.RectF] cast to [Rect]. We
- * therefore use it directly for [IntOffset] positioning and only convert
- * dp→px for the gap and header/footer reserves.
+ * Coordinate handling: [selectionRect] arrives in **pixels (px)** —
+ * it is Readium's viewport-space [android.graphics.RectF] cast to
+ * [Rect]. The composable uses it directly for [IntOffset]
+ * positioning and only converts dp→px for the anchor gap and
+ * header/footer reserves (see [HEADER_RESERVE_DP] and
+ * [FOOTER_RESERVE_DP]).
+ *
+ * Anchoring rules: the menu is placed above the selection if there
+ * is enough room (≥ 80dp from the top of the viewport), otherwise
+ * it flips below. Horizontally it is centered on the selection
+ * and clamped to the viewport edges. The math is in the private
+ * `computeAnchor` helper.
+ *
+ * @param selectionState Current selection state from the reader
+ *   ViewModel. `None` means no surface is shown.
+ * @param showColorPickerPopover Show the [HighlightColorPickerPopover]
+ *   instead of (or on top of) the text-selection menu. Default
+ *   `false`.
+ * @param showTagInput Show [AnchoredTagInput]. Default `false`.
+ * @param tagSuggestions Suggestions to show in the tag input.
+ *   Default empty.
+ * @param activeTagText Current tag input value. Default `""`.
+ * @param showDefinitionInput Show [AnchoredDefinitionInput]. Default
+ *   `false`.
+ * @param activeDefinitionText Current definition input value.
+ *   Default `""`.
+ * @param selectionRect Selection bounding box in **pixels**. When
+ *   `null`, the composable returns immediately (renders nothing).
+ * @param selectedText The currently selected text. Used as the
+ *   "word" header in the definition input and to drive default
+ *   highlight color resolution. May be `null`.
+ * @param highlights All highlights in the current book. Used to
+ *   resolve the default highlight color (last highlight's color, or
+ *   YELLOW as fallback) when [activeHighlightColor] is null.
+ * @param activeHighlightColor Currently active highlight color
+ *   (hex). Drives the Palette icon tint. When `null`, falls back to
+ *   YELLOW or the last highlight's color.
+ * @param customHighlightColors User-customized 5-color palette for
+ *   the [HighlightColorPickerPopover]. Default `null` (uses
+ *   [DEFAULT_HIGHLIGHT_PRESETS]).
+ * @param onColorSelected Invoked with the chosen hex when a color
+ *   is picked from the popover.
+ * @param onCopy Copy-selection callback (from the text-selection
+ *   menu).
+ * @param onDismissContextMenu Tap-away backdrop callback.
+ * @param onDelete Delete-highlight callback (from the existing-
+ *   highlight menu).
+ * @param onAddTag Open-tag-input callback.
+ * @param onAnnotate Open-annotation-modal callback.
+ * @param onShare Share-selection callback.
+ * @param onDictionary Open-dictionary-input callback.
+ * @param onShowColorPickerPopover Open-color-picker callback
+ *   (from the Palette action). Default no-op.
+ * @param onDismissColorPickerPopover Close-color-picker callback.
+ *   Default no-op.
+ * @param onTagTextChanged Tag-input change callback. Default no-op.
+ * @param onSaveTag Save-tag callback. Default no-op.
+ * @param onDismissTagInput Close-tag-input callback. Default no-op.
+ * @param onDefinitionTextChanged Definition-input change callback.
+ *   Default no-op.
+ * @param onSaveDefinition Save-definition callback. Default no-op.
+ * @param onDismissDefinitionInput Close-definition-input callback.
+ *   Default no-op.
+ * @param modifier Modifier applied to the positioned `Box` of the
+ *   menus (not the popover, which uses its own offset).
+ *
+ * **Visual**: backdrop = transparent tap-away layer (`fillMaxSize`).
+ *   Each menu is wrapped in a `Box` with an 8dp padding and
+ *   positioned via `Modifier.offset { anchor }` where `anchor` is
+ *   computed from the selection rect. The color-picker popover is
+ *   offset to (anchorCenterX - 110dp, selectionRect.bottom + 12dp).
+ * **Behavior**: branches are mutually exclusive at the top level
+ *   (only one menu is shown at a time). Tapping outside any menu
+ *   dismisses via the tap-away backdrop. Tapping a menu action
+ *   fires the respective callback (caller decides whether to also
+ *   close the surface).
+ * **Recomposition**: recomposes when any parameter changes. Each
+ *   branch tracks its own `menuWidthPx`/`menuHeightPx` via
+ *   `onGloballyPositioned` to compute the anchor.
  */
 @Composable
 fun SelectionOverlay(

@@ -42,22 +42,47 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 
 /**
- * Reading progress bar with draggable thumb.
+ * Reader's progress bar with a draggable thumb and a row of
+ * supporting controls below. Used inside the reader screen to show
+ * the user where they are in the book and let them jump to any
+ * position.
  *
- * Design:
- * - Track: #2F3445FF (h=4dp)
- * - Fill: #ADC6FFFF (h=4dp)
- * - Thumb: #ADC6FFFF (w=12dp, h=12dp, shadow), draggable via pointerInput
- * - Below track: [Rotate] — "102 / 320" centered — "32%"
- * - Padding [16, 20, 32, 20] (start, end, bottom, top)
+ * Design (dark theme):
+ * - Track: `#2F3445`, 4dp height, full width.
+ * - Fill: `#ADC6FF`, 4dp height, animated width.
+ * - Thumb: 12dp circle, `#ADC6FF` with 4dp shadow, draggable.
+ * - Below: [Rotate icon] — position label centered — "NN%" right.
+ * - Outer padding: 16/20/32/20 (start/end/bottom/top).
  *
- * Chapter navigation arrows were removed in favour of the fullscreen
- * side arrows + swipe gesture.
+ * @param progressPercent Current progress in `[0f, 100f]`. Values
+ *   outside this range are `coerceIn`-clamped.
+ * @param label Position label shown centered below the bar (e.g.
+ *   `"3 / 10"` or `"45 / 200"`). When empty, the
+ *   `R.string.reader_progress_empty` fallback is shown.
+ * @param onProgressChange Optional callback invoked (with the new
+ *   percentage in `[0f, 100f]`) while the user drags the thumb.
+ *   When `null`, the thumb still renders but does not respond to
+ *   drag gestures.
+ * @param onRotateScreen Optional callback for the rotate-screen
+ *   button on the left of the label row. When `null`, the button
+ *   is replaced by an invisible 36dp spacer to keep the label
+ *   centered.
+ * @param modifier Modifier applied to the outer `Column`.
  *
- * @param progressPercent 0f–100f progress value
- * @param label Position label like "3 / 10" or "45 / 200"
- * @param onProgressChange Called when user drags thumb to a new percentage
- * @param onRotateScreen Called when the rotate-screen button is tapped
+ * **Visual**: 12dp-tall track container (4dp visible bar centered
+ *   inside for a 4dp touch slop on each side). Fill is animated via
+ *   `animateFloatAsState` for smooth transitions. Below: 36dp icon
+ *   button or spacer, `labelMedium` position label
+ *   (`#718096`), `labelMedium` bold percentage (`#ADC6FF`).
+ * **Behavior**: drag the thumb → invokes [onProgressChange] on
+ *   every pointer-move with the new percentage, clamped to
+ *   `[0f, 100f]`. Tap the rotate icon → [onRotateScreen].
+ *   The thumb drag is wired via `pointerInput(Unit)`; if
+ *   [onProgressChange] is `null`, the drag handler is wired but
+ *   does nothing.
+ * **Recomposition**: recomposes when `progressPercent`, `label`, or
+ *   callbacks change. `trackWidth` is updated via `onSizeChanged`
+ *   after layout.
  */
 @Composable
 fun ReadingProgressBar(

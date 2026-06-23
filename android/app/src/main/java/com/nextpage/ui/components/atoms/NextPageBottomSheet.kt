@@ -16,6 +16,36 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+/**
+ * Modal bottom sheet with a centered `titleLarge` header and a
+ * `ColumnScope` content slot. Wraps Material 3 `ModalBottomSheet` with
+ * the NextPage padding defaults.
+ *
+ * @param title Header text rendered in `MaterialTheme.typography.titleLarge`,
+ *   center-aligned, with 16dp bottom padding.
+ * @param onDismiss Invoked when the user swipes the sheet down, taps
+ *   the scrim, or presses back. Clear the show-state in the ViewModel
+ *   here.
+ * @param modifier Modifier applied to the underlying `ModalBottomSheet`.
+ * @param sheetState The Material 3 sheet state. Default uses
+ *   `rememberModalBottomSheetState(skipPartiallyExpanded = true)` so the
+ *   sheet opens fully expanded (no half-expanded snap point). Pass a
+ *   hoisted state if you need programmatic control.
+ * @param content Composable content rendered below the title. Receives
+ *   a `ColumnScope` and is wrapped in a `Column` with `fillMaxWidth()`
+ *   and 24dp horizontal + 24dp bottom padding.
+ *
+ * **Visual**: standard Material 3 bottom sheet, drag handle included
+ * by default. Title is centered horizontally. Content has uniform
+ * 24dp horizontal padding and 24dp bottom padding.
+ * **Behavior**: modal — blocks the underlying screen and traps focus.
+ * Dismisses on scrim tap, swipe-down, or back press. There is no
+ * explicit close button — the user dismisses via gesture or you
+ * dismiss programmatically through [sheetState].
+ * **Recomposition**: recomposes when `title` or `onDismiss` change.
+ * [sheetState] is stable; updating it does not retrigger composition
+ * of this composable.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NextPageBottomSheet(

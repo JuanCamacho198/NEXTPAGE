@@ -24,6 +24,33 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageTextField
 
+/**
+ * Top header for the library screen: large title, search and filter
+ * icon buttons, and an optional inline search field that toggles
+ * in/out based on [showSearch].
+ *
+ * @param showSearch When `true`, the search field is rendered below
+ *   the title row. Toggle this from the parent to show/hide search.
+ * @param onSearchToggle Invoked when the user taps the search icon.
+ *   Typically flips the `showSearch` state in the parent.
+ * @param searchQuery Current value of the search input. Hoisted state
+ *   owned by the parent ViewModel.
+ * @param onSearchQueryChange Invoked on every keystroke in the
+ *   search field.
+ * @param onFilterToggle Invoked when the user taps the filter icon.
+ *   Typically opens the [FilterBottomSheet].
+ *
+ * **Visual**: `headlineMedium` bold title on the left, two
+ * `IconButton`s (Search, FilterList) on the right, with 4dp spacing
+ * between them. When [showSearch] is `true`, a 24dp-rounded
+ * [NextPageTextField] appears below the title with 16dp horizontal
+ * padding. The whole header uses 24dp vertical padding.
+ * **Behavior**: tapping the search icon toggles the inline search
+ * field on/off via [onSearchToggle]. The filter icon is a separate
+ * action — it does NOT toggle the search.
+ * **Recomposition**: recomposes when `showSearch`, `searchQuery`, or
+ * any callback changes.
+ */
 @Composable
 fun LibraryHeader(
     showSearch: Boolean,

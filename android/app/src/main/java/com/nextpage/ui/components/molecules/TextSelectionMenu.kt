@@ -31,20 +31,42 @@ import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
 
 /**
- * Floating action menu shown when the user selects new text.
+ * Floating action menu shown when the user makes a NEW text
+ * selection. Sibling of [FloatingContextMenu] but with a different
+ * action set: color, copy, dictionary, share, annotate (the
+ * "existing highlight" menu has Tag + Delete and no Dictionary).
  *
- * Design: horizontal pill of icon actions:
- *     [Palette] | [Copy] | [Dictionary] | [Share] | [Annotate]
+ * Design: horizontal pill of icon actions with thin vertical
+ * dividers between groups:
+ * ```
+ * [Palette] | [Copy] | [Dictionary] | [Share] | [Annotate]
+ * ```
+ * All colors come from [MaterialTheme.colorScheme] so the menu
+ * adapts to light/dark themes.
  *
- * All colours are derived from [MaterialTheme.colorScheme] so the menu adapts
- * to light and dark themes automatically.
+ * @param selectedColor Currently active highlight color (hex with
+ *   or without `#`). Drives the Palette icon tint via
+ *   [parseColorHex]. Defaults to [HighlightColor.YELLOW].hex.
+ *   Bad hex strings resolve to opaque black.
+ * @param onColorSelected Invoked when the Palette icon is tapped.
+ *   Typically opens the [HighlightColorPickerPopover].
+ * @param onCopy Copy the selected text to the clipboard.
+ * @param onDictionary Open the [AnchoredDefinitionInput] for the
+ *   selected word.
+ * @param onShare Share the selected text via the system share
+ *   sheet.
+ * @param onAnnotate Open the [HighlightAnnotationModal] to add a
+ *   note to the new highlight.
+ * @param modifier Modifier applied to the outer `Row`.
  *
- * @param selectedColor currently active highlight color (drives the Palette icon tint)
- * @param onColorSelected called when the Palette action is tapped
- * @param onCopy copy to clipboard
- * @param onDictionary open the definition input
- * @param onShare share the selected text
- * @param onAnnotate open the note modal
+ * **Visual**: pill-shaped `Row` with 8dp shadow, 6dp padding,
+ *   50%-radius corners. Each icon is a 40dp clickable circle; the
+ *   vertical dividers (1dp × 20dp) are placed only after the
+ *   Palette icon (between Color and the rest of the actions).
+ * **Behavior**: each icon calls its respective callback. No
+ *   internal state, no animation.
+ * **Recomposition**: recomposes when `selectedColor` or any
+ *   callback changes.
  */
 @Composable
 fun TextSelectionMenu(

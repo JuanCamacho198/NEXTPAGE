@@ -21,6 +21,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 
+/**
+ * Scaffold + `TopAppBar` shell for any settings sub-page. Provides a
+ * back button, a bold title, and a 24dp-padded content column. Use
+ * this as the outermost composable of any settings screen pushed
+ * onto the navigation stack.
+ *
+ * @param title Sub-page title rendered in the `TopAppBar` as
+ *   `titleLarge` bold.
+ * @param onBack Invoked when the user taps the back arrow in the
+ *   top-left. Typically pops the navigation back stack.
+ * @param modifier Modifier applied to the outer `Scaffold`.
+ * @param content Composable body of the sub-page, rendered in a
+ *   `Column` with 24dp horizontal padding below the `TopAppBar`.
+ *   Receives a `ColumnScope`.
+ *
+ * **Visual**: standard Material 3 `TopAppBar` with an auto-mirrored
+ *   back arrow and a bold title. Content area is a `Column` with
+ *   `innerPadding` from the scaffold applied + 24dp horizontal
+ *   padding.
+ * **Behavior**: tap the back arrow → [onBack]. The Scaffold
+ *   manages the status-bar inset for the top app bar; the caller
+ *   does not need to handle insets manually for the content area
+ *   thanks to `innerPadding`.
+ * **Recomposition**: recomposes when `title` or `onBack` changes.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NextPageSettingsSubPage(

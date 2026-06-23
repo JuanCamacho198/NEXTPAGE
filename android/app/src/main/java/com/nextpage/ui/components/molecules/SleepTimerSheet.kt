@@ -38,9 +38,18 @@ import androidx.compose.ui.unit.sp
 import com.nextpage.R
 
 /**
- * Preset options for the sleep timer.
+ * Plain-data model for a sleep-timer duration preset.
  *
- * @property isEndOfChapter If true, the timer stops when the user changes chapter.
+ * @property label Display label for the preset (e.g. `"5"`, `"10"`,
+ *   or `"End of chapter"`).
+ * @property minutes Duration in minutes. For end-of-chapter presets
+ *   this is a sentinel value (typically `0` or `Int.MAX_VALUE`) —
+ *   the caller decides how to interpret it.
+ * @property isEndOfChapter When `true`, the preset is a
+ *   "stop at end of chapter" option rather than a fixed-time
+ *   preset. Rendered differently (full-width card with a
+ *   description) and excluded from the time-based chips row.
+ *   Defaults to `false`.
  */
 data class SleepTimerPreset(
     val label: String,
@@ -49,9 +58,46 @@ data class SleepTimerPreset(
 )
 
 /**
- * BottomSheet for selecting a sleep timer duration.
+ * Modal bottom sheet for picking or canceling a sleep-timer
+ * duration. Shows the active remaining time (when [isActive] is
+ * `true`), a row of time-based preset chips (3 per row), an
+ * "End of chapter" full-width card if any preset has
+ * `isEndOfChapter = true`, and a cancel action when active.
  *
- * Presets: 5, 10, 15, 30 minutes. Custom input can be added later.
+ * @param isActive `true` when a timer is currently running. Drives
+ *   the visibility of the "remaining" header and the cancel button.
+ * @param remainingFormatted Pre-formatted remaining time string
+ *   (e.g. `"04:32"`). Shown in the active header. The composable
+ *   does not format this — the caller is in charge.
+ * @param presets All available presets. Time-based presets
+ *   (`isEndOfChapter = false`) are rendered as a 3-per-row grid of
+ *   chips; end-of-chapter presets each get a full-width
+ *   description card.
+ * @param onPresetSelected Invoked with the chosen preset's
+ *   `minutes` when the user taps any preset. Does NOT auto-close
+ *   the sheet.
+ * @param onCancel Invoked when the user taps the "Cancel timer"
+ *   button. Only rendered when [isActive] is `true`.
+ * @param onDismiss Invoked on swipe-down, scrim-tap, back-press, or
+ *   when the user taps the close X.
+ *
+ * **Visual**: standard `ModalBottomSheet` with `surface` background
+ *   and 16dp top corners. Header: "Sleep timer" `titleLarge` bold
+ *   + close X. If active: a 12dp-rounded `primary`-tinted box
+ *   showing "Remaining: HH:MM" in `headlineSmall` bold primary.
+ *   Then a section label ("Choose duration" or "Change duration"),
+ *   then a `Row` of time-preset chips (`surfaceVariant` background,
+ *   primary number, "min" label) in `Arrangement.spacedBy(8.dp)`,
+ *   then any end-of-chapter cards (`primary` 10% alpha background
+ *   with arrow icon, label, description). If active: a full-width
+ *   "Cancel timer" button in `error` 8% alpha background with error
+ *   text.
+ * **Behavior**: tap a preset chip or end-of-chapter card →
+ *   [onPresetSelected]. Tap the cancel button (active only) →
+ *   [onCancel]. Tap the close X or swipe → [onDismiss]. No
+ *   internal state.
+ * **Recomposition**: recomposes when `isActive`, `remainingFormatted`,
+ *   `presets`, or callbacks change.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

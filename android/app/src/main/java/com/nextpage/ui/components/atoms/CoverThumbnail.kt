@@ -17,6 +17,32 @@ import coil.request.ImageRequest
 import com.nextpage.R
 import java.io.File
 
+/**
+ * Small local-file cover thumbnail for the library grid. Loads a
+ * `File` (not a URL) via Coil with an explicit 80×120 px decode
+ * size and reports the loader state through [onImageState]. Sibling
+ * of [NextPageBookCover], tuned for the in-library list view.
+ *
+ * @param coverPath Absolute path to the cover image file on local
+ *   storage. When `null` or blank, the request resolves to
+ *   `fallback(R.drawable.cover_placeholder)`.
+ * @param modifier Modifier applied to the `AsyncImage`. Use it to set
+ *   the rendered size — the decode size is fixed at 80×120 px and is
+ *   decoupled from the render size.
+ * @param onImageState Optional observer invoked on every state change
+ *   of the underlying `AsyncImagePainter` (`Loading`, `Success`,
+ *   `Error`, `Empty`). Useful for shimmer/placeholder swap-in logic.
+ *
+ * **Visual**: `AsyncImage` with `ContentScale.Crop`, clipped to
+ * `MaterialTheme.shapes.small`. `crossfade(true)` is enabled.
+ * **Behavior**: pure rendering. The `File` and `ImageRequest` are
+ * `remember`-ed keyed on `coverPath`/`(context, density, coverFile,
+ * coverPath)` to avoid rebuilding the request on unrelated
+ * recompositions. Both memory and disk cache policies are enabled.
+ * **Recomposition**: recomposes when `coverPath` or `modifier`
+ * change; [onImageState] is invoked from `AsyncImage`'s internal
+ * `State`, not composition.
+ */
 @Composable
 fun CoverThumbnail(
     coverPath: String?,

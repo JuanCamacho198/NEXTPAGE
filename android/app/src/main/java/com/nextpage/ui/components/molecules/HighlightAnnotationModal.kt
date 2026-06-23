@@ -51,34 +51,53 @@ import androidx.compose.ui.unit.sp
 import com.nextpage.R
 
 /**
- * Glassmorphic modal for adding/editing a note or comment on a highlighted
- * text selection.
+ * Glassmorphic full-screen modal for adding or editing a personal
+ * note/comment on a highlighted text selection. Shows the selected
+ * text snippet (when [selectedText] is non-blank) and a 120dp-tall
+ * textarea. No color selector — explicitly removed per design spec
+ * CM03.
  *
- * Design node `GshXP` (Pencil) — adapted for Material 3 while preserving
- * the key visual elements from the design spec:
- * - Full-screen backdrop: black 36% opacity + background blur
- * - Modal container: 512dp width, rounded 24dp, fill #101c2cb4,
- *   stroke #94adce17
- * - Header: title (Manrope 18/Bold, white) + close X button
- * - Text snippet: left cyan border (#49d4ff, 4dp), dark bg (#08111f40)
- * - Textarea: background #08111f, rounded 16dp, padding 16dp,
- *   stroke #94adce08
- * - Actions: "Cancelar" (text #8fa3bf) + "Guardar" (bg #49d4ff,
- *   rounded pill, text #08111f bold)
+ * Design node `GshXP` (Pencil):
+ * - Backdrop: full-screen black, tap = dismiss.
+ * - Modal: 360dp wide (max 512dp), 24dp rounded, fill `#101C2C`,
+ *   stroke `#1794ADCE`, 24dp padding.
+ * - Header: title (18sp white bold) + 32dp circular close button.
+ * - Snippet: left 4dp cyan border (`#49D4FF`), 8dp rounded
+ *   background (`#4008111F`), 6-line-clipped text.
+ * - Textarea: `#08111F` background, 16dp rounded, 120dp tall, cyan
+ *   cursor.
+ * - Actions: "Cancel" (`#8FA3BF` text) + "Save" (cyan
+ *   `#49D4FF` background, dark text, 50% rounded pill).
  *
- * NO colour selector — explicitly removed per design spec CM03.
+ * @param titleRes String resource for the modal title (e.g.
+ *   "New note" / "New comment").
+ * @param hintRes String resource for the textarea placeholder.
+ * @param snippetLabelRes String resource for the label above the
+ *   highlighted text snippet (e.g. "Selected text"). The whole
+ *   snippet area is hidden when [selectedText] is null/blank.
+ * @param selectedText The highlighted text to display. When
+ *   `null`/blank, the snippet area is omitted entirely.
+ * @param initialText Pre-filled textarea text. Use for editing an
+ *   existing note. The local form state is `remember(initialText)`-
+ *   keyed, so swapping the initial value re-initializes the form.
+ *   Default `""`.
+ * @param onSave Invoked with the final textarea text when the user
+ *   taps "Save".
+ * @param onDismiss Invoked when the user taps the backdrop or the
+ *   close X. Does NOT save.
+ * @param modifier Modifier applied to the backdrop `Box`.
  *
- * @param titleRes string resource for the modal title ("Nueva Nota"
- *  or "Nuevo Comentario")
- * @param hintRes string resource for the textarea placeholder text
- * @param snippetLabelRes string resource for the label above the
- *  highlighted text snippet (e.g. "Texto seleccionado")
- * @param selectedText the highlighted text content to display in the
- *  snippet area
- * @param initialText pre-filled text (for editing an existing
- *  note/comment)
- * @param onSave invoked with the final text when "Guardar" is tapped
- * @param onDismiss invoked when the backdrop or X button is tapped
+ * **Visual**: full-screen black backdrop → centered 360dp dark
+ *   card. Header row (title + close), optional snippet block, 120dp
+ *   textarea, action row.
+ * **Behavior**: tap on the backdrop (outside the card) → [onDismiss].
+ *   Tap on the card body does NOT dismiss (consumed by a
+ *   no-indication `clickable`). Tapping the close X also dismisses.
+ *   The card has no IME action wired — the user must tap "Save"
+ *   explicitly to commit.
+ * **Recomposition**: recomposes when any string/int resource, the
+ *   selected text, or callbacks change. Local `text` state is
+ *   hoisted via `remember(initialText)`.
  */
 @Composable
 fun HighlightAnnotationModal(

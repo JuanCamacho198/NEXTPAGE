@@ -39,6 +39,38 @@ import com.nextpage.R
 import com.nextpage.domain.model.Book
 import java.io.File
 
+/**
+ * `AlertDialog` for editing a book's metadata (title, author,
+ * description, cover). Owns its own local form state — initial values
+ * come from the [book] parameter and are `remember`-ed keyed on the
+ * book instance so swapping to a different book resets the form.
+ *
+ * @param book The book being edited. Provides the initial values for
+ *   the form fields (title is required, author/description are
+ *   optional and default to empty string).
+ * @param selectedCoverUri Optional user-picked `Uri` for a new cover.
+ *   When `null`, the dialog falls back to the book's existing
+ *   `coverPath` (if any) and renders a blank thumbnail area.
+ * @param onDismiss Invoked when the user taps outside the dialog,
+ *   presses back, or taps "Cancel". Does NOT save the form.
+ * @param onSave Invoked with `(title, author?, description?)` when the
+ *   user taps "Save". Empty `author`/`description` are normalized to
+ *   `null` before the call.
+ * @param onChangeCover Invoked when the user taps "Change cover".
+ *   The caller is expected to launch an image picker and pass the
+ *   resulting URI back through [selectedCoverUri].
+ *
+ * **Visual**: standard Material 3 `AlertDialog` with a scrollable
+ * body (in case of small phones) and a 72×96dp cover preview
+ * thumbnail alongside a "Change cover" outlined button.
+ * **Behavior**: the local form state is `remember(book)`-keyed, so
+ * editing a different book resets all fields. Saving calls [onSave]
+ * with the current values; the dialog does NOT auto-dismiss — the
+ * caller should call [onDismiss] in response to [onSave] (typical
+ * pattern in this codebase).
+ * **Recomposition**: recomposes when `book` (different identity),
+ * `selectedCoverUri`, or any callback changes.
+ */
 @Composable
 fun EditBookMetadataDialog(
     book: Book,

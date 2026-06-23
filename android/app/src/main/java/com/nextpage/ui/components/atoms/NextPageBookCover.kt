@@ -25,6 +25,37 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.nextpage.R
 
+/**
+ * Book cover image atom with three render branches: loading spinner,
+ * remote `AsyncImage` (Coil) with explicit decode size, or a fallback
+ * `Book` icon. Always clipped to a rounded 8dp shape with a
+ * `surfaceVariant` background so the placeholder area looks like a
+ * card even when the image is missing.
+ *
+ * @param coverUrl Remote cover URL. When `null` or blank, the fallback
+ *   icon branch is rendered (unless [isLoading] is `true`).
+ * @param title Book title, used as the `contentDescription` for the
+ *   remote image and fallback icon. When `null`, falls back to
+ *   `R.string.library_cover_content_description`.
+ * @param modifier Modifier applied to the outer `Box`. The size must
+ *   be set by the caller (e.g. `Modifier.size(width = 96.dp, height = 136.dp)`).
+ * @param isLoading When `true`, the loading branch is forced (overrides
+ *   [coverUrl]). Renders a 32dp `CircularProgressIndicator` centered
+ *   inside the box. Pass `false` once the surrounding data is ready.
+ *
+ * **Visual**: rounded 8dp `Box` filled with `colorScheme.surfaceVariant`.
+ * On loading: 32dp `CircularProgressIndicator` in `colorScheme.primary`.
+ * On image: `AsyncImage` with `ContentScale.Crop`, decoded at
+ * 128×180 px (matches the rendered size on typical phone DPIs) with
+ * placeholder/error/fallback drawables, `crossfade(true)`, and both
+ * memory and disk cache policies enabled.
+ * On fallback: 40dp outlined `Book` icon in `colorScheme.onSurfaceVariant`.
+ * **Behavior**: pure rendering. The `ImageRequest` is `remember`-ed
+ * keyed on `(context, density, coverUrl)` so it's only rebuilt when
+ * the URL changes.
+ * **Recomposition**: recomposes when `coverUrl`, `title`, or
+ * `isLoading` change.
+ */
 @Composable
 fun NextPageBookCover(
     coverUrl: String? = null,

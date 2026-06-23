@@ -38,13 +38,37 @@ import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
 
 /**
- * Settings section that displays the 5 customisable highlight colour
- * swatches and allows the user to edit each one or reset to defaults.
+ * Settings section that displays the five customizable highlight
+ * color swatches and lets the user edit each one or reset to
+ * defaults. Each swatch row opens an inline `AlertDialog` for
+ * entering a hex code.
  *
- * @param customColors the current custom palette (5 hex strings), or
- *  null to show [HighlightColor] enum defaults
- * @param onUpdateColor invoked with (index, hex) when a swatch is edited
- * @param onReset invoked when the user taps "Reset to defaults"
+ * @param customColors Current 5-color palette as hex strings, or
+ *   `null` to show the [HighlightColor] enum defaults. Exactly five
+ *   entries are expected; extras are ignored, fewer than five show
+ *   fewer rows.
+ * @param onUpdateColor Invoked with `(index, "#RRGGBB")` when the
+ *   user confirms a swatch edit. Called only for valid 6-char hex
+ *   strings (the dialog validates and silently rejects invalid
+ *   input on save).
+ * @param onReset Invoked when the user taps the "Reset to defaults"
+ *   row. The caller is expected to clear the custom palette (and
+ *   `customColors` will then be `null` on the next composition).
+ * @param modifier Modifier applied to the outer `Column`.
+ *
+ * **Visual**: subtitle in `bodySmall` `onSurfaceVariant`, then 5
+ *   `PaletteSwatchRow`s (32dp circle + uppercase hex, 12dp rounded
+ *   `surfaceVariant` background), then a full-width "Reset to
+ *   defaults" row tinted `colorScheme.error`. 16dp horizontal
+ *   padding, 8dp vertical spacing between rows.
+ * **Behavior**: tap a swatch → opens an `AlertDialog` with a color
+ *   preview circle and a single-line hex input. Confirming a valid
+ *   6-char hex calls [onUpdateColor(index, hex)]. Tapping the
+ *   reset row calls [onReset] immediately (no confirmation).
+ *   Internal `editingIndex`/`editorHex` state is `remember`-ed and
+ *   survives recomposition but not process death.
+ * **Recomposition**: recomposes when `customColors` or callbacks
+ *   change.
  */
 @Composable
 fun HighlightPaletteSection(

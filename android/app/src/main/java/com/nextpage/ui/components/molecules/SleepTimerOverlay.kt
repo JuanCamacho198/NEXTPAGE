@@ -24,9 +24,25 @@ import androidx.compose.ui.unit.sp
 import com.nextpage.R
 
 /**
- * Full-screen semi-transparent overlay shown when the sleep timer finishes.
+ * Full-screen overlay shown when the sleep timer fires. Centers a
+ * small "timer finished" card over a 60% scrim; any tap on the
+ * screen dismisses it via [onDismiss].
  *
- * Dismisses on any tap via [onDismiss].
+ * @param onDismiss Invoked when the user taps anywhere — the
+ *   scrim, the card itself, or any empty area. There is no
+ *   explicit "OK" button; tapping is the dismissal gesture.
+ *
+ * **Visual**: full-screen `Box` with `colorScheme.scrim` at 60%
+ *   alpha as the background. Centered `Card` (24dp rounded, 8dp
+ *   elevation, `surface` background) with 32dp padding. Inside: 48sp
+ *   stopwatch emoji `⏰`, `headlineSmall` bold title
+ *   (`R.string.reader_sleep_timer_finished_title`), and a
+ *   `bodyMedium` subtitle
+ *   (`R.string.reader_sleep_timer_tap_to_dismiss`) in
+ *   `onSurfaceVariant`.
+ * **Behavior**: any tap → [onDismiss]. No internal state, no
+ *   auto-dismiss timer.
+ * **Recomposition**: recomposes only when [onDismiss] changes.
  */
 @Composable
 fun SleepTimerOverlay(

@@ -35,6 +35,35 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.InputStream
 
+/**
+ * LibraryUiState — UI state for the Library screen (bookshelf).
+ *
+ * **Used by**: LibraryScreen
+ * **Mutated by**: [LibraryViewModel] (init block — Room/Sync observation),
+ *                 the filter/import/action state holders via callbacks, and
+ *                 direct updates from [LibraryViewModel.onPullToRefresh].
+ *
+ * @property books All books from the local library, unfiltered.
+ * @property isLoading `true` until the first emission from the library flow lands.
+ * @property isImporting `true` while an EPUB/PDF import is in progress.
+ * @property bookToDelete The book targeted for deletion (drives the confirm dialog).
+ * @property bookToEdit The book targeted for edit (drives the edit-book sheet).
+ * @property bookToShare The book targeted for share (drives the share intent).
+ * @property totalMinutesRead Cumulative reading time across all books (minutes).
+ * @property readingMinutesByBook Per-book reading time map (bookId → minutes) used for derived status.
+ * @property isSyncing `true` while the [SyncService] is running.
+ * @property isRefreshing `true` while a pull-to-refresh is in progress.
+ * @property pendingCount Number of pending sync operations queued.
+ * @property syncError Last sync error message, or `null`.
+ * @property statusFilter Active status filter id: `"all" | "reading" | "pending" | "completed"`.
+ * @property sortBy Active sort key: `"date_added" | "title" | "author" | "last_read"`.
+ * @property isGridView `true` for grid layout, `false` for list.
+ * @property searchQuery Current text in the search input (updates immediately).
+ * @property debouncedSearchQuery Debounced (300ms) value of [searchQuery] used for filtering.
+ * @property showSearch `true` when the search input is expanded.
+ * @property showFilterSheet `true` when the filter bottom sheet is open.
+ * @property filterFormat Format filter id: `"all" | <format token>`.
+ */
 data class LibraryUiState(
     val books: List<Book> = emptyList(),
     val isLoading: Boolean = true,
@@ -105,11 +134,30 @@ private fun sortBookList(
     }
 }
 
+/**
+ * One-shot events from the book-import flow.
+ *
+ * @property Success The import finished and the book is in the library.
+ * @property Failure The import failed; [message] is user-facing.
+ */
 sealed interface LibraryImportEvent {
     data class Success(val title: String) : LibraryImportEvent
     data class Failure(val message: String) : LibraryImportEvent
 }
 
+/**
+ * LibraryViewModel — Owns the bookshelf (book list) state and exposes a
+ * filtered/sorted/searched view of it. Wires Room observation, sync service
+ * observation, and delegates filter / import / action logic to dedicated
+ * state holders.
+ *
+ * @param libraryRepository Source of books + reading-time flows.
+ * @param importEpubBookUseCase Use case that copies and registers an EPUB file.
+ * @param syncService Sync scheduler and state stream.
+ * @param coverStorage Storage for cover images extracted from imported files.
+ * @param appContext Application context (used by the action holder to read file metadata).
+ * @param mainDispatcher Dispatcher for state updates; defaults to [Dispatchers.Main].
+ */
 class LibraryViewModel(
     private val libraryRepository: LibraryRepository,
     private val importEpubBookUseCase: ImportEpubBookUseCase,
@@ -120,9 +168,36 @@ class LibraryViewModel(
 ) : ViewModel() {
 
     private val mutableUiState = MutableStateFlow(LibraryUiState())
+    /**
+     * Raw [LibraryUiState] for the Library screen.
+     *
+     * **Emits when**: any underlying source updates — Room library flow,
+     *                total/per-book reading-time flows, sync state/pending
+     *                count, or any UI action (filter, import, delete, edit,
+     *                share, pull-to-refresh).
+     * **Initial value**: [LibraryUiState] with `isLoading = true`, empty lists.
+     * **Lifecycle**: hot, lifetime-scoped to the ViewModel.
+     */
     val uiState: StateFlow<LibraryUiState> = mutableUiState.asStateFlow()
 
-    /** Memoized searched/filtered/sorted books derived from [mutableUiState]. */
+    /**
+     * Books after applying status filter, format filter, debounced search, and sort.
+     *
+     * **Emits when**: `statusFilter` or `filterFormat` changes, the debounced
+     *                search query changes (300ms after `searchQuery`), the sort
+     *                key changes, or the underlying `books` / `readingMinutesByBook`
+     *                change.
+     * **Initial value**: `emptyList()` (no books visible until the first upstream
+     *                    emit and at least one subscriber is active).
+     * **Lifecycle**: `stateIn(WhileSubscribed(5000))` — only collects when at
+     *                least one subscriber is active, with a 5s grace period
+     *                for config changes.
+     *
+     * @see onSearchQueryChanged to update the search query (debounced).
+     * @see onStatusFilterChanged to filter by status.
+     * @see onSortByChanged to change sort order.
+     * @see onFilterFormatChanged to filter by format.
+     */
     val searchedBooks: StateFlow<List<Book>> = mutableUiState
         .map { state ->
             val byStatus = filterBooks(state.books, state.statusFilter, state.readingMinutesByBook)
@@ -138,9 +213,22 @@ class LibraryViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val mutableImportEvents = MutableSharedFlow<LibraryImportEvent>(extraBufferCapacity = 1)
+    /**
+     * One-shot events for import completion (success / failure).
+     *
+     * **Emits when**: an EPUB or PDF import finishes.
+     * **Backpressure**: SharedFlow with `extraBufferCapacity = 1` so a fast
+     *                  second import does not drop the first event silently.
+     */
     val importEvents: SharedFlow<LibraryImportEvent> = mutableImportEvents.asSharedFlow()
 
     private val _uiEvent = MutableSharedFlow<UiEvent>(extraBufferCapacity = 1)
+    /**
+     * One-shot UI events (snackbars, toasts) for non-import actions.
+     *
+     * **Emits when**: book-action holder emits a UI event (e.g. share, delete confirmation).
+     * **Backpressure**: SharedFlow with `extraBufferCapacity = 1`.
+     */
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
     // ── Holders ────────────────────────────────────────────────────────
@@ -237,22 +325,97 @@ class LibraryViewModel(
 
     // ── Delegation: Filter / Sort / Search ─────────────────────────────
 
+    /**
+     * Updates the active status filter.
+     *
+     * Side effects:
+     * 1. Delegates to [BookFilterStateHolder] which writes the new filter to
+     *    `mutableUiState.statusFilter`.
+     * 2. `searchedBooks` re-emits with the filtered list on the next tick.
+     *
+     * @param filter One of `"all"`, `"reading"`, `"pending"`, `"completed"`.
+     */
     fun onStatusFilterChanged(filter: String) = bookFilterStateHolder.onStatusFilterChanged(filter)
+    /**
+     * Updates the active sort key.
+     *
+     * Side effects:
+     * 1. Updates `mutableUiState.sortBy`.
+     * 2. `searchedBooks` re-emits sorted by the new key.
+     *
+     * @param sort One of `"date_added"`, `"title"`, `"author"`, `"last_read"`.
+     */
     fun onSortByChanged(sort: String) = bookFilterStateHolder.onSortByChanged(sort)
+    /**
+     * Toggles between grid and list view.
+     *
+     * Side effects: flips `mutableUiState.isGridView`.
+     */
     fun onToggleView() = bookFilterStateHolder.onToggleView()
+    /**
+     * Toggles the search input visibility.
+     *
+     * Side effects: flips `mutableUiState.showSearch`; clearing the query on close
+     *               is delegated to the filter state holder.
+     */
     fun onToggleSearch() = bookFilterStateHolder.onToggleSearch()
+    /**
+     * Updates the search query and triggers a debounced re-filter.
+     *
+     * Side effects:
+     * 1. Updates `mutableUiState.searchQuery` immediately (instant UI feedback).
+     * 2. Debounces 300ms before updating `mutableUiState.debouncedSearchQuery`.
+     * 3. `searchedBooks` re-emits with filtered results.
+     *
+     * @param query The new search text. Empty string clears the filter (returns all books).
+     */
     fun onSearchQueryChanged(query: String) = bookFilterStateHolder.onSearchQueryChanged(query)
+    /**
+     * Toggles the filter bottom sheet visibility.
+     *
+     * Side effects: flips `mutableUiState.showFilterSheet`.
+     */
     fun onToggleFilterSheet() = bookFilterStateHolder.onToggleFilterSheet()
+    /**
+     * Updates the active format filter.
+     *
+     * Side effects:
+     * 1. Updates `mutableUiState.filterFormat`.
+     * 2. `searchedBooks` re-emits with the format filter applied.
+     *
+     * @param format `"all"` to disable, or a format token to restrict to that format.
+     */
     fun onFilterFormatChanged(format: String) = bookFilterStateHolder.onFilterFormatChanged(format)
 
     // ── Delegation: Import ─────────────────────────────────────────────
 
+    /**
+     * Imports an EPUB file from disk.
+     *
+     * Side effects:
+     * 1. Delegates to [BookImportStateHolder] — sets `isImporting = true`.
+     * 2. On completion emits a [LibraryImportEvent.Success] or [LibraryImportEvent.Failure].
+     * 3. New book appears in the library via the Room flow observation.
+     *
+     * @param sourcePath Original filesystem path of the EPUB (used for cover extraction).
+     * @param fallbackTitle Title to use if the EPUB metadata has no title.
+     * @param inputStreamProvider Suspend function yielding a fresh [InputStream] over the file.
+     */
     fun importBookFromEpub(
         sourcePath: String,
         fallbackTitle: String?,
         inputStreamProvider: suspend () -> InputStream?
     ) = bookImportStateHolder.importBookFromEpub(sourcePath, fallbackTitle, inputStreamProvider)
 
+    /**
+     * Imports a PDF book from disk.
+     *
+     * Side effects: same as [importBookFromEpub] but for PDF files.
+     *
+     * @param sourcePath Original filesystem path of the PDF.
+     * @param fallbackTitle Title to use if the PDF metadata has no title.
+     * @param pdfFile The PDF file handle for streaming reads.
+     */
     fun importPdfBook(
         sourcePath: String,
         fallbackTitle: String?,
@@ -261,11 +424,29 @@ class LibraryViewModel(
 
     // ── Delegation: Actions (Delete / Edit / Share / Status) ──────────
 
+    /**
+     * Requests deletion of [book] — sets `bookToDelete` so the UI shows a confirmation dialog.
+     */
     fun requestDeleteBook(book: Book) = bookActionStateHolder.requestDeleteBook(book)
+    /** Dismisses the delete confirmation dialog. */
     fun dismissDeleteDialog() = bookActionStateHolder.dismissDeleteDialog()
+    /** Confirms deletion of the book staged in `bookToDelete`. */
     fun confirmDeleteBook() = bookActionStateHolder.confirmDeleteBook()
+    /**
+     * Requests edit of [book] — sets `bookToEdit` so the UI shows the edit sheet.
+     */
     fun requestEditBook(book: Book) = bookActionStateHolder.requestEditBook(book)
+    /** Dismisses the edit-book sheet. */
     fun dismissEditDialog() = bookActionStateHolder.dismissEditDialog()
+    /**
+     * Commits the edits to [book] and dismisses the edit sheet.
+     *
+     * @param book The original book being edited.
+     * @param title New title.
+     * @param author New author (nullable).
+     * @param description New description (nullable).
+     * @param coverBytes New cover image bytes, or `null` to keep the existing cover.
+     */
     fun confirmEditBook(
         book: Book,
         title: String,
@@ -273,12 +454,29 @@ class LibraryViewModel(
         description: String?,
         coverBytes: ByteArray?
     ) = bookActionStateHolder.confirmEditBook(book, title, author, description, coverBytes)
+    /**
+     * Marks [book] as completed in the local library.
+     */
     fun onMenuMarkCompleted(book: Book) = bookActionStateHolder.onMenuMarkCompleted(book)
+    /**
+     * Marks [book] as plan-to-read in the local library.
+     */
     fun onMenuMarkPlanToRead(book: Book) = bookActionStateHolder.onMenuMarkPlanToRead(book)
+    /**
+     * Stages [book] for sharing — sets `bookToShare` so the UI fires a share intent.
+     */
     fun onMenuShare(book: Book) = bookActionStateHolder.onMenuShare(book)
 
     // ── Sync (stays in ViewModel — cross-cutting concern) ──────────────
 
+    /**
+     * Triggers a pull-to-refresh sync.
+     *
+     * Side effects:
+     * 1. Sets `isRefreshing = true` immediately for the swipe indicator.
+     * 2. Calls [SyncService.schedulePull] — `isRefreshing` clears when sync state
+     *    transitions out of [SyncState.Running] (see init-block sync observation).
+     */
     fun onPullToRefresh() {
         mutableUiState.update { it.copy(isRefreshing = true) }
         viewModelScope.launch(mainDispatcher) {
@@ -287,6 +485,12 @@ class LibraryViewModel(
     }
 }
 
+/**
+ * ViewModelProvider.Factory for [LibraryViewModel].
+ *
+ * Use when the ViewModel cannot be constructor-injected by the DI container
+ * (e.g. legacy `viewModels()` call sites).
+ */
 class LibraryViewModelFactory(
     private val libraryRepository: LibraryRepository,
     private val syncService: SyncService,

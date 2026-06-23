@@ -44,13 +44,37 @@ import org.readium.r2.shared.publication.Publication
 typealias BookChapter = com.nextpage.presentation.viewmodel.reader.BookChapter
 
 /**
- * UI state for the Reader screen.
+ * ReaderUiState — Aggregate UI state for the Reader screen.
  *
- * NOTE: Not a `data class` because [selectionRect] is an Android [Rect]
- * whose `equals()` is not available in JVM unit tests. Custom
- * [equals]/[hashCode]/[toString] skip [selectionRect] — the rect is
- * transient UI-positioning data that should not influence state-flow
- * deduplication.
+ * This is the single state object consumed by the Reader composables.
+ * It is **not** a `data class` because [selectionRect] is an Android
+ * [Rect] whose `equals()` is not available in JVM unit tests — the
+ * custom [equals]/[hashCode]/[toString] skip [selectionRect] since
+ * it is transient UI-positioning data that should not influence
+ * state-flow deduplication.
+ *
+ * **Used by**: ReaderScreen
+ * **Mutated by**: [ReaderViewModel] init block (merges state from
+ *                 `lifecycleHolder`, `interactionHolder`, `searchStateHolder`,
+ *                 `fullscreenManager`, `settingsManager`, and `sleepTimerManager`).
+ *
+ * Field groups (see constructor below for the full list):
+ * - **Book identity & format**: [selectedBookId], [bookFilePath], [bookFormat]
+ * - **Pagination**: [chapters], [currentChapterIndex], [previewText],
+ *   [currentPdfPage], [totalPdfPages], [readingProgress]
+ * - **User data**: [highlights], [bookmarks], [readerSettings]
+ * - **Sleep timer**: [sleepTimerActive], [sleepTimerRemainingSecs], [sleepTimerFinished], [sleepTimerPresetMinutes], [sleepTimerEndOfChapterMode]
+ * - **Progress**: [progressPercent], [progressLabel]
+ * - **Search**: [isSearchActive], [searchQuery], [searchResults], [isSearching]
+ * - **Text selection**: [selectionState], [selectedText], [selectionRect],
+ *   [activeHighlightId], [highlightTapDebounceUntil], [menuJustClosedAt]
+ * - **Sheets / panels**: [showHighlightsSheet], [showTocSheet], [showSplitSettings]
+ * - **Fullscreen**: [isFullscreen]
+ * - **Readium (EPUB)**: [readiumPublication], [readiumLocator], [readiumSelectionLocator], [readiumViewportHeight]
+ * - **Anchored inputs**: [showColorPickerPopover], [showNoteModal], [activeNoteText],
+ *   [showTagInput], [activeTagText], [tagSuggestions],
+ *   [showDefinitionInput], [activeDefinitionText]
+ * - **Load status**: [isLoading], [loadTimeMs], [error]
  */
 @Immutable
 class ReaderUiState(
@@ -395,6 +419,28 @@ class ReaderUiState(
     }
 }
 
+/**
+ * ReaderViewModel — Owns the entire state of the Reader screen: book loading,
+ * pagination, text selection, highlights, bookmarks, search, sleep timer,
+ * settings, and fullscreen. Delegates focused sub-domains to dedicated
+ * state holders (`lifecycleHolder`, `interactionHolder`, `searchStateHolder`,
+ * `fullscreenManager`, `settingsManager`, `sleepTimerManager`) and merges
+ * their state streams into a single [ReaderUiState] in `init`.
+ *
+ * Public actions are grouped by responsibility — see the section comments
+ * throughout this file. The largest public surface is the text-selection
+ * flow ([onTextSelection], [onSelectHighlightColor], [onAnnotate], etc.),
+ * followed by EPUB/PDF navigation ([goToNextChapter], [goToPdfPage], etc.).
+ *
+ * @param application Application context (needed for the Android `ViewModel` superclass).
+ * @param readerRepository Source of book data, progress, and locator storage.
+ * @param readingStatsRepository Source of reading-time statistics.
+ * @param updateReadingProgressUseCase Use case that persists reading progress.
+ * @param readerPreferences Persistent user settings (font, theme, etc.). May be `null` in tests.
+ * @param defaultBookId Book to restore progress for on construction. May be `null`.
+ * @param dictionaryRepository Optional dictionary backing for the "add to dictionary" flow.
+ * @param mainDispatcher Dispatcher for state-collection coroutines. Defaults to [Dispatchers.Main].
+ */
 class ReaderViewModel(
     application: Application,
     private val readerRepository: ReaderRepository,
@@ -408,14 +454,48 @@ class ReaderViewModel(
     private val mutableUiState = MutableStateFlow(
         ReaderUiState(selectedBookId = defaultBookId)
     )
+    /**
+     * Aggregate reader UI state consumed by the ReaderScreen.
+     *
+     * **Emits when**: any underlying state holder (`lifecycleHolder`,
+     *                `interactionHolder`, `searchStateHolder`,
+     *                `fullscreenManager`, `settingsManager`, or
+     *                `sleepTimerManager`) emits a new value, or any
+     *                public action mutates state directly.
+     * **Initial value**: [ReaderUiState] with `selectedBookId = defaultBookId`
+     *                    and `isLoading = true` (or `false` if no
+     *                    `defaultBookId` was supplied).
+     * **Lifecycle**: hot, lifetime-scoped to the ViewModel.
+     */
     val uiState: StateFlow<ReaderUiState> = mutableUiState.asStateFlow()
 
+    /**
+     * Sleep timer manager — exposes the timer state and controls.
+     * Most callers should use the convenience functions
+     * ([startSleepTimer], [cancelSleepTimer], etc.) rather than touching
+     * this directly.
+     */
     val sleepTimerManager = SleepTimerManager(viewModelScope)
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
+    /**
+     * One-shot UI events for the reader (snackbars, toasts).
+     *
+     * **Emits when**: lifecycle or interaction holders emit a UI event
+     *                (e.g. import errors, save confirmations).
+     * **Backpressure**: default SharedFlow buffer; no replay.
+     */
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
     private val _navigateToLocator = MutableSharedFlow<Locator>()
+    /**
+     * One-shot navigation events carrying a Readium [Locator] to jump to
+     * (used by search-result taps and highlight-tap navigation).
+     *
+     * **Emits when**: a search result is selected (EPUB path) or a
+     *                highlight is tapped that has a stored locator.
+     * **Backpressure**: default SharedFlow buffer; no replay.
+     */
     val navigateToLocator: SharedFlow<Locator> = _navigateToLocator.asSharedFlow()
 
     // ── Cluster C state holders (extracted responsibilities) ──────────
@@ -456,7 +536,14 @@ class ReaderViewModel(
         mainDispatcher = mainDispatcher
     )
 
-    /** Emitted when the WebView selection should be cleared. Delegated to interaction holder. */
+    /**
+     * Emitted when the WebView/Readium selection should be cleared.
+     *
+     * **Emits when**: the lifecycle holder detects a book swap that should
+     *                wipe the in-flight selection (delegated to
+     *                [ReaderInteractionStateHolder]).
+     * **Backpressure**: default SharedFlow buffer; no replay.
+     */
     val clearSelectionEvent: SharedFlow<Unit> = interactionHolder.clearSelectionEvent
 
     init {
@@ -564,6 +651,20 @@ class ReaderViewModel(
 
     // ── Book Loading ──────────────────────────────────────────────────
 
+    /**
+     * Loads a new book into the reader, replacing any current selection.
+     *
+     * Side effects:
+     * 1. Clears `highlights`, `bookmarks`, and fullscreen state in [uiState].
+     * 2. Resets the fullscreen manager.
+     * 3. Delegates to `lifecycleHolder.loadBook` — the lifecycle state holder
+     *    will emit a new [ReaderUiState] with the book metadata, chapters,
+     *    publication (EPUB), and `isLoading = true` until the book is ready.
+     *
+     * @param bookId Database id of the book to load.
+     * @param filePath Absolute filesystem path to the book file.
+     * @param format `"epub"` or `"pdf"`. Defaults to `"epub"`.
+     */
     fun loadBook(bookId: String, filePath: String, format: String = "epub") {
         mutableUiState.update {
             it.copy(
@@ -578,33 +679,70 @@ class ReaderViewModel(
 
     // ── Readium Bridge ──────────────────────────────────────────────
 
+    /**
+     * Notifies the ViewModel that the Readium navigator moved to [locator]
+     * (e.g. user paginated, tapped a link). Persists reading progress and
+     * updates [ReaderUiState.readiumLocator].
+     */
     fun onReadiumLocatorChanged(locator: Locator) {
         lifecycleHolder.onReadiumLocatorChanged(locator)
     }
 
+    /** Notifies the ViewModel that the Readium viewport height changed; used for layout calculations. */
     fun onReadiumViewportChanged(height: Int) {
         lifecycleHolder.onReadiumViewportChanged(height)
     }
 
+    /** Notifies the ViewModel that a PDF document finished loading with [pages] total pages. */
     fun onPdfDocumentLoaded(pages: Int) {
         lifecycleHolder.onPdfDocumentLoaded(pages)
     }
 
     // ── Search (Gap 3) ──────────────────────────────────────────────
 
+    /**
+     * Toggles the in-reader search panel visibility. Delegates to
+     * [SearchStateHolder]; the resulting [ReaderUiState.isSearchActive]
+     * is merged back into [uiState].
+     */
     fun onToggleSearch() = searchStateHolder.onToggleSearch()
 
+    /**
+     * Updates the search query and triggers a debounced search.
+     *
+     * Side effects: delegates to [SearchStateHolder.onSearchQuery] which
+     * debounces input and (for EPUB) uses the active [Publication] to
+     * resolve matches; results land in [ReaderUiState.searchResults].
+     *
+     * @param query The new search text.
+     */
     fun onSearchQuery(query: String) {
         val state = mutableUiState.value
         searchStateHolder.onSearchQuery(query, state.readiumPublication, state.bookFormat)
     }
 
+    /** Clears the current search query and results without closing the search panel. */
     fun onClearSearch() = searchStateHolder.onClearSearch()
 
+    /** Dismisses the search panel and clears any in-flight search state. */
     fun onDismissSearch() = searchStateHolder.onDismissSearch()
 
+    /**
+     * Receives search results from the native PDF layer (JSON-encoded) and
+     * surfaces them as [SearchResult]s in [ReaderUiState.searchResults].
+     *
+     * @param json JSON payload produced by the PDF reader's search API.
+     */
     fun onPdfSearchResults(json: String) = searchStateHolder.onPdfSearchResults(json)
 
+    /**
+     * Jumps the reader to the location of [result].
+     *
+     * Side effects:
+     * 1. For EPUB: emits a [Locator] on [navigateToLocator] to scroll to the match.
+     * 2. For PDF: calls [goToPdfPage] with the match's page index.
+     * 3. Updates `currentChapterIndex` in [uiState] for the EPUB path.
+     */
     fun onSearchResultSelected(result: SearchResult) {
         val state = mutableUiState.value
         searchStateHolder.onSearchResultSelected(
@@ -617,15 +755,33 @@ class ReaderViewModel(
 
     // ── Text Selection (Gap 4) — delegated to Cluster B ─────────────
 
+    /**
+     * Handles a tap on an existing [highlight], opening the highlight
+     * action menu anchored to [rect].
+     */
     fun onHighlightTapped(highlight: Highlight, rect: RectF) =
         interactionHolder.onHighlightTapped(highlight, rect)
 
+    /**
+     * Low-level text-selection event from the WebView (coordinates + text).
+     * Prefer [onTextSelection] for new code paths.
+     */
     fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) =
         interactionHolder.onTextSelectionEvent(text, left, top, right, bottom)
 
+    /**
+     * Handles a text selection in the reader: shows the selection context
+     * menu anchored to [rect] and exposes the selected text via
+     * [ReaderUiState.selectedText].
+     */
     fun onTextSelection(text: String, rect: Rect) =
         interactionHolder.onTextSelection(text, rect)
 
+    /**
+     * Persists a new highlight with the given [color] for the active
+     * selection. Uses the current locator (Readium) or page (PDF) to
+     * store the position.
+     */
     fun onSelectHighlightColor(color: String) {
         val state = mutableUiState.value
         interactionHolder.onSelectHighlightColor(
@@ -639,10 +795,17 @@ class ReaderViewModel(
         )
     }
 
+    /** Copies the current [ReaderUiState.selectedText] to the system clipboard. */
     fun onCopySelectedText() = interactionHolder.onCopySelectedText()
 
+    /** Dismisses the active selection context menu without committing an action. */
     fun onDismissContextMenu() = interactionHolder.onDismissContextMenu()
 
+    /**
+     * Handles a Readium-flavoured text selection: stores the [locator] and
+     * [text] in [ReaderUiState.readiumSelectionLocator] / [selectedText]
+     * and shows the context menu anchored to [rect].
+     */
     fun onReadiumSelection(locator: Locator, rect: RectF, text: String) {
         val state = mutableUiState.value
         interactionHolder.onReadiumSelection(
@@ -654,26 +817,44 @@ class ReaderViewModel(
         )
     }
 
+    /**
+     * Clears the in-flight text selection (both UI state and any
+     * Readium-side highlight selection). Emits on [clearSelectionEvent]
+     * so the WebView/Readium layer can clear its native selection.
+     */
     fun onSelectionCleared() {
         interactionHolder.onSelectionCleared()
     }
 
     // ── Colour Picker Popover (Phase 2) ───────────────────────────
 
+    /** Shows the color-picker popover anchored near the current selection. */
     fun onShowColorPickerPopover() = interactionHolder.onShowColorPickerPopover()
 
+    /** Dismisses the color-picker popover. */
     fun onDismissColorPickerPopover() = interactionHolder.onDismissColorPickerPopover()
 
     // ── Note Modal ───────────────────────────────────────────────
 
+    /** Opens the note modal for the active selection. */
     fun onShowNoteModal() = interactionHolder.onShowNoteModal()
 
+    /** Dismisses the note modal without saving. */
     fun onDismissNoteModal() = interactionHolder.onDismissNoteModal()
 
+    /**
+     * Saves the note [text] attached to the current selection and dismisses
+     * the note modal.
+     */
     fun onSaveNote(text: String) = interactionHolder.onSaveNote(text)
 
     // ── Annotate (unified note/comment) ──────────────────────────
 
+    /**
+     * Persists the current selection as a free-form annotation (highlight
+     * with a note, no specific category). Uses the current Readium locator
+     * or PDF page to anchor the annotation.
+     */
     fun onAnnotate() {
         val state = mutableUiState.value
         interactionHolder.onAnnotate(
@@ -687,34 +868,55 @@ class ReaderViewModel(
 
     // ── Anchored Tag Input ───────────────────────────────────────
 
+    /** Opens the tag input anchored near the current selection. */
     fun onShowTagInput() = interactionHolder.onShowTagInput()
 
+    /** Dismisses the tag input. */
     fun onDismissTagInput() = interactionHolder.onDismissTagInput()
 
+    /** Updates the in-progress tag text and refreshes tag suggestions. */
     fun onTagTextChanged(text: String) = interactionHolder.onTagTextChanged(text)
 
+    /** Saves the current tag text against the active selection. */
     fun onSaveTag(text: String) = interactionHolder.onSaveTag(text)
 
     // ── Anchored Definition Input ─────────────────────────────────
 
+    /** Opens the dictionary-definition input anchored near the current selection. */
     fun onShowDefinitionInput() = interactionHolder.onShowDefinitionInput()
 
+    /** Dismisses the definition input. */
     fun onDismissDefinitionInput() = interactionHolder.onDismissDefinitionInput()
 
+    /** Updates the in-progress definition text. */
     fun onDefinitionTextChanged(text: String) = interactionHolder.onDefinitionTextChanged(text)
 
+    /** Saves the typed definition against the active selection. */
     fun onSaveDefinition(definition: String) = interactionHolder.onSaveDefinition(definition)
 
+    /**
+     * Adds the selected word (with its definition) to the user's dictionary.
+     * Requires [dictionaryRepository] to be wired at construction time.
+     */
     fun onAddToDictionary() = interactionHolder.onAddToDictionary()
 
     // ── Share ────────────────────────────────────────────────────
 
+    /**
+     * Fires a share intent for the currently selected text. Delegates to
+     * the interaction holder, which routes through [uiEvent].
+     */
     fun onShareSelectedText() {
         interactionHolder.onShareSelectedText(mutableUiState.value.selectedText)
     }
 
     // ── Readium Highlights (Phase 3+) ──────────────────────────────
 
+    /**
+     * Persists a Readium highlight with the given [color] for the active
+     * EPUB selection. Mirrors [onSelectHighlightColor] but is invoked from
+     * the Readium-native highlight menu.
+     */
     fun onReadiumHighlightColorSelected(color: String) {
         val state = mutableUiState.value
         interactionHolder.onReadiumHighlightColorSelected(
@@ -728,28 +930,53 @@ class ReaderViewModel(
         )
     }
 
+    /**
+     * Deletes the Readium highlight identified by [highlightId].
+     */
     fun onReadiumDeleteHighlight(highlightId: String) =
         interactionHolder.onReadiumDeleteHighlight(highlightId)
 
+    /**
+     * Updates the color of an existing Readium highlight to [color].
+     */
     fun onReadiumUpdateHighlightColor(highlightId: String, color: String) =
         interactionHolder.onReadiumUpdateHighlightColor(highlightId, color)
 
     // ── Debug: Force menu visibility ──────────────────────────────
 
+    /** Debug-only: forces the selection context menu to open for UI testing. */
     fun onDebugForceMenu() = interactionHolder.onDebugForceMenu()
 
+    /** Debug-only: forces the color picker popover to open for UI testing. */
     fun onDebugForceColorPicker() = interactionHolder.onDebugForceColorPicker()
 
     // ── Highlights Panel (Gap 5) ────────────────────────────────────
 
+    /** Toggles the highlights panel sheet visibility. */
     fun onToggleHighlightsPanel() = interactionHolder.onToggleHighlightsPanel()
 
+    /**
+     * Toggles the table-of-contents sheet visibility.
+     * Side effects: flips [ReaderUiState.showTocSheet] directly.
+     */
     fun onToggleTocSheet() {
         mutableUiState.update {
             it.copy(showTocSheet = !it.showTocSheet)
         }
     }
 
+    /**
+     * Navigates to the position of [highlight].
+     *
+     * Side effects:
+     * 1. For PDF highlights (`cfiRange` starts with `pdfpage:`): jumps to the
+     *    stored page via [goToPdfPage].
+     * 2. For EPUB highlights with a stored Readium locator: emits a
+     *    [Locator] on [navigateToLocator] for precise position.
+     * 3. For legacy EPUB highlights without a locator: extracts the chapter
+     *    index from the CFI string and navigates to the chapter start.
+     * 4. Closes the highlights sheet.
+     */
     fun onHighlightSelected(highlight: Highlight) {
         val cfi = highlight.cfiRange
         if (cfi.startsWith("pdfpage:")) {
@@ -779,9 +1006,20 @@ class ReaderViewModel(
 
     // ── Bookmarks ─────────────────────────────────────────────────
 
+    /**
+     * Creates a bookmark at [cfiLocation] for [bookId] with the given [titleOrSnippet].
+     *
+     * @param bookId Database id of the book.
+     * @param cfiLocation CFI string (EPUB) or `"pdfpage:<n>"` marker.
+     * @param titleOrSnippet User-supplied title or snippet to label the bookmark.
+     */
     fun createBookmark(bookId: String, cfiLocation: String, titleOrSnippet: String) =
         interactionHolder.createBookmark(bookId, cfiLocation, titleOrSnippet)
 
+    /**
+     * Creates a bookmark at the reader's current position using the
+     * active Readium locator (EPUB) or PDF page as the anchor.
+     */
     fun createBookmarkFromCurrentPosition() {
         val state = mutableUiState.value
         interactionHolder.createBookmarkFromCurrentPosition(
@@ -799,62 +1037,130 @@ class ReaderViewModel(
 
     // ── aA Settings ──────────────────────────────────────────────────
 
+    /** Toggles the "aA" font/spacing settings sheet. */
     fun onToggleSplitSettings() = settingsManager.onToggleSplitSettings()
 
     // ── Fullscreen ───────────────────────────────────────────────────
 
+    /** Toggles immersive fullscreen mode (hides system bars + reader chrome). */
     fun onToggleFullscreen() = fullscreenManager.onToggleFullscreen()
 
     // ── Custom Highlight Palette (Phase 4) ───────────────────────
 
+    /**
+     * Updates one of the user's custom highlight palette slots.
+     *
+     * @param index Palette slot index (0-based).
+     * @param hex Hex color string (e.g. `"#FFAA00"`).
+     */
     fun onUpdateCustomHighlightColor(index: Int, hex: String) =
         settingsManager.onUpdateCustomHighlightColor(index, hex)
 
+    /** Resets the custom highlight palette to its default values. */
     fun onResetCustomHighlightColors() = settingsManager.onResetCustomHighlightColors()
 
     // ── Sleep Timer (delegated to SleepTimerManager) ─────────────────
 
+    /**
+     * Starts a sleep timer that will close the reader (or finish at the
+     * end of the current chapter) after [minutes].
+     *
+     * @param minutes Duration in minutes. Pass `0` for end-of-chapter mode.
+     */
     fun startSleepTimer(minutes: Int) = sleepTimerManager.startTimer(minutes)
 
+    /** Cancels the active sleep timer. */
     fun cancelSleepTimer() = sleepTimerManager.cancel()
 
+    /** Dismisses the sleep-timer-finished overlay without cancelling. */
     fun dismissSleepTimerOverlay() = sleepTimerManager.dismissOverlay()
 
+    /**
+     * Formats the remaining seconds as a `mm:ss` / `h:mm:ss` string.
+     * @param secs Remaining seconds.
+     * @return Human-readable countdown string.
+     */
     fun formatSleepTimerRemaining(secs: Int): String = sleepTimerManager.formatRemaining(secs)
 
     // ── Reader Settings ──────────────────────────────────────────────
 
+    /**
+     * Replaces the entire [ReaderSettings] (font, size, theme, line height, etc.).
+     * Use this from a settings sheet "apply" action.
+     */
     fun updateReaderSettings(settings: ReaderSettings) = settingsManager.updateReaderSettings(settings)
 
     // ── Cluster A — Delegated to ReaderLifecycleStateHolder ─────────
 
+    /**
+     * Navigates to the next chapter in the EPUB TOC (no-op if already at the last chapter).
+     */
     fun goToNextChapter() = lifecycleHolder.goToNextChapter()
 
+    /** Navigates to the previous chapter in the EPUB TOC (no-op if already at the first chapter). */
     fun goToPreviousChapter() = lifecycleHolder.goToPreviousChapter()
 
+    /**
+     * Navigates to the chapter at [index] in the EPUB TOC.
+     * @param index Zero-based chapter index.
+     */
     fun goToChapter(index: Int) = lifecycleHolder.goToChapter(index)
 
+    /** Navigates to the next PDF page (no-op if already at the last page). */
     fun goToNextPdfPage() = lifecycleHolder.goToNextPdfPage()
 
+    /** Navigates to the previous PDF page (no-op if already at the first page). */
     fun goToPreviousPdfPage() = lifecycleHolder.goToPreviousPdfPage()
 
+    /**
+     * Jumps to [pageNumber] (1-based) in the current book.
+     * For EPUB this is the Readium position; for PDF it is the literal page.
+     */
     fun goToPage(pageNumber: Int) = lifecycleHolder.goToPage(pageNumber)
 
+    /**
+     * Jumps to [pageIndex] (1-based) in the current PDF.
+     * @param pageIndex 1-based page number.
+     */
     fun goToPdfPage(pageIndex: Int) = lifecycleHolder.goToPdfPage(pageIndex)
 
+    /**
+     * Handles a tap on a screen-edge tap-zone.
+     * @param isLeftZone `true` for the left third (page back), `false` for the right third (page forward).
+     */
     fun onTapZone(isLeftZone: Boolean) = lifecycleHolder.onTapZone(isLeftZone)
 
+    /**
+     * Persists reading progress at [percent] (0.0–1.0) without changing the locator.
+     * Used by the slider drag handler.
+     */
     fun onProgressChange(percent: Float) = lifecycleHolder.onProgressChange(percent)
 
+    /**
+     * Restores the last-saved progress for [bookId] from the repository and
+     * jumps the reader to that position. Called on screen open and on pull-to-refresh.
+     */
     fun restoreProgressForBook(bookId: String) = lifecycleHolder.restoreProgressForBook(bookId)
 
+    /**
+     * Persists the current reading position.
+     * @param bookId Database id of the book.
+     * @param cfiLocation CFI string (EPUB) or `"pdfpage:<n>"` marker.
+     * @param percentage Progress as a 0.0–1.0 float.
+     */
     fun updateProgress(bookId: String, cfiLocation: String, percentage: Float) =
         lifecycleHolder.updateProgress(bookId, cfiLocation, percentage)
 
+    /** Notifies the lifecycle holder that the reader screen was opened (starts the reading-time tracker). */
     fun onReaderOpened() = lifecycleHolder.onReaderOpened()
 
+    /** Notifies the lifecycle holder that the reader screen was paused (resumes the tracker when reopened). */
     fun onReaderPaused() = lifecycleHolder.onReaderPaused()
 
+    /**
+     * Notifies the lifecycle holder that the app went to background
+     * (flushes pending progress writes immediately).
+     */
     fun onReaderBackgrounded() = lifecycleHolder.onReaderBackgrounded()
 
     override fun onCleared() {

@@ -38,6 +38,21 @@ private val NextPageLightColorScheme = lightColorScheme(
     onError = TextPrimary
 )
 
+/**
+ * NextPageTheme — Root theme composable. Wrap your app's content with this
+ * to apply NextPage colors, typography, shapes, and [ExtendedColors].
+ *
+ * Behavior:
+ * - Adapts to the system dark/light setting via [darkTheme] (defaults to
+ *   [isSystemInDarkTheme]) — re-evaluates when the user toggles the system theme.
+ * - Provides [ExtendedColors] via [LocalExtendedColors] so the Reader background
+ *   and Statistics chart accents resolve to theme-appropriate values.
+ *
+ * @param darkTheme `true` to force dark scheme, `false` for light. Defaults to system.
+ * @param content The composable hierarchy that will receive this theme.
+ *
+ * @see NextPageTheme.colors for accessing the active [ExtendedColors] from a child composable.
+ */
 @Composable
 fun NextPageTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -56,7 +71,15 @@ fun NextPageTheme(
     }
 }
 
+/**
+ * NextPageTheme — Companion object exposing theme-level accessors.
+ *
+ * Use `NextPageTheme.colors` from any composable inside a [NextPageTheme] to
+ * read the active [ExtendedColors] (reading background, chart accent, header,
+ * border) without re-supplying the [LocalExtendedColors] lookup.
+ */
 object NextPageTheme {
+    /** The active [ExtendedColors] for the current theme. Must be called from a composable inside [NextPageTheme]. */
     val colors: ExtendedColors
         @Composable
         get() = LocalExtendedColors.current

@@ -12,10 +12,10 @@ The Auth flow is the canonical example. Read `data-flow.md` first; copy its skel
 
 The reference worked example is `data-flow.md` (in this folder). Lock in this structure for any new flow doc:
 
-1. **Outcome-oriented title** — start with the verb and the path (e.g. "Trace the Auth flow from Compose to Supabase").
+1. **Outcome-oriented title** — start with the verb and the path (e.g. "Trace the Auth flow from Compose to Google One Tap (Credential Manager) to session bootstrap").
 2. **One-paragraph summary** — name the actors and the outcome in five lines or fewer.
 3. **`## Quick path`** — three numbered steps the reader can execute to follow the flow in code.
-4. **`## Details`** — at least two subsections: call chain (with a Mermaid `sequenceDiagram`) and UI states (with a Mermaid `stateDiagram-v2`). Use tables for facts, not prose.
+4. **`## Details`** — at least two subsections: call chain (with a Mermaid `sequenceDiagram`) and UI states. For `data class`-based state holders (e.g., `AuthUiState(isLoading, errorMessage, currentSession)`), use a `flowchart` of flag transitions. Use `stateDiagram-v2` only for sealed-class state machines (none in the codebase today). Use tables for facts, not prose.
 5. **`## Checklist`** — one checkbox per spec scenario the doc satisfies.
 6. **`## Next step`** — link to a related doc.
 7. **`## Design Traceability`** — table mapping each code path to its Pencil node ID. Domain and data layers have no node by design; the table is the contract.
@@ -25,7 +25,7 @@ The reference worked example is `data-flow.md` (in this folder). Lock in this st
 - [ ] Title is outcome-oriented (verb + path).
 - [ ] One-paragraph summary names every actor.
 - [ ] `## Quick path` has ≥ 3 numbered steps.
-- [ ] `## Details` has a `sequenceDiagram` AND a `stateDiagram` (or strong reason to omit one).
+- [ ] `## Details` has a `sequenceDiagram` AND a state representation (a Mermaid `flowchart` for `data class` state holders, or `stateDiagram-v2` for sealed-class state machines — or strong reason to omit one).
 - [ ] `## Design Traceability` references every code path the doc touches.
 - [ ] `## Next step` points to the next doc a reader should open.
 

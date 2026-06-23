@@ -6,6 +6,19 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+/**
+ * Material 3 [Typography] scale for NextPage.
+ *
+ * Wires into [NextPageTheme] via `MaterialTheme.typography`. All styles share
+ * [FontFamily.SansSerif] (system default — no custom font files shipped).
+ *
+ * Scale overview (Material 3 spec):
+ * - `displayLarge` (57sp Bold) — hero/splash text, not used in current screens
+ * - `headline*` (32/28/24sp) — screen titles, section headers
+ * - `title*` (22/16/14sp) — card titles, dialog titles, list-item primaries
+ * - `body*` (16/14/12sp) — paragraph text, captions, helper text
+ * - `label*` (14/12/11sp) — buttons, chips, tab labels, dense metadata
+ */
 val NextPageTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,

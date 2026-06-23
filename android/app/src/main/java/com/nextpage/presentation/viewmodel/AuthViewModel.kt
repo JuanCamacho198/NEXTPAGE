@@ -20,13 +20,38 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
+/**
+ * Classifies the source of an auth failure so the UI can react differently
+ * (e.g. show a "fix config" CTA for [CONFIG_ERROR] vs. a generic error toast
+ * for [UNKNOWN]).
+ */
 enum class AuthFailureKind {
+    /** No failure — session is healthy or has not yet been attempted. */
     NONE,
+    /** Failure caused by missing/malformed auth configuration (build flag, keys). */
     CONFIG_ERROR,
+    /** Failure caused by a wiring/dependency problem in the auth chain. */
     WIRING_ERROR,
+    /** Failure that does not match the known categories. */
     UNKNOWN
 }
 
+/**
+ * AuthUiState — UI state for the authentication flow (sign-in / sign-up / sign-out).
+ *
+ * **Used by**: AuthScreen
+ * **Mutated by**: [AuthViewModel.startGoogleSignIn], [AuthViewModel.signUp],
+ *                 [AuthViewModel.signIn], [AuthViewModel.signOut],
+ *                 [AuthViewModel.continueLocally], [AuthViewModel.clearError],
+ *                 and the init-block session restoration.
+ *
+ * @property currentSession The active auth session, or `null` if signed out / not yet known.
+ * @property isConfigured `true` if the auth subsystem is configured at runtime (build keys present).
+ * @property hasWiringIssue `true` if a DI/dependency wiring problem was detected at startup.
+ * @property isLoading `true` while an auth call is in flight.
+ * @property errorMessage Human-readable error string from the last failed call (or `null`).
+ * @property failureKind Coarse classification of [errorMessage] (see [AuthFailureKind]).
+ */
 data class AuthUiState(
     val currentSession: AuthSession? = null,
     val isConfigured: Boolean = true,
@@ -36,6 +61,18 @@ data class AuthUiState(
     val failureKind: AuthFailureKind = AuthFailureKind.NONE
 )
 
+/**
+ * AuthViewModel — Owns the user's authentication state and exposes it as
+ * [uiState] for [com.nextpage.presentation.screen.AuthScreen]. Handles
+ * Google One Tap sign-in, email/password sign-up and sign-in, anonymous
+ * local continuation, and sign-out. On successful sign-in it bootstraps
+ * remote sync via [SyncService].
+ *
+ * @param authRepository Remote auth operations (Google, email, local session).
+ * @param syncService Sync bootstrap and pull/push scheduler.
+ * @param isAuthConfigured Build-time flag indicating auth keys are wired in.
+ * @param hasAuthWiringIssue Build-time flag indicating a DI wiring problem.
+ */
 class AuthViewModel(
     private val authRepository: AuthRepository,
     private val syncService: SyncService,
@@ -48,9 +85,25 @@ class AuthViewModel(
     }
 
     private val _uiState = MutableStateFlow(AuthUiState())
+    /**
+     * Current authentication state for the AuthScreen.
+     *
+     * **Emits when**: init (configuration flags + restored session), any auth
+     *                action (sign-in, sign-up, sign-out, continue-locally),
+     *                or [clearError] is called.
+     * **Initial value**: [AuthUiState] with `isConfigured = true`, `hasWiringIssue = false`,
+     *                    no session, not loading, no error.
+     * **Lifecycle**: hot, lifetime-scoped to the ViewModel.
+     */
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
+    /**
+     * One-shot UI events for snackbars (errors from failed auth calls).
+     *
+     * **Emits when**: a sign-in / sign-up / sign-out / continue-locally call fails.
+     * **Backpressure**: SharedFlow with default buffer; no replay for past events.
+     */
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
     init {
@@ -79,7 +132,15 @@ class AuthViewModel(
 
     /**
      * Initiates Google sign-in via Credential Manager One Tap (native bottom sheet).
-     * No browser redirect — the One Tap result is handled directly.
+     *
+     * Side effects:
+     * 1. Sets `isLoading = true` and clears any prior `errorMessage`/`failureKind`.
+     * 2. Calls [AuthRepository.signInWithGoogle] — One Tap result is handled directly,
+     *    no browser redirect, no OAuth callback.
+     * 3. On success: triggers sync for the new session and updates `currentSession`.
+     * 4. On failure: sets `errorMessage`/`failureKind` and emits a `ShowSnackbar` event.
+     *
+     * @see onGoogleAuthCallback (deprecated, no-op since One Tap replaced OAuth callback flow)
      */
     fun startGoogleSignIn() {
         viewModelScope.launch {
@@ -119,6 +180,18 @@ class AuthViewModel(
         // No-op: One Tap no longer uses browser callback
     }
 
+    /**
+     * Signs the user up with email and password.
+     *
+     * Side effects:
+     * 1. Sets `isLoading = true`, clears `errorMessage`.
+     * 2. Calls [AuthRepository.signUp].
+     * 3. On result: clears loading, sets `currentSession` (or leaves null on failure).
+     * 4. On failure: emits a `ShowSnackbar` event with the error message.
+     *
+     * @param email User email address.
+     * @param password Account password.
+     */
     fun signUp(email: String, password: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -134,6 +207,18 @@ class AuthViewModel(
         }
     }
 
+    /**
+     * Signs the user in with email and password.
+     *
+     * Side effects:
+     * 1. Sets `isLoading = true`, clears `errorMessage`.
+     * 2. Calls [AuthRepository.signIn].
+     * 3. On result: clears loading, sets `currentSession` (or leaves null on failure).
+     * 4. On failure: emits a `ShowSnackbar` event with the error message.
+     *
+     * @param email User email address.
+     * @param password Account password.
+     */
     fun signIn(email: String, password: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -149,6 +234,15 @@ class AuthViewModel(
         }
     }
 
+    /**
+     * Signs the user out and clears the local session.
+     *
+     * Side effects:
+     * 1. Calls [AuthRepository.signOut].
+     * 2. On success: `currentSession` becomes `null`.
+     * 3. On failure: `currentSession` is preserved, `errorMessage` is set,
+     *    and a `ShowSnackbar` event is emitted.
+     */
     fun signOut() {
         viewModelScope.launch {
             val result = authRepository.signOut()
@@ -163,6 +257,15 @@ class AuthViewModel(
         }
     }
 
+    /**
+     * Continues without a remote account — creates / restores a local-only session.
+     *
+     * Side effects:
+     * 1. Sets `isLoading = true`.
+     * 2. Calls [AuthRepository.signInLocally].
+     * 3. On result: clears loading, sets `currentSession` (or leaves null on failure).
+     * 4. On failure: emits a `ShowSnackbar` event with the error message.
+     */
     fun continueLocally() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -178,6 +281,14 @@ class AuthViewModel(
         }
     }
 
+    /**
+     * Clears the current error message and failure kind from [uiState].
+     *
+     * Side effects:
+     * 1. Sets `errorMessage = null` and `failureKind = AuthFailureKind.NONE`.
+     * 2. Does not emit a `UiEvent` — purely a local state reset (e.g. when the
+     *    user dismisses the error banner in the UI).
+     */
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null, failureKind = AuthFailureKind.NONE) }
     }
@@ -209,6 +320,12 @@ class AuthViewModel(
         syncService.schedulePush()
     }
 
+    /**
+     * ViewModelProvider.Factory for [AuthViewModel].
+     *
+     * Use when the ViewModel cannot be constructor-injected by the DI container
+     * (e.g. legacy `viewModels()` call sites).
+     */
     class Factory(
         private val authRepository: AuthRepository,
         private val syncService: SyncService,

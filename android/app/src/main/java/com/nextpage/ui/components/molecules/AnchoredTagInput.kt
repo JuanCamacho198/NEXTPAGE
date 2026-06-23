@@ -37,18 +37,35 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 
 /**
- * Anchored tag input card shown near a highlight.
+ * Anchored 280dp-wide card for attaching a tag to a highlight. Shows
+ * a single-line text field and (when [suggestions] is non-empty) a
+ * wrapping `FlowRow` of suggestion chips. Auto-requests focus and
+ * shows the soft keyboard on first composition.
  *
- * Displays a text field for the tag plus suggestion chips built from default
- * suggestions and existing tags. Requests focus immediately so the keyboard
- * appears.
+ * @param tag Current tag text. Hoisted state owned by the parent.
+ * @param suggestions Suggestion chips rendered below the text field.
+ *   Hidden when the list is empty.
+ * @param onTagChange Invoked on every keystroke.
+ * @param onSuggestionClick Invoked with the tapped suggestion's
+ *   text. The parent typically pre-fills the text field and may
+ *   auto-save.
+ * @param onSave Invoked when the user taps "Save" OR presses the
+ *   IME `Done` action.
+ * @param onDismiss Invoked when the user taps "Cancel".
+ * @param modifier Modifier applied to the outer `Surface`.
  *
- * @param tag current tag text
- * @param suggestions list of suggestion chips to show
- * @param onTagChange called when the user edits the text field
- * @param onSuggestionClick called when a suggestion chip is tapped
- * @param onSave called when the user confirms
- * @param onDismiss called when the user cancels
+ * **Visual**: 280dp-wide `Surface`, 16dp corners, 8dp elevation.
+ *   Single-line `OutlinedTextField` (label "Tag", `ImeAction.Done`).
+ *   Suggestions shown as pill chips (50% corner radius) with a
+ *   `outline` border, `surfaceContainerHighest` background, and
+ *   `primary` text. Footer: text-button "Cancel" + filled-button
+ *   "Save", right-aligned with 8dp gap.
+ * **Behavior**: `LaunchedEffect(Unit)` focuses the tag field and
+ *   opens the keyboard. Tapping a suggestion fires
+ *   [onSuggestionClick] only — it does NOT auto-save; the parent
+ *   decides whether to call [onSave] in response. Tapping "Save" or
+ *   the IME "Done" key both fire [onSave].
+ * **Recomposition**: recomposes when any parameter changes.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

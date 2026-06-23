@@ -38,6 +38,50 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 
+/**
+ * Card showing a single saved highlight: the highlight text, an
+ * optional attribution (e.g. "— Chapter 3"), an optional personal
+ * note, an optional tag chip, and an optional color label. The card
+ * has a 4dp-wide colored left edge in [accentColor] and an optional
+ * kebab menu (Edit note / Delete) on the right.
+ *
+ * @param content The highlighted text. Rendered in `bodyMedium` medium
+ *   weight, no line limit.
+ * @param accentColor Color used for the left edge stripe and the
+ *   color label chip background (15% alpha) / text (100% alpha).
+ * @param modifier Modifier applied to the outer `Surface`.
+ * @param attribution Optional source line (e.g. "— Chapter 3") shown
+ *   in `bodySmall` after the content. When `null` or blank, the
+ *   attribution row is hidden.
+ * @param note Optional personal note. When non-blank, rendered in
+ *   `bodySmall` below the attribution, capped at 3 lines with
+ *   ellipsis.
+ * @param tag Optional tag label rendered as a `primaryContainer`
+ *   chip. When [onTagClick] is also non-null, the chip is
+ *   clickable and fires it with the tag string.
+ * @param colorLabel Optional label for the highlight color (e.g.
+ *   "Yellow"). Rendered as a small chip tinted with [accentColor].
+ *   When `null`, the color-label chip is hidden.
+ * @param onEditNote Optional edit-note action. The kebab menu is
+ *   only rendered if either [onEditNote] or [onDelete] is non-null.
+ * @param onDelete Optional delete action. The "Delete" menu item is
+ *   tinted `colorScheme.error` to signal destructive intent.
+ * @param onTagClick Optional tag-chip click handler. When non-null
+ *   AND [tag] is non-null, the tag chip is clickable and fires
+ *   this callback with the tag string.
+ *
+ * **Visual**: 12dp-rounded `surfaceVariant` card with a 4dp left
+ *   edge in [accentColor]. Content padded 16dp on the sides and
+ *   bottom. Optional kebab icon (40dp) in the top-right corner.
+ * **Behavior**: the kebab menu is only shown when at least one of
+ *   [onEditNote]/[onDelete] is non-null. Tapping a menu item
+ *   dismisses the menu and calls the respective callback. Tapping
+ *   the tag chip (if [onTagClick] is wired) calls the callback with
+ *   the tag string.
+ * **Recomposition**: recomposes when `content`, `accentColor`, or
+ *   any of the optional params/callbacks change. Internal
+ *   `showMenu` state is `remember`-ed.
+ */
 @Composable
 fun NextPageHighlightCard(
     content: String,

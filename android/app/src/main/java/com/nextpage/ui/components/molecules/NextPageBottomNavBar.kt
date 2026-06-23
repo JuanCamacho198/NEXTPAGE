@@ -37,6 +37,31 @@ data class BottomNavItem(
     @DrawableRes val iconRes: Int
 )
 
+/**
+ * Bottom navigation bar with icon+label tabs. Equal-width tabs spread
+ * across the available width. The active tab is tinted
+ * `NextPageColors.navBarActive`; inactive tabs use
+ * `NextPageColors.navBarInactive`. The bar auto-applies
+ * `navigationBarsPadding` so it sits above the system nav bar.
+ *
+ * @param destinations Ordered list of tabs to render. Each item is a
+ *   [BottomNavItem] with `route`, `labelRes`, and `iconRes`.
+ * @param currentRoute Currently active route, or `null` if no tab is
+ *   active. Matched against each `dest.route` for the active state.
+ * @param onTabSelected Invoked with the selected tab's `route` when
+ *   the user taps any tab.
+ * @param modifier Modifier applied to the outer `Surface`.
+ *
+ * **Visual**: 64dp tall, `SpaceEvenly` layout, 20dp horizontal
+ *   padding, `NextPageColors.surface` background. Each tab shows an
+ *   icon (height `NextPageDimens.iconNavBar`) + 4dp gap + a
+ *   12sp medium-weight label.
+ * **Behavior**: tap a tab → [onTabSelected] with its `route`. No
+ *   internal state. Designed to be wired with the navigation graph's
+ *   `currentBackStackEntryAsState` for the active route.
+ * **Recomposition**: recomposes when `destinations`, `currentRoute`,
+ *   or `onTabSelected` change.
+ */
 @Composable
 fun NextPageBottomNavBar(
     destinations: List<BottomNavItem>,

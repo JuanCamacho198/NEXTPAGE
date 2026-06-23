@@ -21,6 +21,31 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 
+/**
+ * Modal bottom sheet for filtering the library by file format. Shows
+ * a single "Format" filter group with three mutually-exclusive chips
+ * (All, EPUB, PDF).
+ *
+ * @param selectedFormat Currently selected format id: `"all"`, `"epub"`,
+ *   or `"pdf"`. Compared case-sensitively.
+ * @param onFormatSelected Invoked with the new format id whenever the
+ *   user taps a chip. Note: the sheet does NOT auto-dismiss on
+ *   selection — the caller should pair this with a state update that
+ *   hides the sheet.
+ * @param onDismiss Invoked when the user swipes down, taps the scrim,
+ *   or presses back.
+ *
+ * **Visual**: standard Material 3 `ModalBottomSheet` with a
+ * `titleLarge` header ("Filter"), a `labelLarge` section label
+ * ("Format"), and a row of three `FilterChip`s with 16dp pill corners.
+ * Selected chip uses `colorScheme.primary` background and
+ * `colorScheme.onPrimary` label.
+ * **Behavior**: tap a chip → `onFormatSelected(id)`. The caller is
+ * responsible for closing the sheet (this differs from the
+ * `NextPageSelector` pattern where selection auto-dismisses).
+ * **Recomposition**: recomposes when `selectedFormat` or
+ * `onFormatSelected` changes.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterBottomSheet(

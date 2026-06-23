@@ -15,6 +15,36 @@ import com.nextpage.ui.components.atoms.NextPageBookCover
 import com.nextpage.ui.components.atoms.NextPageProgressBar
 import com.nextpage.ui.components.atoms.NextPageTypography
 
+/**
+ * Card representing a single book in the library list/grid. Shows a
+ * cover image, title, author, and a reading-progress bar, with a
+ * kebab-menu that opens edit/remove actions.
+ *
+ * @param title Book title rendered as a 2-line-clipped `titleMedium`.
+ * @param author Author name rendered as a 1-line-clipped `bodyMedium`
+ *   in `colorScheme.onSurfaceVariant`.
+ * @param progress Reading progress in `[0f, 1f]`. Clamped by the
+ *   underlying [NextPageProgressBar]. Values outside this range will
+ *   be clamped.
+ * @param modifier Modifier applied to the outer `Box`.
+ * @param onClick Invoked when the card body is tapped. The kebab icon
+ *   in the top-right corner does NOT trigger this — it opens the menu.
+ *   Default no-op.
+ * @param onDeleteClick Invoked when the user taps "Remove from library"
+ *   in the kebab menu. Default no-op.
+ *
+ * **Visual**: `Surface` with `shapes.medium` corners, 2dp elevation,
+ * 16dp internal padding. Cover image fills the width at 140dp height;
+ * progress bar fills the full width.
+ * **Behavior**: tap on the card → [onClick]. Tap on the kebab icon →
+ * opens a `DropdownMenu` with "Edit metadata" (currently a TODO
+ * navigation stub) and "Remove from library" (calls [onDeleteClick]).
+ * The kebab and card tap-targets are independent — tapping the kebab
+ * does NOT trigger [onClick].
+ * **Recomposition**: recomposes when `title`, `author`, `progress`,
+ * or the callbacks change. Internal `showMenu` state is hoisted via
+ * `remember` and does not survive recomposition.
+ */
 @Composable
 fun BookCard(
     title: String,

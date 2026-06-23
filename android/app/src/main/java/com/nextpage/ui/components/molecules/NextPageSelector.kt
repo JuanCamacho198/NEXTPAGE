@@ -28,6 +28,34 @@ data class SelectorOption(
     val icon: ImageVector? = null
 )
 
+/**
+ * Modal bottom sheet that lets the user pick one option from a list
+ * (radio-style). Wraps [NextPageBottomSheet] with a `LazyColumn` of
+ * options; the active option shows a checkmark. Tapping any option
+ * invokes [onOptionSelected] AND auto-dismisses the sheet.
+ *
+ * @param title Sheet title shown at the top.
+ * @param options The list of options. Order is preserved in the UI.
+ * @param selectedOptionId Id of the currently selected option. Used
+ *   to render the checkmark. Matched with `option.id` exactly.
+ * @param onOptionSelected Invoked with the chosen [SelectorOption]
+ *   when the user taps a row. The sheet auto-dismisses immediately
+ *   after via [onDismiss].
+ * @param onDismiss Invoked on swipe-down, scrim-tap, back-press, or
+ *   after a successful selection (the caller should clear the show-
+ *   state in the ViewModel).
+ *
+ * **Visual**: `NextPageBottomSheet` header + a vertically scrolling
+ *   list of rows. Each row shows (optional icon, label, optional
+ *   checkmark). The label is resolved as `option.label ?:
+ *   option.labelRes-stringResource ?: option.id`. The checkmark is
+ *   shown only on the row matching [selectedOptionId], tinted
+ *   `colorScheme.primary`.
+ * **Behavior**: tap a row → [onOptionSelected] then [onDismiss].
+ *   Standard sheet dismissal also calls [onDismiss].
+ * **Recomposition**: recomposes when `title`, `options`,
+ *   `selectedOptionId`, or callbacks change.
+ */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun NextPageSelector(

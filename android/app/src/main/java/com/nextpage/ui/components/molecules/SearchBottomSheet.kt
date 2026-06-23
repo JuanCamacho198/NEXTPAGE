@@ -47,10 +47,50 @@ import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.SearchResult
 
 /**
- * Bottom sheet for in-book text search.
+ * Modal bottom sheet for full-text search inside the current book.
+ * Owns no search state — the caller drives the query, results, and
+ * the loading flag.
  *
- * Design: drag handle, search input with lupa icon + clear button,
- * results count "Resultados (N)", results list with color markers.
+ * Visual design is locked to the dark reader theme (background
+ * `#161F33`, text `#DDE2F8`, accent `#ADC6FF`) — this sheet is
+ * intended to be shown on top of the dark reading surface.
+ *
+ * Design: drag handle → search input (lupa icon + clear button)
+ * → results count → results list with a per-chapter color marker
+ * (5-color rotating palette based on `chapterIndex % 5`).
+ *
+ * @param query Current search query text. Hoisted by the parent.
+ *   When non-empty, the clear (X) button is shown in the trailing
+ *   icon slot and the results count line is displayed.
+ * @param results Search results to display. When empty (and
+ *   [isSearching] is `false` and [query] is non-empty) the "no
+ *   results" placeholder is shown.
+ * @param isSearching `true` while a search is in flight. Renders a
+ *   centered `CircularProgressIndicator` in place of the results
+ *   list.
+ * @param onQueryChange Invoked on every keystroke in the search
+ *   field. The caller is expected to debounce and re-query.
+ * @param onClearQuery Invoked when the user taps the clear (X) icon.
+ *   Typically clears the query in the parent's state.
+ * @param onResultSelected Invoked with the tapped [SearchResult].
+ *   The sheet does NOT auto-dismiss — the parent typically closes
+ *   it after jumping to the result.
+ * @param onDismiss Invoked on swipe-down, scrim-tap, or back-press.
+ * @param modifier Modifier applied to the inner `Column`.
+ *
+ * **Visual**: dark `ModalBottomSheet` (24dp top corners). Drag
+ *   handle, 12dp-rounded search input (`#ADC6FF` focused border,
+ *   `#2F3445` unfocused, `#ADC6FF` cursor), 12dp gap, optional
+ *   results count (`#718096`), then 320dp `LazyColumn` of result
+ *   rows (4dp × 32dp color marker + 2-line text preview + chapter
+ *   number).
+ * **Behavior**: search input is a single-line `OutlinedTextField` with
+ *   `ImeAction.Search` (no IME action wired — caller handles query
+ *   lifecycle). The clear button only appears when [query] is
+ *   non-empty. The three render branches (loading, empty, results)
+ *   are mutually exclusive via `when`.
+ * **Recomposition**: recomposes when any parameter changes.
+ *   `LazyColumn` items are keyed by `"$chapterIndex-$offset"`.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -32,13 +32,35 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 
 /**
- * Anchored mini-input for saving a dictionary word with an optional definition.
+ * Anchored 280dp-wide card for adding/editing the user-supplied
+ * definition of a selected word (dictionary flow). Auto-requests
+ * focus and shows the soft keyboard on first composition.
  *
- * @param word the word being saved
- * @param definition current definition text
- * @param onDefinitionChange called when the definition changes
- * @param onSave called when the user confirms
- * @param onDismiss called when the user cancels
+ * @param word The word being defined. Rendered as a `titleSmall`
+ *   label above the text field. Caller is responsible for actually
+ *   saving this — this composable does not own dictionary state.
+ * @param definition Current definition text. Hoisted state owned by
+ *   the parent.
+ * @param onDefinitionChange Invoked on every keystroke in the
+ *   definition text field.
+ * @param onSave Invoked when the user taps the "Save" button OR
+ *   presses the IME `Done` action. The caller is expected to close
+ *   the surrounding overlay.
+ * @param onDismiss Invoked when the user taps "Cancel". The caller
+ *   is expected to close the surrounding overlay.
+ * @param modifier Modifier applied to the outer `Surface`.
+ *
+ * **Visual**: 280dp-wide `Surface` with 16dp corner radius, 8dp
+ *   elevation. Header: `titleSmall` word. Multi-line `OutlinedTextField`
+ *   with 2-4 line range, "Definition" label, surface-colored
+ *   container. Footer: text-button "Cancel" + filled-button "Save",
+ *   right-aligned with 8dp gap.
+ * **Behavior**: `LaunchedEffect(Unit)` requests focus on the
+ *   definition field and shows the soft keyboard. Tapping the IME
+ *   "Done" action fires the same [onSave] as the Save button.
+ *   The composable does NOT close itself on save — the caller
+ *   must trigger dismissal.
+ * **Recomposition**: recomposes when any parameter changes.
  */
 @Composable
 fun AnchoredDefinitionInput(

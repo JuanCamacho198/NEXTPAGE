@@ -63,22 +63,59 @@ val DEFAULT_HIGHLIGHT_PRESETS = listOf(
 )
 
 /**
- * kixeV color picker popover for selecting a highlight colour.
+ * kixeV color picker popover for selecting a highlight color. 220dp
+ * wide white card with five preset swatches, a black→hue→white
+ * spectrum canvas (draggable), a hue slider, and a hex text field.
+ * Owns its local state — selection is committed on preset-tap (with
+ * auto-dismiss) or implicit on hex-edit (no auto-dismiss; the
+ * caller should call [onDismiss]).
  *
  * Design matches Pencil node `kixeV`:
- * - White container (#ffffff), rounded 16dp, drop shadow, 220dp wide
- * - 5 colour presets in a row (20dp circles)
- * - Spectrum gradient Canvas (black→green→white), 128dp tall, draggable thumb
- * - Hue slider (red→yellow gradient track)
- * - Hex input field (pill-shaped, monospace font)
- * - Arrow pointing down (tooltip-style)
+ * - White `#FFFFFF` container, 16dp rounded, 12dp shadow, 220dp wide.
+ * - 5 preset circles (24dp) in a `SpaceEvenly` row.
+ * - 128dp spectrum gradient `Canvas` with a draggable thumb
+ *   (black→saturated color→white, based on current hue).
+ * - 20dp hue `Slider` (transparent track; visual hue gradient is
+ *   intended to be drawn by the parent via `Modifier.background` —
+ *   the current implementation falls back to the default track).
+ * - 40dp pill-shaped `OutlinedTextField` for the hex code,
+ *   monospace 12sp, with a "#" leading icon.
  *
- * @param customColors custom preset colours from settings; falls back to
- *   [DEFAULT_HIGHLIGHT_PRESETS] when `null` or < 5.
- * @param onColorSelected called with the hex colour when the user confirms.
- * @param onDismiss called when the user taps outside or cancels.
- * @param anchorX horizontal centre of the anchor point (e.g. FaPN3 centre).
- * @param anchorY vertical position to place the arrow tip.
+ * @param customColors Custom 5-color preset list. Falls back to
+ *   [DEFAULT_HIGHLIGHT_PRESETS] when `null` or fewer than 5 entries.
+ *   The first 5 entries are used.
+ * @param onColorSelected Invoked with the chosen hex color
+ *   (e.g. `"#4ADE80"`) when the user taps a preset (this also
+ *   auto-dismisses) or when the user types a valid 6-char hex in
+ *   the input (caller must dismiss).
+ * @param onDismiss Invoked when the caller wants to close the
+ *   popover (preset taps also call it). This composable does NOT
+ *   render a scrim or backdrop — the parent is expected to provide
+ *   tap-away handling (see [SelectionOverlay] for the pattern).
+ * @param anchorX Horizontal anchor in pixels (px). Used to position
+ *   the popover near the originating UI element. Default `0`.
+ * @param anchorY Vertical anchor in pixels (px) for the arrow tip.
+ *   The popover itself is offset using `Modifier.offset { ... }`
+ *   based on this value. Default `0`.
+ * @param modifier Modifier applied to the outer `Column`. (Note: the
+ *   parent usually wraps this in a `Modifier.offset` to position
+ *   the popover near the selection rect.)
+ *
+ * **Visual**: 220dp wide, white card with 12dp padding. Top row of
+ *   5 swatches (active swatch gets a 2dp `#1F2937` border). Below:
+ *   128dp spectrum bar with a white circular thumb, then a 20dp hue
+ *   slider, then a 40dp hex field with a leading "#". Hint text
+ *   "Confirm" at the bottom in 10sp gray.
+ * **Behavior**: tap a preset → [onColorSelected] + [onDismiss] +
+ *   state reset. Drag the spectrum thumb → updates `selectedColor`
+ *   locally (does NOT call [onColorSelected] — caller can read it
+ *   via a hoisted state pattern, or use the hex input). Slide the
+ *   hue → updates hue locally. Edit the hex field → on 6-char valid
+ *   input, sets `selectedColor` locally.
+ * **Recomposition**: recomposes when `customColors`, anchor values,
+ *   or callbacks change. Internal state (`selectedColor`, `hexInput`,
+ *   `hue`, `spectrumPosition`) is `remember`-ed and survives
+ *   recomposition.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

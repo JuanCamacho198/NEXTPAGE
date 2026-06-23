@@ -62,14 +62,56 @@ import com.nextpage.domain.model.ReaderTheme
 import com.nextpage.domain.model.ScrollMode
 
 /**
- * Split-layout settings panel that replaces the old ReadingSettingsSheet.
+ * Split-layout settings panel for the reader. Top 40% is a live text
+ * preview that reflects the current [ReaderSettings]; bottom 60% is
+ * the config panel (font, theme, font size, layout toggles,
+ * expandable sections for justification / margins / direction /
+ * audio).
  *
- * Design: Column(weight 0.4f + 0.6f)
- * - Top half: live Text preview with current settings applied
- * - Bottom half: config panel with drag handle + font selector + 4 theme circles
- *   + font size slider + layout toggles + switches + expandable sections
+ * The preview is a real `Text` composable that re-renders on every
+ * settings change — what you see here is what the reader will look
+ * like after applying these settings.
  *
- * Config panel bg: #191F2FFF, cornerRadius [24,24,0,0], shadow, drag handle.
+ * Visual design (locked to the dark reader theme):
+ * - Preview: background = `settings.theme.bgHex`, text =
+ *   `settings.theme.textHex`, with the configured
+ *   `fontSize`/`lineHeight`/`fontFamily`/`alignment` and
+ *   `leftMargin`/`rightMargin`.
+ * - Config panel: `#191F2F` background, 24dp top corners, 8dp shadow.
+ *
+ * @param settings Current reader settings. Drives the preview AND
+ *   the form controls (selected theme, slider position, switch
+ *   states).
+ * @param previewText Text to render in the live preview. When
+ *   blank, the `R.string.aa_preview_text` lorem-ipsum is used.
+ * @param onSettingsChanged Invoked with a new [ReaderSettings]
+ *   whenever the user changes any control. The composable does NOT
+ *   persist the change — the caller is in charge of saving it.
+ * @param onDismiss Invoked when the user taps the close X in the
+ *   panel header. (Note: this composable does not render a scrim
+ *   or sheet wrapper — it is intended to be embedded in a sheet
+ *   the caller controls.)
+ * @param modifier Modifier applied to the outer `Column`.
+ *
+ * **Visual**: outer `Column` with 12dp shadow, 24dp top corners.
+ *   Top half (weight 0.4f): live preview block with 20dp vertical
+ *   padding and the configured side margins. Bottom half
+ *   (weight 0.6f): 24dp top corners, scrollable, 20dp horizontal
+ *   padding, 32dp bottom padding. Contents: drag handle + header
+ *   (title + close X), font selector (`DropdownMenu` with Georgia/
+ *   Arial/Merriweather), 4 theme circles (Light/Sepia/Dark/OLED)
+ *   with labels, font-size slider (`A-` ... `A+` discrete steps
+ *   over `FontSizePreset.entries`), two `SettingsSwitchRow`s
+ *   (editor values, vertical scroll), and four `ExpandableSection`s
+ *   (justification, margins, direction, audio).
+ * **Behavior**: every control emits a new [ReaderSettings] through
+ *   [onSettingsChanged]. The vertical-scroll switch also flips
+ *   `scrollMode` between `VERTICAL` and `PAGINATED` automatically.
+ *   Expandable sections toggle locally; they don't round-trip
+ *   through the parent.
+ * **Recomposition**: recomposes when `settings`, `previewText`, or
+ *   callbacks change. Internal `showFontDropdown` and section
+ *   expansion flags are `remember`-ed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Suppress("UNUSED_PARAMETER")

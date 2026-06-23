@@ -30,6 +30,39 @@ data class FilterTab(
     val icon: ImageVector? = null
 )
 
+/**
+ * Horizontally scrolling row of pill-shaped filter tabs. The active
+ * tab uses `colorScheme.primary`; inactive tabs use
+ * `colorScheme.surfaceVariant`. Optionally shows a ">" indicator on
+ * the right edge when more tabs are available to the right (i.e.
+ * there is horizontal overflow in the scroll position).
+ *
+ * @param tabs Ordered list of tabs. Each [FilterTab] is `id` +
+ *   localized label (and optional icon).
+ * @param selectedTabId Id of the active tab. Must match one of
+ *   `tabs[*].id`; no tab is highlighted if the id is unknown.
+ * @param onTabSelected Invoked with the tapped tab's id.
+ * @param modifier Modifier applied to the outer `Box`.
+ * @param showOverflowIndicator `true` (default) to show a ">" hint
+ *   on the right edge when more tabs are scrollable. Set `false` to
+ *   hide it (e.g. when the parent already shows a different scroll
+ *   affordance).
+ *
+ * **Visual**: 20dp-pill `Surface` per tab, 14dp horizontal × 8dp
+ *   vertical padding. Active tab: `primary` background,
+ *   `onPrimary` text, semibold weight. Inactive tab:
+ *   `surfaceVariant` background, `onSurfaceVariant` text, normal
+ *   weight. Optional icon (16dp) before the label. The overflow
+ *   indicator is a `titleMedium` ">" in `colorScheme.primary` at
+ *   the right-center, with 8dp end padding.
+ * **Behavior**: tap a tab → [onTabSelected(tab.id)`. The horizontal
+ *   scroll state is owned internally; the overflow indicator is
+ *   derived from `ScrollState.canScrollForward` via
+ *   `derivedStateOf`.
+ * **Recomposition**: recomposes when `tabs`, `selectedTabId`, or
+ *   callbacks change; the overflow indicator recomposes only when
+ *   the scroll forward-ability flips.
+ */
 @Composable
 fun NextPageFilterTabs(
     tabs: List<FilterTab>,

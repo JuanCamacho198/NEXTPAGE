@@ -35,10 +35,37 @@ import com.nextpage.R
 import com.nextpage.presentation.viewmodel.reader.BookChapter
 
 /**
- * Bottom sheet listing the book's chapters.
+ * Modal bottom sheet that lists the book's chapters as a
+ * scrollable list. Tapping a row jumps to that chapter via
+ * [onChapterSelected] and auto-dismisses the sheet. The current
+ * chapter is highlighted with a left dot, a colored text, and a
+ * darker row background.
  *
- * Tap a row → [onChapterSelected] is invoked and the sheet closes.
- * The current chapter row is rendered with a distinct color and weight.
+ * Visual design is locked to the dark reader theme (background
+ * `#161F33`, text `#DDE2F8`, accent `#ADC6FF`) — this sheet is
+ * intended to be shown on top of the dark reading surface.
+ *
+ * @param chapters Ordered list of chapters. When empty, an
+ *   `R.string.highlights_empty` placeholder is shown.
+ * @param currentChapterIndex Index of the chapter the reader is
+ *   currently in. Used to highlight the active row. Out-of-range
+ *   values simply produce no highlight.
+ * @param onChapterSelected Invoked with the chosen index when the
+ *   user taps a row. The sheet auto-dismisses immediately after.
+ * @param onDismiss Invoked on swipe-down, scrim-tap, or back-press.
+ * @param modifier Modifier applied to the inner `Column`.
+ *
+ * **Visual**: dark-themed `ModalBottomSheet` with 24dp top corners.
+ *   Drag handle, `titleLarge` bold header, `HorizontalDivider`,
+ *   then a 420dp `LazyColumn` of `ChapterRow`s. Each row: 8dp dot
+ *   (current only) + title, 2-line ellipsized. Current row: blue
+ *   text (`#ADC6FF`), semibold, `#2F3445` background.
+ * **Behavior**: tap a row → [onChapterSelected(index)] + sheet
+ *   dismissal. No internal state. The list height is hard-capped at
+ *   420dp — if the book has more chapters, the list scrolls.
+ * **Recomposition**: recomposes when `chapters`, `currentChapterIndex`,
+ *   or callbacks change. New `LazyColumn` items are keyed implicitly
+ *   by their position in the list.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

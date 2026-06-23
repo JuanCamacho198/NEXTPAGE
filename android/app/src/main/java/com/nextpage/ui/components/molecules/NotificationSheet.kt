@@ -40,7 +40,19 @@ import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageDivider
 
 /**
- * A notification item model for display in [NotificationSheet].
+ * Plain-data model for a single row in [NotificationSheet].
+ *
+ * @property id Stable identifier (string) for the row. Currently
+ *   used only as a key for the row's `Compose` identity.
+ * @property icon Leading icon shown in a circular tinted badge.
+ * @property title Notification headline. Rendered in
+ *   `bodyLarge` semibold when [isUnread] is `true`, normal weight
+ *   otherwise. Capped at 1 line with ellipsis.
+ * @property body Notification body. Rendered in `bodyMedium`
+ *   `onSurfaceVariant`, capped at 2 lines with ellipsis.
+ * @property isUnread When `true`, an 8dp `colorScheme.primary` dot
+ *   is rendered to the right of the body. Defaults to `true` (most
+ *   notifications are unread when first shown).
  */
 data class NotificationItem(
     val id: String,
@@ -51,10 +63,25 @@ data class NotificationItem(
 )
 
 /**
- * BottomSheet showing a list of notification items (mocked data).
+ * Modal bottom sheet that shows a list of in-app notifications.
+ * Currently uses three hard-coded "mock" notifications (welcome,
+ * reading streak, library); the data list lives inside the
+ * composable and is not parameterized.
  *
- * Reusable across HomeScreen, SettingsScreen, and any other screen
- * that has a notification bell icon in its header.
+ * @param onDismiss Invoked on swipe-down, scrim-tap, back-press, or
+ *   when the user taps the close X in the header. The sheet does
+ *   NOT auto-dismiss on item tap (rows are non-interactive in the
+ *   current design).
+ *
+ * **Visual**: standard Material 3 `ModalBottomSheet` with
+ *   `surface` background and 16dp top corners. Header: "Notifications"
+ *   `titleLarge` bold + close X. Below: a `NextPageDivider`, then
+ *   3 rows of `NotificationRow` (icon badge + title + body + unread
+ *   dot), separated by dividers (except after the last row).
+ * **Behavior**: tap any row → no-op (rows are display-only).
+ *   Tap the close X or swipe → [onDismiss].
+ * **Recomposition**: recomposes when [onDismiss] changes. The
+ *   mock notification list is rebuilt on every composition.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

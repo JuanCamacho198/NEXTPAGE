@@ -218,6 +218,7 @@ Para inspeccionar nodos del diseño desde el MCP de Pencil:
 | Archivo | Propósito |
 |---------|-----------|
 | `.gitignore` | Ignora builds, IDE, secrets, graphify-out |
+| `docs/` | Documentación del proyecto (architecture, ui, diagrams, onboarding) |
 | `.docs/GENTLE_AI_ORCHESTRATOR_GUIDE.md` | Memoria técnica SDD + estado de pantallas vs diseño |
 | `graphify-out/` | Output de graphify (gitignored) |
 

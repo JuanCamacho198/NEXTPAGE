@@ -41,5 +41,6 @@ desktop/src-tauri/target/
 
 # Project-specific
 docs/
+!android/docs/
 openspec/
 CLAUDE.md

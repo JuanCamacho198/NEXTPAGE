@@ -14,6 +14,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -68,6 +70,7 @@ fun ReadiumPdfReaderContent(
     highlights: List<Highlight>,
     readerSettings: ReaderSettings,
     viewModel: ReaderViewModel,
+    onShowChrome: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current as FragmentActivity
@@ -219,22 +222,32 @@ fun ReadiumPdfReaderContent(
         }
     }
 
-    AndroidView(
-        factory = { ctx ->
-            FragmentContainerView(ctx).also { view ->
-                view.id = containerId
-                view.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
-                    override fun onViewAttachedToWindow(v: android.view.View) {
-                        containerReady = true
-                    }
-                    override fun onViewDetachedFromWindow(v: android.view.View) {}
-                })
+    Box(modifier = modifier) {
+        AndroidView(
+            factory = { ctx ->
+                FragmentContainerView(ctx).also { view ->
+                    view.id = containerId
+                    view.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
+                        override fun onViewAttachedToWindow(v: android.view.View) {
+                            containerReady = true
+                        }
+                        override fun onViewDetachedFromWindow(v: android.view.View) {}
+                    })
+                }
+            },
+            modifier = Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
+                viewModel.onReadiumViewportChanged(coordinates.size.height)
             }
-        },
-        modifier = modifier.onGloballyPositioned { coordinates ->
-            viewModel.onReadiumViewportChanged(coordinates.size.height)
+        )
+
+        // Edge-tap zones (top + bottom 5%) for re-showing the chrome. See
+        // [ChromeEdgeTapZones] in ReadiumReaderContent for the full rationale —
+        // the middle 90% has no overlay so the PDF fragment's own gestures
+        // (swipe to change page, pinch to zoom) work without interference.
+        if (onShowChrome != null) {
+            ChromeEdgeTapZones(onShowChrome = { onShowChrome() })
         }
-    )
+    }
 }
 
 // ── Utilities ────────────────────────────────────────────────────────

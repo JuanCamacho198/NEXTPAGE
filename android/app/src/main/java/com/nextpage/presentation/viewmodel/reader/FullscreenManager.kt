@@ -17,6 +17,14 @@ class FullscreenManager {
         _state.update { it.copy(isFullscreen = !it.isFullscreen) }
     }
 
+    /**
+     * Idempotently enters fullscreen (immersive) mode. Used to auto-enter
+     * the reader's immersive reading mode when a book is opened.
+     */
+    fun enterFullscreen() {
+        _state.update { it.copy(isFullscreen = true) }
+    }
+
     fun reset() {
         _state.value = FullscreenState()
     }

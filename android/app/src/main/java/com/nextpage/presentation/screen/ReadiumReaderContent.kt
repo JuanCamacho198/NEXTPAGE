@@ -9,15 +9,24 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -35,6 +44,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.readium.r2.navigator.DecorableNavigator
 import org.readium.r2.navigator.Decoration
@@ -84,11 +94,17 @@ fun ReadiumReaderContent(
     initialLocator: Locator? = null,
     inspectHighlightsHtmlTrigger: SharedFlow<Unit> = MutableSharedFlow(),
     logWebViewTreeTrigger: SharedFlow<Unit> = MutableSharedFlow(),
+    onShowChrome: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current as FragmentActivity
     val fragmentManager = remember { context.supportFragmentManager }
     val containerId = remember { View.generateViewId() }
+    // Coroutine scope used by the decoration listener to probe
+    // selectable.currentSelection() (a suspend function) when it can't
+    // decide synchronously whether the user is creating a new selection
+    // or tapping an existing highlight.
+    val tapProbeScope = rememberCoroutineScope()
 
     // Create the EpubNavigatorFactory — Readium 3.x pattern
     val navigatorFactory = remember(publication, navigatorConfig) {
@@ -103,29 +119,51 @@ fun ReadiumReaderContent(
     // empty list.
     val latestHighlights by rememberUpdatedState(highlights)
 
-    // ── Commit EpubNavigatorFragment ──────────────────────────────
-    LaunchedEffect(containerReady) {
-        if (!containerReady) return@LaunchedEffect
+    // ── Reset container readiness when the publication changes ──
+    // We also remove the stale fragment from the previous book here,
+    // BEFORE resetting containerReady. The FragmentContainerView is
+    // already attached (the AndroidView is in the tree), so the
+    // OnAttachStateChangeListener that used to gate containerReady
+    // would not refire on subsequent loads — that's the original bug.
+    // Instead, onGloballyPositioned (see the AndroidView below) sets
+    // containerReady = true on the next layout pass, which is triggered
+    // by removing/adding fragments or by recomposition.
+    LaunchedEffect(publication) {
         val tag = "ReadiumNavigator"
         val existing = fragmentManager.findFragmentByTag(tag)
-        if (existing == null) {
-            val resolvedLocator = initialLocator
-                ?: publication.readingOrder.firstOrNull()?.let {
-                    publication.locatorFromLink(it)
-                }
-            if (resolvedLocator == null) return@LaunchedEffect
-            // Note: the native ActionMode (Copy/Share/Translate) is suppressed
-            // by installing [SuppressSelectionActionMode] on the underlying
-            // WebView once the fragment view is created (see below). In newer
-            // Readium versions this can be done via fragment configuration,
-            // but 3.2.0 does not expose that hook.
-            val factory = navigatorFactory.createFragmentFactory(
-                initialLocator = resolvedLocator
-            )
-            fragmentManager.fragmentFactory = factory
-            fragmentManager.commit {
-                add(containerId, EpubNavigatorFragment::class.java, Bundle(), tag)
+        if (existing != null) {
+            fragmentManager.commit { remove(existing) }
+            fragmentManager.executePendingTransactions()
+        }
+        containerReady = false
+    }
+
+    // ── Commit EpubNavigatorFragment ──────────────────────────────
+    // Keyed on BOTH publication and containerReady so the effect re-fires
+    // when a new book is loaded (publication changes) and when the
+    // container becomes ready. The stale fragment from the previous load
+    // is removed in the publication-keyed LaunchedEffect above; here we
+    // just create the new one once the container is laid out
+    // (containerReady = true from onGloballyPositioned).
+    LaunchedEffect(publication, containerReady) {
+        if (!containerReady) return@LaunchedEffect
+        val tag = "ReadiumNavigator"
+        val resolvedLocator = initialLocator
+            ?: publication.readingOrder.firstOrNull()?.let {
+                publication.locatorFromLink(it)
             }
+        if (resolvedLocator == null) return@LaunchedEffect
+        // Note: the native ActionMode (Copy/Share/Translate) is suppressed
+        // by installing [SuppressSelectionActionMode] on the underlying
+        // WebView once the fragment view is created (see below). In newer
+        // Readium versions this can be done via fragment configuration,
+        // but 3.2.0 does not expose that hook.
+        val factory = navigatorFactory.createFragmentFactory(
+            initialLocator = resolvedLocator
+        )
+        fragmentManager.fragmentFactory = factory
+        fragmentManager.commit {
+            add(containerId, EpubNavigatorFragment::class.java, Bundle(), tag)
         }
         delay(200)
         navigatorFragment = fragmentManager.findFragmentByTag(tag) as? EpubNavigatorFragment
@@ -251,9 +289,16 @@ fun ReadiumReaderContent(
     // Registers a listener so tapping an existing highlight opens our
     // FloatingContextMenu anchored to the highlight rect, instead of doing
     // nothing.
+    //
+    // Guard: if the user is currently creating a NEW text selection (long-press
+    // + drag) that happens to overlap a decoration span, Readium fires
+    // onDecorationActivated. We must NOT treat that as a highlight tap — the
+    // polling loop will resolve the new selection correctly. Only proceed when
+    // no selection is being created.
     DisposableEffect(navigatorFragment) {
         val frag = navigatorFragment
         val decorable = frag as? DecorableNavigator
+        val selectable = frag as? SelectableNavigator
         val listener = if (decorable != null) {
             object : DecorableNavigator.Listener {
                 override fun onDecorationActivated(
@@ -276,6 +321,14 @@ fun ReadiumReaderContent(
                         DebugLog.warn("Readium", "Decoration group mismatch (got ${event.group})")
                         return false
                     }
+                    // If the user is creating a new text selection that happens
+                    // to touch a decoration span, this is a long-press, not a
+                    // highlight tap. Defer to the polling loop which will set
+                    // the correct New / Existing state.
+                    //
+                    // currentSelection() is suspend, so we probe it on the
+                    // composable scope after a short delay. If by then a
+                    // selection is being created, skip the highlight tap.
                     val rect: RectF = event.rect ?: return false
                     val highlight = latestHighlights.firstOrNull { it.id == event.decoration.id }
                     if (highlight == null) {
@@ -287,6 +340,27 @@ fun ReadiumReaderContent(
                         return false
                     }
                     DebugStateHolder.recordHighlightActivation(event.decoration.id, rectString)
+                    if (selectable != null) {
+                        tapProbeScope.launch {
+                            try {
+                                delay(80)
+                                val currentSel = try {
+                                    selectable.currentSelection()
+                                } catch (_: Throwable) { null }
+                                if (currentSel != null) {
+                                    DebugLog.info(
+                                        "Readium",
+                                        "onDecorationActivated SKIPPED: user is creating a new selection (id=${event.decoration.id})"
+                                    )
+                                    return@launch
+                                }
+                            } catch (_: Throwable) {
+                                // Probe failed — fall through and treat as a tap
+                            }
+                            viewModel.onHighlightTapped(highlight, rect)
+                        }
+                        return true
+                    }
                     viewModel.onHighlightTapped(highlight, rect)
                     return true
                 }
@@ -511,22 +585,36 @@ fun ReadiumReaderContent(
         }
     }
 
-    AndroidView(
-        factory = { ctx ->
-            FragmentContainerView(ctx).also { view ->
-                view.id = containerId
-                view.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
-                    override fun onViewAttachedToWindow(v: android.view.View) {
-                        containerReady = true
-                    }
-                    override fun onViewDetachedFromWindow(v: android.view.View) {}
-                })
+    // Keep latest onShowChrome reachable from the long-lived pointerInput
+    // without restarting the gesture detector on every recomposition.
+    val currentOnShowChrome by rememberUpdatedState(onShowChrome)
+
+    Box(modifier = modifier) {
+        AndroidView(
+            factory = { ctx ->
+                FragmentContainerView(ctx).apply {
+                    id = containerId
+                }
+            },
+            modifier = Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
+                // Mark the container ready on the first layout pass. The
+                // FragmentContainerView is already attached when this fires,
+                // so this is more reliable than OnAttachStateChangeListener
+                // (which only fires on attach/detach transitions and would
+                // never refire on subsequent book loads — the original bug).
+                if (!containerReady) containerReady = true
+                viewModel.onReadiumViewportChanged(coordinates.size.height)
             }
-        },
-        modifier = modifier.onGloballyPositioned { coordinates ->
-            viewModel.onReadiumViewportChanged(coordinates.size.height)
+        )
+        // Edge-tap zones (top + bottom 5%) for re-showing the chrome.
+        // The middle 90% has NO overlay, so the WebView receives touches
+        // natively — long-press for text selection, scroll, link taps all
+        // work without interference. See [ChromeEdgeTapZones] for the
+        // implementation shared with the PDF reader.
+        if (currentOnShowChrome != null) {
+            ChromeEdgeTapZones(onShowChrome = { currentOnShowChrome?.invoke() })
         }
-    )
+    }
 }
 
 // ── Utilities ──────────────────────────────────────────────────────
@@ -657,19 +745,22 @@ private fun installActionModeCallback(root: View) {
 
 private fun installActionModeCallbackOnWebView(webView: WebView) {
     try {
+        // Use getDeclaredMethod so that Readium's R2WebView subclass
+        // (which may hide or override the parent) does not block access.
+        // getMethod only finds public methods; getDeclaredMethod finds
+        // all methods including package-private overrides.
         val method = try {
-            // First try the actual runtime class (handles R2WebView overrides)
-            webView.javaClass.getMethod(
+            webView.javaClass.getDeclaredMethod(
                 "setCustomSelectionActionModeCallback",
                 ActionMode.Callback::class.java
             )
         } catch (e: NoSuchMethodException) {
-            // Fallback to the public WebView class
-            WebView::class.java.getMethod(
+            WebView::class.java.getDeclaredMethod(
                 "setCustomSelectionActionModeCallback",
                 ActionMode.Callback::class.java
             )
         }
+        method.isAccessible = true
         method.invoke(webView, SuppressSelectionActionMode)
         // Also block the long-press context menu as a defensive layer.
         runCatching { webView.isLongClickable = false }
@@ -677,7 +768,53 @@ private fun installActionModeCallbackOnWebView(webView: WebView) {
         Log.d("ReadiumReaderContent", "Installed custom selection ActionMode callback on ${webView.javaClass.simpleName}")
         DebugLog.success("ActionMode", "Callback installed on ${webView.javaClass.simpleName}")
     } catch (e: Throwable) {
-        Log.e("ReadiumReaderContent", "Failed to install ActionMode callback", e)
-        DebugLog.error("ActionMode", "Failed to install callback: ${e::class.java.simpleName}: ${e.message}")
+        // The ActionMode suppression is a nice-to-have — if it fails the
+        // native toolbar may appear alongside our custom overlay, but core
+        // functionality is not affected.  Downgrade from ERROR to WARN.
+        Log.w("ReadiumReaderContent", "Failed to install ActionMode callback (non-critical)", e)
+        DebugLog.warn("ActionMode", "Callback not installed (non-critical): ${e::class.java.simpleName}: ${e.message}")
+    }
+}
+
+/**
+ * Edge-tap zones (top + bottom 5% of the parent) that re-show the reader
+ * chrome (header + footer). Tapping either edge calls [onShowChrome],
+ * which the screen wires to set `controlsVisible = true` and reset the
+ * auto-hide timer.
+ *
+ * The middle 90% of the parent has NO overlay, so the WebView or PDF
+ * fragment receives touches natively — long-press triggers text
+ * selection, drag scrolls the page, and link taps work without
+ * interference from the chrome toggle. This replaces the previous
+ * full-screen tap-to-toggle, which conflicted with text selection.
+ *
+ * Shared by [ReadiumReaderContent] (EPUB) and [ReadiumPdfReaderContent]
+ * (PDF) so both readers behave consistently.
+ */
+@Composable
+internal fun ChromeEdgeTapZones(
+    onShowChrome: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val edgeHeight = maxHeight * 0.05f
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(edgeHeight)
+                .align(Alignment.TopCenter)
+                .pointerInput(onShowChrome) {
+                    detectTapGestures(onTap = { onShowChrome() })
+                }
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(edgeHeight)
+                .align(Alignment.BottomCenter)
+                .pointerInput(onShowChrome) {
+                    detectTapGestures(onTap = { onShowChrome() })
+                }
+        )
     }
 }

@@ -1,9 +1,13 @@
 package com.nextpage.presentation.screen
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -16,18 +20,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.Toc
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.FullscreenExit
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.TextIncrease
 import androidx.compose.material3.Icon
@@ -55,6 +53,9 @@ private val HEADER_FG = Color(0xFFDDE2F8)
 private val HEADER_AUTHOR_FG = Color(0xFFC2C6D6)
 private val BUTTON_BG = Color(0xFF2F3445)
 
+/** Duration (ms) of the header/footer show/hide animation. */
+private const val CHROME_ANIM_MS = 300
+
 // ── ReaderChrome: structural layout ────────────────────────────────
 
 /**
@@ -63,17 +64,18 @@ private val BUTTON_BG = Color(0xFF2F3445)
  * and overlays (search, highlights, settings, sleep timer, etc.)
  * on top of the dark reader background.
  *
- * @param isFullscreen when true, header and footer are hidden (immersive).
- * @param controlsVisible when true (and [isFullscreen] is true), the
- *   floating close button is rendered. Auto-hidden after inactivity by the
- *   caller. Has no effect when [isFullscreen] is false.
+ * The reader is always in immersive (fullscreen) mode. The header and
+ * footer are toggled by [controlsVisible] and animate in/out with a
+ * slide + fade transition — they are never removed from the layout
+ * abruptly.
+ *
+ * @param controlsVisible drives the animated show/hide of the header
+ *   and footer. Auto-toggled by the caller (tap to show, inactivity to hide).
  * @param contentModifier Modifier applied to the content Box (useful for
  *   attaching tap / gesture handlers that observe content taps).
  */
 @Composable
 fun ReaderChrome(
-    isFullscreen: Boolean,
-    onToggleFullscreen: () -> Unit,
     contentPadding: PaddingValues,
     header: @Composable () -> Unit,
     footer: @Composable () -> Unit,
@@ -89,7 +91,19 @@ fun ReaderChrome(
             .padding(contentPadding)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            if (!isFullscreen) header()
+            AnimatedVisibility(
+                visible = controlsVisible,
+                enter = slideInVertically(
+                    animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
+                    initialOffsetY = { -it }
+                ) + fadeIn(animationSpec = tween(CHROME_ANIM_MS)),
+                exit = slideOutVertically(
+                    animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
+                    targetOffsetY = { -it }
+                ) + fadeOut(animationSpec = tween(CHROME_ANIM_MS))
+            ) {
+                header()
+            }
 
             Box(
                 modifier = Modifier
@@ -104,28 +118,18 @@ fun ReaderChrome(
                 content()
             }
 
-            if (!isFullscreen) footer()
-        }
-
-        // Floating close button — visible only in fullscreen mode and
-        // while controls are not auto-hidden.
-        if (isFullscreen && controlsVisible) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 12.dp, end = 12.dp)
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0x992F3445))
-                    .clickable { onToggleFullscreen() },
-                contentAlignment = Alignment.Center
+            AnimatedVisibility(
+                visible = controlsVisible,
+                enter = slideInVertically(
+                    animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
+                    initialOffsetY = { it }
+                ) + fadeIn(animationSpec = tween(CHROME_ANIM_MS)),
+                exit = slideOutVertically(
+                    animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
+                    targetOffsetY = { it }
+                ) + fadeOut(animationSpec = tween(CHROME_ANIM_MS))
             ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.fullscreen_exit),
-                    tint = HEADER_FG,
-                    modifier = Modifier.size(22.dp)
-                )
+                footer()
             }
         }
 
@@ -135,18 +139,16 @@ fun ReaderChrome(
 
 // ── Header Component ──────────────────────────────────────────────
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ReaderHeader(
     uiState: ReaderUiState,
     onNavigateBack: () -> Unit,
-    onToggleFullscreen: () -> Unit,
     onToggleSearch: () -> Unit,
     onToggleHighlights: () -> Unit,
     onCreateBookmark: () -> Unit,
     onToggleSplitSettings: () -> Unit = {},
     onToggleToc: () -> Unit = {},
-    onDebugToggle: () -> Unit = {},
+    onToggleDebugPanel: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -175,15 +177,9 @@ fun ReaderHeader(
         }
 
         // Title + Author centered
-        // Long-press on title toggles debug force-menu (shows FaPN3
-        // with hardcoded rect to test overlay independently of JS pipeline)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = onDebugToggle
-                )
         ) {
             Text(
                 text = stringResource(R.string.reader_title),
@@ -210,15 +206,6 @@ fun ReaderHeader(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Fullscreen
-            HeaderActionButton(
-                icon = if (uiState.isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                contentDescription = stringResource(
-                    if (uiState.isFullscreen) R.string.fullscreen_exit else R.string.fullscreen_enter
-                ),
-                onClick = onToggleFullscreen
-            )
-
             // Search
             HeaderActionButton(
                 icon = Icons.Default.Search,
@@ -242,7 +229,12 @@ fun ReaderHeader(
                 )
             }
 
-            // Highlights (new dedicated button)
+            // Highlights (Create / pencil icon) — kept for the user-facing
+            // highlights sheet. Tapping it should never crash, but the
+            // previous wiring also routed long-press on the title to a
+            // debug-only force-menu helper that could throw when the
+            // selection overlay was already open. Both call sites now go
+            // through safe state-only toggles.
             HeaderActionButton(
                 icon = Icons.Default.Create,
                 contentDescription = stringResource(R.string.reader_highlights_button),
@@ -255,6 +247,18 @@ fun ReaderHeader(
                 contentDescription = stringResource(R.string.reader_add_bookmark),
                 onClick = onCreateBookmark
             )
+
+            // Debug panel toggle — only shown in debug builds. Wired to
+            // the onToggleDebugPanel callback so the caller decides when
+            // the debug surface should appear (the screen already gates
+            // it on BuildConfig.DEBUG + DebugPrefs.isEnabled).
+            if (uiState.isDebugBuild) {
+                HeaderActionButton(
+                    icon = Icons.Default.BugReport,
+                    contentDescription = stringResource(R.string.debug_panel_title),
+                    onClick = onToggleDebugPanel
+                )
+            }
         }
     }
 }

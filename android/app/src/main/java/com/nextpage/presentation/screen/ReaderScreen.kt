@@ -8,7 +8,6 @@ import android.content.pm.ActivityInfo
 import android.os.SystemClock
 import android.view.WindowInsetsController
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +23,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -41,7 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -121,17 +121,22 @@ fun ReaderScreen(
         lastInteractionAt = SystemClock.elapsedRealtime()
     }
 
-    val onContentTap: () -> Unit = tap@{
-        if (!uiState.isFullscreen) return@tap
-        if (isSelectionActive) return@tap
-        controlsVisible = !controlsVisible
-        lastInteractionAt = SystemClock.elapsedRealtime()
+    // Edge-tap (top/bottom 5%) callback. Only SHOWS the chrome; never
+    // hides it. Hiding is handled by the inactivity auto-hide timer.
+    // Gated on the same conditions as the previous tap-to-toggle so
+    // that the chrome doesn't pop up over an active text-selection menu
+    // or while the book is still loading.
+    val onShowChrome: () -> Unit = {
+        if (!uiState.isLoading && !isSelectionActive) {
+            controlsVisible = true
+            lastInteractionAt = SystemClock.elapsedRealtime()
+        }
     }
 
-    // Keep the latest onContentTap reachable from the long-lived
+    // Keep the latest onShowChrome reachable from the long-lived
     // pointerInput block without restarting the gesture detector on
     // every recomposition.
-    val currentOnContentTap by rememberUpdatedState(onContentTap)
+    val currentOnShowChrome by rememberUpdatedState(onShowChrome)
 
     // ── SelectionOverlay: stabilized callbacks (R5,R6) ──────────────
     // R7: derivedStateOf prevents O(n) highlight lookup on every frame
@@ -174,13 +179,17 @@ fun ReaderScreen(
     // ── Debug action triggers: panel button → ReadiumReaderContent ──
     val inspectHighlightsHtmlTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
     val logWebViewTreeTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // ── Collect UiEvents (toasts) ──────────────────
+    // ── Collect UiEvents (toasts + snackbars) ─────────
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
                 is com.nextpage.presentation.UiEvent.ShowToast -> {
                     android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_SHORT).show()
+                }
+                is com.nextpage.presentation.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
                 }
                 else -> {}
             }
@@ -252,22 +261,19 @@ fun ReaderScreen(
     // ── Render via ReaderChrome ─────────────────────────────────────
     Box(modifier = Modifier.fillMaxSize()) {
         ReaderChrome(
-        isFullscreen = uiState.isFullscreen || uiState.isLoading,
-        onToggleFullscreen = { viewModel.onToggleFullscreen() },
         contentPadding = contentPadding,
         controlsVisible = controlsVisible,
-        contentModifier = Modifier.pointerInput(uiState.isFullscreen) {
-            // Tap-to-show / tap-to-hide controls. Only meaningful in
-            // fullscreen and when no selection menu is open. The gesture
-            // detector does not consume the down event, so the WebView
-            // still receives long-press + drag for text selection.
-            detectTapGestures(onTap = { currentOnContentTap() })
-        },
+        // The tap-to-toggle-chrome detector lives inside ReadiumReaderContent
+        // (and the PDF reader) as a transparent overlay on top of the
+        // WebView/PDF view. Putting it on a parent Box here was ineffective
+        // because the native WebView consumed the down event before the
+        // Compose pointerInput saw it. The overlay is placed at a higher
+        // z-layer so it receives the tap first; the WebView still gets
+        // long-press for text selection.
         header = {
             ReaderHeader(
                 uiState = uiState,
                 onNavigateBack = onNavigateBack,
-                onToggleFullscreen = { viewModel.onToggleFullscreen() },
                 onToggleSearch = { viewModel.onToggleSearch() },
                 onToggleHighlights = { viewModel.onToggleHighlightsPanel() },
                 onCreateBookmark = {
@@ -276,7 +282,7 @@ fun ReaderScreen(
                 },
                 onToggleSplitSettings = { viewModel.onToggleSplitSettings() },
                 onToggleToc = { viewModel.onToggleTocSheet() },
-                onDebugToggle = { viewModel.onDebugForceMenu() }
+                onToggleDebugPanel = { debugPanelVisible = !debugPanelVisible }
             )
         },
         footer = {
@@ -316,6 +322,7 @@ fun ReaderScreen(
                             highlights = uiState.highlights,
                             readerSettings = uiState.readerSettings,
                             viewModel = viewModel,
+                            onShowChrome = { currentOnShowChrome() },
                             modifier = Modifier.fillMaxSize()
                         )
 
@@ -364,6 +371,7 @@ fun ReaderScreen(
                             initialLocator = uiState.readiumLocator,
                             inspectHighlightsHtmlTrigger = inspectHighlightsHtmlTrigger,
                             logWebViewTreeTrigger = logWebViewTreeTrigger,
+                            onShowChrome = { currentOnShowChrome() },
                             modifier = Modifier.fillMaxSize()
                         )
 
@@ -404,9 +412,13 @@ fun ReaderScreen(
         },
         overlays = {
             // ── Fullscreen side arrows (page nav) ───────────────
-            // Hidden while a selection is active so the arrow hit areas
-            // do not steal the selection drag gesture.
-            if (uiState.isFullscreen && !isSelectionActive) {
+            // Always visible (not tied to controlsVisible) so the user can
+            // navigate pages even when the chrome is hidden by the tap
+            // gesture. Hidden only during loading or while a selection is
+            // active (so arrow hit areas don't steal the drag gesture).
+            if (!uiState.isLoading && !isSelectionActive &&
+                !(uiState.readerSettings.verticalScroll && uiState.bookFormat == "epub")
+            ) {
                 ReaderFullscreenArrows(
                     onPrevious = {
                         onUserInteraction()
@@ -655,6 +667,12 @@ fun ReaderScreen(
                 }
             )
         }
+
+        // ── Snackbar host (for "Copied to clipboard" etc.) ─────────
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 

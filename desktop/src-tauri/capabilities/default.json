@@ -14,7 +14,9 @@
     "fs:allow-appdata-read-recursive",
     "fs:allow-appdata-write-recursive",
     "deep-link:default",
-    "oauth:default",
+    "oauth:allow-start",
+    "oauth:allow-cancel",
+    "opener:default",
     "core:window:allow-set-fullscreen"
   ]
 }

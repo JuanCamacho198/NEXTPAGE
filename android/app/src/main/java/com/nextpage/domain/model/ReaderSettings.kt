@@ -106,7 +106,7 @@ data class ReaderSettings(
     val scrollMode: ScrollMode = ScrollMode.VERTICAL,
     val layoutPrefs: LayoutPreferences = LayoutPreferences(),
     val editorValues: Boolean = true,
-    val verticalScroll: Boolean = false,
+    val verticalScroll: Boolean = true,
     /** Custom highlight colour presets (5 hex values). `null` means use enum defaults. */
     val customHighlightColors: List<String>? = null
 ) {

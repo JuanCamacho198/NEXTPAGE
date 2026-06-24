@@ -169,6 +169,8 @@ fun ReaderScreen(
         val currentHighlight = (uiState.selectionState
             as? com.nextpage.presentation.viewmodel.reader.ReaderSelectionState.Existing)?.highlight
         currentHighlight?.let { viewModel.onReadiumDeleteHighlight(it.id) }
+        @Suppress("UNUSED_EXPRESSION")
+        Unit
     } }
     val onSelectionAddTag = remember(viewModel) { { viewModel.onShowTagInput() } }
     val onSelectionAnnotate = remember(viewModel) { { viewModel.onAnnotate() } }

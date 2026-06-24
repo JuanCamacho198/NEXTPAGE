@@ -27,6 +27,12 @@ interface DictionaryWordDao {
     @Query("SELECT COUNT(*) FROM dictionary_words WHERE word = :word")
     suspend fun countByWord(word: String): Int
 
+    @Query("SELECT * FROM dictionary_words WHERE id = :wordId LIMIT 1")
+    suspend fun findById(wordId: String): DictionaryWordEntity?
+
+    @Query("UPDATE dictionary_words SET definition = :definition WHERE id = :wordId")
+    suspend fun updateDefinition(wordId: String, definition: String?)
+
     @RawQuery(observedEntities = [DictionaryWordEntity::class])
     suspend fun searchFtsRaw(query: SupportSQLiteQuery): List<DictionaryWordEntity>
 

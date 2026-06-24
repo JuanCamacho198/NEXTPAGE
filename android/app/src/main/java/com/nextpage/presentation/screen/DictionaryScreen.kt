@@ -1,5 +1,6 @@
 package com.nextpage.presentation.screen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -120,7 +121,9 @@ fun DictionaryScreen(
                 ) {
                     items(uiState.filteredWords, key = { it.id }) { word ->
                         Surface(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.onRequestEditWord(word) },
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant
                         ) {
@@ -143,6 +146,13 @@ fun DictionaryScreen(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 2,
                                             overflow = TextOverflow.Ellipsis
+                                        )
+                                    } else {
+                                        Text(
+                                            text = stringResource(R.string.dictionary_tap_to_add_definition),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                                         )
                                     }
                                     Text(
@@ -253,6 +263,44 @@ fun DictionaryScreen(
                         onClick = { viewModel.onDismissDeleteDialog() },
                         variant = NextPageButtonVariant.TEXT
                     ) {
+                        Text(text = stringResource(R.string.reader_cancel))
+                    }
+                }
+            )
+        }
+
+        // ── Edit Definition Dialog ───────────────────────────────
+        uiState.wordBeingEdited?.let { word ->
+            AlertDialog(
+                onDismissRequest = { viewModel.onDismissEditDialog() },
+                title = {
+                    Text(
+                        text = word.word,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
+                text = {
+                    OutlinedTextField(
+                        value = uiState.editDefinitionText,
+                        onValueChange = { viewModel.onEditDefinitionTextChanged(it) },
+                        placeholder = {
+                            Text(stringResource(R.string.dictionary_add_definition_hint))
+                        },
+                        singleLine = false,
+                        minLines = 2,
+                        maxLines = 5,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { viewModel.onEditDefinitionConfirm() }
+                    ) {
+                        Text(text = stringResource(R.string.dictionary_edit_confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.onDismissEditDialog() }) {
                         Text(text = stringResource(R.string.reader_cancel))
                     }
                 }

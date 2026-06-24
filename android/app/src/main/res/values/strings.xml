@@ -309,8 +309,6 @@
     <string name="scroll_mode_paginated">Paginated</string>
     <string name="editor_values">Editor values</string>
     <string name="vertical_scroll">Vertical scroll</string>
-    <string name="fullscreen_enter">Enter fullscreen</string>
-    <string name="fullscreen_exit">Exit fullscreen</string>
     <string name="fullscreen_prev_page">Previous page</string>
     <string name="fullscreen_next_page">Next page</string>
     <string name="reader_rotate_screen">Rotate screen</string>
@@ -496,6 +494,8 @@
     <string name="dictionary_duplicate">"%1$s" is already in your dictionary.</string>
     <string name="dictionary_added">"%1$s" added to your dictionary.</string>
     <string name="dictionary_word_count">%1$d words</string>
+    <string name="dictionary_tap_to_add_definition">Tap to add definition</string>
+    <string name="dictionary_edit_confirm">Save</string>
     <string name="settings_dictionary_label">Dictionary</string>
     <string name="context_menu_dictionary">Add to Dictionary</string>
     <string name="reader_add_to_dictionary">Added to dictionary</string>

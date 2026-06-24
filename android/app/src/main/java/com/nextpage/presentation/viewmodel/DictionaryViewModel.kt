@@ -23,7 +23,9 @@ data class DictionaryUiState(
     val wordToDelete: DictionaryWord? = null,
     val showAddDialog: Boolean = false,
     val addWordText: String = "",
-    val addDefinitionText: String = ""
+    val addDefinitionText: String = "",
+    val wordBeingEdited: DictionaryWord? = null,
+    val editDefinitionText: String = ""
 )
 
 class DictionaryViewModel(
@@ -119,6 +121,48 @@ class DictionaryViewModel(
         viewModelScope.launch {
             dictionaryRepository.delete(word.id)
             _uiState.update { it.copy(wordToDelete = null) }
+        }
+    }
+
+    // ── Edit definition ──────────────────────────────────────────
+
+    /** Opens the edit-definition dialog pre-filled with the current definition. */
+    fun onRequestEditWord(word: DictionaryWord) {
+        _uiState.update {
+            it.copy(
+                wordBeingEdited = word,
+                editDefinitionText = word.definition.orEmpty()
+            )
+        }
+    }
+
+    fun onDismissEditDialog() {
+        _uiState.update {
+            it.copy(wordBeingEdited = null, editDefinitionText = "")
+        }
+    }
+
+    fun onEditDefinitionTextChanged(text: String) {
+        _uiState.update { it.copy(editDefinitionText = text) }
+    }
+
+    fun onEditDefinitionConfirm() {
+        val word = _uiState.value.wordBeingEdited ?: return
+        val definition = _uiState.value.editDefinitionText.trim().takeIf { it.isNotBlank() }
+        viewModelScope.launch {
+            dictionaryRepository.updateDefinition(word.id, definition).fold(
+                onSuccess = {
+                    _uiEvent.emit(UiEvent.ShowSnackbar("Definición guardada"))
+                    _uiState.update {
+                        it.copy(wordBeingEdited = null, editDefinitionText = "")
+                    }
+                },
+                onFailure = { e ->
+                    _uiEvent.emit(UiEvent.ShowSnackbar(
+                        e.message ?: "Failed to save definition"
+                    ))
+                }
+            )
         }
     }
 }

@@ -247,8 +247,6 @@
     <string name="scroll_mode_paginated">Paginado</string>
     <string name="editor_values">Valores del editor</string>
     <string name="vertical_scroll">Desplazamiento vertical</string>
-    <string name="fullscreen_enter">Pantalla completa</string>
-    <string name="fullscreen_exit">Salir de pantalla completa</string>
     <string name="fullscreen_prev_page">Página anterior</string>
     <string name="fullscreen_next_page">Página siguiente</string>
     <string name="reader_rotate_screen">Rotar pantalla</string>
@@ -439,6 +437,8 @@
     <string name="dictionary_duplicate">"%1$s" ya está en tu diccionario.</string>
     <string name="dictionary_added">"%1$s" agregado a tu diccionario.</string>
     <string name="dictionary_word_count">%1$d palabras</string>
+    <string name="dictionary_tap_to_add_definition">Tocar para agregar definición</string>
+    <string name="dictionary_edit_confirm">Guardar</string>
     <string name="settings_dictionary_label">Diccionario</string>
     <string name="context_menu_dictionary">Agregar al diccionario</string>
     <string name="reader_add_to_dictionary">Agregado al diccionario</string>

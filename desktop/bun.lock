@@ -5,6 +5,7 @@
     "": {
       "name": "nextpage-desktop",
       "dependencies": {
+        "@fabianlars/tauri-plugin-oauth": "^2.0.0",
         "@sentry/browser": "^10.53.1",
         "@tauri-apps/api": "^2.10.1",
         "@tauri-apps/plugin-deep-link": "^2.4.8",
@@ -219,6 +220,8 @@
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.7.1", "", { "dependencies": { "@eslint/core": "^1.2.1", "levn": "^0.4.1" } }, "sha512-rZAP3aVgB9ds9KOeUSL+zZ21hPmo8dh6fnIFwRQj5EAZl9gzR7wxYbYXYysAM8CTqGmUGyp2S4kUdV17MnGuWQ=="],
 
     "@exodus/bytes": ["@exodus/bytes@1.15.0", "", { "peerDependencies": { "@noble/hashes": "^1.8.0 || ^2.0.0" }, "optionalPeers": ["@noble/hashes"] }, "sha512-UY0nlA+feH81UGSHv92sLEPLCeZFjXOuHhrIo0HQydScuQc8s0A7kL/UdgwgDq8g8ilksmuoF35YVTNphV2aBQ=="],
+
+    "@fabianlars/tauri-plugin-oauth": ["@fabianlars/tauri-plugin-oauth@2.0.0", "", { "dependencies": { "@tauri-apps/api": "^2.0.3" } }, "sha512-I1s08ZXrsFuYfNWusAcpLyiCfr5TCvaBrRuKfTG+XQrcaqnAcwjdWH0U5J9QWuMDLwCUMnVxdobtMJzPR8raxQ=="],
 
     "@humanfs/core": ["@humanfs/core@0.19.2", "", { "dependencies": { "@humanfs/types": "^0.15.0" } }, "sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA=="],
 

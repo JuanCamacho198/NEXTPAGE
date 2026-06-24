@@ -2,7 +2,7 @@ import "./styles.css";
 import App from "./App.svelte";
 import { mount } from "svelte";
 import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
-import { handleCallback } from "./lib/shared/services/GoogleOAuthService";
+import { registerOAuthCallbackHandler } from "./lib/shared/services/GoogleOAuthService";
 import { logger } from "./lib/shared/logger/Logger";
 import { consoleSink } from "./lib/shared/logger/ConsoleSink";
 import { tauriSink } from "./lib/shared/logger/TauriSink";
@@ -93,32 +93,12 @@ const registerGlobalHandlers = async (): Promise<void> => {
 
 onOpenUrl((urls) => {
   console.log("Deep links received:", urls);
-  for (const url of urls) {
-    if (url.includes("auth-callback")) {
-      console.log("Handling auth-callback...");
-      try {
-        const parsedUrl = new URL(url);
-        const code = parsedUrl.searchParams.get("code");
-        const error = parsedUrl.searchParams.get("error");
-
-        if (error) {
-          console.error("OAuth error:", error);
-          return;
-        }
-
-        if (code) {
-          handleCallback(code).then(() => {
-            console.log("Google OAuth session completed");
-          }).catch((err: unknown) => {
-            console.error("Error completing OAuth session:", err);
-          });
-        }
-      } catch (e) {
-        console.error("Error parsing auth callback URL:", e);
-      }
-    }
-  }
+  // REQ-7: deep-link is reserved for non-OAuth URLs. OAuth uses loopback.
+  // Future: route specific URL patterns to book-opening handlers.
 });
+
+// OAuth wiring: subscribe to plugin's oauth://url event once at module init.
+registerOAuthCallbackHandler();
 
 const app = mount(App, {
   target: document.getElementById("app") as HTMLElement

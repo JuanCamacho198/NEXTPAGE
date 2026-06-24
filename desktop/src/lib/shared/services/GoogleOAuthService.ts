@@ -83,6 +83,57 @@ function buildState(): string {
   return base64UrlEncode(stateBytes.buffer);
 }
 
+/**
+ * Custom HTML shown to the user in the system browser after Google redirects
+ * them back to the loopback server. Replaces `tauri-plugin-oauth`'s default
+ * "Please return to the app." plain-text response with a styled success page.
+ * Tauri itself does not render this — it lives in the system browser tab.
+ */
+const LOOPBACK_SUCCESS_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Signed in — NextPage</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; margin: 0; padding: 24px;
+      background: #f0fdf4; color: #14532d;
+    }
+    .card {
+      max-width: 420px; width: 100%;
+      background: #fff; border: 1px solid #bbf7d0; border-radius: 16px;
+      padding: 32px 24px; text-align: center;
+      box-shadow: 0 10px 25px -10px rgba(22, 101, 52, 0.25);
+    }
+    .check {
+      width: 64px; height: 64px; margin: 0 auto 16px;
+      background: #22c55e; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; line-height: 1.2; }
+    p  { margin: 0; font-size: 14px; line-height: 1.5; color: #4b5563; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #052e16; color: #dcfce7; }
+      .card { background: #0f172a; border-color: #14532d; box-shadow: none; }
+      p { color: #94a3b8; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="check">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+    </div>
+    <h1>You're signed in</h1>
+    <p>You can close this tab and return to NextPage. The app will pick up where you left off.</p>
+  </div>
+</body>
+</html>`;
+
 export async function startAuth(): Promise<void> {
   if (currentPort !== null) {
     try {
@@ -95,7 +146,7 @@ export async function startAuth(): Promise<void> {
 
   let port: number;
   try {
-    port = await start();
+    port = await start({ response: LOOPBACK_SUCCESS_HTML });
   } catch (err) {
     throw new OAuthError(
       `Failed to start loopback server: ${String(err)}`,

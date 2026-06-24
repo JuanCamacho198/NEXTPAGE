@@ -17,6 +17,10 @@ import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 import { logger } from '$lib/shared/logger/Logger';
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID as string;
+// Google requires the client_secret on the token endpoint whenever the OAuth
+// client was issued one, even for Desktop-app + PKCE flows. Read from env
+// (also VITE_-prefixed so Vite exposes it to the client bundle).
+const CLIENT_SECRET = (import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET ?? '') as string;
 const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const SCOPES = [
@@ -202,6 +206,7 @@ export async function handleCallback(code: string): Promise<void> {
   const body = new URLSearchParams({
     code,
     client_id: CLIENT_ID,
+    client_secret: CLIENT_SECRET,
     redirect_uri:
       currentPort !== null ? `http://127.0.0.1:${currentPort}/` : 'http://127.0.0.1:0/',
     code_verifier: codeVerifier,

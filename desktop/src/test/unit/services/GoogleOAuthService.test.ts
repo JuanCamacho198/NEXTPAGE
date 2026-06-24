@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 const mockPluginStart = vi.fn();
 const mockPluginCancel = vi.fn();
 const mockPluginOnUrl = vi.fn();
+const mockOpenUrl = vi.fn();
 
 let capturedOnUrlHandler: ((url: string) => void) | null = null;
 let mockSetSession = vi.fn();
@@ -32,6 +33,10 @@ vi.mock('@fabianlars/tauri-plugin-oauth', () => ({
       }
     });
   },
+}));
+
+vi.mock('@tauri-apps/plugin-opener', () => ({
+  openUrl: (...args: unknown[]) => mockOpenUrl(...args),
 }));
 
 vi.mock('$lib/stores/authState.svelte', () => ({
@@ -63,6 +68,12 @@ type Sut = typeof import('$lib/shared/services/GoogleOAuthService');
 let sut: Sut;
 
 beforeAll(async () => {
+  // Provide the client_secret env var the SUT reads via import.meta.env.
+  // Google requires it on the token endpoint whenever the OAuth client was
+  // issued one, even for Desktop-app + PKCE flows.
+  vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', 'test-client-id.apps.googleusercontent.com');
+  vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', 'test-client-secret');
+
   const mod = await import('$lib/shared/services/GoogleOAuthService');
   sut = mod;
 });
@@ -73,10 +84,12 @@ beforeEach(async () => {
   mockPluginStart.mockReset();
   mockPluginCancel.mockReset();
   mockPluginOnUrl.mockReset();
+  mockOpenUrl.mockReset();
   mockSetSession.mockReset();
   mockClearSession.mockReset();
   capturedOnUrlHandler = null;
   mockPluginCancel.mockResolvedValue(undefined);
+  mockOpenUrl.mockResolvedValue(undefined);
   mockSetSession.mockReturnValue(undefined);
   mockClearSession.mockReturnValue(undefined);
 
@@ -131,18 +144,24 @@ function stubWindowOpen(): ReturnType<typeof vi.fn> {
   return fn;
 }
 
+/**
+ * Open in the current NextPage implementation goes through the Tauri
+ * `tauri-plugin-opener` plugin (`openUrl()`) because `window.open()` is a
+ * no-op in the Tauri webview. Tests assert against the `mockOpenUrl` spy
+ * declared above instead of `window.open`.
+ */
+
 // ---- Tests ----
 
 describe('GoogleOAuthService — startAuth (loopback redirect)', () => {
   it('startAuth calls plugin.start() and derives redirect URI from port', async () => {
     mockPluginStart.mockResolvedValue(48723);
-    const openStub = stubWindowOpen();
 
     await sut.startAuth();
 
     expect(mockPluginStart).toHaveBeenCalledTimes(1);
-    expect(openStub).toHaveBeenCalledTimes(1);
-    const authUrl = openStub.mock.calls[0]?.[0] as string;
+    expect(mockOpenUrl).toHaveBeenCalledTimes(1);
+    const authUrl = mockOpenUrl.mock.calls[0]?.[0] as string;
     expect(authUrl).toContain('accounts.google.com/o/oauth2/v2/auth');
     expect(authUrl).toContain('redirect_uri=http%3A%2F%2F127.0.0.1%3A48723%2F');
     expect(authUrl).toContain('response_type=code');
@@ -153,11 +172,10 @@ describe('GoogleOAuthService — startAuth (loopback redirect)', () => {
 
   it('startAuth generates and stores state for CSRF', async () => {
     mockPluginStart.mockResolvedValue(48000);
-    const openStub = stubWindowOpen();
 
     await sut.startAuth();
 
-    const authUrl = openStub.mock.calls[0]?.[0] as string;
+    const authUrl = mockOpenUrl.mock.calls[0]?.[0] as string;
     const stateMatch = authUrl.match(/state=([^&]+)/);
     expect(stateMatch).not.toBeNull();
     const stateFromUrl = stateMatch?.[1] ?? '';
@@ -180,9 +198,8 @@ describe('GoogleOAuthService — startAuth (loopback redirect)', () => {
 describe('GoogleOAuthService — handleOAuthCallback', () => {
   it('extracts code, validates state, and exchanges token', async () => {
     mockPluginStart.mockResolvedValue(48723);
-    const openStub = stubWindowOpen();
     await sut.startAuth();
-    const authUrl = openStub.mock.calls[0]?.[0] as string;
+    const authUrl = mockOpenUrl.mock.calls[0]?.[0] as string;
     const state = new URL(authUrl).searchParams.get('state') ?? '';
 
     const fetchSpy = vi
@@ -202,6 +219,10 @@ describe('GoogleOAuthService — handleOAuthCallback', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const tokenUrl = fetchSpy.mock.calls[0]?.[0];
     expect(tokenUrl).toBe('https://oauth2.googleapis.com/token');
+    // Google requires the client_secret on the token endpoint whenever the
+    // OAuth client was issued one, even for Desktop-app + PKCE flows.
+    const tokenBody = fetchSpy.mock.calls[0]?.[1]?.body as string;
+    expect(tokenBody).toContain('client_secret=test-client-secret');
     expect(mockSetSession).toHaveBeenCalledTimes(1);
     expect(mockSetSession.mock.calls[0]?.[0]).toMatchObject({
       accessToken: 'access-1',
@@ -212,7 +233,6 @@ describe('GoogleOAuthService — handleOAuthCallback', () => {
 
   it('rejects mismatched state with state_mismatch OAuthError', async () => {
     mockPluginStart.mockResolvedValue(48723);
-    stubWindowOpen();
     await sut.startAuth();
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
@@ -228,7 +248,6 @@ describe('GoogleOAuthService — handleOAuthCallback', () => {
 
   it('user denial surfaces user_denied OAuthError', async () => {
     mockPluginStart.mockResolvedValue(48723);
-    stubWindowOpen();
     await sut.startAuth();
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
@@ -245,7 +264,6 @@ describe('GoogleOAuthService — handleOAuthCallback', () => {
 
   it('server error other than access_denied surfaces server_failed', async () => {
     mockPluginStart.mockResolvedValue(48723);
-    stubWindowOpen();
     await sut.startAuth();
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
@@ -279,7 +297,6 @@ describe('GoogleOAuthService — registerOAuthCallbackHandler', () => {
 describe('GoogleOAuthService — multi-instance safety', () => {
   it('multi-instance cancels the previous server before starting a new one', async () => {
     mockPluginStart.mockResolvedValueOnce(48000).mockResolvedValueOnce(48001);
-    stubWindowOpen();
 
     await sut.startAuth();
     expect(mockPluginStart).toHaveBeenCalledTimes(1);
@@ -293,7 +310,6 @@ describe('GoogleOAuthService — multi-instance safety', () => {
 
   it('re-sign-in after sign-out starts a fresh flow', async () => {
     mockPluginStart.mockResolvedValueOnce(48000).mockResolvedValueOnce(48001);
-    stubWindowOpen();
 
     await sut.startAuth();
     const clearSessionCountBefore = mockClearSession.mock.calls.length;

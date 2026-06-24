@@ -74,12 +74,15 @@ import com.nextpage.R
  *   `animateFloatAsState` for smooth transitions. Below: 36dp icon
  *   button or spacer, `labelMedium` position label
  *   (`#718096`), `labelMedium` bold percentage (`#ADC6FF`).
- * **Behavior**: drag the thumb → invokes [onProgressChange] on
- *   every pointer-move with the new percentage, clamped to
- *   `[0f, 100f]`. Tap the rotate icon → [onRotateScreen].
- *   The thumb drag is wired via `pointerInput(Unit)`; if
- *   [onProgressChange] is `null`, the drag handler is wired but
- *   does nothing.
+ * **Behavior**: drag anywhere on the 12dp-tall track (or the thumb) →
+ *   invokes [onProgressChange] on every pointer-move with the new
+ *   percentage, clamped to `[0f, 100f]`. The drag works in BOTH
+ *   directions (left and right) — `change.position.x` is measured in
+ *   the track's local coordinate space (0..trackWidth) because the
+ *   `pointerInput` is attached to the outer track Box, not the thumb.
+ *   Tap the rotate icon → [onRotateScreen]. The drag is wired via
+ *   `pointerInput(Unit)`; if [onProgressChange] is `null`, the drag
+ *   handler is wired but does nothing.
  * **Recomposition**: recomposes when `progressPercent`, `label`, or
  *   callbacks change. `trackWidth` is updated via `onSizeChanged`
  *   after layout.
@@ -115,6 +118,22 @@ fun ReadingProgressBar(
                 .fillMaxWidth()
                 .height(12.dp) // extra height for touch target
                 .onSizeChanged { trackWidth = it.width }
+                .pointerInput(Unit) {
+                    // Drag handler is wired on the OUTER track Box (not the
+                    // thumb) so that `change.position.x` is measured in the
+                    // track's local coordinate space (0..trackWidth). This
+                    // makes the drag work in BOTH directions, anywhere on
+                    // the track, and the formula below is correct.
+                    if (onProgressChange != null) {
+                        detectDragGestures { change, _ ->
+                            change.consume()
+                            if (trackWidth <= 0) return@detectDragGestures
+                            val newFraction =
+                                (change.position.x / trackWidth).coerceIn(0f, 1f)
+                            onProgressChange(newFraction * 100f)
+                        }
+                    }
+                }
         ) {
             // Track background
             Box(
@@ -138,7 +157,9 @@ fun ReadingProgressBar(
                 )
             }
 
-            // Draggable thumb
+            // Draggable thumb (visual only — drag is handled by the outer
+            // track's `pointerInput` above so the entire track is a
+            // touch target, not just the 12dp thumb circle).
             Box(
                 modifier = Modifier
                     .size(12.dp)
@@ -153,16 +174,6 @@ fun ReadingProgressBar(
                     .shadow(4.dp, CircleShape)
                     .clip(CircleShape)
                     .background(Color(0xFFADC6FF))
-                    .pointerInput(Unit) {
-                        if (onProgressChange != null) {
-                            detectDragGestures { change, _ ->
-                                change.consume()
-                                val newFraction =
-                                    (change.position.x / trackWidth).coerceIn(0f, 1f)
-                                onProgressChange(newFraction * 100f)
-                            }
-                        }
-                    }
             )
         }
 

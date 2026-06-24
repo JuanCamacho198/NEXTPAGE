@@ -44,6 +44,29 @@ class FullscreenManagerTest {
     }
 
     @Test
+    fun `enterFullscreen sets true idempotently`() {
+        val manager = FullscreenManager()
+
+        manager.enterFullscreen()
+        assertTrue("Should be fullscreen after enter", manager.state.value.isFullscreen)
+
+        // Calling again must not flip back to false.
+        manager.enterFullscreen()
+        assertTrue("Should remain fullscreen after repeated enter", manager.state.value.isFullscreen)
+    }
+
+    @Test
+    fun `enterFullscreen from default differs from reset`() {
+        val enterManager = FullscreenManager()
+        enterManager.enterFullscreen()
+        assertTrue("enter should be fullscreen", enterManager.state.value.isFullscreen)
+
+        val resetManager = FullscreenManager()
+        resetManager.reset()
+        assertFalse("reset should not be fullscreen", resetManager.state.value.isFullscreen)
+    }
+
+    @Test
     fun `reset brings back to default`() {
         val manager = FullscreenManager()
 

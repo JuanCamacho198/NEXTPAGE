@@ -161,7 +161,12 @@ class ReaderViewModelSelectionTest {
     }
 
     @Test
-    fun `onReadiumSelection within highlight debounce does not overwrite Existing`() = runTest {
+    fun `onReadiumSelection within highlight debounce does not overwrite Existing when text matches`() = runTest {
+        // The 2s debounce after a highlight tap only suppresses the polling
+        // loop when the new selection text matches the tapped highlight's
+        // text. In that case the user is re-selecting the same highlight
+        // (or a sub-range) and the FloatingContextMenu (Existing) should
+        // remain open.
         val viewModel = createViewModel(testScheduler)
         val highlight = createHighlight()
         val highlightRect = RectF(100f, 200f, 300f, 250f)
@@ -169,12 +174,34 @@ class ReaderViewModelSelectionTest {
 
         val locator = createLocator()
         val selectionRect = RectF(110f, 210f, 310f, 260f)
-        viewModel.onReadiumSelection(locator, selectionRect, "new selection")
+        // Text matches the highlight's textContent ("highlighted text")
+        viewModel.onReadiumSelection(locator, selectionRect, "highlighted text")
 
         val state = viewModel.uiState.value
         // activeHighlightId is managed internally by SelectionCoordinator — not exposed in uiState
-        assertTrue("selectionState should remain Existing (debounce active)",
+        assertTrue("selectionState should remain Existing (debounce active, text matches)",
             state.selectionState is ReaderSelectionState.Existing)
+    }
+
+    @Test
+    fun `onReadiumSelection within highlight debounce overrides Existing when text differs`() = runTest {
+        // Regression test: a new text selection that doesn't match any
+        // existing highlight must transition to New, even if the debounce
+        // from a previous highlight tap is still active. Otherwise the UI
+        // would show the FloatingContextMenu (Tag/Delete) instead of the
+        // TextSelectionMenu (Dictionary/Copy/Share).
+        val viewModel = createViewModel(testScheduler)
+        val highlight = createHighlight()
+        val highlightRect = RectF(100f, 200f, 300f, 250f)
+        viewModel.onHighlightTapped(highlight, highlightRect)
+
+        val locator = createLocator()
+        val selectionRect = RectF(110f, 210f, 310f, 260f)
+        viewModel.onReadiumSelection(locator, selectionRect, "completely different text")
+
+        val state = viewModel.uiState.value
+        assertTrue("selectionState should be New (text differs from highlight)",
+            state.selectionState is ReaderSelectionState.New)
     }
 
     @Test

@@ -139,6 +139,7 @@ class ReaderUiState(
 
     // ── Debug ──────────────────────────────────────────────────────
     val debugForceMenu: Boolean = false,
+    val isDebugBuild: Boolean = com.nextpage.BuildConfig.DEBUG,
 
     // ── Floating menus / anchored inputs ────────────────────────────
     val showColorPickerPopover: Boolean = false,
@@ -193,6 +194,7 @@ class ReaderUiState(
         readiumSelectionLocator: Locator? = this.readiumSelectionLocator,
         readiumViewportHeight: Int = this.readiumViewportHeight,
         debugForceMenu: Boolean = this.debugForceMenu,
+        isDebugBuild: Boolean = this.isDebugBuild,
         showColorPickerPopover: Boolean = this.showColorPickerPopover,
         showNoteModal: Boolean = this.showNoteModal,
         activeNoteText: String = this.activeNoteText,
@@ -244,6 +246,7 @@ class ReaderUiState(
             readiumSelectionLocator = readiumSelectionLocator,
             readiumViewportHeight = readiumViewportHeight,
             debugForceMenu = debugForceMenu,
+            isDebugBuild = isDebugBuild,
             showColorPickerPopover = showColorPickerPopover,
             showNoteModal = showNoteModal,
             activeNoteText = activeNoteText,
@@ -298,6 +301,7 @@ class ReaderUiState(
             readiumSelectionLocator == other.readiumSelectionLocator &&
             readiumViewportHeight == other.readiumViewportHeight &&
             debugForceMenu == other.debugForceMenu &&
+            isDebugBuild == other.isDebugBuild &&
             showColorPickerPopover == other.showColorPickerPopover &&
             showNoteModal == other.showNoteModal &&
             activeNoteText == other.activeNoteText &&
@@ -350,6 +354,7 @@ class ReaderUiState(
         result = 31 * result + (readiumSelectionLocator?.hashCode() ?: 0)
         result = 31 * result + readiumViewportHeight
         result = 31 * result + debugForceMenu.hashCode()
+        result = 31 * result + isDebugBuild.hashCode()
         result = 31 * result + showColorPickerPopover.hashCode()
         result = 31 * result + showNoteModal.hashCode()
         result = 31 * result + activeNoteText.hashCode()
@@ -404,6 +409,7 @@ class ReaderUiState(
             "readiumSelectionLocator=$readiumSelectionLocator, " +
             "readiumViewportHeight=$readiumViewportHeight, " +
             "debugForceMenu=$debugForceMenu, " +
+            "isDebugBuild=$isDebugBuild, " +
             "showColorPickerPopover=$showColorPickerPopover, " +
             "showNoteModal=$showNoteModal, " +
             "activeNoteText='$activeNoteText', " +
@@ -638,11 +644,7 @@ class ReaderViewModel(
                         showDefinitionInput = interaction.showDefinitionInput,
                         activeDefinitionText = interaction.activeDefinitionText,
                         showHighlightsSheet = interaction.showHighlightsSheet,
-                        debugForceMenu = interaction.debugForceMenu,
-                        // These fields are managed internally by SelectionCoordinator
-                        activeHighlightId = null,
-                        highlightTapDebounceUntil = 0L,
-                        menuJustClosedAt = 0L
+                        debugForceMenu = interaction.debugForceMenu
                     )
                 }
             }
@@ -655,8 +657,9 @@ class ReaderViewModel(
      * Loads a new book into the reader, replacing any current selection.
      *
      * Side effects:
-     * 1. Clears `highlights`, `bookmarks`, and fullscreen state in [uiState].
-     * 2. Resets the fullscreen manager.
+     * 1. Clears `highlights` and `bookmarks` in [uiState].
+     * 2. Enters immersive (fullscreen) reading mode so the reader opens
+     *    with the chrome auto-hidden.
      * 3. Delegates to `lifecycleHolder.loadBook` — the lifecycle state holder
      *    will emit a new [ReaderUiState] with the book metadata, chapters,
      *    publication (EPUB), and `isLoading = true` until the book is ready.
@@ -669,11 +672,11 @@ class ReaderViewModel(
         mutableUiState.update {
             it.copy(
                 highlights = emptyList(),
-                bookmarks = emptyList(),
-                isFullscreen = false
+                bookmarks = emptyList()
             )
         }
-        fullscreenManager.reset()
+        interactionHolder.resetCoordinator()
+        fullscreenManager.enterFullscreen()
         lifecycleHolder.loadBook(bookId, filePath, format)
     }
 
@@ -807,13 +810,11 @@ class ReaderViewModel(
      * and shows the context menu anchored to [rect].
      */
     fun onReadiumSelection(locator: Locator, rect: RectF, text: String) {
-        val state = mutableUiState.value
         interactionHolder.onReadiumSelection(
-            locator, rect, text,
-            existingHighlights = state.highlights,
-            currentActiveHighlightId = state.activeHighlightId,
-            currentHighlightTapDebounceUntil = state.highlightTapDebounceUntil,
-            currentMenuJustClosedAt = state.menuJustClosedAt
+            locator = locator,
+            rect = rect,
+            text = text,
+            existingHighlights = mutableUiState.value.highlights
         )
     }
 
@@ -957,13 +958,12 @@ class ReaderViewModel(
 
     /**
      * Toggles the table-of-contents sheet visibility.
-     * Side effects: flips [ReaderUiState.showTocSheet] directly.
+     *
+     * Delegates to the lifecycle holder so the state is owned by a single
+     * StateFlow. Mutating the merged `mutableUiState` directly caused a
+     * race where the next lifecycle emission would reset the sheet flag.
      */
-    fun onToggleTocSheet() {
-        mutableUiState.update {
-            it.copy(showTocSheet = !it.showTocSheet)
-        }
-    }
+    fun onToggleTocSheet() = lifecycleHolder.onToggleTocSheet()
 
     /**
      * Navigates to the position of [highlight].

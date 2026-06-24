@@ -66,7 +66,7 @@ class ReaderViewModelFullscreenTest {
     }
 
     @Test
-    fun `fullscreen resets on new book load`() = runTest {
+    fun `fullscreen enters immersive on new book load`() = runTest {
         mockkStatic(Log::class)
         every { Log.e(any(), any()) } returns 0
         every { Log.e(any(), any(), any()) } returns 0
@@ -83,15 +83,11 @@ class ReaderViewModelFullscreenTest {
             mainDispatcher = dispatcher
         )
 
-        // Enter fullscreen
-        viewModel.onToggleFullscreen()
-        assertTrue(viewModel.uiState.value.isFullscreen)
-
         // Load a new book (simulate)
         viewModel.loadBook("new-book", "/path/book.epub", "epub")
 
-        // Fullscreen should reset to false
-        assertFalse(viewModel.uiState.value.isFullscreen)
+        // Reader should auto-enter immersive (fullscreen) reading mode.
+        assertTrue(viewModel.uiState.value.isFullscreen)
     }
 
     @Test

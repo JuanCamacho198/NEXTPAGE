@@ -10,6 +10,7 @@
  */
 
 import { start, cancel, onUrl } from '@fabianlars/tauri-plugin-oauth';
+import { openUrl } from '@tauri-apps/plugin-opener';
 
 import { authState, type TokenSet } from '$lib/stores/authState.svelte';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
@@ -117,7 +118,7 @@ export async function startAuth(): Promise<void> {
     prompt: 'consent',
   });
 
-  window.open(`${AUTH_ENDPOINT}?${params.toString()}`, '_blank');
+  await openUrl(`${AUTH_ENDPOINT}?${params.toString()}`);
 }
 
 export async function handleOAuthCallback(url: string): Promise<void> {

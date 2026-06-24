@@ -12,6 +12,7 @@ import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.viewmodel.CfiMigrator
 import kotlinx.coroutines.*
+import org.json.JSONObject
 import kotlinx.coroutines.flow.*
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
@@ -150,14 +151,7 @@ class ReaderLifecycleStateHolder(
                 val loadTime = System.currentTimeMillis() - startTime
                 Log.d(TAG, "Readium loaded EPUB in ${loadTime}ms")
 
-                val chapters = publication.readingOrder.mapIndexed { index, link ->
-                    BookChapter(
-                        index = index,
-                        id = link.href.toString(),
-                        title = link.title ?: "Chapter ${index + 1}",
-                        href = link.href.toString()
-                    )
-                }
+                val chapters = buildChaptersFromPublication(publication)
 
                 // ── Restore saved position ──────────────────────────────
                 val savedProgress = readerRepository.getProgressForBook(bookId)
@@ -239,14 +233,7 @@ class ReaderLifecycleStateHolder(
                 val loadTime = System.currentTimeMillis() - startTime
                 Log.d(TAG, "Readium loaded PDF in ${loadTime}ms")
 
-                val chapters = publication.readingOrder.mapIndexed { index, link ->
-                    BookChapter(
-                        index = index,
-                        id = link.href.toString(),
-                        title = link.title ?: "Page ${index + 1}",
-                        href = link.href.toString()
-                    )
-                }
+                val chapters = buildChaptersFromPublication(publication)
 
                 _state.update {
                     it.copy(
@@ -445,6 +432,20 @@ class ReaderLifecycleStateHolder(
         }
     }
 
+    /**
+     * Toggles the TOC/Chapter bottom sheet visibility.
+     *
+     * Kept on the lifecycle holder (not the ViewModel) so the state flows
+     * through the same `state` StateFlow that the UI subscribes to. If the
+     * toggle lived on the ViewModel and wrote directly to the merged
+     * `mutableUiState`, the next emission from `state` (e.g. on chapter
+     * change) would overwrite the user's flip because the holder's value
+     * is always copied into the merge.
+     */
+    fun onToggleTocSheet() {
+        _state.update { it.copy(showTocSheet = !it.showTocSheet) }
+    }
+
     // ── PDF Page Navigation ────────────────────────────────────────
 
     fun goToNextPdfPage() {
@@ -497,6 +498,37 @@ class ReaderLifecycleStateHolder(
         when (format) {
             "pdf" -> if (isLeftZone) goToPreviousPdfPage() else goToNextPdfPage()
             else -> if (isLeftZone) goToPreviousChapter() else goToNextChapter()
+        }
+        // State updates (chapterIndex / currentPdfPage) are necessary but
+        // not sufficient — the Readium navigator only moves when we emit a
+        // Locator on the navigateToLocator flow. Without the emit, the UI
+        // header updates but the page itself doesn't turn.
+        emitLocatorForCurrentState()
+    }
+
+    /**
+     * Emits a Readium [Locator] pointing at the chapter/page currently
+     * stored in state, so the reader content actually navigates.
+     *
+     * Used by [onTapZone] (chapter/page arrows) and by the progress bar
+     * drag handler. Safe to call when no [Publication] is loaded — it just
+     * returns without emitting.
+     */
+    private fun emitLocatorForCurrentState() {
+        val state = _state.value
+        val publication = state.readiumPublication ?: return
+        when (state.bookFormat) {
+            "pdf" -> {
+                val link = publication.readingOrder.getOrNull(state.currentPdfPage) ?: return
+                emitPdfNavigateLocator(state.currentPdfPage, link)
+            }
+            else -> {
+                val link = publication.readingOrder.getOrNull(state.currentChapterIndex) ?: return
+                val totalProgression = if (publication.readingOrder.isNotEmpty()) {
+                    state.currentChapterIndex.toFloat() / publication.readingOrder.size
+                } else 0f
+                emitEpubNavigateLocator(state.currentChapterIndex, totalProgression, link)
+            }
         }
     }
 
@@ -635,6 +667,13 @@ class ReaderLifecycleStateHolder(
 
     // ── Progress drag ────────────────────────────────────────────────
 
+    /**
+     * Handles a progress-bar drag from the reader UI. Updates the
+     * displayed progress, then — crucially — emits a Readium [Locator]
+     * via [onNavigateToLocator] so the EPUB WebView or PDF fragment
+     * actually navigates to the new position. Without that emit, the
+     * state changes but the reader content does not move.
+     */
     fun onProgressChange(percent: Float) {
         val clamped = percent.coerceIn(0f, 100f)
         _state.update {
@@ -643,18 +682,79 @@ class ReaderLifecycleStateHolder(
 
         if (_state.value.selectedBookId == null) return
 
-        if (_state.value.totalPdfPages > 0) {
-            val pageIndex = ((clamped / 100f) * _state.value.totalPdfPages).toInt()
-                .coerceIn(0, _state.value.totalPdfPages - 1)
-            _state.update { it.copy(currentPdfPage = pageIndex) }
-            updatePdfProgress(pageIndex, _state.value.totalPdfPages)
-            updateProgressDisplay()
-        } else if (_state.value.chapters.isNotEmpty()) {
-            val chapterIndex = ((clamped / 100f) * _state.value.chapters.size).toInt()
-                .coerceIn(0, _state.value.chapters.size - 1)
-            if (chapterIndex != _state.value.currentChapterIndex) {
-                goToChapter(chapterIndex)
+        val state = _state.value
+        if (state.totalPdfPages > 0) {
+            val pageIndex = ((clamped / 100f) * state.totalPdfPages).toInt()
+                .coerceIn(0, state.totalPdfPages - 1)
+            if (pageIndex != state.currentPdfPage) {
+                _state.update { it.copy(currentPdfPage = pageIndex) }
+                updatePdfProgress(pageIndex, state.totalPdfPages)
+                updateProgressDisplay()
+                emitPdfNavigateLocator(pageIndex)
             }
+        } else if (state.chapters.isNotEmpty()) {
+            val chapterIndex = ((clamped / 100f) * state.chapters.size).toInt()
+                .coerceIn(0, state.chapters.size - 1)
+            if (chapterIndex != state.currentChapterIndex) {
+                _state.update { it.copy(currentChapterIndex = chapterIndex) }
+                updateProgressForChapter(chapterIndex)
+                onChapterChanged()
+                emitEpubNavigateLocator(chapterIndex, clamped / 100f)
+            }
+        }
+    }
+
+    /**
+     * Builds a Readium [Locator] pointing at PDF page [pageIndex] (0-based)
+     * and emits it via [onNavigateToLocator]. The [PdfNavigatorFragment]
+     * collects from that flow and calls `frag.go(locator)` to actually
+     * move to the new page.
+     */
+    private fun emitPdfNavigateLocator(pageIndex: Int, link: org.readium.r2.shared.publication.Link? = null) {
+        val publication = _state.value.readiumPublication ?: return
+        val resolvedLink = link ?: publication.readingOrder.getOrNull(pageIndex) ?: return
+        val json = JSONObject().apply {
+            put("href", resolvedLink.href.toString())
+            put("mediaType", resolvedLink.mediaType?.toString() ?: "application/pdf")
+            put("locations", JSONObject().apply {
+                put("position", pageIndex + 1)
+            })
+        }
+        val locator = Locator.fromJSON(json) ?: return
+        scope.launch(mainDispatcher) {
+            onNavigateToLocator(locator)
+        }
+    }
+
+    /**
+     * Builds a Readium [Locator] pointing at the EPUB chapter at
+     * [chapterIndex] (0-based) and emits it via [onNavigateToLocator].
+     * The [EpubNavigatorFragment] collects from that flow and calls
+     * `frag.go(locator)` to actually move to the new chapter.
+     *
+     * The emitted Locator includes:
+     * - `href` of the chapter resource,
+     * - `progression = 0.0` (start of the chapter),
+     * - `totalProgression` (0.0–1.0) for accurate progress bar display.
+     */
+    private fun emitEpubNavigateLocator(
+        chapterIndex: Int,
+        totalProgression: Float,
+        link: org.readium.r2.shared.publication.Link? = null
+    ) {
+        val publication = _state.value.readiumPublication ?: return
+        val resolvedLink = link ?: publication.readingOrder.getOrNull(chapterIndex) ?: return
+        val json = JSONObject().apply {
+            put("href", resolvedLink.href.toString())
+            put("type", resolvedLink.mediaType?.toString() ?: "application/xhtml+xml")
+            put("locations", JSONObject().apply {
+                put("progression", 0.0)
+                put("totalProgression", totalProgression.toDouble().coerceIn(0.0, 1.0))
+            })
+        }
+        val locator = Locator.fromJSON(json) ?: return
+        scope.launch(mainDispatcher) {
+            onNavigateToLocator(locator)
         }
     }
 
@@ -714,6 +814,62 @@ class ReaderLifecycleStateHolder(
             Log.d(TAG, "Recorded $additionalMinutes minutes for book $bookId")
         }
         sessionStartTime = now
+    }
+
+    /**
+     * Builds the chapter list shown in the reader's TOC sheet.
+     *
+     * The list is ALWAYS aligned 1:1 with [Publication.readingOrder] so
+     * the chapter index in state is interchangeable with the reading-order
+     * index used by the Readium navigator. Titles come from the
+     * [Publication.tableOfContents] (the EPUB `nav.xhtml`) when available;
+     * spine items without a matching TOC entry fall back to "Chapter N".
+     *
+     * Sub-chapters (nested [Link.children]) are walked recursively and
+     * their titles are attached to the corresponding reading-order entry.
+     *
+     * When the publication has no TOC (typical for PDFs and malformed
+     * EPUBs) the reading order is used directly.
+     */
+    private fun buildChaptersFromPublication(publication: Publication): List<BookChapter> {
+        val titlesByHref = LinkedHashMap<String, String>()
+        if (publication.tableOfContents.isNotEmpty()) {
+            for (link in publication.tableOfContents) {
+                collectTocTitles(link, titlesByHref)
+            }
+        }
+        return publication.readingOrder.mapIndexed { readingIndex, link ->
+            val href = link.href.toString()
+            val title = titlesByHref[href]
+                ?: link.title?.takeIf { it.isNotBlank() }
+                ?: "Chapter ${readingIndex + 1}"
+            BookChapter(
+                index = readingIndex,
+                id = href,
+                title = title,
+                href = href
+            )
+        }
+    }
+
+    /**
+     * Recursively walks a TOC [Link] (and any [Link.children]) collecting
+     * `href -> title` pairs into [out]. The first title seen for a given
+     * href wins, matching how the EPUB spec defines the relationship
+     * between the nav map and the spine.
+     */
+    private fun collectTocTitles(
+        link: org.readium.r2.shared.publication.Link,
+        out: MutableMap<String, String>
+    ) {
+        val href = link.href.toString()
+        val title = link.title
+        if (title != null && title.isNotBlank() && !out.containsKey(href)) {
+            out[href] = title
+        }
+        for (child in link.children) {
+            collectTocTitles(child, out)
+        }
     }
 
     // ── Test helpers ────────────────────────────────────────────────

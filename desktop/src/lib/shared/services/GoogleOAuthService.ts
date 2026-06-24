@@ -58,7 +58,10 @@ function base64UrlEncode(buffer: ArrayBuffer): string {
 }
 
 export function generateCodeVerifier(): string {
-  const bytes = new Uint8Array(128);
+  // PKCE spec (RFC 7636 §4.1): code_verifier must be 43-128 chars when
+  // base64url-encoded, i.e. 32-96 random bytes. 32 bytes gives 256 bits of
+  // entropy and produces a 43-char verifier. Using 128 bytes overflows.
+  const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   return base64UrlEncode(bytes.buffer);
 }

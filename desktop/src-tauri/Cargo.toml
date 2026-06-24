@@ -20,6 +20,7 @@ tauri = { version = "2.1.1", features = ["protocol-asset"] }
 tauri-plugin-deep-link = "2.0.0"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+tauri-plugin-oauth = "2"
 thiserror = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
 zip = "2"

@@ -124,10 +124,7 @@ class ReaderInteractionStateHolder(
         locator: Locator,
         rect: RectF,
         text: String,
-        existingHighlights: List<Highlight>,
-        currentActiveHighlightId: String?,
-        currentHighlightTapDebounceUntil: Long,
-        currentMenuJustClosedAt: Long
+        existingHighlights: List<Highlight>
     ) {
         Log.d("SelectionDebug", "VM.onReadiumSelection: text='${text.take(50)}', " +
             "rect=[${rect.left},${rect.top},${rect.right},${rect.bottom}], " +
@@ -145,30 +142,59 @@ class ReaderInteractionStateHolder(
                 coordinator = SelectionCoordinator.Idle
             }
             is SelectionCoordinator.ExistingHighlight -> {
+                // The decoration listener (onDecorationActivated) is the
+                // source of truth for highlight taps — it calls
+                // [onHighlightTapped] directly when the user taps an
+                // existing highlight. The polling loop in
+                // [ReadiumReaderContent] fires [onReadiumSelection] for
+                // ANY active selection (new or pre-existing), so we use
+                // a debounce here to prevent the polling loop from
+                // overriding the highlight-tap menu during the brief
+                // window when both events fire for the same selection.
+                //
+                // Two cases during the debounce window:
+                // 1. Text matches the tapped highlight → the polling loop
+                //    is just catching the same selection that triggered
+                //    the highlight tap; ignore it to keep the existing
+                //    menu open.
+                // 2. Text does NOT match → the user is making a fresh
+                //    selection in a different area; let it through so
+                //    the new-selection menu can show.
+                //
+                // After the debounce expires, the polling event is always
+                // a FRESH user selection — possibly inside highlighted
+                // text (long-press drag inside the same highlight) — and
+                // must show the new-selection menu. The previous
+                // "re-establish" path incorrectly re-opened the
+                // existing-highlight menu whenever the new selection's
+                // text happened to match a previously-tapped highlight.
+                val activeHighlight = current.highlight
+                val textMatchesActive = activeHighlight.textContent.isNotBlank() &&
+                    (text == activeHighlight.textContent ||
+                        text.contains(activeHighlight.textContent) ||
+                        activeHighlight.textContent.contains(text))
                 if (now < current.debounceUntil) {
-                    Log.d("SelectionDebug", "Ignoring selection during highlight-tap debounce")
-                    DebugLog.warn(TAG, "onReadiumSelection IGNORED (debounce active until=${current.debounceUntil}, now=$now)")
-                    return
+                    if (textMatchesActive) {
+                        Log.d("SelectionDebug", "Ignoring selection during highlight-tap debounce (matches active highlight)")
+                        DebugLog.warn(TAG, "onReadiumSelection IGNORED (debounce active, matches active highlight)")
+                        return
+                    }
+                    DebugLog.info(
+                        TAG,
+                        "Debounce active but selection text doesn't match active highlight — overriding"
+                    )
+                    // fall through to new-selection handling
+                } else {
+                    DebugLog.info(TAG, "Debounce expired — falling through to new-selection menu")
+                    // fall through to new-selection handling
                 }
-                // Debounce expired — fall through
             }
             is SelectionCoordinator.Idle,
             is SelectionCoordinator.NewSelection -> {
-                // Proceed with normal handling
+                // Always treat as new selection. The decoration listener
+                // (onDecorationActivated) handles highlight taps while it's
+                // active — this polling path should not override it.
             }
-        }
-
-        // Check if the current selection sits inside an existing highlight.
-        val matchingHighlight = existingHighlights.firstOrNull { highlight ->
-            highlight.textContent.isNotBlank() &&
-                (text == highlight.textContent ||
-                    text.contains(highlight.textContent) ||
-                    highlight.textContent.contains(text))
-        }
-        if (matchingHighlight != null && currentActiveHighlightId == matchingHighlight.id) {
-            DebugLog.info(TAG, "Selection inside existing highlight: id=${matchingHighlight.id}, opening FaPN3")
-            onHighlightTapped(matchingHighlight, rect)
-            return
         }
 
         val selectionRect = try {
@@ -354,8 +380,18 @@ class ReaderInteractionStateHolder(
         currentChapterIndex: Int
     ) {
         val bookId = selectedBookId ?: return
-        val locator = readiumSelectionLocator ?: return
-        val text = selectedText ?: return
+        // The `readiumSelectionLocator` parameter is wired from
+        // [ReaderLifecycleStateHolder.state.readiumSelectionLocator], but
+        // that field is never written anywhere — the lifecycle holder
+        // only declares it. The real locator for the active selection
+        // lives in [ReaderSelectionState.New.locator] (set by
+        // [onReadiumSelection] when the polling loop detects a new
+        // selection). Fall back to it, and finally to the parameter
+        // for the legacy non-Readium path.
+        val locator = (_state.value.selectionState as? ReaderSelectionState.New)?.locator
+            ?: readiumSelectionLocator
+            ?: return
+        val text = selectedText ?: _state.value.selectedText ?: return
 
         val activeId = when (val c = coordinator) {
             is SelectionCoordinator.ExistingHighlight -> c.activeHighlightId
@@ -664,10 +700,45 @@ class ReaderInteractionStateHolder(
         dismissMenuAndClearSelection()
     }
 
-    /** Opens the anchored definition input so the user can save the selected
-     *  word with an optional definition. */
+    /**
+     * Saves the currently selected text to the user's personal
+     * dictionary. No definition is required at this point — the user
+     * can add one later from the Dictionary screen
+     * ([com.nextpage.presentation.screen.DictionaryScreen]).
+     *
+     * Flow:
+     * 1. Trim and read the selected text.
+     * 2. If the repository is unavailable (tests, missing DI) or the
+     *    selection is empty, silently return.
+     * 3. If the word is already in the dictionary, emit a snackbar
+     *    "ya está en tu diccionario" and dismiss the menu.
+     * 4. Otherwise persist via [DictionaryRepository.save] and emit
+     *    a confirmation snackbar. Always dismiss the menu and clear
+     *    the selection at the end.
+     */
     fun onAddToDictionary() {
-        onShowDefinitionInput()
+        val repo = dictionaryRepository ?: return
+        val text = _state.value.selectedText?.trim()?.takeIf { it.isNotBlank() } ?: return
+
+        scope.launch(mainDispatcher) {
+            if (repo.exists(text)) {
+                onEvent(UiEvent.ShowSnackbar("\"$text\" ya está en tu diccionario"))
+            } else {
+                // Use isSuccess / exceptionOrNull instead of fold to avoid
+                // a runtime ClassCastException when the result carries a
+                // non-null typed value that is null at runtime (e.g. a
+                // relaxed MockK return). The real repository never returns
+                // null; this is just test-mock safety.
+                val result = repo.save(text)
+                if (result.isSuccess) {
+                    onEvent(UiEvent.ShowSnackbar("\"$text\" guardada en tu diccionario"))
+                } else {
+                    val msg = result.exceptionOrNull()?.message ?: "Error al guardar"
+                    onEvent(UiEvent.ShowSnackbar(msg))
+                }
+            }
+        }
+        dismissMenuAndClearSelection()
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -779,32 +850,37 @@ class ReaderInteractionStateHolder(
             )
             return
         }
-        val rect = Rect(200, 200, 600, 250)
-        val highlight = Highlight(
-            id = "debug-highlight",
-            bookId = "debug-book",
-            cfiRange = "epubcfi(/6/1)",
-            textContent = "Texto de prueba debug",
-            note = null,
-            color = HighlightColor.YELLOW.hex,
-            updatedAtEpochMillis = System.currentTimeMillis(),
-            deletedAtEpochMillis = null
-        )
-        coordinator = SelectionCoordinator.ExistingHighlight(
-            highlight = highlight,
-            rect = rect,
-            debounceUntil = SystemClock.elapsedRealtime() + HIGHLIGHT_TAP_DEBOUNCE_MS
-        )
-        _state.update {
-            it.copy(
-                selectedText = "Texto de prueba debug",
-                selectionRect = rect,
-                selectionState = ReaderSelectionState.Existing(
-                    highlight,
-                    rect
-                ),
-                debugForceMenu = true
+        try {
+            val rect = Rect(200, 200, 600, 250)
+            val highlight = Highlight(
+                id = "debug-highlight",
+                bookId = "debug-book",
+                cfiRange = "epubcfi(/6/1)",
+                textContent = "Texto de prueba debug",
+                note = null,
+                color = HighlightColor.YELLOW.hex,
+                updatedAtEpochMillis = System.currentTimeMillis(),
+                deletedAtEpochMillis = null
             )
+            coordinator = SelectionCoordinator.ExistingHighlight(
+                highlight = highlight,
+                rect = rect,
+                debounceUntil = SystemClock.elapsedRealtime() + HIGHLIGHT_TAP_DEBOUNCE_MS
+            )
+            _state.update {
+                it.copy(
+                    selectedText = "Texto de prueba debug",
+                    selectionRect = rect,
+                    selectionState = ReaderSelectionState.Existing(
+                        highlight,
+                        rect
+                    ),
+                    debugForceMenu = true
+                )
+            }
+        } catch (e: Throwable) {
+            // Debug helper — never let a force-menu crash the reader.
+            DebugLog.warn(TAG, "onDebugForceMenu failed: ${e::class.simpleName}: ${e.message}")
         }
     }
 
@@ -817,25 +893,54 @@ class ReaderInteractionStateHolder(
             )
             return
         }
-        val rect = Rect(200, 200, 600, 250)
-        coordinator = SelectionCoordinator.NewSelection("Texto de prueba debug", rect, null)
-        _state.update {
-            it.copy(
-                selectedText = "Texto de prueba debug",
-                selectionRect = rect,
-                selectionState = ReaderSelectionState.New(
-                    rect = rect,
-                    text = "Texto de prueba debug",
-                    locator = null
-                ),
-                debugForceMenu = true
-            )
+        try {
+            val rect = Rect(200, 200, 600, 250)
+            coordinator = SelectionCoordinator.NewSelection("Texto de prueba debug", rect, null)
+            _state.update {
+                it.copy(
+                    selectedText = "Texto de prueba debug",
+                    selectionRect = rect,
+                    selectionState = ReaderSelectionState.New(
+                        rect = rect,
+                        text = "Texto de prueba debug",
+                        locator = null
+                    ),
+                    debugForceMenu = true
+                )
+            }
+        } catch (e: Throwable) {
+            // Debug helper — never let a force-color-picker crash the reader.
+            DebugLog.warn(TAG, "onDebugForceColorPicker failed: ${e::class.simpleName}: ${e.message}")
         }
     }
 
     // ──────────────────────────────────────────────────────────────
     // Lifecycle bridge
     // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Called when a new book is loaded to reset the selection coordinator
+     * and clear any stale selection state.
+     */
+    fun resetCoordinator() {
+        coordinator = SelectionCoordinator.Idle
+        _state.update {
+            it.copy(
+                selectionState = ReaderSelectionState.None,
+                selectedText = null,
+                selectionRect = null,
+                showColorPickerPopover = false,
+                showNoteModal = false,
+                showTagInput = false,
+                showDefinitionInput = false,
+                activeNoteText = "",
+                activeTagText = "",
+                activeDefinitionText = "",
+                tagSuggestions = emptyList(),
+                debugForceMenu = false
+            )
+        }
+    }
 
     /**
      * Bridge method called from [ReaderLifecycleStateHolder.onSelectionCleared]

@@ -1,6 +1,7 @@
 package com.nextpage.ui.components.molecules
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,9 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -33,49 +32,58 @@ import com.nextpage.domain.model.HighlightColor
 /**
  * Floating action menu shown when the user makes a NEW text
  * selection. Sibling of [FloatingContextMenu] but with a different
- * action set: color, copy, dictionary, share, annotate (the
- * "existing highlight" menu has Tag + Delete and no Dictionary).
+ * action set: 5 color swatches + copy + dictionary + share (the
+ * "existing highlight" menu has Tag + Delete instead of the
+ * dictionary, and uses a single color popover trigger).
  *
- * Design: horizontal pill of icon actions with thin vertical
- * dividers between groups:
+ * Design: horizontal pill with thin vertical divider between the
+ * color group and the action group:
  * ```
- * [Palette] | [Copy] | [Dictionary] | [Share] | [Annotate]
+ * [●][●][●][●][●] | [Copy] [Dictionary] [Share]
  * ```
  * All colors come from [MaterialTheme.colorScheme] so the menu
  * adapts to light/dark themes.
  *
+ * @param paletteColors List of 5 hex color strings shown as
+ *   swatches. Should come from
+ *   `ReaderSettings.customHighlightColors` (or the defaults via
+ *   [HighlightColor.defaultHexList]). The first 5 are used; extras
+ *   are ignored.
  * @param selectedColor Currently active highlight color (hex with
- *   or without `#`). Drives the Palette icon tint via
- *   [parseColorHex]. Defaults to [HighlightColor.YELLOW].hex.
- *   Bad hex strings resolve to opaque black.
- * @param onColorSelected Invoked when the Palette icon is tapped.
- *   Typically opens the [HighlightColorPickerPopover].
+ *   or without `#`). The matching swatch gets a 2dp ring around
+ *   it so the user can see which color was last used. Pass `null`
+ *   to disable the ring (e.g. for the very first selection).
+ * @param onColorSelected Invoked with the chosen hex when a
+ *   swatch is tapped. The caller should immediately persist the
+ *   highlight with that color (this menu does NOT open a popover).
  * @param onCopy Copy the selected text to the clipboard.
  * @param onDictionary Open the [AnchoredDefinitionInput] for the
  *   selected word.
  * @param onShare Share the selected text via the system share
  *   sheet.
- * @param onAnnotate Open the [HighlightAnnotationModal] to add a
- *   note to the new highlight.
  * @param modifier Modifier applied to the outer `Row`.
  *
  * **Visual**: pill-shaped `Row` with 8dp shadow, 6dp padding,
- *   50%-radius corners. Each icon is a 40dp clickable circle; the
- *   vertical dividers (1dp × 20dp) are placed only after the
- *   Palette icon (between Color and the rest of the actions).
- * **Behavior**: each icon calls its respective callback. No
- *   internal state, no animation.
- * **Recomposition**: recomposes when `selectedColor` or any
- *   callback changes.
+ *   50%-radius corners. Each swatch is a 28dp clickable circle;
+ *   the active swatch (matching [selectedColor]) is wrapped in a
+ *   2dp ring of `onSurface` for visibility against the
+ *   surface. Action icons are 40dp clickable circles (same as
+ *   [FloatingContextMenu]). Vertical dividers (1dp × 20dp) sit
+ *   between the color group and the action group.
+ * **Behavior**: each swatch calls [onColorSelected] with its hex.
+ *   Each action icon calls its respective callback. No internal
+ *   state, no animation.
+ * **Recomposition**: recomposes when `paletteColors`,
+ *   `selectedColor`, or any callback changes.
  */
 @Composable
 fun TextSelectionMenu(
-    selectedColor: String = HighlightColor.YELLOW.hex,
-    onColorSelected: () -> Unit,
+    paletteColors: List<String>,
+    selectedColor: String? = null,
+    onColorSelected: (String) -> Unit,
     onCopy: () -> Unit,
     onDictionary: () -> Unit,
     onShare: () -> Unit,
-    onAnnotate: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val containerColor = MaterialTheme.colorScheme.surface
@@ -90,15 +98,26 @@ fun TextSelectionMenu(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        SelectionMenuIcon(
-            icon = Icons.Default.Palette,
-            contentDescription = stringResource(R.string.context_menu_color),
-            tint = parseColorHex(selectedColor),
-            onClick = onColorSelected
-        )
+        // ── 5 color swatches (direct selection) ─────────────────
+        paletteColors.take(5).forEach { hex ->
+            val isActive = selectedColor != null &&
+                hex.equals(selectedColor, ignoreCase = true)
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(parseColorHex(hex))
+                    .then(
+                        if (isActive) Modifier.border(2.dp, contentColor, CircleShape)
+                        else Modifier
+                    )
+                    .clickable { onColorSelected(hex) }
+            )
+        }
 
         MenuVerticalDivider(dividerColor)
 
+        // ── Actions ─────────────────────────────────────────────
         SelectionMenuIcon(
             icon = Icons.Default.ContentCopy,
             contentDescription = stringResource(R.string.text_selection_copy),
@@ -118,13 +137,6 @@ fun TextSelectionMenu(
             contentDescription = stringResource(R.string.context_menu_share),
             tint = contentColor,
             onClick = onShare
-        )
-
-        SelectionMenuIcon(
-            icon = Icons.Default.EditNote,
-            contentDescription = stringResource(R.string.context_menu_annotate),
-            tint = contentColor,
-            onClick = onAnnotate
         )
     }
 }

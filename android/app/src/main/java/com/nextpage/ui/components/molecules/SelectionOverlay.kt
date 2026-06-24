@@ -203,19 +203,17 @@ fun SelectionOverlay(
                 }
                 .padding(8.dp)
         ) {
-            val defaultColor = selectedText?.let {
-                highlights.lastOrNull()?.color?.let { color ->
-                    HighlightColor.fromHex(color)?.hex
-                } ?: HighlightColor.YELLOW.hex
-            } ?: HighlightColor.YELLOW.hex
+            val defaultColor = HighlightColor.YELLOW.hex
+            val paletteColors = customHighlightColors
+                ?: HighlightColor.defaultHexList()
 
             TextSelectionMenu(
+                paletteColors = paletteColors,
                 selectedColor = activeHighlightColor ?: defaultColor,
-                onColorSelected = onShowColorPickerPopover,
+                onColorSelected = onColorSelected,
                 onCopy = onCopy,
                 onDictionary = onDictionary,
-                onShare = onShare,
-                onAnnotate = onAnnotate
+                onShare = onShare
             )
         }
     }

@@ -76,10 +76,7 @@ class SelectionCoordinatorTest {
             locator = locator,
             rect = sampleRectF,
             text = "selected text",
-            existingHighlights = emptyList(),
-            currentActiveHighlightId = null,
-            currentHighlightTapDebounceUntil = 0L,
-            currentMenuJustClosedAt = 0L
+            existingHighlights = emptyList()
         )
 
         val state = holder.state.value
@@ -100,7 +97,7 @@ class SelectionCoordinatorTest {
     }
 
     @Test
-    fun `ExistingHighlight ignores onReadiumSelection within debounce period`() = runTest {
+    fun `ExistingHighlight ignores onReadiumSelection within debounce period when text matches`() = runTest {
         // Given: current time is 1000L
         every { SystemClock.elapsedRealtime() } returns 1000L
         holder = createHolder(scope = this)
@@ -108,24 +105,54 @@ class SelectionCoordinatorTest {
         holder.onHighlightTapped(highlight, sampleRectF)
         // Now coordinator is ExistingHighlight with debounceUntil = 1000L + 2000 = 3000L
 
-        // When: onReadiumSelection is called with time still at 1000L (before debounce expires)
+        // When: onReadiumSelection is called with text that MATCHES the
+        // tapped highlight, before the debounce expires.
         every { SystemClock.elapsedRealtime() } returns 1500L // Still before 3000L
         val locator = mockk<Locator>(relaxed = true)
         holder.onReadiumSelection(
             locator = locator,
             rect = sampleRectF,
-            text = "new text selection",
-            existingHighlights = listOf(highlight),
-            currentActiveHighlightId = "h1",
-            currentHighlightTapDebounceUntil = 3000L,
-            currentMenuJustClosedAt = 0L
+            text = "highlighted text", // matches highlight.textContent
+            existingHighlights = listOf(highlight)
         )
 
         // Then: selection state should remain Existing (not overwritten by New)
         val state = holder.state.value
         assertTrue(
-            "selectionState should remain Existing during debounce",
+            "selectionState should remain Existing during debounce (matching text)",
             state.selectionState is ReaderSelectionState.Existing
+        )
+    }
+
+    @Test
+    fun `ExistingHighlight overrides debounce when selection text does not match highlight`() = runTest {
+        // Regression test: a NEW text selection (long-press + drag) that
+        // overlaps an existing highlight must NOT be stuck on the
+        // FloatingContextMenu (Existing). The polling loop must be allowed
+        // to transition the state to New when the selected text clearly
+        // doesn't match the highlight's stored text.
+        every { SystemClock.elapsedRealtime() } returns 1000L
+        holder = createHolder(scope = this)
+        val highlight = createSampleHighlight(id = "h1")
+        holder.onHighlightTapped(highlight, sampleRectF)
+        // coordinator = ExistingHighlight(debounceUntil = 1000 + 2000 = 3000L)
+
+        // When: onReadiumSelection fires within the debounce window with
+        // a selection text that does NOT match the highlight.
+        every { SystemClock.elapsedRealtime() } returns 1500L
+        val locator = mockk<Locator>(relaxed = true)
+        holder.onReadiumSelection(
+            locator = locator,
+            rect = sampleRectF,
+            text = "entirely different fresh selection",
+            existingHighlights = listOf(highlight)
+        )
+
+        // Then: selection transitions to New, not Existing.
+        val state = holder.state.value
+        assertTrue(
+            "selectionState should be New (text doesn't match highlight — debounce overridden)",
+            state.selectionState is ReaderSelectionState.New
         )
     }
 
@@ -139,10 +166,7 @@ class SelectionCoordinatorTest {
             locator = locator,
             rect = sampleRectF,
             text = "selected text",
-            existingHighlights = emptyList(),
-            currentActiveHighlightId = null,
-            currentHighlightTapDebounceUntil = 0L,
-            currentMenuJustClosedAt = 0L
+            existingHighlights = emptyList()
         )
         assertTrue("Should start as New", holder.state.value.selectionState is ReaderSelectionState.New)
 
@@ -170,10 +194,7 @@ class SelectionCoordinatorTest {
             locator = locator,
             rect = sampleRectF,
             text = "selected text",
-            existingHighlights = emptyList(),
-            currentActiveHighlightId = null,
-            currentHighlightTapDebounceUntil = 0L,
-            currentMenuJustClosedAt = 0L
+            existingHighlights = emptyList()
         )
 
         // Dismiss creates MenuClosed(1000L)
@@ -186,10 +207,7 @@ class SelectionCoordinatorTest {
             locator = locator2,
             rect = sampleRectF,
             text = "new text after close",
-            existingHighlights = emptyList(),
-            currentActiveHighlightId = null,
-            currentHighlightTapDebounceUntil = 0L,
-            currentMenuJustClosedAt = 1000L
+            existingHighlights = emptyList()
         )
 
         // Then: selection state should remain None (ignored)
@@ -217,10 +235,7 @@ class SelectionCoordinatorTest {
             locator = locator,
             rect = sampleRectF,
             text = "fresh selection after debounce",
-            existingHighlights = emptyList(),
-            currentActiveHighlightId = null,
-            currentHighlightTapDebounceUntil = 0L, // Past debounce so no guard
-            currentMenuJustClosedAt = 0L
+            existingHighlights = emptyList()
         )
 
         // Then: selection should transition to NewSelection

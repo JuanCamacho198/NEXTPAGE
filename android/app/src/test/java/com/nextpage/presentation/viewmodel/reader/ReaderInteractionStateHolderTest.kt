@@ -10,6 +10,7 @@ import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.presentation.UiEvent
 import com.nextpage.testutil.MainDispatcherRule
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -90,10 +91,7 @@ class ReaderInteractionStateHolderTest {
             locator = locator,
             rect = sampleRectF,
             text = "selected text from readium",
-            existingHighlights = emptyList(),
-            currentActiveHighlightId = null,
-            currentHighlightTapDebounceUntil = 0L,
-            currentMenuJustClosedAt = 0L
+            existingHighlights = emptyList()
         )
 
         val state = holder.state.value
@@ -133,10 +131,7 @@ class ReaderInteractionStateHolderTest {
             locator = locator,
             rect = sampleRectF,
             text = "some text",
-            existingHighlights = emptyList(),
-            currentActiveHighlightId = null,
-            currentHighlightTapDebounceUntil = 0L,
-            currentMenuJustClosedAt = 0L
+            existingHighlights = emptyList()
         )
         assertTrue("Should have New selection initially",
             holder.state.value.selectionState is ReaderSelectionState.New)
@@ -304,12 +299,38 @@ class ReaderInteractionStateHolderTest {
     // ── Definition Input ──────────────────────────────────────────
 
     @Test
-    fun `onShowDefinitionInput opens definition input`() = runTest {
-        holder = createHolder(scope = this)
+    fun `onAddToDictionary saves selected word directly without opening input`() = runTest {
+        val events = mutableListOf<UiEvent>()
+        holder = ReaderInteractionStateHolder(
+            readerRepository = readerRepository,
+            dictionaryRepository = dictionaryRepository,
+            scope = this,
+            onEvent = { events.add(it) }
+        )
+        // Set up a selection so onAddToDictionary has text to save
+        val locator = mockk<Locator>(relaxed = true)
+        holder.onReadiumSelection(
+            locator = locator,
+            rect = sampleRectF,
+            text = "vocabulario",
+            existingHighlights = emptyList()
+        )
+        // dictionaryRepository is a relaxed mock — `exists` returns false
+        // and `save` returns Result.success(null) by default.
 
+        // When: user taps Dictionary button
         holder.onAddToDictionary()
+        testScheduler.advanceUntilIdle()
 
-        assertTrue("definition input should open", holder.state.value.showDefinitionInput)
+        // Then: dictionary input did NOT open
+        assertFalse("definition input should NOT open", holder.state.value.showDefinitionInput)
+        // And: selection was dismissed (selectedText cleared)
+        assertNull("selection should be cleared", holder.state.value.selectedText)
+        assertTrue("selectionState should be None",
+            holder.state.value.selectionState is ReaderSelectionState.None)
+        // And: a snackbar was emitted
+        assertTrue("snackbar should be emitted",
+            events.any { it is com.nextpage.presentation.UiEvent.ShowSnackbar })
     }
 
     @Test
@@ -339,10 +360,7 @@ class ReaderInteractionStateHolderTest {
             locator = locator,
             rect = sampleRectF,
             text = "shareable text",
-            existingHighlights = emptyList(),
-            currentActiveHighlightId = null,
-            currentHighlightTapDebounceUntil = 0L,
-            currentMenuJustClosedAt = 0L
+            existingHighlights = emptyList()
         )
 
         // When: share
@@ -367,10 +385,7 @@ class ReaderInteractionStateHolderTest {
             locator = locator,
             rect = sampleRectF,
             text = "copiable text",
-            existingHighlights = emptyList(),
-            currentActiveHighlightId = null,
-            currentHighlightTapDebounceUntil = 0L,
-            currentMenuJustClosedAt = 0L
+            existingHighlights = emptyList()
         )
 
         holder.onCopySelectedText()

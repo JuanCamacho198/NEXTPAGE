@@ -14,6 +14,7 @@
     "fs:allow-appdata-read-recursive",
     "fs:allow-appdata-write-recursive",
     "deep-link:default",
+    "oauth:default",
     "core:window:allow-set-fullscreen"
   ]
 }

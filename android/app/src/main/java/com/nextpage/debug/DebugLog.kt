@@ -14,6 +14,10 @@ import kotlinx.coroutines.flow.update
  *   debug UI is the only runtime gate.
  * - Thread-safe: mutations go through [MutableStateFlow.update].
  * - Capped at [MAX_EVENTS] entries (oldest dropped).
+ * - A separate [errorEvents] ring buffer only stores `ERROR`-level events
+ *   so critical failures are not evicted by high-frequency INFO/DEBUG
+ *   messages (e.g. the selection poll every 300 ms). Its capacity is
+ *   [MAX_ERROR_EVENTS].
  */
 object DebugLog {
 
@@ -26,10 +30,15 @@ object DebugLog {
         val message: String
     )
 
-    private const val MAX_EVENTS = 100
+    private const val MAX_EVENTS = 500
+    private const val MAX_ERROR_EVENTS = 200
 
     private val _events = MutableStateFlow<List<DebugEvent>>(emptyList())
     val events: StateFlow<List<DebugEvent>> = _events.asStateFlow()
+
+    private val _errorEvents = MutableStateFlow<List<DebugEvent>>(emptyList())
+    /** Only `ERROR`-level events, newest first. Survives INFO/WARN flood. */
+    val errorEvents: StateFlow<List<DebugEvent>> = _errorEvents.asStateFlow()
 
     fun log(level: Level, tag: String, message: String) {
         val event = DebugEvent(
@@ -44,6 +53,15 @@ object DebugLog {
             val keep = current.take(MAX_EVENTS - 1)
             updated.addAll(keep)
             updated
+        }
+        if (level == Level.ERROR) {
+            _errorEvents.update { current ->
+                val updated = ArrayList<DebugEvent>(minOf(current.size + 1, MAX_ERROR_EVENTS))
+                updated.add(event)
+                val keep = current.take(MAX_ERROR_EVENTS - 1)
+                updated.addAll(keep)
+                updated
+            }
         }
         val priority = when (level) {
             Level.INFO -> Log.INFO
@@ -61,6 +79,7 @@ object DebugLog {
 
     fun clear() {
         _events.update { emptyList() }
+        _errorEvents.update { emptyList() }
     }
 
     /**

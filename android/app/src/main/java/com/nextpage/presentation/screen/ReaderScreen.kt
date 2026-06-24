@@ -159,9 +159,16 @@ fun ReaderScreen(
     } }
     val onSelectionDismiss = remember(viewModel) { { viewModel.onDismissContextMenu() } }
     val onSelectionDelete = remember(viewModel) { {
-        uiState.activeHighlightId?.let { viewModel.onReadiumDeleteHighlight(it) }
-        @Suppress("UNUSED_EXPRESSION")
-        Unit
+        // The Delete action only fires from [FloatingContextMenu] which
+        // is shown for [ReaderSelectionState.Existing]. The highlight
+        // being edited lives in that state's `highlight` field —
+        // `uiState.activeHighlightId` is a separate field documented as
+        // "managed internally by SelectionCoordinator — set to null
+        // in combine", so reading it always returns null and the
+        // delete was a no-op. Pull the id from the selection state.
+        val currentHighlight = (uiState.selectionState
+            as? com.nextpage.presentation.viewmodel.reader.ReaderSelectionState.Existing)?.highlight
+        currentHighlight?.let { viewModel.onReadiumDeleteHighlight(it.id) }
     } }
     val onSelectionAddTag = remember(viewModel) { { viewModel.onShowTagInput() } }
     val onSelectionAnnotate = remember(viewModel) { { viewModel.onAnnotate() } }

@@ -10,8 +10,10 @@
   import type { MessageKey } from "$lib/shared/i18n";
   import type { ReaderSettings, SearchBookTextResponse } from "$lib/shared/types";
   import type { LibraryBookDto } from "$lib/shared/types/library";
+  import type { HighlightActionKind, HighlightActionOpts, HighlightDto } from "$lib/shared/types/book";
+  import { HIGHLIGHT_COLORS } from "$lib/features/reader/highlight/highlightColors";
   import { debugState } from "$lib/shared/debug/debugState.svelte";
-  import { saveHighlight, deleteHighlight, upsertReaderSettings, getDefaultReaderSettings } from "$lib/shared/api/tauriClient";
+  import { saveHighlight, deleteHighlight, upsertReaderSettings, getDefaultReaderSettings, listHighlights } from "$lib/shared/api/tauriClient";
   import { createFocusTrap } from "$lib/shared/utils/focusTrap";
   import { createBookmarksState } from "../stores/bookmarksState.svelte";
   import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
@@ -102,12 +104,17 @@
   let showToolbar = $state(false);
   let selectedColor = $state("#FACC15");
 
-  // Persisted highlights state
+  // Persisted highlights state. We carry the full HighlightDto for
+  // EPUB (we need `cfi` to round-trip selections back to the
+  // iframe's cfiToRange), and a slim shape for the in-memory PDF
+  // overlay rendering. Both share the same key set we use to look
+  // up "this highlight" inside the EPUB iframe.
   type PersistedHighlight = {
     id: string;
     color: string;
     pageNumber: number;
     rects: Array<{ left: number; top: number; width: number; height: number }>;
+    cfi?: string | null;
   };
   let persistedHighlights = $state<PersistedHighlight[]>([]);
   let lastSelectionData = $state<{
@@ -115,7 +122,14 @@
     bounds: { left: number; top: number; right: number; bottom: number };
     rects: Array<{ left: number; top: number; width: number; height: number }>;
     pageNumber: number;
+    cfi: string | null;
   } | null>(null);
+
+  // Menu 2 (EPUB highlight manager) state
+  let activeHighlightId = $state<string | null>(null);
+  let activeHighlightColor = $state<string>(HIGHLIGHT_COLORS[0].hex);
+  let highlightToolbarPos = $state<{ x: number; y: number } | null>(null);
+  let showHighlightToolbar = $state(false);
 
   // PDF page tracking for footer
   let currentPdfPage = $state(0);
@@ -139,6 +153,30 @@
     }
     onEpubLocationChange?.(cfi, pct);
   }
+
+  // Load persisted highlights when the active book changes. We use the
+  // slim PersistedHighlight shape (the EPUB viewer needs cfi; the PDF
+  // viewer needs rects but ignores cfi). This is best-effort: on
+  // failure we keep the in-memory list empty and log.
+  $effect(() => {
+    if (activeReadingBook) {
+      listHighlights(activeReadingBook.id)
+        .then((rows: HighlightDto[]) => {
+          persistedHighlights = rows.map((r) => ({
+            id: r.id,
+            color: r.color,
+            pageNumber: r.pageNumber,
+            rects: [],
+            cfi: r.cfi ?? null,
+          }));
+        })
+        .catch((err) => {
+          console.error('Failed to load highlights:', err);
+        });
+    } else {
+      persistedHighlights = [];
+    }
+  });
 
   // Search panel state
   let searchPanelOpen = $state(false);
@@ -240,6 +278,7 @@
     placement: string;
     rects: Array<{ left: number; top: number; width: number; height: number }>;
     pageNumber: number;
+    cfi?: string | null;
   }): void {
     selectedText = event.text;
     selectionBounds = {
@@ -260,6 +299,7 @@
       bounds: event.bounds,
       rects: event.rects,
       pageNumber: event.pageNumber,
+      cfi: event.cfi ?? null,
     };
     showToolbar = true;
   }
@@ -284,6 +324,7 @@
       const highlightId = crypto.randomUUID();
       const bounds = lastSelectionData.bounds;
       const pageNumber = lastSelectionData.pageNumber ?? 1;
+      const cfi = lastSelectionData.cfi ?? null;
 
       // Persist visually immediately
       persistedHighlights = [...persistedHighlights, {
@@ -291,6 +332,7 @@
         color,
         pageNumber,
         rects: lastSelectionData.rects,
+        cfi,
       }];
 
       // Save to backend (async, don't block UI)
@@ -305,7 +347,7 @@
           rectRight: bounds.right,
           rectTop: bounds.top,
           rectBottom: bounds.bottom,
-          cfi: null,
+          cfi,
         });
       } catch (err) {
         console.error("Failed to save highlight:", err);
@@ -344,6 +386,59 @@
       deleteHighlight(event.highlightId).catch((err) =>
         console.error("Failed to delete highlight:", err)
       );
+    }
+  }
+
+  // Menu 2 (EPUB) highlight action handler. Distinct from the PDF
+  // `handleHighlightAction` because the EPUB viewer posts structured
+  // (action, id, opts) messages -- a richer contract than the PDF
+  // overlay's `{ highlightId, action, color }` event.
+  function handleEpubHighlightAction(action: HighlightActionKind, id: string, opts?: HighlightActionOpts): void {
+    if (action === "open" && opts) {
+      const hl = persistedHighlights.find((h) => h.id === id);
+      activeHighlightId = id;
+      activeHighlightColor = opts.color ?? hl?.color ?? HIGHLIGHT_COLORS[0].hex;
+      highlightToolbarPos = { x: opts.x ?? 0, y: opts.y ?? 0 };
+      showHighlightToolbar = true;
+      return;
+    }
+    if (action === "close") {
+      showHighlightToolbar = false;
+      activeHighlightId = null;
+      return;
+    }
+    if (action === "updateColor" && opts?.color) {
+      persistedHighlights = persistedHighlights.map((h) =>
+        h.id === id ? { ...h, color: opts.color! } : h
+      );
+      if (activeHighlightId === id) activeHighlightColor = opts.color!;
+      if (activeReadingBook) {
+        const hl = persistedHighlights.find((h) => h.id === id);
+        if (hl) {
+          saveHighlight({
+            id: hl.id,
+            bookId: activeReadingBook.id,
+            text: "",
+            color: opts.color,
+            pageNumber: hl.pageNumber,
+            rectLeft: 0,
+            rectRight: 0,
+            rectTop: 0,
+            rectBottom: 0,
+            cfi: hl.cfi ?? null,
+          }).catch((err) => console.error("Failed to update highlight color:", err));
+        }
+      }
+      return;
+    }
+    if (action === "delete") {
+      persistedHighlights = persistedHighlights.filter((h) => h.id !== id);
+      showHighlightToolbar = false;
+      activeHighlightId = null;
+      deleteHighlight(id).catch((err) =>
+        console.error("Failed to delete highlight:", err)
+      );
+      return;
     }
   }
 
@@ -450,6 +545,8 @@
           showToc={showTocPanel}
           onToggleToc={toggleTocPanel}
           onSettingsChange={handleTextSettingsChange}
+          {persistedHighlights}
+          onHighlightAction={handleEpubHighlightAction}
           {t}
         />
       </div>
@@ -469,6 +566,53 @@
         onColorSelect={handleColorSelect}
         {t}
       />
+    {/if}
+
+    <!-- Menu 2: EPUB highlight manager toolbar (floating) -->
+    {#if showHighlightToolbar && highlightToolbarPos && activeHighlightId}
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="fixed z-[100] flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-800 border border-slate-700 shadow-[0_8px_24px_rgba(0,0,0,0.35),0_2px_8px_rgba(0,0,0,0.15)]"
+        style="left: {highlightToolbarPos.x}px; top: {highlightToolbarPos.y}px;"
+        role="toolbar"
+        tabindex="-1"
+        aria-label={t("highlight.menuAriaLabel")}
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => { if (e.key === 'Escape' && activeHighlightId) handleEpubHighlightAction('close', activeHighlightId); }}
+      >
+        {#each HIGHLIGHT_COLORS as color}
+          <button
+            type="button"
+            class="w-[22px] h-[22px] border-2 border-white/60 rounded-full cursor-pointer p-0 transition-[transform,border-color] duration-150 hover:scale-110"
+            style="background-color: {color.hex}; {activeHighlightColor === color.hex ? 'border-color: white; box-shadow: 0 0 0 2px rgba(255,255,255,0.3);' : ''}"
+            onclick={() => handleHighlightAction('updateColor', activeHighlightId!, { color: color.hex })}
+            aria-label={t("highlight.selectColor", { color: color.label })}
+          ></button>
+        {/each}
+        <span class="w-px h-5 bg-slate-700 mx-1"></span>
+        <button
+          type="button"
+          class="flex items-center justify-center w-7 h-7 border-none rounded-full bg-transparent text-red-500 cursor-pointer transition-[background-color,transform] duration-150 hover:bg-red-500/15 hover:scale-110"
+          onclick={() => activeHighlightId && handleHighlightAction('delete', activeHighlightId)}
+          aria-label={t("settings.deleteHighlight")}
+          title={t("settings.deleteHighlight")}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"></path>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 1 2 1 2 2v2"></path>
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="flex items-center justify-center w-5 h-5 border-none rounded-full bg-transparent text-slate-400 cursor-pointer text-sm leading-none transition-[background-color,color] duration-150 hover:bg-slate-400/15 hover:text-slate-100"
+          onclick={() => activeHighlightId && handleHighlightAction('close', activeHighlightId)}
+          aria-label={t("settings.close")}
+        >
+          &times;
+        </button>
+      </div>
     {/if}
   </div>
 

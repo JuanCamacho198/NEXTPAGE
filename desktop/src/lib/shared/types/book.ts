@@ -87,3 +87,24 @@ export type UpsertBookCoverInput = {
   data: number[];
   mimeType?: string;
 };
+
+/**
+ * Discriminated action kinds for highlight events originating from a
+ * viewer. `open` is fired by the EPUB/PDF iframe when the user clicks
+ * a persisted highlight (the parent renders the Menu 2 toolbar).
+ * `updateColor` and `delete` are fired by the Menu 2 toolbar itself.
+ * `close` dismisses the toolbar without mutating the highlight.
+ */
+export type HighlightActionKind = "open" | "updateColor" | "delete" | "close";
+
+/**
+ * Options payload for `onHighlightAction`. `color` is the current
+ * color (hex) for `open` and the new color for `updateColor`. `x`
+ * and `y` are parent-viewport coordinates (the click point) for
+ * `open` so the parent can anchor the Menu 2 toolbar.
+ */
+export interface HighlightActionOpts {
+  color?: string;
+  x?: number;
+  y?: number;
+}

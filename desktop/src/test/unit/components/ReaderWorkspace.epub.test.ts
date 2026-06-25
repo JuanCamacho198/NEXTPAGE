@@ -44,6 +44,7 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
   })),
   upsertReaderSettings: vi.fn(),
   listBookmarks: vi.fn().mockResolvedValue([]),
+  listHighlights: vi.fn().mockResolvedValue([]),
   saveBookmark: vi.fn(),
   deleteBookmark: vi.fn(),
 }));

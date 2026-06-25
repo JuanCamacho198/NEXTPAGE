@@ -1,10 +1,11 @@
 import { render, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import HighlightContextMenu from '$lib/features/reader/components/HighlightContextMenu.svelte';
+import HighlightContextMenu from '$lib/features/reader/highlight/HighlightContextMenu.svelte';
 
 const t = (key: string, params?: Record<string, string | number>) => {
   const translations: Record<string, string> = {
     "highlight.contextMenuAriaLabel": "Highlight actions",
+    "highlight.changeColor": "Change color",
     "highlight.colors": "Colors",
     "highlight.selectColor": "Select {{color}} highlight",
     "highlight.color.yellow": "Yellow",
@@ -28,13 +29,11 @@ const t = (key: string, params?: Record<string, string | number>) => {
 };
 
 describe('HighlightContextMenu', () => {
-  it('renders color palette and action buttons', () => {
+  it('renders the change color trigger and action buttons', () => {
     const { getByLabelText, getByText } = render(HighlightContextMenu, {
       highlightId: 'hl-1',
-      highlightColor: '#FACC15',
       position: { x: 100, y: 100 },
       assignedTags: [],
-      onColorSelect: () => undefined,
       onCustomColor: () => undefined,
       onCopy: () => undefined,
       onTag: () => undefined,
@@ -44,22 +43,20 @@ describe('HighlightContextMenu', () => {
       t,
     });
 
-    expect(getByLabelText('Custom color')).toBeTruthy();
+    expect(getByLabelText('Change color')).toBeTruthy();
     expect(getByText('Copy')).toBeTruthy();
     expect(getByText('Tag')).toBeTruthy();
     expect(getByText('Note')).toBeTruthy();
     expect(getByText('Delete highlight')).toBeTruthy();
   });
 
-  it('fires onColorSelect when a preset color is clicked', async () => {
-    const onColorSelect = vi.fn();
+  it('opens color picker via onCustomColor when palette trigger clicked', async () => {
+    const onCustomColor = vi.fn();
     const { getByLabelText } = render(HighlightContextMenu, {
       highlightId: 'hl-1',
-      highlightColor: '#FACC15',
       position: { x: 100, y: 100 },
       assignedTags: [],
-      onColorSelect,
-      onCustomColor: () => undefined,
+      onCustomColor,
       onCopy: () => undefined,
       onTag: () => undefined,
       onNote: () => undefined,
@@ -68,9 +65,9 @@ describe('HighlightContextMenu', () => {
       t,
     });
 
-    const yellowButton = getByLabelText('Select Yellow highlight');
-    await fireEvent.click(yellowButton);
-    expect(onColorSelect).toHaveBeenCalledWith('#FACC15');
+    const paletteBtn = getByLabelText('Change color');
+    await fireEvent.click(paletteBtn);
+    expect(onCustomColor).toHaveBeenCalledOnce();
   });
 
   it('fires onCopy and closes menu', async () => {
@@ -78,10 +75,8 @@ describe('HighlightContextMenu', () => {
     const onClose = vi.fn();
     const { getByText } = render(HighlightContextMenu, {
       highlightId: 'hl-1',
-      highlightColor: '#FACC15',
       position: { x: 100, y: 100 },
       assignedTags: [],
-      onColorSelect: () => undefined,
       onCustomColor: () => undefined,
       onCopy,
       onTag: () => undefined,
@@ -93,16 +88,15 @@ describe('HighlightContextMenu', () => {
 
     await fireEvent.click(getByText('Copy'));
     expect(onCopy).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
   });
 
   it('closes on Escape key', async () => {
     const onClose = vi.fn();
     const { container } = render(HighlightContextMenu, {
       highlightId: 'hl-1',
-      highlightColor: '#FACC15',
       position: { x: 100, y: 100 },
       assignedTags: [],
-      onColorSelect: () => undefined,
       onCustomColor: () => undefined,
       onCopy: () => undefined,
       onTag: () => undefined,

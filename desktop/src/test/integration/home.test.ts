@@ -91,7 +91,7 @@ vi.mock("$lib/shared/services/pdfThumbnail", () => ({
   })),
 }));
 
-vi.mock("$lib/features/reader/components/PdfViewer.svelte", async () => {
+vi.mock("$lib/features/reader/viewer-pdf/PdfViewer.svelte", async () => {
   const mod = await import("../stubs/ViewerStub.svelte");
   return { default: mod.default };
 });

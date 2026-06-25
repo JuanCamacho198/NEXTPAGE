@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import EpubControls from '$lib/features/reader/components/epub/EpubControls.svelte';
+import EpubControls from '$lib/features/reader/viewer-epub/EpubControls.svelte';
 
 const t = (key: string) => key;
 

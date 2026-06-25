@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ReaderControls from "../ReaderControls.svelte";
+  import ReaderControls from "../chrome/ReaderControls.svelte";
   import type { MessageKey } from "$lib/shared/i18n";
 
   type Props = {

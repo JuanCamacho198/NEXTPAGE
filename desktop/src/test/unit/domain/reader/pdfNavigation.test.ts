@@ -8,7 +8,7 @@ import {
   PDF_SCALE_STEP,
   isPageWithinBounds,
   resolveNavigationTransaction,
-} from "$lib/features/reader/pdf/pdfNavigation.js";
+} from "$lib/features/reader/viewer-pdf/pdfNavigation.js";
 
 describe("pdfNavigation", () => {
   it("keeps the default PDF scale at 100%", () => {

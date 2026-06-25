@@ -16,7 +16,7 @@ import {
   getCachedEpubToc,
   setCachedEpubToc,
   epubCache,
-} from "$lib/features/reader/epub/epubCache";
+} from "$lib/features/reader/viewer-epub/epubCache";
 
 function resetCache(): void {
   epubCache.clear();

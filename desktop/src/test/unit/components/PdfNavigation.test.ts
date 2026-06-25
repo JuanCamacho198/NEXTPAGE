@@ -8,7 +8,7 @@ import {
   PDF_SCALE_MAX,
   PDF_SCALE_STEP,
   DEFAULT_PDF_SCALE,
-} from "$lib/features/reader/pdf/pdfNavigation";
+} from "$lib/features/reader/viewer-pdf/pdfNavigation";
 
 describe("isPageWithinBounds", () => {
   it("returns true for valid page within bounds", () => {

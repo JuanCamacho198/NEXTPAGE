@@ -67,7 +67,7 @@ import {
   loadPdfOutline,
   createPdfDocument,
   documentCache,
-} from "$lib/features/reader/pdf/pdfStreaming";
+} from "$lib/features/reader/viewer-pdf/pdfStreaming";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
 function makeMockDocument(): any {

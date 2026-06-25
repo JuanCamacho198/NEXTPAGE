@@ -27,7 +27,7 @@ vi.mock("$lib/shared/api/tauriClient", () => ({
 }));
 
 // Mock pdfStreaming for startReading PDF path
-vi.mock("$lib/features/reader/pdf/pdfStreaming", () => ({
+vi.mock("$lib/features/reader/viewer-pdf/pdfStreaming", () => ({
   createPdfDocument: vi.fn().mockResolvedValue({ numPages: 10 }),
 }));
 

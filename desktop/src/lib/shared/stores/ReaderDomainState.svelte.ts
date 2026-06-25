@@ -70,7 +70,7 @@ class ReaderDomainState {
 
     if (format === "pdf") {
       // Kick off PDF streaming cache
-      import("$lib/features/reader/pdf/pdfStreaming").then(({ createPdfDocument }) => {
+      import("$lib/features/reader/viewer-pdf/pdfStreaming").then(({ createPdfDocument }) => {
         void createPdfDocument(book.filePath).catch(() => {});
       });
     }

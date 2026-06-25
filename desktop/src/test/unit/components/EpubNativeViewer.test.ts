@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import EpubNativeViewer from '$lib/features/reader/components/EpubNativeViewer.svelte';
+import EpubNativeViewer from '$lib/features/reader/viewer-epub/EpubNativeViewer.svelte';
 
 // Mock Tauri invoke
 const mockInvoke = vi.fn();

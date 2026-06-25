@@ -2,7 +2,7 @@
   import * as pdfjsLib from "pdfjs-dist";
   import "pdfjs-dist/web/pdf_viewer.css";
   import { onMount } from "svelte";
-  import { createPdfDocument, loadPdfOutline, clearDocumentCache, removeCachedDocument, setCachedDocument } from "$lib/features/reader/pdf/pdfStreaming";
+  import { createPdfDocument, loadPdfOutline, clearDocumentCache, removeCachedDocument, setCachedDocument } from "$lib/features/reader/viewer-pdf/pdfStreaming";
   import type { MessageKey } from "$lib/shared/i18n";
   import type { PdfOutlineItem, ReaderSettings } from "$lib/shared/types";
   import {
@@ -11,8 +11,8 @@
     DEFAULT_PDF_SCALE,
     isPageWithinBounds,
     PDF_SCALE_STEP,
-  } from "$lib/features/reader/pdf/pdfNavigation";
-  import { resolveReaderArrowIntent } from "$lib/features/reader/epub/keyboardNav";
+  } from "$lib/features/reader/viewer-pdf/pdfNavigation";
+  import { resolveReaderArrowIntent } from "$lib/features/reader/viewer-epub/keyboardNav";
   import {
     TOOLBAR_OFFSET,
     TOOLBAR_WIDTH_ESTIMATE,
@@ -23,7 +23,7 @@
     clamp,
     clampSelectionPoint,
     type SelectionOverlayRect,
-  } from "$lib/features/reader/pdf/pdfState.svelte";
+  } from "$lib/features/reader/viewer-pdf/pdfState.svelte";
   import {
     buildSelectionOverlayRects,
     readProgressPercent,
@@ -33,15 +33,15 @@
     canScrollElementInDirection,
     isRefLike,
     flattenOutline,
-  } from "$lib/features/reader/pdf/pdfSelection";
-  import { SafeTextLayer } from "$lib/features/reader/pdf/safeTextLayer";
+  } from "$lib/features/reader/viewer-pdf/pdfSelection";
+  import { SafeTextLayer } from "$lib/features/reader/viewer-pdf/safeTextLayer";
 
-  import PdfControls from "./pdf/PdfControls.svelte";
-  import PdfSelectionOverlay from "./pdf/PdfSelectionOverlay.svelte";
-  import PdfLoadingOverlay from "./pdf/PdfLoadingOverlay.svelte";
-  import PdfTocSidebar from "./pdf/PdfTocSidebar.svelte";
+  import PdfControls from "./PdfControls.svelte";
+  import PdfSelectionOverlay from "./PdfSelectionOverlay.svelte";
+  import PdfLoadingOverlay from "./PdfLoadingOverlay.svelte";
+  import PdfTocSidebar from "./PdfTocSidebar.svelte";
 
-  import type { TocEntry } from "./ReaderTocPanel.svelte";
+  import type { TocEntry } from "../chrome/ReaderTocPanel.svelte";
   import { debugState } from "$lib/shared/debug/debugState.svelte";
   import { setReaderError, clearReaderError } from "$lib/stores/readerErrorState.svelte";
 
@@ -155,7 +155,6 @@
   let tocLoading = $state(false);
   let tocError = $state<string | null>(null);
   let outlineDeferred = $state(false);
-  let fullscreenSupported = $state(true);
   let isViewerFocused = $state(false);
 
   let pdfDoc: pdfjsLib.PDFDocumentProxy | null = null;
@@ -285,7 +284,6 @@
 
     const handleFullscreenError = (): void => {
       navigationError = t("pdf.fullscreenUnsupported");
-      fullscreenSupported = canUseFullscreenApi();
     };
 
     const handleSelectionChange = (): void => {
@@ -302,7 +300,6 @@
 
     document.addEventListener("fullscreenerror", handleFullscreenError);
     document.addEventListener("selectionchange", handleSelectionChange);
-    fullscreenSupported = canUseFullscreenApi();
 
     return () => {
       activeLoadRequestId += 1;
@@ -320,11 +317,6 @@
       document.removeEventListener("fullscreenerror", handleFullscreenError);
       document.removeEventListener("selectionchange", handleSelectionChange);
     };
-  });
-
-  $effect(() => {
-    void viewerRoot;
-    fullscreenSupported = canUseFullscreenApi();
   });
 
   $effect(() => {
@@ -558,7 +550,7 @@
     try {
       if (pdfjsLib.TextLayer) {
         textLayerInstance = new SafeTextLayer({
-          container: textLayer, viewport, textContentSource: textContent as unknown as import("$lib/features/reader/pdf/safeTextLayer").SafeTextLayerParams["textContentSource"],
+          container: textLayer, viewport, textContentSource: textContent as unknown as import("$lib/features/reader/viewer-pdf/safeTextLayer").SafeTextLayerParams["textContentSource"],
         });
         await textLayerInstance.render();
       } else {
@@ -740,12 +732,12 @@
 
   async function toggleFullscreen(): Promise<void> {
     if (onToggleFullscreen) { onToggleFullscreen(); return; }
-    if (!canUseFullscreenApi()) { fullscreenSupported = false; navigationError = t("pdf.fullscreenUnsupported"); return; }
+    if (!canUseFullscreenApi()) { navigationError = t("pdf.fullscreenUnsupported"); return; }
     try {
       navigationError = null;
       if (document.fullscreenElement === viewerRoot) { await document.exitFullscreen(); }
       else { await viewerRoot?.requestFullscreen(); }
-    } catch { navigationError = t("pdf.fullscreenUnsupported"); fullscreenSupported = false; }
+    } catch { navigationError = t("pdf.fullscreenUnsupported"); }
   }
 
   // ── Lazy outline loading ─────────────────────────────────
@@ -948,7 +940,6 @@
       {totalPages}
       {scale}
       {isFullscreen}
-      {fullscreenSupported}
       {showToc}
       {isLoading}
       {error}

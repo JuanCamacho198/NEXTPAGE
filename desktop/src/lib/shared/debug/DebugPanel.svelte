@@ -1,8 +1,8 @@
 <script lang="ts">
   import { debugState } from "./debugState.svelte";
   import { getLogs, diagnose } from "$lib/shared/api/tauriClient";
-  import { epubCache } from "$lib/features/reader/epub/epubCache";
-  import { documentCache } from "$lib/features/reader/pdf/pdfStreaming";
+  import { epubCache } from "$lib/features/reader/viewer-epub/epubCache";
+  import { documentCache } from "$lib/features/reader/viewer-pdf/pdfStreaming";
   import { metricsStore } from "$lib/shared/logger/MetricsStore";
   import type { DiagnoseResult } from "$lib/types";
 

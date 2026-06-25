@@ -1,8 +1,8 @@
 <script lang="ts">
-  import PdfViewer from "./PdfViewer.svelte";
-  import EpubNativeViewer from "./EpubNativeViewer.svelte";
-  import SearchPanel from "./SearchPanel.svelte";
-  import SelectionToolbar from "./SelectionToolbar.svelte";
+  import PdfViewer from "../viewer-pdf/PdfViewer.svelte";
+  import EpubNativeViewer from "../viewer-epub/EpubNativeViewer.svelte";
+  import SearchPanel from "../panels/SearchPanel.svelte";
+  import SelectionToolbar from "../highlight/SelectionToolbar.svelte";
   import ReaderTextSettings from "./ReaderTextSettings.svelte";
   import ReaderTocPanel, { type TocEntry } from "./ReaderTocPanel.svelte";
   import ReaderHeader from "./ReaderHeader.svelte";
@@ -26,12 +26,12 @@
     getDefaultReaderSettings,
     listHighlights,
   } from "$lib/shared/api/tauriClient";
-  import HighlightContextMenu from "./HighlightContextMenu.svelte";
-  import ColorPickerPopover from "./ColorPickerPopover.svelte";
-  import TagPopover from "./TagPopover.svelte";
-  import NoteEditorModal from "./NoteEditorModal.svelte";
+  import HighlightContextMenu from "../highlight/HighlightContextMenu.svelte";
+  import ColorPickerPopover from "../highlight/ColorPickerPopover.svelte";
+  import TagPopover from "../highlight/TagPopover.svelte";
+  import NoteEditorModal from "../highlight/NoteEditorModal.svelte";
   import { createFocusTrap } from "$lib/shared/utils/focusTrap";
-  import { createBookmarksState } from "../stores/bookmarksState.svelte";
+  import { createBookmarksState } from "./bookmarksState.svelte";
   import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
   import { getReaderError } from "$lib/stores/readerErrorState.svelte";
 
@@ -562,11 +562,6 @@
     );
   }
 
-  function handleMenuColorSelect(color: string): void {
-    if (!highlightMenu.highlightId) return;
-    updateHighlightColor(highlightMenu.highlightId, color);
-  }
-
   function handleMenuCustomColor(): void {
     showColorPicker = !showColorPicker;
   }
@@ -817,10 +812,8 @@
       >
         <HighlightContextMenu
           highlightId={highlightMenu.highlightId}
-          highlightColor={highlightMenu.color}
           position={highlightMenu.position}
           assignedTags={highlightMenu.assignedTags}
-          onColorSelect={handleMenuColorSelect}
           onCustomColor={handleMenuCustomColor}
           onCopy={handleMenuCopy}
           onTag={handleMenuTag}

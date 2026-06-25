@@ -9,12 +9,12 @@ vi.mock('@tauri-apps/api/webviewWindow', () => ({
   }),
 }));
 
-vi.mock("$lib/features/reader/components/PdfViewer.svelte", async () => {
+vi.mock("$lib/features/reader/viewer-pdf/PdfViewer.svelte", async () => {
   const mod = await import("../../mocks/MockPdfViewer.svelte");
   return { default: mod.default };
 });
 
-import ReaderWorkspace from "$lib/features/reader/components/ReaderWorkspace.svelte";
+import ReaderWorkspace from "$lib/features/reader/chrome/ReaderWorkspace.svelte";
 
 const makeBook = (overrides: Partial<{ format: string; filePath: string }> = {}) => ({
   id: "book-1",

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { cleanup } from "@testing-library/svelte";
-import type { ReaderArrowIntent } from "$lib/features/reader/epub/keyboardNav";
+import type { ReaderArrowIntent } from "$lib/features/reader/viewer-epub/keyboardNav";
 
 vi.mock("$lib/shared/stores/reader", () => ({
   readerStore: {

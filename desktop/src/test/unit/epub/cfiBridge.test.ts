@@ -5,7 +5,7 @@ import {
   cfiToRange,
   getChapterBaseCFI,
   setSpine,
-} from "$lib/features/reader/epub/cfiBridge";
+} from "$lib/features/reader/viewer-epub/cfiBridge";
 
 // Inlined fixture: a synthetic EPUB chapter (1 heading + 3 paragraphs).
 // Inlined as a string constant so the test is self-contained and not

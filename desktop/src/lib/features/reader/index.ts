@@ -1,19 +1,75 @@
-export { default as PdfViewer } from "./components/PdfViewer.svelte";
-export { default as BookmarksPanel } from "./components/BookmarksPanel.svelte";
-export { default as SearchPanel } from "./components/SearchPanel.svelte";
-export { default as ReaderWorkspace } from "./components/ReaderWorkspace.svelte";
-export { default as SelectionToolbar } from "./components/SelectionToolbar.svelte";
-export { default as ReaderHeader } from "./components/ReaderHeader.svelte";
-export { default as ReaderFooter } from "./components/ReaderFooter.svelte";
-export { default as ReaderTextSettings } from "./components/ReaderTextSettings.svelte";
-export { default as ReaderTocPanel } from "./components/ReaderTocPanel.svelte";
-export { default as EpubControls } from "./components/epub/EpubControls.svelte";
-export { default as EpubNativeViewer } from "./components/EpubNativeViewer.svelte";
-export { default as EpubTocSidebar } from "./components/epub/EpubTocSidebar.svelte";
-export { default as PdfControls } from "./components/pdf/PdfControls.svelte";
-export { default as PdfLoadingOverlay } from "./components/pdf/PdfLoadingOverlay.svelte";
-export { default as PdfSelectionOverlay } from "./components/pdf/PdfSelectionOverlay.svelte";
-export { default as PdfTocSidebar } from "./components/pdf/PdfTocSidebar.svelte";
-export * from "./epub/keyboardNav";
-export * from "./pdf/pdfNavigation";
-export * from "./epub/epub";
+// Domain subdirs — each one owns a coherent slice of the reader feature
+// (a viewer, a UI subsystem, or a panel). See per-domain `index.ts` for the
+// public surface. This root barrel re-exports the whole feature so external
+// consumers (AppRouter, tests that go through `$lib/features/reader`) keep
+// working without knowing the new layout.
+
+// Chrome (reader layout: workspace, header, footer, controls, text settings,
+// toc panel) + bookmarks state.
+export {
+  ReaderControls,
+  ReaderFooter,
+  ReaderHeader,
+  ReaderTextSettings,
+  ReaderTocPanel,
+  ReaderWorkspace,
+} from "./chrome";
+export * from "./chrome/bookmarksState.svelte";
+
+// Highlight system (toolbars, modals, popovers, color tokens).
+export {
+  ColorPickerPopover,
+  HighlightContextMenu,
+  NoteEditorModal,
+  SelectionToolbar,
+  TagPopover,
+} from "./highlight";
+export * from "./highlight/highlightColors";
+
+// Secondary feature panels.
+export { BookmarksPanel, SearchPanel } from "./panels";
+
+// EPUB viewer + sub-components + scripts.
+export {
+  EpubControls,
+  EpubNativeViewer,
+  EpubTocSidebar,
+  IFRAME_CFI_BRIDGE_SCRIPT,
+  IFRAME_HIGHLIGHT_OVERLAY_SCRIPT,
+} from "./viewer-epub";
+export * from "./viewer-epub/cfiBridge";
+export * from "./viewer-epub/epub";
+export * from "./viewer-epub/epubCache";
+export * from "./viewer-epub/keyboardNav";
+
+// PDF viewer + sub-components + scripts + state.
+export {
+  PdfControls,
+  PdfLoadingOverlay,
+  PdfSelectionOverlay,
+  PdfTocSidebar,
+  PdfViewer,
+} from "./viewer-pdf";
+export {
+  scaleOptions,
+  TOOLBAR_OFFSET,
+  TOOLBAR_WIDTH_ESTIMATE,
+  TOOLBAR_EDGE_PADDING,
+  VERTICAL_SCROLL_STEP_PX,
+  ZOOM_COMMIT_DELAY_MS,
+  ZOOM_EPSILON,
+  SELECTION_X_PADDING_PX,
+  SELECTION_Y_INSET_PX,
+  SELECTION_LINE_TOLERANCE_PX,
+  type ReaderThemePalette,
+  type SelectionOverlayRect,
+  clamp,
+  clampSelectionPoint,
+  resolveThemePalette,
+  calculateScale,
+  formatPageNumber,
+} from "./viewer-pdf/pdfState.svelte";
+export * from "./viewer-pdf/pdfNavigation";
+export * from "./viewer-pdf/pdfSelection";
+export * from "./viewer-pdf/pdfStreaming";
+export * from "./viewer-pdf/safeTextLayer";

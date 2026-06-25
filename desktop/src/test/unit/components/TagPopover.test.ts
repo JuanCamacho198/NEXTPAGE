@@ -1,6 +1,6 @@
 import { render, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import TagPopover from '$lib/features/reader/components/TagPopover.svelte';
+import TagPopover from '$lib/features/reader/highlight/TagPopover.svelte';
 
 const t = (key: string) => {
   const translations: Record<string, string> = {

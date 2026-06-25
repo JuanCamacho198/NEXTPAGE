@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import ReaderWorkspace from '$lib/features/reader/components/ReaderWorkspace.svelte';
+import ReaderWorkspace from '$lib/features/reader/chrome/ReaderWorkspace.svelte';
 
 const t = (key: string) => key;
 
@@ -10,12 +10,12 @@ vi.mock('@tauri-apps/api/webviewWindow', () => ({
   }),
 }));
 
-vi.mock('$lib/features/reader/components/PdfViewer.svelte', async () => {
+vi.mock('$lib/features/reader/viewer-pdf/PdfViewer.svelte', async () => {
   const mod = await import('../../mocks/MockPdfViewer.svelte');
   return { default: mod.default };
 });
 
-vi.mock('$lib/features/reader/components/EpubNativeViewer.svelte', async () => {
+vi.mock('$lib/features/reader/viewer-epub/EpubNativeViewer.svelte', async () => {
   const mod = await import('../../mocks/MockPdfViewer.svelte');
   return { default: mod.default };
 });

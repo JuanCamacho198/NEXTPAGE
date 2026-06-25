@@ -6,10 +6,8 @@
 
   type Props = {
     highlightId: string;
-    highlightColor: string;
     position: { x: number; y: number };
     assignedTags: TagDto[];
-    onColorSelect: (color: string) => void;
     onCustomColor: () => void;
     onCopy: () => void;
     onTag: () => void;
@@ -22,10 +20,8 @@
   };
 
   let {
-    highlightColor,
     position,
     assignedTags,
-    onColorSelect,
     onCustomColor,
     onCopy,
     onTag,

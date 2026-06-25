@@ -1,7 +1,7 @@
 <script lang="ts">
-  import ReaderControls from "../ReaderControls.svelte";
+  import ReaderControls from "../chrome/ReaderControls.svelte";
   import type { MessageKey } from "$lib/shared/i18n";
-  import { scaleOptions } from "$lib/features/reader/pdf/pdfState.svelte";
+  import { scaleOptions } from "$lib/features/reader/viewer-pdf/pdfState.svelte";
   import { debugState } from "$lib/shared/debug/debugState.svelte";
 
   type Props = {
@@ -9,7 +9,6 @@
     totalPages: number;
     scale: number;
     isFullscreen: boolean;
-    fullscreenSupported: boolean;
     showToc: boolean;
     isLoading: boolean;
     error: string | null;
@@ -27,7 +26,6 @@
     totalPages,
     scale,
     isFullscreen,
-    fullscreenSupported,
     isLoading,
     error,
     t,

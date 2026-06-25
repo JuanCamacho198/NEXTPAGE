@@ -4,11 +4,11 @@
   import { convertFileSrc } from '@tauri-apps/api/core';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, ReaderThemeMode, ReaderTextAlign, ReaderDirection } from '$lib/shared/types';
-  import EpubControls from './epub/EpubControls.svelte';
+  import EpubControls from './EpubControls.svelte';
   import { setReaderError, clearReaderError } from "$lib/stores/readerErrorState.svelte";
   import { debugState } from "$lib/shared/debug/debugState.svelte";
-  import { IFRAME_CFI_BRIDGE_SCRIPT } from '$lib/features/reader/epub/cfiBridgeIframe';
-  import { IFRAME_HIGHLIGHT_OVERLAY_SCRIPT } from '$lib/features/reader/epub/epubHighlightOverlayIframe';
+  import { IFRAME_CFI_BRIDGE_SCRIPT } from '$lib/features/reader/viewer-epub/cfiBridgeIframe';
+  import { IFRAME_HIGHLIGHT_OVERLAY_SCRIPT } from '$lib/features/reader/viewer-epub/epubHighlightOverlayIframe';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
 
   // ─── Types ───────────────────────────────────────────────

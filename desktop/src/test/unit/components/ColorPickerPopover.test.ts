@@ -1,6 +1,6 @@
 import { render, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import ColorPickerPopover from '$lib/features/reader/components/ColorPickerPopover.svelte';
+import ColorPickerPopover from '$lib/features/reader/highlight/ColorPickerPopover.svelte';
 
 describe('ColorPickerPopover', () => {
   function createAnchor(): HTMLElement {

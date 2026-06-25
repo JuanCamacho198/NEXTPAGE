@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import ReaderTocPanel from "$lib/features/reader/components/ReaderTocPanel.svelte";
+import ReaderTocPanel from "$lib/features/reader/chrome/ReaderTocPanel.svelte";
 
 const t = (key: string, _params?: Record<string, string | number>) => {
   const dictionary: Record<string, string> = {

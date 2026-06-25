@@ -38,7 +38,7 @@ describe("PdfViewer module", () => {
   it(
     "exports the component as default",
     async () => {
-      const mod = await import("$lib/features/reader/components/PdfViewer.svelte");
+      const mod = await import("$lib/features/reader/viewer-pdf/PdfViewer.svelte");
       expect(typeof mod.default).toBe("function");
     },
     15000

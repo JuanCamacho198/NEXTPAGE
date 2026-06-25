@@ -38,7 +38,7 @@
  * All public functions are total: they NEVER throw on invalid input.
  * On failure they `console.warn` and return `null`.
  *
- * @module $lib/features/reader/epub/cfiBridge
+ * @module $lib/features/reader/viewer-epub/cfiBridge
  */
 
 const BLACKLIST_TAGS = new Set([

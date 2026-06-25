@@ -2,7 +2,7 @@ import { render, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import SelectionToolbar, {
   type SelectionData,
-} from '$lib/features/reader/components/SelectionToolbar.svelte';
+} from '$lib/features/reader/highlight/SelectionToolbar.svelte';
 
 const t = (key: string) => {
   const translations: Record<string, string> = {

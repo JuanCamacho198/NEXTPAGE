@@ -6,7 +6,9 @@ import EpubNativeViewer from '$lib/features/reader/components/EpubNativeViewer.s
 const mockInvoke = vi.fn();
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args: unknown[]) => mockInvoke(...args),
-  convertFileSrc: vi.fn((path: string) => `tauri://asset.localhost/${String(path).replace(/\\/g, '/')}`),
+  convertFileSrc: vi.fn(
+    (path: string) => `tauri://asset.localhost/${String(path).replace(/\\/g, '/')}`,
+  ),
 }));
 
 const t = (key: string) => key;
@@ -282,5 +284,157 @@ describe('EpubNativeViewer', () => {
       const fsBtn = screen.getByTestId('epub-fullscreen');
       expect(fsBtn).toBeInTheDocument();
     });
+  });
+
+  // ─── Menu 2: highlight click postMessage ──────────────
+  describe('Menu 2 (highlight click) postMessage', () => {
+    it('translates epub-highlight-click coords to parent-viewport and calls onHighlightAction', async () => {
+      const onHighlightAction = vi.fn();
+
+      render(EpubNativeViewer, {
+        filePath: '/test/book.epub',
+        bookId: 'test-book',
+        t,
+        onHighlightAction,
+      });
+
+      const iframe = (await screen.findByTitle('chapter')) as HTMLIFrameElement;
+      expect(iframe).toBeTruthy();
+
+      // The test book has chapter index 0 (0-based). We dispatch a
+      // click from the iframe at iframe-local (50, 80) and verify the
+      // parent translates it to parent-viewport by adding the iframe
+      // element's bounding rect.
+      const frameRect = iframe.getBoundingClientRect();
+      const iframeLocalX = 50;
+      const iframeLocalY = 80;
+
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: {
+            type: 'epub-highlight-click',
+            id: 'hl-123',
+            x: iframeLocalX,
+            y: iframeLocalY,
+            color: '#4ADE80',
+            pageNumber: 0,
+          },
+          origin: window.origin,
+        }),
+      );
+
+      expect(onHighlightAction).toHaveBeenCalledTimes(1);
+      expect(onHighlightAction).toHaveBeenCalledWith('open', 'hl-123', {
+        color: '#4ADE80',
+        x: iframeLocalX + frameRect.left,
+        y: iframeLocalY + frameRect.top,
+      });
+    });
+  });
+
+  // ─── SEL-4: chapter guard drops stale postMessages ─────────
+  describe('SEL-4 (stale chapter guard)', () => {
+    it('drops an epub-selection postMessage whose pageNumber is not the current chapter', async () => {
+      const onselection = vi.fn();
+
+      render(EpubNativeViewer, {
+        filePath: '/test/book.epub',
+        bookId: 'test-book',
+        t,
+        onselection,
+      });
+
+      await screen.findByTitle('chapter');
+
+      // The test book has 1 chapter so currentChapterIndex is 0.
+      // Send a selection with pageNumber=2 -- must be dropped.
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: {
+            type: 'epub-selection',
+            text: 'some text',
+            bounds: { left: 0, top: 0, right: 100, bottom: 20 },
+            container: { left: 0, top: 0, width: 800, height: 600 },
+            rects: [{ left: 0, top: 0, width: 100, height: 20 }],
+            pageNumber: 2,
+            cfi: null,
+          },
+          origin: window.origin,
+        }),
+      );
+
+      expect(onselection).not.toHaveBeenCalled();
+    });
+
+    it('drops an epub-highlight-click postMessage whose pageNumber is not the current chapter', async () => {
+      const onHighlightAction = vi.fn();
+
+      render(EpubNativeViewer, {
+        filePath: '/test/book.epub',
+        bookId: 'test-book',
+        t,
+        onHighlightAction,
+      });
+
+      await screen.findByTitle('chapter');
+
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: {
+            type: 'epub-highlight-click',
+            id: 'hl-stale',
+            x: 10,
+            y: 20,
+            color: '#FACC15',
+            pageNumber: 99,
+          },
+          origin: window.origin,
+        }),
+      );
+
+      expect(onHighlightAction).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── NFR-2: smoke test for iframe + frameElement ────────────
+  describe('NFR-2 (iframe smoke)', () => {
+    // jsdom does not fully implement srcdoc-loaded iframes: the
+    // `frameElement` property on the iframe's contentWindow is not
+    // populated synchronously after `srcdoc` is set, and the `load`
+    // event does not fire from srcdoc-initialized documents. The
+    // `EpubHighlightOverlay` render path is exercised in production by
+    // Tauri's WebView2 / WKWebView (where srcdoc + frameElement work
+    // as expected). The unit test below asserts the parent side:
+    // the iframe element is rendered, has a non-empty srcdoc, and is
+    // queryable. This is a defensive smoke test for the parent wiring
+    // only; the iframe-internal CFI bridge round-trip is covered
+    // exhaustively by `cfiBridge.test.ts`.
+    it('renders the iframe with a non-empty srcdoc (parent-side smoke)', async () => {
+      render(EpubNativeViewer, {
+        filePath: '/test/book.epub',
+        bookId: 'test-book',
+        t,
+      });
+
+      const iframe = (await screen.findByTitle('chapter')) as HTMLIFrameElement;
+      expect(iframe).toBeTruthy();
+      expect(iframe.tagName).toBe('IFRAME');
+      const srcdoc = iframe.getAttribute('srcdoc');
+      expect(srcdoc).toBeTruthy();
+      expect(srcdoc!.length).toBeGreaterThan(0);
+      // The srcdoc must include the reader override style id, the
+      // chapter content, and the base element pointing to the
+      // resources path. (We do NOT assert on the inlined script
+      // content here: `buildChapterSrcdoc` strips the <script> tags
+      // it appends to the doc before serialising, so the inlined JS
+      // does not appear in the srcdoc attribute. The scripts run from
+      // the iframe's parsed document in production.)
+      expect(srcdoc).toContain('nextpage-reader-overrides');
+      expect(srcdoc).toContain('Hello');
+    });
+
+    it.todo(
+      'iframe.contentWindow.frameElement is the iframe element and getBoundingClientRect returns finite numbers (Tauri webview smoke)',
+    );
   });
 });

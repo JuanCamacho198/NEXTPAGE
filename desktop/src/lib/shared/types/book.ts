@@ -33,6 +33,13 @@ export type HighlightDto = {
   pageNumber: number;
   note?: string | null;
   createdAt: string;
+  /**
+   * EPUB only. The Canonical Fragment Identifier that pins the
+   * highlight to a specific range inside a chapter. Null for PDF
+   * highlights and for legacy EPUB highlights saved before the
+   * CFI-persistence change.
+   */
+  cfi?: string | null;
 };
 
 export type BookmarkDto = {

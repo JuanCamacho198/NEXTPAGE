@@ -67,6 +67,13 @@ type RawHighlightDto = {
   page?: number;
   note?: string | null;
   createdAt: string;
+  /**
+   * EPUB CFI from the backend. The Rust `highlights.cfi TEXT` column
+   * is already round-tripped by the `saveHighlight` command -- the
+   * client must preserve it here. `null` for PDF and for legacy EPUB
+   * highlights saved before the CFI-persistence change.
+   */
+  cfi?: string | null;
 };
 
 const normalizeMessage = (error: unknown): string => {
@@ -177,6 +184,7 @@ const normalizeHighlightDto = (payload: RawHighlightDto): HighlightDto => {
     pageNumber,
     note: payload.note ?? null,
     createdAt: payload.createdAt,
+    cfi: payload.cfi ?? null,
   };
 };
 

@@ -268,7 +268,14 @@
     if (!iframeEl?.contentDocument) return;
 
     const doc = iframeEl.contentDocument;
-    const height = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+    // `documentElement` and `body` can be null while the iframe is still
+    // mid-load (e.g. when an `epub-resize` postMessage arrives before the
+    // chapter DOM is ready). Bail out instead of throwing.
+    const docEl = doc.documentElement;
+    const body = doc.body;
+    if (!docEl || !body) return;
+
+    const height = Math.max(docEl.scrollHeight, body.scrollHeight);
     iframeContentHeight = height > 0 ? height : 0;
   }
 
@@ -443,6 +450,109 @@
     return `${convertFileSrc(`${base}/${normalized}`)}`;
   }
 
+  /**
+   * Scan the chapter HTML for `@font-face` rules whose `src:` points to a
+   * local font file (the EPUB declares them but the editor forgot to embed
+   * the .ttf/.otf/.woff/.woff2 inside the archive). Returns the list of
+   * resolved `asset://` URLs so the caller can probe them with a HEAD
+   * request and drop the ones that 404/403.
+   *
+   * EPUBs in the wild routinely reference Neutraface, Felt Tip Roman and
+   * other commercial fonts in their CSS without bundling the file. Without
+   * this filter, the iframe fires a 403 per missing font on every chapter.
+   */
+  function collectFontFaceAssetUrls(
+    html: string,
+    chapterPath: string,
+    resourcesPath: string
+  ): string[] {
+    const urls = new Set<string>();
+    const fontExt = /\.(ttf|otf|woff2?|eot)(\?|$|#)/i;
+    const urlPattern = /url\(\s*(['"]?)([^'")]+)\1\s*\)/gi;
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const normalizedChapter = chapterPath.replace(/\\/g, "/");
+
+    const collectFromCss = (cssText: string): void => {
+      // Only consider rules that look like @font-face (a heuristic: contain
+      // `font-face`). This avoids touching unrelated background-image urls.
+      if (!/font-face/i.test(cssText)) return;
+      let match: RegExpExecArray | null;
+      urlPattern.lastIndex = 0;
+      while ((match = urlPattern.exec(cssText)) !== null) {
+        const rawUrl = match[2];
+        if (
+          !rawUrl ||
+          rawUrl.startsWith("http") ||
+          rawUrl.startsWith("data:") ||
+          rawUrl.startsWith("asset:") ||
+          rawUrl.startsWith("#") ||
+          rawUrl.startsWith("local(")
+        ) {
+          continue;
+        }
+        if (!fontExt.test(rawUrl)) continue;
+        const resourcePath = resolveResourcePath(normalizedChapter, rawUrl);
+        urls.add(toAssetUrl(resourcesPath, resourcePath));
+      }
+    };
+
+    for (const styleEl of doc.querySelectorAll("style")) {
+      collectFromCss(styleEl.textContent ?? "");
+    }
+    // We don't probe linked stylesheets (they're loaded async by the iframe
+    // and their body isn't in the HTML string we get from Rust). The 403s
+    // for those are handled by the same `missingFonts` filter applied to
+    // their `@font-face` rules once they're parsed by the browser.
+    return Array.from(urls);
+  }
+
+  /**
+   * HEAD-probe a batch of asset URLs in parallel and return the set of
+   * URLs that didn't respond OK. Any error (network, 4xx, 5xx) is treated
+   * as "missing" — the iframe would 403 anyway, so it's safe to drop the
+   * corresponding `@font-face` rule.
+   */
+  async function probeMissingFontUrls(urls: string[]): Promise<Set<string>> {
+    const missing = new Set<string>();
+    if (urls.length === 0) return missing;
+    const results = await Promise.allSettled(
+      urls.map(async (url) => {
+        try {
+          const res = await fetch(url, { method: "HEAD" });
+          if (!res.ok) throw new Error(`status ${res.status}`);
+        } catch {
+          throw new Error("missing");
+        }
+      })
+    );
+    urls.forEach((url, i) => {
+      if (results[i].status === "rejected") {
+        missing.add(url);
+      }
+    });
+    return missing;
+  }
+
+  /**
+   * Drop `@font-face` rules from a CSS string whose rewritten `src:` URL
+   * appears in `missingFonts`. We keep the rest of the CSS intact so the
+   * cascade falls back to the system font instead of a broken custom one.
+   */
+  function stripMissingFontFaces(cssText: string, missingFonts: Set<string>): string {
+    if (missingFonts.size === 0) return cssText;
+    return cssText.replace(
+      /@font-face\s*\{[^{}]*\}/gi,
+      (rule) => {
+        const urlMatch = rule.match(/url\(\s*(['"]?)([^'")]+)\1\s*\)/i);
+        if (!urlMatch) return rule;
+        if (missingFonts.has(urlMatch[2])) return "";
+        return rule;
+      }
+    );
+  }
+
   function buildReaderOverrideCss(): string {
     const hyphensValue = hyphenation ? 'auto' : 'none';
     const effectiveFontSize = (fontSize * zoomLevel) / 100;
@@ -482,7 +592,13 @@
     `;
   }
 
-  function buildChapterSrcdoc(chapterData: EpubChapterContent, resourcesPath: string, spineHrefs: string[], currentChapterHref: string): string {
+  function buildChapterSrcdoc(
+    chapterData: EpubChapterContent,
+    resourcesPath: string,
+    spineHrefs: string[],
+    currentChapterHref: string,
+    missingFonts: Set<string> = new Set()
+  ): string {
     const parser = new DOMParser();
     const doc = parser.parseFromString(chapterData.html, 'text/html');
     const chapterPath = chapterData.chapterPath.replace(/\\/g, '/');
@@ -517,10 +633,10 @@
     }
 
     for (const styleEl of doc.querySelectorAll('style')) {
-      const cssText = styleEl.textContent ?? '';
+      let cssText = styleEl.textContent ?? '';
       if (!cssText.includes('url(')) continue;
 
-      styleEl.textContent = cssText.replace(
+      cssText = cssText.replace(
         /url\(\s*(['"]?)([^'")]+)\1\s*\)/gi,
         (_match, quote: string, rawUrl: string) => {
           if (
@@ -536,6 +652,12 @@
           return `url(${quote}${toAssetUrl(resourcesPath, resourcePath)}${quote})`;
         },
       );
+      // After rewriting, drop @font-face rules whose URL was probed and
+      // found missing — they'd 403 the iframe and pollute the console.
+      if (missingFonts.size > 0) {
+        cssText = stripMissingFontFaces(cssText, missingFonts);
+      }
+      styleEl.textContent = cssText;
     }
 
     let readerStyle = doc.getElementById('nextpage-reader-overrides');
@@ -797,7 +919,23 @@
 
       const spineHrefs = metadata.chapters.map((c) => c.href);
       const chapterHref = metadata.chapters[index]?.href ?? '';
-      const srcdoc = buildChapterSrcdoc(chapterData, metadata.resourcesPath, spineHrefs, chapterHref);
+      // Probe every @font-face URL the chapter declares. Those that 404/403
+      // (typically because the EPUB references commercial fonts like
+      // Neutraface or Felt Tip Roman without bundling the file) get their
+      // rule stripped from the CSS so the iframe doesn't 403 on every load.
+      const fontUrls = collectFontFaceAssetUrls(
+        chapterData.html,
+        chapterData.chapterPath,
+        metadata.resourcesPath
+      );
+      const missingFonts = await probeMissingFontUrls(fontUrls);
+      const srcdoc = buildChapterSrcdoc(
+        chapterData,
+        metadata.resourcesPath,
+        spineHrefs,
+        chapterHref,
+        missingFonts
+      );
 
       iframeEl.onload = () => {
         syncIframeHeight();

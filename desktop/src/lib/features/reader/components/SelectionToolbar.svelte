@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { MessageKey } from "$lib/shared/i18n";
+  import { HIGHLIGHT_COLORS } from "$lib/features/reader/highlight/highlightColors";
 
   type Props = {
     selectedText: string;
@@ -22,15 +23,7 @@
     t,
   }: Props = $props();
 
-  const colors = [
-    { hex: "#FACC15", label: "yellow" },
-    { hex: "#4ADE80", label: "green" },
-    { hex: "#60A5FA", label: "blue" },
-    { hex: "#C084FC", label: "purple" },
-    { hex: "#FB923C", label: "orange" },
-  ];
-
-  let selectedColor = $state("#FACC15");
+  let selectedColor = $state(HIGHLIGHT_COLORS[0].hex);
   let showNoteEditor = $state(false);
   let noteText = $state("");
 
@@ -97,7 +90,7 @@
   <!-- Main toolbar -->
   <div class="flex items-center gap-5 rounded-[28px] border border-(--color-surface-strong) bg-(--color-surface-strong) px-5 py-2.5 shadow-xl" role="toolbar" aria-label="Selection tools">
     <!-- Color circles -->
-    {#each colors as color}
+    {#each HIGHLIGHT_COLORS as color}
       <button
         type="button"
         class="h-6 w-6 cursor-pointer rounded-full transition-transform hover:scale-110"

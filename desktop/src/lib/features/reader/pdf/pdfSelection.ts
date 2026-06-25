@@ -6,13 +6,16 @@ import {
   clampSelectionPoint,
 } from "./pdfState.svelte";
 
-export const HIGHLIGHT_COLORS = [
-  { hex: "#FACC15", label: "yellow" },
-  { hex: "#4ADE80", label: "green" },
-  { hex: "#60A5FA", label: "blue" },
-  { hex: "#C084FC", label: "purple" },
-  { hex: "#FB923C", label: "orange" },
-] as const;
+// Re-export the canonical highlight palette so existing PDF imports keep
+// working unchanged. The single source of truth is
+// `$lib/features/reader/highlight/highlightColors`; see spec HC-1 / HC-2.
+export {
+  HIGHLIGHT_COLORS,
+  DEFAULT_HIGHLIGHT_COLOR,
+  highlightFillRgba,
+  type HighlightColor,
+  type HighlightColorId,
+} from "$lib/features/reader/highlight/highlightColors";
 
 export function buildSelectionOverlayRects(range: Range, containerRect: DOMRect): SelectionOverlayRect[] {
   const rawRects = Array.from(range.getClientRects()).filter(

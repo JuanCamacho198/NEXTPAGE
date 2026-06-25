@@ -1,5 +1,4 @@
 export { default as PdfViewer } from "./components/PdfViewer.svelte";
-export { default as HighlightToolbar } from "./components/HighlightToolbar.svelte";
 export { default as BookmarksPanel } from "./components/BookmarksPanel.svelte";
 export { default as SearchPanel } from "./components/SearchPanel.svelte";
 export { default as ReaderWorkspace } from "./components/ReaderWorkspace.svelte";

@@ -7,6 +7,7 @@
   import EpubControls from './epub/EpubControls.svelte';
   import { setReaderError, clearReaderError } from "$lib/stores/readerErrorState.svelte";
   import { debugState } from "$lib/shared/debug/debugState.svelte";
+  import { IFRAME_CFI_BRIDGE_SCRIPT } from '$lib/features/reader/epub/cfiBridgeIframe';
 
   // ─── Types ───────────────────────────────────────────────
   interface EpubChapterMeta {
@@ -50,6 +51,7 @@
       placement: string;
       rects: Array<{ left: number; top: number; width: number; height: number }>;
       pageNumber: number;
+      cfi: string | null;
     }) => void;
     onselectionclear?: () => void;
     isFullscreen?: boolean;
@@ -137,12 +139,32 @@
 
   // ─── Lifecycle ───────────────────────────────────────────
   function handleIframeMessage(event: MessageEvent): void {
-    if (event.data?.type === 'epub-resize') {
+    if (!event.data || typeof event.data !== 'object') return;
+
+    // SEL-4: drop any in-flight postMessage from a chapter that is no
+    // longer current. The chapter-change $effect can run between the
+    // mouseup and the postMessage delivery, so we always sanity-check
+    // the pageNumber. (The epub-resize message has no pageNumber and
+    // is treated as a global signal -- but the resize handler reads
+    // the current iframe state, so it is also safe to drop stale
+    // resize events. We keep it for now since resizes are cheap.)
+    if (event.data.type === 'epub-resize') {
       syncIframeHeight();
       return;
     }
 
-    if (event.data?.type !== 'epub-selection') return;
+    if (event.data.type === 'epub-highlight-click') {
+      handleEpubHighlightClick(event.data);
+      return;
+    }
+
+    if (event.data.type !== 'epub-selection') return;
+
+    if (typeof event.data.pageNumber === 'number' && event.data.pageNumber !== currentChapterIndex) {
+      // Stale message from a chapter the user has already navigated
+      // away from. Drop silently.
+      return;
+    }
 
     if (!event.data.text) {
       onselectionclear?.();
@@ -158,7 +180,14 @@
       placement: 'epub-chapter',
       rects: event.data.rects ?? [],
       pageNumber: currentChapterIndex,
+      cfi: typeof event.data.cfi === 'string' ? event.data.cfi : null,
     });
+  }
+
+  // Placeholder for the Menu 2 click handler, fleshed out in commit 7.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function handleEpubHighlightClick(_msg: unknown): void {
+    // No-op for now; commit 7 wires this up.
   }
 
   function syncIframeHeight(): void {
@@ -325,7 +354,7 @@
     `;
   }
 
-  function buildChapterSrcdoc(chapterData: EpubChapterContent, resourcesPath: string): string {
+  function buildChapterSrcdoc(chapterData: EpubChapterContent, resourcesPath: string, spineHrefs: string[], currentChapterHref: string): string {
     const parser = new DOMParser();
     const doc = parser.parseFromString(chapterData.html, 'text/html');
     const chapterPath = chapterData.chapterPath.replace(/\\/g, '/');
@@ -389,6 +418,28 @@
     }
     readerStyle.textContent = buildReaderOverrideCss();
 
+    // Inlined CFI bridge (see cfiBridgeIframe.ts). Mounts as
+    // `window.__cfiBridge` for the selection script to call. Must run
+    // before the selection script and before the spine-init script.
+    const bridgeScript = doc.createElement('script');
+    bridgeScript.textContent = IFRAME_CFI_BRIDGE_SCRIPT;
+
+    // Spine init: register the ordered chapter hrefs so the bridge can
+    // compute the spine index for the current chapter's CFI. The
+    // hrefs are JSON-serialised; we trust them because they come from
+    // the parent (which got them from the Rust `parse_epub` command,
+    // a trusted source).
+    const spineScript = doc.createElement('script');
+    spineScript.textContent = `
+      (function() {
+        try {
+          window.__cfiBridge.setSpine(${JSON.stringify(spineHrefs)});
+        } catch (e) {
+          console.warn('epub-cfi: failed to set spine', e);
+        }
+      })();
+    `;
+
     const resizeScript = doc.createElement('script');
     resizeScript.textContent = `
       (function() {
@@ -407,20 +458,57 @@
     selectionScript.textContent = `
       (function() {
         var timer = null;
+        var mouseupDebounceTimer = null;
+        var CHAPTER_HREF = ${JSON.stringify(currentChapterHref)};
         document.addEventListener('mouseup', function() {
           if (timer) clearTimeout(timer);
-          timer = setTimeout(function() {
+          if (mouseupDebounceTimer) clearTimeout(mouseupDebounceTimer);
+          mouseupDebounceTimer = setTimeout(function() {
+            mouseupDebounceTimer = null;
             var sel = window.getSelection();
             if (!sel || sel.isCollapsed || !sel.toString().trim()) return;
             var text = sel.toString().trim();
             var range = sel.getRangeAt(0);
+            // SEL-1 / SEL-3: translate iframe-local coordinates to
+            // parent-viewport so the SelectionToolbar lands at the
+            // visible selection (not at the top-left of the screen).
+            var frameRect = (window.frameElement && window.frameElement.getBoundingClientRect)
+              ? window.frameElement.getBoundingClientRect()
+              : { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 };
             var rect = range.getBoundingClientRect();
-            var bounds = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
-            var container = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+            var bounds = {
+              left: rect.left + frameRect.left,
+              top: rect.top + frameRect.top,
+              right: rect.right + frameRect.left,
+              bottom: rect.bottom + frameRect.top
+            };
+            var container = {
+              left: frameRect.left,
+              top: frameRect.top,
+              width: frameRect.width,
+              height: frameRect.height
+            };
+            var clientRects = range.getClientRects();
             var rects = [];
-            for (var i = 0; i < range.getClientRects().length; i++) {
-              var r = range.getClientRects()[i];
-              rects.push({ left: r.left, top: r.top, width: r.width, height: r.height });
+            for (var i = 0; i < clientRects.length; i++) {
+              var r = clientRects[i];
+              rects.push({
+                left: r.left + frameRect.left,
+                top: r.top + frameRect.top,
+                width: r.width,
+                height: r.height
+              });
+            }
+            // CFI-1: compute the CFI for the selection in this chapter.
+            // Done in the iframe because the bridge needs the chapter's
+            // Document, which only exists here.
+            var cfi = null;
+            try {
+              if (window.__cfiBridge && typeof window.__cfiBridge.rangeToCFI === 'function') {
+                cfi = window.__cfiBridge.rangeToCFI(range, CHAPTER_HREF, document);
+              }
+            } catch (e) {
+              console.warn('epub-cfi: rangeToCFI threw', e);
             }
             window.parent.postMessage({
               type: 'epub-selection',
@@ -428,7 +516,8 @@
               bounds: bounds,
               container: container,
               rects: rects,
-              pageNumber: ${currentChapterIndex}
+              pageNumber: ${currentChapterIndex},
+              cfi: cfi
             }, '*');
           }, 100);
         });
@@ -437,13 +526,18 @@
           if (!sel || sel.isCollapsed) {
             if (timer) clearTimeout(timer);
             timer = setTimeout(function() {
-              window.parent.postMessage({ type: 'epub-selection', text: '' }, '*');
+              window.parent.postMessage({ type: 'epub-selection', text: '', pageNumber: ${currentChapterIndex} }, '*');
             }, 200);
           }
         });
       })();
     `;
 
+    // Scripts run in document order. The bridge must mount before the
+    // selection script (which calls window.__cfiBridge.rangeToCFI) and
+    // before the spine init (which calls setSpine).
+    doc.body.appendChild(bridgeScript);
+    doc.body.appendChild(spineScript);
     doc.body.appendChild(resizeScript);
     doc.body.appendChild(selectionScript);
 
@@ -495,12 +589,25 @@
       currentChapterIndex = index;
       iframeContentHeight = 0;
 
-      const srcdoc = buildChapterSrcdoc(chapterData, metadata.resourcesPath);
+      const spineHrefs = metadata.chapters.map((c) => c.href);
+      const chapterHref = metadata.chapters[index]?.href ?? '';
+      const srcdoc = buildChapterSrcdoc(chapterData, metadata.resourcesPath, spineHrefs, chapterHref);
 
       iframeEl.onload = () => {
         syncIframeHeight();
         if (zoomContainerEl) {
           zoomContainerEl.scrollTop = 0;
+        }
+        // Defensive: re-set the spine in case the inline spine script
+        // didn't run (e.g. if the iframe document was replaced before
+        // the script executed). The bridge's setSpine is idempotent.
+        try {
+          const win = iframeEl?.contentWindow as (Window & { __cfiBridge?: { setSpine: (h: string[]) => void } }) | null;
+          if (win?.__cfiBridge && typeof win.__cfiBridge.setSpine === 'function') {
+            win.__cfiBridge.setSpine(spineHrefs);
+          }
+        } catch (e) {
+          console.warn('epub-cfi: failed to re-set spine on iframe load', e);
         }
       };
       iframeEl.srcdoc = srcdoc;

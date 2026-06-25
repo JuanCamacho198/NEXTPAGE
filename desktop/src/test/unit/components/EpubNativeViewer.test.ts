@@ -128,6 +128,7 @@ describe('EpubNativeViewer', () => {
         container: { left: 0, top: 0, width: 800, height: 600 },
         rects: [{ left: 10, top: 20, width: 90, height: 20 }],
         pageNumber: 0,
+        cfi: null as string | null,
       };
 
       window.dispatchEvent(
@@ -145,6 +146,7 @@ describe('EpubNativeViewer', () => {
         placement: 'epub-chapter',
         rects: [{ left: 10, top: 20, width: 90, height: 20 }],
         pageNumber: 0,
+        cfi: null,
       });
     });
 

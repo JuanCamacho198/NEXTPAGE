@@ -165,6 +165,22 @@
   function handleIframeMessage(event: MessageEvent): void {
     if (!event.data || typeof event.data !== 'object') return;
 
+    // Debug: capture every postMessage so the panel can show what arrived.
+    if (debugState.enabled) {
+      debugState.epub.postMessageCount++;
+      debugState.epub.lastRawMessage = {
+        type: String(event.data.type ?? ""),
+        pageNumber: typeof event.data.pageNumber === "number" ? event.data.pageNumber : null,
+        hasText: typeof event.data.text === "string" && event.data.text.length > 0,
+        textPreview: typeof event.data.text === "string" ? event.data.text.slice(0, 60) : "",
+        hasBounds: !!event.data.bounds,
+        hasContainer: !!event.data.container,
+        hasCfi: typeof event.data.cfi === "string" && event.data.cfi.length > 0,
+        cfiPreview: typeof event.data.cfi === "string" ? event.data.cfi.slice(0, 60) : "",
+      };
+      debugState.epub.guardResult = "none";
+    }
+
     // SEL-4: drop any in-flight postMessage from a chapter that is no
     // longer current. The chapter-change $effect can run between the
     // mouseup and the postMessage delivery, so we always sanity-check
@@ -182,20 +198,36 @@
       return;
     }
 
-    if (event.data.type !== 'epub-selection') return;
+    if (event.data.type !== 'epub-selection') {
+      if (debugState.enabled) debugState.epub.guardResult = "drop-unknown-type";
+      return;
+    }
 
     if (typeof event.data.pageNumber === 'number' && event.data.pageNumber !== currentChapterIndex) {
       // Stale message from a chapter the user has already navigated
       // away from. Drop silently.
+      if (debugState.enabled) debugState.epub.guardResult = "drop-chapter-mismatch";
       return;
     }
 
     if (!event.data.text) {
+      if (debugState.enabled) {
+        debugState.epub.guardResult = "drop-empty-text";
+        debugState.epub.emptyTextMessageCount++;
+      }
+      debugState.epub.onselectionclearCalled++;
       onselectionclear?.();
       return;
     }
 
-    if (!onselection) return;
+    if (!onselection) {
+      if (debugState.enabled) debugState.epub.guardResult = "drop-no-handler";
+      return;
+    }
+
+    if (debugState.enabled) debugState.epub.guardResult = "pass";
+    debugState.epub.onselectionCalled++;
+    debugState.epub.rectCount = Array.isArray(event.data.rects) ? event.data.rects.length : 0;
 
     onselection({
       text: event.data.text,
@@ -214,6 +246,7 @@
     x: number;
     y: number;
     color: string;
+    text?: string;
     pageNumber: number;
   }): void {
     // HM-4: pageNumber guard (already enforced by the switch above
@@ -225,6 +258,7 @@
     const frameRect = iframeEl.getBoundingClientRect();
     onHighlightAction('open', msg.id, {
       color: msg.color,
+      text: msg.text,
       x: msg.x + frameRect.left,
       y: msg.y + frameRect.top,
     });
@@ -244,6 +278,30 @@
     return () => {
       window.removeEventListener('message', handleIframeMessage);
     };
+  });
+
+  // ─── Debug: track iframe rect so the panel can show where the iframe sits ──
+  $effect(() => {
+    const el = iframeEl;
+    if (!el || !debugState.enabled) return;
+    const update = (): void => {
+      const r = el.getBoundingClientRect();
+      debugState.epub.iframeRect = { left: r.left, top: r.top, width: r.width, height: r.height };
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  });
+
+  $effect(() => {
+    debugState.epub.currentChapterIndex = currentChapterIndex;
   });
 
   let lastRenderedChapter = $state(-1);
@@ -562,6 +620,7 @@
           if (sel) sel.removeAllRanges();
           var id = span.getAttribute('data-id');
           var color = span.style.background || '#FACC15';
+          var text = (span.textContent || '').trim();
           if (!id) return;
           window.parent.postMessage({
             type: 'epub-highlight-click',
@@ -569,6 +628,7 @@
             x: ev.clientX,
             y: ev.clientY,
             color: color,
+            text: text,
             pageNumber: CHAPTER_INDEX
           }, '*');
         }, true);
@@ -592,18 +652,20 @@
               node = node.parentNode;
             }
             if (inHl) return;
-            // SEL-1 / SEL-3: translate iframe-local coordinates to
-            // parent-viewport so the SelectionToolbar lands at the
-            // visible selection (not at the top-left of the screen).
+            // SEL-1 / SEL-3: SelectionToolbar treats bounds as
+            // CONTAINER-relative (the iframe is the container here) and
+            // container as PARENT-viewport. So we must NOT add frameRect
+            // to bounds -- the iframe-local rect IS already in container-
+            // relative coords. We only add frameRect to container.
             var frameRect = (window.frameElement && window.frameElement.getBoundingClientRect)
               ? window.frameElement.getBoundingClientRect()
               : { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 };
             var rect = range.getBoundingClientRect();
             var bounds = {
-              left: rect.left + frameRect.left,
-              top: rect.top + frameRect.top,
-              right: rect.right + frameRect.left,
-              bottom: rect.bottom + frameRect.top
+              left: rect.left,
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom
             };
             var containerRect = {
               left: frameRect.left,
@@ -616,8 +678,8 @@
             for (var i = 0; i < clientRects.length; i++) {
               var r = clientRects[i];
               rects.push({
-                left: r.left + frameRect.left,
-                top: r.top + frameRect.top,
+                left: r.left,
+                top: r.top,
                 width: r.width,
                 height: r.height
               });
@@ -653,8 +715,30 @@
             }, 200);
           }
         });
+        // Scroll dismiss: when the user scrolls the chapter, the selection
+        // is still in the DOM but the user can't see it -- dismiss the
+        // Menu 1 toolbar so it stops "floating" over unrelated content.
+        // Browsers don't fire selectionchange on scroll, so we need this.
+        var scrollDismissTimer = null;
+        function dismissOnScroll() {
+          if (scrollDismissTimer) clearTimeout(scrollDismissTimer);
+          scrollDismissTimer = setTimeout(function() {
+            window.parent.postMessage({ type: 'epub-selection', text: '', pageNumber: CHAPTER_INDEX }, '*');
+          }, 50);
+        }
+        window.addEventListener('scroll', dismissOnScroll, true);
+        document.addEventListener('scroll', dismissOnScroll, true);
       })();
     `;
+
+    // CRITICAL ORDER: strip dangerous EPUB scripts BEFORE appending our own.
+    // A previous version of this code stripped scripts AFTER appending, which
+    // also stripped our injected bridge/spine/overlay/resize/selection scripts
+    // and left the iframe with zero JavaScript — selection events fired but no
+    // postMessage ever reached the parent (see git history for the bug).
+    for (const script of doc.querySelectorAll('script')) {
+      script.remove();
+    }
 
     // Scripts run in document order. The bridge must mount before the
     // selection script (which calls window.__cfiBridge.rangeToCFI) and
@@ -667,11 +751,6 @@
     doc.body.appendChild(highlightOverlayScript);
     doc.body.appendChild(resizeScript);
     doc.body.appendChild(selectionScript);
-
-    // Strip untrusted <script> tags from EPUB content before serialization
-    for (const script of doc.querySelectorAll('script')) {
-      script.remove();
-    }
 
     // Use outerHTML instead of XMLSerializer for HTML5-compliant serialization
     // XMLSerializer produces XHTML self-closing tags that break HTML5 parsing
@@ -908,6 +987,9 @@
       <iframe
         bind:this={iframeEl}
         class="w-full border-none block"
+        class:outline-2={debugState.enabled}
+        class:outline-dashed={debugState.enabled}
+        class:outline-red-500={debugState.enabled}
         style:height={iframeContentHeight > 0 ? `${iframeContentHeight}px` : 'auto'}
         title="chapter"
       ></iframe>

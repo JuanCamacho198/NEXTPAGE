@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { HighlightActionKind, HighlightActionOpts } from "$lib/shared/types/book";
+
   type Props = {
     isFullscreen?: boolean;
     onToggleFullscreen?: () => void;
@@ -8,9 +10,10 @@
       container: { left: number; top: number; width: number; height: number };
       placement: "above" | "below";
     }) => void;
+    onHighlightAction?: (action: HighlightActionKind, id: string, opts?: HighlightActionOpts) => void;
   };
 
-  let { isFullscreen = false, onToggleFullscreen, onselection }: Props = $props();
+  let { isFullscreen = false, onToggleFullscreen, onselection, onHighlightAction }: Props = $props();
   let fullscreenState = $state(false);
 
   $effect(() => {
@@ -23,6 +26,15 @@
       bounds: { left: 20, top: 40, right: 180, bottom: 80 },
       container: { left: 100, top: 200, width: 320, height: 480 },
       placement: "above",
+    });
+  }
+
+  function emitHighlightClick(): void {
+    onHighlightAction?.("open", "hl-1", {
+      color: "#FACC15",
+      text: "Mock highlight text",
+      x: 150,
+      y: 250,
     });
   }
 
@@ -55,4 +67,7 @@
 </button>
 <button type="button" data-testid="mock-pdfviewer-select" onclick={emitSelection}>
   Emit Selection
+</button>
+<button type="button" data-testid="mock-pdfviewer-highlight" onclick={emitHighlightClick}>
+  Emit Highlight Click
 </button>

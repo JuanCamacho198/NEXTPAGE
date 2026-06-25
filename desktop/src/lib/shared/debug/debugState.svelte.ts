@@ -29,6 +29,50 @@ const BREAKPOINTS = [
   { name: "2xl", min: 1280, max: Infinity },
 ] as const;
 
+type EpubSelectionDebug = {
+  iframeRect: { left: number; top: number; width: number; height: number } | null;
+  lastRawMessage: {
+    type: string;
+    pageNumber: number | null;
+    hasText: boolean;
+    textPreview: string;
+    hasBounds: boolean;
+    hasContainer: boolean;
+    hasCfi: boolean;
+    cfiPreview: string;
+  } | null;
+  postMessageCount: number;
+  emptyTextMessageCount: number;
+  guardResult:
+    | "pass"
+    | "drop-chapter-mismatch"
+    | "drop-empty-text"
+    | "drop-no-handler"
+    | "drop-unknown-type"
+    | "none";
+  currentChapterIndex: number | null;
+  onselectionCalled: number;
+  onselectionclearCalled: number;
+  parentState: {
+    showToolbar: boolean;
+    selectedText: string;
+    selectionBounds: { left: number; top: number; right: number; bottom: number } | null;
+    selectionContainer: { left: number; top: number; width: number; height: number } | null;
+  };
+  computedToolbarX: number | null;
+  computedToolbarY: number | null;
+  rectCount: number;
+  // Issue 2: dismiss
+  dismissToolbarCallCount: number;
+  lastDismissTrigger: string;
+  // Issue 3: color picker
+  colorPickCount: number;
+  lastPickedColor: string;
+  saveHighlightCallCount: number;
+  saveHighlightLastError: string;
+  persistedHighlightsCount: number;
+};
+
 class DebugState {
   enabled = $state(false);
   currentRoute = $state("");
@@ -36,6 +80,27 @@ class DebugState {
   viewportHeight = $state(0);
   readerInfo: DebugReaderInfo = $state(null);
   selection: DebugSelectionInfo = $state(null);
+  epub: EpubSelectionDebug = $state({
+    iframeRect: null,
+    lastRawMessage: null,
+    postMessageCount: 0,
+    emptyTextMessageCount: 0,
+    guardResult: "none",
+    currentChapterIndex: null,
+    onselectionCalled: 0,
+    onselectionclearCalled: 0,
+    parentState: { showToolbar: false, selectedText: "", selectionBounds: null, selectionContainer: null },
+    computedToolbarX: null,
+    computedToolbarY: null,
+    rectCount: 0,
+    dismissToolbarCallCount: 0,
+    lastDismissTrigger: "—",
+    colorPickCount: 0,
+    lastPickedColor: "—",
+    saveHighlightCallCount: 0,
+    saveHighlightLastError: "",
+    persistedHighlightsCount: 0,
+  });
 
   get breakpoint(): string {
     const bp = BREAKPOINTS.find(
@@ -82,4 +147,4 @@ class DebugState {
 }
 
 export const debugState = new DebugState();
-export type { DebugReaderInfo, DebugSelectionInfo };
+export type { DebugReaderInfo, DebugSelectionInfo, EpubSelectionDebug };

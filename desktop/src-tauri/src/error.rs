@@ -35,6 +35,9 @@ pub enum AppError {
 
     #[error("thumbnail generation failed: {0}")]
     ThumbnailFail(String),
+
+    #[error("not found: {0}")]
+    NotFound(String),
 }
 
 impl AppError {
@@ -47,6 +50,7 @@ impl AppError {
             AppError::ThumbnailFail(_) => true,
             AppError::InvalidInput(_) => true,
             AppError::Compatibility(_) => true,
+            AppError::NotFound(_) => true,
             AppError::MissingBookId => false,
             AppError::Database(_) => false,
             AppError::Io(_) => false,
@@ -69,6 +73,7 @@ pub enum ErrorCode {
     SyncConflict,
     ImportError,
     ThumbnailFail,
+    NotFound,
 }
 
 pub type AppResult<T> = Result<T, AppError>;

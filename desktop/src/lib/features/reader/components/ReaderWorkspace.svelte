@@ -13,7 +13,23 @@
   import type { HighlightActionKind, HighlightActionOpts, HighlightDto } from "$lib/shared/types/book";
   import { HIGHLIGHT_COLORS } from "$lib/features/reader/highlight/highlightColors";
   import { debugState } from "$lib/shared/debug/debugState.svelte";
-  import { saveHighlight, deleteHighlight, upsertReaderSettings, getDefaultReaderSettings, listHighlights } from "$lib/shared/api/tauriClient";
+  import {
+    saveHighlight,
+    deleteHighlight,
+    updateHighlight,
+    saveHighlightTags,
+    createTag,
+    listTags,
+    listTagsForHighlight,
+    addDictionaryWord,
+    upsertReaderSettings,
+    getDefaultReaderSettings,
+    listHighlights,
+  } from "$lib/shared/api/tauriClient";
+  import HighlightContextMenu from "./HighlightContextMenu.svelte";
+  import ColorPickerPopover from "./ColorPickerPopover.svelte";
+  import TagPopover from "./TagPopover.svelte";
+  import NoteEditorModal from "./NoteEditorModal.svelte";
   import { createFocusTrap } from "$lib/shared/utils/focusTrap";
   import { createBookmarksState } from "../stores/bookmarksState.svelte";
   import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
@@ -115,6 +131,8 @@
     pageNumber: number;
     rects: Array<{ left: number; top: number; width: number; height: number }>;
     cfi?: string | null;
+    text?: string;
+    note?: string | null;
   };
   let persistedHighlights = $state<PersistedHighlight[]>([]);
   let lastSelectionData = $state<{
@@ -125,11 +143,47 @@
     cfi: string | null;
   } | null>(null);
 
-  // Menu 2 (EPUB highlight manager) state
-  let activeHighlightId = $state<string | null>(null);
-  let activeHighlightColor = $state<string>(HIGHLIGHT_COLORS[0].hex);
-  let highlightToolbarPos = $state<{ x: number; y: number } | null>(null);
-  let showHighlightToolbar = $state(false);
+  // Menu 2 (existing-highlight context menu) state
+  type HighlightMenuState = {
+    open: boolean;
+    highlightId: string | null;
+    color: string;
+    text: string;
+    position: { x: number; y: number } | null;
+    assignedTags: import("$lib/shared/types/book").TagDto[];
+  };
+  let highlightMenu = $state<HighlightMenuState>({
+    open: false,
+    highlightId: null,
+    color: HIGHLIGHT_COLORS[0].hex,
+    text: "",
+    position: null,
+    assignedTags: [],
+  });
+
+  let allTags = $state<import("$lib/shared/types/book").TagDto[]>([]);
+  let showColorPicker = $state(false);
+  let showTagPopover = $state(false);
+  let showNoteModal = $state(false);
+  let colorPickerAnchor = $state<HTMLElement | null>(null);
+  let tagPopoverAnchor = $state<HTMLElement | null>(null);
+
+  async function refreshTags(): Promise<void> {
+    try {
+      allTags = await listTags();
+    } catch (err) {
+      console.error("Failed to load tags:", err);
+    }
+  }
+
+  async function refreshHighlightTags(highlightId: string): Promise<void> {
+    try {
+      const tags = await listTagsForHighlight(highlightId);
+      highlightMenu.assignedTags = tags;
+    } catch (err) {
+      console.error("Failed to load highlight tags:", err);
+    }
+  }
 
   // PDF page tracking for footer
   let currentPdfPage = $state(0);
@@ -168,6 +222,8 @@
             pageNumber: r.pageNumber,
             rects: [],
             cfi: r.cfi ?? null,
+            text: r.text,
+            note: r.note ?? null,
           }));
         })
         .catch((err) => {
@@ -304,6 +360,44 @@
     showToolbar = true;
   }
 
+  // ─── Debug: replicate SelectionToolbar's position math so we can show
+  //     the user where the toolbar SHOULD be rendered (crosshair + debug
+  //     panel). Source of truth is the SelectionToolbar component itself;
+  //     we keep this in sync by re-implementing the same constants.
+  const DEBUG_TOOLBAR_WIDTH_ESTIMATE = 320;
+  const DEBUG_TOOLBAR_HEIGHT_ESTIMATE = 56;
+  const DEBUG_TOOLBAR_EDGE_PADDING = 16;
+  const DEBUG_TOOLBAR_OFFSET = 16;
+
+  const computedToolbarX = $derived.by(() => {
+    if (!selectionBounds || !selectionContainer) return null;
+    const center = (selectionBounds.left + selectionBounds.right) / 2;
+    const min = DEBUG_TOOLBAR_EDGE_PADDING + DEBUG_TOOLBAR_WIDTH_ESTIMATE / 2;
+    const max = selectionContainer.width - DEBUG_TOOLBAR_EDGE_PADDING - DEBUG_TOOLBAR_WIDTH_ESTIMATE / 2;
+    const anchor = Math.max(min, Math.min(center, max));
+    const viewerX = Math.max(0, anchor - DEBUG_TOOLBAR_WIDTH_ESTIMATE / 2);
+    return selectionContainer.left + viewerX;
+  });
+
+  const computedToolbarY = $derived.by(() => {
+    if (!selectionBounds) return null;
+    return selectionBounds.top > DEBUG_TOOLBAR_HEIGHT_ESTIMATE + DEBUG_TOOLBAR_OFFSET
+      ? selectionBounds.top - DEBUG_TOOLBAR_HEIGHT_ESTIMATE - DEBUG_TOOLBAR_OFFSET
+      : selectionBounds.bottom + DEBUG_TOOLBAR_OFFSET;
+  });
+
+  $effect(() => {
+    debugState.epub.parentState = {
+      showToolbar,
+      selectedText: selectedText.slice(0, 80),
+      selectionBounds,
+      selectionContainer,
+    };
+    debugState.epub.computedToolbarX = computedToolbarX;
+    debugState.epub.computedToolbarY = computedToolbarY;
+    debugState.epub.persistedHighlightsCount = persistedHighlights.length;
+  });
+
   function handleCopy(): void {
     if (selectedText) {
       navigator.clipboard.writeText(selectedText);
@@ -311,13 +405,19 @@
     dismissToolbar();
   }
 
-  function handleNote(_text: string): void {
-    // Future: save note to highlight
+  async function handleAddToDictionary(word: string): Promise<void> {
+    try {
+      await addDictionaryWord({ word });
+    } catch (err) {
+      console.error("Failed to add dictionary word:", err);
+    }
     dismissToolbar();
   }
 
   async function handleColorSelect(color: string): Promise<void> {
     selectedColor = color;
+    debugState.epub.colorPickCount++;
+    debugState.epub.lastPickedColor = color;
 
     // Save highlight and persist it visually on the PDF
     if (lastSelectionData && activeReadingBook) {
@@ -333,10 +433,13 @@
         pageNumber,
         rects: lastSelectionData.rects,
         cfi,
+        text: lastSelectionData.text,
+        note: null,
       }];
 
       // Save to backend (async, don't block UI)
       try {
+        debugState.epub.saveHighlightCallCount++;
         await saveHighlight({
           id: highlightId,
           bookId: activeReadingBook.id,
@@ -350,99 +453,172 @@
           cfi,
         });
       } catch (err) {
+        debugState.epub.saveHighlightLastError = String(err);
         console.error("Failed to save highlight:", err);
       }
     }
   }
 
-  function handleHighlightAction(event: {
-    highlightId: string;
-    action: "updateColor" | "delete";
-    color?: string;
-  }): void {
-    if (event.action === "updateColor" && event.color) {
-      persistedHighlights = persistedHighlights.map((h) =>
-        h.id === event.highlightId ? { ...h, color: event.color! } : h
-      );
-      if (activeReadingBook) {
-        const hl = persistedHighlights.find((h) => h.id === event.highlightId);
-        if (hl) {
-          saveHighlight({
-            id: hl.id,
-            bookId: activeReadingBook.id,
-            text: "",
-            color: event.color,
-            pageNumber: hl.pageNumber,
-            rectLeft: 0,
-            rectRight: 0,
-            rectTop: 0,
-            rectBottom: 0,
-            cfi: null,
-          }).catch((err) => console.error("Failed to update highlight color:", err));
-        }
-      }
-    } else if (event.action === "delete") {
-      persistedHighlights = persistedHighlights.filter((h) => h.id !== event.highlightId);
-      deleteHighlight(event.highlightId).catch((err) =>
-        console.error("Failed to delete highlight:", err)
-      );
+  function openHighlightMenu(id: string, opts?: HighlightActionOpts): void {
+    const hl = persistedHighlights.find((h) => h.id === id);
+    highlightMenu = {
+      open: true,
+      highlightId: id,
+      color: opts?.color ?? hl?.color ?? HIGHLIGHT_COLORS[0].hex,
+      text: opts?.text ?? hl?.text ?? "",
+      position: opts?.x !== undefined && opts?.y !== undefined
+        ? { x: opts.x, y: opts.y }
+        : { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+      assignedTags: [],
+    };
+    void refreshTags();
+    if (hl) {
+      refreshHighlightTags(id);
     }
   }
 
-  // Menu 2 (EPUB) highlight action handler. Distinct from the PDF
-  // `handleHighlightAction` because the EPUB viewer posts structured
-  // (action, id, opts) messages -- a richer contract than the PDF
-  // overlay's `{ highlightId, action, color }` event.
-  function handleEpubHighlightAction(action: HighlightActionKind, id: string, opts?: HighlightActionOpts): void {
-    if (action === "open" && opts) {
-      const hl = persistedHighlights.find((h) => h.id === id);
-      activeHighlightId = id;
-      activeHighlightColor = opts.color ?? hl?.color ?? HIGHLIGHT_COLORS[0].hex;
-      highlightToolbarPos = { x: opts.x ?? 0, y: opts.y ?? 0 };
-      showHighlightToolbar = true;
+  function closeHighlightMenu(): void {
+    highlightMenu = {
+      open: false,
+      highlightId: null,
+      color: HIGHLIGHT_COLORS[0].hex,
+      text: "",
+      position: null,
+      assignedTags: [],
+    };
+    showColorPicker = false;
+    showTagPopover = false;
+    showNoteModal = false;
+  }
+
+  function handleHighlightAction(action: HighlightActionKind, id: string, opts?: HighlightActionOpts): void {
+    if (action === "open") {
+      openHighlightMenu(id, opts);
       return;
     }
     if (action === "close") {
-      showHighlightToolbar = false;
-      activeHighlightId = null;
+      closeHighlightMenu();
       return;
     }
     if (action === "updateColor" && opts?.color) {
-      persistedHighlights = persistedHighlights.map((h) =>
-        h.id === id ? { ...h, color: opts.color! } : h
-      );
-      if (activeHighlightId === id) activeHighlightColor = opts.color!;
-      if (activeReadingBook) {
-        const hl = persistedHighlights.find((h) => h.id === id);
-        if (hl) {
-          saveHighlight({
-            id: hl.id,
-            bookId: activeReadingBook.id,
-            text: "",
-            color: opts.color,
-            pageNumber: hl.pageNumber,
-            rectLeft: 0,
-            rectRight: 0,
-            rectTop: 0,
-            rectBottom: 0,
-            cfi: hl.cfi ?? null,
-          }).catch((err) => console.error("Failed to update highlight color:", err));
-        }
-      }
+      updateHighlightColor(id, opts.color);
       return;
     }
     if (action === "delete") {
-      persistedHighlights = persistedHighlights.filter((h) => h.id !== id);
-      showHighlightToolbar = false;
-      activeHighlightId = null;
-      deleteHighlight(id).catch((err) =>
-        console.error("Failed to delete highlight:", err)
-      );
+      deleteHighlightById(id);
       return;
     }
   }
 
+  function updateHighlightColor(id: string, color: string): void {
+    persistedHighlights = persistedHighlights.map((h) =>
+      h.id === id ? { ...h, color } : h
+    );
+    if (highlightMenu.highlightId === id) {
+      highlightMenu.color = color;
+    }
+    updateHighlight({ id, color }).catch((err) => {
+      console.error("Failed to update highlight color:", err);
+    });
+  }
+
+  function updateHighlightNote(id: string, note: string | null): void {
+    persistedHighlights = persistedHighlights.map((h) =>
+      h.id === id ? { ...h, note } : h
+    );
+    updateHighlight({ id, note: note ?? undefined }).catch((err) => {
+      console.error("Failed to update highlight note:", err);
+    });
+  }
+
+  function deleteHighlightById(id: string): void {
+    persistedHighlights = persistedHighlights.filter((h) => h.id !== id);
+    closeHighlightMenu();
+    deleteHighlight(id).catch((err) =>
+      console.error("Failed to delete highlight:", err)
+    );
+  }
+
+  function handleMenuColorSelect(color: string): void {
+    if (!highlightMenu.highlightId) return;
+    updateHighlightColor(highlightMenu.highlightId, color);
+  }
+
+  function handleMenuCustomColor(): void {
+    showColorPicker = !showColorPicker;
+  }
+
+  function handleMenuCopy(): void {
+    if (highlightMenu.text) {
+      navigator.clipboard.writeText(highlightMenu.text);
+    }
+    closeHighlightMenu();
+  }
+
+  function handleMenuTag(): void {
+    showTagPopover = !showTagPopover;
+  }
+
+  function handleMenuNote(): void {
+    showNoteModal = true;
+  }
+
+  function handleMenuDelete(): void {
+    if (!highlightMenu.highlightId) return;
+    deleteHighlightById(highlightMenu.highlightId);
+  }
+
+  function handleNoteSave(note: string | null): void {
+    if (!highlightMenu.highlightId) return;
+    updateHighlightNote(highlightMenu.highlightId, note);
+    showNoteModal = false;
+  }
+
+  async function handleTagCreate(name: string, color?: string): Promise<void> {
+    try {
+      const tag = await createTag({ name, color });
+      allTags = [...allTags, tag];
+      if (highlightMenu.highlightId) {
+        const currentIds = highlightMenu.assignedTags.map((t) => t.id);
+        const updated = await saveHighlightTags({
+          highlightId: highlightMenu.highlightId,
+          tagIds: [...currentIds, tag.id],
+        });
+        highlightMenu.assignedTags = updated;
+      }
+    } catch (err) {
+      console.error("Failed to create tag:", err);
+    }
+  }
+
+  async function handleTagToggle(tagId: string): Promise<void> {
+    if (!highlightMenu.highlightId) return;
+    const currentIds = new Set(highlightMenu.assignedTags.map((t) => t.id));
+    if (currentIds.has(tagId)) {
+      currentIds.delete(tagId);
+    } else {
+      currentIds.add(tagId);
+    }
+    try {
+      const updated = await saveHighlightTags({
+        highlightId: highlightMenu.highlightId,
+        tagIds: Array.from(currentIds),
+      });
+      highlightMenu.assignedTags = updated;
+    } catch (err) {
+      console.error("Failed to save highlight tags:", err);
+    }
+  }
+
+  function handleColorPickerSelect(color: string): void {
+    if (!highlightMenu.highlightId) return;
+    updateHighlightColor(highlightMenu.highlightId, color);
+    showColorPicker = false;
+  }
+
   function dismissToolbar(): void {
+    debugState.epub.dismissToolbarCallCount++;
+    debugState.epub.lastDismissTrigger = "dismissToolbar()";
     showToolbar = false;
     selectedText = "";
     selectionBounds = null;
@@ -546,7 +722,7 @@
           onToggleToc={toggleTocPanel}
           onSettingsChange={handleTextSettingsChange}
           {persistedHighlights}
-          onHighlightAction={handleEpubHighlightAction}
+          onHighlightAction={handleHighlightAction}
           {t}
         />
       </div>
@@ -561,59 +737,103 @@
         selectionBounds={selectionBounds}
         containerRect={selectionContainer}
         onCopy={handleCopy}
-        onNote={handleNote}
-        onDismiss={dismissToolbar}
+        onAddToDictionary={handleAddToDictionary}
         onColorSelect={handleColorSelect}
         {t}
       />
     {/if}
 
-    <!-- Menu 2: EPUB highlight manager toolbar (floating) -->
-    {#if showHighlightToolbar && highlightToolbarPos && activeHighlightId}
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <!-- Debug: crosshair at the computed SelectionToolbar position.
+         Only visible when debug mode is enabled. -->
+    {#if debugState.enabled && computedToolbarX !== null && computedToolbarY !== null}
       <div
-        class="fixed z-[100] flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-800 border border-slate-700 shadow-[0_8px_24px_rgba(0,0,0,0.35),0_2px_8px_rgba(0,0,0,0.15)]"
-        style="left: {highlightToolbarPos.x}px; top: {highlightToolbarPos.y}px;"
-        role="toolbar"
-        tabindex="-1"
-        aria-label={t("highlight.menuAriaLabel")}
-        onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => { if (e.key === 'Escape' && activeHighlightId) handleEpubHighlightAction('close', activeHighlightId); }}
+        aria-hidden="true"
+        class="pointer-events-none fixed z-9998"
+        style="left: {computedToolbarX}px; top: {computedToolbarY}px;"
       >
-        {#each HIGHLIGHT_COLORS as color}
-          <button
-            type="button"
-            class="w-[22px] h-[22px] border-2 border-white/60 rounded-full cursor-pointer p-0 transition-[transform,border-color] duration-150 hover:scale-110"
-            style="background-color: {color.hex}; {activeHighlightColor === color.hex ? 'border-color: white; box-shadow: 0 0 0 2px rgba(255,255,255,0.3);' : ''}"
-            onclick={() => handleEpubHighlightAction('updateColor', activeHighlightId!, { color: color.hex })}
-            aria-label={t("highlight.selectColor", { color: color.label })}
-          ></button>
-        {/each}
-        <span class="w-px h-5 bg-slate-700 mx-1"></span>
-        <button
-          type="button"
-          class="flex items-center justify-center w-7 h-7 border-none rounded-full bg-transparent text-red-500 cursor-pointer transition-[background-color,transform] duration-150 hover:bg-red-500/15 hover:scale-110"
-            onclick={() => activeHighlightId && handleEpubHighlightAction('delete', activeHighlightId)}
-          aria-label={t("settings.deleteHighlight")}
-          title={t("settings.deleteHighlight")}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 6h18"></path>
-            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-            <path d="M8 6V4c0-1 1-2 2-2h4c1 1 2 1 2 2v2"></path>
-          </svg>
-        </button>
-        <button
-          type="button"
-          class="flex items-center justify-center w-5 h-5 border-none rounded-full bg-transparent text-slate-400 cursor-pointer text-sm leading-none transition-[background-color,color] duration-150 hover:bg-slate-400/15 hover:text-slate-100"
-            onclick={() => activeHighlightId && handleEpubHighlightAction('close', activeHighlightId)}
-          aria-label={t("settings.close")}
-        >
-          &times;
-        </button>
+        <div class="relative">
+          <div class="absolute -left-1 -top-1 h-3 w-3 rounded-full bg-cyan-400 ring-2 ring-white"></div>
+          <div class="absolute left-3 top-0 whitespace-nowrap rounded bg-cyan-500 px-1.5 py-0.5 text-[10px] font-mono text-white shadow">
+            toolbar target ({Math.round(computedToolbarX)},{Math.round(computedToolbarY)})
+          </div>
+        </div>
       </div>
     {/if}
+
+    <!-- Debug: red dashed outline of the actual selection bounds in parent coords.
+         Uses selectionBounds (container-relative) + selectionContainer.left/top
+         to convert to parent coords for the overlay. -->
+    {#if debugState.enabled && selectionBounds && selectionContainer}
+      {@const selParentLeft = selectionContainer.left + selectionBounds.left}
+      {@const selParentTop = selectionContainer.top + selectionBounds.top}
+      {@const selParentWidth = selectionBounds.right - selectionBounds.left}
+      {@const selParentHeight = selectionBounds.bottom - selectionBounds.top}
+      <div
+        aria-hidden="true"
+        class="pointer-events-none fixed z-9997 border-2 border-dashed border-red-500"
+        style="left: {selParentLeft}px; top: {selParentTop}px; width: {selParentWidth}px; height: {selParentHeight}px;"
+      >
+        <span class="absolute -top-5 left-0 whitespace-nowrap rounded bg-red-500 px-1.5 py-0.5 text-[10px] font-mono text-white shadow">
+          selection bounds ({Math.round(selParentLeft)},{Math.round(selParentTop)})
+        </span>
+      </div>
+    {/if}
+
+    <!-- Menu 2: existing-highlight context menu (EPUB + PDF) -->
+    {#if highlightMenu.open && highlightMenu.highlightId && highlightMenu.position}
+      <div
+        class="fixed inset-0 z-[99]"
+        role="presentation"
+        onclick={closeHighlightMenu}
+        onkeydown={(e) => { if (e.key === 'Escape') closeHighlightMenu(); }}
+      >
+        <HighlightContextMenu
+          highlightId={highlightMenu.highlightId}
+          highlightColor={highlightMenu.color}
+          position={highlightMenu.position}
+          assignedTags={highlightMenu.assignedTags}
+          onColorSelect={handleMenuColorSelect}
+          onCustomColor={handleMenuCustomColor}
+          onCopy={handleMenuCopy}
+          onTag={handleMenuTag}
+          onNote={handleMenuNote}
+          onDelete={handleMenuDelete}
+          onClose={closeHighlightMenu}
+          setColorPickerAnchor={(el) => (colorPickerAnchor = el)}
+          setTagPopoverAnchor={(el) => (tagPopoverAnchor = el)}
+          {t}
+        />
+      </div>
+    {/if}
+
+    <ColorPickerPopover
+      open={showColorPicker}
+      anchor={colorPickerAnchor}
+      currentColor={highlightMenu.color}
+      onSelect={handleColorPickerSelect}
+      onClose={() => (showColorPicker = false)}
+    />
+
+    <TagPopover
+      open={showTagPopover}
+      anchor={tagPopoverAnchor}
+      assignedTagIds={highlightMenu.assignedTags.map((tag) => tag.id)}
+      allTags={allTags}
+      onCreate={handleTagCreate}
+      onToggle={handleTagToggle}
+      onClose={() => (showTagPopover = false)}
+      {t}
+    />
+
+    <NoteEditorModal
+      open={showNoteModal}
+      note={highlightMenu.highlightId
+        ? (persistedHighlights.find((h) => h.id === highlightMenu.highlightId)?.note ?? null)
+        : null}
+      onSave={handleNoteSave}
+      onClose={() => (showNoteModal = false)}
+      {t}
+    />
   </div>
 
   <ReaderFooter

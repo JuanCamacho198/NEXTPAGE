@@ -334,6 +334,43 @@
       {/if}
     </div>
 
+    <!-- EPUB Selection Debug -->
+    <div class="border-b border-(--color-border) p-3">
+      <h4 class="mb-1 text-[10px] uppercase tracking-wider text-(--color-text-muted)">EPUB Selection Debug</h4>
+      <div class="space-y-0.5">
+        <p>Iframe: <span class="font-semibold">
+          {debugState.epub.iframeRect
+            ? `${Math.round(debugState.epub.iframeRect.left)},${Math.round(debugState.epub.iframeRect.top)} (${Math.round(debugState.epub.iframeRect.width)}×${Math.round(debugState.epub.iframeRect.height)})`
+            : "—"}
+        </span></p>
+        <p>PostMessage RX: <span class="font-semibold">{debugState.epub.postMessageCount}</span> (empty-text: <span class="font-semibold">{debugState.epub.emptyTextMessageCount}</span>)</p>
+        <p>Guard: <span class="font-semibold" class:text-green-500={debugState.epub.guardResult === "pass"} class:text-yellow-500={debugState.epub.guardResult === "none"} class:text-red-500={debugState.epub.guardResult.startsWith("drop-")}>{debugState.epub.guardResult}</span></p>
+        <p>onselection: <span class="font-semibold">{debugState.epub.onselectionCalled}</span> | onselectionclear: <span class="font-semibold">{debugState.epub.onselectionclearCalled}</span></p>
+        <p>rectCount: <span class="font-semibold">{debugState.epub.rectCount}</span> | currentChapter: <span class="font-semibold">{debugState.epub.currentChapterIndex ?? "—"}</span></p>
+        {#if debugState.epub.lastRawMessage}
+          <details class="mt-1">
+            <summary class="cursor-pointer text-(--color-text-muted)">Last msg ({debugState.epub.lastRawMessage.type})</summary>
+            <pre class="mt-1 whitespace-pre-wrap break-all text-[10px]">{JSON.stringify(debugState.epub.lastRawMessage, null, 2)}</pre>
+          </details>
+        {/if}
+        <hr class="my-1 border-(--color-border)" />
+        <p>showToolbar: <span class="font-semibold" class:text-green-500={debugState.epub.parentState.showToolbar} class:text-red-500={!debugState.epub.parentState.showToolbar}>{String(debugState.epub.parentState.showToolbar)}</span></p>
+        <p>selectedText: <span class="font-semibold">{debugState.epub.parentState.selectedText || "—"}</span></p>
+        <p>bounds: <span class="font-semibold">{debugState.epub.parentState.selectionBounds ? `${Math.round(debugState.epub.parentState.selectionBounds.left)},${Math.round(debugState.epub.parentState.selectionBounds.top)} → ${Math.round(debugState.epub.parentState.selectionBounds.right)},${Math.round(debugState.epub.parentState.selectionBounds.bottom)}` : "—"}</span></p>
+        <p>container: <span class="font-semibold">{debugState.epub.parentState.selectionContainer ? `${Math.round(debugState.epub.parentState.selectionContainer.left)},${Math.round(debugState.epub.parentState.selectionContainer.top)}` : "—"}</span></p>
+        <p>toolbarX/Y: <span class="font-semibold text-cyan-600">
+          {debugState.epub.computedToolbarX !== null && debugState.epub.computedToolbarY !== null
+            ? `${Math.round(debugState.epub.computedToolbarX)}, ${Math.round(debugState.epub.computedToolbarY)}`
+            : "—"}
+        </span></p>
+        <hr class="my-1 border-(--color-border)" />
+        <p class="text-(--color-text-muted)">dismiss: <span class="font-semibold">{debugState.epub.dismissToolbarCallCount}</span> ({debugState.epub.lastDismissTrigger})</p>
+        <p class="text-(--color-text-muted)">color pick: <span class="font-semibold">{debugState.epub.colorPickCount}</span> ({debugState.epub.lastPickedColor})</p>
+        <p class="text-(--color-text-muted)">saveHighlight: <span class="font-semibold">{debugState.epub.saveHighlightCallCount}</span>{debugState.epub.saveHighlightLastError ? ` err="${debugState.epub.saveHighlightLastError.slice(0, 30)}"` : ""}</p>
+        <p class="text-(--color-text-muted)">persistedHighlights: <span class="font-semibold">{debugState.epub.persistedHighlightsCount}</span></p>
+      </div>
+    </div>
+
     <!-- Export Logs -->
     <div class="p-3">
       <h4 class="mb-1 text-[10px] uppercase tracking-wider text-(--color-text-muted)">Logs</h4>

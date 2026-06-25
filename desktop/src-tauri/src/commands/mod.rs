@@ -39,12 +39,13 @@ use tauri::State;
 use crate::error::AppError;
 use crate::logger::{ErrorEventDto, LogEventDto, DEFAULT_MAX_LOG_LINES, SETTING_MAX_LOG_LINES_KEY};
 use crate::models::{
-    AppSettingDto, BookCollectionInput, BookDeleteInput, BookDto, BookImportInput, BookmarkDto,
-    CollectionDto, CommandErrorDto, CreateCollectionInput, HideBookInput, HighlightDto,
-    IndexBookTextInput, LibraryBookDto, ListLibraryBooksInput, ReadingProgressDto,
-    ReadingSessionInput, ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput,
-    SaveProgressInput, ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse,
-    UpsertBookCoverInput,
+    AddDictionaryWordInput, AppSettingDto, BookCollectionInput, BookDeleteInput, BookDto,
+    BookImportInput, BookmarkDto, CollectionDto, CommandErrorDto, CreateCollectionInput,
+    CreateTagInput, DictionaryWordDto, HideBookInput, HighlightDto, IndexBookTextInput,
+    LibraryBookDto, ListLibraryBooksInput, ReadingProgressDto, ReadingSessionInput,
+    ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput, SaveHighlightTagsInput,
+    SaveProgressInput, ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse, TagDto,
+    UpdateHighlightInput, UpsertBookCoverInput,
 };
 use crate::state::AppState;
 
@@ -62,6 +63,7 @@ fn map_command_error(error: AppError) -> String {
         AppError::ImportError(message) => CommandErrorDto::import_error(message),
         AppError::ThumbnailFail(message) => CommandErrorDto::thumbnail_error(message),
         AppError::MigrationFail(message) => CommandErrorDto::migration_fail(message),
+        AppError::NotFound(message) => CommandErrorDto::not_found(message),
         other => CommandErrorDto::internal(other.to_string()),
     };
 
@@ -378,6 +380,74 @@ pub fn saveHighlight(
 pub fn deleteHighlight(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository.delete_highlight(&id).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn updateHighlight(
+    state: State<'_, AppState>,
+    payload: UpdateHighlightInput,
+) -> Result<HighlightDto, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.update_highlight(payload).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn listTags(state: State<'_, AppState>) -> Result<Vec<TagDto>, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.list_tags().map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn listTagsForHighlight(
+    state: State<'_, AppState>,
+    highlight_id: String,
+) -> Result<Vec<TagDto>, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.list_tags_for_highlight(&highlight_id).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn createTag(state: State<'_, AppState>, payload: CreateTagInput) -> Result<TagDto, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.create_tag(payload).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn saveHighlightTags(
+    state: State<'_, AppState>,
+    payload: SaveHighlightTagsInput,
+) -> Result<Vec<TagDto>, String> {
+    let mut repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.save_highlight_tags(payload).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn listDictionaryWords(state: State<'_, AppState>) -> Result<Vec<DictionaryWordDto>, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.list_dictionary_words().map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn addDictionaryWord(
+    state: State<'_, AppState>,
+    payload: AddDictionaryWordInput,
+) -> Result<DictionaryWordDto, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.add_dictionary_word(payload).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn removeDictionaryWord(state: State<'_, AppState>, id: String) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.remove_dictionary_word(&id).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]

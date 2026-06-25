@@ -50,6 +50,7 @@
     color: string;
     pageNumber: number;
     rects: Array<{ left: number; top: number; width: number; height: number }>;
+    text?: string;
   };
 
   type Props = {
@@ -78,11 +79,11 @@
       pageNumber: number;
     }) => void;
     onselectionclear?: () => void;
-    onHighlightAction?: (event: {
-      highlightId: string;
-      action: "updateColor" | "delete";
-      color?: string;
-    }) => void;
+    onHighlightAction?: (
+      action: import("$lib/shared/types/book").HighlightActionKind,
+      id: string,
+      opts?: import("$lib/shared/types/book").HighlightActionOpts,
+    ) => void;
     onTocReady?: (entries: TocEntry[]) => void;
     externalTocNavigate?: TocEntry | null;
     persistedHighlights?: PersistedHighlight[];
@@ -163,8 +164,6 @@
   let selectionPlacement = $state<"above" | "below">("above");
   let selectionOverlayRects = $state<Array<{ left: number; top: number; width: number; height: number }>>([]);
   let activeHighlightId = $state<string | null>(null);
-  let activeHighlightColor = $state<string>("");
-  let highlightToolbarPos = $state<{ x: number; y: number } | null>(null);
 
 
 
@@ -701,38 +700,21 @@
 
   function dismissHighlightManager(): void {
     activeHighlightId = null;
-    activeHighlightColor = "";
-    highlightToolbarPos = null;
   }
 
   function handleHighlightClick(hl: PersistedHighlight, event: MouseEvent): void {
     event.stopPropagation();
-    if (activeHighlightId === hl.id) { dismissHighlightManager(); return; }
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    if (activeHighlightId === hl.id) {
+      dismissHighlightManager();
+      return;
+    }
     activeHighlightId = hl.id;
-    activeHighlightColor = hl.color;
-    const toolbarWidth = 280;
-    const toolbarHeight = 56;
-    const offset = 12;
-    let x = rect.left + rect.width / 2 - toolbarWidth / 2;
-    let y = rect.top - toolbarHeight - offset;
-    if (y < 8) y = rect.bottom + offset;
-    x = Math.max(8, Math.min(x, window.innerWidth - toolbarWidth - 8));
-    highlightToolbarPos = { x, y };
-  }
-
-  function handleHighlightColorPick(hex: string): void {
-    if (!activeHighlightId) return;
-    activeHighlightColor = hex;
-    onHighlightAction?.({ highlightId: activeHighlightId, action: "updateColor", color: hex });
-    dismissHighlightManager();
-  }
-
-  function handleHighlightDelete(): void {
-    if (!activeHighlightId) return;
-    const id = activeHighlightId;
-    dismissHighlightManager();
-    onHighlightAction?.({ highlightId: id, action: "delete" });
+    onHighlightAction?.('open', hl.id, {
+      color: hl.color,
+      text: hl.text ?? '',
+      x: event.clientX,
+      y: event.clientY,
+    });
   }
 
   // ── Navigation ───────────────────────────────────────────
@@ -795,6 +777,21 @@
   });
 
   // ── Wheel zoom ───────────────────────────────────────────
+  // Svelte 5's `onwheel={...}` binding registers the listener as passive,
+  // which means `event.preventDefault()` is silently ignored and the browser
+  // falls back to its native page zoom (Ctrl+wheel enlarges the whole window).
+  // We register the listener manually with `{ passive: false }` so that
+  // preventDefault() actually cancels the native zoom and only our PDF zoom runs.
+  $effect(() => {
+    const el = canvasContainer;
+    if (!el) return;
+    const handler: EventListener = (event) => {
+      handleViewerWheel(event as WheelEvent);
+    };
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  });
+
   function handleViewerWheel(event: WheelEvent): void {
     if (!pdfDoc) return;
     if (!event.ctrlKey && !event.metaKey) return;
@@ -812,13 +809,16 @@
 
   // ── Keyboard navigation ──────────────────────────────────
   function handleViewerKeydown(event: KeyboardEvent): void {
-    if (!isViewerFocused) return;
+    // Ctrl/Cmd + = / + / − must work even when the viewer div is not focused,
+    // otherwise the browser's native zoom fires and enlarges the whole window.
+    // Bypass the isViewerFocused gate for these shortcuts only.
     if ((event.ctrlKey || event.metaKey) && (event.key === "=" || event.key === "+" || event.key === "-")) {
       event.preventDefault();
       const step = event.key === "-" ? -PDF_SCALE_STEP : PDF_SCALE_STEP;
-      setScale(scale + step);
+      void setScale(scale + step);
       return;
     }
+    if (!isViewerFocused) return;
     const intent = resolveReaderArrowIntent(event);
     if (!intent) return;
     if (intent === "prevPage") { event.preventDefault(); goToPrevPage(); return; }
@@ -975,7 +975,7 @@
           onNavigate={(item) => navigateToOutlineItem(item)}
         />
       {/if}
-      <div class="flex-1 overflow-auto bg-(--pdf-reader-root-bg,var(--color-background))" bind:this={canvasContainer} onwheel={handleViewerWheel} style="padding: {canvasContainerPaddingStyle};">
+      <div class="flex-1 overflow-auto bg-(--pdf-reader-root-bg,var(--color-background))" bind:this={canvasContainer} style="padding: {canvasContainerPaddingStyle};">
         <div class="flex min-h-full items-center justify-center">
           <div class="relative inline-block" class:search-hit={flashSearchResult} style="isolation: isolate; {canvasWrapperStyle}">
             <canvas bind:this={canvas} style="filter: {visualFilterStyle};"></canvas>
@@ -986,12 +986,7 @@
               {currentPage}
               {scale}
               {activeHighlightId}
-              {activeHighlightColor}
-              {highlightToolbarPos}
               onHighlightClick={handleHighlightClick}
-              onHighlightColorPick={handleHighlightColorPick}
-              onHighlightDelete={handleHighlightDelete}
-              onDismissHighlightManager={dismissHighlightManager}
             />
 
             <div

@@ -1,8 +1,8 @@
 use super::LibraryRepository;
 use crate::error::{AppError, AppResult};
-use crate::models::{HighlightDto, SaveHighlightInput};
+use crate::models::{HighlightDto, SaveHighlightInput, UpdateHighlightInput};
 use chrono::Utc;
-use rusqlite::params;
+use rusqlite::{params, OptionalExtension};
 use uuid::Uuid;
 
 pub fn list_highlights(
@@ -108,4 +108,167 @@ pub fn delete_highlight(repo: &LibraryRepository, id: &str) -> AppResult<()> {
         params![now, id],
     )?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::UpdateHighlightInput;
+    use crate::repository::tests::new_repository;
+    use chrono::Utc;
+    use rusqlite::params;
+    use uuid::Uuid;
+
+    fn insert_book_and_highlight(repo: &LibraryRepository) -> String {
+        let now = Utc::now().to_rfc3339();
+        repo.connection
+            .execute(
+                "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
+                 VALUES (?1, 'Book', 'Author', 'C:/book.epub', 'epub', 'local', 0, 100, ?2, ?2, 1)",
+                params!["book-1", now],
+            )
+            .unwrap();
+        let id = Uuid::new_v4().to_string();
+        repo.connection
+            .execute(
+                "INSERT INTO highlights (id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, note, created_at, updated_at, version)
+                 VALUES (?1, 'book-1', '#FACC15', 'sample', 1, 0, 10, 0, 10, NULL, NULL, ?2, ?2, 1)",
+                params![id, now],
+            )
+            .unwrap();
+        id
+    }
+
+    #[test]
+    fn update_highlight_color_persists() {
+        let repo = new_repository();
+        let id = insert_book_and_highlight(&repo);
+        let updated = update_highlight(
+            &repo,
+            UpdateHighlightInput { id: id.clone(), color: Some("#4ADE80".to_string()), note: None },
+        )
+        .unwrap();
+        assert_eq!(updated.color, "#4ADE80");
+
+        let color: String = repo
+            .connection
+            .query_row("SELECT color FROM highlights WHERE id = ?1", params![id], |row| row.get(0))
+            .unwrap();
+        assert_eq!(color, "#4ADE80");
+    }
+
+    #[test]
+    fn update_highlight_note_persists() {
+        let repo = new_repository();
+        let id = insert_book_and_highlight(&repo);
+        let updated = update_highlight(
+            &repo,
+            UpdateHighlightInput { id: id.clone(), color: None, note: Some("A note".to_string()) },
+        )
+        .unwrap();
+        assert_eq!(updated.note, Some("A note".to_string()));
+    }
+
+    #[test]
+    fn update_highlight_clears_note_with_empty_string() {
+        let repo = new_repository();
+        let id = insert_book_and_highlight(&repo);
+        update_highlight(
+            &repo,
+            UpdateHighlightInput { id: id.clone(), color: None, note: Some("A note".to_string()) },
+        )
+        .unwrap();
+        let updated = update_highlight(
+            &repo,
+            UpdateHighlightInput { id: id.clone(), color: None, note: Some("".to_string()) },
+        )
+        .unwrap();
+        assert_eq!(updated.note, Some("".to_string()));
+    }
+
+    #[test]
+    fn update_highlight_not_found_returns_error() {
+        let repo = new_repository();
+        let result = update_highlight(
+            &repo,
+            UpdateHighlightInput {
+                id: "missing-id".to_string(),
+                color: Some("#4ADE80".to_string()),
+                note: None,
+            },
+        );
+        assert!(matches!(result, Err(AppError::NotFound(_))));
+    }
+}
+
+pub fn update_highlight(
+    repo: &LibraryRepository,
+    input: UpdateHighlightInput,
+) -> AppResult<HighlightDto> {
+    let existing: Option<HighlightDto> = repo
+        .connection
+        .query_row(
+            "SELECT id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, note, created_at, updated_at
+             FROM highlights
+             WHERE id = ?1 AND deleted_at IS NULL",
+            params![input.id],
+            |row| {
+                Ok(HighlightDto {
+                    id: row.get(0)?,
+                    book_id: row.get(1)?,
+                    color: row.get(2)?,
+                    text: row.get(3)?,
+                    page: row.get(4)?,
+                    rect_left: row.get(5)?,
+                    rect_right: row.get(6)?,
+                    rect_top: row.get(7)?,
+                    rect_bottom: row.get(8)?,
+                    cfi: row.get(9)?,
+                    note: row.get(10)?,
+                    created_at: row.get(11)?,
+                    updated_at: row.get(12)?,
+                })
+            },
+        )
+        .optional()?;
+
+    let mut highlight =
+        existing.ok_or_else(|| AppError::NotFound(format!("Highlight {} not found", input.id)))?;
+
+    let mut updates: Vec<(&str, &dyn rusqlite::ToSql)> = Vec::new();
+
+    if let Some(color) = input.color.as_ref() {
+        if color.trim().is_empty() {
+            return Err(AppError::InvalidInput("Highlight color cannot be empty".to_string()));
+        }
+        highlight.color = color.clone();
+        updates.push(("color = ?", color as &dyn rusqlite::ToSql));
+    }
+
+    if input.note.is_some() {
+        highlight.note = input.note.clone();
+        updates.push(("note = ?", &highlight.note as &dyn rusqlite::ToSql));
+    }
+
+    if updates.is_empty() {
+        return Ok(highlight);
+    }
+
+    let now = Utc::now().to_rfc3339();
+    let set_clause = updates.iter().map(|(clause, _)| *clause).collect::<Vec<_>>().join(", ");
+    let mut params_values: Vec<&dyn rusqlite::ToSql> =
+        updates.iter().map(|(_, value)| *value).collect();
+    params_values.push(&now);
+    params_values.push(&input.id);
+
+    repo.connection.execute(
+        &format!(
+            "UPDATE highlights SET {}, updated_at = ?, version = version + 1 WHERE id = ?",
+            set_clause
+        ),
+        params_values.as_slice(),
+    )?;
+
+    highlight.updated_at = now;
+    Ok(highlight)
 }

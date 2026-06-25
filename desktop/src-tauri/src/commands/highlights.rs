@@ -1,1 +1,4 @@
-pub use super::{deleteHighlight, listHighlights, saveHighlight};
+pub use super::{
+    addDictionaryWord, createTag, deleteHighlight, listDictionaryWords, listHighlights, listTags,
+    listTagsForHighlight, removeDictionaryWord, saveHighlight, saveHighlightTags, updateHighlight,
+};

@@ -40,6 +40,51 @@ pub struct SaveHighlightInput {
     pub note: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateHighlightInput {
+    pub id: String,
+    pub color: Option<String>,
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagDto {
+    pub id: String,
+    pub name: String,
+    pub color: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveHighlightTagsInput {
+    pub highlight_id: String,
+    pub tag_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTagInput {
+    pub name: String,
+    pub color: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DictionaryWordDto {
+    pub id: String,
+    pub word: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddDictionaryWordInput {
+    pub word: String,
+}
+
 impl SaveHighlightInput {
     pub fn resolve_page_number(&self) -> Result<i32, AppError> {
         match (self.page_number, self.page) {
@@ -289,6 +334,10 @@ impl CommandErrorDto {
 
     pub fn migration_fail(message: impl Into<String>) -> Self {
         Self { code: "MIGRATION_FAIL".to_string(), message: message.into(), recoverable: false }
+    }
+
+    pub fn not_found(message: impl Into<String>) -> Self {
+        Self { code: "NOT_FOUND".to_string(), message: message.into(), recoverable: true }
     }
 }
 

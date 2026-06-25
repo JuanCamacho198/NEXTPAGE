@@ -7,10 +7,18 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 import {
+  addDictionaryWord,
+  createTag,
   getDefaultReaderSettings,
   getReaderSettings,
+  listDictionaryWords,
+  listTags,
+  listTagsForHighlight,
+  removeDictionaryWord,
   resetReaderSettingsToDefaults,
   sanitizeReaderSettings,
+  saveHighlightTags,
+  updateHighlight,
   upsertReaderSettings,
 } from "$lib/shared/api/tauriClient";
 
@@ -131,7 +139,7 @@ describe("tauriClient reader settings", () => {
     expect(invokeMock).toHaveBeenCalledTimes(1);
     const [command, args] = invokeMock.mock.calls[0] as [string, { settings: Array<{ key: string; valueJson: string }> }];
     expect(command).toBe("upsertSettings");
-    expect(args.settings).toHaveLength(18);
+    expect(args.settings).toHaveLength(21);
     expect(args.settings.find((entry) => entry.key === "reader.themeMode")?.valueJson).toBe(
       JSON.stringify("sepia"),
     );
@@ -182,5 +190,112 @@ describe("tauriClient reader settings", () => {
     expect(args.settings.find((entry) => entry.key === "reader.textAlign")?.valueJson).toBe(
       JSON.stringify("left"),
     );
+  });
+});
+
+describe("tauriClient highlight menu commands", () => {
+  beforeEach(() => {
+    invokeMock.mockReset();
+  });
+
+  it("updates highlight color and note", async () => {
+    invokeMock.mockResolvedValueOnce({
+      id: "hl-1",
+      bookId: "book-1",
+      text: "sample",
+      color: "#4ADE80",
+      pageNumber: 1,
+      note: "updated note",
+      createdAt: "2024-01-01T00:00:00Z",
+    });
+
+    const result = await updateHighlight({ id: "hl-1", color: "#4ADE80", note: "updated note" });
+
+    expect(invokeMock).toHaveBeenCalledWith("updateHighlight", {
+      payload: { id: "hl-1", color: "#4ADE80", note: "updated note" },
+    });
+    expect(result.color).toBe("#4ADE80");
+    expect(result.note).toBe("updated note");
+  });
+
+  it("saves highlight tags", async () => {
+    invokeMock.mockResolvedValueOnce([
+      { id: "tag-1", name: "Review", createdAt: "2024-01-01T00:00:00Z" },
+    ]);
+
+    const result = await saveHighlightTags({ highlightId: "hl-1", tagIds: ["tag-1"] });
+
+    expect(invokeMock).toHaveBeenCalledWith("saveHighlightTags", {
+      payload: { highlightId: "hl-1", tagIds: ["tag-1"] },
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("Review");
+  });
+
+  it("lists tags", async () => {
+    invokeMock.mockResolvedValueOnce([
+      { id: "tag-1", name: "Review", createdAt: "2024-01-01T00:00:00Z" },
+    ]);
+
+    const result = await listTags();
+
+    expect(invokeMock).toHaveBeenCalledWith("listTags", undefined);
+    expect(result).toHaveLength(1);
+  });
+
+  it("lists tags for a highlight", async () => {
+    invokeMock.mockResolvedValueOnce([
+      { id: "tag-1", name: "Review", createdAt: "2024-01-01T00:00:00Z" },
+    ]);
+
+    const result = await listTagsForHighlight("hl-1");
+
+    expect(invokeMock).toHaveBeenCalledWith("listTagsForHighlight", { highlightId: "hl-1" });
+    expect(result).toHaveLength(1);
+  });
+
+  it("creates a tag", async () => {
+    invokeMock.mockResolvedValueOnce({
+      id: "tag-1",
+      name: "Review",
+      color: "#ff0000",
+      createdAt: "2024-01-01T00:00:00Z",
+    });
+
+    const result = await createTag({ name: "Review", color: "#ff0000" });
+
+    expect(invokeMock).toHaveBeenCalledWith("createTag", {
+      payload: { name: "Review", color: "#ff0000" },
+    });
+    expect(result.color).toBe("#ff0000");
+  });
+
+  it("adds and lists dictionary words", async () => {
+    invokeMock.mockResolvedValueOnce({
+      id: "word-1",
+      word: "Serendipity",
+      createdAt: "2024-01-01T00:00:00Z",
+    });
+
+    const added = await addDictionaryWord({ word: "Serendipity" });
+
+    expect(invokeMock).toHaveBeenCalledWith("addDictionaryWord", {
+      payload: { word: "Serendipity" },
+    });
+    expect(added.word).toBe("Serendipity");
+
+    invokeMock.mockResolvedValueOnce([{ id: "word-1", word: "Serendipity", createdAt: "2024-01-01T00:00:00Z" }]);
+
+    const words = await listDictionaryWords();
+    expect(invokeMock).toHaveBeenCalledWith("listDictionaryWords", undefined);
+    expect(words).toHaveLength(1);
+  });
+
+  it("removes a dictionary word", async () => {
+    invokeMock.mockResolvedValueOnce(undefined);
+
+    await removeDictionaryWord("word-1");
+
+    expect(invokeMock).toHaveBeenCalledWith("removeDictionaryWord", { id: "word-1" });
   });
 });

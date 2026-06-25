@@ -7,6 +7,7 @@ import type {
   ScanFolderResult,
   CommandErrorDto,
   CreateCollectionInput,
+  DictionaryWordDto,
   HighlightDto,
   LibraryBookDto,
   ReadingProgressDto,
@@ -17,6 +18,7 @@ import type {
   SaveBookmarkInput,
   SearchBookTextInput,
   SearchBookTextResponse,
+  TagDto,
   UpsertBookCoverInput,
   UiLocale,
   CollectionDto,
@@ -734,7 +736,7 @@ export const saveHighlight = async (highlight: SaveHighlightInput): Promise<void
   };
 
   try {
-    await invoke("saveHighlight", { highlight: payload });
+    await invoke("saveHighlight", { payload });
   } catch (error) {
     attachCommandError(error);
   }
@@ -742,6 +744,82 @@ export const saveHighlight = async (highlight: SaveHighlightInput): Promise<void
 
 export const deleteHighlight = async (id: string): Promise<void> => {
   await invoke("deleteHighlight", { id });
+};
+
+export const updateHighlight = async (payload: {
+  id: string;
+  color?: string;
+  note?: string;
+}): Promise<HighlightDto> => {
+  try {
+    return await invoke<HighlightDto>("updateHighlight", { payload });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const saveHighlightTags = async (payload: {
+  highlightId: string;
+  tagIds: string[];
+}): Promise<TagDto[]> => {
+  try {
+    return await invoke<TagDto[]>("saveHighlightTags", { payload });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const createTag = async (payload: {
+  name: string;
+  color?: string;
+}): Promise<TagDto> => {
+  try {
+    return await invoke<TagDto>("createTag", { payload });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const listTags = async (): Promise<TagDto[]> => {
+  try {
+    return await invoke<TagDto[]>("listTags");
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const listTagsForHighlight = async (highlightId: string): Promise<TagDto[]> => {
+  try {
+    return await invoke<TagDto[]>("listTagsForHighlight", { highlightId });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const addDictionaryWord = async (payload: {
+  word: string;
+}): Promise<DictionaryWordDto> => {
+  try {
+    return await invoke<DictionaryWordDto>("addDictionaryWord", { payload });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const listDictionaryWords = async (): Promise<DictionaryWordDto[]> => {
+  try {
+    return await invoke<DictionaryWordDto[]>("listDictionaryWords");
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const removeDictionaryWord = async (id: string): Promise<void> => {
+  try {
+    await invoke("removeDictionaryWord", { id });
+  } catch (error) {
+    attachCommandError(error);
+  }
 };
 
 export const listBookmarks = async (bookId?: string): Promise<BookmarkDto[]> => {

@@ -73,6 +73,19 @@ export type SaveBookmarkInput = {
   createdAt: string;
 };
 
+export type TagDto = {
+  id: string;
+  name: string;
+  color?: string | null;
+  createdAt: string;
+};
+
+export type DictionaryWordDto = {
+  id: string;
+  word: string;
+  createdAt: string;
+};
+
 export type BookCoverDto = {
   bookId: string;
   storagePath: string;
@@ -105,6 +118,7 @@ export type HighlightActionKind = "open" | "updateColor" | "delete" | "close";
  */
 export interface HighlightActionOpts {
   color?: string;
+  text?: string;
   x?: number;
   y?: number;
 }

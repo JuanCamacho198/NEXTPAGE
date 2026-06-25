@@ -3,12 +3,14 @@
 
 pub mod bookmarks;
 pub mod collections;
+pub mod dictionary;
 pub mod files;
 pub mod highlights;
 pub mod library;
 pub mod progress;
 pub mod search;
 pub mod settings;
+pub mod tags;
 
 use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
@@ -23,10 +25,12 @@ use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    AppSettingDto, BookCoverDto, BookDeleteInput, BookDto, BookImportInput, BookmarkDto,
-    CollectionDto, HighlightDto, IndexBookTextInput, LibraryBookDto, ReadingProgressDto,
-    ReadingSessionInput, ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput,
-    SaveProgressInput, ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse,
+    AddDictionaryWordInput, AppSettingDto, BookCoverDto, BookDeleteInput, BookDto, BookImportInput,
+    BookmarkDto, CollectionDto, CreateTagInput, DictionaryWordDto, HighlightDto,
+    IndexBookTextInput, LibraryBookDto, ReadingProgressDto, ReadingSessionInput,
+    ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput, SaveHighlightTagsInput,
+    SaveProgressInput, ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse, TagDto,
+    UpdateHighlightInput,
 };
 
 const MAX_SETTING_BATCH: usize = 100;
@@ -504,8 +508,43 @@ impl LibraryRepository {
         highlights::save_highlight(self, payload)
     }
 
+    pub fn update_highlight(&self, input: UpdateHighlightInput) -> AppResult<HighlightDto> {
+        highlights::update_highlight(self, input)
+    }
+
     pub fn delete_highlight(&self, id: &str) -> AppResult<()> {
         highlights::delete_highlight(self, id)
+    }
+
+    pub fn list_tags(&self) -> AppResult<Vec<TagDto>> {
+        tags::list_tags(self)
+    }
+
+    pub fn create_tag(&self, input: CreateTagInput) -> AppResult<TagDto> {
+        tags::create_tag(self, input)
+    }
+
+    pub fn list_tags_for_highlight(&self, highlight_id: &str) -> AppResult<Vec<TagDto>> {
+        tags::list_tags_for_highlight(self, highlight_id)
+    }
+
+    pub fn save_highlight_tags(&mut self, input: SaveHighlightTagsInput) -> AppResult<Vec<TagDto>> {
+        tags::save_highlight_tags(self, input)
+    }
+
+    pub fn list_dictionary_words(&self) -> AppResult<Vec<DictionaryWordDto>> {
+        dictionary::list_dictionary_words(self)
+    }
+
+    pub fn add_dictionary_word(
+        &self,
+        input: AddDictionaryWordInput,
+    ) -> AppResult<DictionaryWordDto> {
+        dictionary::add_dictionary_word(self, input)
+    }
+
+    pub fn remove_dictionary_word(&self, id: &str) -> AppResult<()> {
+        dictionary::remove_dictionary_word(self, id)
     }
 
     pub fn list_bookmarks(&self, book_id: Option<&str>) -> AppResult<Vec<BookmarkDto>> {
@@ -998,9 +1037,15 @@ mod tests {
                 "../../migrations/0007_highlight_note_and_page_contract.sql"
             ))
             .unwrap();
+        connection
+            .execute_batch(include_str!("../../migrations/0008_queue_and_perf_indexes.sql"))
+            .unwrap();
+        connection
+            .execute_batch(include_str!("../../migrations/0009_dictionary_tags.sql"))
+            .unwrap();
     }
 
-    fn new_repository() -> LibraryRepository {
+    pub(crate) fn new_repository() -> LibraryRepository {
         let connection = Connection::open_in_memory().unwrap();
         apply_test_migrations(&connection);
         LibraryRepository::new(connection)

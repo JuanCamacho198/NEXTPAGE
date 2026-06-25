@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { HIGHLIGHT_COLORS } from "$lib/features/reader/pdf/pdfSelection";
-
   type PersistedHighlight = {
     id: string;
     color: string;
@@ -15,20 +13,13 @@
     height: number;
   };
 
-  type HighlightToolbarPos = { x: number; y: number } | null;
-
   type Props = {
     selectionOverlayRects: SelectionOverlayRect[];
     persistedHighlights: PersistedHighlight[];
     currentPage: number;
     scale: number;
     activeHighlightId: string | null;
-    activeHighlightColor: string;
-    highlightToolbarPos: HighlightToolbarPos;
     onHighlightClick: (hl: PersistedHighlight, event: MouseEvent) => void;
-    onHighlightColorPick: (hex: string) => void;
-    onHighlightDelete: () => void;
-    onDismissHighlightManager: () => void;
   };
 
   let {
@@ -37,12 +28,7 @@
     currentPage,
     scale,
     activeHighlightId,
-    activeHighlightColor,
-    highlightToolbarPos,
     onHighlightClick,
-    onHighlightColorPick,
-    onHighlightDelete,
-    onDismissHighlightManager,
   }: Props = $props();
 </script>
 
@@ -73,47 +59,3 @@
     {/each}
   {/each}
 </div>
-
-{#if highlightToolbarPos && activeHighlightId}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div
-    class="fixed z-[100] flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-800 border border-slate-700 shadow-[0_8px_24px_rgba(0,0,0,0.35),0_2px_8px_rgba(0,0,0,0.15)] pointer-events-auto"
-    style="left: {highlightToolbarPos.x}px; top: {highlightToolbarPos.y}px;"
-    onclick={(e) => e.stopPropagation()}
-    role="toolbar"
-    tabindex="-1"
-    aria-label="Highlight options"
-  >
-    {#each HIGHLIGHT_COLORS as color}
-      <button
-        type="button"
-        class="w-[22px] h-[22px] border-2 border-white/60 rounded-full cursor-pointer p-0 transition-[transform,border-color] duration-150 hover:scale-110"
-        style="background-color: {color.hex}; {activeHighlightColor === color.hex ? 'border-color: white; box-shadow: 0 0 0 2px rgba(255,255,255,0.3);' : ''}"
-        onclick={() => onHighlightColorPick(color.hex)}
-        aria-label={color.label}
-      ></button>
-    {/each}
-    <span class="w-px h-5 bg-slate-700 mx-1"></span>
-    <button
-      type="button"
-      class="flex items-center justify-center w-7 h-7 border-none rounded-full bg-transparent text-red-500 cursor-pointer transition-[background-color,transform] duration-150 hover:bg-red-500/15 hover:scale-110"
-      onclick={onHighlightDelete}
-      aria-label="Delete highlight"
-      title="Delete highlight"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 6h18"></path>
-        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-      </svg>
-    </button>
-    <button
-      type="button"
-      class="flex items-center justify-center w-5 h-5 border-none rounded-full bg-transparent text-slate-400 cursor-pointer text-sm leading-none transition-[background-color,color] duration-150 hover:bg-slate-400/15 hover:text-slate-100"
-      onclick={onDismissHighlightManager}
-      aria-label="Close"
-    >
-      &times;
-    </button>
-  </div>
-{/if}

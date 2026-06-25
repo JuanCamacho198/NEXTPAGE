@@ -24,7 +24,7 @@ describe('tauri command wiring compatibility', () => {
   it('keeps invoke handler public command symbols available from commands module', () => {
     const mainRs = readFileSync(resolve(root, 'main.rs'), 'utf8');
     const commandMod = readFileSync(resolve(root, 'commands/mod.rs'), 'utf8');
-    const symbols = ['listBooks', 'getSettings', 'upsertSettings', 'saveProgress', 'listCollections', 'getFileBytes'];
+    const symbols = ['listBooks', 'getSettings', 'upsertSettings', 'saveProgress', 'listCollections', 'getFileBytes', 'listTagsForHighlight'];
     for (const symbol of symbols) {
       expect(mainRs.includes(`commands::${symbol}`)).toBe(true);
       expect(commandMod.includes(`pub fn ${symbol}`) || commandMod.includes(`pub async fn ${symbol}`)).toBe(true);

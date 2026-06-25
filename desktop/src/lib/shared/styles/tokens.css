@@ -116,6 +116,12 @@
   --shadow-glow: 0 0 15px rgba(73, 212, 255, 0.15);
   --shadow-glow-hover: 0 0 20px rgba(73, 212, 255, 0.3);
 
+  /* Highlight menu tokens */
+  --color-highlight-menu-bg: #161f33;
+  --color-highlight-menu-border: rgba(255, 255, 255, 0.1);
+  --color-note-modal-bg: rgba(16, 28, 44, 0.71);
+  --color-color-picker-bg: #ffffff;
+
   /* Gradient backgrounds */
   --gradient-surface: radial-gradient(circle at top left, rgba(73, 212, 255, 0.12), transparent 26%),
                      radial-gradient(circle at top right, rgba(245, 207, 122, 0.1), transparent 24%),
@@ -155,6 +161,12 @@
   --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);
   --shadow-glow: 0 0 15px rgba(0, 110, 200, 0.14);
   --shadow-glow-hover: 0 0 20px rgba(0, 110, 200, 0.26);
+
+  /* Highlight menu tokens */
+  --color-highlight-menu-bg: #e8edf4;
+  --color-highlight-menu-border: rgba(30, 58, 95, 0.12);
+  --color-note-modal-bg: rgba(238, 242, 247, 0.9);
+  --color-color-picker-bg: #ffffff;
 
   /* Gradient backgrounds */
   --gradient-surface: radial-gradient(circle at top left, rgba(0, 110, 200, 0.07), transparent 28%),
@@ -278,8 +290,16 @@ body {
 }
 
 .textLayer span::selection {
-  background: rgba(73, 212, 255, 0.28);
+  background: transparent;
   color: transparent;
+}
+
+/* Persisted highlights also leak the native ::selection background when the
+ * user selects text that overlaps a saved highlight. Suppress it everywhere
+ * inside the PDF viewer root so the custom overlay (PdfSelectionOverlay) is the
+ * single source of truth for the visual selection. */
+.pdf-viewer ::selection {
+  background: transparent;
 }
 
 /* ============================================

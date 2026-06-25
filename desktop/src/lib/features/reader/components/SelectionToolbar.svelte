@@ -7,25 +7,23 @@
     selectionBounds: { left: number; top: number; right: number; bottom: number };
     containerRect: { left: number; top: number; width: number; height: number };
     onCopy: () => void;
-    onNote: (text: string) => void;
-    onDismiss: () => void;
+    onAddToDictionary: (text: string) => void;
     onColorSelect: (color: string) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
   let {
+    selectedText,
     selectionBounds,
     containerRect,
     onCopy,
-    onNote,
-    onDismiss,
+    onAddToDictionary,
     onColorSelect,
     t,
   }: Props = $props();
 
   let selectedColor = $state(HIGHLIGHT_COLORS[0].hex);
-  let showNoteEditor = $state(false);
-  let noteText = $state("");
+  let dictionaryFeedback = $state<string | null>(null);
 
   const TOOLBAR_HEIGHT_ESTIMATE = 56;
   const TOOLBAR_WIDTH_ESTIMATE = 320;
@@ -61,17 +59,14 @@
     onCopy();
   }
 
-  function handleNoteToggle(): void {
-    showNoteEditor = !showNoteEditor;
-    if (!showNoteEditor) noteText = "";
-  }
-
-  function handleSaveNote(): void {
-    if (noteText.trim()) {
-      onNote(noteText.trim());
-    }
-    showNoteEditor = false;
-    noteText = "";
+  function handleAddToDictionary(): void {
+    const word = selectedText.trim();
+    if (!word) return;
+    onAddToDictionary(word);
+    dictionaryFeedback = t("reader.addedToDictionary");
+    window.setTimeout(() => {
+      dictionaryFeedback = null;
+    }, 1500);
   }
 </script>
 
@@ -84,11 +79,15 @@
   <!-- Tip arrow pointing to selection -->
   <div
     class="mx-auto h-2.5 w-5"
-    style="clip-path: polygon(50% 100%, 0 0, 100% 0); background: var(--color-surface-strong);"
+    style="clip-path: polygon(50% 100%, 0 0, 100% 0); background: var(--color-highlight-menu-bg);"
   ></div>
 
   <!-- Main toolbar -->
-  <div class="flex items-center gap-5 rounded-[28px] border border-(--color-surface-strong) bg-(--color-surface-strong) px-5 py-2.5 shadow-xl" role="toolbar" aria-label="Selection tools">
+  <div
+    class="flex items-center gap-3 rounded-full border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) px-4 py-2 shadow-xl"
+    role="toolbar"
+    aria-label={t("highlight.menuAriaLabel")}
+  >
     <!-- Color circles -->
     {#each HIGHLIGHT_COLORS as color}
       <button
@@ -98,73 +97,40 @@
         class:ring-white={selectedColor === color.hex}
         style="background-color: {color.hex};"
         onclick={() => selectColor(color.hex)}
-        aria-label={color.label}
+        aria-label={t("highlight.selectColor", { color: t(color.i18nKey) })}
       ></button>
     {/each}
 
     <!-- Separator -->
-    <span class="text-base font-normal text-(--color-text-auxiliary)">||</span>
+    <span class="text-base font-normal text-(--color-text-auxiliary)">|</span>
 
     <!-- Copy -->
     <button
       type="button"
-      class="cursor-pointer text-sm font-medium text-(--color-text-inverse) hover:text-(--color-text-inverse)"
+      class="cursor-pointer text-sm font-medium text-(--color-text-inverse) hover:text-(--color-accent-sky)"
       onclick={handleCopy}
     >
       {t("reader.copiar")}
     </button>
 
-    <!-- Note -->
+    <!-- Add to Dictionary -->
     <button
       type="button"
-      class="cursor-pointer text-sm font-medium text-(--color-text-inverse) hover:text-(--color-text-inverse)"
-      onclick={handleNoteToggle}
+      class="cursor-pointer text-sm font-medium text-(--color-text-inverse) hover:text-(--color-accent-sky)"
+      onclick={handleAddToDictionary}
     >
-      {t("reader.nota")}
-    </button>
-
-    <!-- Trash -->
-    <button
-      type="button"
-      class="cursor-pointer text-(--color-error) hover:text-red-400"
-      onclick={onDismiss}
-      aria-label={t("reader.eliminar_destacado")}
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 6h18"></path>
-        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-      </svg>
+      {t("reader.addToDictionary")}
     </button>
   </div>
 
-  <!-- Note editor (inline) -->
-  {#if showNoteEditor}
-    <div class="mt-2 rounded-2xl border border-(--color-surface-strong) bg-(--color-surface-strong) p-3 shadow-xl">
-      <textarea
-        bind:value={noteText}
-        rows="2"
-        class="w-full resize-none rounded-xl border border-(--color-text-auxiliary) bg-(--color-bg-deep) p-2 text-sm text-(--color-text-inverse) placeholder-(--color-text-auxiliary) focus:outline-none focus:ring-1 focus:ring-(--color-accent-sky)"
-        placeholder={t("highlight.notePlaceholder")}
-        maxlength="500"
-      ></textarea>
-      <div class="mt-2 flex justify-end gap-2">
-        <button
-          type="button"
-          class="cursor-pointer rounded-full px-3 py-1 text-xs font-medium text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
-          onclick={handleNoteToggle}
-        >
-          {t("highlight.cancel")}
-        </button>
-        <button
-          type="button"
-          class="cursor-pointer rounded-full bg-(--color-accent-sky) px-3 py-1 text-xs font-medium text-(--color-bg-deep) hover:bg-(--color-accent-blue)"
-          onclick={handleSaveNote}
-          disabled={!noteText.trim()}
-        >
-          {t("highlight.save")}
-        </button>
-      </div>
+  <!-- Dictionary feedback -->
+  {#if dictionaryFeedback}
+    <div
+      class="mt-2 rounded-lg bg-(--color-highlight-menu-bg) px-3 py-1 text-center text-xs text-(--color-text-inverse) shadow-lg"
+      role="status"
+      aria-live="polite"
+    >
+      {dictionaryFeedback}
     </div>
   {/if}
 </div>

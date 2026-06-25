@@ -305,6 +305,7 @@ export const messagesEs: Record<MessageKey, string> = {
   "highlight.color.orange": "Naranja",
   "highlight.colors": "Colores",
   "highlight.customColor": "Color personalizado",
+  "highlight.changeColor": "Cambiar color",
   "highlight.tag": "Etiqueta",
   "highlight.tags": "Etiquetas",
   "highlight.tagPopoverAriaLabel": "Etiquetas",
@@ -316,6 +317,8 @@ export const messagesEs: Record<MessageKey, string> = {
   "highlight.saving": "Guardando...",
   "highlight.note": "Nota",
   "highlight.cancel": "Cancelar",
+  "highlight.noteReference": "Referencia",
+  "highlight.noteColor": "Color de nota",
   "highlight.notePlaceholder": "Escribe una nota para este resaltado",
   "highlight.noteInputAriaLabel": "Nota del resaltado",
   "highlight.saveWithNote": "Guardar nota",
@@ -407,6 +410,7 @@ export const messagesEs: Record<MessageKey, string> = {
   
   // Reader - Nueva rediseño
   "reader.copiar": "Copiar",
+  "reader.copiedToClipboard": "Copiado al portapapeles",
   "reader.addToDictionary": "Agregar al diccionario",
   "reader.addedToDictionary": "Guardado",
   "reader.nota": "Nota",

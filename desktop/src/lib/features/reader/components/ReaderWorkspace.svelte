@@ -586,7 +586,7 @@
             type="button"
             class="w-[22px] h-[22px] border-2 border-white/60 rounded-full cursor-pointer p-0 transition-[transform,border-color] duration-150 hover:scale-110"
             style="background-color: {color.hex}; {activeHighlightColor === color.hex ? 'border-color: white; box-shadow: 0 0 0 2px rgba(255,255,255,0.3);' : ''}"
-            onclick={() => handleHighlightAction('updateColor', activeHighlightId!, { color: color.hex })}
+            onclick={() => handleEpubHighlightAction('updateColor', activeHighlightId!, { color: color.hex })}
             aria-label={t("highlight.selectColor", { color: color.label })}
           ></button>
         {/each}
@@ -594,7 +594,7 @@
         <button
           type="button"
           class="flex items-center justify-center w-7 h-7 border-none rounded-full bg-transparent text-red-500 cursor-pointer transition-[background-color,transform] duration-150 hover:bg-red-500/15 hover:scale-110"
-          onclick={() => activeHighlightId && handleHighlightAction('delete', activeHighlightId)}
+            onclick={() => activeHighlightId && handleEpubHighlightAction('delete', activeHighlightId)}
           aria-label={t("settings.deleteHighlight")}
           title={t("settings.deleteHighlight")}
         >
@@ -607,7 +607,7 @@
         <button
           type="button"
           class="flex items-center justify-center w-5 h-5 border-none rounded-full bg-transparent text-slate-400 cursor-pointer text-sm leading-none transition-[background-color,color] duration-150 hover:bg-slate-400/15 hover:text-slate-100"
-          onclick={() => activeHighlightId && handleHighlightAction('close', activeHighlightId)}
+            onclick={() => activeHighlightId && handleEpubHighlightAction('close', activeHighlightId)}
           aria-label={t("settings.close")}
         >
           &times;

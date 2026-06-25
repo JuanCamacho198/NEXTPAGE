@@ -1,5 +1,5 @@
 {
-  "version": "2.13",
+  "version": "2.14",
   "children": [
     {
       "type": "frame",
@@ -30787,7 +30787,6 @@
                     5.5,
                     16
                   ],
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "text",
@@ -30858,7 +30857,6 @@
                       ],
                       "layout": "vertical",
                       "justifyContent": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "frame",
@@ -30903,7 +30901,6 @@
                   "layout": "vertical",
                   "gap": 8,
                   "padding": 16,
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "frame",
@@ -30999,7 +30996,6 @@
                   "layout": "vertical",
                   "gap": 8,
                   "padding": 16,
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "frame",
@@ -31100,7 +31096,6 @@
                     20,
                     16
                   ],
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "frame",
@@ -31190,7 +31185,6 @@
                   "layout": "vertical",
                   "gap": 8,
                   "padding": 16,
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "frame",
@@ -31295,7 +31289,6 @@
                   "padding": 16,
                   "justifyContent": "space_between",
                   "alignItems": "center",
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "frame",
@@ -31376,7 +31369,6 @@
                   "padding": 16,
                   "justifyContent": "space_between",
                   "alignItems": "center",
-                  "layoutIncludeStroke": true,
                   "children": [
                     {
                       "type": "frame",
@@ -31468,7 +31460,6 @@
                       "strokeAlignment": "inner",
                       "padding": 16,
                       "alignItems": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "frame",
@@ -31545,7 +31536,6 @@
                       "strokeAlignment": "inner",
                       "padding": 16,
                       "alignItems": "center",
-                      "layoutIncludeStroke": true,
                       "children": [
                         {
                           "type": "frame",
@@ -31921,5 +31911,6 @@
       "type": "color",
       "value": "#94A3B8"
     }
-  }
+  },
+  "fileToken": "36fd5e7d-f0b4-46ec-a4b8-62694667ae3f"
 }

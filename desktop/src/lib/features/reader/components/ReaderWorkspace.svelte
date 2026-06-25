@@ -400,9 +400,15 @@
 
   function handleCopy(): void {
     if (selectedText) {
-      navigator.clipboard.writeText(selectedText);
+      navigator.clipboard.writeText(selectedText).catch((err) => {
+        console.error("Failed to copy to clipboard:", err);
+      });
     }
-    dismissToolbar();
+    // Intentionally NOT calling dismissToolbar() here: the SelectionToolbar
+    // shows a small feedback toast for ~1.5s and the parent must stay mounted
+    // long enough for the user to see it. The toolbar will close naturally
+    // via onselectionclear (browser clears the selection) or when the user
+    // clicks outside / makes a new selection.
   }
 
   async function handleAddToDictionary(word: string): Promise<void> {
@@ -411,29 +417,37 @@
     } catch (err) {
       console.error("Failed to add dictionary word:", err);
     }
-    dismissToolbar();
+    // Intentionally NOT calling dismissToolbar() — same reason as handleCopy:
+    // the dictionary feedback toast must remain visible to the user.
   }
 
-  async function handleColorSelect(color: string): Promise<void> {
+  async function handleColorSelect(
+    color: string,
+    data: NonNullable<typeof lastSelectionData>
+  ): Promise<void> {
     selectedColor = color;
     debugState.epub.colorPickCount++;
     debugState.epub.lastPickedColor = color;
 
-    // Save highlight and persist it visually on the PDF
-    if (lastSelectionData && activeReadingBook) {
+    // Use the data passed by the toolbar (captured at mount time) rather than
+    // the global `lastSelectionData`. This is the fix for the race condition:
+    // the browser's selectionchange can fire before our click handler runs
+    // and clear the global state, but the data we need to persist the
+    // highlight is already in this argument.
+    if (data && activeReadingBook) {
       const highlightId = crypto.randomUUID();
-      const bounds = lastSelectionData.bounds;
-      const pageNumber = lastSelectionData.pageNumber ?? 1;
-      const cfi = lastSelectionData.cfi ?? null;
+      const bounds = data.bounds;
+      const pageNumber = data.pageNumber ?? 1;
+      const cfi = data.cfi ?? null;
 
       // Persist visually immediately
       persistedHighlights = [...persistedHighlights, {
         id: highlightId,
         color,
         pageNumber,
-        rects: lastSelectionData.rects,
+        rects: data.rects,
         cfi,
-        text: lastSelectionData.text,
+        text: data.text,
         note: null,
       }];
 
@@ -443,7 +457,7 @@
         await saveHighlight({
           id: highlightId,
           bookId: activeReadingBook.id,
-          text: lastSelectionData.text,
+          text: data.text,
           color,
           pageNumber,
           rectLeft: bounds.left,
@@ -457,6 +471,15 @@
         console.error("Failed to save highlight:", err);
       }
     }
+
+    // Close the toolbar AND clear the browser's text selection on a small
+    // delay so the Svelte out:scale transition plays out cleanly. We delay
+    // the removeAllRanges call to avoid it firing a fresh selectionchange
+    // while we're still rendering.
+    setTimeout(() => {
+      dismissToolbar();
+      window.getSelection()?.removeAllRanges();
+    }, 220);
   }
 
   function openHighlightMenu(id: string, opts?: HighlightActionOpts): void {
@@ -623,8 +646,12 @@
     selectedText = "";
     selectionBounds = null;
     selectionContainer = null;
-    lastSelectionData = null;
-    window.getSelection()?.removeAllRanges();
+    // Intentionally NOT clearing `lastSelectionData` here. The toolbar keeps
+    // a reference to the data via its `selectionData` prop and forwards it
+    // through `onColorSelect`. Clearing it on dismiss would race with the
+    // browser's selectionchange and drop the highlight before the click
+    // handler runs. `removeAllRanges` is also deferred to handleColorSelect
+    // to avoid a feedback loop with selectionchange.
   }
 
   function toggleSearch(): void {
@@ -736,6 +763,7 @@
         {selectedText}
         selectionBounds={selectionBounds}
         containerRect={selectionContainer}
+        selectionData={lastSelectionData}
         onCopy={handleCopy}
         onAddToDictionary={handleAddToDictionary}
         onColorSelect={handleColorSelect}
@@ -830,6 +858,7 @@
       note={highlightMenu.highlightId
         ? (persistedHighlights.find((h) => h.id === highlightMenu.highlightId)?.note ?? null)
         : null}
+      highlightText={highlightMenu.text}
       onSave={handleNoteSave}
       onClose={() => (showNoteModal = false)}
       {t}

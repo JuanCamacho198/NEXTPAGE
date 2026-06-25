@@ -293,6 +293,7 @@ export const messagesEn = {
 
   // Common
   "settings.search": "Search",
+  "common.close": "Close",
   "highlight.menuAriaLabel": "Selection actions",
   "highlight.selectColor": "Select {{color}} highlight",
   "highlight.save": "Save",

@@ -294,6 +294,7 @@ export const messagesEs: Record<MessageKey, string> = {
 
   // Common
   "settings.search": "Buscar",
+  "common.close": "Cerrar",
   "highlight.menuAriaLabel": "Acciones de seleccion",
   "highlight.selectColor": "Seleccionar resaltado {{color}}",
   "highlight.save": "Guardar",

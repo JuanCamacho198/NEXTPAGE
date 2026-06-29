@@ -1,13 +1,13 @@
-import { i18n, type MessageKey } from "$lib/shared/i18n";
-import { initTheme } from "$lib/shared/stores/theme";
-import { reconcileHomeState } from "$lib/shared/stores/homeState";
-import { navigationState } from "$lib/shared/stores/NavigationDomainState.svelte";
-import { libraryState } from "$lib/shared/stores/LibraryDomainState.svelte";
-import { readerState } from "$lib/shared/stores/ReaderDomainState.svelte";
-import { searchState } from "$lib/shared/stores/SearchDomainState.svelte";
-import { bulkImportState } from "$lib/shared/stores/BulkImportDomainState.svelte";
-import { statsState } from "$lib/shared/stores/StatsDomainState.svelte";
-import { settingsState } from "$lib/shared/stores/SettingsDomainState.svelte";
+import { i18n, type MessageKey } from '$lib/shared/i18n';
+import { initTheme } from '$lib/shared/stores/theme';
+import { reconcileHomeState } from '$lib/shared/stores/homeState';
+import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
+import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
+import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
+import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
+import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
+import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
+import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
 
 import type {
   BulkImportSummary,
@@ -21,14 +21,14 @@ import type {
   SearchBookTextResponse,
   SearchNavigationTarget,
   UiLocale,
-} from "$lib/shared/types";
+} from '$lib/shared/types';
 import {
   createShelfQueryState,
   type AppRoute,
   type ShelfQueryState,
-} from "$lib/shared/stores/homeState";
-import type { BulkImportProgress } from "$lib/shared/services/BulkImportService";
-import type { ImportProgress } from "$lib/shared/services/BookImportService";
+} from '$lib/shared/stores/homeState';
+import type { BulkImportProgress } from '$lib/shared/services/BulkImportService';
+import type { ImportProgress } from '$lib/shared/services/BookImportService';
 
 type MaybeCommandError = Error & { commandError?: CommandErrorDto };
 
@@ -44,99 +44,250 @@ class AppState {
   private statsDomain = statsState;
 
   // ─── Property passthrough: Navigation ───
-  get route(): AppRoute { return this.navigation.route; }
-  set route(v: AppRoute) { this.navigation.route = v; }
-  get previewBookId(): string | null { return this.navigation.previewBookId; }
-  set previewBookId(v: string | null) { this.navigation.previewBookId = v; }
-  get shelfDetailsBookId(): string | null { return this.navigation.shelfDetailsBookId; }
-  set shelfDetailsBookId(v: string | null) { this.navigation.shelfDetailsBookId = v; }
-  get libraryUnavailableReason(): string | null { return this.navigation.libraryUnavailableReason; }
-  set libraryUnavailableReason(v: string | null) { this.navigation.libraryUnavailableReason = v; }
-  get statsUnavailableReason(): string | null { return this.navigation.statsUnavailableReason; }
-  set statsUnavailableReason(v: string | null) { this.navigation.statsUnavailableReason = v; }
-  get searchUnavailableReason(): string | null { return this.navigation.searchUnavailableReason; }
-  set searchUnavailableReason(v: string | null) { this.navigation.searchUnavailableReason = v; }
+  get route(): AppRoute {
+    return this.navigation.route;
+  }
+  set route(v: AppRoute) {
+    this.navigation.route = v;
+  }
+  get previewBookId(): string | null {
+    return this.navigation.previewBookId;
+  }
+  set previewBookId(v: string | null) {
+    this.navigation.previewBookId = v;
+  }
+  get shelfDetailsBookId(): string | null {
+    return this.navigation.shelfDetailsBookId;
+  }
+  set shelfDetailsBookId(v: string | null) {
+    this.navigation.shelfDetailsBookId = v;
+  }
+  get libraryUnavailableReason(): string | null {
+    return this.navigation.libraryUnavailableReason;
+  }
+  set libraryUnavailableReason(v: string | null) {
+    this.navigation.libraryUnavailableReason = v;
+  }
+  get statsUnavailableReason(): string | null {
+    return this.navigation.statsUnavailableReason;
+  }
+  set statsUnavailableReason(v: string | null) {
+    this.navigation.statsUnavailableReason = v;
+  }
+  get searchUnavailableReason(): string | null {
+    return this.navigation.searchUnavailableReason;
+  }
+  set searchUnavailableReason(v: string | null) {
+    this.navigation.searchUnavailableReason = v;
+  }
 
   // ─── Property passthrough: Library ───
-  get books(): ReaderBook[] { return this.library.books; }
-  set books(v: ReaderBook[]) { this.library.books = v; }
-  get shelfQueryState(): ShelfQueryState { return this.library.shelfQueryState; }
-  set shelfQueryState(v: ShelfQueryState) { this.library.shelfQueryState = v; }
-  get collections(): CollectionDto[] { return this.library.collections; }
-  set collections(v: CollectionDto[]) { this.library.collections = v; }
-  get isLoadingLibrary(): boolean { return this.library.isLoadingLibrary; }
-  set isLoadingLibrary(v: boolean) { this.library.isLoadingLibrary = v; }
-  get readerError(): string | null { return this.library.readerError; }
-  set readerError(v: string | null) { this.library.readerError = v; }
-  get editingBook(): ReaderBook | null { return this.library.editingBook; }
-  set editingBook(v: ReaderBook | null) { this.library.editingBook = v; }
-  get isCollectionManagerOpen(): boolean { return this.library.isCollectionManagerOpen; }
-  set isCollectionManagerOpen(v: boolean) { this.library.isCollectionManagerOpen = v; }
+  get books(): ReaderBook[] {
+    return this.library.books;
+  }
+  set books(v: ReaderBook[]) {
+    this.library.books = v;
+  }
+  get shelfQueryState(): ShelfQueryState {
+    return this.library.shelfQueryState;
+  }
+  set shelfQueryState(v: ShelfQueryState) {
+    this.library.shelfQueryState = v;
+  }
+  get collections(): CollectionDto[] {
+    return this.library.collections;
+  }
+  set collections(v: CollectionDto[]) {
+    this.library.collections = v;
+  }
+  get isLoadingLibrary(): boolean {
+    return this.library.isLoadingLibrary;
+  }
+  set isLoadingLibrary(v: boolean) {
+    this.library.isLoadingLibrary = v;
+  }
+  get readerError(): string | null {
+    return this.library.readerError;
+  }
+  set readerError(v: string | null) {
+    this.library.readerError = v;
+  }
+  get editingBook(): ReaderBook | null {
+    return this.library.editingBook;
+  }
+  set editingBook(v: ReaderBook | null) {
+    this.library.editingBook = v;
+  }
+  get isCollectionManagerOpen(): boolean {
+    return this.library.isCollectionManagerOpen;
+  }
+  set isCollectionManagerOpen(v: boolean) {
+    this.library.isCollectionManagerOpen = v;
+  }
 
-  get continueReadingBooks(): ReaderBook[] { return this.library.continueReadingBooks; }
-  get myShelfBooks(): ReaderBook[] { return this.library.myShelfBooks; }
-  get shelfBooks(): ReaderBook[] { return this.library.shelfBooks; }
-  get shelfWarnings(): string[] { return this.library.shelfWarnings; }
-  get shelfSortToken(): string | null { return this.library.shelfSortToken; }
+  get continueReadingBooks(): ReaderBook[] {
+    return this.library.continueReadingBooks;
+  }
+  get myShelfBooks(): ReaderBook[] {
+    return this.library.myShelfBooks;
+  }
+  get shelfBooks(): ReaderBook[] {
+    return this.library.shelfBooks;
+  }
+  get shelfWarnings(): string[] {
+    return this.library.shelfWarnings;
+  }
+  get shelfSortToken(): string | null {
+    return this.library.shelfSortToken;
+  }
   selectedShelfBook = $derived.by(() => {
-    return this.library.myShelfBooks.find(
-      (book) => book.id === this.navigation.shelfDetailsBookId,
-    ) ?? null;
+    return (
+      this.library.myShelfBooks.find((book) => book.id === this.navigation.shelfDetailsBookId) ??
+      null
+    );
   });
 
   // ─── Property passthrough: Reader ───
-  get activeReadingBookId(): string | null { return this.reader.activeReadingBookId; }
-  set activeReadingBookId(v: string | null) { this.reader.activeReadingBookId = v; }
-  get cfiLocation(): string { return this.reader.cfiLocation; }
-  set cfiLocation(v: string) { this.reader.cfiLocation = v; }
-  get percentage(): number { return this.reader.percentage; }
-  set percentage(v: number) { this.reader.percentage = v; }
-  get preloadedBytes(): { filePath: string; data: Uint8Array } | null { return this.reader.preloadedBytes; }
-  set preloadedBytes(v: { filePath: string; data: Uint8Array } | null) { this.reader.preloadedBytes = v; }
+  get activeReadingBookId(): string | null {
+    return this.reader.activeReadingBookId;
+  }
+  set activeReadingBookId(v: string | null) {
+    this.reader.activeReadingBookId = v;
+  }
+  get cfiLocation(): string {
+    return this.reader.cfiLocation;
+  }
+  set cfiLocation(v: string) {
+    this.reader.cfiLocation = v;
+  }
+  get percentage(): number {
+    return this.reader.percentage;
+  }
+  set percentage(v: number) {
+    this.reader.percentage = v;
+  }
+  get preloadedBytes(): { filePath: string; data: Uint8Array } | null {
+    return this.reader.preloadedBytes;
+  }
+  set preloadedBytes(v: { filePath: string; data: Uint8Array } | null) {
+    this.reader.preloadedBytes = v;
+  }
 
   // ─── Property passthrough: Search ───
-  get searchResponse(): SearchBookTextResponse | null { return this.search.searchResponse; }
-  set searchResponse(v: SearchBookTextResponse | null) { this.search.searchResponse = v; }
-  get searchTargetLocator(): string | null { return this.search.searchTargetLocator; }
-  set searchTargetLocator(v: string | null) { this.search.searchTargetLocator = v; }
-  get isSearching(): boolean { return this.search.isSearching; }
-  set isSearching(v: boolean) { this.search.isSearching = v; }
+  get searchResponse(): SearchBookTextResponse | null {
+    return this.search.searchResponse;
+  }
+  set searchResponse(v: SearchBookTextResponse | null) {
+    this.search.searchResponse = v;
+  }
+  get searchTargetLocator(): string | null {
+    return this.search.searchTargetLocator;
+  }
+  set searchTargetLocator(v: string | null) {
+    this.search.searchTargetLocator = v;
+  }
+  get isSearching(): boolean {
+    return this.search.isSearching;
+  }
+  set isSearching(v: boolean) {
+    this.search.isSearching = v;
+  }
 
   // ─── Property passthrough: BulkImport ───
-  get isBulkImportOpen(): boolean { return this.bulkImport.isBulkImportOpen; }
-  set isBulkImportOpen(v: boolean) { this.bulkImport.isBulkImportOpen = v; }
-  get isBulkScanning(): boolean { return this.bulkImport.isBulkScanning; }
-  set isBulkScanning(v: boolean) { this.bulkImport.isBulkScanning = v; }
-  get isBulkImporting(): boolean { return this.bulkImport.isBulkImporting; }
-  set isBulkImporting(v: boolean) { this.bulkImport.isBulkImporting = v; }
-  get bulkImportFolderPath(): string | null { return this.bulkImport.bulkImportFolderPath; }
-  set bulkImportFolderPath(v: string | null) { this.bulkImport.bulkImportFolderPath = v; }
-  get bulkImportFolderName(): string | null { return this.bulkImport.bulkImportFolderName; }
-  set bulkImportFolderName(v: string | null) { this.bulkImport.bulkImportFolderName = v; }
-  get bulkScanResult(): ScanFolderResult | null { return this.bulkImport.bulkScanResult; }
-  set bulkScanResult(v: ScanFolderResult | null) { this.bulkImport.bulkScanResult = v; }
-  get bulkScanError(): string | null { return this.bulkImport.bulkScanError; }
-  set bulkScanError(v: string | null) { this.bulkImport.bulkScanError = v; }
-  get bulkImportProgress(): BulkImportProgress | null { return this.bulkImport.bulkImportProgress; }
-  set bulkImportProgress(v: BulkImportProgress | null) { this.bulkImport.bulkImportProgress = v; }
-  get bulkImportSummary(): BulkImportSummary | null { return this.bulkImport.bulkImportSummary; }
-  set bulkImportSummary(v: BulkImportSummary | null) { this.bulkImport.bulkImportSummary = v; }
-  get isImporting(): boolean { return this.bulkImport.isImporting; }
-  set isImporting(v: boolean) { this.bulkImport.isImporting = v; }
-  get importProgress(): ImportProgress | null { return this.bulkImport.importProgress; }
-  set importProgress(v: ImportProgress | null) { this.bulkImport.importProgress = v; }
+  get isBulkImportOpen(): boolean {
+    return this.bulkImport.isBulkImportOpen;
+  }
+  set isBulkImportOpen(v: boolean) {
+    this.bulkImport.isBulkImportOpen = v;
+  }
+  get isBulkScanning(): boolean {
+    return this.bulkImport.isBulkScanning;
+  }
+  set isBulkScanning(v: boolean) {
+    this.bulkImport.isBulkScanning = v;
+  }
+  get isBulkImporting(): boolean {
+    return this.bulkImport.isBulkImporting;
+  }
+  set isBulkImporting(v: boolean) {
+    this.bulkImport.isBulkImporting = v;
+  }
+  get bulkImportFolderPath(): string | null {
+    return this.bulkImport.bulkImportFolderPath;
+  }
+  set bulkImportFolderPath(v: string | null) {
+    this.bulkImport.bulkImportFolderPath = v;
+  }
+  get bulkImportFolderName(): string | null {
+    return this.bulkImport.bulkImportFolderName;
+  }
+  set bulkImportFolderName(v: string | null) {
+    this.bulkImport.bulkImportFolderName = v;
+  }
+  get bulkScanResult(): ScanFolderResult | null {
+    return this.bulkImport.bulkScanResult;
+  }
+  set bulkScanResult(v: ScanFolderResult | null) {
+    this.bulkImport.bulkScanResult = v;
+  }
+  get bulkScanError(): string | null {
+    return this.bulkImport.bulkScanError;
+  }
+  set bulkScanError(v: string | null) {
+    this.bulkImport.bulkScanError = v;
+  }
+  get bulkImportProgress(): BulkImportProgress | null {
+    return this.bulkImport.bulkImportProgress;
+  }
+  set bulkImportProgress(v: BulkImportProgress | null) {
+    this.bulkImport.bulkImportProgress = v;
+  }
+  get bulkImportSummary(): BulkImportSummary | null {
+    return this.bulkImport.bulkImportSummary;
+  }
+  set bulkImportSummary(v: BulkImportSummary | null) {
+    this.bulkImport.bulkImportSummary = v;
+  }
+  get isImporting(): boolean {
+    return this.bulkImport.isImporting;
+  }
+  set isImporting(v: boolean) {
+    this.bulkImport.isImporting = v;
+  }
+  get importProgress(): ImportProgress | null {
+    return this.bulkImport.importProgress;
+  }
+  set importProgress(v: ImportProgress | null) {
+    this.bulkImport.importProgress = v;
+  }
 
   // ─── Property passthrough: Stats ───
-  get stats(): ReadingStatsSummaryDto | null { return this.statsDomain.stats; }
-  set stats(v: ReadingStatsSummaryDto | null) { this.statsDomain.stats = v; }
-  get isLoadingStats(): boolean { return this.statsDomain.isLoadingStats; }
-  set isLoadingStats(v: boolean) { this.statsDomain.isLoadingStats = v; }
+  get stats(): ReadingStatsSummaryDto | null {
+    return this.statsDomain.stats;
+  }
+  set stats(v: ReadingStatsSummaryDto | null) {
+    this.statsDomain.stats = v;
+  }
+  get isLoadingStats(): boolean {
+    return this.statsDomain.isLoadingStats;
+  }
+  set isLoadingStats(v: boolean) {
+    this.statsDomain.isLoadingStats = v;
+  }
 
   // ─── Property passthrough: Settings ───
-  get locale(): UiLocale { return this.settings.locale; }
-  set locale(v: UiLocale) { this.settings.locale = v; }
-  get readerSettings(): ReaderSettings { return this.settings.readerSettings; }
-  set readerSettings(v: ReaderSettings) { this.settings.readerSettings = v; }
+  get locale(): UiLocale {
+    return this.settings.locale;
+  }
+  set locale(v: UiLocale) {
+    this.settings.locale = v;
+  }
+  get readerSettings(): ReaderSettings {
+    return this.settings.readerSettings;
+  }
+  set readerSettings(v: ReaderSettings) {
+    this.settings.readerSettings = v;
+  }
 
   // ─── Constants ───
   readonly SHELF_TAB_OPTIONS = this.library.SHELF_TAB_OPTIONS;
@@ -152,8 +303,8 @@ class AppState {
     const typed = error as MaybeCommandError;
     if (typed.commandError) return typed.commandError;
 
-    const fallback = error instanceof Error ? error.message : this.t("errors.commandFailure");
-    return { code: "INTERNAL_ERROR", message: fallback, recoverable: false };
+    const fallback = error instanceof Error ? error.message : this.t('errors.commandFailure');
+    return { code: 'INTERNAL_ERROR', message: fallback, recoverable: false };
   }
 
   isValidSessionProgressEvent(event: {
@@ -170,7 +321,7 @@ class AppState {
     return this.library.getBookById(bookId);
   }
 
-  hasResolvedCoverPath(book: Pick<LibraryBookDto, "coverPath">): boolean {
+  hasResolvedCoverPath(book: Pick<LibraryBookDto, 'coverPath'>): boolean {
     return this.library.hasResolvedCoverPath(book);
   }
 
@@ -183,32 +334,56 @@ class AppState {
   }
 
   // ─── Navigation ───
-  navigateToHome = (): void => { this.navigation.navigateToHome(); };
-  navigateToLibrary = (): void => { this.navigation.navigateToLibrary(); };
-  navigateToStats = (): void => { this.navigation.navigateToStats(); };
-  navigateToHighlights = (): void => { this.navigation.navigateToHighlights(); };
-  navigateToSettings = (): void => { this.navigation.navigateToSettings(); };
-  backToHome = (): void => { this.navigation.backToHome(); };
-  openDetails = (book: ReaderBook): void => { this.navigation.openDetails(book.id); };
-  openShelfDetails = (book: ReaderBook): void => { this.navigation.openShelfDetails(book.id); };
-  closeShelfDetails = (): void => { this.navigation.closeShelfDetails(); };
-  setDomainUnavailable = (domain: "library" | "stats" | "search", reason: string | null): void => {
+  navigateToHome = (): void => {
+    this.navigation.navigateToHome();
+  };
+  navigateToLibrary = (): void => {
+    this.navigation.navigateToLibrary();
+  };
+  navigateToStats = (): void => {
+    this.navigation.navigateToStats();
+  };
+  navigateToHighlights = (): void => {
+    this.navigation.navigateToHighlights();
+  };
+  navigateToSettings = (): void => {
+    this.navigation.navigateToSettings();
+  };
+  backToHome = (): void => {
+    this.navigation.backToHome();
+  };
+  openDetails = (book: ReaderBook): void => {
+    this.navigation.openDetails(book.id);
+  };
+  openShelfDetails = (book: ReaderBook): void => {
+    this.navigation.openShelfDetails(book.id);
+  };
+  closeShelfDetails = (): void => {
+    this.navigation.closeShelfDetails();
+  };
+  setDomainUnavailable = (domain: 'library' | 'stats' | 'search', reason: string | null): void => {
     this.navigation.setDomainUnavailable(domain, reason);
   };
 
   // ─── Library methods ───
-  setShelfTab = (tab: (typeof this.library.SHELF_TAB_OPTIONS)[number]["key"]): void => {
+  setShelfTab = (tab: (typeof this.library.SHELF_TAB_OPTIONS)[number]['key']): void => {
     this.library.setShelfTab(tab);
   };
-  setShelfSort = (sortKey: (typeof this.library.SHELF_SORT_OPTIONS)[number]["key"]): void => {
+  setShelfSort = (sortKey: (typeof this.library.SHELF_SORT_OPTIONS)[number]['key']): void => {
     this.library.setShelfSort(sortKey);
   };
-  setShelfViewMode = (viewMode: "grid" | "list"): void => {
+  setShelfViewMode = (viewMode: 'grid' | 'list'): void => {
     this.library.setShelfViewMode(viewMode);
   };
-  handleShelfQueryInput = (event: Event): void => { this.library.handleShelfQueryInput(event); };
-  clearShelfQuery = (): void => { this.library.clearShelfQuery(); };
-  handleEditBook = (book: ReaderBook): void => { this.library.handleEditBook(book); };
+  handleShelfQueryInput = (event: Event): void => {
+    this.library.handleShelfQueryInput(event);
+  };
+  clearShelfQuery = (): void => {
+    this.library.clearShelfQuery();
+  };
+  handleEditBook = (book: ReaderBook): void => {
+    this.library.handleEditBook(book);
+  };
   handleSaveEditedBook = async (updatedBook: LibraryBookDto): Promise<void> => {
     await this.library.handleSaveEditedBook(updatedBook);
   };
@@ -233,7 +408,7 @@ class AppState {
 
     const error = this.library.consumeLastRecoverableError();
     if (error) {
-      this.navigation.setDomainUnavailable("library", error.message);
+      this.navigation.setDomainUnavailable('library', error.message);
     }
   };
   handleToggleFavorite = async (book: ReaderBook): Promise<void> => {
@@ -268,7 +443,9 @@ class AppState {
   handleLocaleChange = (nextLocale: UiLocale): void => {
     this.settings.handleLocaleChange(nextLocale);
   };
-  handleReaderLocationContext = (): void => { this.reader.handleReaderLocationContext(); };
+  handleReaderLocationContext = (): void => {
+    this.reader.handleReaderLocationContext();
+  };
 
   // ─── Search methods ───
   handleSearch = async (query: string, page: number): Promise<void> => {
@@ -276,7 +453,7 @@ class AppState {
     await this.search.handleSearch(this.reader.activeReadingBookId, query, page);
     // Propagate unavailable reason to navigation
     if (this.search.searchUnavailableReason) {
-      this.navigation.setDomainUnavailable("search", this.search.searchUnavailableReason);
+      this.navigation.setDomainUnavailable('search', this.search.searchUnavailableReason);
     }
   };
   handleSearchJump = (target: SearchNavigationTarget): void => {
@@ -284,10 +461,16 @@ class AppState {
   };
 
   // ─── Bulk import methods ───
-  openBulkImportModal = (): void => { this.bulkImport.openBulkImportModal(); };
-  closeBulkImportModal = (): void => { this.bulkImport.closeBulkImportModal(); };
+  openBulkImportModal = (): void => {
+    this.bulkImport.openBulkImportModal();
+  };
+  closeBulkImportModal = (): void => {
+    this.bulkImport.closeBulkImportModal();
+  };
   handlePickBulkImportFolder = async (): Promise<void> => {
-    await this.bulkImport.handlePickBulkImportFolder(this.t("library.bulkImport.selectFolderTitle"));
+    await this.bulkImport.handlePickBulkImportFolder(
+      this.t('library.bulkImport.selectFolderTitle'),
+    );
   };
   handleScanBulkImportFolder = async (): Promise<void> => {
     await this.bulkImport.handleScanBulkImportFolder();
@@ -295,12 +478,14 @@ class AppState {
   handleStartBulkImport = async (): Promise<void> => {
     await this.bulkImport.handleStartBulkImport();
   };
-  handleCancelBulkImport = (): void => { this.bulkImport.handleCancelBulkImport(); };
+  handleCancelBulkImport = (): void => {
+    this.bulkImport.handleCancelBulkImport();
+  };
   handleImportFile = async (): Promise<void> => {
     try {
       await this.bulkImport.handleImportFile();
     } catch (error) {
-      this.library.readerError = error instanceof Error ? error.message : this.t("import.failed");
+      this.library.readerError = error instanceof Error ? error.message : this.t('import.failed');
     }
   };
 
@@ -308,7 +493,7 @@ class AppState {
   loadStats = async (bookId?: string): Promise<void> => {
     await this.statsDomain.loadStats(bookId);
     if (this.statsDomain.statsUnavailableReason) {
-      this.navigation.setDomainUnavailable("stats", this.statsDomain.statsUnavailableReason);
+      this.navigation.setDomainUnavailable('stats', this.statsDomain.statsUnavailableReason);
     }
   };
 
@@ -335,7 +520,7 @@ class AppState {
     // Apply recoverable error to navigation
     const error = this.library.consumeLastRecoverableError();
     if (error) {
-      this.navigation.setDomainUnavailable("library", error.message);
+      this.navigation.setDomainUnavailable('library', error.message);
     }
   }
 
@@ -344,7 +529,7 @@ class AppState {
     this.library.promoteBookForReading(book.id);
     this.reader.activeReadingBookId = book.id;
     this.navigation.shelfDetailsBookId = null;
-    this.navigation.route = "reader";
+    this.navigation.route = 'reader';
     this.search.resetSearch();
 
     this.library.recordReaderOpenMetric(book.format);
@@ -354,7 +539,10 @@ class AppState {
   }
 
   // ─── Cross-domain: progress handlers ───
-  handleEpubLocationChange = async (nextLocation: string, nextPercentage: number): Promise<void> => {
+  handleEpubLocationChange = async (
+    nextLocation: string,
+    nextPercentage: number,
+  ): Promise<void> => {
     if (!this.reader.activeReadingBookId) return;
     await this.reader.handleEpubLocationChange(
       this.reader.activeReadingBookId,
@@ -388,7 +576,7 @@ class AppState {
   async init(): Promise<void> {
     initTheme();
 
-    this.navigation.route = "home";
+    this.navigation.route = 'home';
     this.navigation.shelfDetailsBookId = null;
     this.library.shelfQueryState = createShelfQueryState();
     this.navigation.previewBookId = null;
@@ -405,7 +593,7 @@ class AppState {
       ]);
       this.settings.locale = nextLocale;
     } catch (error) {
-      console.error("Initialization error:", error);
+      console.error('Initialization error:', error);
       try {
         this.settings.locale = await i18n.initializeLocale();
       } catch {

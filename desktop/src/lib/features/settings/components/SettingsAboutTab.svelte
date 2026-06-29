@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Panel from "$lib/shared/ui/layout/Panel.svelte";
-  import Button from "$lib/shared/ui/forms/Button.svelte";
-  import type { MessageKey } from "$lib/shared/i18n";
+  import Panel from '$lib/shared/ui/layout/Panel.svelte';
+  import Button from '$lib/shared/ui/forms/Button.svelte';
+  import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -10,17 +10,30 @@
   let { t }: Props = $props();
 </script>
 
-<Panel title={t("settings.about")}>
+<Panel title={t('settings.about')}>
   <section class="rounded-lg border border-(--color-border) bg-(--color-surface) p-4">
     <div class="flex items-center gap-3">
-      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-(--color-primary)"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="32"
+        height="32"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        class="text-(--color-primary)"
+        ><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path
+          d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+        /></svg
+      >
       <div class="flex flex-col">
         <span class="text-lg font-semibold text-(--color-primary)">NextPage</span>
         <span class="text-xs text-(--color-text-muted)">Version {'0.1.0'}</span>
       </div>
     </div>
     <p class="text-sm text-(--color-text-muted) mt-3">
-      A modern e-reader application for enjoying your EPUB collection with a clean, customizable reading experience.
+      A modern e-reader application for enjoying your EPUB collection with a clean, customizable
+      reading experience.
     </p>
   </section>
 
@@ -45,10 +58,18 @@
   <section class="rounded-lg border border-(--color-border) bg-(--color-surface) p-4 mt-4">
     <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">Links</h4>
     <div class="flex gap-2">
-      <Button onclick={() => window.open("https://github.com/anomalyco/nextpage", "_blank")} variant="ghost" size="sm">
+      <Button
+        onclick={() => window.open('https://github.com/anomalyco/nextpage', '_blank')}
+        variant="ghost"
+        size="sm"
+      >
         GitHub
       </Button>
-      <Button onclick={() => window.open("https://github.com/anomalyco/nextpage/issues", "_blank")} variant="ghost" size="sm">
+      <Button
+        onclick={() => window.open('https://github.com/anomalyco/nextpage/issues', '_blank')}
+        variant="ghost"
+        size="sm"
+      >
         Report Issue
       </Button>
     </div>

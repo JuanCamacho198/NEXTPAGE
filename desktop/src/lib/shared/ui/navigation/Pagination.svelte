@@ -6,12 +6,7 @@
     onchange?: (detail: { page: number }) => void;
   };
 
-  let {
-    current = $bindable(1),
-    total = 1,
-    visible = 5,
-    onchange,
-  }: Props = $props();
+  let { current = $bindable(1), total = 1, visible = 5, onchange }: Props = $props();
 
   function goTo(page: number): void {
     if (page >= 1 && page <= total) {
@@ -21,7 +16,7 @@
   }
 
   const pages = $derived.by(() => {
-    const result: (number | "...")[] = [];
+    const result: (number | '...')[] = [];
     const half = Math.floor(visible / 2);
     let start = Math.max(1, current - half);
     let end = Math.min(total, start + visible - 1);
@@ -35,10 +30,10 @@
     }
 
     if (start > 1) {
-      result.unshift("...");
+      result.unshift('...');
     }
     if (end < total) {
-      result.push("...");
+      result.push('...');
     }
 
     return result;
@@ -54,17 +49,12 @@
     aria-label="Previous page"
   >
     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        d="M15 19l-7-7 7-7"
-      />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
     </svg>
   </button>
 
   {#each pages as page}
-    {#if page === "..."}
+    {#if page === '...'}
       <span class="px-2 text-(--color-text-muted)">...</span>
     {:else}
       <button
@@ -88,12 +78,7 @@
     aria-label="Next page"
   >
     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        d="M9 5l7 7-7 7"
-      />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
     </svg>
   </button>
 </nav>

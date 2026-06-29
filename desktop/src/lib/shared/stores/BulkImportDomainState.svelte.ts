@@ -1,14 +1,8 @@
-import { importBook, type ImportProgress } from "$lib/shared/services/BookImportService";
-import {
-  BulkImportService,
-  type BulkImportProgress,
-} from "$lib/shared/services/BulkImportService";
-import { pickFile, pickFolder } from "$lib/shared/services/FilePicker";
-import { extractPdfMetadata } from "$lib/shared/services/pdfThumbnail";
-import type {
-  BulkImportSummary,
-  ScanFolderResult,
-} from "$lib/shared/types";
+import { importBook, type ImportProgress } from '$lib/shared/services/BookImportService';
+import { BulkImportService, type BulkImportProgress } from '$lib/shared/services/BulkImportService';
+import { pickFile, pickFolder } from '$lib/shared/services/FilePicker';
+import { extractPdfMetadata } from '$lib/shared/services/pdfThumbnail';
+import type { BulkImportSummary, ScanFolderResult } from '$lib/shared/types';
 
 class BulkImportDomainState {
   // ─── State ───
@@ -42,11 +36,11 @@ class BulkImportDomainState {
     this.isImporting = true;
 
     try {
-      const format = file.name.toLowerCase().endsWith(".epub") ? "epub" : "pdf";
-      const title = file.name.replace(/\.(pdf|epub)$/i, "");
+      const format = file.name.toLowerCase().endsWith('.epub') ? 'epub' : 'pdf';
+      const title = file.name.replace(/\.(pdf|epub)$/i, '');
 
       let author: string | undefined;
-      if (format === "pdf") {
+      if (format === 'pdf') {
         try {
           const meta = await extractPdfMetadata(file.path);
           if (meta.author) {
@@ -120,10 +114,10 @@ class BulkImportDomainState {
     this.bulkScanError = null;
 
     try {
-      const { scanFolder } = await import("$lib/shared/api/tauriClient");
+      const { scanFolder } = await import('$lib/shared/api/tauriClient');
       this.bulkScanResult = await scanFolder(this.bulkImportFolderPath);
     } catch (error) {
-      this.bulkScanError = error instanceof Error ? error.message : "Import failed";
+      this.bulkScanError = error instanceof Error ? error.message : 'Import failed';
     } finally {
       this.isBulkScanning = false;
     }
@@ -134,7 +128,11 @@ class BulkImportDomainState {
   }
 
   async handleStartBulkImport(): Promise<void> {
-    if (!this.bulkImportFolderPath || !this.bulkScanResult || this.bulkScanResult.files.length === 0) {
+    if (
+      !this.bulkImportFolderPath ||
+      !this.bulkScanResult ||
+      this.bulkScanResult.files.length === 0
+    ) {
       return;
     }
 
@@ -153,11 +151,16 @@ class BulkImportDomainState {
 
       this.bulkImportSummary = summary;
 
-      if (summary.success > 0 || summary.skipped > 0 || summary.failed > 0 || summary.cancelled > 0) {
+      if (
+        summary.success > 0 ||
+        summary.skipped > 0 ||
+        summary.failed > 0 ||
+        summary.cancelled > 0
+      ) {
         await this.onLibraryRefreshNeeded?.();
       }
     } catch (error) {
-      this.bulkScanError = error instanceof Error ? error.message : "Import failed";
+      this.bulkScanError = error instanceof Error ? error.message : 'Import failed';
     } finally {
       this.isBulkImporting = false;
     }

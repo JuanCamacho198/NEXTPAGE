@@ -1,11 +1,11 @@
 export type MetricName =
-  | "page_load"
-  | "reader_open"
-  | "import_start"
-  | "import_complete"
-  | "sync_start"
-  | "sync_complete"
-  | "ipc_call";
+  | 'page_load'
+  | 'reader_open'
+  | 'import_start'
+  | 'import_complete'
+  | 'sync_start'
+  | 'sync_complete'
+  | 'ipc_call';
 
 export interface MetricEvent {
   id: string;
@@ -20,11 +20,11 @@ export interface MetricEvent {
 }
 
 export const METRIC_NAMES = {
-  PAGE_LOAD: "page_load",
-  READER_OPEN: "reader_open",
-  IMPORT_START: "import_start",
-  IMPORT_COMPLETE: "import_complete",
-  SYNC_START: "sync_start",
-  SYNC_COMPLETE: "sync_complete",
-  IPC_CALL: "ipc_call",
+  PAGE_LOAD: 'page_load',
+  READER_OPEN: 'reader_open',
+  IMPORT_START: 'import_start',
+  IMPORT_COMPLETE: 'import_complete',
+  SYNC_START: 'sync_start',
+  SYNC_COMPLETE: 'sync_complete',
+  IPC_CALL: 'ipc_call',
 } as const;

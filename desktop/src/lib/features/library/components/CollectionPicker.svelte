@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { CollectionDto } from "$lib/shared/types";
-  import { addBookToCollection, removeBookFromCollection } from "$lib/shared/api/tauriClient";
+  import type { CollectionDto } from '$lib/shared/types';
+  import { addBookToCollection, removeBookFromCollection } from '$lib/shared/api/tauriClient';
 
   type Props = {
     bookId: string;
@@ -24,10 +24,10 @@
       }
       const newIds = checked
         ? [...collectionIds, collectionId]
-        : collectionIds.filter(id => id !== collectionId);
+        : collectionIds.filter((id) => id !== collectionId);
       onUpdate(newIds);
     } catch (e) {
-      console.error("Failed to update collection:", e);
+      console.error('Failed to update collection:', e);
     } finally {
       loading = false;
     }

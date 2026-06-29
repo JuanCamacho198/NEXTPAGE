@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Button, Modal } from "$lib/shared/ui";
-  import type { LibraryBookDto } from "$lib/shared/types";
-  import type { MessageKey } from "$lib/shared/i18n";
+  import { Button, Modal } from '$lib/shared/ui';
+  import type { LibraryBookDto } from '$lib/shared/types';
+  import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
     book: LibraryBookDto | null;
@@ -13,26 +13,26 @@
 
   let { book, open, onClose, onSave, t }: Props = $props();
 
-  let title = $state("");
-  let author = $state("");
+  let title = $state('');
+  let author = $state('');
   let isSaving = $state(false);
   let error = $state<string | null>(null);
 
   $effect(() => {
     if (open && book) {
       title = book.title;
-      author = book.author || "";
+      author = book.author || '';
       error = null;
     }
   });
 
   const hasChanges = $derived(
-    book !== null && (title !== book.title || author !== (book.author || ""))
+    book !== null && (title !== book.title || author !== (book.author || '')),
   );
 
   const handleSave = async (): Promise<void> => {
     if (!book || !title.trim()) {
-      error = t("library.editMetadata.titleRequired");
+      error = t('library.editMetadata.titleRequired');
       return;
     }
 
@@ -46,7 +46,7 @@
         author: author.trim(),
       });
     } catch (e) {
-      error = e instanceof Error ? e.message : t("errors.commandFailure");
+      error = e instanceof Error ? e.message : t('errors.commandFailure');
     } finally {
       isSaving = false;
     }
@@ -54,12 +54,12 @@
 </script>
 
 {#if open && book}
-  <Modal bind:open={open} title={t("library.editMetadata.title")}>
+  <Modal bind:open title={t('library.editMetadata.title')}>
     {#snippet children()}
       <div class="space-y-4">
         <div>
           <label for="edit-title" class="mb-1 block text-sm font-medium text-(--color-primary)">
-            {t("library.editMetadata.titleLabel")}
+            {t('library.editMetadata.titleLabel')}
           </label>
           <input
             id="edit-title"
@@ -71,7 +71,7 @@
 
         <div>
           <label for="edit-author" class="mb-1 block text-sm font-medium text-(--color-primary)">
-            {t("library.editMetadata.authorLabel")}
+            {t('library.editMetadata.authorLabel')}
           </label>
           <input
             id="edit-author"
@@ -89,10 +89,10 @@
 
     {#snippet footer()}
       <Button variant="secondary" onclick={onClose} disabled={isSaving}>
-        {t("library.editMetadata.cancel")}
+        {t('library.editMetadata.cancel')}
       </Button>
       <Button onclick={handleSave} disabled={!hasChanges || isSaving}>
-        {isSaving ? t("library.editMetadata.saving") : t("library.editMetadata.save")}
+        {isSaving ? t('library.editMetadata.saving') : t('library.editMetadata.save')}
       </Button>
     {/snippet}
   </Modal>

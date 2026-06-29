@@ -1,4 +1,4 @@
-import type { MetricEvent, MetricName } from "./metricTypes";
+import type { MetricEvent, MetricName } from './metricTypes';
 
 const MAX_IN_MEMORY_METRICS = 500;
 
@@ -14,7 +14,7 @@ class MetricsStoreImpl {
     return this.sessionId;
   }
 
-  record(event: Omit<MetricEvent, "id" | "sessionId" | "timestamp">): MetricEvent {
+  record(event: Omit<MetricEvent, 'id' | 'sessionId' | 'timestamp'>): MetricEvent {
     const metric: MetricEvent = {
       id: crypto.randomUUID(),
       sessionId: this.sessionId,
@@ -45,7 +45,7 @@ class MetricsStoreImpl {
     name: MetricName,
     errorCode: string,
     durationMs?: number,
-    feature?: string
+    feature?: string,
   ): MetricEvent {
     return this.record({
       name,
@@ -98,14 +98,14 @@ export const recordMetric = (
     feature?: string;
     success?: boolean;
     errorCode?: string;
-  }
+  },
 ): MetricEvent => {
   if (options?.success === false) {
     return metricsStore.recordFailure(
       name,
-      options.errorCode ?? "UNKNOWN",
+      options.errorCode ?? 'UNKNOWN',
       options.durationMs,
-      options.feature
+      options.feature,
     );
   }
   return metricsStore.recordSuccess(name, options?.durationMs, options?.feature);

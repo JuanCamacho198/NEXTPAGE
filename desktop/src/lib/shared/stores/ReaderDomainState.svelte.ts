@@ -1,29 +1,23 @@
-import { readFile } from "@tauri-apps/plugin-fs";
+import { readFile } from '@tauri-apps/plugin-fs';
 import {
   getProgress,
   saveProgress,
   saveReadingSession,
   updateBookProgress,
-} from "$lib/shared/api/tauriClient";
-import type {
-  ReaderBook,
-  ReadingSessionInput,
-  SaveProgressInput,
-} from "$lib/shared/types";
+} from '$lib/shared/api/tauriClient';
+import type { ReaderBook, ReadingSessionInput, SaveProgressInput } from '$lib/shared/types';
 
 class ReaderDomainState {
   // ─── State ───
   activeReadingBookId = $state<string | null>(null);
-  cfiLocation = $state("");
+  cfiLocation = $state('');
   percentage = $state(0);
   preloadedBytes = $state<{ filePath: string; data: Uint8Array } | null>(null);
   readerError = $state<string | null>(null);
 
   // ─── Callbacks ───
   onStatsRefreshNeeded: ((bookId: string) => Promise<void>) | null = null;
-  onPageChangeCallback:
-    | ((bookId: string, page: number, total: number) => void)
-    | null = null;
+  onPageChangeCallback: ((bookId: string, page: number, total: number) => void) | null = null;
 
   // ─── Validation ───
 
@@ -43,7 +37,7 @@ class ReaderDomainState {
     }
 
     const percentages = [event.startPercentage, event.endPercentage].filter(
-      (value): value is number => typeof value === "number",
+      (value): value is number => typeof value === 'number',
     );
 
     return percentages.every((value) => value >= 0 && value <= 100);
@@ -58,7 +52,7 @@ class ReaderDomainState {
     const format = book.format.toLowerCase();
 
     // Start preloading file data
-    if (format === "epub" || format === "pdf") {
+    if (format === 'epub' || format === 'pdf') {
       readFile(book.filePath)
         .then((bytes) => {
           this.preloadedBytes = { filePath: book.filePath, data: bytes };
@@ -68,20 +62,20 @@ class ReaderDomainState {
         });
     }
 
-    if (format === "pdf") {
+    if (format === 'pdf') {
       // Kick off PDF streaming cache
-      import("$lib/features/reader/viewer-pdf/pdfStreaming").then(({ createPdfDocument }) => {
+      import('$lib/features/reader/viewer-pdf/pdfStreaming').then(({ createPdfDocument }) => {
         void createPdfDocument(book.filePath).catch(() => {});
       });
     }
 
-    if (format === "epub") {
+    if (format === 'epub') {
       try {
         const progress = await getProgress(book.id);
-        this.cfiLocation = progress?.cfiLocation ?? "";
+        this.cfiLocation = progress?.cfiLocation ?? '';
         this.percentage = progress?.percentage ?? 0;
       } catch {
-        this.cfiLocation = "";
+        this.cfiLocation = '';
         this.percentage = 0;
       }
     }
@@ -89,7 +83,11 @@ class ReaderDomainState {
 
   // ─── Progress ───
 
-  async handleEpubLocationChange(bookId: string, nextLocation: string, nextPercentage: number): Promise<void> {
+  async handleEpubLocationChange(
+    bookId: string,
+    nextLocation: string,
+    nextPercentage: number,
+  ): Promise<void> {
     this.cfiLocation = nextLocation;
     this.percentage = Math.max(0, Math.min(100, nextPercentage));
 
@@ -120,13 +118,16 @@ class ReaderDomainState {
     void this.onStatsRefreshNeeded?.(bookId);
   }
 
-  async handlePdfSessionProgress(bookId: string, event: {
-    startedAt: string;
-    endedAt?: string;
-    durationSeconds: number;
-    startPercentage?: number;
-    endPercentage?: number;
-  }): Promise<void> {
+  async handlePdfSessionProgress(
+    bookId: string,
+    event: {
+      startedAt: string;
+      endedAt?: string;
+      durationSeconds: number;
+      startPercentage?: number;
+      endPercentage?: number;
+    },
+  ): Promise<void> {
     if (!this.isValidSessionProgressEvent(event)) return;
 
     const payload: ReadingSessionInput = {
@@ -154,7 +155,7 @@ class ReaderDomainState {
 
   resetReader(): void {
     this.activeReadingBookId = null;
-    this.cfiLocation = "";
+    this.cfiLocation = '';
     this.percentage = 0;
     this.preloadedBytes = null;
     this.readerError = null;

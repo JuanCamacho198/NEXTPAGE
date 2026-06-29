@@ -1,13 +1,13 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
-  import type { MessageKey } from "../../lib/i18n";
+  import type { Snippet } from 'svelte';
+  import type { MessageKey } from '../../lib/i18n';
 
   type Props = {
     stats?: unknown;
     isLoadingStats?: boolean;
     statsUnavailableReason?: string | null;
     selectedBookTitle?: string | null;
-    activeRoute?: "home" | "highlights" | "settings";
+    activeRoute?: 'home' | 'highlights' | 'settings';
     onNavigateHome?: () => void;
     onNavigateHighlights?: () => void;
     onNavigateSettings?: () => void;
@@ -36,7 +36,7 @@
     <button type="button" onclick={onNavigateSettings}>Settings</button>
   </nav>
 
-  <p data-testid="selected-book-title">{selectedBookTitle ?? ""}</p>
+  <p data-testid="selected-book-title">{selectedBookTitle ?? ''}</p>
 
   <div>
     {@render navbarActions?.()}

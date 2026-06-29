@@ -47,14 +47,29 @@
       <div
         class="absolute rounded pointer-events-auto cursor-pointer"
         class:z-3={activeHighlightId === hl.id}
-        style="left: {rect.left * scale}px; top: {rect.top * scale}px; width: {rect.width * scale}px; height: {rect.height * scale}px; --highlight-color: {hl.color}; background: color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--highlight-color, #FACC15) 25%, transparent);"
-        onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = `color-mix(in srgb, var(--highlight-color, #FACC15) 60%, transparent)`; }}
-        onmouseleave={(e) => { const isActive = activeHighlightId === hl.id; (e.currentTarget as HTMLElement).style.background = isActive ? `color-mix(in srgb, var(--highlight-color, #FACC15) 72%, transparent)` : `color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent)`; }}
+        style="left: {rect.left * scale}px; top: {rect.top * scale}px; width: {rect.width *
+          scale}px; height: {rect.height *
+          scale}px; --highlight-color: {hl.color}; background: color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--highlight-color, #FACC15) 25%, transparent);"
+        onmouseenter={(e) => {
+          (e.currentTarget as HTMLElement).style.background =
+            `color-mix(in srgb, var(--highlight-color, #FACC15) 60%, transparent)`;
+        }}
+        onmouseleave={(e) => {
+          const isActive = activeHighlightId === hl.id;
+          (e.currentTarget as HTMLElement).style.background = isActive
+            ? `color-mix(in srgb, var(--highlight-color, #FACC15) 72%, transparent)`
+            : `color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent)`;
+        }}
         role="button"
         tabindex="0"
         aria-label="Highlight"
         onclick={(e) => onHighlightClick(hl, e)}
-        onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onHighlightClick(hl, e as unknown as MouseEvent); } }}
+        onkeydown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onHighlightClick(hl, e as unknown as MouseEvent);
+          }
+        }}
       ></div>
     {/each}
   {/each}

@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
-import { i18n } from "$lib/shared/i18n";
+import { invoke } from '@tauri-apps/api/core';
+import { i18n } from '$lib/shared/i18n';
 
 export type BookImportInput = {
   sourcePath: string;
@@ -22,18 +22,18 @@ export type BookDto = {
 };
 
 export type ImportProgress = {
-  status: "reading" | "importing" | "complete" | "error";
+  status: 'reading' | 'importing' | 'complete' | 'error';
   message: string;
   percentage?: number;
 };
 
 const normalizeSourcePath = (value: string): string => {
   const trimmed = value.trim();
-  if (trimmed.startsWith("file://")) {
+  if (trimmed.startsWith('file://')) {
     try {
-      return decodeURIComponent(trimmed.replace(/^file:\/\//, ""));
+      return decodeURIComponent(trimmed.replace(/^file:\/\//, ''));
     } catch {
-      return trimmed.replace(/^file:\/\//, "");
+      return trimmed.replace(/^file:\/\//, '');
     }
   }
 
@@ -46,7 +46,7 @@ const readImportErrorMessage = (error: unknown): string => {
       const parsed = JSON.parse(error.message) as {
         message?: unknown;
       };
-      if (typeof parsed.message === "string" && parsed.message.length > 0) {
+      if (typeof parsed.message === 'string' && parsed.message.length > 0) {
         return parsed.message;
       }
     } catch {
@@ -56,37 +56,39 @@ const readImportErrorMessage = (error: unknown): string => {
     return error.message;
   }
 
-  if (typeof error === "string" && error.length > 0) {
+  if (typeof error === 'string' && error.length > 0) {
     return error;
   }
 
-  if (typeof error === "object" && error !== null) {
+  if (typeof error === 'object' && error !== null) {
     const candidate = (error as { message?: unknown }).message;
-    if (typeof candidate === "string" && candidate.length > 0) {
+    if (typeof candidate === 'string' && candidate.length > 0) {
       return candidate;
     }
   }
 
-  return i18n.t("en", "errors.importCommandFailed");
+  return i18n.t('en', 'errors.importCommandFailed');
 };
 
 export async function importBook(
   input: BookImportInput,
-  onProgress?: (progress: ImportProgress) => void
+  onProgress?: (progress: ImportProgress) => void,
 ): Promise<BookDto> {
-  const locale = i18n.toSupportedLocale((globalThis.localStorage?.getItem("nextpage.ui.locale") ?? "").trim()) ?? "es";
+  const locale =
+    i18n.toSupportedLocale((globalThis.localStorage?.getItem('nextpage.ui.locale') ?? '').trim()) ??
+    'es';
   onProgress?.({
-    status: "reading",
-    message: i18n.t(locale, "import.reading"),
+    status: 'reading',
+    message: i18n.t(locale, 'import.reading'),
   });
 
   try {
     const sourcePath = normalizeSourcePath(input.sourcePath);
     if (!sourcePath) {
-      throw new Error(i18n.t(locale, "import.emptyPath"));
+      throw new Error(i18n.t(locale, 'import.emptyPath'));
     }
 
-    const book = await invoke<BookDto>("importBook", {
+    const book = await invoke<BookDto>('importBook', {
       input: {
         sourcePath,
         title: input.title,
@@ -96,21 +98,21 @@ export async function importBook(
     });
 
     onProgress?.({
-      status: "importing",
-      message: i18n.t(locale, "import.importing"),
+      status: 'importing',
+      message: i18n.t(locale, 'import.importing'),
       percentage: 50,
     });
 
     onProgress?.({
-      status: "complete",
-      message: i18n.t(locale, "import.complete"),
+      status: 'complete',
+      message: i18n.t(locale, 'import.complete'),
       percentage: 100,
     });
 
     return book;
   } catch (error) {
     onProgress?.({
-      status: "error",
+      status: 'error',
       message: readImportErrorMessage(error),
     });
 
@@ -119,6 +121,6 @@ export async function importBook(
 }
 
 export async function getFileBytes(filePath: string): Promise<Uint8Array> {
-  const bytes = await invoke<number[]>("getFileBytes", { filePath });
+  const bytes = await invoke<number[]>('getFileBytes', { filePath });
   return new Uint8Array(bytes);
 }

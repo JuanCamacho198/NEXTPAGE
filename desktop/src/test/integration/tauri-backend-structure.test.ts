@@ -28,7 +28,7 @@ describe('tauri backend refactor structure', () => {
       'models/mod.rs',
       'models/dto.rs',
       'models/domain.rs',
-      'models/mapper.rs'
+      'models/mapper.rs',
     ];
 
     for (const rel of required) {
@@ -38,7 +38,11 @@ describe('tauri backend refactor structure', () => {
 
   it('keeps invoke_handler commands registered and dto serde boundary', () => {
     const mainRs = readFileSync(resolve(root, 'main.rs'), 'utf8');
-    for (const symbol of ['commands::listBooks', 'commands::saveProgress', 'commands::getFileBytes']) {
+    for (const symbol of [
+      'commands::listBooks',
+      'commands::saveProgress',
+      'commands::getFileBytes',
+    ]) {
       expect(mainRs.includes(symbol)).toBe(true);
     }
 

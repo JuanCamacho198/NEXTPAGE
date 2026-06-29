@@ -68,10 +68,7 @@ export const normalizeProfileSession = (
 ): ProfileSessionViewModel => {
   const email = toNonEmptyString(user?.email) ?? DEFAULT_PROFILE_EMAIL;
   const localPart = toEmailLocalPart(user?.email);
-  const name =
-    toNonEmptyString(user?.name) ??
-    localPart ??
-    DEFAULT_PROFILE_NAME;
+  const name = toNonEmptyString(user?.name) ?? localPart ?? DEFAULT_PROFILE_NAME;
 
   return {
     name,
@@ -94,7 +91,10 @@ export function profileSessionFromAuthState(): ProfileSessionViewModel {
 }
 
 export const getProfileInitials = (name: string): string => {
-  const words = name.trim().split(/\s+/).filter((word) => word.length > 0);
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0);
   if (words.length === 0) {
     return DEFAULT_PROFILE_NAME[0];
   }

@@ -4,20 +4,20 @@ import HighlightContextMenu from '$lib/features/reader/highlight/HighlightContex
 
 const t = (key: string, params?: Record<string, string | number>) => {
   const translations: Record<string, string> = {
-    "highlight.contextMenuAriaLabel": "Highlight actions",
-    "highlight.changeColor": "Change color",
-    "highlight.colors": "Colors",
-    "highlight.selectColor": "Select {{color}} highlight",
-    "highlight.color.yellow": "Yellow",
-    "highlight.color.green": "Green",
-    "highlight.color.blue": "Blue",
-    "highlight.color.purple": "Purple",
-    "highlight.color.orange": "Orange",
-    "highlight.customColor": "Custom color",
-    "reader.copiar": "Copy",
-    "highlight.tag": "Tag",
-    "highlight.note": "Note",
-    "reader.eliminar_destacado": "Delete highlight",
+    'highlight.contextMenuAriaLabel': 'Highlight actions',
+    'highlight.changeColor': 'Change color',
+    'highlight.colors': 'Colors',
+    'highlight.selectColor': 'Select {{color}} highlight',
+    'highlight.color.yellow': 'Yellow',
+    'highlight.color.green': 'Green',
+    'highlight.color.blue': 'Blue',
+    'highlight.color.purple': 'Purple',
+    'highlight.color.orange': 'Orange',
+    'highlight.customColor': 'Custom color',
+    'reader.copiar': 'Copy',
+    'highlight.tag': 'Tag',
+    'highlight.note': 'Note',
+    'reader.eliminar_destacado': 'Delete highlight',
   };
   let value = translations[key] ?? key;
   if (params) {

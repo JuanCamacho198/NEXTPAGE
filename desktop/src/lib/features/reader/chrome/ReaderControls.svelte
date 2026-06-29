@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
-  import Icon from "$lib/shared/ui/navigation/Icon.svelte";
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { Snippet } from 'svelte';
+  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
     currentPage: number;
@@ -73,7 +73,9 @@
   }
 </script>
 
-<div class="flex items-center gap-3 px-3 py-2 bg-(--color-surface) border-b border-(--color-border) flex-wrap">
+<div
+  class="flex items-center gap-3 px-3 py-2 bg-(--color-surface) border-b border-(--color-border) flex-wrap"
+>
   {#if left}
     {@render left()}
   {:else if children}
@@ -83,7 +85,7 @@
       type="button"
       onclick={onToggleToc}
       class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
-      aria-label={t("reader.tabla_contenidos")}
+      aria-label={t('reader.tabla_contenidos')}
       data-testid={tocTestId}
     >
       <Icon name="menu" size="sm" />
@@ -94,7 +96,7 @@
     onclick={onPrev}
     disabled={currentPage <= 1}
     class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
-    aria-label={t("reader.prev_page")}
+    aria-label={t('reader.prev_page')}
     data-testid={prevTestId}
     {...restProps}
   >
@@ -105,7 +107,7 @@
     onclick={onNext}
     disabled={currentPage >= totalPages}
     class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
-    aria-label={t("reader.next_page")}
+    aria-label={t('reader.next_page')}
     data-testid={nextTestId}
   >
     <Icon name="arrow-right" size="sm" />
@@ -118,20 +120,22 @@
       value={pageValue}
       onchange={handlePageInput}
       class="w-[50px] p-1 border border-(--color-border) rounded text-center bg-(--color-surface) text-(--color-primary)"
-      aria-label={t("reader.page_input")}
+      aria-label={t('reader.page_input')}
       data-testid={pageInputTestId}
     />
-    <span class="text-xs text-(--color-text-muted) opacity-70" data-testid={totalPagesTestId}>/ {totalPages}</span>
+    <span class="text-xs text-(--color-text-muted) opacity-70" data-testid={totalPagesTestId}
+      >/ {totalPages}</span
+    >
   </span>
   <button
     type="button"
     onclick={onToggleFullscreen}
-    title={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}
+    title={isFullscreen ? t('pdf.fullscreenExit') : t('pdf.fullscreenEnter')}
     class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-8 min-h-8 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
-    aria-label={isFullscreen ? t("pdf.fullscreenExit") : t("pdf.fullscreenEnter")}
+    aria-label={isFullscreen ? t('pdf.fullscreenExit') : t('pdf.fullscreenEnter')}
     data-testid={fullscreenTestId}
   >
-    <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen-enter"} size="sm" />
+    <Icon name={isFullscreen ? 'fullscreen-exit' : 'fullscreen-enter'} size="sm" />
   </button>
   {#if right}
     {@render right()}

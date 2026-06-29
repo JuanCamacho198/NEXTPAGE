@@ -1,4 +1,4 @@
-import type { ErrorEvent } from "../events/ErrorEvent";
+import type { ErrorEvent } from '../events/ErrorEvent';
 
 export interface LoggerSink {
   log(event: ErrorEvent): void;

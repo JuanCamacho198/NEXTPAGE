@@ -1,4 +1,4 @@
-import type { BreadcrumbEntry, BreadcrumbType } from "./breadcrumbTypes";
+import type { BreadcrumbEntry, BreadcrumbType } from './breadcrumbTypes';
 
 const MAX_BREADCRUMBS = 100;
 
@@ -57,7 +57,7 @@ export const breadcrumbsStore = new BreadcrumbsStoreImpl();
 export const captureBreadcrumb = (
   type: BreadcrumbType,
   label: string,
-  data?: Record<string, unknown>
+  data?: Record<string, unknown>,
 ): BreadcrumbEntry => {
   return breadcrumbsStore.add(type, label, data);
 };

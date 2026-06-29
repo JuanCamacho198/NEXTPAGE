@@ -4,11 +4,11 @@ import TagPopover from '$lib/features/reader/highlight/TagPopover.svelte';
 
 const t = (key: string) => {
   const translations: Record<string, string> = {
-    "highlight.tagPopoverAriaLabel": "Tags",
-    "highlight.tags": "Tags",
-    "highlight.createTag": "Create",
-    "highlight.newTagPlaceholder": "New tag",
-    "highlight.noTagsYet": "No tags yet",
+    'highlight.tagPopoverAriaLabel': 'Tags',
+    'highlight.tags': 'Tags',
+    'highlight.createTag': 'Create',
+    'highlight.newTagPlaceholder': 'New tag',
+    'highlight.noTagsYet': 'No tags yet',
   };
   return translations[key] ?? key;
 };
@@ -17,7 +17,17 @@ describe('TagPopover', () => {
   function createAnchor(): HTMLElement {
     const el = document.createElement('button');
     document.body.appendChild(el);
-    el.getBoundingClientRect = () => ({ left: 100, top: 100, width: 24, height: 24, right: 124, bottom: 124, x: 100, y: 100 } as DOMRect);
+    el.getBoundingClientRect = () =>
+      ({
+        left: 100,
+        top: 100,
+        width: 24,
+        height: 24,
+        right: 124,
+        bottom: 124,
+        x: 100,
+        y: 100,
+      }) as DOMRect;
     return el;
   }
 

@@ -8,8 +8,8 @@
   };
 
   let {
-    placeholder = "Search...",
-    value = $bindable(""),
+    placeholder = 'Search...',
+    value = $bindable(''),
     debounce = 300,
     icon = true,
     onsearch,
@@ -27,9 +27,9 @@
   }
 
   function clear(): void {
-    value = "";
+    value = '';
     clearTimeout(debounceTimer);
-    onsearch?.({ value: "" });
+    onsearch?.({ value: '' });
   }
 </script>
 

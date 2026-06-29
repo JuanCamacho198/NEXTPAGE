@@ -65,11 +65,7 @@ export class SyncService {
           const existsLocally = await tauri.fileExists(localBook.filePath);
           if (existsLocally) {
             const fileBytes = await tauri.getFileBytes(localBook.filePath);
-            await this.gdrive.upload(
-              expectedName,
-              new Uint8Array(fileBytes),
-              expectedName,
-            );
+            await this.gdrive.upload(expectedName, new Uint8Array(fileBytes), expectedName);
           }
         } catch (e) {
           console.error(`Failed to upload book file for ${localBook.id}:`, e);

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { MessageKey } from "$lib/shared/i18n";
-  import type { PdfOutlineItem } from "$lib/shared/types";
+  import type { MessageKey } from '$lib/shared/i18n';
+  import type { PdfOutlineItem } from '$lib/shared/types';
 
   type FlatOutlineItem = {
     item: PdfOutlineItem;
@@ -18,16 +18,20 @@
   let { flatOutline, tocLoading, tocError, t, onNavigate }: Props = $props();
 </script>
 
-<aside class="w-60 bg-(--pdf-reader-surface-bg,var(--color-surface)) border-r border-(--color-border) overflow-y-auto shrink-0 max-sm:w-[min(240px,70vw)]">
-  <h3 class="m-0 px-3 py-3 text-sm font-semibold border-b border-(--color-border) text-(--pdf-reader-text,var(--color-primary))">
-    {t("pdf.tableOfContents")}
+<aside
+  class="w-60 bg-(--pdf-reader-surface-bg,var(--color-surface)) border-r border-(--color-border) overflow-y-auto shrink-0 max-sm:w-[min(240px,70vw)]"
+>
+  <h3
+    class="m-0 px-3 py-3 text-sm font-semibold border-b border-(--color-border) text-(--pdf-reader-text,var(--color-primary))"
+  >
+    {t('pdf.tableOfContents')}
   </h3>
   {#if tocLoading}
-    <p class="m-0 px-3 py-3 text-xs text-(--color-text-muted)">{t("pdf.tocLoading")}</p>
+    <p class="m-0 px-3 py-3 text-xs text-(--color-text-muted)">{t('pdf.tocLoading')}</p>
   {:else if tocError}
     <p class="m-0 px-3 py-3 text-xs text-red-600">{tocError}</p>
   {:else if flatOutline.length === 0}
-    <p class="m-0 px-3 py-3 text-xs text-(--color-text-muted)">{t("pdf.tocEmpty")}</p>
+    <p class="m-0 px-3 py-3 text-xs text-(--color-text-muted)">{t('pdf.tocEmpty')}</p>
   {:else}
     <ul class="m-0 p-0 list-none">
       {#each flatOutline as entry (entry.item.id)}

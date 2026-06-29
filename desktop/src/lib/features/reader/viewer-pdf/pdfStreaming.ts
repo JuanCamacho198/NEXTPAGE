@@ -1,7 +1,7 @@
-import * as pdfjsLib from "pdfjs-dist";
-import type { PDFDocumentProxy, PDFDocumentLoadingTask } from "pdfjs-dist";
-import { getFileBytes } from "$lib/shared/api/tauriClient";
-import type { PdfOutlineItem } from "$lib/types";
+import * as pdfjsLib from 'pdfjs-dist';
+import type { PDFDocumentProxy, PDFDocumentLoadingTask } from 'pdfjs-dist';
+import { getFileBytes } from '$lib/shared/api/tauriClient';
+import type { PdfOutlineItem } from '$lib/types';
 
 // ──────────────────────────────────────────
 // 1. Document Cache
@@ -142,14 +142,11 @@ interface RawOutlineItem {
   items?: unknown[];
 }
 
-function normalizeOutlineItems(
-  rawItems: unknown[],
-  parentId = "outline",
-): PdfOutlineItem[] {
+function normalizeOutlineItems(rawItems: unknown[], parentId = 'outline'): PdfOutlineItem[] {
   const normalized: PdfOutlineItem[] = [];
 
   rawItems.forEach((rawItem, index) => {
-    if (!rawItem || typeof rawItem !== "object") {
+    if (!rawItem || typeof rawItem !== 'object') {
       return;
     }
 
@@ -159,7 +156,7 @@ function normalizeOutlineItems(
       : [];
 
     const destination =
-      typeof item.dest === "string" || Array.isArray(item.dest) ? item.dest : null;
+      typeof item.dest === 'string' || Array.isArray(item.dest) ? item.dest : null;
 
     normalized.push({
       id: `${parentId}-${index}`,
@@ -173,9 +170,9 @@ function normalizeOutlineItems(
 }
 
 function toOutlineTitle(title: unknown): string {
-  if (typeof title !== "string") {
-    return "Untitled";
+  if (typeof title !== 'string') {
+    return 'Untitled';
   }
   const normalized = title.trim();
-  return normalized.length > 0 ? normalized : "Untitled";
+  return normalized.length > 0 ? normalized : 'Untitled';
 }

@@ -1,44 +1,44 @@
-import { render, screen } from "@testing-library/svelte";
-import userEvent from "@testing-library/user-event";
-import { readFile } from "@tauri-apps/plugin-fs";
-import { describe, expect, it, vi } from "vitest";
-import { LibraryView } from "$lib/features/library";
-import type { LibraryBookDto } from "$lib/types";
-import { listLibraryBooks } from "$lib/shared/api/tauriClient";
+import { render, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
+import { readFile } from '@tauri-apps/plugin-fs';
+import { describe, expect, it, vi } from 'vitest';
+import { LibraryView } from '$lib/features/library';
+import type { LibraryBookDto } from '$lib/types';
+import { listLibraryBooks } from '$lib/shared/api/tauriClient';
 
-vi.mock("@tauri-apps/api/core", () => ({
+vi.mock('@tauri-apps/api/core', () => ({
   convertFileSrc: vi.fn((path: string) => `asset://localhost/${path}`),
 }));
 
 const t = (key: string, params?: Record<string, string | number>) => {
-  if (key === "library.optionsFor") {
-    return `Options for ${params?.title ?? ""}`;
+  if (key === 'library.optionsFor') {
+    return `Options for ${params?.title ?? ''}`;
   }
 
   const dictionary: Record<string, string> = {
-    "library.title": "Library",
-    "library.list": "List",
-    "library.grid": "Grid",
-    "library.loading": "Loading library...",
-    "library.empty": "No books available.",
-    "library.noCover": "No cover",
-    "library.cover": "Cover",
-    "library.hide": "Hide from library",
-    "library.open": "Open",
-    "library.updated": "Updated",
-    "library.min": "min",
-    "app.unknownAuthor": "Unknown author",
-    "settings.unknownBook": "Unknown",
+    'library.title': 'Library',
+    'library.list': 'List',
+    'library.grid': 'Grid',
+    'library.loading': 'Loading library...',
+    'library.empty': 'No books available.',
+    'library.noCover': 'No cover',
+    'library.cover': 'Cover',
+    'library.hide': 'Hide from library',
+    'library.open': 'Open',
+    'library.updated': 'Updated',
+    'library.min': 'min',
+    'app.unknownAuthor': 'Unknown author',
+    'settings.unknownBook': 'Unknown',
   };
 
   return dictionary[key] ?? key;
 };
 
-vi.mock("$lib/shared/api/tauriClient", () => ({
+vi.mock('$lib/shared/api/tauriClient', () => ({
   listLibraryBooks: vi.fn(),
 }));
 
-vi.mock("@tauri-apps/plugin-fs", () => ({
+vi.mock('@tauri-apps/plugin-fs', () => ({
   readFile: vi.fn(),
 }));
 
@@ -46,14 +46,14 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
 const mockedListLibraryBooks = listLibraryBooks as unknown as ReturnType<typeof vi.fn>;
 const mockedReadFile = readFile as unknown as ReturnType<typeof vi.fn>;
 
-describe("LibraryView", () => {
-  it("renders backend metadata consistently in list and grid views", async () => {
+describe('LibraryView', () => {
+  it('renders backend metadata consistently in list and grid views', async () => {
     const books: LibraryBookDto[] = [
       {
-        id: "book-1",
-        title: "Book One",
-        author: "Author One",
-        format: "epub",
+        id: 'book-1',
+        title: 'Book One',
+        author: 'Author One',
+        format: 'epub',
         currentPage: 12,
         totalPages: 240,
         progressPercentage: 50,
@@ -72,30 +72,30 @@ describe("LibraryView", () => {
       selectedBookId: null,
       isLoading: false,
       disabledReason: null,
-      viewMode: "list",
+      viewMode: 'list',
       onToggleView,
       t,
     });
 
-    expect(screen.getByText("Book One")).toBeInTheDocument();
+    expect(screen.getByText('Book One')).toBeInTheDocument();
     expect(screen.getByText(/Author One/)).toBeInTheDocument();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Grid" }));
-    expect(onToggleView).toHaveBeenCalledWith("grid");
+    await user.click(screen.getByRole('button', { name: 'Grid' }));
+    expect(onToggleView).toHaveBeenCalledWith('grid');
   });
 
-  it("exposes hide action from item menu", async () => {
+  it('exposes hide action from item menu', async () => {
     const onHide = vi.fn();
     const user = userEvent.setup();
 
     render(LibraryView, {
       books: [
         {
-          id: "book-hide-1",
-          title: "Book Hide",
-          author: "Author Hide",
-          format: "pdf",
+          id: 'book-hide-1',
+          title: 'Book Hide',
+          author: 'Author Hide',
+          format: 'pdf',
           currentPage: 1,
           totalPages: 10,
           progressPercentage: 10,
@@ -107,35 +107,35 @@ describe("LibraryView", () => {
       selectedBookId: null,
       isLoading: false,
       disabledReason: null,
-      viewMode: "list",
+      viewMode: 'list',
       onHide,
       t,
     });
 
-    const bookRow = screen.getByText("Book Hide").closest("li");
+    const bookRow = screen.getByText('Book Hide').closest('li');
     expect(bookRow).not.toBeNull();
-    const menuButton = bookRow?.querySelector("button.rounded-md.border") as HTMLButtonElement;
+    const menuButton = bookRow?.querySelector('button.rounded-md.border') as HTMLButtonElement;
     await user.click(menuButton);
-    await user.click(screen.getByRole("button", { name: "Hide from library" }));
+    await user.click(screen.getByRole('button', { name: 'Hide from library' }));
 
     expect(onHide).toHaveBeenCalledTimes(1);
-    expect(onHide.mock.calls[0][0].id).toBe("book-hide-1");
+    expect(onHide.mock.calls[0][0].id).toBe('book-hide-1');
   });
 
-  it("falls back to placeholder when cover image fails to load", async () => {
-    mockedReadFile.mockRejectedValueOnce(new Error("cover not found"));
+  it('falls back to placeholder when cover image fails to load', async () => {
+    mockedReadFile.mockRejectedValueOnce(new Error('cover not found'));
 
     render(LibraryView, {
       books: [
         {
-          id: "book-cover-error",
-          title: "Libro con portada",
-          author: "Autor",
-          format: "pdf",
+          id: 'book-cover-error',
+          title: 'Libro con portada',
+          author: 'Autor',
+          format: 'pdf',
           currentPage: 3,
           totalPages: 10,
           progressPercentage: 30,
-          coverPath: "C:/covers/book-cover-error.png",
+          coverPath: 'C:/covers/book-cover-error.png',
           minutesRead: 8,
           updatedAt: new Date().toISOString(),
         },
@@ -143,21 +143,22 @@ describe("LibraryView", () => {
       selectedBookId: null,
       isLoading: false,
       disabledReason: null,
-      viewMode: "grid",
+      viewMode: 'grid',
       t,
     });
 
-    expect(await screen.findByText("No cover")).toBeInTheDocument();
+    expect(await screen.findByText('No cover')).toBeInTheDocument();
   });
 
-  it("keeps long spanish labels constrained inside card layout", () => {
+  it('keeps long spanish labels constrained inside card layout', () => {
     render(LibraryView, {
       books: [
         {
-          id: "book-overflow-1",
-          title: "Este es un titulo extremadamente largo para verificar truncado en tarjetas de biblioteca",
-          author: "Autor con nombre considerablemente largo para stress test",
-          format: "pdf",
+          id: 'book-overflow-1',
+          title:
+            'Este es un titulo extremadamente largo para verificar truncado en tarjetas de biblioteca',
+          author: 'Autor con nombre considerablemente largo para stress test',
+          format: 'pdf',
           currentPage: 123,
           totalPages: 456,
           progressPercentage: 27,
@@ -169,12 +170,12 @@ describe("LibraryView", () => {
       selectedBookId: null,
       isLoading: false,
       disabledReason: null,
-      viewMode: "list",
+      viewMode: 'list',
       t,
     });
 
-    expect(screen.getByText(/extremadamente largo/i)).toHaveClass("line-clamp-2");
-    expect(screen.getByText(/nombre considerablemente largo/i)).toHaveClass("truncate");
-    expect(screen.getByText(/Updated/i)).toHaveClass("truncate");
+    expect(screen.getByText(/extremadamente largo/i)).toHaveClass('line-clamp-2');
+    expect(screen.getByText(/nombre considerablemente largo/i)).toHaveClass('truncate');
+    expect(screen.getByText(/Updated/i)).toHaveClass('truncate');
   });
 });

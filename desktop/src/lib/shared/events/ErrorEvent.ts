@@ -1,16 +1,16 @@
-export type ErrorSeverity = "low" | "medium" | "high" | "critical";
+export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 export type ErrorCategory =
-  | "runtime"
-  | "promise_rejection"
-  | "command"
-  | "network"
-  | "parsing"
-  | "validation"
-  | "unknown"
-  | "alert";
+  | 'runtime'
+  | 'promise_rejection'
+  | 'command'
+  | 'network'
+  | 'parsing'
+  | 'validation'
+  | 'unknown'
+  | 'alert';
 
-export type ErrorSource = "app_shell" | "reader" | "library" | "settings" | "import" | "sync";
+export type ErrorSource = 'app_shell' | 'reader' | 'library' | 'settings' | 'import' | 'sync';
 
 export interface ErrorEvent {
   timestamp: string;
@@ -37,9 +37,9 @@ export interface ErrorEventDto {
 }
 
 export const createErrorEvent = (
-  params: Omit<ErrorEvent, "timestamp" | "correlationId"> & {
+  params: Omit<ErrorEvent, 'timestamp' | 'correlationId'> & {
     correlationId?: string;
-  }
+  },
 ): ErrorEvent => {
   return {
     timestamp: new Date().toISOString(),

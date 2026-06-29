@@ -3,9 +3,9 @@
     SearchBookTextResponse,
     SearchNavigationTarget,
     SearchResult,
-  } from "$lib/shared/types";
-  import type { MessageKey } from "$lib/shared/i18n";
-  import Panel from "$lib/shared/ui/layout/Panel.svelte";
+  } from '$lib/shared/types';
+  import type { MessageKey } from '$lib/shared/i18n';
+  import Panel from '$lib/shared/ui/layout/Panel.svelte';
 
   type Props = {
     bookId?: string | null;
@@ -27,7 +27,7 @@
     t,
   }: Props = $props();
 
-  let query = $state("");
+  let query = $state('');
 
   const resultCount = (): number => response?.items.length ?? 0;
   const hasResults = (): boolean => resultCount() > 0;
@@ -54,7 +54,7 @@
   };
 </script>
 
-<Panel title={t("search.title")}>
+<Panel title={t('search.title')}>
   {#snippet children()}
     {#if disabledReason}
       <div class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -72,7 +72,7 @@
           type="text"
           class="min-w-0 flex-1 rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm text-(--color-primary)"
           bind:value={query}
-          placeholder={t("search.placeholder")}
+          placeholder={t('search.placeholder')}
           disabled={isSearching || !bookId}
         />
         <button
@@ -80,7 +80,7 @@
           class="rounded-md bg-(--color-primary) px-3 py-2 text-sm font-medium text-(--color-background) hover:opacity-90 disabled:opacity-60"
           disabled={isSearching || !bookId || !query.trim()}
         >
-          {isSearching ? t("search.searching") : t("search.search")}
+          {isSearching ? t('search.searching') : t('search.search')}
         </button>
       </form>
 
@@ -94,14 +94,23 @@
                 onclick={() => jumpTo(item, index)}
               >
                 <p class="text-sm text-(--color-primary)">{item.snippet}</p>
-                <p class="mt-1 text-xs text-(--color-text-muted)">{t("search.locator")}: {item.locator}</p>
+                <p class="mt-1 text-xs text-(--color-text-muted)">
+                  {t('search.locator')}: {item.locator}
+                </p>
               </button>
             </li>
           {/each}
         </ul>
 
-        <nav class="mt-3 flex items-center justify-between text-xs text-(--color-text-muted)" aria-label="Search pagination">
-          <span>{t("search.page")} {currentPage()} · {Math.min(total(), pageSize() * currentPage())} / {total()} {t("search.matches")}</span>
+        <nav
+          class="mt-3 flex items-center justify-between text-xs text-(--color-text-muted)"
+          aria-label="Search pagination"
+        >
+          <span
+            >{t('search.page')}
+            {currentPage()} · {Math.min(total(), pageSize() * currentPage())} / {total()}
+            {t('search.matches')}</span
+          >
           <div class="flex gap-1">
             <button
               type="button"
@@ -109,7 +118,7 @@
               onclick={() => runSearch(currentPage() - 1)}
               disabled={currentPage() <= 1 || isSearching}
             >
-              {t("search.prev")}
+              {t('search.prev')}
             </button>
             <button
               type="button"
@@ -117,12 +126,12 @@
               onclick={() => runSearch(currentPage() + 1)}
               disabled={!hasMore() || isSearching}
             >
-              {t("search.next")}
+              {t('search.next')}
             </button>
           </div>
         </nav>
       {:else if isNoMatch()}
-        <p class="text-sm text-(--color-text-muted)">{t("search.noMatches")}</p>
+        <p class="text-sm text-(--color-text-muted)">{t('search.noMatches')}</p>
       {/if}
     {/if}
   {/snippet}

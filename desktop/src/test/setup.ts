@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom/vitest'
+import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 
 // Global mock for Tauri IPC
@@ -13,9 +13,15 @@ globalThis.structuredClone = (obj: unknown) => JSON.parse(JSON.stringify(obj));
 // Polyfill ResizeObserver for jsdom (used by App.svelte debug panel)
 if (typeof globalThis.ResizeObserver === 'undefined') {
   class ResizeObserverMock {
-    observe() { /* noop */ }
-    unobserve() { /* noop */ }
-    disconnect() { /* noop */ }
+    observe() {
+      /* noop */
+    }
+    unobserve() {
+      /* noop */
+    }
+    disconnect() {
+      /* noop */
+    }
   }
   globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 }
@@ -24,13 +30,27 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 if (typeof globalThis.Element !== 'undefined' && !globalThis.Element.prototype.animate) {
   globalThis.Element.prototype.animate = function () {
     return {
-      play() { /* noop */ },
-      pause() { /* noop */ },
-      finish() { /* noop */ },
-      cancel() { /* noop */ },
-      reverse() { /* noop */ },
-      addEventListener() { /* noop */ },
-      removeEventListener() { /* noop */ },
+      play() {
+        /* noop */
+      },
+      pause() {
+        /* noop */
+      },
+      finish() {
+        /* noop */
+      },
+      cancel() {
+        /* noop */
+      },
+      reverse() {
+        /* noop */
+      },
+      addEventListener() {
+        /* noop */
+      },
+      removeEventListener() {
+        /* noop */
+      },
       currentTime: null,
       playbackRate: 1,
       playState: 'finished',
@@ -43,7 +63,12 @@ if (typeof globalThis.Element !== 'undefined' && !globalThis.Element.prototype.a
 // Polyfill DOMMatrix for pdfjs-dist (not available in Node.js/jsdom/happy-dom)
 if (typeof globalThis.DOMMatrix === 'undefined') {
   class DOMMatrixPolyfill {
-    a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
+    a = 1;
+    b = 0;
+    c = 0;
+    d = 1;
+    e = 0;
+    f = 0;
     constructor(transform?: string) {
       if (transform) {
         const m = transform.match(/matrix\(([^)]+)\)/);
@@ -59,11 +84,13 @@ if (typeof globalThis.DOMMatrix === 'undefined') {
       }
     }
     translate(tx = 0, ty = 0) {
-      this.e += tx; this.f += ty;
+      this.e += tx;
+      this.f += ty;
       return this;
     }
     scale(sx = 1, sy = 1) {
-      this.a *= sx; this.d *= sy;
+      this.a *= sx;
+      this.d *= sy;
       return this;
     }
     multiply(other: DOMMatrixPolyfill) {
@@ -77,7 +104,9 @@ if (typeof globalThis.DOMMatrix === 'undefined') {
       return this;
     }
     get isIdentity() {
-      return this.a === 1 && this.b === 0 && this.c === 0 && this.d === 1 && this.e === 0 && this.f === 0;
+      return (
+        this.a === 1 && this.b === 0 && this.c === 0 && this.d === 1 && this.e === 0 && this.f === 0
+      );
     }
     toFloat64() {
       return new Float64Array([this.a, this.b, this.c, this.d, this.e, this.f]);

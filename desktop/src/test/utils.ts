@@ -1,5 +1,5 @@
 // Test utilities for vitest 4.x compatibility
-import { vi, describe, expect, it, beforeEach, afterEach, beforeAll, afterAll } from "vitest";
+import { vi, describe, expect, it, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 
 // Since vi.mocked is not available in vitest 4.x with globals: true,
 // we use a type cast workaround

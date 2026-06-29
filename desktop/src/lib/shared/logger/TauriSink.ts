@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
-import type { LoggerSink } from "./Logger";
-import type { ErrorEvent } from "../events/ErrorEvent";
+import { invoke } from '@tauri-apps/api/core';
+import type { LoggerSink } from './Logger';
+import type { ErrorEvent } from '../events/ErrorEvent';
 
 export class TauriSink implements LoggerSink {
   async log(event: ErrorEvent): Promise<void> {
@@ -17,7 +17,7 @@ export class TauriSink implements LoggerSink {
         recoverable: event.recoverable,
       };
 
-      await invoke("reportErrorEvent", { event: dto });
+      await invoke('reportErrorEvent', { event: dto });
     } catch {
       // logging should never break the app
     }

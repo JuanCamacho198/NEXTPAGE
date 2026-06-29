@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import ePub, { Book, Rendition, NavItem } from "epubjs";
+import ePub, { Book, Rendition, NavItem } from 'epubjs';
 
 export interface EpubChapter {
   id: string;
@@ -37,8 +37,8 @@ export class EpubReaderService {
     const metadata = pkg?.metadata || {};
 
     return {
-      title: metadata.title || "Unknown Title",
-      author: metadata.creator || "Unknown Author",
+      title: metadata.title || 'Unknown Title',
+      author: metadata.creator || 'Unknown Author',
       language: metadata.language,
       publisher: metadata.publisher,
       cover: await this.getCoverUrl(),
@@ -58,7 +58,7 @@ export class EpubReaderService {
 
   async getToc(): Promise<EpubChapter[]> {
     if (!this.book) {
-      throw new Error("Book not loaded");
+      throw new Error('Book not loaded');
     }
 
     const navigation = await (this.book as any).loaded.navigation;
@@ -76,22 +76,22 @@ export class EpubReaderService {
 
   render(container: HTMLElement): void {
     if (!this.book) {
-      throw new Error("Book not loaded");
+      throw new Error('Book not loaded');
     }
 
     this.container = container;
-    container.innerHTML = "";
+    container.innerHTML = '';
 
     this.rendition = this.book.renderTo(container, {
-      width: "100%",
-      height: "100%",
-      spread: "none",
+      width: '100%',
+      height: '100%',
+      spread: 'none',
     }) as any;
   }
 
   async display(cfi?: string): Promise<void> {
     if (!this.rendition) {
-      throw new Error("Rendition not initialized");
+      throw new Error('Rendition not initialized');
     }
 
     await this.rendition.display(cfi);
@@ -105,14 +105,14 @@ export class EpubReaderService {
 
     return {
       index: location.index ?? 0,
-      cfi: location.cfi ?? "",
-      href: location.href ?? "",
+      cfi: location.cfi ?? '',
+      href: location.href ?? '',
     };
   }
 
   async goToCfi(cfi: string): Promise<void> {
     if (!this.rendition) {
-      throw new Error("Rendition not initialized");
+      throw new Error('Rendition not initialized');
     }
 
     await this.rendition.display(cfi);
@@ -120,10 +120,10 @@ export class EpubReaderService {
 
   async goToChapter(index: number): Promise<void> {
     if (!this.rendition || !this.book) {
-      throw new Error("Book or rendition not initialized");
+      throw new Error('Book or rendition not initialized');
     }
 
-    const spineItems = await (this.book as any).loaded.spine as any[];
+    const spineItems = (await (this.book as any).loaded.spine) as any[];
     const spineItem = spineItems[index];
     if (spineItem) {
       await this.rendition.display(spineItem.href);
@@ -133,11 +133,11 @@ export class EpubReaderService {
   onLocationChange(callback: (location: EpubLocation) => void): void {
     if (!this.rendition) return;
 
-    (this.rendition as any).on("locationChanged", (loc: any) => {
+    (this.rendition as any).on('locationChanged', (loc: any) => {
       callback({
         index: loc?.start?.index ?? 0,
-        cfi: loc?.start?.cfi ?? "",
-        href: loc?.start?.href ?? "",
+        cfi: loc?.start?.cfi ?? '',
+        href: loc?.start?.href ?? '',
       });
     });
   }
@@ -145,7 +145,7 @@ export class EpubReaderService {
   onRendered(callback: () => void): void {
     if (!this.rendition) return;
 
-    (this.rendition as any).on("rendered", callback);
+    (this.rendition as any).on('rendered', callback);
   }
 
   getRendition(): Rendition | null {
@@ -164,7 +164,7 @@ export class EpubReaderService {
     }
 
     if (this.container) {
-      this.container.innerHTML = "";
+      this.container.innerHTML = '';
       this.container = null;
     }
   }

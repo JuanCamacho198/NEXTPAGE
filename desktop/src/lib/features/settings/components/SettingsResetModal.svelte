@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Modal from "$lib/shared/ui/layout/Modal.svelte";
-  import type { MessageKey } from "$lib/shared/i18n";
+  import Modal from '$lib/shared/ui/layout/Modal.svelte';
+  import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
     show: boolean;
@@ -17,9 +17,9 @@
   });
 </script>
 
-<Modal bind:open size="sm" title={t("settings.resetConfirmTitle")}>
+<Modal bind:open size="sm" title={t('settings.resetConfirmTitle')}>
   {#snippet children()}
-    <p class="text-sm text-(--color-text-muted)">{t("settings.resetConfirmMessage")}</p>
+    <p class="text-sm text-(--color-text-muted)">{t('settings.resetConfirmMessage')}</p>
   {/snippet}
   {#snippet footer()}
     <button
@@ -27,14 +27,14 @@
       onclick={() => (open = false)}
       class="rounded-lg border border-(--color-border) px-4 py-1.5 text-sm bg-transparent text-(--color-primary) cursor-pointer hover:opacity-80"
     >
-      {t("settings.cancel")}
+      {t('settings.cancel')}
     </button>
     <button
       type="button"
       onclick={onConfirm}
       class="rounded-lg border border-red-500 px-4 py-1.5 text-sm bg-red-500 text-white cursor-pointer hover:opacity-90"
     >
-      {t("settings.reset")}
+      {t('settings.reset')}
     </button>
   {/snippet}
 </Modal>

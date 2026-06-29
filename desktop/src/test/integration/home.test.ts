@@ -1,7 +1,7 @@
-import { render, screen, waitFor, within } from "@testing-library/svelte";
-import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import App from "../../App.svelte";
+import { render, screen, waitFor, within } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import App from '../../App.svelte';
 import type {
   BookDto,
   CollectionDto,
@@ -9,32 +9,32 @@ import type {
   ReadingStatsSummaryDto,
   ReaderSettings,
   SearchBookTextResponse,
-} from "$lib/types";
+} from '$lib/types';
 
 const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoisted(() => {
   return {
     tauriClientMock: {
       getDefaultReaderSettings: vi.fn<() => ReaderSettings>(() => ({
-        themeMode: "paper",
+        themeMode: 'paper',
         brightness: 100,
         contrast: 100,
-        selectionColor: "#3388ff",
+        selectionColor: '#3388ff',
         epub: {
           fontSize: 100,
-          fontFamily: "serif",
+          fontFamily: 'serif',
         },
         lineHeight: 1.8,
         letterSpacing: 0,
         paragraphSpacing: 1,
-        textAlign: "left",
-        direction: "ltr",
+        textAlign: 'left',
+        direction: 'ltr',
         hyphenation: false,
         verticalScrolling: false,
         margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
         showHeader: true,
         showFooter: true,
         showPageNumbers: true,
-        progressIndicator: "percentage",
+        progressIndicator: 'percentage',
       })),
       getProgress: vi.fn(),
       getReaderSettings: vi.fn(),
@@ -62,7 +62,7 @@ const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoi
   };
 });
 
-vi.mock("$lib/shared/api/tauriClient", () => tauriClientMock);
+vi.mock('$lib/shared/api/tauriClient', () => tauriClientMock);
 
 vi.mock('@tauri-apps/api/webviewWindow', () => ({
   getCurrentWebviewWindow: () => ({
@@ -70,12 +70,12 @@ vi.mock('@tauri-apps/api/webviewWindow', () => ({
   }),
 }));
 
-vi.mock("$lib/shared/services/FilePicker", () => ({
+vi.mock('$lib/shared/services/FilePicker', () => ({
   pickFile: pickFileMock,
   pickFolder: pickFolderMock,
 }));
 
-vi.mock("$lib/shared/services/BookImportService", () => ({
+vi.mock('$lib/shared/services/BookImportService', () => ({
   importBook: importBookMock,
   BulkImportService: class {
     cancel = vi.fn();
@@ -83,7 +83,7 @@ vi.mock("$lib/shared/services/BookImportService", () => ({
   },
 }));
 
-vi.mock("$lib/shared/services/pdfThumbnail", () => ({
+vi.mock('$lib/shared/services/pdfThumbnail', () => ({
   extractPdfMetadata: vi.fn(async () => ({
     author: null,
     totalPages: null,
@@ -91,78 +91,78 @@ vi.mock("$lib/shared/services/pdfThumbnail", () => ({
   })),
 }));
 
-vi.mock("$lib/features/reader/viewer-pdf/PdfViewer.svelte", async () => {
-  const mod = await import("../stubs/ViewerStub.svelte");
+vi.mock('$lib/features/reader/viewer-pdf/PdfViewer.svelte', async () => {
+  const mod = await import('../stubs/ViewerStub.svelte');
   return { default: mod.default };
 });
 
-vi.mock("$lib/features/home/components/HomeDesktopView.svelte", async () => {
-  const mod = await import("../stubs/HomeDesktopViewStub.svelte");
+vi.mock('$lib/features/home/components/HomeDesktopView.svelte', async () => {
+  const mod = await import('../stubs/HomeDesktopViewStub.svelte');
   return { default: mod.default };
 });
 
 const dictionary: Record<string, string> = {
-  "app.title": "NextPage",
-  "app.brandPlaceholder": "Reading workspace",
-  "app.homeNavLabel": "Home navigation",
-  "app.navBookshelf": "Bookshelf",
-  "app.navFuture": "Future",
-  "app.importBook": "Import book",
-  "app.importing": "Importing",
-  "app.menu": "Menu",
-  "app.openMenu": "Open menu",
-  "app.settings": "Settings",
-  "app.read": "Read",
-  "app.backToHome": "Back to home",
-  "app.openBookPrompt": "Open a book",
-  "app.locationLabel": "Location",
-  "app.start": "Start",
-  "app.homeReadHint": "Select Read to resume",
-  "app.unknownAuthor": "Unknown author",
-  "home.highlightsTitle": "Highlights",
-  "home.highlightsPlaceholder": "Highlights and recent notes will appear here in a future update.",
-  "home.continueReadingTitle": "Continue Reading",
-  "home.continueReadingHint": "In progress",
-  "home.continueReadingPlaceholder": "No in-progress books yet",
-  "home.myShelfTitle": "My Shelf",
-  "home.myShelfHint": "Imported books",
-  "home.myShelfPlaceholder": "Import a book to populate your shelf",
-  "home.shelfTab.all": "Todos",
-  "home.shelfTab.favorites": "Favoritos",
-  "home.shelfTab.toRead": "Planeo leer",
-  "home.shelfTab.completed": "Completado",
-  "home.shelfSortLabel": "Sort shelf",
-  "home.shelfSort.progress": "Progress",
-  "home.shelfSort.date": "Date",
-  "home.shelfSort.lastRead": "Last read",
-  "home.shelfSort.author": "Author",
-  "home.shelfSort.title": "Title",
-  "home.shelfSort.fileSize": "File size",
-  "home.shelfSearchPlaceholder": "Search or use tokens like status:favoritos",
-  "home.shelfClearSearch": "Clear shelf search",
-  "home.shelfWarningsLabel": "Query warnings",
-  "home.shelfSearchInvalid": "Ignored tokens: {{value}}",
-  "home.shelfSortFromQuery": "Sort token active: {{value}}",
-  "home.shelfResults": "Showing {{count}} of {{total}} shelf books",
-  "home.shelfNoResults": "No shelf books match the current filters.",
-  "library.grid": "Grid",
-  "library.list": "List",
-  "library.hide": "Hide from library",
-  "library.optionsFor": "Options for {{title}}",
-  "library.favoriteAdd": "Add to favorites",
-  "library.favoriteRemove": "Remove from favorites",
-  "library.removeFromShelf": "Remove from shelf",
-  "library.editMetadata.title": "Edit Metadata",
-  "home.futureTitle": "Workspace",
-  "home.futurePlaceholder": "Future widgets and shortcuts will be added here.",
-  "settings.close": "Close",
-  "settings.title": "Settings",
-  "errors.commandFailure": "Command failed",
+  'app.title': 'NextPage',
+  'app.brandPlaceholder': 'Reading workspace',
+  'app.homeNavLabel': 'Home navigation',
+  'app.navBookshelf': 'Bookshelf',
+  'app.navFuture': 'Future',
+  'app.importBook': 'Import book',
+  'app.importing': 'Importing',
+  'app.menu': 'Menu',
+  'app.openMenu': 'Open menu',
+  'app.settings': 'Settings',
+  'app.read': 'Read',
+  'app.backToHome': 'Back to home',
+  'app.openBookPrompt': 'Open a book',
+  'app.locationLabel': 'Location',
+  'app.start': 'Start',
+  'app.homeReadHint': 'Select Read to resume',
+  'app.unknownAuthor': 'Unknown author',
+  'home.highlightsTitle': 'Highlights',
+  'home.highlightsPlaceholder': 'Highlights and recent notes will appear here in a future update.',
+  'home.continueReadingTitle': 'Continue Reading',
+  'home.continueReadingHint': 'In progress',
+  'home.continueReadingPlaceholder': 'No in-progress books yet',
+  'home.myShelfTitle': 'My Shelf',
+  'home.myShelfHint': 'Imported books',
+  'home.myShelfPlaceholder': 'Import a book to populate your shelf',
+  'home.shelfTab.all': 'Todos',
+  'home.shelfTab.favorites': 'Favoritos',
+  'home.shelfTab.toRead': 'Planeo leer',
+  'home.shelfTab.completed': 'Completado',
+  'home.shelfSortLabel': 'Sort shelf',
+  'home.shelfSort.progress': 'Progress',
+  'home.shelfSort.date': 'Date',
+  'home.shelfSort.lastRead': 'Last read',
+  'home.shelfSort.author': 'Author',
+  'home.shelfSort.title': 'Title',
+  'home.shelfSort.fileSize': 'File size',
+  'home.shelfSearchPlaceholder': 'Search or use tokens like status:favoritos',
+  'home.shelfClearSearch': 'Clear shelf search',
+  'home.shelfWarningsLabel': 'Query warnings',
+  'home.shelfSearchInvalid': 'Ignored tokens: {{value}}',
+  'home.shelfSortFromQuery': 'Sort token active: {{value}}',
+  'home.shelfResults': 'Showing {{count}} of {{total}} shelf books',
+  'home.shelfNoResults': 'No shelf books match the current filters.',
+  'library.grid': 'Grid',
+  'library.list': 'List',
+  'library.hide': 'Hide from library',
+  'library.optionsFor': 'Options for {{title}}',
+  'library.favoriteAdd': 'Add to favorites',
+  'library.favoriteRemove': 'Remove from favorites',
+  'library.removeFromShelf': 'Remove from shelf',
+  'library.editMetadata.title': 'Edit Metadata',
+  'home.futureTitle': 'Workspace',
+  'home.futurePlaceholder': 'Future widgets and shortcuts will be added here.',
+  'settings.close': 'Close',
+  'settings.title': 'Settings',
+  'errors.commandFailure': 'Command failed',
 };
 
-vi.mock("$lib/shared/i18n", () => ({
+vi.mock('$lib/shared/i18n', () => ({
   i18n: {
-    initializeLocale: vi.fn(async () => "en"),
+    initializeLocale: vi.fn(async () => 'en'),
     t: (locale: string, key: string, params?: Record<string, string | number>) => {
       void locale;
       const template = dictionary[key] ?? key;
@@ -171,17 +171,17 @@ vi.mock("$lib/shared/i18n", () => ({
       }
 
       return template
-        .replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_match, token) => String(params[token] ?? ""))
-        .replace(/\{\s*([\w.-]+)\s*\}/g, (_match, token) => String(params[token] ?? ""));
+        .replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_match, token) => String(params[token] ?? ''))
+        .replace(/\{\s*([\w.-]+)\s*\}/g, (_match, token) => String(params[token] ?? ''));
     },
   },
 }));
 
 const makeLibraryBook = (overrides: Partial<LibraryBookDto> = {}): LibraryBookDto => ({
-  id: "book-1",
-  title: "Book One",
-  author: "Author One",
-  format: "epub",
+  id: 'book-1',
+  title: 'Book One',
+  author: 'Author One',
+  format: 'epub',
   currentPage: 2,
   totalPages: 20,
   progressPercentage: 0,
@@ -196,7 +196,7 @@ const makeShelfBook = (
     isFavorite?: boolean;
     toRead?: boolean;
     completed?: boolean;
-    shelfStatus?: "all" | "favorites" | "to_read" | "completed";
+    shelfStatus?: 'all' | 'favorites' | 'to_read' | 'completed';
     fileSizeBytes?: number;
     lastReadAt?: string;
     createdAt?: string;
@@ -210,11 +210,11 @@ const makeShelfBook = (
 
 const makeSourceBook = (id: string, filePath: string): BookDto => ({
   id,
-  title: "Source",
-  author: "",
+  title: 'Source',
+  author: '',
   filePath,
-  format: filePath.toLowerCase().endsWith(".pdf") ? "pdf" : "epub",
-  syncStatus: "local",
+  format: filePath.toLowerCase().endsWith('.pdf') ? 'pdf' : 'epub',
+  syncStatus: 'local',
   currentPage: 1,
   totalPages: 20,
   createdAt: new Date().toISOString(),
@@ -234,7 +234,8 @@ const collections: CollectionDto[] = [];
 const configureLibrary = (libraryBooks: LibraryBookDto[], sourceBooks?: BookDto[]): void => {
   tauriClientMock.listLibraryBooks.mockResolvedValue(libraryBooks);
   tauriClientMock.listBooks.mockResolvedValue(
-    sourceBooks ?? libraryBooks.map((book) => makeSourceBook(book.id, `C:/library/${book.id}.epub`)),
+    sourceBooks ??
+      libraryBooks.map((book) => makeSourceBook(book.id, `C:/library/${book.id}.epub`)),
   );
   tauriClientMock.listCollections.mockResolvedValue(collections);
   tauriClientMock.getBookCollections.mockResolvedValue([]);
@@ -251,7 +252,7 @@ beforeEach(() => {
     pageSize: 200,
   } satisfies SearchBookTextResponse);
   tauriClientMock.getProgress.mockResolvedValue({
-    cfiLocation: "",
+    cfiLocation: '',
     percentage: 0,
   });
   tauriClientMock.saveProgress.mockResolvedValue(undefined);
@@ -259,103 +260,106 @@ beforeEach(() => {
   tauriClientMock.updateBookProgress.mockResolvedValue(undefined);
 });
 
-describe("App desktop home redesign QA scenarios", () => {
-  it("renders desktop home shell and sections on first load", async () => {
+describe('App desktop home redesign QA scenarios', () => {
+  it('renders desktop home shell and sections on first load', async () => {
     configureLibrary([
-      makeLibraryBook({ id: "shelf-a", title: "Shelf A", progressPercentage: 0 }),
-      makeLibraryBook({ id: "continue-b", title: "Continue B", progressPercentage: 24 }),
+      makeLibraryBook({ id: 'shelf-a', title: 'Shelf A', progressPercentage: 0 }),
+      makeLibraryBook({ id: 'continue-b', title: 'Continue B', progressPercentage: 24 }),
     ]);
 
     render(App);
 
-    expect(await screen.findByTestId("home-desktop-view-stub")).toBeInTheDocument();
-    expect(screen.getByTestId("continue-section")).toBeInTheDocument();
-    expect(screen.getByTestId("shelf-section")).toBeInTheDocument();
+    expect(await screen.findByTestId('home-desktop-view-stub')).toBeInTheDocument();
+    expect(screen.getByTestId('continue-section')).toBeInTheDocument();
+    expect(screen.getByTestId('shelf-section')).toBeInTheDocument();
   });
 
-  it("partitions continue reading and shelf without duplication", async () => {
+  it('partitions continue reading and shelf without duplication', async () => {
     configureLibrary([
-      makeLibraryBook({ id: "shelf-a", title: "Shelf A", progressPercentage: 0 }),
-      makeLibraryBook({ id: "progress-b", title: "Progress B", progressPercentage: 17 }),
-      makeLibraryBook({ id: "complete-c", title: "Complete C", progressPercentage: 100 }),
+      makeLibraryBook({ id: 'shelf-a', title: 'Shelf A', progressPercentage: 0 }),
+      makeLibraryBook({ id: 'progress-b', title: 'Progress B', progressPercentage: 17 }),
+      makeLibraryBook({ id: 'complete-c', title: 'Complete C', progressPercentage: 100 }),
     ]);
 
     render(App);
 
-    const continueSection = await screen.findByTestId("continue-section");
-    const shelfSection = await screen.findByTestId("shelf-section");
+    const continueSection = await screen.findByTestId('continue-section');
+    const shelfSection = await screen.findByTestId('shelf-section');
 
     await waitFor(() => {
-      expect(continueSection).toHaveTextContent("Progress B");
-      expect(continueSection).not.toHaveTextContent("Shelf A");
-      expect(continueSection).not.toHaveTextContent("Complete C");
+      expect(continueSection).toHaveTextContent('Progress B');
+      expect(continueSection).not.toHaveTextContent('Shelf A');
+      expect(continueSection).not.toHaveTextContent('Complete C');
 
-      expect(shelfSection).toHaveTextContent("Shelf A");
-      expect(shelfSection).toHaveTextContent("Complete C");
-      expect(shelfSection).not.toHaveTextContent("Progress B");
+      expect(shelfSection).toHaveTextContent('Shelf A');
+      expect(shelfSection).toHaveTextContent('Complete C');
+      expect(shelfSection).not.toHaveTextContent('Progress B');
     });
   });
 
-  it("shows empty-state messages for both sections when library is empty", async () => {
+  it('shows empty-state messages for both sections when library is empty', async () => {
     configureLibrary([]);
 
     render(App);
 
-    const continueSection = await screen.findByTestId("continue-section");
-    const shelfSection = await screen.findByTestId("shelf-section");
+    const continueSection = await screen.findByTestId('continue-section');
+    const shelfSection = await screen.findByTestId('shelf-section');
 
-    expect(continueSection).toHaveTextContent("No in-progress books yet");
-    expect(shelfSection).toHaveTextContent("Import a book to populate your shelf");
+    expect(continueSection).toHaveTextContent('No in-progress books yet');
+    expect(shelfSection).toHaveTextContent('Import a book to populate your shelf');
   });
 
-  it("opens shelf details modal and closes it via close action", async () => {
+  it('opens shelf details modal and closes it via close action', async () => {
     configureLibrary([
-      makeLibraryBook({ id: "shelf-a", title: "Shelf A", progressPercentage: 0, author: "Author A" }),
+      makeLibraryBook({
+        id: 'shelf-a',
+        title: 'Shelf A',
+        progressPercentage: 0,
+        author: 'Author A',
+      }),
     ]);
 
     render(App);
     const user = userEvent.setup();
 
-    const shelfButtons = await screen.findAllByRole("button", { name: /Shelf A/i });
+    const shelfButtons = await screen.findAllByRole('button', { name: /Shelf A/i });
     await user.click(shelfButtons[0]);
-    expect(await screen.findByRole("dialog", { name: "Shelf A" })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Shelf A' })).toBeInTheDocument();
 
-    const closeButtons = screen.getAllByRole("button", { name: "Close" });
+    const closeButtons = screen.getAllByRole('button', { name: 'Close' });
     await user.click(closeButtons[0]);
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Shelf A" })).not.toBeInTheDocument();
+      expect(screen.queryByRole('dialog', { name: 'Shelf A' })).not.toBeInTheDocument();
     });
   });
 
-  it("read from shelf promotes book, enters reader, and returns to home shell", async () => {
-    configureLibrary([
-      makeLibraryBook({ id: "shelf-a", title: "Shelf A", progressPercentage: 0 }),
-    ]);
+  it('read from shelf promotes book, enters reader, and returns to home shell', async () => {
+    configureLibrary([makeLibraryBook({ id: 'shelf-a', title: 'Shelf A', progressPercentage: 0 })]);
 
     render(App);
     const user = userEvent.setup();
 
-    const shelfButtons = await screen.findAllByRole("button", { name: /Shelf A/i });
+    const shelfButtons = await screen.findAllByRole('button', { name: /Shelf A/i });
     await user.click(shelfButtons[0]);
-    expect(await screen.findByRole("dialog", { name: "Shelf A" })).toBeInTheDocument();
-    const dialog = screen.getByRole("dialog", { name: "Shelf A" });
-    await user.click(within(dialog).getByRole("button", { name: "Read" }));
+    expect(await screen.findByRole('dialog', { name: 'Shelf A' })).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog', { name: 'Shelf A' });
+    await user.click(within(dialog).getByRole('button', { name: 'Read' }));
 
-    expect(await screen.findByRole("button", { name: "reader.biblioteca" })).toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: "Shelf A" })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'reader.biblioteca' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Shelf A' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "reader.biblioteca" }));
-    expect(await screen.findByTestId("home-desktop-view-stub")).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'reader.biblioteca' }));
+    expect(await screen.findByTestId('home-desktop-view-stub')).toBeInTheDocument();
 
-    const continueSection = screen.getByTestId("continue-section");
-    const shelfSection = screen.getByTestId("shelf-section");
-    expect(continueSection).toHaveTextContent("Shelf A");
-    expect(shelfSection).not.toHaveTextContent("Shelf A");
+    const continueSection = screen.getByTestId('continue-section');
+    const shelfSection = screen.getByTestId('shelf-section');
+    expect(continueSection).toHaveTextContent('Shelf A');
+    expect(shelfSection).not.toHaveTextContent('Shelf A');
   });
 
-  it("updates preview context when a continue-reading card is selected", async () => {
+  it('updates preview context when a continue-reading card is selected', async () => {
     configureLibrary([
-      makeLibraryBook({ id: "progress-b", title: "Progress B", progressPercentage: 17 }),
+      makeLibraryBook({ id: 'progress-b', title: 'Progress B', progressPercentage: 17 }),
     ]);
 
     render(App);
@@ -363,210 +367,239 @@ describe("App desktop home redesign QA scenarios", () => {
 
     // The card content button contains "Progress B" in its accessible name;
     // scoped to the continue section to avoid matching the ShelfActionMenu trigger
-    const continueSection = await screen.findByTestId("continue-section");
-    const cardButtons = within(continueSection).getAllByRole("button", { name: /Progress B/i });
+    const continueSection = await screen.findByTestId('continue-section');
+    const cardButtons = within(continueSection).getAllByRole('button', { name: /Progress B/i });
     // Pick the card content button (first one is the card, second is the actions menu trigger)
     await user.click(cardButtons[0]);
 
     await waitFor(() => {
-      expect(screen.getByTestId("selected-book-title")).toHaveTextContent("Progress B");
+      expect(screen.getByTestId('selected-book-title')).toHaveTextContent('Progress B');
     });
   });
 
-  it("navigates Home -> Highlights -> Settings -> Reader and back deterministically", async () => {
+  it('navigates Home -> Highlights -> Settings -> Reader and back deterministically', async () => {
     configureLibrary([
-      makeLibraryBook({ id: "shelf-a", title: "Shelf A", progressPercentage: 0 }),
-      makeLibraryBook({ id: "shelf-b", title: "Shelf B", progressPercentage: 0 }),
+      makeLibraryBook({ id: 'shelf-a', title: 'Shelf A', progressPercentage: 0 }),
+      makeLibraryBook({ id: 'shelf-b', title: 'Shelf B', progressPercentage: 0 }),
     ]);
 
     render(App);
     const user = userEvent.setup();
 
-    expect(await screen.findByTestId("home-desktop-view-stub")).toBeInTheDocument();
+    expect(await screen.findByTestId('home-desktop-view-stub')).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Highlights" }));
-    expect(screen.getByRole("heading", { name: "Highlights" })).toBeInTheDocument();
-    expect(screen.queryByTestId("home-desktop-view-stub")).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Highlights' }));
+    expect(screen.getByRole('heading', { name: 'Highlights' })).toBeInTheDocument();
+    expect(screen.queryByTestId('home-desktop-view-stub')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Inicio/ }));
-    expect(await screen.findByTestId("home-desktop-view-stub")).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Inicio/ }));
+    expect(await screen.findByTestId('home-desktop-view-stub')).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Settings" }));
-    expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Inicio/ }));
-    expect(await screen.findByTestId("home-desktop-view-stub")).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Inicio/ }));
+    expect(await screen.findByTestId('home-desktop-view-stub')).toBeInTheDocument();
 
-    const homeShelfButtons = screen.getAllByRole("button", { name: /Shelf A/i });
+    const homeShelfButtons = screen.getAllByRole('button', { name: /Shelf A/i });
     await user.click(homeShelfButtons[0]);
-    const shelfDialog = await screen.findByRole("dialog", { name: "Shelf A" });
-    await user.click(within(shelfDialog).getByRole("button", { name: "Read" }));
-    expect(await screen.findByRole("button", { name: "reader.biblioteca" })).toBeInTheDocument();
+    const shelfDialog = await screen.findByRole('dialog', { name: 'Shelf A' });
+    await user.click(within(shelfDialog).getByRole('button', { name: 'Read' }));
+    expect(await screen.findByRole('button', { name: 'reader.biblioteca' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "reader.biblioteca" }));
-    expect(await screen.findByTestId("home-desktop-view-stub")).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'reader.biblioteca' }));
+    expect(await screen.findByTestId('home-desktop-view-stub')).toBeInTheDocument();
   });
 
-  it("applies shelf tabs, smart-query search, and token warnings", async () => {
+  it('applies shelf tabs, smart-query search, and token warnings', async () => {
     configureLibrary([
-      makeShelfBook({ id: "fav-1", title: "Favorites Book", author: "Asimov", progressPercentage: 0, isFavorite: true }),
-      makeShelfBook({ id: "todo-1", title: "Todo Book", author: "Borges", progressPercentage: 0 }),
-      makeShelfBook({ id: "plan-1", title: "Plan Book", author: "Le Guin", progressPercentage: 0, toRead: true }),
+      makeShelfBook({
+        id: 'fav-1',
+        title: 'Favorites Book',
+        author: 'Asimov',
+        progressPercentage: 0,
+        isFavorite: true,
+      }),
+      makeShelfBook({ id: 'todo-1', title: 'Todo Book', author: 'Borges', progressPercentage: 0 }),
+      makeShelfBook({
+        id: 'plan-1',
+        title: 'Plan Book',
+        author: 'Le Guin',
+        progressPercentage: 0,
+        toRead: true,
+      }),
     ]);
 
     render(App);
     const user = userEvent.setup();
 
-    const shelfSection = await screen.findByTestId("shelf-section");
+    const shelfSection = await screen.findByTestId('shelf-section');
     await waitFor(() => {
-      expect(shelfSection).toHaveTextContent("Favorites Book");
-      expect(shelfSection).toHaveTextContent("Todo Book");
-      expect(shelfSection).toHaveTextContent("Plan Book");
+      expect(shelfSection).toHaveTextContent('Favorites Book');
+      expect(shelfSection).toHaveTextContent('Todo Book');
+      expect(shelfSection).toHaveTextContent('Plan Book');
     });
 
-    await user.click(screen.getByTestId("shelf-tab-favorites"));
+    await user.click(screen.getByTestId('shelf-tab-favorites'));
     await waitFor(() => {
-      expect(shelfSection).toHaveTextContent("Favorites Book");
-      expect(shelfSection).not.toHaveTextContent("Todo Book");
-      expect(shelfSection).not.toHaveTextContent("Plan Book");
+      expect(shelfSection).toHaveTextContent('Favorites Book');
+      expect(shelfSection).not.toHaveTextContent('Todo Book');
+      expect(shelfSection).not.toHaveTextContent('Plan Book');
     });
 
-    const searchInput = screen.getByTestId("shelf-search");
+    const searchInput = screen.getByTestId('shelf-search');
     await user.clear(searchInput);
-    await user.type(searchInput, "author:asimov foo:bar");
+    await user.type(searchInput, 'author:asimov foo:bar');
 
     await waitFor(() => {
-      expect(shelfSection).toHaveTextContent("Favorites Book");
-      expect(shelfSection).toHaveTextContent("Ignored tokens: foo:bar");
-      expect(screen.getByTestId("shelf-warnings")).toBeInTheDocument();
+      expect(shelfSection).toHaveTextContent('Favorites Book');
+      expect(shelfSection).toHaveTextContent('Ignored tokens: foo:bar');
+      expect(screen.getByTestId('shelf-warnings')).toBeInTheDocument();
     });
   });
 
-  it("switches shelf between grid and list modes", async () => {
+  it('switches shelf between grid and list modes', async () => {
     configureLibrary([
-      makeShelfBook({ id: "a-1", title: "Alpha", author: "Author A", progressPercentage: 0 }),
-      makeShelfBook({ id: "b-1", title: "Beta", author: "Author B", progressPercentage: 0 }),
+      makeShelfBook({ id: 'a-1', title: 'Alpha', author: 'Author A', progressPercentage: 0 }),
+      makeShelfBook({ id: 'b-1', title: 'Beta', author: 'Author B', progressPercentage: 0 }),
     ]);
 
     render(App);
     const user = userEvent.setup();
 
-    const shelfSection = await screen.findByTestId("shelf-section");
+    const shelfSection = await screen.findByTestId('shelf-section');
     await waitFor(() => {
-      expect(shelfSection.querySelector("ul.grid")).not.toBeNull();
+      expect(shelfSection.querySelector('ul.grid')).not.toBeNull();
     });
 
-    const viewToggle = screen.getByTestId("shelf-view-toggle");
-    await user.click(within(viewToggle).getByRole("button", { name: "Vista en lista" }));
+    const viewToggle = screen.getByTestId('shelf-view-toggle');
+    await user.click(within(viewToggle).getByRole('button', { name: 'Vista en lista' }));
 
     await waitFor(() => {
-      expect(shelfSection.querySelector("ul.space-y-2")).not.toBeNull();
+      expect(shelfSection.querySelector('ul.space-y-2')).not.toBeNull();
     });
   });
 
-  it("applies shelf sort control to the current filtered results", async () => {
+  it('applies shelf sort control to the current filtered results', async () => {
     configureLibrary([
-      makeShelfBook({ id: "book-c", title: "Gamma", author: "Carlos", progressPercentage: 0 }),
-      makeShelfBook({ id: "book-a", title: "Alpha", author: "Ana", progressPercentage: 0 }),
-      makeShelfBook({ id: "book-b", title: "Beta", author: "Bruno", progressPercentage: 0 }),
+      makeShelfBook({ id: 'book-c', title: 'Gamma', author: 'Carlos', progressPercentage: 0 }),
+      makeShelfBook({ id: 'book-a', title: 'Alpha', author: 'Ana', progressPercentage: 0 }),
+      makeShelfBook({ id: 'book-b', title: 'Beta', author: 'Bruno', progressPercentage: 0 }),
     ]);
 
     render(App);
     const user = userEvent.setup();
 
-    const shelfSection = await screen.findByTestId("shelf-section");
-    const sortSelect = screen.getByTestId("shelf-sort") as HTMLSelectElement;
-    await user.selectOptions(sortSelect, "author");
+    const shelfSection = await screen.findByTestId('shelf-section');
+    const sortSelect = screen.getByTestId('shelf-sort') as HTMLSelectElement;
+    await user.selectOptions(sortSelect, 'author');
 
     await waitFor(() => {
-      const titles = Array.from(shelfSection.querySelectorAll("li button p:first-child")).map((node) =>
-        node.textContent?.trim(),
+      const titles = Array.from(shelfSection.querySelectorAll('li button p:first-child')).map(
+        (node) => node.textContent?.trim(),
       );
-      expect(titles).toEqual(["Alpha", "Beta", "Gamma"]);
+      expect(titles).toEqual(['Alpha', 'Beta', 'Gamma']);
     });
   });
 
-  it("uses dedicated single-item visual treatment for shelf results", async () => {
+  it('uses dedicated single-item visual treatment for shelf results', async () => {
     configureLibrary([
-      makeShelfBook({ id: "solo-shelf", title: "Solo Shelf", author: "Only Author", progressPercentage: 0 }),
-      makeShelfBook({ id: "active-continue", title: "Active Continue", progressPercentage: 30 }),
+      makeShelfBook({
+        id: 'solo-shelf',
+        title: 'Solo Shelf',
+        author: 'Only Author',
+        progressPercentage: 0,
+      }),
+      makeShelfBook({ id: 'active-continue', title: 'Active Continue', progressPercentage: 30 }),
     ]);
 
     render(App);
 
-    const shelfSection = await screen.findByTestId("shelf-section");
+    const shelfSection = await screen.findByTestId('shelf-section');
 
     await waitFor(() => {
-      expect(shelfSection.querySelector("article")).not.toBeNull();
-      expect(shelfSection.querySelector("ul.grid")).toBeNull();
-      expect(shelfSection.querySelector("ul.space-y-2")).toBeNull();
-      expect(shelfSection).toHaveTextContent("Solo Shelf");
+      expect(shelfSection.querySelector('article')).not.toBeNull();
+      expect(shelfSection.querySelector('ul.grid')).toBeNull();
+      expect(shelfSection.querySelector('ul.space-y-2')).toBeNull();
+      expect(shelfSection).toHaveTextContent('Solo Shelf');
     });
   });
 
-  it("supports keyboard-accessible shelf action menu semantics and focus return", async () => {
+  it('supports keyboard-accessible shelf action menu semantics and focus return', async () => {
     configureLibrary([
-      makeShelfBook({ id: "menu-1", title: "Menu Book", author: "Author A", progressPercentage: 0 }),
+      makeShelfBook({
+        id: 'menu-1',
+        title: 'Menu Book',
+        author: 'Author A',
+        progressPercentage: 0,
+      }),
     ]);
 
     render(App);
     const user = userEvent.setup();
 
-    const trigger = await screen.findByTestId("shelf-actions-trigger-menu-1");
+    const trigger = await screen.findByTestId('shelf-actions-trigger-menu-1');
     trigger.focus();
 
-    await user.keyboard("{ArrowDown}");
-    const menu = await screen.findByRole("menu", { name: "Options for Menu Book" });
-    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await user.keyboard('{ArrowDown}');
+    const menu = await screen.findByRole('menu', { name: 'Options for Menu Book' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
 
-    await user.keyboard("{ArrowDown}");
-    expect(screen.getByRole("menuitem", { name: "Edit Metadata" })).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitem', { name: 'Edit Metadata' })).toHaveFocus();
 
-    await user.keyboard("{Escape}");
+    await user.keyboard('{Escape}');
     await waitFor(() => {
-      expect(screen.queryByRole("menu", { name: "Options for Menu Book" })).not.toBeInTheDocument();
+      expect(screen.queryByRole('menu', { name: 'Options for Menu Book' })).not.toBeInTheDocument();
     });
     expect(trigger).toHaveFocus();
 
-    await user.keyboard("{ArrowDown}");
-    expect(await screen.findByRole("menu", { name: "Options for Menu Book" })).toBeInTheDocument();
-    await user.keyboard("{Tab}");
+    await user.keyboard('{ArrowDown}');
+    expect(await screen.findByRole('menu', { name: 'Options for Menu Book' })).toBeInTheDocument();
+    await user.keyboard('{Tab}');
     await waitFor(() => {
-      expect(screen.queryByRole("menu", { name: "Options for Menu Book" })).not.toBeInTheDocument();
+      expect(screen.queryByRole('menu', { name: 'Options for Menu Book' })).not.toBeInTheDocument();
     });
 
     expect(menu).toBeTruthy();
   });
 
-  it("renders required shelf actions and wires favorite toggle + remove", async () => {
+  it('renders required shelf actions and wires favorite toggle + remove', async () => {
     configureLibrary([
-      makeShelfBook({ id: "actions-1", title: "Actions Book", author: "Author A", progressPercentage: 0 }),
+      makeShelfBook({
+        id: 'actions-1',
+        title: 'Actions Book',
+        author: 'Author A',
+        progressPercentage: 0,
+      }),
     ]);
 
     render(App);
     const user = userEvent.setup();
 
-    const trigger = await screen.findByTestId("shelf-actions-trigger-actions-1");
+    const trigger = await screen.findByTestId('shelf-actions-trigger-actions-1');
     trigger.focus();
-    await user.keyboard("{ArrowDown}");
+    await user.keyboard('{ArrowDown}');
 
-    expect(await screen.findByRole("menuitem", { name: "Add to favorites" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Edit Metadata" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Remove from shelf" })).toBeInTheDocument();
+    expect(await screen.findByRole('menuitem', { name: 'Add to favorites' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Edit Metadata' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Remove from shelf' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("menuitem", { name: "Add to favorites" }));
+    await user.click(screen.getByRole('menuitem', { name: 'Add to favorites' }));
 
     await waitFor(() => {
       expect(tauriClientMock.upsertBook).toHaveBeenCalled();
     });
 
     trigger.focus();
-    await user.keyboard("{ArrowDown}");
-    expect(await screen.findByRole("menuitem", { name: "Remove from favorites" })).toBeInTheDocument();
+    await user.keyboard('{ArrowDown}');
+    expect(
+      await screen.findByRole('menuitem', { name: 'Remove from favorites' }),
+    ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("menuitem", { name: "Remove from shelf" }));
+    await user.click(screen.getByRole('menuitem', { name: 'Remove from shelf' }));
     await waitFor(() => {
-      expect(tauriClientMock.hideBookFromLibrary).toHaveBeenCalledWith("actions-1");
+      expect(tauriClientMock.hideBookFromLibrary).toHaveBeenCalledWith('actions-1');
     });
   });
 });

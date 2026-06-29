@@ -1,4 +1,4 @@
-import { listBookmarks, saveBookmark, deleteBookmark } from "$lib/shared/api/tauriClient";
+import { listBookmarks, saveBookmark, deleteBookmark } from '$lib/shared/api/tauriClient';
 
 export type BookmarkItem = {
   id: string;
@@ -23,7 +23,7 @@ export function createBookmarksState(): {
     try {
       bookmarksList = await listBookmarks(bookId);
     } catch (err) {
-      console.error("Failed to load bookmarks:", err);
+      console.error('Failed to load bookmarks:', err);
       bookmarksList = [];
     } finally {
       bookmarksLoading = false;
@@ -41,7 +41,7 @@ export function createBookmarksState(): {
       });
       await loadBookmarks(bookId);
     } catch (err) {
-      console.error("Failed to save bookmark:", err);
+      console.error('Failed to save bookmark:', err);
     }
   }
 
@@ -50,13 +50,17 @@ export function createBookmarksState(): {
       await deleteBookmark(id);
       await loadBookmarks(bookId);
     } catch (err) {
-      console.error("Failed to delete bookmark:", err);
+      console.error('Failed to delete bookmark:', err);
     }
   }
 
   return {
-    get bookmarksList() { return bookmarksList; },
-    get bookmarksLoading() { return bookmarksLoading; },
+    get bookmarksList() {
+      return bookmarksList;
+    },
+    get bookmarksLoading() {
+      return bookmarksLoading;
+    },
     loadBookmarks,
     addBookmark,
     removeBookmark,

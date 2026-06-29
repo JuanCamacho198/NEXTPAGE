@@ -1,16 +1,16 @@
-import { writable } from "svelte/store";
-import { getLocaleSetting, upsertLocaleSetting } from "$lib/shared/api/tauriClient";
-import { SUPPORTED_UI_LOCALES, type UiLocale } from "$lib/types";
-import { messagesEn, type MessageKey } from "./messages.en";
-import { messagesEs } from "./messages.es";
-import { logger } from "$lib/shared/logger/Logger";
-import { createErrorEvent } from "$lib/shared/events/ErrorEvent";
+import { writable } from 'svelte/store';
+import { getLocaleSetting, upsertLocaleSetting } from '$lib/shared/api/tauriClient';
+import { SUPPORTED_UI_LOCALES, type UiLocale } from '$lib/types';
+import { messagesEn, type MessageKey } from './messages.en';
+import { messagesEs } from './messages.es';
+import { logger } from '$lib/shared/logger/Logger';
+import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 
 type TranslationParams = Record<string, string | number>;
 
-const DEFAULT_LOCALE: UiLocale = "es";
-const FALLBACK_LOCALE: UiLocale = "en";
-const LOCALE_STORAGE_KEY = "nextpage.ui.locale";
+const DEFAULT_LOCALE: UiLocale = 'es';
+const FALLBACK_LOCALE: UiLocale = 'en';
+const LOCALE_STORAGE_KEY = 'nextpage.ui.locale';
 
 const supportedLocales = new Set<string>(SUPPORTED_UI_LOCALES);
 
@@ -39,7 +39,7 @@ const interpolate = (template: string, params?: TranslationParams): string => {
 
   return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_match, key: string) => {
     const value = params[key];
-    return value === undefined ? "" : String(value);
+    return value === undefined ? '' : String(value);
   });
 };
 
@@ -57,15 +57,17 @@ const resolveMessage = (locale: UiLocale, key: MessageKey): string => {
     const logKey = `${locale}:${key}`;
     if (!missingKeysLogged.has(logKey)) {
       missingKeysLogged.add(logKey);
-      logger.warn(createErrorEvent({
-        severity: "low",
-        category: "runtime",
-        code: "I18N_MISSING_KEY",
-        message: `i18n key "${key}" not found in locale "${locale}", using fallback "${FALLBACK_LOCALE}"`,
-        context: { locale, key, fallbackLocale: FALLBACK_LOCALE },
-        source: "app_shell" as const,
-        recoverable: true,
-      }));
+      logger.warn(
+        createErrorEvent({
+          severity: 'low',
+          category: 'runtime',
+          code: 'I18N_MISSING_KEY',
+          message: `i18n key "${key}" not found in locale "${locale}", using fallback "${FALLBACK_LOCALE}"`,
+          context: { locale, key, fallbackLocale: FALLBACK_LOCALE },
+          source: 'app_shell' as const,
+          recoverable: true,
+        }),
+      );
     }
     return fallback;
   }
@@ -73,22 +75,24 @@ const resolveMessage = (locale: UiLocale, key: MessageKey): string => {
   // Log warning once per missing key (no translation found at all)
   if (!missingKeysLogged.has(key)) {
     missingKeysLogged.add(key);
-    logger.warn(createErrorEvent({
-      severity: "low",
-      category: "runtime",
-      code: "I18N_MISSING_KEY",
-      message: `i18n key "${key}" not found in any locale`,
-      context: { key, locales: Object.keys(dictionaries) },
-      source: "app_shell" as const,
-      recoverable: true,
-    }));
+    logger.warn(
+      createErrorEvent({
+        severity: 'low',
+        category: 'runtime',
+        code: 'I18N_MISSING_KEY',
+        message: `i18n key "${key}" not found in any locale`,
+        context: { key, locales: Object.keys(dictionaries) },
+        source: 'app_shell' as const,
+        recoverable: true,
+      }),
+    );
   }
 
   return key;
 };
 
 const createI18nStore = (): {
-  locale: import("svelte/store").Writable<UiLocale>;
+  locale: import('svelte/store').Writable<UiLocale>;
   setLocale: (nextLocale: string | UiLocale) => Promise<void>;
   initializeLocale: () => Promise<UiLocale>;
   t: (locale: UiLocale, key: MessageKey, params?: TranslationParams) => string;
@@ -107,7 +111,7 @@ const createI18nStore = (): {
 
   const initializeLocale = async (): Promise<UiLocale> => {
     const cachedRaw = globalThis.localStorage?.getItem(LOCALE_STORAGE_KEY);
-    if (typeof cachedRaw === "string") {
+    if (typeof cachedRaw === 'string') {
       const cached = toSupportedLocale(cachedRaw);
       if (cached) {
         localeStore.set(cached);
@@ -128,7 +132,7 @@ const createI18nStore = (): {
       return persisted;
     }
 
-    if (typeof persistedRaw === "string" && persistedRaw.length > 0) {
+    if (typeof persistedRaw === 'string' && persistedRaw.length > 0) {
       localeStore.set(FALLBACK_LOCALE);
       globalThis.localStorage?.setItem(LOCALE_STORAGE_KEY, FALLBACK_LOCALE);
       await upsertLocaleSetting(FALLBACK_LOCALE);

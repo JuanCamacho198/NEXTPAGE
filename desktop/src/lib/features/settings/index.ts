@@ -1,2 +1,2 @@
-export { default as SettingsPanel } from "./components/SettingsPanel.svelte";
-export * from "./profileSession";
+export { default as SettingsPanel } from './components/SettingsPanel.svelte';
+export * from './profileSession';

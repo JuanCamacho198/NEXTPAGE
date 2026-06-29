@@ -1,36 +1,36 @@
-import { fireEvent, render, screen } from "@testing-library/svelte";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
-import { SearchPanel } from "$lib/features/reader";
-import type { SearchBookTextResponse } from "$lib/types";
-import { searchBookText } from "$lib/shared/api/tauriClient";
+import { fireEvent, render, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+import { SearchPanel } from '$lib/features/reader';
+import type { SearchBookTextResponse } from '$lib/types';
+import { searchBookText } from '$lib/shared/api/tauriClient';
 
 const t = (key: string) => {
   const dictionary: Record<string, string> = {
-    "search.title": "In-Book Search",
-    "search.placeholder": "Search text in this book",
-    "search.search": "Search",
-    "search.searching": "Searching...",
-    "search.locator": "Locator",
-    "search.page": "Page",
-    "search.matches": "matches",
-    "search.prev": "Prev",
-    "search.next": "Next",
-    "search.noMatches": "No matches found for this query.",
+    'search.title': 'In-Book Search',
+    'search.placeholder': 'Search text in this book',
+    'search.search': 'Search',
+    'search.searching': 'Searching...',
+    'search.locator': 'Locator',
+    'search.page': 'Page',
+    'search.matches': 'matches',
+    'search.prev': 'Prev',
+    'search.next': 'Next',
+    'search.noMatches': 'No matches found for this query.',
   };
 
   return dictionary[key] ?? key;
 };
 
-vi.mock("$lib/shared/api/tauriClient", () => ({
+vi.mock('$lib/shared/api/tauriClient', () => ({
   searchBookText: vi.fn(),
 }));
 
 // Use type cast since vi.mocked is not available in vitest 4.x
 const mockedSearchBookText = searchBookText as unknown as ReturnType<typeof vi.fn>;
 
-describe("SearchPanel", () => {
-  it("shows no-match state and emits search/jump callbacks", async () => {
+describe('SearchPanel', () => {
+  it('shows no-match state and emits search/jump callbacks', async () => {
     mockedSearchBookText.mockResolvedValueOnce({
       items: [],
       total: 0,
@@ -39,8 +39,8 @@ describe("SearchPanel", () => {
     });
 
     const noMatches = await searchBookText({
-      bookId: "book-1",
-      query: "absent",
+      bookId: 'book-1',
+      query: 'absent',
       page: 1,
       pageSize: 200,
     });
@@ -49,7 +49,7 @@ describe("SearchPanel", () => {
     const onJump = vi.fn();
 
     const rendered = render(SearchPanel, {
-      bookId: "book-1",
+      bookId: 'book-1',
       disabledReason: null,
       isSearching: false,
       response: noMatches,
@@ -58,21 +58,21 @@ describe("SearchPanel", () => {
       t,
     });
 
-    expect(screen.getByText("No matches found for this query.")).toBeInTheDocument();
+    expect(screen.getByText('No matches found for this query.')).toBeInTheDocument();
 
     const user = userEvent.setup();
-    const input = screen.getByPlaceholderText("Search text in this book");
-    await user.type(input, "needle");
-    await fireEvent.submit(input.closest("form") as HTMLFormElement);
-    expect(onSearch).toHaveBeenCalledWith("needle", 1);
+    const input = screen.getByPlaceholderText('Search text in this book');
+    await user.type(input, 'needle');
+    await fireEvent.submit(input.closest('form') as HTMLFormElement);
+    expect(onSearch).toHaveBeenCalledWith('needle', 1);
 
     const withMatches: SearchBookTextResponse = {
       items: [
         {
-          chunkId: "chunk-1",
-          bookId: "book-1",
-          locator: "epubcfi(/6/2)",
-          snippet: "...needle...",
+          chunkId: 'chunk-1',
+          bookId: 'book-1',
+          locator: 'epubcfi(/6/2)',
+          snippet: '...needle...',
           rank: 0.2,
         },
       ],
@@ -83,7 +83,7 @@ describe("SearchPanel", () => {
 
     rendered.unmount();
     render(SearchPanel, {
-      bookId: "book-1",
+      bookId: 'book-1',
       disabledReason: null,
       isSearching: false,
       response: withMatches,
@@ -91,11 +91,11 @@ describe("SearchPanel", () => {
       onJump,
       t,
     });
-    await user.click(screen.getByRole("button", { name: /needle/ }));
+    await user.click(screen.getByRole('button', { name: /needle/ }));
 
     expect(onJump).toHaveBeenCalledTimes(1);
     expect(onJump.mock.calls[0][0]).toMatchObject({
-      locator: "epubcfi(/6/2)",
+      locator: 'epubcfi(/6/2)',
     });
   });
 });

@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { appState } from "$lib/shared/stores/AppState.svelte";
-  import { EditMetadataModal, CollectionManager, BulkImportModal } from "$lib/features/library";
-  import ErrorToast from "$lib/shared/ui/feedback/ErrorToast.svelte";
-  import ErrorFallback from "$lib/shared/ui/feedback/ErrorFallback.svelte";
+  import { appState } from '$lib/shared/stores/AppState.svelte';
+  import { EditMetadataModal, CollectionManager, BulkImportModal } from '$lib/features/library';
+  import ErrorToast from '$lib/shared/ui/feedback/ErrorToast.svelte';
+  import ErrorFallback from '$lib/shared/ui/feedback/ErrorFallback.svelte';
 </script>
 
 <EditMetadataModal
-  book={appState.editingBook as import("$lib/types").LibraryBookDto | null}
+  book={appState.editingBook as import('$lib/types').LibraryBookDto | null}
   open={appState.editingBook !== null}
   onClose={() => {
     appState.editingBook = null;

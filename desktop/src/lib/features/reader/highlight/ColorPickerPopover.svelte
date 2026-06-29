@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from "svelte";
+  import { tick } from 'svelte';
 
   type Props = {
     open: boolean;
@@ -11,7 +11,7 @@
 
   let { open, anchor, currentColor, onSelect, onClose }: Props = $props();
 
-  let inputValue = $state("");
+  let inputValue = $state('');
   let popoverEl = $state<HTMLDivElement | null>(null);
 
   const HEX_REGEX = /^#([0-9A-Fa-f]{6})$/;
@@ -28,7 +28,7 @@
   function handleTextInput(event: Event): void {
     const target = event.target as HTMLInputElement;
     let value = target.value.trim();
-    if (value && !value.startsWith("#")) {
+    if (value && !value.startsWith('#')) {
       value = `#${value}`;
     }
     inputValue = value;
@@ -41,10 +41,10 @@
   }
 
   function handleKeydown(event: KeyboardEvent): void {
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       event.preventDefault();
       onClose();
-    } else if (event.key === "Enter") {
+    } else if (event.key === 'Enter') {
       event.preventDefault();
       handleSave();
     }
@@ -64,7 +64,10 @@
   <div
     bind:this={popoverEl}
     class="fixed z-[110] w-52 rounded-xl border border-(--color-highlight-menu-border) bg-(--color-color-picker-bg) p-3 shadow-xl"
-    style="left: {Math.max(8, Math.min(anchor.getBoundingClientRect().left, window.innerWidth - 224))}px; top: {anchor.getBoundingClientRect().bottom + 8}px;"
+    style="left: {Math.max(
+      8,
+      Math.min(anchor.getBoundingClientRect().left, window.innerWidth - 224),
+    )}px; top: {anchor.getBoundingClientRect().bottom + 8}px;"
     role="dialog"
     aria-label="Custom color picker"
     tabindex="-1"

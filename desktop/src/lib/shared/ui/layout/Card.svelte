@@ -1,12 +1,12 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
+  import type { Snippet } from 'svelte';
 
   type Props = {
     title?: string;
     subtitle?: string;
-    variant?: "default" | "surface" | "interactive";
-    padding?: "none" | "sm" | "md" | "lg";
-    size?: "sm" | "md" | "lg";
+    variant?: 'default' | 'surface' | 'interactive';
+    padding?: 'none' | 'sm' | 'md' | 'lg';
+    size?: 'sm' | 'md' | 'lg';
     clickable?: boolean;
     media?: Snippet;
     default?: Snippet;
@@ -18,46 +18,46 @@
   let {
     title,
     subtitle,
-    variant = "default",
-    padding = "md",
-    size = "md",
+    variant = 'default',
+    padding = 'md',
+    size = 'md',
     clickable = false,
     media,
     default: content,
     actions,
     onclick,
-    class: className = ""
+    class: className = '',
   }: Props = $props();
 
   const paddingClasses: Record<string, string> = {
-    none: "",
-    sm: "p-3",
-    md: "p-4",
-    lg: "p-6"
+    none: '',
+    sm: 'p-3',
+    md: 'p-4',
+    lg: 'p-6',
   };
 
   const sizeClasses: Record<string, string> = {
-    sm: "rounded-lg",
-    md: "rounded-xl",
-    lg: "rounded-2xl"
+    sm: 'rounded-lg',
+    md: 'rounded-xl',
+    lg: 'rounded-2xl',
   };
 
   const variantClasses: Record<string, string> = {
-    default: "",
-    surface: "bg-(--color-surface-dim)",
-    interactive: "hover:border-(--color-primary) hover:shadow-md transition-all duration-200"
+    default: '',
+    surface: 'bg-(--color-surface-dim)',
+    interactive: 'hover:border-(--color-primary) hover:shadow-md transition-all duration-200',
   };
 
-  let baseClasses = $derived(`${sizeClasses[size]} border border-(--color-border) bg-(--color-surface) overflow-hidden`);
-
-
+  let baseClasses = $derived(
+    `${sizeClasses[size]} border border-(--color-border) bg-(--color-surface) overflow-hidden`,
+  );
 </script>
 
 {#if clickable}
   <button
     type="button"
     class="{baseClasses} {variantClasses[variant]} cursor-pointer {className}"
-    onclick={onclick}
+    {onclick}
   >
     {#if media}
       <figure class="media">

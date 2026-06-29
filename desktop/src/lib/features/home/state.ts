@@ -2,4 +2,4 @@
 // Re-exports from state.svelte.ts for backward compat.
 // TODO: Remove once all components migrate to AppState.
 
-export { homeState, type AppRoute } from "./state.svelte";
+export { homeState, type AppRoute } from './state.svelte';

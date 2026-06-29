@@ -1,4 +1,4 @@
-import { open } from "@tauri-apps/plugin-dialog";
+import { open } from '@tauri-apps/plugin-dialog';
 
 export type FilePickerResult = {
   path: string;
@@ -12,8 +12,8 @@ export type FolderPickerResult = {
 
 const filters = [
   {
-    name: "Books",
-    extensions: ["pdf", "epub"],
+    name: 'Books',
+    extensions: ['pdf', 'epub'],
   },
 ];
 
@@ -21,7 +21,7 @@ export async function pickFile(): Promise<FilePickerResult | null> {
   const selected = await open({
     multiple: false,
     filters,
-    title: "Select a book",
+    title: 'Select a book',
   });
 
   if (!selected) {
@@ -38,7 +38,7 @@ export async function pickFile(): Promise<FilePickerResult | null> {
   };
 }
 
-export async function pickFolder(title = "Select a folder"): Promise<FolderPickerResult | null> {
+export async function pickFolder(title = 'Select a folder'): Promise<FolderPickerResult | null> {
   const selected = await open({
     directory: true,
     multiple: false,

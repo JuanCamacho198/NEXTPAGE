@@ -4,7 +4,9 @@ export interface ConflictResolver<T> {
   resolve(local: T | null | undefined, remote: T): T;
 }
 
-export class LastWriteWinsConflictResolver<T extends VersionedSyncRecord> implements ConflictResolver<T> {
+export class LastWriteWinsConflictResolver<
+  T extends VersionedSyncRecord,
+> implements ConflictResolver<T> {
   resolve(local: T | null | undefined, remote: T): T {
     if (!local) return remote;
 

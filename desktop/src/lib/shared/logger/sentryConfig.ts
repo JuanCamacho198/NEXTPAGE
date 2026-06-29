@@ -4,8 +4,8 @@ export interface SentrySettings {
   enabled: boolean;
 }
 
-const ENV_DSN_KEY = "SENTRY_DSN";
-const SETTINGS_DSN_KEY = "sentry.dsn";
+const ENV_DSN_KEY = 'SENTRY_DSN';
+const SETTINGS_DSN_KEY = 'sentry.dsn';
 
 const DEFAULT_TRACES_SAMPLE_RATE = 0.1;
 
@@ -37,7 +37,7 @@ export const getSentrySettings = async (): Promise<SentrySettings> => {
   }
 
   return {
-    dsn: settingsDsn ?? envDsn ?? "",
+    dsn: settingsDsn ?? envDsn ?? '',
     enabled: settingsEnabled ?? !!envDsn,
     tracesSampleRate: settingsSampleRate ?? DEFAULT_TRACES_SAMPLE_RATE,
   };
@@ -46,10 +46,10 @@ export const getSentrySettings = async (): Promise<SentrySettings> => {
 export const createSentrySettings = (
   dsn?: string,
   enabled?: boolean,
-  tracesSampleRate?: number
+  tracesSampleRate?: number,
 ): SentrySettings => {
   return {
-    dsn: dsn ?? getSentryDsn() ?? "",
+    dsn: dsn ?? getSentryDsn() ?? '',
     enabled: enabled ?? !!dsn,
     tracesSampleRate: tracesSampleRate ?? DEFAULT_TRACES_SAMPLE_RATE,
   };

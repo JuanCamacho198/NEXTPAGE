@@ -6,7 +6,17 @@ describe('ColorPickerPopover', () => {
   function createAnchor(): HTMLElement {
     const el = document.createElement('button');
     document.body.appendChild(el);
-    el.getBoundingClientRect = () => ({ left: 100, top: 100, width: 24, height: 24, right: 124, bottom: 124, x: 100, y: 100 } as DOMRect);
+    el.getBoundingClientRect = () =>
+      ({
+        left: 100,
+        top: 100,
+        width: 24,
+        height: 24,
+        right: 124,
+        bottom: 124,
+        x: 100,
+        y: 100,
+      }) as DOMRect;
     return el;
   }
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { debugState } from "./debugState.svelte";
+  import { debugState } from './debugState.svelte';
 </script>
 
 <button

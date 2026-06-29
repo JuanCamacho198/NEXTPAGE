@@ -1,7 +1,7 @@
 /* ============================================
  * MAIN STYLES — Import tokens and add app-specific styles
  * ============================================ */
-@import "./lib/shared/styles/tokens.css";
+@import './lib/shared/styles/tokens.css';
 
 /* ============================================
  * APP CUSTOM STYLES
@@ -69,12 +69,12 @@ label {
   margin-bottom: 6px;
 }
 
-input[type="text"],
-input[type="range"] {
+input[type='text'],
+input[type='range'] {
   width: 100%;
 }
 
-input[type="text"] {
+input[type='text'] {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-primary);
@@ -100,7 +100,8 @@ input[type="text"] {
  * BUTTON OVERRIDES (tokens.css already has base)
  * ============================================ */
 button {
-  transition: transform var(--duration-fast) var(--ease-bounce),
-              opacity var(--duration-fast) var(--ease-smooth),
-              box-shadow var(--duration-normal) var(--ease-smooth);
+  transition:
+    transform var(--duration-fast) var(--ease-bounce),
+    opacity var(--duration-fast) var(--ease-smooth),
+    box-shadow var(--duration-normal) var(--ease-smooth);
 }

@@ -1,4 +1,4 @@
-import { invoke } from "$lib/shared/api/invokeWrapper";
+import { invoke } from '$lib/shared/api/invokeWrapper';
 import type {
   AppSettingDto,
   BookCollectionInput,
@@ -25,7 +25,7 @@ import type {
   ReaderSettings,
   ReaderThemeMode,
   DiagnoseResult,
-} from "$lib/types";
+} from '$lib/types';
 import {
   UI_LOCALE_SETTING_KEY,
   READER_THEME_MODE_SETTING_KEY,
@@ -50,13 +50,9 @@ import {
   READER_SHOW_FOOTER_SETTING_KEY,
   READER_SHOW_PAGE_NUMBERS_SETTING_KEY,
   READER_PROGRESS_INDICATOR_SETTING_KEY,
-} from "$lib/types";
+} from '$lib/types';
 
-import type {
-  ReaderTextAlign,
-  ReaderDirection,
-  ReaderProgressIndicator,
-} from "$lib/types";
+import type { ReaderTextAlign, ReaderDirection, ReaderProgressIndicator } from '$lib/types';
 
 type MaybeCommandError = Error & { commandError?: CommandErrorDto };
 
@@ -79,7 +75,7 @@ type RawHighlightDto = {
 };
 
 const normalizeMessage = (error: unknown): string => {
-  if (typeof error === "string") {
+  if (typeof error === 'string') {
     return error;
   }
 
@@ -87,19 +83,19 @@ const normalizeMessage = (error: unknown): string => {
     return error.message;
   }
 
-  if (typeof error === "object" && error !== null) {
+  if (typeof error === 'object' && error !== null) {
     const candidate = (error as { message?: unknown; error?: unknown }).message;
-    if (typeof candidate === "string" && candidate.length > 0) {
+    if (typeof candidate === 'string' && candidate.length > 0) {
       return candidate;
     }
 
     const nestedError = (error as { error?: unknown }).error;
-    if (typeof nestedError === "string" && nestedError.length > 0) {
+    if (typeof nestedError === 'string' && nestedError.length > 0) {
       return nestedError;
     }
   }
 
-  return "Command invocation failed";
+  return 'Command invocation failed';
 };
 
 const parseCommandError = (raw: unknown): CommandErrorDto | null => {
@@ -112,9 +108,9 @@ const parseCommandError = (raw: unknown): CommandErrorDto | null => {
     const parsed = JSON.parse(text) as CommandErrorDto;
     if (
       parsed &&
-      typeof parsed.code === "string" &&
-      typeof parsed.message === "string" &&
-      typeof parsed.recoverable === "boolean"
+      typeof parsed.code === 'string' &&
+      typeof parsed.message === 'string' &&
+      typeof parsed.recoverable === 'boolean'
     ) {
       return parsed;
     }
@@ -134,32 +130,29 @@ const attachCommandError = (error: unknown): never => {
   throw wrapped;
 };
 
-const normalizePageNumber = (
-  pageNumberValue: unknown,
-  legacyPageValue: unknown,
-): number => {
-  const hasCanonical = typeof pageNumberValue !== "undefined";
-  const hasLegacy = typeof legacyPageValue !== "undefined";
+const normalizePageNumber = (pageNumberValue: unknown, legacyPageValue: unknown): number => {
+  const hasCanonical = typeof pageNumberValue !== 'undefined';
+  const hasLegacy = typeof legacyPageValue !== 'undefined';
 
   if (!hasCanonical && !hasLegacy) {
-    throw new Error("Highlight payload requires pageNumber (or legacy page)");
+    throw new Error('Highlight payload requires pageNumber (or legacy page)');
   }
 
   const canonical =
-    typeof pageNumberValue === "number" && Number.isFinite(pageNumberValue)
+    typeof pageNumberValue === 'number' && Number.isFinite(pageNumberValue)
       ? pageNumberValue
       : null;
   const legacy =
-    typeof legacyPageValue === "number" && Number.isFinite(legacyPageValue)
+    typeof legacyPageValue === 'number' && Number.isFinite(legacyPageValue)
       ? legacyPageValue
       : null;
 
   if (hasCanonical && canonical === null) {
-    throw new Error("Highlight payload pageNumber must be a finite number");
+    throw new Error('Highlight payload pageNumber must be a finite number');
   }
 
   if (hasLegacy && legacy === null) {
-    throw new Error("Highlight payload page must be a finite number");
+    throw new Error('Highlight payload page must be a finite number');
   }
 
   if (canonical !== null && legacy !== null && canonical !== legacy) {
@@ -170,7 +163,7 @@ const normalizePageNumber = (
 
   const resolved = canonical ?? legacy;
   if (resolved === null || !Number.isInteger(resolved) || resolved <= 0) {
-    throw new Error("Highlight payload page number must be a positive integer");
+    throw new Error('Highlight payload page number must be a positive integer');
   }
 
   return resolved;
@@ -191,12 +184,12 @@ const normalizeHighlightDto = (payload: RawHighlightDto): HighlightDto => {
 };
 
 export const listBooks = async (): Promise<BookDto[]> => {
-  return invoke<BookDto[]>("listBooks");
+  return invoke<BookDto[]>('listBooks');
 };
 
 export const scanFolder = async (path: string): Promise<ScanFolderResult> => {
   try {
-    return await invoke<ScanFolderResult>("scanFolder", { path });
+    return await invoke<ScanFolderResult>('scanFolder', { path });
   } catch (error) {
     return attachCommandError(error);
   }
@@ -204,7 +197,7 @@ export const scanFolder = async (path: string): Promise<ScanFolderResult> => {
 
 export const listLibraryBooks = async (responseVersion = 1): Promise<LibraryBookDto[]> => {
   try {
-    return await invoke<LibraryBookDto[]>("listLibraryBooks", {
+    return await invoke<LibraryBookDto[]>('listLibraryBooks', {
       payload: {
         responseVersion,
       },
@@ -224,28 +217,28 @@ export const upsertBook = async (book: {
   currentPage?: number;
   totalPages?: number;
 }): Promise<void> => {
-  await invoke("upsertBook", { book });
+  await invoke('upsertBook', { book });
 };
 
 export const getProgress = async (bookId: string): Promise<ReadingProgressDto | null> => {
-  return invoke<ReadingProgressDto | null>("getProgress", { bookId });
+  return invoke<ReadingProgressDto | null>('getProgress', { bookId });
 };
 
 export const saveProgress = async (payload: SaveProgressInput): Promise<void> => {
-  await invoke("saveProgress", { payload });
+  await invoke('saveProgress', { payload });
 };
 
 export const saveReadingSession = async (payload: ReadingSessionInput): Promise<void> => {
-  await invoke("saveReadingSession", { payload });
+  await invoke('saveReadingSession', { payload });
 };
 
 export const upsertProgress = async (progress: ReadingProgressDto): Promise<void> => {
-  await invoke("upsertProgress", { progress });
+  await invoke('upsertProgress', { progress });
 };
 
 export const getReadingStats = async (bookId?: string): Promise<ReadingStatsSummaryDto> => {
   try {
-    return await invoke<ReadingStatsSummaryDto>("getReadingStats", {
+    return await invoke<ReadingStatsSummaryDto>('getReadingStats', {
       bookId,
     });
   } catch (error) {
@@ -255,7 +248,7 @@ export const getReadingStats = async (bookId?: string): Promise<ReadingStatsSumm
 
 export const getSettings = async (): Promise<AppSettingDto[]> => {
   try {
-    return await invoke<AppSettingDto[]>("getSettings");
+    return await invoke<AppSettingDto[]>('getSettings');
   } catch (error) {
     return attachCommandError(error);
   }
@@ -263,7 +256,7 @@ export const getSettings = async (): Promise<AppSettingDto[]> => {
 
 export const upsertSettings = async (settings: AppSettingDto[]): Promise<void> => {
   try {
-    await invoke("upsertSettings", { settings });
+    await invoke('upsertSettings', { settings });
   } catch (error) {
     attachCommandError(error);
   }
@@ -282,32 +275,38 @@ const readSettingValue = (settings: AppSettingDto[], key: string): unknown => {
   }
 };
 
-const READER_THEME_MODES: ReadonlyArray<ReaderThemeMode> = ["paper", "sepia", "night", "dark", "blue"];
-const TEXT_ALIGN_MODES: ReadonlyArray<ReaderTextAlign> = ["left", "center", "right", "justify"];
-const DIRECTION_MODES: ReadonlyArray<ReaderDirection> = ["ltr", "rtl"];
-const PROGRESS_MODES: ReadonlyArray<ReaderProgressIndicator> = ["percentage", "chapter", "time"];
+const READER_THEME_MODES: ReadonlyArray<ReaderThemeMode> = [
+  'paper',
+  'sepia',
+  'night',
+  'dark',
+  'blue',
+];
+const TEXT_ALIGN_MODES: ReadonlyArray<ReaderTextAlign> = ['left', 'center', 'right', 'justify'];
+const DIRECTION_MODES: ReadonlyArray<ReaderDirection> = ['ltr', 'rtl'];
+const PROGRESS_MODES: ReadonlyArray<ReaderProgressIndicator> = ['percentage', 'chapter', 'time'];
 
 const DEFAULT_READER_SETTINGS: ReaderSettings = {
-  themeMode: "paper",
+  themeMode: 'paper',
   brightness: 100,
   contrast: 100,
-  selectionColor: "#3388ff",
+  selectionColor: '#3388ff',
   epub: {
     fontSize: 100,
-    fontFamily: "serif",
+    fontFamily: 'serif',
   },
   lineHeight: 1.8,
   letterSpacing: 0,
   paragraphSpacing: 1,
-  textAlign: "left",
-  direction: "ltr",
+  textAlign: 'left',
+  direction: 'ltr',
   hyphenation: false,
   verticalScrolling: false,
   margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
   showHeader: true,
   showFooter: true,
   showPageNumbers: true,
-  progressIndicator: "percentage",
+  progressIndicator: 'percentage',
 };
 
 const clampInteger = (value: number, min: number, max: number): number => {
@@ -315,7 +314,7 @@ const clampInteger = (value: number, min: number, max: number): number => {
 };
 
 const sanitizeThemeMode = (value: unknown): ReaderThemeMode => {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return DEFAULT_READER_SETTINGS.themeMode;
   }
 
@@ -333,7 +332,7 @@ const sanitizeRangedNumber = (
   max: number,
   fallback: number,
 ): number => {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     return fallback;
   }
 
@@ -341,7 +340,7 @@ const sanitizeRangedNumber = (
 };
 
 const sanitizeFontFamily = (value: unknown): string => {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return DEFAULT_READER_SETTINGS.epub.fontFamily;
   }
 
@@ -358,22 +357,22 @@ const sanitizeEnum = <T extends string>(
   allowed: ReadonlyArray<T>,
   fallback: T,
 ): T => {
-  if (typeof value !== "string") return fallback;
+  if (typeof value !== 'string') return fallback;
   const normalized = value.trim().toLowerCase() as T;
   if (!allowed.includes(normalized)) return fallback;
   return normalized;
 };
 
 const sanitizeBoolean = (value: unknown, fallback: boolean): boolean => {
-  if (typeof value === "boolean") return value;
+  if (typeof value === 'boolean') return value;
   return fallback;
 };
 
 const sanitizeMargins = (
   value: unknown,
-  fallback: ReaderSettings["margins"],
-): ReaderSettings["margins"] => {
-  if (typeof value !== "object" || value === null) return fallback;
+  fallback: ReaderSettings['margins'],
+): ReaderSettings['margins'] => {
+  if (typeof value !== 'object' || value === null) return fallback;
 
   const obj = value as Record<string, unknown>;
   return {
@@ -390,30 +389,24 @@ const sanitizeRangedFloat = (
   max: number,
   fallback: number,
 ): number => {
-  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
   if (value < min) return min;
   if (value > max) return max;
   // Round to 1 decimal for float ranges
   return Math.round(value * 10) / 10;
 };
 
-export const sanitizeReaderSettings = (
-  input?: Partial<ReaderSettings> | null,
-): ReaderSettings => {
+export const sanitizeReaderSettings = (input?: Partial<ReaderSettings> | null): ReaderSettings => {
   const next = input ?? {};
 
-  const selectionColor = typeof next.selectionColor === "string" && next.selectionColor.trim().length > 0
-    ? next.selectionColor.trim()
-    : DEFAULT_READER_SETTINGS.selectionColor;
+  const selectionColor =
+    typeof next.selectionColor === 'string' && next.selectionColor.trim().length > 0
+      ? next.selectionColor.trim()
+      : DEFAULT_READER_SETTINGS.selectionColor;
 
   return {
     themeMode: sanitizeThemeMode(next.themeMode),
-    brightness: sanitizeRangedNumber(
-      next.brightness,
-      50,
-      150,
-      DEFAULT_READER_SETTINGS.brightness,
-    ),
+    brightness: sanitizeRangedNumber(next.brightness, 50, 150, DEFAULT_READER_SETTINGS.brightness),
     contrast: sanitizeRangedNumber(next.contrast, 50, 150, DEFAULT_READER_SETTINGS.contrast),
     selectionColor,
     epub: {
@@ -427,17 +420,34 @@ export const sanitizeReaderSettings = (
     },
     // New layout fields
     lineHeight: sanitizeRangedFloat(next.lineHeight, 1.0, 3.0, DEFAULT_READER_SETTINGS.lineHeight),
-    letterSpacing: sanitizeRangedNumber(next.letterSpacing, -2, 10, DEFAULT_READER_SETTINGS.letterSpacing),
-    paragraphSpacing: sanitizeRangedFloat(next.paragraphSpacing, 0, 4, DEFAULT_READER_SETTINGS.paragraphSpacing),
+    letterSpacing: sanitizeRangedNumber(
+      next.letterSpacing,
+      -2,
+      10,
+      DEFAULT_READER_SETTINGS.letterSpacing,
+    ),
+    paragraphSpacing: sanitizeRangedFloat(
+      next.paragraphSpacing,
+      0,
+      4,
+      DEFAULT_READER_SETTINGS.paragraphSpacing,
+    ),
     textAlign: sanitizeEnum(next.textAlign, TEXT_ALIGN_MODES, DEFAULT_READER_SETTINGS.textAlign),
     direction: sanitizeEnum(next.direction, DIRECTION_MODES, DEFAULT_READER_SETTINGS.direction),
     hyphenation: sanitizeBoolean(next.hyphenation, DEFAULT_READER_SETTINGS.hyphenation),
-    verticalScrolling: sanitizeBoolean(next.verticalScrolling, DEFAULT_READER_SETTINGS.verticalScrolling),
+    verticalScrolling: sanitizeBoolean(
+      next.verticalScrolling,
+      DEFAULT_READER_SETTINGS.verticalScrolling,
+    ),
     margins: sanitizeMargins(next.margins, DEFAULT_READER_SETTINGS.margins),
     showHeader: sanitizeBoolean(next.showHeader, DEFAULT_READER_SETTINGS.showHeader),
     showFooter: sanitizeBoolean(next.showFooter, DEFAULT_READER_SETTINGS.showFooter),
     showPageNumbers: sanitizeBoolean(next.showPageNumbers, DEFAULT_READER_SETTINGS.showPageNumbers),
-    progressIndicator: sanitizeEnum(next.progressIndicator, PROGRESS_MODES, DEFAULT_READER_SETTINGS.progressIndicator),
+    progressIndicator: sanitizeEnum(
+      next.progressIndicator,
+      PROGRESS_MODES,
+      DEFAULT_READER_SETTINGS.progressIndicator,
+    ),
   };
 };
 
@@ -560,7 +570,7 @@ export const getDefaultReaderSettings = (): ReaderSettings => {
 export const getLocaleSetting = async (): Promise<string | null> => {
   const settings = await getSettings();
   const rawLocale = readSettingValue(settings, UI_LOCALE_SETTING_KEY);
-  if (typeof rawLocale !== "string" || rawLocale.trim().length === 0) {
+  if (typeof rawLocale !== 'string' || rawLocale.trim().length === 0) {
     return null;
   }
 
@@ -597,21 +607,28 @@ export const getReaderSettings = async (): Promise<ReaderSettings> => {
     direction: readSettingValue(settings, READER_DIRECTION_SETTING_KEY) as ReaderDirection,
     hyphenation: readSettingValue(settings, READER_HYPHENATION_SETTING_KEY) as boolean,
     verticalScrolling: readSettingValue(settings, READER_VERTICAL_SCROLLING_SETTING_KEY) as boolean,
-    margins: readSettingValue(settings, READER_MARGINS_SETTING_KEY) as ReaderSettings["margins"]
-      || {
-        top: (readSettingValue(settings, READER_MARGIN_TOP_SETTING_KEY) as number) ?? 1.5,
-        bottom: (readSettingValue(settings, READER_MARGIN_BOTTOM_SETTING_KEY) as number) ?? 1.5,
-        left: (readSettingValue(settings, READER_MARGIN_LEFT_SETTING_KEY) as number) ?? 2,
-        right: (readSettingValue(settings, READER_MARGIN_RIGHT_SETTING_KEY) as number) ?? 2,
-      },
+    margins: (readSettingValue(
+      settings,
+      READER_MARGINS_SETTING_KEY,
+    ) as ReaderSettings['margins']) || {
+      top: (readSettingValue(settings, READER_MARGIN_TOP_SETTING_KEY) as number) ?? 1.5,
+      bottom: (readSettingValue(settings, READER_MARGIN_BOTTOM_SETTING_KEY) as number) ?? 1.5,
+      left: (readSettingValue(settings, READER_MARGIN_LEFT_SETTING_KEY) as number) ?? 2,
+      right: (readSettingValue(settings, READER_MARGIN_RIGHT_SETTING_KEY) as number) ?? 2,
+    },
     showHeader: readSettingValue(settings, READER_SHOW_HEADER_SETTING_KEY) as boolean,
     showFooter: readSettingValue(settings, READER_SHOW_FOOTER_SETTING_KEY) as boolean,
     showPageNumbers: readSettingValue(settings, READER_SHOW_PAGE_NUMBERS_SETTING_KEY) as boolean,
-    progressIndicator: readSettingValue(settings, READER_PROGRESS_INDICATOR_SETTING_KEY) as ReaderProgressIndicator,
+    progressIndicator: readSettingValue(
+      settings,
+      READER_PROGRESS_INDICATOR_SETTING_KEY,
+    ) as ReaderProgressIndicator,
   });
 };
 
-export const upsertReaderSettings = async (settings: Partial<ReaderSettings>): Promise<ReaderSettings> => {
+export const upsertReaderSettings = async (
+  settings: Partial<ReaderSettings>,
+): Promise<ReaderSettings> => {
   const sanitized = sanitizeReaderSettings(settings);
   await upsertSettings(buildReaderSettingsPayload(sanitized));
   return sanitized;
@@ -628,7 +645,7 @@ export const indexBookText = async (payload: {
   chunks: Array<{ locator: string; chunkIndex: number; textContent: string }>;
 }): Promise<void> => {
   try {
-    await invoke("indexBookText", { payload });
+    await invoke('indexBookText', { payload });
   } catch (error) {
     attachCommandError(error);
   }
@@ -638,7 +655,7 @@ export const searchBookText = async (
   payload: SearchBookTextInput,
 ): Promise<SearchBookTextResponse> => {
   try {
-    return await invoke<SearchBookTextResponse>("searchBookText", { payload });
+    return await invoke<SearchBookTextResponse>('searchBookText', { payload });
   } catch (error) {
     return attachCommandError(error);
   }
@@ -650,20 +667,24 @@ export const importBook = async (input: {
   filePath: string;
   format: string;
 }): Promise<{ id: string }> => {
-  return invoke<{ id: string }>("importBook", { input });
+  return invoke<{ id: string }>('importBook', { input });
 };
 
 export const getFileSize = async (filePath: string): Promise<number> => {
   try {
-    return await invoke<number>("getFileSize", { filePath });
+    return await invoke<number>('getFileSize', { filePath });
   } catch (error) {
     return attachCommandError(error);
   }
 };
 
-export const readFileRange = async (filePath: string, offset: number, length: number): Promise<number[]> => {
+export const readFileRange = async (
+  filePath: string,
+  offset: number,
+  length: number,
+): Promise<number[]> => {
   try {
-    return await invoke<number[]>("readFileRange", { filePath, offset, length });
+    return await invoke<number[]>('readFileRange', { filePath, offset, length });
   } catch (error) {
     return attachCommandError(error);
   }
@@ -671,7 +692,7 @@ export const readFileRange = async (filePath: string, offset: number, length: nu
 
 export const getFileBytes = async (filePath: string): Promise<number[]> => {
   try {
-    return await invoke<number[]>("getFileBytes", { filePath });
+    return await invoke<number[]>('getFileBytes', { filePath });
   } catch (error) {
     return attachCommandError(error);
   }
@@ -679,7 +700,7 @@ export const getFileBytes = async (filePath: string): Promise<number[]> => {
 
 export const hideBookFromLibrary = async (bookId: string): Promise<void> => {
   try {
-    await invoke("hideBookFromLibrary", {
+    await invoke('hideBookFromLibrary', {
       payload: {
         bookId,
       },
@@ -690,20 +711,20 @@ export const hideBookFromLibrary = async (bookId: string): Promise<void> => {
 };
 
 export const updateBookProgress = async (bookId: string, currentPage: number): Promise<void> => {
-  await invoke("updateBookProgress", { bookId, currentPage });
+  await invoke('updateBookProgress', { bookId, currentPage });
 };
 
 export const fileExists = async (path: string): Promise<boolean> => {
-  return invoke<boolean>("fileExists", { path });
+  return invoke<boolean>('fileExists', { path });
 };
 
 export const saveBookFile = async (id: string, data: number[]): Promise<void> => {
-  await invoke("saveBookFile", { id, data });
+  await invoke('saveBookFile', { id, data });
 };
 
 export const upsertBookCover = async (payload: UpsertBookCoverInput): Promise<void> => {
   try {
-    await invoke("upsertBookCover", { payload });
+    await invoke('upsertBookCover', { payload });
   } catch (error) {
     attachCommandError(error);
   }
@@ -711,7 +732,7 @@ export const upsertBookCover = async (payload: UpsertBookCoverInput): Promise<vo
 
 export const extractEpubCover = async (bookId: string, filePath: string): Promise<boolean> => {
   try {
-    return await invoke<boolean>("extractEpubCover", { bookId, filePath });
+    return await invoke<boolean>('extractEpubCover', { bookId, filePath });
   } catch (error) {
     return attachCommandError(error);
   }
@@ -719,7 +740,7 @@ export const extractEpubCover = async (bookId: string, filePath: string): Promis
 
 export const listHighlights = async (bookId?: string): Promise<HighlightDto[]> => {
   try {
-    const rows = await invoke<RawHighlightDto[]>("listHighlights", { bookId: bookId ?? null });
+    const rows = await invoke<RawHighlightDto[]>('listHighlights', { bookId: bookId ?? null });
     return rows.map(normalizeHighlightDto);
   } catch (error) {
     return attachCommandError(error);
@@ -736,14 +757,14 @@ export const saveHighlight = async (highlight: SaveHighlightInput): Promise<void
   };
 
   try {
-    await invoke("saveHighlight", { payload });
+    await invoke('saveHighlight', { payload });
   } catch (error) {
     attachCommandError(error);
   }
 };
 
 export const deleteHighlight = async (id: string): Promise<void> => {
-  await invoke("deleteHighlight", { id });
+  await invoke('deleteHighlight', { id });
 };
 
 export const updateHighlight = async (payload: {
@@ -752,7 +773,7 @@ export const updateHighlight = async (payload: {
   note?: string;
 }): Promise<HighlightDto> => {
   try {
-    return await invoke<HighlightDto>("updateHighlight", { payload });
+    return await invoke<HighlightDto>('updateHighlight', { payload });
   } catch (error) {
     return attachCommandError(error);
   }
@@ -763,18 +784,15 @@ export const saveHighlightTags = async (payload: {
   tagIds: string[];
 }): Promise<TagDto[]> => {
   try {
-    return await invoke<TagDto[]>("saveHighlightTags", { payload });
+    return await invoke<TagDto[]>('saveHighlightTags', { payload });
   } catch (error) {
     return attachCommandError(error);
   }
 };
 
-export const createTag = async (payload: {
-  name: string;
-  color?: string;
-}): Promise<TagDto> => {
+export const createTag = async (payload: { name: string; color?: string }): Promise<TagDto> => {
   try {
-    return await invoke<TagDto>("createTag", { payload });
+    return await invoke<TagDto>('createTag', { payload });
   } catch (error) {
     return attachCommandError(error);
   }
@@ -782,7 +800,7 @@ export const createTag = async (payload: {
 
 export const listTags = async (): Promise<TagDto[]> => {
   try {
-    return await invoke<TagDto[]>("listTags");
+    return await invoke<TagDto[]>('listTags');
   } catch (error) {
     return attachCommandError(error);
   }
@@ -790,17 +808,15 @@ export const listTags = async (): Promise<TagDto[]> => {
 
 export const listTagsForHighlight = async (highlightId: string): Promise<TagDto[]> => {
   try {
-    return await invoke<TagDto[]>("listTagsForHighlight", { highlightId });
+    return await invoke<TagDto[]>('listTagsForHighlight', { highlightId });
   } catch (error) {
     return attachCommandError(error);
   }
 };
 
-export const addDictionaryWord = async (payload: {
-  word: string;
-}): Promise<DictionaryWordDto> => {
+export const addDictionaryWord = async (payload: { word: string }): Promise<DictionaryWordDto> => {
   try {
-    return await invoke<DictionaryWordDto>("addDictionaryWord", { payload });
+    return await invoke<DictionaryWordDto>('addDictionaryWord', { payload });
   } catch (error) {
     return attachCommandError(error);
   }
@@ -808,7 +824,7 @@ export const addDictionaryWord = async (payload: {
 
 export const listDictionaryWords = async (): Promise<DictionaryWordDto[]> => {
   try {
-    return await invoke<DictionaryWordDto[]>("listDictionaryWords");
+    return await invoke<DictionaryWordDto[]>('listDictionaryWords');
   } catch (error) {
     return attachCommandError(error);
   }
@@ -816,27 +832,27 @@ export const listDictionaryWords = async (): Promise<DictionaryWordDto[]> => {
 
 export const removeDictionaryWord = async (id: string): Promise<void> => {
   try {
-    await invoke("removeDictionaryWord", { id });
+    await invoke('removeDictionaryWord', { id });
   } catch (error) {
     attachCommandError(error);
   }
 };
 
 export const listBookmarks = async (bookId?: string): Promise<BookmarkDto[]> => {
-  return invoke<BookmarkDto[]>("listBookmarks", { bookId: bookId ?? null });
+  return invoke<BookmarkDto[]>('listBookmarks', { bookId: bookId ?? null });
 };
 
 export const saveBookmark = async (bookmark: SaveBookmarkInput): Promise<void> => {
-  await invoke("saveBookmark", { bookmark });
+  await invoke('saveBookmark', { bookmark });
 };
 
 export const deleteBookmark = async (id: string): Promise<void> => {
-  await invoke("deleteBookmark", { id });
+  await invoke('deleteBookmark', { id });
 };
 
 export const createCollection = async (payload: CreateCollectionInput): Promise<CollectionDto> => {
   try {
-    return await invoke<CollectionDto>("createCollection", { payload });
+    return await invoke<CollectionDto>('createCollection', { payload });
   } catch (error) {
     return attachCommandError(error);
   }
@@ -844,7 +860,7 @@ export const createCollection = async (payload: CreateCollectionInput): Promise<
 
 export const deleteCollection = async (id: number): Promise<void> => {
   try {
-    await invoke("deleteCollection", { id });
+    await invoke('deleteCollection', { id });
   } catch (error) {
     attachCommandError(error);
   }
@@ -852,7 +868,7 @@ export const deleteCollection = async (id: number): Promise<void> => {
 
 export const listCollections = async (): Promise<CollectionDto[]> => {
   try {
-    return await invoke<CollectionDto[]>("listCollections");
+    return await invoke<CollectionDto[]>('listCollections');
   } catch (error) {
     return attachCommandError(error);
   }
@@ -860,7 +876,7 @@ export const listCollections = async (): Promise<CollectionDto[]> => {
 
 export const addBookToCollection = async (payload: BookCollectionInput): Promise<void> => {
   try {
-    await invoke("addBookToCollection", { payload });
+    await invoke('addBookToCollection', { payload });
   } catch (error) {
     attachCommandError(error);
   }
@@ -868,7 +884,7 @@ export const addBookToCollection = async (payload: BookCollectionInput): Promise
 
 export const removeBookFromCollection = async (payload: BookCollectionInput): Promise<void> => {
   try {
-    await invoke("removeBookFromCollection", { payload });
+    await invoke('removeBookFromCollection', { payload });
   } catch (error) {
     attachCommandError(error);
   }
@@ -876,16 +892,16 @@ export const removeBookFromCollection = async (payload: BookCollectionInput): Pr
 
 export const getBookCollections = async (bookId: string): Promise<CollectionDto[]> => {
   try {
-    return await invoke<CollectionDto[]>("getBookCollections", { bookId });
+    return await invoke<CollectionDto[]>('getBookCollections', { bookId });
   } catch (error) {
     return attachCommandError(error);
   }
 };
 
 export const diagnose = async (): Promise<DiagnoseResult> => {
-  return invoke<DiagnoseResult>("diagnose");
+  return invoke<DiagnoseResult>('diagnose');
 };
 
 export const getLogs = async (): Promise<string[]> => {
-  return invoke<string[]>("getLogs");
+  return invoke<string[]>('getLogs');
 };

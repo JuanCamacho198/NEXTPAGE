@@ -1,4 +1,4 @@
-import * as pdfjsLib from "pdfjs-dist";
+import * as pdfjsLib from 'pdfjs-dist';
 
 export interface SafeTextLayerParams {
   container: HTMLElement;
@@ -33,16 +33,20 @@ export class SafeTextLayer {
     this.cancelled = false;
 
     // Position the container for overlay rendering
-    this.container.style.position = "absolute";
-    this.container.style.left = "0";
-    this.container.style.top = "0";
+    this.container.style.position = 'absolute';
+    this.container.style.left = '0';
+    this.container.style.top = '0';
 
     // Set CSS custom properties and dimensions BEFORE creating the TextLayer
     this.setLayerCssVars(params.viewport);
     this.setLayerDimensions(params.viewport);
 
     // Create the raw TextLayer instance
-    this.instance = new (pdfjsLib as unknown as { TextLayer: new (args: Record<string, unknown>) => Record<string, unknown> }).TextLayer({
+    this.instance = new (
+      pdfjsLib as unknown as {
+        TextLayer: new (args: Record<string, unknown>) => Record<string, unknown>;
+      }
+    ).TextLayer({
       container: params.container,
       viewport: params.viewport,
       textContentSource: params.textContentSource,
@@ -57,7 +61,10 @@ export class SafeTextLayer {
    */
   async render(): Promise<void> {
     const instance = this.instance;
-    if (instance && typeof (instance as unknown as { render: () => Promise<void> }).render === "function") {
+    if (
+      instance &&
+      typeof (instance as unknown as { render: () => Promise<void> }).render === 'function'
+    ) {
       await (instance as unknown as { render: () => Promise<void> }).render();
     }
   }
@@ -74,7 +81,11 @@ export class SafeTextLayer {
     this.setLayerDimensions(params.viewport);
 
     const instance = this.instance;
-    if (instance && typeof (instance as unknown as { update: (p: SafeTextLayerUpdateParams) => void }).update === "function") {
+    if (
+      instance &&
+      typeof (instance as unknown as { update: (p: SafeTextLayerUpdateParams) => void }).update ===
+        'function'
+    ) {
       (instance as unknown as { update: (p: SafeTextLayerUpdateParams) => void }).update(params);
     }
 
@@ -89,7 +100,7 @@ export class SafeTextLayer {
   cancel(): void {
     this.cancelled = true;
     const instance = this.instance;
-    if (instance && typeof (instance as unknown as { cancel: () => void }).cancel === "function") {
+    if (instance && typeof (instance as unknown as { cancel: () => void }).cancel === 'function') {
       (instance as unknown as { cancel: () => void }).cancel();
     }
   }
@@ -97,10 +108,10 @@ export class SafeTextLayer {
   // ── Private helpers ───────────────────────────────────────
 
   private setLayerCssVars(viewport: { scale: number }): void {
-    this.container.style.setProperty("--scale-factor", String(viewport.scale));
-    this.container.style.setProperty("--total-scale-factor", String(viewport.scale));
-    this.container.style.setProperty("--scale-round-x", "1px");
-    this.container.style.setProperty("--scale-round-y", "1px");
+    this.container.style.setProperty('--scale-factor', String(viewport.scale));
+    this.container.style.setProperty('--total-scale-factor', String(viewport.scale));
+    this.container.style.setProperty('--scale-round-x', '1px');
+    this.container.style.setProperty('--scale-round-y', '1px');
   }
 
   private setLayerDimensions(viewport: { width: number; height: number }): void {
@@ -109,8 +120,8 @@ export class SafeTextLayer {
   }
 
   private fixScale(viewport: { scale: number }): void {
-    if (this.instance && this.instance["#scale"] !== undefined) {
-      this.instance["#scale"] = viewport.scale;
+    if (this.instance && this.instance['#scale'] !== undefined) {
+      this.instance['#scale'] = viewport.scale;
     }
   }
 }

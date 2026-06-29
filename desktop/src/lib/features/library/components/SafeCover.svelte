@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { readFile } from "@tauri-apps/plugin-fs";
-  import { onDestroy } from "svelte";
+  import { readFile } from '@tauri-apps/plugin-fs';
+  import { onDestroy } from 'svelte';
 
-  let { 
-    path, 
-    alt = "Cover", 
-    className = "",
-    fallback
-  }: { 
-    path: string; 
-    alt?: string; 
+  let {
+    path,
+    alt = 'Cover',
+    className = '',
+    fallback,
+  }: {
+    path: string;
+    alt?: string;
     className?: string;
-    fallback?: import("svelte").Snippet;
+    fallback?: import('svelte').Snippet;
   } = $props();
 
   let objectUrl = $state<string | null>(null);
@@ -32,7 +32,7 @@
       error = true;
       return;
     }
-    
+
     try {
       const bytes = await readFile(path);
       if (!bytes || bytes.length === 0) {
@@ -41,14 +41,14 @@
         return;
       }
 
-      const blob = new Blob([bytes], { type: "image/png" });
+      const blob = new Blob([bytes], { type: 'image/png' });
 
       releaseObjectUrl();
-      
+
       objectUrl = URL.createObjectURL(blob);
       error = false;
     } catch (e) {
-      console.error("[SafeCover] Failed to read cover file:", path, e);
+      console.error('[SafeCover] Failed to read cover file:', path, e);
       releaseObjectUrl();
       error = true;
     }
@@ -81,6 +81,6 @@
     role="img"
     aria-label={alt}
   >
-    <span>{alt?.trim().slice(0, 1).toUpperCase() || "B"}</span>
+    <span>{alt?.trim().slice(0, 1).toUpperCase() || 'B'}</span>
   </div>
 {/if}

@@ -1,10 +1,9 @@
-import { searchBookText } from "$lib/shared/api/tauriClient";
-import type {
-  SearchBookTextResponse,
-  SearchNavigationTarget,
-} from "$lib/shared/types";
+import { searchBookText } from '$lib/shared/api/tauriClient';
+import type { SearchBookTextResponse, SearchNavigationTarget } from '$lib/shared/types';
 
-type MaybeCommandError = Error & { commandError?: { code: string; message: string; recoverable: boolean } };
+type MaybeCommandError = Error & {
+  commandError?: { code: string; message: string; recoverable: boolean };
+};
 
 class SearchDomainState {
   // ─── State ───

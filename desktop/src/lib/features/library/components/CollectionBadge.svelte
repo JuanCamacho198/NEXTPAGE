@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { CollectionDto } from "$lib/shared/types";
+  import type { CollectionDto } from '$lib/shared/types';
 
   type Props = {
     collection: CollectionDto;
@@ -8,7 +8,7 @@
 
   let { collection, onClick }: Props = $props();
 
-  const bgColor = $derived(collection.color ?? "#6366f1");
+  const bgColor = $derived(collection.color ?? '#6366f1');
 </script>
 
 <button

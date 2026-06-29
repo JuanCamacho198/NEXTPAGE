@@ -5,14 +5,14 @@
  * Usage: var(--color-primary), var(--spacing-md), etc.
  * ============================================ */
 
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* ============================================
  * FONTS
  * ============================================ */
 @theme {
-  --font-sans: "Manrope", "Segoe UI", Arial, sans-serif;
-  --font-serif: "Newsreader", "Times New Roman", serif;
+  --font-sans: 'Manrope', 'Segoe UI', Arial, sans-serif;
+  --font-serif: 'Newsreader', 'Times New Roman', serif;
 
   /* Spacing */
   --spacing-xs: 4px;
@@ -41,8 +41,8 @@
  * ============================================ */
 :root {
   /* Font families — duplicado de @theme para var() */
-  --font-sans: "Manrope", "Segoe UI", Arial, sans-serif;
-  --font-serif: "Newsreader", "Times New Roman", serif;
+  --font-sans: 'Manrope', 'Segoe UI', Arial, sans-serif;
+  --font-serif: 'Newsreader', 'Times New Roman', serif;
 
   /* Font sizes — del diseño anterior */
   --text-xs: 0.75rem;
@@ -85,26 +85,26 @@
  * DARK THEME (default)
  * ============================================ */
 :root,
-[data-theme="dark"] {
+[data-theme='dark'] {
   /* Core colors */
   --color-background: #08111f;
   --color-surface: rgba(16, 28, 44, 0.84);
-  --color-surface-strong: #1E293B;
+  --color-surface-strong: #1e293b;
   --color-panel-accent: rgba(73, 212, 255, 0.08);
   --color-primary: #f8fbff;
   --color-secondary: #dbe7f6;
   --color-tertiary: #8fa3bf;
   --color-text: #f8fbff;
   --color-text-muted: #8fa3bf;
-  --color-text-auxiliary: #94A3B8;
-  --color-text-inverse: #F8FAFC;
+  --color-text-auxiliary: #94a3b8;
+  --color-text-inverse: #f8fafc;
 
   /* Semantic colors */
   --color-error: #ff7b83;
   --color-accent-blue: #49d4ff;
-  --color-accent-sky: #38BDF8;
+  --color-accent-sky: #38bdf8;
   --color-accent-soft: rgba(73, 212, 255, 0.1);
-  --color-bg-deep: #0B1120;
+  --color-bg-deep: #0b1120;
 
   /* Borders */
   --color-border: rgba(148, 173, 206, 0.18);
@@ -123,15 +123,16 @@
   --color-color-picker-bg: #ffffff;
 
   /* Gradient backgrounds */
-  --gradient-surface: radial-gradient(circle at top left, rgba(73, 212, 255, 0.12), transparent 26%),
-                     radial-gradient(circle at top right, rgba(245, 207, 122, 0.1), transparent 24%),
-                     linear-gradient(180deg, #07111d 0%, #09111d 45%, #08101a 100%);
+  --gradient-surface:
+    radial-gradient(circle at top left, rgba(73, 212, 255, 0.12), transparent 26%),
+    radial-gradient(circle at top right, rgba(245, 207, 122, 0.1), transparent 24%),
+    linear-gradient(180deg, #07111d 0%, #09111d 45%, #08101a 100%);
 }
 
 /* ============================================
  * LIGHT THEME
  * ============================================ */
-[data-theme="light"] {
+[data-theme='light'] {
   /* Core colors */
   --color-background: #eef2f7;
   --color-surface: rgba(255, 255, 255, 0.9);
@@ -143,7 +144,7 @@
   --color-text: #111827;
   --color-text-muted: #4a6888;
   --color-text-auxiliary: #6b7d9a;
-  --color-text-inverse: #0B1120;
+  --color-text-inverse: #0b1120;
 
   /* Semantic colors */
   --color-error: #c0392b;
@@ -169,9 +170,10 @@
   --color-color-picker-bg: #ffffff;
 
   /* Gradient backgrounds */
-  --gradient-surface: radial-gradient(circle at top left, rgba(0, 110, 200, 0.07), transparent 28%),
-                     radial-gradient(circle at top right, rgba(255, 190, 80, 0.08), transparent 26%),
-                     linear-gradient(180deg, #e8eef6 0%, #eef2f8 50%, #f0f4fa 100%);
+  --gradient-surface:
+    radial-gradient(circle at top left, rgba(0, 110, 200, 0.07), transparent 28%),
+    radial-gradient(circle at top right, rgba(255, 190, 80, 0.08), transparent 26%),
+    linear-gradient(180deg, #e8eef6 0%, #eef2f8 50%, #f0f4fa 100%);
 }
 
 /* ============================================
@@ -271,7 +273,9 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;

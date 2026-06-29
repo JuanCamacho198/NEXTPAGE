@@ -5,25 +5,21 @@
     label?: string;
   };
 
-  let {
-    value = "#33bbff",
-    onchange,
-    label,
-  }: Props = $props();
+  let { value = '#33bbff', onchange, label }: Props = $props();
 
   let isOpen = $state(false);
 
   const presetColors = [
-    "#33bbff", // blue (default)
-    "#ff6b6b", // red
-    "#4ecdc4", // teal
-    "#ffe66d", // yellow
-    "#95e1d3", // mint
-    "#f38181", // coral
-    "#aa96da", // lavender
-    "#fcbad3", // pink
-    "#a8d8ea", // light blue
-    "#00d2d3", // cyan
+    '#33bbff', // blue (default)
+    '#ff6b6b', // red
+    '#4ecdc4', // teal
+    '#ffe66d', // yellow
+    '#95e1d3', // mint
+    '#f38181', // coral
+    '#aa96da', // lavender
+    '#fcbad3', // pink
+    '#a8d8ea', // light blue
+    '#00d2d3', // cyan
   ];
 
   function selectColor(color: string): void {
@@ -44,7 +40,7 @@
   {#if label}
     <label for={id} class="mb-1 block text-xs text-zinc-600">{label}</label>
   {/if}
-  
+
   <div class="flex items-center gap-2">
     <button
       type="button"
@@ -53,15 +49,15 @@
       onclick={() => (isOpen = !isOpen)}
       aria-label="Select color"
     ></button>
-    
+
     <input
       type="text"
-      id={id}
+      {id}
       {value}
       oninput={handleInputChange}
       class="h-8 w-20 rounded border border-(--color-border) px-2 text-xs font-mono"
     />
-    
+
     <input
       type="color"
       {value}
@@ -71,7 +67,9 @@
   </div>
 
   {#if isOpen}
-    <div class="absolute top-full left-0 z-50 mt-1 rounded-lg bg-(--color-surface,white) border border-(--color-border) shadow-lg p-2">
+    <div
+      class="absolute top-full left-0 z-50 mt-1 rounded-lg bg-(--color-surface,white) border border-(--color-border) shadow-lg p-2"
+    >
       <div class="grid grid-cols-5 gap-1">
         {#each presetColors as color}
           <button

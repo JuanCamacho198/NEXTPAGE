@@ -1,7 +1,9 @@
-import { getReadingStats } from "$lib/shared/api/tauriClient";
-import type { ReadingStatsSummaryDto } from "$lib/shared/types";
+import { getReadingStats } from '$lib/shared/api/tauriClient';
+import type { ReadingStatsSummaryDto } from '$lib/shared/types';
 
-type MaybeCommandError = Error & { commandError?: { code: string; message: string; recoverable: boolean } };
+type MaybeCommandError = Error & {
+  commandError?: { code: string; message: string; recoverable: boolean };
+};
 
 class StatsDomainState {
   // ─── State ───

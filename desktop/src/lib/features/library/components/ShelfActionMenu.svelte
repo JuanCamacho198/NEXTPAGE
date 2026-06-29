@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { getShelfMenuId } from "../utils";
+  import { onMount } from 'svelte';
+  import { getShelfMenuId } from '../utils';
 
   const {
     bookId,
@@ -29,8 +29,6 @@
     onRemove: () => void;
     onToggleFavorite: () => void;
   } = $props();
-
-  
 
   let isOpen = $state(false);
   let containerEl = $state<HTMLDivElement | null>(null);
@@ -94,13 +92,13 @@
   };
 
   const handleTriggerKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === "ArrowDown") {
+    if (event.key === 'ArrowDown') {
       event.preventDefault();
       openMenu(true);
       return;
     }
 
-    if (event.key === "ArrowUp") {
+    if (event.key === 'ArrowUp') {
       event.preventDefault();
       openMenu(false);
       queueMicrotask(() => {
@@ -113,7 +111,7 @@
       return;
     }
 
-    if (event.key === "Enter" || event.key === " ") {
+    if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       toggleMenu();
     }
@@ -127,37 +125,37 @@
 
     const activeIndex = items.findIndex((item) => item === document.activeElement);
 
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       event.preventDefault();
       closeMenu(true);
       return;
     }
 
-    if (event.key === "ArrowDown") {
+    if (event.key === 'ArrowDown') {
       event.preventDefault();
       focusItemAt(activeIndex + 1);
       return;
     }
 
-    if (event.key === "ArrowUp") {
+    if (event.key === 'ArrowUp') {
       event.preventDefault();
       focusItemAt(activeIndex <= 0 ? items.length - 1 : activeIndex - 1);
       return;
     }
 
-    if (event.key === "Home") {
+    if (event.key === 'Home') {
       event.preventDefault();
       focusItemAt(0);
       return;
     }
 
-    if (event.key === "End") {
+    if (event.key === 'End') {
       event.preventDefault();
       focusItemAt(items.length - 1);
       return;
     }
 
-    if (event.key === "Tab") {
+    if (event.key === 'Tab') {
       closeMenu(false);
     }
   };
@@ -195,16 +193,16 @@
     };
 
     const handleDocumentKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         closeMenu(true);
       }
     };
 
-    document.addEventListener("pointerdown", handleDocumentPointerDown, true);
-    document.addEventListener("keydown", handleDocumentKeyDown, true);
+    document.addEventListener('pointerdown', handleDocumentPointerDown, true);
+    document.addEventListener('keydown', handleDocumentKeyDown, true);
     return () => {
-      document.removeEventListener("pointerdown", handleDocumentPointerDown, true);
-      document.removeEventListener("keydown", handleDocumentKeyDown, true);
+      document.removeEventListener('pointerdown', handleDocumentPointerDown, true);
+      document.removeEventListener('keydown', handleDocumentKeyDown, true);
     };
   });
 </script>

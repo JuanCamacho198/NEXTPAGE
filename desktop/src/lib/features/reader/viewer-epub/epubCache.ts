@@ -43,7 +43,9 @@ export function getEpubBlob(filePath: string): ArrayBuffer | null {
 }
 
 /** Returns cached TOC or null if not loaded yet */
-export function getCachedEpubToc(filePath: string): Array<{ id: string; label: string; href: string }> | null {
+export function getCachedEpubToc(
+  filePath: string,
+): Array<{ id: string; label: string; href: string }> | null {
   const entry = epubCache.get(filePath);
   if (entry?.tocLoaded) {
     return entry.toc;

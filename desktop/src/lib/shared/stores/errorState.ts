@@ -1,5 +1,5 @@
-import { writable } from "svelte/store";
-import type { ErrorEvent } from "../events/ErrorEvent";
+import { writable } from 'svelte/store';
+import type { ErrorEvent } from '../events/ErrorEvent';
 
 interface ErrorState {
   currentError: ErrorEvent | null;
@@ -14,14 +14,14 @@ const initialState: ErrorState = {
 };
 
 function createErrorStateStore(): {
-    subscribe: import("svelte/store").Readable<ErrorState>["subscribe"];
-    setError(error: ErrorEvent): void;
-    showErrorToast(error: ErrorEvent): void;
-    showErrorFallback(error: ErrorEvent): void;
-    clearError(): void;
-    dismissToast(): void;
-    reset(): void;
-  } {
+  subscribe: import('svelte/store').Readable<ErrorState>['subscribe'];
+  setError(error: ErrorEvent): void;
+  showErrorToast(error: ErrorEvent): void;
+  showErrorFallback(error: ErrorEvent): void;
+  clearError(): void;
+  dismissToast(): void;
+  reset(): void;
+} {
   const { subscribe, set, update } = writable<ErrorState>(initialState);
 
   return {

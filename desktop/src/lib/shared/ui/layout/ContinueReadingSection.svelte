@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { appState } from "$lib/shared/stores/AppState.svelte";
-  import { BookCard, ShelfActionMenu } from "$lib/features/library";
+  import { appState } from '$lib/shared/stores/AppState.svelte';
+  import { BookCard, ShelfActionMenu } from '$lib/features/library';
 </script>
 
 {#if appState.continueReadingBooks.length === 0}
-  <p class="text-sm text-(--color-text-muted)">{appState.t("home.continueReadingPlaceholder")}</p>
+  <p class="text-sm text-(--color-text-muted)">{appState.t('home.continueReadingPlaceholder')}</p>
 {:else if appState.continueReadingBooks.length === 1}
   {@const book = appState.continueReadingBooks[0]}
   <BookCard
-    book={book}
+    {book}
     variant="continue-reading"
     selected={appState.previewBookId === book.id}
     onSelect={() => {
@@ -23,12 +23,12 @@
       <ShelfActionMenu
         bookId={book.id}
         isFavorite={Boolean(book.isFavorite)}
-        readLabel={appState.t("app.read")}
-        editLabel={appState.t("library.editMetadata.title")}
-        removeLabel={appState.t("library.removeFromShelf")}
-        favoriteAddLabel={appState.t("library.favoriteAdd")}
-        favoriteRemoveLabel={appState.t("library.favoriteRemove")}
-        triggerLabel={appState.t("library.optionsFor", { title: book.title })}
+        readLabel={appState.t('app.read')}
+        editLabel={appState.t('library.editMetadata.title')}
+        removeLabel={appState.t('library.removeFromShelf')}
+        favoriteAddLabel={appState.t('library.favoriteAdd')}
+        favoriteRemoveLabel={appState.t('library.favoriteRemove')}
+        triggerLabel={appState.t('library.optionsFor', { title: book.title })}
         onRead={() => {
           void appState.startReading(book);
         }}
@@ -49,7 +49,7 @@
     {#each appState.continueReadingBooks as book}
       <li>
         <BookCard
-          book={book}
+          {book}
           variant="continue-reading"
           compact={appState.continueReadingBooks.length > 1}
           selected={appState.previewBookId === book.id}
@@ -65,12 +65,12 @@
             <ShelfActionMenu
               bookId={book.id}
               isFavorite={Boolean(book.isFavorite)}
-              readLabel={appState.t("app.read")}
-              editLabel={appState.t("library.editMetadata.title")}
-              removeLabel={appState.t("library.removeFromShelf")}
-              favoriteAddLabel={appState.t("library.favoriteAdd")}
-              favoriteRemoveLabel={appState.t("library.favoriteRemove")}
-              triggerLabel={appState.t("library.optionsFor", { title: book.title })}
+              readLabel={appState.t('app.read')}
+              editLabel={appState.t('library.editMetadata.title')}
+              removeLabel={appState.t('library.removeFromShelf')}
+              favoriteAddLabel={appState.t('library.favoriteAdd')}
+              favoriteRemoveLabel={appState.t('library.favoriteRemove')}
+              triggerLabel={appState.t('library.optionsFor', { title: book.title })}
               onEdit={() => {
                 appState.handleEditBook(book);
               }}
@@ -89,7 +89,7 @@
   {#if appState.previewBookId}
     {@const pb = appState.getBookById(appState.previewBookId)}
     {#if pb}
-      <p class="mt-2 text-sm text-(--color-text-muted)">{appState.t("app.homeReadHint")}</p>
+      <p class="mt-2 text-sm text-(--color-text-muted)">{appState.t('app.homeReadHint')}</p>
     {/if}
   {/if}
 {/if}

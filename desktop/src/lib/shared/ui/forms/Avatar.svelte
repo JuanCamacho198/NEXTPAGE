@@ -2,32 +2,27 @@
   type Props = {
     src?: string;
     name?: string;
-    size?: "sm" | "md" | "lg";
+    size?: 'sm' | 'md' | 'lg';
     class?: string;
   };
 
-  let {
-    src = "",
-    name = "",
-    size = "md",
-    class: className = "",
-  }: Props = $props();
+  let { src = '', name = '', size = 'md', class: className = '' }: Props = $props();
 
   let isBroken = $state(false);
 
   const sizeClasses = {
-    sm: "w-8 h-8 text-xs",
-    md: "w-10 h-10 text-sm",
-    lg: "w-14 h-14 text-base",
+    sm: 'w-8 h-8 text-xs',
+    md: 'w-10 h-10 text-sm',
+    lg: 'w-14 h-14 text-base',
   };
 
   const initials = $derived(
     name
-      .split(" ")
+      .split(' ')
       .map((n) => n[0])
-      .join("")
+      .join('')
       .toUpperCase()
-      .slice(0, 2)
+      .slice(0, 2),
   );
 
   function handleError(): void {

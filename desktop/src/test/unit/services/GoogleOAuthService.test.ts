@@ -124,10 +124,7 @@ function base64UrlEncodeUtf8(input: string): string {
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i] ?? 0);
   }
-  return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 function mockFetchOk(body: unknown): Response {
@@ -202,16 +199,14 @@ describe('GoogleOAuthService — handleOAuthCallback', () => {
     const authUrl = mockOpenUrl.mock.calls[0]?.[0] as string;
     const state = new URL(authUrl).searchParams.get('state') ?? '';
 
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(
-        mockFetchOk({
-          access_token: 'access-1',
-          refresh_token: 'refresh-1',
-          id_token: makeTokenResponseJson(),
-          expires_in: 3600,
-        }),
-      );
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      mockFetchOk({
+        access_token: 'access-1',
+        refresh_token: 'refresh-1',
+        id_token: makeTokenResponseJson(),
+        expires_in: 3600,
+      }),
+    );
 
     const callbackUrl = `http://127.0.0.1:48723/?code=ABC&state=${encodeURIComponent(state)}`;
     await sut.handleOAuthCallback(callbackUrl);
@@ -268,9 +263,7 @@ describe('GoogleOAuthService — handleOAuthCallback', () => {
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     await expect(
-      sut.handleOAuthCallback(
-        'http://127.0.0.1:48723/?error=invalid_request',
-      ),
+      sut.handleOAuthCallback('http://127.0.0.1:48723/?error=invalid_request'),
     ).rejects.toMatchObject({
       name: 'OAuthError',
       code: 'server_failed',
@@ -315,9 +308,7 @@ describe('GoogleOAuthService — multi-instance safety', () => {
     const clearSessionCountBefore = mockClearSession.mock.calls.length;
     await sut.signOut();
     // signOut must have invoked clearSession (at least once more than before).
-    expect(mockClearSession.mock.calls.length).toBeGreaterThan(
-      clearSessionCountBefore,
-    );
+    expect(mockClearSession.mock.calls.length).toBeGreaterThan(clearSessionCountBefore);
     expect(mockPluginCancel).toHaveBeenCalledWith(48000);
 
     // Fresh flow after sign-out — different port used.

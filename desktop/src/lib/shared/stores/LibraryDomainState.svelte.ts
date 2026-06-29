@@ -8,10 +8,10 @@ import {
   updateBookProgress,
   saveProgress,
   extractEpubCover,
-} from "$lib/shared/api/tauriClient";
-import { extractPdfMetadata } from "$lib/shared/services/pdfThumbnail";
-import { recordMetric } from "$lib/shared/logger/MetricsStore";
-import { METRIC_NAMES } from "$lib/shared/logger/metricTypes";
+} from '$lib/shared/api/tauriClient';
+import { extractPdfMetadata } from '$lib/shared/services/pdfThumbnail';
+import { recordMetric } from '$lib/shared/logger/MetricsStore';
+import { METRIC_NAMES } from '$lib/shared/logger/metricTypes';
 import {
   createShelfQueryState,
   updateShelfQueryState,
@@ -19,20 +19,17 @@ import {
   selectShelfBooks,
   getShelfQueryWarnings,
   promoteBookForReading,
-} from "$lib/shared/stores/homeState";
-import type {
-  BookDto,
-  CollectionDto,
-  LibraryBookDto,
-  ReaderBook,
-} from "$lib/shared/types";
+} from '$lib/shared/stores/homeState';
+import type { BookDto, CollectionDto, LibraryBookDto, ReaderBook } from '$lib/shared/types';
 
-type MaybeCommandError = Error & { commandError?: { code: string; message: string; recoverable: boolean } };
+type MaybeCommandError = Error & {
+  commandError?: { code: string; message: string; recoverable: boolean };
+};
 
 class LibraryDomainState {
   // ─── State ───
   books = $state<ReaderBook[]>([]);
-  shelfQueryState = $state(createShelfQueryState(""));
+  shelfQueryState = $state(createShelfQueryState(''));
   collections = $state<CollectionDto[]>([]);
   isLoadingLibrary = $state(false);
   readerError = $state<string | null>(null);
@@ -51,7 +48,7 @@ class LibraryDomainState {
   shelfSortToken = $derived.by(() => {
     for (let index = this.shelfQueryState.smartTokens.length - 1; index >= 0; index -= 1) {
       const token = this.shelfQueryState.smartTokens[index];
-      if (token.field === "sort") {
+      if (token.field === 'sort') {
         return token.value;
       }
     }
@@ -60,19 +57,19 @@ class LibraryDomainState {
 
   // ─── Constants ───
   readonly SHELF_TAB_OPTIONS = [
-    { key: "all", label: "home.shelfTab.all" },
-    { key: "favorites", label: "home.shelfTab.favorites" },
-    { key: "to_read", label: "home.shelfTab.toRead" },
-    { key: "completed", label: "home.shelfTab.completed" },
+    { key: 'all', label: 'home.shelfTab.all' },
+    { key: 'favorites', label: 'home.shelfTab.favorites' },
+    { key: 'to_read', label: 'home.shelfTab.toRead' },
+    { key: 'completed', label: 'home.shelfTab.completed' },
   ] as const;
 
   readonly SHELF_SORT_OPTIONS = [
-    { key: "progress", label: "home.shelfSort.progress" },
-    { key: "date", label: "home.shelfSort.date" },
-    { key: "last_read", label: "home.shelfSort.lastRead" },
-    { key: "author", label: "home.shelfSort.author" },
-    { key: "title", label: "home.shelfSort.title" },
-    { key: "file_size", label: "home.shelfSort.fileSize" },
+    { key: 'progress', label: 'home.shelfSort.progress' },
+    { key: 'date', label: 'home.shelfSort.date' },
+    { key: 'last_read', label: 'home.shelfSort.lastRead' },
+    { key: 'author', label: 'home.shelfSort.author' },
+    { key: 'title', label: 'home.shelfSort.title' },
+    { key: 'file_size', label: 'home.shelfSort.fileSize' },
   ] as const;
 
   // ─── Utility ───
@@ -82,18 +79,18 @@ class LibraryDomainState {
     return this.books.find((book) => book.id === bookId) ?? null;
   }
 
-  hasResolvedCoverPath(book: Pick<LibraryBookDto, "coverPath">): boolean {
-    return typeof book.coverPath === "string" && book.coverPath.trim().length > 0;
+  hasResolvedCoverPath(book: Pick<LibraryBookDto, 'coverPath'>): boolean {
+    return typeof book.coverPath === 'string' && book.coverPath.trim().length > 0;
   }
 
   shouldGeneratePdfCover(book: ReaderBook): boolean {
-    if (book.format.toLowerCase() !== "pdf") return false;
+    if (book.format.toLowerCase() !== 'pdf') return false;
     if (this.hasResolvedCoverPath(book)) return false;
     return book.filePath.trim().length > 0;
   }
 
   shouldGenerateEpubCover(book: ReaderBook): boolean {
-    if (book.format.toLowerCase() !== "epub") return false;
+    if (book.format.toLowerCase() !== 'epub') return false;
     if (this.hasResolvedCoverPath(book)) return false;
     return book.filePath.trim().length > 0;
   }
@@ -109,7 +106,7 @@ class LibraryDomainState {
         await this.loadLibrary();
       }
     } catch (e) {
-      console.error("[Library] ensureEpubCover failed:", e);
+      console.error('[Library] ensureEpubCover failed:', e);
     } finally {
       this.thumbnailGenerationInFlight.delete(book.id);
     }
@@ -124,21 +121,21 @@ class LibraryDomainState {
         await upsertBookCover({
           bookId: book.id,
           data: Array.from(metadata.thumbnailBytes),
-          mimeType: "image/png",
+          mimeType: 'image/png',
         });
       }
 
-      const needsAuthorUpdate = metadata.author && (!book.author || book.author.trim() === "");
+      const needsAuthorUpdate = metadata.author && (!book.author || book.author.trim() === '');
       const needsPagesUpdate = metadata.totalPages && (!book.totalPages || book.totalPages === 0);
 
       if (needsAuthorUpdate || needsPagesUpdate) {
         await upsertBook({
           id: book.id,
           title: book.title,
-          author: metadata.author || book.author || "",
+          author: metadata.author || book.author || '',
           filePath: book.filePath,
           format: book.format,
-          syncStatus: "local" as const,
+          syncStatus: 'local' as const,
           currentPage: book.currentPage,
           totalPages: metadata.totalPages || book.totalPages || 0,
         });
@@ -146,7 +143,7 @@ class LibraryDomainState {
 
       await this.loadLibrary();
     } catch (e) {
-      console.error("[Library] ensurePdfCover failed:", e);
+      console.error('[Library] ensurePdfCover failed:', e);
     } finally {
       this.thumbnailGenerationInFlight.delete(book.id);
     }
@@ -172,7 +169,7 @@ class LibraryDomainState {
 
       const booksWithCollections = libraryRows.map((entry: LibraryBookDto) => ({
         ...entry,
-        filePath: filePathById.get(entry.id) ?? "",
+        filePath: filePathById.get(entry.id) ?? '',
         collectionIds: entry.collectionIds ?? [],
       }));
 
@@ -209,9 +206,13 @@ class LibraryDomainState {
     } catch (error) {
       const typed = error as MaybeCommandError;
       if (typed.commandError?.recoverable) {
-        this._lastRecoverableError = { code: typed.commandError.code, message: typed.commandError.message };
+        this._lastRecoverableError = {
+          code: typed.commandError.code,
+          message: typed.commandError.message,
+        };
       } else {
-        this.readerError = typed.commandError?.message ?? (error instanceof Error ? error.message : "Unknown error");
+        this.readerError =
+          typed.commandError?.message ?? (error instanceof Error ? error.message : 'Unknown error');
       }
     } finally {
       this.isLoadingLibrary = false;
@@ -242,7 +243,8 @@ class LibraryDomainState {
       await this.loadLibrary();
     } catch (error) {
       const typed = error as MaybeCommandError;
-      this.readerError = typed.commandError?.message ?? (error instanceof Error ? error.message : "Unknown error");
+      this.readerError =
+        typed.commandError?.message ?? (error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
@@ -261,10 +263,10 @@ class LibraryDomainState {
       await upsertBook({
         id: currentSnapshot.id,
         title: currentSnapshot.title,
-        author: currentSnapshot.author || "",
+        author: currentSnapshot.author || '',
         filePath: currentSnapshot.filePath,
         format: currentSnapshot.format,
-        syncStatus: "local" as const,
+        syncStatus: 'local' as const,
         currentPage: currentSnapshot.currentPage,
         totalPages: currentSnapshot.totalPages,
       });
@@ -276,14 +278,15 @@ class LibraryDomainState {
       });
 
       const typed = error as MaybeCommandError;
-      this.readerError = typed.commandError?.message ?? (error instanceof Error ? error.message : "Unknown error");
+      this.readerError =
+        typed.commandError?.message ?? (error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
   async handleMarkCompleted(book: ReaderBook): Promise<void> {
     try {
-      if (book.format.toLowerCase() === "epub") {
-        await saveProgress({ bookId: book.id, cfiLocation: "", percentage: 100 });
+      if (book.format.toLowerCase() === 'epub') {
+        await saveProgress({ bookId: book.id, cfiLocation: '', percentage: 100 });
       } else {
         await updateBookProgress(book.id, Math.max(1, book.totalPages || book.currentPage || 1));
       }
@@ -292,7 +295,10 @@ class LibraryDomainState {
         currentBook.id === book.id
           ? {
               ...currentBook,
-              currentPage: Math.max(currentBook.currentPage, currentBook.totalPages || currentBook.currentPage),
+              currentPage: Math.max(
+                currentBook.currentPage,
+                currentBook.totalPages || currentBook.currentPage,
+              ),
               progressPercentage: 100,
               completed: true,
             }
@@ -302,7 +308,8 @@ class LibraryDomainState {
       await this.loadLibrary();
     } catch (error) {
       const typed = error as MaybeCommandError;
-      this.readerError = typed.commandError?.message ?? (error instanceof Error ? error.message : "Unknown error");
+      this.readerError =
+        typed.commandError?.message ?? (error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
@@ -318,10 +325,10 @@ class LibraryDomainState {
       await upsertBook({
         id: updatedBook.id,
         title: updatedBook.title,
-        author: updatedBook.author || "",
+        author: updatedBook.author || '',
         filePath: readerBook.filePath,
         format: readerBook.format,
-        syncStatus: "local" as const,
+        syncStatus: 'local' as const,
         currentPage: readerBook.currentPage,
         totalPages: readerBook.totalPages,
       });
@@ -335,21 +342,22 @@ class LibraryDomainState {
       this.editingBook = null;
     } catch (error) {
       const typed = error as MaybeCommandError;
-      this.readerError = typed.commandError?.message ?? (error instanceof Error ? error.message : "Unknown error");
+      this.readerError =
+        typed.commandError?.message ?? (error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
   // ─── Shelf ───
 
-  setShelfTab(tab: (typeof this.SHELF_TAB_OPTIONS)[number]["key"]): void {
+  setShelfTab(tab: (typeof this.SHELF_TAB_OPTIONS)[number]['key']): void {
     this.shelfQueryState = updateShelfQueryState(this.shelfQueryState, { tab });
   }
 
-  setShelfSort(sortKey: (typeof this.SHELF_SORT_OPTIONS)[number]["key"]): void {
+  setShelfSort(sortKey: (typeof this.SHELF_SORT_OPTIONS)[number]['key']): void {
     this.shelfQueryState = updateShelfQueryState(this.shelfQueryState, { sortKey });
   }
 
-  setShelfViewMode(viewMode: "grid" | "list"): void {
+  setShelfViewMode(viewMode: 'grid' | 'list'): void {
     this.shelfQueryState = updateShelfQueryState(this.shelfQueryState, { viewMode });
   }
 
@@ -361,7 +369,7 @@ class LibraryDomainState {
   }
 
   clearShelfQuery(): void {
-    this.shelfQueryState = updateShelfQueryState(this.shelfQueryState, { rawQuery: "" });
+    this.shelfQueryState = updateShelfQueryState(this.shelfQueryState, { rawQuery: '' });
   }
 
   // ─── Reading helpers (used by coordinator) ───
@@ -372,9 +380,7 @@ class LibraryDomainState {
 
   updateBookPage(bookId: string, page: number, total: number): void {
     this.books = this.books.map((book) =>
-      book.id === bookId
-        ? { ...book, currentPage: page, totalPages: total }
-        : book,
+      book.id === bookId ? { ...book, currentPage: page, totalPages: total } : book,
     );
   }
 

@@ -1,4 +1,4 @@
-import type { ReaderThemeMode } from "$lib/shared/types";
+import type { ReaderThemeMode } from '$lib/shared/types';
 
 export const scaleOptions = Array.from({ length: 26 }, (_, index) => (50 + index * 10) / 100);
 
@@ -42,38 +42,38 @@ export function clampPdfScale(value: number): number {
 }
 
 export function resolveThemePalette(themeMode: ReaderThemeMode): ReaderThemePalette {
-  if (themeMode === "sepia") {
+  if (themeMode === 'sepia') {
     return {
-      rootBackground: "#efe2cc",
-      surfaceBackground: "#f6ebd8",
-      textColor: "#2f2416",
+      rootBackground: '#efe2cc',
+      surfaceBackground: '#f6ebd8',
+      textColor: '#2f2416',
     };
   }
-  if (themeMode === "night") {
+  if (themeMode === 'night') {
     return {
-      rootBackground: "#0f1320",
-      surfaceBackground: "#161c2d",
-      textColor: "#e8ecf7",
+      rootBackground: '#0f1320',
+      surfaceBackground: '#161c2d',
+      textColor: '#e8ecf7',
     };
   }
-  if (themeMode === "dark") {
+  if (themeMode === 'dark') {
     return {
-      rootBackground: "#1a1a2e",
-      surfaceBackground: "#16213e",
-      textColor: "#e0e0e0",
+      rootBackground: '#1a1a2e',
+      surfaceBackground: '#16213e',
+      textColor: '#e0e0e0',
     };
   }
-  if (themeMode === "blue") {
+  if (themeMode === 'blue') {
     return {
-      rootBackground: "#1e3a5f",
-      surfaceBackground: "#2b4d7a",
-      textColor: "#d6e4f0",
+      rootBackground: '#1e3a5f',
+      surfaceBackground: '#2b4d7a',
+      textColor: '#d6e4f0',
     };
   }
   return {
-    rootBackground: "#f4efe1",
-    surfaceBackground: "#fbf7ed",
-    textColor: "#221a12",
+    rootBackground: '#f4efe1',
+    surfaceBackground: '#fbf7ed',
+    textColor: '#221a12',
   };
 }
 

@@ -1,13 +1,13 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
+  import type { Snippet } from 'svelte';
 
   type Props = {
     trigger: Snippet;
     children?: Snippet;
-    position?: "bottom-left" | "bottom-right";
+    position?: 'bottom-left' | 'bottom-right';
   };
 
-  let { trigger, children, position = "bottom-right" }: Props = $props();
+  let { trigger, children, position = 'bottom-right' }: Props = $props();
 
   let isOpen = $state(false);
   let containerEl = $state<HTMLDivElement | undefined>();
@@ -24,8 +24,8 @@
         isOpen = false;
       }
     };
-    document.addEventListener("click", handle, true);
-    return () => document.removeEventListener("click", handle, true);
+    document.addEventListener('click', handle, true);
+    return () => document.removeEventListener('click', handle, true);
   });
 </script>
 

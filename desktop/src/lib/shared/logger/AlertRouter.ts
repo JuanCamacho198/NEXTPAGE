@@ -1,7 +1,7 @@
-import type { ErrorEvent, ErrorSeverity } from "../events/ErrorEvent";
-import { logger } from "./Logger";
+import type { ErrorEvent, ErrorSeverity } from '../events/ErrorEvent';
+import { logger } from './Logger';
 
-export type AlertSeverity = "info" | "warning" | "critical";
+export type AlertSeverity = 'info' | 'warning' | 'critical';
 
 export interface AlertRule {
   id: string;
@@ -20,30 +20,28 @@ const CRITICAL_THRESHOLD = 3;
 
 const defaultRules: AlertRule[] = [
   {
-    id: "startup_failure",
-    name: "Startup Failure",
-    severity: "critical",
+    id: 'startup_failure',
+    name: 'Startup Failure',
+    severity: 'critical',
     condition: (event: ErrorEvent) =>
-      event.source === "app_shell" &&
-      event.category === "runtime" &&
-      event.code === "UNCAUGHT_ERROR" &&
+      event.source === 'app_shell' &&
+      event.category === 'runtime' &&
+      event.code === 'UNCAUGHT_ERROR' &&
       !event.recoverable,
   },
   {
-    id: "db_migration_failure",
-    name: "Database Migration Failure",
-    severity: "critical",
+    id: 'db_migration_failure',
+    name: 'Database Migration Failure',
+    severity: 'critical',
     condition: (event: ErrorEvent) =>
-      event.category === "command" &&
-      event.code.includes("MIGRATION") &&
-      event.severity === "high",
+      event.category === 'command' && event.code.includes('MIGRATION') && event.severity === 'high',
   },
   {
-    id: "repeated_failures",
-    name: "Repeated Failures",
-    severity: "critical",
+    id: 'repeated_failures',
+    name: 'Repeated Failures',
+    severity: 'critical',
     condition: (event: ErrorEvent) => {
-      return event.severity === "critical";
+      return event.severity === 'critical';
     },
   },
 ];
@@ -64,7 +62,7 @@ class AlertRouterImpl {
       return;
     }
 
-    if (matchingRule.severity === "critical") {
+    if (matchingRule.severity === 'critical') {
       this.incrementCount(event.code);
     }
 
@@ -99,7 +97,7 @@ class AlertRouterImpl {
     logger.error({
       timestamp: new Date().toISOString(),
       severity: this.mapSeverity(rule.severity),
-      category: "alert",
+      category: 'alert',
       code: `ALERT_${rule.id}`,
       message: `[${rule.name}] ${event.message}`,
       context: {
@@ -117,14 +115,14 @@ class AlertRouterImpl {
 
   private mapSeverity(alertSeverity: AlertSeverity): ErrorSeverity {
     switch (alertSeverity) {
-      case "critical":
-        return "critical";
-      case "warning":
-        return "high";
-      case "info":
-        return "medium";
+      case 'critical':
+        return 'critical';
+      case 'warning':
+        return 'high';
+      case 'info':
+        return 'medium';
       default:
-        return "medium";
+        return 'medium';
     }
   }
 

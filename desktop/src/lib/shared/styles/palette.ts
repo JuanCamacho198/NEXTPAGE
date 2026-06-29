@@ -1,7 +1,7 @@
 /**
  * DESIGN TOKENS — Color Palette
  * Semantic tokens with comments for AI understanding
- * 
+ *
  * Naming convention: semantic (primary, secondary) + role (text, surface, border)
  * Avoid: #FF0000, 'red', 'blue' — always use tokens
  */
@@ -11,22 +11,22 @@
  * ============================================ */
 export const darkTheme = {
   // Core surfaces
-  background: '#08111f',      // Main app background
-  surface: 'rgba(16, 28, 44, 0.84)',      // Cards, panels
+  background: '#08111f', // Main app background
+  surface: 'rgba(16, 28, 44, 0.84)', // Cards, panels
   panelAccent: 'rgba(73, 212, 255, 0.08)', // Active/hover panels
 
   // Text hierarchy
-  primary: '#f8fbff',       // Headlines, primary content
-  secondary: '#dbe7f6',    // Body text, secondary content
-  tertiary: '#8fa3bf',      // Captions, disabled, hints
+  primary: '#f8fbff', // Headlines, primary content
+  secondary: '#dbe7f6', // Body text, secondary content
+  tertiary: '#8fa3bf', // Captions, disabled, hints
 
   // Semantic
-  error: '#ff7b83',        // Errors, destructive actions
-  accentBlue: '#49d4ff',    // Links, highlights, focus
+  error: '#ff7b83', // Errors, destructive actions
+  accentBlue: '#49d4ff', // Links, highlights, focus
   accentSoft: 'rgba(73, 212, 255, 0.1)', // Subtle accents
 
   // Borders
-  border: 'rgba(148, 173, 206, 0.18)',      // Subtle dividers
+  border: 'rgba(148, 173, 206, 0.18)', // Subtle dividers
   borderStrong: 'rgba(148, 173, 206, 0.3)', // Input borders, active
 
   // Shadows
@@ -45,9 +45,9 @@ export const lightTheme = {
   panelAccent: 'rgba(0, 110, 200, 0.06)',
 
   // Text hierarchy
-  primary: '#111827',       // Headlines
+  primary: '#111827', // Headlines
   secondary: '#1e3a5f', // Body
-  tertiary: '#4a6888',  // Captions
+  tertiary: '#4a6888', // Captions
 
   // Semantic
   error: '#c0392b',
@@ -102,7 +102,7 @@ export const font = {
  *   - Match text/bg pairs: background + primary text
  *   - Use surface for cards, panels
  *   - Use accentSoft for subtle hovers
- * 
+ *
  * DON'T:
  *   - Use hardcoded colors (#ff0000, 'red')
  *   - Mix dark/light colors

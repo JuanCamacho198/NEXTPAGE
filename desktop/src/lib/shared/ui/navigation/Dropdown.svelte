@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
+  import type { Snippet } from 'svelte';
 
   export type Option = {
     value: string;
@@ -19,7 +19,7 @@
   let {
     options = [],
     value = $bindable(null),
-    placeholder = "Select...",
+    placeholder = 'Select...',
     disabled = false,
     onchange,
     trigger,
@@ -49,13 +49,11 @@
         isOpen = false;
       }
     };
-    document.addEventListener("click", handle, true);
-    return () => document.removeEventListener("click", handle, true);
+    document.addEventListener('click', handle, true);
+    return () => document.removeEventListener('click', handle, true);
   });
 
-  const selectedLabel = $derived(
-    options.find((o) => o.value === value)?.label ?? placeholder
-  );
+  const selectedLabel = $derived(options.find((o) => o.value === value)?.label ?? placeholder);
 </script>
 
 <div bind:this={containerEl} class="relative inline-block">
@@ -69,18 +67,8 @@
       {@render trigger()}
     {:else}
       <span>{selectedLabel}</span>
-      <svg
-        class="ml-2 h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M19 9l-7 7-7-7"
-        />
+      <svg class="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
       </svg>
     {/if}
   </button>

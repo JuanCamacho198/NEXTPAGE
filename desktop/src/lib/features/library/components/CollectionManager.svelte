@@ -1,23 +1,23 @@
 <script lang="ts">
-  import type { CollectionDto } from "$lib/shared/types";
-  import { createCollection, deleteCollection, listCollections } from "$lib/shared/api/tauriClient";
-  import { COLLECTION_COLOR_OPTIONS } from "../utils";
+  import type { CollectionDto } from '$lib/shared/types';
+  import { createCollection, deleteCollection, listCollections } from '$lib/shared/api/tauriClient';
+  import { COLLECTION_COLOR_OPTIONS } from '../utils';
 
   let { open, onClose }: { open: boolean; onClose: () => void } = $props();
 
   let collections = $state<CollectionDto[]>([]);
   let loading = $state(false);
-  let newName = $state("");
-  let newColor = $state("#6366f1");
+  let newName = $state('');
+  let newColor = $state('#6366f1');
   let editingId = $state<number | null>(null);
-  let editName = $state("");
+  let editName = $state('');
 
   async function loadCollections(): Promise<void> {
     loading = true;
     try {
       collections = await listCollections();
     } catch (e) {
-      console.error("Failed to load collections:", e);
+      console.error('Failed to load collections:', e);
     } finally {
       loading = false;
     }
@@ -28,25 +28,25 @@
     try {
       const created = await createCollection({ name: newName.trim(), color: newColor });
       collections = [...collections, created];
-      newName = "";
-      newColor = "#6366f1";
+      newName = '';
+      newColor = '#6366f1';
     } catch (e) {
-      console.error("Failed to create collection:", e);
+      console.error('Failed to create collection:', e);
     }
   }
 
   async function handleDelete(id: number): Promise<void> {
     try {
       await deleteCollection(id);
-      collections = collections.filter(c => c.id !== id);
+      collections = collections.filter((c) => c.id !== id);
     } catch (e) {
-      console.error("Failed to delete collection:", e);
+      console.error('Failed to delete collection:', e);
     }
   }
 
   function cancelEdit(): void {
     editingId = null;
-    editName = "";
+    editName = '';
   }
 
   $effect(() => {
@@ -64,14 +64,14 @@
       if (e.target === e.currentTarget) onClose();
     }}
     onkeydown={(e) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === 'Escape') onClose();
     }}
   >
-    <div 
+    <div
       class="w-full max-w-md rounded-xl border border-(--color-border) bg-(--color-surface) p-6 shadow-lg max-h-[80vh] overflow-y-auto"
       role="presentation"
       onkeydown={(e) => {
-        if (e.key === "Escape") onClose();
+        if (e.key === 'Escape') onClose();
       }}
     >
       <div class="flex items-center justify-between mb-4">
@@ -85,7 +85,12 @@
           aria-label="Close"
         >
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
@@ -105,8 +110,10 @@
                 <button
                   type="button"
                   class="h-8 w-8 rounded-full transition-transform hover:scale-110"
-                  style="background-color: {color}; {newColor === color ? 'ring-2 ring-offset-2 ring-(--color-primary)' : ''}"
-                  onclick={() => newColor = color}
+                  style="background-color: {color}; {newColor === color
+                    ? 'ring-2 ring-offset-2 ring-(--color-primary)'
+                    : ''}"
+                  onclick={() => (newColor = color)}
                   aria-label="Select {color} color"
                 ></button>
               {/each}

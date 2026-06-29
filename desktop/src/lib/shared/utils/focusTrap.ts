@@ -1,6 +1,6 @@
 /**
  * Focus trap utility for modals, dialogs, and side panels.
- * 
+ *
  * Traps keyboard focus within a container element so users can't tab out.
  * Focuses the first focusable element on activation and restores focus
  * to the previously focused element on deactivation.
@@ -13,15 +13,15 @@
  */
 
 const FOCUSABLE_SELECTOR = [
-  "a[href]",
-  "button:not([disabled])",
-  "input:not([disabled])",
-  "textarea:not([disabled])",
-  "select:not([disabled])",
-  "[tabindex]:not([tabindex=\"-1\"])",
-  "details > summary:first-of-type",
-  "[contenteditable]:not([contenteditable=\"false\"])",
-].join(", ");
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'textarea:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+  'details > summary:first-of-type',
+  '[contenteditable]:not([contenteditable="false"])',
+].join(', ');
 
 export interface FocusTrapOptions {
   /** Called when the trap is deactivated */
@@ -39,10 +39,7 @@ export interface FocusTrap {
   updateContainer: (el: HTMLElement) => void;
 }
 
-export function createFocusTrap(
-  container: HTMLElement,
-  options: FocusTrapOptions = {},
-): FocusTrap {
+export function createFocusTrap(container: HTMLElement, options: FocusTrapOptions = {}): FocusTrap {
   let activeElement = container;
   let previouslyFocused: HTMLElement | null = null;
   const { onDeactivate, initialFocusEl, restoreFocus = true } = options;
@@ -67,13 +64,13 @@ export function createFocusTrap(
       target.focus();
     } else {
       // If no focusable elements, focus the container itself
-      activeElement.setAttribute("tabindex", "-1");
+      activeElement.setAttribute('tabindex', '-1');
       activeElement.focus();
     }
   }
 
   function handleKeyDown(event: KeyboardEvent): void {
-    if (event.key !== "Tab") return;
+    if (event.key !== 'Tab') return;
 
     const firstEl = getFirstFocusable();
     const lastEl = getLastFocusable();
@@ -110,14 +107,14 @@ export function createFocusTrap(
   return {
     activate(): void {
       previouslyFocused = document.activeElement as HTMLElement | null;
-      activeElement.addEventListener("keydown", handleKeyDown);
-      activeElement.addEventListener("focusout", handleFocusOut);
+      activeElement.addEventListener('keydown', handleKeyDown);
+      activeElement.addEventListener('focusout', handleFocusOut);
       focusFirst();
     },
 
     deactivate(): void {
-      activeElement.removeEventListener("keydown", handleKeyDown);
-      activeElement.removeEventListener("focusout", handleFocusOut);
+      activeElement.removeEventListener('keydown', handleKeyDown);
+      activeElement.removeEventListener('focusout', handleFocusOut);
 
       if (restoreFocus && previouslyFocused && previouslyFocused !== document.body) {
         previouslyFocused.focus();

@@ -1,32 +1,31 @@
 <script lang="ts">
   type SkeletonProps = {
-    variant?: "text" | "circular" | "rectangular" | "rounded" | "card" | "book";
+    variant?: 'text' | 'circular' | 'rectangular' | 'rounded' | 'card' | 'book';
     width?: string;
     height?: string;
     class?: string;
   };
 
-  let {
-    variant = "text",
-    width,
-    height,
-    class: className = ""
-  }: SkeletonProps = $props();
+  let { variant = 'text', width, height, class: className = '' }: SkeletonProps = $props();
 
-  const baseShimmer = "animate-pulse bg-gradient-to-r from-(--color-border) via-(--color-surface) to-(--color-border) bg-[length:200%_100%]";
+  const baseShimmer =
+    'animate-pulse bg-gradient-to-r from-(--color-border) via-(--color-surface) to-(--color-border) bg-[length:200%_100%]';
 
   const variants = {
-    text: "rounded h-4",
-    circular: "rounded-full",
-    rectangular: "rounded-none",
-    rounded: "rounded-lg",
-    card: "rounded-xl border border-(--color-border) bg-(--color-surface)",
-    book: "rounded-xl border border-(--color-border) bg-(--color-surface)"
+    text: 'rounded h-4',
+    circular: 'rounded-full',
+    rectangular: 'rounded-none',
+    rounded: 'rounded-lg',
+    card: 'rounded-xl border border-(--color-border) bg-(--color-surface)',
+    book: 'rounded-xl border border-(--color-border) bg-(--color-surface)',
   };
 </script>
 
-{#if variant === "book" || variant === "card"}
-  <div class="{variants[variant]} p-4 {className}" style="width: {width ?? '100%'}; height: {height ?? 'auto'};">
+{#if variant === 'book' || variant === 'card'}
+  <div
+    class="{variants[variant]} p-4 {className}"
+    style="width: {width ?? '100%'}; height: {height ?? 'auto'};"
+  >
     <div class="flex gap-4">
       <div class="{baseShimmer} shrink-0 rounded" style="width: 64px; height: 80px;"></div>
       <div class="flex flex-1 flex-col gap-3 pt-1">
@@ -37,5 +36,8 @@
     </div>
   </div>
 {:else}
-  <div class="{baseShimmer} {variants[variant]} {className}" style="width: {width ?? '100%'}; height: {height ?? '1em'};"></div>
+  <div
+    class="{baseShimmer} {variants[variant]} {className}"
+    style="width: {width ?? '100%'}; height: {height ?? '1em'};"
+  ></div>
 {/if}

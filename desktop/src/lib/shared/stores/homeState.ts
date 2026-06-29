@@ -3,22 +3,29 @@ export type ProgressLike = {
   progressPercentage?: number | null;
 };
 
-export type AppRoute = "home" | "library" | "stats" | "reader" | "highlights" | "settings";
+export type AppRoute = 'home' | 'library' | 'stats' | 'reader' | 'highlights' | 'settings';
 
-export const SHELF_TAB_CODES = ["all", "favorites", "to_read", "completed"] as const;
+export const SHELF_TAB_CODES = ['all', 'favorites', 'to_read', 'completed'] as const;
 export type ShelfTabCode = (typeof SHELF_TAB_CODES)[number];
 
-export const SHELF_SORT_KEYS = ["progress", "date", "last_read", "author", "title", "file_size"] as const;
+export const SHELF_SORT_KEYS = [
+  'progress',
+  'date',
+  'last_read',
+  'author',
+  'title',
+  'file_size',
+] as const;
 export type ShelfSortKey = (typeof SHELF_SORT_KEYS)[number];
 
-export const SHELF_VIEW_MODES = ["grid", "list"] as const;
+export const SHELF_VIEW_MODES = ['grid', 'list'] as const;
 export type ShelfViewMode = (typeof SHELF_VIEW_MODES)[number];
 
-export const DEFAULT_SHELF_TAB: ShelfTabCode = "all";
-export const DEFAULT_SHELF_SORT_KEY: ShelfSortKey = "date";
-export const DEFAULT_SHELF_VIEW_MODE: ShelfViewMode = "grid";
+export const DEFAULT_SHELF_TAB: ShelfTabCode = 'all';
+export const DEFAULT_SHELF_SORT_KEY: ShelfSortKey = 'date';
+export const DEFAULT_SHELF_VIEW_MODE: ShelfViewMode = 'grid';
 
-export type SmartQueryField = "status" | "sort" | "author" | "title";
+export type SmartQueryField = 'status' | 'sort' | 'author' | 'title';
 
 export type ShelfQueryToken = {
   field: SmartQueryField;
@@ -28,10 +35,10 @@ export type ShelfQueryToken = {
 };
 
 export type ShelfQueryInvalidTokenReason =
-  | "unknown_field"
-  | "missing_value"
-  | "invalid_value"
-  | "malformed";
+  | 'unknown_field'
+  | 'missing_value'
+  | 'invalid_value'
+  | 'malformed';
 
 export type ShelfQueryInvalidToken = {
   raw: string;
@@ -69,7 +76,8 @@ export type ShelfBookLike = ProgressLike & {
   shelfStatus?: ShelfTabCode | null;
 };
 
-const removeAccents = (value: string): string => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const removeAccents = (value: string): string =>
+  value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 const normalizeSearchValue = (value: string): string => removeAccents(value).toLowerCase().trim();
 
@@ -79,7 +87,7 @@ const getSearchTerms = (value: string): string[] =>
     .filter((term) => term.length > 0);
 
 const parseDateAsMillis = (value: string | null | undefined): number => {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return Number.NEGATIVE_INFINITY;
   }
 
@@ -88,7 +96,7 @@ const parseDateAsMillis = (value: string | null | undefined): number => {
 };
 
 const toNonNegativeNumber = (value: number | null | undefined): number => {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     return 0;
   }
 
@@ -96,67 +104,87 @@ const toNonNegativeNumber = (value: number | null | undefined): number => {
 };
 
 const normalizeStatusAlias = (statusValue: string): ShelfTabCode | null => {
-  const normalized = normalizeSearchValue(statusValue).replace(/[-\s]/g, "_");
+  const normalized = normalizeSearchValue(statusValue).replace(/[-\s]/g, '_');
 
-  if (normalized === "all" || normalized === "todos") {
-    return "all";
-  }
-
-  if (normalized === "favorites" || normalized === "favorite" || normalized === "favoritos" || normalized === "favorito") {
-    return "favorites";
+  if (normalized === 'all' || normalized === 'todos') {
+    return 'all';
   }
 
   if (
-    normalized === "to_read" ||
-    normalized === "toread" ||
-    normalized === "planeo_leer" ||
-    normalized === "plan_to_read"
+    normalized === 'favorites' ||
+    normalized === 'favorite' ||
+    normalized === 'favoritos' ||
+    normalized === 'favorito'
   ) {
-    return "to_read";
+    return 'favorites';
   }
 
-  if (normalized === "completed" || normalized === "complete" || normalized === "completado" || normalized === "completados") {
-    return "completed";
+  if (
+    normalized === 'to_read' ||
+    normalized === 'toread' ||
+    normalized === 'planeo_leer' ||
+    normalized === 'plan_to_read'
+  ) {
+    return 'to_read';
+  }
+
+  if (
+    normalized === 'completed' ||
+    normalized === 'complete' ||
+    normalized === 'completado' ||
+    normalized === 'completados'
+  ) {
+    return 'completed';
   }
 
   return null;
 };
 
 const normalizeSortAlias = (sortValue: string): ShelfSortKey | null => {
-  const normalized = normalizeSearchValue(sortValue).replace(/[-\s]/g, "_");
+  const normalized = normalizeSearchValue(sortValue).replace(/[-\s]/g, '_');
 
-  if (normalized === "progress" || normalized === "progreso") {
-    return "progress";
+  if (normalized === 'progress' || normalized === 'progreso') {
+    return 'progress';
   }
 
-  if (normalized === "date" || normalized === "fecha") {
-    return "date";
+  if (normalized === 'date' || normalized === 'fecha') {
+    return 'date';
   }
 
-  if (normalized === "last_read" || normalized === "ultimoleido" || normalized === "ultimo_leido" || normalized === "lastread") {
-    return "last_read";
+  if (
+    normalized === 'last_read' ||
+    normalized === 'ultimoleido' ||
+    normalized === 'ultimo_leido' ||
+    normalized === 'lastread'
+  ) {
+    return 'last_read';
   }
 
-  if (normalized === "author" || normalized === "autor") {
-    return "author";
+  if (normalized === 'author' || normalized === 'autor') {
+    return 'author';
   }
 
-  if (normalized === "title" || normalized === "titulo") {
-    return "title";
+  if (normalized === 'title' || normalized === 'titulo') {
+    return 'title';
   }
 
-  if (normalized === "file_size" || normalized === "tamano_de_archivo" || normalized === "tamanodearchivo" || normalized === "size") {
-    return "file_size";
+  if (
+    normalized === 'file_size' ||
+    normalized === 'tamano_de_archivo' ||
+    normalized === 'tamanodearchivo' ||
+    normalized === 'size'
+  ) {
+    return 'file_size';
   }
 
   return null;
 };
 
 export const parseShelfSmartQuery = (rawQuery: string): ParsedShelfSmartQuery => {
-  const query = typeof rawQuery === "string" ? rawQuery.trim() : "";
+  const query = typeof rawQuery === 'string' ? rawQuery.trim() : '';
   if (query.length === 0) {
     return {
-      freeText: "",
+      freeText: '',
       tokens: [],
       invalidTokens: [],
     };
@@ -168,7 +196,7 @@ export const parseShelfSmartQuery = (rawQuery: string): ParsedShelfSmartQuery =>
   const invalidTokens: ShelfQueryInvalidToken[] = [];
 
   for (const part of rawParts) {
-    const separatorIndex = part.indexOf(":");
+    const separatorIndex = part.indexOf(':');
     if (separatorIndex < 0) {
       freeTextParts.push(part);
       continue;
@@ -183,7 +211,7 @@ export const parseShelfSmartQuery = (rawQuery: string): ParsedShelfSmartQuery =>
       invalidTokens.push({
         raw: part,
         field: null,
-        reason: "malformed",
+        reason: 'malformed',
       });
       continue;
     }
@@ -192,52 +220,52 @@ export const parseShelfSmartQuery = (rawQuery: string): ParsedShelfSmartQuery =>
       invalidTokens.push({
         raw: part,
         field,
-        reason: "missing_value",
+        reason: 'missing_value',
       });
       continue;
     }
 
-    if (field === "status") {
+    if (field === 'status') {
       const normalizedStatus = normalizeStatusAlias(value);
       if (!normalizedStatus) {
         invalidTokens.push({
           raw: part,
           field,
-          reason: "invalid_value",
+          reason: 'invalid_value',
         });
         continue;
       }
 
       tokens.push({
         raw: part,
-        field: "status",
+        field: 'status',
         value,
         normalizedValue: normalizedStatus,
       });
       continue;
     }
 
-    if (field === "sort") {
+    if (field === 'sort') {
       const normalizedSort = normalizeSortAlias(value);
       if (!normalizedSort) {
         invalidTokens.push({
           raw: part,
           field,
-          reason: "invalid_value",
+          reason: 'invalid_value',
         });
         continue;
       }
 
       tokens.push({
         raw: part,
-        field: "sort",
+        field: 'sort',
         value,
         normalizedValue: normalizedSort,
       });
       continue;
     }
 
-    if (field === "author" || field === "title") {
+    if (field === 'author' || field === 'title') {
       tokens.push({
         raw: part,
         field,
@@ -250,20 +278,22 @@ export const parseShelfSmartQuery = (rawQuery: string): ParsedShelfSmartQuery =>
     invalidTokens.push({
       raw: part,
       field,
-      reason: "unknown_field",
+      reason: 'unknown_field',
     });
   }
 
   return {
-    freeText: freeTextParts.join(" "),
+    freeText: freeTextParts.join(' '),
     tokens,
     invalidTokens,
   };
 };
 
 export const createShelfQueryState = (
-  rawQuery = "",
-  overrides: Partial<Omit<ShelfQueryState, "rawQuery" | "searchText" | "smartTokens" | "invalidTokens">> = {},
+  rawQuery = '',
+  overrides: Partial<
+    Omit<ShelfQueryState, 'rawQuery' | 'searchText' | 'smartTokens' | 'invalidTokens'>
+  > = {},
 ): ShelfQueryState => {
   const parsed = parseShelfSmartQuery(rawQuery);
 
@@ -280,7 +310,7 @@ export const createShelfQueryState = (
 
 export const updateShelfQueryState = (
   state: ShelfQueryState,
-  updates: Partial<Omit<ShelfQueryState, "searchText" | "smartTokens" | "invalidTokens">>,
+  updates: Partial<Omit<ShelfQueryState, 'searchText' | 'smartTokens' | 'invalidTokens'>>,
 ): ShelfQueryState => {
   const nextRawQuery = updates.rawQuery ?? state.rawQuery;
   const parsed = parseShelfSmartQuery(nextRawQuery);
@@ -295,7 +325,7 @@ export const updateShelfQueryState = (
   };
 };
 
-export const getShelfQueryWarnings = (state: Pick<ShelfQueryState, "invalidTokens">): string[] => {
+export const getShelfQueryWarnings = (state: Pick<ShelfQueryState, 'invalidTokens'>): string[] => {
   return state.invalidTokens.map((token) => token.raw);
 };
 
@@ -305,22 +335,22 @@ const getBookStatus = (book: ShelfBookLike): ShelfTabCode => {
   }
 
   if (book.completed === true || getSafeProgressPercentage(book) >= 100) {
-    return "completed";
+    return 'completed';
   }
 
   if (book.isFavorite === true) {
-    return "favorites";
+    return 'favorites';
   }
 
   if (book.toRead === true) {
-    return "to_read";
+    return 'to_read';
   }
 
-  return "all";
+  return 'all';
 };
 
 const matchesStatusCode = (book: ShelfBookLike, statusCode: ShelfTabCode): boolean => {
-  if (statusCode === "all") {
+  if (statusCode === 'all') {
     return true;
   }
 
@@ -348,12 +378,16 @@ const compareWithTieBreakers = <TBook extends ShelfBookLike>(
     return primary;
   }
 
-  const titleCompare = normalizeSearchValue(left.title ?? "").localeCompare(normalizeSearchValue(right.title ?? ""));
+  const titleCompare = normalizeSearchValue(left.title ?? '').localeCompare(
+    normalizeSearchValue(right.title ?? ''),
+  );
   if (titleCompare !== 0) {
     return titleCompare;
   }
 
-  const authorCompare = normalizeSearchValue(left.author ?? "").localeCompare(normalizeSearchValue(right.author ?? ""));
+  const authorCompare = normalizeSearchValue(left.author ?? '').localeCompare(
+    normalizeSearchValue(right.author ?? ''),
+  );
   if (authorCompare !== 0) {
     return authorCompare;
   }
@@ -369,7 +403,7 @@ const compareWithTieBreakers = <TBook extends ShelfBookLike>(
 const getSortFromTokens = (tokens: ShelfQueryToken[]): ShelfSortKey | null => {
   for (let index = tokens.length - 1; index >= 0; index -= 1) {
     const token = tokens[index];
-    if (token.field === "sort") {
+    if (token.field === 'sort') {
       return token.normalizedValue as ShelfSortKey;
     }
   }
@@ -380,7 +414,7 @@ const getSortFromTokens = (tokens: ShelfQueryToken[]): ShelfSortKey | null => {
 const getStatusFiltersFromTokens = (tokens: ShelfQueryToken[]): ShelfTabCode[] => {
   const statuses = new Set<ShelfTabCode>();
   for (const token of tokens) {
-    if (token.field === "status") {
+    if (token.field === 'status') {
       statuses.add(token.normalizedValue as ShelfTabCode);
     }
   }
@@ -388,17 +422,20 @@ const getStatusFiltersFromTokens = (tokens: ShelfQueryToken[]): ShelfTabCode[] =
   return Array.from(statuses);
 };
 
-export const selectShelfBooks = <TBook extends ShelfBookLike>(books: TBook[], queryState: ShelfQueryState): TBook[] => {
+export const selectShelfBooks = <TBook extends ShelfBookLike>(
+  books: TBook[],
+  queryState: ShelfQueryState,
+): TBook[] => {
   const statusFiltersFromTokens = getStatusFiltersFromTokens(queryState.smartTokens);
   const activeSortKey = getSortFromTokens(queryState.smartTokens) ?? queryState.sortKey;
 
   const freeTextTerms = getSearchTerms(queryState.searchText);
   const authorTokenTerms = queryState.smartTokens
-    .filter((token) => token.field === "author")
+    .filter((token) => token.field === 'author')
     .map((token) => token.normalizedValue)
     .filter((token) => token.length > 0);
   const titleTokenTerms = queryState.smartTokens
-    .filter((token) => token.field === "title")
+    .filter((token) => token.field === 'title')
     .map((token) => token.normalizedValue)
     .filter((token) => token.length > 0);
 
@@ -407,15 +444,24 @@ export const selectShelfBooks = <TBook extends ShelfBookLike>(books: TBook[], qu
       return false;
     }
 
-    if (statusFiltersFromTokens.length > 0 && !statusFiltersFromTokens.some((status) => matchesStatusCode(book, status))) {
+    if (
+      statusFiltersFromTokens.length > 0 &&
+      !statusFiltersFromTokens.some((status) => matchesStatusCode(book, status))
+    ) {
       return false;
     }
 
-    if (authorTokenTerms.length > 0 && !authorTokenTerms.every((term) => matchesSearchTerms(book.author ?? "", [term]))) {
+    if (
+      authorTokenTerms.length > 0 &&
+      !authorTokenTerms.every((term) => matchesSearchTerms(book.author ?? '', [term]))
+    ) {
       return false;
     }
 
-    if (titleTokenTerms.length > 0 && !titleTokenTerms.every((term) => matchesSearchTerms(book.title ?? "", [term]))) {
+    if (
+      titleTokenTerms.length > 0 &&
+      !titleTokenTerms.every((term) => matchesSearchTerms(book.title ?? '', [term]))
+    ) {
       return false;
     }
 
@@ -423,7 +469,7 @@ export const selectShelfBooks = <TBook extends ShelfBookLike>(books: TBook[], qu
       return true;
     }
 
-    return matchesSearchTerms(`${book.title ?? ""} ${book.author ?? ""} ${book.id}`, freeTextTerms);
+    return matchesSearchTerms(`${book.title ?? ''} ${book.author ?? ''} ${book.id}`, freeTextTerms);
   });
 
   const indexed = filtered.map((book, index) => ({
@@ -432,32 +478,41 @@ export const selectShelfBooks = <TBook extends ShelfBookLike>(books: TBook[], qu
   }));
 
   indexed.sort((left, right) => {
-    if (activeSortKey === "progress") {
+    if (activeSortKey === 'progress') {
       const primary = getSafeProgressPercentage(right.book) - getSafeProgressPercentage(left.book);
       return compareWithTieBreakers(left.book, right.book, primary, left.index, right.index);
     }
 
-    if (activeSortKey === "date") {
-      const primary = parseDateAsMillis(right.book.updatedAt ?? right.book.createdAt) - parseDateAsMillis(left.book.updatedAt ?? left.book.createdAt);
+    if (activeSortKey === 'date') {
+      const primary =
+        parseDateAsMillis(right.book.updatedAt ?? right.book.createdAt) -
+        parseDateAsMillis(left.book.updatedAt ?? left.book.createdAt);
       return compareWithTieBreakers(left.book, right.book, primary, left.index, right.index);
     }
 
-    if (activeSortKey === "last_read") {
-      const primary = parseDateAsMillis(right.book.lastReadAt ?? right.book.updatedAt) - parseDateAsMillis(left.book.lastReadAt ?? left.book.updatedAt);
+    if (activeSortKey === 'last_read') {
+      const primary =
+        parseDateAsMillis(right.book.lastReadAt ?? right.book.updatedAt) -
+        parseDateAsMillis(left.book.lastReadAt ?? left.book.updatedAt);
       return compareWithTieBreakers(left.book, right.book, primary, left.index, right.index);
     }
 
-    if (activeSortKey === "author") {
-      const primary = normalizeSearchValue(left.book.author ?? "").localeCompare(normalizeSearchValue(right.book.author ?? ""));
+    if (activeSortKey === 'author') {
+      const primary = normalizeSearchValue(left.book.author ?? '').localeCompare(
+        normalizeSearchValue(right.book.author ?? ''),
+      );
       return compareWithTieBreakers(left.book, right.book, primary, left.index, right.index);
     }
 
-    if (activeSortKey === "title") {
-      const primary = normalizeSearchValue(left.book.title ?? "").localeCompare(normalizeSearchValue(right.book.title ?? ""));
+    if (activeSortKey === 'title') {
+      const primary = normalizeSearchValue(left.book.title ?? '').localeCompare(
+        normalizeSearchValue(right.book.title ?? ''),
+      );
       return compareWithTieBreakers(left.book, right.book, primary, left.index, right.index);
     }
 
-    const primary = toNonNegativeNumber(right.book.fileSizeBytes) - toNonNegativeNumber(left.book.fileSizeBytes);
+    const primary =
+      toNonNegativeNumber(right.book.fileSizeBytes) - toNonNegativeNumber(left.book.fileSizeBytes);
     return compareWithTieBreakers(left.book, right.book, primary, left.index, right.index);
   });
 
@@ -483,21 +538,25 @@ const clamp = (value: number, min: number, max: number): number => {
   return value;
 };
 
-export const getSafeProgressPercentage = (book: Pick<ProgressLike, "progressPercentage">): number => {
+export const getSafeProgressPercentage = (
+  book: Pick<ProgressLike, 'progressPercentage'>,
+): number => {
   const raw = book.progressPercentage;
-  if (typeof raw !== "number" || !Number.isFinite(raw)) {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) {
     return 0;
   }
 
   return clamp(raw, 0, 100);
 };
 
-export const isBookInProgress = (book: Pick<ProgressLike, "progressPercentage">): boolean => {
+export const isBookInProgress = (book: Pick<ProgressLike, 'progressPercentage'>): boolean => {
   const progress = getSafeProgressPercentage(book);
   return progress > 0 && progress < 100;
 };
 
-export const partitionHomeBooks = <TBook extends ProgressLike>(books: TBook[]): { continueReadingBooks: TBook[]; myShelfBooks: TBook[] } => {
+export const partitionHomeBooks = <TBook extends ProgressLike>(
+  books: TBook[],
+): { continueReadingBooks: TBook[]; myShelfBooks: TBook[] } => {
   const continueReadingBooks: TBook[] = [];
   const myShelfBooks: TBook[] = [];
   const seenIds = new Set<string>();
@@ -522,7 +581,10 @@ export const partitionHomeBooks = <TBook extends ProgressLike>(books: TBook[]): 
   };
 };
 
-export const promoteBookForReading = <TBook extends ProgressLike>(books: TBook[], bookId: string): TBook[] => {
+export const promoteBookForReading = <TBook extends ProgressLike>(
+  books: TBook[],
+  bookId: string,
+): TBook[] => {
   let changed = false;
   const promoted = books.map((book) => {
     if (book.id !== bookId) {
@@ -553,22 +615,24 @@ export const reconcileHomeState = <TBook extends ProgressLike>(
   const shelfIds = new Set(myShelfBooks.map((book) => book.id));
 
   const firstBookId = books[0]?.id ?? null;
-  const previewBookId = snapshot.previewBookId && bookIds.has(snapshot.previewBookId)
-    ? snapshot.previewBookId
-    : firstBookId;
+  const previewBookId =
+    snapshot.previewBookId && bookIds.has(snapshot.previewBookId)
+      ? snapshot.previewBookId
+      : firstBookId;
 
-  const activeReadingBookId = snapshot.activeReadingBookId && bookIds.has(snapshot.activeReadingBookId)
-    ? snapshot.activeReadingBookId
-    : null;
+  const activeReadingBookId =
+    snapshot.activeReadingBookId && bookIds.has(snapshot.activeReadingBookId)
+      ? snapshot.activeReadingBookId
+      : null;
 
   const route = activeReadingBookId
     ? snapshot.route
-    : snapshot.route === "reader"
-      ? "home"
+    : snapshot.route === 'reader'
+      ? 'home'
       : snapshot.route;
 
   const canKeepShelfDetails =
-    route === "home" &&
+    route === 'home' &&
     snapshot.shelfDetailsBookId !== null &&
     shelfIds.has(snapshot.shelfDetailsBookId);
 

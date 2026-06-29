@@ -1,12 +1,9 @@
-import {
-  getDefaultReaderSettings,
-  getReaderSettings,
-} from "$lib/shared/api/tauriClient";
-import type { ReaderSettings, UiLocale } from "$lib/shared/types";
+import { getDefaultReaderSettings, getReaderSettings } from '$lib/shared/api/tauriClient';
+import type { ReaderSettings, UiLocale } from '$lib/shared/types';
 
 class SettingsDomainState {
   // ─── State ───
-  locale = $state<UiLocale>("es");
+  locale = $state<UiLocale>('es');
   readerSettings = $state<ReaderSettings>(getDefaultReaderSettings());
 
   // ─── Methods ───

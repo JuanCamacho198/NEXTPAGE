@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { libraryState } from "$lib/shared/stores/LibraryDomainState.svelte";
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
 
 // ─── Hoisted mock factories ───
 
@@ -17,7 +17,7 @@ const mockRecordMetric = vi.hoisted(() => vi.fn());
 
 // ─── Module mocks ───
 
-vi.mock("$lib/shared/api/tauriClient", () => ({
+vi.mock('$lib/shared/api/tauriClient', () => ({
   listLibraryBooks: mockListLibraryBooks,
   listBooks: mockListBooks,
   listCollections: mockListCollections,
@@ -29,16 +29,16 @@ vi.mock("$lib/shared/api/tauriClient", () => ({
   extractEpubCover: mockExtractEpubCover,
 }));
 
-vi.mock("$lib/shared/services/pdfThumbnail", () => ({
+vi.mock('$lib/shared/services/pdfThumbnail', () => ({
   extractPdfMetadata: mockExtractPdfMetadata,
 }));
 
-vi.mock("$lib/shared/logger/MetricsStore", () => ({
+vi.mock('$lib/shared/logger/MetricsStore', () => ({
   recordMetric: mockRecordMetric,
 }));
 
-vi.mock("$lib/shared/logger/metricTypes", () => ({
-  METRIC_NAMES: { READER_OPEN: "reader_open" },
+vi.mock('$lib/shared/logger/metricTypes', () => ({
+  METRIC_NAMES: { READER_OPEN: 'reader_open' },
 }));
 
 // ─── Helpers ───
@@ -62,17 +62,17 @@ type BookLike = {
 };
 
 const makeBook = (overrides: Partial<BookLike> = {}): BookLike => ({
-  id: "book-1",
-  title: "Test Book",
-  author: "Test Author",
-  filePath: "/test/book.pdf",
-  format: "pdf",
+  id: 'book-1',
+  title: 'Test Book',
+  author: 'Test Author',
+  filePath: '/test/book.pdf',
+  format: 'pdf',
   currentPage: 0,
   totalPages: 100,
   progressPercentage: 0,
   coverPath: null,
   minutesRead: 0,
-  updatedAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: '2026-01-01T00:00:00.000Z',
   collectionIds: [],
   isFavorite: false,
   toRead: false,
@@ -105,7 +105,7 @@ const makeSourceRow = (overrides: Partial<BookLike> = {}) => {
     title: b.title,
     author: b.author,
     format: b.format,
-    syncStatus: "local",
+    syncStatus: 'local',
     currentPage: b.currentPage,
     totalPages: b.totalPages,
   };
@@ -118,9 +118,9 @@ function resetLibraryState(): void {
   libraryState.readerError = null;
   libraryState.editingBook = null;
   libraryState.isCollectionManagerOpen = false;
-  libraryState.setShelfTab("all");
-  libraryState.setShelfSort("date");
-  libraryState.setShelfViewMode("grid");
+  libraryState.setShelfTab('all');
+  libraryState.setShelfSort('date');
+  libraryState.setShelfViewMode('grid');
   libraryState._booksJustChanged = false;
   libraryState._lastRecoverableError = null;
   libraryState.thumbnailGenerationInFlight.clear();
@@ -148,7 +148,7 @@ function setupDefaultMocks(): void {
 
 // ─── Tests ───
 
-describe("LibraryDomainState", () => {
+describe('LibraryDomainState', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupDefaultMocks();
@@ -157,7 +157,7 @@ describe("LibraryDomainState", () => {
 
   // ─── Initial state ───
 
-  it("has expected initial state", () => {
+  it('has expected initial state', () => {
     expect(libraryState.books).toEqual([]);
     expect(libraryState.collections).toEqual([]);
     expect(libraryState.isLoadingLibrary).toBe(false);
@@ -170,51 +170,75 @@ describe("LibraryDomainState", () => {
 
   // ─── getBookById ───
 
-  it("getBookById returns null for null/empty id", () => {
+  it('getBookById returns null for null/empty id', () => {
     expect(libraryState.getBookById(null)).toBeNull();
-    expect(libraryState.getBookById("nonexistent")).toBeNull();
+    expect(libraryState.getBookById('nonexistent')).toBeNull();
   });
 
-  it("getBookById returns matching book", () => {
-    const book = makeBook({ id: "b1", title: "Found" });
+  it('getBookById returns matching book', () => {
+    const book = makeBook({ id: 'b1', title: 'Found' });
     libraryState.books = [book as any];
-    expect(libraryState.getBookById("b1")?.id).toBe("b1");
-    expect(libraryState.getBookById("b1")?.title).toBe("Found");
+    expect(libraryState.getBookById('b1')?.id).toBe('b1');
+    expect(libraryState.getBookById('b1')?.title).toBe('Found');
   });
 
   // ─── hasResolvedCoverPath ───
 
-  it("hasResolvedCoverPath checks non-empty coverPath", () => {
-    expect(libraryState.hasResolvedCoverPath({ coverPath: "/path.jpg" })).toBe(true);
-    expect(libraryState.hasResolvedCoverPath({ coverPath: "" })).toBe(false);
-    expect(libraryState.hasResolvedCoverPath({ coverPath: "   " })).toBe(false);
+  it('hasResolvedCoverPath checks non-empty coverPath', () => {
+    expect(libraryState.hasResolvedCoverPath({ coverPath: '/path.jpg' })).toBe(true);
+    expect(libraryState.hasResolvedCoverPath({ coverPath: '' })).toBe(false);
+    expect(libraryState.hasResolvedCoverPath({ coverPath: '   ' })).toBe(false);
     expect(libraryState.hasResolvedCoverPath({ coverPath: null })).toBe(false);
   });
 
   // ─── shouldGeneratePdfCover ───
 
-  it("shouldGeneratePdfCover only for PDFs without cover and with filePath", () => {
-    expect(libraryState.shouldGeneratePdfCover(makeBook({ format: "pdf", filePath: "/t.pdf" }) as any)).toBe(true);
-    expect(libraryState.shouldGeneratePdfCover(makeBook({ format: "epub" }) as any)).toBe(false);
-    expect(libraryState.shouldGeneratePdfCover(makeBook({ format: "pdf", coverPath: "/c.jpg" }) as any)).toBe(false);
-    expect(libraryState.shouldGeneratePdfCover(makeBook({ format: "pdf", filePath: "" }) as any)).toBe(false);
+  it('shouldGeneratePdfCover only for PDFs without cover and with filePath', () => {
+    expect(
+      libraryState.shouldGeneratePdfCover(makeBook({ format: 'pdf', filePath: '/t.pdf' }) as any),
+    ).toBe(true);
+    expect(libraryState.shouldGeneratePdfCover(makeBook({ format: 'epub' }) as any)).toBe(false);
+    expect(
+      libraryState.shouldGeneratePdfCover(makeBook({ format: 'pdf', coverPath: '/c.jpg' }) as any),
+    ).toBe(false);
+    expect(
+      libraryState.shouldGeneratePdfCover(makeBook({ format: 'pdf', filePath: '' }) as any),
+    ).toBe(false);
   });
 
   // ─── shouldGenerateEpubCover ───
 
-  it("shouldGenerateEpubCover only for EPUBs without cover and with filePath", () => {
-    expect(libraryState.shouldGenerateEpubCover(makeBook({ format: "epub", filePath: "/t.epub" }) as any)).toBe(true);
-    expect(libraryState.shouldGenerateEpubCover(makeBook({ format: "pdf" }) as any)).toBe(false);
-    expect(libraryState.shouldGenerateEpubCover(makeBook({ format: "epub", coverPath: "/c.jpg" }) as any)).toBe(false);
-    expect(libraryState.shouldGenerateEpubCover(makeBook({ format: "epub", filePath: "" }) as any)).toBe(false);
+  it('shouldGenerateEpubCover only for EPUBs without cover and with filePath', () => {
+    expect(
+      libraryState.shouldGenerateEpubCover(
+        makeBook({ format: 'epub', filePath: '/t.epub' }) as any,
+      ),
+    ).toBe(true);
+    expect(libraryState.shouldGenerateEpubCover(makeBook({ format: 'pdf' }) as any)).toBe(false);
+    expect(
+      libraryState.shouldGenerateEpubCover(
+        makeBook({ format: 'epub', coverPath: '/c.jpg' }) as any,
+      ),
+    ).toBe(false);
+    expect(
+      libraryState.shouldGenerateEpubCover(makeBook({ format: 'epub', filePath: '' }) as any),
+    ).toBe(false);
   });
 
   // ─── loadLibrary ───
 
-  it("loadLibrary fetches books and collections", async () => {
-    const rows = [makeLibraryRow({ id: "b1", title: "Book 1", format: "pdf", collectionIds: [1] })];
-    const sourceRows = [makeSourceRow({ id: "b1", filePath: "/b1.pdf" })];
-    const collections = [{ id: 1, name: "Favorites", color: "red", isSystem: false, createdAt: "2026-01-01T00:00:00.000Z" }];
+  it('loadLibrary fetches books and collections', async () => {
+    const rows = [makeLibraryRow({ id: 'b1', title: 'Book 1', format: 'pdf', collectionIds: [1] })];
+    const sourceRows = [makeSourceRow({ id: 'b1', filePath: '/b1.pdf' })];
+    const collections = [
+      {
+        id: 1,
+        name: 'Favorites',
+        color: 'red',
+        isSystem: false,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ];
 
     mockListLibraryBooks.mockResolvedValue(rows);
     mockListBooks.mockResolvedValue(sourceRows);
@@ -226,46 +250,53 @@ describe("LibraryDomainState", () => {
     expect(mockListBooks).toHaveBeenCalled();
     expect(mockListCollections).toHaveBeenCalled();
     expect(libraryState.books).toHaveLength(1);
-    expect(libraryState.books[0].id).toBe("b1");
-    expect(libraryState.books[0].filePath).toBe("/b1.pdf");
+    expect(libraryState.books[0].id).toBe('b1');
+    expect(libraryState.books[0].filePath).toBe('/b1.pdf');
     expect(libraryState.collections).toEqual(collections);
     expect(libraryState.isLoadingLibrary).toBe(false);
     expect(libraryState.readerError).toBeNull();
   });
 
-  it("loadLibrary sets readerError on unrecoverable error", async () => {
-    const commandError = { code: "DB_ERROR", message: "Database connection failed", recoverable: false };
-    mockListLibraryBooks.mockRejectedValue({ commandError, message: "Database connection failed" });
+  it('loadLibrary sets readerError on unrecoverable error', async () => {
+    const commandError = {
+      code: 'DB_ERROR',
+      message: 'Database connection failed',
+      recoverable: false,
+    };
+    mockListLibraryBooks.mockRejectedValue({ commandError, message: 'Database connection failed' });
 
     await libraryState.loadLibrary();
 
-    expect(libraryState.readerError).toBe("Database connection failed");
+    expect(libraryState.readerError).toBe('Database connection failed');
     expect(libraryState.isLoadingLibrary).toBe(false);
     expect(libraryState._lastRecoverableError).toBeNull();
     // Other mocks still resolve, but Promise.all fails fast
   });
 
-  it("loadLibrary stores recoverable error separately", async () => {
-    const commandError = { code: "RATE_LIMIT", message: "Too many requests", recoverable: true };
-    mockListLibraryBooks.mockRejectedValue({ commandError, message: "Too many requests" });
+  it('loadLibrary stores recoverable error separately', async () => {
+    const commandError = { code: 'RATE_LIMIT', message: 'Too many requests', recoverable: true };
+    mockListLibraryBooks.mockRejectedValue({ commandError, message: 'Too many requests' });
 
     await libraryState.loadLibrary();
 
     expect(libraryState.readerError).toBeNull();
-    expect(libraryState._lastRecoverableError).toEqual({ code: "RATE_LIMIT", message: "Too many requests" });
+    expect(libraryState._lastRecoverableError).toEqual({
+      code: 'RATE_LIMIT',
+      message: 'Too many requests',
+    });
   });
 
-  it("loadLibrary handles plain Error without commandError", async () => {
-    mockListLibraryBooks.mockRejectedValue(new Error("Network error"));
+  it('loadLibrary handles plain Error without commandError', async () => {
+    mockListLibraryBooks.mockRejectedValue(new Error('Network error'));
 
     await libraryState.loadLibrary();
 
-    expect(libraryState.readerError).toBe("Network error");
+    expect(libraryState.readerError).toBe('Network error');
   });
 
-  it("loadLibrary sets booksJustChanged flag", async () => {
-    const rows = [makeLibraryRow({ id: "b1", format: "epub" })];
-    const sourceRows = [makeSourceRow({ id: "b1", filePath: "/b1.epub" })];
+  it('loadLibrary sets booksJustChanged flag', async () => {
+    const rows = [makeLibraryRow({ id: 'b1', format: 'epub' })];
+    const sourceRows = [makeSourceRow({ id: 'b1', filePath: '/b1.epub' })];
     mockListLibraryBooks.mockResolvedValue(rows);
     mockListBooks.mockResolvedValue(sourceRows);
 
@@ -275,87 +306,93 @@ describe("LibraryDomainState", () => {
     expect(libraryState.consumeBooksJustChanged()).toBe(false);
   });
 
-  it("loadLibrary handles non-Error non-commandError unknown throws", async () => {
-    mockListLibraryBooks.mockRejectedValue("some string error");
+  it('loadLibrary handles non-Error non-commandError unknown throws', async () => {
+    mockListLibraryBooks.mockRejectedValue('some string error');
 
     await libraryState.loadLibrary();
 
-    expect(libraryState.readerError).toBe("Unknown error");
+    expect(libraryState.readerError).toBe('Unknown error');
   });
 
   // ─── handleHideBook ───
 
-  it("handleHideBook hides book and reloads", async () => {
-    const rows = [makeLibraryRow({ id: "b1", format: "epub" })];
+  it('handleHideBook hides book and reloads', async () => {
+    const rows = [makeLibraryRow({ id: 'b1', format: 'epub' })];
     mockListLibraryBooks.mockResolvedValue(rows);
-    mockListBooks.mockResolvedValue([makeSourceRow({ id: "b1" })]);
+    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1' })]);
 
-    await libraryState.handleHideBook(makeBook({ id: "b1" }) as any);
+    await libraryState.handleHideBook(makeBook({ id: 'b1' }) as any);
 
-    expect(mockHideBookFromLibrary).toHaveBeenCalledWith("b1");
+    expect(mockHideBookFromLibrary).toHaveBeenCalledWith('b1');
     expect(mockListLibraryBooks).toHaveBeenCalled();
   });
 
-  it("handleHideBook sets error on failure", async () => {
-    mockHideBookFromLibrary.mockRejectedValue(new Error("Cannot hide"));
+  it('handleHideBook sets error on failure', async () => {
+    mockHideBookFromLibrary.mockRejectedValue(new Error('Cannot hide'));
 
-    await libraryState.handleHideBook(makeBook({ id: "b1" }) as any);
+    await libraryState.handleHideBook(makeBook({ id: 'b1' }) as any);
 
-    expect(libraryState.readerError).toBe("Cannot hide");
+    expect(libraryState.readerError).toBe('Cannot hide');
   });
 
   // ─── handleToggleFavorite ───
 
-  it("handleToggleFavorite optimistically updates and persists", async () => {
-    const book = makeBook({ id: "b1", isFavorite: false });
+  it('handleToggleFavorite optimistically updates and persists', async () => {
+    const book = makeBook({ id: 'b1', isFavorite: false });
     libraryState.books = [book as any];
 
     await libraryState.handleToggleFavorite(book as any);
 
     expect(libraryState.books[0].isFavorite).toBe(true);
-    expect(mockUpsertBook).toHaveBeenCalledWith(expect.objectContaining({ id: "b1" }));
+    expect(mockUpsertBook).toHaveBeenCalledWith(expect.objectContaining({ id: 'b1' }));
   });
 
-  it("handleToggleFavorite rolls back on failure", async () => {
-    const book = makeBook({ id: "b1", isFavorite: false });
+  it('handleToggleFavorite rolls back on failure', async () => {
+    const book = makeBook({ id: 'b1', isFavorite: false });
     libraryState.books = [book as any];
-    mockUpsertBook.mockRejectedValue(new Error("Save failed"));
+    mockUpsertBook.mockRejectedValue(new Error('Save failed'));
 
     await libraryState.handleToggleFavorite(book as any);
 
     expect(libraryState.books[0].isFavorite).toBe(false);
-    expect(libraryState.readerError).toBe("Save failed");
+    expect(libraryState.readerError).toBe('Save failed');
   });
 
   // ─── handleMarkCompleted ───
 
-  it("handleMarkCompleted marks PDF book as completed", async () => {
-    const book = makeBook({ id: "b1", format: "pdf", currentPage: 50, totalPages: 100 });
+  it('handleMarkCompleted marks PDF book as completed', async () => {
+    const book = makeBook({ id: 'b1', format: 'pdf', currentPage: 50, totalPages: 100 });
     libraryState.books = [book as any];
     // loadLibrary runs inside handleMarkCompleted; mock returns progressPercentage: 100
-    const row = makeLibraryRow({ id: "b1", format: "pdf", currentPage: 100, totalPages: 100, progressPercentage: 100 });
+    const row = makeLibraryRow({
+      id: 'b1',
+      format: 'pdf',
+      currentPage: 100,
+      totalPages: 100,
+      progressPercentage: 100,
+    });
     mockListLibraryBooks.mockResolvedValue([row]);
-    mockListBooks.mockResolvedValue([makeSourceRow({ id: "b1", format: "pdf" })]);
+    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1', format: 'pdf' })]);
 
     await libraryState.handleMarkCompleted(book as any);
 
-    expect(mockUpdateBookProgress).toHaveBeenCalledWith("b1", 100);
+    expect(mockUpdateBookProgress).toHaveBeenCalledWith('b1', 100);
     // Verify the save was sent AND loadLibrary confirmed progressPercentage from backend
     expect(libraryState.books[0].progressPercentage).toBe(100);
   });
 
-  it("handleMarkCompleted marks EPUB book as completed via saveProgress", async () => {
-    const book = makeBook({ id: "b1", format: "epub" });
+  it('handleMarkCompleted marks EPUB book as completed via saveProgress', async () => {
+    const book = makeBook({ id: 'b1', format: 'epub' });
     libraryState.books = [book as any];
-    const row = makeLibraryRow({ id: "b1", format: "epub", progressPercentage: 100 });
+    const row = makeLibraryRow({ id: 'b1', format: 'epub', progressPercentage: 100 });
     mockListLibraryBooks.mockResolvedValue([row]);
-    mockListBooks.mockResolvedValue([makeSourceRow({ id: "b1", format: "epub" })]);
+    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1', format: 'epub' })]);
 
     await libraryState.handleMarkCompleted(book as any);
 
     expect(mockSaveProgress).toHaveBeenCalledWith({
-      bookId: "b1",
-      cfiLocation: "",
+      bookId: 'b1',
+      cfiLocation: '',
       percentage: 100,
     });
     // loadLibrary persists progressPercentage; completed field is DTO-only
@@ -364,97 +401,100 @@ describe("LibraryDomainState", () => {
 
   // ─── handleEditBook / handleSaveEditedBook ───
 
-  it("handleEditBook sets editingBook", () => {
-    const book = makeBook({ id: "b1" });
+  it('handleEditBook sets editingBook', () => {
+    const book = makeBook({ id: 'b1' });
     libraryState.handleEditBook(book as any);
-    expect(libraryState.editingBook?.id).toBe("b1");
+    expect(libraryState.editingBook?.id).toBe('b1');
   });
 
-  it("handleSaveEditedBook updates book and clears editingBook", async () => {
-    const book = makeBook({ id: "b1", title: "Old Title", author: "Old Author" });
+  it('handleSaveEditedBook updates book and clears editingBook', async () => {
+    const book = makeBook({ id: 'b1', title: 'Old Title', author: 'Old Author' });
     libraryState.books = [book as any];
 
     await libraryState.handleSaveEditedBook({
-      id: "b1",
-      title: "New Title",
-      author: "New Author",
+      id: 'b1',
+      title: 'New Title',
+      author: 'New Author',
     } as any);
 
     expect(mockUpsertBook).toHaveBeenCalled();
-    expect(libraryState.books[0].title).toBe("New Title");
-    expect(libraryState.books[0].author).toBe("New Author");
+    expect(libraryState.books[0].title).toBe('New Title');
+    expect(libraryState.books[0].author).toBe('New Author');
     expect(libraryState.editingBook).toBeNull();
   });
 
   // ─── Shelf operations ───
 
-  it("setShelfTab updates tab", () => {
-    libraryState.setShelfTab("favorites");
-    expect(libraryState.shelfQueryState.tab).toBe("favorites");
+  it('setShelfTab updates tab', () => {
+    libraryState.setShelfTab('favorites');
+    expect(libraryState.shelfQueryState.tab).toBe('favorites');
   });
 
-  it("setShelfSort updates sort", () => {
-    libraryState.setShelfSort("title");
-    expect(libraryState.shelfQueryState.sortKey).toBe("title");
+  it('setShelfSort updates sort', () => {
+    libraryState.setShelfSort('title');
+    expect(libraryState.shelfQueryState.sortKey).toBe('title');
   });
 
-  it("setShelfViewMode toggles grid/list", () => {
-    libraryState.setShelfViewMode("list");
-    expect(libraryState.shelfQueryState.viewMode).toBe("list");
-    libraryState.setShelfViewMode("grid");
-    expect(libraryState.shelfQueryState.viewMode).toBe("grid");
+  it('setShelfViewMode toggles grid/list', () => {
+    libraryState.setShelfViewMode('list');
+    expect(libraryState.shelfQueryState.viewMode).toBe('list');
+    libraryState.setShelfViewMode('grid');
+    expect(libraryState.shelfQueryState.viewMode).toBe('grid');
   });
 
-  it("handleShelfQueryInput updates raw query", () => {
-    libraryState.handleShelfQueryInput({ target: { value: "search text" } } as unknown as Event);
-    expect(libraryState.shelfQueryState.rawQuery).toBe("search text");
+  it('handleShelfQueryInput updates raw query', () => {
+    libraryState.handleShelfQueryInput({ target: { value: 'search text' } } as unknown as Event);
+    expect(libraryState.shelfQueryState.rawQuery).toBe('search text');
   });
 
-  it("clearShelfQuery clears raw query", () => {
-    libraryState.handleShelfQueryInput({ target: { value: "search" } } as unknown as Event);
+  it('clearShelfQuery clears raw query', () => {
+    libraryState.handleShelfQueryInput({ target: { value: 'search' } } as unknown as Event);
     libraryState.clearShelfQuery();
-    expect(libraryState.shelfQueryState.rawQuery).toBe("");
+    expect(libraryState.shelfQueryState.rawQuery).toBe('');
   });
 
   // ─── Reading helpers ───
 
-  it("promoteBookForReading delegates to homeState", () => {
-    const book = makeBook({ id: "b1", progressPercentage: 0 });
+  it('promoteBookForReading delegates to homeState', () => {
+    const book = makeBook({ id: 'b1', progressPercentage: 0 });
     libraryState.books = [book as any];
-    libraryState.promoteBookForReading("b1");
+    libraryState.promoteBookForReading('b1');
     expect(libraryState.books[0].progressPercentage).toBe(1);
   });
 
-  it("updateBookPage updates book page and total pages", () => {
-    const book = makeBook({ id: "b1", currentPage: 0, totalPages: 100 });
+  it('updateBookPage updates book page and total pages', () => {
+    const book = makeBook({ id: 'b1', currentPage: 0, totalPages: 100 });
     libraryState.books = [book as any];
-    libraryState.updateBookPage("b1", 50, 100);
+    libraryState.updateBookPage('b1', 50, 100);
     expect(libraryState.books[0].currentPage).toBe(50);
     expect(libraryState.books[0].totalPages).toBe(100);
   });
 
-  it("recordReaderOpenMetric records metric", () => {
-    libraryState.recordReaderOpenMetric("epub");
-    expect(mockRecordMetric).toHaveBeenCalledWith("reader_open", { feature: "epub" });
+  it('recordReaderOpenMetric records metric', () => {
+    libraryState.recordReaderOpenMetric('epub');
+    expect(mockRecordMetric).toHaveBeenCalledWith('reader_open', { feature: 'epub' });
   });
 
   // ─── consumeBooksJustChanged / consumeLastRecoverableError ───
 
-  it("consumeBooksJustChanged returns and clears flag", () => {
+  it('consumeBooksJustChanged returns and clears flag', () => {
     libraryState._booksJustChanged = true;
     expect(libraryState.consumeBooksJustChanged()).toBe(true);
     expect(libraryState.consumeBooksJustChanged()).toBe(false);
   });
 
-  it("consumeLastRecoverableError returns and clears", () => {
-    libraryState._lastRecoverableError = { code: "RATE_LIMIT", message: "Too fast" };
-    expect(libraryState.consumeLastRecoverableError()).toEqual({ code: "RATE_LIMIT", message: "Too fast" });
+  it('consumeLastRecoverableError returns and clears', () => {
+    libraryState._lastRecoverableError = { code: 'RATE_LIMIT', message: 'Too fast' };
+    expect(libraryState.consumeLastRecoverableError()).toEqual({
+      code: 'RATE_LIMIT',
+      message: 'Too fast',
+    });
     expect(libraryState.consumeLastRecoverableError()).toBeNull();
   });
 
   // ─── Derived state ───
 
-  it("derived values do not throw with empty books", () => {
+  it('derived values do not throw with empty books', () => {
     expect(() => {
       void libraryState.continueReadingBooks;
       void libraryState.myShelfBooks;
@@ -464,112 +504,129 @@ describe("LibraryDomainState", () => {
     }).not.toThrow();
   });
 
-  it("derived shelfSortToken returns null when no sort token exists", () => {
+  it('derived shelfSortToken returns null when no sort token exists', () => {
     expect(libraryState.shelfSortToken).toBeNull();
   });
 
-  it("derived shelfSortToken extracts sort value from query", () => {
-    libraryState.handleShelfQueryInput({ target: { value: "sort:title hello" } } as unknown as Event);
-    expect(libraryState.shelfSortToken).toBe("title");
+  it('derived shelfSortToken extracts sort value from query', () => {
+    libraryState.handleShelfQueryInput({
+      target: { value: 'sort:title hello' },
+    } as unknown as Event);
+    expect(libraryState.shelfSortToken).toBe('title');
   });
 
   // ─── Constants ───
 
-  it("SHELF_TAB_OPTIONS has expected entries", () => {
+  it('SHELF_TAB_OPTIONS has expected entries', () => {
     expect(libraryState.SHELF_TAB_OPTIONS).toHaveLength(4);
-    expect(libraryState.SHELF_TAB_OPTIONS[0].key).toBe("all");
+    expect(libraryState.SHELF_TAB_OPTIONS[0].key).toBe('all');
   });
 
-  it("SHELF_SORT_OPTIONS has expected entries", () => {
+  it('SHELF_SORT_OPTIONS has expected entries', () => {
     expect(libraryState.SHELF_SORT_OPTIONS).toHaveLength(6);
   });
 });
 
-describe("LibraryDomainState — Thumbnail generation", () => {
+describe('LibraryDomainState — Thumbnail generation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupDefaultMocks();
     resetLibraryState();
   });
 
-  it("ensureEpubCover calls extractEpubCover and reloads on success", async () => {
+  it('ensureEpubCover calls extractEpubCover and reloads on success', async () => {
     mockExtractEpubCover.mockResolvedValue(true);
-    const rows = [makeLibraryRow({ id: "b1", format: "epub" })];
+    const rows = [makeLibraryRow({ id: 'b1', format: 'epub' })];
     mockListLibraryBooks.mockResolvedValue(rows);
-    mockListBooks.mockResolvedValue([makeSourceRow({ id: "b1", format: "epub" })]);
+    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1', format: 'epub' })]);
 
-    await libraryState.ensureEpubCover(makeBook({ id: "b1", format: "epub" }) as any);
+    await libraryState.ensureEpubCover(makeBook({ id: 'b1', format: 'epub' }) as any);
 
-    expect(mockExtractEpubCover).toHaveBeenCalledWith("b1", "/test/book.pdf");
+    expect(mockExtractEpubCover).toHaveBeenCalledWith('b1', '/test/book.pdf');
     expect(mockListLibraryBooks).toHaveBeenCalled();
   });
 
-  it("ensureEpubCover skips if already in flight", async () => {
-    libraryState.thumbnailGenerationInFlight.add("b1");
-    await libraryState.ensureEpubCover(makeBook({ id: "b1", format: "epub" }) as any);
+  it('ensureEpubCover skips if already in flight', async () => {
+    libraryState.thumbnailGenerationInFlight.add('b1');
+    await libraryState.ensureEpubCover(makeBook({ id: 'b1', format: 'epub' }) as any);
     expect(mockExtractEpubCover).not.toHaveBeenCalled();
   });
 
-  it("ensurePdfCover extracts metadata and updates book", async () => {
+  it('ensurePdfCover extracts metadata and updates book', async () => {
     mockExtractPdfMetadata.mockResolvedValue({
-      author: "New Author",
+      author: 'New Author',
       title: null,
       totalPages: 200,
       thumbnailBytes: new Uint8Array([1, 2, 3]),
     });
-    const book = makeBook({ id: "b1", format: "pdf", filePath: "/t.pdf", author: "", totalPages: 0 });
+    const book = makeBook({
+      id: 'b1',
+      format: 'pdf',
+      filePath: '/t.pdf',
+      author: '',
+      totalPages: 0,
+    });
     libraryState.books = [book as any];
-    const rows = [makeLibraryRow({ id: "b1", format: "pdf", author: "New Author", totalPages: 200 })];
+    const rows = [
+      makeLibraryRow({ id: 'b1', format: 'pdf', author: 'New Author', totalPages: 200 }),
+    ];
     mockListLibraryBooks.mockResolvedValue(rows);
-    mockListBooks.mockResolvedValue([makeSourceRow({ id: "b1", filePath: "/t.pdf" })]);
+    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1', filePath: '/t.pdf' })]);
 
     await libraryState.ensurePdfCover(book as any);
 
-    expect(mockExtractPdfMetadata).toHaveBeenCalledWith("/t.pdf");
+    expect(mockExtractPdfMetadata).toHaveBeenCalledWith('/t.pdf');
     expect(mockUpsertBookCover).toHaveBeenCalledWith({
-      bookId: "b1",
+      bookId: 'b1',
       data: [1, 2, 3],
-      mimeType: "image/png",
+      mimeType: 'image/png',
     });
-    expect(mockUpsertBook).toHaveBeenCalledWith(expect.objectContaining({ id: "b1", author: "New Author", totalPages: 200 }));
+    expect(mockUpsertBook).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'b1', author: 'New Author', totalPages: 200 }),
+    );
     expect(mockListLibraryBooks).toHaveBeenCalled();
   });
 
-  it("ensurePdfCover skips if already in flight", async () => {
-    libraryState.thumbnailGenerationInFlight.add("b1");
-    await libraryState.ensurePdfCover(makeBook({ id: "b1", format: "pdf" }) as any);
+  it('ensurePdfCover skips if already in flight', async () => {
+    libraryState.thumbnailGenerationInFlight.add('b1');
+    await libraryState.ensurePdfCover(makeBook({ id: 'b1', format: 'pdf' }) as any);
     expect(mockExtractPdfMetadata).not.toHaveBeenCalled();
   });
 });
 
-describe("LibraryDomainState — loadLibrary thumbnail triggering", () => {
+describe('LibraryDomainState — loadLibrary thumbnail triggering', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupDefaultMocks();
     resetLibraryState();
   });
 
-  it("loadLibrary with pending PDF thumbnails attempts generation", async () => {
-    const rows = [makeLibraryRow({ id: "b1", format: "pdf" })];
+  it('loadLibrary with pending PDF thumbnails attempts generation', async () => {
+    const rows = [makeLibraryRow({ id: 'b1', format: 'pdf' })];
     mockListLibraryBooks.mockResolvedValue(rows);
-    mockListBooks.mockResolvedValue([makeSourceRow({ id: "b1", filePath: "/b1.pdf" })]);
+    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1', filePath: '/b1.pdf' })]);
     // Make extractPdfMetadata return nulls so ensurePdfCover doesn't recursively load
-    mockExtractPdfMetadata.mockResolvedValue({ author: null, title: null, totalPages: null, thumbnailBytes: null });
+    mockExtractPdfMetadata.mockResolvedValue({
+      author: null,
+      title: null,
+      totalPages: null,
+      thumbnailBytes: null,
+    });
 
     await libraryState.loadLibrary();
 
-    expect(libraryState.thumbnailGenerationAttempted.has("b1")).toBe(true);
-    expect(mockExtractPdfMetadata).toHaveBeenCalledWith("/b1.pdf");
+    expect(libraryState.thumbnailGenerationAttempted.has('b1')).toBe(true);
+    expect(mockExtractPdfMetadata).toHaveBeenCalledWith('/b1.pdf');
   });
 
-  it("loadLibrary with pending EPUB covers attempts generation", async () => {
-    const rows = [makeLibraryRow({ id: "b1", format: "epub" })];
+  it('loadLibrary with pending EPUB covers attempts generation', async () => {
+    const rows = [makeLibraryRow({ id: 'b1', format: 'epub' })];
     mockListLibraryBooks.mockResolvedValue(rows);
-    mockListBooks.mockResolvedValue([makeSourceRow({ id: "b1", filePath: "/b1.epub" })]);
+    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1', filePath: '/b1.epub' })]);
 
     await libraryState.loadLibrary();
 
-    expect(libraryState.thumbnailGenerationAttempted.has("b1")).toBe(true);
-    expect(mockExtractEpubCover).toHaveBeenCalledWith("b1", "/b1.epub");
+    expect(libraryState.thumbnailGenerationAttempted.has('b1')).toBe(true);
+    expect(mockExtractEpubCover).toHaveBeenCalledWith('b1', '/b1.epub');
   });
 });

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { scale } from "svelte/transition";
-  import { cubicOut } from "svelte/easing";
-  import type { MessageKey } from "$lib/shared/i18n";
-  import type { TagDto } from "$lib/shared/types/book";
+  import { scale } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
+  import type { MessageKey } from '$lib/shared/i18n';
+  import type { TagDto } from '$lib/shared/types/book';
 
   type Props = {
     highlightId: string;
@@ -43,12 +43,12 @@
   const PADDING = 8;
 
   const menuX = $derived(
-    Math.max(PADDING, Math.min(position.x, window.innerWidth - MENU_WIDTH - PADDING))
+    Math.max(PADDING, Math.min(position.x, window.innerWidth - MENU_WIDTH - PADDING)),
   );
   const menuY = $derived(
     position.y + MENU_HEIGHT_ESTIMATE > window.innerHeight - PADDING
       ? position.y - MENU_HEIGHT_ESTIMATE - PADDING
-      : position.y + PADDING
+      : position.y + PADDING,
   );
 
   // Terminal actions close the menu; opening popovers / modals (color picker,
@@ -66,7 +66,7 @@
   }
 
   function handleKeydown(event: KeyboardEvent): void {
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       event.preventDefault();
       onClose();
     }
@@ -81,18 +81,18 @@
   });
 
   const ICON_BTN =
-    "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-text-inverse) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)";
+    'flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-text-inverse) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)';
   const ICON_BTN_DANGER =
-    "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-error) transition-colors hover:bg-red-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-error)";
+    'flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-error) transition-colors hover:bg-red-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-error)';
   const TOOLTIP =
-    "pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100";
+    'pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100';
 </script>
 
 <div
   class="fixed z-[100] rounded-xl border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) p-2 shadow-xl"
   style="left: {menuX}px; top: {menuY}px; width: {MENU_WIDTH}px;"
   role="menu"
-  aria-label={t("highlight.contextMenuAriaLabel")}
+  aria-label={t('highlight.contextMenuAriaLabel')}
   in:scale={{ duration: 140, start: 0.94, easing: cubicOut }}
   out:scale={{ duration: 100, start: 0.97, easing: cubicOut }}
   onclick={(e) => e.stopPropagation()}
@@ -101,13 +101,15 @@
 >
   <!-- Assigned tags chips (metadata, wraps to multiple lines if many) -->
   {#if assignedTags.length > 0}
-    <div class="mb-1.5 flex flex-wrap gap-1 px-1 pb-1.5 border-b border-(--color-highlight-menu-border)">
+    <div
+      class="mb-1.5 flex flex-wrap gap-1 px-1 pb-1.5 border-b border-(--color-highlight-menu-border)"
+    >
       {#each assignedTags as tag (tag.id)}
         <span
           class="max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-medium text-(--color-text-inverse)"
           style={tag.color
             ? `background-color: ${tag.color}33; border: 1px solid ${tag.color}66;`
-            : "background-color: rgba(255,255,255,0.1);"}
+            : 'background-color: rgba(255,255,255,0.1);'}
         >
           {tag.name}
         </span>
@@ -128,8 +130,8 @@
         class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full ring-2 ring-(--color-text-inverse) transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-(--color-accent-sky)"
         style="background-image: linear-gradient(135deg, #f87171 0%, #4ade80 50%, #60a5fa 100%);"
         onclick={onCustomColor}
-        aria-label={t("highlight.changeColor")}
-        title={t("highlight.changeColor")}
+        aria-label={t('highlight.changeColor')}
+        title={t('highlight.changeColor')}
       >
         <svg
           class="h-3 w-3 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
@@ -141,7 +143,7 @@
         </svg>
       </button>
       <span class={TOOLTIP} role="tooltip">
-        {t("highlight.changeColor")}
+        {t('highlight.changeColor')}
       </span>
     </div>
 
@@ -154,8 +156,8 @@
         type="button"
         class={ICON_BTN}
         onclick={handleCopyClick}
-        aria-label={t("reader.copiar")}
-        title={t("reader.copiar")}
+        aria-label={t('reader.copiar')}
+        title={t('reader.copiar')}
       >
         <svg
           class="h-4 w-4"
@@ -171,7 +173,7 @@
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
         </svg>
       </button>
-      <span class={TOOLTIP} role="tooltip">{t("reader.copiar")}</span>
+      <span class={TOOLTIP} role="tooltip">{t('reader.copiar')}</span>
     </div>
 
     <!-- Tag (opens TagPopover) -->
@@ -181,8 +183,8 @@
         bind:this={tagBtn}
         class={ICON_BTN}
         onclick={onTag}
-        aria-label={t("highlight.tag")}
-        title={t("highlight.tag")}
+        aria-label={t('highlight.tag')}
+        title={t('highlight.tag')}
       >
         <svg
           class="h-4 w-4"
@@ -194,11 +196,13 @@
           viewBox="0 0 24 24"
           aria-hidden="true"
         >
-          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+          <path
+            d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+          />
           <line x1="7" y1="7" x2="7.01" y2="7" />
         </svg>
       </button>
-      <span class={TOOLTIP} role="tooltip">{t("highlight.tag")}</span>
+      <span class={TOOLTIP} role="tooltip">{t('highlight.tag')}</span>
     </div>
 
     <!-- Note (opens NoteEditorModal) -->
@@ -207,8 +211,8 @@
         type="button"
         class={ICON_BTN}
         onclick={onNote}
-        aria-label={t("highlight.note")}
-        title={t("highlight.note")}
+        aria-label={t('highlight.note')}
+        title={t('highlight.note')}
       >
         <svg
           class="h-4 w-4"
@@ -226,7 +230,7 @@
           <line x1="9" y1="17" x2="15" y2="17" />
         </svg>
       </button>
-      <span class={TOOLTIP} role="tooltip">{t("highlight.note")}</span>
+      <span class={TOOLTIP} role="tooltip">{t('highlight.note')}</span>
     </div>
 
     <!-- Separator -->
@@ -238,8 +242,8 @@
         type="button"
         class={ICON_BTN_DANGER}
         onclick={handleDeleteClick}
-        aria-label={t("reader.eliminar_destacado")}
-        title={t("reader.eliminar_destacado")}
+        aria-label={t('reader.eliminar_destacado')}
+        title={t('reader.eliminar_destacado')}
       >
         <svg
           class="h-4 w-4"
@@ -259,7 +263,7 @@
         </svg>
       </button>
       <span class={TOOLTIP} role="tooltip">
-        {t("reader.eliminar_destacado")}
+        {t('reader.eliminar_destacado')}
       </span>
     </div>
   </div>

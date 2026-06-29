@@ -1,5 +1,5 @@
-import * as pdfjsLib from "pdfjs-dist";
-import { getFileBytes } from "$lib/shared/api/tauriClient";
+import * as pdfjsLib from 'pdfjs-dist';
+import { getFileBytes } from '$lib/shared/api/tauriClient';
 
 let workerConfigured = false;
 
@@ -9,7 +9,7 @@ const configureWorker = (): void => {
   }
 
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.mjs",
+    'pdfjs-dist/build/pdf.worker.min.mjs',
     import.meta.url,
   ).toString();
   workerConfigured = true;
@@ -53,16 +53,16 @@ export const extractPdfMetadata = async (
     try {
       const meta = await pdfDoc.getMetadata();
       const info = meta?.info as Record<string, unknown> | null | undefined;
-      
+
       console.log(`[PdfMetadata] Raw Info:`, info);
 
       if (info) {
-        const rawAuthor = info["Author"] ?? info["author"] ?? info["Creator"] ?? info["creator"];
-        const rawTitle = info["Title"] ?? info["title"];
-        if (typeof rawAuthor === "string" && rawAuthor.trim().length > 0) {
+        const rawAuthor = info['Author'] ?? info['author'] ?? info['Creator'] ?? info['creator'];
+        const rawTitle = info['Title'] ?? info['title'];
+        if (typeof rawAuthor === 'string' && rawAuthor.trim().length > 0) {
           author = rawAuthor.trim();
         }
-        if (typeof rawTitle === "string" && rawTitle.trim().length > 0) {
+        if (typeof rawTitle === 'string' && rawTitle.trim().length > 0) {
           title = rawTitle.trim();
         }
       }
@@ -78,15 +78,15 @@ export const extractPdfMetadata = async (
       const renderScale = baseViewport.width > maxWidth ? maxWidth / baseViewport.width : 1;
       const viewport = page.getViewport({ scale: renderScale });
 
-      const canvas = document.createElement("canvas");
+      const canvas = document.createElement('canvas');
       canvas.width = Math.max(1, Math.floor(viewport.width));
       canvas.height = Math.max(1, Math.floor(viewport.height));
 
-      const context = canvas.getContext("2d");
+      const context = canvas.getContext('2d');
       if (context) {
         await page.render({ canvasContext: context, viewport, canvas }).promise;
         const blob = await new Promise<Blob | null>((resolve) => {
-          canvas.toBlob((result) => resolve(result), "image/png");
+          canvas.toBlob((result) => resolve(result), 'image/png');
         });
         if (blob) {
           thumbnailBytes = await blobToBytes(blob);
@@ -104,13 +104,14 @@ export const extractPdfMetadata = async (
   }
 };
 
-
 /** @deprecated Use extractPdfMetadata instead which is more efficient */
-export const generatePdfFirstPageThumbnail = async (filePath: string, maxWidth = 280): Promise<Uint8Array> => {
+export const generatePdfFirstPageThumbnail = async (
+  filePath: string,
+  maxWidth = 280,
+): Promise<Uint8Array> => {
   const result = await extractPdfMetadata(filePath, maxWidth);
   if (!result.thumbnailBytes) {
-    throw new Error("Failed to generate PDF thumbnail");
+    throw new Error('Failed to generate PDF thumbnail');
   }
   return result.thumbnailBytes;
 };
-

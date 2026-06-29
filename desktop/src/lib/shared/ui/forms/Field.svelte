@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
+  import type { Snippet } from 'svelte';
 
   type Props = {
     label: string;
@@ -9,13 +9,7 @@
     class?: string;
   };
 
-  let {
-    label,
-    error,
-    id,
-    input,
-    class: className = ""
-  }: Props = $props();
+  let { label, error, id, input, class: className = '' }: Props = $props();
 </script>
 
 <div class="flex flex-col gap-1.5 {className}">

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { listBookmarks, saveBookmark, deleteBookmark } from "$lib/shared/api/tauriClient";
+  import { listBookmarks, saveBookmark, deleteBookmark } from '$lib/shared/api/tauriClient';
 
   type Props = {
     bookId: string;
@@ -28,7 +28,7 @@
     try {
       bookmarks = await listBookmarks(bookId);
     } catch (err) {
-      console.error("Failed to load bookmarks:", err);
+      console.error('Failed to load bookmarks:', err);
       bookmarks = [];
     } finally {
       isLoading = false;
@@ -49,7 +49,7 @@
       });
       await loadBookmarks();
     } catch (err) {
-      console.error("Failed to save bookmark:", err);
+      console.error('Failed to save bookmark:', err);
     }
   }
 
@@ -58,7 +58,7 @@
       await deleteBookmark(id);
       await loadBookmarks();
     } catch (err) {
-      console.error("Failed to delete bookmark:", err);
+      console.error('Failed to delete bookmark:', err);
     }
   }
 
@@ -79,7 +79,7 @@
     >
       +
     </button>
-    </header>
+  </header>
 
   {#if isLoading}
     <div class="p-6 text-center text-xs text-zinc-500">Loading bookmarks...</div>

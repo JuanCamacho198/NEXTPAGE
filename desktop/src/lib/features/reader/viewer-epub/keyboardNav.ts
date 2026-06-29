@@ -1,21 +1,21 @@
-const INPUT_LIKE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT", "BUTTON"]);
+const INPUT_LIKE_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON']);
 
 const ARROW_INTENT_BY_KEY = {
-  ArrowLeft: "prevPage",
-  ArrowRight: "nextPage",
-  ArrowUp: "scrollUp",
-  ArrowDown: "scrollDown",
+  ArrowLeft: 'prevPage',
+  ArrowRight: 'nextPage',
+  ArrowUp: 'scrollUp',
+  ArrowDown: 'scrollDown',
 } as const;
 
 export type ReaderArrowIntent = (typeof ARROW_INTENT_BY_KEY)[keyof typeof ARROW_INTENT_BY_KEY];
 
 const hasEditableRole = (element: HTMLElement): boolean => {
-  const role = element.getAttribute("role");
+  const role = element.getAttribute('role');
   if (!role) {
     return false;
   }
 
-  return role === "textbox" || role === "searchbox" || role === "combobox";
+  return role === 'textbox' || role === 'searchbox' || role === 'combobox';
 };
 
 const isEditableElement = (element: HTMLElement): boolean => {
@@ -23,12 +23,12 @@ const isEditableElement = (element: HTMLElement): boolean => {
     return true;
   }
 
-  const contentEditableAttr = element.getAttribute("contenteditable");
-  if (contentEditableAttr === "" || contentEditableAttr === "true") {
+  const contentEditableAttr = element.getAttribute('contenteditable');
+  if (contentEditableAttr === '' || contentEditableAttr === 'true') {
     return true;
   }
 
-  if (element.contentEditable === "true") {
+  if (element.contentEditable === 'true') {
     return true;
   }
 

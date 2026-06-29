@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { errorState } from "$lib/shared/stores/errorState";
-  import Button from "../forms/Button.svelte";
+  import { errorState } from '$lib/shared/stores/errorState';
+  import Button from '../forms/Button.svelte';
 
   let visible = $state(false);
-  let message = $state("");
+  let message = $state('');
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   $effect(() => {
@@ -57,12 +57,8 @@
       </button>
     </div>
     <div class="mt-3 flex gap-2">
-      <Button size="sm" variant="secondary" onclick={handleRetry}>
-        Retry
-      </Button>
-      <Button size="sm" variant="ghost" onclick={handleDismiss}>
-        Dismiss
-      </Button>
+      <Button size="sm" variant="secondary" onclick={handleRetry}>Retry</Button>
+      <Button size="sm" variant="ghost" onclick={handleDismiss}>Dismiss</Button>
     </div>
   </div>
 {/if}

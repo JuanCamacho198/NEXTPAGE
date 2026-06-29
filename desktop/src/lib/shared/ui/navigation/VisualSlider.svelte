@@ -7,7 +7,7 @@
     label?: string;
     showValue?: boolean;
     unit?: string;
-    gradient?: "brightness" | "contrast" | "size";
+    gradient?: 'brightness' | 'contrast' | 'size';
     onchange?: (value: { value: number }) => void;
   };
 
@@ -18,16 +18,16 @@
     step = 1,
     label,
     showValue = true,
-    unit = "%",
-    gradient = "brightness",
+    unit = '%',
+    gradient = 'brightness',
     onchange,
   }: Props = $props();
 
   // Generate gradient based on type
   const gradientStyles = {
-    brightness: "linear-gradient(to right, #1a1a1a 0%, #ffffff 100%)",
-    contrast: "linear-gradient(to right, #666 0%, #000 50%, #fff 100%)",
-    size: "linear-gradient(to right, var(--color-surface) 0%, var(--color-primary) 100%)",
+    brightness: 'linear-gradient(to right, #1a1a1a 0%, #ffffff 100%)',
+    contrast: 'linear-gradient(to right, #666 0%, #000 50%, #fff 100%)',
+    size: 'linear-gradient(to right, var(--color-surface) 0%, var(--color-primary) 100%)',
   };
 
   function handleInput(e: Event): void {
@@ -50,11 +50,11 @@
       {/if}
     </div>
   {/if}
-  
+
   <div class="slider-container">
     <input
       type="range"
-      id={id}
+      {id}
       {min}
       {max}
       {step}
@@ -120,7 +120,9 @@
     cursor: pointer;
     margin-top: -5px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    transition: transform 0.15s, box-shadow 0.15s;
+    transition:
+      transform 0.15s,
+      box-shadow 0.15s;
   }
 
   .slider-input::-webkit-slider-thumb:hover {
@@ -137,7 +139,9 @@
     border: 2px solid var(--color-primary);
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    transition: transform 0.15s, box-shadow 0.15s;
+    transition:
+      transform 0.15s,
+      box-shadow 0.15s;
   }
 
   .slider-input::-moz-range-thumb:hover {

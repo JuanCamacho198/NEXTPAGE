@@ -1,37 +1,37 @@
-import { render, screen } from "@testing-library/svelte";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
-import { ReadingStatsPanel } from "$lib/features/stats";
-import type { ReadingStatsSummaryDto } from "$lib/types";
-import { getReadingStats } from "$lib/shared/api/tauriClient";
+import { render, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+import { ReadingStatsPanel } from '$lib/features/stats';
+import type { ReadingStatsSummaryDto } from '$lib/types';
+import { getReadingStats } from '$lib/shared/api/tauriClient';
 
 const t = (key: string) => {
   const dictionary: Record<string, string> = {
-    "stats.title": "Reading Stats",
-    "stats.refresh": "Refresh",
-    "stats.scope": "Scope",
-    "stats.global": "Global",
-    "stats.loading": "Loading stats...",
-    "stats.unavailable": "Stats unavailable.",
-    "stats.minutes": "Minutes",
-    "stats.sessions": "Sessions",
-    "stats.started": "Started",
-    "stats.completed": "Completed",
-    "stats.averageProgress": "Average progress",
+    'stats.title': 'Reading Stats',
+    'stats.refresh': 'Refresh',
+    'stats.scope': 'Scope',
+    'stats.global': 'Global',
+    'stats.loading': 'Loading stats...',
+    'stats.unavailable': 'Stats unavailable.',
+    'stats.minutes': 'Minutes',
+    'stats.sessions': 'Sessions',
+    'stats.started': 'Started',
+    'stats.completed': 'Completed',
+    'stats.averageProgress': 'Average progress',
   };
 
   return dictionary[key] ?? key;
 };
 
-vi.mock("$lib/shared/api/tauriClient", () => ({
+vi.mock('$lib/shared/api/tauriClient', () => ({
   getReadingStats: vi.fn(),
 }));
 
 // Use type cast since vi.mocked is not available in vitest 4.x
 const mockedGetReadingStats = getReadingStats as unknown as ReturnType<typeof vi.fn>;
 
-describe("ReadingStatsPanel", () => {
-  it("renders global and per-book stats values from command response", async () => {
+describe('ReadingStatsPanel', () => {
+  it('renders global and per-book stats values from command response', async () => {
     const stats: ReadingStatsSummaryDto = {
       totalMinutesRead: 125,
       totalSessions: 8,
@@ -48,20 +48,20 @@ describe("ReadingStatsPanel", () => {
       stats: response,
       isLoading: false,
       disabledReason: null,
-      selectedBookTitle: "Book One",
+      selectedBookTitle: 'Book One',
       onRefresh,
       t,
     });
 
-    expect(screen.getByText("125")).toBeInTheDocument();
-    expect(screen.getByText("8")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText('125')).toBeInTheDocument();
+    expect(screen.getByText('8')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText(/62%/)).toBeInTheDocument();
     expect(screen.getByText(/Scope: Book One/)).toBeInTheDocument();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Refresh" }));
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 });

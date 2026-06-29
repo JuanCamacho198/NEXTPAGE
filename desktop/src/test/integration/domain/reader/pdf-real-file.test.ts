@@ -12,37 +12,37 @@
  * IMPORTANT: These tests require a real PDF.js worker and will be slower
  * than unit tests. They are intentionally kept separate from unit tests.
  */
-import { describe, expect, it, beforeAll } from "vitest";
-import { readFileSync, existsSync } from "fs";
-import { resolve } from "path";
-import { pathToFileURL } from "url";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+import { describe, expect, it, beforeAll } from 'vitest';
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
+import { pathToFileURL } from 'url';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 // ── Paths ────────────────────────────────────────────
 
-const FIXTURE_DIR = resolve("src/test/fixtures/pdfs");
+const FIXTURE_DIR = resolve('src/test/fixtures/pdfs');
 
 const FIXTURES = {
-  "sample-small.pdf": {
-    path: resolve(FIXTURE_DIR, "sample-small.pdf"),
+  'sample-small.pdf': {
+    path: resolve(FIXTURE_DIR, 'sample-small.pdf'),
     expectedPages: 1,
-    description: "PDF de 1 página",
+    description: 'PDF de 1 página',
   },
-  "sample-multi.pdf": {
-    path: resolve(FIXTURE_DIR, "sample-multi.pdf"),
+  'sample-multi.pdf': {
+    path: resolve(FIXTURE_DIR, 'sample-multi.pdf'),
     expectedMinPages: 2,
-    description: "PDF multi-página",
+    description: 'PDF multi-página',
   },
-  "sample-toc.pdf": {
-    path: resolve(FIXTURE_DIR, "sample-toc.pdf"),
+  'sample-toc.pdf': {
+    path: resolve(FIXTURE_DIR, 'sample-toc.pdf'),
     expectedMinPages: 1,
     hasOutline: true,
-    description: "PDF con tabla de contenidos",
+    description: 'PDF con tabla de contenidos',
   },
-  "sample-withimages.pdf": {
-    path: resolve(FIXTURE_DIR, "sample-withimages.pdf"),
+  'sample-withimages.pdf': {
+    path: resolve(FIXTURE_DIR, 'sample-withimages.pdf'),
     expectedMinPages: 1,
-    description: "PDF con imágenes",
+    description: 'PDF con imágenes',
   },
 };
 
@@ -58,9 +58,7 @@ beforeAll(() => {
 
   // Set up the PDF.js worker for Node.js
   // On Windows, workerSrc must be a file:// URL, not a drive-letter path
-  const workerPath = resolve(
-    "node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs",
-  );
+  const workerPath = resolve('node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs');
   if (!existsSync(workerPath)) {
     throw new Error(`PDF.js worker not found at: ${workerPath}`);
   }
@@ -80,9 +78,7 @@ function readFixtureBytes(filePath: string): Uint8Array {
 /**
  * Load a PDF document from a fixture file and return the PDF document proxy.
  */
-async function loadPdfFixture(
-  filePath: string,
-): Promise<pdfjsLib.PDFDocumentProxy> {
+async function loadPdfFixture(filePath: string): Promise<pdfjsLib.PDFDocumentProxy> {
   const data = readFixtureBytes(filePath);
   const loadingTask = pdfjsLib.getDocument({ data });
   return await loadingTask.promise;
@@ -91,51 +87,49 @@ async function loadPdfFixture(
 /**
  * Extract all text from a single page.
  */
-async function getPageText(
-  page: pdfjsLib.PDFPageProxy,
-): Promise<string> {
+async function getPageText(page: pdfjsLib.PDFPageProxy): Promise<string> {
   const textContent = await page.getTextContent();
   return textContent.items
-    .map((item) => ("str" in item ? (item as { str: string }).str : ""))
-    .join(" ");
+    .map((item) => ('str' in item ? (item as { str: string }).str : ''))
+    .join(' ');
 }
 
 // ── Tests: Loading ────────────────────────────────────
 
-describe("PDF Real Files — Document Loading", () => {
+describe('PDF Real Files — Document Loading', () => {
   it.each([
-    ["sample-small.pdf", FIXTURES["sample-small.pdf"]],
-    ["sample-multi.pdf", FIXTURES["sample-multi.pdf"]],
-    ["sample-toc.pdf", FIXTURES["sample-toc.pdf"]],
-    ["sample-withimages.pdf", FIXTURES["sample-withimages.pdf"]],
-  ])("%s loads successfully", async (name, fixture) => {
+    ['sample-small.pdf', FIXTURES['sample-small.pdf']],
+    ['sample-multi.pdf', FIXTURES['sample-multi.pdf']],
+    ['sample-toc.pdf', FIXTURES['sample-toc.pdf']],
+    ['sample-withimages.pdf', FIXTURES['sample-withimages.pdf']],
+  ])('%s loads successfully', async (name, fixture) => {
     const pdf = await loadPdfFixture(fixture.path);
     expect(pdf).toBeDefined();
     expect(pdf.numPages).toBeGreaterThanOrEqual(
-      "expectedPages" in fixture ? (fixture as { expectedPages?: number }).expectedPages ?? 1 : 1,
+      'expectedPages' in fixture ? ((fixture as { expectedPages?: number }).expectedPages ?? 1) : 1,
     );
     // Clean up
     pdf.destroy();
   });
 });
 
-describe("PDF Real Files — Page Count", () => {
-  it("sample-small.pdf has exactly 1 page", async () => {
-    const pdf = await loadPdfFixture(FIXTURES["sample-small.pdf"].path);
+describe('PDF Real Files — Page Count', () => {
+  it('sample-small.pdf has exactly 1 page', async () => {
+    const pdf = await loadPdfFixture(FIXTURES['sample-small.pdf'].path);
     expect(pdf.numPages).toBe(1);
     pdf.destroy();
   });
 
-  it("sample-multi.pdf has multiple pages", async () => {
-    const pdf = await loadPdfFixture(FIXTURES["sample-multi.pdf"].path);
+  it('sample-multi.pdf has multiple pages', async () => {
+    const pdf = await loadPdfFixture(FIXTURES['sample-multi.pdf'].path);
     expect(pdf.numPages).toBeGreaterThanOrEqual(2);
     pdf.destroy();
   });
 });
 
-describe("PDF Real Files — Page Dimensions", () => {
-  it("returns viewport dimensions for a page", async () => {
-    const pdf = await loadPdfFixture(FIXTURES["sample-small.pdf"].path);
+describe('PDF Real Files — Page Dimensions', () => {
+  it('returns viewport dimensions for a page', async () => {
+    const pdf = await loadPdfFixture(FIXTURES['sample-small.pdf'].path);
     const page = await pdf.getPage(1);
     const viewport = page.getViewport({ scale: 1 });
 
@@ -148,8 +142,8 @@ describe("PDF Real Files — Page Dimensions", () => {
     pdf.destroy();
   });
 
-  it("can render at different scales", async () => {
-    const pdf = await loadPdfFixture(FIXTURES["sample-multi.pdf"].path);
+  it('can render at different scales', async () => {
+    const pdf = await loadPdfFixture(FIXTURES['sample-multi.pdf'].path);
     const page = await pdf.getPage(1);
 
     const vp1 = page.getViewport({ scale: 1 });
@@ -162,9 +156,9 @@ describe("PDF Real Files — Page Dimensions", () => {
   });
 });
 
-describe("PDF Real Files — Text Extraction", () => {
-  it("sample-small.pdf contains extractable text", async () => {
-    const pdf = await loadPdfFixture(FIXTURES["sample-small.pdf"].path);
+describe('PDF Real Files — Text Extraction', () => {
+  it('sample-small.pdf contains extractable text', async () => {
+    const pdf = await loadPdfFixture(FIXTURES['sample-small.pdf'].path);
     const page = await pdf.getPage(1);
     const text = await getPageText(page);
 
@@ -175,8 +169,8 @@ describe("PDF Real Files — Text Extraction", () => {
     pdf.destroy();
   });
 
-  it("sample-multi.pdf has text content on each page", async () => {
-    const pdf = await loadPdfFixture(FIXTURES["sample-multi.pdf"].path);
+  it('sample-multi.pdf has text content on each page', async () => {
+    const pdf = await loadPdfFixture(FIXTURES['sample-multi.pdf'].path);
 
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
@@ -188,9 +182,9 @@ describe("PDF Real Files — Text Extraction", () => {
   });
 });
 
-describe("PDF Real Files — Outline / TOC", () => {
-  it("sample-toc.pdf returns outline items", async () => {
-    const pdf = await loadPdfFixture(FIXTURES["sample-toc.pdf"].path);
+describe('PDF Real Files — Outline / TOC', () => {
+  it('sample-toc.pdf returns outline items', async () => {
+    const pdf = await loadPdfFixture(FIXTURES['sample-toc.pdf'].path);
     const outline = await pdf.getOutline();
 
     expect(outline).not.toBeNull();
@@ -199,15 +193,15 @@ describe("PDF Real Files — Outline / TOC", () => {
 
     // Verify outline item structure
     const firstItem = outline![0];
-    expect(firstItem).toHaveProperty("title");
-    expect(typeof firstItem.title).toBe("string");
+    expect(firstItem).toHaveProperty('title');
+    expect(typeof firstItem.title).toBe('string');
     expect(firstItem.title!.length).toBeGreaterThan(0);
 
     pdf.destroy();
   });
 
-  it("sample-small.pdf has no outline (returns null or empty)", async () => {
-    const pdf = await loadPdfFixture(FIXTURES["sample-small.pdf"].path);
+  it('sample-small.pdf has no outline (returns null or empty)', async () => {
+    const pdf = await loadPdfFixture(FIXTURES['sample-small.pdf'].path);
     const outline = await pdf.getOutline();
 
     // Simple PDFs without TOC may return null or []
@@ -216,20 +210,18 @@ describe("PDF Real Files — Outline / TOC", () => {
     pdf.destroy();
   });
 
-  it("sample-toc.pdf outline items have valid destinations", async () => {
-    const pdf = await loadPdfFixture(FIXTURES["sample-toc.pdf"].path);
+  it('sample-toc.pdf outline items have valid destinations', async () => {
+    const pdf = await loadPdfFixture(FIXTURES['sample-toc.pdf'].path);
     const outline = await pdf.getOutline();
 
     expect(outline).not.toBeNull();
     expect(outline!.length).toBeGreaterThan(0);
 
     for (const item of outline!) {
-      expect(item).toHaveProperty("title");
+      expect(item).toHaveProperty('title');
       if (item.dest) {
         // Destination can be a string, array, or null
-        expect(
-          typeof item.dest === "string" || Array.isArray(item.dest),
-        ).toBe(true);
+        expect(typeof item.dest === 'string' || Array.isArray(item.dest)).toBe(true);
       }
     }
 
@@ -237,9 +229,9 @@ describe("PDF Real Files — Outline / TOC", () => {
   });
 });
 
-describe("PDF Real Files — Metadata", () => {
-  it("sample-small.pdf has metadata info", async () => {
-    const pdf = await loadPdfFixture(FIXTURES["sample-small.pdf"].path);
+describe('PDF Real Files — Metadata', () => {
+  it('sample-small.pdf has metadata info', async () => {
+    const pdf = await loadPdfFixture(FIXTURES['sample-small.pdf'].path);
 
     // pdfjs-dist provides metadata via getMetadata()
     const metadata = await pdf.getMetadata();
@@ -250,8 +242,8 @@ describe("PDF Real Files — Metadata", () => {
   });
 });
 
-describe("PDF Real Files — Edge Cases", () => {
-  it("handles unknown file gracefully with clear error", async () => {
+describe('PDF Real Files — Edge Cases', () => {
+  it('handles unknown file gracefully with clear error', async () => {
     const fakeData = new Uint8Array([0, 0, 0, 0, 0, 0]);
     const loadingTask = pdfjsLib.getDocument({ data: fakeData });
 
@@ -260,8 +252,8 @@ describe("PDF Real Files — Edge Cases", () => {
     }).rejects.toThrow();
   });
 
-  it("can request a specific page without loading all pages", async () => {
-    const pdf = await loadPdfFixture(FIXTURES["sample-multi.pdf"].path);
+  it('can request a specific page without loading all pages', async () => {
+    const pdf = await loadPdfFixture(FIXTURES['sample-multi.pdf'].path);
     const page = await pdf.getPage(pdf.numPages); // get the last page
 
     expect(page).toBeDefined();
@@ -270,17 +262,17 @@ describe("PDF Real Files — Edge Cases", () => {
     pdf.destroy();
   });
 
-  it("cleans up document resources on destroy", async () => {
-    const pdf = await loadPdfFixture(FIXTURES["sample-small.pdf"].path);
+  it('cleans up document resources on destroy', async () => {
+    const pdf = await loadPdfFixture(FIXTURES['sample-small.pdf'].path);
     // destroy() should resolve without error
     await expect(pdf.destroy()).resolves.toBeUndefined();
   });
 
-  it("loads multiple documents concurrently", async () => {
+  it('loads multiple documents concurrently', async () => {
     const results = await Promise.all([
-      loadPdfFixture(FIXTURES["sample-small.pdf"].path),
-      loadPdfFixture(FIXTURES["sample-withimages.pdf"].path),
-      loadPdfFixture(FIXTURES["sample-multi.pdf"].path),
+      loadPdfFixture(FIXTURES['sample-small.pdf'].path),
+      loadPdfFixture(FIXTURES['sample-withimages.pdf'].path),
+      loadPdfFixture(FIXTURES['sample-multi.pdf'].path),
     ]);
 
     expect(results).toHaveLength(3);

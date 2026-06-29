@@ -1,14 +1,14 @@
-import * as Sentry from "@sentry/browser";
-import type { LoggerSink } from "./Logger";
-import type { ErrorEvent } from "../events/ErrorEvent";
-import type { SentrySettings } from "../types/settings";
-import { captureBreadcrumb } from "./BreadcrumbsStore";
-import { BREADCRUMB_LABELS } from "./breadcrumbTypes";
-import { routeAlert } from "./AlertRouter";
+import * as Sentry from '@sentry/browser';
+import type { LoggerSink } from './Logger';
+import type { ErrorEvent } from '../events/ErrorEvent';
+import type { SentrySettings } from '../types/settings';
+import { captureBreadcrumb } from './BreadcrumbsStore';
+import { BREADCRUMB_LABELS } from './breadcrumbTypes';
+import { routeAlert } from './AlertRouter';
 
-type SentrySeverityLevel = "fatal" | "error" | "warning" | "info" | "debug";
+type SentrySeverityLevel = 'fatal' | 'error' | 'warning' | 'info' | 'debug';
 
-const HIGH_SEVERITY = ["high", "critical"];
+const HIGH_SEVERITY = ['high', 'critical'];
 
 export class SentrySink implements LoggerSink {
   private isEnabled: boolean = false;
@@ -42,7 +42,7 @@ export class SentrySink implements LoggerSink {
 
   log(event: ErrorEvent): void {
     if (HIGH_SEVERITY.includes(event.severity)) {
-      captureBreadcrumb("error", this.mapCodeToLabel(event.code), {
+      captureBreadcrumb('error', this.mapCodeToLabel(event.code), {
         message: event.message,
         code: event.code,
         source: event.source,
@@ -59,11 +59,11 @@ export class SentrySink implements LoggerSink {
 
     Sentry.withScope((scope: Sentry.Scope) => {
       scope.setLevel(level);
-      scope.setExtra("category", event.category);
-      scope.setExtra("code", event.code);
-      scope.setExtra("source", event.source);
-      scope.setExtra("recoverable", event.recoverable);
-      scope.setExtra("correlationId", event.correlationId);
+      scope.setExtra('category', event.category);
+      scope.setExtra('code', event.code);
+      scope.setExtra('source', event.source);
+      scope.setExtra('recoverable', event.recoverable);
+      scope.setExtra('correlationId', event.correlationId);
 
       if (event.context && Object.keys(event.context).length > 0) {
         for (const [key, value] of Object.entries(event.context)) {
@@ -71,7 +71,7 @@ export class SentrySink implements LoggerSink {
         }
       }
 
-      if (level === "error" || level === "fatal") {
+      if (level === 'error' || level === 'fatal') {
         const error = new Error(event.message);
         error.name = event.code;
         Sentry.captureException(error);
@@ -82,24 +82,24 @@ export class SentrySink implements LoggerSink {
   }
 
   private mapCodeToLabel(code: string): string {
-    if (code.includes("IMPORT")) return BREADCRUMB_LABELS.IMPORT_FAIL;
-    if (code.includes("SYNC")) return "sync_fail";
-    if (code.includes("READER")) return "reader_fail";
-    return "error_generic";
+    if (code.includes('IMPORT')) return BREADCRUMB_LABELS.IMPORT_FAIL;
+    if (code.includes('SYNC')) return 'sync_fail';
+    if (code.includes('READER')) return 'reader_fail';
+    return 'error_generic';
   }
 
-  private mapSeverity(severity: ErrorEvent["severity"]): SentrySeverityLevel {
+  private mapSeverity(severity: ErrorEvent['severity']): SentrySeverityLevel {
     switch (severity) {
-      case "critical":
-        return "fatal";
-      case "high":
-        return "error";
-      case "medium":
-        return "warning";
-      case "low":
-        return "info";
+      case 'critical':
+        return 'fatal';
+      case 'high':
+        return 'error';
+      case 'medium':
+        return 'warning';
+      case 'low':
+        return 'info';
       default:
-        return "info";
+        return 'info';
     }
   }
 }

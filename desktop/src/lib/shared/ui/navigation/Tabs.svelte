@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
+  import type { Snippet } from 'svelte';
 
   type Tab = {
     id: string;
@@ -15,9 +15,9 @@
 
   let {
     tabs,
-    active = $bindable(tabs[0]?.id ?? ""),
+    active = $bindable(tabs[0]?.id ?? ''),
     children,
-    class: className = ""
+    class: className = '',
   }: Props = $props();
 
   function handleTabClick(tabId: string): void {
@@ -25,12 +25,15 @@
   }
 </script>
 
-<div class="{className}">
+<div class={className}>
   <div class="flex border-b border-(--color-border)" role="tablist">
     {#each tabs as tab}
       <button
         type="button"
-        class="relative px-4 py-2.5 text-sm font-medium transition-colors hover:text-(--color-primary) {active === tab.id ? 'text-(--color-primary)' : 'text-(--color-muted)'}"
+        class="relative px-4 py-2.5 text-sm font-medium transition-colors hover:text-(--color-primary) {active ===
+        tab.id
+          ? 'text-(--color-primary)'
+          : 'text-(--color-muted)'}"
         role="tab"
         aria-selected={active === tab.id}
         onclick={() => handleTabClick(tab.id)}

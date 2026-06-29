@@ -1,15 +1,15 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
-  import { createFocusTrap } from "$lib/shared/utils/focusTrap";
+  import type { Snippet } from 'svelte';
+  import { createFocusTrap } from '$lib/shared/utils/focusTrap';
 
-  import { fly, fade } from "svelte/transition";
+  import { fly, fade } from 'svelte/transition';
 
   type Props = {
     open: boolean;
     title: string;
     children?: Snippet;
     footer?: Snippet;
-    size?: "sm" | "md" | "lg";
+    size?: 'sm' | 'md' | 'lg';
     noCloseButton?: boolean;
     class?: string;
   };
@@ -19,16 +19,14 @@
     title,
     children,
     footer,
-    size = "md",
+    size = 'md',
     noCloseButton = false,
-    class: className = ""
+    class: className = '',
   }: Props = $props();
 
   let dialogEl: HTMLDivElement | undefined = $state();
 
-  const sizeClass = $derived(
-    size === "sm" ? "max-w-sm" : size === "lg" ? "max-w-2xl" : "max-w-lg"
-  );
+  const sizeClass = $derived(size === 'sm' ? 'max-w-sm' : size === 'lg' ? 'max-w-2xl' : 'max-w-lg');
 
   const handleBackdropClick = (e: MouseEvent): void => {
     if (e.target === e.currentTarget) {
@@ -37,7 +35,7 @@
   };
 
   const handleKeydown = (e: KeyboardEvent): void => {
-    if (e.key === "Escape") {
+    if (e.key === 'Escape') {
       open = false;
     }
   };
@@ -62,7 +60,7 @@
     role="presentation"
     transition:fade={{ duration: 200 }}
   >
-    <div 
+    <div
       bind:this={dialogEl}
       class="w-full {sizeClass} rounded-xl border border-(--color-border) bg-(--color-surface) shadow-xl {className}"
       role="dialog"
@@ -79,7 +77,12 @@
             aria-label="Close"
           >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         {/if}

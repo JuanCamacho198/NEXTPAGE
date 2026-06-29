@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { tick } from "svelte";
-  import type { MessageKey } from "$lib/shared/i18n";
-  import type { TagDto } from "$lib/shared/types/book";
+  import { tick } from 'svelte';
+  import type { MessageKey } from '$lib/shared/i18n';
+  import type { TagDto } from '$lib/shared/types/book';
 
   type Props = {
     open: boolean;
@@ -16,7 +16,7 @@
 
   let { open, anchor, assignedTagIds, allTags, onCreate, onToggle, onClose, t }: Props = $props();
 
-  let newTagName = $state("");
+  let newTagName = $state('');
   let popoverEl = $state<HTMLDivElement | null>(null);
 
   const normalizedAssigned = $derived(new Set(assignedTagIds));
@@ -39,14 +39,14 @@
     } else {
       onCreate(name);
     }
-    newTagName = "";
+    newTagName = '';
   }
 
   function handleKeydown(event: KeyboardEvent): void {
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       event.preventDefault();
       onClose();
-    } else if (event.key === "Enter" && newTagName.trim()) {
+    } else if (event.key === 'Enter' && newTagName.trim()) {
       event.preventDefault();
       handleCreate();
     }
@@ -54,7 +54,7 @@
 
   $effect(() => {
     if (open) {
-      newTagName = "";
+      newTagName = '';
       void tick().then(() => {
         popoverEl?.focus();
       });
@@ -66,9 +66,12 @@
   <div
     bind:this={popoverEl}
     class="fixed z-[110] w-56 rounded-xl border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) p-2 shadow-xl"
-    style="left: {Math.max(8, Math.min(anchor.getBoundingClientRect().left, window.innerWidth - 240))}px; top: {anchor.getBoundingClientRect().bottom + 8}px;"
+    style="left: {Math.max(
+      8,
+      Math.min(anchor.getBoundingClientRect().left, window.innerWidth - 240),
+    )}px; top: {anchor.getBoundingClientRect().bottom + 8}px;"
     role="dialog"
-    aria-label={t("highlight.tagPopoverAriaLabel")}
+    aria-label={t('highlight.tagPopoverAriaLabel')}
     tabindex="-1"
     onclick={(e) => e.stopPropagation()}
     onkeydown={handleKeydown}
@@ -78,7 +81,7 @@
         type="text"
         bind:value={newTagName}
         maxlength="50"
-        placeholder={t("highlight.newTagPlaceholder")}
+        placeholder={t('highlight.newTagPlaceholder')}
         class="flex-1 rounded-md border border-(--color-highlight-menu-border) bg-(--color-bg-deep) px-2 py-1 text-sm text-(--color-text-inverse) placeholder-(--color-text-auxiliary) focus:outline-none focus:ring-1 focus:ring-(--color-accent-sky)"
       />
       <button
@@ -87,14 +90,14 @@
         disabled={!newTagName.trim()}
         onclick={handleCreate}
       >
-        {t("highlight.createTag")}
+        {t('highlight.createTag')}
       </button>
     </div>
 
-    <div class="mt-2 max-h-40 overflow-y-auto" role="group" aria-label={t("highlight.tags")}>
+    <div class="mt-2 max-h-40 overflow-y-auto" role="group" aria-label={t('highlight.tags')}>
       {#if allTags.length === 0}
         <p class="px-1 py-2 text-xs text-(--color-text-auxiliary)">
-          {t("highlight.noTagsYet")}
+          {t('highlight.noTagsYet')}
         </p>
       {:else}
         {#each allTags as tag (tag.id)}

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
+  import type { Snippet } from 'svelte';
 
   type Props = {
     title: string;
@@ -7,11 +7,7 @@
     class?: string;
   };
 
-  let {
-    title,
-    actions,
-    class: className = ""
-  }: Props = $props();
+  let { title, actions, class: className = '' }: Props = $props();
 </script>
 
 <div class="flex items-center justify-between {className}">

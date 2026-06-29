@@ -5,13 +5,9 @@
     class?: string;
   };
 
-  let {
-    text = "",
-    color,
-    class: className = "",
-  }: Props = $props();
+  let { text = '', color, class: className = '' }: Props = $props();
 
-  const bgColor = $derived(color ?? "var(--color-primary)");
+  const bgColor = $derived(color ?? 'var(--color-primary)');
 </script>
 
 <span

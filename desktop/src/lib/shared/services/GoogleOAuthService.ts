@@ -23,11 +23,7 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID as string;
 const CLIENT_SECRET = (import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET ?? '') as string;
 const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
-const SCOPES = [
-  'https://www.googleapis.com/auth/drive.appdata',
-  'email',
-  'profile',
-].join(' ');
+const SCOPES = ['https://www.googleapis.com/auth/drive.appdata', 'email', 'profile'].join(' ');
 
 let currentPort: number | null = null;
 let expectedState: string | null = null;
@@ -148,10 +144,7 @@ export async function startAuth(): Promise<void> {
   try {
     port = await start({ response: LOOPBACK_SUCCESS_HTML });
   } catch (err) {
-    throw new OAuthError(
-      `Failed to start loopback server: ${String(err)}`,
-      'plugin_unavailable',
-    );
+    throw new OAuthError(`Failed to start loopback server: ${String(err)}`, 'plugin_unavailable');
   }
   currentPort = port;
 
@@ -193,19 +186,13 @@ export async function handleOAuthCallback(url: string): Promise<void> {
   if (error) {
     expectedState = null;
     currentPort = null;
-    throw new OAuthError(
-      `OAuth provider returned error: ${error}`,
-      'server_failed',
-    );
+    throw new OAuthError(`OAuth provider returned error: ${error}`, 'server_failed');
   }
   if (!code) {
     throw new OAuthError('No authorization code in callback URL', 'no_code');
   }
   if (state !== expectedState) {
-    throw new OAuthError(
-      'State parameter mismatch — possible CSRF',
-      'state_mismatch',
-    );
+    throw new OAuthError('State parameter mismatch — possible CSRF', 'state_mismatch');
   }
 
   await handleCallback(code);
@@ -258,8 +245,7 @@ export async function handleCallback(code: string): Promise<void> {
     code,
     client_id: CLIENT_ID,
     client_secret: CLIENT_SECRET,
-    redirect_uri:
-      currentPort !== null ? `http://127.0.0.1:${currentPort}/` : 'http://127.0.0.1:0/',
+    redirect_uri: currentPort !== null ? `http://127.0.0.1:${currentPort}/` : 'http://127.0.0.1:0/',
     code_verifier: codeVerifier,
     grant_type: 'authorization_code',
   });

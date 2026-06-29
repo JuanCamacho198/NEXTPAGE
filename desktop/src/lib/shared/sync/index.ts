@@ -1,1 +1,1 @@
-export * from "./ConflictResolver";
+export * from './ConflictResolver';

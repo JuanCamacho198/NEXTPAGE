@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { MessageKey } from "$lib/shared/i18n";
-  import { createFocusTrap } from "$lib/shared/utils/focusTrap";
+  import type { MessageKey } from '$lib/shared/i18n';
+  import { createFocusTrap } from '$lib/shared/utils/focusTrap';
 
   export interface TocEntry {
     id: string;
@@ -41,7 +41,7 @@
   <div
     class="fixed inset-0 z-40"
     onclick={handleBackdropClick}
-    onkeydown={(e) => e.key === "Escape" && onClose()}
+    onkeydown={(e) => e.key === 'Escape' && onClose()}
     role="presentation"
   >
     <!-- Backdrop -->
@@ -51,20 +51,20 @@
     <div
       bind:this={sidebarEl}
       class="absolute right-0 top-0 flex h-full w-65 flex-col overflow-y-auto border-l border-(--color-border-deep) bg-(--color-surface)/70 pt-15 text-(--color-text-muted) backdrop-blur-sm"
-      onkeydown={(e) => e.key === "Escape" && onClose()}
+      onkeydown={(e) => e.key === 'Escape' && onClose()}
       role="dialog"
-      aria-label={t("reader.tabla_contenidos")}
+      aria-label={t('reader.tabla_contenidos')}
       tabindex="0"
     >
       <!-- Heading -->
       <header class="border-b border-(--color-border)/5 px-5 py-4">
-        <h2 class="text-base font-bold text-(--color-primary)">{t("reader.tabla_contenidos")}</h2>
+        <h2 class="text-base font-bold text-(--color-primary)">{t('reader.tabla_contenidos')}</h2>
       </header>
 
       <!-- Chapter List -->
       {#if entries.length === 0}
         <div class="flex flex-1 items-center justify-center px-5">
-          <p class="text-sm italic text-(--color-text-muted)/60">{t("reader.toc_empty")}</p>
+          <p class="text-sm italic text-(--color-text-muted)/60">{t('reader.toc_empty')}</p>
         </div>
       {:else}
         <nav class="flex-1 overflow-y-auto py-2">
@@ -74,7 +74,9 @@
               class="flex w-full cursor-pointer items-start px-5 py-2 text-left transition-colors hover:bg-(--color-border)"
               class:border-l-2={entry.id === activeId}
               class:border-(--color-accent-blue)={entry.id === activeId}
-              style="background-color: {entry.id === activeId ? 'rgba(73, 212, 255, 0.05)' : 'transparent'};"
+              style="background-color: {entry.id === activeId
+                ? 'rgba(73, 212, 255, 0.05)'
+                : 'transparent'};"
               class:pl-7={entry.depth === 1}
               class:pl-9={entry.depth === 2}
               class:pl-11={entry.depth >= 3}

@@ -19,12 +19,12 @@ export type ScanFolderResult = {
 };
 
 export const BULK_IMPORT_ITEM_STATUS = {
-  QUEUED: "queued",
-  IMPORTING: "importing",
-  SUCCESS: "success",
-  SKIPPED: "skipped",
-  FAILED: "failed",
-  CANCELLED: "cancelled",
+  QUEUED: 'queued',
+  IMPORTING: 'importing',
+  SUCCESS: 'success',
+  SKIPPED: 'skipped',
+  FAILED: 'failed',
+  CANCELLED: 'cancelled',
 } as const;
 
 export type BulkImportItemStatus =
@@ -93,5 +93,5 @@ export type ReaderBook = LibraryBookDto & {
   isFavorite?: boolean;
   toRead?: boolean;
   completed?: boolean;
-  shelfStatus?: "all" | "favorites" | "to_read" | "completed";
+  shelfStatus?: 'all' | 'favorites' | 'to_read' | 'completed';
 };

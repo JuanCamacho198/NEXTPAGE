@@ -108,7 +108,7 @@ export type UpsertBookCoverInput = {
  * `updateColor` and `delete` are fired by the Menu 2 toolbar itself.
  * `close` dismisses the toolbar without mutating the highlight.
  */
-export type HighlightActionKind = "open" | "updateColor" | "delete" | "close";
+export type HighlightActionKind = 'open' | 'updateColor' | 'delete' | 'close';
 
 /**
  * Options payload for `onHighlightAction`. `color` is the current

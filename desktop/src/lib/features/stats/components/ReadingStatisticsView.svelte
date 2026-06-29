@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { SafeCover } from "$lib/features/library";
-  import { getSafeProgressPercentage } from "$lib/shared/stores/homeState";
+  import { SafeCover } from '$lib/features/library';
+  import { getSafeProgressPercentage } from '$lib/shared/stores/homeState';
   import {
     periodLabels,
     hashNumber,
@@ -9,16 +9,16 @@
     type Granularity,
     type GenreKey,
     type Props,
-  } from "./readingStatsState.svelte";
+  } from './readingStatsState.svelte';
 
   let { books, stats, isLoading = false, disabledReason = null }: Props = $props();
 
-  let activePeriod = $state<PeriodKey>("month");
-  let activeGranularity = $state<Granularity>("day");
+  let activePeriod = $state<PeriodKey>('month');
+  let activeGranularity = $state<Granularity>('day');
 
   const genreDistribution = $derived.by(() => {
     const buckets: Record<GenreKey, number> = {
-      "Desarrollo personal": 0,
+      'Desarrollo personal': 0,
       Productividad: 0,
       Finanzas: 0,
       Ficcion: 0,
@@ -35,31 +35,64 @@
       genre: genre as GenreKey,
       minutes,
       percent: total > 0 ? Math.round((minutes / total) * 100) : 0,
-      color: ["#43d3c4", "#f4b942", "#4d86ff", "#9d59ff", "#ff6b6b"][index],
+      color: ['#43d3c4', '#f4b942', '#4d86ff', '#9d59ff', '#ff6b6b'][index],
     }));
   });
 
-  const totalMinutes = $derived(stats?.totalMinutesRead ?? books.reduce((sum, book) => sum + book.minutesRead, 0));
+  const totalMinutes = $derived(
+    stats?.totalMinutesRead ?? books.reduce((sum, book) => sum + book.minutesRead, 0),
+  );
   const totalSessions = $derived(stats?.totalSessions ?? Math.max(books.length * 2, 0));
-  const booksStarted = $derived(stats?.booksStarted ?? books.filter((book) => getSafeProgressPercentage(book) > 0).length);
-  const booksCompleted = $derived(stats?.booksCompleted ?? books.filter((book) => book.completed || getSafeProgressPercentage(book) >= 100).length);
-  const averageProgress = $derived(stats?.avgProgressPercentage ?? (books.length ? books.reduce((sum, book) => sum + getSafeProgressPercentage(book), 0) / books.length : 0));
+  const booksStarted = $derived(
+    stats?.booksStarted ?? books.filter((book) => getSafeProgressPercentage(book) > 0).length,
+  );
+  const booksCompleted = $derived(
+    stats?.booksCompleted ??
+      books.filter((book) => book.completed || getSafeProgressPercentage(book) >= 100).length,
+  );
+  const averageProgress = $derived(
+    stats?.avgProgressPercentage ??
+      (books.length
+        ? books.reduce((sum, book) => sum + getSafeProgressPercentage(book), 0) / books.length
+        : 0),
+  );
 
   const metricCards = $derived([
-    { label: "Minutos leidos", value: totalMinutes.toLocaleString("es-CO"), delta: "+18% vs. mes anterior" },
-    { label: "Sesiones", value: totalSessions.toLocaleString("es-CO"), delta: "+21% vs. mes anterior" },
-    { label: "Libros iniciados", value: booksStarted.toLocaleString("es-CO"), delta: "+25% vs. mes anterior" },
-    { label: "Libros completados", value: booksCompleted.toLocaleString("es-CO"), delta: "+100% vs. mes anterior" },
-    { label: "Progreso promedio", value: `${Math.round(averageProgress)}%`, delta: "+12% vs. mes anterior" },
+    {
+      label: 'Minutos leidos',
+      value: totalMinutes.toLocaleString('es-CO'),
+      delta: '+18% vs. mes anterior',
+    },
+    {
+      label: 'Sesiones',
+      value: totalSessions.toLocaleString('es-CO'),
+      delta: '+21% vs. mes anterior',
+    },
+    {
+      label: 'Libros iniciados',
+      value: booksStarted.toLocaleString('es-CO'),
+      delta: '+25% vs. mes anterior',
+    },
+    {
+      label: 'Libros completados',
+      value: booksCompleted.toLocaleString('es-CO'),
+      delta: '+100% vs. mes anterior',
+    },
+    {
+      label: 'Progreso promedio',
+      value: `${Math.round(averageProgress)}%`,
+      delta: '+12% vs. mes anterior',
+    },
   ]);
 
   const activitySeries = $derived.by(() => {
     const templates: Record<Granularity, string[]> = {
-      day: activePeriod === "week"
-        ? ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"]
-        : ["1 may.", "6 may.", "11 may.", "16 may.", "21 may.", "26 may.", "31 may."],
-      week: ["Sem 1", "Sem 2", "Sem 3", "Sem 4", "Sem 5", "Sem 6"],
-      month: ["Ene", "Mar", "May", "Jul", "Sep", "Nov"],
+      day:
+        activePeriod === 'week'
+          ? ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom']
+          : ['1 may.', '6 may.', '11 may.', '16 may.', '21 may.', '26 may.', '31 may.'],
+      week: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6'],
+      month: ['Ene', 'Mar', 'May', 'Jul', 'Sep', 'Nov'],
     };
 
     const labels = templates[activeGranularity];
@@ -91,15 +124,15 @@
       return { ...point, x, y };
     });
 
-    const line = points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x},${point.y}`).join(" ");
+    const line = points
+      .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x},${point.y}`)
+      .join(' ');
     const area = `${line} L ${width},${height} L 0,${height} Z`;
     return { max, points, line, area, width, height };
   });
 
   const mostReadBooks = $derived.by(() =>
-    [...books]
-      .sort((left, right) => right.minutesRead - left.minutesRead)
-      .slice(0, 3),
+    [...books].sort((left, right) => right.minutesRead - left.minutesRead).slice(0, 3),
   );
 
   const streakDays = $derived.by(() => {
@@ -114,30 +147,40 @@
     Array.from({ length: 14 }, (_, index) => {
       const active = index >= 14 - streakDays || index % 3 === 0;
       return {
-        label: ["L", "M", "M", "J", "V", "S", "D"][index % 7],
+        label: ['L', 'M', 'M', 'J', 'V', 'S', 'D'][index % 7],
         active,
       };
     }),
   );
 
-  const averageMinutesPerSession = $derived(totalSessions > 0 ? Math.round(totalMinutes / totalSessions) : 0);
-  const averageMinutesPerDay = $derived(activitySeries.length > 0 ? Math.round(totalMinutes / activitySeries.length) : 0);
-  const totalPagesRead = $derived(books.reduce((sum, book) => sum + Math.max(book.currentPage, 0), 0));
+  const averageMinutesPerSession = $derived(
+    totalSessions > 0 ? Math.round(totalMinutes / totalSessions) : 0,
+  );
+  const averageMinutesPerDay = $derived(
+    activitySeries.length > 0 ? Math.round(totalMinutes / activitySeries.length) : 0,
+  );
+  const totalPagesRead = $derived(
+    books.reduce((sum, book) => sum + Math.max(book.currentPage, 0), 0),
+  );
 </script>
 
 <section class="space-y-5">
-  <div class="rounded-[28px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-[0_24px_80px_rgba(3,10,20,0.38)]">
+  <div
+    class="rounded-[28px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-[0_24px_80px_rgba(3,10,20,0.38)]"
+  >
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">Estadísticas</h1>
         <p class="mt-1 text-sm text-(--color-text-muted)">Tu progreso de lectura en detalle.</p>
       </div>
 
-      <label class="inline-flex items-center gap-2 self-start rounded-2xl border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--color-primary)">
+      <label
+        class="inline-flex items-center gap-2 self-start rounded-2xl border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--color-primary)"
+      >
         <span class="sr-only">Periodo</span>
         <select class="bg-transparent outline-none" bind:value={activePeriod}>
           {#each Object.entries(periodLabels) as [value, label]}
-            <option value={value}>{label}</option>
+            <option {value}>{label}</option>
           {/each}
         </select>
       </label>
@@ -145,31 +188,52 @@
   </div>
 
   {#if disabledReason}
-    <div class="rounded-[24px] border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">{disabledReason}</div>
+    <div
+      class="rounded-[24px] border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+    >
+      {disabledReason}
+    </div>
   {:else if isLoading}
-    <div class="rounded-[24px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] px-4 py-8 text-sm text-(--color-text-muted)">Cargando estadisticas...</div>
+    <div
+      class="rounded-[24px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] px-4 py-8 text-sm text-(--color-text-muted)"
+    >
+      Cargando estadisticas...
+    </div>
   {:else}
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-5">
       {#each metricCards as metric}
-        <article class="rounded-[24px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
+        <article
+          class="rounded-[24px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]"
+        >
           <p class="text-xs text-(--color-text-muted)">{metric.label}</p>
-          <p class="mt-3 text-3xl font-semibold tracking-tight text-(--color-primary)">{metric.value}</p>
+          <p class="mt-3 text-3xl font-semibold tracking-tight text-(--color-primary)">
+            {metric.value}
+          </p>
           <p class="mt-2 text-xs text-[#61d6a6]">{metric.delta}</p>
         </article>
       {/each}
     </div>
 
     <div class="grid grid-cols-1 gap-4 2xl:grid-cols-[1.6fr_1fr]">
-      <article class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
+      <article
+        class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]"
+      >
         <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 class="text-base font-semibold text-(--color-primary)">Minutos leidos</h2>
-            <p class="text-sm text-(--color-text-muted)">Actividad de lectura a lo largo del tiempo.</p>
+            <p class="text-sm text-(--color-text-muted)">
+              Actividad de lectura a lo largo del tiempo.
+            </p>
           </div>
 
-          <label class="inline-flex items-center gap-2 rounded-2xl border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-3 py-2 text-xs text-(--color-text-muted)">
+          <label
+            class="inline-flex items-center gap-2 rounded-2xl border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-3 py-2 text-xs text-(--color-text-muted)"
+          >
             <span>Vista</span>
-            <select class="bg-transparent text-sm text-(--color-primary) outline-none" bind:value={activeGranularity}>
+            <select
+              class="bg-transparent text-sm text-(--color-primary) outline-none"
+              bind:value={activeGranularity}
+            >
               <option value="day">Dia</option>
               <option value="week">Semana</option>
               <option value="month">Mes</option>
@@ -177,7 +241,9 @@
           </label>
         </div>
 
-        <div class="rounded-[22px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(6,14,24,0.86),rgba(10,18,30,0.94))] p-4">
+        <div
+          class="rounded-[22px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(6,14,24,0.86),rgba(10,18,30,0.94))] p-4"
+        >
           <svg viewBox={`0 0 ${chartMeta.width} ${chartMeta.height + 28}`} class="h-[280px] w-full">
             <defs>
               <linearGradient id="lineStroke" x1="0%" x2="100%" y1="0%" y2="0%">
@@ -202,14 +268,26 @@
             {/each}
 
             <path d={chartMeta.area} fill="url(#lineFill)"></path>
-            <path d={chartMeta.line} fill="none" stroke="url(#lineStroke)" stroke-width="3" stroke-linecap="round"></path>
+            <path
+              d={chartMeta.line}
+              fill="none"
+              stroke="url(#lineStroke)"
+              stroke-width="3"
+              stroke-linecap="round"
+            ></path>
 
             {#each chartMeta.points as point}
               <circle cx={point.x} cy={point.y} r="4" fill="#49d4ff"></circle>
             {/each}
 
             {#each chartMeta.points as point}
-              <text x={point.x} y={chartMeta.height + 18} text-anchor="middle" font-size="11" fill="var(--color-text-muted)">
+              <text
+                x={point.x}
+                y={chartMeta.height + 18}
+                text-anchor="middle"
+                font-size="11"
+                fill="var(--color-text-muted)"
+              >
                 {point.label}
               </text>
             {/each}
@@ -217,23 +295,37 @@
         </div>
       </article>
 
-      <article class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
+      <article
+        class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]"
+      >
         <div class="mb-4">
           <h2 class="text-base font-semibold text-(--color-primary)">Tiempo por genero</h2>
-          <p class="text-sm text-(--color-text-muted)">Distribucion del tiempo de lectura por categoria.</p>
+          <p class="text-sm text-(--color-text-muted)">
+            Distribucion del tiempo de lectura por categoria.
+          </p>
         </div>
 
-        <div class="flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div
+          class="flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between"
+        >
           <div
             class="relative h-52 w-52 rounded-full"
-            style={`background: conic-gradient(${genreDistribution.map((entry, index, array) => {
-              const start = array.slice(0, index).reduce((sum, current) => sum + current.percent, 0);
-              const end = start + entry.percent;
-              return `${entry.color} ${start}% ${end}%`;
-            }).join(", ")});`}
+            style={`background: conic-gradient(${genreDistribution
+              .map((entry, index, array) => {
+                const start = array
+                  .slice(0, index)
+                  .reduce((sum, current) => sum + current.percent, 0);
+                const end = start + entry.percent;
+                return `${entry.color} ${start}% ${end}%`;
+              })
+              .join(', ')});`}
           >
-            <div class="absolute inset-[26px] flex flex-col items-center justify-center rounded-full bg-[rgba(9,17,29,0.96)] text-center">
-              <span class="text-3xl font-semibold text-(--color-primary)">{totalMinutes.toLocaleString("es-CO")}</span>
+            <div
+              class="absolute inset-[26px] flex flex-col items-center justify-center rounded-full bg-[rgba(9,17,29,0.96)] text-center"
+            >
+              <span class="text-3xl font-semibold text-(--color-primary)"
+                >{totalMinutes.toLocaleString('es-CO')}</span
+              >
               <span class="text-xs text-(--color-text-muted)">minutos</span>
             </div>
           </div>
@@ -254,19 +346,31 @@
     </div>
 
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_1fr]">
-      <article class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
+      <article
+        class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]"
+      >
         <div class="mb-4">
           <h2 class="text-base font-semibold text-(--color-primary)">Libros mas leidos</h2>
-          <p class="text-sm text-(--color-text-muted)">Titulos con mayor tiempo de lectura acumulado.</p>
+          <p class="text-sm text-(--color-text-muted)">
+            Titulos con mayor tiempo de lectura acumulado.
+          </p>
         </div>
 
         <div class="space-y-3">
           {#each mostReadBooks as book}
-            <div class="flex items-center gap-3 rounded-[22px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3">
+            <div
+              class="flex items-center gap-3 rounded-[22px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3"
+            >
               <div class="h-14 w-10 overflow-hidden rounded-xl bg-[rgba(255,255,255,0.03)]">
-                <SafeCover path={book.coverPath ?? ""} alt={`Portada de ${book.title}`} className="h-full w-full object-cover">
+                <SafeCover
+                  path={book.coverPath ?? ''}
+                  alt={`Portada de ${book.title}`}
+                  className="h-full w-full object-cover"
+                >
                   {#snippet fallback()}
-                    <div class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] text-[9px] uppercase tracking-[0.16em] text-(--color-primary)">
+                    <div
+                      class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] text-[9px] uppercase tracking-[0.16em] text-(--color-primary)"
+                    >
                       Libro
                     </div>
                   {/snippet}
@@ -276,7 +380,10 @@
               <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-medium text-(--color-primary)">{book.title}</p>
                 <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
-                  <div class="h-full rounded-full bg-[linear-gradient(90deg,#4e8cff,#49d4ff)]" style={`width: ${Math.max(12, Math.round((book.minutesRead / Math.max(mostReadBooks[0]?.minutesRead || 1, 1)) * 100))}%;`}></div>
+                  <div
+                    class="h-full rounded-full bg-[linear-gradient(90deg,#4e8cff,#49d4ff)]"
+                    style={`width: ${Math.max(12, Math.round((book.minutesRead / Math.max(mostReadBooks[0]?.minutesRead || 1, 1)) * 100))}%;`}
+                  ></div>
                 </div>
               </div>
 
@@ -287,19 +394,25 @@
       </article>
 
       <article class="grid gap-4">
-        <div class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
+        <div
+          class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]"
+        >
           <div class="mb-3">
             <h2 class="text-base font-semibold text-(--color-primary)">Racha actual</h2>
             <p class="text-sm text-(--color-text-muted)">Consistencia reciente de lectura.</p>
           </div>
 
-          <p class="text-4xl font-semibold tracking-tight text-(--color-primary)">{streakDays} dias</p>
+          <p class="text-4xl font-semibold tracking-tight text-(--color-primary)">
+            {streakDays} dias
+          </p>
           <p class="mt-1 text-sm text-(--color-text-muted)">Sigue asi.</p>
 
           <div class="mt-5 flex flex-wrap gap-2">
             {#each streakCalendar as day}
               <div class="flex flex-col items-center gap-2">
-                <div class={`flex h-8 w-8 items-center justify-center rounded-full text-[11px] ${day.active ? "bg-[linear-gradient(135deg,#4e8cff,#49d4ff)] text-[#07111d]" : "border border-(--color-border) bg-[rgba(255,255,255,0.03)] text-(--color-text-muted)"}`}>
+                <div
+                  class={`flex h-8 w-8 items-center justify-center rounded-full text-[11px] ${day.active ? 'bg-[linear-gradient(135deg,#4e8cff,#49d4ff)] text-[#07111d]' : 'border border-(--color-border) bg-[rgba(255,255,255,0.03)] text-(--color-text-muted)'}`}
+                >
                   {day.label}
                 </div>
               </div>
@@ -307,24 +420,40 @@
           </div>
         </div>
 
-        <div class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]">
+        <div
+          class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]"
+        >
           <div class="mb-4">
             <h2 class="text-base font-semibold text-(--color-primary)">Informacion adicional</h2>
-            <p class="text-sm text-(--color-text-muted)">Promedios utiles para entender el habito de lectura.</p>
+            <p class="text-sm text-(--color-text-muted)">
+              Promedios utiles para entender el habito de lectura.
+            </p>
           </div>
 
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
-            <div class="rounded-[20px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3">
+            <div
+              class="rounded-[20px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3"
+            >
               <p class="text-xs text-(--color-text-muted)">Promedio por sesion</p>
-              <p class="mt-2 text-2xl font-semibold text-(--color-primary)">{averageMinutesPerSession} min</p>
+              <p class="mt-2 text-2xl font-semibold text-(--color-primary)">
+                {averageMinutesPerSession} min
+              </p>
             </div>
-            <div class="rounded-[20px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3">
+            <div
+              class="rounded-[20px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3"
+            >
               <p class="text-xs text-(--color-text-muted)">Promedio por dia</p>
-              <p class="mt-2 text-2xl font-semibold text-(--color-primary)">{averageMinutesPerDay} min</p>
+              <p class="mt-2 text-2xl font-semibold text-(--color-primary)">
+                {averageMinutesPerDay} min
+              </p>
             </div>
-            <div class="rounded-[20px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3">
+            <div
+              class="rounded-[20px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3"
+            >
               <p class="text-xs text-(--color-text-muted)">Paginas leidas</p>
-              <p class="mt-2 text-2xl font-semibold text-(--color-primary)">{totalPagesRead.toLocaleString("es-CO")}</p>
+              <p class="mt-2 text-2xl font-semibold text-(--color-primary)">
+                {totalPagesRead.toLocaleString('es-CO')}
+              </p>
             </div>
           </div>
         </div>

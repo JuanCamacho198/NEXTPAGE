@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Button from "../forms/Button.svelte";
-  import Modal from "../layout/Modal.svelte";
+  import Button from '../forms/Button.svelte';
+  import Modal from '../layout/Modal.svelte';
 
   type Props = {
     open?: boolean;
@@ -14,10 +14,10 @@
 
   let {
     open = $bindable(false),
-    title = "Confirm",
-    message = "Are you sure?",
-    confirmText = "Confirm",
-    cancelText = "Cancel",
+    title = 'Confirm',
+    message = 'Are you sure?',
+    confirmText = 'Confirm',
+    cancelText = 'Cancel',
     onconfirm,
     oncancel,
   }: Props = $props();
@@ -33,7 +33,7 @@
   }
 </script>
 
-<Modal bind:open size="sm" title={title}>
+<Modal bind:open size="sm" {title}>
   {#snippet children()}
     <p class="text-sm text-(--color-text-muted)">{message}</p>
   {/snippet}

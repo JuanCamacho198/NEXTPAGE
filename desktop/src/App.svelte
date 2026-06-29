@@ -1,29 +1,30 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { debugState } from "./lib/shared/debug/debugState.svelte";
-  import DebugToggle from "$lib/shared/debug/DebugToggle.svelte";
-  import DebugPanel from "$lib/shared/debug/DebugPanel.svelte";
-  import { appState } from "$lib/shared/stores/AppState.svelte";
-  import AppRouter from "$lib/shared/ui/layout/AppRouter.svelte";
-  import AppModals from "$lib/shared/ui/layout/AppModals.svelte";
+  import { onMount } from 'svelte';
+  import { debugState } from './lib/shared/debug/debugState.svelte';
+  import DebugToggle from '$lib/shared/debug/DebugToggle.svelte';
+  import DebugPanel from '$lib/shared/debug/DebugPanel.svelte';
+  import { appState } from '$lib/shared/stores/AppState.svelte';
+  import AppRouter from '$lib/shared/ui/layout/AppRouter.svelte';
+  import AppModals from '$lib/shared/ui/layout/AppModals.svelte';
   onMount(() => {
     appState.init();
 
     // Global error handler (replaces Svelte 5's missing ErrorBoundary)
     const handleError = (event: ErrorEvent | PromiseRejectionEvent): void => {
-      const message = event instanceof PromiseRejectionEvent
-        ? event.reason?.message ?? event.reason?.toString() ?? "Unhandled Promise rejection"
-        : event.message;
-      console.error("[App] Uncaught error:", event);
+      const message =
+        event instanceof PromiseRejectionEvent
+          ? (event.reason?.message ?? event.reason?.toString() ?? 'Unhandled Promise rejection')
+          : event.message;
+      console.error('[App] Uncaught error:', event);
       appState.library.readerError = message;
     };
 
-    window.addEventListener("error", handleError);
-    window.addEventListener("unhandledrejection", handleError);
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleError);
 
     return () => {
-      window.removeEventListener("error", handleError);
-      window.removeEventListener("unhandledrejection", handleError);
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleError);
     };
   });
 
@@ -33,7 +34,7 @@
 
   // Track viewport for debug panel
   $effect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return;
     debugState.updateViewport();
     const ro = new ResizeObserver(() => debugState.updateViewport());
     ro.observe(document.body);
@@ -52,7 +53,7 @@
     href="#main-content"
     class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-1/2 focus:-translate-x-1/2 focus:z-100 focus:px-4 focus:py-2.5 focus:rounded-lg focus:bg-(--color-accent-blue) focus:text-(--color-background) focus:text-sm focus:font-semibold focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50"
   >
-    {appState.t("app.skipToContent")}
+    {appState.t('app.skipToContent')}
   </a>
   <AppRouter />
   <AppModals />

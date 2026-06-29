@@ -11,23 +11,23 @@
  * the EPUB XML files directly, avoiding epubjs's browser-specific
  * Promise chains that don't resolve in Node.js/jsdom.
  */
-import { describe, expect, it, beforeAll } from "vitest";
-import { readFileSync, existsSync } from "fs";
-import { resolve } from "path";
-import JSZip from "jszip";
+import { describe, expect, it, beforeAll } from 'vitest';
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
+import JSZip from 'jszip';
 
 // ── Paths ────────────────────────────────────────────
 
-const FIXTURE_DIR = resolve("src/test/fixtures/epubs");
+const FIXTURE_DIR = resolve('src/test/fixtures/epubs');
 
 const FIXTURES = {
-  "sample1.epub": {
-    path: resolve(FIXTURE_DIR, "sample1.epub"),
-    description: "EPUB simple básico",
+  'sample1.epub': {
+    path: resolve(FIXTURE_DIR, 'sample1.epub'),
+    description: 'EPUB simple básico',
   },
-  "accessible_epub_3.epub": {
-    path: resolve(FIXTURE_DIR, "accessible_epub_3.epub"),
-    description: "EPUB accesible v3",
+  'accessible_epub_3.epub': {
+    path: resolve(FIXTURE_DIR, 'accessible_epub_3.epub'),
+    description: 'EPUB accesible v3',
   },
 };
 
@@ -43,11 +43,11 @@ beforeAll(() => {
 
 // ── Helpers ──────────────────────────────────────────
 
-const CONTAINER_PATH = "META-INF/container.xml";
+const CONTAINER_PATH = 'META-INF/container.xml';
 
 interface OpfResult {
   metadata: Record<string, string>;
-  manifest: Record<string, { id: string; href: string; "media-type": string }>;
+  manifest: Record<string, { id: string; href: string; 'media-type': string }>;
   spine: Array<{ idref: string }>;
   tocHref: string | null;
 }
@@ -65,7 +65,7 @@ function extractXmlText(xml: string, tagName: string): string | null {
   // Match <tagName>text</tagName> or <prefix:tagName>text</prefix:tagName>
   const regex = new RegExp(
     `<(?:(?:\\w+:)?)${tagName}(?:\\s[^>]*)?>([^<]*)<\\/(?:(?:\\w+:)?)${tagName}>`,
-    "i",
+    'i',
   );
   const match = xml.match(regex);
   return match ? match[1].trim() : null;
@@ -76,16 +76,12 @@ function extractXmlText(xml: string, tagName: string): string | null {
  * Handles namespaced and non-namespaced tags.
  * e.g. <rootfile full-path="..."> or <opf:rootfile full-path="...">
  */
-function extractAttribute(
-  xml: string,
-  tagName: string,
-  attributeName: string,
-): string | null {
+function extractAttribute(xml: string, tagName: string, attributeName: string): string | null {
   // Match: <tagName ... attr="value" ...>
   // Use [^>]* to match everything between tag name and the target attribute
   const regex = new RegExp(
     `<(?:(?:\\w+:)?)${tagName}[^>]*\\s${attributeName}\\s*=\\s*\"([^\"]*)\"`,
-    "i",
+    'i',
   );
   const match = xml.match(regex);
   return match ? match[1] : null;
@@ -100,19 +96,13 @@ function extractItems(
   tagName: string,
   attributes: string[],
 ): Array<Record<string, string>> {
-  const regex = new RegExp(
-    `<(?:(?:\\w+:)?)${tagName}((?:\\s[^>]*?))\\/?>`,
-    "gi",
-  );
+  const regex = new RegExp(`<(?:(?:\\w+:)?)${tagName}((?:\\s[^>]*?))\\/?>`, 'gi');
   const results: Array<Record<string, string>> = [];
   let match;
   while ((match = regex.exec(xml)) !== null) {
     const attrs: Record<string, string> = {};
     for (const attr of attributes) {
-      const attrRegex = new RegExp(
-        `\\s${attr}\\s*=\\s*\"([^\"]*)\"`,
-        "i",
-      );
+      const attrRegex = new RegExp(`\\s${attr}\\s*=\\s*\"([^\"]*)\"`, 'i');
       const attrMatch = match[1].match(attrRegex);
       if (attrMatch) {
         attrs[attr] = attrMatch[1];
@@ -143,16 +133,12 @@ async function loadEpubStructure(filePath: string): Promise<{
   if (!containerFile) {
     throw new Error(`EPUB missing ${CONTAINER_PATH}`);
   }
-  const containerXml = await containerFile.async("string");
+  const containerXml = await containerFile.async('string');
 
   // Find OPF path from container
-  const opfPath = extractAttribute(
-    containerXml,
-    "rootfile",
-    "full-path",
-  );
+  const opfPath = extractAttribute(containerXml, 'rootfile', 'full-path');
   if (!opfPath) {
-    throw new Error("Could not find rootfile/full-path in container.xml");
+    throw new Error('Could not find rootfile/full-path in container.xml');
   }
 
   // Read OPF file
@@ -160,7 +146,7 @@ async function loadEpubStructure(filePath: string): Promise<{
   if (!opfFile) {
     throw new Error(`OPF file not found: ${opfPath}`);
   }
-  const opfXml = await opfFile.async("string");
+  const opfXml = await opfFile.async('string');
 
   // Parse OPF
   const opf = parseOpf(opfXml);
@@ -175,52 +161,43 @@ function parseOpf(opfXml: string): OpfResult {
   // Metadata: use dc: namespace for title, creator, identifier, language
   const metadata: Record<string, string> = {};
 
-  const title = extractXmlText(opfXml, "title");
+  const title = extractXmlText(opfXml, 'title');
   if (title) metadata.title = title;
 
-  const creator = extractXmlText(opfXml, "creator");
+  const creator = extractXmlText(opfXml, 'creator');
   if (creator) metadata.creator = creator;
 
-  const language = extractXmlText(opfXml, "language");
+  const language = extractXmlText(opfXml, 'language');
   if (language) metadata.language = language;
 
-  const identifier = extractXmlText(opfXml, "identifier");
+  const identifier = extractXmlText(opfXml, 'identifier');
   if (identifier) metadata.identifier = identifier;
 
-  const publisher = extractXmlText(opfXml, "publisher");
+  const publisher = extractXmlText(opfXml, 'publisher');
   if (publisher) metadata.publisher = publisher;
 
   // Manifest
-  const manifestItems = extractItems(opfXml, "item", [
-    "id",
-    "href",
-    "media-type",
-  ]);
-  const manifest: Record<
-    string,
-    { id: string; href: string; "media-type": string }
-  > = {};
+  const manifestItems = extractItems(opfXml, 'item', ['id', 'href', 'media-type']);
+  const manifest: Record<string, { id: string; href: string; 'media-type': string }> = {};
   for (const item of manifestItems) {
     if (item.id) {
-      manifest[item.id] = item as unknown as { id: string; href: string; "media-type": string };
+      manifest[item.id] = item as unknown as { id: string; href: string; 'media-type': string };
     }
   }
 
   // Spine
-  const spineItems = extractItems(opfXml, "itemref", ["idref"]);
-  const spine: Array<{ idref: string }> = spineItems.map(
-    (item) => ({ idref: item.idref }),
-  );
+  const spineItems = extractItems(opfXml, 'itemref', ['idref']);
+  const spine: Array<{ idref: string }> = spineItems.map((item) => ({ idref: item.idref }));
 
   // Find TOC (navigation document)
   // Look for the NCX or nav document in the spine
   let tocHref: string | null = null;
   const tocItem = manifestItems.find(
     (item) =>
-      item["media-type"] === "application/x-dtbncx+xml" ||
-      item["media-type"] === "application/xhtml+xml" ||
-      item.id === "ncx" ||
-      item.id === "toc",
+      item['media-type'] === 'application/x-dtbncx+xml' ||
+      item['media-type'] === 'application/xhtml+xml' ||
+      item.id === 'ncx' ||
+      item.id === 'toc',
   );
   if (tocItem && tocItem.href) {
     tocHref = tocItem.href;
@@ -232,9 +209,7 @@ function parseOpf(opfXml: string): OpfResult {
 /**
  * Extract navigation entries from an NCX file.
  */
-function extractNcxEntries(
-  ncxXml: string,
-): Array<{ label: string; src: string }> {
+function extractNcxEntries(ncxXml: string): Array<{ label: string; src: string }> {
   // Find all <navPoint> elements and extract label/src
   const navPointRegex = /<navPoint[^>]*>([\s\S]*?)<\/navPoint>/gi;
   const entries: Array<{ label: string; src: string }> = [];
@@ -243,10 +218,8 @@ function extractNcxEntries(
   while ((match = navPointRegex.exec(ncxXml)) !== null) {
     const content = match[1];
 
-    const label =
-      extractXmlText(content, "text") || "Untitled";
-    const src =
-      extractAttribute(content, "content", "src") || "";
+    const label = extractXmlText(content, 'text') || 'Untitled';
+    const src = extractAttribute(content, 'content', 'src') || '';
 
     entries.push({ label, src });
   }
@@ -263,11 +236,11 @@ function looksLikeXml(str: string): boolean {
 
 // ── Tests: ZIP / Archive Structure ────────────────────
 
-describe("EPUB Real Files — Archive Structure", () => {
+describe('EPUB Real Files — Archive Structure', () => {
   it.each([
-    ["sample1.epub", FIXTURES["sample1.epub"]],
-    ["accessible_epub_3.epub", FIXTURES["accessible_epub_3.epub"]],
-  ])("%s is a valid ZIP archive", async (name, fixture) => {
+    ['sample1.epub', FIXTURES['sample1.epub']],
+    ['accessible_epub_3.epub', FIXTURES['accessible_epub_3.epub']],
+  ])('%s is a valid ZIP archive', async (name, fixture) => {
     const data = readFixtureBuffer(fixture.path);
 
     // Check ZIP magic bytes: PK\x03\x04
@@ -282,91 +255,75 @@ describe("EPUB Real Files — Archive Structure", () => {
     expect(files.length).toBeGreaterThan(0);
   });
 
-  it("sample1.epub contains META-INF/container.xml", async () => {
-    const data = readFixtureBuffer(FIXTURES["sample1.epub"].path);
+  it('sample1.epub contains META-INF/container.xml', async () => {
+    const data = readFixtureBuffer(FIXTURES['sample1.epub'].path);
     const zip = await JSZip.loadAsync(data);
     expect(zip.file(CONTAINER_PATH)).toBeDefined();
   });
 
-  it("accessible_epub_3.epub contains META-INF/container.xml", async () => {
-    const data = readFixtureBuffer(FIXTURES["accessible_epub_3.epub"].path);
+  it('accessible_epub_3.epub contains META-INF/container.xml', async () => {
+    const data = readFixtureBuffer(FIXTURES['accessible_epub_3.epub'].path);
     const zip = await JSZip.loadAsync(data);
     expect(zip.file(CONTAINER_PATH)).toBeDefined();
   });
 
-  it("mimetype file is first entry (EPUB 3 spec)", async () => {
-    const data = readFixtureBuffer(FIXTURES["sample1.epub"].path);
+  it('mimetype file is first entry (EPUB 3 spec)', async () => {
+    const data = readFixtureBuffer(FIXTURES['sample1.epub'].path);
     const zip = await JSZip.loadAsync(data);
-    const mimetypeFile = zip.file("mimetype");
+    const mimetypeFile = zip.file('mimetype');
     expect(mimetypeFile).toBeDefined();
     expect(mimetypeFile).not.toBeNull();
 
-    const mimetype = await mimetypeFile!.async("string");
-    expect(mimetype.trim()).toBe("application/epub+zip");
+    const mimetype = await mimetypeFile!.async('string');
+    expect(mimetype.trim()).toBe('application/epub+zip');
   });
 });
 
-describe("EPUB Real Files — Container XML", () => {
-  it("container.xml contains rootfile with full-path attribute", async () => {
-    const { containerXml } = await loadEpubStructure(
-      FIXTURES["sample1.epub"].path,
-    );
+describe('EPUB Real Files — Container XML', () => {
+  it('container.xml contains rootfile with full-path attribute', async () => {
+    const { containerXml } = await loadEpubStructure(FIXTURES['sample1.epub'].path);
 
     expect(looksLikeXml(containerXml)).toBe(true);
-    const fullPath = extractAttribute(
-      containerXml,
-      "rootfile",
-      "full-path",
-    );
+    const fullPath = extractAttribute(containerXml, 'rootfile', 'full-path');
     expect(fullPath).toBeTruthy();
-    expect(fullPath!.endsWith(".opf")).toBe(true);
+    expect(fullPath!.endsWith('.opf')).toBe(true);
   });
 });
 
-describe("EPUB Real Files — Package Document (OPF)", () => {
-  it("sample1.epub has valid OPF with package element", async () => {
-    const { opfXml } = await loadEpubStructure(
-      FIXTURES["sample1.epub"].path,
-    );
+describe('EPUB Real Files — Package Document (OPF)', () => {
+  it('sample1.epub has valid OPF with package element', async () => {
+    const { opfXml } = await loadEpubStructure(FIXTURES['sample1.epub'].path);
     expect(looksLikeXml(opfXml)).toBe(true);
-    expect(opfXml).toContain("<package");
-    expect(opfXml).toContain("</package>");
+    expect(opfXml).toContain('<package');
+    expect(opfXml).toContain('</package>');
   });
 
-  it("contains metadata with title and creator", async () => {
-    const { opf } = await loadEpubStructure(
-      FIXTURES["sample1.epub"].path,
-    );
+  it('contains metadata with title and creator', async () => {
+    const { opf } = await loadEpubStructure(FIXTURES['sample1.epub'].path);
 
     expect(opf.metadata.title).toBeDefined();
     expect(opf.metadata.title!.length).toBeGreaterThan(0);
     expect(opf.metadata.creator).toBeDefined();
   });
 
-  it("accessible_epub_3.epub has title metadata", async () => {
-    const { opf } = await loadEpubStructure(
-      FIXTURES["accessible_epub_3.epub"].path,
-    );
+  it('accessible_epub_3.epub has title metadata', async () => {
+    const { opf } = await loadEpubStructure(FIXTURES['accessible_epub_3.epub'].path);
 
     expect(opf.metadata.title).toBeDefined();
     expect(opf.metadata.title!.length).toBeGreaterThan(0);
   });
 
-  it("metadata has identifier and language", async () => {
-    const { opf } = await loadEpubStructure(
-      FIXTURES["sample1.epub"].path,
-    );
+  it('metadata has identifier and language', async () => {
+    const { opf } = await loadEpubStructure(FIXTURES['sample1.epub'].path);
 
     expect(opf.metadata.identifier).toBeDefined();
     expect(opf.metadata.language).toBeDefined();
   });
 });
 
-describe("EPUB Real Files — Manifest", () => {
-  it("sample1.epub has manifest with items", async () => {
-    const { opf } = await loadEpubStructure(
-      FIXTURES["sample1.epub"].path,
-    );
+describe('EPUB Real Files — Manifest', () => {
+  it('sample1.epub has manifest with items', async () => {
+    const { opf } = await loadEpubStructure(FIXTURES['sample1.epub'].path);
 
     const entries = Object.keys(opf.manifest);
     expect(entries.length).toBeGreaterThan(0);
@@ -376,26 +333,22 @@ describe("EPUB Real Files — Manifest", () => {
     const firstItem = opf.manifest[firstId];
     expect(firstItem.id).toBeDefined();
     expect(firstItem.href).toBeDefined();
-    expect(firstItem["media-type"]).toBeDefined();
+    expect(firstItem['media-type']).toBeDefined();
   });
 
-  it("contains at least one XHTML content document", async () => {
-    const { opf } = await loadEpubStructure(
-      FIXTURES["sample1.epub"].path,
-    );
+  it('contains at least one XHTML content document', async () => {
+    const { opf } = await loadEpubStructure(FIXTURES['sample1.epub'].path);
 
     const xhtmlItems = Object.values(opf.manifest).filter(
-      (item) => item["media-type"] === "application/xhtml+xml",
+      (item) => item['media-type'] === 'application/xhtml+xml',
     );
     expect(xhtmlItems.length).toBeGreaterThan(0);
   });
 });
 
-describe("EPUB Real Files — Spine (Reading Order)", () => {
-  it("sample1.epub has spine with itemrefs", async () => {
-    const { opf } = await loadEpubStructure(
-      FIXTURES["sample1.epub"].path,
-    );
+describe('EPUB Real Files — Spine (Reading Order)', () => {
+  it('sample1.epub has spine with itemrefs', async () => {
+    const { opf } = await loadEpubStructure(FIXTURES['sample1.epub'].path);
 
     expect(opf.spine.length).toBeGreaterThan(0);
 
@@ -406,10 +359,8 @@ describe("EPUB Real Files — Spine (Reading Order)", () => {
     }
   });
 
-  it("accessible_epub_3.epub has spine with multiple items", async () => {
-    const { opf } = await loadEpubStructure(
-      FIXTURES["accessible_epub_3.epub"].path,
-    );
+  it('accessible_epub_3.epub has spine with multiple items', async () => {
+    const { opf } = await loadEpubStructure(FIXTURES['accessible_epub_3.epub'].path);
 
     expect(opf.spine.length).toBeGreaterThanOrEqual(1);
 
@@ -419,16 +370,13 @@ describe("EPUB Real Files — Spine (Reading Order)", () => {
   });
 });
 
-describe("EPUB Real Files — Table of Contents / Navigation", () => {
-  it("sample1.epub has NCX navigation entries", async () => {
-    const { zip, opf } = await loadEpubStructure(
-      FIXTURES["sample1.epub"].path,
-    );
+describe('EPUB Real Files — Table of Contents / Navigation', () => {
+  it('sample1.epub has NCX navigation entries', async () => {
+    const { zip, opf } = await loadEpubStructure(FIXTURES['sample1.epub'].path);
 
     // Look for NCX file (TO C XML format)
     const ncxEntry = Object.entries(opf.manifest).find(
-      ([, item]) =>
-        item["media-type"] === "application/x-dtbncx+xml",
+      ([, item]) => item['media-type'] === 'application/x-dtbncx+xml',
     );
 
     expect(ncxEntry).toBeDefined();
@@ -437,7 +385,7 @@ describe("EPUB Real Files — Table of Contents / Navigation", () => {
     const ncxFile = zip.file(ncxItem.href);
     expect(ncxFile).toBeDefined();
 
-    const ncxXml = await ncxFile!.async("string");
+    const ncxXml = await ncxFile!.async('string');
     const entries = extractNcxEntries(ncxXml);
     expect(entries.length).toBeGreaterThan(0);
 
@@ -448,17 +396,15 @@ describe("EPUB Real Files — Table of Contents / Navigation", () => {
     expect(firstEntry.src).toBeDefined();
   });
 
-  it("has at least one section in reading order", async () => {
-    const { opf } = await loadEpubStructure(
-      FIXTURES["sample1.epub"].path,
-    );
+  it('has at least one section in reading order', async () => {
+    const { opf } = await loadEpubStructure(FIXTURES['sample1.epub'].path);
 
     expect(opf.spine.length).toBeGreaterThan(0);
   });
 });
 
-describe("EPUB Real Files — Edge Cases", () => {
-  it("handles invalid EPUB data gracefully", async () => {
+describe('EPUB Real Files — Edge Cases', () => {
+  it('handles invalid EPUB data gracefully', async () => {
     const fakeData = Buffer.from([0, 0, 0, 0, 0, 0]);
 
     await expect(async () => {
@@ -466,10 +412,10 @@ describe("EPUB Real Files — Edge Cases", () => {
     }).rejects.toThrow();
   });
 
-  it("loads multiple EPUBs concurrently", async () => {
+  it('loads multiple EPUBs concurrently', async () => {
     const results = await Promise.all([
-      loadEpubStructure(FIXTURES["sample1.epub"].path),
-      loadEpubStructure(FIXTURES["accessible_epub_3.epub"].path),
+      loadEpubStructure(FIXTURES['sample1.epub'].path),
+      loadEpubStructure(FIXTURES['accessible_epub_3.epub'].path),
     ]);
 
     expect(results).toHaveLength(2);

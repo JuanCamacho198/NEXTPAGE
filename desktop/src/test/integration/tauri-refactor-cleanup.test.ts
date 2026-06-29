@@ -21,7 +21,12 @@ describe('tauri refactor cleanup and rollback readiness', () => {
     expect(existsSync(checklistPath)).toBe(true);
 
     const checklist = readFileSync(checklistPath, 'utf8');
-    for (const marker of ['settings/library', 'progress/highlights', 'bookmarks/collections/search/files', 'verify gate']) {
+    for (const marker of [
+      'settings/library',
+      'progress/highlights',
+      'bookmarks/collections/search/files',
+      'verify gate',
+    ]) {
       expect(checklist.includes(marker), `missing ${marker}`).toBe(true);
     }
   });

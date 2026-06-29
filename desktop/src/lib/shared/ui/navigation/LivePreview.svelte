@@ -1,7 +1,7 @@
 <script lang="ts">
   type Props = {
     text?: string;
-    themeMode?: "paper" | "sepia" | "night";
+    themeMode?: 'paper' | 'sepia' | 'night';
     fontSize?: number;
     fontFamily?: string;
     margins?: { top: number; bottom: number; left: number; right: number };
@@ -10,10 +10,10 @@
   };
 
   let {
-    text = "",
-    themeMode = "paper",
+    text = '',
+    themeMode = 'paper',
     fontSize = 100,
-    fontFamily = "sans",
+    fontFamily = 'sans',
     margins = { top: 5, bottom: 5, left: 5, right: 5 },
     brightness = 100,
     contrast = 100,
@@ -32,9 +32,9 @@ Winston made for the stairs. It was no use trying the lift. Even at the best of 
 
   // Theme colors
   const themeColors = {
-    paper: { bg: "#fafafa", text: "#1a1a1a", muted: "#6b7280" },
-    sepia: { bg: "#f4ecd8", text: "#5b4636", muted: "#8b7355" },
-    night: { bg: "#1a1a1a", text: "#e8e8e8", muted: "#9ca3af" },
+    paper: { bg: '#fafafa', text: '#1a1a1a', muted: '#6b7280' },
+    sepia: { bg: '#f4ecd8', text: '#5b4636', muted: '#8b7355' },
+    night: { bg: '#1a1a1a', text: '#e8e8e8', muted: '#9ca3af' },
   };
 
   const colors = $derived(themeColors[themeMode]);
@@ -50,7 +50,11 @@ Winston made for the stairs. It was no use trying the lift. Even at the best of 
     --preview-text: {colors.text};
     --preview-muted: {colors.muted};
     --preview-font-size: {effectiveFontSize}px;
-    --preview-font-family: {fontFamily === 'serif' ? 'Georgia, serif' : fontFamily === 'monospace' ? 'monospace' : 'system-ui, sans-serif'};
+    --preview-font-family: {fontFamily === 'serif'
+    ? 'Georgia, serif'
+    : fontFamily === 'monospace'
+      ? 'monospace'
+      : 'system-ui, sans-serif'};
     --preview-margin: {margins.top}% {margins.right}% {margins.bottom}% {margins.left}%;
     --preview-brightness: {effectiveBrightness};
     --preview-contrast: {effectiveContrast};

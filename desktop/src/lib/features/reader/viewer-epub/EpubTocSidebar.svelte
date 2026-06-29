@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { MessageKey } from "$lib/shared/i18n";
+  import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
     toc: Array<{ id: string; label: string; href: string }>;
@@ -11,8 +11,10 @@
 </script>
 
 <aside class="w-60 bg-(--color-surface) border-r border-(--color-border) overflow-y-auto shrink-0">
-  <h3 class="px-3 py-3 text-sm font-semibold border-b border-(--color-border) m-0 text-(--color-primary)">
-    {t("epub.tableOfContents")}
+  <h3
+    class="px-3 py-3 text-sm font-semibold border-b border-(--color-border) m-0 text-(--color-primary)"
+  >
+    {t('epub.tableOfContents')}
   </h3>
   <ul class="list-none m-0 p-0">
     {#each toc as chapter}

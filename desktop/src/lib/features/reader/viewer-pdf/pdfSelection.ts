@@ -1,10 +1,10 @@
-import type { SelectionOverlayRect } from "./pdfState.svelte";
+import type { SelectionOverlayRect } from './pdfState.svelte';
 import {
   SELECTION_X_PADDING_PX,
   SELECTION_Y_INSET_PX,
   SELECTION_LINE_TOLERANCE_PX,
   clampSelectionPoint,
-} from "./pdfState.svelte";
+} from './pdfState.svelte';
 
 // Re-export the canonical highlight palette so existing PDF imports keep
 // working unchanged. The single source of truth is
@@ -15,9 +15,12 @@ export {
   highlightFillRgba,
   type HighlightColor,
   type HighlightColorId,
-} from "$lib/features/reader/highlight/highlightColors";
+} from '$lib/features/reader/highlight/highlightColors';
 
-export function buildSelectionOverlayRects(range: Range, containerRect: DOMRect): SelectionOverlayRect[] {
+export function buildSelectionOverlayRects(
+  range: Range,
+  containerRect: DOMRect,
+): SelectionOverlayRect[] {
   const rawRects = Array.from(range.getClientRects()).filter(
     (rect) => rect.width > 0 && rect.height > 0,
   );
@@ -122,10 +125,7 @@ export function captureScrollAnchor(host: HTMLElement | null): ScrollAnchor | nu
   };
 }
 
-export function restoreScrollAnchor(
-  anchor: ScrollAnchor | null,
-  host: HTMLElement | null,
-): void {
+export function restoreScrollAnchor(anchor: ScrollAnchor | null, host: HTMLElement | null): void {
   if (!anchor || !host) return;
   const { previousScrollTop, previousHeight, viewportHeight } = anchor;
   const previousCenter = previousScrollTop + viewportHeight / 2;
@@ -137,10 +137,7 @@ export function restoreScrollAnchor(
   host.scrollTop = nextScrollTop;
 }
 
-export function canScrollElementInDirection(
-  element: HTMLElement,
-  delta: number,
-): boolean {
+export function canScrollElementInDirection(element: HTMLElement, delta: number): boolean {
   if (element.scrollHeight <= element.clientHeight + 1) return false;
   if (delta < 0) return element.scrollTop > 0;
   return element.scrollTop + element.clientHeight < element.scrollHeight - 1;
@@ -149,16 +146,13 @@ export function canScrollElementInDirection(
 type RefLike = { num: number; gen: number };
 
 export function isRefLike(value: unknown): value is RefLike {
-  if (!value || typeof value !== "object") return false;
+  if (!value || typeof value !== 'object') return false;
   const candidate = value as { num?: unknown; gen?: unknown };
-  return typeof candidate.num === "number" && typeof candidate.gen === "number";
+  return typeof candidate.num === 'number' && typeof candidate.gen === 'number';
 }
 
-export function toOutlineTitle(
-  title: unknown,
-  fallbackLabel: string,
-): string {
-  if (typeof title !== "string") return fallbackLabel;
+export function toOutlineTitle(title: unknown, fallbackLabel: string): string {
+  if (typeof title !== 'string') return fallbackLabel;
   const normalized = title.trim();
   return normalized.length > 0 ? normalized : fallbackLabel;
 }
@@ -173,18 +167,18 @@ type NormalizedOutlineItem = {
 export function normalizeOutlineItems(
   items: unknown[],
   fallbackLabel: string,
-  parentId = "outline",
+  parentId = 'outline',
 ): NormalizedOutlineItem[] {
   const normalized: NormalizedOutlineItem[] = [];
 
   items.forEach((rawItem, index) => {
-    if (!rawItem || typeof rawItem !== "object") return;
+    if (!rawItem || typeof rawItem !== 'object') return;
     const item = rawItem as { title?: unknown; dest?: unknown; items?: unknown };
     const children = Array.isArray(item.items)
       ? normalizeOutlineItems(item.items, fallbackLabel, `${parentId}-${index}`)
       : [];
     const destination =
-      typeof item.dest === "string" || Array.isArray(item.dest) ? item.dest : null;
+      typeof item.dest === 'string' || Array.isArray(item.dest) ? item.dest : null;
     normalized.push({
       id: `${parentId}-${index}`,
       title: toOutlineTitle(item.title, fallbackLabel),

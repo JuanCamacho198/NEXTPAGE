@@ -101,19 +101,41 @@ export const IFRAME_CFI_BRIDGE_SCRIPT = `
     if (segments.length === 0) return null;
     return '/' + segments.join('/');
   }
+  // LOCKSTEP: see cfiBridge.test.ts "cross-paragraph round-trip preserves endpoints".
+  // This helper mirrors findFirstTextDescendant in cfiBridge.ts. It is added
+  // alongside the Bug B element-container fix; keep both files in sync.
+  function findFirstTextDescendant(node) {
+    if (node.nodeType === 3) return node;
+    var children = node.childNodes;
+    for (var i = 0; i < children.length; i++) {
+      var c = children[i];
+      if (isBlacklisted(c)) continue;
+      var found = findFirstTextDescendant(c);
+      if (found) return found;
+    }
+    return null;
+  }
+  // LOCKSTEP: see cfiBridge.test.ts "cross-paragraph round-trip preserves endpoints".
+  // textTerminusStep in cfiBridgeIframe.ts must stay byte-for-byte equivalent
+  // (modulo types) to textTerminusStep in cfiBridge.ts.
   function textTerminusStep(container, offset, commonAncestor) {
     var textNode = null;
+    var forceTextEnd = false;
     if (container.nodeType === 3) {
       textNode = container;
     } else if (container.nodeType === 1) {
       var children = container.childNodes;
-      var textChildren = [];
-      for (var i = 0; i < children.length; i++) {
-        var c = children[i];
-        if (c.nodeType === 3 && !isBlacklisted(c)) textChildren.push(c);
+      if (children.length === 0) return null;
+      var targetChild;
+      if (offset <= 0) {
+        targetChild = children[0];
+      } else if (offset >= children.length) {
+        targetChild = children[children.length - 1];
+        forceTextEnd = true;
+      } else {
+        targetChild = children[offset];
       }
-      if (textChildren.length === 0) return null;
-      textNode = textChildren[Math.min(offset, textChildren.length - 1)] || textChildren[0];
+      textNode = findFirstTextDescendant(targetChild);
     } else {
       return null;
     }
@@ -140,7 +162,7 @@ export const IFRAME_CFI_BRIDGE_SCRIPT = `
     if (textIdx === null) return null;
     segments.push(textIdx);
     var totalLen = (textNode.nodeValue || '').length;
-    var clampedOffset = Math.max(0, Math.min(offset, totalLen));
+    var clampedOffset = forceTextEnd ? totalLen : Math.max(0, Math.min(offset, totalLen));
     return '/' + segments.join('/') + ':' + clampedOffset;
   }
   function rangeToCFI(range, chapterHref, doc) {

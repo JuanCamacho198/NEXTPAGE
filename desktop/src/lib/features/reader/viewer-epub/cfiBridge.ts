@@ -41,15 +41,7 @@
  * @module $lib/features/reader/viewer-epub/cfiBridge
  */
 
-const BLACKLIST_TAGS = new Set([
-  'audio',
-  'video',
-  'script',
-  'link',
-  'style',
-  'object',
-  'embed',
-]);
+const BLACKLIST_TAGS = new Set(['audio', 'video', 'script', 'link', 'style', 'object', 'embed']);
 
 /**
  * Spine registry: maps a chapter href (1:1 with the EPUB's spine order)
@@ -319,6 +311,23 @@ export function rangeToCFI(
 }
 
 /**
+ * Find the first text-node descendant of `node` (depth-first). Used by
+ * {@link textTerminusStep} when the range endpoint's container is an
+ * element node: we need to descend to a text node before the CFI
+ * terminus can carry a character offset. Returns `null` if `node` has
+ * no text descendants.
+ */
+function findFirstTextDescendant(node: Node): Text | null {
+  if (node.nodeType === 3 /* TEXT_NODE */) return node as Text;
+  for (const child of Array.from(node.childNodes)) {
+    if (isBlacklisted(child)) continue;
+    const found = findFirstTextDescendant(child);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
  * Compute the text-terminus step chain for one endpoint of a range.
  *
  * Per the EPUB CFI spec, a terminus can be a chain of CFI steps ending
@@ -336,6 +345,19 @@ export function rangeToCFI(
  * If the endpoint's container is not a text node, we walk to the
  * nearest text descendant (the mouse-selection happy path).
  *
+ * Element-container semantics (Bug B fix, see design Decision 1):
+ * when `container.nodeType === 1`, we branch on `offset` against
+ * `childNodes.length`:
+ *   - `offset <= 0`: target `children[0]`, first text descendant, char 0
+ *   - `offset >= children.length`: target `children[last]`, first text
+ *     descendant, char at end of text (the "after the last child"
+ *     position resolves to the end of the last text node)
+ *   - `0 < offset < children.length`: target `children[offset]`, first
+ *     text descendant, char 0
+ * This matches browser `Range.endOffset` semantics for element
+ * containers and prevents the wrap from overshooting into the next
+ * paragraph's leading whitespace.
+ *
  * @param container        The range's start or end container.
  * @param offset           The range's start or end offset.
  * @param commonAncestor   The range's common ancestor (the deepest
@@ -343,25 +365,35 @@ export function rangeToCFI(
  * @param doc              The chapter's document.
  * @returns The terminus step chain string, or `null`.
  */
-function textTerminusStep(
-  container: Node,
-  offset: number,
-  commonAncestor: Node,
-): string | null {
+function textTerminusStep(container: Node, offset: number, commonAncestor: Node): string | null {
   let textNode: Node | null = null;
+  // When true, the resolved character offset is the END of the chosen
+  // text node (not the `offset` argument). Set when the element-
+  // container offset was at or past the end of `children.length`, which
+  // is the "after the last child" position and should resolve to the
+  // end of the last text descendant.
+  let forceTextEnd = false;
 
   if (container.nodeType === 3 /* TEXT_NODE */) {
     textNode = container;
   } else if (container.nodeType === 1 /* ELEMENT_NODE */) {
-    // Pick the text child at `offset` (or the first text child if out
-    // of range). This handles element-container ranges from mouse
-    // selections that started on an element boundary.
+    // Pick the child to descend into based on `offset` vs `childNodes.length`.
+    // See the element-container semantics block in the JSDoc above.
     const el = container as Element;
-    const textChildren = Array.from(el.childNodes).filter(
-      (n) => n.nodeType === 3 && !isBlacklisted(n),
-    );
-    if (textChildren.length === 0) return null;
-    textNode = textChildren[Math.min(offset, textChildren.length - 1)] ?? textChildren[0];
+    const children = el.childNodes;
+    if (children.length === 0) return null;
+
+    let targetChild: Node;
+    if (offset <= 0) {
+      targetChild = children[0]!;
+    } else if (offset >= children.length) {
+      targetChild = children[children.length - 1]!;
+      forceTextEnd = true;
+    } else {
+      targetChild = children[offset]!;
+    }
+
+    textNode = findFirstTextDescendant(targetChild);
   } else {
     return null;
   }
@@ -396,7 +428,10 @@ function textTerminusStep(
   segments.push(textIdx);
 
   const totalLen = (textNode.nodeValue ?? '').length;
-  const clampedOffset = Math.max(0, Math.min(offset, totalLen));
+  // For element-container endpoints at the "after the last child"
+  // position, the supplied `offset` is a child index, not a character
+  // offset. Resolve to the END of the text node instead.
+  const clampedOffset = forceTextEnd ? totalLen : Math.max(0, Math.min(offset, totalLen));
 
   return `/${segments.join('/')}:${clampedOffset}`;
 }
@@ -466,15 +501,15 @@ export function cfiToRange(
 
     const startText = resolveTextTerminus(commonAncestor, parsed.startChain, parsed.startOffset);
     const endText = resolveTextTerminus(commonAncestor, parsed.endChain, parsed.endOffset);
-  if (!startText || !endText) {
-    console.warn('epub-cfi: text terminus did not resolve', { cfi });
-    return null;
-  }
+    if (!startText || !endText) {
+      console.warn('epub-cfi: text terminus did not resolve', { cfi });
+      return null;
+    }
 
-  const range = doc.createRange();
-  range.setStart(startText.node, startText.offset);
-  range.setEnd(endText.node, endText.offset);
-  return range;
+    const range = doc.createRange();
+    range.setStart(startText.node, startText.offset);
+    range.setEnd(endText.node, endText.offset);
+    return range;
   } catch (err) {
     console.warn('epub-cfi: cfiToRange failed', err);
     return null;
@@ -552,7 +587,13 @@ function parseTerminusChain(s: string): { chain: number[]; offset: number } | nu
   if (!m || !m[1] || !m[2]) return null;
   const lastStep = Number.parseInt(m[1], 10);
   const offset = Number.parseInt(m[2], 10);
-  if (!Number.isFinite(lastStep) || !Number.isFinite(offset) || lastStep <= 0 || lastStep % 2 !== 1 || offset < 0) {
+  if (
+    !Number.isFinite(lastStep) ||
+    !Number.isFinite(offset) ||
+    lastStep <= 0 ||
+    lastStep % 2 !== 1 ||
+    offset < 0
+  ) {
     return null;
   }
 

@@ -20,13 +20,32 @@
 export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
 (function() {
   if (window.__epubHighlightOverlay) return; // idempotent
+  // hexToRgba: now returns null on invalid input instead of falling back
+  // to a default yellow. The caller (render) detects null and posts an
+  // 'epub-hl-failed' message with reason: 'invalid-color'. isFinite
+  // guards against hex strings that parse to NaN (e.g. '#XYZ123' would
+  // produce rgba(NaN, NaN, 35, ...) under the old behavior).
   function hexToRgba(hex, alpha) {
-    var h = (hex || '#FACC15').replace('#', '');
-    if (h.length !== 6) return 'rgba(250, 204, 21, ' + (alpha == null ? 0.4 : alpha) + ')';
+    if (typeof hex !== 'string') return null;
+    var h = hex.replace('#', '');
+    if (h.length !== 6) return null;
     var r = parseInt(h.slice(0, 2), 16);
     var g = parseInt(h.slice(2, 4), 16);
     var b = parseInt(h.slice(4, 6), 16);
+    if (!isFinite(r) || !isFinite(g) || !isFinite(b)) return null;
     return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + (alpha == null ? 0.4 : alpha) + ')';
+  }
+  function postFailure(id, reason, pageNumber) {
+    try {
+      window.parent.postMessage({
+        type: 'epub-hl-failed',
+        id: id,
+        reason: reason,
+        pageNumber: pageNumber
+      }, '*');
+    } catch (e) {
+      console.warn('epub-hl: failed to post failure message', e);
+    }
   }
   function clearHighlights(doc) {
     var existing = doc.querySelectorAll('.epub-hl');
@@ -39,11 +58,11 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
     }
     if (doc.body) doc.body.normalize();
   }
-  function wrapRange(range, hl) {
+  function wrapRange(range, hl, rgba) {
     var span = document.createElement('span');
     span.className = 'epub-hl';
     span.setAttribute('data-id', hl.id);
-    span.style.background = hexToRgba(hl.color, 0.4);
+    span.style.background = rgba;
     span.style.borderRadius = '2px';
     try {
       range.surroundContents(span);
@@ -75,9 +94,16 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
       }
       if (!range) {
         console.warn('epub-hl: cfi did not resolve for highlight', hl.id);
+        postFailure(hl.id, 'cfi-unresolved', currentChapterIndex);
         continue;
       }
-      wrapRange(range, hl);
+      var rgba = hexToRgba(hl.color, 0.4);
+      if (rgba == null) {
+        console.warn('epub-hl: invalid color for highlight', hl.id, hl.color);
+        postFailure(hl.id, 'invalid-color', currentChapterIndex);
+        continue;
+      }
+      wrapRange(range, hl, rgba);
     }
   }
   window.__epubHighlightOverlay = { render: render };

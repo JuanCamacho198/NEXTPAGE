@@ -3,10 +3,15 @@
   import { invoke } from '@tauri-apps/api/core';
   import { convertFileSrc } from '@tauri-apps/api/core';
   import type { MessageKey } from '$lib/shared/i18n';
-  import type { ReaderSettings, ReaderThemeMode, ReaderTextAlign, ReaderDirection } from '$lib/shared/types';
+  import type {
+    ReaderSettings,
+    ReaderThemeMode,
+    ReaderTextAlign,
+    ReaderDirection,
+  } from '$lib/shared/types';
   import EpubControls from './EpubControls.svelte';
-  import { setReaderError, clearReaderError } from "$lib/stores/readerErrorState.svelte";
-  import { debugState } from "$lib/shared/debug/debugState.svelte";
+  import { setReaderError, clearReaderError } from '$lib/stores/readerErrorState.svelte';
+  import { debugState } from '$lib/shared/debug/debugState.svelte';
   import { IFRAME_CFI_BRIDGE_SCRIPT } from '$lib/features/reader/viewer-epub/cfiBridgeIframe';
   import { IFRAME_HIGHLIGHT_OVERLAY_SCRIPT } from '$lib/features/reader/viewer-epub/epubHighlightOverlayIframe';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
@@ -74,7 +79,11 @@
      * (color picker + delete + close) at the click point in
      * parent-viewport coordinates.
      */
-    onHighlightAction?: (action: HighlightActionKind, id: string, opts?: HighlightActionOpts) => void;
+    onHighlightAction?: (
+      action: HighlightActionKind,
+      id: string,
+      opts?: HighlightActionOpts,
+    ) => void;
     onselectionclear?: () => void;
     isFullscreen?: boolean;
     onToggleFullscreen?: () => void;
@@ -169,16 +178,16 @@
     if (debugState.enabled) {
       debugState.epub.postMessageCount++;
       debugState.epub.lastRawMessage = {
-        type: String(event.data.type ?? ""),
-        pageNumber: typeof event.data.pageNumber === "number" ? event.data.pageNumber : null,
-        hasText: typeof event.data.text === "string" && event.data.text.length > 0,
-        textPreview: typeof event.data.text === "string" ? event.data.text.slice(0, 60) : "",
+        type: String(event.data.type ?? ''),
+        pageNumber: typeof event.data.pageNumber === 'number' ? event.data.pageNumber : null,
+        hasText: typeof event.data.text === 'string' && event.data.text.length > 0,
+        textPreview: typeof event.data.text === 'string' ? event.data.text.slice(0, 60) : '',
         hasBounds: !!event.data.bounds,
         hasContainer: !!event.data.container,
-        hasCfi: typeof event.data.cfi === "string" && event.data.cfi.length > 0,
-        cfiPreview: typeof event.data.cfi === "string" ? event.data.cfi.slice(0, 60) : "",
+        hasCfi: typeof event.data.cfi === 'string' && event.data.cfi.length > 0,
+        cfiPreview: typeof event.data.cfi === 'string' ? event.data.cfi.slice(0, 60) : '',
       };
-      debugState.epub.guardResult = "none";
+      debugState.epub.guardResult = 'none';
     }
 
     // SEL-4: drop any in-flight postMessage from a chapter that is no
@@ -198,21 +207,29 @@
       return;
     }
 
-    if (event.data.type !== 'epub-selection') {
-      if (debugState.enabled) debugState.epub.guardResult = "drop-unknown-type";
+    if (event.data.type === 'epub-hl-failed') {
+      handleEpubHighlightFailed(event.data);
       return;
     }
 
-    if (typeof event.data.pageNumber === 'number' && event.data.pageNumber !== currentChapterIndex) {
+    if (event.data.type !== 'epub-selection') {
+      if (debugState.enabled) debugState.epub.guardResult = 'drop-unknown-type';
+      return;
+    }
+
+    if (
+      typeof event.data.pageNumber === 'number' &&
+      event.data.pageNumber !== currentChapterIndex
+    ) {
       // Stale message from a chapter the user has already navigated
       // away from. Drop silently.
-      if (debugState.enabled) debugState.epub.guardResult = "drop-chapter-mismatch";
+      if (debugState.enabled) debugState.epub.guardResult = 'drop-chapter-mismatch';
       return;
     }
 
     if (!event.data.text) {
       if (debugState.enabled) {
-        debugState.epub.guardResult = "drop-empty-text";
+        debugState.epub.guardResult = 'drop-empty-text';
         debugState.epub.emptyTextMessageCount++;
       }
       debugState.epub.onselectionclearCalled++;
@@ -221,11 +238,11 @@
     }
 
     if (!onselection) {
-      if (debugState.enabled) debugState.epub.guardResult = "drop-no-handler";
+      if (debugState.enabled) debugState.epub.guardResult = 'drop-no-handler';
       return;
     }
 
-    if (debugState.enabled) debugState.epub.guardResult = "pass";
+    if (debugState.enabled) debugState.epub.guardResult = 'pass';
     debugState.epub.onselectionCalled++;
     debugState.epub.rectCount = Array.isArray(event.data.rects) ? event.data.rects.length : 0;
 
@@ -264,6 +281,28 @@
     });
   }
 
+  // ─── epub-hl-failed: apply failure observability ──────────────
+  // The iframe overlay posts this when cfiToRange returns null (cfi-
+  // unresolved) or hexToRgba returns null (invalid-color). We mirror
+  // the id to debugState with Set-like dedup and log a warning. Bounded
+  // growth: n < 100 in practice. See design Decision 2.
+  function handleEpubHighlightFailed(msg: {
+    id: string;
+    reason: string;
+    pageNumber: number;
+    cfi?: string;
+    color?: string;
+  }): void {
+    if (msg.id && !debugState.epub.failedHighlightIds.includes(msg.id)) {
+      debugState.epub.failedHighlightIds.push(msg.id);
+    }
+    console.warn('epub-hl: highlight failed to apply', {
+      id: msg.id,
+      reason: msg.reason,
+      pageNumber: msg.pageNumber,
+    });
+  }
+
   function syncIframeHeight(): void {
     if (!iframeEl?.contentDocument) return;
 
@@ -298,12 +337,12 @@
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
     return () => {
       ro.disconnect();
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
     };
   });
 
@@ -340,35 +379,37 @@
     refreshReaderStyles();
   });
 
-    // ─── Re-render persisted highlights inside the iframe ──────
-    // Runs after every chapter change (when the iframe document is
-    // fresh) and whenever the parent's `persistedHighlights` reference
-    // changes (e.g. after a color update or delete). The overlay is
-    // idempotent -- it clears existing wraps before re-applying.
-    type EpubHighlightShape = {
-      id: string;
-      color: string;
-      pageNumber: number;
-      cfi?: string | null;
-    };
-    $effect(() => {
-      if (!metadata || isLoading || !iframeEl) return;
-      if (lastRenderedChapter !== currentChapterIndex) return; // wait for chapter to load
-      const win = iframeEl.contentWindow as (Window & {
-        __epubHighlightOverlay?: {
-          render: (h: EpubHighlightShape[], chapterHref: string, idx: number) => void;
-        };
-      }) | null;
-      if (!win || !win.__epubHighlightOverlay) return;
-      const chapterHref = metadata.chapters[currentChapterIndex]?.href ?? '';
-      // Touch persistedHighlights to track it reactively.
-      void persistedHighlights;
-      try {
-        win.__epubHighlightOverlay.render(persistedHighlights, chapterHref, currentChapterIndex);
-      } catch (err) {
-        console.warn('epub-hl: render failed', err);
-      }
-    });
+  // ─── Re-render persisted highlights inside the iframe ──────
+  // Runs after every chapter change (when the iframe document is
+  // fresh) and whenever the parent's `persistedHighlights` reference
+  // changes (e.g. after a color update or delete). The overlay is
+  // idempotent -- it clears existing wraps before re-applying.
+  type EpubHighlightShape = {
+    id: string;
+    color: string;
+    pageNumber: number;
+    cfi?: string | null;
+  };
+  $effect(() => {
+    if (!metadata || isLoading || !iframeEl) return;
+    if (lastRenderedChapter !== currentChapterIndex) return; // wait for chapter to load
+    const win = iframeEl.contentWindow as
+      | (Window & {
+          __epubHighlightOverlay?: {
+            render: (h: EpubHighlightShape[], chapterHref: string, idx: number) => void;
+          };
+        })
+      | null;
+    if (!win || !win.__epubHighlightOverlay) return;
+    const chapterHref = metadata.chapters[currentChapterIndex]?.href ?? '';
+    // Touch persistedHighlights to track it reactively.
+    void persistedHighlights;
+    try {
+      win.__epubHighlightOverlay.render(persistedHighlights, chapterHref, currentChapterIndex);
+    } catch (err) {
+      console.warn('epub-hl: render failed', err);
+    }
+  });
 
   // ─── External TOC navigation ─────────────────────────────
   $effect(() => {
@@ -464,15 +505,15 @@
   function collectFontFaceAssetUrls(
     html: string,
     chapterPath: string,
-    resourcesPath: string
+    resourcesPath: string,
   ): string[] {
     const urls = new Set<string>();
     const fontExt = /\.(ttf|otf|woff2?|eot)(\?|$|#)/i;
     const urlPattern = /url\(\s*(['"]?)([^'")]+)\1\s*\)/gi;
 
     const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-    const normalizedChapter = chapterPath.replace(/\\/g, "/");
+    const doc = parser.parseFromString(html, 'text/html');
+    const normalizedChapter = chapterPath.replace(/\\/g, '/');
 
     const collectFromCss = (cssText: string): void => {
       // Only consider rules that look like @font-face (a heuristic: contain
@@ -484,11 +525,11 @@
         const rawUrl = match[2];
         if (
           !rawUrl ||
-          rawUrl.startsWith("http") ||
-          rawUrl.startsWith("data:") ||
-          rawUrl.startsWith("asset:") ||
-          rawUrl.startsWith("#") ||
-          rawUrl.startsWith("local(")
+          rawUrl.startsWith('http') ||
+          rawUrl.startsWith('data:') ||
+          rawUrl.startsWith('asset:') ||
+          rawUrl.startsWith('#') ||
+          rawUrl.startsWith('local(')
         ) {
           continue;
         }
@@ -498,8 +539,8 @@
       }
     };
 
-    for (const styleEl of doc.querySelectorAll("style")) {
-      collectFromCss(styleEl.textContent ?? "");
+    for (const styleEl of doc.querySelectorAll('style')) {
+      collectFromCss(styleEl.textContent ?? '');
     }
     // We don't probe linked stylesheets (they're loaded async by the iframe
     // and their body isn't in the HTML string we get from Rust). The 403s
@@ -520,15 +561,15 @@
     const results = await Promise.allSettled(
       urls.map(async (url) => {
         try {
-          const res = await fetch(url, { method: "HEAD" });
+          const res = await fetch(url, { method: 'HEAD' });
           if (!res.ok) throw new Error(`status ${res.status}`);
         } catch {
-          throw new Error("missing");
+          throw new Error('missing');
         }
-      })
+      }),
     );
     urls.forEach((url, i) => {
-      if (results[i].status === "rejected") {
+      if (results[i].status === 'rejected') {
         missing.add(url);
       }
     });
@@ -542,15 +583,12 @@
    */
   function stripMissingFontFaces(cssText: string, missingFonts: Set<string>): string {
     if (missingFonts.size === 0) return cssText;
-    return cssText.replace(
-      /@font-face\s*\{[^{}]*\}/gi,
-      (rule) => {
-        const urlMatch = rule.match(/url\(\s*(['"]?)([^'")]+)\1\s*\)/i);
-        if (!urlMatch) return rule;
-        if (missingFonts.has(urlMatch[2])) return "";
-        return rule;
-      }
-    );
+    return cssText.replace(/@font-face\s*\{[^{}]*\}/gi, (rule) => {
+      const urlMatch = rule.match(/url\(\s*(['"]?)([^'")]+)\1\s*\)/i);
+      if (!urlMatch) return rule;
+      if (missingFonts.has(urlMatch[2])) return '';
+      return rule;
+    });
   }
 
   function buildReaderOverrideCss(): string {
@@ -597,7 +635,7 @@
     resourcesPath: string,
     spineHrefs: string[],
     currentChapterHref: string,
-    missingFonts: Set<string> = new Set()
+    missingFonts: Set<string> = new Set(),
   ): string {
     const parser = new DOMParser();
     const doc = parser.parseFromString(chapterData.html, 'text/html');
@@ -626,7 +664,8 @@
     for (const el of doc.querySelectorAll('img, image, video, audio, source, object')) {
       const attrName = el.tagName.toLowerCase() === 'image' ? 'href' : 'src';
       const src = el.getAttribute(attrName);
-      if (!src || src.startsWith('http') || src.startsWith('data:') || src.startsWith('asset:')) continue;
+      if (!src || src.startsWith('http') || src.startsWith('data:') || src.startsWith('asset:'))
+        continue;
 
       const resourcePath = resolveResourcePath(chapterPath, src);
       el.setAttribute(attrName, toAssetUrl(resourcesPath, resourcePath));
@@ -926,7 +965,7 @@
       const fontUrls = collectFontFaceAssetUrls(
         chapterData.html,
         chapterData.chapterPath,
-        metadata.resourcesPath
+        metadata.resourcesPath,
       );
       const missingFonts = await probeMissingFontUrls(fontUrls);
       const srcdoc = buildChapterSrcdoc(
@@ -934,7 +973,7 @@
         metadata.resourcesPath,
         spineHrefs,
         chapterHref,
-        missingFonts
+        missingFonts,
       );
 
       iframeEl.onload = () => {
@@ -952,12 +991,14 @@
           cfi?: string | null;
         };
         try {
-          const win = iframeEl?.contentWindow as (Window & {
-            __cfiBridge?: { setSpine: (h: string[]) => void };
-            __epubHighlightOverlay?: {
-              render: (h: EpubHighlightShape[], chapterHref: string, idx: number) => void;
-            };
-          }) | null;
+          const win = iframeEl?.contentWindow as
+            | (Window & {
+                __cfiBridge?: { setSpine: (h: string[]) => void };
+                __epubHighlightOverlay?: {
+                  render: (h: EpubHighlightShape[], chapterHref: string, idx: number) => void;
+                };
+              })
+            | null;
           if (win?.__cfiBridge && typeof win.__cfiBridge.setSpine === 'function') {
             win.__cfiBridge.setSpine(spineHrefs);
           }
@@ -1076,7 +1117,10 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="flex flex-col h-full w-full min-h-0 outline-none relative" tabindex="-1" role="presentation"
+<div
+  class="flex flex-col h-full w-full min-h-0 outline-none relative"
+  tabindex="-1"
+  role="presentation"
   class:w-full={isFullscreen}
   class:h-full={isFullscreen}
 >
@@ -1097,8 +1141,8 @@
       currentPage={currentChapterIndex + 1}
       totalPages={totalChapters}
       currentPercentage={((currentChapterIndex + 0.5) / totalChapters) * 100}
-      fontSize={fontSize}
-      isFullscreen={isFullscreen}
+      {fontSize}
+      {isFullscreen}
       {t}
       onPrev={goToPrev}
       onNext={goToNext}

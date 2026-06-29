@@ -1,5 +1,5 @@
 type DebugReaderInfo = {
-  format: "pdf" | "epub" | null;
+  format: 'pdf' | 'epub' | null;
   isTocOpen: boolean;
   isSearchOpen: boolean;
   isFullscreen: boolean;
@@ -16,17 +16,17 @@ type DebugRect = {
 
 type DebugSelectionInfo = {
   text: string;
-  source: "pdf" | "epub";
+  source: 'pdf' | 'epub';
   rectCount: number;
   firstRect: DebugRect;
 } | null;
 
 const BREAKPOINTS = [
-  { name: "sm", min: 0, max: 639 },
-  { name: "md", min: 640, max: 767 },
-  { name: "lg", min: 768, max: 1023 },
-  { name: "xl", min: 1024, max: 1279 },
-  { name: "2xl", min: 1280, max: Infinity },
+  { name: 'sm', min: 0, max: 639 },
+  { name: 'md', min: 640, max: 767 },
+  { name: 'lg', min: 768, max: 1023 },
+  { name: 'xl', min: 1024, max: 1279 },
+  { name: '2xl', min: 1280, max: Infinity },
 ] as const;
 
 type EpubSelectionDebug = {
@@ -44,12 +44,12 @@ type EpubSelectionDebug = {
   postMessageCount: number;
   emptyTextMessageCount: number;
   guardResult:
-    | "pass"
-    | "drop-chapter-mismatch"
-    | "drop-empty-text"
-    | "drop-no-handler"
-    | "drop-unknown-type"
-    | "none";
+    | 'pass'
+    | 'drop-chapter-mismatch'
+    | 'drop-empty-text'
+    | 'drop-no-handler'
+    | 'drop-unknown-type'
+    | 'none';
   currentChapterIndex: number | null;
   onselectionCalled: number;
   onselectionclearCalled: number;
@@ -71,11 +71,16 @@ type EpubSelectionDebug = {
   saveHighlightCallCount: number;
   saveHighlightLastError: string;
   persistedHighlightsCount: number;
+  // epub-highlight-bugfix: append-only deduped list of highlight IDs that
+  // failed to apply. Populated by `epub-hl-failed` postMessage from the
+  // iframe overlay (cfi-unresolved, invalid-color) and from
+  // `saveHighlight` reject in ReaderWorkspace. Bounded by Set-like dedup.
+  failedHighlightIds: string[];
 };
 
 class DebugState {
   enabled = $state(false);
-  currentRoute = $state("");
+  currentRoute = $state('');
   viewportWidth = $state(0);
   viewportHeight = $state(0);
   readerInfo: DebugReaderInfo = $state(null);
@@ -85,28 +90,32 @@ class DebugState {
     lastRawMessage: null,
     postMessageCount: 0,
     emptyTextMessageCount: 0,
-    guardResult: "none",
+    guardResult: 'none',
     currentChapterIndex: null,
     onselectionCalled: 0,
     onselectionclearCalled: 0,
-    parentState: { showToolbar: false, selectedText: "", selectionBounds: null, selectionContainer: null },
+    parentState: {
+      showToolbar: false,
+      selectedText: '',
+      selectionBounds: null,
+      selectionContainer: null,
+    },
     computedToolbarX: null,
     computedToolbarY: null,
     rectCount: 0,
     dismissToolbarCallCount: 0,
-    lastDismissTrigger: "—",
+    lastDismissTrigger: '—',
     colorPickCount: 0,
-    lastPickedColor: "—",
+    lastPickedColor: '—',
     saveHighlightCallCount: 0,
-    saveHighlightLastError: "",
+    saveHighlightLastError: '',
     persistedHighlightsCount: 0,
+    failedHighlightIds: [],
   });
 
   get breakpoint(): string {
-    const bp = BREAKPOINTS.find(
-      (b) => this.viewportWidth >= b.min && this.viewportWidth <= b.max,
-    );
-    return bp?.name ?? "lg";
+    const bp = BREAKPOINTS.find((b) => this.viewportWidth >= b.min && this.viewportWidth <= b.max);
+    return bp?.name ?? 'lg';
   }
 
   updateViewport(): void {
@@ -116,20 +125,18 @@ class DebugState {
 
   getSnapshot(): string {
     const lines: string[] = [
-      `Route: ${this.currentRoute || "—"}`,
+      `Route: ${this.currentRoute || '—'}`,
       `Viewport: ${this.viewportWidth}x${this.viewportHeight} (${this.breakpoint})`,
     ];
     if (this.readerInfo) {
       lines.push(
-        `Reader: ${this.readerInfo.format ?? "—"} | ${this.readerInfo.pageInfo} | fullscreen:${this.readerInfo.isFullscreen}`,
+        `Reader: ${this.readerInfo.format ?? '—'} | ${this.readerInfo.pageInfo} | fullscreen:${this.readerInfo.isFullscreen}`,
       );
     }
     if (this.selection) {
-      lines.push(
-        `Selection: ${this.selection.source} | "${this.selection.text.slice(0, 80)}"`,
-      );
+      lines.push(`Selection: ${this.selection.source} | "${this.selection.text.slice(0, 80)}"`);
     }
-    return lines.join("\n");
+    return lines.join('\n');
   }
 
   async copySnapshot(): Promise<void> {
@@ -137,7 +144,7 @@ class DebugState {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      console.warn("Failed to copy debug snapshot");
+      console.warn('Failed to copy debug snapshot');
     }
   }
 

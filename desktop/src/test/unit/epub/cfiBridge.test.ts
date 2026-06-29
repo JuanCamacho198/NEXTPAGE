@@ -1,11 +1,11 @@
-import { describe, expect, it, beforeAll } from "vitest";
-import { JSDOM } from "jsdom";
+import { describe, expect, it, beforeAll, afterAll } from 'vitest';
+import { JSDOM } from 'jsdom';
 import {
   rangeToCFI,
   cfiToRange,
   getChapterBaseCFI,
   setSpine,
-} from "$lib/features/reader/viewer-epub/cfiBridge";
+} from '$lib/features/reader/viewer-epub/cfiBridge';
 
 // Inlined fixture: a synthetic EPUB chapter (1 heading + 3 paragraphs).
 // Inlined as a string constant so the test is self-contained and not
@@ -42,8 +42,8 @@ const FIXTURE_HTML = `<!DOCTYPE html>
 </html>
 `;
 
-const CHAPTER_HREF = "OEBPS/Text/chapter1.xhtml";
-const SPINE = [CHAPTER_HREF, "OEBPS/Text/chapter2.xhtml", "OEBPS/Text/chapter3.xhtml"];
+const CHAPTER_HREF = 'OEBPS/Text/chapter1.xhtml';
+const SPINE = [CHAPTER_HREF, 'OEBPS/Text/chapter2.xhtml', 'OEBPS/Text/chapter3.xhtml'];
 
 /**
  * Parse the fixture HTML into a fresh jsdom Document and return it.
@@ -54,77 +54,77 @@ function loadFixtureDocument(): Document {
   return dom.window.document;
 }
 
-describe("cfiBridge", () => {
+describe('cfiBridge', () => {
   beforeAll(() => {
     setSpine(SPINE);
   });
 
-  describe("getChapterBaseCFI", () => {
-    it("returns a base CFI for a registered chapter", () => {
+  describe('getChapterBaseCFI', () => {
+    it('returns a base CFI for a registered chapter', () => {
       const base = getChapterBaseCFI(CHAPTER_HREF);
-      expect(base).toBe("epubcfi(/6/1!)");
+      expect(base).toBe('epubcfi(/6/1!)');
     });
 
-    it("returns the 1-based spine index for chapter 2", () => {
-      const base = getChapterBaseCFI("OEBPS/Text/chapter2.xhtml");
-      expect(base).toBe("epubcfi(/6/2!)");
+    it('returns the 1-based spine index for chapter 2', () => {
+      const base = getChapterBaseCFI('OEBPS/Text/chapter2.xhtml');
+      expect(base).toBe('epubcfi(/6/2!)');
     });
 
-    it("returns null for an unregistered chapter", () => {
-      expect(getChapterBaseCFI("OEBPS/Text/missing.xhtml")).toBeNull();
+    it('returns null for an unregistered chapter', () => {
+      expect(getChapterBaseCFI('OEBPS/Text/missing.xhtml')).toBeNull();
     });
 
-    it("returns null for invalid input", () => {
-      expect(getChapterBaseCFI("")).toBeNull();
+    it('returns null for invalid input', () => {
+      expect(getChapterBaseCFI('')).toBeNull();
       expect(getChapterBaseCFI(null as unknown as string)).toBeNull();
       expect(getChapterBaseCFI(undefined as unknown as string)).toBeNull();
     });
   });
 
-  describe("setSpine", () => {
-    it("replaces the spine registry", () => {
+  describe('setSpine', () => {
+    it('replaces the spine registry', () => {
       setSpine([CHAPTER_HREF]);
-      expect(getChapterBaseCFI(CHAPTER_HREF)).toBe("epubcfi(/6/1!)");
-      expect(getChapterBaseCFI("OEBPS/Text/chapter2.xhtml")).toBeNull();
+      expect(getChapterBaseCFI(CHAPTER_HREF)).toBe('epubcfi(/6/1!)');
+      expect(getChapterBaseCFI('OEBPS/Text/chapter2.xhtml')).toBeNull();
       // Restore the test fixture spine.
       setSpine(SPINE);
     });
 
-    it("accepts null/undefined to reset", () => {
+    it('accepts null/undefined to reset', () => {
       setSpine(null);
       expect(getChapterBaseCFI(CHAPTER_HREF)).toBeNull();
       setSpine(SPINE);
     });
   });
 
-  describe("rangeToCFI", () => {
-    it("returns a non-empty CFI for a known phrase", () => {
+  describe('rangeToCFI', () => {
+    it('returns a non-empty CFI for a known phrase', () => {
       const doc = loadFixtureDocument();
       // "thirteen" appears in the first paragraph as a word.
-      const range = selectText(doc, "thirteen");
+      const range = selectText(doc, 'thirteen');
       expect(range).not.toBeNull();
       const cfi = rangeToCFI(range, CHAPTER_HREF, doc);
       expect(cfi).toBeTruthy();
       expect(cfi).toMatch(/^epubcfi\(\/6\/1!/);
     });
 
-    it("round-trips: rangeToCFI -> cfiToRange preserves the text", () => {
+    it('round-trips: rangeToCFI -> cfiToRange preserves the text', () => {
       const doc = loadFixtureDocument();
-      const original = selectText(doc, "Winston Smith");
+      const original = selectText(doc, 'Winston Smith');
       expect(original).not.toBeNull();
       const cfi = rangeToCFI(original, CHAPTER_HREF, doc);
       expect(cfi).toBeTruthy();
 
       const restored = cfiToRange(cfi, CHAPTER_HREF, doc);
       expect(restored).not.toBeNull();
-      expect(restored!.toString()).toBe("Winston Smith");
+      expect(restored!.toString()).toBe('Winston Smith');
     });
 
-    it("round-trips a multi-paragraph selection", () => {
+    it('round-trips a multi-paragraph selection', () => {
       const doc = loadFixtureDocument();
       // Selection that crosses paragraph boundaries: from "smelt"
       // (end of p1) through to "current" (start of p3).
-      const range = selectRangeFromTexts(doc, "hallway smelt", "current");
+      const range = selectRangeFromTexts(doc, 'hallway smelt', 'current');
       expect(range).not.toBeNull();
       const cfi = rangeToCFI(range, CHAPTER_HREF, doc);
       expect(cfi).toBeTruthy();
@@ -138,14 +138,14 @@ describe("cfiBridge", () => {
       const restoredText = restored!.toString();
       // Both paragraphs that span the selection should be in the
       // restored text.
-      expect(restoredText).toContain("coloured poster");
-      expect(restoredText).toContain("Winston made for the stairs");
+      expect(restoredText).toContain('coloured poster');
+      expect(restoredText).toContain('Winston made for the stairs');
     });
 
-    it("returns null for an empty range", () => {
+    it('returns null for an empty range', () => {
       const doc = loadFixtureDocument();
       const range = doc.createRange();
-      const p = doc.querySelector("p")!;
+      const p = doc.querySelector('p')!;
       range.setStart(p.firstChild!, 0);
       range.setEnd(p.firstChild!, 0);
       // rangeToCFI should still return a CFI for a zero-length range --
@@ -155,43 +155,43 @@ describe("cfiBridge", () => {
       expect(cfi).toBeTruthy();
     });
 
-    it("returns null for a chapter not in the spine registry", () => {
+    it('returns null for a chapter not in the spine registry', () => {
       const doc = loadFixtureDocument();
-      const range = selectText(doc, "Winston");
+      const range = selectText(doc, 'Winston');
       expect(range).not.toBeNull();
-      const cfi = rangeToCFI(range, "OEBPS/Text/missing.xhtml", doc);
+      const cfi = rangeToCFI(range, 'OEBPS/Text/missing.xhtml', doc);
       expect(cfi).toBeNull();
     });
 
-    it("returns null on invalid input without throwing", () => {
+    it('returns null on invalid input without throwing', () => {
       const doc = loadFixtureDocument();
-      const range = selectText(doc, "Winston");
+      const range = selectText(doc, 'Winston');
       expect(rangeToCFI(null, CHAPTER_HREF, doc)).toBeNull();
-      expect(rangeToCFI(range, "", doc)).toBeNull();
+      expect(rangeToCFI(range, '', doc)).toBeNull();
       expect(rangeToCFI(range, CHAPTER_HREF, null)).toBeNull();
       expect(rangeToCFI(undefined as unknown as Range, CHAPTER_HREF, doc)).toBeNull();
     });
   });
 
-  describe("cfiToRange", () => {
-    it("returns null for malformed CFIs without throwing", () => {
+  describe('cfiToRange', () => {
+    it('returns null for malformed CFIs without throwing', () => {
       const doc = loadFixtureDocument();
-      expect(cfiToRange("", CHAPTER_HREF, doc)).toBeNull();
-      expect(cfiToRange("not-a-cfi", CHAPTER_HREF, doc)).toBeNull();
-      expect(cfiToRange("epubcfi(/garbage!)", CHAPTER_HREF, doc)).toBeNull();
-      expect(cfiToRange("epubcfi(/6/1!)", CHAPTER_HREF, doc)).toBeNull();
+      expect(cfiToRange('', CHAPTER_HREF, doc)).toBeNull();
+      expect(cfiToRange('not-a-cfi', CHAPTER_HREF, doc)).toBeNull();
+      expect(cfiToRange('epubcfi(/garbage!)', CHAPTER_HREF, doc)).toBeNull();
+      expect(cfiToRange('epubcfi(/6/1!)', CHAPTER_HREF, doc)).toBeNull();
       // Spine index mismatch
-      expect(cfiToRange("epubcfi(/6/2!/4/2,/1:0,/1:0)", CHAPTER_HREF, doc)).toBeNull();
+      expect(cfiToRange('epubcfi(/6/2!/4/2,/1:0,/1:0)', CHAPTER_HREF, doc)).toBeNull();
     });
 
-    it("returns null when the local path does not resolve", () => {
+    it('returns null when the local path does not resolve', () => {
       const doc = loadFixtureDocument();
       // Spine 1, local path with a non-existent child step (e.g. /999)
-      expect(cfiToRange("epubcfi(/6/1!/4/2/999,/1:0,/1:0)", CHAPTER_HREF, doc)).toBeNull();
+      expect(cfiToRange('epubcfi(/6/1!/4/2/999,/1:0,/1:0)', CHAPTER_HREF, doc)).toBeNull();
     });
   });
 
-  describe("NFR-1 (performance)", () => {
+  describe('NFR-1 (performance)', () => {
     // Perf test for `rangeToCFI` against a chapter inflated to ~50K
     // text nodes. The spec target is < 5ms in the Tauri webview
     // (real browser engine). jsdom is much slower (tree walking is
@@ -200,8 +200,8 @@ describe("cfiBridge", () => {
     // walked. Real-world performance is logged for visibility.
     //
     // Skip in slow CI: set SKIP_PERF=1 to opt out.
-    it("processes a 50K text node chapter (jsdom baseline)", () => {
-      if (process.env.SKIP_PERF === "1") {
+    it('processes a 50K text node chapter (jsdom baseline)', () => {
+      if (process.env.SKIP_PERF === '1') {
         return;
       }
       const doc = loadFixtureDocument();
@@ -211,7 +211,7 @@ describe("cfiBridge", () => {
       // those too). We aim for >= 50K text nodes by appending 50K
       // copies of the existing paragraphs.
       const body = doc.body;
-      const sourceParagraphs = Array.from(doc.querySelectorAll("p"));
+      const sourceParagraphs = Array.from(doc.querySelectorAll('p'));
       for (let i = 0; i < 50_000; i++) {
         for (const p of sourceParagraphs) {
           body.appendChild(p.cloneNode(true));
@@ -237,7 +237,7 @@ describe("cfiBridge", () => {
       expect(target).toBeTruthy();
       const range = doc.createRange();
       range.setStart(target!, 0);
-      range.setEnd(target!, Math.min(5, (target!.nodeValue ?? "").length));
+      range.setEnd(target!, Math.min(5, (target!.nodeValue ?? '').length));
 
       const start = performance.now();
       const cfi = rangeToCFI(range, CHAPTER_HREF, doc);
@@ -249,6 +249,173 @@ describe("cfiBridge", () => {
       console.log(`cfiBridge perf: ${elapsed.toFixed(2)}ms over ${textNodeCount} text nodes`);
       expect(cfi).toBeTruthy();
       expect(elapsed).toBeLessThan(2000);
+    });
+  });
+
+  describe('cross-paragraph round-trip (Bug B fix)', () => {
+    // Bug B regression: when the user's range endpoint is an element
+    // (e.g. p1, p2, or body) the algorithm must descend to the correct
+    // text child and use the right character offset. The OLD algorithm
+    // iterated ONLY text children and used `offset` as a child index,
+    // but then treated `offset` as a character offset in the offset
+    // clamp. This produced wrong endpoints (truncated, overshot, or
+    // wrapped into a sibling paragraph's leading whitespace).
+    //
+    // Fixture: a minimal 2-paragraph chapter where p2 has a leading
+    // space. jsdom parses this as body[whitespace, p1, whitespace, p2, whitespace]
+    // with each <p> holding one text child.
+    const CROSS_PARA_HTML = `<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /></head>
+  <body>
+    <p>Hello world.</p>
+    <p> Next paragraph.</p>
+  </body>
+</html>`;
+    const CROSS_PARA_HREF = 'OEBPS/Text/cross-para.xhtml';
+
+    function loadCrossPara(): Document {
+      return new JSDOM(CROSS_PARA_HTML).window.document;
+    }
+
+    afterAll(() => {
+      // Restore the global spine so subsequent tests in this file
+      // still find the original chapters.
+      setSpine(SPINE);
+    });
+
+    it('round-trips a text-node endpoint at the visual start of p2 byte-equal', () => {
+      // Covers Spec Req: CFI Round-Trip Correctness, Scenario:
+      // cross-paragraph round-trip preserves endpoints.
+      // The range uses TEXT-NODE endpoints (p1's text and p2's text)
+      // so the element-container branch is not exercised. The
+      // round-trip must produce identical startContainer / startOffset
+      // / endContainer / endOffset. This is the spec's "byte-equal"
+      // assertion.
+      setSpine([CROSS_PARA_HREF]);
+      const doc = loadCrossPara();
+      const p1 = doc.querySelectorAll('p')[0]!;
+      const p2 = doc.querySelectorAll('p')[1]!;
+      const p1Text = p1.firstChild as Text;
+      const p2Text = p2.firstChild as Text;
+
+      // Range: end of p1 ("Hello world." = 12 chars) to visual start
+      // of p2 (after the leading space, before "N" = offset 1).
+      const range = doc.createRange();
+      range.setStart(p1Text, 12);
+      range.setEnd(p2Text, 1);
+
+      const cfi = rangeToCFI(range, CROSS_PARA_HREF, doc);
+      expect(cfi).toBeTruthy();
+      const restored = cfiToRange(cfi, CROSS_PARA_HREF, doc);
+      expect(restored).not.toBeNull();
+      expect(restored!.startContainer).toBe(p1Text);
+      expect(restored!.startOffset).toBe(12);
+      expect(restored!.endContainer).toBe(p2Text);
+      expect(restored!.endOffset).toBe(1);
+    });
+
+    it('resolves element-container endpoint with offset 0 to first text + char 0', () => {
+      // Covers Spec Req: CFI Round-Trip Correctness, Scenario:
+      // element-container endpoint with offset 0.
+      // endContainer = p2 (element), endOffset = 0 must resolve to
+      // p2's text child at char 0 (the position BEFORE the leading
+      // space). The wrap must include p1's selected text and the
+      // body whitespace between p1 and p2, but MUST NOT include any
+      // character of p2's text (the leading space or "Next").
+      setSpine([CROSS_PARA_HREF]);
+      const doc = loadCrossPara();
+      const p1 = doc.querySelectorAll('p')[0]!;
+      const p2 = doc.querySelectorAll('p')[1]!;
+      const p1Text = p1.firstChild as Text;
+
+      const range = doc.createRange();
+      range.setStart(p1Text, 6); // start at "world." (skip "Hello ")
+      range.setEnd(p2, 0);
+
+      const cfi = rangeToCFI(range, CROSS_PARA_HREF, doc);
+      expect(cfi).toBeTruthy();
+      const restored = cfiToRange(cfi, CROSS_PARA_HREF, doc);
+      expect(restored).not.toBeNull();
+      // Wrap must include "world." and any inter-paragraph body
+      // whitespace, but MUST NOT bleed into p2's text. The OLD
+      // algorithm would resolve p2[0] to the FIRST text descendant
+      // (p2's text) at char 0, including the leading space.
+      const text = restored!.toString();
+      expect(text).toContain('world.');
+      expect(text).not.toContain('Next');
+      expect(text).not.toContain('paragraph');
+    });
+
+    it("resolves element-container endpoint at 'after last child' to last text + end", () => {
+      // Bug B core regression. endContainer = p1 (element), endOffset
+      // = 1 (= childNodes.length, the "after the last child" position
+      // the browser uses when the user ends a selection exactly at the
+      // end of p1). The OLD algorithm:
+      //   textChildren = [p1's text]
+      //   textChildren[Math.min(1, 0)] = textChildren[0] = p1's text
+      //   clampedOffset = Math.min(1, 12) = 1
+      // produced a CFI that resolved to char 1 — truncating the
+      // selection to "H" only. The FIX resolves to char 12 (end of
+      // p1's text) because `offset >= children.length` is treated as
+      // "after the last child" → END of the last text descendant.
+      setSpine([CROSS_PARA_HREF]);
+      const doc = loadCrossPara();
+      const p1 = doc.querySelectorAll('p')[0]!;
+      const p1Text = p1.firstChild as Text;
+
+      const range = doc.createRange();
+      range.setStart(p1Text, 0);
+      range.setEnd(p1, 1);
+
+      const cfi = rangeToCFI(range, CROSS_PARA_HREF, doc);
+      expect(cfi).toBeTruthy();
+      const restored = cfiToRange(cfi, CROSS_PARA_HREF, doc);
+      expect(restored).not.toBeNull();
+      expect(restored!.toString()).toBe('Hello world.');
+    });
+
+    it("element-container endpoint at body does not bleed into p2's content", () => {
+      // Bug B alternative regression. When the user's range ends at
+      // the body element with an offset past p1 (the position between
+      // p1 and p2 in the document order), the algorithm must descend
+      // to the text child AT that position — not the last text child
+      // of the body (which would be far past p2, causing the wrap to
+      // include p2 and any trailing whitespace).
+      //
+      // Find p1's child index in body, then use p1Index+1 as the
+      // body offset (the position right after p1).
+      setSpine([CROSS_PARA_HREF]);
+      const doc = loadCrossPara();
+      const body = doc.body;
+      const p1 = doc.querySelectorAll('p')[0]!;
+      const p1Text = p1.firstChild as Text;
+
+      let p1Index = -1;
+      for (let i = 0; i < body.childNodes.length; i++) {
+        if (body.childNodes[i] === p1) {
+          p1Index = i;
+          break;
+        }
+      }
+      expect(p1Index).toBeGreaterThanOrEqual(0);
+      const offsetAfterP1 = p1Index + 1;
+
+      const range = doc.createRange();
+      range.setStart(p1Text, 6); // start at "world."
+      range.setEnd(body, offsetAfterP1);
+
+      const cfi = rangeToCFI(range, CROSS_PARA_HREF, doc);
+      expect(cfi).toBeTruthy();
+      const restored = cfiToRange(cfi, CROSS_PARA_HREF, doc);
+      expect(restored).not.toBeNull();
+      // Wrap must include "world." (6 chars of p1) and MUST NOT bleed
+      // into p2's content. The OLD algorithm wrapped the entire p2
+      // text + trailing whitespace (the visible bug).
+      const text = restored!.toString();
+      expect(text).toContain('world.');
+      expect(text).not.toContain('Next');
+      expect(text).not.toContain('paragraph');
     });
   });
 });
@@ -263,7 +430,7 @@ function selectText(doc: Document, text: string): Range | null {
   const walker = doc.createTreeWalker(doc.body, 0x4 /* SHOW_TEXT */);
   let node: Node | null = walker.nextNode();
   while (node) {
-    const value = node.nodeValue ?? "";
+    const value = node.nodeValue ?? '';
     const idx = value.indexOf(text);
     if (idx >= 0) {
       const range = doc.createRange();
@@ -290,7 +457,7 @@ function selectRangeFromTexts(doc: Document, startText: string, endText: string)
   let endOffset = 0;
   let foundStart = false;
   while (node) {
-    const value = node.nodeValue ?? "";
+    const value = node.nodeValue ?? '';
     const startIdx = value.indexOf(startText);
     const endIdx = value.indexOf(endText);
     if (!foundStart && startIdx >= 0) {

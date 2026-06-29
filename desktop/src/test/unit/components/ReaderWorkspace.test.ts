@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/svelte";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from '@testing-library/svelte';
+import { describe, expect, it, vi } from 'vitest';
 
 const t = (key: string) => key;
 
@@ -9,19 +9,19 @@ vi.mock('@tauri-apps/api/webviewWindow', () => ({
   }),
 }));
 
-vi.mock("$lib/features/reader/viewer-pdf/PdfViewer.svelte", async () => {
-  const mod = await import("../../mocks/MockPdfViewer.svelte");
+vi.mock('$lib/features/reader/viewer-pdf/PdfViewer.svelte', async () => {
+  const mod = await import('../../mocks/MockPdfViewer.svelte');
   return { default: mod.default };
 });
 
-import ReaderWorkspace from "$lib/features/reader/chrome/ReaderWorkspace.svelte";
+import ReaderWorkspace from '$lib/features/reader/chrome/ReaderWorkspace.svelte';
 
 const makeBook = (overrides: Partial<{ format: string; filePath: string }> = {}) => ({
-  id: "book-1",
-  title: "Book",
-  author: "Author",
-  filePath: "C:/book.pdf",
-  format: "pdf",
+  id: 'book-1',
+  title: 'Book',
+  author: 'Author',
+  filePath: 'C:/book.pdf',
+  format: 'pdf',
   currentPage: 1,
   totalPages: 10,
   progressPercentage: 0,
@@ -31,18 +31,18 @@ const makeBook = (overrides: Partial<{ format: string; filePath: string }> = {})
   ...overrides,
 });
 
-describe("ReaderWorkspace", () => {
-  it("owns fullscreen at workspace root", async () => {
+describe('ReaderWorkspace', () => {
+  it('owns fullscreen at workspace root', async () => {
     const requestFullscreen = vi.fn(function (this: HTMLElement) {
-      Object.defineProperty(document, "fullscreenElement", {
+      Object.defineProperty(document, 'fullscreenElement', {
         configurable: true,
         value: this,
       });
-      document.dispatchEvent(new Event("fullscreenchange"));
+      document.dispatchEvent(new Event('fullscreenchange'));
       return Promise.resolve();
     });
 
-    Object.defineProperty(document.documentElement, "requestFullscreen", {
+    Object.defineProperty(document.documentElement, 'requestFullscreen', {
       configurable: true,
       value: requestFullscreen,
     });
@@ -53,20 +53,20 @@ describe("ReaderWorkspace", () => {
       onBackToHome: () => undefined,
     });
 
-    await fireEvent.click(screen.getByTestId("mock-pdfviewer-toggle"));
+    await fireEvent.click(screen.getByTestId('mock-pdfviewer-toggle'));
     expect(requestFullscreen).toHaveBeenCalled();
   });
-  it("renders selection toolbar using viewerSpace payload", async () => {
+  it('renders selection toolbar using viewerSpace payload', async () => {
     render(ReaderWorkspace, {
       activeReadingBook: makeBook(),
       t,
       onBackToHome: () => undefined,
     });
 
-    await fireEvent.click(screen.getByTestId("mock-pdfviewer-select"));
-    const toolbar = document.querySelector(".selection-toolbar");
+    await fireEvent.click(screen.getByTestId('mock-pdfviewer-select'));
+    const toolbar = document.querySelector('.selection-toolbar');
     expect(toolbar).toBeTruthy();
-    expect(toolbar?.getAttribute("style")).toContain("left: 116px");
-    expect(toolbar?.getAttribute("style")).toContain("top: 296px");
+    expect(toolbar?.getAttribute('style')).toContain('left: 116px');
+    expect(toolbar?.getAttribute('style')).toContain('top: 296px');
   });
 });

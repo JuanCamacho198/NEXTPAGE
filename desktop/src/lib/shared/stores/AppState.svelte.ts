@@ -49,6 +49,15 @@ class AppState {
   // Stats domain: use statsDomain to avoid name collision with the stats getter
   private statsDomain = statsState;
 
+  constructor() {
+    // Wire the bulk-import domain to this coordinator so single-file and
+    // bulk imports refresh the in-memory library after the backend commits.
+    // The callback was added in the bulk-import extraction commit but never
+    // assigned here, so handleImportFile silently no-op'd the post-import
+    // refresh and the user had to Ctrl+R to see the new book.
+    this.bulkImport.onLibraryRefreshNeeded = () => this.loadLibrary();
+  }
+
   // ─── Init gate ───
   /**
    * `false` until `init()` resolves. The AppRouter shows a brief loader

@@ -143,11 +143,11 @@
 
       <!-- Text block -->
       <div class="min-w-0 flex-1">
-        <p class="m-0 truncate text-sm font-semibold">
+        <p class="m-0 truncate text-sm font-semibold" title={titleText}>
           {titleText}
         </p>
         {#if subtitleText}
-          <p class="m-0 mt-0.5 truncate text-xs opacity-80">
+          <p class="m-0 mt-0.5 truncate text-xs opacity-80" title={subtitleText}>
             {subtitleText}
           </p>
         {/if}

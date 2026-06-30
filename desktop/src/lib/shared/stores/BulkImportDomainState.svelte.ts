@@ -2,6 +2,7 @@ import { importBook, type ImportProgress } from '$lib/shared/services/BookImport
 import { BulkImportService, type BulkImportProgress } from '$lib/shared/services/BulkImportService';
 import { pickFile, pickFolder } from '$lib/shared/services/FilePicker';
 import { extractPdfMetadata } from '$lib/shared/services/pdfThumbnail';
+import { extractEpubImportMetadata } from '$lib/shared/services/epubImportMetadata';
 import type { BulkImportSummary, ScanFolderResult } from '$lib/shared/types';
 
 export type ImportNoticeStatus = 'importing' | 'success' | 'error';
@@ -77,29 +78,47 @@ class BulkImportDomainState {
       return;
     }
 
+    const format = file.name.toLowerCase().endsWith('.epub') ? 'epub' : 'pdf';
+    // Fallback title (filename without extension) used when no metadata is
+    // available. Kept here so the import notice can render something useful
+    // before metadata extraction completes.
+    const fileStem = file.name.replace(/\.(pdf|epub)$/i, '');
+
     this.isImporting = true;
     this.setImportNotice({
       status: 'importing',
-      fileName: file.name,
+      fileName: fileStem,
       message: '', // populated on first progress callback
       percentage: 0,
     });
 
     try {
-      const format = file.name.toLowerCase().endsWith('.epub') ? 'epub' : 'pdf';
-      const title = file.name.replace(/\.(pdf|epub)$/i, '');
-
+      // Pull the title/author from the file's embedded metadata when
+      // possible. The PDF branch already extracted both via pdfjs; the
+      // EPUB branch uses a lightweight epubjs one-shot. Either way, a
+      // missing or empty metadata field falls back to the filename.
+      let title: string | undefined;
       let author: string | undefined;
-      if (format === 'pdf') {
-        try {
+      try {
+        if (format === 'pdf') {
           const meta = await extractPdfMetadata(file.path);
-          if (meta.author) {
-            author = meta.author;
-          }
-        } catch {
-          // best-effort
+          if (meta.title?.trim()) title = meta.title.trim();
+          if (meta.author?.trim()) author = meta.author.trim();
+        } else if (format === 'epub') {
+          const meta = await extractEpubImportMetadata(file.path);
+          if (meta.title?.trim()) title = meta.title.trim();
+          if (meta.author?.trim()) author = meta.author.trim();
         }
+      } catch {
+        // best-effort: fall through to filename-based title
       }
+      if (!title) title = fileStem;
+
+      // What the user sees in the import banner / success / error notice.
+      // Prefer the metadata title (shorter, cleaner); otherwise the file
+      // stem (filename without extension) which can be long but is still
+      // meaningful.
+      const displayName = title;
 
       await importBook(
         {
@@ -121,7 +140,7 @@ class BulkImportDomainState {
                 : 'importing';
           this.importNotice = {
             status: noticeStatus,
-            fileName: file.name,
+            fileName: displayName,
             message: progress.message,
             percentage: progress.percentage ?? 0,
           };
@@ -137,7 +156,7 @@ class BulkImportDomainState {
       this.setImportNotice(
         {
           status: 'success',
-          fileName: file.name,
+          fileName: displayName,
           message: '', // resolved by banner i18n
           percentage: 100,
         },
@@ -147,7 +166,7 @@ class BulkImportDomainState {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.setImportNotice({
         status: 'error',
-        fileName: file.name,
+        fileName: fileStem,
         message: errorMessage,
         percentage: 0,
       });

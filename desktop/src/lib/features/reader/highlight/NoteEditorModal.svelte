@@ -75,7 +75,7 @@
     }}
   >
     <div
-      class="w-full max-w-md overflow-hidden rounded-3xl border border-(--color-highlight-menu-border) bg-(--color-note-modal-bg) shadow-2xl backdrop-blur-sm"
+      class="w-full max-w-2xl overflow-hidden rounded-3xl border border-(--color-highlight-menu-border) bg-(--color-note-modal-bg) shadow-2xl backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label={t('highlight.noteModalTitle')}

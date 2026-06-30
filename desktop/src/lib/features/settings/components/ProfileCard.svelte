@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { getProfileInitials, type ProfileSessionViewModel } from '../profileSession';
+  import type { ProfileSessionViewModel } from '../profileSession';
   import type { MessageKey } from '$lib/shared/i18n';
+  import Avatar from '$lib/shared/ui/forms/Avatar.svelte';
 
   type Props = {
     profile: ProfileSessionViewModel;
@@ -10,13 +11,16 @@
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
-  let { profile, isProfileLoading, profileError, profileAvatarBroken, t }: Props = $props();
-
-  let avatarBroken = $state(false);
-
-  $effect(() => {
-    avatarBroken = profileAvatarBroken;
-  });
+  // The `profileAvatarBroken` prop is accepted for backwards compatibility
+  // (other call sites pass it), but the actual broken-image state now lives
+  // inside the shared `Avatar` component.
+  let {
+    profile,
+    isProfileLoading,
+    profileError,
+    profileAvatarBroken: _unused,
+    t,
+  }: Props = $props();
 </script>
 
 {#if profileError}
@@ -28,25 +32,7 @@
 <article
   class="flex gap-3 items-start rounded-xl border border-(--color-border) bg-(--color-surface,#fff) p-3"
 >
-  <div class="w-14 h-14 shrink-0">
-    {#if profile.avatarUrl && !avatarBroken}
-      <img
-        src={profile.avatarUrl}
-        alt={t('settings.profile.avatarAlt', { name: profile.name })}
-        class="w-full h-full rounded-full object-cover block border border-(--color-border)"
-        onerror={() => {
-          avatarBroken = true;
-        }}
-      />
-    {:else}
-      <div
-        class="w-full h-full rounded-full flex items-center justify-center text-sm font-bold text-(--color-primary) bg-(--color-primary)/12 border border-(--color-border)"
-        aria-hidden="true"
-      >
-        {getProfileInitials(profile.name)}
-      </div>
-    {/if}
-  </div>
+  <Avatar src={profile.avatarUrl ?? undefined} name={profile.name} size="lg" />
 
   <div class="min-w-0 flex-1">
     <p class="m-0 text-[11px] text-(--color-text-muted,#6b7280)">

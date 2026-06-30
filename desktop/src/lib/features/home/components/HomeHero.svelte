@@ -1,11 +1,17 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { profileSessionFromAuthState } from '$lib/features/settings/profileSession';
+  import Avatar from '$lib/shared/ui/forms/Avatar.svelte';
 
   type Props = {
     actions?: Snippet;
   };
 
   let { actions }: Props = $props();
+
+  // Read the profile from reactive auth state. Updates automatically
+  // when the user signs in / out or refreshes their Google profile.
+  const profile = $derived(profileSessionFromAuthState());
 </script>
 
 <section
@@ -21,13 +27,20 @@
 
   <div class="relative z-10 flex flex-col gap-6 md:flex-row md:items-center">
     <div class="flex items-center gap-5 min-w-0 flex-1">
-      <div
-        class="flex h-16 w-16 shrink-0 items-center justify-center rounded-[18px] bg-(--color-accent-soft) shadow-(--shadow-glow) border border-(--color-border-strong)"
-      >
-        <span class="text-xl font-bold text-(--color-accent-blue)">NP</span>
-      </div>
+      <Avatar
+        src={profile.avatarUrl ?? undefined}
+        name={profile.name}
+        size="xl"
+        class="border-(--color-border-strong)"
+      />
       <div class="min-w-0">
-        <h2 class="text-2xl font-bold tracking-tight text-(--color-primary)">Hola, Usuario</h2>
+        <h2 class="text-2xl font-bold tracking-tight text-(--color-primary)">
+          {#if profile.isSignedIn}
+            Hola, {profile.name}
+          {:else}
+            Hola
+          {/if}
+        </h2>
         <p class="mt-1 text-sm leading-relaxed text-(--color-text-muted)">
           Aquí tienes un resumen de tu progreso de lectura. Importa nuevos libros o retoma donde lo
           dejaste.

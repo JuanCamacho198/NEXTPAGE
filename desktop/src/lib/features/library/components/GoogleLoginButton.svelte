@@ -4,6 +4,19 @@
   import Toast from '$lib/shared/ui/feedback/Toast.svelte';
   import { startAuth } from '$lib/shared/services/GoogleOAuthService';
   import { authState } from '$lib/stores/authState.svelte';
+  import type { MessageKey } from '$lib/shared/i18n';
+
+  type Translator = (key: MessageKey, params?: Record<string, string | number>) => string;
+
+  /**
+   * Default `t` that returns the key. Keeps the component self-contained for
+   * callers that haven't been migrated to i18n yet (e.g. the existing
+   * SettingsPanel usage). When a real `t` is passed, all visible strings
+   * route through the i18n dictionary.
+   */
+  const defaultT: Translator = (key) => String(key);
+
+  let { t = defaultT }: { t?: Translator } = $props();
 
   let isLoggingIn = $state(false);
   let showSuccessToast = $state(false);
@@ -35,7 +48,7 @@
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       console.error('Login Error:', msg);
-      alert(`Login failed: ${msg}`);
+      alert(t('errors.commandFailure') + ': ' + msg);
     } finally {
       isLoggingIn = false;
     }
@@ -51,7 +64,9 @@
     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
     </svg>
-    <span>Signed in as {authState.email ?? 'your Google account'}</span>
+    <span
+      >{t('welcome.signedInAs', { email: authState.email ?? t('welcome.signedInFallback') })}</span
+    >
   </div>
 {:else}
   <Button
@@ -61,7 +76,7 @@
     disabled={isLoggingIn}
   >
     {#if isLoggingIn}
-      Logging in...
+      {t('welcome.loggingIn')}
     {:else}
       <svg
         width="18"
@@ -87,14 +102,14 @@
           fill="#EA4335"
         />
       </svg>
-      Continue with Google
+      {t('welcome.continueGoogle')}
     {/if}
   </Button>
 {/if}
 
 <Toast
   type="success"
-  message="Signed in successfully"
+  message={t('welcome.signedInToast')}
   bind:visible={showSuccessToast}
   onDismiss={() => (showSuccessToast = false)}
 />

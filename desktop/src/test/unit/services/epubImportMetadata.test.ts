@@ -98,11 +98,7 @@ describe('epubImportMetadata OPF fallback (regex parser)', () => {
     vi.mocked(getFileBytes).mockResolvedValue(encodeOpf(OPF_WITH_MULTIPLE_SUBJECTS));
     const meta = await parseOpfDirectly(MOCK_FILE_PATH);
     expect(meta.subject).toBe('Desarrollo personal');
-    expect(meta.subjects).toEqual([
-      'Desarrollo personal',
-      'Habitos',
-      'Productividad',
-    ]);
+    expect(meta.subjects).toEqual(['Desarrollo personal', 'Habitos', 'Productividad']);
   });
 
   it('accepts any single-word namespace prefix on subject (e.g. dc11:subject)', async () => {

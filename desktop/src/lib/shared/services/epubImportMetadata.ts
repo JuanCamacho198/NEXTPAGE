@@ -65,9 +65,7 @@ const trimToNull = (value: unknown): string | null => {
  * unit-tested with synthetic byte payloads without standing up the
  * epubjs pipeline.
  */
-export const parseOpfDirectly = async (
-  filePath: string,
-): Promise<ImportEpubMetadata> => {
+export const parseOpfDirectly = async (filePath: string): Promise<ImportEpubMetadata> => {
   try {
     const bytes = await getFileBytes(filePath);
     // Many EPUBs store the OPF inside the zip at OEBPS/content.opf or
@@ -76,26 +74,19 @@ export const parseOpfDirectly = async (
     // zip local-file header is plain ASCII-ish; for our regex needs
     // (find <metadata>...</metadata>) we can scan the whole byte string
     // as latin1 without unzipping.
-    const text = new TextDecoder('utf-8', { fatal: false }).decode(
-      new Uint8Array(bytes),
-    );
+    const text = new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(bytes));
     // Match the first <metadata>...</metadata> block, allowing any
     // namespace prefix on the title/creator tags.
     const metaBlock = /<metadata[\s\S]*?<\/metadata>/i.exec(text);
-    if (!metaBlock)
-      return { title: null, author: null, subject: null, subjects: [] };
+    if (!metaBlock) return { title: null, author: null, subject: null, subjects: [] };
     const block = metaBlock[0];
-    const titleMatch = /<(?:\w+:)?title[^>]*>([\s\S]*?)<\/(?:\w+:)?title>/i.exec(
-      block,
-    );
-    const creatorMatch =
-      /<(?:\w+:)?creator[^>]*>([\s\S]*?)<\/(?:\w+:)?creator>/i.exec(block);
+    const titleMatch = /<(?:\w+:)?title[^>]*>([\s\S]*?)<\/(?:\w+:)?title>/i.exec(block);
+    const creatorMatch = /<(?:\w+:)?creator[^>]*>([\s\S]*?)<\/(?:\w+:)?creator>/i.exec(block);
     // dc:subject is repeating in EPUB OPF (one tag per subject, in
     // document order). The `g` flag + matchAll lets us collect every
     // one; the same `(?:\w+:)?` namespace prefix accepts `dc:subject`,
     // `dc11:subject`, and `opf:subject`.
-    const subjectRegex =
-      /<(?:\w+:)?subject[^>]*>([\s\S]*?)<\/(?:\w+:)?subject>/gi;
+    const subjectRegex = /<(?:\w+:)?subject[^>]*>([\s\S]*?)<\/(?:\w+:)?subject>/gi;
     const subjects: string[] = [];
     for (const match of block.matchAll(subjectRegex)) {
       const trimmed = trimToNull(match[1]);
@@ -126,9 +117,7 @@ const withTimeout = async <T>(promise: Promise<T>, ms: number): Promise<T> => {
   }
 };
 
-export const extractEpubImportMetadata = async (
-  filePath: string,
-): Promise<ImportEpubMetadata> => {
+export const extractEpubImportMetadata = async (filePath: string): Promise<ImportEpubMetadata> => {
   const fileData = await getFileBytes(filePath);
   const buffer = new Uint8Array(fileData).buffer as ArrayBuffer;
 

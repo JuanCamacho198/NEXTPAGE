@@ -123,7 +123,8 @@ class BulkImportDomainState {
       console.debug('[import] resolved metadata', {
         format,
         file: file.name,
-        titleSource: title && title !== fileStem ? 'metadata' : title ? 'filename-fallback' : 'none',
+        titleSource:
+          title && title !== fileStem ? 'metadata' : title ? 'filename-fallback' : 'none',
         authorSource: author ? 'metadata' : 'none',
         subjectSource: subject ? 'metadata' : 'none',
         title,

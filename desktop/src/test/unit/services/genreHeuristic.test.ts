@@ -26,9 +26,7 @@ describe('inferGenreFromText', () => {
   });
 
   it('returns Productividad for the canonical English needle', () => {
-    expect(inferGenreFromText({ title: 'Deep Work', author: 'Cal Newport' })).toBe(
-      'Productividad',
-    );
+    expect(inferGenreFromText({ title: 'Deep Work', author: 'Cal Newport' })).toBe('Productividad');
   });
 
   it('returns Finanzas for a Spanish finance needle', () => {
@@ -75,9 +73,9 @@ describe('inferGenreFromText', () => {
   });
 
   it('appends author to the searched text', () => {
-    expect(
-      inferGenreFromText({ title: 'Untitled', author: 'Deep Work Press' }),
-    ).toBe('Productividad');
+    expect(inferGenreFromText({ title: 'Untitled', author: 'Deep Work Press' })).toBe(
+      'Productividad',
+    );
   });
 
   it('does not throw when author is undefined or null', () => {

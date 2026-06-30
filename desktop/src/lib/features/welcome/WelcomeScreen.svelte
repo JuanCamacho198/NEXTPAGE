@@ -156,10 +156,7 @@
         {t('welcome.subtitle')}
       </p>
 
-      <ul
-        id="features"
-        class="m-0 p-0 list-none grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2"
-      >
+      <ul id="features" class="m-0 p-0 list-none grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
         <li
           class="flex items-start gap-3 rounded-lg border border-(--color-border) bg-(--color-surface) p-3 min-w-0"
         >

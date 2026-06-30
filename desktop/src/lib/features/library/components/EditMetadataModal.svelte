@@ -37,9 +37,7 @@
 
   const hasChanges = $derived(
     book !== null &&
-      (title !== book.title ||
-        author !== (book.author || '') ||
-        genre !== (book.genre ?? '')),
+      (title !== book.title || author !== (book.author || '') || genre !== (book.genre ?? '')),
   );
 
   const handleSave = async (): Promise<void> => {

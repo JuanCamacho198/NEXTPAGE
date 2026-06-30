@@ -20,14 +20,8 @@ const MIGRATIONS: [(&str, &str); 10] = [
         include_str!("../migrations/0007_highlight_note_and_page_contract.sql"),
     ),
     ("0008_queue_and_perf_indexes", include_str!("../migrations/0008_queue_and_perf_indexes.sql")),
-    (
-        "0009_dictionary_tags",
-        include_str!("../migrations/0009_dictionary_tags.sql"),
-    ),
-    (
-        "0010_book_genre",
-        include_str!("../migrations/0010_book_genre.sql"),
-    ),
+    ("0009_dictionary_tags", include_str!("../migrations/0009_dictionary_tags.sql")),
+    ("0010_book_genre", include_str!("../migrations/0010_book_genre.sql")),
 ];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {

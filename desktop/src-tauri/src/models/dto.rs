@@ -41,6 +41,13 @@ pub struct ReadingStatsSummaryDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct ActivityPoint {
+    pub bucket: String,
+    pub minutes: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct HighlightDto {
     pub id: String,
     pub book_id: String,

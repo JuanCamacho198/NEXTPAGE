@@ -1473,17 +1473,11 @@ mod tests {
         let seeded_days: [i64; 7] = [0, 3, 7, 12, 18, 24, 29];
         for offset in seeded_days {
             let day = today - Duration::days(offset);
-            let started_at = day
-                .and_hms_opt(10, 0, 0)
-                .unwrap()
-                .and_utc()
-                .to_rfc3339();
+            let started_at = day.and_hms_opt(10, 0, 0).unwrap().and_utc().to_rfc3339();
             insert_reading_session(&repository, "book-activity", &started_at, 300);
         }
 
-        let series = repository
-            .get_reading_activity("month", "day", None)
-            .unwrap();
+        let series = repository.get_reading_activity("month", "day", None).unwrap();
 
         assert_eq!(series.len(), 30);
         let filled = series.iter().filter(|p| p.minutes == 5).count();
@@ -1520,22 +1514,15 @@ mod tests {
 
         let today = Utc::now().date_naive();
         let day_a = today.and_hms_opt(10, 0, 0).unwrap().and_utc();
-        let day_b = (today - Duration::days(1))
-            .and_hms_opt(10, 0, 0)
-            .unwrap()
-            .and_utc();
+        let day_b = (today - Duration::days(1)).and_hms_opt(10, 0, 0).unwrap().and_utc();
         insert_reading_session(&repository, "book-a", &day_a.to_rfc3339(), 600);
         insert_reading_session(&repository, "book-b", &day_b.to_rfc3339(), 1800);
 
-        let only_a = repository
-            .get_reading_activity("week", "day", Some("book-a"))
-            .unwrap();
+        let only_a = repository.get_reading_activity("week", "day", Some("book-a")).unwrap();
         let total_a: i64 = only_a.iter().map(|p| p.minutes).sum();
         assert_eq!(total_a, 10);
 
-        let only_b = repository
-            .get_reading_activity("week", "day", Some("book-b"))
-            .unwrap();
+        let only_b = repository.get_reading_activity("week", "day", Some("book-b")).unwrap();
         let total_b: i64 = only_b.iter().map(|p| p.minutes).sum();
         assert_eq!(total_b, 30);
     }
@@ -1547,11 +1534,7 @@ mod tests {
         let repository = new_repository();
         insert_book(&repository, "book-range", "C:/library/book-range.epub");
 
-        let base = Utc::now()
-            .date_naive()
-            .and_hms_opt(12, 0, 0)
-            .unwrap()
-            .and_utc();
+        let base = Utc::now().date_naive().and_hms_opt(12, 0, 0).unwrap().and_utc();
         insert_reading_session(&repository, "book-range", &base.to_rfc3339(), 600);
         insert_reading_session(
             &repository,
@@ -1568,9 +1551,7 @@ mod tests {
 
         let from = (base - Duration::days(1)).to_rfc3339();
         let to = (base - Duration::days(1) + Duration::seconds(1)).to_rfc3339();
-        let stats = repository
-            .get_reading_stats_for_range(&from, &to, Some("book-range"))
-            .unwrap();
+        let stats = repository.get_reading_stats_for_range(&from, &to, Some("book-range")).unwrap();
 
         assert_eq!(stats.total_sessions, 1);
         assert_eq!(stats.total_minutes_read, 20);
@@ -1579,11 +1560,8 @@ mod tests {
     #[test]
     fn get_reading_stats_for_range_rejects_malformed_rfc3339() {
         let repository = new_repository();
-        let result = repository.get_reading_stats_for_range(
-            "not-a-date",
-            "2026-01-01T00:00:00Z",
-            None,
-        );
+        let result =
+            repository.get_reading_stats_for_range("not-a-date", "2026-01-01T00:00:00Z", None);
         assert!(matches!(result, Err(AppError::InvalidInput(_))));
     }
 
@@ -1598,11 +1576,7 @@ mod tests {
     fn get_reading_streak_returns_one_for_single_session_today() {
         let repository = new_repository();
         insert_book(&repository, "book-streak-1", "C:/library/book-streak-1.epub");
-        let now = Utc::now()
-            .date_naive()
-            .and_hms_opt(10, 0, 0)
-            .unwrap()
-            .and_utc();
+        let now = Utc::now().date_naive().and_hms_opt(10, 0, 0).unwrap().and_utc();
         insert_reading_session(&repository, "book-streak-1", &now.to_rfc3339(), 600);
 
         let streak = repository.get_reading_streak(None).unwrap();
@@ -1642,11 +1616,7 @@ mod tests {
                 .and_utc();
             insert_reading_session(&repository, "book-streak-gap", &at.to_rfc3339(), 600);
         }
-        let today = Utc::now()
-            .date_naive()
-            .and_hms_opt(9, 0, 0)
-            .unwrap()
-            .and_utc();
+        let today = Utc::now().date_naive().and_hms_opt(9, 0, 0).unwrap().and_utc();
         insert_reading_session(&repository, "book-streak-gap", &today.to_rfc3339(), 600);
 
         let streak = repository.get_reading_streak(None).unwrap();

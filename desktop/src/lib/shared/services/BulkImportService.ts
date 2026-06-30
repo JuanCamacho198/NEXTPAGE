@@ -1,5 +1,6 @@
 import { importBook as importSingleBook } from './BookImportService';
 import { scanFolder } from '$lib/shared/api/tauriClient';
+import { inferGenreFromText } from '$lib/shared/services/genreHeuristic';
 import {
   BULK_IMPORT_ITEM_STATUS,
   type BulkImportItemResult,
@@ -113,10 +114,12 @@ export class BulkImportService {
     result.message = null;
 
     try {
+      const stem = stripKnownExtension(result.file.fileName);
       const importedBook = await importSingleBook({
         sourcePath: result.file.fullPath,
-        title: stripKnownExtension(result.file.fileName),
+        title: stem,
         format: result.file.format,
+        genre: inferGenreFromText({ title: stem }),
       });
 
       result.status = BULK_IMPORT_ITEM_STATUS.SUCCESS;

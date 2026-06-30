@@ -11,7 +11,14 @@ import {
   type ShelfViewMode,
 } from '$lib/shared/stores/homeState';
 
-export type AppRoute = 'home' | 'reader' | 'library' | 'stats' | 'highlights' | 'settings';
+export type AppRoute =
+  | 'home'
+  | 'reader'
+  | 'library'
+  | 'stats'
+  | 'highlights'
+  | 'settings'
+  | 'welcome';
 
 class HomeStateManager {
   route = $state<AppRoute>('home');

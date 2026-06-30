@@ -8,6 +8,12 @@ import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
 import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
 import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
 import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
+import { authState, setSession } from '$lib/stores/authState.svelte';
+import {
+  clearPersistedAuth,
+  loadPersistedAuth,
+  type LocalUserProfile,
+} from '$lib/stores/authPersistence';
 
 import type {
   BulkImportSummary,
@@ -42,6 +48,14 @@ class AppState {
   settings = settingsState;
   // Stats domain: use statsDomain to avoid name collision with the stats getter
   private statsDomain = statsState;
+
+  // ─── Init gate ───
+  /**
+   * `false` until `init()` resolves. The AppRouter shows a brief loader
+   * while false so returning users do not see a flash of the welcome
+   * screen during the async cache read.
+   */
+  isInitialized = $state(false);
 
   // ─── Property passthrough: Navigation ───
   get route(): AppRoute {
@@ -349,6 +363,13 @@ class AppState {
   navigateToSettings = (): void => {
     this.navigation.navigateToSettings();
   };
+  /**
+   * Route to the welcome screen. Used after sign-out so the user lands
+   * on the first-launch experience.
+   */
+  navigateToWelcome = (): void => {
+    this.navigation.route = 'welcome';
+  };
   backToHome = (): void => {
     this.navigation.backToHome();
   };
@@ -576,13 +597,33 @@ class AppState {
   async init(): Promise<void> {
     initTheme();
 
-    this.navigation.route = 'home';
     this.navigation.shelfDetailsBookId = null;
     this.library.shelfQueryState = createShelfQueryState();
     this.navigation.previewBookId = null;
     this.library.readerError = null;
     this.bulkImport.isImporting = false;
     this.bulkImport.importProgress = null;
+
+    // Decide the initial route BEFORE setting `isInitialized = true` so the
+    // router never renders a flash of the wrong screen. Cache read failures
+    // are non-fatal: the app degrades to the welcome screen.
+    let initialRoute: AppRoute = 'welcome';
+    try {
+      const cached = await loadPersistedAuth();
+      if (cached) {
+        if (cached.kind === 'google') {
+          // Tokens are persisted; restore the session in memory.
+          setSession(cached.tokens);
+          initialRoute = 'home';
+        } else if (cached.kind === 'local') {
+          authState.setLocalUser(cached.profile satisfies LocalUserProfile);
+          initialRoute = 'home';
+        }
+      }
+    } catch (error) {
+      console.error('Failed to read auth cache during init:', error);
+    }
+    this.navigation.route = initialRoute;
 
     try {
       const [nextLocale] = await Promise.all([
@@ -602,8 +643,22 @@ class AppState {
       this.settings.loadReaderSettings();
       this.loadLibrary();
       this.statsDomain.loadStats(undefined);
+    } finally {
+      this.isInitialized = true;
     }
   }
+
+  /**
+   * Sign-out helper: clear the in-memory auth state, drop the persisted
+   * cache, and route to the welcome screen. Safe to call when no auth is
+   * present (no-op for the relevant setter).
+   */
+  signOutAndReturnToWelcome = async (): Promise<void> => {
+    authState.clearLocalUser();
+    authState.clearSession();
+    await clearPersistedAuth();
+    this.navigateToWelcome();
+  };
   // ─── Internal helpers ───
   // (removed _reconcileAfterBookChange — replaced by full reconcileHomeState in handleHideBook and handleMarkCompleted)
 }

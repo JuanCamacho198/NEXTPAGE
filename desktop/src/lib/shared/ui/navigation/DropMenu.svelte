@@ -36,7 +36,7 @@
 
   {#if isOpen}
     <div
-      class="absolute z-10 mt-2 w-56 rounded-md bg-(--color-surface) shadow-lg ring-1 ring-(--color-border) focus:outline-none
+      class="absolute z-10 mt-2 w-56 rounded-md bg-(--color-elevated) shadow-lg ring-1 ring-(--color-border) focus:outline-none
       {position === 'bottom-right' ? 'right-0' : 'left-0'}"
     >
       <div class="py-1">

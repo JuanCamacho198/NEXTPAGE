@@ -160,27 +160,6 @@
     }
   };
 
-  const handleContainerMouseEnter = (): void => {
-    openMenu(false);
-  };
-
-  const handleContainerMouseLeave = (): void => {
-    if (containerEl?.contains(document.activeElement)) {
-      return;
-    }
-
-    closeMenu(false);
-  };
-
-  const handleContainerFocusOut = (event: FocusEvent): void => {
-    const nextTarget = event.relatedTarget as Node | null;
-    if (nextTarget && containerEl?.contains(nextTarget)) {
-      return;
-    }
-
-    closeMenu(false);
-  };
-
   onMount(() => {
     const handleDocumentPointerDown = (event: PointerEvent): void => {
       if (!isOpen) {
@@ -212,9 +191,6 @@
   role="group"
   aria-label={triggerLabel}
   class="relative inline-block"
-  onmouseenter={handleContainerMouseEnter}
-  onmouseleave={handleContainerMouseLeave}
-  onfocusout={handleContainerFocusOut}
 >
   <button
     bind:this={triggerEl}
@@ -238,7 +214,7 @@
       role="menu"
       tabindex="-1"
       aria-label={triggerLabel}
-      class="absolute right-0 z-10 mt-2 w-56 rounded-md bg-(--color-surface) shadow-lg ring-1 ring-(--color-border)"
+      class="absolute right-0 z-10 mt-2 w-56 rounded-md bg-(--color-elevated) shadow-lg ring-1 ring-(--color-border)"
       onkeydown={handleMenuKeyDown}
     >
       <div class="py-1">

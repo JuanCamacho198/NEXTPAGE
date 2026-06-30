@@ -77,7 +77,7 @@
 
   {#if isOpen}
     <div
-      class="absolute z-10 mt-1 w-full min-w-[160px] rounded-md bg-(--color-surface) shadow-lg ring-1 ring-(--color-border)"
+      class="absolute z-10 mt-1 w-full min-w-[160px] rounded-md bg-(--color-elevated) shadow-lg ring-1 ring-(--color-border)"
     >
       <ul class="py-1">
         {#each options as opt}

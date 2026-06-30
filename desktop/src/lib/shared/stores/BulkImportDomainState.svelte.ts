@@ -109,9 +109,21 @@ class BulkImportDomainState {
           if (meta.title?.trim()) title = meta.title.trim();
           if (meta.author?.trim()) author = meta.author.trim();
         }
-      } catch {
+      } catch (err) {
         // best-effort: fall through to filename-based title
+        console.debug('[import] metadata extraction threw, falling back to filename', err);
       }
+      // Observability: log what we're about to commit to the backend so
+      // "I imported a book and the title is still the filename" has a
+      // paper trail in the dev console.
+      console.debug('[import] resolved metadata', {
+        format,
+        file: file.name,
+        titleSource: title && title !== fileStem ? 'metadata' : title ? 'filename-fallback' : 'none',
+        authorSource: author ? 'metadata' : 'none',
+        title,
+        author,
+      });
       if (!title) title = fileStem;
 
       // What the user sees in the import banner / success / error notice.

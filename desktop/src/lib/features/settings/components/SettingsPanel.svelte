@@ -17,6 +17,10 @@
     profileSessionFromAuthState,
     type ProfileSessionViewModel,
   } from '../profileSession';
+  import { authState } from '$lib/stores/authState.svelte';
+  import { signOut } from '$lib/shared/services/GoogleOAuthService';
+  import { clearPersistedAuth } from '$lib/stores/authPersistence';
+  import { appState } from '$lib/shared/stores/AppState.svelte';
   import type {
     AppSettingDto,
     CommandErrorDto,
@@ -190,6 +194,34 @@
     }
 
     isOpen = false;
+  }
+
+  let isSigningOut = $state(false);
+
+  const isAnyAuth = $derived(authState.isSignedIn || authState.isLocalUser);
+
+  async function handleSignOut(): Promise<void> {
+    if (isSigningOut) return;
+    isSigningOut = true;
+    try {
+      // Google path: clears the loopback port + authState. For local users
+      // there is no Google session to revoke — just clear the in-memory
+      // profile. Both paths clear the persisted cache and route home→welcome.
+      if (authState.isSignedIn) {
+        try {
+          await signOut();
+        } catch (error) {
+          console.error('Google signOut failed:', error);
+        }
+      }
+      if (authState.isLocalUser) {
+        authState.clearLocalUser();
+      }
+      await clearPersistedAuth();
+      appState.navigateToWelcome();
+    } finally {
+      isSigningOut = false;
+    }
   }
 
   async function loadAppSettings(): Promise<void> {
@@ -477,7 +509,20 @@
         {#if activeTab === 'account'}
           <div role="tabpanel" id="tabpanel-account" aria-labelledby="tab-account">
             <Panel title={t('settings.authentication')} subtitle={t('settings.authDescription')}>
-              <GoogleLoginButton />
+              <GoogleLoginButton {t} />
+
+              {#if isAnyAuth}
+                <div class="mt-4 flex justify-end">
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    disabled={isSigningOut}
+                    onclick={() => void handleSignOut()}
+                  >
+                    {isSigningOut ? t('welcome.signingOut') : t('welcome.signOut')}
+                  </Button>
+                </div>
+              {/if}
 
               {#if settingsUnavailable}
                 <p

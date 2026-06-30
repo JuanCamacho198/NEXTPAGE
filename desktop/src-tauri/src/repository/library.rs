@@ -146,6 +146,14 @@ pub fn import_book(
     });
     let author = input.author.unwrap_or_default();
     let format = input.format;
+    let genre = input.genre.and_then(|value| {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    });
 
     let book = BookDto {
         id: Uuid::new_v4().to_string(),
@@ -158,11 +166,12 @@ pub fn import_book(
         total_pages: 0,
         created_at: now.clone(),
         updated_at: now,
+        genre: genre.clone(),
     };
 
     repo.connection.execute(
-            "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1)",
+            "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, genre)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1, ?11)",
             params![
                 book.id,
                 book.title,
@@ -173,7 +182,8 @@ pub fn import_book(
                 book.current_page,
                 book.total_pages,
                 book.created_at,
-                book.updated_at
+                book.updated_at,
+                genre
             ],
         )?;
 
@@ -248,7 +258,7 @@ pub fn delete_book(
 
 pub fn list_books(repo: &LibraryRepository) -> AppResult<Vec<BookDto>> {
     let mut statement = repo.connection.prepare(
-        "SELECT id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at\n         FROM books\n         WHERE deleted_at IS NULL\n           AND hidden_at IS NULL\n         ORDER BY updated_at DESC",
+        "SELECT id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, genre\n         FROM books\n         WHERE deleted_at IS NULL\n           AND hidden_at IS NULL\n         ORDER BY updated_at DESC",
     )?;
 
     let rows = statement.query_map([], |row| {
@@ -263,6 +273,7 @@ pub fn list_books(repo: &LibraryRepository) -> AppResult<Vec<BookDto>> {
             total_pages: row.get(7)?,
             created_at: row.get(8)?,
             updated_at: row.get(9)?,
+            genre: row.get(10)?,
         })
     })?;
 
@@ -272,7 +283,7 @@ pub fn list_books(repo: &LibraryRepository) -> AppResult<Vec<BookDto>> {
 
 pub fn upsert_book(repo: &LibraryRepository, book: BookDto) -> AppResult<()> {
     repo.connection.execute(
-        "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1)\n         ON CONFLICT(id) DO UPDATE SET\n           title = excluded.title,\n           author = excluded.author,\n           file_path = excluded.file_path,\n           format = excluded.format,\n           sync_status = excluded.sync_status,\n           current_page = excluded.current_page,\n           total_pages = excluded.total_pages,\n           updated_at = excluded.updated_at,\n           version = version + 1",
+        "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, genre)\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1, ?11)\n         ON CONFLICT(id) DO UPDATE SET\n           title = excluded.title,\n           author = excluded.author,\n           file_path = excluded.file_path,\n           format = excluded.format,\n           sync_status = excluded.sync_status,\n           current_page = excluded.current_page,\n           total_pages = excluded.total_pages,\n           updated_at = excluded.updated_at,\n           genre = excluded.genre,\n           version = version + 1",
         params![
             book.id,
             book.title,
@@ -283,7 +294,8 @@ pub fn upsert_book(repo: &LibraryRepository, book: BookDto) -> AppResult<()> {
             book.current_page,
             book.total_pages,
             book.created_at,
-            book.updated_at
+            book.updated_at,
+            book.genre
         ],
     )?;
     Ok(())

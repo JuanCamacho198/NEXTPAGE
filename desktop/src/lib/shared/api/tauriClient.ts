@@ -216,6 +216,7 @@ export const upsertBook = async (book: {
   syncStatus?: string;
   currentPage?: number;
   totalPages?: number;
+  genre?: string | null;
 }): Promise<void> => {
   await invoke('upsertBook', { book });
 };

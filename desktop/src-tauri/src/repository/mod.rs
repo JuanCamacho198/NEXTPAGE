@@ -25,8 +25,8 @@ use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    AddDictionaryWordInput, AppSettingDto, BookCoverDto, BookDeleteInput, BookDto, BookImportInput,
-    BookmarkDto, CollectionDto, CreateTagInput, DictionaryWordDto, HighlightDto,
+    ActivityPoint, AddDictionaryWordInput, AppSettingDto, BookCoverDto, BookDeleteInput, BookDto,
+    BookImportInput, BookmarkDto, CollectionDto, CreateTagInput, DictionaryWordDto, HighlightDto,
     IndexBookTextInput, LibraryBookDto, ReadingProgressDto, ReadingSessionInput,
     ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput, SaveHighlightTagsInput,
     SaveProgressInput, ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse, TagDto,
@@ -438,7 +438,8 @@ impl LibraryRepository {
                     bc.storage_path,
                     COALESCE(CAST(ROUND(rs.total_duration_seconds / 60.0) AS INTEGER), 0) AS minutes_read,
                     b.updated_at,
-                    (SELECT GROUP_CONCAT(collection_id, ',') FROM book_collections bc2 WHERE bc2.book_id = b.id) AS collection_ids
+                    (SELECT GROUP_CONCAT(collection_id, ',') FROM book_collections bc2 WHERE bc2.book_id = b.id) AS collection_ids,
+                    b.genre
              FROM books b
              LEFT JOIN reading_progress rp
                ON rp.book_id = b.id
@@ -474,6 +475,7 @@ impl LibraryRepository {
                 minutes_read: row.get(8)?,
                 updated_at: row.get(9)?,
                 collection_ids,
+                genre: row.get(11)?,
             })
         })?;
 
@@ -487,6 +489,28 @@ impl LibraryRepository {
 
     pub fn get_reading_stats(&self, book_id: Option<&str>) -> AppResult<ReadingStatsSummaryDto> {
         progress::get_reading_stats(self, book_id)
+    }
+
+    pub fn get_reading_activity(
+        &self,
+        period: &str,
+        granularity: &str,
+        book_id: Option<&str>,
+    ) -> AppResult<Vec<ActivityPoint>> {
+        progress::get_reading_activity(self, period, granularity, book_id)
+    }
+
+    pub fn get_reading_stats_for_range(
+        &self,
+        from: &str,
+        to: &str,
+        book_id: Option<&str>,
+    ) -> AppResult<ReadingStatsSummaryDto> {
+        progress::get_reading_stats_for_range(self, from, to, book_id)
+    }
+
+    pub fn get_reading_streak(&self, book_id: Option<&str>) -> AppResult<i64> {
+        progress::get_reading_streak(self, book_id)
     }
 
     pub fn index_book_text(&mut self, payload: IndexBookTextInput) -> AppResult<()> {
@@ -1064,6 +1088,35 @@ mod tests {
             .unwrap();
     }
 
+    /// Raw INSERT helper for `reading_sessions` that bypasses the validated
+    /// `save_reading_session` path so the new tests can seed arbitrary
+    /// `started_at` values (including historical dates) without triggering
+    /// the "session in the past" rejection.
+    fn insert_reading_session(
+        repository: &LibraryRepository,
+        book_id: &str,
+        started_at: &str,
+        duration_seconds: i64,
+    ) {
+        repository
+            .connection
+            .execute(
+                "INSERT INTO reading_sessions (id, book_id, started_at, ended_at, duration_seconds, start_percentage, end_percentage, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                params![
+                    Uuid::new_v4().to_string(),
+                    book_id,
+                    started_at,
+                    started_at,
+                    duration_seconds,
+                    0.0_f64,
+                    0.0_f64,
+                    started_at,
+                ],
+            )
+            .unwrap();
+    }
+
     #[test]
     fn settings_validation_rejects_invalid_payload_without_mutating_existing_values() {
         let mut repository = new_repository();
@@ -1404,5 +1457,218 @@ mod tests {
             )
             .unwrap();
         assert_eq!(total_sessions, 1);
+    }
+
+    // ─── reading-stats-real: new tests for activity, range, streak ───
+
+    #[test]
+    fn get_reading_activity_returns_dense_day_series_for_period_month() {
+        use chrono::Duration;
+
+        let repository = new_repository();
+        insert_book(&repository, "book-activity", "C:/library/book-activity.epub");
+
+        let today = Utc::now().date_naive();
+        // Seed 7 days with 5-min sessions out of the last 30.
+        let seeded_days: [i64; 7] = [0, 3, 7, 12, 18, 24, 29];
+        for offset in seeded_days {
+            let day = today - Duration::days(offset);
+            let started_at = day
+                .and_hms_opt(10, 0, 0)
+                .unwrap()
+                .and_utc()
+                .to_rfc3339();
+            insert_reading_session(&repository, "book-activity", &started_at, 300);
+        }
+
+        let series = repository
+            .get_reading_activity("month", "day", None)
+            .unwrap();
+
+        assert_eq!(series.len(), 30);
+        let filled = series.iter().filter(|p| p.minutes == 5).count();
+        let zeros = series.iter().filter(|p| p.minutes == 0).count();
+        assert_eq!(filled, 7);
+        assert_eq!(zeros, 23);
+
+        for window in series.windows(2) {
+            assert!(window[0].bucket < window[1].bucket);
+        }
+    }
+
+    #[test]
+    fn get_reading_activity_rejects_unknown_period() {
+        let repository = new_repository();
+        let result = repository.get_reading_activity("hourly", "day", None);
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn get_reading_activity_rejects_unknown_granularity() {
+        let repository = new_repository();
+        let result = repository.get_reading_activity("week", "biweekly", None);
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn get_reading_activity_filters_by_book_id() {
+        use chrono::Duration;
+
+        let repository = new_repository();
+        insert_book(&repository, "book-a", "C:/library/book-a.epub");
+        insert_book(&repository, "book-b", "C:/library/book-b.epub");
+
+        let today = Utc::now().date_naive();
+        let day_a = today.and_hms_opt(10, 0, 0).unwrap().and_utc();
+        let day_b = (today - Duration::days(1))
+            .and_hms_opt(10, 0, 0)
+            .unwrap()
+            .and_utc();
+        insert_reading_session(&repository, "book-a", &day_a.to_rfc3339(), 600);
+        insert_reading_session(&repository, "book-b", &day_b.to_rfc3339(), 1800);
+
+        let only_a = repository
+            .get_reading_activity("week", "day", Some("book-a"))
+            .unwrap();
+        let total_a: i64 = only_a.iter().map(|p| p.minutes).sum();
+        assert_eq!(total_a, 10);
+
+        let only_b = repository
+            .get_reading_activity("week", "day", Some("book-b"))
+            .unwrap();
+        let total_b: i64 = only_b.iter().map(|p| p.minutes).sum();
+        assert_eq!(total_b, 30);
+    }
+
+    #[test]
+    fn get_reading_stats_for_range_excludes_sessions_outside_window() {
+        use chrono::Duration;
+
+        let repository = new_repository();
+        insert_book(&repository, "book-range", "C:/library/book-range.epub");
+
+        let base = Utc::now()
+            .date_naive()
+            .and_hms_opt(12, 0, 0)
+            .unwrap()
+            .and_utc();
+        insert_reading_session(&repository, "book-range", &base.to_rfc3339(), 600);
+        insert_reading_session(
+            &repository,
+            "book-range",
+            &(base - Duration::days(1)).to_rfc3339(),
+            1200,
+        );
+        insert_reading_session(
+            &repository,
+            "book-range",
+            &(base - Duration::days(2)).to_rfc3339(),
+            1800,
+        );
+
+        let from = (base - Duration::days(1)).to_rfc3339();
+        let to = (base - Duration::days(1) + Duration::seconds(1)).to_rfc3339();
+        let stats = repository
+            .get_reading_stats_for_range(&from, &to, Some("book-range"))
+            .unwrap();
+
+        assert_eq!(stats.total_sessions, 1);
+        assert_eq!(stats.total_minutes_read, 20);
+    }
+
+    #[test]
+    fn get_reading_stats_for_range_rejects_malformed_rfc3339() {
+        let repository = new_repository();
+        let result = repository.get_reading_stats_for_range(
+            "not-a-date",
+            "2026-01-01T00:00:00Z",
+            None,
+        );
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn get_reading_streak_returns_zero_for_empty_table() {
+        let repository = new_repository();
+        let streak = repository.get_reading_streak(None).unwrap();
+        assert_eq!(streak, 0);
+    }
+
+    #[test]
+    fn get_reading_streak_returns_one_for_single_session_today() {
+        let repository = new_repository();
+        insert_book(&repository, "book-streak-1", "C:/library/book-streak-1.epub");
+        let now = Utc::now()
+            .date_naive()
+            .and_hms_opt(10, 0, 0)
+            .unwrap()
+            .and_utc();
+        insert_reading_session(&repository, "book-streak-1", &now.to_rfc3339(), 600);
+
+        let streak = repository.get_reading_streak(None).unwrap();
+        assert_eq!(streak, 1);
+    }
+
+    #[test]
+    fn get_reading_streak_returns_three_for_three_consecutive_days() {
+        use chrono::Duration;
+
+        let repository = new_repository();
+        insert_book(&repository, "book-streak-3", "C:/library/book-streak-3.epub");
+
+        for offset in [0_i64, 1, 2] {
+            let at = (Utc::now().date_naive() - Duration::days(offset))
+                .and_hms_opt(9, 0, 0)
+                .unwrap()
+                .and_utc();
+            insert_reading_session(&repository, "book-streak-3", &at.to_rfc3339(), 600);
+        }
+
+        let streak = repository.get_reading_streak(None).unwrap();
+        assert_eq!(streak, 3);
+    }
+
+    #[test]
+    fn get_reading_streak_resets_at_a_gap() {
+        use chrono::Duration;
+
+        let repository = new_repository();
+        insert_book(&repository, "book-streak-gap", "C:/library/book-streak-gap.epub");
+
+        for offset in [5_i64, 4, 3] {
+            let at = (Utc::now().date_naive() - Duration::days(offset))
+                .and_hms_opt(9, 0, 0)
+                .unwrap()
+                .and_utc();
+            insert_reading_session(&repository, "book-streak-gap", &at.to_rfc3339(), 600);
+        }
+        let today = Utc::now()
+            .date_naive()
+            .and_hms_opt(9, 0, 0)
+            .unwrap()
+            .and_utc();
+        insert_reading_session(&repository, "book-streak-gap", &today.to_rfc3339(), 600);
+
+        let streak = repository.get_reading_streak(None).unwrap();
+        assert_eq!(streak, 1);
+    }
+
+    #[test]
+    fn get_reading_streak_caps_at_45_days() {
+        use chrono::Duration;
+
+        let repository = new_repository();
+        insert_book(&repository, "book-streak-cap", "C:/library/book-streak-cap.epub");
+
+        for offset in 0..50_i64 {
+            let at = (Utc::now().date_naive() - Duration::days(offset))
+                .and_hms_opt(9, 0, 0)
+                .unwrap()
+                .and_utc();
+            insert_reading_session(&repository, "book-streak-cap", &at.to_rfc3339(), 600);
+        }
+
+        let streak = repository.get_reading_streak(None).unwrap();
+        assert_eq!(streak, 45);
     }
 }

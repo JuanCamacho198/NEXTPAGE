@@ -1,6 +1,7 @@
 <script lang="ts">
   import SettingsResetModal from './SettingsResetModal.svelte';
   import { GoogleLoginButton } from '$lib/features/library';
+  import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import { Button, Panel } from '$lib/shared/ui';
   import {
     getSettings,
@@ -126,6 +127,23 @@
     const normalized = value.trim();
     return normalized.length > 0 ? normalized : 'sans';
   };
+
+  const localeOptions = $derived([
+    { value: 'es', label: t('settings.languageSpanish') },
+    { value: 'en', label: t('settings.languageEnglish') },
+  ]);
+
+  const themeOptions = $derived([
+    { value: 'light', label: t('settings.theme.light') },
+    { value: 'dark', label: t('settings.theme.dark') },
+    { value: 'sepia', label: t('settings.theme.sepia') },
+  ]);
+
+  const panelFontFamilyOptions = [
+    { value: 'serif', label: 'Serif' },
+    { value: 'sans-serif', label: 'Sans Serif' },
+    { value: 'monospace', label: 'Monospace' },
+  ];
 
   const buildReaderSettingsDraft = (): ReaderSettings => ({
     themeMode: readerThemeMode,
@@ -545,34 +563,22 @@
                 </h3>
 
                 <div class="mb-2">
-                  <label class="mb-1 block text-xs text-zinc-600" for="locale-select"
-                    >{t('settings.language')}</label
-                  >
-                  <select
-                    id="locale-select"
+                  <span class="mb-1 block text-xs text-zinc-600">{t('settings.language')}</span>
+                  <Dropdown
+                    options={localeOptions}
                     value={locale}
-                    onchange={(event) =>
-                      void handleLocaleSelect((event.currentTarget as HTMLSelectElement).value)}
-                    class="w-full rounded border border-(--color-border) bg-(--color-surface) px-2 py-1.5 text-sm text-(--color-text) focus:outline-none focus:ring-2 focus:ring-(--color-primary)"
-                  >
-                    <option value="es">{t('settings.languageSpanish')}</option>
-                    <option value="en">{t('settings.languageEnglish')}</option>
-                  </select>
+                    class="w-full"
+                    onchange={({ value }) => void handleLocaleSelect(value)}
+                  />
                 </div>
 
                 <div class="mb-2">
-                  <label class="mb-1 block text-xs text-zinc-600" for="theme-select"
-                    >{t('settings.theme')}</label
-                  >
-                  <select
-                    id="theme-select"
+                  <span class="mb-1 block text-xs text-zinc-600">{t('settings.theme')}</span>
+                  <Dropdown
+                    options={themeOptions}
                     bind:value={preferredTheme}
-                    class="w-full rounded border border-(--color-border) bg-(--color-surface) px-2 py-1.5 text-sm text-(--color-text) focus:outline-none focus:ring-2 focus:ring-(--color-primary)"
-                  >
-                    <option value="light">{t('settings.theme.light')}</option>
-                    <option value="dark">{t('settings.theme.dark')}</option>
-                    <option value="sepia">{t('settings.theme.sepia')}</option>
-                  </select>
+                    class="w-full"
+                  />
                 </div>
 
                 <div class="mb-2">
@@ -771,18 +777,14 @@
                 </div>
 
                 <div class="mb-2">
-                  <label class="mb-1 block text-xs text-zinc-600" for="reader-font-family"
-                    >{t('settings.reader.epub.fontFamily')}</label
+                  <span class="mb-1 block text-xs text-zinc-600"
+                    >{t('settings.reader.epub.fontFamily')}</span
                   >
-                  <select
-                    id="reader-font-family"
+                  <Dropdown
+                    options={panelFontFamilyOptions}
                     bind:value={readerEpubFontFamily}
-                    class="w-full rounded border border-(--color-border) bg-(--color-surface) px-2 py-1.5 text-sm text-(--color-text) focus:outline-none focus:ring-2 focus:ring-(--color-primary)"
-                  >
-                    <option value="serif">Serif</option>
-                    <option value="sans-serif">Sans Serif</option>
-                    <option value="monospace">Monospace</option>
-                  </select>
+                    class="w-full"
+                  />
                 </div>
 
                 <div class="flex gap-2 mt-4">

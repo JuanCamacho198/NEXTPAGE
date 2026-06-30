@@ -86,6 +86,8 @@
  * ============================================ */
 :root,
 [data-theme='dark'] {
+  color-scheme: dark;
+
   /* Core colors */
   --color-background: #08111f;
   --color-surface: rgba(16, 28, 44, 0.84);
@@ -133,6 +135,8 @@
  * LIGHT THEME
  * ============================================ */
 [data-theme='light'] {
+  color-scheme: light;
+
   /* Core colors */
   --color-background: #eef2f7;
   --color-surface: rgba(255, 255, 255, 0.9);
@@ -281,6 +285,56 @@ body {
     scroll-behavior: auto !important;
     transition-duration: 1ms !important;
   }
+}
+
+/* ============================================
+ * SCROLLBAR STYLING
+ * Tailwind v4.3 scrollbar utilities + cross-browser
+ * ============================================ */
+
+/* Default thin scrollbar for the whole app */
+* {
+  scrollbar-width: thin;
+}
+
+/* Dark theme */
+:root,
+[data-theme='dark'] {
+  scrollbar-color: rgba(148, 173, 206, 0.25) transparent;
+}
+
+/* Light theme */
+[data-theme='light'] {
+  scrollbar-color: rgba(30, 58, 95, 0.2) transparent;
+}
+
+/* WebKit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:root ::-webkit-scrollbar-thumb,
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: rgba(148, 173, 206, 0.25);
+  border-radius: 3px;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 173, 206, 0.45);
+}
+
+[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: rgba(30, 58, 95, 0.2);
+  border-radius: 3px;
+}
+
+[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(30, 58, 95, 0.35);
 }
 
 /* ============================================

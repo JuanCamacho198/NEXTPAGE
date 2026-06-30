@@ -12,6 +12,7 @@
     placeholder?: string;
     disabled?: boolean;
     onchange?: (detail: { value: string }) => void;
+    class?: string;
     trigger?: Snippet;
     option?: Snippet<[Option]>;
   };
@@ -22,6 +23,7 @@
     placeholder = 'Select...',
     disabled = false,
     onchange,
+    class: className = '',
     trigger,
     option,
   }: Props = $props();
@@ -59,7 +61,7 @@
 <div bind:this={containerEl} class="relative inline-block">
   <button
     type="button"
-    class="inline-flex items-center justify-between rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm text-(--color-primary) hover:bg-(--color-border) disabled:cursor-not-allowed disabled:opacity-50"
+    class="inline-flex items-center justify-between rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm text-(--color-primary) hover:bg-(--color-border) disabled:cursor-not-allowed disabled:opacity-50 {className}"
     onclick={toggle}
     {disabled}
   >

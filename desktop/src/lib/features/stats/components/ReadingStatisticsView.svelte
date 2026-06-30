@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SafeCover } from '$lib/features/library';
+  import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import { getSafeProgressPercentage } from '$lib/shared/stores/homeState';
   import {
     periodLabels,
@@ -17,6 +18,15 @@
 
   let activePeriod = $state<PeriodKey>('month');
   let activeGranularity = $state<Granularity>('day');
+
+  const periodDropdownOptions = $derived(
+    Object.entries(periodLabels).map(([value, label]) => ({ value, label })),
+  );
+  const granularityOptions: Array<{ value: string; label: string }> = [
+    { value: 'day', label: 'Día' },
+    { value: 'week', label: 'Semana' },
+    { value: 'month', label: 'Mes' },
+  ];
 
   // ─── Data fetching effects ───
 
@@ -175,16 +185,8 @@
         <p class="mt-1 text-sm text-(--color-text-muted)">Tu progreso de lectura en detalle.</p>
       </div>
 
-      <label
-        class="inline-flex items-center gap-2 self-start rounded-2xl border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-3 py-2 text-sm text-(--color-primary)"
-      >
-        <span class="sr-only">Periodo</span>
-        <select class="bg-transparent outline-none" bind:value={activePeriod}>
-          {#each Object.entries(periodLabels) as [value, label]}
-            <option {value}>{label}</option>
-          {/each}
-        </select>
-      </label>
+      <span class="sr-only">Periodo</span>
+      <Dropdown options={periodDropdownOptions} bind:value={activePeriod} class="min-w-[120px]" />
     </div>
   </div>
 
@@ -227,19 +229,8 @@
             </p>
           </div>
 
-          <label
-            class="inline-flex items-center gap-2 rounded-2xl border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-3 py-2 text-xs text-(--color-text-muted)"
-          >
-            <span>Vista</span>
-            <select
-              class="bg-transparent text-sm text-(--color-primary) outline-none"
-              bind:value={activeGranularity}
-            >
-              <option value="day">Dia</option>
-              <option value="week">Semana</option>
-              <option value="month">Mes</option>
-            </select>
-          </label>
+          <span class="text-xs text-(--color-text-muted)">Vista</span>
+          <Dropdown options={granularityOptions} bind:value={activeGranularity} class="min-w-[100px]" />
         </div>
 
         <div

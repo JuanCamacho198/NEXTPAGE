@@ -1,6 +1,7 @@
 <script lang="ts">
   import Panel from '$lib/shared/ui/layout/Panel.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
+  import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderThemeMode } from '$lib/types';
 
@@ -45,6 +46,12 @@
     onReaderEpubFontSizeChange,
     onReaderEpubFontFamilyChange,
   }: Props = $props();
+
+  const fontFamilyOptions = [
+    { value: 'serif', label: 'Serif' },
+    { value: 'sans-serif', label: 'Sans Serif' },
+    { value: 'monospace', label: 'Monospace' },
+  ];
 
   const previewStyles = $derived(() => {
     const styles: Record<string, string> = {
@@ -326,16 +333,12 @@
       <label class="mb-1 block text-xs text-(--color-text-muted)" for="reader-font-family"
         >{t('settings.reader.epub.fontFamily')}</label
       >
-      <select
-        id="reader-font-family"
+      <Dropdown
+        options={fontFamilyOptions}
         value={readerEpubFontFamily}
-        onchange={(e) => onReaderEpubFontFamilyChange((e.target as HTMLSelectElement).value)}
-        class="w-full rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm text-(--color-primary) cursor-pointer outline-none"
-      >
-        <option value="serif">Serif</option>
-        <option value="sans-serif">Sans Serif</option>
-        <option value="monospace">Monospace</option>
-      </select>
+        class="w-full"
+        onchange={({ value }) => onReaderEpubFontFamilyChange(value)}
+      />
     </div>
     <div class="flex gap-2 mt-4">
       <Button onclick={onSaveSettings} disabled={isSavingSettings} size="sm">

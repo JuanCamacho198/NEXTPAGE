@@ -1,6 +1,7 @@
 <script lang="ts">
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import DropMenu from '$lib/shared/ui/navigation/DropMenu.svelte';
+  import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import SafeCover from './SafeCover.svelte';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -47,6 +48,13 @@
   let activeFilter = $state<ShelfFilter>('all');
   let activeSort = $state<ShelfSort>('date_added');
   let activeView = $state<ShelfView>('grid');
+
+  const sortDropdownOptions = $derived(
+    SORT_OPTIONS.map((o) => ({ value: o.key, label: o.label })),
+  );
+  const activeSortLabel = $derived(
+    SORT_OPTIONS.find((o) => o.key === activeSort)?.label ?? '',
+  );
 
   const totalBooks = $derived(books.length);
   const readingBooks = $derived(
@@ -202,19 +210,15 @@
       </fieldset>
 
       <div class="flex flex-col gap-3 md:flex-row md:items-center">
-        <label
-          class="flex items-center gap-2 rounded-2xl border border-(--color-border) bg-[rgba(255,255,255,0.02)] px-3 py-2 text-xs text-(--color-text-muted)"
-        >
-          <span>Ordenar por</span>
-          <select
-            class="bg-transparent text-sm text-(--color-primary) outline-none"
-            bind:value={activeSort}
-          >
-            {#each SORT_OPTIONS as option}
-              <option value={option.key}>{option.label}</option>
-            {/each}
-          </select>
-        </label>
+        <span class="text-xs text-(--color-text-muted)">Ordenar por</span>
+        <Dropdown options={sortDropdownOptions} bind:value={activeSort} class="min-w-[130px]">
+          {#snippet trigger()}
+            <span class="text-sm text-(--color-primary)">{activeSortLabel}</span>
+            <svg class="ml-1 h-4 w-4 text-(--color-text-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          {/snippet}
+        </Dropdown>
 
         <fieldset
           class="inline-flex rounded-2xl border-(--color-border) bg-[rgba(255,255,255,0.02)] p-1 border-0"

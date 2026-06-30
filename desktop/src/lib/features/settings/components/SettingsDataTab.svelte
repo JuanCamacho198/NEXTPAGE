@@ -1,5 +1,6 @@
 <script lang="ts">
   import Panel from '$lib/shared/ui/layout/Panel.svelte';
+  import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -31,6 +32,16 @@
     onSelectedExportBookChange,
     onSelectedExportFormatChange,
   }: Props = $props();
+
+  const exportBookOptions = $derived([
+    { value: 'all', label: t('settings.data.allBooks') },
+    ...(books ?? []).map((b: { id: string; title: string }) => ({ value: b.id, label: b.title })),
+  ]);
+
+  const exportFormatOptions = $derived([
+    { value: 'json', label: 'JSON' },
+    { value: 'markdown', label: t('settings.data.markdown') },
+  ]);
 </script>
 
 <Panel
@@ -66,29 +77,18 @@
     class="flex flex-col gap-2 p-3 bg-(--color-background) border border-(--color-border) rounded-lg"
   >
     <div class="flex gap-2">
-      <select
+      <Dropdown
+        options={exportBookOptions}
         value={selectedExportBook}
-        onchange={(e) => onSelectedExportBookChange((e.target as HTMLSelectElement).value)}
-        class="flex-1 rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-2 text-xs text-(--color-primary) cursor-pointer outline-none focus:border-(--color-primary)"
-      >
-        <option value="all">{t('settings.data.allBooks')}</option>
-        {#if books && books.length > 0}
-          {#each books as book (book.id)}
-            <option value={book.id}>{book.title}</option>
-          {/each}
-        {/if}
-      </select>
-      <select
+        class="flex-1"
+        onchange={({ value }) => onSelectedExportBookChange(value)}
+      />
+      <Dropdown
+        options={exportFormatOptions}
         value={selectedExportFormat}
-        onchange={(e) =>
-          onSelectedExportFormatChange(
-            (e.target as HTMLSelectElement).value as 'json' | 'markdown',
-          )}
-        class="w-[90px] shrink-0 rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-2 text-xs text-(--color-primary) cursor-pointer outline-none focus:border-(--color-primary)"
-      >
-        <option value="json">JSON</option>
-        <option value="markdown">{t('settings.data.markdown')}</option>
-      </select>
+        class="w-[90px] shrink-0"
+        onchange={({ value }) => onSelectedExportFormatChange(value as 'json' | 'markdown')}
+      />
       <button
         type="button"
         class="flex items-center gap-2 px-4 py-2 rounded-md border border-(--color-primary) bg-(--color-primary) text-(--color-background) cursor-pointer transition-all duration-200 text-xs font-medium hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"

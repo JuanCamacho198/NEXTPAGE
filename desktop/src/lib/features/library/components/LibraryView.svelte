@@ -1,6 +1,7 @@
 <script lang="ts">
   import SafeCover from './SafeCover.svelte';
   import CollectionBadge from './CollectionBadge.svelte';
+  import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import { DropMenu, Skeleton, EmptyState, Panel } from '$lib/shared/ui';
   import type { LibraryBookDto, CollectionDto } from '$lib/shared/types';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -49,6 +50,11 @@
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   } = $props();
 
+  const collectionDropdownOptions = $derived([
+    { value: '', label: 'All' },
+    ...collections.map((c) => ({ value: String(c.id), label: c.name })),
+  ]);
+
   let searchQuery = $state('');
   let debounceTimer: ReturnType<typeof setTimeout> | undefined = $state(undefined);
 
@@ -83,19 +89,12 @@
     <header class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div class="flex flex-wrap items-center gap-3">
         {#if collections.length > 0}
-          <select
-            class="max-w-[120px] sm:max-w-[150px] rounded-lg border border-(--color-border) bg-(--color-background) px-2 py-1 text-sm text-(--color-primary) text-ellipsis"
+          <Dropdown
+            options={collectionDropdownOptions}
             value={selectedCollectionId ?? ''}
-            onchange={(e) => {
-              const value = (e.target as HTMLSelectElement).value;
-              onCollectionSelect?.(value ? value : null);
-            }}
-          >
-            <option value="">All</option>
-            {#each collections as collection}
-              <option value={collection.id}>{collection.name}</option>
-            {/each}
-          </select>
+            class="min-w-[120px] sm:min-w-[150px]"
+            onchange={({ value }) => onCollectionSelect?.(value ? value : null)}
+          />
           <button
             type="button"
             class="text-xs text-(--color-text-muted) hover:text-(--color-primary) whitespace-nowrap"

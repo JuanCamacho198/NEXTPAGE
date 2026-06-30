@@ -264,9 +264,13 @@ describe('SettingsPanel', () => {
     expect(screen.queryByText('Settings')).not.toBeInTheDocument();
   });
 
-  it('renders language options in general tab', () => {
+  it('renders language options in general tab', async () => {
+    const user = userEvent.setup();
     render(SettingsPanel, defaultProps);
+    // The Dropdown button shows the currently selected language ('Spanish' for locale='es')
     expect(screen.getByText('Spanish')).toBeInTheDocument();
+    // Click the dropdown to open it, then verify English option exists
+    await user.click(screen.getByText('Spanish'));
     expect(screen.getByText('English')).toBeInTheDocument();
   });
 

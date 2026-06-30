@@ -6,8 +6,14 @@
   import Modal from '$lib/shared/ui/layout/Modal.svelte';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
+  import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
 
   let showShelfModal = $state(false);
+
+  const shelfSortOptions = $derived(
+    appState.SHELF_SORT_OPTIONS.map((o) => ({ value: o.key, label: appState.t(o.label) })),
+  );
+
   $effect(() => {
     if (appState.selectedShelfBook) {
       showShelfModal = true;
@@ -64,22 +70,16 @@
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
-      <label class="sr-only" for="shelf-sort-select">{appState.t('home.shelfSortLabel')}</label>
-      <select
-        id="shelf-sort-select"
-        data-testid="shelf-sort"
-        class="rounded-md border border-(--color-border) bg-(--color-background) px-2 py-1 text-xs text-(--color-primary)"
-        value={appState.shelfQueryState.sortKey}
-        onchange={(event) => {
-          const value = (event.target as HTMLSelectElement)
-            .value as (typeof appState.SHELF_SORT_OPTIONS)[number]['key'];
-          appState.setShelfSort(value);
-        }}
-      >
-        {#each appState.SHELF_SORT_OPTIONS as sortOption}
-          <option value={sortOption.key}>{appState.t(sortOption.label)}</option>
-        {/each}
-      </select>
+      <span class="sr-only">{appState.t('home.shelfSortLabel')}</span>
+      <div data-testid="shelf-sort">
+        <Dropdown
+          options={shelfSortOptions}
+          value={appState.shelfQueryState.sortKey}
+          onchange={({ value }) => {
+            appState.setShelfSort(value as (typeof appState.SHELF_SORT_OPTIONS)[number]['key']);
+          }}
+        />
+      </div>
 
       <fieldset
         class="inline-flex rounded-md border-(--color-border) bg-(--color-background) p-1 border-0"

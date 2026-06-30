@@ -535,8 +535,11 @@ describe('App desktop home redesign QA scenarios', () => {
     const user = userEvent.setup();
 
     const shelfSection = await screen.findByTestId('shelf-section');
-    const sortSelect = screen.getByTestId('shelf-sort') as HTMLSelectElement;
-    await user.selectOptions(sortSelect, 'author');
+    const sortContainer = screen.getByTestId('shelf-sort');
+    const trigger = sortContainer.querySelector('button')!;
+    await user.click(trigger);
+    const authorOption = screen.getByRole('button', { name: 'Author' });
+    await user.click(authorOption);
 
     await waitFor(() => {
       const titles = Array.from(shelfSection.querySelectorAll('li button p:first-child')).map(

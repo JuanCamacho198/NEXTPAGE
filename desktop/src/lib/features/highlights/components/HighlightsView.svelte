@@ -4,6 +4,7 @@
   import { listHighlights, deleteHighlight } from '$lib/shared/api/tauriClient';
   import SafeCover from '$lib/features/library/components/SafeCover.svelte';
   import Pagination from '$lib/shared/ui/navigation/Pagination.svelte';
+  import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import DropMenu from '$lib/shared/ui/navigation/DropMenu.svelte';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
@@ -18,8 +19,8 @@
   let isLoading = $state(true);
   let searchQuery = $state('');
   let selectedColor = $state<string | null>(null);
-  let selectedBookId = $state<string | null>(null);
-  let selectedDateRange = $state<string | null>(null);
+  let selectedBookId = $state<string | null>('');
+  let selectedDateRange = $state<string | null>('');
   let currentPage = $state(1);
 
   // ── Derived ──
@@ -74,6 +75,18 @@
     return books.filter((b) => ids.has(b.id));
   });
 
+  const bookFilterOptions = $derived([
+    { value: '', label: t('home.highlightsAllBooks') },
+    ...uniqueBooks.map((b) => ({ value: b.id, label: b.title })),
+  ]);
+
+  const dateFilterOptions: Array<{ value: string; label: string }> = $derived([
+    { value: '', label: t('home.highlightsAllDates') },
+    { value: '7d', label: t('home.highlightsLastWeek') },
+    { value: '30d', label: t('home.highlightsLastMonth') },
+    { value: '90d', label: t('home.highlightsLast3Months') },
+  ]);
+
   // ── Actions ──
   async function loadHighlights(): Promise<void> {
     isLoading = true;
@@ -102,8 +115,8 @@
   function clearFilters(): void {
     searchQuery = '';
     selectedColor = null;
-    selectedBookId = null;
-    selectedDateRange = null;
+    selectedBookId = '';
+    selectedDateRange = '';
     currentPage = 1;
   }
 
@@ -208,30 +221,22 @@
       <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
         >{t('home.highlightsFilterBook')}</span
       >
-      <select
-        class="px-3 py-2 rounded-md border border-(--color-border) bg-(--color-background) text-(--color-primary) text-[0.75rem] font-sans cursor-pointer min-w-35 focus:outline-none focus:border-(--color-accent-blue,#49d4ff)"
+      <Dropdown
+        options={bookFilterOptions}
         bind:value={selectedBookId}
-      >
-        <option value={null}>{t('home.highlightsAllBooks')}</option>
-        {#each uniqueBooks as book}
-          <option value={book.id}>{book.title}</option>
-        {/each}
-      </select>
+        class="min-w-[150px]"
+      />
     </div>
 
     <div class="flex items-center gap-2">
       <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
         >{t('home.highlightsFilterDate')}</span
       >
-      <select
-        class="px-3 py-2 rounded-md border border-(--color-border) bg-(--color-background) text-(--color-primary) text-[0.75rem] font-sans cursor-pointer min-w-35 focus:outline-none focus:border-(--color-accent-blue,#49d4ff)"
+      <Dropdown
+        options={dateFilterOptions}
         bind:value={selectedDateRange}
-      >
-        <option value={null}>{t('home.highlightsAllDates')}</option>
-        <option value="7d">{t('home.highlightsLastWeek')}</option>
-        <option value="30d">{t('home.highlightsLastMonth')}</option>
-        <option value="90d">{t('home.highlightsLast3Months')}</option>
-      </select>
+        class="min-w-[140px]"
+      />
     </div>
 
     <Button size="sm" variant="ghost" onclick={clearFilters}

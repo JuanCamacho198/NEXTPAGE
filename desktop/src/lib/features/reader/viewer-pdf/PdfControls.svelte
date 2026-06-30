@@ -3,6 +3,7 @@
   import type { MessageKey } from '$lib/shared/i18n';
   import { scaleOptions } from '$lib/features/reader/viewer-pdf/pdfState.svelte';
   import { debugState } from '$lib/shared/debug/debugState.svelte';
+  import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
 
   type Props = {
     currentPage: number;
@@ -20,6 +21,10 @@
     onToggleFullscreen: () => void;
     onToggleToc: () => void;
   };
+
+  const scaleDropdownOptions: Array<{ value: string; label: string }> = $derived(
+    scaleOptions.map((s) => ({ value: String(s), label: `${Math.round(s * 100)}%` })),
+  );
 
   let {
     currentPage,
@@ -57,16 +62,12 @@
           >p{currentPage}/{totalPages} | {Math.round(scale * 100)}%</span
         >
       {/if}
-      <select
-        value={scale}
-        onchange={(e) => onSetScale(Number(e.currentTarget.value))}
-        class="ml-auto px-2 py-1 border border-(--color-border) rounded bg-(--pdf-reader-surface-bg,var(--color-surface)) text-(--pdf-reader-text,var(--color-primary)) max-sm:ml-0"
-        title={t('pdf.zoomLevel', { level: String(Math.round(scale * 100)) })}
-      >
-        {#each scaleOptions as option (option)}
-          <option value={option}>{Math.round(option * 100)}%</option>
-        {/each}
-      </select>
+      <Dropdown
+        options={scaleDropdownOptions}
+        value={String(scale)}
+        class="min-w-[80px] ml-auto max-sm:ml-0"
+        onchange={({ value }) => onSetScale(Number(value))}
+      />
     {/snippet}
   </ReaderControls>
 </div>

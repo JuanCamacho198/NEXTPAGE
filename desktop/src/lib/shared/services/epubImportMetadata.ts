@@ -33,6 +33,8 @@ import { getFileBytes } from '$lib/shared/api/tauriClient';
 export type ImportEpubMetadata = {
   title: string | null;
   author: string | null;
+  subject: string | null;
+  subjects: string[];
 };
 
 // Generous: a valid EPUB is parsed in well under a second; anything past
@@ -80,19 +82,35 @@ export const parseOpfDirectly = async (
     // Match the first <metadata>...</metadata> block, allowing any
     // namespace prefix on the title/creator tags.
     const metaBlock = /<metadata[\s\S]*?<\/metadata>/i.exec(text);
-    if (!metaBlock) return { title: null, author: null };
+    if (!metaBlock)
+      return { title: null, author: null, subject: null, subjects: [] };
     const block = metaBlock[0];
     const titleMatch = /<(?:\w+:)?title[^>]*>([\s\S]*?)<\/(?:\w+:)?title>/i.exec(
       block,
     );
     const creatorMatch =
       /<(?:\w+:)?creator[^>]*>([\s\S]*?)<\/(?:\w+:)?creator>/i.exec(block);
+    // dc:subject is repeating in EPUB OPF (one tag per subject, in
+    // document order). The `g` flag + matchAll lets us collect every
+    // one; the same `(?:\w+:)?` namespace prefix accepts `dc:subject`,
+    // `dc11:subject`, and `opf:subject`.
+    const subjectRegex =
+      /<(?:\w+:)?subject[^>]*>([\s\S]*?)<\/(?:\w+:)?subject>/gi;
+    const subjects: string[] = [];
+    for (const match of block.matchAll(subjectRegex)) {
+      const trimmed = trimToNull(match[1]);
+      if (trimmed !== null) {
+        subjects.push(trimmed);
+      }
+    }
     return {
       title: titleMatch ? trimToNull(titleMatch[1]) : null,
       author: creatorMatch ? trimToNull(creatorMatch[1]) : null,
+      subject: subjects[0] ?? null,
+      subjects,
     };
   } catch {
-    return { title: null, author: null };
+    return { title: null, author: null, subject: null, subjects: [] };
   }
 };
 
@@ -114,16 +132,32 @@ export const extractEpubImportMetadata = async (
   const fileData = await getFileBytes(filePath);
   const buffer = new Uint8Array(fileData).buffer as ArrayBuffer;
 
-  let epubResult: ImportEpubMetadata = { title: null, author: null };
+  let epubResult: ImportEpubMetadata = {
+    title: null,
+    author: null,
+    subject: null,
+    subjects: [],
+  };
   let book: EpubJsBook | null = null;
 
   try {
     book = ePub(buffer) as unknown as EpubJsBook;
     await withTimeout(book.ready, PARSE_TIMEOUT_MS);
     const metadata = book.package?.metadata ?? {};
+    const subjectsRaw = metadata.subject;
+    const subjectsList = Array.isArray(subjectsRaw)
+      ? subjectsRaw
+      : subjectsRaw !== undefined && subjectsRaw !== null
+        ? [subjectsRaw]
+        : [];
+    const subjectsTrimmed = subjectsList
+      .map((value) => trimToNull(value))
+      .filter((value): value is string => value !== null);
     epubResult = {
       title: trimToNull(metadata.title),
       author: trimToNull(metadata.creator),
+      subject: subjectsTrimmed[0] ?? null,
+      subjects: subjectsTrimmed,
     };
   } catch (err) {
     console.debug('[epub-import-meta] epubjs parse failed, will try OPF fallback', err);
@@ -141,7 +175,7 @@ export const extractEpubImportMetadata = async (
   // fall back to parsing the raw OPF. The fallback only reads the file
   // once more if it didn't already have the bytes (it does — we just
   // fetched them above and Tauri caches the read).
-  if (epubResult.title && epubResult.author) {
+  if (epubResult.title && epubResult.author && epubResult.subject) {
     return epubResult;
   }
 
@@ -149,6 +183,8 @@ export const extractEpubImportMetadata = async (
   const combined: ImportEpubMetadata = {
     title: epubResult.title ?? opfResult.title,
     author: epubResult.author ?? opfResult.author,
+    subject: epubResult.subject ?? opfResult.subject,
+    subjects: epubResult.subjects.length > 0 ? epubResult.subjects : opfResult.subjects,
   };
 
   if (!combined.title && !combined.author) {

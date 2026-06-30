@@ -24,6 +24,7 @@ const OPF_WITH_DC = `<?xml version="1.0"?>
   <metadata>
     <dc:title>Don Quijote de la Mancha</dc:title>
     <dc:creator>Miguel de Cervantes</dc:creator>
+    <dc:subject>Novela</dc:subject>
   </metadata>
   <manifest/>
   <spine/>
@@ -42,6 +43,30 @@ const OPF_EPUB2_STYLE = `<?xml version="1.0"?>
 const OPF_NO_METADATA = `<?xml version="1.0"?>
 <package>
   <metadata/>
+  <manifest/>
+  <spine/>
+</package>`;
+
+const OPF_WITH_MULTIPLE_SUBJECTS = `<?xml version="1.0"?>
+<package xmlns="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <metadata>
+    <dc:title>Habitos Atomicos</dc:title>
+    <dc:creator>James Clear</dc:creator>
+    <dc:subject>Desarrollo personal</dc:subject>
+    <dc:subject>Habitos</dc:subject>
+    <dc:subject>Productividad</dc:subject>
+  </metadata>
+  <manifest/>
+  <spine/>
+</package>`;
+
+const OPF_WITH_DC11_SUBJECT = `<?xml version="1.0"?>
+<package xmlns="http://www.idpf.org/2007/opf" xmlns:dc11="http://purl.org/dc/elements/1.1/">
+  <metadata>
+    <dc11:title>1984</dc11:title>
+    <dc11:creator>George Orwell</dc11:creator>
+    <dc11:subject>Ficcion</dc11:subject>
+  </metadata>
   <manifest/>
   <spine/>
 </package>`;
@@ -65,6 +90,26 @@ describe('epubImportMetadata OPF fallback (regex parser)', () => {
     const meta = await parseOpfDirectly(MOCK_FILE_PATH);
     expect(meta.title).toBe('Don Quijote de la Mancha');
     expect(meta.author).toBe('Miguel de Cervantes');
+    expect(meta.subject).toBe('Novela');
+    expect(meta.subjects).toEqual(['Novela']);
+  });
+
+  it('captures the first dc:subject and lists every subject in document order', async () => {
+    vi.mocked(getFileBytes).mockResolvedValue(encodeOpf(OPF_WITH_MULTIPLE_SUBJECTS));
+    const meta = await parseOpfDirectly(MOCK_FILE_PATH);
+    expect(meta.subject).toBe('Desarrollo personal');
+    expect(meta.subjects).toEqual([
+      'Desarrollo personal',
+      'Habitos',
+      'Productividad',
+    ]);
+  });
+
+  it('accepts any single-word namespace prefix on subject (e.g. dc11:subject)', async () => {
+    vi.mocked(getFileBytes).mockResolvedValue(encodeOpf(OPF_WITH_DC11_SUBJECT));
+    const meta = await parseOpfDirectly(MOCK_FILE_PATH);
+    expect(meta.subject).toBe('Ficcion');
+    expect(meta.subjects).toEqual(['Ficcion']);
   });
 
   it('trims whitespace from extracted values', async () => {
@@ -86,5 +131,7 @@ describe('epubImportMetadata OPF fallback (regex parser)', () => {
     const meta = await parseOpfDirectly(MOCK_FILE_PATH);
     expect(meta.title).toBeNull();
     expect(meta.author).toBeNull();
+    expect(meta.subject).toBeNull();
+    expect(meta.subjects).toEqual([]);
   });
 });

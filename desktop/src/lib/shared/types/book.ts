@@ -9,6 +9,7 @@ export type BookDto = {
   totalPages: number;
   createdAt: string;
   updatedAt: string;
+  genre?: string | null;
 };
 
 export type ReadingProgressDto = {

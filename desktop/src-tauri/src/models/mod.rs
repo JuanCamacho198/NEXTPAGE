@@ -136,6 +136,7 @@ pub struct BookDto {
     pub total_pages: i32,
     pub created_at: String,
     pub updated_at: String,
+    pub genre: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -145,6 +146,7 @@ pub struct BookImportInput {
     pub title: Option<String>,
     pub author: Option<String>,
     pub format: String,
+    pub genre: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -223,6 +225,7 @@ pub struct LibraryBookDto {
     pub minutes_read: i64,
     pub updated_at: String,
     pub collection_ids: Vec<i64>,
+    pub genre: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -239,6 +242,13 @@ pub struct ReadingStatsSummaryDto {
     pub books_started: i64,
     pub books_completed: i64,
     pub avg_progress_percentage: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivityPoint {
+    pub bucket: String,
+    pub minutes: i64,
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -3,6 +3,7 @@ export type BookImportInput = {
   title?: string;
   author?: string;
   format: string;
+  genre?: string | null;
 };
 
 export type ScannedFile = {
@@ -60,6 +61,7 @@ export type LibraryBookDto = {
   minutesRead: number;
   updatedAt: string;
   collectionIds?: number[];
+  genre?: string | null;
 };
 
 export type CollectionDto = {

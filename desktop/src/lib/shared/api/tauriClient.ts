@@ -1,5 +1,6 @@
 import { invoke } from '$lib/shared/api/invokeWrapper';
 import type {
+  ActivityPoint,
   AppSettingDto,
   BookCollectionInput,
   BookDto,
@@ -242,6 +243,38 @@ export const getReadingStats = async (bookId?: string): Promise<ReadingStatsSumm
     return await invoke<ReadingStatsSummaryDto>('getReadingStats', {
       bookId,
     });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const getReadingActivity = async (
+  period: string,
+  granularity: string,
+  bookId?: string,
+): Promise<ActivityPoint[]> => {
+  try {
+    return await invoke<ActivityPoint[]>('getReadingActivity', { period, granularity, bookId });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const getReadingStatsForRange = async (
+  from: string,
+  to: string,
+  bookId?: string,
+): Promise<ReadingStatsSummaryDto> => {
+  try {
+    return await invoke<ReadingStatsSummaryDto>('getReadingStatsForRange', { from, to, bookId });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const getReadingStreak = async (bookId?: string): Promise<number> => {
+  try {
+    return await invoke<number>('getReadingStreak', { bookId });
   } catch (error) {
     return attachCommandError(error);
   }

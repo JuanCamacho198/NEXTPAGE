@@ -5,7 +5,7 @@ use chrono::Utc;
 use nextpage_desktop::commands::list_library_books_internal;
 use nextpage_desktop::db::open_and_migrate;
 use nextpage_desktop::models::{
-    AppSettingDto, BookDto, ListLibraryBooksInput, ReadingSessionInput,
+    ActivityPoint, AppSettingDto, BookDto, ListLibraryBooksInput, ReadingSessionInput,
 };
 use nextpage_desktop::repository::LibraryRepository;
 use uuid::Uuid;
@@ -65,6 +65,7 @@ fn delete_book_metadata_soft_deletes_cover_metadata_and_returns_storage_path() {
             total_pages: 100,
             created_at: now.clone(),
             updated_at: now,
+            genre: None,
         })
         .unwrap();
 
@@ -98,6 +99,7 @@ fn restart_roundtrip_preserves_settings_and_stats() {
                 total_pages: 100,
                 created_at: now.clone(),
                 updated_at: now.clone(),
+                genre: None,
             })
             .unwrap();
 
@@ -219,4 +221,95 @@ fn domain_evolution_keeps_ipc_contract_stable_via_mapper_boundaries() {
     assert!(json.get("cfiLocation").is_some());
     assert!(json.get("percentage").is_some());
     assert!(json.get("updatedAt").is_some());
+}
+
+#[test]
+fn reading_stats_activity_command_round_trips_through_repository() {
+    use chrono::Duration;
+
+    let db_path = temp_db_path();
+    let connection = open_and_migrate(&db_path).unwrap();
+    let repository = LibraryRepository::new(connection);
+
+    let today = Utc::now().date_naive();
+
+    // Insert 3 books
+    repository
+        .upsert_book(BookDto {
+            id: "book-1".to_string(),
+            title: "Book One".to_string(),
+            author: "Author".to_string(),
+            file_path: "C:/library/book-1.epub".to_string(),
+            format: "epub".to_string(),
+            sync_status: "local".to_string(),
+            current_page: 0,
+            total_pages: 100,
+            created_at: Utc::now().to_rfc3339(),
+            updated_at: Utc::now().to_rfc3339(),
+            genre: None,
+        })
+        .unwrap();
+    repository
+        .upsert_book(BookDto {
+            id: "book-2".to_string(),
+            title: "Book Two".to_string(),
+            author: "Author".to_string(),
+            file_path: "C:/library/book-2.epub".to_string(),
+            format: "epub".to_string(),
+            sync_status: "local".to_string(),
+            current_page: 0,
+            total_pages: 100,
+            created_at: Utc::now().to_rfc3339(),
+            updated_at: Utc::now().to_rfc3339(),
+            genre: None,
+        })
+        .unwrap();
+    repository
+        .upsert_book(BookDto {
+            id: "book-3".to_string(),
+            title: "Book Three".to_string(),
+            author: "Author".to_string(),
+            file_path: "C:/library/book-3.epub".to_string(),
+            format: "epub".to_string(),
+            sync_status: "local".to_string(),
+            current_page: 0,
+            total_pages: 100,
+            created_at: Utc::now().to_rfc3339(),
+            updated_at: Utc::now().to_rfc3339(),
+            genre: None,
+        })
+        .unwrap();
+
+    // Insert 3 reading sessions spanning 3 days (today, yesterday, day before)
+    for i in 0..3_i64 {
+        let session_time = (today - Duration::days(i))
+            .and_hms_opt(10, 0, 0)
+            .unwrap()
+            .and_utc();
+        repository
+            .save_reading_session(ReadingSessionInput {
+                book_id: format!("book-{}", i + 1),
+                started_at: session_time.to_rfc3339(),
+                ended_at: Some((session_time + Duration::seconds(300)).to_rfc3339()),
+                duration_seconds: 300,
+                start_percentage: Some(0.0),
+                end_percentage: Some(10.0),
+            })
+            .unwrap();
+    }
+
+    // Call get_reading_activity with week period, day granularity
+    let activity = repository.get_reading_activity("week", "day", None).unwrap();
+
+    // Assert exactly 7 ActivityPoints (one per day for a week)
+    assert_eq!(activity.len(), 7);
+    // Assert exactly 3 of them have minutes > 0
+    let on_days: Vec<&ActivityPoint> = activity.iter().filter(|p| p.minutes > 0).collect();
+    assert_eq!(on_days.len(), 3);
+    // Each non-zero point should have exactly 5 minutes
+    for point in &on_days {
+        assert_eq!(point.minutes, 5);
+    }
+
+    let _ = fs::remove_file(db_path);
 }

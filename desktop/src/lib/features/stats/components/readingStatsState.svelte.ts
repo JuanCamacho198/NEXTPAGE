@@ -1,5 +1,6 @@
-import type { LibraryBookDto, ReadingStatsSummaryDto } from '$lib/types';
+import type { LibraryBookDto } from '$lib/types';
 import { UNCLASSIFIED_GENRE, type CanonicalGenre } from '$lib/shared/services/genreHeuristic';
+import type { AppState } from '$lib/shared/stores/AppState.svelte';
 
 export type StatsBook = LibraryBookDto & {
   isFavorite?: boolean;
@@ -12,10 +13,7 @@ export type Granularity = 'day' | 'week' | 'month';
 export type GenreKey = CanonicalGenre;
 
 export type Props = {
-  books: StatsBook[];
-  stats: ReadingStatsSummaryDto | null;
-  isLoading?: boolean;
-  disabledReason?: string | null;
+  appState: AppState;
 };
 
 export const periodLabels: Record<PeriodKey, string> = {
@@ -52,6 +50,60 @@ export function groupBooksByGenre(books: StatsBook[]): Map<string, number> {
   }
   return groups;
 }
+
+export function periodWindow(period: PeriodKey): { from: string; to: string } {
+  const now = new Date();
+  const to = now.toISOString();
+  let from: Date;
+  switch (period) {
+    case 'week':
+      from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    case 'month':
+      from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    case 'year':
+      from = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      break;
+    case 'all':
+      return { from: '1970-01-01T00:00:00Z', to };
+  }
+  return { from: from.toISOString(), to };
+}
+
+export function previousWindow(period: PeriodKey): { from: string; to: string } {
+  const now = new Date();
+  let length: number;
+  switch (period) {
+    case 'week':
+      length = 7;
+      break;
+    case 'month':
+      length = 30;
+      break;
+    case 'year':
+      length = 365;
+      break;
+    case 'all':
+      return { from: '1970-01-01T00:00:00Z', to: now.toISOString() };
+  }
+  const windowMs = length * 24 * 60 * 60 * 1000;
+  const to = new Date(now.getTime() - windowMs);
+  const from = new Date(to.getTime() - windowMs);
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+export function computeDelta(current: number, previous: number): number | null {
+  if (previous <= 0) return null;
+  return Math.round(((current - previous) / previous) * 100 * 10) / 10;
+}
+
+export const periodDeltaLabels: Record<PeriodKey, string> = {
+  week: 'vs. semana anterior',
+  month: 'vs. mes anterior',
+  year: 'vs. año anterior',
+  all: 'vs. periodo anterior',
+};
 
 export function calculateGenreDistribution(
   books: StatsBook[],

@@ -11,6 +11,9 @@ import {
   createTag,
   getDefaultReaderSettings,
   getReaderSettings,
+  getReadingActivity,
+  getReadingStatsForRange,
+  getReadingStreak,
   listDictionaryWords,
   listTags,
   listTagsForHighlight,
@@ -329,5 +332,102 @@ describe('tauriClient highlight menu commands', () => {
     await removeDictionaryWord('word-1');
 
     expect(invokeMock).toHaveBeenCalledWith('removeDictionaryWord', { id: 'word-1' });
+  });
+});
+
+describe('tauriClient reading stats commands', () => {
+  beforeEach(() => {
+    invokeMock.mockReset();
+  });
+
+  it('getReadingActivity invokes the command with period, granularity, and bookId', async () => {
+    const expected: Array<{ bucket: string; minutes: number }> = [
+      { bucket: '2026-06-24', minutes: 10 },
+      { bucket: '2026-06-25', minutes: 5 },
+    ];
+    invokeMock.mockResolvedValueOnce(expected);
+
+    const result = await getReadingActivity('week', 'day', undefined);
+
+    expect(invokeMock).toHaveBeenCalledWith('getReadingActivity', {
+      period: 'week',
+      granularity: 'day',
+      bookId: undefined,
+    });
+    expect(result).toEqual(expected);
+  });
+
+  it('getReadingActivity with bookId passes it through', async () => {
+    invokeMock.mockResolvedValueOnce([]);
+
+    await getReadingActivity('month', 'day', 'book-1');
+
+    expect(invokeMock).toHaveBeenCalledWith('getReadingActivity', {
+      period: 'month',
+      granularity: 'day',
+      bookId: 'book-1',
+    });
+  });
+
+  it('getReadingActivity throws on rejection', async () => {
+    invokeMock.mockRejectedValueOnce(new Error('command failed'));
+
+    await expect(getReadingActivity('week', 'day')).rejects.toThrow();
+  });
+
+  it('getReadingStatsForRange invokes the command with from, to, and bookId', async () => {
+    const expected = {
+      totalMinutesRead: 120,
+      totalSessions: 3,
+      booksStarted: 1,
+      booksCompleted: 0,
+      avgProgressPercentage: 15.5,
+    };
+    invokeMock.mockResolvedValueOnce(expected);
+
+    const result = await getReadingStatsForRange('2026-06-01T00:00:00Z', '2026-06-30T23:59:59Z');
+
+    expect(invokeMock).toHaveBeenCalledWith('getReadingStatsForRange', {
+      from: '2026-06-01T00:00:00Z',
+      to: '2026-06-30T23:59:59Z',
+      bookId: undefined,
+    });
+    expect(result).toEqual(expected);
+  });
+
+  it('getReadingStatsForRange throws on rejection', async () => {
+    invokeMock.mockRejectedValueOnce(new Error('stats unavailable'));
+
+    await expect(
+      getReadingStatsForRange('2026-01-01T00:00:00Z', '2026-12-31T23:59:59Z'),
+    ).rejects.toThrow();
+  });
+
+  it('getReadingStreak invokes the command with bookId', async () => {
+    invokeMock.mockResolvedValueOnce(5);
+
+    const result = await getReadingStreak('book-1');
+
+    expect(invokeMock).toHaveBeenCalledWith('getReadingStreak', {
+      bookId: 'book-1',
+    });
+    expect(result).toBe(5);
+  });
+
+  it('getReadingStreak without bookId passes undefined', async () => {
+    invokeMock.mockResolvedValueOnce(0);
+
+    const result = await getReadingStreak();
+
+    expect(invokeMock).toHaveBeenCalledWith('getReadingStreak', {
+      bookId: undefined,
+    });
+    expect(result).toBe(0);
+  });
+
+  it('getReadingStreak throws on rejection', async () => {
+    invokeMock.mockRejectedValueOnce(new Error('streak unavailable'));
+
+    await expect(getReadingStreak()).rejects.toThrow();
   });
 });

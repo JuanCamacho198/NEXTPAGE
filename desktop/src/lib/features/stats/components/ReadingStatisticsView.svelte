@@ -3,90 +3,114 @@
   import { getSafeProgressPercentage } from '$lib/shared/stores/homeState';
   import {
     periodLabels,
-    hashNumber,
     calculateGenreDistribution,
+    periodWindow,
+    previousWindow,
+    computeDelta,
+    periodDeltaLabels,
     type PeriodKey,
     type Granularity,
     type Props,
   } from './readingStatsState.svelte';
 
-  let { books, stats, isLoading = false, disabledReason = null }: Props = $props();
+  let { appState }: Props = $props();
 
   let activePeriod = $state<PeriodKey>('month');
   let activeGranularity = $state<Granularity>('day');
 
-  const genreDistribution = $derived(calculateGenreDistribution(books));
+  // ─── Data fetching effects ───
+
+  $effect(() => {
+    void appState.loadStatsActivity(activePeriod, activeGranularity);
+  });
+
+  $effect(() => {
+    const { from, to } = periodWindow(activePeriod);
+    const { from: prevFrom, to: prevTo } = previousWindow(activePeriod);
+    void appState.loadStatsRange(from, to, undefined, 'current');
+    void appState.loadStatsRange(prevFrom, prevTo, undefined, 'previous');
+  });
+
+  $effect(() => {
+    void appState.loadStatsStreak();
+  });
+
+  // ─── Derived from domain state with fallbacks from books ───
+
+  const sd = $derived(appState.statsDomain);
+
+  const genreDistribution = $derived(calculateGenreDistribution(appState.books));
 
   const totalMinutes = $derived(
-    stats?.totalMinutesRead ?? books.reduce((sum, book) => sum + book.minutesRead, 0),
+    sd.currentStats?.totalMinutesRead ??
+      appState.books.reduce((sum, book) => sum + book.minutesRead, 0),
   );
-  const totalSessions = $derived(stats?.totalSessions ?? Math.max(books.length * 2, 0));
+  const totalSessions = $derived(
+    sd.currentStats?.totalSessions ?? Math.max(appState.books.length * 2, 0),
+  );
   const booksStarted = $derived(
-    stats?.booksStarted ?? books.filter((book) => getSafeProgressPercentage(book) > 0).length,
+    sd.currentStats?.booksStarted ??
+      appState.books.filter((book) => getSafeProgressPercentage(book) > 0).length,
   );
   const booksCompleted = $derived(
-    stats?.booksCompleted ??
-      books.filter((book) => book.completed || getSafeProgressPercentage(book) >= 100).length,
+    sd.currentStats?.booksCompleted ??
+      appState.books.filter((book) => book.completed || getSafeProgressPercentage(book) >= 100)
+        .length,
   );
   const averageProgress = $derived(
-    stats?.avgProgressPercentage ??
-      (books.length
-        ? books.reduce((sum, book) => sum + getSafeProgressPercentage(book), 0) / books.length
+    sd.currentStats?.avgProgressPercentage ??
+      (appState.books.length
+        ? appState.books.reduce((sum, book) => sum + getSafeProgressPercentage(book), 0) /
+          appState.books.length
         : 0),
   );
+
+  function deltaText(current: number | undefined, previous: number | undefined): string {
+    const delta = computeDelta(current ?? 0, previous ?? 0);
+    if (delta === null) return 'Sin datos previos';
+    const sign = delta >= 0 ? '+' : '';
+    return `${sign}${delta}% ${periodDeltaLabels[activePeriod]}`;
+  }
 
   const metricCards = $derived([
     {
       label: 'Minutos leidos',
       value: totalMinutes.toLocaleString('es-CO'),
-      delta: '+18% vs. mes anterior',
+      delta: deltaText(sd.currentStats?.totalMinutesRead, sd.previousStats?.totalMinutesRead),
     },
     {
       label: 'Sesiones',
       value: totalSessions.toLocaleString('es-CO'),
-      delta: '+21% vs. mes anterior',
+      delta: deltaText(sd.currentStats?.totalSessions, sd.previousStats?.totalSessions),
     },
     {
       label: 'Libros iniciados',
       value: booksStarted.toLocaleString('es-CO'),
-      delta: '+25% vs. mes anterior',
+      delta: deltaText(sd.currentStats?.booksStarted, sd.previousStats?.booksStarted),
     },
     {
       label: 'Libros completados',
       value: booksCompleted.toLocaleString('es-CO'),
-      delta: '+100% vs. mes anterior',
+      delta: deltaText(sd.currentStats?.booksCompleted, sd.previousStats?.booksCompleted),
     },
     {
       label: 'Progreso promedio',
       value: `${Math.round(averageProgress)}%`,
-      delta: '+12% vs. mes anterior',
+      delta: deltaText(
+        sd.currentStats?.avgProgressPercentage,
+        sd.previousStats?.avgProgressPercentage,
+      ),
     },
   ]);
 
-  const activitySeries = $derived.by(() => {
-    const templates: Record<Granularity, string[]> = {
-      day:
-        activePeriod === 'week'
-          ? ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom']
-          : ['1 may.', '6 may.', '11 may.', '16 may.', '21 may.', '26 may.', '31 may.'],
-      week: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6'],
-      month: ['Ene', 'Mar', 'May', 'Jul', 'Sep', 'Nov'],
-    };
-
-    const labels = templates[activeGranularity];
-    const count = labels.length;
-    const base = Math.max(totalMinutes, count * 20);
-
-    return labels.map((label, index) => {
-      const weight = 0.24 + index / (count * 1.2);
-      const bookSeed = books[index % Math.max(books.length, 1)];
-      const variance = bookSeed ? (hashNumber(bookSeed.id) % 90) - 20 : 0;
-      return {
-        label,
-        value: Math.max(20, Math.round((base * weight) / count + variance)),
-      };
-    });
-  });
+  const activitySeries = $derived(
+    sd.activitySeries.length > 0
+      ? sd.activitySeries.map((point) => ({
+          label: point.bucket,
+          value: point.minutes,
+        }))
+      : [],
+  );
 
   const chartMeta = $derived.by(() => {
     const max = Math.max(...activitySeries.map((point) => point.value), 1);
@@ -110,26 +134,19 @@
   });
 
   const mostReadBooks = $derived.by(() =>
-    [...books].sort((left, right) => right.minutesRead - left.minutesRead).slice(0, 3),
+    [...appState.books].sort((left, right) => right.minutesRead - left.minutesRead).slice(0, 3),
   );
 
-  const streakDays = $derived.by(() => {
-    if (totalSessions === 0) {
-      return 0;
-    }
+  const streakDays = $derived(sd.streakDays);
 
-    return Math.min(30, Math.max(3, Math.round(totalSessions / 3)));
+  const streakCalendar = $derived.by(() => {
+    const days = 14;
+    const activeDays = Math.min(sd.streakDays, days);
+    return Array.from({ length: days }, (_, index) => ({
+      label: ['L', 'M', 'M', 'J', 'V', 'S', 'D'][index % 7],
+      active: index >= days - activeDays,
+    }));
   });
-
-  const streakCalendar = $derived.by(() =>
-    Array.from({ length: 14 }, (_, index) => {
-      const active = index >= 14 - streakDays || index % 3 === 0;
-      return {
-        label: ['L', 'M', 'M', 'J', 'V', 'S', 'D'][index % 7],
-        active,
-      };
-    }),
-  );
 
   const averageMinutesPerSession = $derived(
     totalSessions > 0 ? Math.round(totalMinutes / totalSessions) : 0,
@@ -138,7 +155,13 @@
     activitySeries.length > 0 ? Math.round(totalMinutes / activitySeries.length) : 0,
   );
   const totalPagesRead = $derived(
-    books.reduce((sum, book) => sum + Math.max(book.currentPage, 0), 0),
+    appState.books.reduce((sum, book) => sum + Math.max(book.currentPage, 0), 0),
+  );
+
+  // ─── Loading / unavailable derived from domain state ───
+  const isLoading = $derived(sd.isLoadingActivity || sd.isLoadingRange || sd.isLoadingStreak);
+  const disabledReason = $derived(
+    sd.rangeUnavailableReason || sd.activityUnavailableReason || sd.streakUnavailableReason,
   );
 </script>
 
@@ -336,10 +359,14 @@
 
         <div class="space-y-3">
           {#each mostReadBooks as book}
-            <div
-              class="flex items-center gap-3 rounded-[22px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3"
+            <button
+              type="button"
+              class="flex w-full items-center gap-3 rounded-[22px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3 cursor-pointer hover:border-(--color-primary) text-left"
+              onclick={() => appState.startReading(book)}
             >
-              <div class="h-14 w-10 overflow-hidden rounded-xl bg-[rgba(255,255,255,0.03)]">
+              <div
+                class="h-14 w-10 shrink-0 overflow-hidden rounded-xl bg-[rgba(255,255,255,0.03)]"
+              >
                 <SafeCover
                   path={book.coverPath ?? ''}
                   alt={`Portada de ${book.title}`}
@@ -365,8 +392,8 @@
                 </div>
               </div>
 
-              <span class="text-sm text-(--color-secondary)">{book.minutesRead} min</span>
-            </div>
+              <span class="shrink-0 text-sm text-(--color-secondary)">{book.minutesRead} min</span>
+            </button>
           {/each}
         </div>
       </article>

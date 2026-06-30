@@ -39,8 +39,8 @@ use tauri::State;
 use crate::error::AppError;
 use crate::logger::{ErrorEventDto, LogEventDto, DEFAULT_MAX_LOG_LINES, SETTING_MAX_LOG_LINES_KEY};
 use crate::models::{
-    AddDictionaryWordInput, AppSettingDto, BookCollectionInput, BookDeleteInput, BookDto,
-    BookImportInput, BookmarkDto, CollectionDto, CommandErrorDto, CreateCollectionInput,
+    ActivityPoint, AddDictionaryWordInput, AppSettingDto, BookCollectionInput, BookDeleteInput,
+    BookDto, BookImportInput, BookmarkDto, CollectionDto, CommandErrorDto, CreateCollectionInput,
     CreateTagInput, DictionaryWordDto, HideBookInput, HighlightDto, IndexBookTextInput,
     LibraryBookDto, ListLibraryBooksInput, ReadingProgressDto, ReadingSessionInput,
     ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput, SaveHighlightTagsInput,
@@ -207,6 +207,59 @@ pub fn getReadingStats(
         });
     }
     repository.get_reading_stats(book_id.as_deref()).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn getReadingActivity(
+    state: State<'_, AppState>,
+    period: String,
+    granularity: String,
+    book_id: Option<String>,
+) -> Result<Vec<ActivityPoint>, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    if !repository.has_desktop_parity_schema().unwrap_or(true) {
+        return Ok(vec![]);
+    }
+    repository
+        .get_reading_activity(&period, &granularity, book_id.as_deref())
+        .map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn getReadingStatsForRange(
+    state: State<'_, AppState>,
+    from: String,
+    to: String,
+    book_id: Option<String>,
+) -> Result<ReadingStatsSummaryDto, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    if !repository.has_desktop_parity_schema().unwrap_or(true) {
+        return Ok(ReadingStatsSummaryDto {
+            total_minutes_read: 0,
+            total_sessions: 0,
+            books_started: 0,
+            books_completed: 0,
+            avg_progress_percentage: 0.0,
+        });
+    }
+    repository
+        .get_reading_stats_for_range(&from, &to, book_id.as_deref())
+        .map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn getReadingStreak(
+    state: State<'_, AppState>,
+    book_id: Option<String>,
+) -> Result<i64, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    if !repository.has_desktop_parity_schema().unwrap_or(true) {
+        return Ok(0);
+    }
+    repository.get_reading_streak(book_id.as_deref()).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]

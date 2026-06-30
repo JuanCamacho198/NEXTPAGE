@@ -82,6 +82,11 @@ export type BookCollectionInput = {
   collectionId: number;
 };
 
+export type ActivityPoint = {
+  bucket: string;
+  minutes: number;
+};
+
 export type ReadingStatsSummaryDto = {
   totalMinutesRead: number;
   totalSessions: number;

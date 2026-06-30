@@ -38,7 +38,7 @@ import type { ImportProgress } from '$lib/shared/services/BookImportService';
 
 type MaybeCommandError = Error & { commandError?: CommandErrorDto };
 
-class AppState {
+export class AppState {
   // ─── Domain States ───
   navigation = navigationState;
   library = libraryState;
@@ -47,7 +47,7 @@ class AppState {
   bulkImport = bulkImportState;
   settings = settingsState;
   // Stats domain: use statsDomain to avoid name collision with the stats getter
-  private statsDomain = statsState;
+  statsDomain = statsState;
 
   constructor() {
     // Wire the bulk-import domain to this coordinator so single-file and
@@ -525,6 +525,27 @@ class AppState {
     if (this.statsDomain.statsUnavailableReason) {
       this.navigation.setDomainUnavailable('stats', this.statsDomain.statsUnavailableReason);
     }
+  };
+
+  loadStatsActivity = async (
+    period: string,
+    granularity: string,
+    bookId?: string,
+  ): Promise<void> => {
+    return this.statsDomain.loadActivity(period, granularity, bookId);
+  };
+
+  loadStatsRange = async (
+    from: string,
+    to: string,
+    bookId?: string,
+    target?: 'current' | 'previous',
+  ): Promise<void> => {
+    return this.statsDomain.loadRangeStats(from, to, bookId, target);
+  };
+
+  loadStatsStreak = async (bookId?: string): Promise<void> => {
+    return this.statsDomain.loadStreak(bookId);
   };
 
   // ─── Cross-domain: loadLibrary ───

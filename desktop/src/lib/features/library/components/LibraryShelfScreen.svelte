@@ -3,6 +3,7 @@
   import DropMenu from '$lib/shared/ui/navigation/DropMenu.svelte';
   import SafeCover from './SafeCover.svelte';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import type { MessageKey } from '$lib/shared/i18n';
   import {
     FILTER_OPTIONS,
     SORT_OPTIONS,
@@ -19,6 +20,7 @@
   type Props = {
     books: ShelfBook[];
     isImporting?: boolean;
+    t: (key: MessageKey, params?: Record<string, string | number>) => string;
     onImportBook?: () => void;
     onOpenBook?: (book: ShelfBook) => void;
     onContinueReading?: (book: ShelfBook) => void;
@@ -31,6 +33,7 @@
   let {
     books,
     isImporting = false,
+    t,
     onImportBook,
     onOpenBook,
     onContinueReading,
@@ -154,8 +157,8 @@
             </svg>
             <input
               type="text"
-              class="h-11 w-full rounded-2xl border border-(--color-border) bg-[rgba(8,17,31,0.72)] pl-11 pr-4 text-sm text-(--color-primary) outline-none placeholder:text-(--color-text-muted)"
-              placeholder="Buscar por titulo o autor..."
+              class="h-11 w-full rounded-2xl border border-(--color-border) bg-[rgba(8,17,31,0.72)] pl-11 pr-16 text-sm text-(--color-primary) outline-none placeholder:text-center placeholder:text-(--color-text-muted)"
+              placeholder={t('library.searchPlaceholder')}
               bind:value={searchQuery}
             />
             <span

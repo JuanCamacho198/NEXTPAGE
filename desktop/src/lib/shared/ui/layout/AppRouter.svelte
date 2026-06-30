@@ -127,6 +127,7 @@
             <LibraryShelfScreen
               books={appState.books}
               isImporting={appState.isImporting}
+              t={appState.t}
               onImportBook={appState.handleImportFile}
               onOpenBook={(book: Parameters<typeof appState.startReading>[0]) => {
                 void appState.startReading(book);

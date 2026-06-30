@@ -303,7 +303,7 @@ describe('epubHighlightOverlay incremental render (CFI preservation)', () => {
       CHAPTER_HREF,
       0,
     );
-    const wrap = doc.querySelector('.epub-hl')!;
+    const wrap = doc.querySelector('.epub-hl') as HTMLElement;
     expect(wrap.style.background).toBe('rgba(250, 204, 21, 0.4)');
 
     // Re-render with a new color but same id and cfi.

@@ -20,9 +20,23 @@ const blobToBytes = async (blob: Blob): Promise<Uint8Array> => {
   return new Uint8Array(buffer);
 };
 
+const pickFirstString = (info: Record<string, unknown>, keys: string[]): string | null => {
+  for (const key of keys) {
+    const value = info[key];
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+  }
+  return null;
+};
+
 export type PdfMetadata = {
   author: string | null;
   title: string | null;
+  subject: string | null;
   totalPages: number | null;
   thumbnailBytes: Uint8Array | null;
 };
@@ -50,6 +64,7 @@ export const extractPdfMetadata = async (
     // Extract textual metadata
     let author: string | null = null;
     let title: string | null = null;
+    let subject: string | null = null;
     try {
       const meta = await pdfDoc.getMetadata();
       const info = meta?.info as Record<string, unknown> | null | undefined;
@@ -64,6 +79,17 @@ export const extractPdfMetadata = async (
         }
         if (typeof rawTitle === 'string' && rawTitle.trim().length > 0) {
           title = rawTitle.trim();
+        }
+        // `Subject` wins over `Keywords` (the latter is a single
+        // comma-separated string in practice). Both keys are checked
+        // case-insensitively because some PDF producers emit lowercase.
+        const rawSubject = pickFirstString(info, ['Subject', 'subject']);
+        const rawKeywords = pickFirstString(info, ['Keywords', 'keywords']);
+        if (rawSubject) {
+          subject = rawSubject;
+        } else if (rawKeywords) {
+          const firstToken = rawKeywords.split(',')[0]?.trim() ?? '';
+          subject = firstToken.length > 0 ? firstToken : null;
         }
       }
     } catch (e) {
@@ -97,7 +123,7 @@ export const extractPdfMetadata = async (
       console.error(`[PdfMetadata] Thumbnail render error:`, e);
     }
 
-    return { author, title, totalPages: numPages, thumbnailBytes };
+    return { author, title, subject, totalPages: numPages, thumbnailBytes };
   } finally {
     await pdfDoc.destroy();
     loadingTask.destroy();

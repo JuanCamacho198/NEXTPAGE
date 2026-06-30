@@ -133,7 +133,7 @@
           <input
             type="text"
             placeholder={t('library.searchPlaceholder')}
-            class="h-8 w-[140px] sm:w-40 rounded-lg border border-(--color-border) bg-(--color-background) pl-9 pr-8 text-sm text-(--color-text) placeholder-(--color-text-muted) focus:border-(--color-primary) focus:outline-none"
+            class="h-8 w-[140px] sm:w-40 rounded-lg border border-(--color-border) bg-(--color-background) pl-10 pr-8 text-sm text-(--color-text) placeholder-(--color-text-muted) focus:border-(--color-primary) focus:outline-none"
             value={searchQuery}
             oninput={handleSearchInput}
           />

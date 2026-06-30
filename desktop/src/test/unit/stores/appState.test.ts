@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { appState } from '$lib/shared/stores/AppState.svelte';
+import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
 
 const mockReadFile = vi.hoisted(() =>
   vi.fn<(...args: unknown[]) => Promise<Uint8Array>>().mockResolvedValue(new Uint8Array([1, 2, 3])),
@@ -161,6 +162,8 @@ function resetAppState(): void {
   appState.isSearching = false;
   appState.isImporting = false;
   appState.importProgress = null;
+  bulkImportState.importNotice = null;
+  bulkImportState.dismissImportNotice();
   appState.cfiLocation = '';
   appState.percentage = 0;
   appState.stats = null;

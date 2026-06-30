@@ -73,7 +73,11 @@ describe('HighlightContextMenu', () => {
   it('fires onCopy and closes menu', async () => {
     const onCopy = vi.fn();
     const onClose = vi.fn();
-    const { getByText } = render(HighlightContextMenu, {
+    // Use the Copy button by its aria-label. The visible "Copy" text only
+    // lives in an opacity-0 tooltip span (not clickable), so getByText
+    // targets the wrong element. getByLabelText resolves to the actual
+    // <button> with onclick={handleCopyClick}.
+    const { getByLabelText } = render(HighlightContextMenu, {
       highlightId: 'hl-1',
       position: { x: 100, y: 100 },
       assignedTags: [],
@@ -86,7 +90,7 @@ describe('HighlightContextMenu', () => {
       t,
     });
 
-    await fireEvent.click(getByText('Copy'));
+    await fireEvent.click(getByLabelText('Copy'));
     expect(onCopy).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
   });

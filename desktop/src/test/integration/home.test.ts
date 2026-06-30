@@ -55,6 +55,28 @@ const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoi
       scanFolder: vi.fn(),
       extractEpubCover: vi.fn().mockResolvedValue(true),
       getFileBytes: vi.fn().mockResolvedValue([]),
+      // Exhaustive coverage: every export of tauriClient.ts that a test
+      // path might reach. Individual tests still override these with
+      // mockResolvedValue / mockResolvedValueOnce in beforeEach.
+      listHighlights: vi.fn().mockResolvedValue([]),
+      createHighlight: vi.fn(),
+      updateHighlight: vi.fn(),
+      deleteHighlight: vi.fn(),
+      saveHighlightTags: vi.fn().mockResolvedValue([]),
+      listTags: vi.fn().mockResolvedValue([]),
+      createTag: vi.fn(),
+      listTagsForHighlight: vi.fn().mockResolvedValue([]),
+      addDictionaryWord: vi.fn(),
+      listDictionaryWords: vi.fn().mockResolvedValue([]),
+      listBookmarks: vi.fn().mockResolvedValue([]),
+      createCollection: vi.fn(),
+      getSettings: vi.fn().mockResolvedValue([]),
+      upsertSetting: vi.fn(),
+      getFileSize: vi.fn().mockResolvedValue(0),
+      readFileRange: vi.fn().mockResolvedValue([]),
+      fileExists: vi.fn().mockResolvedValue(false),
+      diagnose: vi.fn(),
+      getLogs: vi.fn().mockResolvedValue([]),
     },
     pickFileMock: vi.fn(),
     pickFolderMock: vi.fn(),
@@ -63,6 +85,24 @@ const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoi
 });
 
 vi.mock('$lib/shared/api/tauriClient', () => tauriClientMock);
+
+// `AppState.init()` calls `loadPersistedAuth()` to decide the initial route.
+// Without a cached session it lands on `'welcome'`, which would render the
+// welcome screen instead of the home shell these tests assert against. Mock
+// a local profile so the app boots straight into the home route.
+vi.mock('$lib/stores/authPersistence', () => ({
+  loadPersistedAuth: vi.fn(async () => ({
+    kind: 'local',
+    profile: {
+      name: 'Test User',
+      email: null,
+      avatarUrl: null,
+      localOnly: true,
+    },
+  })),
+  clearPersistedAuth: vi.fn(async () => undefined),
+  savePersistedAuth: vi.fn(async () => undefined),
+}));
 
 vi.mock('@tauri-apps/api/webviewWindow', () => ({
   getCurrentWebviewWindow: () => ({
@@ -366,9 +406,13 @@ describe('App desktop home redesign QA scenarios', () => {
     const user = userEvent.setup();
 
     // The card content button contains "Progress B" in its accessible name;
-    // scoped to the continue section to avoid matching the ShelfActionMenu trigger
+    // scoped to the continue section to avoid matching the ShelfActionMenu trigger.
+    // Use the async findAllByRole so we wait for the library load to populate
+    // the section (the mock resolves on the next microtask).
     const continueSection = await screen.findByTestId('continue-section');
-    const cardButtons = within(continueSection).getAllByRole('button', { name: /Progress B/i });
+    const cardButtons = await within(continueSection).findAllByRole('button', {
+      name: /Progress B/i,
+    });
     // Pick the card content button (first one is the card, second is the actions menu trigger)
     await user.click(cardButtons[0]);
 

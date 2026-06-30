@@ -200,7 +200,7 @@ describe('cfiBridge', () => {
     // walked. Real-world performance is logged for visibility.
     //
     // Skip in slow CI: set SKIP_PERF=1 to opt out.
-    it('processes a 50K text node chapter (jsdom baseline)', () => {
+    it('processes a 50K text node chapter (jsdom baseline)', { timeout: 15_000 }, () => {
       if (process.env.SKIP_PERF === '1') {
         return;
       }

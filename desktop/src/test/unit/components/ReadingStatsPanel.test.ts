@@ -25,6 +25,28 @@ const t = (key: string) => {
 
 vi.mock('$lib/shared/api/tauriClient', () => ({
   getReadingStats: vi.fn(),
+  // SettingsDomainState imports getDefaultReaderSettings at module-load
+  // time. Without this mock export the entire suite fails to bootstrap.
+  getDefaultReaderSettings: vi.fn(() => ({
+    themeMode: 'paper',
+    brightness: 100,
+    contrast: 100,
+    selectionColor: '#3388ff',
+    epub: { fontSize: 100, fontFamily: 'serif' },
+    lineHeight: 1.8,
+    letterSpacing: 0,
+    paragraphSpacing: 1,
+    textAlign: 'left',
+    direction: 'ltr',
+    hyphenation: false,
+    verticalScrolling: false,
+    margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+    showHeader: true,
+    showFooter: true,
+    showPageNumbers: true,
+    progressIndicator: 'percentage',
+  })),
+  getReaderSettings: vi.fn(),
 }));
 
 // Use type cast since vi.mocked is not available in vitest 4.x

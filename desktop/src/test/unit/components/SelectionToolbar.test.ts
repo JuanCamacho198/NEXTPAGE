@@ -4,17 +4,26 @@ import SelectionToolbar, {
   type SelectionData,
 } from '$lib/features/reader/highlight/SelectionToolbar.svelte';
 
-const t = (key: string) => {
+const t = (key: string, params?: Record<string, string | number>) => {
   const translations: Record<string, string> = {
     'highlight.menuAriaLabel': 'Selection actions',
-    'highlight.selectColor': 'Select color highlight',
+    // The component calls t('highlight.selectColor', { color: t('highlight.color.yellow') }),
+    // so the placeholder MUST be present for the substituted aria-label
+    // to actually contain the color name (e.g. "Select Yellow highlight").
+    'highlight.selectColor': 'Select {{color}} highlight',
     'highlight.color.yellow': 'Yellow',
     'reader.copiar': 'Copy',
     'reader.copiedToClipboard': 'Copied to clipboard',
     'reader.addToDictionary': 'Add to Dictionary',
     'reader.addedToDictionary': 'Saved',
   };
-  return translations[key] ?? key;
+  let value = translations[key] ?? key;
+  if (params) {
+    for (const [paramKey, paramValue] of Object.entries(params)) {
+      value = value.replace(`{{${paramKey}}}`, String(paramValue));
+    }
+  }
+  return value;
 };
 
 function makeSelectionData(overrides: Partial<SelectionData> = {}): SelectionData {

@@ -6,6 +6,7 @@
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import AppRouter from '$lib/shared/ui/layout/AppRouter.svelte';
   import AppModals from '$lib/shared/ui/layout/AppModals.svelte';
+  import ImportProgressBanner from '$lib/shared/ui/feedback/ImportProgressBanner.svelte';
   onMount(() => {
     appState.init();
 
@@ -57,6 +58,7 @@
   </a>
   <AppRouter />
   <AppModals />
+  <ImportProgressBanner />
   <DebugToggle />
   <DebugPanel />
 </main>

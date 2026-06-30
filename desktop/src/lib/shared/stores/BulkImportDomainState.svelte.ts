@@ -4,6 +4,17 @@ import { pickFile, pickFolder } from '$lib/shared/services/FilePicker';
 import { extractPdfMetadata } from '$lib/shared/services/pdfThumbnail';
 import type { BulkImportSummary, ScanFolderResult } from '$lib/shared/types';
 
+export type ImportNoticeStatus = 'importing' | 'success' | 'error';
+
+export type ImportNotice = {
+  status: ImportNoticeStatus;
+  fileName: string;
+  message: string;
+  percentage: number;
+};
+
+const SUCCESS_DISMISS_MS = 3500;
+
 class BulkImportDomainState {
   // ─── State ───
   isBulkImportOpen = $state(false);
@@ -19,11 +30,44 @@ class BulkImportDomainState {
   isImporting = $state(false);
   importProgress = $state<ImportProgress | null>(null);
 
+  /**
+   * Persistent import notice for the top progress banner. Lives across the
+   * full lifecycle of a single-file import (start → success/error) and is
+   * cleared manually via `dismissImportNotice()` or automatically on
+   * success after SUCCESS_DISMISS_MS.
+   */
+  importNotice = $state<ImportNotice | null>(null);
+
   // Internal
   bulkImportService = new BulkImportService();
+  private importNoticeTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   // ─── Callback for post-import refresh ───
   onLibraryRefreshNeeded: (() => Promise<void>) | null = null;
+
+  // ─── Notice lifecycle ───
+
+  dismissImportNotice(): void {
+    if (this.importNoticeTimeoutId) {
+      clearTimeout(this.importNoticeTimeoutId);
+      this.importNoticeTimeoutId = null;
+    }
+    this.importNotice = null;
+  }
+
+  private setImportNotice(notice: ImportNotice, autoDismissMs?: number): void {
+    if (this.importNoticeTimeoutId) {
+      clearTimeout(this.importNoticeTimeoutId);
+      this.importNoticeTimeoutId = null;
+    }
+    this.importNotice = notice;
+    if (autoDismissMs !== undefined) {
+      this.importNoticeTimeoutId = setTimeout(() => {
+        this.importNotice = null;
+        this.importNoticeTimeoutId = null;
+      }, autoDismissMs);
+    }
+  }
 
   // ─── Single file import ───
 
@@ -34,6 +78,12 @@ class BulkImportDomainState {
     }
 
     this.isImporting = true;
+    this.setImportNotice({
+      status: 'importing',
+      fileName: file.name,
+      message: '', // populated on first progress callback
+      percentage: 0,
+    });
 
     try {
       const format = file.name.toLowerCase().endsWith('.epub') ? 'epub' : 'pdf';
@@ -60,12 +110,48 @@ class BulkImportDomainState {
         },
         (progress) => {
           this.importProgress = progress;
+          // Map service-level status to notice status. The progress
+          // `message` is locale-correct (it comes from the service's own
+          // i18n lookup) so we reuse it verbatim.
+          const noticeStatus: ImportNoticeStatus =
+            progress.status === 'complete'
+              ? 'success'
+              : progress.status === 'error'
+                ? 'error'
+                : 'importing';
+          this.importNotice = {
+            status: noticeStatus,
+            fileName: file.name,
+            message: progress.message,
+            percentage: progress.percentage ?? 0,
+          };
         },
       );
 
       await this.onLibraryRefreshNeeded?.();
+
+      // After successful import, ensure the banner shows a success state
+      // for SUCCESS_DISMISS_MS. The progress callback already set it, but
+      // (a) we re-confirm and (b) schedule the auto-dismiss here, where
+      // the import lifecycle is owned.
+      this.setImportNotice(
+        {
+          status: 'success',
+          fileName: file.name,
+          message: '', // resolved by banner i18n
+          percentage: 100,
+        },
+        SUCCESS_DISMISS_MS,
+      );
     } catch (error) {
-      // Error is propagated via readerError in coordinator
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.setImportNotice({
+        status: 'error',
+        fileName: file.name,
+        message: errorMessage,
+        percentage: 0,
+      });
+      // Re-throw so the coordinator can surface the error elsewhere if needed.
       throw error;
     } finally {
       this.isImporting = false;

@@ -74,10 +74,6 @@
       {/if}
     </div>
     <div class="mx-auto max-w-7xl">
-      {#if appState.importProgress}
-        <p class="mb-3 text-sm text-(--color-secondary)">{appState.importProgress.message}</p>
-      {/if}
-
       {#if appState.readerError}
         <p class="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
           {appState.readerError}

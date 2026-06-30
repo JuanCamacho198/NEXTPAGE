@@ -365,6 +365,10 @@ export const messagesEs: Record<MessageKey, string> = {
   'import.complete': 'Importacion completa',
   'import.failed': 'Fallo la importacion',
   'import.emptyPath': 'Fallo el comando de importacion. La ruta seleccionada esta vacia.',
+  'import.bannerImporting': 'Importando «{name}»...',
+  'import.bannerSuccess': '«{name}» se agrego a tu biblioteca',
+  'import.bannerErrorTitle': 'No se pudo importar «{name}»',
+  'import.bannerDismissAria': 'Cerrar notificacion de importacion',
   'errors.commandFailure': 'Fallo desconocido del comando',
   'errors.settingsCommandFailed': 'Fallo el comando de ajustes.',
   'errors.importCommandFailed':

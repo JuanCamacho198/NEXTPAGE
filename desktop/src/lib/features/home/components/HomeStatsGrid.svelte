@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { ReadingStatsSummaryDto } from '$lib/shared/types';
   import type { MessageKey } from '$lib/shared/i18n';
+  import type { IconName } from '$lib/shared/ui/navigation/Icon.svelte';
+  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
 
   type Props = {
     stats: ReadingStatsSummaryDto | null;
@@ -11,39 +13,47 @@
 
   let { stats, isLoading = false, disabledReason = null }: Props = $props();
 
-  const statItems = $derived([
+  type StatItem = {
+    label: string;
+    value: string;
+    icon: IconName;
+    color: string;
+    bg: string;
+  };
+
+  const statItems = $derived<StatItem[]>([
     {
       label: 'Iniciados', // Replace with t() key if available, like t("stats.booksStarted")
       value: stats?.booksStarted?.toString() ?? '0',
-      icon: '📚',
+      icon: 'book',
       color: 'var(--color-accent-blue)',
       bg: 'rgba(73, 212, 255, 0.1)',
     },
     {
       label: 'Completados',
       value: stats?.booksCompleted?.toString() ?? '0',
-      icon: '✅',
+      icon: 'check',
       color: '#4ade80',
       bg: 'rgba(74, 222, 128, 0.1)',
     },
     {
       label: 'Minutos leídos',
       value: stats?.totalMinutesRead?.toString() ?? '0',
-      icon: '⏱️',
+      icon: 'clock',
       color: '#a78bfa',
       bg: 'rgba(167, 139, 250, 0.1)',
     },
     {
       label: 'Sesiones',
       value: stats?.totalSessions?.toString() ?? '0',
-      icon: '📈',
+      icon: 'trend-up',
       color: '#fbbf24',
       bg: 'rgba(251, 191, 36, 0.1)',
     },
     {
       label: 'Progreso promedio',
       value: `${stats ? Math.round(stats.avgProgressPercentage) : 0}%`,
-      icon: '📊',
+      icon: 'chart',
       color: '#60a5fa',
       bg: 'rgba(96, 165, 250, 0.1)',
     },
@@ -77,7 +87,7 @@
             class="flex h-10 w-10 items-center justify-center rounded-full"
             style="background-color: {item.bg}; color: {item.color};"
           >
-            <span class="text-lg">{item.icon}</span>
+            <Icon name={item.icon} size="lg" />
           </div>
         </div>
 

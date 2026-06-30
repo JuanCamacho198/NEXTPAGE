@@ -322,6 +322,11 @@ class LibraryDomainState {
       const readerBook = this.books.find((b) => b.id === updatedBook.id);
       if (!readerBook) return;
 
+      const normalizedGenre =
+        typeof updatedBook.genre === 'string' && updatedBook.genre.trim().length > 0
+          ? updatedBook.genre.trim()
+          : null;
+
       await upsertBook({
         id: updatedBook.id,
         title: updatedBook.title,
@@ -331,11 +336,12 @@ class LibraryDomainState {
         syncStatus: 'local' as const,
         currentPage: readerBook.currentPage,
         totalPages: readerBook.totalPages,
+        genre: normalizedGenre,
       });
 
       this.books = this.books.map((b) =>
         b.id === updatedBook.id
-          ? { ...b, title: updatedBook.title, author: updatedBook.author }
+          ? { ...b, title: updatedBook.title, author: updatedBook.author, genre: normalizedGenre }
           : b,
       );
 

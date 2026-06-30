@@ -168,6 +168,7 @@
       <BookCard
         {book}
         variant="shelf"
+        compact={true}
         selected={appState.previewBookId === book.id}
         onSelect={() => {
           appState.openShelfDetails(book);

@@ -59,21 +59,59 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
     if (doc.body) doc.body.normalize();
   }
   function wrapRange(range, hl, rgba) {
-    var span = document.createElement('span');
-    span.className = 'epub-hl';
-    span.setAttribute('data-id', hl.id);
-    span.style.background = rgba;
-    span.style.borderRadius = '2px';
-    try {
-      range.surroundContents(span);
-    } catch (e) {
-      try {
-        var contents = range.extractContents();
-        span.appendChild(contents);
-        range.insertNode(span);
-      } catch (e2) {
-        console.warn('epub-hl: failed to wrap range', e2);
-      }
+    // Fast path: the range is a subset of a single text node.
+    // surroundContents works directly and produces valid HTML.
+    if (range.startContainer === range.endContainer && range.startContainer.nodeType === 3) {
+      var singleSpan = document.createElement('span');
+      singleSpan.className = 'epub-hl';
+      singleSpan.setAttribute('data-id', hl.id);
+      singleSpan.style.background = rgba;
+      singleSpan.style.borderRadius = '2px';
+      try { range.surroundContents(singleSpan); }
+      catch (e) { console.warn('epub-hl: failed to wrap range', e); }
+      return;
+    }
+    // Slow path: the range crosses element boundaries or contains block
+    // elements (e.g. the user selected across multiple <p>s, or selected
+    // an entire <p>). surroundContents throws when the range contains
+    // non-text nodes, and the previous fallback (extractContents + wrap
+    // the extracted fragment in a <span>) produced invalid HTML of the
+    // form <span class="epub-hl"><p>...</p></span> -- an inline element
+    // containing a block element. The browser auto-corrects this on the
+    // next render, which (a) breaks the visual highlight and (b) shifts
+    // child indices of the parent, invalidating CFIs for OTHER
+    // highlights in the same chapter (causing
+    // 'epub-cfi: text terminus did not resolve' on subsequent renders).
+    //
+    // Fix: collect every text node within the range FIRST, then wrap
+    // each text node's in-range portion with its own <span>. Block
+    // elements (<p>, <br>, etc.) stay in place; the wrap goes INSIDE
+    // the <p> around the text nodes, which is valid HTML.
+    var walker = document.createTreeWalker(
+      range.commonAncestorContainer,
+      NodeFilter.SHOW_TEXT,
+      { acceptNode: function (node) {
+        return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      } }
+    );
+    var textNodes = [];
+    var tn = walker.nextNode();
+    while (tn) { textNodes.push(tn); tn = walker.nextNode(); }
+    for (var i = 0; i < textNodes.length; i++) {
+      var node = textNodes[i];
+      var startOffset = (node === range.startContainer) ? range.startOffset : 0;
+      var endOffset = (node === range.endContainer) ? range.endOffset : node.nodeValue.length;
+      if (endOffset <= startOffset) continue;
+      var nodeRange = document.createRange();
+      nodeRange.setStart(node, startOffset);
+      nodeRange.setEnd(node, endOffset);
+      var span = document.createElement('span');
+      span.className = 'epub-hl';
+      span.setAttribute('data-id', hl.id);
+      span.style.background = rgba;
+      span.style.borderRadius = '2px';
+      try { nodeRange.surroundContents(span); }
+      catch (e) { console.warn('epub-hl: failed to wrap text node', e); }
     }
   }
   function render(highlights, chapterHref, currentChapterIndex) {

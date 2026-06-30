@@ -191,3 +191,130 @@ describe('epubHighlightOverlay wrapRange (block-level selections)', () => {
     expect(p1.textContent).toContain('Contiene algo');
   });
 });
+
+// ─── Incremental render regression tests ──────────────────────────
+// Reproduces the user-reported bug: "a veces tengo que salir y volver a
+// entrar al libro para que pueda verlos". Root cause was the
+// "clear-all then re-render-all" strategy: removing every wrap then
+// calling body.normalize() to merge adjacent text nodes invalidated
+// the CFIs of highlights the user just created (their CFIs were
+// captured against the wrapped DOM). The fix makes the render
+// incremental: only adds the new wraps, never touches the existing
+// ones, never normalizes.
+describe('epubHighlightOverlay incremental render (CFI preservation)', () => {
+  beforeEach(() => {
+    setSpine(SPINE);
+  });
+
+  it('keeps the first highlight when a second one is added in the same chapter', () => {
+    const { doc, win } = setupDomWithOverlay();
+    const p1 = doc.querySelectorAll('p')[0]!;
+    const p2 = doc.querySelectorAll('p')[1]!;
+    const p1Text = p1.firstChild!;
+    const p2Text = p2.firstChild!;
+
+    // First highlight: "Contiene algo" in p1. CFI captured against
+    // the bare DOM (no wraps yet).
+    const r1 = doc.createRange();
+    r1.setStart(p1Text, p1Text.nodeValue!.indexOf('Contiene'));
+    r1.setEnd(p1Text, p1Text.nodeValue!.indexOf('Contiene') + 'Contiene algo'.length);
+    const cfi1 = rangeToCFI(r1, CHAPTER_HREF, doc);
+    expect(cfi1).not.toBeNull();
+
+    win.__epubHighlightOverlay!.render(
+      [{ id: 'hl-1', color: '#FACC15', pageNumber: 0, cfi: cfi1 }],
+      CHAPTER_HREF,
+      0,
+    );
+    expect(doc.querySelectorAll('.epub-hl').length).toBe(1);
+    expect(doc.querySelector('.epub-hl')!.getAttribute('data-id')).toBe('hl-1');
+
+    // Second highlight: "Tambien tiene" in p2. CFI captured against
+    // the DOM with hl-1 ALREADY WRAPPED. This is the exact scenario
+    // that broke before the fix: clearing+normalizing would have
+    // destroyed hl-1's text node position and hl-2's CFI would fail.
+    const r2 = doc.createRange();
+    r2.setStart(p2Text, p2Text.nodeValue!.indexOf('Tambien'));
+    r2.setEnd(p2Text, p2Text.nodeValue!.indexOf('Tambien') + 'Tambien tiene'.length);
+    const cfi2 = rangeToCFI(r2, CHAPTER_HREF, doc);
+    expect(cfi2).not.toBeNull();
+
+    win.__epubHighlightOverlay!.render(
+      [
+        { id: 'hl-1', color: '#FACC15', pageNumber: 0, cfi: cfi1 },
+        { id: 'hl-2', color: '#60A5FA', pageNumber: 0, cfi: cfi2 },
+      ],
+      CHAPTER_HREF,
+      0,
+    );
+
+    // Both wraps must be present. Before the fix, hl-2's CFI failed
+    // to resolve with "local path did not resolve" and the highlight
+    // was silently missing.
+    const wraps = Array.from(doc.querySelectorAll('.epub-hl'));
+    expect(wraps.length).toBe(2);
+    const ids = wraps.map((w) => w.getAttribute('data-id')).sort();
+    expect(ids).toEqual(['hl-1', 'hl-2']);
+  });
+
+  it('removes a wrap when its highlight is deleted from the list', () => {
+    const { doc, win } = setupDomWithOverlay();
+    const p1 = doc.querySelectorAll('p')[0]!;
+    const p1Text = p1.firstChild!;
+    const r = doc.createRange();
+    r.setStart(p1Text, 0);
+    r.setEnd(p1Text, 'Primer'.length);
+    const cfi = rangeToCFI(r, CHAPTER_HREF, doc);
+    expect(cfi).not.toBeNull();
+
+    win.__epubHighlightOverlay!.render(
+      [
+        { id: 'keep', color: '#FACC15', pageNumber: 0, cfi },
+        { id: 'remove', color: '#60A5FA', pageNumber: 0, cfi },
+      ],
+      CHAPTER_HREF,
+      0,
+    );
+    expect(doc.querySelectorAll('.epub-hl').length).toBe(2);
+
+    // Re-render with only "keep".
+    win.__epubHighlightOverlay!.render(
+      [{ id: 'keep', color: '#FACC15', pageNumber: 0, cfi }],
+      CHAPTER_HREF,
+      0,
+    );
+    const remaining = Array.from(doc.querySelectorAll('.epub-hl'));
+    expect(remaining.length).toBe(1);
+    expect(remaining[0]!.getAttribute('data-id')).toBe('keep');
+  });
+
+  it('updates the background of an existing wrap when its color changes', () => {
+    const { doc, win } = setupDomWithOverlay();
+    const p1 = doc.querySelectorAll('p')[0]!;
+    const p1Text = p1.firstChild!;
+    const r = doc.createRange();
+    r.setStart(p1Text, 0);
+    r.setEnd(p1Text, 'Primer'.length);
+    const cfi = rangeToCFI(r, CHAPTER_HREF, doc);
+    expect(cfi).not.toBeNull();
+
+    win.__epubHighlightOverlay!.render(
+      [{ id: 'hl', color: '#FACC15', pageNumber: 0, cfi }],
+      CHAPTER_HREF,
+      0,
+    );
+    const wrap = doc.querySelector('.epub-hl')!;
+    expect(wrap.style.background).toBe('rgba(250, 204, 21, 0.4)');
+
+    // Re-render with a new color but same id and cfi.
+    win.__epubHighlightOverlay!.render(
+      [{ id: 'hl', color: '#60A5FA', pageNumber: 0, cfi }],
+      CHAPTER_HREF,
+      0,
+    );
+    // Same wrap node, new background. No duplicate wraps.
+    expect(doc.querySelectorAll('.epub-hl').length).toBe(1);
+    expect(doc.querySelector('.epub-hl')).toBe(wrap);
+    expect(wrap.style.background).toBe('rgba(96, 165, 250, 0.4)');
+  });
+});

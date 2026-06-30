@@ -4,6 +4,7 @@
   type ButtonProps = {
     children?: Snippet;
     onclick?: () => void;
+    type?: 'button' | 'submit' | 'reset';
     variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
     size?: 'sm' | 'md' | 'lg';
     disabled?: boolean;
@@ -13,6 +14,7 @@
   let {
     children,
     onclick,
+    type = 'button',
     variant = 'primary',
     size = 'md',
     disabled = false,
@@ -45,7 +47,7 @@
 </script>
 
 <button
-  type="button"
+  {type}
   class="{baseClasses} {pressStyles} {variants[variant]} {sizes[size]} {className}"
   {disabled}
   {onclick}

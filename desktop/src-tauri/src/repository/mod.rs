@@ -1043,6 +1043,7 @@ mod tests {
         connection
             .execute_batch(include_str!("../../migrations/0009_dictionary_tags.sql"))
             .unwrap();
+        connection.execute_batch(include_str!("../../migrations/0010_book_genre.sql")).unwrap();
     }
 
     pub(crate) fn new_repository() -> LibraryRepository {

@@ -6,6 +6,7 @@ export type BookImportInput = {
   title?: string;
   author?: string;
   format: string;
+  genre?: string | null;
 };
 
 export type BookDto = {
@@ -94,6 +95,7 @@ export async function importBook(
         title: input.title,
         author: input.author,
         format: input.format,
+        genre: input.genre ?? null,
       },
     });
 

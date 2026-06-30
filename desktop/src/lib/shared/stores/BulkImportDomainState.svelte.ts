@@ -3,6 +3,7 @@ import { BulkImportService, type BulkImportProgress } from '$lib/shared/services
 import { pickFile, pickFolder } from '$lib/shared/services/FilePicker';
 import { extractPdfMetadata } from '$lib/shared/services/pdfThumbnail';
 import { extractEpubImportMetadata } from '$lib/shared/services/epubImportMetadata';
+import { inferGenreFromText } from '$lib/shared/services/genreHeuristic';
 import type { BulkImportSummary, ScanFolderResult } from '$lib/shared/types';
 
 export type ImportNoticeStatus = 'importing' | 'success' | 'error';
@@ -93,21 +94,24 @@ class BulkImportDomainState {
     });
 
     try {
-      // Pull the title/author from the file's embedded metadata when
-      // possible. The PDF branch already extracted both via pdfjs; the
-      // EPUB branch uses a lightweight epubjs one-shot. Either way, a
-      // missing or empty metadata field falls back to the filename.
+      // Pull the title/author/subject from the file's embedded metadata
+      // when possible. The PDF branch already extracted both via pdfjs;
+      // the EPUB branch uses a lightweight epubjs one-shot. Either way,
+      // a missing or empty metadata field falls back to the filename.
       let title: string | undefined;
       let author: string | undefined;
+      let subject: string | null = null;
       try {
         if (format === 'pdf') {
           const meta = await extractPdfMetadata(file.path);
           if (meta.title?.trim()) title = meta.title.trim();
           if (meta.author?.trim()) author = meta.author.trim();
+          if (meta.subject?.trim()) subject = meta.subject.trim();
         } else if (format === 'epub') {
           const meta = await extractEpubImportMetadata(file.path);
           if (meta.title?.trim()) title = meta.title.trim();
           if (meta.author?.trim()) author = meta.author.trim();
+          if (meta.subject?.trim()) subject = meta.subject.trim();
         }
       } catch (err) {
         // best-effort: fall through to filename-based title
@@ -121,10 +125,18 @@ class BulkImportDomainState {
         file: file.name,
         titleSource: title && title !== fileStem ? 'metadata' : title ? 'filename-fallback' : 'none',
         authorSource: author ? 'metadata' : 'none',
+        subjectSource: subject ? 'metadata' : 'none',
         title,
         author,
+        subject,
       });
       if (!title) title = fileStem;
+
+      // Genre resolution: prefer the embedded subject (EPUB <dc:subject>
+      // or PDF info-dict Subject/Keywords) verbatim. Fall back to the
+      // keyword heuristic over title + author so the book lands in a
+      // sensible bucket when no metadata is present.
+      const genre = subject ?? inferGenreFromText({ title, author: author ?? null });
 
       // What the user sees in the import banner / success / error notice.
       // Prefer the metadata title (shorter, cleaner); otherwise the file
@@ -138,6 +150,7 @@ class BulkImportDomainState {
           title,
           author,
           format,
+          genre,
         },
         (progress) => {
           this.importProgress = progress;

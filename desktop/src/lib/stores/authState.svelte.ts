@@ -5,7 +5,19 @@
  * Usage:
  *   import { authState } from "$lib/stores/authState.svelte";
  *   // authState.isSignedIn, authState.email, etc. are reactive
+ *
+ * Local-user support (welcome-screen change):
+ * Local users are first-class profiles that do NOT set `accessToken`. This is
+ * intentional: `SyncService.ts` is gated on `isSignedIn`, so local users
+ * implicitly skip Google Drive sync without any extra gate. `isSignedIn`
+ * therefore evaluates to `false` for local users — this is the documented
+ * contract, not a bug. Callers that need "has any profile" should check
+ * `authState.isLocalUser || authState.isSignedIn`.
  */
+
+import type { LocalUserProfile } from './authPersistence';
+
+export type { LocalUserProfile };
 
 let accessToken: string | null = $state(null);
 let refreshToken: string | null = $state(null);
@@ -14,8 +26,10 @@ let email: string | null = $state(null);
 let displayName: string | null = $state(null);
 let photoUrl: string | null = $state(null);
 let userId: string | null = $state(null);
+let localUser: LocalUserProfile | null = $state(null);
 
 const isSignedIn = $derived(accessToken !== null);
+const isLocalUser = $derived(localUser !== null);
 const isTokenExpired = $derived(
   expiresAt === null || Date.now() >= expiresAt - 60000, // 1-minute buffer
 );
@@ -75,6 +89,21 @@ export function clearSession(): void {
   userId = null;
 }
 
+/**
+ * Set the active local-user profile. Local users do NOT have an
+ * `accessToken` — see file-level comment for the rationale.
+ *
+ * Callers are expected to persist the profile via `savePersistedAuth({ kind:
+ * 'local', profile })` immediately after calling this.
+ */
+export function setLocalUser(profile: LocalUserProfile): void {
+  localUser = profile;
+}
+
+export function clearLocalUser(): void {
+  localUser = null;
+}
+
 export function getAccessToken(): string | null {
   return accessToken;
 }
@@ -98,6 +127,9 @@ export const authState = {
   get isTokenExpired(): boolean {
     return isTokenExpired;
   },
+  get isLocalUser(): boolean {
+    return isLocalUser;
+  },
   get email(): string | null {
     return email;
   },
@@ -119,8 +151,13 @@ export const authState = {
   get expiresAt(): number | null {
     return expiresAt;
   },
+  get localUser(): LocalUserProfile | null {
+    return localUser;
+  },
   setSession,
   clearSession,
+  setLocalUser,
+  clearLocalUser,
   getAccessToken,
   getRefreshToken,
   getExpiresAt,

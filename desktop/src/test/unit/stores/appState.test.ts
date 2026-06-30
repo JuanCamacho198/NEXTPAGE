@@ -88,7 +88,13 @@ vi.mock('$lib/shared/api/tauriClient', () => {
 });
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
+  BaseDirectory: { AppData: 0 },
   readFile: mockReadFile,
+  readTextFile: vi.fn(),
+  writeTextFile: vi.fn(),
+  rename: vi.fn(),
+  remove: vi.fn(),
+  exists: vi.fn().mockResolvedValue(false),
 }));
 
 vi.mock('$lib/shared/services/BulkImportService', () => {

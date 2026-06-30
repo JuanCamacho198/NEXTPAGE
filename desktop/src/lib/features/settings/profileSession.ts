@@ -1,4 +1,4 @@
-import { authState } from '$lib/stores/authState.svelte';
+import { authState, type LocalUserProfile } from '$lib/stores/authState.svelte';
 
 const DEFAULT_PROFILE_NAME = 'Reader';
 const DEFAULT_PROFILE_EMAIL = 'No email available';
@@ -17,6 +17,13 @@ export type ProfileSessionViewModel = {
   avatarUrl: string | null;
   isSignedIn: boolean;
 };
+
+/**
+ * Discriminated union for the two profile shapes `normalizeProfileSession`
+ * accepts. The `localOnly: true` literal narrows the type without an extra
+ * `_kind` field, keeping the on-disk cache shape stable.
+ */
+export type ProfileUserInput = GoogleUser | (LocalUserProfile & { localOnly: true }) | null;
 
 const toEmailLocalPart = (email: string | null | undefined): string | null => {
   if (typeof email !== 'string') {
@@ -60,29 +67,47 @@ const toValidHttpUrl = (value: unknown): string | null => {
 };
 
 /**
- * Normalize a user profile from GoogleUser fields.
+ * Normalize a user profile from GoogleUser or LocalUserProfile fields.
  * Reads email, name, and picture directly (flat structure, no user_metadata nesting).
+ *
+ * For local users, `isSignedIn` is always `true` so the home hero greets them
+ * by name (same UX as a Google user). For Google users, `isSignedIn` reflects
+ * whether the email claim was present.
  */
-export const normalizeProfileSession = (
-  user: GoogleUser | null | undefined,
-): ProfileSessionViewModel => {
-  const email = toNonEmptyString(user?.email) ?? DEFAULT_PROFILE_EMAIL;
-  const localPart = toEmailLocalPart(user?.email);
-  const name = toNonEmptyString(user?.name) ?? localPart ?? DEFAULT_PROFILE_NAME;
+export const normalizeProfileSession = (user: ProfileUserInput): ProfileSessionViewModel => {
+  // Local users: detect via the `localOnly: true` literal type guard. The
+  // shape is `{ name, email | null, avatarUrl | null, localOnly: true }`.
+  if (user !== null && typeof user === 'object' && 'localOnly' in user && user.localOnly === true) {
+    const local = user as LocalUserProfile;
+    return {
+      name: toNonEmptyString(local.name) ?? DEFAULT_PROFILE_NAME,
+      email: toNonEmptyString(local.email) ?? DEFAULT_PROFILE_EMAIL,
+      avatarUrl: toValidHttpUrl(local.avatarUrl),
+      isSignedIn: true,
+    };
+  }
+
+  const google = user as GoogleUser | null | undefined;
+  const email = toNonEmptyString(google?.email) ?? DEFAULT_PROFILE_EMAIL;
+  const localPart = toEmailLocalPart(google?.email);
+  const name = toNonEmptyString(google?.name) ?? localPart ?? DEFAULT_PROFILE_NAME;
 
   return {
     name,
     email,
-    avatarUrl: toValidHttpUrl(user?.picture),
-    isSignedIn: Boolean(user?.email),
+    avatarUrl: toValidHttpUrl(google?.picture),
+    isSignedIn: Boolean(google?.email),
   };
 };
 
 /**
  * Convenience function that reads profile directly from reactive authState.
- * Use this for the new Google OAuth PKCE flow.
+ * Local users take precedence over Google fields when both are set.
  */
 export function profileSessionFromAuthState(): ProfileSessionViewModel {
+  if (authState.isLocalUser && authState.localUser) {
+    return normalizeProfileSession(authState.localUser);
+  }
   return normalizeProfileSession({
     email: authState.email,
     name: authState.displayName,

@@ -1,4 +1,5 @@
 import type { LibraryBookDto, ReadingStatsSummaryDto } from '$lib/types';
+import { UNCLASSIFIED_GENRE, type CanonicalGenre } from '$lib/shared/services/genreHeuristic';
 
 export type StatsBook = LibraryBookDto & {
   isFavorite?: boolean;
@@ -8,7 +9,7 @@ export type StatsBook = LibraryBookDto & {
 
 export type PeriodKey = 'week' | 'month' | 'year' | 'all';
 export type Granularity = 'day' | 'week' | 'month';
-export type GenreKey = 'Desarrollo personal' | 'Productividad' | 'Finanzas' | 'Ficcion' | 'Otros';
+export type GenreKey = CanonicalGenre;
 
 export type Props = {
   books: StatsBook[];
@@ -34,44 +35,36 @@ export function hashNumber(value: string): number {
   return hash;
 }
 
-export function inferGenre(book: StatsBook): GenreKey {
-  const text = `${book.title} ${book.author}`.toLowerCase();
-  if (/(habitos|mindset|vida|feliz|atomic|self|mejora)/.test(text)) {
-    return 'Desarrollo personal';
+const resolveGenre = (book: StatsBook): string => {
+  const value = book.genre;
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
   }
-  if (/(deep work|productividad|eficacia|principios|efectiva|work)/.test(text)) {
-    return 'Productividad';
+  return UNCLASSIFIED_GENRE;
+};
+
+export function groupBooksByGenre(books: StatsBook[]): Map<string, number> {
+  const groups = new Map<string, number>();
+  for (const book of books) {
+    const minutes = Math.max(book.minutesRead, 10);
+    const key = resolveGenre(book);
+    groups.set(key, (groups.get(key) ?? 0) + minutes);
   }
-  if (/(rico|finanza|money|wealth|inversion)/.test(text)) {
-    return 'Finanzas';
-  }
-  if (/(novela|cuento|fiction|ficcion)/.test(text)) {
-    return 'Ficcion';
-  }
-  return 'Otros';
+  return groups;
 }
 
 export function calculateGenreDistribution(
   books: StatsBook[],
-): Array<{ genre: GenreKey; minutes: number; percent: number; color: string }> {
-  const buckets: Record<GenreKey, number> = {
-    'Desarrollo personal': 0,
-    Productividad: 0,
-    Finanzas: 0,
-    Ficcion: 0,
-    Otros: 0,
-  };
+): Array<{ genre: string; minutes: number; percent: number; color: string }> {
+  const groups = groupBooksByGenre(books);
+  const total = Array.from(groups.values()).reduce((sum, value) => sum + value, 0);
 
-  for (const book of books) {
-    const minutes = Math.max(book.minutesRead, 10);
-    buckets[inferGenre(book)] += minutes;
-  }
-
-  const total = Object.values(buckets).reduce((sum, value) => sum + value, 0);
-  return Object.entries(buckets).map(([genre, minutes], index) => ({
-    genre: genre as GenreKey,
-    minutes,
-    percent: total > 0 ? Math.round((minutes / total) * 100) : 0,
-    color: GENRE_COLORS[index],
-  }));
+  return Array.from(groups.entries())
+    .sort(([left], [right]) => left.localeCompare(right, 'es'))
+    .map(([genre, minutes], index) => ({
+      genre,
+      minutes,
+      percent: total > 0 ? Math.round((minutes / total) * 100) : 0,
+      color: GENRE_COLORS[index % GENRE_COLORS.length],
+    }));
 }

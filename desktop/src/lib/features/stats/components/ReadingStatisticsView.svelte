@@ -4,10 +4,9 @@
   import {
     periodLabels,
     hashNumber,
-    inferGenre,
+    calculateGenreDistribution,
     type PeriodKey,
     type Granularity,
-    type GenreKey,
     type Props,
   } from './readingStatsState.svelte';
 
@@ -16,28 +15,7 @@
   let activePeriod = $state<PeriodKey>('month');
   let activeGranularity = $state<Granularity>('day');
 
-  const genreDistribution = $derived.by(() => {
-    const buckets: Record<GenreKey, number> = {
-      'Desarrollo personal': 0,
-      Productividad: 0,
-      Finanzas: 0,
-      Ficcion: 0,
-      Otros: 0,
-    };
-
-    for (const book of books) {
-      const minutes = Math.max(book.minutesRead, 10);
-      buckets[inferGenre(book)] += minutes;
-    }
-
-    const total = Object.values(buckets).reduce((sum, value) => sum + value, 0);
-    return Object.entries(buckets).map(([genre, minutes], index) => ({
-      genre: genre as GenreKey,
-      minutes,
-      percent: total > 0 ? Math.round((minutes / total) * 100) : 0,
-      color: ['#43d3c4', '#f4b942', '#4d86ff', '#9d59ff', '#ff6b6b'][index],
-    }));
-  });
+  const genreDistribution = $derived(calculateGenreDistribution(books));
 
   const totalMinutes = $derived(
     stats?.totalMinutesRead ?? books.reduce((sum, book) => sum + book.minutesRead, 0),

@@ -137,6 +137,8 @@ pub struct BookDto {
     pub created_at: String,
     pub updated_at: String,
     pub genre: Option<String>,
+    pub language: Option<String>,
+    pub publication_date: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -226,6 +228,9 @@ pub struct LibraryBookDto {
     pub updated_at: String,
     pub collection_ids: Vec<i64>,
     pub genre: Option<String>,
+    pub language: Option<String>,
+    pub publication_date: Option<String>,
+    pub cover_user_deleted: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

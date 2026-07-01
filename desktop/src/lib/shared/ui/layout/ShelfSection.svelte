@@ -7,6 +7,9 @@
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
+  import { readFile } from '@tauri-apps/plugin-fs';
+  import { pickImage } from '$lib/shared/services/FilePicker';
+  import { upsertBookCover } from '$lib/shared/api/tauriClient';
 
   let showShelfModal = $state(false);
 
@@ -58,6 +61,84 @@
       return `Hace ${Math.floor(diffDays / 365)} años`;
     } catch {
       return '';
+    }
+  }
+
+  const LANGUAGE_NAMES: Record<string, string> = {
+    es: 'Español',
+    en: 'Inglés',
+    fr: 'Francés',
+    de: 'Alemán',
+    it: 'Italiano',
+    pt: 'Portugués',
+    ru: 'Ruso',
+    ja: 'Japonés',
+    zh: 'Chino',
+    ar: 'Árabe',
+    ko: 'Coreano',
+    nl: 'Neerlandés',
+    pl: 'Polaco',
+    sv: 'Sueco',
+    tr: 'Turco',
+    vi: 'Vietnamita',
+  };
+
+  function getLanguageName(code: string): string {
+    return LANGUAGE_NAMES[code.toLowerCase()] ?? code.toUpperCase();
+  }
+
+  function formatPublicationDate(iso: string): string {
+    if (!iso) return '';
+    try {
+      const date = new Date(iso);
+      if (isNaN(date.getTime())) return iso;
+      return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'short',
+      });
+    } catch {
+      return iso;
+    }
+  }
+
+  function getMimeTypeFromExtension(fileName: string): string {
+    const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+    const map: Record<string, string> = {
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      webp: 'image/webp',
+      gif: 'image/gif',
+    };
+    return map[ext] ?? 'image/png';
+  }
+
+  function getCurrentStatus(book: typeof appState.selectedShelfBook): string {
+    if (!book) return 'reading';
+    if (book.completed) return 'completed';
+    if (book.isFavorite) return 'favorites';
+    if (book.toRead) return 'to_read';
+    return 'reading';
+  }
+
+  async function handleCoverImport(book: NonNullable<typeof appState.selectedShelfBook>): Promise<void> {
+    const result = await pickImage();
+    if (!result) return;
+    try {
+      const bytes = await readFile(result.path);
+      const mimeType = getMimeTypeFromExtension(result.name);
+      await upsertBookCover({
+        bookId: book.id,
+        data: Array.from(bytes),
+        mimeType,
+      });
+      // Update local coverPath so the new cover shows immediately
+      const found = appState.books.find((b) => b.id === book.id);
+      if (found) {
+        found.coverPath = result.path;
+      }
+    } catch (e) {
+      console.error('Failed to import cover:', e);
     }
   }
 </script>
@@ -301,45 +382,72 @@
 {#if appState.selectedShelfBook}
   {@const shelfDetail = appState.selectedShelfBook}
   {@const progressPct = Math.round(getSafeProgressPercentage(shelfDetail))}
+  {@const currentStatus = getCurrentStatus(shelfDetail)}
   <Modal bind:open={showShelfModal} title={shelfDetail.title} size="lg" noCloseButton>
     {#snippet children()}
       <div class="flex flex-col gap-6 sm:flex-row">
         <!-- Cover column -->
         <div class="shrink-0 mx-auto sm:mx-0">
           {#if shelfDetail.coverPath}
-            <SafeCover
-              path={shelfDetail.coverPath}
-              alt={shelfDetail.title}
-              className="w-36 h-52 object-cover rounded-lg shadow-md border border-(--color-border)"
-            >
-              {#snippet fallback()}
-                <div
-                  class="w-36 h-52 rounded-lg bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3 flex items-center justify-center border border-(--color-border) shadow-md"
-                >
-                  <span class="text-4xl font-bold text-(--color-primary)/30"
-                    >{shelfDetail.title.trim()[0]?.toUpperCase() || '?'}</span
-                  >
-                </div>
-              {/snippet}
-            </SafeCover>
-          {:else}
-            <div
-              class="w-36 h-52 rounded-lg bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3 flex items-center justify-center border border-(--color-border) shadow-md"
-            >
-              <span class="text-4xl font-bold text-(--color-primary)/30"
-                >{shelfDetail.title.trim()[0]?.toUpperCase() || '?'}</span
+            <div class="relative w-36">
+              <SafeCover
+                path={shelfDetail.coverPath}
+                alt={shelfDetail.title}
+                className="w-36 h-52 object-cover rounded-lg shadow-md border border-(--color-border)"
               >
+                {#snippet fallback()}
+                  <div
+                    class="w-36 h-52 rounded-lg bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3 flex items-center justify-center border border-(--color-border) shadow-md"
+                  >
+                    <span class="text-4xl font-bold text-(--color-primary)/30"
+                      >{shelfDetail.title.trim()[0]?.toUpperCase() || '?'}</span
+                    >
+                  </div>
+                {/snippet}
+              </SafeCover>
+              <!-- Trash icon overlay -->
+              <button
+                type="button"
+                class="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                onclick={() => void appState.handleDeleteCover(shelfDetail)}
+                aria-label="Eliminar portada"
+              >
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          {:else}
+            <div class="relative w-36">
+              <div
+                class="w-36 h-52 rounded-lg bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3 flex items-center justify-center border border-(--color-border) shadow-md"
+              >
+                <span class="text-4xl font-bold text-(--color-primary)/30"
+                  >{shelfDetail.title.trim()[0]?.toUpperCase() || '?'}</span
+                >
+              </div>
+              <!-- Import icon overlay -->
+              <button
+                type="button"
+                class="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                onclick={() => handleCoverImport(shelfDetail)}
+                aria-label="Importar portada"
+              >
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                </svg>
+              </button>
             </div>
           {/if}
         </div>
 
         <!-- Info column -->
-        <div class="flex-1 min-w-0 space-y-3">
+        <div class="flex-1 min-w-0 space-y-2">
           {#if shelfDetail.author}
             <p class="text-sm text-(--color-text-muted)">{shelfDetail.author}</p>
           {/if}
 
-          <!-- Badges row: format, genre, favorite, completed -->
+          <!-- Badges row: format, genre, language -->
           <div class="flex flex-wrap items-center gap-2">
             <!-- Format badge -->
             <span
@@ -359,6 +467,35 @@
                 {shelfDetail.genre}
               </span>
             {/if}
+
+            <!-- Language badge -->
+            {#if shelfDetail.language}
+              <span
+                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border)"
+              >
+                {getLanguageName(shelfDetail.language)}
+              </span>
+            {/if}
+          </div>
+
+          <!-- Status dropdown + Favorite + Completed -->
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Status dropdown -->
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs text-(--color-text-muted)">Estado:</span>
+              <select
+                class="rounded-md border border-(--color-border) bg-(--color-background) px-2 py-1 text-xs text-(--color-primary) focus:outline-none focus:ring-1 focus:ring-(--color-primary)"
+                value={currentStatus}
+                onchange={(e) => {
+                  appState.handleStatusChange(shelfDetail, (e.target as HTMLSelectElement).value);
+                }}
+              >
+                <option value="reading">En lectura</option>
+                <option value="to_read">Por leer</option>
+                <option value="favorites">Favoritos</option>
+                <option value="completed">Completado</option>
+              </select>
+            </div>
 
             <!-- Favorite toggle -->
             {#if shelfDetail.isFavorite !== undefined}
@@ -400,6 +537,21 @@
             {/if}
           </div>
 
+          <!-- Separator between sections -->
+          <hr class="border-(--color-border)/50" />
+
+          <!-- Dates section -->
+          {#if shelfDetail.publicationDate || shelfDetail.language}
+            <div class="space-y-1">
+              {#if shelfDetail.publicationDate}
+                <p class="text-xs text-(--color-text-muted)">
+                  <span class="mr-1">📅</span>Publicado: {formatPublicationDate(shelfDetail.publicationDate)}
+                </p>
+              {/if}
+            </div>
+            <hr class="border-(--color-border)/50" />
+          {/if}
+
           <!-- Collections -->
           {#if shelfDetail.collectionIds && shelfDetail.collectionIds.length > 0}
             {@const collNames = getCollectionNames(shelfDetail.collectionIds)}
@@ -415,6 +567,7 @@
                 {/each}
               </div>
             {/if}
+            <hr class="border-(--color-border)/50" />
           {/if}
 
           <!-- Progress -->
@@ -434,7 +587,7 @@
           {/if}
 
           <!-- Metadata -->
-          <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
+          <dl class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
             {#if shelfDetail.minutesRead > 0}
               <dt class="sr-only">Tiempo de lectura</dt>
               <dd>{formatMinutes(shelfDetail.minutesRead)} leídos</dd>
@@ -448,6 +601,13 @@
       </div>
     {/snippet}
     {#snippet footer()}
+      <Button
+        size="sm"
+        variant="ghost"
+        onclick={() => appState.handleEditBook(shelfDetail)}
+      >
+        ✏️ Editar metadatos
+      </Button>
       <Button size="sm" variant="ghost" onclick={appState.closeShelfDetails}
         >{appState.t('settings.close')}</Button
       >

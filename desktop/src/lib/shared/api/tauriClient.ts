@@ -772,6 +772,14 @@ export const extractEpubCover = async (bookId: string, filePath: string): Promis
   }
 };
 
+export const deleteBookCover = async (bookId: string): Promise<void> => {
+  try {
+    await invoke('deleteBookCover', { bookId });
+  } catch (error) {
+    attachCommandError(error);
+  }
+};
+
 export const listHighlights = async (bookId?: string): Promise<HighlightDto[]> => {
   try {
     const rows = await invoke<RawHighlightDto[]>('listHighlights', { bookId: bookId ?? null });

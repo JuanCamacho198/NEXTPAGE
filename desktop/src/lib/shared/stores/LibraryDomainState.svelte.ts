@@ -8,6 +8,7 @@ import {
   updateBookProgress,
   saveProgress,
   extractEpubCover,
+  deleteBookCover,
 } from '$lib/shared/api/tauriClient';
 import { extractPdfMetadata } from '$lib/shared/services/pdfThumbnail';
 import { recordMetric } from '$lib/shared/logger/MetricsStore';
@@ -92,6 +93,7 @@ class LibraryDomainState {
   shouldGenerateEpubCover(book: ReaderBook): boolean {
     if (book.format.toLowerCase() !== 'epub') return false;
     if (this.hasResolvedCoverPath(book)) return false;
+    if (book.coverUserDeleted) return false;
     return book.filePath.trim().length > 0;
   }
 
@@ -315,6 +317,15 @@ class LibraryDomainState {
 
   handleEditBook(book: ReaderBook): void {
     this.editingBook = book;
+  }
+
+  async handleDeleteCover(book: ReaderBook): Promise<void> {
+    await deleteBookCover(book.id);
+    // Update local state: set coverPath to null
+    const found = this.books.find((b) => b.id === book.id);
+    if (found) {
+      found.coverPath = null;
+    }
   }
 
   async handleSaveEditedBook(updatedBook: LibraryBookDto): Promise<void> {

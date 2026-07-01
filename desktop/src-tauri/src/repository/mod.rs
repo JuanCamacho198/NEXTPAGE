@@ -439,7 +439,10 @@ impl LibraryRepository {
                     COALESCE(CAST(ROUND(rs.total_duration_seconds / 60.0) AS INTEGER), 0) AS minutes_read,
                     b.updated_at,
                     (SELECT GROUP_CONCAT(collection_id, ',') FROM book_collections bc2 WHERE bc2.book_id = b.id) AS collection_ids,
-                    b.genre
+                    b.genre,
+                    b.language,
+                    b.publication_date,
+                    (SELECT MAX(user_deleted) FROM book_covers bc2 WHERE bc2.book_id = b.id) AS cover_user_deleted
              FROM books b
              LEFT JOIN reading_progress rp
                ON rp.book_id = b.id
@@ -476,6 +479,9 @@ impl LibraryRepository {
                 updated_at: row.get(9)?,
                 collection_ids,
                 genre: row.get(11)?,
+                language: row.get(12)?,
+                publication_date: row.get(13)?,
+                cover_user_deleted: row.get(14)?,
             })
         })?;
 
@@ -1041,6 +1047,58 @@ impl LibraryRepository {
         let cover = self.upsert_book_cover_from_bytes(app, book_id, &data, Some(mime_type))?;
         Ok(Some(cover))
     }
+
+    pub fn delete_book_cover(&self, app: &tauri::AppHandle, book_id: &str) -> AppResult<()> {
+        let book_id = book_id.trim();
+        if book_id.is_empty() {
+            return Err(AppError::MissingBookId);
+        }
+
+        // Query the current cover storage_path
+        let cover: Option<(String, String)> = self
+            .connection
+            .query_row(
+                "SELECT id, storage_path
+                 FROM book_covers
+                 WHERE book_id = ?1 AND deleted_at IS NULL
+                 LIMIT 1",
+                params![book_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()?;
+
+        let now = Utc::now().to_rfc3339();
+
+        if let Some((_, storage_path)) = &cover {
+            // Delete the cover file from disk
+            let path = PathBuf::from(storage_path);
+            if path.exists() {
+                if let Err(err) = std::fs::remove_file(&path) {
+                    if err.kind() != std::io::ErrorKind::NotFound {
+                        self.enqueue_cover_cleanup(app, storage_path)?;
+                        self.log_recoverable_cover_error(
+                            app,
+                            &format!(
+                                "deferred_cover_cleanup_queued book_id={} path={} error={}",
+                                book_id, storage_path, err
+                            ),
+                        )?;
+                    }
+                }
+            }
+        }
+
+        // Soft-delete and set user_deleted flag
+        self.connection.execute(
+            "UPDATE book_covers
+             SET deleted_at = ?1, user_deleted = 1
+             WHERE book_id = ?2 AND deleted_at IS NULL",
+            params![now, book_id],
+        )?;
+
+        let _ = self.run_deferred_cover_cleanup(app);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -1068,6 +1126,7 @@ mod tests {
             .execute_batch(include_str!("../../migrations/0009_dictionary_tags.sql"))
             .unwrap();
         connection.execute_batch(include_str!("../../migrations/0010_book_genre.sql")).unwrap();
+        connection.execute_batch(include_str!("../../migrations/0011_book_metadata.sql")).unwrap();
     }
 
     pub(crate) fn new_repository() -> LibraryRepository {

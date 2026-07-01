@@ -444,6 +444,37 @@ export class AppState {
   handleToggleFavorite = async (book: ReaderBook): Promise<void> => {
     await this.library.handleToggleFavorite(book);
   };
+  handleDeleteCover = async (book: ReaderBook): Promise<void> => {
+    await this.library.handleDeleteCover(book);
+  };
+  handleStatusChange = (book: ReaderBook, status: string): void => {
+    // Compute current status
+    const current =
+      book.completed ? 'completed' :
+      book.isFavorite ? 'favorites' :
+      book.toRead ? 'to_read' :
+      'reading';
+
+    if (current === status) return;
+
+    // Clear previous status
+    if (current === 'favorites' && book.isFavorite) {
+      void this.handleToggleFavorite(book);
+    } else if (current === 'completed' && book.completed) {
+      void this.handleMarkCompleted(book);
+    }
+    if (current === 'to_read') book.toRead = false;
+
+    // Set new status
+    if (status === 'favorites' && !book.isFavorite) {
+      void this.handleToggleFavorite(book);
+    } else if (status === 'completed' && !book.completed) {
+      void this.handleMarkCompleted(book);
+    } else if (status === 'to_read') {
+      book.toRead = true;
+    }
+    // 'reading' = default, no flags needed
+  };
   handleMarkCompleted = async (book: ReaderBook): Promise<void> => {
     const snapshot = {
       route: this.navigation.route,

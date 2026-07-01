@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
 
-const MIGRATIONS: [(&str, &str); 10] = [
+const MIGRATIONS: [(&str, &str); 11] = [
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_books", include_str!("../migrations/0002_books.sql")),
     ("0003_highlights", include_str!("../migrations/0003_highlights.sql")),
@@ -22,6 +22,7 @@ const MIGRATIONS: [(&str, &str); 10] = [
     ("0008_queue_and_perf_indexes", include_str!("../migrations/0008_queue_and_perf_indexes.sql")),
     ("0009_dictionary_tags", include_str!("../migrations/0009_dictionary_tags.sql")),
     ("0010_book_genre", include_str!("../migrations/0010_book_genre.sql")),
+    ("0011_book_metadata", include_str!("../migrations/0011_book_metadata.sql")),
 ];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {
@@ -61,7 +62,8 @@ pub fn open_and_migrate(db_path: &Path) -> AppResult<Connection> {
                     || (name == "0005_hidden_books" && has_column(&tx, "books", "hidden_at")?)
                     || (name == "0007_highlight_note_and_page_contract"
                         && has_column(&tx, "highlights", "note")?)
-                    || (name == "0010_book_genre" && has_column(&tx, "books", "genre")?) =>
+                    || (name == "0010_book_genre" && has_column(&tx, "books", "genre")?)
+                    || (name == "0011_book_metadata" && has_column(&tx, "books", "language")?) =>
             {
                 // Existing DBs may already have these columns from pre-tracker launches.
                 // Treat as previously applied once all expected columns are present.

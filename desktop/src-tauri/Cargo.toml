@@ -26,6 +26,7 @@ thiserror = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
 zip = "2"
 epub = "2.1"
+lopdf = "0.42"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

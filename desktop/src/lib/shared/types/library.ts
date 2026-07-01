@@ -62,6 +62,9 @@ export type LibraryBookDto = {
   updatedAt: string;
   collectionIds?: number[];
   genre?: string | null;
+  publicationDate?: string;
+  language?: string;
+  coverUserDeleted?: boolean;
 };
 
 export type CollectionDto = {

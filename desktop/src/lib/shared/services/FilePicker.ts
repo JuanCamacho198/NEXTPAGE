@@ -38,6 +38,32 @@ export async function pickFile(): Promise<FilePickerResult | null> {
   };
 }
 
+export async function pickImage(): Promise<FilePickerResult | null> {
+  const selected = await open({
+    multiple: false,
+    filters: [
+      {
+        name: 'Images',
+        extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'],
+      },
+    ],
+    title: 'Select a cover image',
+  });
+
+  if (!selected) {
+    return null;
+  }
+
+  const filePath = selected as string;
+  const parts = filePath.split(/[\\/]/);
+  const name = parts[parts.length - 1];
+
+  return {
+    path: filePath,
+    name,
+  };
+}
+
 export async function pickFolder(title = 'Select a folder'): Promise<FolderPickerResult | null> {
   const selected = await open({
     directory: true,

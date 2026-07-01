@@ -66,6 +66,8 @@ fn delete_book_metadata_soft_deletes_cover_metadata_and_returns_storage_path() {
             created_at: now.clone(),
             updated_at: now,
             genre: None,
+            language: None,
+            publication_date: None,
         })
         .unwrap();
 
@@ -100,6 +102,8 @@ fn restart_roundtrip_preserves_settings_and_stats() {
                 created_at: now.clone(),
                 updated_at: now.clone(),
                 genre: None,
+                language: None,
+                publication_date: None,
             })
             .unwrap();
 
@@ -247,6 +251,8 @@ fn reading_stats_activity_command_round_trips_through_repository() {
             created_at: Utc::now().to_rfc3339(),
             updated_at: Utc::now().to_rfc3339(),
             genre: None,
+            language: None,
+            publication_date: None,
         })
         .unwrap();
     repository
@@ -262,6 +268,8 @@ fn reading_stats_activity_command_round_trips_through_repository() {
             created_at: Utc::now().to_rfc3339(),
             updated_at: Utc::now().to_rfc3339(),
             genre: None,
+            language: None,
+            publication_date: None,
         })
         .unwrap();
     repository
@@ -277,15 +285,14 @@ fn reading_stats_activity_command_round_trips_through_repository() {
             created_at: Utc::now().to_rfc3339(),
             updated_at: Utc::now().to_rfc3339(),
             genre: None,
+            language: None,
+            publication_date: None,
         })
         .unwrap();
 
     // Insert 3 reading sessions spanning 3 days (today, yesterday, day before)
     for i in 0..3_i64 {
-        let session_time = (today - Duration::days(i))
-            .and_hms_opt(10, 0, 0)
-            .unwrap()
-            .and_utc();
+        let session_time = (today - Duration::days(i)).and_hms_opt(10, 0, 0).unwrap().and_utc();
         repository
             .save_reading_session(ReadingSessionInput {
                 book_id: format!("book-{}", i + 1),

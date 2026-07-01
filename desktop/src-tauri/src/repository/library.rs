@@ -4,6 +4,7 @@ use crate::models::{
     BookDeleteInput, BookDto, BookImportInput, ScanFolderResultDto, ScannedBookFileDto,
 };
 use chrono::Utc;
+use epub::doc::EpubDoc;
 use rusqlite::params;
 use std::fs;
 use std::path::PathBuf;
@@ -155,6 +156,55 @@ pub fn import_book(
         }
     });
 
+    // Extract language and publication_date from EPUB or PDF metadata
+    let (language, publication_date): (Option<String>, Option<String>) = match format.as_str() {
+        "epub" => match EpubDoc::new(&dest_path) {
+            Ok(doc) => {
+                let lang = doc.mdata("language").and_then(|v| {
+                    let trimmed = v.value.trim().to_string();
+                    if trimmed.is_empty() {
+                        None
+                    } else {
+                        Some(trimmed)
+                    }
+                });
+                let date = doc.mdata("date").and_then(|v| {
+                    let trimmed = v.value.trim().to_string();
+                    if trimmed.is_empty() {
+                        None
+                    } else {
+                        Some(trimmed)
+                    }
+                });
+                (lang, date)
+            }
+            Err(_) => (None, None),
+        },
+        "pdf" => {
+            let date = lopdf::Document::load(&dest_path).ok().and_then(|doc| {
+                doc.trailer.get(b"Info").ok().and_then(|info| {
+                    if let Ok(info_dict) = info.as_dict() {
+                        info_dict.get(b"/CreationDate").ok().and_then(|v| match v {
+                            lopdf::Object::String(s, _) => {
+                                let s = String::from_utf8_lossy(s).to_string();
+                                if s.is_empty() {
+                                    None
+                                } else {
+                                    Some(s)
+                                }
+                            }
+                            _ => None,
+                        })
+                    } else {
+                        None
+                    }
+                })
+            });
+            (None, date)
+        }
+        _ => (None, None),
+    };
+
     let book = BookDto {
         id: Uuid::new_v4().to_string(),
         title,
@@ -167,11 +217,13 @@ pub fn import_book(
         created_at: now.clone(),
         updated_at: now,
         genre: genre.clone(),
+        language: language.clone(),
+        publication_date: publication_date.clone(),
     };
 
     repo.connection.execute(
-            "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, genre)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1, ?11)",
+            "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, genre, language, publication_date)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1, ?11, ?12, ?13)",
             params![
                 book.id,
                 book.title,
@@ -183,7 +235,9 @@ pub fn import_book(
                 book.total_pages,
                 book.created_at,
                 book.updated_at,
-                genre
+                genre,
+                language,
+                publication_date,
             ],
         )?;
 
@@ -258,7 +312,7 @@ pub fn delete_book(
 
 pub fn list_books(repo: &LibraryRepository) -> AppResult<Vec<BookDto>> {
     let mut statement = repo.connection.prepare(
-        "SELECT id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, genre\n         FROM books\n         WHERE deleted_at IS NULL\n           AND hidden_at IS NULL\n         ORDER BY updated_at DESC",
+        "SELECT id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, genre, language, publication_date\n         FROM books\n         WHERE deleted_at IS NULL\n           AND hidden_at IS NULL\n         ORDER BY updated_at DESC",
     )?;
 
     let rows = statement.query_map([], |row| {
@@ -274,6 +328,8 @@ pub fn list_books(repo: &LibraryRepository) -> AppResult<Vec<BookDto>> {
             created_at: row.get(8)?,
             updated_at: row.get(9)?,
             genre: row.get(10)?,
+            language: row.get(11)?,
+            publication_date: row.get(12)?,
         })
     })?;
 
@@ -283,7 +339,7 @@ pub fn list_books(repo: &LibraryRepository) -> AppResult<Vec<BookDto>> {
 
 pub fn upsert_book(repo: &LibraryRepository, book: BookDto) -> AppResult<()> {
     repo.connection.execute(
-        "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, genre)\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1, ?11)\n         ON CONFLICT(id) DO UPDATE SET\n           title = excluded.title,\n           author = excluded.author,\n           file_path = excluded.file_path,\n           format = excluded.format,\n           sync_status = excluded.sync_status,\n           current_page = excluded.current_page,\n           total_pages = excluded.total_pages,\n           updated_at = excluded.updated_at,\n           genre = excluded.genre,\n           version = version + 1",
+        "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, genre, language, publication_date)\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1, ?11, ?12, ?13)\n         ON CONFLICT(id) DO UPDATE SET\n           title = excluded.title,\n           author = excluded.author,\n           file_path = excluded.file_path,\n           format = excluded.format,\n           sync_status = excluded.sync_status,\n           current_page = excluded.current_page,\n           total_pages = excluded.total_pages,\n           updated_at = excluded.updated_at,\n           genre = excluded.genre,\n           language = excluded.language,\n           publication_date = excluded.publication_date,\n           version = version + 1",
         params![
             book.id,
             book.title,
@@ -295,7 +351,9 @@ pub fn upsert_book(repo: &LibraryRepository, book: BookDto) -> AppResult<()> {
             book.total_pages,
             book.created_at,
             book.updated_at,
-            book.genre
+            book.genre,
+            book.language,
+            book.publication_date,
         ],
     )?;
     Ok(())

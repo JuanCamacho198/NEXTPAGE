@@ -1,0 +1,3 @@
+ALTER TABLE books ADD COLUMN language TEXT;
+ALTER TABLE books ADD COLUMN publication_date TEXT;
+ALTER TABLE book_covers ADD COLUMN user_deleted INTEGER NOT NULL DEFAULT 0;

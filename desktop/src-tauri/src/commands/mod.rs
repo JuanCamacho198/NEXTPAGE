@@ -393,6 +393,18 @@ pub fn upsertBookCover(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
+pub fn deleteBookCover(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    book_id: String,
+) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.delete_book_cover(&app, &book_id).map_err(map_command_error)?;
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
 pub fn extractEpubCover(
     app: tauri::AppHandle,
     state: State<'_, AppState>,

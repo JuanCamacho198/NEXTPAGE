@@ -260,8 +260,8 @@
                   >
                     <div
                       class="h-full rounded-full"
-                      class:bg-[#22c55e]={cmd.successRate >= 95}
-                      class:bg-[#eab308]={cmd.successRate >= 80 && cmd.successRate < 95}
+                      class:bg-(--color-success)={cmd.successRate >= 95}
+                      class:bg-(--color-warning)={cmd.successRate >= 80 && cmd.successRate < 95}
                       class:bg-[#ef4444]={cmd.successRate < 80}
                       style={`width: ${(cmd.count / Math.max(maxCount, 1)) * 100}%`}
                     ></div>

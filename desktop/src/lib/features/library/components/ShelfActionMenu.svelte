@@ -223,7 +223,7 @@
           role="menuitem"
           tabindex="0"
           data-menu-item="true"
-          class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
+          class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
           onclick={() => {
             handleAction(onToggleFavorite);
           }}
@@ -237,7 +237,7 @@
             role="menuitem"
             tabindex="0"
             data-menu-item="true"
-            class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
+            class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
             onclick={() => {
               handleAction(onRead);
             }}
@@ -251,7 +251,7 @@
           role="menuitem"
           tabindex="0"
           data-menu-item="true"
-          class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
+          class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
           onclick={() => {
             handleAction(onEdit);
           }}
@@ -264,7 +264,7 @@
           role="menuitem"
           tabindex="0"
           data-menu-item="true"
-          class="w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-(--color-border)"
+          class="w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-(--color-surface-hover)"
           onclick={() => {
             handleAction(onRemove);
           }}

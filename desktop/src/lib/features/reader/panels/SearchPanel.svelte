@@ -90,7 +90,7 @@
             <li>
               <button
                 type="button"
-                class="w-full rounded-lg border border-(--color-border) bg-(--color-background) px-3 py-2 text-left hover:bg-(--color-border)"
+                class="w-full rounded-lg border border-(--color-border) bg-(--color-background) px-3 py-2 text-left hover:bg-(--color-surface-hover)"
                 onclick={() => jumpTo(item, index)}
               >
                 <p class="text-sm text-(--color-primary)">{item.snippet}</p>
@@ -114,7 +114,7 @@
           <div class="flex gap-1">
             <button
               type="button"
-              class="rounded border border-(--color-border) px-2 py-1 text-(--color-primary) hover:bg-(--color-border) disabled:opacity-50"
+              class="rounded border border-(--color-border) px-2 py-1 text-(--color-primary) hover:bg-(--color-surface-hover) disabled:opacity-50"
               onclick={() => runSearch(currentPage() - 1)}
               disabled={currentPage() <= 1 || isSearching}
             >
@@ -122,7 +122,7 @@
             </button>
             <button
               type="button"
-              class="rounded border border-(--color-border) px-2 py-1 text-(--color-primary) hover:bg-(--color-border) disabled:opacity-50"
+              class="rounded border border-(--color-border) px-2 py-1 text-(--color-primary) hover:bg-(--color-surface-hover) disabled:opacity-50"
               onclick={() => runSearch(currentPage() + 1)}
               disabled={!hasMore() || isSearching}
             >

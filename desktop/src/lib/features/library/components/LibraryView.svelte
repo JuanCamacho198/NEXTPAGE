@@ -107,7 +107,7 @@
       <div class="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          class="shrink-0 rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-xs font-medium text-(--color-primary) hover:bg-(--color-border) disabled:cursor-not-allowed disabled:opacity-60"
+          class="shrink-0 rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-xs font-medium text-(--color-primary) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-60"
           onclick={onImportFolder}
           disabled={isImportingFolder}
         >
@@ -132,14 +132,14 @@
           <input
             type="text"
             placeholder={t('library.searchPlaceholder')}
-            class="h-8 w-[140px] sm:w-40 rounded-lg border border-(--color-border) bg-(--color-background) pl-10 pr-8 text-sm text-(--color-text) placeholder-(--color-text-muted) focus:border-(--color-primary) focus:outline-none"
+            class="h-8 w-[140px] sm:w-40 rounded-lg border border-(--color-border) bg-(--color-background) pl-10 pr-8 text-sm text-(--color-primary) placeholder-(--color-text-muted) focus:border-(--color-primary) focus:outline-none"
             value={searchQuery}
             oninput={handleSearchInput}
           />
           {#if searchQuery}
             <button
               type="button"
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-(--color-text-muted) hover:text-(--color-text)"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-(--color-text-muted) hover:text-(--color-primary)"
               aria-label="Clear search"
               onclick={clearSearch}
             >
@@ -220,20 +220,20 @@
                   {#snippet trigger()}
                     <button
                       type="button"
-                      class="rounded-md border border-(--color-border) px-2 py-1 text-xs text-(--color-text-muted) hover:bg-(--color-border)"
+                      class="rounded-md border border-(--color-border) px-2 py-1 text-xs text-(--color-text-muted) hover:bg-(--color-surface-hover)"
                       >...</button
                     >
                   {/snippet}
                   <button
                     type="button"
-                    class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
+                    class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
                     onclick={() => onEdit?.(book)}
                   >
                     {t('library.editMetadata.title')}
                   </button>
                   <button
                     type="button"
-                    class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
+                    class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
                     onclick={() => onHide?.(book)}
                   >
                     {t('library.hide')}
@@ -352,14 +352,14 @@
                   {/snippet}
                   <button
                     type="button"
-                    class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
+                    class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
                     onclick={() => onEdit?.(book)}
                   >
                     {t('library.editMetadata.title')}
                   </button>
                   <button
                     type="button"
-                    class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
+                    class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
                     onclick={() => onHide?.(book)}
                   >
                     {t('library.hide')}

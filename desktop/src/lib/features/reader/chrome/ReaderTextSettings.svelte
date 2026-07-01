@@ -209,7 +209,7 @@
           <!-- Alignment button -->
           <button
             type="button"
-            class="cursor-pointer rounded p-2 hover:bg-(--color-border)"
+            class="cursor-pointer rounded p-2 hover:bg-(--color-surface-hover)"
             onclick={cycleAlignment}
             aria-label={t('reader.alignment')}
             title={alignLabel(readerSettings.textAlign)}
@@ -258,7 +258,7 @@
           <!-- List view / direction toggle -->
           <button
             type="button"
-            class="cursor-pointer rounded p-2 hover:bg-(--color-border)"
+            class="cursor-pointer rounded p-2 hover:bg-(--color-surface-hover)"
             onclick={() =>
               onSettingsChange({
                 ...readerSettings,
@@ -352,7 +352,7 @@
           <div class="flex justify-between">
             <button
               type="button"
-              class="flex h-12 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-border)"
+              class="flex h-12 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-surface-hover)"
               onclick={() => changeFontSize(-10)}
               aria-label={t('reader.font_decrease')}
             >
@@ -375,7 +375,7 @@
             </button>
             <button
               type="button"
-              class="flex h-12 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-border)"
+              class="flex h-12 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-surface-hover)"
               onclick={cycleLineHeight}
               aria-label={t('reader.line_spacing')}
               title={`Line height: ${readerSettings.lineHeight}`}
@@ -405,7 +405,7 @@
           <div class="flex justify-between">
             <button
               type="button"
-              class="flex h-10 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-border)"
+              class="flex h-10 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-surface-hover)"
               onclick={() => changeLetterSpacing(-1)}
               aria-label={t('reader.spacing_decrease')}
             >
@@ -426,7 +426,7 @@
             </button>
             <button
               type="button"
-              class="flex h-10 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-border)"
+              class="flex h-10 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-surface-hover)"
               onclick={() => changeLetterSpacing(1)}
               aria-label={t('reader.spacing_increase')}
             >
@@ -697,7 +697,7 @@
         <!-- Saved Settings (reset to defaults) -->
         <button
           type="button"
-          class="flex w-full items-center justify-between rounded-xl bg-(--color-border) px-3 py-2 cursor-pointer hover:bg-(--color-border)"
+          class="flex w-full items-center justify-between rounded-xl bg-(--color-border) px-3 py-2 cursor-pointer hover:bg-(--color-surface-hover)"
           onclick={resetToDefaults}
         >
           <span class="text-sm text-(--color-accent-blue)">{t('reader.saved_settings')}</span>

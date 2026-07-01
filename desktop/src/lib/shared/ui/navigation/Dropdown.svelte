@@ -61,7 +61,7 @@
 <div bind:this={containerEl} class="relative inline-block">
   <button
     type="button"
-    class="inline-flex items-center justify-between rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm text-(--color-primary) hover:bg-(--color-border) disabled:cursor-not-allowed disabled:opacity-50 {className}"
+    class="inline-flex items-center justify-between rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm text-(--color-primary) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-50 {className}"
     onclick={toggle}
     {disabled}
   >
@@ -84,7 +84,7 @@
           <li>
             <button
               type="button"
-              class="w-full px-3 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
+              class="w-full px-3 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
               onclick={() => select(opt)}
             >
               {#if option}

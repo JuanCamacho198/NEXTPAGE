@@ -457,7 +457,7 @@
         aria-controls="tabpanel-account"
         id="tab-account"
         tabindex={activeTab === 'account' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
         class:text-(--color-primary)={activeTab === 'account'}
         class:border-(--color-primary)={activeTab === 'account'}
         onclick={() => handleTabChange('account')}
@@ -471,7 +471,7 @@
         aria-controls="tabpanel-profile"
         id="tab-profile"
         tabindex={activeTab === 'profile' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
         class:text-(--color-primary)={activeTab === 'profile'}
         class:border-(--color-primary)={activeTab === 'profile'}
         onclick={() => handleTabChange('profile')}
@@ -485,7 +485,7 @@
         aria-controls="tabpanel-reader"
         id="tab-reader"
         tabindex={activeTab === 'reader' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
         class:text-(--color-primary)={activeTab === 'reader'}
         class:border-(--color-primary)={activeTab === 'reader'}
         onclick={() => handleTabChange('reader')}
@@ -499,7 +499,7 @@
         aria-controls="tabpanel-appTheme"
         id="tab-appTheme"
         tabindex={activeTab === 'appTheme' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
         class:text-(--color-primary)={activeTab === 'appTheme'}
         class:border-(--color-primary)={activeTab === 'appTheme'}
         onclick={() => handleTabChange('appTheme')}
@@ -513,7 +513,7 @@
         aria-controls="tabpanel-about"
         id="tab-about"
         tabindex={activeTab === 'about' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-[13px] text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
+        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
         class:text-(--color-primary)={activeTab === 'about'}
         class:border-(--color-primary)={activeTab === 'about'}
         onclick={() => handleTabChange('about')}
@@ -932,28 +932,28 @@
                   <li
                     class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0"
                   >
-                    <span class="text-[13px] text-(--color-text-muted,var(--color-secondary))"
+                    <span class="text-(--text-2sm) text-(--color-text-muted,var(--color-secondary))"
                       >Core Team</span
                     >
-                    <span class="text-[13px] text-(--color-primary) font-medium"
+                    <span class="text-(--text-2sm) text-(--color-primary) font-medium"
                       >NextPage Contributors</span
                     >
                   </li>
                   <li
                     class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0"
                   >
-                    <span class="text-[13px] text-(--color-text-muted,var(--color-secondary))"
+                    <span class="text-(--text-2sm) text-(--color-text-muted,var(--color-secondary))"
                       >EPUB Parsing</span
                     >
-                    <span class="text-[13px] text-(--color-primary) font-medium">epub.js</span>
+                    <span class="text-(--text-2sm) text-(--color-primary) font-medium">epub.js</span>
                   </li>
                   <li
                     class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0"
                   >
-                    <span class="text-[13px] text-(--color-text-muted,var(--color-secondary))"
+                    <span class="text-(--text-2sm) text-(--color-text-muted,var(--color-secondary))"
                       >Framework</span
                     >
-                    <span class="text-[13px] text-(--color-primary) font-medium"
+                    <span class="text-(--text-2sm) text-(--color-primary) font-medium"
                       >Svelte / Tauri</span
                     >
                   </li>

@@ -80,7 +80,7 @@
         </h2>
         <button
           type="button"
-          class="text-(--color-text-muted) hover:text-(--color-text)"
+          class="text-(--color-text-muted) hover:text-(--color-primary)"
           onclick={onClose}
           aria-label="Close"
         >
@@ -102,7 +102,7 @@
             <input
               type="text"
               placeholder="Collection name"
-              class="flex-1 rounded-lg border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-text)"
+              class="flex-1 rounded-lg border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-primary)"
               bind:value={newName}
             />
             <div class="flex gap-1">

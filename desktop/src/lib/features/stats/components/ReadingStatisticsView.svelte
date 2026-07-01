@@ -212,7 +212,7 @@
           <p class="mt-3 text-3xl font-semibold tracking-tight text-(--color-primary)">
             {metric.value}
           </p>
-          <p class="mt-2 text-xs text-[#61d6a6]">{metric.delta}</p>
+          <p class="mt-2 text-xs text-(--color-success)">{metric.delta}</p>
         </article>
       {/each}
     </div>

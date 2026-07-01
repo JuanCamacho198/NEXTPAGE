@@ -33,8 +33,8 @@
       label: 'Completados',
       value: stats?.booksCompleted?.toString() ?? '0',
       icon: 'check',
-      color: '#4ade80',
-      bg: 'rgba(74, 222, 128, 0.1)',
+      color: 'var(--color-success)',
+      bg: 'color-mix(in srgb, var(--color-success) 10%, transparent)',
     },
     {
       label: 'Minutos leídos',
@@ -47,8 +47,8 @@
       label: 'Sesiones',
       value: stats?.totalSessions?.toString() ?? '0',
       icon: 'trend-up',
-      color: '#fbbf24',
-      bg: 'rgba(251, 191, 36, 0.1)',
+      color: 'var(--color-warning)',
+      bg: 'color-mix(in srgb, var(--color-warning) 10%, transparent)',
     },
     {
       label: 'Progreso promedio',

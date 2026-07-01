@@ -32,11 +32,11 @@
     primary:
       'bg-(--color-primary) text-(--color-background) hover:opacity-90 focus:ring-(--color-primary)',
     secondary:
-      'bg-(--color-surface) text-(--color-primary) border border-(--color-border) hover:bg-(--color-border) focus:ring-(--color-primary)',
+      'bg-(--color-surface) text-(--color-primary) border border-(--color-border) hover:bg-(--color-surface-hover) focus:ring-(--color-primary)',
     danger:
       'bg-(--color-error) text-(--color-background) hover:opacity-90 focus:ring-(--color-error)',
     ghost:
-      'bg-transparent text-(--color-primary) hover:bg-(--color-border) focus:ring-(--color-primary)',
+      'bg-transparent text-(--color-primary) hover:bg-(--color-surface-hover) focus:ring-(--color-primary)',
   };
 
   const sizes = {

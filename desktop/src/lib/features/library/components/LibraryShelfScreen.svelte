@@ -491,17 +491,17 @@
                   </button>
                 {/snippet}
                 <button
-                  class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
+                  class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
                   onclick={() => onOpenBook?.(book)}>Abrir libro</button
                 >
                 <button
-                  class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
+                  class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
                   onclick={() => onToggleFavorite?.(book)}
                 >
                   {book.isFavorite ? 'Quitar de favoritos' : 'Marcar como favorito'}
                 </button>
                 <button
-                  class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-border)"
+                  class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
                   onclick={() => onMarkCompleted?.(book)}>Marcar como completado</button
                 >
                 <button
@@ -509,7 +509,7 @@
                   onclick={() => onViewDetails?.(book)}>Ver detalles</button
                 >
                 <button
-                  class="w-full px-4 py-2 text-left text-sm text-(--color-danger) hover:bg-(--color-border)"
+                  class="w-full px-4 py-2 text-left text-sm text-(--color-danger) hover:bg-(--color-surface-hover)"
                   onclick={() => onRemoveBook?.(book)}>Eliminar de la biblioteca</button
                 >
               </DropMenu>

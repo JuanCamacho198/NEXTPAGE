@@ -43,7 +43,7 @@
 <nav class="flex items-center gap-1">
   <button
     type="button"
-    class="rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm text-(--color-primary) hover:bg-(--color-border) disabled:cursor-not-allowed disabled:opacity-50"
+    class="rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm text-(--color-primary) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-50"
     onclick={() => goTo(current - 1)}
     disabled={current <= 1}
     aria-label="Previous page"
@@ -62,7 +62,7 @@
         class="rounded-md px-3 py-1.5 text-sm transition-colors
           {page === current
           ? 'bg-(--color-primary) text-(--color-background)'
-          : 'text-(--color-primary) hover:bg-(--color-border)'}"
+          : 'text-(--color-primary) hover:bg-(--color-surface-hover)'}"
         onclick={() => goTo(page)}
       >
         {page}
@@ -72,7 +72,7 @@
 
   <button
     type="button"
-    class="rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm text-(--color-primary) hover:bg-(--color-border) disabled:cursor-not-allowed disabled:opacity-50"
+    class="rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm text-(--color-primary) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-50"
     onclick={() => goTo(current + 1)}
     disabled={current >= total}
     aria-label="Next page"

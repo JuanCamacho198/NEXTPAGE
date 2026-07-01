@@ -116,7 +116,7 @@
   {#if title}
     <span
       class="absolute bottom-full left-1/2 -translate-x-1/2 translate-y-1
-             bg-(--color-surface) text-(--color-text) p-1 rounded text-xs
+             bg-(--color-surface) text-(--color-primary) p-1 rounded text-xs
              whitespace-nowrap opacity-0 invisible transition-all duration-150 ease
              pointer-events-none z-50 shadow-[0_2px_8px_rgba(0,0,0,0.2)]
              group-hover:opacity-100 group-hover:visible group-hover:translate-y-0

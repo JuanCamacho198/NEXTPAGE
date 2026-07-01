@@ -56,6 +56,7 @@
   --text-4xl: 2.5rem;
   --text-2xs: 0.6875rem;
   --text-micro: 0.625rem;
+  --text-2sm: 0.8125rem;
 
   /* Font weights */
   --font-weight-regular: 400;
@@ -100,10 +101,9 @@
   --color-surface-strong: #1e293b;
   --color-bg-panel: rgba(11, 21, 35, 0.88);
   --color-panel-accent: rgba(73, 212, 255, 0.08);
+  /* --color-primary is the foreground/text color (white in dark, near-black in light) */
   --color-primary: #f8fbff;
   --color-secondary: #dbe7f6;
-  --color-tertiary: #8fa3bf;
-  --color-text: #f8fbff;
   --color-text-muted: #8fa3bf;
   --color-text-auxiliary: #94a3b8;
   --color-text-inverse: #f8fafc;
@@ -111,12 +111,18 @@
   /* Semantic colors */
   --color-error: #ff7b83;
   --color-danger: #ff9fa5;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
   --color-accent-start: #4e8cff;
   --color-accent-end: #49d4ff;
   --color-accent-blue: #49d4ff;
   --color-accent-sky: #38bdf8;
   --color-accent-soft: rgba(73, 212, 255, 0.1);
+  --color-accent: var(--color-accent-start);
   --color-bg-deep: #0b1120;
+
+  /* Surface hierarchy */
+  --color-surface-hover: rgba(148, 173, 206, 0.18);
 
   /* Borders */
   --color-border: rgba(148, 173, 206, 0.18);
@@ -163,8 +169,6 @@
   --color-panel-accent: rgba(0, 110, 200, 0.06);
   --color-primary: #111827;
   --color-secondary: #1e3a5f;
-  --color-tertiary: #4a6888;
-  --color-text: #111827;
   --color-text-muted: #4a6888;
   --color-text-auxiliary: #6b7d9a;
   --color-text-inverse: #0b1120;
@@ -172,12 +176,18 @@
   /* Semantic colors */
   --color-error: #c0392b;
   --color-danger: #dc2626;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
   --color-accent-start: #006ec8;
   --color-accent-end: #38bdf8;
   --color-accent-blue: #006ec8;
   --color-accent-sky: #0284c7;
   --color-accent-soft: rgba(0, 110, 200, 0.12);
+  --color-accent: var(--color-accent-start);
   --color-bg-deep: #dbe4ed;
+
+  /* Surface hierarchy */
+  --color-surface-hover: rgba(30, 58, 95, 0.15);
 
   /* Borders */
   --color-border: rgba(30, 58, 95, 0.15);
@@ -215,6 +225,20 @@
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+body {
+  transition:
+    color var(--duration-normal) ease,
+    background-color var(--duration-slow) ease;
+}
+
+a,
+button,
+input,
+textarea,
+select,
+[role='button'] {
   transition:
     background-color var(--duration-slow) ease,
     border-color var(--duration-slow) ease,
@@ -295,13 +319,13 @@ body {
 }
 
 ::selection {
-  background: rgba(73, 212, 255, 0.28);
-  color: var(--color-text);
+  background: var(--color-accent-soft);
+  color: var(--color-primary);
 }
 
 :focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(148, 236, 255, 0.22);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -328,12 +352,16 @@ body {
 /* Dark theme */
 :root,
 [data-theme='dark'] {
-  scrollbar-color: rgba(148, 173, 206, 0.25) transparent;
+  --scrollbar-thumb: rgba(148, 173, 206, 0.25);
+  --scrollbar-thumb-hover: rgba(148, 173, 206, 0.45);
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 /* Light theme */
 [data-theme='light'] {
-  scrollbar-color: rgba(30, 58, 95, 0.2) transparent;
+  --scrollbar-thumb: rgba(30, 58, 95, 0.2);
+  --scrollbar-thumb-hover: rgba(30, 58, 95, 0.35);
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 /* WebKit (Chrome, Edge, Safari) */
@@ -348,21 +376,21 @@ body {
 
 :root ::-webkit-scrollbar-thumb,
 [data-theme='dark'] ::-webkit-scrollbar-thumb {
-  background: rgba(148, 173, 206, 0.25);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
 [data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 173, 206, 0.45);
+  background: var(--scrollbar-thumb-hover);
 }
 
 [data-theme='light'] ::-webkit-scrollbar-thumb {
-  background: rgba(30, 58, 95, 0.2);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
 [data-theme='light'] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(30, 58, 95, 0.35);
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* ============================================

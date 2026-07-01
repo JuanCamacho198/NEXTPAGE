@@ -353,7 +353,7 @@
             <button
               type="button"
               class="flex w-full items-center gap-3 rounded-[22px] border border-(--color-border) bg-(--color-surface-subtle) p-3 cursor-pointer hover:border-(--color-primary) text-left"
-              onclick={() => appState.startReading(book)}
+              onclick={() => appState.openShelfDetails(book)}
             >
               <div
                 class="h-14 w-10 shrink-0 overflow-hidden rounded-xl bg-(--color-surface-subtle)"

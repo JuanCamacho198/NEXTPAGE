@@ -34,6 +34,16 @@
     return `${m} min`;
   }
 
+  function getCollectionNames(ids: number[] | undefined): string[] {
+    if (!ids || ids.length === 0) return [];
+    const result: string[] = [];
+    for (const id of ids) {
+      const coll = appState.collections.find((c) => c.id === id);
+      if (coll) result.push(coll.name);
+    }
+    return result;
+  }
+
   function formatRelativeDate(iso: string): string {
     try {
       const date = new Date(iso);
@@ -329,15 +339,83 @@
             <p class="text-sm text-(--color-text-muted)">{shelfDetail.author}</p>
           {/if}
 
-          <!-- Format badge -->
-          <span
-            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border uppercase {shelfDetail.format ===
-            'epub'
-              ? 'bg-(--color-primary)/8 text-(--color-primary) border-(--color-primary)/25'
-              : 'bg-amber-500/8 text-amber-600 border-amber-500/25'}"
-          >
-            {shelfDetail.format}
-          </span>
+          <!-- Badges row: format, genre, favorite, completed -->
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Format badge -->
+            <span
+              class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border uppercase {shelfDetail.format ===
+              'epub'
+                ? 'bg-(--color-primary)/8 text-(--color-primary) border-(--color-primary)/25'
+                : 'bg-amber-500/8 text-amber-600 border-amber-500/25'}"
+            >
+              {shelfDetail.format}
+            </span>
+
+            <!-- Genre badge -->
+            {#if shelfDetail.genre}
+              <span
+                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border)"
+              >
+                {shelfDetail.genre}
+              </span>
+            {/if}
+
+            <!-- Favorite toggle -->
+            {#if shelfDetail.isFavorite !== undefined}
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors {shelfDetail.isFavorite
+                  ? 'bg-amber-500/12 text-amber-500 border-amber-500/25'
+                  : 'bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border) hover:border-amber-500/25'}"
+                onclick={() => void appState.handleToggleFavorite(shelfDetail)}
+                aria-label={shelfDetail.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill={shelfDetail.isFavorite ? 'currentColor' : 'none'}
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  stroke-width="2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                  />
+                </svg>
+                {shelfDetail.isFavorite ? 'Favorito' : 'Favorito'}
+              </button>
+            {/if}
+
+            <!-- Completed badge -->
+            {#if shelfDetail.completed}
+              <span
+                class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border bg-green-500/10 text-green-500 border-green-500/25"
+              >
+                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Completado
+              </span>
+            {/if}
+          </div>
+
+          <!-- Collections -->
+          {#if shelfDetail.collectionIds && shelfDetail.collectionIds.length > 0}
+            {@const collNames = getCollectionNames(shelfDetail.collectionIds)}
+            {#if collNames.length > 0}
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-xs text-(--color-text-muted)">Colecciones:</span>
+                {#each collNames as name}
+                  <span
+                    class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-(--color-primary)/8 text-(--color-primary) border border-(--color-primary)/15"
+                  >
+                    {name}
+                  </span>
+                {/each}
+              </div>
+            {/if}
+          {/if}
 
           <!-- Progress -->
           {#if shelfDetail.totalPages > 0}

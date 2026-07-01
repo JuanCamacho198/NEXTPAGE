@@ -12,7 +12,7 @@
     variant="continue-reading"
     selected={appState.previewBookId === book.id}
     onSelect={() => {
-      appState.openDetails(book);
+      appState.openShelfDetails(book);
     }}
     onRead={() => {
       void appState.startReading(book);
@@ -54,7 +54,7 @@
           compact={appState.continueReadingBooks.length > 1}
           selected={appState.previewBookId === book.id}
           onSelect={() => {
-            appState.openDetails(book);
+            appState.openShelfDetails(book);
           }}
           onRead={() => {
             void appState.startReading(book);

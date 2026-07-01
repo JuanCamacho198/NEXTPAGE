@@ -164,9 +164,9 @@ export class AppState {
     return this.library.shelfSortToken;
   }
   selectedShelfBook = $derived.by(() => {
+    if (!this.navigation.shelfDetailsBookId) return null;
     return (
-      this.library.myShelfBooks.find((book) => book.id === this.navigation.shelfDetailsBookId) ??
-      null
+      this.books.find((book) => book.id === this.navigation.shelfDetailsBookId) ?? null
     );
   });
 

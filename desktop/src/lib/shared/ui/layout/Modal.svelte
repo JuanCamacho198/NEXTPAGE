@@ -62,7 +62,7 @@
   >
     <div
       bind:this={dialogEl}
-      class="w-full {sizeClass} rounded-xl border border-(--color-border) bg-(--color-surface) shadow-xl {className}"
+      class="w-full {sizeClass} rounded-xl border border-(--color-border) bg-(--color-elevated) shadow-xl {className}"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"

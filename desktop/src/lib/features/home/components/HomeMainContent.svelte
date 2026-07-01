@@ -15,7 +15,7 @@
   <!-- Columna Izquierda: Continuar Lectura -->
   <div class="xl:col-span-1 space-y-4">
     <div
-      class="rounded-[24px] border border-(--color-border) bg-(--color-surface) shadow-(--shadow-soft) p-5"
+      class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) shadow-(--shadow-soft) p-5"
     >
       <div class="mb-4 flex items-center justify-between">
         <h3 class="text-base font-semibold tracking-tight text-(--color-primary)">

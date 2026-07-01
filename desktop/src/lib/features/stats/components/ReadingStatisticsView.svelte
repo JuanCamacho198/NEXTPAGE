@@ -177,7 +177,7 @@
 
 <section class="space-y-5">
   <div
-    class="rounded-[28px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-[0_24px_80px_rgba(3,10,20,0.38)]"
+    class="rounded-(--radius-2xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-(--shadow-hero)"
   >
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
@@ -192,13 +192,13 @@
 
   {#if disabledReason}
     <div
-      class="rounded-[24px] border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+      class="rounded-(--radius-xl) border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
     >
       {disabledReason}
     </div>
   {:else if isLoading}
     <div
-      class="rounded-[24px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] px-4 py-8 text-sm text-(--color-text-muted)"
+      class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-bg-panel) px-4 py-8 text-sm text-(--color-text-muted)"
     >
       Cargando estadisticas...
     </div>
@@ -206,7 +206,7 @@
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-5">
       {#each metricCards as metric}
         <article
-          class="rounded-[24px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]"
+          class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
         >
           <p class="text-xs text-(--color-text-muted)">{metric.label}</p>
           <p class="mt-3 text-3xl font-semibold tracking-tight text-(--color-primary)">
@@ -219,7 +219,7 @@
 
     <div class="grid grid-cols-1 gap-4 2xl:grid-cols-[1.6fr_1fr]">
       <article
-        class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]"
+        class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
       >
         <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
@@ -288,7 +288,7 @@
       </article>
 
       <article
-        class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]"
+        class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
       >
         <div class="mb-4">
           <h2 class="text-base font-semibold text-(--color-primary)">Tiempo por genero</h2>
@@ -339,7 +339,7 @@
 
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_1fr]">
       <article
-        class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]"
+        class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
       >
         <div class="mb-4">
           <h2 class="text-base font-semibold text-(--color-primary)">Libros mas leidos</h2>
@@ -352,11 +352,11 @@
           {#each mostReadBooks as book}
             <button
               type="button"
-              class="flex w-full items-center gap-3 rounded-[22px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3 cursor-pointer hover:border-(--color-primary) text-left"
+              class="flex w-full items-center gap-3 rounded-[22px] border border-(--color-border) bg-(--color-surface-subtle) p-3 cursor-pointer hover:border-(--color-primary) text-left"
               onclick={() => appState.startReading(book)}
             >
               <div
-                class="h-14 w-10 shrink-0 overflow-hidden rounded-xl bg-[rgba(255,255,255,0.03)]"
+                class="h-14 w-10 shrink-0 overflow-hidden rounded-xl bg-(--color-surface-subtle)"
               >
                 <SafeCover
                   path={book.coverPath ?? ''}
@@ -377,7 +377,7 @@
                 <p class="truncate text-sm font-medium text-(--color-primary)">{book.title}</p>
                 <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                   <div
-                    class="h-full rounded-full bg-[linear-gradient(90deg,#4e8cff,#49d4ff)]"
+                    class="h-full rounded-full bg-(--gradient-accent-h)"
                     style={`width: ${Math.max(12, Math.round((book.minutesRead / Math.max(mostReadBooks[0]?.minutesRead || 1, 1)) * 100))}%;`}
                   ></div>
                 </div>
@@ -391,7 +391,7 @@
 
       <article class="grid gap-4">
         <div
-          class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]"
+          class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
         >
           <div class="mb-3">
             <h2 class="text-base font-semibold text-(--color-primary)">Racha actual</h2>
@@ -407,7 +407,7 @@
             {#each streakCalendar as day}
               <div class="flex flex-col items-center gap-2">
                 <div
-                  class={`flex h-8 w-8 items-center justify-center rounded-full text-[11px] ${day.active ? 'bg-[linear-gradient(135deg,#4e8cff,#49d4ff)] text-[#07111d]' : 'border border-(--color-border) bg-[rgba(255,255,255,0.03)] text-(--color-text-muted)'}`}
+                  class={`flex h-8 w-8 items-center justify-center rounded-full text-(--text-2xs) ${day.active ? 'bg-(--gradient-accent) text-[#07111d]' : 'border border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted)'}`}
                 >
                   {day.label}
                 </div>
@@ -417,7 +417,7 @@
         </div>
 
         <div
-          class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.2)]"
+          class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
         >
           <div class="mb-4">
             <h2 class="text-base font-semibold text-(--color-primary)">Informacion adicional</h2>
@@ -428,7 +428,7 @@
 
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
             <div
-              class="rounded-[20px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3"
+              class="rounded-[20px] border border-(--color-border) bg-(--color-surface-subtle) p-3"
             >
               <p class="text-xs text-(--color-text-muted)">Promedio por sesion</p>
               <p class="mt-2 text-2xl font-semibold text-(--color-primary)">
@@ -436,7 +436,7 @@
               </p>
             </div>
             <div
-              class="rounded-[20px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3"
+              class="rounded-[20px] border border-(--color-border) bg-(--color-surface-subtle) p-3"
             >
               <p class="text-xs text-(--color-text-muted)">Promedio por dia</p>
               <p class="mt-2 text-2xl font-semibold text-(--color-primary)">
@@ -444,7 +444,7 @@
               </p>
             </div>
             <div
-              class="rounded-[20px] border border-(--color-border) bg-[rgba(255,255,255,0.02)] p-3"
+              class="rounded-[20px] border border-(--color-border) bg-(--color-surface-subtle) p-3"
             >
               <p class="text-xs text-(--color-text-muted)">Paginas leidas</p>
               <p class="mt-2 text-2xl font-semibold text-(--color-primary)">

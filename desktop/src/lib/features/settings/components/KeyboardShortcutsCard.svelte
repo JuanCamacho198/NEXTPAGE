@@ -27,7 +27,7 @@
     {#each shortcuts as shortcut (shortcut.id)}
       <li class="flex items-center gap-2">
         <span
-          class="inline-flex items-center justify-center min-w-[86px] px-2 py-1 rounded-md border border-(--color-border) font-mono text-[11px] text-(--color-primary) bg-(--color-background)"
+          class="inline-flex items-center justify-center min-w-[86px] px-2 py-1 rounded-md border border-(--color-border) font-mono text-(--text-2xs) text-(--color-primary) bg-(--color-background)"
           >{shortcut.combo}</span
         >
         <span class="text-xs text-(--color-primary)">{t(shortcut.descriptionKey)}</span>

@@ -118,7 +118,7 @@
           <div
             class="rounded-r-lg border-l-4 border-(--color-accent-blue) bg-(--color-bg-deep)/40 p-3"
           >
-            <div class="text-[10px] font-bold tracking-[0.6px] text-(--color-text-muted) uppercase">
+            <div class="text-(--text-micro) font-bold tracking-[0.6px] text-(--color-text-muted) uppercase">
               {t('highlight.noteReference')}
             </div>
             <div class="mt-1 text-sm text-(--color-secondary)">

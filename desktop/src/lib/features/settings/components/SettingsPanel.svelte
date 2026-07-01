@@ -646,14 +646,14 @@
                 </div>
 
                 <div class="min-w-0 flex-1">
-                  <p class="m-0 text-[11px] text-(--color-text-muted,#6b7280)">
+                  <p class="m-0 text-(--text-2xs) text-(--color-text-muted,#6b7280)">
                     {t('settings.profile.nameLabel')}
                   </p>
                   <p class="my-[2px] mb-2 text-[14px] text-(--color-primary) wrap-break-word">
                     {isProfileLoading ? t('settings.profile.loading') : profile.name}
                   </p>
 
-                  <p class="m-0 text-[11px] text-(--color-text-muted,#6b7280)">
+                  <p class="m-0 text-(--text-2xs) text-(--color-text-muted,#6b7280)">
                     {t('settings.profile.emailLabel')}
                   </p>
                   <p class="my-[2px] mb-2 text-[14px] text-(--color-primary) wrap-break-word">
@@ -679,7 +679,7 @@
                   {#each keyboardShortcuts as shortcut (shortcut.id)}
                     <li class="flex items-center gap-2">
                       <span
-                        class="inline-flex items-center justify-center min-w-[86px] px-2 py-1 border border-(--color-border) rounded-md font-mono text-[11px] text-(--color-primary) bg-(--color-background)"
+                        class="inline-flex items-center justify-center min-w-[86px] px-2 py-1 border border-(--color-border) rounded-md font-mono text-(--text-2xs) text-(--color-primary) bg-(--color-background)"
                         >{shortcut.combo}</span
                       >
                       <span class="text-xs text-(--color-primary)"

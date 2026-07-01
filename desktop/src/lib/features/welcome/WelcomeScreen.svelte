@@ -143,7 +143,7 @@
       class="flex min-w-0 min-h-0 flex-col justify-center gap-4 lg:gap-5 max-w-xl w-full lg:w-auto"
       aria-labelledby="welcome-headline"
     >
-      <p class="m-0 text-[11px] font-semibold uppercase tracking-wider text-(--color-accent-blue)">
+      <p class="m-0 text-(--text-2xs) font-semibold uppercase tracking-wider text-(--color-accent-blue)">
         {t('welcome.eyebrow')}
       </p>
       <h1
@@ -267,7 +267,7 @@
             >
               {t('welcome.continueLocal')}
             </Button>
-            <p class="m-0 text-center text-[11px] text-(--color-text-muted)">
+            <p class="m-0 text-center text-(--text-2xs) text-(--color-text-muted)">
               {t('welcome.devSkipHint')}
             </p>
           </div>
@@ -302,7 +302,7 @@
   >
     <div class="flex items-center gap-2 text-xs sm:text-sm text-(--color-text-muted)">
       <span
-        class="flex size-6 shrink-0 items-center justify-center rounded-full bg-(--color-primary)/12 text-(--color-primary) text-[11px] font-semibold"
+        class="flex size-6 shrink-0 items-center justify-center rounded-full bg-(--color-primary)/12 text-(--color-primary) text-(--text-2xs) font-semibold"
         aria-hidden="true"
       >
         ✓
@@ -311,7 +311,7 @@
     </div>
     <div class="flex items-center gap-2 text-xs sm:text-sm text-(--color-text-muted)">
       <span
-        class="flex size-6 shrink-0 items-center justify-center rounded-full bg-(--color-primary)/12 text-(--color-primary) text-[11px] font-semibold"
+        class="flex size-6 shrink-0 items-center justify-center rounded-full bg-(--color-primary)/12 text-(--color-primary) text-(--text-2xs) font-semibold"
         aria-hidden="true"
       >
         ✓
@@ -320,7 +320,7 @@
     </div>
     <div class="flex items-center gap-2 text-xs sm:text-sm text-(--color-text-muted)">
       <span
-        class="flex size-6 shrink-0 items-center justify-center rounded-full bg-(--color-primary)/12 text-(--color-primary) text-[11px] font-semibold"
+        class="flex size-6 shrink-0 items-center justify-center rounded-full bg-(--color-primary)/12 text-(--color-primary) text-(--text-2xs) font-semibold"
         aria-hidden="true"
       >
         ✓

@@ -37,7 +37,7 @@
 </script>
 
 <section
-  class={`overflow-hidden rounded-[24px] border border-(--color-border) ${variantClasses[variant]} shadow-(--shadow-soft) backdrop-blur-xl ${className}`}
+  class={`overflow-hidden rounded-(--radius-xl) border border-(--color-border) ${variantClasses[variant]} shadow-(--shadow-soft) backdrop-blur-xl ${className}`}
 >
   {#if title || subtitle || hint || actions}
     <div class="border-b border-(--color-border)/80 px-5 py-4">

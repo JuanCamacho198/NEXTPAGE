@@ -35,14 +35,14 @@
   <Avatar src={profile.avatarUrl ?? undefined} name={profile.name} size="lg" />
 
   <div class="min-w-0 flex-1">
-    <p class="m-0 text-[11px] text-(--color-text-muted,#6b7280)">
+    <p class="m-0 text-(--text-2xs) text-(--color-text-muted,#6b7280)">
       {t('settings.profile.nameLabel')}
     </p>
     <p class="my-0.5 mb-2 text-sm text-(--color-primary) wrap-break-word">
       {isProfileLoading ? t('settings.profile.loading') : profile.name}
     </p>
 
-    <p class="m-0 text-[11px] text-(--color-text-muted,#6b7280)">
+    <p class="m-0 text-(--text-2xs) text-(--color-text-muted,#6b7280)">
       {t('settings.profile.emailLabel')}
     </p>
     <p class="my-0.5 mb-2 text-sm text-(--color-primary) wrap-break-word">

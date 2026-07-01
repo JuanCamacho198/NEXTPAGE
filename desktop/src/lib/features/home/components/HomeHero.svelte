@@ -15,7 +15,7 @@
 </script>
 
 <section
-  class="relative overflow-hidden rounded-[24px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(18,30,47,0.92),rgba(12,20,32,0.84))] p-8 shadow-(--shadow-soft) backdrop-blur-xl"
+  class="relative overflow-hidden rounded-(--radius-xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(18,30,47,0.92),rgba(12,20,32,0.84))] p-8 shadow-(--shadow-soft) backdrop-blur-xl"
 >
   <!-- Decorative background glows -->
   <div

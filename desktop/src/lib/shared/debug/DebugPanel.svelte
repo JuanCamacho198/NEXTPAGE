@@ -142,12 +142,12 @@
     <div class="border-b border-(--color-border) p-3">
       <div class="flex items-start justify-between gap-2">
         <div class="min-w-0 flex-1">
-          <h4 class="mb-1 text-[10px] uppercase tracking-wider text-(--color-text-muted)">Route</h4>
+          <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">Route</h4>
           <p class="text-sm">{debugState.currentRoute || 'Unknown Route'}</p>
         </div>
         <button
           type="button"
-          class="shrink-0 rounded px-2 py-0.5 text-[10px] font-medium bg-(--color-primary) text-white hover:opacity-80"
+          class="shrink-0 rounded px-2 py-0.5 text-(--text-micro) font-medium bg-(--color-primary) text-white hover:opacity-80"
           onclick={() => void debugState.copySnapshot()}
           title="Copy debug state to clipboard"
         >
@@ -155,7 +155,7 @@
         </button>
       </div>
       <div class="mt-2 flex items-baseline gap-3">
-        <p class="text-[10px] text-(--color-text-muted)">
+        <p class="text-(--text-micro) text-(--color-text-muted)">
           <span class="font-semibold text-(--color-primary)">{debugState.viewportWidth}</span> ×
           <span class="font-semibold text-(--color-primary)">{debugState.viewportHeight}</span>
         </p>
@@ -170,7 +170,7 @@
     <!-- IPC Performance -->
     <div class="border-b border-(--color-border) p-3">
       <div class="flex items-center justify-between">
-        <h4 class="text-[10px] uppercase tracking-wider text-(--color-text-muted)">
+        <h4 class="text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">
           IPC Performance
         </h4>
         <span class="text-[9px] text-(--color-text-muted)">refreshing…</span>
@@ -215,7 +215,7 @@
             <p class="mb-1 text-[9px] text-(--color-text-muted)">
               Recent calls (last {recentCalls.length})
             </p>
-            <div class="rounded bg-[rgba(255,255,255,0.03)] p-2">
+            <div class="rounded bg-(--color-surface-subtle) p-2">
               <svg viewBox={`0 0 ${CHART_W} 68`} class="h-17 w-full">
                 {#each recentCalls as call, i}
                   {@const barW = (CHART_W - (recentCalls.length - 1) * 2) / recentCalls.length}
@@ -248,15 +248,15 @@
           <div class="space-y-1">
             {#each ipcCommands as cmd}
               {@const maxCount = Math.max(...ipcCommands.map((c) => c.count), 1)}
-              <div class="rounded bg-[rgba(255,255,255,0.03)] p-1.5">
+              <div class="rounded bg-(--color-surface-subtle) p-1.5">
                 <div class="flex items-center justify-between gap-1">
-                  <span class="truncate text-[10px]" title={cmd.feature}>{cmd.feature}</span>
-                  <span class="shrink-0 text-[10px] font-semibold">{cmd.count}x</span>
+                  <span class="truncate text-(--text-micro)" title={cmd.feature}>{cmd.feature}</span>
+                  <span class="shrink-0 text-(--text-micro) font-semibold">{cmd.count}x</span>
                 </div>
                 <div class="mt-0.5 flex items-center gap-2">
                   <!-- Mini bar -->
                   <div
-                    class="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]"
+                    class="h-1.5 flex-1 overflow-hidden rounded-full bg-(--color-surface-subtle)"
                   >
                     <div
                       class="h-full rounded-full"
@@ -290,7 +290,7 @@
 
     <!-- Session Info -->
     <div class="border-b border-(--color-border) p-3">
-      <h4 class="mb-1 text-[10px] uppercase tracking-wider text-(--color-text-muted)">Session</h4>
+      <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">Session</h4>
       <p class="truncate" title={metricsStore.getSessionId()}>
         ID: <span class="font-semibold">{metricsStore.getSessionId().slice(0, 8)}…</span>
       </p>
@@ -299,7 +299,7 @@
 
     <!-- Cache State -->
     <div class="border-b border-(--color-border) p-3">
-      <h4 class="mb-1 text-[10px] uppercase tracking-wider text-(--color-text-muted)">
+      <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">
         Cache State
       </h4>
       <p>EPUB cache: <span class="font-semibold">{epubCache.size} books</span></p>
@@ -308,7 +308,7 @@
 
     <!-- Diagnose -->
     <div class="border-b border-(--color-border) p-3">
-      <h4 class="mb-1 text-[10px] uppercase tracking-wider text-(--color-text-muted)">
+      <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">
         Health Diagnose
       </h4>
       {#if diagnoseResult}
@@ -327,7 +327,7 @@
           {#if Object.keys(diagnoseResult.details).length > 0}
             <details class="mt-1">
               <summary class="cursor-pointer text-(--color-text-muted)">Details</summary>
-              <pre class="mt-1 whitespace-pre-wrap break-all text-[10px]">{JSON.stringify(
+              <pre class="mt-1 whitespace-pre-wrap break-all text-(--text-micro)">{JSON.stringify(
                   diagnoseResult.details,
                   null,
                   2,
@@ -337,7 +337,7 @@
         </div>
       {/if}
       <button
-        class="mt-1 rounded px-2 py-0.5 text-[10px] font-medium bg-(--color-primary) text-white hover:opacity-80 disabled:opacity-50"
+        class="mt-1 rounded px-2 py-0.5 text-(--text-micro) font-medium bg-(--color-primary) text-white hover:opacity-80 disabled:opacity-50"
         onclick={handleDiagnose}
         disabled={diagnoseLoading}
       >
@@ -347,7 +347,7 @@
 
     <!-- Reader Info -->
     <div class="border-b border-(--color-border) p-3">
-      <h4 class="mb-1 text-[10px] uppercase tracking-wider text-(--color-text-muted)">
+      <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">
         Reader Info
       </h4>
       {#if debugState.readerInfo}
@@ -372,7 +372,7 @@
 
     <!-- Selection Inspector -->
     <div class="border-b border-(--color-border) p-3">
-      <h4 class="mb-1 text-[10px] uppercase tracking-wider text-(--color-text-muted)">
+      <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">
         Selection Inspector
       </h4>
       {#if debugState.selection}
@@ -394,7 +394,7 @@
 
     <!-- EPUB Selection Debug -->
     <div class="border-b border-(--color-border) p-3">
-      <h4 class="mb-1 text-[10px] uppercase tracking-wider text-(--color-text-muted)">
+      <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">
         EPUB Selection Debug
       </h4>
       <div class="space-y-0.5">
@@ -433,7 +433,7 @@
             <summary class="cursor-pointer text-(--color-text-muted)"
               >Last msg ({debugState.epub.lastRawMessage.type})</summary
             >
-            <pre class="mt-1 whitespace-pre-wrap break-all text-[10px]">{JSON.stringify(
+            <pre class="mt-1 whitespace-pre-wrap break-all text-(--text-micro)">{JSON.stringify(
                 debugState.epub.lastRawMessage,
                 null,
                 2,
@@ -500,9 +500,9 @@
 
     <!-- Export Logs -->
     <div class="p-3">
-      <h4 class="mb-1 text-[10px] uppercase tracking-wider text-(--color-text-muted)">Logs</h4>
+      <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">Logs</h4>
       <button
-        class="rounded px-2 py-0.5 text-[10px] font-medium bg-(--color-primary) text-white hover:opacity-80 disabled:opacity-50"
+        class="rounded px-2 py-0.5 text-(--text-micro) font-medium bg-(--color-primary) text-white hover:opacity-80 disabled:opacity-50"
         onclick={handleExportLogs}
         disabled={logsLoading}
       >

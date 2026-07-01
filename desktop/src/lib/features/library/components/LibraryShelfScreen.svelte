@@ -119,7 +119,7 @@
 
 <section class="space-y-5">
   <header
-    class="rounded-[28px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-[0_24px_80px_rgba(3,10,20,0.38)]"
+    class="rounded-(--radius-2xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-(--shadow-hero)"
   >
     <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
       <div class="space-y-2">
@@ -132,17 +132,17 @@
 
         <div class="flex flex-wrap gap-3 text-xs text-(--color-text-muted)">
           <div
-            class="rounded-full border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-3 py-1.5"
+            class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-3 py-1.5"
           >
             {totalBooks} libros
           </div>
           <div
-            class="rounded-full border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-3 py-1.5"
+            class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-3 py-1.5"
           >
             {readingBooks} leyendo
           </div>
           <div
-            class="rounded-full border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-3 py-1.5"
+            class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-3 py-1.5"
           >
             {completedBooks} completados
           </div>
@@ -170,7 +170,7 @@
               bind:value={searchQuery}
             />
             <span
-              class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-(--color-border) px-1.5 py-0.5 text-[10px] text-(--color-text-muted)"
+              class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-(--color-border) px-1.5 py-0.5 text-(--text-micro) text-(--color-text-muted)"
             >
               Ctrl K
             </span>
@@ -179,7 +179,7 @@
           <Button
             onclick={onImportBook}
             disabled={isImporting}
-            class="h-11 min-w-[170px] rounded-2xl bg-[linear-gradient(135deg,#4e8cff,#49d4ff)] !text-[#07111d] shadow-[0_18px_40px_rgba(73,212,255,0.2)]"
+            class="h-11 min-w-[170px] rounded-2xl bg-(--gradient-accent) !text-[#07111d] shadow-(--shadow-glow-strong)"
           >
             {isImporting ? 'Importando...' : 'Importar libro'}
           </Button>
@@ -189,7 +189,7 @@
   </header>
 
   <section
-    class="rounded-[28px] border border-(--color-border) bg-[rgba(11,21,35,0.88)] p-4 shadow-[0_20px_64px_rgba(2,10,18,0.28)]"
+    class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-section)"
   >
     <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
       <fieldset class="border-0 p-0 m-0">
@@ -198,7 +198,7 @@
           {#each FILTER_OPTIONS as option}
             <button
               type="button"
-              class={`rounded-2xl border px-3 py-2 text-xs font-medium transition ${activeFilter === option.key ? 'border-[rgba(82,143,255,0.4)] bg-[rgba(78,140,255,0.22)] text-(--color-primary)' : 'border-(--color-border) bg-[rgba(255,255,255,0.02)] text-(--color-text-muted) hover:text-(--color-primary)'}`}
+              class={`rounded-2xl border px-3 py-2 text-xs font-medium transition ${activeFilter === option.key ? 'border-[rgba(82,143,255,0.4)] bg-[rgba(78,140,255,0.22)] text-(--color-primary)' : 'border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted) hover:text-(--color-primary)'}`}
               onclick={() => {
                 activeFilter = option.key;
               }}
@@ -221,7 +221,7 @@
         </Dropdown>
 
         <fieldset
-          class="inline-flex rounded-2xl border-(--color-border) bg-[rgba(255,255,255,0.02)] p-1 border-0"
+          class="inline-flex rounded-2xl border-(--color-border) bg-(--color-surface-subtle) p-1 border-0"
         >
           <legend class="sr-only">Vista de estantería</legend>
           <button
@@ -256,11 +256,11 @@
       {#each filteredBooks as book}
         <li>
           <article
-            class="group flex min-h-[360px] flex-col rounded-[24px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.22)]"
+            class="group flex min-h-[360px] flex-col rounded-(--radius-xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-4 shadow-(--shadow-panel)"
           >
             <div class="mb-3 flex items-start justify-between gap-3">
               <span
-                class="rounded-full border border-(--color-border) bg-[rgba(255,255,255,0.03)] px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-(--color-text-muted)"
+                class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-2.5 py-1 text-(--text-micro) uppercase tracking-[0.16em] text-(--color-text-muted)"
               >
                 {getStateLabel(book)}
               </span>
@@ -297,14 +297,14 @@
                   onclick={() => onViewDetails?.(book)}>Ver detalles</button
                 >
                 <button
-                  class="w-full px-4 py-2.5 text-left text-sm text-[#ff9fa5] hover:bg-[rgba(255,255,255,0.08)]"
+                  class="w-full px-4 py-2.5 text-left text-sm text-(--color-danger) hover:bg-[rgba(255,255,255,0.08)]"
                   onclick={() => onRemoveBook?.(book)}>Eliminar de la biblioteca</button
                 >
               </DropMenu>
             </div>
 
             <div
-              class="relative mb-4 aspect-[0.72] overflow-hidden rounded-[20px] bg-[rgba(255,255,255,0.03)]"
+              class="relative mb-4 aspect-[0.72] overflow-hidden rounded-[20px] bg-(--color-surface-subtle)"
             >
               <SafeCover
                 path={book.coverPath ?? ''}
@@ -339,7 +339,7 @@
             >
               <div class="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                 <div
-                  class="h-full rounded-full bg-[linear-gradient(90deg,#4e8cff,#49d4ff)]"
+                  class="h-full rounded-full bg-(--gradient-accent-h)"
                   style={`width: ${formatPercent(book)};`}
                 ></div>
               </div>
@@ -360,7 +360,7 @@
               </Button>
               <Button
                 size="sm"
-                class="rounded-xl bg-[linear-gradient(135deg,#4e8cff,#49d4ff)] !text-[#07111d]"
+                class="rounded-xl bg-(--gradient-accent) !text-[#07111d]"
                 onclick={() => onContinueReading?.(book)}
               >
                 {getSafeProgressPercentage(book) > 0 ? 'Continuar' : 'Empezar'}
@@ -373,11 +373,11 @@
       <li>
         <button
           type="button"
-          class="flex min-h-[360px] flex-col items-center justify-center gap-4 rounded-[24px] border border-dashed border-(--color-border-strong) bg-[rgba(255,255,255,0.02)] p-6 text-center text-(--color-text-muted) transition hover:border-[rgba(78,140,255,0.5)] hover:text-(--color-primary)"
+          class="flex min-h-[360px] flex-col items-center justify-center gap-4 rounded-(--radius-xl) border border-dashed border-(--color-border-strong) bg-(--color-surface-subtle) p-6 text-center text-(--color-text-muted) transition hover:border-[rgba(78,140,255,0.5)] hover:text-(--color-primary)"
           onclick={onImportBook}
         >
           <div
-            class="flex h-16 w-16 items-center justify-center rounded-full border border-(--color-border) bg-[rgba(255,255,255,0.03)]"
+            class="flex h-16 w-16 items-center justify-center rounded-full border border-(--color-border) bg-(--color-surface-subtle)"
           >
             <svg
               class="h-6 w-6"
@@ -402,11 +402,11 @@
       {#each filteredBooks as book}
         <li>
           <article
-            class="flex flex-col gap-4 rounded-[24px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-4 shadow-[0_16px_48px_rgba(2,10,20,0.18)] md:flex-row md:items-center"
+            class="flex flex-col gap-4 rounded-(--radius-xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-4 shadow-(--shadow-panel) md:flex-row md:items-center"
           >
             <div class="flex items-start gap-4 md:min-w-0 md:flex-1">
               <div
-                class="h-28 w-20 shrink-0 overflow-hidden rounded-[18px] bg-[rgba(255,255,255,0.03)]"
+                class="h-28 w-20 shrink-0 overflow-hidden rounded-[18px] bg-(--color-surface-subtle)"
               >
                 <SafeCover
                   path={book.coverPath ?? ''}
@@ -415,7 +415,7 @@
                 >
                   {#snippet fallback()}
                     <div
-                      class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] px-2 text-center text-[10px] uppercase tracking-[0.16em] text-(--color-primary)"
+                      class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] px-2 text-center text-(--text-micro) uppercase tracking-[0.16em] text-(--color-primary)"
                     >
                       Sin portada
                     </div>
@@ -429,7 +429,7 @@
                     {book.title}
                   </h3>
                   <span
-                    class="rounded-full border border-(--color-border) px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-(--color-text-muted)"
+                    class="rounded-full border border-(--color-border) px-2 py-1 text-(--text-micro) uppercase tracking-[0.12em] text-(--color-text-muted)"
                   >
                     {getStateLabel(book)}
                   </span>
@@ -447,7 +447,7 @@
                 >
                   <div class="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                     <div
-                      class="h-full rounded-full bg-[linear-gradient(90deg,#4e8cff,#49d4ff)]"
+                      class="h-full rounded-full bg-(--gradient-accent-h)"
                       style={`width: ${formatPercent(book)};`}
                     ></div>
                   </div>
@@ -471,7 +471,7 @@
               >
               <Button
                 size="sm"
-                class="rounded-xl bg-[linear-gradient(135deg,#4e8cff,#49d4ff)] !text-[#07111d]"
+                class="rounded-xl bg-(--gradient-accent) !text-[#07111d]"
                 onclick={() => onContinueReading?.(book)}
               >
                 {getSafeProgressPercentage(book) > 0 ? 'Continuar lectura' : 'Empezar lectura'}
@@ -480,7 +480,7 @@
                 {#snippet trigger()}
                   <button
                     type="button"
-                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-(--color-border) bg-[rgba(255,255,255,0.03)] text-(--color-text-muted)"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted)"
                     aria-label={`Opciones para ${book.title}`}
                   >
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -509,7 +509,7 @@
                   onclick={() => onViewDetails?.(book)}>Ver detalles</button
                 >
                 <button
-                  class="w-full px-4 py-2 text-left text-sm text-[#ff9fa5] hover:bg-(--color-border)"
+                  class="w-full px-4 py-2 text-left text-sm text-(--color-danger) hover:bg-(--color-border)"
                   onclick={() => onRemoveBook?.(book)}>Eliminar de la biblioteca</button
                 >
               </DropMenu>
@@ -521,11 +521,11 @@
       <li>
         <button
           type="button"
-          class="flex min-h-[120px] items-center justify-center gap-4 rounded-[24px] border border-dashed border-(--color-border-strong) bg-[rgba(255,255,255,0.02)] p-6 text-left text-(--color-text-muted) transition hover:border-[rgba(78,140,255,0.5)] hover:text-(--color-primary)"
+          class="flex min-h-[120px] items-center justify-center gap-4 rounded-(--radius-xl) border border-dashed border-(--color-border-strong) bg-(--color-surface-subtle) p-6 text-left text-(--color-text-muted) transition hover:border-[rgba(78,140,255,0.5)] hover:text-(--color-primary)"
           onclick={onImportBook}
         >
           <div
-            class="flex h-14 w-14 items-center justify-center rounded-full border border-(--color-border) bg-[rgba(255,255,255,0.03)]"
+            class="flex h-14 w-14 items-center justify-center rounded-full border border-(--color-border) bg-(--color-surface-subtle)"
           >
             <svg
               class="h-5 w-5"

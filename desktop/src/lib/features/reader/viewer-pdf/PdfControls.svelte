@@ -58,7 +58,7 @@
     {#snippet right()}
       {#if debugState.enabled}
         <span
-          class="text-[11px] text-(--pdf-reader-text,var(--color-text-auxiliary)) opacity-60 font-mono"
+          class="text-(--text-2xs) text-(--pdf-reader-text,var(--color-text-auxiliary)) opacity-60 font-mono"
           >p{currentPage}/{totalPages} | {Math.round(scale * 100)}%</span
         >
       {/if}

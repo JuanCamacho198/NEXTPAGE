@@ -52,8 +52,14 @@
       const date = new Date(iso);
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
+      const diffMin = Math.floor(diffMs / (1000 * 60));
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      if (diffDays === 0) return 'Hoy';
+      if (diffDays === 0) {
+        if (diffMin < 1) return 'Ahora';
+        if (diffMin < 60) return `Hace ${diffMin} min`;
+        const hours = Math.floor(diffMin / 60);
+        return `Hace ${hours} h`;
+      }
       if (diffDays === 1) return 'Ayer';
       if (diffDays < 7) return `Hace ${diffDays} días`;
       if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} sem.`;
@@ -689,7 +695,7 @@
               </div>
 
               <!-- Status dropdown + Favorite + Completed -->
-              <div class="flex flex-wrap items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2 pt-3">
                 <!-- Status dropdown -->
                 <div class="flex items-center gap-1.5">
                   <span class="text-xs text-(--color-text-muted)">Estado:</span>

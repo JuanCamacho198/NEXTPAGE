@@ -28,6 +28,7 @@ const makeBook = (overrides: Partial<{ format: string; filePath: string }> = {})
   coverPath: null,
   minutesRead: 0,
   updatedAt: new Date().toISOString(),
+  createdAt: new Date().toISOString(),
   ...overrides,
 });
 

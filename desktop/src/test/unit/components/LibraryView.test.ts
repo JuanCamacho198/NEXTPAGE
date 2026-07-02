@@ -91,6 +91,7 @@ describe('LibraryView', () => {
         coverPath: null,
         minutesRead: 34,
         updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       },
     ];
     mockedListLibraryBooks.mockResolvedValueOnce(books);
@@ -133,6 +134,7 @@ describe('LibraryView', () => {
           coverPath: null,
           minutesRead: 1,
           updatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
         },
       ] satisfies LibraryBookDto[],
       selectedBookId: null,
@@ -169,6 +171,7 @@ describe('LibraryView', () => {
           coverPath: 'C:/covers/book-cover-error.png',
           minutesRead: 8,
           updatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
         },
       ] satisfies LibraryBookDto[],
       selectedBookId: null,
@@ -196,6 +199,7 @@ describe('LibraryView', () => {
           coverPath: null,
           minutesRead: 120,
           updatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
         },
       ] satisfies LibraryBookDto[],
       selectedBookId: null,

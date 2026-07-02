@@ -61,6 +61,7 @@ const makeEpubBook = () => ({
   coverPath: null,
   minutesRead: 0,
   updatedAt: new Date().toISOString(),
+  createdAt: new Date().toISOString(),
 });
 
 describe('ReaderWorkspace EPUB', () => {

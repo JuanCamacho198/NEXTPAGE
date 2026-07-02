@@ -228,6 +228,7 @@ const makeLibraryBook = (overrides: Partial<LibraryBookDto> = {}): LibraryBookDt
   coverPath: null,
   minutesRead: 0,
   updatedAt: new Date().toISOString(),
+  createdAt: new Date().toISOString(),
   ...overrides,
 });
 

@@ -165,9 +165,7 @@ export class AppState {
   }
   selectedShelfBook = $derived.by(() => {
     if (!this.navigation.shelfDetailsBookId) return null;
-    return (
-      this.books.find((book) => book.id === this.navigation.shelfDetailsBookId) ?? null
-    );
+    return this.books.find((book) => book.id === this.navigation.shelfDetailsBookId) ?? null;
   });
 
   // ─── Property passthrough: Reader ───
@@ -449,10 +447,7 @@ export class AppState {
   };
   handleStatusChange = (book: ReaderBook, status: string): void => {
     // Compute current status (favorites is NOT a status — it's a separate toggle)
-    const current =
-      book.completed ? 'completed' :
-      book.toRead ? 'to_read' :
-      'reading';
+    const current = book.completed ? 'completed' : book.toRead ? 'to_read' : 'reading';
 
     if (current === status) return;
 

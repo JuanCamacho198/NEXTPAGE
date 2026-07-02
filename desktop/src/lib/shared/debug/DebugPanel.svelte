@@ -142,7 +142,9 @@
     <div class="border-b border-(--color-border) p-3">
       <div class="flex items-start justify-between gap-2">
         <div class="min-w-0 flex-1">
-          <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">Route</h4>
+          <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">
+            Route
+          </h4>
           <p class="text-sm">{debugState.currentRoute || 'Unknown Route'}</p>
         </div>
         <button
@@ -250,7 +252,8 @@
               {@const maxCount = Math.max(...ipcCommands.map((c) => c.count), 1)}
               <div class="rounded bg-(--color-surface-subtle) p-1.5">
                 <div class="flex items-center justify-between gap-1">
-                  <span class="truncate text-(--text-micro)" title={cmd.feature}>{cmd.feature}</span>
+                  <span class="truncate text-(--text-micro)" title={cmd.feature}>{cmd.feature}</span
+                  >
                   <span class="shrink-0 text-(--text-micro) font-semibold">{cmd.count}x</span>
                 </div>
                 <div class="mt-0.5 flex items-center gap-2">
@@ -290,7 +293,9 @@
 
     <!-- Session Info -->
     <div class="border-b border-(--color-border) p-3">
-      <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">Session</h4>
+      <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">
+        Session
+      </h4>
       <p class="truncate" title={metricsStore.getSessionId()}>
         ID: <span class="font-semibold">{metricsStore.getSessionId().slice(0, 8)}…</span>
       </p>
@@ -500,7 +505,9 @@
 
     <!-- Export Logs -->
     <div class="p-3">
-      <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">Logs</h4>
+      <h4 class="mb-1 text-(--text-micro) uppercase tracking-wider text-(--color-text-muted)">
+        Logs
+      </h4>
       <button
         class="rounded px-2 py-0.5 text-(--text-micro) font-medium bg-(--color-primary) text-white hover:opacity-80 disabled:opacity-50"
         onclick={handleExportLogs}

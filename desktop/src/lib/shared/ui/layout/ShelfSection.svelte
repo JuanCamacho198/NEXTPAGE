@@ -126,7 +126,9 @@
     return 'reading';
   }
 
-  async function handleCoverImport(book: NonNullable<typeof appState.selectedShelfBook>): Promise<void> {
+  async function handleCoverImport(
+    book: NonNullable<typeof appState.selectedShelfBook>,
+  ): Promise<void> {
     const result = await pickImage();
     if (!result) return;
     try {
@@ -146,6 +148,72 @@
       console.error('Failed to import cover:', e);
     }
   }
+
+  // ─── Inline editing ───
+  let isEditing = $state(false);
+  let editTitle = $state('');
+  let editAuthor = $state('');
+  let editGenre = $state('');
+  let editError = $state<string | null>(null);
+  let isSaving = $state(false);
+
+  const MAX_GENRE_LENGTH = 80;
+  const CONTROL_CHAR_REGEX = /[\u0000-\u001f\u007f]/;
+
+  function startEditing(book: NonNullable<typeof appState.selectedShelfBook>): void {
+    editTitle = book.title;
+    editAuthor = book.author || '';
+    editGenre = book.genre ?? '';
+    editError = null;
+    isEditing = true;
+  }
+
+  function cancelEditing(): void {
+    isEditing = false;
+    editError = null;
+  }
+
+  async function saveEditing(): Promise<void> {
+    const book = appState.selectedShelfBook;
+    if (!book) return;
+    if (!editTitle.trim()) {
+      editError = 'El título es obligatorio';
+      return;
+    }
+    const trimmedGenre = editGenre.trim();
+    if (trimmedGenre.length > MAX_GENRE_LENGTH) {
+      editError = 'El género no puede exceder 80 caracteres';
+      return;
+    }
+    if (CONTROL_CHAR_REGEX.test(trimmedGenre)) {
+      editError = 'El género contiene caracteres inválidos';
+      return;
+    }
+
+    isSaving = true;
+    editError = null;
+    try {
+      await appState.handleSaveEditedBook({
+        ...book,
+        title: editTitle.trim(),
+        author: editAuthor.trim(),
+        genre: trimmedGenre.length > 0 ? trimmedGenre : null,
+      });
+      isEditing = false;
+    } catch (e) {
+      editError = e instanceof Error ? e.message : 'Error al guardar';
+    } finally {
+      isSaving = false;
+    }
+  }
+
+  // Reset editing state when modal closes
+  $effect(() => {
+    if (!showShelfModal) {
+      isEditing = false;
+      editError = null;
+    }
+  });
 </script>
 
 <section class="space-y-3">
@@ -388,21 +456,25 @@
   {@const shelfDetail = appState.selectedShelfBook}
   {@const progressPct = Math.round(getSafeProgressPercentage(shelfDetail))}
   {@const currentStatus = getCurrentStatus(shelfDetail)}
-  <Modal bind:open={showShelfModal} title={shelfDetail.title} size="lg" noCloseButton>
+  <Modal
+    bind:open={showShelfModal}
+    title={isEditing ? 'Editar metadatos' : shelfDetail.title}
+    size="xl"
+  >
     {#snippet children()}
       <div class="flex flex-col gap-6 sm:flex-row">
         <!-- Cover column -->
         <div class="shrink-0 mx-auto sm:mx-0">
           {#if shelfDetail.coverPath}
-            <div class="relative w-36">
+            <div class="relative w-48">
               <SafeCover
                 path={shelfDetail.coverPath}
                 alt={shelfDetail.title}
-                className="w-36 h-52 object-cover rounded-lg shadow-md border border-(--color-border)"
+                className="w-48 h-64 object-cover rounded-lg shadow-md border border-(--color-border)"
               >
                 {#snippet fallback()}
                   <div
-                    class="w-36 h-52 rounded-lg bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3 flex items-center justify-center border border-(--color-border) shadow-md"
+                    class="w-48 h-64 rounded-lg bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3 flex items-center justify-center border border-(--color-border) shadow-md"
                   >
                     <span class="text-4xl font-bold text-(--color-primary)/30"
                       >{shelfDetail.title.trim()[0]?.toUpperCase() || '?'}</span
@@ -417,13 +489,23 @@
                 onclick={() => void appState.handleDeleteCover(shelfDetail)}
                 aria-label="Eliminar portada"
               >
-                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  stroke-width="2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
               </button>
             </div>
           {:else}
-            <div class="relative w-36">
+            <div class="relative w-48">
               <div
                 class="w-36 h-52 rounded-lg bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3 flex items-center justify-center border border-(--color-border) shadow-md"
               >
@@ -438,78 +520,9 @@
                 onclick={() => handleCoverImport(shelfDetail)}
                 aria-label="Importar portada"
               >
-                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
-                </svg>
-              </button>
-            </div>
-          {/if}
-        </div>
-
-        <!-- Info column -->
-        <div class="flex-1 min-w-0 space-y-2">
-          {#if shelfDetail.author}
-            <p class="text-sm text-(--color-text-muted)">{shelfDetail.author}</p>
-          {/if}
-
-          <!-- Badges row: format, genre, language -->
-          <div class="flex flex-wrap items-center gap-2">
-            <!-- Format badge -->
-            <span
-              class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border uppercase {shelfDetail.format ===
-              'epub'
-                ? 'bg-(--color-primary)/8 text-(--color-primary) border-(--color-primary)/25'
-                : 'bg-amber-500/8 text-amber-600 border-amber-500/25'}"
-            >
-              {shelfDetail.format}
-            </span>
-
-            <!-- Genre badge -->
-            {#if shelfDetail.genre}
-              <span
-                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border)"
-              >
-                {shelfDetail.genre}
-              </span>
-            {/if}
-
-            <!-- Language badge -->
-            {#if shelfDetail.language}
-              <span
-                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border)"
-              >
-                {getLanguageName(shelfDetail.language)}
-              </span>
-            {/if}
-          </div>
-
-          <!-- Status dropdown + Favorite + Completed -->
-          <div class="flex flex-wrap items-center gap-2">
-            <!-- Status dropdown -->
-            <div class="flex items-center gap-1.5">
-              <span class="text-xs text-(--color-text-muted)">Estado:</span>
-              <Dropdown
-                options={STATUS_OPTIONS}
-                value={currentStatus}
-                onchange={({ value }) => {
-                  appState.handleStatusChange(shelfDetail, value);
-                }}
-              />
-            </div>
-
-            <!-- Favorite toggle -->
-            {#if shelfDetail.isFavorite !== undefined}
-              <button
-                type="button"
-                class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors {shelfDetail.isFavorite
-                  ? 'bg-amber-500/12 text-amber-500 border-amber-500/25'
-                  : 'bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border) hover:border-amber-500/25'}"
-                onclick={() => void appState.handleToggleFavorite(shelfDetail)}
-                aria-label={shelfDetail.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-              >
                 <svg
                   class="h-3.5 w-3.5"
-                  fill={shelfDetail.isFavorite ? 'currentColor' : 'none'}
+                  fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                   stroke-width="2"
@@ -517,108 +530,261 @@
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                    d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"
                   />
                 </svg>
-                {shelfDetail.isFavorite ? 'Favorito' : 'Favorito'}
               </button>
-            {/if}
+            </div>
+          {/if}
+        </div>
 
-            <!-- Completed badge -->
-            {#if shelfDetail.completed}
-              <span
-                class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border bg-green-500/10 text-green-500 border-green-500/25"
-              >
-                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                Completado
-              </span>
-            {/if}
-          </div>
-
-          <!-- Separator between sections -->
-          <hr class="border-(--color-border)/50" />
-
-          <!-- Dates section -->
-          {#if shelfDetail.publicationDate || shelfDetail.language}
-            <div class="space-y-1">
-              {#if shelfDetail.publicationDate}
-                <p class="text-xs text-(--color-text-muted)">
-                  <span class="mr-1">📅</span>Publicado: {formatPublicationDate(shelfDetail.publicationDate)}
-                </p>
+        <!-- Info column -->
+        <div class="flex-1 min-w-0 space-y-4">
+          {#if isEditing}
+            <!-- Inline edit form -->
+            <div class="rounded-lg border border-(--color-border) p-4 space-y-3">
+              <div>
+                <label
+                  for="edit-title"
+                  class="mb-1 block text-xs font-medium text-(--color-primary)"
+                >
+                  Título
+                </label>
+                <input
+                  id="edit-title"
+                  type="text"
+                  bind:value={editTitle}
+                  class="w-full rounded-md border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-primary) focus:border-(--color-primary) focus:outline-none"
+                />
+              </div>
+              <div>
+                <label
+                  for="edit-author"
+                  class="mb-1 block text-xs font-medium text-(--color-primary)"
+                >
+                  Autor
+                </label>
+                <input
+                  id="edit-author"
+                  type="text"
+                  bind:value={editAuthor}
+                  class="w-full rounded-md border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-primary) focus:border-(--color-primary) focus:outline-none"
+                />
+              </div>
+              <div>
+                <label
+                  for="edit-genre"
+                  class="mb-1 block text-xs font-medium text-(--color-primary)"
+                >
+                  Género
+                </label>
+                <input
+                  id="edit-genre"
+                  type="text"
+                  bind:value={editGenre}
+                  maxlength={MAX_GENRE_LENGTH}
+                  class="w-full rounded-md border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-primary) focus:border-(--color-primary) focus:outline-none"
+                />
+              </div>
+              {#if editError}
+                <p class="text-sm text-red-600">{editError}</p>
               {/if}
             </div>
-            <hr class="border-(--color-border)/50" />
-          {/if}
+          {:else}
+            <!-- Info card -->
+            <div class="rounded-lg border border-(--color-border) p-4 space-y-3">
+              {#if shelfDetail.author}
+                <p class="text-sm text-(--color-text-muted)">{shelfDetail.author}</p>
+              {/if}
 
-          <!-- Collections -->
-          {#if shelfDetail.collectionIds && shelfDetail.collectionIds.length > 0}
-            {@const collNames = getCollectionNames(shelfDetail.collectionIds)}
-            {#if collNames.length > 0}
-              <div class="flex flex-wrap items-center gap-1.5">
-                <span class="text-xs text-(--color-text-muted)">Colecciones:</span>
-                {#each collNames as name}
+              <!-- Badges row: format, genre, language -->
+              <div class="flex flex-wrap items-center gap-2">
+                <!-- Format badge -->
+                <span
+                  class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border uppercase {shelfDetail.format ===
+                  'epub'
+                    ? 'bg-(--color-primary)/8 text-(--color-primary) border-(--color-primary)/25'
+                    : 'bg-amber-500/8 text-amber-600 border-amber-500/25'}"
+                >
+                  {shelfDetail.format}
+                </span>
+
+                <!-- Genre badge -->
+                {#if shelfDetail.genre}
                   <span
-                    class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-(--color-primary)/8 text-(--color-primary) border border-(--color-primary)/15"
+                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border)"
                   >
-                    {name}
+                    {shelfDetail.genre}
                   </span>
-                {/each}
-              </div>
-            {/if}
-            <hr class="border-(--color-border)/50" />
-          {/if}
+                {/if}
 
-          <!-- Progress -->
-          {#if shelfDetail.totalPages > 0}
-            <div class="space-y-1">
-              <div class="flex justify-between text-xs text-(--color-text-muted)">
-                <span>Progreso</span>
-                <span>{shelfDetail.currentPage}/{shelfDetail.totalPages} · {progressPct}%</span>
+                <!-- Language badge -->
+                {#if shelfDetail.language}
+                  <span
+                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border)"
+                  >
+                    {getLanguageName(shelfDetail.language)}
+                  </span>
+                {/if}
               </div>
-              <div class="h-1.5 w-full rounded-full bg-(--color-border)">
-                <div
-                  class="h-1.5 rounded-full bg-(--color-primary) transition-all"
-                  style="width: {progressPct}%"
-                ></div>
+
+              <!-- Status dropdown + Favorite + Completed -->
+              <div class="flex flex-wrap items-center gap-2">
+                <!-- Status dropdown -->
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs text-(--color-text-muted)">Estado:</span>
+                  <Dropdown
+                    options={STATUS_OPTIONS}
+                    value={currentStatus}
+                    onchange={({ value }) => {
+                      appState.handleStatusChange(shelfDetail, value);
+                    }}
+                  />
+                </div>
+
+                <!-- Favorite toggle -->
+                {#if shelfDetail.isFavorite !== undefined}
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors {shelfDetail.isFavorite
+                      ? 'bg-amber-500/12 text-amber-500 border-amber-500/25'
+                      : 'bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border) hover:border-amber-500/25'}"
+                    onclick={() => void appState.handleToggleFavorite(shelfDetail)}
+                    aria-label={shelfDetail.isFavorite
+                      ? 'Quitar de favoritos'
+                      : 'Agregar a favoritos'}
+                  >
+                    <svg
+                      class="h-3.5 w-3.5"
+                      fill={shelfDetail.isFavorite ? 'currentColor' : 'none'}
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                      />
+                    </svg>
+                    {shelfDetail.isFavorite ? 'Favorito' : 'Favorito'}
+                  </button>
+                {/if}
+
+                <!-- Completed badge -->
+                {#if shelfDetail.completed}
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border bg-green-500/10 text-green-500 border-green-500/25"
+                  >
+                    <svg
+                      class="h-3 w-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      stroke-width="2.5"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Completado
+                  </span>
+                {/if}
               </div>
             </div>
           {/if}
 
-          <!-- Metadata -->
-          <dl class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
-            {#if shelfDetail.minutesRead > 0}
-              <dt class="sr-only">Tiempo de lectura</dt>
-              <dd>{formatMinutes(shelfDetail.minutesRead)} leídos</dd>
+          <!-- Progress card -->
+          <div class="rounded-lg border border-(--color-border) p-4 space-y-3">
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-(--color-text-muted)">
+              <Icon name="clock" size="sm" class="inline -mt-0.5 mr-1" />
+              Lectura
+            </h4>
+            {#if shelfDetail.totalPages > 0}
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs text-(--color-text-muted)">
+                  <span>Progreso</span>
+                  <span>{shelfDetail.currentPage}/{shelfDetail.totalPages} · {progressPct}%</span>
+                </div>
+                <div class="h-1.5 w-full rounded-full bg-(--color-border)">
+                  <div
+                    class="h-1.5 rounded-full bg-(--color-primary) transition-all"
+                    style="width: {progressPct}%"
+                  ></div>
+                </div>
+              </div>
             {/if}
-            {#if shelfDetail.updatedAt}
-              <dt class="sr-only">Última actividad</dt>
-              <dd>{formatRelativeDate(shelfDetail.updatedAt)}</dd>
+            <dl class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
+              {#if shelfDetail.minutesRead > 0}
+                <dt class="sr-only">Tiempo de lectura</dt>
+                <dd>{formatMinutes(shelfDetail.minutesRead)} leídos</dd>
+              {/if}
+              {#if shelfDetail.updatedAt}
+                <dt class="sr-only">Última actividad</dt>
+                <dd>{formatRelativeDate(shelfDetail.updatedAt)}</dd>
+              {/if}
+            </dl>
+          </div>
+
+          <!-- Details card -->
+          <div class="rounded-lg border border-(--color-border) p-4 space-y-3">
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-(--color-text-muted)">
+              <Icon name="info" size="sm" class="inline -mt-0.5 mr-1" />
+              Detalles
+            </h4>
+            {#if shelfDetail.publicationDate}
+              <p class="flex items-center gap-1.5 text-xs text-(--color-text-muted)">
+                <Icon name="calendar" size="sm" class="shrink-0" />
+                Publicado: {formatPublicationDate(shelfDetail.publicationDate)}
+              </p>
             {/if}
-          </dl>
+            {#if shelfDetail.createdAt}
+              <p class="flex items-center gap-1.5 text-xs text-(--color-text-muted)">
+                <Icon name="calendar" size="sm" class="shrink-0" />
+                Agregado: {formatRelativeDate(shelfDetail.createdAt)}
+              </p>
+            {/if}
+            {#if shelfDetail.collectionIds && shelfDetail.collectionIds.length > 0}
+              {@const collNames = getCollectionNames(shelfDetail.collectionIds)}
+              {#if collNames.length > 0}
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="text-xs text-(--color-text-muted)">Colecciones:</span>
+                  {#each collNames as name}
+                    <span
+                      class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-(--color-primary)/8 text-(--color-primary) border border-(--color-primary)/15"
+                    >
+                      {name}
+                    </span>
+                  {/each}
+                </div>
+              {/if}
+            {/if}
+          </div>
         </div>
       </div>
     {/snippet}
     {#snippet footer()}
-      <Button
-        size="sm"
-        variant="ghost"
-        onclick={() => appState.handleEditBook(shelfDetail)}
-      >
-        ✏️ Editar metadatos
-      </Button>
-      <Button size="sm" variant="ghost" onclick={appState.closeShelfDetails}
-        >{appState.t('settings.close')}</Button
-      >
-      <Button
-        size="sm"
-        onclick={() => {
-          void appState.startReading(shelfDetail);
-        }}
-      >
-        {appState.t('app.read')}
-      </Button>
+      {#if isEditing}
+        <Button size="sm" variant="ghost" onclick={cancelEditing} disabled={isSaving}>
+          Cancelar
+        </Button>
+        <Button size="sm" onclick={saveEditing} disabled={isSaving}>
+          {isSaving ? 'Guardando…' : 'Guardar'}
+        </Button>
+      {:else}
+        <Button size="sm" variant="ghost" onclick={() => startEditing(shelfDetail)}>
+          <Icon name="edit" size="sm" /> Editar metadatos
+        </Button>
+        <Button size="sm" variant="ghost" onclick={appState.closeShelfDetails}
+          >{appState.t('settings.close')}</Button
+        >
+        <Button
+          size="sm"
+          onclick={() => {
+            void appState.startReading(shelfDetail);
+          }}
+        >
+          {appState.t('app.read')}
+        </Button>
+      {/if}
     {/snippet}
   </Modal>
 {/if}

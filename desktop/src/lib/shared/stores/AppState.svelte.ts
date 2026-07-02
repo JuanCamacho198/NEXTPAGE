@@ -448,27 +448,22 @@ export class AppState {
     await this.library.handleDeleteCover(book);
   };
   handleStatusChange = (book: ReaderBook, status: string): void => {
-    // Compute current status
+    // Compute current status (favorites is NOT a status — it's a separate toggle)
     const current =
       book.completed ? 'completed' :
-      book.isFavorite ? 'favorites' :
       book.toRead ? 'to_read' :
       'reading';
 
     if (current === status) return;
 
     // Clear previous status
-    if (current === 'favorites' && book.isFavorite) {
-      void this.handleToggleFavorite(book);
-    } else if (current === 'completed' && book.completed) {
+    if (current === 'completed' && book.completed) {
       void this.handleMarkCompleted(book);
     }
     if (current === 'to_read') book.toRead = false;
 
     // Set new status
-    if (status === 'favorites' && !book.isFavorite) {
-      void this.handleToggleFavorite(book);
-    } else if (status === 'completed' && !book.completed) {
+    if (status === 'completed' && !book.completed) {
       void this.handleMarkCompleted(book);
     } else if (status === 'to_read') {
       book.toRead = true;

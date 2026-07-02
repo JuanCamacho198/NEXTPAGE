@@ -113,10 +113,15 @@
     return map[ext] ?? 'image/png';
   }
 
+  const STATUS_OPTIONS = [
+    { value: 'reading', label: 'En lectura' },
+    { value: 'to_read', label: 'Por leer' },
+    { value: 'completed', label: 'Completado' },
+  ];
+
   function getCurrentStatus(book: typeof appState.selectedShelfBook): string {
     if (!book) return 'reading';
     if (book.completed) return 'completed';
-    if (book.isFavorite) return 'favorites';
     if (book.toRead) return 'to_read';
     return 'reading';
   }
@@ -483,18 +488,13 @@
             <!-- Status dropdown -->
             <div class="flex items-center gap-1.5">
               <span class="text-xs text-(--color-text-muted)">Estado:</span>
-              <select
-                class="rounded-md border border-(--color-border) bg-(--color-background) px-2 py-1 text-xs text-(--color-primary) focus:outline-none focus:ring-1 focus:ring-(--color-primary)"
+              <Dropdown
+                options={STATUS_OPTIONS}
                 value={currentStatus}
-                onchange={(e) => {
-                  appState.handleStatusChange(shelfDetail, (e.target as HTMLSelectElement).value);
+                onchange={({ value }) => {
+                  appState.handleStatusChange(shelfDetail, value);
                 }}
-              >
-                <option value="reading">En lectura</option>
-                <option value="to_read">Por leer</option>
-                <option value="favorites">Favoritos</option>
-                <option value="completed">Completado</option>
-              </select>
+              />
             </div>
 
             <!-- Favorite toggle -->

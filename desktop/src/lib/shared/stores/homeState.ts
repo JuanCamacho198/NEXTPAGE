@@ -77,10 +77,8 @@ export type ShelfBookLike = ProgressLike & {
   updatedAt?: string | null;
   lastReadAt?: string | null;
   fileSizeBytes?: number | null;
-  isFavorite?: boolean | null;
-  toRead?: boolean | null;
-  completed?: boolean | null;
-  shelfStatus?: ShelfTabCode | null;
+  collectionIds?: number[] | null;
+  readingStatus?: 'to_read' | 'reading' | 'completed' | null;
 };
 
 const removeAccents = (value: string): string =>
@@ -337,19 +335,15 @@ export const getShelfQueryWarnings = (state: Pick<ShelfQueryState, 'invalidToken
 };
 
 const getBookStatus = (book: ShelfBookLike): ShelfTabCode => {
-  if (book.shelfStatus && SHELF_TAB_CODES.includes(book.shelfStatus)) {
-    return book.shelfStatus;
-  }
-
-  if (book.completed === true || getSafeProgressPercentage(book) >= 100) {
+  if (book.readingStatus === 'completed' || getSafeProgressPercentage(book) >= 100) {
     return 'completed';
   }
 
-  if (book.isFavorite === true) {
+  if (book.collectionIds?.includes(1)) {
     return 'favorites';
   }
 
-  if (book.toRead === true) {
+  if (book.readingStatus === 'to_read') {
     return 'to_read';
   }
 

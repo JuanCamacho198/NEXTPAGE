@@ -85,6 +85,7 @@ fn main() {
             commands::addBookToCollection,
             commands::removeBookFromCollection,
             commands::getBookCollections,
+            commands::setReadingStatus,
             commands::reportErrorEvent,
             commands::logEvent,
             commands::diagnose,

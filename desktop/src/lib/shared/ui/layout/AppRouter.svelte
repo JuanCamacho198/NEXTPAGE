@@ -138,8 +138,8 @@
               onToggleFavorite={(book: Parameters<typeof appState.handleToggleFavorite>[0]) => {
                 void appState.handleToggleFavorite(book);
               }}
-              onMarkCompleted={(book: Parameters<typeof appState.handleMarkCompleted>[0]) => {
-                void appState.handleMarkCompleted(book);
+              onStatusChange={(book: Parameters<typeof appState.handleStatusChange>[0], status: string) => {
+                void appState.handleStatusChange(book, status);
               }}
               onViewDetails={appState.openShelfDetails}
               onRemoveBook={(book: Parameters<typeof appState.handleHideBook>[0]) => {

@@ -932,6 +932,10 @@ export const removeBookFromCollection = async (payload: BookCollectionInput): Pr
   }
 };
 
+export const setReadingStatus = async (bookId: string, status: string | null): Promise<void> => {
+  await invoke('setReadingStatus', { bookId, status });
+};
+
 export const getBookCollections = async (bookId: string): Promise<CollectionDto[]> => {
   try {
     return await invoke<CollectionDto[]>('getBookCollections', { bookId });

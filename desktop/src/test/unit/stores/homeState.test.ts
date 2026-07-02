@@ -21,9 +21,8 @@ type TestBook = {
   createdAt?: string;
   lastReadAt?: string;
   fileSizeBytes?: number;
-  isFavorite?: boolean;
-  toRead?: boolean;
-  completed?: boolean;
+  collectionIds?: number[];
+  readingStatus?: 'to_read' | 'reading' | 'completed' | null;
 };
 
 const makeState = (state: Partial<HomeStateSnapshot>): HomeStateSnapshot => {
@@ -248,7 +247,7 @@ describe('homeState shelf selector pipeline', () => {
       title: 'Ficciones',
       author: 'Jorge Luis Borges',
       progressPercentage: 100,
-      completed: true,
+      readingStatus: 'completed',
       updatedAt: '2026-03-05T12:00:00.000Z',
       createdAt: '2026-01-01T00:00:00.000Z',
       lastReadAt: '2026-03-05T12:00:00.000Z',
@@ -259,7 +258,7 @@ describe('homeState shelf selector pipeline', () => {
       title: 'Fundacion',
       author: 'Isaac Asimov',
       progressPercentage: 20,
-      isFavorite: true,
+      collectionIds: [1],
       updatedAt: '2026-03-04T12:00:00.000Z',
       createdAt: '2026-01-02T00:00:00.000Z',
       lastReadAt: '2026-03-04T12:00:00.000Z',
@@ -270,7 +269,7 @@ describe('homeState shelf selector pipeline', () => {
       title: 'Dune',
       author: 'Frank Herbert',
       progressPercentage: 0,
-      toRead: true,
+      readingStatus: 'to_read',
       updatedAt: '2026-03-03T12:00:00.000Z',
       createdAt: '2026-01-03T00:00:00.000Z',
       lastReadAt: '2026-03-02T12:00:00.000Z',

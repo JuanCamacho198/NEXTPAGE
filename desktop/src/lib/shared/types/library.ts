@@ -49,6 +49,8 @@ export type BulkImportSummary = {
   results: BulkImportItemResult[];
 };
 
+export type ReadingStatus = 'to_read' | 'reading' | 'completed';
+
 export type LibraryBookDto = {
   id: string;
   title: string;
@@ -66,6 +68,7 @@ export type LibraryBookDto = {
   publicationDate?: string;
   language?: string;
   coverUserDeleted?: boolean;
+  readingStatus?: ReadingStatus | null;
 };
 
 export type CollectionDto = {
@@ -101,8 +104,4 @@ export type ReadingStatsSummaryDto = {
 
 export type ReaderBook = LibraryBookDto & {
   filePath: string;
-  isFavorite?: boolean;
-  toRead?: boolean;
-  completed?: boolean;
-  shelfStatus?: 'all' | 'favorites' | 'to_read' | 'completed';
 };

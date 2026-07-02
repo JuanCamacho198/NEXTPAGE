@@ -234,10 +234,6 @@ const makeLibraryBook = (overrides: Partial<LibraryBookDto> = {}): LibraryBookDt
 
 const makeShelfBook = (
   overrides: Partial<LibraryBookDto> & {
-    isFavorite?: boolean;
-    toRead?: boolean;
-    completed?: boolean;
-    shelfStatus?: 'all' | 'favorites' | 'to_read' | 'completed';
     fileSizeBytes?: number;
     lastReadAt?: string;
     createdAt?: string;
@@ -271,8 +267,10 @@ const defaultStats: ReadingStatsSummaryDto = {
 };
 
 const collections: CollectionDto[] = [];
+let libraryBooks: LibraryBookDto[] = [];
 
-const configureLibrary = (libraryBooks: LibraryBookDto[], sourceBooks?: BookDto[]): void => {
+const configureLibrary = (books: LibraryBookDto[], sourceBooks?: BookDto[]): void => {
+  libraryBooks = books;
   tauriClientMock.listLibraryBooks.mockResolvedValue(libraryBooks);
   tauriClientMock.listBooks.mockResolvedValue(
     sourceBooks ??
@@ -280,6 +278,25 @@ const configureLibrary = (libraryBooks: LibraryBookDto[], sourceBooks?: BookDto[
   );
   tauriClientMock.listCollections.mockResolvedValue(collections);
   tauriClientMock.getBookCollections.mockResolvedValue([]);
+  tauriClientMock.addBookToCollection.mockImplementation(
+    ({ bookId, collectionId }: { bookId: string; collectionId: number }) => {
+      const book = libraryBooks.find((b) => b.id === bookId);
+      if (book) {
+        book.collectionIds = [...new Set([...(book.collectionIds ?? []), collectionId])];
+      }
+      // Update mock resolved value so re-fetch via listLibraryBooks sees the change
+      tauriClientMock.listLibraryBooks.mockResolvedValue([...libraryBooks]);
+    },
+  );
+  tauriClientMock.removeBookFromCollection.mockImplementation(
+    ({ bookId, collectionId }: { bookId: string; collectionId: number }) => {
+      const book = libraryBooks.find((b) => b.id === bookId);
+      if (book) {
+        book.collectionIds = (book.collectionIds ?? []).filter((id) => id !== collectionId);
+      }
+      tauriClientMock.listLibraryBooks.mockResolvedValue([...libraryBooks]);
+    },
+  );
 };
 
 beforeEach(() => {
@@ -463,7 +480,7 @@ describe('App desktop home redesign QA scenarios', () => {
         title: 'Favorites Book',
         author: 'Asimov',
         progressPercentage: 0,
-        isFavorite: true,
+        collectionIds: [1],
       }),
       makeShelfBook({ id: 'todo-1', title: 'Todo Book', author: 'Borges', progressPercentage: 0 }),
       makeShelfBook({
@@ -471,7 +488,7 @@ describe('App desktop home redesign QA scenarios', () => {
         title: 'Plan Book',
         author: 'Le Guin',
         progressPercentage: 0,
-        toRead: true,
+        readingStatus: 'to_read',
       }),
     ]);
 
@@ -636,7 +653,10 @@ describe('App desktop home redesign QA scenarios', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Add to favorites' }));
 
     await waitFor(() => {
-      expect(tauriClientMock.upsertBook).toHaveBeenCalled();
+      expect(tauriClientMock.addBookToCollection).toHaveBeenCalledWith({
+        bookId: 'actions-1',
+        collectionId: 1,
+      });
     });
 
     trigger.focus();

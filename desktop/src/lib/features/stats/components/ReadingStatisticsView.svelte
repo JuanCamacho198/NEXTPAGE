@@ -64,7 +64,7 @@
   );
   const booksCompleted = $derived(
     sd.currentStats?.booksCompleted ??
-      appState.books.filter((book) => book.completed || getSafeProgressPercentage(book) >= 100)
+      appState.books.filter((book) => book.readingStatus === 'completed' || getSafeProgressPercentage(book) >= 100)
         .length,
   );
   const averageProgress = $derived(

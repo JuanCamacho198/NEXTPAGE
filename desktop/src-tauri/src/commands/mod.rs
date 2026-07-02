@@ -602,6 +602,19 @@ pub fn getBookCollections(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
+pub fn setReadingStatus(
+    state: State<'_, AppState>,
+    book_id: String,
+    status: Option<String>,
+) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository
+        .set_reading_status(&book_id, status.as_deref())
+        .map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
 pub fn reportErrorEvent(state: State<'_, AppState>, event: ErrorEventDto) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     let max_lines = get_max_log_lines_internal(&repository).unwrap_or(DEFAULT_MAX_LOG_LINES);

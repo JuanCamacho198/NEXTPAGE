@@ -232,6 +232,7 @@ pub struct LibraryBookDto {
     pub language: Option<String>,
     pub publication_date: Option<String>,
     pub cover_user_deleted: Option<bool>,
+    pub reading_status: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

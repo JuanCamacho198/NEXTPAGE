@@ -8,6 +8,7 @@ pub mod files;
 pub mod highlights;
 pub mod library;
 pub mod progress;
+pub mod reading_status;
 pub mod search;
 pub mod settings;
 pub mod tags;
@@ -439,11 +440,12 @@ impl LibraryRepository {
                     COALESCE(CAST(ROUND(rs.total_duration_seconds / 60.0) AS INTEGER), 0) AS minutes_read,
                      b.updated_at,
                      b.created_at,
-                    (SELECT GROUP_CONCAT(collection_id, ',') FROM book_collections bc2 WHERE bc2.book_id = b.id) AS collection_ids,
+                    (SELECT GROUP_CONCAT(collection_id, ',') FROM book_collections bc2 WHERE bc2.book_id = b.id AND bc2.collection_id NOT IN (2, 3)) AS collection_ids,
                     b.genre,
                     b.language,
                     b.publication_date,
-                    (SELECT MAX(user_deleted) FROM book_covers bc2 WHERE bc2.book_id = b.id) AS cover_user_deleted
+                    (SELECT MAX(user_deleted) FROM book_covers bc2 WHERE bc2.book_id = b.id) AS cover_user_deleted,
+                    brs.status AS reading_status
              FROM books b
              LEFT JOIN reading_progress rp
                ON rp.book_id = b.id
@@ -457,6 +459,8 @@ impl LibraryRepository {
                 GROUP BY book_id
              ) rs
                ON rs.book_id = b.id
+             LEFT JOIN book_reading_status brs
+               ON brs.book_id = b.id
              WHERE b.deleted_at IS NULL
                AND b.hidden_at IS NULL
              ORDER BY b.updated_at DESC, b.id ASC",
@@ -484,6 +488,7 @@ impl LibraryRepository {
                 language: row.get(13)?,
                 publication_date: row.get(14)?,
                 cover_user_deleted: row.get(15)?,
+                reading_status: row.get(16)?,
             })
         })?;
 
@@ -613,6 +618,14 @@ impl LibraryRepository {
 
     pub fn get_book_collections(&self, book_id: &str) -> AppResult<Vec<CollectionDto>> {
         collections::get_book_collections(self, book_id)
+    }
+
+    pub fn set_reading_status(&self, book_id: &str, status: Option<&str>) -> AppResult<()> {
+        reading_status::set_reading_status(self, book_id, status)
+    }
+
+    pub fn get_reading_status(&self, book_id: &str) -> AppResult<Option<String>> {
+        reading_status::get_reading_status(self, book_id)
     }
 
     fn validate_setting(setting: &AppSettingDto) -> AppResult<()> {
@@ -1129,6 +1142,9 @@ mod tests {
             .unwrap();
         connection.execute_batch(include_str!("../../migrations/0010_book_genre.sql")).unwrap();
         connection.execute_batch(include_str!("../../migrations/0011_book_metadata.sql")).unwrap();
+        connection
+            .execute_batch(include_str!("../../migrations/0012_reading_status.sql"))
+            .unwrap();
     }
 
     pub(crate) fn new_repository() -> LibraryRepository {
@@ -1137,7 +1153,7 @@ mod tests {
         LibraryRepository::new(connection)
     }
 
-    fn insert_book(repository: &LibraryRepository, id: &str, file_path: &str) {
+    pub(crate) fn insert_book(repository: &LibraryRepository, id: &str, file_path: &str) {
         let now = Utc::now().to_rfc3339();
         repository
             .connection

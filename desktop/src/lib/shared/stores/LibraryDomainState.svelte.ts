@@ -2,6 +2,9 @@ import {
   listLibraryBooks,
   listBooks,
   listCollections,
+  addBookToCollection,
+  removeBookFromCollection,
+  setReadingStatus,
   upsertBook,
   upsertBookCover,
   hideBookFromLibrary,
@@ -251,62 +254,25 @@ class LibraryDomainState {
   }
 
   async handleToggleFavorite(book: ReaderBook): Promise<void> {
-    const nextFavorite = !Boolean(book.isFavorite);
-
-    this.books = this.books.map((currentBook) => {
-      if (currentBook.id !== book.id) return currentBook;
-      return { ...currentBook, isFavorite: nextFavorite };
-    });
-
-    const currentSnapshot = this.books.find((entry) => entry.id === book.id);
-    if (!currentSnapshot) return;
+    const isFav = book.collectionIds?.includes(1) ?? false;
 
     try {
-      await upsertBook({
-        id: currentSnapshot.id,
-        title: currentSnapshot.title,
-        author: currentSnapshot.author || '',
-        filePath: currentSnapshot.filePath,
-        format: currentSnapshot.format,
-        syncStatus: 'local' as const,
-        currentPage: currentSnapshot.currentPage,
-        totalPages: currentSnapshot.totalPages,
-      });
+      if (isFav) {
+        await removeBookFromCollection({ bookId: book.id, collectionId: 1 });
+      } else {
+        await addBookToCollection({ bookId: book.id, collectionId: 1 });
+      }
+      await this.loadLibrary();
     } catch (error) {
-      // Rollback
-      this.books = this.books.map((currentBook) => {
-        if (currentBook.id !== book.id) return currentBook;
-        return { ...currentBook, isFavorite: Boolean(book.isFavorite) };
-      });
-
       const typed = error as MaybeCommandError;
       this.readerError =
         typed.commandError?.message ?? (error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
-  async handleMarkCompleted(book: ReaderBook): Promise<void> {
+  async handleStatusChange(book: ReaderBook, status: 'to_read' | 'reading' | 'completed'): Promise<void> {
     try {
-      if (book.format.toLowerCase() === 'epub') {
-        await saveProgress({ bookId: book.id, cfiLocation: '', percentage: 100 });
-      } else {
-        await updateBookProgress(book.id, Math.max(1, book.totalPages || book.currentPage || 1));
-      }
-
-      this.books = this.books.map((currentBook) =>
-        currentBook.id === book.id
-          ? {
-              ...currentBook,
-              currentPage: Math.max(
-                currentBook.currentPage,
-                currentBook.totalPages || currentBook.currentPage,
-              ),
-              progressPercentage: 100,
-              completed: true,
-            }
-          : currentBook,
-      );
-
+      await setReadingStatus(book.id, status);
       await this.loadLibrary();
     } catch (error) {
       const typed = error as MaybeCommandError;

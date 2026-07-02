@@ -22,7 +22,7 @@
     {#snippet actions()}
       <ShelfActionMenu
         bookId={book.id}
-        isFavorite={Boolean(book.isFavorite)}
+        isFavorite={Boolean(book.collectionIds?.includes(1))}
         readLabel={appState.t('app.read')}
         editLabel={appState.t('library.editMetadata.title')}
         removeLabel={appState.t('library.removeFromShelf')}
@@ -64,7 +64,7 @@
           {#snippet actions()}
             <ShelfActionMenu
               bookId={book.id}
-              isFavorite={Boolean(book.isFavorite)}
+              isFavorite={Boolean(book.collectionIds?.includes(1))}
               readLabel={appState.t('app.read')}
               editLabel={appState.t('library.editMetadata.title')}
               removeLabel={appState.t('library.removeFromShelf')}

@@ -127,8 +127,8 @@
 
   function getCurrentStatus(book: typeof appState.selectedShelfBook): string {
     if (!book) return 'reading';
-    if (book.completed) return 'completed';
-    if (book.toRead) return 'to_read';
+    if (book.readingStatus === 'completed') return 'completed';
+    if (book.readingStatus === 'to_read') return 'to_read';
     return 'reading';
   }
 
@@ -392,7 +392,7 @@
         {#snippet actions()}
           <ShelfActionMenu
             bookId={book.id}
-            isFavorite={Boolean(book.isFavorite)}
+            isFavorite={Boolean(book.collectionIds?.includes(1))}
             readLabel={appState.t('app.read')}
             editLabel={appState.t('library.editMetadata.title')}
             removeLabel={appState.t('library.removeFromShelf')}
@@ -431,7 +431,7 @@
               {#snippet actions()}
                 <ShelfActionMenu
                   bookId={book.id}
-                  isFavorite={Boolean(book.isFavorite)}
+                  isFavorite={Boolean(book.collectionIds?.includes(1))}
                   readLabel={appState.t('app.read')}
                   editLabel={appState.t('library.editMetadata.title')}
                   removeLabel={appState.t('library.removeFromShelf')}
@@ -474,7 +474,7 @@
             {#snippet actions()}
               <ShelfActionMenu
                 bookId={book.id}
-                isFavorite={Boolean(book.isFavorite)}
+                isFavorite={Boolean(book.collectionIds?.includes(1))}
                 readLabel={appState.t('app.read')}
                 editLabel={appState.t('library.editMetadata.title')}
                 removeLabel={appState.t('library.removeFromShelf')}
@@ -709,14 +709,15 @@
                 </div>
 
                 <!-- Favorite toggle -->
-                {#if shelfDetail.isFavorite !== undefined}
+                {#if shelfDetail.collectionIds}
+                  {@const fav = shelfDetail.collectionIds.includes(1)}
                   <button
                     type="button"
-                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors {shelfDetail.isFavorite
+                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors {fav
                       ? 'bg-amber-500/15 text-amber-500 border-amber-500/25'
                       : 'bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border) hover:border-amber-500/25'}"
                     onclick={() => void appState.handleToggleFavorite(shelfDetail)}
-                    aria-label={shelfDetail.isFavorite
+                    aria-label={fav
                       ? 'Quitar de favoritos'
                       : 'Agregar a favoritos'}
                   >
@@ -725,7 +726,7 @@
                       viewBox="0 0 24 24"
                       stroke-width="1.5"
                     >
-                      {#if shelfDetail.isFavorite}
+                      {#if fav}
                         <path
                           fill="#f59e0b"
                           stroke="#f59e0b"
@@ -743,12 +744,12 @@
                         />
                       {/if}
                     </svg>
-                    {shelfDetail.isFavorite ? 'Favorito' : 'Favorito'}
+                    {fav ? 'Favorito' : 'Favorito'}
                   </button>
                 {/if}
 
                 <!-- Completed badge -->
-                {#if shelfDetail.completed}
+                {#if shelfDetail.readingStatus === 'completed'}
                   <span
                     class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border bg-green-500/10 text-green-500 border-green-500/25"
                   >

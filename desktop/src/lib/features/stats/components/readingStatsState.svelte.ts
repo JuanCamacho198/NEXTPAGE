@@ -2,11 +2,7 @@ import type { LibraryBookDto } from '$lib/types';
 import { UNCLASSIFIED_GENRE, type CanonicalGenre } from '$lib/shared/services/genreHeuristic';
 import type { AppState } from '$lib/shared/stores/AppState.svelte';
 
-export type StatsBook = LibraryBookDto & {
-  isFavorite?: boolean;
-  toRead?: boolean;
-  completed?: boolean;
-};
+export type StatsBook = LibraryBookDto;
 
 export type PeriodKey = 'week' | 'month' | 'year' | 'all';
 export type Granularity = 'day' | 'week' | 'month';

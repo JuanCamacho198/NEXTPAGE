@@ -445,27 +445,7 @@ export class AppState {
   handleDeleteCover = async (book: ReaderBook): Promise<void> => {
     await this.library.handleDeleteCover(book);
   };
-  handleStatusChange = (book: ReaderBook, status: string): void => {
-    // Compute current status (favorites is NOT a status — it's a separate toggle)
-    const current = book.completed ? 'completed' : book.toRead ? 'to_read' : 'reading';
-
-    if (current === status) return;
-
-    // Clear previous status
-    if (current === 'completed' && book.completed) {
-      void this.handleMarkCompleted(book);
-    }
-    if (current === 'to_read') book.toRead = false;
-
-    // Set new status
-    if (status === 'completed' && !book.completed) {
-      void this.handleMarkCompleted(book);
-    } else if (status === 'to_read') {
-      book.toRead = true;
-    }
-    // 'reading' = default, no flags needed
-  };
-  handleMarkCompleted = async (book: ReaderBook): Promise<void> => {
+  handleStatusChange = async (book: ReaderBook, status: string): Promise<void> => {
     const snapshot = {
       route: this.navigation.route,
       previewBookId: this.navigation.previewBookId,
@@ -473,9 +453,9 @@ export class AppState {
       shelfDetailsBookId: this.navigation.shelfDetailsBookId,
     };
 
-    await this.library.handleMarkCompleted(book);
+    await this.library.handleStatusChange(book, status as 'to_read' | 'reading' | 'completed');
 
-    // Consume reconciliation flags set by loadLibrary() inside handleMarkCompleted
+    // Consume reconciliation flags set by loadLibrary() inside handleStatusChange
     if (this.library.consumeBooksJustChanged()) {
       const reconciled = reconcileHomeState(this.library.books, snapshot);
       this.navigation.route = reconciled.route;

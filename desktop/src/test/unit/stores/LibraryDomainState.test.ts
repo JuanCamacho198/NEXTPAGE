@@ -14,6 +14,9 @@ const mockSaveProgress = vi.hoisted(() => vi.fn());
 const mockExtractEpubCover = vi.hoisted(() => vi.fn());
 const mockExtractPdfMetadata = vi.hoisted(() => vi.fn());
 const mockRecordMetric = vi.hoisted(() => vi.fn());
+const mockAddBookToCollection = vi.hoisted(() => vi.fn());
+const mockRemoveBookFromCollection = vi.hoisted(() => vi.fn());
+const mockSetReadingStatus = vi.hoisted(() => vi.fn());
 
 // ─── Module mocks ───
 
@@ -27,6 +30,9 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
   updateBookProgress: mockUpdateBookProgress,
   saveProgress: mockSaveProgress,
   extractEpubCover: mockExtractEpubCover,
+  addBookToCollection: mockAddBookToCollection,
+  removeBookFromCollection: mockRemoveBookFromCollection,
+  setReadingStatus: mockSetReadingStatus,
 }));
 
 vi.mock('$lib/shared/services/pdfThumbnail', () => ({
@@ -56,9 +62,7 @@ type BookLike = {
   minutesRead: number;
   updatedAt: string;
   collectionIds: number[];
-  isFavorite?: boolean;
-  toRead?: boolean;
-  completed?: boolean;
+  readingStatus?: 'to_read' | 'reading' | 'completed' | null;
 };
 
 const makeBook = (overrides: Partial<BookLike> = {}): BookLike => ({
@@ -74,9 +78,6 @@ const makeBook = (overrides: Partial<BookLike> = {}): BookLike => ({
   minutesRead: 0,
   updatedAt: '2026-01-01T00:00:00.000Z',
   collectionIds: [],
-  isFavorite: false,
-  toRead: false,
-  completed: false,
   ...overrides,
 });
 
@@ -94,6 +95,7 @@ const makeLibraryRow = (overrides: Partial<BookLike> = {}) => {
     minutesRead: b.minutesRead,
     updatedAt: b.updatedAt,
     collectionIds: b.collectionIds,
+    readingStatus: b.readingStatus ?? null,
   };
 };
 
@@ -337,66 +339,63 @@ describe('LibraryDomainState', () => {
 
   // ─── handleToggleFavorite ───
 
-  it('handleToggleFavorite optimistically updates and persists', async () => {
-    const book = makeBook({ id: 'b1', isFavorite: false });
+  it('handleToggleFavorite adds to collection 1 when not already favorite', async () => {
+    const book = makeBook({ id: 'b1', collectionIds: [] });
     libraryState.books = [book as any];
+    const row = makeLibraryRow({ id: 'b1', collectionIds: [1] });
+    mockListLibraryBooks.mockResolvedValue([row]);
+    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1' })]);
 
     await libraryState.handleToggleFavorite(book as any);
 
-    expect(libraryState.books[0].isFavorite).toBe(true);
-    expect(mockUpsertBook).toHaveBeenCalledWith(expect.objectContaining({ id: 'b1' }));
+    expect(mockAddBookToCollection).toHaveBeenCalledWith({ bookId: 'b1', collectionId: 1 });
+    expect(mockListLibraryBooks).toHaveBeenCalled();
   });
 
-  it('handleToggleFavorite rolls back on failure', async () => {
-    const book = makeBook({ id: 'b1', isFavorite: false });
+  it('handleToggleFavorite removes from collection 1 when already favorite', async () => {
+    const book = makeBook({ id: 'b1', collectionIds: [1] });
     libraryState.books = [book as any];
-    mockUpsertBook.mockRejectedValue(new Error('Save failed'));
+    const row = makeLibraryRow({ id: 'b1', collectionIds: [] });
+    mockListLibraryBooks.mockResolvedValue([row]);
+    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1' })]);
 
     await libraryState.handleToggleFavorite(book as any);
 
-    expect(libraryState.books[0].isFavorite).toBe(false);
+    expect(mockRemoveBookFromCollection).toHaveBeenCalledWith({ bookId: 'b1', collectionId: 1 });
+  });
+
+  it('handleToggleFavorite sets error on failure', async () => {
+    const book = makeBook({ id: 'b1', collectionIds: [] });
+    mockAddBookToCollection.mockRejectedValue(new Error('Save failed'));
+
+    await libraryState.handleToggleFavorite(book as any);
+
     expect(libraryState.readerError).toBe('Save failed');
   });
 
-  // ─── handleMarkCompleted ───
+  // ─── handleStatusChange ───
 
-  it('handleMarkCompleted marks PDF book as completed', async () => {
-    const book = makeBook({ id: 'b1', format: 'pdf', currentPage: 50, totalPages: 100 });
+  it('handleStatusChange calls setReadingStatus and reloads', async () => {
+    const book = makeBook({ id: 'b1', format: 'pdf' });
     libraryState.books = [book as any];
-    // loadLibrary runs inside handleMarkCompleted; mock returns progressPercentage: 100
-    const row = makeLibraryRow({
-      id: 'b1',
-      format: 'pdf',
-      currentPage: 100,
-      totalPages: 100,
-      progressPercentage: 100,
-    });
+    const row = makeLibraryRow({ id: 'b1', readingStatus: 'completed' });
     mockListLibraryBooks.mockResolvedValue([row]);
-    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1', format: 'pdf' })]);
+    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1' })]);
 
-    await libraryState.handleMarkCompleted(book as any);
+    await libraryState.handleStatusChange(book as any, 'completed');
 
-    expect(mockUpdateBookProgress).toHaveBeenCalledWith('b1', 100);
-    // Verify the save was sent AND loadLibrary confirmed progressPercentage from backend
-    expect(libraryState.books[0].progressPercentage).toBe(100);
+    expect(mockSetReadingStatus).toHaveBeenCalledWith('b1', 'completed');
+    expect(mockListLibraryBooks).toHaveBeenCalled();
+    expect(libraryState.books[0].readingStatus).toBe('completed');
   });
 
-  it('handleMarkCompleted marks EPUB book as completed via saveProgress', async () => {
-    const book = makeBook({ id: 'b1', format: 'epub' });
-    libraryState.books = [book as any];
-    const row = makeLibraryRow({ id: 'b1', format: 'epub', progressPercentage: 100 });
-    mockListLibraryBooks.mockResolvedValue([row]);
-    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1', format: 'epub' })]);
+  it('handleStatusChange sets error on failure', async () => {
+    const book = makeBook({ id: 'b1' });
+    mockSetReadingStatus.mockRejectedValue(new Error('Status failed'));
 
-    await libraryState.handleMarkCompleted(book as any);
+    await libraryState.handleStatusChange(book as any, 'reading');
 
-    expect(mockSaveProgress).toHaveBeenCalledWith({
-      bookId: 'b1',
-      cfiLocation: '',
-      percentage: 100,
-    });
-    // loadLibrary persists progressPercentage; completed field is DTO-only
-    expect(libraryState.books[0].progressPercentage).toBe(100);
+    expect(libraryState.readerError).toBe('Status failed');
   });
 
   // ─── handleEditBook / handleSaveEditedBook ───

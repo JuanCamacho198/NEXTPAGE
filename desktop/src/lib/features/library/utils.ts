@@ -76,9 +76,6 @@ export function getBulkImportStatusClass(status: string): string {
 
 export type ShelfBook = LibraryBookDto & {
   filePath: string;
-  isFavorite?: boolean;
-  toRead?: boolean;
-  completed?: boolean;
 };
 
 export type ShelfFilter = 'all' | 'reading' | 'pending' | 'completed' | 'favorites';
@@ -111,17 +108,17 @@ export function getSafeProgressPercentage(book: LibraryBookDto): number {
 
 export function getBookState(book: ShelfBook): ShelfFilter {
   const progress = getSafeProgressPercentage(book);
-  if (book.completed || progress >= 100) return 'completed';
+  if (book.readingStatus === 'completed' || progress >= 100) return 'completed';
   if (progress > 0) return 'reading';
-  if (book.isFavorite) return 'favorites';
+  if (book.collectionIds?.includes(1)) return 'favorites';
   return 'pending';
 }
 
 export function getStateLabel(book: ShelfBook): string {
   const progress = getSafeProgressPercentage(book);
-  if (book.completed || progress >= 100) return 'Completado';
+  if (book.readingStatus === 'completed' || progress >= 100) return 'Completado';
   if (progress > 0) return 'En lectura';
-  if (book.isFavorite) return 'Favorito';
+  if (book.collectionIds?.includes(1)) return 'Favorito';
   return 'Pendiente';
 }
 

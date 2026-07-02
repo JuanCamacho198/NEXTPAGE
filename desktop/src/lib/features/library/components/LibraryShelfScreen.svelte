@@ -26,7 +26,7 @@
     onOpenBook?: (book: ShelfBook) => void;
     onContinueReading?: (book: ShelfBook) => void;
     onToggleFavorite?: (book: ShelfBook) => void;
-    onMarkCompleted?: (book: ShelfBook) => void;
+    onStatusChange?: (book: ShelfBook, status: string) => void;
     onViewDetails?: (book: ShelfBook) => void;
     onRemoveBook?: (book: ShelfBook) => void;
   };
@@ -39,7 +39,7 @@
     onOpenBook,
     onContinueReading,
     onToggleFavorite,
-    onMarkCompleted,
+    onStatusChange,
     onViewDetails,
     onRemoveBook,
   }: Props = $props();
@@ -59,7 +59,7 @@
     ).length,
   );
   const completedBooks = $derived(
-    books.filter((book) => book.completed || getSafeProgressPercentage(book) >= 100).length,
+    books.filter((book) => book.readingStatus === 'completed' || getSafeProgressPercentage(book) >= 100).length,
   );
 
   const filteredBooks = $derived.by(() => {
@@ -81,7 +81,7 @@
       }
 
       if (activeFilter === 'favorites') {
-        return Boolean(book.isFavorite);
+        return Boolean(book.collectionIds?.includes(1));
       }
 
       if (activeFilter === 'reading') {
@@ -89,7 +89,7 @@
       }
 
       if (activeFilter === 'completed') {
-        return Boolean(book.completed) || progress >= 100;
+        return book.readingStatus === 'completed' || progress >= 100;
       }
 
       return progress === 0;
@@ -292,11 +292,11 @@
                   class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]"
                   onclick={() => onToggleFavorite?.(book)}
                 >
-                  {book.isFavorite ? 'Quitar de favoritos' : 'Marcar como favorito'}
+                  {book.collectionIds?.includes(1) ? 'Quitar de favoritos' : 'Marcar como favorito'}
                 </button>
                 <button
                   class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]"
-                  onclick={() => onMarkCompleted?.(book)}>Marcar como completado</button
+                  onclick={() => onStatusChange?.(book, 'completed')}>Marcar como completado</button
                 >
                 <button
                   class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]"
@@ -504,11 +504,11 @@
                   class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
                   onclick={() => onToggleFavorite?.(book)}
                 >
-                  {book.isFavorite ? 'Quitar de favoritos' : 'Marcar como favorito'}
+                  {book.collectionIds?.includes(1) ? 'Quitar de favoritos' : 'Marcar como favorito'}
                 </button>
                 <button
                   class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
-                  onclick={() => onMarkCompleted?.(book)}>Marcar como completado</button
+                  onclick={() => onStatusChange?.(book, 'completed')}>Marcar como completado</button
                 >
                 <button
                   class="w-full px-4 py-2 text-left text-sm text-(--color-border)"

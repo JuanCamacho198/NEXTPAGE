@@ -764,11 +764,11 @@
               <Icon name="clock" size="sm" class="inline -mt-0.5 mr-1" />
               Lectura
             </h4>
-            {#if shelfDetail.totalPages > 0}
+            {#if progressPct > 0}
               <div class="space-y-1">
-                <div class="flex justify-between text-xs text-(--color-text-muted)">
+                <div class="flex items-center justify-between text-(--text-2xs) text-(--color-text-muted)">
                   <span>Progreso</span>
-                  <span>{shelfDetail.currentPage}/{shelfDetail.totalPages} · {progressPct}%</span>
+                  <span>{progressPct}%</span>
                 </div>
                 <div class="h-1.5 w-full rounded-full bg-(--color-border)">
                   <div
@@ -776,6 +776,11 @@
                     style="width: {progressPct}%"
                   ></div>
                 </div>
+                {#if shelfDetail.totalPages > 0}
+                  <p class="text-(--text-2xs) text-(--color-text-muted)">
+                    Página {shelfDetail.currentPage} de {shelfDetail.totalPages}
+                  </p>
+                {/if}
               </div>
             {/if}
             <dl class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">

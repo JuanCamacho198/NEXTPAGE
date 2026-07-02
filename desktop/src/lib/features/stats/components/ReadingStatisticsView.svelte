@@ -230,7 +230,11 @@
           </div>
 
           <span class="text-xs text-(--color-text-muted)">Vista</span>
-          <Dropdown options={granularityOptions} bind:value={activeGranularity} class="min-w-[100px]" />
+          <Dropdown
+            options={granularityOptions}
+            bind:value={activeGranularity}
+            class="min-w-[100px]"
+          />
         </div>
 
         <div

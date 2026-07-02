@@ -143,7 +143,9 @@
       class="flex min-w-0 min-h-0 flex-col justify-center gap-4 lg:gap-5 max-w-xl w-full lg:w-auto"
       aria-labelledby="welcome-headline"
     >
-      <p class="m-0 text-(--text-2xs) font-semibold uppercase tracking-wider text-(--color-accent-blue)">
+      <p
+        class="m-0 text-(--text-2xs) font-semibold uppercase tracking-wider text-(--color-accent-blue)"
+      >
         {t('welcome.eyebrow')}
       </p>
       <h1

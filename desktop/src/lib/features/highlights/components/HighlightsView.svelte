@@ -221,22 +221,14 @@
       <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
         >{t('home.highlightsFilterBook')}</span
       >
-      <Dropdown
-        options={bookFilterOptions}
-        bind:value={selectedBookId}
-        class="min-w-[150px]"
-      />
+      <Dropdown options={bookFilterOptions} bind:value={selectedBookId} class="min-w-[150px]" />
     </div>
 
     <div class="flex items-center gap-2">
       <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
         >{t('home.highlightsFilterDate')}</span
       >
-      <Dropdown
-        options={dateFilterOptions}
-        bind:value={selectedDateRange}
-        class="min-w-[140px]"
-      />
+      <Dropdown options={dateFilterOptions} bind:value={selectedDateRange} class="min-w-[140px]" />
     </div>
 
     <Button size="sm" variant="ghost" onclick={clearFilters}

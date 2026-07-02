@@ -574,11 +574,7 @@
 
                 <div class="mb-2">
                   <span class="mb-1 block text-xs text-zinc-600">{t('settings.theme')}</span>
-                  <Dropdown
-                    options={themeOptions}
-                    bind:value={preferredTheme}
-                    class="w-full"
-                  />
+                  <Dropdown options={themeOptions} bind:value={preferredTheme} class="w-full" />
                 </div>
 
                 <div class="mb-2">
@@ -945,7 +941,8 @@
                     <span class="text-(--text-2sm) text-(--color-text-muted,var(--color-secondary))"
                       >EPUB Parsing</span
                     >
-                    <span class="text-(--text-2sm) text-(--color-primary) font-medium">epub.js</span>
+                    <span class="text-(--text-2sm) text-(--color-primary) font-medium">epub.js</span
+                    >
                   </li>
                   <li
                     class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0"

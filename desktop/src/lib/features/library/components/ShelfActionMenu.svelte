@@ -186,12 +186,7 @@
   });
 </script>
 
-<div
-  bind:this={containerEl}
-  role="group"
-  aria-label={triggerLabel}
-  class="relative inline-block"
->
+<div bind:this={containerEl} role="group" aria-label={triggerLabel} class="relative inline-block">
   <button
     bind:this={triggerEl}
     type="button"

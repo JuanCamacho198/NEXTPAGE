@@ -594,38 +594,45 @@
             <!-- Info card -->
             <div class="rounded-lg border border-(--color-border) p-4 space-y-3">
               {#if shelfDetail.author}
-                <p class="text-sm text-(--color-text-muted)">{shelfDetail.author}</p>
+                <p class="text-sm text-(--color-text-muted)">
+                  <span class="font-medium text-(--color-primary)">Autor:</span>
+                  {shelfDetail.author}
+                </p>
               {/if}
 
-              <!-- Badges row: format, genre, language -->
-              <div class="flex flex-wrap items-center gap-2">
-                <!-- Format badge -->
-                <span
-                  class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border uppercase {shelfDetail.format ===
-                  'epub'
-                    ? 'bg-(--color-primary)/8 text-(--color-primary) border-(--color-primary)/25'
-                    : 'bg-amber-500/8 text-amber-600 border-amber-500/25'}"
-                >
-                  {shelfDetail.format}
-                </span>
-
-                <!-- Genre badge -->
-                {#if shelfDetail.genre}
+              <!-- Metadata list: format, genre, language -->
+              <div class="space-y-1">
+                <p class="flex items-center gap-2 text-xs text-(--color-text-muted)">
+                  <span class="font-medium text-(--color-primary) w-16 shrink-0">Formato:</span>
                   <span
-                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border)"
+                    class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium border uppercase {shelfDetail.format ===
+                    'epub'
+                      ? 'bg-(--color-primary)/8 text-(--color-primary) border-(--color-primary)/25'
+                      : 'bg-amber-500/8 text-amber-600 border-amber-500/25'}"
                   >
-                    {shelfDetail.genre}
+                    {shelfDetail.format}
                   </span>
-                {/if}
-
-                <!-- Language badge -->
-                {#if shelfDetail.language}
-                  <span
-                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border)"
-                  >
-                    {getLanguageName(shelfDetail.language)}
+                </p>
+                <p class="flex items-center gap-2 text-xs text-(--color-text-muted)">
+                  <span class="font-medium text-(--color-primary) w-16 shrink-0">Género:</span>
+                  <span>
+                    {#if shelfDetail.genre}
+                      {shelfDetail.genre}
+                    {:else}
+                      <span class="italic opacity-60">Sin clasificar</span>
+                    {/if}
                   </span>
-                {/if}
+                </p>
+                <p class="flex items-center gap-2 text-xs text-(--color-text-muted)">
+                  <span class="font-medium text-(--color-primary) w-16 shrink-0">Idioma:</span>
+                  <span>
+                    {#if shelfDetail.language}
+                      {getLanguageName(shelfDetail.language)}
+                    {:else}
+                      <span class="italic opacity-60">Sin especificar</span>
+                    {/if}
+                  </span>
+                </p>
               </div>
 
               <!-- Status dropdown + Favorite + Completed -->
@@ -711,6 +718,10 @@
                   ></div>
                 </div>
               </div>
+            {:else if shelfDetail.minutesRead === 0 && !shelfDetail.updatedAt}
+              <p class="text-xs italic text-(--color-text-muted) opacity-60">
+                Sin datos de lectura todavía
+              </p>
             {/if}
             <dl class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
               {#if shelfDetail.minutesRead > 0}

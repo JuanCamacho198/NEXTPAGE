@@ -64,6 +64,7 @@ fn main() {
             commands::saveBookFile,
             commands::upsertBookCover,
             commands::extractEpubCover,
+            commands::deleteBookCover,
             commands::listHighlights,
             commands::saveHighlight,
             commands::updateHighlight,

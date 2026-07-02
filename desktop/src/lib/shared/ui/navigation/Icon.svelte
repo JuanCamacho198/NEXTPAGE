@@ -33,7 +33,8 @@
     | 'filter'
     | 'user'
     | 'database'
-    | 'info';
+    | 'info'
+    | 'calendar';
 
   type Props = {
     name: IconName;
@@ -97,6 +98,8 @@
     database:
       'M4 7c0-1.1.9-2 2-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7zM8 7V5a2 2 0 012-2h4a2 2 0 012 2v2m-6 4v6m-2-2h4',
     info: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    calendar:
+      'M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
   };
 </script>
 

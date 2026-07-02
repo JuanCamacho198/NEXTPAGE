@@ -9,7 +9,7 @@
     title: string;
     children?: Snippet;
     footer?: Snippet;
-    size?: 'sm' | 'md' | 'lg';
+    size?: 'sm' | 'md' | 'lg' | 'xl';
     noCloseButton?: boolean;
     class?: string;
   };
@@ -26,7 +26,15 @@
 
   let dialogEl: HTMLDivElement | undefined = $state();
 
-  const sizeClass = $derived(size === 'sm' ? 'max-w-sm' : size === 'lg' ? 'max-w-2xl' : 'max-w-lg');
+  const sizeClass = $derived(
+    size === 'sm'
+      ? 'max-w-sm'
+      : size === 'lg'
+        ? 'max-w-2xl'
+        : size === 'xl'
+          ? 'max-w-4xl'
+          : 'max-w-lg',
+  );
 
   const handleBackdropClick = (e: MouseEvent): void => {
     if (e.target === e.currentTarget) {

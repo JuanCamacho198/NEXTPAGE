@@ -60,6 +60,7 @@ export type LibraryBookDto = {
   coverPath: string | null;
   minutesRead: number;
   updatedAt: string;
+  createdAt: string;
   collectionIds?: number[];
   genre?: string | null;
   publicationDate?: string;

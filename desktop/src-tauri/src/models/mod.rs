@@ -226,6 +226,7 @@ pub struct LibraryBookDto {
     pub cover_path: Option<String>,
     pub minutes_read: i64,
     pub updated_at: String,
+    pub created_at: String,
     pub collection_ids: Vec<i64>,
     pub genre: Option<String>,
     pub language: Option<String>,

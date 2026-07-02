@@ -437,7 +437,8 @@ impl LibraryRepository {
                     COALESCE(rp.percentage, 0.0) AS progress_percentage,
                     bc.storage_path,
                     COALESCE(CAST(ROUND(rs.total_duration_seconds / 60.0) AS INTEGER), 0) AS minutes_read,
-                    b.updated_at,
+                     b.updated_at,
+                     b.created_at,
                     (SELECT GROUP_CONCAT(collection_id, ',') FROM book_collections bc2 WHERE bc2.book_id = b.id) AS collection_ids,
                     b.genre,
                     b.language,
@@ -462,7 +463,7 @@ impl LibraryRepository {
         )?;
 
         let rows = statement.query_map([], |row| {
-            let collection_ids_str: Option<String> = row.get(10)?;
+            let collection_ids_str: Option<String> = row.get(11)?;
             let collection_ids: Vec<i64> = collection_ids_str
                 .map(|s| s.split(',').filter_map(|x| x.parse().ok()).collect())
                 .unwrap_or_default();
@@ -477,11 +478,12 @@ impl LibraryRepository {
                 cover_path: row.get(7)?,
                 minutes_read: row.get(8)?,
                 updated_at: row.get(9)?,
+                created_at: row.get(10)?,
                 collection_ids,
-                genre: row.get(11)?,
-                language: row.get(12)?,
-                publication_date: row.get(13)?,
-                cover_user_deleted: row.get(14)?,
+                genre: row.get(12)?,
+                language: row.get(13)?,
+                publication_date: row.get(14)?,
+                cover_user_deleted: row.get(15)?,
             })
         })?;
 

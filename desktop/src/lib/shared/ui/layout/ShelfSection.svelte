@@ -149,11 +149,39 @@
     }
   }
 
+  // ─── Genre options ───
+  const KNOWN_GENRES = [
+    'Novela',
+    'Ficción',
+    'No ficción',
+    'Ciencia ficción',
+    'Fantasía',
+    'Terror',
+    'Misterio',
+    'Romance',
+    'Thriller',
+    'Biografía / Memorias',
+    'Historia',
+    'Ciencia / Tecnología',
+    'Autoayuda',
+    'Filosofía',
+    'Ensayo',
+    'Poesía',
+    'Aventura',
+    'Clásicos',
+  ] as const;
+
+  const GENRE_OPTIONS = [
+    ...KNOWN_GENRES.map((g) => ({ value: g, label: g })),
+    { value: '__other__', label: '✏️ Otro…' },
+  ];
+
   // ─── Inline editing ───
   let isEditing = $state(false);
   let editTitle = $state('');
   let editAuthor = $state('');
-  let editGenre = $state('');
+  let selectedGenre = $state<string | null>(null);
+  let customGenre = $state('');
   let editError = $state<string | null>(null);
   let isSaving = $state(false);
 
@@ -163,7 +191,15 @@
   function startEditing(book: NonNullable<typeof appState.selectedShelfBook>): void {
     editTitle = book.title;
     editAuthor = book.author || '';
-    editGenre = book.genre ?? '';
+    const stored = (book.genre ?? '').trim();
+    const known = KNOWN_GENRES.find((g) => g.toLowerCase() === stored.toLowerCase());
+    if (known) {
+      selectedGenre = known;
+      customGenre = '';
+    } else {
+      selectedGenre = '__other__';
+      customGenre = stored;
+    }
     editError = null;
     isEditing = true;
   }
@@ -173,6 +209,11 @@
     editError = null;
   }
 
+  function resolveGenre(): string {
+    if (selectedGenre === '__other__') return customGenre.trim();
+    return selectedGenre ?? '';
+  }
+
   async function saveEditing(): Promise<void> {
     const book = appState.selectedShelfBook;
     if (!book) return;
@@ -180,12 +221,12 @@
       editError = 'El título es obligatorio';
       return;
     }
-    const trimmedGenre = editGenre.trim();
+    const trimmedGenre = resolveGenre();
     if (trimmedGenre.length > MAX_GENRE_LENGTH) {
       editError = 'El género no puede exceder 80 caracteres';
       return;
     }
-    if (CONTROL_CHAR_REGEX.test(trimmedGenre)) {
+    if (trimmedGenre.length > 0 && CONTROL_CHAR_REGEX.test(trimmedGenre)) {
       editError = 'El género contiene caracteres inválidos';
       return;
     }
@@ -578,13 +619,22 @@
                 >
                   Género
                 </label>
-                <input
-                  id="edit-genre"
-                  type="text"
-                  bind:value={editGenre}
-                  maxlength={MAX_GENRE_LENGTH}
-                  class="w-full rounded-md border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-primary) focus:border-(--color-primary) focus:outline-none"
+                <Dropdown
+                  options={GENRE_OPTIONS}
+                  bind:value={selectedGenre}
+                  placeholder="Seleccionar género"
+                  class="w-full"
                 />
+                {#if selectedGenre === '__other__'}
+                  <input
+                    id="edit-genre"
+                    type="text"
+                    bind:value={customGenre}
+                    maxlength={MAX_GENRE_LENGTH}
+                    placeholder="Escribir género personalizado"
+                    class="mt-2 w-full rounded-md border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-primary) focus:border-(--color-primary) focus:outline-none"
+                  />
+                {/if}
               </div>
               {#if editError}
                 <p class="text-sm text-red-600">{editError}</p>

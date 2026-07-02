@@ -81,8 +81,6 @@
           <p class="text-xs tabular-nums text-(--color-text-muted)">
             {#if book.totalPages > 0}
               {book.currentPage}/{book.totalPages}
-            {:else if book.progressPercentage > 0}
-              {Math.round(book.progressPercentage)}%
             {:else}
               —
             {/if}

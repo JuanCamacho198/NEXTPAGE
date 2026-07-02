@@ -777,21 +777,25 @@
                   ></div>
                 </div>
               </div>
-            {:else if shelfDetail.minutesRead === 0 && !shelfDetail.updatedAt}
-              <p class="text-xs italic text-(--color-text-muted) opacity-60">
-                Sin datos de lectura todavía
-              </p>
             {/if}
             <dl class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
               {#if shelfDetail.minutesRead > 0}
                 <dt class="sr-only">Tiempo de lectura</dt>
-                <dd>{formatMinutes(shelfDetail.minutesRead)} leídos</dd>
+                <dd class="font-medium text-(--color-primary)">
+                  <Icon name="clock" size="sm" class="inline -mt-0.5 mr-0.5" />
+                  {formatMinutes(shelfDetail.minutesRead)} leídos
+                </dd>
               {/if}
               {#if shelfDetail.updatedAt}
                 <dt class="sr-only">Última actividad</dt>
                 <dd>{formatRelativeDate(shelfDetail.updatedAt)}</dd>
               {/if}
             </dl>
+            {#if shelfDetail.totalPages === 0 && shelfDetail.minutesRead === 0 && !shelfDetail.updatedAt}
+              <p class="text-xs italic text-(--color-text-muted) opacity-60">
+                Sin datos de lectura todavía
+              </p>
+            {/if}
           </div>
 
           <!-- Details card -->

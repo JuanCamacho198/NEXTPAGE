@@ -452,3 +452,24 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   border: none;
 }
+
+/* Theme icon button — pseudo-element gradient background */
+.theme-icon-btn {
+  position: relative;
+}
+.theme-icon-btn::before {
+  content: '';
+  position: absolute;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 10px;
+  background: var(--icon-bg);
+  z-index: 0;
+}
+.theme-icon {
+  position: relative;
+  z-index: 1;
+}

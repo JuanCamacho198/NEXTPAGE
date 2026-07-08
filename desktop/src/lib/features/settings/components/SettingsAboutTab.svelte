@@ -38,7 +38,7 @@
   </section>
 
   <section class="rounded-lg border border-(--color-border) bg-(--color-surface) p-4 mt-4">
-    <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">Credits</h4>
+    <h4 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">Credits</h4>
     <ul class="m-0 p-0 list-none">
       <li class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0">
         <span class="text-xs text-(--color-text-muted)">Core Team</span>
@@ -56,7 +56,7 @@
   </section>
 
   <section class="rounded-lg border border-(--color-border) bg-(--color-surface) p-4 mt-4">
-    <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">Links</h4>
+    <h4 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">Links</h4>
     <div class="flex gap-2">
       <Button
         onclick={() => window.open('https://github.com/anomalyco/nextpage', '_blank')}

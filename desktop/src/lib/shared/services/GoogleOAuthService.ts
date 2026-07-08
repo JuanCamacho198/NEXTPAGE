@@ -13,6 +13,7 @@ import { start, cancel, onUrl } from '@fabianlars/tauri-plugin-oauth';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
 import { authState, type TokenSet } from '$lib/stores/authState.svelte';
+import { savePersistedAuth } from '$lib/stores/authPersistence';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 import { logger } from '$lib/shared/logger/Logger';
 
@@ -276,6 +277,7 @@ export async function handleCallback(code: string): Promise<void> {
   };
 
   authState.setSession(tokenSet);
+  await savePersistedAuth({ kind: 'google', tokens: tokenSet });
 }
 
 export async function getValidAccessToken(): Promise<string> {

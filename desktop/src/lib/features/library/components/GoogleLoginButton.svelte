@@ -57,7 +57,7 @@
 
 {#if authState.isSignedIn}
   <div
-    class="flex w-full items-center justify-center gap-2 rounded-md border border-green-300 bg-green-50 px-4 py-2 text-sm font-medium text-green-800"
+    class="flex w-full items-center justify-center gap-2 rounded-md border border-(--color-success)/30 bg-(--color-success)/10 px-4 py-2 text-sm font-medium text-(--color-primary)"
     role="status"
     aria-live="polite"
   >
@@ -71,7 +71,7 @@
 {:else}
   <Button
     variant="secondary"
-    class="w-full flex items-center justify-center gap-2 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 shadow-sm transition-all"
+    class="w-full flex items-center justify-center gap-2 bg-white text-gray-900 border-gray-300 hover:bg-gray-100 px-3 py-2 text-sm"
     onclick={handleLogin}
     disabled={isLoggingIn}
   >

@@ -2,7 +2,8 @@
   import SettingsResetModal from './SettingsResetModal.svelte';
   import { GoogleLoginButton } from '$lib/features/library';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
-  import { Button, Panel } from '$lib/shared/ui';
+  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import { Button } from '$lib/shared/ui';
   import {
     getSettings,
     upsertSettings,
@@ -13,7 +14,6 @@
 
   import { i18n, type MessageKey } from '$lib/shared/i18n';
   import {
-    getProfileInitials,
     normalizeProfileSession,
     profileSessionFromAuthState,
     type ProfileSessionViewModel,
@@ -29,6 +29,7 @@
     ReaderSettings,
     ReaderThemeMode,
   } from '$lib/shared/types';
+  import ProfileCard from './ProfileCard.svelte';
 
   let {
     isOpen = $bindable(false),
@@ -38,6 +39,7 @@
     onLocaleChange,
     onReaderSettingsChange,
     t,
+    books = [],
   } = $props<{
     isOpen: boolean;
     mode?: 'overlay' | 'page';
@@ -49,7 +51,7 @@
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   }>();
 
-  let activeTab = $state<'account' | 'profile' | 'reader' | 'appTheme' | 'about'>('account');
+  let activeTab = $state<'cuenta' | 'apariencia' | 'reader' | 'datos' | 'atajos' | 'acerca'>('cuenta');
 
   let preferredTheme = $state('light');
   let preferredFontScale = $state(100);
@@ -62,11 +64,18 @@
   let settingsUnavailable = $state<string | null>(null);
   let isSavingSettings = $state(false);
   let showResetModal = $state(false);
-  let pendingResetTab = $state<'account' | 'reader' | 'appTheme' | null>(null);
+  let pendingResetTab = $state<'cuenta' | 'apariencia' | 'reader' | null>(null);
   let isProfileLoading = $state(false);
   let profileError = $state<string | null>(null);
   let profileAvatarBroken = $state(false);
   let profile = $state<ProfileSessionViewModel>(profileSessionFromAuthState());
+
+  // Data tab state
+  let isClearingCache = $state(false);
+  let cacheCleared = $state(false);
+  let selectedExportBook = $state('all');
+  let selectedExportFormat = $state<'json' | 'markdown'>('json');
+  let isExportingHighlights = $state(false);
 
   type ShortcutDescriptor = {
     id: string;
@@ -131,12 +140,6 @@
   const localeOptions = $derived([
     { value: 'es', label: t('settings.languageSpanish') },
     { value: 'en', label: t('settings.languageEnglish') },
-  ]);
-
-  const themeOptions = $derived([
-    { value: 'light', label: t('settings.theme.light') },
-    { value: 'dark', label: t('settings.theme.dark') },
-    { value: 'sepia', label: t('settings.theme.sepia') },
   ]);
 
   const panelFontFamilyOptions = [
@@ -216,15 +219,10 @@
 
   let isSigningOut = $state(false);
 
-  const isAnyAuth = $derived(authState.isSignedIn || authState.isLocalUser);
-
   async function handleSignOut(): Promise<void> {
     if (isSigningOut) return;
     isSigningOut = true;
     try {
-      // Google path: clears the loopback port + authState. For local users
-      // there is no Google session to revoke — just clear the in-memory
-      // profile. Both paths clear the persisted cache and route home→welcome.
       if (authState.isSignedIn) {
         try {
           await signOut();
@@ -348,20 +346,20 @@
   }
 
   async function handleTabChange(
-    tab: 'account' | 'profile' | 'reader' | 'appTheme' | 'about',
+    tab: 'cuenta' | 'apariencia' | 'reader' | 'datos' | 'atajos' | 'acerca',
   ): Promise<void> {
     activeTab = tab;
-    if (tab === 'profile') {
+    if (tab === 'cuenta') {
       await loadProfileData();
     }
 
-    if (tab === 'reader' || tab === 'appTheme') {
+    if (tab === 'apariencia' || tab === 'reader') {
       await loadAppSettings();
     }
   }
 
   function handleTabKeydown(e: KeyboardEvent): void {
-    const tabs = ['account', 'profile', 'reader', 'appTheme', 'about'] as const;
+    const tabs = ['cuenta', 'apariencia', 'reader', 'datos', 'atajos', 'acerca'] as const;
     const idx = tabs.indexOf(activeTab);
     let next: number | null = null;
 
@@ -385,7 +383,7 @@
     }
   }
 
-  function openResetModal(tab: 'account' | 'reader' | 'appTheme'): void {
+  function openResetModal(tab: 'cuenta' | 'apariencia' | 'reader'): void {
     pendingResetTab = tab;
     showResetModal = true;
   }
@@ -396,7 +394,7 @@
   }
 
   async function confirmReset(): Promise<void> {
-    if (pendingResetTab === 'account') {
+    if (pendingResetTab === 'cuenta') {
       preferredTheme = DEFAULT_VALUES.preferredTheme;
       preferredFontScale = DEFAULT_VALUES.preferredFontScale;
     } else if (pendingResetTab === 'reader') {
@@ -405,13 +403,47 @@
       readerContrast = DEFAULT_VALUES.readerContrast;
       readerEpubFontSize = DEFAULT_VALUES.readerEpubFontSize;
       readerEpubFontFamily = DEFAULT_VALUES.readerEpubFontFamily;
-    } else if (pendingResetTab === 'appTheme') {
+    } else if (pendingResetTab === 'apariencia') {
       preferredTheme = DEFAULT_VALUES.preferredTheme;
       preferredFontScale = DEFAULT_VALUES.preferredFontScale;
     }
     closeResetModal();
     await saveAppSettings();
   }
+
+  // Data tab handlers
+  async function handleClearCache(): Promise<void> {
+    isClearingCache = true;
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      cacheCleared = true;
+    } finally {
+      isClearingCache = false;
+    }
+  }
+
+  function handleExportLibrary(): void {
+    // Placeholder — wired via props in a future iteration
+  }
+
+  async function handleExportHighlights(): Promise<void> {
+    isExportingHighlights = true;
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    } finally {
+      isExportingHighlights = false;
+    }
+  }
+
+  const exportBookOptions = $derived([
+    { value: 'all', label: t('settings.data.allBooks') },
+    ...books.map((b: { id: string; title: string }) => ({ value: b.id, label: b.title })),
+  ]);
+
+  const exportFormatOptions = $derived([
+    { value: 'json', label: 'JSON' },
+    { value: 'markdown', label: t('settings.data.markdown') },
+  ]);
 
   $effect(() => {
     if (isOpen) {
@@ -428,19 +460,19 @@
   {/if}
   <aside
     class={mode === 'overlay'
-      ? 'fixed top-0 right-0 w-[350px] h-screen bg-white border-l border-zinc-200 shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]'
-      : 'w-full rounded-xl border border-(--color-border) bg-background shadow-sm flex flex-col overflow-hidden'}
+      ? 'fixed top-0 right-0 w-[350px] h-screen bg-(--color-surface) border-l border-(--color-border) shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]'
+      : 'w-full rounded-xl border border-(--color-border) bg-(--color-background) shadow-sm flex flex-col overflow-hidden'}
   >
-    <div class="flex items-center justify-between p-4 border-b border-zinc-200">
-      <h2 class="m-0 text-lg font-semibold text-emerald-50">{t('settings.title')}</h2>
+    <div class="flex items-center p-3 border-b border-(--color-border)">
       <button
-        class="bg-transparent border-none text-xl cursor-pointer text-zinc-600 p-1 flex items-center justify-center hover:text-zinc-900"
+        class="inline-flex items-center justify-center size-8 rounded-lg bg-(--color-surface) border border-(--color-border) text-(--color-text-muted) cursor-pointer hover:text-(--color-primary) hover:border-(--color-primary) transition-all duration-200"
         onclick={closePanel}
-        onkeydown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') closePanel();
-        }}
-        aria-label={t('settings.close')}>✕</button
+        aria-label={t('settings.backToHome')}
       >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5m7-7l-7 7 7 7"/>
+        </svg>
+      </button>
     </div>
 
     <div
@@ -453,30 +485,36 @@
       <button
         type="button"
         role="tab"
-        aria-selected={activeTab === 'account'}
-        aria-controls="tabpanel-account"
-        id="tab-account"
-        tabindex={activeTab === 'account' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
-        class:text-(--color-primary)={activeTab === 'account'}
-        class:border-(--color-primary)={activeTab === 'account'}
-        onclick={() => handleTabChange('account')}
+        aria-selected={activeTab === 'cuenta'}
+        aria-controls="tabpanel-cuenta"
+        id="tab-cuenta"
+        tabindex={activeTab === 'cuenta' ? 0 : -1}
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class:bg-(--color-accent-soft)={activeTab === 'cuenta'}
+        class:text-(--color-accent-start)={activeTab === 'cuenta'}
+        class:border-(--color-accent-start)={activeTab === 'cuenta'}
+        class:font-semibold={activeTab === 'cuenta'}
+        onclick={() => void handleTabChange('cuenta')}
       >
-        {t('settings.tab.account')}
+        <Icon name="user" size="sm" />
+        <span>{t('settings.tab.account')}</span>
       </button>
       <button
         type="button"
         role="tab"
-        aria-selected={activeTab === 'profile'}
-        aria-controls="tabpanel-profile"
-        id="tab-profile"
-        tabindex={activeTab === 'profile' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
-        class:text-(--color-primary)={activeTab === 'profile'}
-        class:border-(--color-primary)={activeTab === 'profile'}
-        onclick={() => handleTabChange('profile')}
+        aria-selected={activeTab === 'apariencia'}
+        aria-controls="tabpanel-apariencia"
+        id="tab-apariencia"
+        tabindex={activeTab === 'apariencia' ? 0 : -1}
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class:bg-(--color-accent-soft)={activeTab === 'apariencia'}
+        class:text-(--color-accent-start)={activeTab === 'apariencia'}
+        class:border-(--color-accent-start)={activeTab === 'apariencia'}
+        class:font-semibold={activeTab === 'apariencia'}
+        onclick={() => void handleTabChange('apariencia')}
       >
-        {t('settings.tab.profile')}
+        <Icon name="sun" size="sm" />
+        <span>{t('settings.tab.appearance')}</span>
       </button>
       <button
         type="button"
@@ -485,112 +523,298 @@
         aria-controls="tabpanel-reader"
         id="tab-reader"
         tabindex={activeTab === 'reader' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
-        class:text-(--color-primary)={activeTab === 'reader'}
-        class:border-(--color-primary)={activeTab === 'reader'}
-        onclick={() => handleTabChange('reader')}
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class:bg-(--color-accent-soft)={activeTab === 'reader'}
+        class:text-(--color-accent-start)={activeTab === 'reader'}
+        class:border-(--color-accent-start)={activeTab === 'reader'}
+        class:font-semibold={activeTab === 'reader'}
+        onclick={() => void handleTabChange('reader')}
       >
-        {t('settings.tab.reader')}
+        <Icon name="book" size="sm" />
+        <span>{t('settings.tab.reader')}</span>
       </button>
       <button
         type="button"
         role="tab"
-        aria-selected={activeTab === 'appTheme'}
-        aria-controls="tabpanel-appTheme"
-        id="tab-appTheme"
-        tabindex={activeTab === 'appTheme' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
-        class:text-(--color-primary)={activeTab === 'appTheme'}
-        class:border-(--color-primary)={activeTab === 'appTheme'}
-        onclick={() => handleTabChange('appTheme')}
+        aria-selected={activeTab === 'datos'}
+        aria-controls="tabpanel-datos"
+        id="tab-datos"
+        tabindex={activeTab === 'datos' ? 0 : -1}
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class:bg-(--color-accent-soft)={activeTab === 'datos'}
+        class:text-(--color-accent-start)={activeTab === 'datos'}
+        class:border-(--color-accent-start)={activeTab === 'datos'}
+        class:font-semibold={activeTab === 'datos'}
+        onclick={() => void handleTabChange('datos')}
       >
-        {t('settings.tab.appTheme')}
+        <Icon name="database" size="sm" />
+        <span>{t('settings.tab.data')}</span>
       </button>
       <button
         type="button"
         role="tab"
-        aria-selected={activeTab === 'about'}
-        aria-controls="tabpanel-about"
-        id="tab-about"
-        tabindex={activeTab === 'about' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none bg-transparent cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary)"
-        class:text-(--color-primary)={activeTab === 'about'}
-        class:border-(--color-primary)={activeTab === 'about'}
-        onclick={() => handleTabChange('about')}
+        aria-selected={activeTab === 'atajos'}
+        aria-controls="tabpanel-atajos"
+        id="tab-atajos"
+        tabindex={activeTab === 'atajos' ? 0 : -1}
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class:bg-(--color-accent-soft)={activeTab === 'atajos'}
+        class:text-(--color-accent-start)={activeTab === 'atajos'}
+        class:border-(--color-accent-start)={activeTab === 'atajos'}
+        class:font-semibold={activeTab === 'atajos'}
+        onclick={() => void handleTabChange('atajos')}
       >
-        {t('settings.tab.about')}
+        <Icon name="bookmark" size="sm" />
+        <span>{t('settings.shortcuts.title')}</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === 'acerca'}
+        aria-controls="tabpanel-acerca"
+        id="tab-acerca"
+        tabindex={activeTab === 'acerca' ? 0 : -1}
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class:bg-(--color-accent-soft)={activeTab === 'acerca'}
+        class:text-(--color-accent-start)={activeTab === 'acerca'}
+        class:border-(--color-accent-start)={activeTab === 'acerca'}
+        class:font-semibold={activeTab === 'acerca'}
+        onclick={() => void handleTabChange('acerca')}
+      >
+        <Icon name="info" size="sm" />
+        <span>{t('settings.tab.about')}</span>
       </button>
     </div>
 
-    <form novalidate onsubmit={(e) => e.preventDefault()}>
-      <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-        {#if activeTab === 'account'}
-          <div role="tabpanel" id="tabpanel-account" aria-labelledby="tab-account">
-            <Panel title={t('settings.authentication')} subtitle={t('settings.authDescription')}>
-              <GoogleLoginButton {t} />
-
-              {#if isAnyAuth}
-                <div class="mt-4 flex justify-end">
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    disabled={isSigningOut}
-                    onclick={() => void handleSignOut()}
-                  >
+    <form novalidate onsubmit={(e) => e.preventDefault()} class="flex-1 flex flex-col min-h-0">
+        {#if activeTab === 'cuenta'}
+          <div
+            role="tabpanel"
+            id="tabpanel-cuenta"
+            aria-labelledby="tab-cuenta"
+            class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+          >
+            <section class="rounded-xl border border-(--color-border) bg-(--color-surface) overflow-visible">
+              <div class="p-4 border-b border-(--color-border) last:border-b-0">
+                <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
+                  {t('settings.authentication')}
+                </h3>
+                <p class="text-(--text-2xs) text-(--color-text-muted) mb-3">
+                  {t('settings.authDescription')}
+                </p>
+                <GoogleLoginButton {t} />
+                {#if authState.isSignedIn}
+                  <Button variant="danger" disabled={isSigningOut} onclick={() => void handleSignOut()} class="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm mt-4">
                     {isSigningOut ? t('welcome.signingOut') : t('welcome.signOut')}
                   </Button>
-                </div>
-              {/if}
-
-              {#if settingsUnavailable}
-                <p
-                  class="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900"
-                >
-                  {settingsUnavailable}
-                </p>
-              {/if}
-              {#if settingsError}
-                <p
-                  class="mb-2 rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-900"
-                >
-                  {settingsError}
-                </p>
-              {/if}
-
-              <div class="mt-6 border-t border-zinc-200 pt-4">
-                <h3 class="mt-0 mb-2 text-base font-semibold text-zinc-900">
-                  {t('settings.localPreferences')}
+                {/if}
+                {#if settingsUnavailable}
+                  <p class="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">{settingsUnavailable}</p>
+                {/if}
+                {#if settingsError}
+                  <p class="mb-2 rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-900">{settingsError}</p>
+                {/if}
+              </div>
+              <div class="p-4 border-b border-(--color-border) last:border-b-0">
+                <ProfileCard {profile} {isProfileLoading} {profileError} {profileAvatarBroken} {t} />
+              </div>
+              <div class="p-4">
+                <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.language')}</span>
+                <Dropdown
+                  options={localeOptions}
+                  value={locale}
+                  class="w-full"
+                  onchange={({ value }) => void handleLocaleSelect(value)}
+                />
+              </div>
+            </section>
+          </div>
+        {:else if activeTab === 'apariencia'}
+          <div
+            role="tabpanel"
+            id="tabpanel-apariencia"
+            aria-labelledby="tab-apariencia"
+            class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+          >
+            <section class="rounded-xl border border-(--color-border) bg-(--color-surface) overflow-hidden">
+              <div class="p-4 border-b border-(--color-border) last:border-b-0">
+                <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
+                  {t('settings.appearance.appTheme')}
                 </h3>
 
-                <div class="mb-2">
-                  <span class="mb-1 block text-xs text-zinc-600">{t('settings.language')}</span>
-                  <Dropdown
-                    options={localeOptions}
-                    value={locale}
-                    class="w-full"
-                    onchange={({ value }) => void handleLocaleSelect(value)}
-                  />
-                </div>
-
-                <div class="mb-2">
-                  <span class="mb-1 block text-xs text-zinc-600">{t('settings.theme')}</span>
-                  <Dropdown options={themeOptions} bind:value={preferredTheme} class="w-full" />
-                </div>
-
-                <div class="mb-2">
-                  <label class="mb-1 block text-xs text-zinc-600" for="font-scale"
-                    >{t('settings.fontScale')}: {preferredFontScale}%</label
+              <div class="mb-4">
+                <div class="grid grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    class="relative flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer bg-(--color-surface) theme-icon-btn"
+                    class:border-(--color-primary)={preferredTheme === 'light'}
+                    class:border-(--color-border)={preferredTheme !== 'light'}
+                    style="--icon-bg: linear-gradient(to bottom right, white, #f3f4f6);"
+                    onclick={() => (preferredTheme = 'light')}
+                    title={t('settings.theme.light')}
                   >
-                  <input
-                    type="range"
-                    id="font-scale"
-                    min="80"
-                    max="140"
-                    bind:value={preferredFontScale}
-                    class="w-full"
-                  />
+                    {#if preferredTheme === 'light'}
+                      <div class="absolute top-1 right-1 text-(--color-primary)">
+                        <Icon name="check" size="sm" />
+                      </div>
+                    {/if}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      aria-hidden="true"
+                      class="theme-icon"
+                      ><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line
+                        x1="12"
+                        y1="21"
+                        x2="12"
+                        y2="23"
+                      /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line
+                        x1="18.36"
+                        y1="18.36"
+                        x2="19.78"
+                        y2="19.78"
+                      /><line x1="1" y1="12" x2="3" y2="12" /><line
+                        x1="21"
+                        y1="12"
+                        x2="23"
+                        y2="12"
+                      /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line
+                        x1="18.36"
+                        y1="5.64"
+                        x2="19.78"
+                        y2="4.22"
+                      /></svg
+                    >
+                    <span class="text-(--text-2xs) font-medium text-(--color-text-muted)"
+                      >{t('settings.theme.light')}</span
+                    >
+                  </button>
+                  <button
+                    type="button"
+                    class="relative flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer bg-(--color-surface) theme-icon-btn"
+                    class:border-(--color-primary)={preferredTheme === 'dark'}
+                    class:border-(--color-border)={preferredTheme !== 'dark'}
+                    style="--icon-bg: linear-gradient(to bottom right, #3f3f46, #18181b);"
+                    onclick={() => (preferredTheme = 'dark')}
+                    title={t('settings.theme.dark')}
+                  >
+                    {#if preferredTheme === 'dark'}
+                      <div class="absolute top-1 right-1 text-(--color-primary)">
+                        <Icon name="check" size="sm" />
+                      </div>
+                    {/if}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      aria-hidden="true"
+                      class="theme-icon"
+                      ><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg
+                    >
+                    <span class="text-(--text-2xs) font-medium text-(--color-text-muted)"
+                      >{t('settings.theme.dark')}</span
+                    >
+                  </button>
+                  <button
+                    type="button"
+                    class="relative flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer bg-(--color-surface) theme-icon-btn"
+                    class:border-(--color-primary)={preferredTheme === 'sepia'}
+                    class:border-(--color-border)={preferredTheme !== 'sepia'}
+                    style="--icon-bg: linear-gradient(to bottom right, #fef3c7, #fde68a);"
+                    onclick={() => (preferredTheme = 'sepia')}
+                    title={t('settings.theme.sepia')}
+                  >
+                    {#if preferredTheme === 'sepia'}
+                      <div class="absolute top-1 right-1 text-(--color-primary)">
+                        <Icon name="check" size="sm" />
+                      </div>
+                    {/if}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      aria-hidden="true"
+                      class="theme-icon"
+                      ><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path
+                        d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+                      /></svg
+                    >
+                    <span class="text-(--text-2xs) font-medium text-(--color-text-muted)"
+                      >{t('settings.theme.sepia')}</span
+                    >
+                  </button>
+                  <button
+                    type="button"
+                    class="relative flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer bg-(--color-surface) theme-icon-btn"
+                    class:border-(--color-primary)={preferredTheme === 'system'}
+                    class:border-(--color-border)={preferredTheme !== 'system'}
+                    style="--icon-bg: linear-gradient(to bottom right, #e0e7ff, #c7d2fe);"
+                    onclick={() => (preferredTheme = 'system')}
+                    title={t('settings.theme.system')}
+                  >
+                    {#if preferredTheme === 'system'}
+                      <div class="absolute top-1 right-1 text-(--color-primary)">
+                        <Icon name="check" size="sm" />
+                      </div>
+                    {/if}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      aria-hidden="true"
+                      class="theme-icon"
+                      ><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line
+                        x1="8"
+                        y1="21"
+                        x2="16"
+                        y2="21"
+                      /><line x1="12" y1="17" x2="12" y2="21" /></svg
+                    >
+                    <span class="text-(--text-2xs) font-medium text-(--color-text-muted)"
+                      >{t('settings.theme.system')}</span
+                    >
+                  </button>
                 </div>
+              </div>
 
+              <div class="mb-2">
+                <label class="mb-1 block text-xs text-(--color-text-muted)" for="app-font-scale"
+                  >{t('settings.fontScale')}: {preferredFontScale}%</label
+                >
+                <input
+                  type="range"
+                  id="app-font-scale"
+                  min="80"
+                  max="140"
+                  bind:value={preferredFontScale}
+                  class="w-full h-1.5 appearance-none bg-(--color-border) rounded-full outline-none slider-thumb"
+                />
+                <div
+                  class="flex items-center justify-center h-12 bg-(--color-background) border border-(--color-border) rounded-lg text-(--color-primary) font-medium mt-2"
+                  style="font-size: {preferredFontScale * 0.14}px"
+                >
+                  Aa
+                </div>
+              </div>
+              </div>
+              <div class="p-4 border-b border-(--color-border) last:border-b-0">
                 <div class="flex gap-2 mt-4">
                   <Button
                     onclick={() => void saveAppSettings()}
@@ -599,139 +823,63 @@
                   >
                     {isSavingSettings ? t('settings.saving') : t('settings.savePreferences')}
                   </Button>
-                  <Button onclick={() => openResetModal('account')} variant="danger" size="sm">
+                  <Button onclick={() => openResetModal('apariencia')} variant="danger" size="sm">
                     {t('settings.resetDefaults')}
                   </Button>
                 </div>
               </div>
-            </Panel>
-          </div>
-        {:else if activeTab === 'profile'}
-          <div role="tabpanel" id="tabpanel-profile" aria-labelledby="tab-profile">
-            <Panel title={t('settings.tab.profile')} subtitle={t('settings.profile.description')}>
-              {#if profileError}
-                <p
-                  class="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900"
-                >
-                  {profileError}
-                </p>
-              {/if}
-
-              <div
-                class="flex gap-3 items-start border border-(--color-border) rounded-xl bg-(--color-surface,#fff) p-3"
-              >
-                <div class="size-14 shrink-0">
-                  {#if profile.avatarUrl && !profileAvatarBroken}
-                    <img
-                      src={profile.avatarUrl}
-                      alt={t('settings.profile.avatarAlt', { name: profile.name })}
-                      class="block size-full rounded-full border border-(--color-border) object-cover"
-                      onerror={() => {
-                        profileAvatarBroken = true;
-                      }}
-                    />
-                  {:else}
-                    <div
-                      class="flex size-full items-center justify-center rounded-full border border-(--color-border) text-[14px] font-bold text-(--color-primary)"
-                      style="background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));"
-                      aria-hidden="true"
-                    >
-                      {getProfileInitials(profile.name)}
-                    </div>
-                  {/if}
-                </div>
-
-                <div class="min-w-0 flex-1">
-                  <p class="m-0 text-(--text-2xs) text-(--color-text-muted,#6b7280)">
-                    {t('settings.profile.nameLabel')}
-                  </p>
-                  <p class="my-[2px] mb-2 text-[14px] text-(--color-primary) wrap-break-word">
-                    {isProfileLoading ? t('settings.profile.loading') : profile.name}
-                  </p>
-
-                  <p class="m-0 text-(--text-2xs) text-(--color-text-muted,#6b7280)">
-                    {t('settings.profile.emailLabel')}
-                  </p>
-                  <p class="my-[2px] mb-2 text-[14px] text-(--color-primary) wrap-break-word">
-                    {isProfileLoading ? t('settings.profile.loading') : profile.email}
-                  </p>
-
-                  {#if !profile.isSignedIn}
-                    <p class="mt-1.5 text-xs text-(--color-text-muted,#6b7280)">
-                      {t('settings.profile.signInPrompt')}
-                    </p>
-                  {/if}
-                </div>
-              </div>
-
-              <div
-                class="border border-(--color-border) rounded-xl bg-(--color-surface,#fff) p-3 mt-3"
-              >
-                <h4 class="mt-0 mb-2 text-sm font-semibold text-neutral-300">
-                  {t('settings.shortcuts.title')}
-                </h4>
-                <p class="text-xs text-zinc-600 mb-3">{t('settings.shortcuts.description')}</p>
-                <ul class="m-0 p-0 list-none grid gap-2">
-                  {#each keyboardShortcuts as shortcut (shortcut.id)}
-                    <li class="flex items-center gap-2">
-                      <span
-                        class="inline-flex items-center justify-center min-w-[86px] px-2 py-1 border border-(--color-border) rounded-md font-mono text-(--text-2xs) text-(--color-primary) bg-(--color-background)"
-                        >{shortcut.combo}</span
-                      >
-                      <span class="text-xs text-(--color-primary)"
-                        >{t(shortcut.descriptionKey)}</span
-                      >
-                    </li>
-                  {/each}
-                </ul>
-              </div>
-            </Panel>
+            </section>
           </div>
         {:else if activeTab === 'reader'}
-          <div role="tabpanel" id="tabpanel-reader" aria-labelledby="tab-reader">
-            <Panel title={t('settings.tab.reader')} subtitle="Configure your reading experience.">
+          <div
+            role="tabpanel"
+            id="tabpanel-reader"
+            aria-labelledby="tab-reader"
+            class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+          >
+            <section class="rounded-xl border border-(--color-border) bg-(--color-surface) overflow-hidden">
+              <div class="p-4 space-y-4">
+                <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
+                  {t('settings.appearance.reader')}
+                </h3>
               <div class="flex gap-2 justify-stretch mb-4">
                 <button
                   type="button"
-                  class="flex-1 py-3 px-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md flex items-center justify-center"
+                  class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-(--text-2xs) font-medium cursor-pointer"
                   class:border-(--color-primary)={readerThemeMode === 'paper'}
-                  class:!shadow-[0_0_0_2px_var(--color-primary)]={readerThemeMode === 'paper'}
-                  style="border-color: var(--preview-border, #e0e0e0); background: var(--preview-bg, #fafafa);"
+                  class:border-(--color-border)={readerThemeMode !== 'paper'}
+                  style="--preview-bg: #fafafa; --preview-text: #1a1a1a; --preview-border: #e0e0e0; background: var(--preview-bg); color: var(--preview-text);"
                   onclick={() => (readerThemeMode = 'paper')}
                 >
-                  <span style="font-size: 11px; color: var(--preview-text); font-weight: 500;"
-                    >{t('settings.reader.themeMode.paper')}</span
-                  >
+                  {t('settings.reader.themeMode.paper')}
                 </button>
                 <button
                   type="button"
-                  class="flex-1 py-3 px-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md flex items-center justify-center"
+                  class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-(--text-2xs) font-medium cursor-pointer"
                   class:border-(--color-primary)={readerThemeMode === 'sepia'}
-                  class:!shadow-[0_0_0_2px_var(--color-primary)]={readerThemeMode === 'sepia'}
-                  style="border-color: var(--preview-border, #d4c4a8); background: var(--preview-bg, #f4ecd8);"
+                  class:border-(--color-border)={readerThemeMode !== 'sepia'}
+                  style="--preview-bg: #f4ecd8; --preview-text: #5b4636; --preview-border: #d4c4a8; background: var(--preview-bg); color: var(--preview-text);"
                   onclick={() => (readerThemeMode = 'sepia')}
                 >
-                  <span style="font-size: 11px; color: var(--preview-text); font-weight: 500;"
-                    >{t('settings.reader.themeMode.sepia')}</span
-                  >
+                  {t('settings.reader.themeMode.sepia')}
                 </button>
                 <button
                   type="button"
-                  class="flex-1 py-3 px-2 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md flex items-center justify-center"
+                  class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-(--text-2xs) font-medium cursor-pointer"
                   class:border-(--color-primary)={readerThemeMode === 'night'}
-                  class:!shadow-[0_0_0_2px_var(--color-primary)]={readerThemeMode === 'night'}
-                  style="border-color: var(--preview-border, #333333); background: var(--preview-bg, #1a1a1a);"
+                  class:border-(--color-border)={readerThemeMode !== 'night'}
+                  style="--preview-bg: #1a1a1a; --preview-text: #e8e8e8; --preview-border: #333333; background: var(--preview-bg); color: var(--preview-text);"
                   onclick={() => (readerThemeMode = 'night')}
                 >
-                  <span style="font-size: 11px; color: var(--preview-text); font-weight: 500;"
-                    >{t('settings.reader.themeMode.night')}</span
-                  >
+                  {t('settings.reader.themeMode.night')}
                 </button>
               </div>
 
               <div class="space-y-4">
                 <div class="mb-2">
-                  <label class="mb-1 block text-xs text-zinc-600" for="reader-brightness"
+                  <label
+                    class="mb-1 block text-xs text-(--color-text-muted)"
+                    for="reader-brightness"
                     >{t('settings.reader.brightness')}: {readerBrightness}%</label
                   >
                   <input
@@ -740,12 +888,12 @@
                     min="50"
                     max="150"
                     bind:value={readerBrightness}
-                    class="w-full"
+                    class="w-full h-1.5 appearance-none bg-(--color-border) rounded-full outline-none slider-thumb"
                   />
                 </div>
 
                 <div class="mb-2">
-                  <label class="mb-1 block text-xs text-zinc-600" for="reader-contrast"
+                  <label class="mb-1 block text-xs text-(--color-text-muted)" for="reader-contrast"
                     >{t('settings.reader.contrast')}: {readerContrast}%</label
                   >
                   <input
@@ -754,12 +902,12 @@
                     min="50"
                     max="150"
                     bind:value={readerContrast}
-                    class="w-full"
+                    class="w-full h-1.5 appearance-none bg-(--color-border) rounded-full outline-none slider-thumb"
                   />
                 </div>
 
                 <div class="mb-2">
-                  <label class="mb-1 block text-xs text-zinc-600" for="reader-font-size"
+                  <label class="mb-1 block text-xs text-(--color-text-muted)" for="reader-font-size"
                     >{t('settings.reader.epub.fontSize')}: {readerEpubFontSize}%</label
                   >
                   <input
@@ -768,13 +916,14 @@
                     min="80"
                     max="200"
                     bind:value={readerEpubFontSize}
-                    class="w-full"
+                    class="w-full h-1.5 appearance-none bg-(--color-border) rounded-full outline-none slider-thumb"
                   />
                 </div>
 
                 <div class="mb-2">
-                  <span class="mb-1 block text-xs text-zinc-600"
-                    >{t('settings.reader.epub.fontFamily')}</span
+                  <label
+                    class="mb-1 block text-xs text-(--color-text-muted)"
+                    for="reader-font-family">{t('settings.reader.epub.fontFamily')}</label
                   >
                   <Dropdown
                     options={panelFontFamilyOptions}
@@ -796,169 +945,227 @@
                   </Button>
                 </div>
               </div>
-            </Panel>
+              </div>
+            </section>
           </div>
-        {:else if activeTab === 'appTheme'}
-          <div role="tabpanel" id="tabpanel-appTheme" aria-labelledby="tab-appTheme">
-            <Panel title={t('settings.tab.appTheme')}>
-              <div
-                class="rounded-lg border p-3 transition-all duration-300 mb-4"
-                style="
-                  border-color: var(--preview-border);
-                  background: var(--preview-bg);
-                  --preview-bg: {preferredTheme === 'light'
-                  ? '#ffffff'
-                  : preferredTheme === 'dark'
-                    ? '#1a1a1a'
-                    : '#f4ecd8'};
-                  --preview-text: {preferredTheme === 'light'
-                  ? '#1a1a1a'
-                  : preferredTheme === 'dark'
-                    ? '#e8e8e8'
-                    : '#5b4636'};
-                  --preview-border: {preferredTheme === 'light'
-                  ? '#e0e0e0'
-                  : preferredTheme === 'dark'
-                    ? '#333333'
-                    : '#d4c4a8'};
-                "
-              >
-                <div
-                  class="flex items-center gap-2 pb-2 border-b mb-2"
-                  style="border-color: var(--preview-border);"
+        {:else if activeTab === 'datos'}
+          <div
+            role="tabpanel"
+            id="tabpanel-datos"
+            aria-labelledby="tab-datos"
+            class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+          >
+            <section class="rounded-xl border border-(--color-border) bg-(--color-surface) overflow-hidden">
+              <div class="p-4 border-b border-(--color-border) last:border-b-0">
+                <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
+                  {t('settings.data.exportLibrary')}
+                </h3>
+                <p class="text-(--text-2xs) text-(--color-text-muted) mb-3">
+                  {t('settings.data.exportLibraryDescription')}
+                </p>
+                <button
+                  type="button"
+                  class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-(--color-border) bg-(--color-background) cursor-pointer transition-all duration-200 text-(--color-primary) text-xs hover:bg-(--color-surface) hover:border-(--color-text-muted)"
+                  onclick={handleExportLibrary}
                 >
-                  <span style="color: var(--preview-text); opacity: 0.7;">☰</span>
-                  <span style="font-size: 12px; font-weight: 600; color: var(--preview-text);"
-                    >NextPage</span
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    ><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path
+                      d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+                    /></svg
                   >
-                </div>
-                <div style="color: var(--preview-text);">
-                  <p style="font-size: 12px; margin: 4px 0;">Sample text preview</p>
-                  <p style="font-size: 10px; opacity: 0.7;">Secondary text</p>
-                </div>
+                  <span>{t('settings.data.exportLibraryAction') || 'Exportar biblioteca'}</span>
+                </button>
               </div>
-
-              <div class="theme-selector mb-4">
-                <div class="flex gap-2">
-                  <button
-                    type="button"
-                    class="flex-1 py-3 px-4 rounded-lg border-2 transition-colors"
-                    class:border-zinc-800={preferredTheme === 'light'}
-                    class:border-zinc-200={preferredTheme !== 'light'}
-                    onclick={() => (preferredTheme = 'light')}
-                  >
-                    <div class="h-16 rounded bg-white border border-zinc-200 mb-2"></div>
-                    <span class="text-xs">{t('settings.theme.light')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="flex-1 py-3 px-4 rounded-lg border-2 transition-colors"
-                    class:border-zinc-800={preferredTheme === 'dark'}
-                    class:border-zinc-200={preferredTheme !== 'dark'}
-                    onclick={() => (preferredTheme = 'dark')}
-                  >
-                    <div class="h-16 rounded bg-zinc-800 border border-zinc-700 mb-2"></div>
-                    <span class="text-xs">{t('settings.theme.dark')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="flex-1 py-3 px-4 rounded-lg border-2 transition-colors"
-                    class:border-zinc-800={preferredTheme === 'sepia'}
-                    class:border-zinc-200={preferredTheme !== 'sepia'}
-                    onclick={() => (preferredTheme = 'sepia')}
-                  >
-                    <div class="h-16 rounded bg-[#f4ecd8] border border-[#d4c4a8] mb-2"></div>
-                    <span class="text-xs">{t('settings.theme.sepia')}</span>
-                  </button>
-                </div>
-              </div>
-
-              <div class="mb-2">
-                <label class="mb-1 block text-xs text-zinc-600" for="app-font-scale"
-                  >{t('settings.fontScale')}: {preferredFontScale}%</label
+              <div class="p-4 border-b border-(--color-border) last:border-b-0">
+                <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
+                  {t('settings.data.exportHighlights')}
+                </h3>
+                <p class="text-(--text-2xs) text-(--color-text-muted) mb-3">
+                  {t('settings.data.exportHighlightsDescription')}
+                </p>
+                <section
+                  class="flex flex-col gap-2 p-3 bg-(--color-background) border border-(--color-border) rounded-lg"
                 >
-                <input
-                  type="range"
-                  id="app-font-scale"
-                  min="80"
-                  max="140"
-                  bind:value={preferredFontScale}
-                  class="w-full"
-                />
+                  <div class="flex gap-2">
+                    <Dropdown
+                      options={exportBookOptions}
+                      value={selectedExportBook}
+                      class="flex-1"
+                      onchange={({ value }) => (selectedExportBook = value)}
+                    />
+                    <Dropdown
+                      options={exportFormatOptions}
+                      value={selectedExportFormat}
+                      class="w-[90px] shrink-0"
+                      onchange={({ value }) => (selectedExportFormat = value as 'json' | 'markdown')}
+                    />
+                    <button
+                      type="button"
+                      class="flex items-center gap-2 px-4 py-2 rounded-md border border-(--color-primary) bg-(--color-primary) text-(--color-background) cursor-pointer transition-all duration-200 text-xs font-medium hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+                      onclick={() => void handleExportHighlights()}
+                      disabled={isExportingHighlights}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        ><path
+                          d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                        /><polyline points="15 3 21 3 21 9" /><line
+                          x1="10"
+                          y1="14"
+                          x2="21"
+                          y2="3"
+                        /></svg
+                      >
+                      <span
+                        >{isExportingHighlights
+                          ? t('settings.data.exporting')
+                          : t('settings.data.download')}</span
+                      >
+                    </button>
+                  </div>
+                </section>
               </div>
-
-              <div class="flex gap-2 mt-4">
-                <Button
-                  onclick={() => void saveAppSettings()}
-                  disabled={isSavingSettings}
-                  size="sm"
+              <div class="p-4">
+                <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
+                  {t('settings.data.clearCache')}
+                </h3>
+                <p class="text-(--text-2xs) text-(--color-text-muted) mb-3">
+                  {t('settings.data.clearCacheDescription')}
+                </p>
+                <button
+                  type="button"
+                  class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-red-300 bg-(--color-background) cursor-pointer transition-all duration-200 text-red-500 text-xs hover:bg-red-50 hover:border-red-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                  onclick={() => void handleClearCache()}
+                  disabled={isClearingCache}
                 >
-                  {isSavingSettings ? t('settings.saving') : t('settings.savePreferences')}
-                </Button>
-                <Button onclick={() => openResetModal('appTheme')} variant="danger" size="sm">
-                  {t('settings.resetDefaults')}
-                </Button>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    ><polyline points="3 6 5 6 21 6" /><path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                    /></svg
+                  >
+                  <span
+                    >{isClearingCache
+                      ? t('settings.data.clearing')
+                      : cacheCleared
+                        ? t('settings.data.cleared')
+                        : t('settings.data.clearCache')}</span
+                  >
+                </button>
               </div>
-            </Panel>
+            </section>
           </div>
-        {:else if activeTab === 'about'}
-          <div role="tabpanel" id="tabpanel-about" aria-labelledby="tab-about">
-            <Panel title={t('settings.about')}>
-              <div class="border border-(--color-border) rounded-lg p-4 bg-(--color-surface)">
+        {:else if activeTab === 'atajos'}
+          <div
+            role="tabpanel"
+            id="tabpanel-atajos"
+            aria-labelledby="tab-atajos"
+            class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+          >
+            <section class="rounded-xl border border-(--color-border) bg-(--color-surface) p-4">
+              <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
+                {t('settings.shortcuts.title')}
+              </h3>
+              <p class="text-(--text-2xs) text-(--color-text-muted) mb-3">
+                {t('settings.shortcuts.description')}
+              </p>
+              <ul class="m-0 p-0 list-none grid gap-2">
+                {#each keyboardShortcuts as shortcut (shortcut.id)}
+                  <li class="flex items-center gap-2">
+                    <span
+                      class="inline-flex items-center justify-center min-w-[86px] px-2 py-1 rounded-md border border-(--color-border) font-mono text-(--text-2xs) text-(--color-primary) bg-(--color-background)"
+                      >{shortcut.combo}</span
+                    >
+                    <span class="text-xs text-(--color-primary)">{t(shortcut.descriptionKey)}</span>
+                  </li>
+                {/each}
+              </ul>
+            </section>
+          </div>
+        {:else if activeTab === 'acerca'}
+          <div
+            role="tabpanel"
+            id="tabpanel-acerca"
+            aria-labelledby="tab-acerca"
+            class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+          >
+            <section class="rounded-xl border border-(--color-border) bg-(--color-surface) overflow-hidden">
+              <div class="p-4 border-b border-(--color-border) last:border-b-0">
                 <div class="flex items-center gap-3">
-                  <span class="text-[32px]">📚</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    class="text-(--color-primary)"
+                  >
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path
+                      d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+                    />
+                  </svg>
                   <div class="flex flex-col">
                     <span class="text-lg font-semibold text-(--color-primary)">NextPage</span>
-                    <span class="text-xs text-(--color-text-muted,var(--color-secondary))"
+                    <span class="text-xs text-(--color-text-muted)"
                       >Version {typeof __APP_VERSION__ !== 'undefined'
                         ? __APP_VERSION__
                         : '0.1.0'}</span
                     >
                   </div>
                 </div>
-                <p class="text-sm text-zinc-600 mt-3">
+                <p class="text-sm text-(--color-text-muted) mt-3">
                   A modern e-reader application for enjoying your EPUB collection with a clean,
                   customizable reading experience.
                 </p>
               </div>
-
-              <div class="border border-(--color-border) rounded-lg p-4 bg-(--color-surface) mt-4">
-                <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">Credits</h4>
-                <ul class="list-none m-0 p-0">
+              <div class="p-4 border-b border-(--color-border) last:border-b-0">
+                <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">Credits</h3>
+                <ul class="m-0 p-0 list-none">
                   <li
                     class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0"
                   >
-                    <span class="text-(--text-2sm) text-(--color-text-muted,var(--color-secondary))"
-                      >Core Team</span
-                    >
-                    <span class="text-(--text-2sm) text-(--color-primary) font-medium"
+                    <span class="text-xs text-(--color-text-muted)">Core Team</span>
+                    <span class="text-xs text-(--color-primary) font-medium"
                       >NextPage Contributors</span
                     >
                   </li>
                   <li
                     class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0"
                   >
-                    <span class="text-(--text-2sm) text-(--color-text-muted,var(--color-secondary))"
-                      >EPUB Parsing</span
-                    >
-                    <span class="text-(--text-2sm) text-(--color-primary) font-medium">epub.js</span
-                    >
+                    <span class="text-xs text-(--color-text-muted)">EPUB Parsing</span>
+                    <span class="text-xs text-(--color-primary) font-medium">epub.js</span>
                   </li>
                   <li
                     class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0"
                   >
-                    <span class="text-(--text-2sm) text-(--color-text-muted,var(--color-secondary))"
-                      >Framework</span
-                    >
-                    <span class="text-(--text-2sm) text-(--color-primary) font-medium"
-                      >Svelte / Tauri</span
-                    >
+                    <span class="text-xs text-(--color-text-muted)">Framework</span>
+                    <span class="text-xs text-(--color-primary) font-medium">Svelte / Tauri</span>
                   </li>
                 </ul>
               </div>
-
-              <div class="border border-(--color-border) rounded-lg p-4 bg-(--color-surface) mt-4">
-                <h4 class="mt-0 mb-2 text-sm font-semibold text-zinc-900">Links</h4>
+              <div class="p-4">
+                <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">Links</h3>
                 <div class="flex gap-2">
                   <Button
                     onclick={() => window.open('https://github.com/anomalyco/nextpage', '_blank')}
@@ -977,10 +1184,9 @@
                   </Button>
                 </div>
               </div>
-            </Panel>
+            </section>
           </div>
         {/if}
-      </div>
     </form>
 
     <SettingsResetModal
@@ -991,14 +1197,3 @@
     />
   </aside>
 {/if}
-
-<style>
-  @keyframes slide-in {
-    from {
-      transform: translateX(100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
-</style>

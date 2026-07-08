@@ -11,16 +11,17 @@
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
-  // The `profileAvatarBroken` prop is accepted for backwards compatibility
-  // (other call sites pass it), but the actual broken-image state now lives
-  // inside the shared `Avatar` component.
   let {
     profile,
     isProfileLoading,
     profileError,
+    // profileAvatarBroken is accepted for backwards compatibility
     profileAvatarBroken: _unused,
     t,
   }: Props = $props();
+
+  // Satisfy the unused-variable linter — the prop itself is still accepted
+  void _unused;
 </script>
 
 {#if profileError}
@@ -29,30 +30,30 @@
   </p>
 {/if}
 
-<article
-  class="flex gap-3 items-start rounded-xl border border-(--color-border) bg-(--color-surface,#fff) p-3"
->
+<article class="flex gap-3 items-start">
   <Avatar src={profile.avatarUrl ?? undefined} name={profile.name} size="lg" />
 
-  <div class="min-w-0 flex-1">
-    <p class="m-0 text-(--text-2xs) text-(--color-text-muted,#6b7280)">
-      {t('settings.profile.nameLabel')}
-    </p>
-    <p class="my-0.5 mb-2 text-sm text-(--color-primary) wrap-break-word">
-      {isProfileLoading ? t('settings.profile.loading') : profile.name}
-    </p>
+  <div class="min-w-0 flex-1 flex flex-col gap-3">
+    <div class="flex flex-col gap-1">
+      <span class="text-(--text-2xs) font-medium text-(--color-text-muted)">{t('settings.profile.nameLabel')}</span>
+      <span class="text-sm text-(--color-primary) font-semibold wrap-break">
+        {isProfileLoading ? t('settings.profile.loading') : profile.name}
+      </span>
+    </div>
 
-    <p class="m-0 text-(--text-2xs) text-(--color-text-muted,#6b7280)">
-      {t('settings.profile.emailLabel')}
-    </p>
-    <p class="my-0.5 mb-2 text-sm text-(--color-primary) wrap-break-word">
-      {isProfileLoading ? t('settings.profile.loading') : profile.email}
-    </p>
-
-    {#if !profile.isSignedIn}
-      <p class="m-0 mt-1.5 text-xs text-(--color-text-muted,#6b7280)">
-        {t('settings.profile.signInPrompt')}
-      </p>
+    {#if profile.isSignedIn}
+      <div class="border-t border-(--color-border) pt-3 flex flex-col gap-1">
+        <span class="text-(--text-2xs) font-medium text-(--color-text-muted)">{t('settings.profile.emailLabel')}</span>
+        <span class="text-sm text-(--color-primary) wrap-break">
+          {isProfileLoading ? t('settings.profile.loading') : profile.email}
+        </span>
+      </div>
+    {:else}
+      <div class="border-t border-(--color-border) pt-3">
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-(--color-accent-soft) text-(--color-accent-start) text-(--text-2xs) font-medium w-fit">
+          Modo local
+        </span>
+      </div>
     {/if}
   </div>
 </article>

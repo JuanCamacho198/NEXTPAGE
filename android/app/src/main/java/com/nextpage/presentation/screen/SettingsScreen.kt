@@ -1,12 +1,20 @@
 package com.nextpage.presentation.screen
 
+import android.app.Application
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -17,6 +25,7 @@ import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.screen.settings.SettingsAboutScreen
 import com.nextpage.presentation.screen.settings.SettingsAccountScreen
 import com.nextpage.presentation.screen.settings.SettingsDataStorageScreen
+import com.nextpage.presentation.screen.settings.SettingsDevicesScreen
 import com.nextpage.presentation.screen.settings.SettingsLanguageScreen
 import com.nextpage.presentation.screen.settings.SettingsListScreen
 import com.nextpage.presentation.screen.settings.SettingsNotificationsScreen
@@ -24,6 +33,7 @@ import com.nextpage.presentation.screen.settings.SettingsPaletteScreen
 import com.nextpage.presentation.screen.settings.SettingsStatisticsScreen
 import com.nextpage.presentation.screen.settings.SettingsThemeScreen
 import com.nextpage.presentation.viewmodel.DictionaryViewModel
+import com.nextpage.presentation.viewmodel.SettingsDevicesViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
 
 @Composable
@@ -81,6 +91,9 @@ fun SettingsScreen(
                     },
                     onNavigateToDictionary = {
                         nestedNavController.navigate(NextPageDestination.SettingsDictionary.route)
+                    },
+                    onNavigateToDevices = {
+                        nestedNavController.navigate(NextPageDestination.SettingsDevices.route)
                     }
                 )
             }
@@ -149,6 +162,40 @@ fun SettingsScreen(
                     DictionaryScreen(
                         viewModel = vm,
                         onNavigateBack = { nestedNavController.popBackStack() }
+                    )
+                }
+            }
+
+            composable(route = NextPageDestination.SettingsDevices.route) {
+                val context = LocalContext.current
+                val viewModel = remember(authSession?.userId) {
+                    authSession?.userId?.let { userId ->
+                        SettingsDevicesViewModel(
+                            application = context.applicationContext as Application,
+                            userId = userId
+                        )
+                    }
+                }
+
+                val lifecycleOwner = LocalLifecycleOwner.current
+                DisposableEffect(lifecycleOwner) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            viewModel?.loadDevices()
+                        } else if (event == Lifecycle.Event.ON_PAUSE) {
+                            viewModel?.stopHeartbeat()
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                }
+
+                if (viewModel != null) {
+                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                    SettingsDevicesScreen(
+                        uiState = uiState,
+                        onRemove = { id -> viewModel.removeDevice(id) },
+                        onBack = { nestedNavController.popBackStack() }
                     )
                 }
             }

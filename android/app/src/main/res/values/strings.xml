@@ -367,6 +367,12 @@
     <string name="settings_sync">Sync</string>
     <string name="settings_about_version">Version %1$s</string>
     <string name="settings_about_build">Build %1$s</string>
+    <string name="settings_devices_title">Connected devices</string>
+    <string name="settings_devices_this_device">This device</string>
+    <string name="settings_devices_remove">Sign out</string>
+    <string name="settings_devices_remove_confirm">Sign out from %1$s?</string>
+    <string name="settings_devices_count">%1$d connected devices</string>
+    <string name="settings_devices_loading">Loading devices...</string>
 
     <!-- Statistics -->
     <string name="statistics_title">Statistics</string>

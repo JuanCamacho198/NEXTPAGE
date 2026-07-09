@@ -376,6 +376,12 @@
     <string name="settings_sync">Sincronización</string>
     <string name="settings_about_version">Versión %1$s</string>
     <string name="settings_about_build">Compilación %1$s</string>
+    <string name="settings_devices_title">Dispositivos conectados</string>
+    <string name="settings_devices_this_device">Este dispositivo</string>
+    <string name="settings_devices_remove">Cerrar sesión</string>
+    <string name="settings_devices_remove_confirm">¿Cerrar sesión en %1$s?</string>
+    <string name="settings_devices_count">%1$d dispositivos conectados</string>
+    <string name="settings_devices_loading">Cargando dispositivos...</string>
 
     <!-- Statistics -->
     <string name="statistics_title">Estadísticas</string>

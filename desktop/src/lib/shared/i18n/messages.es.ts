@@ -427,6 +427,16 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.languageEnglish': 'Inglés',
   'settings.authentication': 'Autenticación',
 
+  // Connected Devices
+  'settings.connectedDevices.title': 'Dispositivos conectados',
+  'settings.connectedDevices.thisDevice': 'Este dispositivo',
+  'settings.connectedDevices.lastActive': 'Última actividad',
+  'settings.connectedDevices.remove': 'Cerrar sesión',
+  'settings.connectedDevices.removeConfirm': '¿Cerrar sesión en {name}? Se eliminará de tus dispositivos.',
+  'settings.connectedDevices.error': 'No se pudieron cargar los dispositivos. Verificá tu conexión.',
+  'settings.connectedDevices.count': '{count} dispositivos conectados',
+  'settings.connectedDevices.notSignedIn': 'Iniciá sesión para ver tus dispositivos conectados.',
+
   // Welcome screen (welcome-screen change)
   'welcome.eyebrow': 'Sistema de lectura enfocado',
   'welcome.headline': 'Tu biblioteca.\nTu conocimiento.',

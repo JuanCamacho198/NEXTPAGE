@@ -465,6 +465,16 @@ export const messagesEn = {
   'settings.languageEnglish': 'English',
   'settings.authentication': 'Authentication',
 
+  // Connected Devices
+  'settings.connectedDevices.title': 'Connected devices',
+  'settings.connectedDevices.thisDevice': 'This device',
+  'settings.connectedDevices.lastActive': 'Last active',
+  'settings.connectedDevices.remove': 'Sign out',
+  'settings.connectedDevices.removeConfirm': 'Sign out from {name}? It will be removed from your devices.',
+  'settings.connectedDevices.error': "Couldn't load devices. Check your connection.",
+  'settings.connectedDevices.count': '{count} connected devices',
+  'settings.connectedDevices.notSignedIn': 'Sign in to see your connected devices.',
+
   // Welcome screen (welcome-screen change)
   'welcome.eyebrow': 'Focused reading system',
   'welcome.headline': 'Your library.\nYour knowledge.',

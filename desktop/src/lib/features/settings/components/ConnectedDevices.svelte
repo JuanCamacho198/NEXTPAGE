@@ -19,17 +19,41 @@
     onremove,
     t,
   }: Props = $props()
+
+  function formatRelative(
+    lastActive: { value: number; unit: 'now' | 'min' | 'hour' | 'day' },
+  ): string {
+    if (lastActive.unit === 'now') {
+      return t('settings.connectedDevices.justNow')
+    }
+    if (lastActive.unit === 'min') {
+      return t('settings.connectedDevices.minAgo', { count: lastActive.value })
+    }
+    if (lastActive.unit === 'hour') {
+      return t('settings.connectedDevices.hourAgo', { count: lastActive.value })
+    }
+    return t('settings.connectedDevices.dayAgo', { count: lastActive.value })
+  }
+
+  function handleRemove(device: DeviceViewModel): void {
+    if (confirm(t('settings.connectedDevices.removeConfirm', { name: device.name }))) {
+      onremove(device.id)
+    }
+  }
 </script>
 
 {#if error}
   <p class="mb-3 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
-    {t('settings.connectedDevices.error')}
+    {error}
   </p>
 {/if}
 
 {#if isLoading && devices.length === 0}
-  <!-- Don't render anything while loading if there are no devices yet -->
+  <p class="text-xs text-(--color-text-muted)">{t('settings.connectedDevices.loading')}</p>
 {:else if devices.length > 0}
+  <div class="mb-2 text-(--text-3xs) text-(--color-text-muted)">
+    {t('settings.connectedDevices.count', { count: devices.length })}
+  </div>
   <div class="flex flex-col gap-2">
     {#each devices as device (device.id)}
       <div
@@ -125,7 +149,7 @@
             </span>
             <span class="text-(--text-3xs) text-(--color-text-muted)">&middot;</span>
             <span class="text-(--text-3xs) text-(--color-text-muted)">
-              {t('settings.connectedDevices.lastActive')}: {device.lastActive}
+              {t('settings.connectedDevices.lastActive')}: {formatRelative(device.lastActive)}
             </span>
           </div>
         </div>
@@ -134,7 +158,7 @@
         {#if !device.isCurrent}
           <button
             class="shrink-0 bg-transparent border-none p-0 text-xs text-red-500 cursor-pointer hover:text-red-600 transition-colors duration-150"
-            onclick={() => onremove(device.id)}
+            onclick={() => handleRemove(device)}
           >
             {t('settings.connectedDevices.remove')}
           </button>
@@ -142,4 +166,6 @@
       </div>
     {/each}
   </div>
+{:else if !isLoading}
+  <p class="text-xs text-(--color-text-muted)">{t('settings.connectedDevices.noDevices')}</p>
 {/if}

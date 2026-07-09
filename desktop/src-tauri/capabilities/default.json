@@ -17,6 +17,7 @@
     "oauth:allow-start",
     "oauth:allow-cancel",
     "opener:default",
-    "core:window:allow-set-fullscreen"
+    "core:window:allow-set-fullscreen",
+    "os:default"
   ]
 }

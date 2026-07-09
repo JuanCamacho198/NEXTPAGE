@@ -18,7 +18,7 @@ export interface DeviceViewModel {
   name: string
   os: string
   icon: 'windows' | 'apple' | 'android' | 'linux'
-  lastActive: string
+  lastActive: { value: number; unit: 'now' | 'min' | 'hour' | 'day' }
   isCurrent: boolean
 }
 
@@ -45,16 +45,15 @@ export async function getDeviceInfo(): Promise<DeviceInfo> {
   let deviceOs = 'Unknown'
 
   try {
-    // Tauri v2 APIs — @tauri-apps/api/os is only available inside Tauri runtime
-    // @ts-expect-error - module not available in browser dev mode
-    const { hostname, type, version } = await import('@tauri-apps/api/os')
+    // Tauri v2 plugin-os — available inside Tauri runtime
+    const { hostname, type, version } = await import('@tauri-apps/plugin-os')
     const [host, osType, osVer] = await Promise.all([hostname(), type(), version()])
     deviceName = host ? `${host} PC` : 'Desktop'
     deviceOs = `${osType} ${osVer}`
       .replace('Windows_NT', 'Windows')
       .replace('Darwin', 'macOS')
   } catch {
-    // Fallback for dev in browser
+    // Fallback for dev in browser (HMR)
     deviceName = 'Desktop'
     deviceOs = navigator.platform
   }
@@ -67,15 +66,15 @@ export async function getDeviceInfo(): Promise<DeviceInfo> {
   }
 }
 
-export function formatRelativeTime(dateStr: string): string {
+export function formatRelativeTime(dateStr: string): { value: number; unit: 'now' | 'min' | 'hour' | 'day' } {
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'now'
-  if (mins < 60) return `${mins} min ago`
+  if (mins < 1) return { value: 0, unit: 'now' }
+  if (mins < 60) return { value: mins, unit: 'min' }
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return { value: hours, unit: 'hour' }
   const days = Math.floor(hours / 24)
-  return `${days}d ago`
+  return { value: days, unit: 'day' }
 }
 
 export function rowToViewModel(

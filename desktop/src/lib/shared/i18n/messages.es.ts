@@ -436,6 +436,12 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.connectedDevices.error': 'No se pudieron cargar los dispositivos. Verificá tu conexión.',
   'settings.connectedDevices.count': '{count} dispositivos conectados',
   'settings.connectedDevices.notSignedIn': 'Iniciá sesión para ver tus dispositivos conectados.',
+  'settings.connectedDevices.justNow': 'Ahora',
+  'settings.connectedDevices.minAgo': 'hace {count} min',
+  'settings.connectedDevices.hourAgo': 'hace {count} h',
+  'settings.connectedDevices.dayAgo': 'hace {count} días',
+  'settings.connectedDevices.loading': 'Cargando dispositivos...',
+  'settings.connectedDevices.noDevices': 'No hay otros dispositivos conectados.',
 
   // Welcome screen (welcome-screen change)
   'welcome.eyebrow': 'Sistema de lectura enfocado',

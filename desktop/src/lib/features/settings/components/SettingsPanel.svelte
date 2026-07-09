@@ -354,6 +354,11 @@
     activeTab = tab;
     if (tab === 'cuenta') {
       await loadProfileData();
+      if (authState.isSignedIn && authState.email) {
+        devicesState.loadDevices(authState.email);
+      }
+    } else {
+      devicesState.stopHeartbeat();
     }
 
     if (tab === 'apariencia' || tab === 'reader') {
@@ -452,18 +457,15 @@
     if (isOpen) {
       void loadAppSettings();
       void loadProfileData();
-
-      // Cargar dispositivos conectados si está logueado
-      if (authState.isSignedIn && authState.email) {
-        devicesState.loadDevices(authState.email)
-      }
     }
+  });
 
+  // Cleanup heartbeat on window close
+  $effect(() => {
     const handleBeforeUnload = () => devicesState.stopHeartbeat()
     window.addEventListener('beforeunload', handleBeforeUnload)
 
     return () => {
-      devicesState.stopHeartbeat()
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
   });

@@ -474,6 +474,12 @@ export const messagesEn = {
   'settings.connectedDevices.error': "Couldn't load devices. Check your connection.",
   'settings.connectedDevices.count': '{count} connected devices',
   'settings.connectedDevices.notSignedIn': 'Sign in to see your connected devices.',
+  'settings.connectedDevices.justNow': 'Now',
+  'settings.connectedDevices.minAgo': '{count} min ago',
+  'settings.connectedDevices.hourAgo': '{count}h ago',
+  'settings.connectedDevices.dayAgo': '{count}d ago',
+  'settings.connectedDevices.loading': 'Loading devices...',
+  'settings.connectedDevices.noDevices': 'No other devices connected.',
 
   // Welcome screen (welcome-screen change)
   'welcome.eyebrow': 'Focused reading system',

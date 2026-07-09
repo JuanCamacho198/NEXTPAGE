@@ -180,14 +180,19 @@ fun SettingsScreen(
                 val lifecycleOwner = LocalLifecycleOwner.current
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
-                        if (event == Lifecycle.Event.ON_RESUME) {
-                            viewModel?.loadDevices()
-                        } else if (event == Lifecycle.Event.ON_PAUSE) {
+                        if (event == Lifecycle.Event.ON_PAUSE) {
                             viewModel?.stopHeartbeat()
+                        } else if (event == Lifecycle.Event.ON_RESUME) {
+                            viewModel?.loadDevices()
                         }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
                     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                }
+
+                // Carga inicial al montar la screen (el observer no se dispara retroactivamente)
+                LaunchedEffect(viewModel) {
+                    viewModel?.loadDevices()
                 }
 
                 if (viewModel != null) {

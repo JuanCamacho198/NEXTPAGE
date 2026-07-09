@@ -1,4 +1,5 @@
-import { getSupabaseClient, type SupabaseClient } from './supabase'
+import { getSupabaseClient } from './supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 // --- Types ---
 export interface DeviceRow {
@@ -44,7 +45,8 @@ export async function getDeviceInfo(): Promise<DeviceInfo> {
   let deviceOs = 'Unknown'
 
   try {
-    // Tauri v2 APIs
+    // Tauri v2 APIs — @tauri-apps/api/os is only available inside Tauri runtime
+    // @ts-expect-error - module not available in browser dev mode
     const { hostname, type, version } = await import('@tauri-apps/api/os')
     const [host, osType, osVer] = await Promise.all([hostname(), type(), version()])
     deviceName = host ? `${host} PC` : 'Desktop'

@@ -30,6 +30,8 @@
     ReaderThemeMode,
   } from '$lib/shared/types';
   import ProfileCard from './ProfileCard.svelte';
+  import { createDevicesState } from '$lib/stores/devicesState.svelte';
+  import ConnectedDevices from './ConnectedDevices.svelte';
 
   let {
     isOpen = $bindable(false),
@@ -69,6 +71,7 @@
   let profileError = $state<string | null>(null);
   let profileAvatarBroken = $state(false);
   let profile = $state<ProfileSessionViewModel>(profileSessionFromAuthState());
+  let devicesState = $state(createDevicesState());
 
   // Data tab state
   let isClearingCache = $state(false);
@@ -449,6 +452,19 @@
     if (isOpen) {
       void loadAppSettings();
       void loadProfileData();
+
+      // Cargar dispositivos conectados si está logueado
+      if (authState.isSignedIn && authState.email) {
+        devicesState.loadDevices(authState.email)
+      }
+    }
+
+    const handleBeforeUnload = () => devicesState.stopHeartbeat()
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      devicesState.stopHeartbeat()
+      window.removeEventListener('beforeunload', handleBeforeUnload)
     }
   });
 </script>
@@ -618,6 +634,21 @@
               <div class="p-4 border-b border-(--color-border) last:border-b-0">
                 <ProfileCard {profile} {isProfileLoading} {profileError} {profileAvatarBroken} {t} />
               </div>
+              {#if authState.isSignedIn && authState.email}
+                <div class="p-4 border-b border-(--color-border) last:border-b-0">
+                  <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
+                    {t('settings.connectedDevices.title')}
+                  </h3>
+                  <ConnectedDevices
+                    devices={devicesState.devices}
+                    error={devicesState.error}
+                    isLoading={devicesState.isLoading}
+                    currentDeviceId={devicesState.currentDeviceId}
+                    onremove={(id: string) => void devicesState.remove(id, authState.email!)}
+                    {t}
+                  />
+                </div>
+              {/if}
               <div class="p-4">
                 <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.language')}</span>
                 <Dropdown

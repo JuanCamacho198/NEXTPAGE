@@ -1,0 +1,120 @@
+package com.nextpage.presentation.viewmodel
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.nextpage.BuildConfig
+import com.nextpage.data.remote.supabase.SupabaseDeviceDataSource
+import com.nextpage.data.repository.DeviceRepositoryImpl
+import com.nextpage.domain.model.Device
+import com.nextpage.domain.model.detectDeviceInfo
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+data class SettingsDevicesUiState(
+    val devices: List<Device> = emptyList(),
+    val currentDeviceId: String? = null,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+    val deviceCount: Int = 0
+)
+
+class SettingsDevicesViewModel(
+    application: Application,
+    private val userId: String
+) : AndroidViewModel(application) {
+
+    private val _uiState = MutableStateFlow(SettingsDevicesUiState())
+    val uiState: StateFlow<SettingsDevicesUiState> = _uiState.asStateFlow()
+
+    private val dataSource = SupabaseDeviceDataSource(
+        supabaseUrl = BuildConfig.SUPABASE_URL,
+        supabaseKey = BuildConfig.SUPABASE_ANON_KEY
+    )
+    private val repository = DeviceRepositoryImpl(dataSource)
+
+    private var heartbeatJob: Job? = null
+
+    fun loadDevices() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+
+            val context = getApplication<Application>()
+            val deviceInfo = detectDeviceInfo(context)
+
+            // Get existing devices
+            val result = repository.getDevices(userId)
+            result.onSuccess { devices ->
+                val existing = devices.find { it.hardwareId == deviceInfo.hardwareId }
+
+                if (existing != null) {
+                    _uiState.value = _uiState.value.copy(
+                        devices = devices,
+                        currentDeviceId = existing.id,
+                        isLoading = false,
+                        deviceCount = devices.size
+                    )
+                    repository.updateHeartbeat(existing.id)
+                    startHeartbeat(existing.id)
+                } else {
+                    // Register new device
+                    val registerResult = repository.registerDevice(userId, deviceInfo)
+                    registerResult.onSuccess { registered ->
+                        val updated = repository.getDevices(userId).getOrDefault(emptyList())
+                        _uiState.value = _uiState.value.copy(
+                            devices = updated,
+                            currentDeviceId = registered.id,
+                            isLoading = false,
+                            deviceCount = updated.size
+                        )
+                        startHeartbeat(registered.id)
+                    }.onFailure { e ->
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            errorMessage = e.message ?: "Failed to register device"
+                        )
+                    }
+                }
+            }.onFailure { e ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = e.message ?: "Failed to load devices"
+                )
+            }
+        }
+    }
+
+    fun removeDevice(deviceId: String) {
+        viewModelScope.launch {
+            repository.removeDevice(deviceId, userId)
+            _uiState.value = _uiState.value.copy(
+                devices = _uiState.value.devices.filter { it.id != deviceId },
+                deviceCount = _uiState.value.devices.size - 1
+            )
+        }
+    }
+
+    private fun startHeartbeat(deviceId: String) {
+        stopHeartbeat()
+        heartbeatJob = viewModelScope.launch {
+            while (true) {
+                delay(120_000)
+                repository.updateHeartbeat(deviceId)
+            }
+        }
+    }
+
+    fun stopHeartbeat() {
+        heartbeatJob?.cancel()
+        heartbeatJob = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopHeartbeat()
+    }
+}

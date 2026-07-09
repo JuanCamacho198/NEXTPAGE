@@ -7,6 +7,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
     id("io.gitlab.arturbosch.detekt")
 }
@@ -54,6 +55,11 @@ android {
 
         val googleOAuthClientId = (localProperties.getProperty("google.oauth.client.id") ?: "").escapeForBuildConfig()
         buildConfigField("String", "GOOGLE_OAUTH_CLIENT_ID", "\"$googleOAuthClientId\"")
+
+        val supabaseUrl = (localProperties.getProperty("SUPABASE_URL") ?: "").escapeForBuildConfig()
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        val supabaseAnonKey = (localProperties.getProperty("SUPABASE_ANON_KEY") ?: "").escapeForBuildConfig()
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
 
         // Git SHA (short) — injected at build time so every APK has a unique fingerprint
         val gitSha = providers.exec {
@@ -153,6 +159,13 @@ dependencies {
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    // Ktor HTTP client for Supabase PostgREST
+    implementation("io.ktor:ktor-client-core:2.3.12")
+    implementation("io.ktor:ktor-client-android:2.3.12")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
 
     // Security: encrypted storage (database encryption requires Kotlin 2.0+ upgrade)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")

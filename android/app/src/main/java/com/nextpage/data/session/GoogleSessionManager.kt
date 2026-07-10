@@ -1,16 +1,17 @@
 package com.nextpage.data.session
 
-/**
- * @deprecated Replaced by [SupabaseSessionManager].
- * Will be removed in the next release cycle.
- */
-@Deprecated("Replaced by SupabaseSessionManager", ReplaceWith("SupabaseSessionManager"))
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.tasks.Tasks
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.model.AuthSession
+
+/**
+ * @deprecated Replaced by [SupabaseSessionManager].
+ * Will be removed in the next release cycle.
+ */
+@Deprecated("Replaced by SupabaseSessionManager", ReplaceWith("SupabaseSessionManager"))
 
 /**
  * SessionManager implementation backed by Google Sign-In OAuth token lifecycle.

@@ -1,12 +1,6 @@
 package com.nextpage.data.repository
 
 import android.content.Context
-
-/**
- * @deprecated Replaced by [SupabaseAuthRepository].
- * Will be removed in the next release cycle.
- */
-@Deprecated("Replaced by SupabaseAuthRepository", ReplaceWith("SupabaseAuthRepository"))
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -27,6 +21,12 @@ import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.repository.AuthRepository
 import java.util.UUID
+
+/**
+ * @deprecated Replaced by [SupabaseAuthRepository].
+ * Will be removed in the next release cycle.
+ */
+@Deprecated("Replaced by SupabaseAuthRepository", ReplaceWith("SupabaseAuthRepository"))
 
 /**
  * AuthRepository implementation using Credential Manager One Tap + Google Sign-In.

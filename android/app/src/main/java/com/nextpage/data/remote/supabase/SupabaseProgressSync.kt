@@ -10,6 +10,7 @@ import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.session.SessionManager
 import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.decodeRecord
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -45,7 +46,7 @@ class SupabaseProgressSync(
     private var processJob: Job? = null
     private var realtimeJob: Job? = null
 
-    private val _state = MutableStateFlow(State.Idle)
+    private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
 
     sealed class State {
@@ -225,15 +226,15 @@ class SupabaseProgressSync(
             launch {
                 dataSource.subscribeToUserChanges(session.userId).collect { action ->
                     when (action) {
-                        is PostgresAction.PostgresInsertAction -> {
+                        is PostgresAction.Insert -> {
                             val row = action.decodeRecord<ReadingProgressRow>()
                             applyRemoteProgress(row)
                         }
-                        is PostgresAction.PostgresUpdateAction -> {
+                        is PostgresAction.Update -> {
                             val row = action.decodeRecord<ReadingProgressRow>()
                             applyRemoteProgress(row)
                         }
-                        else -> { /* DELETE handled by ignoring */ }
+                        is PostgresAction.Delete, is PostgresAction.Select -> { /* no-op */ }
                     }
                 }
             }
@@ -242,15 +243,15 @@ class SupabaseProgressSync(
             launch {
                 dataSource.subscribeToBookmarkChanges(session.userId).collect { action ->
                     when (action) {
-                        is PostgresAction.PostgresInsertAction -> {
+                        is PostgresAction.Insert -> {
                             val row = action.decodeRecord<BookmarkRow>()
                             applyRemoteBookmark(row)
                         }
-                        is PostgresAction.PostgresUpdateAction -> {
+                        is PostgresAction.Update -> {
                             val row = action.decodeRecord<BookmarkRow>()
                             applyRemoteBookmark(row)
                         }
-                        else -> { /* DELETE handled by ignoring */ }
+                        is PostgresAction.Delete, is PostgresAction.Select -> { /* no-op */ }
                     }
                 }
             }
@@ -259,15 +260,15 @@ class SupabaseProgressSync(
             launch {
                 dataSource.subscribeToHighlightChanges(session.userId).collect { action ->
                     when (action) {
-                        is PostgresAction.PostgresInsertAction -> {
+                        is PostgresAction.Insert -> {
                             val row = action.decodeRecord<HighlightRow>()
                             applyRemoteHighlight(row)
                         }
-                        is PostgresAction.PostgresUpdateAction -> {
+                        is PostgresAction.Update -> {
                             val row = action.decodeRecord<HighlightRow>()
                             applyRemoteHighlight(row)
                         }
-                        else -> { /* DELETE handled by ignoring */ }
+                        is PostgresAction.Delete, is PostgresAction.Select -> { /* no-op */ }
                     }
                 }
             }
@@ -387,7 +388,7 @@ class SupabaseProgressSync(
     /**
      * Stop periodic processing and unsubscribe from Realtime.
      */
-    fun stop() {
+    suspend fun stop() {
         processJob?.cancel()
         processJob = null
         realtimeJob?.cancel()

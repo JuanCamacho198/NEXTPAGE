@@ -26,6 +26,8 @@ import com.nextpage.data.remote.google.GoogleDriveConfig
 import com.nextpage.data.remote.google.GoogleDriveClientProvider
 import com.nextpage.data.remote.google.GoogleDriveInitDiagnostic
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
+import com.nextpage.data.remote.supabase.SupabaseProgressDataSource
+import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.GoogleDriveStorageRemoteDataSource
 import com.nextpage.data.remote.sync.GoogleDriveSyncService
@@ -150,6 +152,19 @@ class AppContainer(context: Context) {
                 message = "Drive sync with provider_token not yet implemented on Android.",
                 component = "AppContainer"
             )
+        )
+    }
+
+    val supabaseProgressDataSource: SupabaseProgressDataSource by lazy {
+        SupabaseProgressDataSource()
+    }
+
+    val supabaseProgressSync: SupabaseProgressSync by lazy {
+        SupabaseProgressSync(
+            outboxDao = appDatabase.syncOutboxDao(),
+            readingProgressDao = appDatabase.readingProgressDao(),
+            sessionManager = sessionManager,
+            dataSource = supabaseProgressDataSource
         )
     }
 

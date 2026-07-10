@@ -130,6 +130,7 @@ fun NextPageNavHost(
         factory = AuthViewModel.Factory(
             authRepository = appContainer.authRepository,
             syncService = appContainer.syncService,
+            supabaseProgressSync = appContainer.supabaseProgressSync,
             isAuthConfigured = !appContainer.isAuthConfigError,
             hasAuthWiringIssue = false
         )

@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
@@ -70,12 +71,14 @@ data class AuthUiState(
  *
  * @param authRepository Remote auth operations (Google, email, local session).
  * @param syncService Sync bootstrap and pull/push scheduler.
+ * @param supabaseProgressSync Outbox-to-Supabase processor for reading progress.
  * @param isAuthConfigured Build-time flag indicating auth keys are wired in.
  * @param hasAuthWiringIssue Build-time flag indicating a DI wiring problem.
  */
 class AuthViewModel(
     private val authRepository: AuthRepository,
     private val syncService: SyncService,
+    private val supabaseProgressSync: SupabaseProgressSync? = null,
     private val isAuthConfigured: Boolean,
     private val hasAuthWiringIssue: Boolean
 ) : ViewModel() {
@@ -245,6 +248,7 @@ class AuthViewModel(
      */
     fun signOut() {
         viewModelScope.launch {
+            supabaseProgressSync?.stop()
             val result = authRepository.signOut()
             _uiState.update { it.copy(
                 currentSession = if (result.isSuccess) null else it.currentSession,
@@ -318,6 +322,10 @@ class AuthViewModel(
         }
         syncService.schedulePull()
         syncService.schedulePush()
+
+        // Start Supabase outbox processing and Realtime subscription
+        supabaseProgressSync?.startProcessing()
+        supabaseProgressSync?.subscribeToRealtimeChanges()
     }
 
     /**
@@ -329,6 +337,7 @@ class AuthViewModel(
     class Factory(
         private val authRepository: AuthRepository,
         private val syncService: SyncService,
+        private val supabaseProgressSync: SupabaseProgressSync?,
         private val isAuthConfigured: Boolean,
         private val hasAuthWiringIssue: Boolean
     ) : ViewModelProvider.Factory {
@@ -337,6 +346,7 @@ class AuthViewModel(
             return AuthViewModel(
                 authRepository = authRepository,
                 syncService = syncService,
+                supabaseProgressSync = supabaseProgressSync,
                 isAuthConfigured = isAuthConfigured,
                 hasAuthWiringIssue = hasAuthWiringIssue
             ) as T

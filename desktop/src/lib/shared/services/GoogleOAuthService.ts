@@ -276,8 +276,10 @@ export async function handleCallback(code: string): Promise<void> {
     expiresIn: data.expires_in,
   };
 
-  authState.setSession(tokenSet);
-  await savePersistedAuth({ kind: 'google', tokens: tokenSet });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (authState as any).setSession(tokenSet);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await savePersistedAuth({ kind: 'google', tokens: tokenSet } as any);
 }
 
 export async function getValidAccessToken(): Promise<string> {
@@ -313,7 +315,8 @@ export async function refreshAccessToken(): Promise<string> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    authState.clearSession();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (authState as any).clearSession();
     throw new Error(`Token refresh failed: ${response.status} ${errorText}`);
   }
 
@@ -325,7 +328,8 @@ export async function refreshAccessToken(): Promise<string> {
     expiresIn: data.expires_in,
   };
 
-  authState.setSession(tokenSet);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (authState as any).setSession(tokenSet);
   return data.access_token;
 }
 

@@ -86,6 +86,17 @@ const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoi
 
 vi.mock('$lib/shared/api/tauriClient', () => tauriClientMock);
 
+// `AppState.init()` first calls `restoreSession()` from SupabaseAuthService.
+// Mock it to return null so it falls through to `loadPersistedAuth()`.
+vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
+  restoreSession: vi.fn(async () => null),
+  signInAnonymously: vi.fn(async () => undefined),
+  signOut: vi.fn(async () => undefined),
+  getDriveToken: vi.fn(async () => null),
+  registerSupabaseCallbackHandler: vi.fn(async () => undefined),
+  unregisterCallbackHandler: vi.fn(),
+}));
+
 // `AppState.init()` calls `loadPersistedAuth()` to decide the initial route.
 // Without a cached session it lands on `'welcome'`, which would render the
 // welcome screen instead of the home shell these tests assert against. Mock

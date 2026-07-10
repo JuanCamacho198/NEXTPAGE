@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { Button } from '$lib/shared/ui';
   import Toast from '$lib/shared/ui/feedback/Toast.svelte';
-  import { startAuth } from '$lib/shared/services/GoogleOAuthService';
+  import { signInWithGoogle } from '$lib/shared/services/SupabaseAuthService';
   import { authState } from '$lib/stores/authState.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
 
@@ -43,8 +43,8 @@
   async function handleLogin(): Promise<void> {
     try {
       isLoggingIn = true;
-      console.log('Initiating Google PKCE login...');
-      await startAuth();
+      console.log('Initiating Supabase Google login...');
+      await signInWithGoogle();
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       console.error('Login Error:', msg);

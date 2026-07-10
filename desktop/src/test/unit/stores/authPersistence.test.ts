@@ -52,7 +52,7 @@ const localProfile: LocalUserProfile = {
   localOnly: true,
 };
 
-const googleAuth: PersistedAuth = { kind: 'google', tokens: googleTokens };
+const googleAuth = { kind: 'google', tokens: googleTokens } as unknown as PersistedAuth;
 const localAuth: PersistedAuth = { kind: 'local', profile: localProfile };
 
 beforeEach(() => {
@@ -71,14 +71,14 @@ describe('loadPersistedAuth', () => {
     expect(mockReadTextFile).not.toHaveBeenCalled();
   });
 
-  it('returns a parsed Google auth when the cache contains a valid Google record', async () => {
+  it('returns null when the cache contains a legacy Google record (discarded per MG-01)', async () => {
     mockExists.mockResolvedValue(true);
     mockReadTextFile.mockResolvedValue(JSON.stringify(googleAuth));
     const result = await loadPersistedAuth();
-    expect(result).toEqual(googleAuth);
+    expect(result).toBeNull();
   });
 
-  it('returns a parsed Local auth when the cache contains a valid local record', async () => {
+  it('returns a parsed local auth when the cache contains a valid local record', async () => {
     mockExists.mockResolvedValue(true);
     mockReadTextFile.mockResolvedValue(JSON.stringify(localAuth));
     const result = await loadPersistedAuth();
@@ -99,10 +99,10 @@ describe('loadPersistedAuth', () => {
     expect(result).toBeNull();
   });
 
-  it('returns null when the Google record is missing required token fields', async () => {
+  it('returns null when the Supabase record has a non-object session field', async () => {
     mockExists.mockResolvedValue(true);
     mockReadTextFile.mockResolvedValue(
-      JSON.stringify({ kind: 'google', tokens: { accessToken: 'x' } }),
+      JSON.stringify({ kind: 'supabase', session: 'not-an-object' }),
     );
     const result = await loadPersistedAuth();
     expect(result).toBeNull();
@@ -141,14 +141,18 @@ describe('loadPersistedAuth', () => {
 });
 
 describe('savePersistedAuth', () => {
-  it('writes Google auth to the tmp file, then renames over the real file (atomic write)', async () => {
+  it('writes Supabase auth to the tmp file, then renames over the real file (atomic write)', async () => {
     mockWriteTextFile.mockResolvedValue();
     mockRename.mockResolvedValue();
+    const supabaseAuth: PersistedAuth = {
+      kind: 'supabase',
+      session: { access_token: 'test' },
+    };
 
-    await savePersistedAuth(googleAuth);
+    await savePersistedAuth(supabaseAuth);
 
     expect(mockWriteTextFile).toHaveBeenCalledTimes(1);
-    expect(mockWriteTextFile).toHaveBeenCalledWith('auth.json.tmp', JSON.stringify(googleAuth), {
+    expect(mockWriteTextFile).toHaveBeenCalledWith('auth.json.tmp', JSON.stringify(supabaseAuth), {
       baseDir: 0,
     });
     expect(mockRename).toHaveBeenCalledTimes(1);
@@ -175,8 +179,12 @@ describe('savePersistedAuth', () => {
 
   it('does not rename if the write fails (no half-written real file)', async () => {
     mockWriteTextFile.mockRejectedValue(new Error('disk full'));
+    const supabaseAuth: PersistedAuth = {
+      kind: 'supabase',
+      session: { access_token: 'test' },
+    };
 
-    await expect(savePersistedAuth(googleAuth)).rejects.toThrow('disk full');
+    await expect(savePersistedAuth(supabaseAuth)).rejects.toThrow('disk full');
     expect(mockRename).not.toHaveBeenCalled();
   });
 });
@@ -220,8 +228,12 @@ describe('clearPersistedAuth', () => {
 });
 
 describe('round-trip persistence', () => {
-  it('returns the same Google auth that was saved', async () => {
+  it('returns the same Supabase auth that was saved', async () => {
     let storedPayload: string | null = null;
+    const supabaseAuth: PersistedAuth = {
+      kind: 'supabase',
+      session: { access_token: 'test', refresh_token: 'test-refresh' },
+    };
 
     mockWriteTextFile.mockImplementation(((_path: unknown, data: unknown) => {
       storedPayload = data as string;
@@ -236,9 +248,9 @@ describe('round-trip persistence', () => {
       return Promise.resolve(storedPayload);
     }) as (...args: unknown[]) => Promise<string>);
 
-    await savePersistedAuth(googleAuth);
+    await savePersistedAuth(supabaseAuth);
     const loaded = await loadPersistedAuth();
-    expect(loaded).toEqual(googleAuth);
+    expect(loaded).toEqual(supabaseAuth);
   });
 
   it('returns the same local auth that was saved', async () => {

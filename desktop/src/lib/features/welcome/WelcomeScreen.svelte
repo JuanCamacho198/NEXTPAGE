@@ -75,24 +75,12 @@
     localFormError = null;
   }
 
-  // ─── Google auth persistence (welcome context) ───
-  // The GoogleLoginButton in SettingsPanel persists via a side-effect that
-  // runs after `setSession` is called. On the welcome screen we want the
-  // same behavior: as soon as the user is signed in, write the cache so a
-  // re-launch skips welcome.
+  // ─── Supabase auth → navigate home ───
+  // The Supabase session is already persisted by TauriStorage adapter
+  // (supabase-session.json in appDataDir). When the login completes and
+  // authState.isSignedIn becomes true, navigate to home.
   $effect(() => {
     if (authState.isSignedIn && authState.accessToken) {
-      const tokens = {
-        accessToken: authState.accessToken,
-        refreshToken: authState.refreshToken ?? '',
-        idToken: '', // The idToken is only available at OAuth time; not on re-read.
-        expiresIn: authState.expiresAt
-          ? Math.max(0, Math.floor((authState.expiresAt - Date.now()) / 1000))
-          : 0,
-      };
-      void savePersistedAuth({ kind: 'google', tokens }).catch((err) => {
-        console.error('Failed to persist Google auth on welcome:', err);
-      });
       appState.navigateToHome();
     }
   });

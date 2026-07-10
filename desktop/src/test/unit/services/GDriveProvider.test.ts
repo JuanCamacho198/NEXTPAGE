@@ -4,13 +4,13 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock GoogleOAuthService BEFORE importing GDriveProvider
-vi.mock('$lib/shared/services/GoogleOAuthService', () => ({
-  getValidAccessToken: vi.fn(),
+// Mock SupabaseAuthService BEFORE importing GDriveProvider
+vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
+  getDriveToken: vi.fn(),
 }));
 
 import { GDriveProvider } from '$lib/shared/services/storage/GDriveProvider';
-import { getValidAccessToken } from '$lib/shared/services/GoogleOAuthService';
+import { getDriveToken } from '$lib/shared/services/SupabaseAuthService';
 
 function mockDriveApiResponses(responses: Array<{ ok: boolean; json: () => unknown }>) {
   let callIndex = 0;
@@ -28,11 +28,11 @@ function mockDriveApiResponses(responses: Array<{ ok: boolean; json: () => unkno
 }
 
 function mockAuth(token: string) {
-  vi.mocked(getValidAccessToken).mockResolvedValue(token);
+  vi.mocked(getDriveToken).mockResolvedValue(token);
 }
 
 function mockAuthError(message: string) {
-  vi.mocked(getValidAccessToken).mockRejectedValue(new Error(message));
+  vi.mocked(getDriveToken).mockRejectedValue(new Error(message));
 }
 
 describe('GDriveProvider — token source swap', () => {
@@ -44,7 +44,7 @@ describe('GDriveProvider — token source swap', () => {
     provider = new GDriveProvider();
   });
 
-  it('calls getValidAccessToken for authentication', async () => {
+  it('calls getDriveToken for authentication', async () => {
     mockAuth('ya29.test-token');
     mockDriveApiResponses([
       { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-1', name: 'Books' }] }) },
@@ -53,16 +53,16 @@ describe('GDriveProvider — token source swap', () => {
 
     await provider.list('');
 
-    expect(getValidAccessToken).toHaveBeenCalled();
+    expect(getDriveToken).toHaveBeenCalled();
   });
 
-  it('throws when getValidAccessToken rejects (not authenticated)', async () => {
-    mockAuthError('No access token available — user must sign in');
+  it('throws when getDriveToken rejects (not authenticated)', async () => {
+    mockAuthError('No Google Drive token available. Please sign in with Google again.');
 
     await expect(provider.list('')).rejects.toThrow(
-      'No access token available — user must sign in',
+      'No Google Drive token available. Please sign in with Google again.',
     );
-    expect(getValidAccessToken).toHaveBeenCalled();
+    expect(getDriveToken).toHaveBeenCalled();
   });
 
   it('upload with custom name uses it in Drive API metadata', async () => {

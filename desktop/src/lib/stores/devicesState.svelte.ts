@@ -1,4 +1,15 @@
-import { getSupabaseClient } from '$lib/services/supabase'
+/**
+ * Reactive devices state using Svelte 5 runes ($state) + Supabase Realtime.
+ *
+ * Uses the session-authenticated Supabase client so RLS policies apply.
+ * Subscribes to Realtime INSERT/UPDATE/DELETE on the `devices` table
+ * so the device list updates live across all sessions.
+ *
+ * @module devicesState
+ */
+
+import { getSessionClient } from '$lib/services/supabase';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import {
   getHardwareId,
   getDeviceInfo,
@@ -9,92 +20,168 @@ import {
   rowToViewModel,
   type DeviceRow,
   type DeviceViewModel,
-} from '$lib/services/devices'
+} from '$lib/services/devices';
 
 export function createDevicesState() {
-  let devices = $state<DeviceViewModel[]>([])
-  let error = $state<string | null>(null)
-  let isLoading = $state(false)
-  let currentDeviceId = $state<string | null>(null)
-  let currentHardwareId = $state(getHardwareId())
-  let deviceCount = $derived(devices.length)
+  let devices = $state<DeviceViewModel[]>([]);
+  let error = $state<string | null>(null);
+  let isLoading = $state(false);
+  let currentDeviceId = $state<string | null>(null);
+  let currentHardwareId = $state(getHardwareId());
+  let deviceCount = $derived(devices.length);
 
-  let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+  let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  let realtimeUnsubscribe: (() => void) | null = null;
+
+  // ── Heartbeat ──────────────────────────────────────────────────
 
   function stopHeartbeat() {
     if (heartbeatTimer) {
-      clearInterval(heartbeatTimer)
-      heartbeatTimer = null
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
     }
   }
 
   function startHeartbeat(id: string) {
-    stopHeartbeat()
-    currentDeviceId = id
+    stopHeartbeat();
+    currentDeviceId = id;
     heartbeatTimer = setInterval(async () => {
       try {
-        await updateHeartbeat(getSupabaseClient(), id)
+        await updateHeartbeat(getSessionClient(), id);
       } catch {
         /* silent */
       }
-    }, 120_000)
+    }, 120_000);
   }
 
-  async function loadDevices(email: string) {
-    isLoading = true
-    error = null
-    try {
-      const client = getSupabaseClient()
-      const rows = await listDevices(client, email)
-      const existing = rows.find((r) => r.hardware_id === currentHardwareId)
+  // ── Realtime subscription ──────────────────────────────────────
 
-      if (existing) {
-        // Already registered — update heartbeat now
-        currentDeviceId = existing.id
-        await updateHeartbeat(client, existing.id)
-        devices = rows.map((r) => rowToViewModel(r, currentHardwareId))
-        startHeartbeat(existing.id)
-      } else {
-        // Register new device
-        const info = await getDeviceInfo()
-        const registered = await registerDevice(client, email, info)
-        const updatedRows = await listDevices(client, email)
-        devices = updatedRows.map((r) => rowToViewModel(r, currentHardwareId))
-        startHeartbeat(registered.id)
-      }
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Could not load devices'
-      devices = []
-    } finally {
-      isLoading = false
+  /**
+   * Subscribe to Postgres changes on the `devices` table.
+   * Any INSERT/UPDATE/DELETE from another device or session
+   * will be reflected in real time.
+   */
+  function subscribeToDeviceChanges(userId: string) {
+    // Clean up previous subscription if any
+    unsubscribeFromDeviceChanges();
+
+    const client = getSessionClient();
+    const channel = client
+      .channel('devices-realtime')
+      .on<DeviceRow>(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'devices',
+          filter: `user_id=eq.${userId}`,
+        },
+        async (payload: RealtimePostgresChangesPayload<DeviceRow>) => {
+          if (payload.eventType === 'INSERT') {
+            const row = payload.new;
+            if (row) {
+              devices = [
+                rowToViewModel(row, currentHardwareId),
+                ...devices.filter((d) => d.id !== row.id),
+              ];
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            const row = payload.new;
+            if (row) {
+              devices = devices.map((d) =>
+                d.id === row.id ? rowToViewModel(row, currentHardwareId) : d,
+              );
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const row = payload.old;
+            if (row) {
+              devices = devices.filter((d) => d.id !== row.id);
+            }
+          }
+        },
+      )
+      .subscribe();
+
+    realtimeUnsubscribe = () => {
+      client.removeChannel(channel);
+    };
+  }
+
+  function unsubscribeFromDeviceChanges() {
+    if (realtimeUnsubscribe) {
+      realtimeUnsubscribe();
+      realtimeUnsubscribe = null;
     }
   }
 
-  async function remove(deviceId: string, userEmail: string) {
-    const client = getSupabaseClient()
-    await removeDevice(client, deviceId, userEmail)
-    devices = devices.filter((d) => d.id !== deviceId)
+  // ── Load / register current device ─────────────────────────────
+
+  async function loadDevices(userId: string) {
+    isLoading = true;
+    error = null;
+    try {
+      const client = getSessionClient();
+      const rows = await listDevices(client, userId);
+      const existing = rows.find((r) => r.hardware_id === currentHardwareId);
+
+      if (existing) {
+        // Already registered — update heartbeat now
+        currentDeviceId = existing.id;
+        await updateHeartbeat(client, existing.id);
+        devices = rows.map((r) => rowToViewModel(r, currentHardwareId));
+        startHeartbeat(existing.id);
+      } else {
+        // Register new device
+        const info = await getDeviceInfo();
+        const registered = await registerDevice(client, userId, info);
+        const updatedRows = await listDevices(client, userId);
+        devices = updatedRows.map((r) => rowToViewModel(r, currentHardwareId));
+        startHeartbeat(registered.id);
+      }
+
+      // Subscribe to Realtime for live updates
+      subscribeToDeviceChanges(userId);
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Could not load devices';
+      devices = [];
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  async function remove(deviceId: string, userId: string) {
+    const client = getSessionClient();
+    await removeDevice(client, deviceId, userId);
+    devices = devices.filter((d) => d.id !== deviceId);
+  }
+
+  // ── Cleanup ────────────────────────────────────────────────────
+
+  function destroy() {
+    stopHeartbeat();
+    unsubscribeFromDeviceChanges();
   }
 
   return {
     get devices() {
-      return devices
+      return devices;
     },
     get error() {
-      return error
+      return error;
     },
     get isLoading() {
-      return isLoading
+      return isLoading;
     },
     get currentDeviceId() {
-      return currentDeviceId
+      return currentDeviceId;
     },
     get deviceCount() {
-      return deviceCount
+      return deviceCount;
     },
     loadDevices,
     remove,
     stopHeartbeat,
     startHeartbeat,
-  }
+    destroy,
+  };
 }

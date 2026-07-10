@@ -1,4 +1,4 @@
-import { getValidAccessToken } from '$lib/shared/services/GoogleOAuthService';
+import { getDriveToken } from '$lib/shared/services/SupabaseAuthService';
 import type { StorageProvider } from './StorageProvider';
 
 export class GDriveProvider implements StorageProvider {
@@ -6,7 +6,11 @@ export class GDriveProvider implements StorageProvider {
   private static readonly FOLDER_NAME = 'NextPage/Books';
 
   private async getAccessToken(): Promise<string> {
-    return getValidAccessToken();
+    const token = await getDriveToken();
+    if (!token) {
+      throw new Error('No Google Drive token available. Please sign in with Google again.');
+    }
+    return token;
   }
 
   private async getOrCreateFolder(accessToken: string): Promise<string> {

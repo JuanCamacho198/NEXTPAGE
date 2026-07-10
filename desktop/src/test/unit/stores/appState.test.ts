@@ -98,6 +98,21 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
   exists: vi.fn().mockResolvedValue(false),
 }));
 
+vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
+  restoreSession: vi.fn(async () => null),
+  signInAnonymously: vi.fn(async () => undefined),
+  signOut: vi.fn(async () => undefined),
+  getDriveToken: vi.fn(async () => null),
+  registerSupabaseCallbackHandler: vi.fn(async () => undefined),
+  unregisterCallbackHandler: vi.fn(),
+}));
+
+vi.mock('$lib/stores/authPersistence', () => ({
+  loadPersistedAuth: vi.fn(async () => null),
+  savePersistedAuth: vi.fn(async () => undefined),
+  clearPersistedAuth: vi.fn(async () => undefined),
+}));
+
 vi.mock('$lib/shared/services/BulkImportService', () => {
   const mock = {
     importFolder: vi.fn().mockResolvedValue({ success: 0, skipped: 0, failed: 0, cancelled: 0 }),

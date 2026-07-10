@@ -19,8 +19,6 @@
     type ProfileSessionViewModel,
   } from '../profileSession';
   import { authState } from '$lib/stores/authState.svelte';
-  import { signOut } from '$lib/shared/services/GoogleOAuthService';
-  import { clearPersistedAuth } from '$lib/stores/authPersistence';
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import type {
     AppSettingDto,
@@ -226,18 +224,9 @@
     if (isSigningOut) return;
     isSigningOut = true;
     try {
-      if (authState.isSignedIn) {
-        try {
-          await signOut();
-        } catch (error) {
-          console.error('Google signOut failed:', error);
-        }
-      }
-      if (authState.isLocalUser) {
-        authState.clearLocalUser();
-      }
-      await clearPersistedAuth();
-      appState.navigateToWelcome();
+      await appState.signOutAndReturnToWelcome();
+    } catch (error) {
+      console.error('Sign out failed:', error);
     } finally {
       isSigningOut = false;
     }
@@ -354,8 +343,8 @@
     activeTab = tab;
     if (tab === 'cuenta') {
       await loadProfileData();
-      if (authState.isSignedIn && authState.email) {
-        devicesState.loadDevices(authState.email);
+      if (authState.isSignedIn && authState.userId) {
+        devicesState.loadDevices(authState.userId);
       }
     } else {
       devicesState.stopHeartbeat();
@@ -636,7 +625,7 @@
               <div class="p-4 border-b border-(--color-border) last:border-b-0">
                 <ProfileCard {profile} {isProfileLoading} {profileError} {profileAvatarBroken} {t} />
               </div>
-              {#if authState.isSignedIn && authState.email}
+              {#if authState.isSignedIn && authState.userId}
                 <div class="p-4 border-b border-(--color-border) last:border-b-0">
                   <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
                     {t('settings.connectedDevices.title')}
@@ -646,7 +635,7 @@
                     error={devicesState.error}
                     isLoading={devicesState.isLoading}
                     currentDeviceId={devicesState.currentDeviceId}
-                    onremove={(id: string) => void devicesState.remove(id, authState.email!)}
+                    onremove={(id: string) => void devicesState.remove(id, authState.userId!)}
                     {t}
                   />
                 </div>

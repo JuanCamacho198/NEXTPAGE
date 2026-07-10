@@ -1,4 +1,6 @@
-import { getSupabaseClient } from './supabase'
+import { getSupabaseClient, getSessionClient } from './supabase'
+
+export { getSessionClient }
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // --- Types ---

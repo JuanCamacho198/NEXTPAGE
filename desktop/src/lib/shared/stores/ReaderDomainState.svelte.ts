@@ -4,8 +4,14 @@ import {
   saveProgress,
   saveReadingSession,
   updateBookProgress,
+  upsertProgress as upsertProgressCmd,
 } from '$lib/shared/api/tauriClient';
-import type { ReaderBook, ReadingSessionInput, SaveProgressInput } from '$lib/shared/types';
+import type { ReaderBook, ReadingSessionInput, ReadingProgressDto, SaveProgressInput } from '$lib/shared/types';
+import { authState } from '$lib/stores/authState.svelte';
+import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
+import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
+
+const outboxDao = new SyncOutboxDao();
 
 class ReaderDomainState {
   // ─── State ───
@@ -99,6 +105,18 @@ class ReaderDomainState {
 
     try {
       await saveProgress(payload);
+
+      // If signed in, queue Supabase sync via outbox
+      if (authState.userId) {
+        const outboxPayload = {
+          userId: authState.userId,
+          bookId,
+          cfiLocation: nextLocation,
+          percentage: this.percentage,
+          updatedAt: new Date().toISOString(),
+        };
+        void outboxDao.add('READING_PROGRESS', bookId, 'UPSERT', JSON.stringify(outboxPayload));
+      }
     } catch {
       // Keep UI usable even when save fails
     }
@@ -149,6 +167,69 @@ class ReaderDomainState {
 
   handleReaderLocationContext(): void {
     // Reserved for index_book_text integration
+  }
+
+  // ─── Realtime subscription (cross-device sync) ───
+
+  private supabaseSync: SupabaseProgressSync | null = null;
+  private unsubscribeRemote: (() => void) | null = null;
+
+  /**
+   * Start listening for reading_progress changes from Supabase Realtime.
+   * When remote progress arrives, upsert into local SQLite.
+   * If the user is currently reading the same book, update in-memory state.
+   */
+  subscribeToRemoteProgress(): void {
+    // Already subscribed
+    if (this.unsubscribeRemote) return;
+    // Need authenticated user
+    if (!authState.userId) return;
+
+    try {
+      this.supabaseSync = new SupabaseProgressSync(authState.userId);
+
+      this.unsubscribeRemote = this.supabaseSync.subscribeToProgress((payload) => {
+        const { bookId, cfiLocation, percentage, updatedAt } = payload;
+
+        // Upsert the remote progress into local SQLite
+        const progressInput: ReadingProgressDto = {
+          id: payload.id ?? crypto.randomUUID(),
+          bookId: bookId,
+          cfiLocation: cfiLocation,
+          percentage,
+          updatedAt: updatedAt,
+        };
+        upsertProgressCmd(progressInput).catch((e) => {
+          console.error('Failed to apply remote progress locally:', e);
+        });
+
+        // If the user is currently reading this book, update in-memory state
+        if (this.activeReadingBookId === bookId) {
+          // Only apply if remote is newer — trust the upsert
+          this.cfiLocation = cfiLocation;
+          this.percentage = percentage;
+        }
+      });
+    } catch (e) {
+      console.error('Failed to subscribe to remote progress:', e);
+    }
+  }
+
+  /**
+   * Stop the Realtime subscription. Call on logout or dispose.
+   */
+  unsubscribeFromRemoteProgress(): void {
+    this.unsubscribeRemote?.();
+    this.unsubscribeRemote = null;
+    this.supabaseSync = null;
+  }
+
+  /**
+   * Re-subscribe — useful when userId changes (login/logout cycle).
+   */
+  refreshRemoteProgressSubscription(): void {
+    this.unsubscribeFromRemoteProgress();
+    this.subscribeToRemoteProgress();
   }
 
   // ─── Reset ───

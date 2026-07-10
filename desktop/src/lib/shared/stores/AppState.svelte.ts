@@ -661,6 +661,10 @@ export class AppState {
             null,
           providerToken: supabaseSession.provider_token ?? null,
         });
+
+        // Start cross-device progress sync via Realtime
+        this.reader.subscribeToRemoteProgress();
+
         initialRoute = 'home';
       } else {
         // 2. Fallback: check persisted auth cache (local user profile)
@@ -720,6 +724,7 @@ export class AppState {
     authState.clearSupabaseSession();
     await clearPersistedAuth();
     await signOut();
+    this.reader.unsubscribeFromRemoteProgress();
     this.navigateToWelcome();
   };
   // ─── Internal helpers ───

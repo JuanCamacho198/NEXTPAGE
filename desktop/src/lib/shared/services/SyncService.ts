@@ -2,10 +2,14 @@
  * SyncService — syncs local SQLite state with Google Drive.
  * Replaces Supabase table sync with Drive JSON state files (GoogleDriveStateSync)
  * and Drive file sync (GDriveProvider). LWW conflict resolution via ConflictResolver.
+ *
+ * Dual-write mode: after Drive sync, also upserts progress to Supabase.
+ * Cutover: when `readingProgressSync` is 'supabase', Drive writes are skipped.
  */
 import { authState } from '$lib/stores/authState.svelte';
 import { GDriveProvider } from './storage/GDriveProvider';
 import { GoogleDriveStateSync } from './GoogleDriveStateSync';
+import { SupabaseProgressSync } from '../sync/SupabaseProgressSync';
 import type {
   ProgressStateJson,
   HighlightStateJson,
@@ -13,13 +17,74 @@ import type {
 } from './GoogleDriveStateSync';
 import * as tauri from '$lib/shared/api/tauriClient';
 
+/** Sync mode for reading progress: 'drive' (legacy), 'dual' (both), 'supabase' (cutover). */
+type ReadingProgressSyncMode = 'drive' | 'dual' | 'supabase';
+
 export class SyncService {
   private static gdrive = new GDriveProvider();
+
+  /** Which mode to use for reading progress sync. Defaults to 'dual' during transition. */
+  private static readingProgressSync: ReadingProgressSyncMode = 'dual';
+
+  /** Flag to track whether Drive → Supabase import was done this session. */
+  private static supabaseImportDone = false;
+
+  /**
+   * Override the sync mode at runtime.
+   * - 'drive': legacy Drive-only (no Supabase writes)
+   * - 'dual': write to both Drive and Supabase (transition)
+   * - 'supabase': Supabase-only (cutover complete)
+   */
+  static setReadingProgressSyncMode(mode: ReadingProgressSyncMode): void {
+    this.readingProgressSync = mode;
+  }
 
   static async syncMetadata(): Promise<void> {
     if (!authState.isSignedIn) return;
 
     await Promise.all([this.syncBooks(), this.syncState()]);
+  }
+
+  /**
+   * On first sync after login, run the one-time import of Drive progress to Supabase.
+   */
+  private static async ensureSupabaseImport(): Promise<void> {
+    if (this.supabaseImportDone || this.readingProgressSync === 'drive') return;
+    if (!authState.userId) return;
+
+    try {
+      const localBooks = await tauri.listBooks();
+      const rows: Array<{
+        userId: string;
+        bookId: string;
+        cfiLocation: string;
+        percentage: number;
+        updatedAt: string;
+      }> = [];
+
+      for (const book of localBooks) {
+        const progress = await tauri.getProgress(book.id);
+        if (progress) {
+          rows.push({
+            userId: authState.userId,
+            bookId: progress.bookId,
+            cfiLocation: progress.cfiLocation,
+            percentage: progress.percentage,
+            updatedAt: progress.updatedAt,
+          });
+        }
+      }
+
+      if (rows.length > 0) {
+        const sync = new SupabaseProgressSync(authState.userId);
+        await sync.importFromDrive(rows);
+      }
+
+      this.supabaseImportDone = true;
+    } catch (e) {
+      console.error('Failed to import progress to Supabase:', e);
+      // Non-blocking — retry on next sync
+    }
   }
 
   /**
@@ -79,6 +144,9 @@ export class SyncService {
    * Uses GoogleDriveStateSync for push/pull with LWW conflict resolution.
    */
   private static async syncState(): Promise<void> {
+    // Import existing progress to Supabase on first sync (if in dual/supabase mode)
+    await this.ensureSupabaseImport();
+
     const localBooks = await tauri.listBooks();
 
     for (const book of localBooks) {
@@ -125,13 +193,15 @@ export class SyncService {
           deletedAtEpochMillis: null,
         }));
 
-        // ---- Push local state to Drive ----
-        await GoogleDriveStateSync.pushState(
-          book.id,
-          localProgress,
-          localHighlights,
-          localBookmarks,
-        );
+        // ---- Push local state to Drive (skip if cutover) ----
+        if (this.readingProgressSync !== 'supabase') {
+          await GoogleDriveStateSync.pushState(
+            book.id,
+            localProgress,
+            localHighlights,
+            localBookmarks,
+          );
+        }
 
         // ---- Pull remote state and merge ----
         const remote = await GoogleDriveStateSync.pullState(
@@ -150,6 +220,37 @@ export class SyncService {
             percentage: remote.progress.percentage,
             updatedAt: new Date(remote.progress.updated_at).toISOString(),
           });
+        }
+
+        // ---- Dual-write: also upsert resolved progress to Supabase ----
+        if (this.readingProgressSync !== 'drive' && authState.userId && remote.progress) {
+          try {
+            const sync = new SupabaseProgressSync(authState.userId);
+            await sync.upsertProgress({
+              userId: authState.userId,
+              bookId: remote.progress.book_id,
+              cfiLocation: remote.progress.cfi_location,
+              percentage: remote.progress.percentage,
+              updatedAt: new Date(remote.progress.updated_at).toISOString(),
+            });
+          } catch (e) {
+            console.error(`Failed to sync progress to Supabase for book ${book.id}:`, e);
+          }
+        }
+        // Also upsert local-only progress that wasn't in Drive
+        else if (this.readingProgressSync !== 'drive' && authState.userId && localProgress && !remote.progress) {
+          try {
+            const sync = new SupabaseProgressSync(authState.userId);
+            await sync.upsertProgress({
+              userId: authState.userId,
+              bookId: localProgress.book_id,
+              cfiLocation: localProgress.cfi_location,
+              percentage: localProgress.percentage,
+              updatedAt: new Date(localProgress.updated_at).toISOString(),
+            });
+          } catch (e) {
+            console.error(`Failed to sync local progress to Supabase for book ${book.id}:`, e);
+          }
         }
 
         // Apply highlights: only those that differ from local

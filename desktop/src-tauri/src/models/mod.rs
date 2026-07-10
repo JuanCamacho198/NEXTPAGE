@@ -2,6 +2,8 @@ pub mod domain;
 pub mod dto;
 pub mod mapper;
 
+pub use dto::SyncOutboxRowDto;
+
 use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;

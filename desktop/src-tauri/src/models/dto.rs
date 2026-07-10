@@ -97,6 +97,20 @@ pub struct SearchResultDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct SyncOutboxRowDto {
+    pub id: String,
+    pub entity_type: String,
+    pub entity_id: Option<String>,
+    pub operation: String,
+    pub payload_json: String,
+    pub retry_count: i32,
+    pub last_error: Option<String>,
+    pub created_at: String,
+    pub next_retry_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct SearchBookTextResponse {
     pub items: Vec<SearchResultDto>,
     pub total: i64,

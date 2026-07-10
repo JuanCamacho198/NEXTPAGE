@@ -8,6 +8,7 @@ pub mod epub_reader;
 pub mod files;
 pub mod highlights;
 pub mod library;
+pub mod outbox;
 pub mod progress;
 pub mod search;
 pub mod settings;
@@ -44,8 +45,8 @@ use crate::models::{
     CreateTagInput, DictionaryWordDto, HideBookInput, HighlightDto, IndexBookTextInput,
     LibraryBookDto, ListLibraryBooksInput, ReadingProgressDto, ReadingSessionInput,
     ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput, SaveHighlightTagsInput,
-    SaveProgressInput, ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse, TagDto,
-    UpdateHighlightInput, UpsertBookCoverInput,
+    SaveProgressInput, ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse,
+    SyncOutboxRowDto, TagDto, UpdateHighlightInput, UpsertBookCoverInput,
 };
 use crate::state::AppState;
 
@@ -641,6 +642,112 @@ pub fn diagnose(state: State<'_, AppState>) -> crate::services::diagnostics::Dia
 pub fn getLogs(state: State<'_, AppState>) -> Result<Vec<String>, String> {
     let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
     logger.read_all_logs()
+}
+
+// ─── Sync Outbox Commands ─────────────────────────────────────────
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn addSyncOutboxItem(
+    state: State<'_, AppState>,
+    entity_type: String,
+    entity_id: Option<String>,
+    operation: String,
+    payload_json: String,
+) -> Result<String, String> {
+    use uuid::Uuid;
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let conn = repository.connection();
+    let id = Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+    conn.execute(
+        "INSERT INTO sync_outbox (id, entity_type, entity_id, operation, payload_json, created_at, next_retry_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)",
+        rusqlite::params![id, entity_type, entity_id, operation, payload_json, now],
+    )
+    .map_err(|e| format!("Failed to insert outbox item: {}", e))?;
+    Ok(id)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn listSyncOutboxReady(state: State<'_, AppState>) -> Result<Vec<SyncOutboxRowDto>, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let conn = repository.connection();
+    let now = chrono::Utc::now().to_rfc3339();
+    let mut statement = conn
+        .prepare(
+            "SELECT id, entity_type, entity_id, operation, payload_json, retry_count, last_error, created_at, next_retry_at
+             FROM sync_outbox
+             WHERE next_retry_at <= ?1 AND retry_count < 50
+             ORDER BY created_at ASC",
+        )
+        .map_err(|e| format!("Failed to prepare: {}", e))?;
+    let rows = statement
+        .query_map(rusqlite::params![now], |row| {
+            Ok(SyncOutboxRowDto {
+                id: row.get(0)?,
+                entity_type: row.get(1)?,
+                entity_id: row.get(2)?,
+                operation: row.get(3)?,
+                payload_json: row.get(4)?,
+                retry_count: row.get(5)?,
+                last_error: row.get(6)?,
+                created_at: row.get(7)?,
+                next_retry_at: row.get(8)?,
+            })
+        })
+        .map_err(|e| format!("Failed to query: {}", e))?;
+    let items = rows.collect::<Result<Vec<_>, _>>().map_err(|e| format!("{}", e))?;
+    Ok(items)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn markSyncOutboxFailed(state: State<'_, AppState>, id: String, error: String) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let conn = repository.connection();
+    // Read current retry_count
+    let current_retry: i32 = conn
+        .query_row(
+            "SELECT retry_count FROM sync_outbox WHERE id = ?1",
+            rusqlite::params![id],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Failed to read retry_count: {}", e))?;
+    let next_delay = std::cmp::min(60, 2_i32.pow((current_retry + 1) as u32));
+    let next_retry_at = (chrono::Utc::now() + chrono::Duration::seconds(next_delay as i64)).to_rfc3339();
+    conn.execute(
+        "UPDATE sync_outbox SET retry_count = retry_count + 1, last_error = ?1, next_retry_at = ?2 WHERE id = ?3",
+        rusqlite::params![error, next_retry_at, id],
+    )
+    .map_err(|e| format!("Failed to update outbox item: {}", e))?;
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn deleteSyncOutboxItem(state: State<'_, AppState>, id: String) -> Result<(), String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let conn = repository.connection();
+    conn.execute("DELETE FROM sync_outbox WHERE id = ?1", rusqlite::params![id])
+        .map_err(|e| format!("Failed to delete outbox item: {}", e))?;
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn pruneSyncOutbox(state: State<'_, AppState>) -> Result<i32, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let conn = repository.connection();
+    let cutoff = (chrono::Utc::now() - chrono::Duration::days(7)).to_rfc3339();
+    let deleted = conn
+        .execute(
+            "DELETE FROM sync_outbox WHERE created_at < ?1 AND retry_count >= 10",
+            rusqlite::params![cutoff],
+        )
+        .map_err(|e| format!("Failed to prune outbox: {}", e))?;
+    Ok(deleted as i32)
 }
 
 fn get_max_log_lines_internal(

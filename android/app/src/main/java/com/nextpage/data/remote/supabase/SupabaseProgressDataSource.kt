@@ -2,9 +2,12 @@ package com.nextpage.data.remote.supabase
 
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.RealtimeChannel
+import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.realtime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -31,16 +34,13 @@ class SupabaseProgressDataSource {
      * Subscribe to realtime reading_progress changes for a given [userId].
      * Returns a Flow that emits [PostgresAction] for INSERT, UPDATE, DELETE.
      */
-    fun subscribeToUserChanges(userId: String): Flow<PostgresAction> {
+    suspend fun subscribeToUserChanges(userId: String): Flow<PostgresAction> {
         unsubscribe()
-        changesChannel = realtime.createChannel("reading-progress-changes")
-        val flow = changesChannel!!.postgresChangeFlow<ReadingProgressRow>(
-            schema = "public",
-            table = "reading_progress",
-            filter = PostgresAction.PostgresUpdateFilter(
-                filter = "user_id=eq.$userId"
-            )
-        )
+        changesChannel = SupabaseClientProvider.client.channel("reading-progress-changes")
+        val flow = changesChannel!!.postgresChangeFlow<PostgresAction>(schema = "public") {
+            table = "reading_progress"
+            filter("user_id", FilterOperator.EQ, userId)
+        }
         changesChannel!!.subscribe()
         return flow
     }
@@ -48,7 +48,7 @@ class SupabaseProgressDataSource {
     /**
      * Unsubscribe from realtime changes.
      */
-    fun unsubscribe() {
+    suspend fun unsubscribe() {
         changesChannel?.unsubscribe()
         changesChannel = null
     }
@@ -56,7 +56,7 @@ class SupabaseProgressDataSource {
     suspend fun upsertProgress(progress: ReadingProgressRow): ReadingProgressRow {
         return postgrest["reading_progress"]
             .upsert(progress) {
-                onConflict("user_id, book_id")
+                onConflict = "user_id, book_id"
             }
             .decodeSingle<ReadingProgressRow>()
     }
@@ -98,7 +98,7 @@ class SupabaseProgressDataSource {
     suspend fun upsertBookmark(bookmark: BookmarkRow): BookmarkRow {
         return postgrest["bookmarks"]
             .upsert(bookmark) {
-                onConflict("user_id, book_id, cfi_location")
+                onConflict = "user_id, book_id, cfi_location"
             }
             .decodeSingle<BookmarkRow>()
     }
@@ -118,9 +118,11 @@ class SupabaseProgressDataSource {
     suspend fun listBookmarks(userId: String, bookId: String? = null): List<BookmarkRow> {
         return postgrest["bookmarks"]
             .select {
-                filter { eq("user_id", userId) }
-                bookId?.let { eq("book_id", it) }
-                isNull("deleted_at")
+                filter {
+                    eq("user_id", userId)
+                    if (bookId != null) eq("book_id", bookId)
+                    exact("deleted_at", null)
+                }
                 order("updated_at", Order.DESCENDING)
             }
             .decodeList<BookmarkRow>()
@@ -147,16 +149,13 @@ class SupabaseProgressDataSource {
     /**
      * Subscribe to realtime bookmark changes for a given [userId].
      */
-    fun subscribeToBookmarkChanges(userId: String): Flow<PostgresAction> {
+    suspend fun subscribeToBookmarkChanges(userId: String): Flow<PostgresAction> {
         bookmarksChannel?.unsubscribe()
-        bookmarksChannel = realtime.createChannel("bookmark-changes")
-        val flow = bookmarksChannel!!.postgresChangeFlow<BookmarkRow>(
-            schema = "public",
-            table = "bookmarks",
-            filter = PostgresAction.PostgresUpdateFilter(
-                filter = "user_id=eq.$userId"
-            )
-        )
+        bookmarksChannel = SupabaseClientProvider.client.channel("bookmark-changes")
+        val flow = bookmarksChannel!!.postgresChangeFlow<PostgresAction>(schema = "public") {
+            table = "bookmarks"
+            filter("user_id", FilterOperator.EQ, userId)
+        }
         bookmarksChannel!!.subscribe()
         return flow
     }
@@ -166,7 +165,7 @@ class SupabaseProgressDataSource {
     suspend fun upsertHighlight(highlight: HighlightRow): HighlightRow {
         return postgrest["highlights"]
             .upsert(highlight) {
-                onConflict("id")
+                onConflict = "id"
             }
             .decodeSingle<HighlightRow>()
     }
@@ -182,9 +181,11 @@ class SupabaseProgressDataSource {
     suspend fun listHighlights(userId: String, bookId: String? = null): List<HighlightRow> {
         return postgrest["highlights"]
             .select {
-                filter { eq("user_id", userId) }
-                bookId?.let { eq("book_id", it) }
-                isNull("deleted_at")
+                filter {
+                    eq("user_id", userId)
+                    if (bookId != null) eq("book_id", bookId)
+                    exact("deleted_at", null)
+                }
                 order("updated_at", Order.DESCENDING)
             }
             .decodeList<HighlightRow>()
@@ -211,16 +212,13 @@ class SupabaseProgressDataSource {
     /**
      * Subscribe to realtime highlight changes for a given [userId].
      */
-    fun subscribeToHighlightChanges(userId: String): Flow<PostgresAction> {
+    suspend fun subscribeToHighlightChanges(userId: String): Flow<PostgresAction> {
         highlightsChannel?.unsubscribe()
-        highlightsChannel = realtime.createChannel("highlight-changes")
-        val flow = highlightsChannel!!.postgresChangeFlow<HighlightRow>(
-            schema = "public",
-            table = "highlights",
-            filter = PostgresAction.PostgresUpdateFilter(
-                filter = "user_id=eq.$userId"
-            )
-        )
+        highlightsChannel = SupabaseClientProvider.client.channel("highlight-changes")
+        val flow = highlightsChannel!!.postgresChangeFlow<PostgresAction>(schema = "public") {
+            table = "highlights"
+            filter("user_id", FilterOperator.EQ, userId)
+        }
         highlightsChannel!!.subscribe()
         return flow
     }
@@ -240,9 +238,9 @@ class SupabaseProgressDataSource {
     }
 
     suspend fun createTag(tag: TagRow): TagRow {
-        return postgrest["tags"]
+        return             postgrest["tags"]
             .upsert(tag) {
-                onConflict("user_id, name")
+                onConflict = "user_id, name"
             }
             .decodeSingle<TagRow>()
     }
@@ -280,7 +278,7 @@ class SupabaseProgressDataSource {
                     "tag_id" to tagId
                 )
             ) {
-                onConflict("highlight_id, tag_id")
+                onConflict = "highlight_id, tag_id"
             }
     }
 
@@ -321,7 +319,7 @@ class SupabaseProgressDataSource {
 
     // ─── Channel cleanup ────────────────────────────────────────
 
-    fun unsubscribeAll() {
+    suspend fun unsubscribeAll() {
         unsubscribe()
         bookmarksChannel?.unsubscribe()
         bookmarksChannel = null

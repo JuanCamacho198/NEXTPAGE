@@ -1,17 +1,19 @@
 package com.nextpage.data.remote.supabase
 
 import com.nextpage.domain.model.Device
+import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.RealtimeChannel
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.decodeRecord
 import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.realtime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.datetime.Clock
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.decodeFromJsonElement
 
 /**
  * Devices CRUD via Supabase PostgREST (using supabase-kt postgrest-kt).
@@ -35,20 +37,12 @@ class SupabaseDeviceDataSource {
      * Subscribe to realtime device changes for a given [userId].
      * Returns a Flow that emits updated [Device] objects on INSERT, UPDATE, DELETE.
      */
-    fun subscribeToChanges(userId: String): Flow<PostgresAction> {
+    suspend fun subscribeToChanges(userId: String): Flow<PostgresAction> {
         unsubscribe()
-        changesChannel = realtime.createChannel("devices-changes")
-        val flow = changesChannel!!.postgresChangeFlow<Device>(
-            schema = "public",
-            table = "devices",
-            filter = PostgresAction.PostgresUpdateFilter(
-                filter = "user_id=eq.$userId"
-            )
-        ) {
-            decodeColumn("device_info") { element ->
-                SupabaseClientProvider.client.serializer
-                    .decodeFromJsonElement<Device>(element)
-            }
+        changesChannel = SupabaseClientProvider.client.channel("devices-changes")
+        val flow = changesChannel!!.postgresChangeFlow<PostgresAction>(schema = "public") {
+            table = "devices"
+            filter("user_id", FilterOperator.EQ, userId)
         }
         changesChannel!!.subscribe()
         return flow
@@ -58,20 +52,16 @@ class SupabaseDeviceDataSource {
      * Flow that emits [Device] lists whenever a change is detected.
      * Requires [subscribeToChanges] to have been called first.
      */
-    suspend fun observeDevices(userId: String): Flow<List<Device>> {
+    suspend fun observeDevices(userId: String): Flow<Device> {
         val channel = changesChannel ?: return emptyFlow()
-        return channel.postgresChangeFlow<JsonElement>(
-            schema = "public",
-            table = "devices",
-            filter = PostgresAction.PostgresUpdateFilter(
-                filter = "user_id=eq.$userId"
-            )
-        ).mapNotNull { action ->
+        return channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+            table = "devices"
+            filter("user_id", FilterOperator.EQ, userId)
+        }.mapNotNull { action ->
             when (action) {
-                is PostgresAction.PostgresUpdateAction -> action.decodeRecord<Device>()
-                is PostgresAction.PostgresInsertAction -> action.decodeRecord<Device>()
-                is PostgresAction.PostgresDeleteAction -> null // handled by re-fetch
-                else -> null
+                is PostgresAction.Update -> action.decodeRecord<Device>()
+                is PostgresAction.Insert -> action.decodeRecord<Device>()
+                is PostgresAction.Delete, is PostgresAction.Select -> null
             }
         }
     }
@@ -79,7 +69,7 @@ class SupabaseDeviceDataSource {
     /**
      * Unsubscribe from realtime changes.
      */
-    fun unsubscribe() {
+    suspend fun unsubscribe() {
         changesChannel?.unsubscribe()
         changesChannel = null
     }
@@ -98,21 +88,18 @@ class SupabaseDeviceDataSource {
     suspend fun upsertDevice(device: Device): Device {
         return postgrest["devices"]
             .upsert(device) {
-                onConflict("user_id,hardware_id")
+                onConflict = "user_id,hardware_id"
             }
             .decodeSingle<Device>()
     }
 
     suspend fun updateHeartbeat(deviceId: String) {
         postgrest["devices"]
-            .patch(
-                value = mapOf("last_active" to Clock.System.now().toString()),
-                request = {
-                    filter {
-                        eq("id", deviceId)
-                    }
+            .update(mapOf("last_active" to java.time.Instant.now().toString())) {
+                filter {
+                    eq("id", deviceId)
                 }
-            )
+            }
     }
 
     suspend fun removeDevice(deviceId: String, userId: String) {

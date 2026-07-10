@@ -2,7 +2,7 @@ import './styles.css';
 import App from './App.svelte';
 import { mount } from 'svelte';
 import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
-import { registerOAuthCallbackHandler } from './lib/shared/services/GoogleOAuthService';
+import { registerSupabaseCallbackHandler } from './lib/shared/services/SupabaseAuthService';
 import { logger } from './lib/shared/logger/Logger';
 import { consoleSink } from './lib/shared/logger/ConsoleSink';
 import { tauriSink } from './lib/shared/logger/TauriSink';
@@ -96,8 +96,8 @@ onOpenUrl((urls) => {
   // Future: route specific URL patterns to book-opening handlers.
 });
 
-// OAuth wiring: subscribe to plugin's oauth://url event once at module init.
-registerOAuthCallbackHandler();
+// Supabase OAuth wiring: listen for OAuth callback on loopback URL.
+registerSupabaseCallbackHandler();
 
 const app = mount(App, {
   target: document.getElementById('app') as HTMLElement,

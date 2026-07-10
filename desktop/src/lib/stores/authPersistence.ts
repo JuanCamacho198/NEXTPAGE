@@ -1,19 +1,13 @@
 /**
  * Persisted authentication cache.
  *
- * Stores the most recent Google OAuth `TokenSet` or a local-only user profile
- * to `appDataDir/auth.json` so returning users can skip the welcome screen.
- * Writes are atomic (tmp file + rename) to prevent partial-write corruption
- * if the process is interrupted.
+ * Stores auth state to `appDataDir/auth.json` so returning users can skip the
+ * welcome screen. Writes are atomic (tmp file + rename).
  *
- * The on-disk format is a discriminated union:
- *
- *   { kind: "google", tokens: TokenSet }
- *   { kind: "local",  profile: LocalUserProfile }
- *
- * No tokens, secrets, or PII are ever logged. Malformed JSON is treated as
- * "no cache" and a warning is emitted; the app falls back to the welcome
- * screen in that case.
+ * Discriminated union on disk:
+ *   { kind: "supabase", session: Record<string, unknown> }
+ *   { kind: "local",    profile: LocalUserProfile }
+ *   { kind: "google",   tokens: TokenSet }  // legacy, discarded on read
  */
 
 import {
@@ -26,7 +20,6 @@ import {
 } from '@tauri-apps/plugin-fs';
 import { logger } from '$lib/shared/logger/Logger';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
-import type { TokenSet } from './authState.svelte';
 
 const CACHE_FILE = 'auth.json';
 const TMP_FILE = 'auth.json.tmp';
@@ -40,18 +33,14 @@ export type LocalUserProfile = {
 };
 
 export type PersistedAuth =
-  | { kind: 'google'; tokens: TokenSet }
+  | { kind: 'supabase'; session: Record<string, unknown> }
   | { kind: 'local'; profile: LocalUserProfile };
 
 /**
  * Load the persisted auth cache. Returns `null` when:
- *  - the file does not exist (first launch, never signed in)
+ *  - the file does not exist
  *  - the file contains malformed JSON
- *  - the file's `kind` discriminator is unknown
- *  - the platform layer (Tauri) is unavailable (e.g. during unit tests)
- *
- * Any read or parse error is logged at `low` severity and treated as a cache
- * miss; the caller does not need to handle exceptions.
+ *  - the file's `kind` is unknown or legacy ('google' — discarded per MG-01)
  */
 export async function loadPersistedAuth(): Promise<PersistedAuth | null> {
   try {
@@ -81,16 +70,10 @@ export async function loadPersistedAuth(): Promise<PersistedAuth | null> {
 
 /**
  * Persist the given auth record atomically.
- *
- * Implementation: write to `auth.json.tmp` first, then `rename` over the
- * real file. The `rename` is atomic on the same filesystem, so a crash
- * mid-write cannot leave a partially-written `auth.json` — the previous
- * valid cache (or no cache) survives.
  */
 export async function savePersistedAuth(auth: PersistedAuth): Promise<void> {
   const payload = JSON.stringify(auth);
   await writeTextFile(TMP_FILE, payload, { baseDir: BASE_DIR });
-  // `rename` in @tauri-apps/plugin-fs overwrites the destination if it exists.
   await rename(TMP_FILE, CACHE_FILE, {
     oldPathBaseDir: BASE_DIR,
     newPathBaseDir: BASE_DIR,
@@ -98,14 +81,12 @@ export async function savePersistedAuth(auth: PersistedAuth): Promise<void> {
 }
 
 /**
- * Remove the persisted auth cache. Best-effort: a missing file is not an
- * error. Failures are logged but never thrown.
+ * Remove the persisted auth cache. Best-effort.
  */
 export async function clearPersistedAuth(): Promise<void> {
   try {
     const fileExists = await exists(CACHE_FILE, { baseDir: BASE_DIR });
     if (!fileExists) {
-      // Also try to clean up a stale .tmp file
       const tmpExists = await exists(TMP_FILE, { baseDir: BASE_DIR });
       if (tmpExists) {
         await remove(TMP_FILE, { baseDir: BASE_DIR });
@@ -143,21 +124,18 @@ function validatePersistedAuth(value: unknown): PersistedAuth | null {
     return null;
   }
 
+  // Legacy 'google' kind — discard per MG-01
   if (value.kind === 'google') {
-    const tokens = value.tokens;
-    if (!isObject(tokens)) {
+    return null;
+  }
+
+  if (value.kind === 'supabase') {
+    const session = value.session;
+    if (!isObject(session)) {
       return null;
     }
-    if (
-      typeof tokens.accessToken !== 'string' ||
-      typeof tokens.refreshToken !== 'string' ||
-      typeof tokens.idToken !== 'string' ||
-      typeof tokens.expiresIn !== 'number' ||
-      !Number.isFinite(tokens.expiresIn)
-    ) {
-      return null;
-    }
-    return { kind: 'google', tokens: tokens as unknown as TokenSet };
+    // We don't validate session fields deeply — supabase-js handles that.
+    return { kind: 'supabase', session: session as Record<string, unknown> };
   }
 
   if (value.kind === 'local') {

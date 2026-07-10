@@ -1,23 +1,48 @@
 /**
- * Reactive Google OAuth state using Svelte 5 runes ($state).
- * Replaces the Supabase auth session with direct Google OAuth PKCE tokens.
+ * Reactive auth state using Svelte 5 runes ($state).
  *
- * Usage:
- *   import { authState } from "$lib/stores/authState.svelte";
- *   // authState.isSignedIn, authState.email, etc. are reactive
+ * Wraps a Supabase Auth session internally but exposes the same
+ * reactive interface as before for backward compatibility.
  *
- * Local-user support (welcome-screen change):
- * Local users are first-class profiles that do NOT set `accessToken`. This is
- * intentional: `SyncService.ts` is gated on `isSignedIn`, so local users
- * implicitly skip Google Drive sync without any extra gate. `isSignedIn`
- * therefore evaluates to `false` for local users — this is the documented
- * contract, not a bug. Callers that need "has any profile" should check
+ * Consumers read: `isSignedIn`, `email`, `userId`, `displayName`,
+ * `photoUrl`, `isLocalUser`, `accessToken`, `refreshToken`, `expiresAt`,
+ * and call `startAuth()`, `signOut()`.
+ *
+ * Local-user support:
+ * Local users are first-class profiles that do NOT set `accessToken`.
+ * `isSignedIn` therefore evaluates to `false` for local users.
+ * Callers that need "has any profile" should check
  * `authState.isLocalUser || authState.isSignedIn`.
  */
 
 import type { LocalUserProfile } from './authPersistence';
 
 export type { LocalUserProfile };
+
+/**
+ * Legacy TokenSet type for backward compatibility with GoogleOAuthService.ts.
+ * @deprecated Will be removed next release cycle.
+ */
+export interface TokenSet {
+  accessToken: string;
+  refreshToken: string;
+  idToken: string;
+  expiresIn: number;
+}
+
+/**
+ * Internal Supabase session data shape.
+ */
+export interface SupabaseSessionData {
+  accessToken: string | null;
+  refreshToken: string | null;
+  expiresAt: number | null;
+  userId: string | null;
+  email: string | null;
+  displayName: string | null;
+  photoUrl: string | null;
+  providerToken: string | null;
+}
 
 let accessToken: string | null = $state(null);
 let refreshToken: string | null = $state(null);
@@ -27,6 +52,7 @@ let displayName: string | null = $state(null);
 let photoUrl: string | null = $state(null);
 let userId: string | null = $state(null);
 let localUser: LocalUserProfile | null = $state(null);
+let providerToken: string | null = $state(null);
 
 const isSignedIn = $derived(accessToken !== null);
 const isLocalUser = $derived(localUser !== null);
@@ -34,52 +60,25 @@ const isTokenExpired = $derived(
   expiresAt === null || Date.now() >= expiresAt - 60000, // 1-minute buffer
 );
 
-export interface IdTokenPayload {
-  sub: string;
-  email: string;
-  name: string;
-  picture: string;
+/**
+ * Set a Supabase session. Clears any local user profile.
+ */
+export function setSupabaseSession(data: SupabaseSessionData): void {
+  accessToken = data.accessToken;
+  refreshToken = data.refreshToken;
+  expiresAt = data.expiresAt;
+  userId = data.userId;
+  email = data.email;
+  displayName = data.displayName;
+  photoUrl = data.photoUrl;
+  providerToken = data.providerToken;
+  localUser = null; // Clear local user when supabase session is set
 }
 
-export interface TokenSet {
-  accessToken: string;
-  refreshToken: string;
-  idToken: string;
-  expiresIn: number; // seconds
-}
-
-function parseIdTokenPayload(idToken: string): IdTokenPayload {
-  const parts = idToken.split('.');
-  if (parts.length !== 3) {
-    throw new Error('Invalid id_token format');
-  }
-  const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-  const json = atob(payloadBase64);
-  const payload = JSON.parse(json);
-  if (!payload.sub || !payload.email) {
-    throw new Error('id_token missing required claims (sub, email)');
-  }
-  return {
-    sub: payload.sub,
-    email: payload.email,
-    name: payload.name || '',
-    picture: payload.picture || '',
-  };
-}
-
-export function setSession(tokens: TokenSet): void {
-  accessToken = tokens.accessToken;
-  refreshToken = tokens.refreshToken;
-  expiresAt = Date.now() + tokens.expiresIn * 1000;
-
-  const payload = parseIdTokenPayload(tokens.idToken);
-  userId = payload.sub;
-  email = payload.email;
-  displayName = payload.name;
-  photoUrl = payload.picture;
-}
-
-export function clearSession(): void {
+/**
+ * Clear the Supabase session (sign out).
+ */
+export function clearSupabaseSession(): void {
   accessToken = null;
   refreshToken = null;
   expiresAt = null;
@@ -87,6 +86,7 @@ export function clearSession(): void {
   displayName = null;
   photoUrl = null;
   userId = null;
+  providerToken = null;
 }
 
 /**
@@ -98,10 +98,16 @@ export function clearSession(): void {
  */
 export function setLocalUser(profile: LocalUserProfile): void {
   localUser = profile;
+  // Clear any supabase session when switching to local
+  clearSupabaseSession();
 }
 
 export function clearLocalUser(): void {
   localUser = null;
+}
+
+export function getProviderToken(): string | null {
+  return providerToken;
 }
 
 export function getAccessToken(): string | null {
@@ -151,15 +157,22 @@ export const authState = {
   get expiresAt(): number | null {
     return expiresAt;
   },
+  get providerToken(): string | null {
+    return providerToken;
+  },
   get localUser(): LocalUserProfile | null {
     return localUser;
   },
-  setSession,
-  clearSession,
+  setSupabaseSession,
+  clearSupabaseSession,
   setLocalUser,
   clearLocalUser,
   getAccessToken,
   getRefreshToken,
   getExpiresAt,
+  getProviderToken,
   needsRefresh,
+  // @deprecated Kept for GoogleOAuthService.ts backward compat. Remove next cycle.
+  setSession: setSupabaseSession,
+  clearSession: clearSupabaseSession,
 };

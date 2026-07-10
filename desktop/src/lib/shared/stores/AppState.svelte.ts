@@ -8,12 +8,14 @@ import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
 import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
 import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
 import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
-import { authState, setSession } from '$lib/stores/authState.svelte';
+import { authState, setSupabaseSession } from '$lib/stores/authState.svelte';
 import {
   clearPersistedAuth,
   loadPersistedAuth,
   type LocalUserProfile,
 } from '$lib/stores/authPersistence';
+import { getSessionClient } from '$lib/services/supabase';
+import { signInAnonymously, restoreSession, signOut } from '$lib/shared/services/SupabaseAuthService';
 
 import type {
   BulkImportSummary,
@@ -640,19 +642,48 @@ export class AppState {
     // are non-fatal: the app degrades to the welcome screen.
     let initialRoute: AppRoute = 'welcome';
     try {
-      const cached = await loadPersistedAuth();
-      if (cached) {
-        if (cached.kind === 'google') {
-          // Tokens are persisted; restore the session in memory.
-          setSession(cached.tokens);
-          initialRoute = 'home';
-        } else if (cached.kind === 'local') {
-          authState.setLocalUser(cached.profile satisfies LocalUserProfile);
-          initialRoute = 'home';
+      // 1. Try restoring a Supabase session (persisted via TauriStorage adapter)
+      const supabaseSession = await restoreSession();
+      if (supabaseSession) {
+        setSupabaseSession({
+          accessToken: supabaseSession.access_token,
+          refreshToken: supabaseSession.refresh_token,
+          expiresAt: supabaseSession.expires_at ? supabaseSession.expires_at * 1000 : null,
+          userId: supabaseSession.user.id,
+          email: supabaseSession.user.email ?? null,
+          displayName:
+            supabaseSession.user.user_metadata?.full_name ??
+            supabaseSession.user.user_metadata?.name ??
+            null,
+          photoUrl:
+            supabaseSession.user.user_metadata?.avatar_url ??
+            supabaseSession.user.user_metadata?.picture ??
+            null,
+          providerToken: supabaseSession.provider_token ?? null,
+        });
+        initialRoute = 'home';
+      } else {
+        // 2. Fallback: check persisted auth cache (local user profile)
+        const cached = await loadPersistedAuth();
+        if (cached) {
+          if (cached.kind === 'local') {
+            authState.setLocalUser(cached.profile satisfies LocalUserProfile);
+            initialRoute = 'home';
+          }
+          // Legacy 'google' kind is discarded per MG-01
+        } else {
+          // 3. No session at all — sign in anonymously for RLS context
+          await signInAnonymously();
         }
       }
     } catch (error) {
       console.error('Failed to read auth cache during init:', error);
+      // Ensure we have at least an anon session
+      try {
+        await signInAnonymously();
+      } catch {
+        // silent
+      }
     }
     this.navigation.route = initialRoute;
 
@@ -686,8 +717,9 @@ export class AppState {
    */
   signOutAndReturnToWelcome = async (): Promise<void> => {
     authState.clearLocalUser();
-    authState.clearSession();
+    authState.clearSupabaseSession();
     await clearPersistedAuth();
+    await signOut();
     this.navigateToWelcome();
   };
   // ─── Internal helpers ───

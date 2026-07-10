@@ -15,13 +15,23 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.nextpage.BuildConfig
 import com.nextpage.R
 import com.nextpage.presentation.viewmodel.AuthFailureKind
 import com.nextpage.presentation.viewmodel.AuthUiState
@@ -29,6 +39,8 @@ import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageTextField
+import kotlinx.coroutines.launch
+import java.util.UUID
 
 private const val AUTH_SCREEN_TAG = "AuthScreen"
 
@@ -154,9 +166,47 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // ─── Google sign-in button ────────────────────────────────
+            // ─── Google sign-in button (Credential Manager) ───────────
+            val context = LocalContext.current
+            val scope = rememberCoroutineScope()
             NextPageButton(
-                onClick = { viewModel.startGoogleSignIn() },
+                onClick = {
+                    val googleIdOption = GetGoogleIdOption.Builder()
+                        .setServerClientId(BuildConfig.GOOGLE_OAUTH_CLIENT_ID)
+                        .setNonce(UUID.randomUUID().hashCode().toString())
+                        .setFilterByAuthorizedAccounts(false)
+                        .build()
+                    val request = GetCredentialRequest.Builder()
+                        .addCredentialOption(googleIdOption)
+                        .build()
+                    scope.launch {
+                        try {
+                            val credentialManager = CredentialManager.create(context)
+                            val result = credentialManager.getCredential(
+                                context = context,
+                                request = request
+                            )
+                            val credential = result.credential
+                            if (credential is CustomCredential &&
+                                credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                            ) {
+                                val googleIdTokenCredential = try {
+                                    GoogleIdTokenCredential.createFrom(credential.data)
+                                } catch (e: GoogleIdTokenParsingException) {
+                                    Log.e(AUTH_SCREEN_TAG, "Failed to parse Google ID token", e)
+                                    return@launch
+                                }
+                                viewModel.handleGoogleIdToken(googleIdTokenCredential.idToken)
+                            } else {
+                                Log.w(AUTH_SCREEN_TAG, "Unexpected credential type: ${credential.type}")
+                            }
+                        } catch (e: GetCredentialCancellationException) {
+                            Log.d(AUTH_SCREEN_TAG, "Google sign-in cancelled by user")
+                        } catch (e: GetCredentialException) {
+                            Log.e(AUTH_SCREEN_TAG, "Google credential error: ${e.message}")
+                        }
+                    }
+                },
                 enabled = buttonEnabled,
                 variant = NextPageButtonVariant.OUTLINED,
                 shape = RoundedCornerShape(28.dp),

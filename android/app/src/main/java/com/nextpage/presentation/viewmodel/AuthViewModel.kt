@@ -41,7 +41,7 @@ enum class AuthFailureKind {
  * AuthUiState — UI state for the authentication flow (sign-in / sign-up / sign-out).
  *
  * **Used by**: AuthScreen
- * **Mutated by**: [AuthViewModel.startGoogleSignIn], [AuthViewModel.signUp],
+ * **Mutated by**: [AuthViewModel.handleGoogleIdToken], [AuthViewModel.signUp],
  *                 [AuthViewModel.signIn], [AuthViewModel.signOut],
  *                 [AuthViewModel.continueLocally], [AuthViewModel.clearError],
  *                 and the init-block session restoration.
@@ -134,26 +134,27 @@ class AuthViewModel(
     }
 
     /**
-     * Initiates Google sign-in via Credential Manager One Tap (native bottom sheet).
+     * Completes Google sign-in with an ID token obtained from Credential Manager.
+     *
+     * Credential Manager launches at the UI layer via
+     * [ActivityResultContracts.GetCredential]; once the user picks their
+     * Google account, the resulting ID token is passed here.
      *
      * Side effects:
      * 1. Sets `isLoading = true` and clears any prior `errorMessage`/`failureKind`.
-     * 2. Calls [AuthRepository.signInWithGoogle] — One Tap result is handled directly,
-     *    no browser redirect, no OAuth callback.
+     * 2. Calls [AuthRepository.signInWithGoogleIdToken] — token exchange with Supabase.
      * 3. On success: triggers sync for the new session and updates `currentSession`.
      * 4. On failure: sets `errorMessage`/`failureKind` and emits a `ShowSnackbar` event.
-     *
-     * @see onGoogleAuthCallback (deprecated, no-op since One Tap replaced OAuth callback flow)
      */
-    fun startGoogleSignIn() {
+    fun handleGoogleIdToken(idToken: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(
                 isLoading = true,
                 errorMessage = null,
                 failureKind = AuthFailureKind.NONE
             ) }
-            logDiagnostics("startGoogleSignIn:loading")
-            val result = authRepository.signInWithGoogle()
+            logDiagnostics("handleGoogleIdToken:loading")
+            val result = authRepository.signInWithGoogleIdToken(idToken)
             result.fold(
                 onSuccess = { session ->
                     triggerSyncForSession(session)
@@ -163,7 +164,7 @@ class AuthViewModel(
                         errorMessage = null,
                         failureKind = AuthFailureKind.NONE
                     ) }
-                    logDiagnostics("startGoogleSignIn:success")
+                    logDiagnostics("handleGoogleIdToken:success")
                 },
                 onFailure = { error ->
                     _uiState.update { it.copy(
@@ -172,9 +173,25 @@ class AuthViewModel(
                         failureKind = classifyFailure(error)
                     ) }
                     _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Authentication failed"))
-                    logDiagnostics("startGoogleSignIn:failure")
+                    logDiagnostics("handleGoogleIdToken:failure")
                 }
             )
+        }
+    }
+
+    /**
+     * @deprecated Use [handleGoogleIdToken] instead. Credential Manager is now
+     * launched from the UI layer; this method throws to prevent accidental use.
+     */
+    @Deprecated("Use handleGoogleIdToken instead")
+    fun startGoogleSignIn() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(
+                isLoading = true,
+                errorMessage = "Google sign-in flow has changed. Please restart the app.",
+                failureKind = AuthFailureKind.WIRING_ERROR
+            ) }
+            _uiEvent.emit(UiEvent.ShowSnackbar("Sign-in method updated. Please try again."))
         }
     }
 

@@ -130,9 +130,7 @@ class AppContainer(context: Context) {
 
     val authRepository: AuthRepository by lazy {
         SupabaseAuthRepository(
-            context = context.applicationContext,
-            sessionManager = sessionManager,
-            clientId = BuildConfig.GOOGLE_OAUTH_CLIENT_ID
+            sessionManager = sessionManager
         )
     }
 

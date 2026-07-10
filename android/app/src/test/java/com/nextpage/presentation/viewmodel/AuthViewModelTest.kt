@@ -52,7 +52,7 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun startGoogleSignIn_setsSession_whenSignInWithGoogleSucceeds() = runTest {
+    fun handleGoogleIdToken_setsSession_whenSignInWithGoogleSucceeds() = runTest {
         val session = AuthSession(userId = "u1", email = "u1@test.com")
         val repository = FakeAuthRepository(
             signInWithGoogleResult = Result.success(session)
@@ -65,14 +65,14 @@ class AuthViewModelTest {
         )
         advanceUntilIdle()
 
-        viewModel.startGoogleSignIn()
+        viewModel.handleGoogleIdToken("test-id-token")
         advanceUntilIdle()
 
         assertEquals(session, viewModel.uiState.value.currentSession)
     }
 
     @Test
-    fun startGoogleSignIn_setsError_whenSignInWithGoogleFails() = runTest {
+    fun handleGoogleIdToken_setsError_whenSignInWithGoogleFails() = runTest {
         val repository = FakeAuthRepository(
             signInWithGoogleResult = Result.failure(
                 AppError(
@@ -91,7 +91,7 @@ class AuthViewModelTest {
         )
         advanceUntilIdle()
 
-        viewModel.startGoogleSignIn()
+        viewModel.handleGoogleIdToken("test-id-token")
         advanceUntilIdle()
 
         assertNull(viewModel.uiState.value.currentSession)
@@ -156,6 +156,8 @@ class AuthViewModelTest {
         override suspend fun completeGoogleSignIn(callbackUri: String): Result<AuthSession?> = completeGoogleResult
 
         override suspend fun signInWithGoogle(): Result<AuthSession> = signInWithGoogleResult
+
+        override suspend fun signInWithGoogleIdToken(idToken: String): Result<AuthSession> = signInWithGoogleResult
 
         override suspend fun signIn(email: String, password: String): Result<AuthSession> {
             return Result.failure(UnsupportedOperationException())

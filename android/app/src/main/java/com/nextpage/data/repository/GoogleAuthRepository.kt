@@ -148,6 +148,17 @@ class GoogleAuthRepository(
         }
     }
 
+    override suspend fun signInWithGoogleIdToken(idToken: String): Result<AuthSession> {
+        return Result.failure(
+            AppError(
+                category = ErrorCategory.AUTH,
+                code = "GOOGLE_AUTH_DEPRECATED",
+                message = "Deprecated. Use SupabaseAuthRepository.",
+                component = COMPONENT
+            )
+        )
+    }
+
     override suspend fun startGoogleSignIn(): Result<String> {
         return Result.failure(
             AppError(

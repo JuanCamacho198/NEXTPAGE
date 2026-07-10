@@ -1,6 +1,12 @@
 package com.nextpage.data.repository
 
 import android.content.Context
+
+/**
+ * @deprecated Replaced by [SupabaseAuthRepository].
+ * Will be removed in the next release cycle.
+ */
+@Deprecated("Replaced by SupabaseAuthRepository", ReplaceWith("SupabaseAuthRepository"))
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest

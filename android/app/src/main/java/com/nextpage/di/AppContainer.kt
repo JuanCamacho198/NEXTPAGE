@@ -21,17 +21,17 @@ import com.nextpage.data.repository.LibraryRepositoryImpl
 import com.nextpage.data.repository.ReaderRepositoryImpl
 import com.nextpage.data.repository.ReadingStatsRepositoryImpl
 import com.nextpage.data.repository.DictionaryRepositoryImpl
-import com.nextpage.data.repository.GoogleAuthRepository
+import com.nextpage.data.repository.SupabaseAuthRepository
 import com.nextpage.data.remote.google.GoogleDriveConfig
 import com.nextpage.data.remote.google.GoogleDriveClientProvider
 import com.nextpage.data.remote.google.GoogleDriveInitDiagnostic
+import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.GoogleDriveStorageRemoteDataSource
 import com.nextpage.data.remote.sync.GoogleDriveSyncService
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.data.session.SessionManager
-import com.nextpage.data.session.GoogleSessionManager
-import com.nextpage.data.session.PreferencesSessionStore
+import com.nextpage.data.session.SupabaseSessionManager
 import com.nextpage.data.storage.AppInternalCoverStorage
 import com.nextpage.domain.repository.AuthRepository
 import com.nextpage.domain.repository.DictionaryRepository
@@ -115,55 +115,24 @@ class AppContainer(context: Context) {
         dao = appDatabase.dictionaryWordDao()
     )
 
-    // ── Google Drive backend ────────────────────────────────────────
+    // ── Supabase Auth ───────────────────────────────────────────────
 
-    private val googleDriveConfig = GoogleDriveConfig(
-        oauthClientId = BuildConfig.GOOGLE_OAUTH_CLIENT_ID
-    )
-    private val googleDriveClientProvider = GoogleDriveClientProvider(googleDriveConfig)
-    private val googleDriveDiagnostic = googleDriveClientProvider.initDiagnostic
-
-    private val googleSignInClient by lazy {
-        if (googleDriveClientProvider.isConfigured) {
-            com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(
-                context.applicationContext,
-                com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder()
-                    .requestIdToken(BuildConfig.GOOGLE_OAUTH_CLIENT_ID)
-                    .requestEmail()
-                    .requestProfile()
-                    .requestScopes(
-                        com.google.android.gms.common.api.Scope(
-                            com.google.api.services.drive.DriveScopes.DRIVE_APPDATA
-                        )
-                    )
-                    .build()
-            )
-        } else null
-    }
+    // Initialise Supabase client eagerly so GoTrue session is ready.
+    // This also checks that SUPABASE_URL and SUPABASE_ANON_KEY are set.
+    private val supabaseInit = runCatching { SupabaseClientProvider.client }
 
     val sessionManager: SessionManager by lazy {
-        GoogleSessionManager(
-            googleSignInClient = googleSignInClient,
-            diagnosticError = googleDriveDiagnostic.error,
-            sessionStore = PreferencesSessionStore(context.applicationContext)
-        )
+        SupabaseSessionManager()
     }
 
     val authRepository: AuthRepository by lazy {
-        GoogleAuthRepository(
+        SupabaseAuthRepository(
             context = context.applicationContext,
-            sessionManager = sessionManager,
-            clientId = BuildConfig.GOOGLE_OAUTH_CLIENT_ID,
-            diagnosticError = googleDriveDiagnostic.error,
-            isClientAvailable = googleDriveClientProvider.isConfigured
+            sessionManager = sessionManager
         )
     }
 
     val syncService: SyncService by lazy {
-        val driveService = googleDriveClientProvider.driveService
-        val remoteDataSource = if (driveService != null) {
-            GoogleDriveStorageRemoteDataSource(driveService)
-        } else null
         GoogleDriveSyncService(
             outboxDao = appDatabase.syncOutboxDao(),
             bookDao = appDatabase.bookDao(),
@@ -172,20 +141,22 @@ class AppContainer(context: Context) {
             highlightDao = appDatabase.highlightDao(),
             bookmarkDao = appDatabase.bookmarkDao(),
             sessionManager = sessionManager,
-            remoteDataSource = remoteDataSource ?: NoopStorageSyncRemoteDataSource,
+            remoteDataSource = NoopStorageSyncRemoteDataSource,
             localBooksDir = context.applicationContext.filesDir.resolve("books"),
-            isEnabled = googleDriveClientProvider.isConfigured && remoteDataSource != null,
-            diagnosticError = googleDriveDiagnostic.error
+            isEnabled = false,
+            diagnosticError = AppError(
+                category = com.nextpage.domain.error.ErrorCategory.CONFIG_ERROR,
+                code = "SYNC_NEEDS_DRIVE_REFACTOR",
+                message = "Drive sync with provider_token not yet implemented on Android.",
+                component = "AppContainer"
+            )
         )
     }
 
     // ── Diagnostic properties ───────────────────────────────────────
 
     val isAuthConfigError: Boolean
-        get() = googleDriveDiagnostic.status == GoogleDriveInitDiagnostic.Status.CONFIG_ERROR
-
-    val isAuthWiringError: Boolean
-        get() = googleDriveDiagnostic.status == GoogleDriveInitDiagnostic.Status.WIRING_ERROR
+        get() = supabaseInit.isFailure
 
     // ── Init timing ─────────────────────────────────────────────────
 

@@ -7,6 +7,7 @@ create table public.reading_progress (
   current_page int,
   locator_json text,
   version     int not null default 1,
+  created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
   unique(user_id, book_id)
 );

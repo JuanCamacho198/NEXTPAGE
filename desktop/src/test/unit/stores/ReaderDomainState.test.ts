@@ -17,6 +17,7 @@ const mockUpdateBookProgress = vi.hoisted(() => vi.fn().mockResolvedValue(undefi
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   readFile: mockReadFile,
+  BaseDirectory: { AppData: 'appData', AppConfig: 'appConfig', AppCache: 'appCache' },
 }));
 
 vi.mock('$lib/shared/api/tauriClient', () => ({

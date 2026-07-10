@@ -35,6 +35,7 @@ import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.data.session.SessionManager
 import com.nextpage.data.session.SupabaseSessionManager
 import com.nextpage.data.storage.AppInternalCoverStorage
+import com.nextpage.domain.error.AppError
 import com.nextpage.domain.repository.AuthRepository
 import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.domain.repository.HomeRepository

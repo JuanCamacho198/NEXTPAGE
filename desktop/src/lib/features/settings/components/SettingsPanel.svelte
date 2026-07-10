@@ -12,6 +12,7 @@
     upsertReaderSettings,
   } from '$lib/shared/api/tauriClient';
 
+  import Toast from '$lib/shared/ui/feedback/Toast.svelte';
   import { i18n, type MessageKey } from '$lib/shared/i18n';
   import {
     normalizeProfileSession,
@@ -219,12 +220,21 @@
   }
 
   let isSigningOut = $state(false);
+  let showSignOutToast = $state(false);
+
+  // Auto-load connected devices when the panel mounts and user is signed in
+  $effect(() => {
+    if (authState.isSignedIn && authState.userId) {
+      devicesState.loadDevices(authState.userId);
+    }
+  });
 
   async function handleSignOut(): Promise<void> {
     if (isSigningOut) return;
     isSigningOut = true;
     try {
       await appState.signOutAndReturnToWelcome();
+      showSignOutToast = true;
     } catch (error) {
       console.error('Sign out failed:', error);
     } finally {
@@ -474,7 +484,7 @@
       <button
         class="inline-flex items-center justify-center size-8 rounded-lg bg-(--color-surface) border border-(--color-border) text-(--color-text-muted) cursor-pointer hover:text-(--color-primary) hover:border-(--color-primary) transition-all duration-200"
         onclick={closePanel}
-        aria-label={t('settings.backToHome')}
+        aria-label={t('app.backToHome')}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M19 12H5m7-7l-7 7 7 7"/>
@@ -1216,6 +1226,13 @@
       {t}
       onClose={closeResetModal}
       onConfirm={confirmReset}
+    />
+
+    <Toast
+      type="success"
+      message={t('welcome.signedOutToast')}
+      bind:visible={showSignOutToast}
+      onDismiss={() => (showSignOutToast = false)}
     />
   </aside>
 {/if}

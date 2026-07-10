@@ -15,11 +15,13 @@ export interface DeviceRow {
   created_at: string
 }
 
+export type DeviceTypeIcon = 'laptop' | 'phone' | 'tablet' | 'globe'
+
 export interface DeviceViewModel {
   id: string
   name: string
   os: string
-  icon: 'windows' | 'apple' | 'android' | 'linux'
+  icon: DeviceTypeIcon
   lastActive: { value: number; unit: 'now' | 'min' | 'hour' | 'day' }
   isCurrent: boolean
 }
@@ -79,23 +81,25 @@ export function formatRelativeTime(dateStr: string): { value: number; unit: 'now
   return { value: days, unit: 'day' }
 }
 
+/** Map device type to icon name */
+function deviceTypeToIcon(type: DeviceRow['type']): DeviceTypeIcon {
+  switch (type) {
+    case 'desktop': return 'laptop'
+    case 'mobile':  return 'phone'
+    case 'tablet':  return 'tablet'
+    case 'web':     return 'globe'
+  }
+}
+
 export function rowToViewModel(
   row: DeviceRow,
   currentHardwareId: string,
 ): DeviceViewModel {
-  const icon = row.os.toLowerCase().includes('windows')
-    ? 'windows'
-    : row.os.toLowerCase().includes('mac') || row.os.includes('Darwin')
-      ? 'apple'
-      : row.os.toLowerCase().includes('android')
-        ? 'android'
-        : 'linux'
-
   return {
     id: row.id,
     name: row.name,
     os: row.os,
-    icon,
+    icon: deviceTypeToIcon(row.type),
     lastActive: formatRelativeTime(row.last_active),
     isCurrent: row.hardware_id === currentHardwareId,
   }

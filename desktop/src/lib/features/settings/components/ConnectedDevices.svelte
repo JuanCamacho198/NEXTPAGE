@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { DeviceViewModel } from '$lib/services/devices'
+  import type { DeviceViewModel, DeviceTypeIcon } from '$lib/services/devices'
   import type { MessageKey } from '$lib/shared/i18n'
 
   type Props = {
@@ -19,6 +19,12 @@
     onremove,
     t,
   }: Props = $props()
+
+  /** Devices that are NOT the current one */
+  let otherDevices = $derived(devices.filter((d) => !d.isCurrent))
+
+  /** The current device (null if not found) */
+  let currentDevice = $derived(devices.find((d) => d.isCurrent) ?? null)
 
   function formatRelative(
     lastActive: { value: number; unit: 'now' | 'min' | 'hour' | 'day' },
@@ -40,6 +46,14 @@
       onremove(device.id)
     }
   }
+
+  function deviceSubtitle(device: DeviceViewModel): string {
+    const base = device.os
+    if (device.isCurrent) {
+      return `${base} · ${t('settings.connectedDevices.lastActive')}: ${formatRelative(device.lastActive)}`
+    }
+    return `${base} · ${formatRelative(device.lastActive)}`
+  }
 </script>
 
 {#if error}
@@ -48,124 +62,168 @@
   </p>
 {/if}
 
-{#if isLoading && devices.length === 0}
-  <p class="text-xs text-(--color-text-muted)">{t('settings.connectedDevices.loading')}</p>
-{:else if devices.length > 0}
-  <div class="mb-2 text-(--text-3xs) text-(--color-text-muted)">
-    {t('settings.connectedDevices.count', { count: devices.length })}
-  </div>
-  <div class="flex flex-col gap-2">
-    {#each devices as device (device.id)}
-      <div
-        class="flex items-center gap-3 py-2 border-b border-(--color-border) last:border-b-0"
+<div class="flex flex-col gap-3">
+  {#if isLoading && !currentDevice}
+    <p class="text-xs text-(--color-text-muted)">{t('settings.connectedDevices.loading')}</p>
+  {:else}
+    <!-- Current device card — always visible -->
+    {#if currentDevice}
+      {@render DeviceCard({
+        device: currentDevice,
+        subtitle: deviceSubtitle(currentDevice),
+        isCurrent: true,
+        t,
+      })}
+    {/if}
+
+    <!-- Other devices -->
+    {#if otherDevices.length > 0}
+      <div class="flex items-center gap-2">
+        <span class="h-px flex-1 bg-(--color-border)"></span>
+        <span class="shrink-0 text-(--text-3xs) text-(--color-text-muted) uppercase tracking-wider">
+          {t('settings.connectedDevices.count', { count: otherDevices.length })}
+        </span>
+        <span class="h-px flex-1 bg-(--color-border)"></span>
+      </div>
+
+      {#each otherDevices as device (device.id)}
+        {@render DeviceCard({
+          device,
+          subtitle: deviceSubtitle(device),
+          isCurrent: false,
+          t,
+          onremove: () => handleRemove(device),
+        })}
+      {/each}
+    {:else if !isLoading && currentDevice}
+      <!-- Empty state: no other devices -->
+      <div class="flex flex-col items-center gap-2 py-4 text-center">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          class="text-(--color-text-muted) opacity-50"
+          aria-hidden="true"
+        >
+          <rect x="2" y="3" width="20" height="14" rx="2" />
+          <line x1="8" y1="21" x2="16" y2="21" />
+          <line x1="12" y1="17" x2="12" y2="21" />
+        </svg>
+        <p class="m-0 text-xs text-(--color-text-muted)">
+          {t('settings.connectedDevices.noDevices')}
+        </p>
+      </div>
+    {/if}
+  {/if}
+</div>
+
+{#snippet DeviceCard({ device, subtitle, isCurrent, t, onremove }: {
+  device: DeviceViewModel
+  subtitle: string
+  isCurrent: boolean
+  t: (key: MessageKey, params?: Record<string, string | number>) => string
+  onremove?: () => void
+})}
+  <div
+    class="flex items-center gap-3 rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-2.5"
+    class:bg-(--color-accent-soft)={isCurrent}
+  >
+    <!-- Device type icon -->
+    {#if device.icon === 'laptop'}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        class="shrink-0 text-(--color-text-muted)"
+        aria-hidden="true"
       >
-        <!-- OS Icon -->
-        {#if device.icon === 'windows'}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            class="shrink-0 text-(--color-text-muted)"
-            aria-hidden="true"
-          >
-            <rect x="3" y="3" width="8" height="8" rx="1" />
-            <rect x="13" y="3" width="8" height="8" rx="1" />
-            <rect x="3" y="13" width="8" height="8" rx="1" />
-            <rect x="13" y="13" width="8" height="8" rx="1" />
-          </svg>
-        {:else if device.icon === 'apple'}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            class="shrink-0 text-(--color-text-muted)"
-            aria-hidden="true"
-          >
-            <path d="M12 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-            <path d="M17 7c-1-1-3-1.5-5-1.5S8 6 7 7c-2 2-2.5 5-2.5 8 0 3 1 5 2.5 6 1 .5 2.5-.5 5-.5s4 1 5 .5c1.5-1 2.5-3 2.5-6 0-3-.5-6-2.5-8z" />
-          </svg>
-        {:else if device.icon === 'android'}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            class="shrink-0 text-(--color-text-muted)"
-            aria-hidden="true"
-          >
-            <path d="M6 9v6" />
-            <path d="M18 9v6" />
-            <rect x="4" y="9" width="16" height="10" rx="2" />
-            <path d="M8 5l-2 4" />
-            <path d="M16 5l2 4" />
-          </svg>
-        {:else}
-          <!-- Linux icon -->
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            class="shrink-0 text-(--color-text-muted)"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="5" r="2" />
-            <path d="M5 21c.5-2 2-4 7-4s6.5 2 7 4" />
-            <path d="M8 14c.5-1 2-2 4-2s3.5 1 4 2" />
-          </svg>
-        {/if}
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <line x1="2" y1="20" x2="22" y2="20" />
+        <path d="M8 20l.5-2h7l.5 2" />
+      </svg>
+    {:else if device.icon === 'phone'}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        class="shrink-0 text-(--color-text-muted)"
+        aria-hidden="true"
+      >
+        <rect x="5" y="2" width="14" height="20" rx="3" />
+        <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="2" />
+      </svg>
+    {:else if device.icon === 'tablet'}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        class="shrink-0 text-(--color-text-muted)"
+        aria-hidden="true"
+      >
+        <rect x="4" y="2" width="16" height="20" rx="3" />
+        <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="2" />
+      </svg>
+    {:else if device.icon === 'globe'}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        class="shrink-0 text-(--color-text-muted)"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <ellipse cx="12" cy="12" rx="4" ry="10" />
+        <path d="M2 12h20" />
+      </svg>
+    {/if}
 
-        <!-- Device info -->
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-(--color-primary) truncate">
-              {device.name}
-            </span>
-            {#if device.isCurrent}
-              <span
-                class="shrink-0 px-1.5 py-0.5 rounded-md bg-(--color-accent-soft) text-(--color-accent-start) text-(--text-3xs) font-medium"
-              >
-                {t('settings.connectedDevices.thisDevice')}
-              </span>
-            {/if}
-          </div>
-          <div class="flex items-center gap-2 mt-0.5">
-            <span class="text-(--text-3xs) text-(--color-text-muted) truncate">
-              {device.os}
-            </span>
-            <span class="text-(--text-3xs) text-(--color-text-muted)">&middot;</span>
-            <span class="text-(--text-3xs) text-(--color-text-muted)">
-              {t('settings.connectedDevices.lastActive')}: {formatRelative(device.lastActive)}
-            </span>
-          </div>
-        </div>
-
-        <!-- Remove button -->
-        {#if !device.isCurrent}
-          <button
-            class="shrink-0 bg-transparent border-none p-0 text-xs text-red-500 cursor-pointer hover:text-red-600 transition-colors duration-150"
-            onclick={() => handleRemove(device)}
+    <!-- Info -->
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-2">
+        <span class="truncate text-sm font-medium text-(--color-primary)">
+          {device.name}
+        </span>
+        {#if isCurrent}
+          <span
+            class="shrink-0 rounded-md bg-(--color-accent-soft) px-1.5 py-0.5 text-(--text-3xs) font-medium text-(--color-accent-start)"
           >
-            {t('settings.connectedDevices.remove')}
-          </button>
+            {t('settings.connectedDevices.thisDevice')}
+          </span>
         {/if}
       </div>
-    {/each}
+      <p class="m-0 mt-0.5 truncate text-(--text-3xs) text-(--color-text-muted)">
+        {subtitle}
+      </p>
+    </div>
+
+    <!-- Remove button -->
+    {#if !isCurrent && onremove}
+      <button
+        class="shrink-0 cursor-pointer border-none bg-transparent p-0 text-xs text-red-500 transition-colors duration-150 hover:text-red-600"
+        onclick={onremove}
+      >
+        {t('settings.connectedDevices.remove')}
+      </button>
+    {/if}
   </div>
-{:else if !isLoading}
-  <p class="text-xs text-(--color-text-muted)">{t('settings.connectedDevices.noDevices')}</p>
-{/if}
+{/snippet}

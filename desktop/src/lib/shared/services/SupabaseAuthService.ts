@@ -90,44 +90,80 @@ export async function registerSupabaseCallbackHandler(): Promise<void> {
   urlUnlisten = await onUrl(async (url) => {
     try {
       const parsed = new URL(url);
+
+      // Try PKCE flow first: ?code=... in query params
       const code = parsed.searchParams.get('code');
 
-      if (!code) {
-        logger.warn(
-          createErrorEvent({
-            severity: 'low',
-            category: 'validation',
-            code: 'SUPABASE_OAUTH_NO_CODE',
-            message: 'OAuth callback missing authorization code',
-            context: { url },
-            source: 'sync',
-            recoverable: true,
-          }),
-        );
+      if (code) {
+        const supabase = getSessionClient();
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (error) {
+          logger.error(
+            createErrorEvent({
+              severity: 'medium',
+              category: 'runtime',
+              code: 'SUPABASE_CODE_EXCHANGE_FAILED',
+              message: error.message,
+              context: { error: error.message },
+              source: 'sync',
+              recoverable: true,
+            }),
+          );
+          return;
+        }
+
+        if (data.session) {
+          await handleSession(data.session);
+        }
         return;
       }
 
-      const supabase = getSessionClient();
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      // Try implicit/hybrid flow: #access_token=... in hash fragment
+      const hashParams = new URLSearchParams(parsed.hash.slice(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
 
-      if (error) {
-        logger.error(
-          createErrorEvent({
-            severity: 'medium',
-            category: 'runtime',
-            code: 'SUPABASE_CODE_EXCHANGE_FAILED',
-            message: error.message,
-            context: { error: error.message },
-            source: 'sync',
-            recoverable: true,
-          }),
-        );
+      if (accessToken && refreshToken) {
+        const supabase = getSessionClient();
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (error) {
+          logger.error(
+            createErrorEvent({
+              severity: 'medium',
+              category: 'runtime',
+              code: 'SUPABASE_SESSION_SET_FAILED',
+              message: error.message,
+              context: { error: error.message },
+              source: 'sync',
+              recoverable: true,
+            }),
+          );
+          return;
+        }
+
+        if (data.session) {
+          await handleSession(data.session);
+        }
         return;
       }
 
-      if (data.session) {
-        await handleSession(data.session);
-      }
+      // No recognizable auth payload in the URL
+      logger.warn(
+        createErrorEvent({
+          severity: 'low',
+          category: 'validation',
+          code: 'SUPABASE_OAUTH_NO_PAYLOAD',
+          message: 'OAuth callback missing both authorization code and session tokens',
+          context: { url },
+          source: 'sync',
+          recoverable: true,
+        }),
+      );
     } catch (err) {
       logger.error(
         createErrorEvent({
@@ -176,6 +212,7 @@ export async function signInWithGoogle(): Promise<void> {
     provider: 'google',
     options: {
       redirectTo,
+      skipBrowserRedirect: true,
       queryParams: {
         access_type: 'offline',
         prompt: 'consent',

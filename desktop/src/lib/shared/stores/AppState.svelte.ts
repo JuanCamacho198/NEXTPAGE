@@ -691,6 +691,19 @@ export class AppState {
     }
     this.navigation.route = initialRoute;
 
+    // Subscribe to auth state changes so OAuth sign-ins that complete during
+    // runtime (via the loopback callback handler) trigger a navigation to home.
+    getSessionClient().auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        // Only navigate away from welcome — if already elsewhere, stay put
+        if (this.navigation.route === 'welcome') {
+          this.navigation.route = 'home';
+          this.loadLibrary();
+          this.statsDomain.loadStats(undefined);
+        }
+      }
+    });
+
     try {
       const [nextLocale] = await Promise.all([
         i18n.initializeLocale(),

@@ -3,7 +3,6 @@ package com.nextpage.presentation.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.nextpage.BuildConfig
 import com.nextpage.data.remote.supabase.SupabaseDeviceDataSource
 import com.nextpage.data.repository.DeviceRepositoryImpl
 import com.nextpage.domain.model.Device
@@ -31,10 +30,7 @@ class SettingsDevicesViewModel(
     private val _uiState = MutableStateFlow(SettingsDevicesUiState())
     val uiState: StateFlow<SettingsDevicesUiState> = _uiState.asStateFlow()
 
-    private val dataSource = SupabaseDeviceDataSource(
-        supabaseUrl = BuildConfig.SUPABASE_URL,
-        supabaseKey = BuildConfig.SUPABASE_ANON_KEY
-    )
+    private val dataSource = SupabaseDeviceDataSource()
     private val repository = DeviceRepositoryImpl(dataSource)
 
     private var heartbeatJob: Job? = null

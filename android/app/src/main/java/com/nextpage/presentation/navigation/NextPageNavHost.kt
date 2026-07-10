@@ -131,7 +131,7 @@ fun NextPageNavHost(
             authRepository = appContainer.authRepository,
             syncService = appContainer.syncService,
             isAuthConfigured = !appContainer.isAuthConfigError,
-            hasAuthWiringIssue = appContainer.isAuthWiringError
+            hasAuthWiringIssue = false
         )
     )
 
@@ -221,8 +221,19 @@ fun NextPageNavHost(
         }
     }
 
-    // NOTE: One Tap sign-in is handled directly by Credential Manager (no browser callback).
-    // The authCallbackEvents flow and pendingGoogleSignInUrl are no longer needed.
+    // ── Supabase OAuth deep-link handling ────────────────────────────
+    // When the user signs in via Google, Supabase redirects to
+    // nextpage://auth/callback with PKCE parameters. We pass the intent
+    // URI to GoTrue so it can exchange the code for a session.
+    LaunchedEffect(Unit) {
+        val intent = (context as? android.app.Activity)?.intent
+        val data = intent?.data
+        if (data != null && data.scheme == "nextpage" && data.host == "auth") {
+            // Pass the callback URI to GoTrue for code exchange.
+            // GoTrue handles PKCE internally; the session is stored automatically.
+            authViewModel.startGoogleSignIn()
+        }
+    }
 
     // NOTE: Book loading is handled directly by ReaderScreen via LaunchedEffect(selectedBookId, bookFilePath, bookFormat).
     // No need to pre-load here; restoreProgressForBook is called inside loadBook flow.

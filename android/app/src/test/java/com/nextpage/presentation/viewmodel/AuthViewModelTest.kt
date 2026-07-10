@@ -79,7 +79,7 @@ class AuthViewModelTest {
                     category = ErrorCategory.AUTH,
                     code = "GOOGLE_AUTH_CANCELLED",
                     message = "User cancelled",
-                    component = "GoogleAuthRepository"
+                    component = "SupabaseAuthRepository"
                 )
             )
         )

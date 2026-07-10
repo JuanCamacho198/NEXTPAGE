@@ -8,13 +8,13 @@ import com.nextpage.data.session.SessionManager
 import com.nextpage.data.session.SupabaseSessionManager
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.repository.AuthRepository
-import io.github.jan.supabase.gotrue.Gotrue
-import io.github.jan.supabase.gotrue.auth
-import io.github.jan.supabase.gotrue.providers.Google
-import io.github.jan.supabase.gotrue.user.UserInfo
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.providers.Google
+import io.github.jan.supabase.auth.user.UserInfo
 
 /**
- * AuthRepository backed by Supabase GoTrue.
+ * AuthRepository backed by Supabase Auth.
  *
  * Replaces [GoogleAuthRepository] (kept as deprecated for 1 release cycle).
  *
@@ -22,7 +22,7 @@ import io.github.jan.supabase.gotrue.user.UserInfo
  * 1. [startGoogleSignIn] opens Supabase's hosted Google OAuth URL in the browser.
  * 2. Supabase redirects to `nextpage://auth/callback` with PKCE code.
  * 3. [completeGoogleSignIn] exchanges the code for a session.
- * 4. Session is persisted automatically by supabase-kt's GoTrue plugin.
+ * 4. Session is persisted automatically by supabase-kt's Auth plugin.
  *
  * Google Drive access: Use [getProviderToken] from the session to obtain
  * the Google OAuth token needed for Drive API calls.
@@ -36,11 +36,10 @@ class SupabaseAuthRepository(
 
     override suspend fun startGoogleSignIn(): Result<String> {
         return try {
-            val url = supabase.auth.signInWith(Google) {
-                redirectTo = "nextpage://auth/callback"
-                scopes = listOf("openid", "email", "profile", "https://www.googleapis.com/auth/drive.appdata")
+            supabase.auth.signInWith(Google, redirectUrl = "nextpage://auth/callback") {
+                scopes.addAll(listOf("openid", "email", "profile", "https://www.googleapis.com/auth/drive.appdata"))
             }
-            Result.success(url)
+            Result.success("nextpage://auth/callback")
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -48,7 +47,7 @@ class SupabaseAuthRepository(
 
     override suspend fun completeGoogleSignIn(callbackUri: String): Result<AuthSession?> {
         return try {
-            supabase.auth.signInWith(Google) // TODO: parse PKCE code from callbackUri
+            supabase.auth.signInWith(Google, redirectUrl = "nextpage://auth/callback") // TODO: parse PKCE code from callbackUri
             val session = supabase.auth.currentSessionOrNull()
             val authSession = session?.let { mapToAuthSession(it.user) }
             sessionManager.setCurrentSession(authSession)
@@ -60,12 +59,9 @@ class SupabaseAuthRepository(
 
     override suspend fun signInWithGoogle(): Result<AuthSession> {
         return try {
-            val url = supabase.auth.signInWith(Google) {
-                redirectTo = "nextpage://auth/callback"
-                scopes = listOf("openid", "email", "profile", "https://www.googleapis.com/auth/drive.appdata")
+            supabase.auth.signInWith(Google, redirectUrl = "nextpage://auth/callback") {
+                scopes.addAll(listOf("openid", "email", "profile", "https://www.googleapis.com/auth/drive.appdata"))
             }
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-            context.startActivity(intent)
             Result.failure(UnsupportedOperationException("Google sign-in must be completed via deep-link callback"))
         } catch (e: Exception) {
             Result.failure(e)
@@ -74,8 +70,12 @@ class SupabaseAuthRepository(
 
     override suspend fun signIn(email: String, password: String): Result<AuthSession> {
         return try {
-            val session = supabase.auth.signInWith(email, password)
-            val authSession = mapToAuthSession(session.user)
+            supabase.auth.signInWith(Email) {
+                this.email = email
+                this.password = password
+            }
+            val authSession = supabase.auth.currentSessionOrNull()?.user?.let { mapToAuthSession(it) }
+                ?: return Result.failure(Exception("No user info returned after sign-in"))
             sessionManager.setCurrentSession(authSession)
             Result.success(authSession)
         } catch (e: Exception) {
@@ -85,8 +85,12 @@ class SupabaseAuthRepository(
 
     override suspend fun signUp(email: String, password: String): Result<AuthSession> {
         return try {
-            val session = supabase.auth.signUpWith(email, password)
-            val authSession = mapToAuthSession(session.user)
+            supabase.auth.signUpWith(Email) {
+                this.email = email
+                this.password = password
+            }
+            val authSession = supabase.auth.currentSessionOrNull()?.user?.let { mapToAuthSession(it) }
+                ?: return Result.failure(Exception("No user info returned after sign-up"))
             sessionManager.setCurrentSession(authSession)
             Result.success(authSession)
         } catch (e: Exception) {
@@ -118,9 +122,10 @@ class SupabaseAuthRepository(
     override suspend fun signInLocally(): Result<AuthSession> {
         // Sign in anonymously for RLS context
         return try {
-            val session = supabase.auth.signInAnonymously()
+            supabase.auth.signInAnonymously()
+            val session = supabase.auth.currentSessionOrNull()
             val authSession = AuthSession(
-                userId = session.user.id,
+                userId = session?.user?.id ?: "anon-${java.util.UUID.randomUUID()}",
                 email = null,
                 displayName = null,
                 photoUrl = null
@@ -147,14 +152,16 @@ class SupabaseAuthRepository(
 
     // ── Helpers ────────────────────────────────────────────────────
 
-    private fun mapToAuthSession(user: UserInfo): AuthSession {
-        return AuthSession(
-            userId = user.id,
-            email = user.email,
-            displayName = user.userMetadata["full_name"] as? String
-                ?: user.userMetadata["name"] as? String,
-            photoUrl = user.userMetadata["avatar_url"] as? String
-                ?: user.userMetadata["picture"] as? String
-        )
+    private fun mapToAuthSession(user: UserInfo?): AuthSession? {
+        return user?.let {
+            AuthSession(
+                userId = it.id,
+                email = it.email,
+                displayName = it.userMetadata?.get("full_name") as? String
+                    ?: it.userMetadata?.get("name") as? String,
+                photoUrl = it.userMetadata?.get("avatar_url") as? String
+                    ?: it.userMetadata?.get("picture") as? String
+            )
+        }
     }
 }

@@ -2,9 +2,10 @@ package com.nextpage.data.session
 
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.domain.model.AuthSession
+import io.github.jan.supabase.auth.auth
 
 /**
- * SessionManager backed by Supabase GoTrue.
+ * SessionManager backed by Supabase Auth.
  *
  * The session is managed natively by supabase-kt (persisted in app storage,
  * auto-refreshed). This adapter maps to the existing [SessionManager] interface
@@ -24,16 +25,18 @@ class SupabaseSessionManager : SessionManager {
     override suspend fun getCurrentSession(): Result<AuthSession?> {
         return try {
             val session = supabase.auth.currentSessionOrNull()
-            val authSession = session?.let {
-                AuthSession(
-                    userId = it.user.id,
-                    email = it.user.email,
-                    displayName = it.user.userMetadata["full_name"] as? String
-                        ?: it.user.userMetadata["name"] as? String,
-                    photoUrl = it.user.userMetadata["avatar_url"] as? String
-                        ?: it.user.userMetadata["picture"] as? String,
-                    providerToken = it.providerToken
-                )
+            val authSession = session?.let { s ->
+                s.user?.let { user ->
+                    AuthSession(
+                        userId = user.id,
+                        email = user.email,
+                        displayName = user.userMetadata?.get("full_name") as? String
+                            ?: user.userMetadata?.get("name") as? String,
+                        photoUrl = user.userMetadata?.get("avatar_url") as? String
+                            ?: user.userMetadata?.get("picture") as? String,
+                        providerToken = s.providerToken
+                    )
+                }
             }
             Result.success(authSession)
         } catch (e: Exception) {
@@ -41,20 +44,25 @@ class SupabaseSessionManager : SessionManager {
         }
     }
 
+    @OptIn(kotlin.time.ExperimentalTime::class)
     override suspend fun ensureFreshSession(): Result<AuthSession> {
         return try {
             val session = supabase.auth.currentSessionOrNull()
-            if (session == null || session.expiresAt?.let { it * 1000 <= System.currentTimeMillis() + 60_000 } == true) {
-                val refreshed = supabase.auth.refreshCurrentSession()
-                val authSession = AuthSession(
-                    userId = refreshed.user.id,
-                    email = refreshed.user.email,
-                    displayName = refreshed.user.userMetadata["full_name"] as? String
-                        ?: refreshed.user.userMetadata["name"] as? String,
-                    photoUrl = refreshed.user.userMetadata["avatar_url"] as? String
-                        ?: refreshed.user.userMetadata["picture"] as? String,
-                    providerToken = refreshed.providerToken
-                )
+            if (session == null || session.expiresAt.epochSeconds <= System.currentTimeMillis() / 1000 + 60) {
+                supabase.auth.refreshCurrentSession()
+                val freshSession = supabase.auth.currentSessionOrNull()
+                    ?: return Result.failure(Exception("No session after refresh"))
+                val authSession = freshSession.user?.let { user ->
+                    AuthSession(
+                        userId = user.id,
+                        email = user.email,
+                        displayName = user.userMetadata?.get("full_name") as? String
+                            ?: user.userMetadata?.get("name") as? String,
+                        photoUrl = user.userMetadata?.get("avatar_url") as? String
+                            ?: user.userMetadata?.get("picture") as? String,
+                        providerToken = freshSession.providerToken
+                    )
+                } ?: return Result.failure(Exception("No user in session after refresh"))
                 Result.success(authSession)
             } else {
                 getCurrentSession().map { it!! }

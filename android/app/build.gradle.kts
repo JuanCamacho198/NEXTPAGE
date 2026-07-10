@@ -169,7 +169,7 @@ dependencies {
 
     // supabase-kt v3 — Supabase client for Android
     implementation(platform("io.github.jan-tennert.supabase:bom:3.1.2"))
-    implementation("io.github.jan-tennert.supabase:gotrue-kt")
+    implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:realtime-kt")
 

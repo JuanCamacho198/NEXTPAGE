@@ -3,16 +3,16 @@ package com.nextpage.data.remote.supabase
 import com.nextpage.BuildConfig
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.gotrue.GoTrue
+import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.realtime.Realtime
 
 /**
  * Singleton factory that provides the Supabase client for Android.
  *
- * Uses supabase-kt v3 with GoTrue (auth), Postgrest (DB), and Realtime (live changes).
+ * Uses supabase-kt v3 with Auth (auth), Postgrest (DB), and Realtime (live changes).
  * The client is session-aware: once the user signs in, all requests carry the
- * auth token via GoTrue (RLS applies automatically).
+ * auth token via Auth (RLS applies automatically).
  *
  * @see [SupabaseDeviceDataSource] for direct DB access using this client.
  */
@@ -43,7 +43,7 @@ object SupabaseClientProvider {
             supabaseUrl = url,
             supabaseKey = anonKey
         ) {
-            install(GoTrue)
+            install(Auth)
             install(Postgrest)
             install(Realtime)
         }

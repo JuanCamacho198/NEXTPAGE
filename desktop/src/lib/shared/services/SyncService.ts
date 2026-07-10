@@ -10,21 +10,26 @@ import { authState } from '$lib/stores/authState.svelte';
 import { GDriveProvider } from './storage/GDriveProvider';
 import { GoogleDriveStateSync } from './GoogleDriveStateSync';
 import { SupabaseProgressSync } from '../sync/SupabaseProgressSync';
-import type {
-  ProgressStateJson,
-  HighlightStateJson,
-  BookmarkStateJson,
-} from './GoogleDriveStateSync';
+import type { ProgressStateJson, HighlightStateJson, BookmarkStateJson } from './GoogleDriveStateSync';
+import type { TagDto } from '$lib/shared/types';
 import * as tauri from '$lib/shared/api/tauriClient';
 
 /** Sync mode for reading progress: 'drive' (legacy), 'dual' (both), 'supabase' (cutover). */
 type ReadingProgressSyncMode = 'drive' | 'dual' | 'supabase';
+type BookmarkSyncMode = 'drive' | 'dual' | 'supabase';
+type HighlightSyncMode = 'drive' | 'dual' | 'supabase';
 
 export class SyncService {
   private static gdrive = new GDriveProvider();
 
   /** Which mode to use for reading progress sync. Defaults to 'dual' during transition. */
   private static readingProgressSync: ReadingProgressSyncMode = 'dual';
+
+  /** Which mode to use for bookmark sync. Independent of readingProgressSync. */
+  private static bookmarkSync: BookmarkSyncMode = 'dual';
+
+  /** Which mode to use for highlight sync (includes tags). Independent of readingProgressSync. */
+  private static highlightSync: HighlightSyncMode = 'dual';
 
   /** Flag to track whether Drive → Supabase import was done this session. */
   private static supabaseImportDone = false;
@@ -39,6 +44,26 @@ export class SyncService {
     this.readingProgressSync = mode;
   }
 
+  static setBookmarkSyncMode(mode: BookmarkSyncMode): void {
+    this.bookmarkSync = mode;
+  }
+
+  static setHighlightSyncMode(mode: HighlightSyncMode): void {
+    this.highlightSync = mode;
+  }
+
+  /**
+   * Whether any import is still pending (import not done and at least one domain in dual/supabase mode).
+   */
+  static get hasPendingImport(): boolean {
+    if (this.supabaseImportDone) return false;
+    return (
+      this.readingProgressSync !== 'drive' ||
+      this.bookmarkSync !== 'drive' ||
+      this.highlightSync !== 'drive'
+    );
+  }
+
   static async syncMetadata(): Promise<void> {
     if (!authState.isSignedIn) return;
 
@@ -46,43 +71,142 @@ export class SyncService {
   }
 
   /**
-   * On first sync after login, run the one-time import of Drive progress to Supabase.
+   * On first sync after login, run the one-time import of Drive progress,
+   * bookmarks, highlights, and tags to Supabase.
    */
   private static async ensureSupabaseImport(): Promise<void> {
-    if (this.supabaseImportDone || this.readingProgressSync === 'drive') return;
+    if (this.supabaseImportDone) return;
+    if (this.readingProgressSync === 'drive' && this.bookmarkSync === 'drive' && this.highlightSync === 'drive') return;
     if (!authState.userId) return;
 
     try {
+      const sync = new SupabaseProgressSync(authState.userId);
       const localBooks = await tauri.listBooks();
-      const rows: Array<{
-        userId: string;
-        bookId: string;
-        cfiLocation: string;
-        percentage: number;
-        updatedAt: string;
-      }> = [];
 
-      for (const book of localBooks) {
-        const progress = await tauri.getProgress(book.id);
-        if (progress) {
-          rows.push({
-            userId: authState.userId,
-            bookId: progress.bookId,
-            cfiLocation: progress.cfiLocation,
-            percentage: progress.percentage,
-            updatedAt: progress.updatedAt,
-          });
+      // ── Import progress ──
+      if (this.readingProgressSync !== 'drive') {
+        const progressRows: Array<{
+          userId: string;
+          bookId: string;
+          cfiLocation: string;
+          percentage: number;
+          updatedAt: string;
+        }> = [];
+
+        for (const book of localBooks) {
+          const progress = await tauri.getProgress(book.id);
+          if (progress) {
+            progressRows.push({
+              userId: authState.userId,
+              bookId: progress.bookId,
+              cfiLocation: progress.cfiLocation,
+              percentage: progress.percentage,
+              updatedAt: progress.updatedAt,
+            });
+          }
+        }
+
+        if (progressRows.length > 0) {
+          await sync.importFromDrive(progressRows);
         }
       }
 
-      if (rows.length > 0) {
-        const sync = new SupabaseProgressSync(authState.userId);
-        await sync.importFromDrive(rows);
+      // ── Import bookmarks ──
+      if (this.bookmarkSync !== 'drive') {
+        const bookmarkRows: Array<{
+          userId: string;
+          bookId: string;
+          cfiLocation: string;
+          titleSnippet: string | null;
+          updatedAt: string;
+        }> = [];
+
+        for (const book of localBooks) {
+          const bookmarks = await tauri.listBookmarks(book.id);
+          for (const b of bookmarks) {
+            bookmarkRows.push({
+              userId: authState.userId,
+              bookId: b.bookId,
+              cfiLocation: '',
+              titleSnippet: b.title ?? null,
+              updatedAt: b.createdAt,
+            });
+          }
+        }
+
+        if (bookmarkRows.length > 0) {
+          await sync.importBookmarksFromDrive(
+            bookmarkRows.map((b) => ({
+              ...b,
+              id: crypto.randomUUID(),
+              locatorJson: null,
+              deletedAt: null,
+            })),
+          );
+        }
+      }
+
+      // ── Import highlights + tags ──
+      if (this.highlightSync !== 'drive') {
+        const highlightRows: Array<{
+          id: string;
+          userId: string;
+          bookId: string;
+          cfiRange: string;
+          textContent: string;
+          note: string | null;
+          color: string;
+          rectJson: Record<string, number> | null;
+          updatedAt: string;
+        }> = [];
+
+        for (const book of localBooks) {
+          const highlights = await tauri.listHighlights(book.id);
+          for (const h of highlights) {
+            highlightRows.push({
+              id: h.id,
+              userId: authState.userId,
+              bookId: h.bookId,
+              cfiRange: h.cfi ?? '',
+              textContent: h.text,
+              note: h.note ?? null,
+              color: h.color,
+              rectJson: h.pageNumber
+                ? { left: 0, right: 0, top: 0, bottom: 0 }
+                : null,
+              updatedAt: h.createdAt,
+            });
+          }
+
+          // Import tags for each highlight
+          for (const h of highlights) {
+            const tags: TagDto[] = await tauri.listTagsForHighlight(h.id).catch(() => []);
+            for (const tag of tags) {
+              const tagRow = await sync.upsertTag({
+                userId: authState.userId,
+                name: tag.name,
+                color: tag.color ?? null,
+              });
+              await sync.linkTagToHighlight(h.id, tagRow.id!);
+            }
+          }
+        }
+
+        if (highlightRows.length > 0) {
+          await sync.importHighlightsFromDrive(
+            highlightRows.map((h) => ({
+              ...h,
+              type: null,
+              locatorJson: null,
+              deletedAt: null,
+            })),
+          );
+        }
       }
 
       this.supabaseImportDone = true;
     } catch (e) {
-      console.error('Failed to import progress to Supabase:', e);
+      console.error('Failed to import data to Supabase:', e);
       // Non-blocking — retry on next sync
     }
   }

@@ -163,6 +163,8 @@ class AppContainer(context: Context) {
         SupabaseProgressSync(
             outboxDao = appDatabase.syncOutboxDao(),
             readingProgressDao = appDatabase.readingProgressDao(),
+            bookmarkDao = appDatabase.bookmarkDao(),
+            highlightDao = appDatabase.highlightDao(),
             sessionManager = sessionManager,
             dataSource = supabaseProgressDataSource
         )

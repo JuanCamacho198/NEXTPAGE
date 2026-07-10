@@ -5,6 +5,10 @@ import {
   saveReadingSession,
   updateBookProgress,
   upsertProgress as upsertProgressCmd,
+  saveBookmark,
+  deleteBookmark,
+  saveHighlight,
+  deleteHighlight,
 } from '$lib/shared/api/tauriClient';
 import type { ReaderBook, ReadingSessionInput, ReadingProgressDto, SaveProgressInput } from '$lib/shared/types';
 import { authState } from '$lib/stores/authState.svelte';
@@ -173,6 +177,8 @@ class ReaderDomainState {
 
   private supabaseSync: SupabaseProgressSync | null = null;
   private unsubscribeRemote: (() => void) | null = null;
+  private unsubscribeRemoteBookmarks: (() => void) | null = null;
+  private unsubscribeRemoteHighlights: (() => void) | null = null;
 
   /**
    * Start listening for reading_progress changes from Supabase Realtime.
@@ -216,7 +222,88 @@ class ReaderDomainState {
   }
 
   /**
-   * Stop the Realtime subscription. Call on logout or dispose.
+   * Subscribe to Realtime changes for bookmarks.
+   * When remote bookmark changes arrive, upsert/delete into local SQLite.
+   */
+  subscribeToRemoteBookmarks(): void {
+    if (this.unsubscribeRemoteBookmarks) return;
+    if (!authState.userId) return;
+
+    try {
+      if (!this.supabaseSync) {
+        this.supabaseSync = new SupabaseProgressSync(authState.userId);
+      }
+
+      this.unsubscribeRemoteBookmarks = this.supabaseSync.subscribeToBookmarks((payload) => {
+        const { id, bookId, cfiLocation, titleSnippet, deletedAt, updatedAt } = payload;
+
+        if (deletedAt) {
+          // Soft-delete: propagate tombstone
+          deleteBookmark(id ?? '').catch((e) => {
+            console.error('Failed to apply remote bookmark delete locally:', e);
+          });
+        } else {
+          saveBookmark({
+            id: id ?? crypto.randomUUID(),
+            bookId: bookId,
+            pageNumber: 0,
+            title: titleSnippet ?? undefined,
+            createdAt: updatedAt,
+          }).catch((e) => {
+            console.error('Failed to apply remote bookmark locally:', e);
+          });
+        }
+      });
+    } catch (e) {
+      console.error('Failed to subscribe to remote bookmarks:', e);
+    }
+  }
+
+  /**
+   * Subscribe to Realtime changes for highlights.
+   * When remote highlight changes arrive, upsert/delete into local SQLite.
+   */
+  subscribeToRemoteHighlights(): void {
+    if (this.unsubscribeRemoteHighlights) return;
+    if (!authState.userId) return;
+
+    try {
+      if (!this.supabaseSync) {
+        this.supabaseSync = new SupabaseProgressSync(authState.userId);
+      }
+
+      this.unsubscribeRemoteHighlights = this.supabaseSync.subscribeToHighlights((payload) => {
+        const { id, bookId, cfiRange, textContent, note, color, deletedAt } = payload;
+
+        if (deletedAt) {
+          deleteHighlight(id ?? '').catch((e) => {
+            console.error('Failed to apply remote highlight delete locally:', e);
+          });
+        } else {
+          saveHighlight({
+            id: id ?? crypto.randomUUID(),
+            bookId: bookId,
+            text: textContent,
+            color: color,
+            pageNumber: 0,
+            rectLeft: 0,
+            rectRight: 0,
+            rectTop: 0,
+            rectBottom: 0,
+            cfi: cfiRange || null,
+            note: note,
+          }).catch((e) => {
+            console.error('Failed to apply remote highlight locally:', e);
+          });
+        }
+      });
+    } catch (e) {
+      console.error('Failed to subscribe to remote highlights:', e);
+    }
+  }
+
+  /**
+   * Stop the Realtime subscription for progress. Call on logout or dispose.
    */
   unsubscribeFromRemoteProgress(): void {
     this.unsubscribeRemote?.();
@@ -225,11 +312,45 @@ class ReaderDomainState {
   }
 
   /**
-   * Re-subscribe — useful when userId changes (login/logout cycle).
+   * Stop the Realtime subscription for bookmarks.
+   */
+  unsubscribeFromRemoteBookmarks(): void {
+    this.unsubscribeRemoteBookmarks?.();
+    this.unsubscribeRemoteBookmarks = null;
+  }
+
+  /**
+   * Stop the Realtime subscription for highlights.
+   */
+  unsubscribeFromRemoteHighlights(): void {
+    this.unsubscribeRemoteHighlights?.();
+    this.unsubscribeRemoteHighlights = null;
+  }
+
+  /**
+   * Re-subscribe all — useful when userId changes (login/logout cycle).
    */
   refreshRemoteProgressSubscription(): void {
     this.unsubscribeFromRemoteProgress();
     this.subscribeToRemoteProgress();
+  }
+
+  /**
+   * Re-subscribe all Realtime channels — call on login.
+   */
+  subscribeToAllRemoteChanges(): void {
+    this.subscribeToRemoteProgress();
+    this.subscribeToRemoteBookmarks();
+    this.subscribeToRemoteHighlights();
+  }
+
+  /**
+   * Unsubscribe from all Realtime channels — call on logout.
+   */
+  unsubscribeFromAllRemoteChanges(): void {
+    this.unsubscribeFromRemoteProgress();
+    this.unsubscribeFromRemoteBookmarks();
+    this.unsubscribeFromRemoteHighlights();
   }
 
   // ─── Reset ───

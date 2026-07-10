@@ -1,8 +1,13 @@
 package com.nextpage.data.remote.supabase
 
+import com.nextpage.data.local.dao.BookmarkDao
+import com.nextpage.data.local.dao.HighlightDao
 import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.SyncOutboxDao
+import com.nextpage.data.local.entity.BookmarkEntity
+import com.nextpage.data.local.entity.HighlightEntity
 import com.nextpage.data.local.entity.SyncEntityType
+import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.session.SessionManager
 import io.github.jan.supabase.realtime.PostgresAction
 import kotlinx.coroutines.CoroutineScope
@@ -13,6 +18,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+import java.util.UUID
 
 /**
  * Processes the local outbox for READING_PROGRESS entries and upserts them
@@ -26,6 +36,8 @@ import kotlinx.coroutines.launch
 class SupabaseProgressSync(
     private val outboxDao: SyncOutboxDao,
     private val readingProgressDao: ReadingProgressDao,
+    private val bookmarkDao: BookmarkDao,
+    private val highlightDao: HighlightDao,
     private val sessionManager: SessionManager,
     private val dataSource: SupabaseProgressDataSource = SupabaseProgressDataSource(),
 ) {
@@ -55,46 +67,153 @@ class SupabaseProgressSync(
         }
     }
 
+    private val dateFormat: SimpleDateFormat = SimpleDateFormat(
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US
+    ).apply { timeZone = TimeZone.getTimeZone("UTC") }
+
     private suspend fun processOutbox() {
         val session = sessionManager.ensureFreshSession().getOrNull() ?: return
 
         _state.value = State.Running
         val pendingItems = outboxDao.getPendingItems()
-            .filter { it.entityType == SyncEntityType.READING_PROGRESS.name }
 
         for (item in pendingItems) {
-            val bookId = item.entityId ?: continue
-
-            // Read current progress from Room (latest local state)
-            val localProgress = readingProgressDao.getProgressForBook(bookId) ?: continue
-
-            val row = ReadingProgressRow(
-                userId = session.userId,
-                bookId = localProgress.bookId,
-                cfiLocation = localProgress.cfiLocation,
-                percentage = localProgress.percentage.toDouble(),
-                updatedAt = java.text.SimpleDateFormat(
-                    "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-                    java.util.Locale.US
-                ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
-                    .format(java.util.Date(localProgress.updatedAtEpochMillis))
-            )
-
-            try {
-                dataSource.upsertProgress(row)
-                outboxDao.deleteById(item.id)
-            } catch (e: Exception) {
-                outboxDao.incrementRetryCount(item.id, e.message ?: "Unknown error")
-                outboxDao.pruneFailedItems(3)
+            when (item.entityType) {
+                SyncEntityType.READING_PROGRESS.name -> processProgressItem(item, session.userId)
+                SyncEntityType.BOOKMARK.name -> processBookmarkItem(item, session.userId)
+                SyncEntityType.HIGHLIGHT.name -> processHighlightItem(item, session.userId)
             }
         }
 
         _state.value = State.Idle
     }
 
+    private suspend fun processProgressItem(
+        item: com.nextpage.data.local.entity.SyncOutboxEntity,
+        userId: String
+    ) {
+        val bookId = item.entityId ?: return
+        val localProgress = readingProgressDao.getProgressForBook(bookId) ?: return
+
+        val row = ReadingProgressRow(
+            userId = userId,
+            bookId = localProgress.bookId,
+            cfiLocation = localProgress.cfiLocation,
+            percentage = localProgress.percentage.toDouble(),
+            updatedAt = dateFormat.format(Date(localProgress.updatedAtEpochMillis))
+        )
+
+        try {
+            dataSource.upsertProgress(row)
+            outboxDao.deleteById(item.id)
+        } catch (e: Exception) {
+            outboxDao.incrementRetryCount(item.id, e.message ?: "Unknown error")
+            outboxDao.pruneFailedItems(3)
+        }
+    }
+
+    private suspend fun processBookmarkItem(
+        item: com.nextpage.data.local.entity.SyncOutboxEntity,
+        userId: String
+    ) {
+        val bookmarkId = item.entityId ?: return
+        val operation = try {
+            SyncOperation.valueOf(item.operation)
+        } catch (_: IllegalArgumentException) {
+            SyncOperation.UPDATE
+        }
+
+        try {
+            when (operation) {
+                SyncOperation.DELETE -> {
+                    dataSource.softDeleteBookmark(bookmarkId, userId)
+                }
+                else -> {
+                    val localBookmark = bookmarkDao.getBookmarkById(bookmarkId) ?: return
+                    val row = BookmarkRow(
+                        id = localBookmark.id,
+                        userId = userId,
+                        bookId = localBookmark.bookId,
+                        cfiLocation = localBookmark.cfiLocation,
+                        titleSnippet = localBookmark.titleOrSnippet.ifEmpty { null },
+                        locatorJson = localBookmark.locatorJson,
+                        deletedAt = localBookmark.deletedAtEpochMillis?.let {
+                            dateFormat.format(Date(it))
+                        },
+                        updatedAt = dateFormat.format(Date(localBookmark.updatedAtEpochMillis))
+                    )
+                    dataSource.upsertBookmark(row)
+                }
+            }
+            outboxDao.deleteById(item.id)
+        } catch (e: Exception) {
+            outboxDao.incrementRetryCount(item.id, e.message ?: "Unknown error")
+            outboxDao.pruneFailedItems(3)
+        }
+    }
+
+    private suspend fun processHighlightItem(
+        item: com.nextpage.data.local.entity.SyncOutboxEntity,
+        userId: String
+    ) {
+        val entityId = item.entityId ?: return
+        val operation = try {
+            SyncOperation.valueOf(item.operation)
+        } catch (_: IllegalArgumentException) {
+            SyncOperation.UPDATE
+        }
+
+        try {
+            when (operation) {
+                SyncOperation.DELETE -> {
+                    // If the payload contains a highlight ID, soft-delete it
+                    val highlightId = entityId
+                    dataSource.softDeleteHighlight(highlightId, userId)
+                }
+                else -> {
+                    // Use entityId as bookId for highlights — need to look up local
+                    val highlightsForBook = highlightDao.getHighlightsForBook(entityId)
+                    for (localHighlight in highlightsForBook) {
+                        val row = HighlightRow(
+                            id = localHighlight.id,
+                            userId = userId,
+                            bookId = localHighlight.bookId,
+                            cfiRange = localHighlight.cfiRange,
+                            textContent = localHighlight.textContent,
+                            note = localHighlight.note,
+                            color = localHighlight.color,
+                            page = null,
+                            type = localHighlight.type,
+                            locatorJson = localHighlight.locatorJson,
+                            deletedAt = localHighlight.deletedAtEpochMillis?.let {
+                                dateFormat.format(Date(it))
+                            },
+                            updatedAt = dateFormat.format(Date(localHighlight.updatedAtEpochMillis))
+                        )
+                        dataSource.upsertHighlight(row)
+
+                        // Sync tag string → Supabase M2M tags
+                        if (!localHighlight.tag.isNullOrBlank()) {
+                            val tagNames = localHighlight.tag.split(",").map { it.trim() }
+                                .filter { it.isNotBlank() }
+                            for (tagName in tagNames) {
+                                val tag = dataSource.findOrCreateTag(userId, tagName)
+                                dataSource.linkTagToHighlight(localHighlight.id, tag.id!!)
+                            }
+                        }
+                    }
+                }
+            }
+            outboxDao.deleteById(item.id)
+        } catch (e: Exception) {
+            outboxDao.incrementRetryCount(item.id, e.message ?: "Unknown error")
+            outboxDao.pruneFailedItems(3)
+        }
+    }
+
     /**
-     * Subscribe to Realtime changes so remote progress updates are applied
-     * to the local Room database.
+     * Subscribe to Realtime changes so remote progress, bookmark, and highlight
+     * updates are applied to the local Room database.
      */
     fun subscribeToRealtimeChanges() {
         if (realtimeJob?.isActive == true) return
@@ -102,17 +221,54 @@ class SupabaseProgressSync(
         realtimeJob = scope.launch {
             val session = sessionManager.ensureFreshSession().getOrNull() ?: return@launch
 
-            dataSource.subscribeToUserChanges(session.userId).collect { action ->
-                when (action) {
-                    is PostgresAction.PostgresInsertAction -> {
-                        val row = action.decodeRecord<ReadingProgressRow>()
-                        applyRemoteProgress(row)
+            // Progress changes
+            launch {
+                dataSource.subscribeToUserChanges(session.userId).collect { action ->
+                    when (action) {
+                        is PostgresAction.PostgresInsertAction -> {
+                            val row = action.decodeRecord<ReadingProgressRow>()
+                            applyRemoteProgress(row)
+                        }
+                        is PostgresAction.PostgresUpdateAction -> {
+                            val row = action.decodeRecord<ReadingProgressRow>()
+                            applyRemoteProgress(row)
+                        }
+                        else -> { /* DELETE handled by ignoring */ }
                     }
-                    is PostgresAction.PostgresUpdateAction -> {
-                        val row = action.decodeRecord<ReadingProgressRow>()
-                        applyRemoteProgress(row)
+                }
+            }
+
+            // Bookmark changes
+            launch {
+                dataSource.subscribeToBookmarkChanges(session.userId).collect { action ->
+                    when (action) {
+                        is PostgresAction.PostgresInsertAction -> {
+                            val row = action.decodeRecord<BookmarkRow>()
+                            applyRemoteBookmark(row)
+                        }
+                        is PostgresAction.PostgresUpdateAction -> {
+                            val row = action.decodeRecord<BookmarkRow>()
+                            applyRemoteBookmark(row)
+                        }
+                        else -> { /* DELETE handled by ignoring */ }
                     }
-                    else -> { /* DELETE handled by ignoring */ }
+                }
+            }
+
+            // Highlight changes
+            launch {
+                dataSource.subscribeToHighlightChanges(session.userId).collect { action ->
+                    when (action) {
+                        is PostgresAction.PostgresInsertAction -> {
+                            val row = action.decodeRecord<HighlightRow>()
+                            applyRemoteHighlight(row)
+                        }
+                        is PostgresAction.PostgresUpdateAction -> {
+                            val row = action.decodeRecord<HighlightRow>()
+                            applyRemoteHighlight(row)
+                        }
+                        else -> { /* DELETE handled by ignoring */ }
+                    }
                 }
             }
         }
@@ -146,6 +302,88 @@ class SupabaseProgressSync(
         }
     }
 
+    private suspend fun applyRemoteBookmark(row: BookmarkRow) {
+        val isDeleted = row.deletedAt != null
+        val localBookmark = bookmarkDao.getBookmarkById(row.id ?: return)
+
+        if (isDeleted) {
+            // Soft-delete tombstone: mark locally
+            if (localBookmark != null) {
+                bookmarkDao.upsert(
+                    localBookmark.copy(
+                        deletedAtEpochMillis = try {
+                            dateFormat.parse(row.deletedAt)?.time
+                        } catch (_: Exception) {
+                            System.currentTimeMillis()
+                        }
+                    )
+                )
+            }
+        } else {
+            val remoteTime = try {
+                dateFormat.parse(row.updatedAt)?.time ?: 0L
+            } catch (_: Exception) {
+                System.currentTimeMillis()
+            }
+
+            if (localBookmark == null || remoteTime > localBookmark.updatedAtEpochMillis) {
+                bookmarkDao.upsert(
+                    BookmarkEntity(
+                        id = row.id ?: UUID.randomUUID().toString(),
+                        bookId = row.bookId,
+                        cfiLocation = row.cfiLocation,
+                        titleOrSnippet = row.titleSnippet ?: "",
+                        updatedAtEpochMillis = remoteTime,
+                        deletedAtEpochMillis = if (isDeleted) remoteTime else null,
+                        locatorJson = row.locatorJson
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun applyRemoteHighlight(row: HighlightRow) {
+        val isDeleted = row.deletedAt != null
+        val localHighlight = highlightDao.getHighlightById(row.id ?: return)
+
+        if (isDeleted) {
+            if (localHighlight != null) {
+                highlightDao.upsert(
+                    localHighlight.copy(
+                        deletedAtEpochMillis = try {
+                            dateFormat.parse(row.deletedAt)?.time
+                        } catch (_: Exception) {
+                            System.currentTimeMillis()
+                        }
+                    )
+                )
+            }
+        } else {
+            val remoteTime = try {
+                dateFormat.parse(row.updatedAt)?.time ?: 0L
+            } catch (_: Exception) {
+                System.currentTimeMillis()
+            }
+
+            if (localHighlight == null || remoteTime > localHighlight.updatedAtEpochMillis) {
+                highlightDao.upsert(
+                    HighlightEntity(
+                        id = row.id ?: UUID.randomUUID().toString(),
+                        bookId = row.bookId,
+                        cfiRange = row.cfiRange,
+                        textContent = row.textContent,
+                        note = row.note,
+                        color = row.color,
+                        updatedAtEpochMillis = remoteTime,
+                        deletedAtEpochMillis = if (isDeleted) remoteTime else null,
+                        locatorJson = row.locatorJson,
+                        type = row.type
+                    )
+                )
+            }
+        }
+    }
+
     /**
      * Stop periodic processing and unsubscribe from Realtime.
      */
@@ -154,7 +392,7 @@ class SupabaseProgressSync(
         processJob = null
         realtimeJob?.cancel()
         realtimeJob = null
-        dataSource.unsubscribe()
+        dataSource.unsubscribeAll()
         _state.value = State.Idle
     }
 }

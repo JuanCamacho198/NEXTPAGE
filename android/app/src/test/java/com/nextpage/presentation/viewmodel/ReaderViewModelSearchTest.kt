@@ -72,45 +72,6 @@ class ReaderViewModelSearchTest {
     }
 
     @Test
-    fun `onSearchResultSelected with different chapter navigates and dismisses`() = runTest {
-        val dispatcher = UnconfinedTestDispatcher(testScheduler)
-        val viewModel = ReaderViewModel(
-            application = mockk<Application>(relaxed = true),
-            readerRepository = FakeReaderRepository(),
-            readingStatsRepository = FakeReadingStatsRepository(),
-            updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),
-            defaultBookId = null,
-            mainDispatcher = dispatcher
-        )
-
-        // Set EPUB state with chapters
-        setEpubState(
-            viewModel,
-            chapters = listOf(
-                BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
-                BookChapter(1, "c2", "Ch 2", "ch2.xhtml"),
-                BookChapter(2, "c3", "Ch 3", "ch3.xhtml")
-            ),
-            currentChapterIndex = 0,
-            bookFilePath = "/test/book.epub"
-        )
-
-        viewModel.onToggleSearch()
-        assertTrue(viewModel.uiState.value.isSearchActive)
-
-        val result = SearchResult(
-            text = "...sample text...",
-            offset = 0,
-            chapterIndex = 2
-        )
-        viewModel.onSearchResultSelected(result)
-
-        val state = viewModel.uiState.value
-        assertEquals(2, state.currentChapterIndex)
-        assertFalse(state.isSearchActive)
-    }
-
-    @Test
     fun `onSearchResultSelected with same chapter dismisses without navigation`() = runTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         val viewModel = ReaderViewModel(

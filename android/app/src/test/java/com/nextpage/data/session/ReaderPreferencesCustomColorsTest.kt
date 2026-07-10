@@ -102,6 +102,7 @@ class ReaderPreferencesCustomColorsTest {
         val paletteValue = slot<String>()
         val editor = mockk<SharedPreferences.Editor>(relaxed = true) {
             every { putString(capture(paletteKey), capture(paletteValue)) } returns this
+            every { putInt(any<String>(), any()) } returns this
         }
         val prefs = mockk<SharedPreferences> {
             every { edit() } returns editor

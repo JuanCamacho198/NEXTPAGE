@@ -94,9 +94,9 @@ class HighlightColorMigrationTest {
     }
 
     @Test
-    fun `fromHex old PINK F9A8D4 migrates to ORANGE (nearest by RGB distance)`() {
-        // PINK #F9A8D4 — nearest new color is ORANGE #F97316
-        assertEquals(HighlightColor.ORANGE, HighlightColor.fromHex("#F9A8D4"))
+    fun `fromHex old PINK F9A8D4 migrates to RED (nearest by RGB distance)`() {
+        // PINK #F9A8D4 — nearest new color is RED #EF4444 (d²=30836 vs ORANGE d²=38909)
+        assertEquals(HighlightColor.RED, HighlightColor.fromHex("#F9A8D4"))
     }
 
     @Test
@@ -108,8 +108,9 @@ class HighlightColorMigrationTest {
     // ── Edge cases ──────────────────────────────────────────────────
 
     @Test
-    fun `fromHex unknown hex falls back to YELLOW`() {
-        assertEquals(HighlightColor.YELLOW, HighlightColor.fromHex("#000000"))
+    fun `fromHex black hex maps to nearest RED`() {
+        // #000000 — nearest color by RGB distance is RED (#EF4444, d²=66369)
+        assertEquals(HighlightColor.RED, HighlightColor.fromHex("#000000"))
     }
 
     @Test

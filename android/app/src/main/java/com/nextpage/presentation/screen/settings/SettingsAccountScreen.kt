@@ -1,18 +1,15 @@
 package com.nextpage.presentation.screen.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
@@ -27,13 +24,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.AuthSession
-import com.nextpage.ui.components.atoms.NextPageDialog
+import com.nextpage.ui.components.atoms.NextPageAvatar
+import com.nextpage.ui.components.atoms.NextPageLogoutDialog
 import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
 
 @Composable
@@ -45,17 +42,12 @@ fun SettingsAccountScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     if (showLogoutDialog) {
-        NextPageDialog(
-            title = stringResource(R.string.settings_logout_title),
-            body = stringResource(R.string.settings_logout_message),
-            confirmText = stringResource(R.string.settings_logout_confirm),
-            dismissText = stringResource(R.string.reader_cancel),
+        NextPageLogoutDialog(
             onConfirm = {
                 showLogoutDialog = false
                 onLogout()
             },
-            onDismiss = { showLogoutDialog = false },
-            confirmColor = MaterialTheme.colorScheme.error
+            onDismiss = { showLogoutDialog = false }
         )
     }
 
@@ -76,21 +68,12 @@ fun SettingsAccountScreen(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = (authSession?.displayName ?: stringResource(R.string.settings_user_default))
-                            .take(1).uppercase(),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
+                NextPageAvatar(
+                    imageUrl = authSession?.photoUrl,
+                    initials = (authSession?.displayName ?: stringResource(R.string.settings_user_default))
+                        .take(2).uppercase(),
+                    size = 56.dp
+                )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
@@ -103,6 +86,32 @@ fun SettingsAccountScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    // Provider badge
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        Text(
+                            text = when (authSession?.provider) {
+                                "google" -> stringResource(R.string.settings_provider_google)
+                                "email" -> stringResource(R.string.settings_provider_email)
+                                else -> stringResource(R.string.settings_provider_anonymous)
+                            },
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                    // Member since
+                    val memberSince = authSession?.createdAt?.let { formatMemberSince(it) }
+                    if (memberSince != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.settings_member_since, memberSince),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -136,5 +145,20 @@ fun SettingsAccountScreen(
                 )
             }
         }
+    }
+}
+
+/**
+ * Formats an ISO 8601 date-time string (e.g. "2024-03-15T10:30:00Z")
+ * into a locale-aware month-year label (e.g. "March 2024" or "marzo 2024").
+ */
+private fun formatMemberSince(createdAt: String): String {
+    return try {
+        val instant = java.time.Instant.parse(createdAt)
+        val zdt = java.time.ZonedDateTime.ofInstant(instant, java.time.ZoneId.systemDefault())
+        val formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy")
+        zdt.format(formatter)
+    } catch (_: Exception) {
+        createdAt
     }
 }

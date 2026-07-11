@@ -1,9 +1,7 @@
 package com.nextpage.presentation.screen.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,11 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
@@ -38,7 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +45,7 @@ import com.nextpage.debug.DebugPrefs
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.ThemeMode
 import com.nextpage.presentation.theme.NextPageDimens
+import com.nextpage.ui.components.atoms.NextPageAvatar
 import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.components.molecules.NextPagePreferenceItem
 
@@ -246,21 +242,12 @@ private fun AccountSection(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = (authSession?.displayName ?: stringResource(R.string.settings_user_default))
-                            .take(1).uppercase(),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
+                NextPageAvatar(
+                    imageUrl = authSession?.photoUrl,
+                    initials = (authSession?.displayName ?: stringResource(R.string.settings_user_default))
+                        .take(2).uppercase(),
+                    size = 48.dp
+                )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(

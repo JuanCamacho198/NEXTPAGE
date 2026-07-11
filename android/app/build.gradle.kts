@@ -172,6 +172,9 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:realtime-kt")
+    // Pin kotlinx-datetime — supabase-kt BOM requests 0.6.2 but Gradle upgrades to
+    // 0.7.x which removes kotlinx.datetime.serializers.InstantIso8601Serializer.
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
 
     // Security: encrypted storage (database encryption requires Kotlin 2.0+ upgrade)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
@@ -242,5 +245,13 @@ tasks.register("verifyReleaseMapping") {
         if (!mappingFile.exists()) {
             throw GradleException("Release mapping file not found: ${mappingFile.path}")
         }
+    }
+}
+
+// Force kotlinx-datetime 0.6.2 — supabase-kt BOM requests it but Readium tries to
+// upgrade to 0.7.x which removes InstantIso8601Serializer that supabase-kt needs.
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
     }
 }

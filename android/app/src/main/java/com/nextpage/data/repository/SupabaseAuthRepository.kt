@@ -132,7 +132,9 @@ class SupabaseAuthRepository(
                 displayName = it.userMetadata?.get("full_name") as? String
                     ?: it.userMetadata?.get("name") as? String,
                 photoUrl = it.userMetadata?.get("avatar_url") as? String
-                    ?: it.userMetadata?.get("picture") as? String
+                    ?: it.userMetadata?.get("picture") as? String,
+                provider = it.userMetadata?.get("provider") as? String,
+                createdAt = it.createdAt?.toString()
             )
         }
     }

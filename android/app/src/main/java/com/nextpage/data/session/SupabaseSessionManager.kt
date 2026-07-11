@@ -34,7 +34,9 @@ class SupabaseSessionManager : SessionManager {
                             ?: user.userMetadata?.get("name") as? String,
                         photoUrl = user.userMetadata?.get("avatar_url") as? String
                             ?: user.userMetadata?.get("picture") as? String,
-                        providerToken = s.providerToken
+                        providerToken = s.providerToken,
+                        provider = user.userMetadata?.get("provider") as? String,
+                        createdAt = user.createdAt?.toString()
                     )
                 }
             }
@@ -60,7 +62,9 @@ class SupabaseSessionManager : SessionManager {
                             ?: user.userMetadata?.get("name") as? String,
                         photoUrl = user.userMetadata?.get("avatar_url") as? String
                             ?: user.userMetadata?.get("picture") as? String,
-                        providerToken = freshSession.providerToken
+                        providerToken = freshSession.providerToken,
+                        provider = user.userMetadata?.get("provider") as? String,
+                        createdAt = user.createdAt?.toString()
                     )
                 } ?: return Result.failure(Exception("No user in session after refresh"))
                 Result.success(authSession)

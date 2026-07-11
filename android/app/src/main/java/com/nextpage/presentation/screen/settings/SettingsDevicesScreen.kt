@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,6 +37,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.Device
+import com.nextpage.ui.components.atoms.NextPageDialog
+import com.nextpage.ui.components.atoms.NextPageDialogVariant
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.outlined.DesktopMac
+import androidx.compose.material.icons.outlined.DesktopWindows
+import androidx.compose.material.icons.outlined.DevicesOther
+import androidx.compose.material.icons.outlined.PhoneAndroid
 import com.nextpage.presentation.viewmodel.SettingsDevicesUiState
 import java.time.Duration
 import java.time.Instant
@@ -116,14 +122,16 @@ private fun DeviceItem(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = when {
-                    device.os.contains("Android") -> "\uD83D\uDCF1"
-                    device.os.contains("Windows") -> "\uD83D\uDCBB"
-                    device.os.contains("macOS") || device.os.contains("Darwin") -> "\uD83C\uDF4E"
-                    else -> "\uD83D\uDCBB"
+            Icon(
+                imageVector = when {
+                    device.os.contains("Android") -> Icons.Outlined.PhoneAndroid
+                    device.os.contains("Windows") -> Icons.Outlined.DesktopWindows
+                    device.os.contains("macOS") || device.os.contains("Darwin") -> Icons.Outlined.DesktopMac
+                    else -> Icons.Outlined.DevicesOther
                 },
-                style = MaterialTheme.typography.titleLarge
+                contentDescription = null,
+                modifier = Modifier.size(28.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
 
             Spacer(Modifier.width(12.dp))
@@ -167,19 +175,14 @@ private fun DeviceItem(
     }
 
     if (showRemoveDialog) {
-        AlertDialog(
-            onDismissRequest = { showRemoveDialog = false },
-            title = { Text(stringResource(R.string.settings_devices_remove_confirm, device.name)) },
-            confirmButton = {
-                TextButton(onClick = { onRemove(); showRemoveDialog = false }) {
-                    Text(stringResource(R.string.settings_devices_remove))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRemoveDialog = false }) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-            }
+        NextPageDialog(
+            title = stringResource(R.string.settings_devices_remove_confirm, device.name),
+            body = "",
+            confirmText = stringResource(R.string.settings_devices_remove),
+            dismissText = stringResource(android.R.string.cancel),
+            onConfirm = { onRemove(); showRemoveDialog = false },
+            onDismiss = { showRemoveDialog = false },
+            variant = NextPageDialogVariant.DESTRUCTIVE
         )
     }
 }

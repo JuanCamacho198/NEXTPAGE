@@ -242,7 +242,7 @@ private fun TodaySummarySection(viewModel: HomeViewModel) {
             )
             StatCard(
                 icon = Icons.Outlined.BarChart,
-                value = "${(uiState.dailyProgressPercent * 100).toInt()}%",
+                value = stringResource(R.string.format_percent, (uiState.dailyProgressPercent * 100).toInt()),
                 label = stringResource(R.string.home_progress),
                 modifier = Modifier.weight(1f)
             )

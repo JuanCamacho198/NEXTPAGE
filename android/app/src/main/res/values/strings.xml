@@ -373,6 +373,10 @@
     <string name="settings_devices_remove_confirm">Sign out from %1$s?</string>
     <string name="settings_devices_count">%1$d connected devices</string>
     <string name="settings_devices_loading">Loading devices...</string>
+    <string name="settings_provider_google">Google</string>
+    <string name="settings_provider_email">Email</string>
+    <string name="settings_provider_anonymous">Anonymous</string>
+    <string name="settings_member_since">Member since %1$s</string>
 
     <!-- Statistics -->
     <string name="statistics_title">Statistics</string>
@@ -528,4 +532,13 @@
 
     <!-- Share -->
     <string name="library_share_chooser_title">Share book</string>
+
+    <!-- Format strings -->
+    <string name="format_percent">%d%%</string>
+
+    <!-- Import Overlay -->
+    <string name="import_overlay_icon_desc">Importing book</string>
+    <string name="import_state_extracting">Extracting book…</string>
+    <string name="import_state_analyzing">Analyzing content…</string>
+    <string name="import_state_saving">Saving…</string>
 </resources>

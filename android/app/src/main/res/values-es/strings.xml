@@ -382,6 +382,10 @@
     <string name="settings_devices_remove_confirm">¿Cerrar sesión en %1$s?</string>
     <string name="settings_devices_count">%1$d dispositivos conectados</string>
     <string name="settings_devices_loading">Cargando dispositivos...</string>
+    <string name="settings_provider_google">Google</string>
+    <string name="settings_provider_email">Correo electrónico</string>
+    <string name="settings_provider_anonymous">Anónimo</string>
+    <string name="settings_member_since">Miembro desde %1$s</string>
 
     <!-- Statistics -->
     <string name="statistics_title">Estadísticas</string>
@@ -471,4 +475,13 @@
 
     <!-- Share -->
     <string name="library_share_chooser_title">Compartir libro</string>
+
+    <!-- Format strings -->
+    <string name="format_percent">%d %%</string>
+
+    <!-- Import Overlay -->
+    <string name="import_overlay_icon_desc">Importando libro</string>
+    <string name="import_state_extracting">Extrayendo libro…</string>
+    <string name="import_state_analyzing">Analizando contenido…</string>
+    <string name="import_state_saving">Guardando…</string>
 </resources>

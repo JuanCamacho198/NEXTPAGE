@@ -308,7 +308,7 @@ private fun GoalsSection(goalProgress: Float) {
                         trackColor = MaterialTheme.colorScheme.outline
                     )
                     Text(
-                        text = "${(goalProgress * 100).toInt()}%",
+                        text = stringResource(R.string.format_percent, (goalProgress * 100).toInt()),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )

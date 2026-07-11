@@ -283,9 +283,9 @@ private fun MetadataGridCard(
             MetadataCell(
                 label = stringResource(R.string.book_detail_progress_label),
                 value = if (progress != null) {
-                    "${progress.percentage.toInt()}%"
+                    stringResource(R.string.format_percent, progress.percentage.toInt())
                 } else {
-                    "0%"
+                    stringResource(R.string.format_percent, 0)
                 }
             )
             MetadataCell(

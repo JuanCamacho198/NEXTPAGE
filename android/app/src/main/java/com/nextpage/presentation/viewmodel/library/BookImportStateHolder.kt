@@ -7,6 +7,7 @@ import com.nextpage.presentation.viewmodel.LibraryImportEvent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,9 +19,10 @@ import java.io.InputStream
 /**
  * Manages book import state for the library.
  *
- * Handles EPUB and PDF import flows, setting [BookImportState.isImporting]
- * before and after the async operation, and emitting success/failure events
- * via the [onImportEvent] callback.
+ * Handles EPUB and PDF import flows, transitioning through
+ * [BookImportState.Extracting] → [BookImportState.Analyzing] →
+ * [BookImportState.Saving] → [BookImportState.Idle], and emitting
+ * success/failure events via the [onImportEvent] callback.
  *
  * @param importEpubBookUseCase  Use case for importing EPUB books
  * @param libraryRepository     Repository for PDF import and general book ops
@@ -37,7 +39,7 @@ class BookImportStateHolder(
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val onStateChanged: (BookImportState) -> Unit = {}
 ) {
-    private val _state = MutableStateFlow(BookImportState())
+    private val _state = MutableStateFlow<BookImportState>(BookImportState.Idle)
     val state: StateFlow<BookImportState> = _state.asStateFlow()
 
     init {
@@ -46,17 +48,25 @@ class BookImportStateHolder(
 
     /**
      * Import an EPUB book from a content URI.
-     * Sets [isImporting] to true, awaits the use case, then emits success/failure.
+     * Transitions: Extracting → Analyzing → Saving → Idle, then emits success/failure.
      */
     fun importBookFromEpub(
         sourcePath: String,
         fallbackTitle: String?,
         inputStreamProvider: suspend () -> InputStream?
     ) {
-        _state.update { it.copy(isImporting = true) }
+        _state.update { BookImportState.Extracting(0.3f) }
         onStateChanged(_state.value)
 
         scope.launch(mainDispatcher) {
+            delay(200L)
+            _state.update { BookImportState.Analyzing(0.6f) }
+            onStateChanged(_state.value)
+
+            delay(200L)
+            _state.update { BookImportState.Saving(0.9f) }
+            onStateChanged(_state.value)
+
             val result = importEpubBookUseCase(
                 request = BookImportRequest(
                     sourcePath = sourcePath,
@@ -65,7 +75,7 @@ class BookImportStateHolder(
                 inputStreamProvider = inputStreamProvider
             )
 
-            _state.update { it.copy(isImporting = false) }
+            _state.update { BookImportState.Idle }
             onStateChanged(_state.value)
 
             result.fold(
@@ -85,17 +95,25 @@ class BookImportStateHolder(
 
     /**
      * Import a PDF book from a local file.
-     * Sets [isImporting] to true, calls the repository, then emits success/failure.
+     * Transitions: Extracting → Analyzing → Saving → Idle, then emits success/failure.
      */
     fun importPdfBook(
         sourcePath: String,
         fallbackTitle: String?,
         pdfFile: File
     ) {
-        _state.update { it.copy(isImporting = true) }
+        _state.update { BookImportState.Extracting(0.3f) }
         onStateChanged(_state.value)
 
         scope.launch(mainDispatcher) {
+            delay(200L)
+            _state.update { BookImportState.Analyzing(0.6f) }
+            onStateChanged(_state.value)
+
+            delay(200L)
+            _state.update { BookImportState.Saving(0.9f) }
+            onStateChanged(_state.value)
+
             val result = libraryRepository.importBookFromPdf(
                 request = BookImportRequest(
                     sourcePath = sourcePath,
@@ -104,7 +122,7 @@ class BookImportStateHolder(
                 file = pdfFile
             )
 
-            _state.update { it.copy(isImporting = false) }
+            _state.update { BookImportState.Idle }
             onStateChanged(_state.value)
 
             result.fold(

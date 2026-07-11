@@ -15,7 +15,9 @@ import com.nextpage.domain.usecase.ImportEpubBookUseCase
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.viewmodel.library.BookActionStateHolder
 import com.nextpage.presentation.viewmodel.library.BookFilterStateHolder
+import com.nextpage.presentation.viewmodel.library.BookImportState
 import com.nextpage.presentation.viewmodel.library.BookImportStateHolder
+import com.nextpage.presentation.viewmodel.library.isImporting
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -262,6 +264,15 @@ class LibraryViewModel(
             mutableUiState.update { it.copy(isImporting = importState.isImporting) }
         }
     )
+
+    /**
+     * Import state flow — drives the [NextPageImportOverlay] in the NavHost.
+     *
+     * **Emits when**: an import transitions through Extracting → Analyzing →
+     * Saving → Idle stages.
+     * **Initial value**: [BookImportState.Idle].
+     */
+    val importState: StateFlow<BookImportState> = bookImportStateHolder.state
 
     private val bookActionStateHolder = BookActionStateHolder(
         libraryRepository = libraryRepository,

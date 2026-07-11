@@ -135,10 +135,8 @@ class AuthViewModel(
 
     /**
      * Completes Google sign-in with an ID token obtained from Credential Manager.
-     *
-     * Credential Manager launches at the UI layer via
-     * [ActivityResultContracts.GetCredential]; once the user picks their
-     * Google account, the resulting ID token is passed here.
+     * The UI layer is responsible for token acquisition; the token is exchanged
+     * with Supabase via [AuthRepository.signInWithGoogleIdToken].
      *
      * Side effects:
      * 1. Sets `isLoading = true` and clears any prior `errorMessage`/`failureKind`.
@@ -310,6 +308,22 @@ class AuthViewModel(
      * 2. Does not emit a `UiEvent` — purely a local state reset (e.g. when the
      *    user dismisses the error banner in the UI).
      */
+    /**
+     * Sets a user-facing error message and emits a snackbar.
+     * Used by the UI layer for errors that happen before the auth call (e.g.,
+     * unexpected credential type from Credential Manager).
+     */
+    fun setError(message: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(
+                isLoading = false,
+                errorMessage = message,
+                failureKind = AuthFailureKind.UNKNOWN
+            ) }
+            _uiEvent.emit(UiEvent.ShowSnackbar(message))
+        }
+    }
+
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null, failureKind = AuthFailureKind.NONE) }
     }

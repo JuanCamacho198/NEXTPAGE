@@ -16,8 +16,10 @@ interface AuthRepository {
     }
     /**
      * Sign in with a Google ID token obtained from Credential Manager (native).
-     * Callers should obtain the ID token via [ActivityResultContracts.GetCredential]
-     * at the UI layer and pass the token here.
+     * Callers should obtain the ID token via Credential Manager at the UI layer
+     * and pass it here.
+     *
+     * @param idToken The Google ID token from Credential Manager.
      */
     suspend fun signInWithGoogleIdToken(idToken: String): Result<AuthSession>
     suspend fun signIn(email: String, password: String): Result<AuthSession>

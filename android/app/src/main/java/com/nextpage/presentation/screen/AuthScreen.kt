@@ -40,7 +40,6 @@ import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageTextField
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 private const val AUTH_SCREEN_TAG = "AuthScreen"
 
@@ -173,7 +172,6 @@ fun AuthScreen(
                 onClick = {
                     val googleIdOption = GetGoogleIdOption.Builder()
                         .setServerClientId(BuildConfig.GOOGLE_OAUTH_CLIENT_ID)
-                        .setNonce(UUID.randomUUID().hashCode().toString())
                         .setFilterByAuthorizedAccounts(false)
                         .build()
                     val request = GetCredentialRequest.Builder()
@@ -198,13 +196,18 @@ fun AuthScreen(
                                 }
                                 viewModel.handleGoogleIdToken(googleIdTokenCredential.idToken)
                             } else {
-                                Log.w(AUTH_SCREEN_TAG, "Unexpected credential type: ${credential.type}")
+                                    Log.w(AUTH_SCREEN_TAG, "Unexpected credential type: ${credential.type}")
+                                    viewModel.setError("Tipo de credencial inesperado: ${credential.type}")
+                                }
+                            } catch (e: GetCredentialCancellationException) {
+                                Log.d(AUTH_SCREEN_TAG, "Google sign-in cancelled by user")
+                            } catch (e: GetCredentialException) {
+                                Log.e(AUTH_SCREEN_TAG, "Google credential error: type=${e.type} msg=${e.message}", e)
+                                viewModel.setError("Error de credencial (${e.type}): ${e.message}")
+                            } catch (e: Exception) {
+                                Log.e(AUTH_SCREEN_TAG, "Unexpected error in Google sign-in", e)
+                                viewModel.setError("Error inesperado: ${e.message}")
                             }
-                        } catch (e: GetCredentialCancellationException) {
-                            Log.d(AUTH_SCREEN_TAG, "Google sign-in cancelled by user")
-                        } catch (e: GetCredentialException) {
-                            Log.e(AUTH_SCREEN_TAG, "Google credential error: ${e.message}")
-                        }
                     }
                 },
                 enabled = buttonEnabled,

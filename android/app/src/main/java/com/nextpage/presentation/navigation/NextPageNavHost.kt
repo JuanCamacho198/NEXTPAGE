@@ -50,6 +50,8 @@ import com.nextpage.presentation.screen.LibraryScreen
 import com.nextpage.presentation.screen.ReaderScreen
 import com.nextpage.presentation.screen.SettingsScreen
 import com.nextpage.presentation.screen.StatisticsScreen
+import com.nextpage.presentation.viewmodel.library.BookImportState
+import com.nextpage.ui.components.atoms.NextPageImportOverlay
 import com.nextpage.ui.components.atoms.NextPageSnackbar
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.HomeViewModel
@@ -275,16 +277,17 @@ fun NextPageNavHost(
                                 }
                             }
                         )
-                    }
                 }
             }
+        }
         ) { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination = startDestination
-            ) {
-                composable(
-                    route = NextPageDestination.Auth.route,
+            Box(modifier = Modifier.fillMaxSize()) {
+                NavHost(
+                    navController = navController,
+                    startDestination = startDestination
+                ) {
+                    composable(
+                        route = NextPageDestination.Auth.route,
                     enterTransition = { fadeIn() },
                     exitTransition = { fadeOut() },
                     popEnterTransition = { fadeIn() },
@@ -536,6 +539,13 @@ fun NextPageNavHost(
                     )
                 }
             }
+
+            // ── Import Overlay (inside wrapper Box, below NavHost) ──
+            val importState by libraryViewModel.importState.collectAsState()
+            NextPageImportOverlay(
+                importState = importState,
+                modifier = Modifier.fillMaxSize()
+            )
         }
 
         // ── Debug FAB ──────────────────────────────────────────────────
@@ -569,4 +579,5 @@ fun NextPageNavHost(
             )
         }
     }
+}
 }

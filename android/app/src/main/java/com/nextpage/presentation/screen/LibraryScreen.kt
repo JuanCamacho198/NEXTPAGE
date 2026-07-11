@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -198,12 +197,6 @@ fun LibraryScreen(
 
         // ── Sync status indicator (top-right; collects own state) ──
         LibrarySyncStatus(viewModel = viewModel)
-
-        if (uiState.isImporting) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center)
-            )
-        }
 
         FilterSheetContent(
             showFilterSheet = uiState.showFilterSheet,

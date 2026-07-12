@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { i18n } from '$lib/shared/i18n';
+import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 
 export type BookImportInput = {
   sourcePath: string;
@@ -98,6 +99,38 @@ export async function importBook(
         genre: input.genre ?? null,
       },
     });
+
+    // Compute SHA-256 hash of the imported file for content-hash dedup
+    // (PR 5 — cross-device book sync). Non-blocking on failure.
+    let contentHash: string | undefined;
+    try {
+      const fileBytes = await getFileBytes(sourcePath);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', fileBytes as Uint8Array);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+      contentHash = `sha256:${hashHex}`;
+    } catch {
+      // Non-blocking — hash failure does not break the import UX.
+      // The reconciliation pass still works (just without dedup).
+    }
+
+    // Queue a BOOK outbox entry so metadata is pushed to Supabase
+    // for cross-device catalog visibility.
+    try {
+      const outboxDao = new SyncOutboxDao();
+      await outboxDao.add('BOOK', book.id, 'UPSERT', JSON.stringify({
+        title: book.title,
+        author: book.author,
+        format: book.format,
+        totalPages: book.totalPages,
+        content_hash: contentHash,
+        importedAt: book.createdAt,
+        updatedAt: book.updatedAt,
+      }));
+    } catch {
+      // Non-blocking — outbox write failure does not break the import UX.
+      // The reconciliation pass in syncBookCatalog() will catch any gaps.
+    }
 
     onProgress?.({
       status: 'importing',

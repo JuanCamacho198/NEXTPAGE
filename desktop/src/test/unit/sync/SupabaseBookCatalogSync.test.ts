@@ -1,0 +1,451 @@
+/**
+ * Unit tests for SupabaseBookCatalogSync — PR 2
+ * Tests: upsert flow, fetch catalog, delete, Realtime subscription,
+ * and reconciliation gap detection.
+ */
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+
+// ---- Mock control variables ----
+let mockFrom = vi.fn();
+let mockChannel = vi.fn();
+let mockChainable: Record<string, ReturnType<typeof vi.fn>>;
+
+// ---- Mock supabase client factory ----
+vi.mock('$lib/services/supabase', () => ({
+  getSessionClient: () => ({
+    from: mockFrom,
+    channel: mockChannel,
+  }),
+}));
+
+// ---- Test data ----
+function makeUserBookRow(overrides: Partial<{
+  id: string;
+  userId: string;
+  title: string;
+  author: string | null;
+  format: string;
+  contentHash: string | null;
+  filePath: string | null;
+  coverUrl: string | null;
+  description: string | null;
+  totalPages: number | null;
+  sourceDevice: string | null;
+  importedAt: string;
+  updatedAt: string;
+}> = {}) {
+  return {
+    id: 'book-1',
+    userId: 'user-1',
+    title: 'Test Book',
+    author: 'Test Author',
+    format: 'epub',
+    contentHash: null,
+    filePath: null,
+    coverUrl: null,
+    description: null,
+    totalPages: 250,
+    sourceDevice: 'desktop',
+    importedAt: '2025-01-01T00:00:00Z',
+    updatedAt: '2025-06-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+function makeRawRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: 'book-1',
+    user_id: 'user-1',
+    title: 'Test Book',
+    author: 'Test Author',
+    format: 'epub',
+    content_hash: null,
+    file_path: null,
+    cover_url: null,
+    description: null,
+    total_pages: 250,
+    source_device: 'desktop',
+    imported_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-06-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+let SupabaseBookCatalogSync: typeof import('$lib/shared/sync/SupabaseBookCatalogSync').SupabaseBookCatalogSync;
+
+beforeAll(async () => {
+  const mod = await import('$lib/shared/sync/SupabaseBookCatalogSync');
+  SupabaseBookCatalogSync = mod.SupabaseBookCatalogSync;
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+
+  // Build a chainable query builder mock
+  mockChainable = {
+    upsert: vi.fn().mockResolvedValue({ error: null }),
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockResolvedValue({ data: [], error: null }),
+    delete: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+
+  mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+  mockChannel = vi.fn().mockReturnValue({
+    on: vi.fn().mockReturnThis(),
+    subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+    unsubscribe: vi.fn(),
+  });
+});
+
+describe('SupabaseBookCatalogSync — upsertBook', () => {
+  it('upserts a book row with correct table and columns', async () => {
+    const sync = new SupabaseBookCatalogSync('user-1');
+    const book = makeUserBookRow();
+
+    await sync.upsertBook(book);
+
+    expect(mockFrom).toHaveBeenCalledWith('user_books');
+    expect(mockChainable.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'book-1',
+        user_id: 'user-1',
+        title: 'Test Book',
+        format: 'epub',
+      }),
+      expect.objectContaining({
+        onConflict: 'user_id, id',
+        ignoreDuplicates: false,
+      }),
+    );
+  });
+
+  it('maps null fields correctly', async () => {
+    const sync = new SupabaseBookCatalogSync('user-1');
+    const book = makeUserBookRow({
+      author: null,
+      contentHash: null,
+      filePath: null,
+      coverUrl: null,
+      description: null,
+      totalPages: null,
+      sourceDevice: null,
+    });
+
+    await sync.upsertBook(book);
+
+    expect(mockChainable.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        author: null,
+        content_hash: null,
+        file_path: null,
+        cover_url: null,
+        description: null,
+        total_pages: null,
+        source_device: null,
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it('throws on Supabase error', async () => {
+    const sync = new SupabaseBookCatalogSync('user-1');
+    const book = makeUserBookRow();
+
+    mockChainable.upsert = vi.fn().mockResolvedValue({ error: new Error('DB error') });
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    // Re-create sync so it picks up the updated mockFrom
+    const sync2 = new SupabaseBookCatalogSync('user-1');
+    await expect(sync2.upsertBook(book)).rejects.toThrow('DB error');
+  });
+});
+
+describe('SupabaseBookCatalogSync — fetchCatalog', () => {
+  it('fetches catalog with correct user filter and ordering', async () => {
+    mockChainable.order = vi.fn().mockResolvedValue({
+      data: [makeRawRow()],
+      error: null,
+    });
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    const result = await sync.fetchCatalog();
+
+    expect(mockFrom).toHaveBeenCalledWith('user_books');
+    expect(mockChainable.select).toHaveBeenCalledWith('*');
+    expect(mockChainable.eq).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(mockChainable.order).toHaveBeenCalledWith('updated_at', { ascending: false });
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('book-1');
+    expect(result[0].title).toBe('Test Book');
+  });
+
+  it('returns empty array when no books in catalog', async () => {
+    mockChainable.order = vi.fn().mockResolvedValue({ data: [], error: null });
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    const result = await sync.fetchCatalog();
+
+    expect(result).toEqual([]);
+  });
+
+  it('throws on Supabase error during fetch', async () => {
+    mockChainable.order = vi.fn().mockResolvedValue({ data: null, error: new Error('Network error') });
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    await expect(sync.fetchCatalog()).rejects.toThrow('Network error');
+  });
+
+  it('maps all columns from snake_case DB to camelCase interface', async () => {
+    mockChainable.order = vi.fn().mockResolvedValue({
+      data: [makeRawRow({
+        id: 'b2',
+        user_id: 'u1',
+        title: '1984',
+        author: 'Orwell',
+        format: 'pdf',
+        content_hash: 'sha256:abc123',
+        file_path: 'books/u1/b2.pdf',
+        cover_url: 'https://example.com/cover.jpg',
+        description: 'A dystopian novel',
+        total_pages: 328,
+        source_device: 'android',
+        imported_at: '2025-03-01T00:00:00Z',
+        updated_at: '2025-06-15T00:00:00Z',
+      })],
+      error: null,
+    });
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    const result = await sync.fetchCatalog();
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      id: 'b2',
+      userId: 'u1',
+      title: '1984',
+      author: 'Orwell',
+      format: 'pdf',
+      contentHash: 'sha256:abc123',
+      filePath: 'books/u1/b2.pdf',
+      coverUrl: 'https://example.com/cover.jpg',
+      description: 'A dystopian novel',
+      totalPages: 328,
+      sourceDevice: 'android',
+      importedAt: '2025-03-01T00:00:00Z',
+      updatedAt: '2025-06-15T00:00:00Z',
+    });
+  });
+});
+
+describe('SupabaseBookCatalogSync — deleteBook', () => {
+  it('deletes a book row by user_id and id', async () => {
+    mockChainable.delete = vi.fn().mockReturnThis();
+    // First eq call returns this, second resolves
+    mockChainable.eq = vi.fn()
+      .mockReturnValueOnce(mockChainable)  // user_id eq
+      .mockResolvedValueOnce({ error: null });  // id eq
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    await sync.deleteBook('book-1');
+
+    expect(mockFrom).toHaveBeenCalledWith('user_books');
+    expect(mockChainable.delete).toHaveBeenCalled();
+    expect(mockChainable.eq).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(mockChainable.eq).toHaveBeenCalledWith('id', 'book-1');
+  });
+
+  it('throws on Supabase error during delete', async () => {
+    mockChainable.delete = vi.fn().mockReturnThis();
+    mockChainable.eq = vi.fn()
+      .mockReturnValueOnce(mockChainable)
+      .mockResolvedValueOnce({ error: new Error('Delete failed') });
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    await expect(sync.deleteBook('book-1')).rejects.toThrow('Delete failed');
+  });
+});
+
+describe('SupabaseBookCatalogSync — subscribeToCatalog', () => {
+  it('subscribes to Realtime changes on user_books with userId filter', () => {
+    const sync = new SupabaseBookCatalogSync('user-1');
+
+    const unsubscribe = sync.subscribeToCatalog(vi.fn());
+
+    expect(mockChannel).toHaveBeenCalledWith('catalog:user-1');
+
+    const channelObj = mockChannel.mock.results[0].value;
+    expect(channelObj.on).toHaveBeenCalledWith(
+      'postgres_changes',
+      expect.objectContaining({
+        event: '*',
+        schema: 'public',
+        table: 'user_books',
+        filter: 'user_id=eq.user-1',
+      }),
+      expect.any(Function),
+    );
+    expect(channelObj.subscribe).toHaveBeenCalled();
+    expect(typeof unsubscribe).toBe('function');
+  });
+
+  it('calls callback on INSERT event', () => {
+    const sync = new SupabaseBookCatalogSync('user-1');
+    const callback = vi.fn();
+
+    sync.subscribeToCatalog(callback);
+
+    const channelObj = mockChannel.mock.results[0].value;
+    const onHandler = channelObj.on.mock.calls[0][2];
+
+    onHandler({
+      eventType: 'INSERT',
+      new: makeRawRow({ id: 'new-book', title: 'New Book' }),
+      old: {},
+      errors: [],
+    });
+
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'new-book',
+        title: 'New Book',
+      }),
+    );
+  });
+
+  it('skips callback when payload.new is null', () => {
+    const sync = new SupabaseBookCatalogSync('user-1');
+    const callback = vi.fn();
+
+    sync.subscribeToCatalog(callback);
+
+    const channelObj = mockChannel.mock.results[0].value;
+    const onHandler = channelObj.on.mock.calls[0][2];
+
+    onHandler({
+      eventType: 'DELETE',
+      new: null,
+      old: {},
+      errors: [],
+    });
+
+    expect(callback).not.toHaveBeenCalled();
+  });
+});
+
+describe('SupabaseBookCatalogSync — findByHash (PR 5 dedup)', () => {
+  it('returns a book row when hash matches', async () => {
+    // Override chainable for findByHash: select → eq(user_id) → eq(content_hash) → maybeSingle
+    const maybeSingleMock = vi.fn().mockResolvedValue({
+      data: makeRawRow({ content_hash: 'sha256:abc123' }),
+      error: null,
+    });
+    mockChainable.maybeSingle = maybeSingleMock;
+    // eq returns this twice (once for user_id, once for content_hash)
+    mockChainable.eq = vi.fn().mockReturnThis();
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    const result = await sync.findByHash('sha256:abc123');
+
+    expect(result).not.toBeNull();
+    expect(result!.id).toBe('book-1');
+    expect(result!.contentHash).toBe('sha256:abc123');
+    expect(mockFrom).toHaveBeenCalledWith('user_books');
+    expect(mockChainable.eq).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(mockChainable.eq).toHaveBeenCalledWith('content_hash', 'sha256:abc123');
+  });
+
+  it('returns null when hash does not match', async () => {
+    mockChainable.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    mockChainable.eq = vi.fn().mockReturnThis();
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    const result = await sync.findByHash('sha256:nonexistent');
+
+    expect(result).toBeNull();
+  });
+
+  it('throws on Supabase error', async () => {
+    mockChainable.maybeSingle = vi.fn().mockResolvedValue({
+      data: null,
+      error: new Error('DB error'),
+    });
+    mockChainable.eq = vi.fn().mockReturnThis();
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    await expect(sync.findByHash('sha256:error')).rejects.toThrow('DB error');
+  });
+});
+
+describe('SupabaseBookCatalogSync — destroy', () => {
+  it('unsubscribes from Realtime channel and clears reference', () => {
+    const sync = new SupabaseBookCatalogSync('user-1');
+
+    sync.subscribeToCatalog(vi.fn());
+
+    const channelObj = mockChannel.mock.results[0].value;
+
+    sync.destroy();
+
+    // destroy() calls the stored unsubscribe function which invokes channel.unsubscribe
+    expect(channelObj.unsubscribe).toHaveBeenCalled();
+  });
+});
+
+describe('Reconciliation — gap detection logic', () => {
+  it('identifies remote books not in local set as downloadable', () => {
+    const localBooks = [
+      { id: 'local-1', title: 'Local Book' },
+      { id: 'local-2', title: 'Another Local' },
+    ];
+
+    const remoteBooks = [
+      { id: 'local-1', title: 'Local Book', userId: 'u1', author: null, format: 'epub',
+        contentHash: null, filePath: null, coverUrl: null, description: null,
+        totalPages: null, sourceDevice: null, importedAt: '', updatedAt: '' },
+      { id: 'remote-1', title: 'Remote Book', userId: 'u1', author: 'Remote Author', format: 'pdf',
+        contentHash: null, filePath: null, coverUrl: null, description: null,
+        totalPages: 300, sourceDevice: 'android', importedAt: '', updatedAt: '' },
+      { id: 'remote-2', title: 'Another Remote', userId: 'u1', author: null, format: 'epub',
+        contentHash: null, filePath: null, coverUrl: null, description: null,
+        totalPages: null, sourceDevice: null, importedAt: '', updatedAt: '' },
+    ];
+
+    const localIds = new Set(localBooks.map((b) => b.id));
+    const downloadable = remoteBooks.filter((rb) => !localIds.has(rb.id));
+
+    expect(downloadable).toHaveLength(2);
+    expect(downloadable.map((b) => b.id)).toEqual(['remote-1', 'remote-2']);
+  });
+
+  it('identifies local books missing from remote as needing push', () => {
+    const localBooks = [
+      { id: 'local-1', title: 'Shared Book' },
+      { id: 'local-2', title: 'Missing from Remote' },
+    ];
+
+    const remoteBooks = [
+      { id: 'local-1', title: 'Shared Book', userId: 'u1', author: null, format: 'epub',
+        contentHash: null, filePath: null, coverUrl: null, description: null,
+        totalPages: null, sourceDevice: null, importedAt: '', updatedAt: '' },
+    ];
+
+    const remoteIds = new Set(remoteBooks.map((b) => b.id));
+    const needPush = localBooks.filter((lb) => !remoteIds.has(lb.id));
+
+    expect(needPush).toHaveLength(1);
+    expect(needPush[0].id).toBe('local-2');
+  });
+});

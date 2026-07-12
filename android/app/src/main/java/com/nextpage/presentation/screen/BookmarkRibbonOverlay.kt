@@ -86,7 +86,7 @@ fun BookmarkRibbonOverlay(
 
     Box(
         modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopEnd
+        contentAlignment = Alignment.TopCenter
     ) {
         AnimatedVisibility(
             visible = phaseVisible,

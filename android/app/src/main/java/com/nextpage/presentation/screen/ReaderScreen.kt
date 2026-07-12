@@ -174,7 +174,21 @@ fun ReaderScreen(
     } }
     val onSelectionAddTag = remember(viewModel) { { viewModel.onShowTagInput() } }
     val onSelectionAnnotate = remember(viewModel) { { viewModel.onAnnotate() } }
-    val onSelectionShare = remember(viewModel) { { viewModel.onShareSelectedText() } }
+    val onSelectionShare = remember(viewModel) { {
+        // Same pattern as onSelectionDelete (lines 161-174): read from
+        // selectionState to get the correct text — Existing highlights
+        // store text in highlight.textContent, not mutableUiState.selectedText.
+        when (val sel = uiState.selectionState) {
+            is com.nextpage.presentation.viewmodel.reader.ReaderSelectionState.Existing ->
+                viewModel.onShareSelectedText(sel.highlight.textContent)
+            is com.nextpage.presentation.viewmodel.reader.ReaderSelectionState.New ->
+                viewModel.onShareSelectedText(sel.text)
+            com.nextpage.presentation.viewmodel.reader.ReaderSelectionState.None -> {
+                @Suppress("UNUSED_EXPRESSION")
+                Unit
+            }
+        }
+    } }
     val onSelectionDictionary = remember(viewModel) { { viewModel.onAddToDictionary() } }
     val onSelectionShowColorPicker = remember(viewModel) { { viewModel.onShowColorPickerPopover() } }
     val onSelectionDismissColorPicker = remember(viewModel) { { viewModel.onDismissColorPickerPopover() } }
@@ -495,9 +509,15 @@ fun ReaderScreen(
 
             // ── Split Settings Sheet ────────────────────────────
             if (uiState.showSplitSettings && uiState.chapters.isNotEmpty()) {
+                // Derive previewText from selected text or chapter title
+                val previewText = remember(uiState.selectedText, uiState.currentChapterIndex, uiState.chapters) {
+                    uiState.selectedText?.takeIf { it.isNotBlank() }
+                        ?: uiState.chapters.getOrNull(uiState.currentChapterIndex)?.title
+                        ?: ""
+                }
                 SplitSettingsSheet(
                     settings = uiState.readerSettings,
-                    previewText = uiState.previewText,
+                    previewText = previewText,
                     onSettingsChanged = { viewModel.updateReaderSettings(it) },
                     onDismiss = { viewModel.onToggleSplitSettings() }
                 )

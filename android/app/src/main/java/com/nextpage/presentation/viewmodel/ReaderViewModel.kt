@@ -968,8 +968,9 @@ class ReaderViewModel(
      * Fires a share intent for the currently selected text. Delegates to
      * the interaction holder, which routes through [uiEvent].
      */
-    fun onShareSelectedText() {
-        interactionHolder.onShareSelectedText(mutableUiState.value.selectedText)
+    fun onShareSelectedText(text: String? = null) {
+        val shareText = text ?: mutableUiState.value.selectedText
+        interactionHolder.onShareSelectedText(shareText)
     }
 
     // ── Readium Highlights (Phase 3+) ──────────────────────────────
@@ -1088,7 +1089,8 @@ class ReaderViewModel(
             bookFormat = state.bookFormat,
             currentPdfPage = state.currentPdfPage,
             chapters = state.chapters,
-            currentChapterIndex = state.currentChapterIndex
+            currentChapterIndex = state.currentChapterIndex,
+            readiumLocator = state.readiumLocator
         )
     }
 

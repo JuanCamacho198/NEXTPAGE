@@ -788,13 +788,19 @@ class ReaderInteractionStateHolder(
     // Bookmarks
     // ──────────────────────────────────────────────────────────────
 
-    fun createBookmark(bookId: String, cfiLocation: String, titleOrSnippet: String) {
+    fun createBookmark(
+        bookId: String,
+        cfiLocation: String,
+        titleOrSnippet: String,
+        locatorJson: String? = null
+    ) {
         scope.launch(mainDispatcher) {
             val bookmark = Bookmark(
                 id = UUID.randomUUID().toString(),
                 bookId = bookId,
                 cfiLocation = cfiLocation,
                 titleOrSnippet = titleOrSnippet,
+                locatorJson = locatorJson,
                 updatedAtEpochMillis = System.currentTimeMillis(),
                 deletedAtEpochMillis = null
             )
@@ -808,7 +814,8 @@ class ReaderInteractionStateHolder(
         bookFormat: String?,
         currentPdfPage: Int,
         chapters: List<BookChapter>,
-        currentChapterIndex: Int
+        currentChapterIndex: Int,
+        readiumLocator: Locator? = null
     ) {
         val bookId = selectedBookId ?: return
         val format = bookFormat
@@ -821,9 +828,25 @@ class ReaderInteractionStateHolder(
             }
             else -> {
                 val chapter = chapters.getOrNull(currentChapterIndex) ?: return
-                val cfiLocation = "epubcfi(/6/${currentChapterIndex + 1})"
-                val titleOrSnippet = "Chapter ${currentChapterIndex + 1}: ${chapter.title}"
-                createBookmark(bookId, cfiLocation, titleOrSnippet)
+                // Use the precise readium locator when available for accurate CFI
+                if (readiumLocator != null) {
+                    val locatorJson = CfiMigrator.locatorToJson(readiumLocator)
+                    val preciseCfi = "readium:${readiumLocator.href}"
+                    val titleOrSnippet = chapter.title.ifBlank {
+                        "Chapter ${currentChapterIndex + 1}"
+                    }
+                    createBookmark(
+                        bookId = bookId,
+                        cfiLocation = preciseCfi,
+                        titleOrSnippet = titleOrSnippet,
+                        locatorJson = locatorJson
+                    )
+                } else {
+                    val cfiLocation = "epubcfi(/6/${currentChapterIndex + 1})"
+                    val titleOrSnippet =
+                        "Chapter ${currentChapterIndex + 1}: ${chapter.title}"
+                    createBookmark(bookId, cfiLocation, titleOrSnippet)
+                }
             }
         }
     }

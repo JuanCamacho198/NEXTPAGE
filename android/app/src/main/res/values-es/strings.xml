@@ -424,6 +424,16 @@
     <string name="highlights_delete_message">¿Estás seguro de eliminar este resaltado? "%1$s"</string>
     <string name="highlights_delete_confirm">Eliminar</string>
     <string name="highlights_deleted_snackbar">Resaltado eliminado</string>
+    <string name="highlights_menu_copy_text">Copiar texto</string>
+    <string name="highlights_menu_change_color">Cambiar color</string>
+    <string name="highlights_menu_view_in_book">Ver en el libro</string>
+    <string name="highlights_menu_add_tag">Agregar etiqueta</string>
+    <string name="highlights_menu_edit_tag">Editar etiqueta</string>
+    <string name="highlights_snackbar_copied">Copiado al portapapeles</string>
+    <string name="highlights_snackbar_color_changed">Color cambiado</string>
+    <string name="highlights_snackbar_tag_saved">Etiqueta guardada</string>
+    <string name="highlights_tag_dialog_hint">Ingresá nombre de etiqueta</string>
+    <string name="highlights_color_filter_todos">Todas</string>
 
     <!-- Library -->
     <string name="library_menu_edit_metadata">Editar metadatos</string>

@@ -1,5 +1,8 @@
 package com.nextpage.presentation.navigation
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -198,6 +201,14 @@ fun NextPageNavHost(
                                 context.getString(com.nextpage.R.string.library_share_chooser_title)
                             )
                         )
+                    }
+                    is UiEvent.CopyToClipboard -> {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("highlight", event.text))
+                        snackbarHostState.showSnackbar(context.getString(com.nextpage.R.string.highlights_snackbar_copied))
+                    }
+                    is UiEvent.OpenBookAtLocation -> {
+                        // TODO: navigate to ReaderScreen with bookId and cfiRange
                     }
                 }
             }

@@ -9,4 +9,6 @@ sealed interface UiEvent {
     /** Emitted to share a book file (EPUB/PDF) via ACTION_SEND.
      *  The host resolves the FileProvider URI and launches the chooser. */
     data class ShareFile(val filePath: String, val mimeType: String) : UiEvent
+    data class CopyToClipboard(val text: String) : UiEvent
+    data class OpenBookAtLocation(val bookId: String, val cfiRange: String) : UiEvent
 }

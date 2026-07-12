@@ -481,6 +481,16 @@
     <string name="highlights_delete_message">Are you sure you want to delete this highlight? "%1$s"</string>
     <string name="highlights_delete_confirm">Delete</string>
     <string name="highlights_deleted_snackbar">Highlight deleted</string>
+    <string name="highlights_menu_copy_text">Copy Text</string>
+    <string name="highlights_menu_change_color">Change Color</string>
+    <string name="highlights_menu_view_in_book">View in Book</string>
+    <string name="highlights_menu_add_tag">Add Tag</string>
+    <string name="highlights_menu_edit_tag">Edit Tag</string>
+    <string name="highlights_snackbar_copied">Copied to clipboard</string>
+    <string name="highlights_snackbar_color_changed">Color changed</string>
+    <string name="highlights_snackbar_tag_saved">Tag saved</string>
+    <string name="highlights_tag_dialog_hint">Enter tag name</string>
+    <string name="highlights_color_filter_todos">All</string>
 
     <!-- Library -->
     <string name="library_menu_edit_metadata">Edit Metadata</string>

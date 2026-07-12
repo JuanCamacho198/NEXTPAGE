@@ -27,7 +27,7 @@ data class HighlightsUiState(
     val books: List<Book> = emptyList(),
     val typeFilter: String = "all",
     val bookFilter: String? = null,
-    val colorFilter: String? = null,
+    val colorFilter: Set<String> = emptySet(),
     val tagFilter: String? = null,
     val searchQuery: String = "",
     val filteredHighlights: List<Highlight> = emptyList(),
@@ -36,7 +36,11 @@ data class HighlightsUiState(
     val errorMessage: String? = null,
     val highlightToEdit: Highlight? = null,
     val highlightToDelete: Highlight? = null,
-    val editNoteText: String = ""
+    val editNoteText: String = "",
+    val colorCounts: Map<String, Int> = emptyMap(),
+    val selectedHighlightForColorChange: Highlight? = null,
+    val selectedHighlightForTagEdit: Highlight? = null,
+    val editTagText: String = ""
 )
 
 class HighlightsViewModel(
@@ -49,12 +53,15 @@ class HighlightsViewModel(
 
     private val typeFilter = MutableStateFlow("all")
     private val bookFilter = MutableStateFlow<String?>(null)
-    private val colorFilter = MutableStateFlow<String?>(null)
+    private val colorFilter = MutableStateFlow<Set<String>>(emptySet())
     private val tagFilter = MutableStateFlow<String?>(null)
     private val searchQuery = MutableStateFlow("")
     private val _highlightToEdit = MutableStateFlow<Highlight?>(null)
     private val _highlightToDelete = MutableStateFlow<Highlight?>(null)
     private val _editNoteText = MutableStateFlow("")
+    private val _highlightToChangeColor = MutableStateFlow<Highlight?>(null)
+    private val _highlightToEditTag = MutableStateFlow<Highlight?>(null)
+    private val _editTagText = MutableStateFlow("")
 
     val uiState: StateFlow<HighlightsUiState> = combine(
         readerRepository.observeAllHighlights(),
@@ -67,24 +74,34 @@ class HighlightsViewModel(
         searchQuery,
         _highlightToEdit,
         _highlightToDelete,
-        _editNoteText
+        _editNoteText,
+        _highlightToChangeColor,
+        _highlightToEditTag,
+        _editTagText
     ) { values ->
         val highlights = values[0] as List<Highlight>
         val bookmarks = values[1] as List<Bookmark>
         val books = values[2] as List<Book>
         val type = values[3] as String
         val book = values[4] as String?
-        val color = values[5] as String?
+        val color = values[5] as Set<String>
         val tag = values[6] as String?
         val query = values[7] as String
         val highlightToEdit = values[8] as Highlight?
         val highlightToDelete = values[9] as Highlight?
         val editNoteText = values[10] as String
+        val highlightToChangeColor = values[11] as Highlight?
+        val highlightToEditTag = values[12] as Highlight?
+        val editTagText = values[13] as String
         val availableTags = highlights
             .mapNotNull { it.tag }
             .filter { it.isNotBlank() }
             .distinct()
             .sorted()
+        val colorCounts = highlights
+            .filter { it.deletedAtEpochMillis == null }
+            .groupBy { it.color }
+            .mapValues { it.value.size }
         HighlightsUiState(
             highlights = highlights,
             bookmarks = bookmarks,
@@ -99,6 +116,10 @@ class HighlightsViewModel(
             highlightToEdit = highlightToEdit,
             highlightToDelete = highlightToDelete,
             editNoteText = editNoteText,
+            colorCounts = colorCounts,
+            selectedHighlightForColorChange = highlightToChangeColor,
+            selectedHighlightForTagEdit = highlightToEditTag,
+            editTagText = editTagText,
             isLoading = false
         )
     }
@@ -116,8 +137,14 @@ class HighlightsViewModel(
         bookFilter.update { bookId }
     }
 
-    fun onColorFilterChanged(color: String?) {
-        colorFilter.update { color }
+    fun onColorFilterChanged(color: String) {
+        colorFilter.update { current ->
+            if (color in current) current - color else current + color
+        }
+    }
+
+    fun onColorFilterReset() {
+        colorFilter.update { emptySet() }
     }
 
     fun onTagFilterChanged(tag: String?) {
@@ -172,11 +199,72 @@ class HighlightsViewModel(
         _highlightToDelete.update { null }
     }
 
+    fun onCopyHighlight(highlight: Highlight) {
+        viewModelScope.launch {
+            _uiEvent.emit(UiEvent.CopyToClipboard(highlight.textContent))
+        }
+    }
+
+    fun onChangeHighlightColor(highlight: Highlight) {
+        _highlightToChangeColor.update { highlight }
+    }
+
+    fun dismissColorPicker() {
+        _highlightToChangeColor.update { null }
+    }
+
+    fun onConfirmColorChange(newColor: String) {
+        val highlight = _highlightToChangeColor.value ?: return
+        val updated = highlight.copy(
+            color = newColor,
+            updatedAtEpochMillis = System.currentTimeMillis()
+        )
+        viewModelScope.launch {
+            readerRepository.upsertHighlight(updated)
+            _uiEvent.emit(UiEvent.ShowSnackbar("Color changed"))
+        }
+        _highlightToChangeColor.update { null }
+    }
+
+    fun onAddHighlightTag(highlight: Highlight) {
+        _highlightToEditTag.update { highlight }
+        _editTagText.update { highlight.tag ?: "" }
+    }
+
+    fun dismissTagEdit() {
+        _highlightToEditTag.update { null }
+        _editTagText.update { "" }
+    }
+
+    fun onTagEditTextChanged(text: String) {
+        _editTagText.update { text }
+    }
+
+    fun onSaveHighlightTag(tag: String) {
+        val highlight = _highlightToEditTag.value ?: return
+        val updated = highlight.copy(
+            tag = tag.ifBlank { null },
+            updatedAtEpochMillis = System.currentTimeMillis()
+        )
+        viewModelScope.launch {
+            readerRepository.upsertHighlight(updated)
+            _uiEvent.emit(UiEvent.ShowSnackbar("Tag saved"))
+        }
+        _highlightToEditTag.update { null }
+        _editTagText.update { "" }
+    }
+
+    fun onViewInBook(highlight: Highlight) {
+        viewModelScope.launch {
+            _uiEvent.emit(UiEvent.OpenBookAtLocation(highlight.bookId, highlight.cfiRange))
+        }
+    }
+
     private fun applyFilters(
         highlights: List<Highlight>,
         type: String,
         book: String?,
-        color: String?,
+        color: Set<String>,
         tag: String?,
         query: String
     ): List<Highlight> {
@@ -188,7 +276,7 @@ class HighlightsViewModel(
                 else -> true
             }
             val matchesBook = book == null || highlight.bookId == book
-            val matchesColor = color == null || highlight.color.equals(color, ignoreCase = true)
+            val matchesColor = color.isEmpty() || color.any { it.equals(highlight.color, ignoreCase = true) }
             val matchesTag = tag == null || highlight.tag.equals(tag, ignoreCase = true)
             val matchesSearch = query.isBlank() ||
                 highlight.textContent.contains(query, ignoreCase = true) ||

@@ -1,6 +1,9 @@
 package com.nextpage.presentation.screen
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,23 +14,34 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FormatQuote
 import androidx.compose.material.icons.outlined.Lightbulb
-import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import com.nextpage.R
+import com.nextpage.domain.model.Highlight
+import com.nextpage.domain.model.HighlightColor
+import com.nextpage.presentation.theme.NextPageColors
+import com.nextpage.presentation.theme.NextPageDimens
+import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,19 +51,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.nextpage.R
-import com.nextpage.domain.model.Highlight
-import com.nextpage.domain.model.HighlightColor
-import com.nextpage.presentation.theme.NextPageColors
-import com.nextpage.presentation.theme.NextPageDimens
-import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageEmptyState
@@ -76,7 +87,7 @@ fun HighlightsScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showSearch by remember { mutableStateOf(false) }
     var showBookSelector by remember { mutableStateOf(false) }
-    var showColorSelector by remember { mutableStateOf(false) }
+
     var showTagSelector by remember { mutableStateOf(false) }
 
     val typeTabs = listOf(
@@ -92,14 +103,6 @@ fun HighlightsScreen(
         ) + uiState.books.map { SelectorOption(it.id, labelRes = null, label = it.title) }
     }
 
-    val colorOptions = remember {
-        listOf(
-            SelectorOption("all", R.string.highlights_filter_all_colors, icon = Icons.Outlined.Palette)
-        ) + HighlightColor.entries.map {
-            SelectorOption(it.hex, labelRes = null, label = it.name.lowercase().replaceFirstChar { c -> c.uppercase() })
-        }
-    }
-
     if (showBookSelector) {
         NextPageSelector(
             title = stringResource(R.string.highlights_filter_book),
@@ -110,19 +113,6 @@ fun HighlightsScreen(
                 showBookSelector = false
             },
             onDismiss = { showBookSelector = false }
-        )
-    }
-
-    if (showColorSelector) {
-        NextPageSelector(
-            title = stringResource(R.string.highlights_filter_color),
-            options = colorOptions,
-            selectedOptionId = uiState.colorFilter ?: "all",
-            onOptionSelected = { option ->
-                viewModel.onColorFilterChanged(if (option.id == "all") null else option.id)
-                showColorSelector = false
-            },
-            onDismiss = { showColorSelector = false }
         )
     }
 
@@ -154,6 +144,9 @@ fun HighlightsScreen(
     val ideaCount by remember { derivedStateOf { uiState.highlights.count { it.type == "idea" } } }
     val passageCount by remember { derivedStateOf { uiState.highlights.count { it.type == "passage" } } }
     val bookmarkCount by remember { derivedStateOf { uiState.bookmarks.size } }
+    val bookMap = remember(uiState.books) {
+        uiState.books.associate { it.id to it.title }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -212,11 +205,18 @@ fun HighlightsScreen(
         item {
             FilterControlsRow(
                 bookFilterTitle = filterBookTitle,
-                colorFilter = uiState.colorFilter,
                 tagFilter = uiState.tagFilter,
                 onBookFilterClick = { showBookSelector = true },
-                onColorFilterClick = { showColorSelector = true },
                 onTagFilterClick = { showTagSelector = true }
+            )
+        }
+
+        item {
+            ColorSwatchRow(
+                selectedColors = uiState.colorFilter,
+                highlightColors = HighlightColor.entries,
+                onColorToggled = { viewModel.onColorFilterChanged(it) },
+                onTodosSelected = { viewModel.onColorFilterReset() }
             )
         }
 
@@ -258,6 +258,16 @@ fun HighlightsScreen(
             }
         }
 
+        item {
+            if (uiState.colorCounts.isNotEmpty()) {
+                ColorStatsRow(
+                    colorCounts = uiState.colorCounts,
+                    selectedColors = uiState.colorFilter,
+                    onColorToggled = { viewModel.onColorFilterChanged(it) }
+                )
+            }
+        }
+
         if (uiState.filteredHighlights.isEmpty()) {
             item {
                 Box(
@@ -276,13 +286,18 @@ fun HighlightsScreen(
         } else {
             items(uiState.filteredHighlights, key = { it.id }) { highlight ->
                 NextPageHighlightCard(
-                    content = highlight.textContent.replace("\\n", " ").replace("\n", " "),
+                    content = stripSurroundingQuotes(
+                        highlight.textContent.replace("\\n", " ").replace("\n", " ")
+                    ),
                     accentColor = parseHighlightColor(highlight.color),
                     note = highlight.note,
                     tag = highlight.tag,
-                    colorLabel = HighlightColor.fromHex(highlight.color)?.name?.lowercase()
-                        ?.replaceFirstChar { c -> c.uppercase() },
+                    attribution = bookMap[highlight.bookId],
+                    onCopyText = { viewModel.onCopyHighlight(highlight) },
                     onEditNote = { viewModel.onEditHighlightNote(highlight) },
+                    onChangeColor = { viewModel.onChangeHighlightColor(highlight) },
+                    onViewInBook = { viewModel.onViewInBook(highlight) },
+                    onAddTag = { viewModel.onAddHighlightTag(highlight) },
                     onDelete = { viewModel.onDeleteHighlight(highlight) },
                     onTagClick = { tag -> viewModel.onTagFilterChanged(tag) }
                 )
@@ -337,15 +352,86 @@ fun HighlightsScreen(
             }
         )
     }
+
+    // ── Change Color Dialog ──────────────────────────────────────
+    uiState.selectedHighlightForColorChange?.let { highlight ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissColorPicker() },
+            title = { Text(stringResource(R.string.highlights_menu_change_color)) },
+            text = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    for (color in HighlightColor.entries) {
+                        val isActive = color.hex.equals(highlight.color, ignoreCase = true)
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(parseHighlightColor(color.hex))
+                                .clickable { viewModel.onConfirmColorChange(color.hex) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isActive) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .border(2.dp, Color.White, CircleShape)
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissColorPicker() }) {
+                    Text(stringResource(R.string.reader_cancel))
+                }
+            }
+        )
+    }
+
+    // ── Tag Edit Dialog ──────────────────────────────────────────
+    uiState.selectedHighlightForTagEdit?.let { _ ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissTagEdit() },
+            title = {
+                Text(
+                    stringResource(
+                        if (uiState.editTagText.isBlank()) R.string.highlights_menu_add_tag
+                        else R.string.highlights_menu_edit_tag
+                    )
+                )
+            },
+            text = {
+                OutlinedTextField(
+                    value = uiState.editTagText,
+                    onValueChange = { viewModel.onTagEditTextChanged(it) },
+                    placeholder = { Text(stringResource(R.string.highlights_tag_dialog_hint)) },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onSaveHighlightTag(uiState.editTagText) }) {
+                    Text(stringResource(R.string.reader_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissTagEdit() }) {
+                    Text(stringResource(R.string.reader_cancel))
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun FilterControlsRow(
     bookFilterTitle: String?,
-    colorFilter: String?,
     tagFilter: String?,
     onBookFilterClick: () -> Unit,
-    onColorFilterClick: () -> Unit,
     onTagFilterClick: () -> Unit
 ) {
     Row(
@@ -356,23 +442,6 @@ private fun FilterControlsRow(
             selected = bookFilterTitle != null,
             onClick = onBookFilterClick,
             label = { Text(bookFilterTitle ?: stringResource(R.string.highlights_filter_book)) },
-            colors = FilterChipDefaults.filterChipColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            modifier = Modifier.weight(1f)
-        )
-        FilterChip(
-            selected = colorFilter != null,
-            onClick = onColorFilterClick,
-            label = {
-                val defaultLabel = stringResource(R.string.highlights_filter_color)
-                val resolvedLabel = remember(colorFilter) {
-                    colorFilter?.let { hex ->
-                        HighlightColor.entries.find { it.hex.equals(hex, ignoreCase = true) }?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
-                    }
-                }
-                Text(resolvedLabel ?: defaultLabel)
-            },
             colors = FilterChipDefaults.filterChipColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             ),
@@ -424,4 +493,125 @@ private fun parseHighlightColor(hex: String): Color {
     } catch (_: Exception) {
         Color.Gray
     }
+}
+
+@Composable
+private fun ColorSwatchRow(
+    selectedColors: Set<String>,
+    highlightColors: List<HighlightColor>,
+    onColorToggled: (String) -> Unit,
+    onTodosSelected: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp)
+    ) {
+        // "Todos" — dashed stroked circle
+        item {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .clickable { onTodosSelected() },
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val stroke = Stroke(
+                        width = 2.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f), 0f)
+                    )
+                    drawCircle(
+                        color = Color.Gray,
+                        radius = size.minDimension / 2f - 2.dp.toPx() / 2f,
+                        style = stroke
+                    )
+                }
+            }
+        }
+
+        // Color swatches
+        items(highlightColors, key = { it.hex }) { highlightColor ->
+            val isSelected = highlightColor.hex in selectedColors
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(parseHighlightColor(highlightColor.hex))
+                    .clickable { onColorToggled(highlightColor.hex) }
+                    .then(
+                        if (isSelected) {
+                            Modifier.border(2.dp, Color.White, CircleShape)
+                        } else {
+                            Modifier
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(Color.White),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.Black
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ColorStatsRow(
+    colorCounts: Map<String, Int>,
+    selectedColors: Set<String>,
+    onColorToggled: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        HighlightColor.entries.forEach { highlightColor ->
+            val count = colorCounts[highlightColor.hex] ?: return@forEach
+            val isSelected = highlightColor.hex in selectedColors
+            Row(
+                modifier = Modifier
+                    .clickable { onColorToggled(highlightColor.hex) }
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(parseHighlightColor(highlightColor.hex))
+                        .then(
+                            if (isSelected) Modifier.border(1.5.dp, Color.White, CircleShape)
+                            else Modifier
+                        )
+                )
+                Text(
+                    text = "$count",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+private fun stripSurroundingQuotes(text: String): String {
+    return text.removeSurrounding("\"").removeSurrounding("'")
 }

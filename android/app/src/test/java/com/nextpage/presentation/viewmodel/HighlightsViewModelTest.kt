@@ -7,11 +7,14 @@ import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.ReadingStats
 import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.ReaderRepository
+import com.nextpage.presentation.UiEvent
 import com.nextpage.testutil.MainDispatcherRule
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -132,7 +135,7 @@ class HighlightsViewModelTest {
         viewModel.onColorFilterChanged(HighlightColor.YELLOW.hex)
 
         val state = viewModel.uiState.first()
-        assertEquals(HighlightColor.YELLOW.hex, state.colorFilter)
+        assertEquals(setOf(HighlightColor.YELLOW.hex), state.colorFilter)
         assertEquals(2, state.filteredHighlights.size)
     }
 
@@ -152,6 +155,153 @@ class HighlightsViewModelTest {
         val state = viewModel.uiState.first()
         assertEquals(1, state.filteredHighlights.size)
         assertEquals("1", state.filteredHighlights.first().id)
+    }
+
+    @Test
+    fun `multiSelectFilter matches any selected color`() = runTest {
+        val highlights = listOf(
+            createHighlight(id = "1", color = HighlightColor.YELLOW.hex),
+            createHighlight(id = "2", color = HighlightColor.GREEN.hex),
+            createHighlight(id = "3", color = HighlightColor.BLUE.hex)
+        )
+        val viewModel = createViewModel(highlights = highlights)
+        viewModel.uiState.first()
+
+        viewModel.onColorFilterChanged(HighlightColor.YELLOW.hex)
+        viewModel.onColorFilterChanged(HighlightColor.GREEN.hex)
+
+        val state = viewModel.uiState.first()
+        assertEquals(setOf(HighlightColor.YELLOW.hex, HighlightColor.GREEN.hex), state.colorFilter)
+        assertEquals(2, state.filteredHighlights.size)
+        assertTrue(state.filteredHighlights.all { it.color != HighlightColor.BLUE.hex })
+    }
+
+    @Test
+    fun `onColorFilterChanged toggles colors`() = runTest {
+        val highlights = listOf(
+            createHighlight(id = "1", color = HighlightColor.YELLOW.hex)
+        )
+        val viewModel = createViewModel(highlights = highlights)
+        viewModel.uiState.first()
+
+        viewModel.onColorFilterChanged(HighlightColor.YELLOW.hex)
+        val stateAfterAdd = viewModel.uiState.first()
+        assertEquals(setOf(HighlightColor.YELLOW.hex), stateAfterAdd.colorFilter)
+
+        viewModel.onColorFilterChanged(HighlightColor.YELLOW.hex)
+        val stateAfterRemove = viewModel.uiState.first()
+        assertEquals(emptySet<String>(), stateAfterRemove.colorFilter)
+    }
+
+    @Test
+    fun `onColorFilterReset clears all colors`() = runTest {
+        val highlights = listOf(
+            createHighlight(id = "1", color = HighlightColor.YELLOW.hex),
+            createHighlight(id = "2", color = HighlightColor.BLUE.hex)
+        )
+        val viewModel = createViewModel(highlights = highlights)
+        viewModel.uiState.first()
+
+        viewModel.onColorFilterChanged(HighlightColor.YELLOW.hex)
+        viewModel.onColorFilterChanged(HighlightColor.BLUE.hex)
+        val stateBeforeReset = viewModel.uiState.first()
+        assertEquals(2, stateBeforeReset.colorFilter.size)
+
+        viewModel.onColorFilterReset()
+        val stateAfterReset = viewModel.uiState.first()
+        assertEquals(emptySet<String>(), stateAfterReset.colorFilter)
+        assertEquals(2, stateAfterReset.filteredHighlights.size)
+    }
+
+    @Test
+    fun `onCopyHighlight emits copy event`() = runTest {
+        val highlight = createHighlight(textContent = "Hello world")
+        val viewModel = createViewModel(highlights = listOf(highlight))
+        viewModel.uiState.first()
+
+        val events = mutableListOf<UiEvent>()
+        backgroundScope.launch(Dispatchers.Main) {
+            viewModel.uiEvent.collect { events.add(it) }
+        }
+
+        viewModel.onCopyHighlight(highlight)
+
+        assertEquals(1, events.size)
+        val event = events.first()
+        assertTrue(event is UiEvent.CopyToClipboard)
+        assertEquals("Hello world", (event as UiEvent.CopyToClipboard).text)
+    }
+
+    @Test
+    fun `onConfirmColorChange persists and emits snackbar`() = runTest {
+        val highlight = createHighlight(color = HighlightColor.YELLOW.hex)
+        val readerRepo = FakeReaderRepository(listOf(highlight))
+        val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository())
+        viewModel.uiState.first()
+
+        viewModel.onChangeHighlightColor(highlight)
+
+        val events = mutableListOf<UiEvent>()
+        backgroundScope.launch(Dispatchers.Main) {
+            viewModel.uiEvent.collect { events.add(it) }
+        }
+
+        viewModel.onConfirmColorChange(HighlightColor.GREEN.hex)
+
+        assertEquals(HighlightColor.GREEN.hex, readerRepo.lastUpsertedHighlight?.color)
+        assertEquals(1, events.size)
+        assertTrue(events.first() is UiEvent.ShowSnackbar)
+        assertEquals("Color changed", (events.first() as UiEvent.ShowSnackbar).message)
+        val state = viewModel.uiState.first()
+        assertNull(state.selectedHighlightForColorChange)
+    }
+
+    @Test
+    fun `onSaveHighlightTag persists and emits snackbar`() = runTest {
+        val highlight = createHighlight(tag = null)
+        val readerRepo = FakeReaderRepository(listOf(highlight))
+        val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository())
+        viewModel.uiState.first()
+
+        viewModel.onAddHighlightTag(highlight)
+
+        val events = mutableListOf<UiEvent>()
+        backgroundScope.launch(Dispatchers.Main) {
+            viewModel.uiEvent.collect { events.add(it) }
+        }
+
+        viewModel.onSaveHighlightTag("my-tag")
+
+        assertEquals("my-tag", readerRepo.lastUpsertedHighlight?.tag)
+        assertEquals(1, events.size)
+        assertTrue(events.first() is UiEvent.ShowSnackbar)
+        assertEquals("Tag saved", (events.first() as UiEvent.ShowSnackbar).message)
+        val state = viewModel.uiState.first()
+        assertNull(state.selectedHighlightForTagEdit)
+        assertEquals("", state.editTagText)
+    }
+
+    @Test
+    fun `onViewInBook emits navigation event`() = runTest {
+        val highlight = createHighlight(
+            bookId = "book-42",
+            textContent = "memorable passage"
+        )
+        val viewModel = createViewModel(highlights = listOf(highlight))
+        viewModel.uiState.first()
+
+        val events = mutableListOf<UiEvent>()
+        backgroundScope.launch(Dispatchers.Main) {
+            viewModel.uiEvent.collect { events.add(it) }
+        }
+
+        viewModel.onViewInBook(highlight)
+
+        assertEquals(1, events.size)
+        val event = events.first()
+        assertTrue(event is UiEvent.OpenBookAtLocation)
+        assertEquals("book-42", (event as UiEvent.OpenBookAtLocation).bookId)
+        assertEquals("epubcfi(/6/2)", (event as UiEvent.OpenBookAtLocation).cfiRange)
     }
 
     // ── Helpers ─────────────────────────────────────────────────────
@@ -190,6 +340,8 @@ class HighlightsViewModelTest {
         private val highlights: List<Highlight> = emptyList()
     ) : ReaderRepository {
         private val highlightsFlow = MutableStateFlow(highlights)
+        var lastUpsertedHighlight: Highlight? = null
+            private set
 
         override fun observeProgress(bookId: String): Flow<com.nextpage.domain.model.ReadingProgress?> =
             MutableStateFlow(null)
@@ -199,7 +351,9 @@ class HighlightsViewModelTest {
         override fun observeAllHighlightsPaged(): Flow<androidx.paging.PagingData<Highlight>> =
             kotlinx.coroutines.flow.flowOf(androidx.paging.PagingData.empty())
         override fun observeHighlights(bookId: String): Flow<List<Highlight>> = highlightsFlow
-        override suspend fun upsertHighlight(highlight: Highlight) = Unit
+        override suspend fun upsertHighlight(highlight: Highlight) {
+            lastUpsertedHighlight = highlight
+        }
         override suspend fun getHighlightsForBook(bookId: String): List<Highlight> = highlights
         override fun observeAllTags(): Flow<List<String>> = MutableStateFlow(
             highlights.mapNotNull { it.tag }.distinct().sorted()

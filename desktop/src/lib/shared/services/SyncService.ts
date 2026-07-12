@@ -5,11 +5,18 @@
  *
  * Dual-write mode: after Drive sync, also upserts progress to Supabase.
  * Cutover: when `readingProgressSync` is 'supabase', Drive writes are skipped.
+ *
+ * Extended in PR 2 (cross-device-book-sync):
+ * - syncBookCatalog(): reconciles local books with Supabase user_books catalog
+ * - setupOutboxProcessor(): wires outbox handler for BOOK entity dispatch
  */
 import { authState } from '$lib/stores/authState.svelte';
 import { GDriveProvider } from './storage/GDriveProvider';
 import { GoogleDriveStateSync } from './GoogleDriveStateSync';
 import { SupabaseProgressSync } from '../sync/SupabaseProgressSync';
+import { SupabaseBookCatalogSync } from '../sync/SupabaseBookCatalogSync';
+import { SyncOutboxService } from '../outbox/SyncOutboxService';
+import { setDownloadableBooks } from '$lib/stores/downloadableCatalog.svelte';
 import type { ProgressStateJson, HighlightStateJson, BookmarkStateJson } from './GoogleDriveStateSync';
 import type { TagDto } from '$lib/shared/types';
 import * as tauri from '$lib/shared/api/tauriClient';
@@ -33,6 +40,9 @@ export class SyncService {
 
   /** Flag to track whether Drive → Supabase import was done this session. */
   private static supabaseImportDone = false;
+
+  /** Singleton outbox service for processing queued sync items. */
+  private static outboxService: SyncOutboxService | null = null;
 
   /**
    * Override the sync mode at runtime.
@@ -64,10 +74,127 @@ export class SyncService {
     );
   }
 
+  /**
+   * Set up and start the outbox timer-based processor.
+   * Registers a handler that dispatches by entity type:
+   * - BOOK → SupabaseBookCatalogSync.upsertBook()
+   * - READING_PROGRESS → (future, no-op for now)
+   *
+   * Idempotent — safe to call multiple times.
+   */
+  static setupOutboxProcessor(): void {
+    if (this.outboxService) return;
+
+    this.outboxService = new SyncOutboxService();
+    this.outboxService.setHandler(async (entityType, entityId, operation, payloadJson) => {
+      if (!authState.userId || !entityId) return;
+
+      if (entityType === 'BOOK' && operation === 'UPSERT') {
+        const metadata = JSON.parse(payloadJson) as Record<string, unknown>;
+        const bookSync = new SupabaseBookCatalogSync(authState.userId);
+
+        const contentHash = metadata.content_hash != null ? String(metadata.content_hash) : null;
+
+        // Content-hash dedup: skip if this SHA-256 hash already exists
+        // in the catalog for this user (book imported from other device).
+        if (contentHash) {
+          const existing = await bookSync.findByHash(contentHash);
+          if (existing) {
+            // Already in catalog — skip upsert to avoid duplicates
+            return;
+          }
+        }
+
+        await bookSync.upsertBook({
+          id: entityId,
+          userId: authState.userId,
+          title: String(metadata.title ?? ''),
+          author: metadata.author != null ? String(metadata.author) : null,
+          format: String(metadata.format ?? ''),
+          contentHash: contentHash,
+          filePath: null,
+          coverUrl: null,
+          description: null,
+          totalPages: metadata.totalPages != null ? Number(metadata.totalPages) : null,
+          sourceDevice: 'desktop',
+          importedAt: metadata.importedAt != null ? String(metadata.importedAt) : new Date().toISOString(),
+          updatedAt: metadata.updatedAt != null ? String(metadata.updatedAt) : new Date().toISOString(),
+        });
+      } else if (entityType === 'BOOK' && operation === 'DELETE') {
+        const bookSync = new SupabaseBookCatalogSync(authState.userId);
+        await bookSync.deleteBook(entityId);
+      }
+      // READING_PROGRESS and other types are handled downstream by
+      // existing SupabaseProgressSync / Drive sync flows.
+    });
+
+    this.outboxService.start();
+  }
+
+  /**
+   * Sync book metadata catalog with Supabase.
+   *
+   * Flow:
+   * 1. Fetch remote catalog from user_books table
+   * 2. Get local books from SQLite
+   * 3. Reconcile: push local books that are missing from the remote catalog
+   * 4. Compute downloadable: remote books not present locally
+   * 5. Store downloadable list in reactive store for UI
+   */
+  static async syncBookCatalog(): Promise<void> {
+    if (!authState.userId) return;
+
+    try {
+      const catalogSync = new SupabaseBookCatalogSync(authState.userId);
+
+      // 1. Fetch remote catalog
+      const remoteBooks = await catalogSync.fetchCatalog();
+
+      // 2. Get local books
+      const localBooks = await tauri.listBooks();
+
+      const remoteIds = new Set(remoteBooks.map((b) => b.id));
+      const localIds = new Set(localBooks.map((b) => b.id));
+
+      // 3. Reconcile: push any local book missing from remote catalog
+      for (const book of localBooks) {
+        if (!remoteIds.has(book.id)) {
+          try {
+            await catalogSync.upsertBook({
+              id: book.id,
+              userId: authState.userId,
+              title: book.title,
+              author: book.author || null,
+              format: book.format,
+              contentHash: null,
+              filePath: book.filePath || null,
+              coverUrl: null,
+              description: null,
+              totalPages: book.totalPages > 0 ? book.totalPages : null,
+              sourceDevice: 'desktop',
+              importedAt: book.createdAt,
+              updatedAt: book.updatedAt,
+            });
+          } catch (e) {
+            console.error(`Failed to push local book ${book.id} to catalog:`, e);
+          }
+        }
+      }
+
+      // 4. Compute downloadable: remote books not in local set
+      const downloadable = remoteBooks.filter((rb) => !localIds.has(rb.id));
+
+      // 5. Store in reactive store
+      setDownloadableBooks(downloadable);
+    } catch (e) {
+      console.error('Failed to sync book catalog:', e);
+    }
+  }
+
   static async syncMetadata(): Promise<void> {
     if (!authState.isSignedIn) return;
 
-    await Promise.all([this.syncBooks(), this.syncState()]);
+    await Promise.all([this.syncBooks(), this.syncState(), this.syncBookCatalog()]);
   }
 
   /**

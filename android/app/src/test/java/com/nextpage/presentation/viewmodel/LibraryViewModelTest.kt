@@ -1,6 +1,7 @@
 package com.nextpage.presentation.viewmodel
 
 import android.content.Context
+import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.data.storage.CoverStorage
@@ -44,7 +45,8 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
-            mainDispatcher = dispatcher
+            mainDispatcher = dispatcher,
+            catalogSync = mockk()
         )
 
         var emittedEvent: LibraryImportEvent? = null
@@ -78,7 +80,8 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
-            mainDispatcher = dispatcher
+            mainDispatcher = dispatcher,
+            catalogSync = mockk()
         )
 
         var emittedEvent: LibraryImportEvent? = null
@@ -111,7 +114,8 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
-            mainDispatcher = dispatcher
+            mainDispatcher = dispatcher,
+            catalogSync = mockk()
         )
 
         assertTrue(viewModel.uiState.value.isLoading)
@@ -145,7 +149,8 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
-            mainDispatcher = dispatcher
+            mainDispatcher = dispatcher,
+            catalogSync = mockk()
         )
 
         var emittedEvent: UiEvent? = null
@@ -183,7 +188,8 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
-            mainDispatcher = dispatcher
+            mainDispatcher = dispatcher,
+            catalogSync = mockk()
         )
 
         var emittedEvent: UiEvent? = null
@@ -221,7 +227,8 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
-            mainDispatcher = dispatcher
+            mainDispatcher = dispatcher,
+            catalogSync = mockk()
         )
 
         repository.emitReadingMinutesByBook(mapOf("book-1" to 42L, "book-2" to 5L))
@@ -241,7 +248,8 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
-            mainDispatcher = dispatcher
+            mainDispatcher = dispatcher,
+            catalogSync = mockk()
         )
 
         // searchedBooks uses WhileSubscribed(5000) — subscribe in background

@@ -9,6 +9,7 @@ import com.nextpage.data.local.entity.BookEntity
 import com.nextpage.data.local.entity.ReadingStatsEntity
 import com.nextpage.data.pdf.PdfMetadata
 import com.nextpage.data.pdf.PdfParserService
+import com.nextpage.data.local.dao.SyncOutboxDao
 import com.nextpage.data.storage.CoverStorage
 import com.nextpage.testutil.FakePagingSource
 import androidx.paging.PagingSource
@@ -44,7 +45,8 @@ class LibraryRepositoryImplTest {
                 )
             ),
             pdfParserService = FakePdfParserService(Result.success(PdfMetadata("PDF Book", null, 10, 100))),
-            coverStorage = FakeCoverStorage()
+            coverStorage = FakeCoverStorage(),
+            outboxDao = mockk()
         )
 
         val result = repository.importBookFromEpub(
@@ -84,7 +86,8 @@ class LibraryRepositoryImplTest {
                     )
                 )
             ),
-            coverStorage = FakeCoverStorage()
+            coverStorage = FakeCoverStorage(),
+            outboxDao = mockk()
         )
 
         val result = repository.importBookFromPdf(
@@ -115,7 +118,8 @@ class LibraryRepositoryImplTest {
             readingStatsDao = FakeReadingStatsDao(),
             epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("Should not be called"))),
             pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("Invalid PDF"))),
-            coverStorage = FakeCoverStorage()
+            coverStorage = FakeCoverStorage(),
+            outboxDao = mockk()
         )
 
         val result = repository.importBookFromPdf(
@@ -140,7 +144,8 @@ class LibraryRepositoryImplTest {
             readingStatsDao = fakeReadingStatsDao,
             epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
             pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
-            coverStorage = FakeCoverStorage()
+            coverStorage = FakeCoverStorage(),
+            outboxDao = mockk()
         )
 
         fakeReadingStatsDao.totalMinutesState.value = null
@@ -160,7 +165,8 @@ class LibraryRepositoryImplTest {
             readingStatsDao = FakeReadingStatsDao(),
             epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
             pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
-            coverStorage = FakeCoverStorage()
+            coverStorage = FakeCoverStorage(),
+            outboxDao = mockk()
         )
 
         fakeDao.upsert(
@@ -231,7 +237,8 @@ class LibraryRepositoryImplTest {
             readingStatsDao = FakeReadingStatsDao(),
             epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
             pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
-            coverStorage = FakeCoverStorage()
+            coverStorage = FakeCoverStorage(),
+            outboxDao = mockk()
         )
 
         // The PagingSource is wired from the DAO. Verify that the FakeBookDao's
@@ -319,7 +326,8 @@ class LibraryRepositoryImplTest {
             readingStatsDao = FakeReadingStatsDao(),
             epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
             pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
-            coverStorage = FakeCoverStorage()
+            coverStorage = FakeCoverStorage(),
+            outboxDao = mockk()
         )
 
         val bookId = "test-book-id"
@@ -352,7 +360,8 @@ class LibraryRepositoryImplTest {
             readingStatsDao = FakeReadingStatsDao(),
             epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
             pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
-            coverStorage = FakeCoverStorage()
+            coverStorage = FakeCoverStorage(),
+            outboxDao = mockk()
         )
 
         val result = repository.getBookById("non-existent-id")

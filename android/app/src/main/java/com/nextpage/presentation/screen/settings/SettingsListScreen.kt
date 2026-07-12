@@ -193,21 +193,19 @@ fun SettingsListScreen(
                 SettingsGroupBlock(group = group)
             }
 
-            if (BuildConfig.DEBUG) {
-                DebugModeSection(context = context)
+            DebugModeSection(context = context)
 
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = stringResource(R.string.debug_panel_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    NextPagePreferenceItem(
-                        icon = Icons.Outlined.BugReport,
-                        label = stringResource(R.string.debug_settings_log_viewer),
-                        onClick = onNavigateToLogViewer
-                    )
-                }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(R.string.debug_panel_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                NextPagePreferenceItem(
+                    icon = Icons.Outlined.BugReport,
+                    label = stringResource(R.string.debug_settings_log_viewer),
+                    onClick = onNavigateToLogViewer
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))

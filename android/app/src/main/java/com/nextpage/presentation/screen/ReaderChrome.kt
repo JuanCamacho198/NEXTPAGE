@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.nextpage.R
+import com.nextpage.debug.DebugPrefs
 import com.nextpage.presentation.viewmodel.ReaderUiState
 
 // ── Reader Design Colors ──────────────────────────────────────────
@@ -248,11 +250,9 @@ fun ReaderHeader(
                 onClick = onCreateBookmark
             )
 
-            // Debug panel toggle — only shown in debug builds. Wired to
-            // the onToggleDebugPanel callback so the caller decides when
-            // the debug surface should appear (the screen already gates
-            // it on BuildConfig.DEBUG + DebugPrefs.isEnabled).
-            if (uiState.isDebugBuild) {
+            // Debug panel toggle — gated on runtime DebugPrefs so it works
+            // in release builds when the debug toggle is enabled in Settings.
+            if (DebugPrefs.isEnabled(LocalContext.current)) {
                 HeaderActionButton(
                     icon = Icons.Default.BugReport,
                     contentDescription = stringResource(R.string.debug_panel_title),

@@ -140,7 +140,6 @@ class ReaderUiState(
 
     // ── Debug ──────────────────────────────────────────────────────
     val debugForceMenu: Boolean = false,
-    val isDebugBuild: Boolean = com.nextpage.BuildConfig.DEBUG,
 
     // ── Floating menus / anchored inputs ────────────────────────────
     val showColorPickerPopover: Boolean = false,
@@ -195,7 +194,6 @@ class ReaderUiState(
         readiumSelectionLocator: Locator? = this.readiumSelectionLocator,
         readiumViewportHeight: Int = this.readiumViewportHeight,
         debugForceMenu: Boolean = this.debugForceMenu,
-        isDebugBuild: Boolean = this.isDebugBuild,
         showColorPickerPopover: Boolean = this.showColorPickerPopover,
         showNoteModal: Boolean = this.showNoteModal,
         activeNoteText: String = this.activeNoteText,
@@ -247,7 +245,6 @@ class ReaderUiState(
             readiumSelectionLocator = readiumSelectionLocator,
             readiumViewportHeight = readiumViewportHeight,
             debugForceMenu = debugForceMenu,
-            isDebugBuild = isDebugBuild,
             showColorPickerPopover = showColorPickerPopover,
             showNoteModal = showNoteModal,
             activeNoteText = activeNoteText,
@@ -302,7 +299,6 @@ class ReaderUiState(
             readiumSelectionLocator == other.readiumSelectionLocator &&
             readiumViewportHeight == other.readiumViewportHeight &&
             debugForceMenu == other.debugForceMenu &&
-            isDebugBuild == other.isDebugBuild &&
             showColorPickerPopover == other.showColorPickerPopover &&
             showNoteModal == other.showNoteModal &&
             activeNoteText == other.activeNoteText &&
@@ -355,7 +351,6 @@ class ReaderUiState(
         result = 31 * result + (readiumSelectionLocator?.hashCode() ?: 0)
         result = 31 * result + readiumViewportHeight
         result = 31 * result + debugForceMenu.hashCode()
-        result = 31 * result + isDebugBuild.hashCode()
         result = 31 * result + showColorPickerPopover.hashCode()
         result = 31 * result + showNoteModal.hashCode()
         result = 31 * result + activeNoteText.hashCode()
@@ -410,7 +405,6 @@ class ReaderUiState(
             "readiumSelectionLocator=$readiumSelectionLocator, " +
             "readiumViewportHeight=$readiumViewportHeight, " +
             "debugForceMenu=$debugForceMenu, " +
-            "isDebugBuild=$isDebugBuild, " +
             "showColorPickerPopover=$showColorPickerPopover, " +
             "showNoteModal=$showNoteModal, " +
             "activeNoteText='$activeNoteText', " +

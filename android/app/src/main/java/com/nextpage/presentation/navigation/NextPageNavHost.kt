@@ -74,7 +74,6 @@ import com.nextpage.debug.LogViewerScreen
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.debug.DebugPanel
 import com.nextpage.presentation.debug.DebugViewModel
-import com.nextpage.BuildConfig
 import com.nextpage.debug.DebugPrefs
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -610,7 +609,7 @@ fun NextPageNavHost(
         }
 
         // ── Debug FAB ──────────────────────────────────────────────────
-        val showDebugFab = BuildConfig.DEBUG &&
+        val showDebugFab =
             DebugPrefs.isEnabled(context) &&
             authState.currentSession?.userId?.startsWith("local-") == true
 
@@ -639,6 +638,7 @@ fun NextPageNavHost(
                 onDismiss = { showDebugSheet = false }
             )
         }
+        }
+        }
     }
-}
 }

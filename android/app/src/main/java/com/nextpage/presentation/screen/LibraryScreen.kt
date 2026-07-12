@@ -7,14 +7,35 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -26,10 +47,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nextpage.R
+import com.nextpage.data.remote.supabase.UserBookRow
 import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.presentation.screen.library.BookGridSection
 import com.nextpage.presentation.screen.library.FilterSheetContent
@@ -37,6 +63,7 @@ import com.nextpage.presentation.screen.library.LibraryDialogs
 import com.nextpage.presentation.screen.library.LibraryToolbar
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.util.getContentDisplayName
+import com.nextpage.presentation.viewmodel.DownloadState
 import com.nextpage.presentation.viewmodel.LibraryViewModel
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
@@ -150,6 +177,16 @@ fun LibraryScreen(
                         onViewToggle = { viewModel.onToggleView() }
                     )
 
+                    val firstDownloadError by viewModel.firstDownloadError.collectAsState()
+
+                    DownloadableBooksSection(
+                        books = uiState.downloadableBooks,
+                        downloadStateMap = uiState.downloadState,
+                        firstError = firstDownloadError,
+                        onDownload = { bookId -> viewModel.downloadBook(bookId) },
+                        onDismissError = { viewModel.dismissDownloadError(it) }
+                    )
+
                     BookGridSection(
                         books = searchedBooks,
                         readingMinutesByBook = uiState.readingMinutesByBook,
@@ -228,6 +265,176 @@ private fun LibrarySyncStatus(viewModel: LibraryViewModel) {
                 .statusBarsPadding()
                 .padding(top = 8.dp, end = 16.dp)
         )
+    }
+}
+
+/**
+ * Section showing books available from other devices.
+ * Appears above the main book grid when there are downloadable books.
+ */
+@Composable
+private fun DownloadableBooksSection(
+    books: List<UserBookRow>,
+    downloadStateMap: Map<String, DownloadState>,
+    firstError: DownloadState.Error?,
+    onDownload: (bookId: String) -> Unit,
+    onDismissError: (bookId: String) -> Unit
+) {
+    if (firstError != null) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer
+            )
+        ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = firstError.message,
+                modifier = Modifier.weight(1f),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            IconButton(
+                onClick = { onDismissError(firstError.bookId) },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.action_dismiss),
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        }
+    }
+
+    if (books.isEmpty()) return
+
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = stringResource(R.string.book_available_from_other_device),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = stringResource(R.string.library_count, books.size),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(books, key = { it.id }) { row ->
+                DownloadableBookCard(
+                    book = row,
+                    isDownloading = downloadStateMap[row.id] is DownloadState.Downloading,
+                    onDownload = { onDownload(row.id) }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+    }
+}
+
+/**
+ * A single downloadable book card with title, author, source label, and download button.
+ */
+@Composable
+private fun DownloadableBookCard(
+    book: UserBookRow,
+    isDownloading: Boolean,
+    onDownload: () -> Unit
+) {
+    val sourceLabel = when (book.sourceDevice) {
+        "android" -> stringResource(R.string.book_download_source_android)
+        "desktop" -> stringResource(R.string.book_download_source_desktop)
+        else -> stringResource(R.string.book_download_source_unknown)
+    }
+
+    Card(
+        modifier = Modifier.width(160.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = book.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (book.author != null) {
+                    Text(
+                        text = book.author,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = sourceLabel,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (isDownloading) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .align(Alignment.CenterHorizontally),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                FilledTonalButton(
+                    onClick = onDownload,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CloudDownload,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.book_download),
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
     }
 }
 

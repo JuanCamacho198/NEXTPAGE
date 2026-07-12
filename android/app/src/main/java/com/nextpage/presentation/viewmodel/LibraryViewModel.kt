@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
+import com.nextpage.data.remote.supabase.UserBookRow
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.data.storage.CoverStorage
@@ -80,6 +82,9 @@ data class LibraryUiState(
     val isRefreshing: Boolean = false,
     val pendingCount: Int = 0,
     val syncError: String? = null,
+    // ── Cross-device download ──
+    val downloadableBooks: List<UserBookRow> = emptyList(),
+    val downloadState: Map<String, DownloadState> = emptyMap(),
     // ── UI State (filters, sort, search) ──
     val statusFilter: String = "all",
     val sortBy: String = "date_added",
@@ -148,6 +153,16 @@ sealed interface LibraryImportEvent {
 }
 
 /**
+ * Download state for a cross-device book download.
+ */
+sealed interface DownloadState {
+    data object Idle : DownloadState
+    data object Downloading : DownloadState
+    data class Error(val bookId: String, val message: String) : DownloadState
+    data class Success(val title: String) : DownloadState
+}
+
+/**
  * LibraryViewModel — Owns the bookshelf (book list) state and exposes a
  * filtered/sorted/searched view of it. Wires Room observation, sync service
  * observation, and delegates filter / import / action logic to dedicated
@@ -166,6 +181,7 @@ class LibraryViewModel(
     private val syncService: SyncService,
     private val coverStorage: CoverStorage,
     private val appContext: Context,
+    private val catalogSync: SupabaseBookCatalogSync,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) : ViewModel() {
 
@@ -332,6 +348,19 @@ class LibraryViewModel(
                     mutableUiState.update { it.copy(pendingCount = count) }
                 }
         }
+
+        // ── Cross-device downloadable books observation ──
+        viewModelScope.launch(mainDispatcher) {
+            // Re-fetch downloadable books periodically (on each session poll cycle).
+            // A more reactive approach would listen to Supabase Realtime changes.
+            while (true) {
+                catalogSync.getDownloadableBooks().onSuccess { books ->
+                    mutableDownloadableBooks.value = books
+                    mutableUiState.update { it.copy(downloadableBooks = books) }
+                }
+                kotlinx.coroutines.delay(30_000L) // poll every 30s
+            }
+        }
     }
 
     // ── Delegation: Filter / Sort / Search ─────────────────────────────
@@ -478,6 +507,67 @@ class LibraryViewModel(
      */
     fun onMenuShare(book: Book) = bookActionStateHolder.onMenuShare(book)
 
+    // ── Cross-device download ────────────────────────────────────────
+
+    private val mutableDownloadableBooks = MutableStateFlow<List<UserBookRow>>(emptyList())
+    /** Books from other devices available for download. */
+    val downloadableBooks: StateFlow<List<UserBookRow>> = mutableDownloadableBooks.asStateFlow()
+
+    private val mutableDownloadState = MutableStateFlow<Map<String, DownloadState>>(emptyMap())
+    /** Per-book download progress state. */
+    val downloadState: StateFlow<Map<String, DownloadState>> = mutableDownloadState.asStateFlow()
+
+    /**
+     * Downloads a book from another device.
+     * Updates per-book [downloadState] through Downloading → Success/Error lifecycle.
+     *
+     * @param bookId The catalog book ID to download.
+     */
+    fun downloadBook(bookId: String) {
+        mutableDownloadState.update { it + (bookId to DownloadState.Downloading) }
+
+        viewModelScope.launch(mainDispatcher) {
+            val book = mutableDownloadableBooks.value.find { it.id == bookId }
+            val title = book?.title ?: bookId
+
+            catalogSync.downloadRemoteBook(bookId)
+                .onSuccess {
+                    mutableDownloadState.update { it + (bookId to DownloadState.Success(title)) }
+                    // Remove from downloadable list after a short delay
+                    kotlinx.coroutines.delay(2_000L)
+                    mutableDownloadableBooks.value = mutableDownloadableBooks.value.filter { it.id != bookId }
+                    mutableUiState.update { current ->
+                        current.copy(
+                            downloadableBooks = current.downloadableBooks.filter { it.id != bookId },
+                            downloadState = current.downloadState + (bookId to DownloadState.Idle)
+                        )
+                    }
+                    mutableDownloadState.update { it - bookId }
+                }
+                .onFailure { error ->
+                    val err = DownloadState.Error(bookId, error.message ?: "Download failed")
+                    mutableDownloadState.update { it + (bookId to err) }
+                }
+        }
+    }
+
+    /**
+     * Dismisses the download error for a specific book.
+     * @param bookId The catalog book ID whose error to dismiss.
+     */
+    fun dismissDownloadError(bookId: String) {
+        mutableDownloadState.update { it - bookId }
+    }
+
+    /**
+     * Convenience: the first error in [downloadState] for error-banner display,
+     * or `null` if no errors.
+     */
+    val firstDownloadError: StateFlow<DownloadState.Error?>
+        get() = mutableDownloadState.map { states ->
+            states.values.filterIsInstance<DownloadState.Error>().firstOrNull()
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     // ── Sync (stays in ViewModel — cross-cutting concern) ──────────────
 
     /**
@@ -506,7 +596,8 @@ class LibraryViewModelFactory(
     private val libraryRepository: LibraryRepository,
     private val syncService: SyncService,
     private val coverStorage: CoverStorage,
-    private val appContext: Context
+    private val appContext: Context,
+    private val catalogSync: SupabaseBookCatalogSync
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -516,7 +607,8 @@ class LibraryViewModelFactory(
                 importEpubBookUseCase = ImportEpubBookUseCase(libraryRepository),
                 syncService = syncService,
                 coverStorage = coverStorage,
-                appContext = appContext
+                appContext = appContext,
+                catalogSync = catalogSync
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

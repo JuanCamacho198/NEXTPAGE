@@ -101,7 +101,8 @@ fun NextPageNavHost(
             libraryRepository = appContainer.libraryRepository,
             syncService = appContainer.syncService,
             coverStorage = appContainer.coverStorage,
-            appContext = context.applicationContext
+            appContext = context.applicationContext,
+            catalogSync = appContainer.supabaseBookCatalogSync
         )
     )
 

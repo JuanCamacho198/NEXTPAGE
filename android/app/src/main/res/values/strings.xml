@@ -571,4 +571,16 @@
     <string name="import_state_extracting">Extracting book…</string>
     <string name="import_state_analyzing">Analyzing content…</string>
     <string name="import_state_saving">Saving…</string>
+
+    <!-- Download from other devices -->
+    <string name="book_available_from_other_device">Available from other devices</string>
+    <string name="book_download">Download</string>
+    <string name="book_downloading">Downloading…</string>
+    <string name="book_download_error">Could not download book. Please check your connection and try again.</string>
+    <string name="book_download_source_android">From Android</string>
+    <string name="book_download_source_desktop">From Desktop</string>
+    <string name="book_download_source_unknown">From another device</string>
+    <string name="book_empty_downloadable">No books available from other devices</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="library_count">%1$d available</string>
 </resources>

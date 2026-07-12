@@ -6,6 +6,10 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -221,6 +225,13 @@ fun AuthScreen(
                         strokeWidth = 2.dp
                     )
                 } else {
+                    Icon(
+                        imageVector = Icons.Filled.AccountCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.auth_continue_with_google),
                         fontWeight = FontWeight.Medium
@@ -263,12 +274,19 @@ fun AuthScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.auth_sign_in_email),
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Email,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.auth_sign_in_email),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
 
             // ─── Email/password fields (animated expand) ──────────────
             AnimatedVisibility(
@@ -337,6 +355,13 @@ fun AuthScreen(
                 onClick = onContinueLocal,
                 variant = NextPageButtonVariant.TEXT
             ) {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.auth_continue_local_dev),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

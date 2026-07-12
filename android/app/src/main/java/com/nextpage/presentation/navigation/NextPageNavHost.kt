@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -144,6 +145,7 @@ fun NextPageNavHost(
 
     val authState by authViewModel.uiState.collectAsState()
     val isAuthenticated = authState.currentSession != null
+    val isCheckingSession = authState.isCheckingSession
 
     val homeViewModel: HomeViewModel = viewModel(
         factory = HomeViewModelFactory(
@@ -275,6 +277,11 @@ fun NextPageNavHost(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        if (isCheckingSession) {
+            // Splash screen while session is being restored — prevents white
+            // flash between Auth and Home when startDestination is unknown.
+            CircularProgressIndicator()
+        } else {
         Scaffold(
             snackbarHost = {
                 SnackbarHost(hostState = snackbarHostState) { data ->

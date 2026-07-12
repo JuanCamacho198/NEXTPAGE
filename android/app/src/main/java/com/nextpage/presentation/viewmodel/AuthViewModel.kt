@@ -55,6 +55,7 @@ enum class AuthFailureKind {
  */
 data class AuthUiState(
     val currentSession: AuthSession? = null,
+    val isCheckingSession: Boolean = true,
     val isConfigured: Boolean = true,
     val hasWiringIssue: Boolean = false,
     val isLoading: Boolean = false,
@@ -127,8 +128,11 @@ class AuthViewModel(
                 _uiState.update { it.copy(
                     currentSession = session,
                     errorMessage = sessionResult.exceptionOrNull()?.message,
-                    failureKind = classifyFailure(sessionResult.exceptionOrNull())
+                    failureKind = classifyFailure(sessionResult.exceptionOrNull()),
+                    isCheckingSession = false
                 ) }
+            } else {
+                _uiState.update { it.copy(isCheckingSession = false) }
             }
         }
     }

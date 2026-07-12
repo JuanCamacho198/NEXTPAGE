@@ -161,6 +161,12 @@ object AppDatabaseMigrations {
         }
     }
 
+    val MIGRATION_16_17 = object : Migration(16, 17) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE books ADD COLUMN content_hash TEXT DEFAULT NULL")
+        }
+    }
+
     val MIGRATION_14_15 = object : Migration(14, 15) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE books ADD COLUMN status TEXT DEFAULT NULL")
@@ -254,6 +260,7 @@ object AppDatabaseMigrations {
         MIGRATION_12_13,
         MIGRATION_13_14,
         MIGRATION_14_15,
-        MIGRATION_15_16
+        MIGRATION_15_16,
+        MIGRATION_16_17
     )
 }

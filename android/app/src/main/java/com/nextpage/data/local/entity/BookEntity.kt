@@ -31,5 +31,7 @@ data class BookEntity(
     @ColumnInfo(name = "deleted_at")
     val deletedAtEpochMillis: Long? = null,
     @ColumnInfo(name = "status")
-    val status: String? = null
+    val status: String? = null,
+    @ColumnInfo(name = "content_hash")
+    val contentHash: String? = null
 )

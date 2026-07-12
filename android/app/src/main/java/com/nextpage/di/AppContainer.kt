@@ -25,6 +25,8 @@ import com.nextpage.data.repository.SupabaseAuthRepository
 import com.nextpage.data.remote.google.GoogleDriveConfig
 import com.nextpage.data.remote.google.GoogleDriveClientProvider
 import com.nextpage.data.remote.google.GoogleDriveInitDiagnostic
+import com.nextpage.data.remote.supabase.SupabaseBookCatalogDataSource
+import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.data.remote.supabase.SupabaseProgressDataSource
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
@@ -82,7 +84,8 @@ class AppContainer(context: Context) {
         epubParserService = ZipEpubParserService(),
         pdfParserService = pdfParserService,
         coverStorage = coverStorage,
-        readingProgressDao = appDatabase.readingProgressDao()
+        readingProgressDao = appDatabase.readingProgressDao(),
+        outboxDao = appDatabase.syncOutboxDao()
     )
     private val epubImportInitTime = System.currentTimeMillis() - epubImportStartTime
     init {
@@ -167,6 +170,19 @@ class AppContainer(context: Context) {
             highlightDao = appDatabase.highlightDao(),
             sessionManager = sessionManager,
             dataSource = supabaseProgressDataSource
+        )
+    }
+
+    val supabaseBookCatalogDataSource: SupabaseBookCatalogDataSource by lazy {
+        SupabaseBookCatalogDataSource()
+    }
+
+    val supabaseBookCatalogSync: SupabaseBookCatalogSync by lazy {
+        SupabaseBookCatalogSync(
+            outboxDao = appDatabase.syncOutboxDao(),
+            bookDao = appDatabase.bookDao(),
+            sessionManager = sessionManager,
+            dataSource = supabaseBookCatalogDataSource
         )
     }
 

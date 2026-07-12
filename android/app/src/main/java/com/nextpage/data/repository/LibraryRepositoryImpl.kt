@@ -12,8 +12,12 @@ import com.nextpage.data.epub.EpubParserService
 import com.nextpage.data.pdf.PdfParserService
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.ReadingProgressDao
+import com.nextpage.data.local.dao.SyncOutboxDao
 import com.nextpage.data.local.entity.BookEntity
 import com.nextpage.data.local.entity.ReadingProgressEntity
+import com.nextpage.data.local.entity.SyncEntityType
+import com.nextpage.data.local.entity.SyncOperation
+import com.nextpage.data.local.entity.SyncOutboxEntity
 import com.nextpage.data.storage.CoverStorage
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.Book
@@ -44,7 +48,8 @@ class LibraryRepositoryImpl(
     private val epubParserService: EpubParserService,
     private val pdfParserService: PdfParserService,
     private val coverStorage: CoverStorage,
-    private val readingProgressDao: ReadingProgressDao
+    private val readingProgressDao: ReadingProgressDao,
+    private val outboxDao: SyncOutboxDao
 ) : LibraryRepository {
     override fun observeLibrary(): Flow<List<Book>> =
         bookDao.observeAllBooks().map { books -> books.map { it.toDomain() } }
@@ -103,7 +108,9 @@ class LibraryRepositoryImpl(
             updatedAtEpochMillis = now
         )
 
-        bookDao.upsert(book.toEntity())
+        val contentHash = computeSha256(request.sourcePath)
+        bookDao.upsert(book.toEntity().copy(contentHash = contentHash))
+        queueBookOutboxEntry(bookId)
         book
     }
 
@@ -130,7 +137,9 @@ class LibraryRepositoryImpl(
             updatedAtEpochMillis = now
         )
 
-        bookDao.upsert(book.toEntity())
+        val contentHash = computeSha256(file.absolutePath)
+        bookDao.upsert(book.toEntity().copy(contentHash = contentHash))
+        queueBookOutboxEntry(bookId)
         book
     }
 
@@ -254,6 +263,30 @@ class LibraryRepositoryImpl(
         updatedAtEpochMillis = updatedAtEpochMillis,
         status = status
     )
+
+    /**
+     * Queue a BOOK outbox entry so the catalog sync processor
+     * can push its metadata to Supabase.
+     *
+     * Non-blocking on failure — the reconciliation pass in
+     * [SupabaseBookCatalogSync.reconcileLocalBooks] covers gaps.
+     */
+    private suspend fun queueBookOutboxEntry(bookId: String) {
+        try {
+            outboxDao.insert(
+                SyncOutboxEntity(
+                    id = UUID.randomUUID().toString(),
+                    entityType = SyncEntityType.BOOK.name,
+                    entityId = bookId,
+                    operation = SyncOperation.CREATE.name,
+                    payloadJson = """{}""",
+                    createdAtEpochMillis = System.currentTimeMillis()
+                )
+            )
+        } catch (_: Exception) {
+            // Non-blocking — reconciliation in SupabaseBookCatalogSync covers gaps
+        }
+    }
 
     private companion object {
         const val EPUB_FORMAT = "epub"

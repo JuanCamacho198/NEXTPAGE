@@ -16,6 +16,7 @@ import {
 } from '$lib/stores/authPersistence';
 import { getSessionClient } from '$lib/services/supabase';
 import { signInAnonymously, restoreSession, signOut } from '$lib/shared/services/SupabaseAuthService';
+import { SyncService } from '$lib/shared/services/SyncService';
 
 import type {
   BulkImportSummary,
@@ -665,6 +666,10 @@ export class AppState {
         // Start cross-device progress sync via Realtime
         this.reader.subscribeToRemoteProgress();
 
+        // Start cross-device book catalog sync via outbox + reconciliation
+        SyncService.setupOutboxProcessor();
+        SyncService.syncBookCatalog(); // fire-and-forget
+
         initialRoute = 'home';
       } else {
         // 2. Fallback: check persisted auth cache (local user profile)
@@ -691,10 +696,22 @@ export class AppState {
     }
     this.navigation.route = initialRoute;
 
+    // Start outbox processor and catalog sync whenever a Supabase session
+    // exists (restored session, anonymous sign-in, or error recovery).
+    // Idempotent — safe if already started in the restored-session branch.
+    SyncService.setupOutboxProcessor();
+    if (authState.userId) {
+      SyncService.syncBookCatalog(); // fire-and-forget
+    }
+
     // Subscribe to auth state changes so OAuth sign-ins that complete during
     // runtime (via the loopback callback handler) trigger a navigation to home.
     getSessionClient().auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
+        // Start book catalog sync on sign-in
+        SyncService.setupOutboxProcessor(); // idempotent
+        SyncService.syncBookCatalog();      // fire-and-forget
+
         // Only navigate away from welcome — if already elsewhere, stay put
         if (this.navigation.route === 'welcome') {
           this.navigation.route = 'home';

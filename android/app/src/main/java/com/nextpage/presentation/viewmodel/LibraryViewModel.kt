@@ -581,7 +581,13 @@ class LibraryViewModel(
     fun onPullToRefresh() {
         mutableUiState.update { it.copy(isRefreshing = true) }
         viewModelScope.launch(mainDispatcher) {
-            syncService.schedulePull()
+            val result = syncService.schedulePull()
+            if (result.isFailure) {
+                // schedulePull may not emit a terminal syncState when the
+                // service is disabled (StateFlow skips same-reference Disabled).
+                // Clear the refresh indicator so it doesn't hang forever.
+                mutableUiState.update { it.copy(isRefreshing = false) }
+            }
         }
     }
 }

@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package com.nextpage.data.session
 
 import com.nextpage.data.remote.supabase.SupabaseClientProvider

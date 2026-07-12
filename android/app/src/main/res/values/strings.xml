@@ -560,6 +560,9 @@
     <!-- Share -->
     <string name="library_share_chooser_title">Share book</string>
 
+    <!-- Navigation errors -->
+    <string name="book_not_found">Book not found</string>
+
     <!-- Format strings -->
     <string name="format_percent">%d%%</string>
 

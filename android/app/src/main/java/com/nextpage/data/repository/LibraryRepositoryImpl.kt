@@ -134,6 +134,9 @@ class LibraryRepositoryImpl(
         book
     }
 
+    override suspend fun getBookById(bookId: String): Book? =
+        bookDao.getBookById(bookId)?.toDomain()
+
     override suspend fun deleteBook(bookId: String): Result<Unit> = runCatching {
         // Clean up cover file first (idempotent — no-op if missing)
         coverStorage.deleteCover(bookId).getOrNull()

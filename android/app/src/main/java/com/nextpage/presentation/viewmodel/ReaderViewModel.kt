@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.readium.r2.shared.publication.Locator
@@ -504,6 +505,15 @@ class ReaderViewModel(
      */
     val navigateToLocator: SharedFlow<Locator> = _navigateToLocator.asSharedFlow()
 
+    /**
+     * Pending CFI range to navigate to once the book finishes loading.
+     * Set by [navigateToCfiAfterLoad] (called from NavHost before navigation),
+     * consumed in [loadBook] after the lifecycle holder reports the book is ready.
+     * Cleared after application or on ViewModel destruction.
+     */
+    @VisibleForTesting
+    internal var pendingCfiAfterLoad: String? = null
+
     // ── Cluster C state holders (extracted responsibilities) ──────────
 
     private val searchStateHolder = SearchStateHolder(
@@ -654,6 +664,24 @@ class ReaderViewModel(
     // ── Book Loading ──────────────────────────────────────────────────
 
     /**
+     * Stores a CFI range that should be navigated to once the book finishes
+     * loading. Called by the NavHost before navigating to the Reader route.
+     *
+     * The pending CFI survives the [loadBook] call (which starts async loading)
+     * and is applied in [applyPendingCfi] after the lifecycle holder reports
+     * that the publication is ready.
+     */
+    fun navigateToCfiAfterLoad(cfiRange: String) {
+        pendingCfiAfterLoad = cfiRange
+        // If the book is already loaded (same-book highlight tap), apply
+        // the pending CFI immediately instead of waiting for loadBook.
+        val state = lifecycleHolder.state.value
+        if (!state.isLoading && state.readiumPublication != null) {
+            applyPendingCfi()
+        }
+    }
+
+    /**
      * Loads a new book into the reader, replacing any current selection.
      *
      * Side effects:
@@ -678,6 +706,39 @@ class ReaderViewModel(
         interactionHolder.resetCoordinator()
         fullscreenManager.enterFullscreen()
         lifecycleHolder.loadBook(bookId, filePath, format)
+
+        // When loading completes, apply any pending CFI navigation
+        // (set by NavHost via navigateToCfiAfterLoad before navigating).
+        viewModelScope.launch(mainDispatcher) {
+            lifecycleHolder.state.first { !it.isLoading }
+            applyPendingCfi()
+        }
+    }
+
+    /**
+     * Applies the pending CFI navigation (if any) after the book has
+     * finished loading. Uses the same logic as [onHighlightSelected]:
+     * - PDF: `cfiRange` is `"pdfpage:<N>"` → [goToPdfPage]
+     * - EPUB: extract chapter index from CFI via `Regex("/6/(\\d+)")` → [goToChapter]
+     *
+     * The pending CFI is cleared after application so it does not re-fire
+     * on subsequent book loads.
+     */
+    @VisibleForTesting
+    internal fun applyPendingCfi() {
+        val cfiRange = pendingCfiAfterLoad ?: return
+        pendingCfiAfterLoad = null
+
+        if (cfiRange.startsWith("pdfpage:")) {
+            val page = cfiRange.removePrefix("pdfpage:").toIntOrNull()
+            if (page != null) goToPdfPage(page)
+        } else {
+            val chapterMatch = Regex("/6/(\\d+)").find(cfiRange)
+            val chapterIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+            if (chapterIndex != null) {
+                goToChapter(chapterIndex - 1)
+            }
+        }
     }
 
     // ── Readium Bridge ──────────────────────────────────────────────

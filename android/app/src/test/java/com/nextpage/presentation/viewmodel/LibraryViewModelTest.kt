@@ -347,6 +347,8 @@ class LibraryViewModelTest {
             return Result.success(Unit)
         }
 
+        override suspend fun getBookById(bookId: String): Book? = null
+
         override suspend fun deleteBook(bookId: String): Result<Unit> {
             deleteFailure?.let { return Result.failure(it) }
             return Result.success(Unit)

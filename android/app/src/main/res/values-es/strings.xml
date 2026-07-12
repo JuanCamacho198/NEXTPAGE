@@ -503,6 +503,9 @@
     <!-- Share -->
     <string name="library_share_chooser_title">Compartir libro</string>
 
+    <!-- Navigation errors -->
+    <string name="book_not_found">Libro no encontrado</string>
+
     <!-- Format strings -->
     <string name="format_percent">%d %%</string>
 

@@ -310,6 +310,56 @@ class LibraryRepositoryImplTest {
     }
 
     @Test
+    fun getBookById_returnsBookWhenBookExists() = runBlocking {
+        val fakeDao = FakeBookDao()
+        val repository = LibraryRepositoryImpl(
+            appContext = mockk(),
+            bookDao = fakeDao,
+            readingProgressDao = FakeReadingProgressDao(),
+            readingStatsDao = FakeReadingStatsDao(),
+            epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
+            pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
+            coverStorage = FakeCoverStorage()
+        )
+
+        val bookId = "test-book-id"
+        fakeDao.upsert(
+            BookEntity(
+                id = bookId,
+                title = "Test Book",
+                author = "Test Author",
+                coverPath = null,
+                filePath = "/test/book.epub",
+                format = "epub",
+                updatedAtEpochMillis = 100L
+            )
+        )
+
+        val result = repository.getBookById(bookId)
+        assertNotNull(result)
+        assertEquals(bookId, result?.id)
+        assertEquals("Test Book", result?.title)
+        assertEquals("Test Author", result?.author)
+    }
+
+    @Test
+    fun getBookById_returnsNullWhenBookDoesNotExist() = runBlocking {
+        val fakeDao = FakeBookDao()
+        val repository = LibraryRepositoryImpl(
+            appContext = mockk(),
+            bookDao = fakeDao,
+            readingProgressDao = FakeReadingProgressDao(),
+            readingStatsDao = FakeReadingStatsDao(),
+            epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
+            pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
+            coverStorage = FakeCoverStorage()
+        )
+
+        val result = repository.getBookById("non-existent-id")
+        assertEquals(null, result)
+    }
+
+    @Test
     fun pagingSource_emptyList_returnsSingleEmptyPage() = runBlocking {
         // R4 empty: 0 books → 1 empty page, no error.
         val source = com.nextpage.testutil.PagedListPagingSource<BookEntity>(emptyList())

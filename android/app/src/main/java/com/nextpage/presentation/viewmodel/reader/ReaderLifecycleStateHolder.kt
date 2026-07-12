@@ -897,6 +897,18 @@ class ReaderLifecycleStateHolder(
     }
 
     @VisibleForTesting
+    internal fun setBookLoadedForTest(publication: Publication? = null) {
+        _state.update {
+            it.copy(
+                isLoading = false,
+                readiumPublication = publication,
+                bookFormat = "epub"
+            )
+        }
+        updateProgressDisplay()
+    }
+
+    @VisibleForTesting
     internal fun setEpubStateForTest(
         chapters: List<BookChapter>,
         currentChapterIndex: Int = 0,

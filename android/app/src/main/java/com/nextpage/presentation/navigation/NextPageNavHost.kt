@@ -209,7 +209,20 @@ fun NextPageNavHost(
                         snackbarHostState.showSnackbar(context.getString(com.nextpage.R.string.highlights_snackbar_copied))
                     }
                     is UiEvent.OpenBookAtLocation -> {
-                        // TODO: navigate to ReaderScreen with bookId and cfiRange
+                        scope.launch {
+                            val book = appContainer.libraryRepository.getBookById(event.bookId)
+                            if (book != null) {
+                                selectedBookId = book.id
+                                selectedBookFilePath = book.filePath
+                                selectedBookFormat = book.format
+                                readerViewModel.navigateToCfiAfterLoad(event.cfiRange)
+                                navController.navigate(NextPageDestination.Reader.route) {
+                                    launchSingleTop = true
+                                }
+                            } else {
+                                snackbarHostState.showSnackbar(context.getString(com.nextpage.R.string.book_not_found))
+                            }
+                        }
                     }
                 }
             }

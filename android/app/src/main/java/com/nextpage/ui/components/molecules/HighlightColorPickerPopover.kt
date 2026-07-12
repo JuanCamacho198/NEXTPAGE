@@ -63,88 +63,38 @@ val DEFAULT_HIGHLIGHT_PRESETS = listOf(
 )
 
 /**
- * kixeV color picker popover for selecting a highlight color. 220dp
- * wide white card with five preset swatches, a black→hue→white
- * spectrum canvas (draggable), a hue slider, and a hex text field.
- * Owns its local state — selection is committed on preset-tap (with
- * auto-dismiss) or implicit on hex-edit (no auto-dismiss; the
- * caller should call [onDismiss]).
+ * Reusable color picker controls extracted from
+ * [HighlightColorPickerPopover]. Contains preset swatches, a spectrum
+ * bar, a hue slider, and a hex text field. Does NOT include a popover
+ * card wrapper — use inside a card, dialog, or column as needed.
  *
- * Design matches Pencil node `kixeV`:
- * - White `#FFFFFF` container, 16dp rounded, 12dp shadow, 220dp wide.
- * - 5 preset circles (24dp) in a `SpaceEvenly` row.
- * - 128dp spectrum gradient `Canvas` with a draggable thumb
- *   (black→saturated color→white, based on current hue).
- * - 20dp hue `Slider` (transparent track; visual hue gradient is
- *   intended to be drawn by the parent via `Modifier.background` —
- *   the current implementation falls back to the default track).
- * - 40dp pill-shaped `OutlinedTextField` for the hex code,
- *   monospace 12sp, with a "#" leading icon.
- *
- * @param customColors Custom 5-color preset list. Falls back to
- *   [DEFAULT_HIGHLIGHT_PRESETS] when `null` or fewer than 5 entries.
- *   The first 5 entries are used.
- * @param onColorSelected Invoked with the chosen hex color
- *   (e.g. `"#4ADE80"`) when the user taps a preset (this also
- *   auto-dismisses) or when the user types a valid 6-char hex in
- *   the input (caller must dismiss).
- * @param onDismiss Invoked when the caller wants to close the
- *   popover (preset taps also call it). This composable does NOT
- *   render a scrim or backdrop — the parent is expected to provide
- *   tap-away handling (see [SelectionOverlay] for the pattern).
- * @param anchorX Horizontal anchor in pixels (px). Used to position
- *   the popover near the originating UI element. Default `0`.
- * @param anchorY Vertical anchor in pixels (px) for the arrow tip.
- *   The popover itself is offset using `Modifier.offset { ... }`
- *   based on this value. Default `0`.
- * @param modifier Modifier applied to the outer `Column`. (Note: the
- *   parent usually wraps this in a `Modifier.offset` to position
- *   the popover near the selection rect.)
- *
- * **Visual**: 220dp wide, white card with 12dp padding. Top row of
- *   5 swatches (active swatch gets a 2dp `#1F2937` border). Below:
- *   128dp spectrum bar with a white circular thumb, then a 20dp hue
- *   slider, then a 40dp hex field with a leading "#". Hint text
- *   "Confirm" at the bottom in 10sp gray.
- * **Behavior**: tap a preset → [onColorSelected] + [onDismiss] +
- *   state reset. Drag the spectrum thumb → updates `selectedColor`
- *   locally (does NOT call [onColorSelected] — caller can read it
- *   via a hoisted state pattern, or use the hex input). Slide the
- *   hue → updates hue locally. Edit the hex field → on 6-char valid
- *   input, sets `selectedColor` locally.
- * **Recomposition**: recomposes when `customColors`, anchor values,
- *   or callbacks change. Internal state (`selectedColor`, `hexInput`,
- *   `hue`, `spectrumPosition`) is `remember`-ed and survives
- *   recomposition.
+ * @param presets List of hex color presets shown as swatches.
+ * @param selectedColor Currently selected hex color (with or without
+ *   `#`). The matching swatch gets a 2dp `#1F2937` border.
+ * @param onColorSelected Invoked with the chosen hex when the user
+ *   taps a preset. Spectrum/hue/hex updates happen locally but do NOT
+ *   emit this callback.
+ * @param onDismiss Invoked when the user taps a preset (auto-dismiss).
+ * @param modifier Modifier applied to the outer `Column`.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HighlightColorPickerPopover(
-    customColors: List<String>?,
+fun ColorPickerContent(
+    presets: List<String>,
+    selectedColor: String,
     onColorSelected: (String) -> Unit,
     onDismiss: () -> Unit,
-    anchorX: Int = 0,
-    anchorY: Int = 0,
     modifier: Modifier = Modifier
 ) {
-    val presets = (customColors?.takeIf { it.size >= 5 } ?: DEFAULT_HIGHLIGHT_PRESETS)
-        .take(5)
-
-    // Current colour state
-    var selectedColor by remember { mutableStateOf(presets.first()) }
-    var hexInput by remember { mutableStateOf(presets.first().removePrefix("#")) }
+    var selectedColorInternal by remember { mutableStateOf(selectedColor) }
+    var hexInput by remember { mutableStateOf(selectedColor.removePrefix("#")) }
     var hue by remember { mutableFloatStateOf(hueFromHex(selectedColor)) }
     var spectrumPosition by remember { mutableFloatStateOf(0.5f) }
 
     val focusManager = LocalFocusManager.current
 
-    // ── Layout ─────────────────────────────────────────────────────
     Column(
-        modifier = modifier
-            .width(220.dp)
-            .shadow(12.dp, RoundedCornerShape(16.dp))
-            .background(Color.White, RoundedCornerShape(16.dp))
-            .padding(12.dp),
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // ── 5 Colour Preset Circles ───────────────────────────────
@@ -152,8 +102,8 @@ fun HighlightColorPickerPopover(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            presets.forEach { hex ->
-                val isActive = hex.equals(selectedColor, ignoreCase = true)
+            presets.take(5).forEach { hex ->
+                val isActive = hex.equals(selectedColorInternal, ignoreCase = true)
                 Box(
                     modifier = Modifier
                         .size(24.dp)
@@ -167,7 +117,7 @@ fun HighlightColorPickerPopover(
                             ) else Modifier
                         )
                         .clickable {
-                            selectedColor = hex
+                            selectedColorInternal = hex
                             hexInput = hex.removePrefix("#")
                             hue = hueFromHex(hex)
                             onColorSelected(hex)
@@ -185,8 +135,8 @@ fun HighlightColorPickerPopover(
             hue = hue,
             onPositionChange = { pos ->
                 spectrumPosition = pos
-                selectedColor = spectrumColorAt(pos)
-                hexInput = selectedColor.removePrefix("#")
+                selectedColorInternal = spectrumColorAt(pos)
+                hexInput = selectedColorInternal.removePrefix("#")
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -200,8 +150,8 @@ fun HighlightColorPickerPopover(
             hue = hue,
             onHueChange = { newHue ->
                 hue = newHue
-                selectedColor = hslToHex(newHue)
-                hexInput = selectedColor.removePrefix("#")
+                selectedColorInternal = hslToHex(newHue)
+                hexInput = selectedColorInternal.removePrefix("#")
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -218,7 +168,7 @@ fun HighlightColorPickerPopover(
                 hexInput = clean
                 if (clean.length == 6) {
                     val hex = "#$clean"
-                    selectedColor = hex
+                    selectedColorInternal = hex
                     hue = hueFromHex(hex)
                 }
             },
@@ -267,6 +217,67 @@ fun HighlightColorPickerPopover(
             fontSize = 10.sp,
             color = Color(0xFF9CA3AF),
             textAlign = TextAlign.Center
+        )
+    }
+}
+
+/**
+ * kixeV color picker popover for selecting a highlight color. 220dp
+ * wide white card wrapping [ColorPickerContent] with preset swatches,
+ * spectrum bar, hue slider, and hex input.
+ *
+ * Design matches Pencil node `kixeV`:
+ * - White `#FFFFFF` container, 16dp rounded, 12dp shadow, 220dp wide.
+ * - Delegates to [ColorPickerContent] for the actual controls.
+ *
+ * @param customColors Custom 5-color preset list. Falls back to
+ *   [DEFAULT_HIGHLIGHT_PRESETS] when `null` or fewer than 5 entries.
+ *   The first 5 entries are used.
+ * @param onColorSelected Invoked with the chosen hex color
+ *   (e.g. `"#4ADE80"`) when the user taps a preset (this also
+ *   auto-dismisses) or when the user types a valid 6-char hex in
+ *   the input (caller must dismiss).
+ * @param onDismiss Invoked when the caller wants to close the
+ *   popover (preset taps also call it). This composable does NOT
+ *   render a scrim or backdrop — the parent is expected to provide
+ *   tap-away handling (see [SelectionOverlay] for the pattern).
+ * @param anchorX Horizontal anchor in pixels (px). Used to position
+ *   the popover near the originating UI element. Default `0`.
+ * @param anchorY Vertical anchor in pixels (px) for the arrow tip.
+ *   The popover itself is offset using `Modifier.offset { ... }`
+ *   based on this value. Default `0`.
+ * @param modifier Modifier applied to the outer `Column`. (Note: the
+ *   parent usually wraps this in a `Modifier.offset` to position
+ *   the popover near the selection rect.)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HighlightColorPickerPopover(
+    customColors: List<String>?,
+    onColorSelected: (String) -> Unit,
+    onDismiss: () -> Unit,
+    anchorX: Int = 0,
+    anchorY: Int = 0,
+    modifier: Modifier = Modifier
+) {
+    val presets = (customColors?.takeIf { it.size >= 5 } ?: DEFAULT_HIGHLIGHT_PRESETS)
+        .take(5)
+
+    val selectedColor by remember { mutableStateOf(presets.first()) }
+
+    Column(
+        modifier = modifier
+            .width(220.dp)
+            .shadow(12.dp, RoundedCornerShape(16.dp))
+            .background(Color.White, RoundedCornerShape(16.dp))
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        ColorPickerContent(
+            presets = presets,
+            selectedColor = selectedColor,
+            onColorSelected = onColorSelected,
+            onDismiss = onDismiss
         )
     }
 }

@@ -221,7 +221,8 @@
     <string name="palette_section_subtitle">Personalizá los 5 colores de resaltado</string>
     <string name="palette_reset">Restablecer valores predeterminados</string>
     <string name="palette_pick_color">Elegir color</string>
-
+    <string name="palette_add_color">Agregar color</string>
+ 
     <!-- Reader / aA Settings -->
     <string name="aa_preview_text">El veloz murciélago hindú comía feliz cardillo y kiwi. Esta es una vista previa de la configuración actual de lectura.</string>
     <string name="aa_expand">Expandir</string>

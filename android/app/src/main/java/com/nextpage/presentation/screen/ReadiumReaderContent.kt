@@ -635,7 +635,7 @@ private fun highlightsToDecorations(highlights: List<Highlight>): List<Decoratio
         Decoration(
             id = h.id,
             locator = locator,
-            style = Decoration.Style.Highlight(tint = tint, isActive = true)
+            style = Decoration.Style.Highlight(tint = tint, isActive = false)
         )
     }
 }

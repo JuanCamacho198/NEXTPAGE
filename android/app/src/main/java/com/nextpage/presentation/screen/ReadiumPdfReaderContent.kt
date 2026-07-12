@@ -268,7 +268,7 @@ private fun highlightsToPdfDecorations(highlights: List<Highlight>): List<Decora
         Decoration(
             id = h.id,
             locator = locator,
-            style = Decoration.Style.Highlight(tint = tint, isActive = true)
+            style = Decoration.Style.Highlight(tint = tint, isActive = false)
         )
     }
 }

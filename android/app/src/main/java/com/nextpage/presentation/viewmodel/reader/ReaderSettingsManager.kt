@@ -1,5 +1,6 @@
 package com.nextpage.presentation.viewmodel.reader
 
+import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.data.session.ReaderPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,13 +37,41 @@ class ReaderSettingsManager(
 
     fun onUpdateCustomHighlightColor(index: Int, hex: String) {
         _state.update { state ->
-            val colors = (state.readerSettings.customHighlightColors ?: emptyList()).toMutableList()
+            val current = state.readerSettings.customHighlightColors
+                ?: HighlightColor.defaultHexList()
+            val colors = current.toMutableList()
             if (index in colors.indices) {
                 colors[index] = hex
                 val updated = state.readerSettings.copy(customHighlightColors = colors)
                 readerPreferences?.save(updated)
                 state.copy(readerSettings = updated)
             } else state
+        }
+    }
+
+    fun onAddCustomHighlightColor() {
+        _state.update { state ->
+            val current = state.readerSettings.customHighlightColors
+                ?: HighlightColor.defaultHexList()
+            if (current.size >= 5) return@update state
+            val colors = current.toMutableList()
+            colors.add(HighlightColor.YELLOW.hex)
+            val updated = state.readerSettings.copy(customHighlightColors = colors)
+            readerPreferences?.save(updated)
+            state.copy(readerSettings = updated)
+        }
+    }
+
+    fun onDeleteCustomHighlightColor(index: Int) {
+        _state.update { state ->
+            val current = state.readerSettings.customHighlightColors
+                ?: HighlightColor.defaultHexList()
+            if (current.size <= 3) return@update state
+            val colors = current.toMutableList()
+            colors.removeAt(index)
+            val updated = state.readerSettings.copy(customHighlightColors = colors)
+            readerPreferences?.save(updated)
+            state.copy(readerSettings = updated)
         }
     }
 

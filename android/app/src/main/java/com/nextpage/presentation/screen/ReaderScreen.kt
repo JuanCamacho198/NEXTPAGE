@@ -198,7 +198,22 @@ fun ReaderScreen(
                     android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_SHORT).show()
                 }
                 is com.nextpage.presentation.UiEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message)
+                    android.widget.Toast.makeText(
+                        context,
+                        event.message,
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+                is com.nextpage.presentation.UiEvent.ShareText -> {
+                    val shareIntent = android.content.Intent(
+                        android.content.Intent.ACTION_SEND
+                    ).apply {
+                        type = "text/plain"
+                        putExtra(android.content.Intent.EXTRA_TEXT, event.text)
+                    }
+                    context.startActivity(
+                        android.content.Intent.createChooser(shareIntent, null)
+                    )
                 }
                 else -> {}
             }

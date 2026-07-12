@@ -529,6 +529,26 @@ fun NextPageNavHost(
                             if (index in colors.indices) colors[index] = hex
                             prefs.save(current.copy(customHighlightColors = colors))
                         },
+                        onAddCustomHighlightColor = {
+                            val prefs = appContainer.readerPreferences
+                            val current = prefs.load()
+                            val colors = current.customHighlightColors?.toMutableList()
+                                ?: com.nextpage.domain.model.HighlightColor.defaultHexList().toMutableList()
+                            if (colors.size < 5) {
+                                colors.add(com.nextpage.domain.model.HighlightColor.YELLOW.hex)
+                                prefs.save(current.copy(customHighlightColors = colors))
+                            }
+                        },
+                        onDeleteCustomHighlightColor = { index ->
+                            val prefs = appContainer.readerPreferences
+                            val current = prefs.load()
+                            val colors = current.customHighlightColors?.toMutableList()
+                                ?: com.nextpage.domain.model.HighlightColor.defaultHexList().toMutableList()
+                            if (colors.size > 3 && index in colors.indices) {
+                                colors.removeAt(index)
+                                prefs.save(current.copy(customHighlightColors = colors))
+                            }
+                        },
                         onResetCustomHighlightColors = {
                             val prefs = appContainer.readerPreferences
                             val current = prefs.load()

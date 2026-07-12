@@ -14,7 +14,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -113,19 +112,95 @@ class ReaderSettingsManagerTest {
     }
 
     @Test
-    fun `onUpdateCustomHighlightColor with null initial palette is no-op`() {
+    fun `onUpdateCustomHighlightColor with null palette initializes defaults then mutates`() {
         val mockPrefs = mockk<ReaderPreferences>(relaxed = true) {
             every { load() } returns ReaderSettings()
         }
         val manager = ReaderSettingsManager(mockPrefs)
 
-        // customHighlightColors is null (default), index 0 is out of bounds for empty list
         manager.onUpdateCustomHighlightColor(0, "#FF0000")
 
-        assertNull(
-            "customHighlightColors should remain null since default is null and no palette existed",
-            manager.state.value.readerSettings.customHighlightColors
-        )
+        val colors = manager.state.value.readerSettings.customHighlightColors
+        assertNotNull("customHighlightColors should be initialized from defaults", colors)
+        assertEquals("#FF0000", colors!![0])
+    }
+
+    @Test
+    fun `onAddCustomHighlightColor adds color when below max`() {
+        val initialColors = listOf("#000000", "#111111", "#222222")
+        val initialSettings = ReaderSettings(customHighlightColors = initialColors)
+        val mockPrefs = mockk<ReaderPreferences>(relaxed = true) {
+            every { load() } returns initialSettings
+        }
+        val manager = ReaderSettingsManager(mockPrefs)
+
+        manager.onAddCustomHighlightColor()
+
+        val colors = manager.state.value.readerSettings.customHighlightColors
+        assertEquals(4, colors?.size)
+        assertEquals("#FACC15", colors?.last()) // YELLOW default
+    }
+
+    @Test
+    fun `onAddCustomHighlightColor no-ops when at max (5)`() {
+        val initialColors = listOf("#000000", "#111111", "#222222", "#333333", "#444444")
+        val initialSettings = ReaderSettings(customHighlightColors = initialColors)
+        val mockPrefs = mockk<ReaderPreferences>(relaxed = true) {
+            every { load() } returns initialSettings
+        }
+        val manager = ReaderSettingsManager(mockPrefs)
+
+        manager.onAddCustomHighlightColor()
+
+        val colors = manager.state.value.readerSettings.customHighlightColors
+        assertEquals(5, colors?.size)
+    }
+
+    @Test
+    fun `onDeleteCustomHighlightColor removes color when above min`() {
+        val initialColors = listOf("#000000", "#111111", "#222222", "#333333")
+        val initialSettings = ReaderSettings(customHighlightColors = initialColors)
+        val mockPrefs = mockk<ReaderPreferences>(relaxed = true) {
+            every { load() } returns initialSettings
+        }
+        val manager = ReaderSettingsManager(mockPrefs)
+
+        manager.onDeleteCustomHighlightColor(1)
+
+        val colors = manager.state.value.readerSettings.customHighlightColors
+        assertEquals(3, colors?.size)
+        assertEquals("#000000", colors!![0])
+        assertEquals("#222222", colors[1])
+        assertEquals("#333333", colors[2])
+    }
+
+    @Test
+    fun `onDeleteCustomHighlightColor no-ops when at min (3)`() {
+        val initialColors = listOf("#000000", "#111111", "#222222")
+        val initialSettings = ReaderSettings(customHighlightColors = initialColors)
+        val mockPrefs = mockk<ReaderPreferences>(relaxed = true) {
+            every { load() } returns initialSettings
+        }
+        val manager = ReaderSettingsManager(mockPrefs)
+
+        manager.onDeleteCustomHighlightColor(0)
+
+        val colors = manager.state.value.readerSettings.customHighlightColors
+        assertEquals(3, colors?.size)
+    }
+
+    @Test
+    fun `onDeleteCustomHighlightColor with null palette initializes then deletes`() {
+        val mockPrefs = mockk<ReaderPreferences>(relaxed = true) {
+            every { load() } returns ReaderSettings()
+        }
+        val manager = ReaderSettingsManager(mockPrefs)
+
+        manager.onDeleteCustomHighlightColor(0)
+
+        val colors = manager.state.value.readerSettings.customHighlightColors
+        assertNotNull("customHighlightColors should be initialized from defaults", colors)
+        assertEquals(4, colors?.size) // 5 default entries, removed at index 0
     }
 
     @Test

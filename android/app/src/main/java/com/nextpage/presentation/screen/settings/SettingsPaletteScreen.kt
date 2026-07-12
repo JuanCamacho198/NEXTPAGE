@@ -14,6 +14,8 @@ import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
 fun SettingsPaletteScreen(
     customHighlightColors: List<String>?,
     onUpdateCustomHighlightColor: (Int, String) -> Unit,
+    onAddCustomHighlightColor: () -> Unit,
+    onDeleteCustomHighlightColor: (Int) -> Unit,
     onResetCustomHighlightColors: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -28,9 +30,9 @@ fun SettingsPaletteScreen(
             onUpdateColor = { index, hex ->
                 onUpdateCustomHighlightColor(index, hex)
             },
-            onReset = {
-                onResetCustomHighlightColors()
-            }
+            onAddColor = onAddCustomHighlightColor,
+            onDeleteColor = onDeleteCustomHighlightColor,
+            onReset = onResetCustomHighlightColors
         )
     }
 }

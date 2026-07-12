@@ -46,6 +46,8 @@ fun SettingsScreen(
     onLogout: () -> Unit = {},
     customHighlightColors: List<String>? = null,
     onUpdateCustomHighlightColor: (Int, String) -> Unit = { _, _ -> },
+    onAddCustomHighlightColor: () -> Unit = {},
+    onDeleteCustomHighlightColor: (Int) -> Unit = {},
     onResetCustomHighlightColors: () -> Unit = {},
     statisticsViewModel: StatisticsViewModel,
     dictionaryRepository: DictionaryRepository? = null
@@ -125,6 +127,8 @@ fun SettingsScreen(
                 SettingsPaletteScreen(
                     customHighlightColors = customHighlightColors,
                     onUpdateCustomHighlightColor = onUpdateCustomHighlightColor,
+                    onAddCustomHighlightColor = onAddCustomHighlightColor,
+                    onDeleteCustomHighlightColor = onDeleteCustomHighlightColor,
                     onResetCustomHighlightColors = onResetCustomHighlightColors,
                     onBack = { nestedNavController.popBackStack() }
                 )

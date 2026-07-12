@@ -116,7 +116,7 @@ fun HighlightAnnotationModal(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF000000))
+            .background(Color(0x99000000))
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }

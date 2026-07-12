@@ -100,17 +100,11 @@ fun TextSelectionMenu(
     ) {
         // ── 5 color swatches (direct selection) ─────────────────
         paletteColors.take(5).forEach { hex ->
-            val isActive = selectedColor != null &&
-                hex.equals(selectedColor, ignoreCase = true)
             Box(
                 modifier = Modifier
                     .size(28.dp)
                     .clip(CircleShape)
                     .background(parseColorHex(hex))
-                    .then(
-                        if (isActive) Modifier.border(2.dp, contentColor, CircleShape)
-                        else Modifier
-                    )
                     .clickable { onColorSelected(hex) }
             )
         }

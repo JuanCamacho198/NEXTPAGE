@@ -2,6 +2,7 @@ package com.nextpage.presentation.viewmodel
 
 import android.content.Context
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
+import com.nextpage.data.remote.supabase.UserBookRow
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.data.storage.CoverStorage
@@ -11,7 +12,9 @@ import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.usecase.ImportEpubBookUseCase
 import com.nextpage.presentation.UiEvent
 import com.nextpage.testutil.MainDispatcherRule
+import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -46,7 +49,7 @@ class LibraryViewModelTest {
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = mockk()
+            catalogSync = catalogSync()
         )
 
         var emittedEvent: LibraryImportEvent? = null
@@ -81,7 +84,7 @@ class LibraryViewModelTest {
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = mockk()
+            catalogSync = catalogSync()
         )
 
         var emittedEvent: LibraryImportEvent? = null
@@ -115,7 +118,7 @@ class LibraryViewModelTest {
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = mockk()
+            catalogSync = catalogSync()
         )
 
         assertTrue(viewModel.uiState.value.isLoading)
@@ -150,7 +153,7 @@ class LibraryViewModelTest {
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = mockk()
+            catalogSync = catalogSync()
         )
 
         var emittedEvent: UiEvent? = null
@@ -189,7 +192,7 @@ class LibraryViewModelTest {
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = mockk()
+            catalogSync = catalogSync()
         )
 
         var emittedEvent: UiEvent? = null
@@ -228,7 +231,7 @@ class LibraryViewModelTest {
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = mockk()
+            catalogSync = catalogSync()
         )
 
         repository.emitReadingMinutesByBook(mapOf("book-1" to 42L, "book-2" to 5L))
@@ -249,7 +252,7 @@ class LibraryViewModelTest {
             coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = mockk()
+            catalogSync = catalogSync()
         )
 
         // searchedBooks uses WhileSubscribed(5000) — subscribe in background
@@ -369,6 +372,25 @@ class LibraryViewModelTest {
         fun emitReadingMinutesByBook(readingMinutesByBook: Map<String, Long>) {
             readingMinutesByBookFlow.value = readingMinutesByBook
         }
+    }
+
+    /**
+     * Creates a mock [SupabaseBookCatalogSync] for testing.
+     *
+     * First call to [getDownloadableBooks] returns an empty list (init-block poll).
+     * Subsequent calls throw [CancellationException] to silently terminate
+     * the `while(true)` polling loop — otherwise `advanceUntilIdle()` would loop
+     * forever advancing past the 30s delay.
+     */
+    private fun catalogSync(): SupabaseBookCatalogSync {
+        val sync = mockk<SupabaseBookCatalogSync>(relaxed = false)
+        var callCount = 0
+        coEvery { sync.getDownloadableBooks() } answers {
+            callCount++
+            if (callCount >= 2) throw CancellationException("test stop")
+            Result.success(emptyList())
+        }
+        return sync
     }
 
     private class FakeSyncService : SyncService {

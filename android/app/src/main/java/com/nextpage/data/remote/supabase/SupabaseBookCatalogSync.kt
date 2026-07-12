@@ -113,7 +113,11 @@ class SupabaseBookCatalogSync(
                     dataSource.deleteUserBook(userId, bookId)
                 }
                 else -> {
-                    val localBook = bookDao.getBookById(bookId) ?: return
+                    val localBook = bookDao.getBookById(bookId)
+                    if (localBook == null) {
+                        outboxDao.deleteById(item.id)
+                        return
+                    }
                     val row = localBook.toUserBookRow(userId)
 
                     // Content-hash dedup: skip upsert if same SHA-256 hash

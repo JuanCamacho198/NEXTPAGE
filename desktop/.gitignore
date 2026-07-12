@@ -30,8 +30,8 @@ node_modules/
 # Coverage
 coverage/
 
-# Graphify cache
-graphify-out/cache/
+# CodeGraph 
+.codegraph
 
 # Images (generated/book covers)
 */images

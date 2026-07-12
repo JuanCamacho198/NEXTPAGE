@@ -379,8 +379,12 @@ private fun HueSlider(
 // ── Color Utilities ─────────────────────────────────────────────────
 
 private fun parseColorHex(hex: String): Color {
-    val sanitized = hex.removePrefix("#")
-    return Color(("FF$sanitized").toLong(16))
+    return try {
+        val sanitized = hex.removePrefix("#")
+        Color(("FF$sanitized").toLong(16))
+    } catch (_: Exception) {
+        Color.Magenta
+    }
 }
 
 /** Extracts approximate hue (0-360) from a hex colour string. */

@@ -132,11 +132,15 @@ fun FloatingContextMenu(
 }
 
 private fun parseColorHex(hex: String): Color {
-    val sanitized = hex.removePrefix("#")
-    val longHex = when (sanitized.length) {
-        6 -> "FF$sanitized"
-        8 -> sanitized
-        else -> "FF000000"
+    return try {
+        val sanitized = hex.removePrefix("#")
+        val longHex = when (sanitized.length) {
+            6 -> "FF$sanitized"
+            8 -> sanitized
+            else -> "FF000000"
+        }
+        Color(longHex.toLong(16))
+    } catch (_: Exception) {
+        Color.Magenta
     }
-    return Color(longHex.toLong(16))
 }

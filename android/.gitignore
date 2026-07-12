@@ -34,8 +34,11 @@ Desktop.ini
 .env.local
 .env.*.local
 
-# ─── Graphify Output ────────────────────────────────────────────────
-graphify-out/
+# ─── CodeGraph Output ────────────────────────────────────────────────
+/.codegraph
+#como añado esta carpeta C:\Users\Juan Camacho\Documents\PROYECTOS\NEXTPAGE\android\.codegraph
+
+
 
 # ─── Proguard / Build Cache ────────────────────────────────────────
 proguard/

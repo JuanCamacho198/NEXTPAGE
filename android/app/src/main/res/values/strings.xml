@@ -460,6 +460,22 @@
     <!-- Debug version label -->
     <string name="debug_version_label">(debug build — for development only)</string>
 
+    <!-- Debug: Log Viewer -->
+    <string name="debug_log_viewer_title">Log Viewer</string>
+    <string name="debug_log_viewer_tab_crashes">Crashes</string>
+    <string name="debug_log_viewer_tab_live">Live Logs</string>
+    <string name="debug_log_viewer_copy_all">Copy All</string>
+    <string name="debug_log_viewer_share">Share</string>
+    <string name="debug_log_viewer_no_crashes">No crashes recorded</string>
+    <string name="debug_log_viewer_no_logs">No logs yet</string>
+    <string name="debug_log_viewer_crash_timestamp">Timestamp</string>
+    <string name="debug_log_viewer_crash_message">Message</string>
+    <string name="debug_log_viewer_crash_stack">Stack Trace</string>
+    <string name="debug_log_viewer_crash_logs">Logs at crash</string>
+    <string name="debug_log_viewer_crash_thread">Thread: %1$s</string>
+    <string name="debug_log_viewer_crash_logs_more">... and %1$d more</string>
+    <string name="debug_settings_log_viewer">Log Viewer</string>
+
     <!-- Debug mode toggle -->
     <string name="debug_mode_title">Debug mode</string>
     <string name="debug_mode_subtitle">Show development tools</string>

@@ -49,6 +49,7 @@ fun SettingsScreen(
     onAddCustomHighlightColor: () -> Unit = {},
     onDeleteCustomHighlightColor: (Int) -> Unit = {},
     onResetCustomHighlightColors: () -> Unit = {},
+    onNavigateToLogViewer: () -> Unit = {},
     statisticsViewModel: StatisticsViewModel,
     dictionaryRepository: DictionaryRepository? = null
 ) {
@@ -97,7 +98,8 @@ fun SettingsScreen(
                     },
                     onNavigateToDevices = {
                         nestedNavController.navigate(NextPageDestination.SettingsDevices.route)
-                    }
+                    },
+                    onNavigateToLogViewer = onNavigateToLogViewer
                 )
             }
 

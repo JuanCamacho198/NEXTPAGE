@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Devices
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -73,7 +74,8 @@ fun SettingsListScreen(
     onNavigateToNotifications: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToDictionary: () -> Unit = {},
-    onNavigateToDevices: () -> Unit = {}
+    onNavigateToDevices: () -> Unit = {},
+    onNavigateToLogViewer: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val langPrefs = androidx.compose.runtime.remember { AppLanguagePreferences(context = context) }
@@ -193,6 +195,19 @@ fun SettingsListScreen(
 
             if (BuildConfig.DEBUG) {
                 DebugModeSection(context = context)
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(R.string.debug_panel_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    NextPagePreferenceItem(
+                        icon = Icons.Outlined.BugReport,
+                        label = stringResource(R.string.debug_settings_log_viewer),
+                        onClick = onNavigateToLogViewer
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))

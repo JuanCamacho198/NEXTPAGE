@@ -30,4 +30,5 @@ sealed class NextPageDestination(
     data object SettingsStatistics : NextPageDestination("settings/data/statistics")
     data object SettingsDictionary : NextPageDestination("settings/dictionary")
     data object SettingsDevices : NextPageDestination("settings/devices")
+    data object LogViewer : NextPageDestination("settings/log-viewer")
 }

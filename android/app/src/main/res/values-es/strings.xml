@@ -325,6 +325,22 @@
     <!-- Debug version label -->
     <string name="debug_version_label">(build de desarrollo)</string>
 
+    <!-- Debug: Visor de registros -->
+    <string name="debug_log_viewer_title">Visor de registros</string>
+    <string name="debug_log_viewer_tab_crashes">Crashes</string>
+    <string name="debug_log_viewer_tab_live">Registros en vivo</string>
+    <string name="debug_log_viewer_copy_all">Copiar todo</string>
+    <string name="debug_log_viewer_share">Compartir</string>
+    <string name="debug_log_viewer_no_crashes">No hay crashes registrados</string>
+    <string name="debug_log_viewer_no_logs">Todavía no hay registros</string>
+    <string name="debug_log_viewer_crash_timestamp">Fecha y hora</string>
+    <string name="debug_log_viewer_crash_message">Mensaje</string>
+    <string name="debug_log_viewer_crash_stack">Stack Trace</string>
+    <string name="debug_log_viewer_crash_logs">Registros al crash</string>
+    <string name="debug_log_viewer_crash_thread">Thread: %1$s</string>
+    <string name="debug_log_viewer_crash_logs_more">... y %1$d más</string>
+    <string name="debug_settings_log_viewer">Visor de registros</string>
+
     <!-- Debug mode toggle -->
     <string name="debug_mode_title">Modo debug</string>
     <string name="debug_mode_subtitle">Mostrar herramientas de desarrollo</string>

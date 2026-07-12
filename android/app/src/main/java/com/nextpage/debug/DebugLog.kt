@@ -1,6 +1,8 @@
 package com.nextpage.debug
 
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +42,26 @@ object DebugLog {
     /** Only `ERROR`-level events, newest first. Survives INFO/WARN flood. */
     val errorEvents: StateFlow<List<DebugEvent>> = _errorEvents.asStateFlow()
 
+    private var writer: LogWriter? = null
+    private var scope: CoroutineScope? = null
+
+    /**
+     * Initializes disk persistence. Called once from Application.onCreate().
+     *
+     * @param scope  CoroutineScope (typically SupervisorJob + Dispatchers.IO)
+     * @param writer LogWriter implementation (typically CrashLogStore)
+     */
+    fun init(scope: CoroutineScope, writer: LogWriter) {
+        this.scope = scope
+        this.writer = writer
+    }
+
+    /** Visible for testing — resets writer and scope to null. */
+    internal fun resetForTest() {
+        writer = null
+        scope = null
+    }
+
     fun log(level: Level, tag: String, message: String) {
         val event = DebugEvent(
             timestamp = System.currentTimeMillis(),
@@ -70,6 +92,13 @@ object DebugLog {
             Level.SUCCESS -> Log.INFO
         }
         Log.println(priority, tag, message)
+
+        // Fire-and-forget disk write — never blocks the calling thread
+        scope?.launch {
+            runCatching {
+                writer?.write(level.name, tag, message, System.currentTimeMillis())
+            }
+        }
     }
 
     fun info(tag: String, message: String) = log(Level.INFO, tag, message)

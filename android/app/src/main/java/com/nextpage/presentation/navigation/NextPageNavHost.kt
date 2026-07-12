@@ -69,6 +69,7 @@ import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModelFactory
 import com.nextpage.data.remote.sync.SyncState
+import com.nextpage.debug.LogViewerScreen
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.debug.DebugPanel
 import com.nextpage.presentation.debug.DebugViewModel
@@ -565,8 +566,17 @@ fun NextPageNavHost(
                             val current = prefs.load()
                             prefs.save(current.copy(customHighlightColors = null))
                         },
+                        onNavigateToLogViewer = {
+                            navController.navigate(NextPageDestination.LogViewer.route)
+                        },
                         statisticsViewModel = statisticsViewModel,
                         dictionaryRepository = appContainer.dictionaryRepository
+                    )
+                }
+
+                composable(route = NextPageDestination.LogViewer.route) {
+                    LogViewerScreen(
+                        onBack = { navController.popBackStack() }
                     )
                 }
             }

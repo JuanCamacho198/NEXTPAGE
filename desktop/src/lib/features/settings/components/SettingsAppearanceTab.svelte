@@ -93,7 +93,7 @@
     </div>
     <div style="color: var(--preview-text)">
       <p class="text-xs m-1">Sample text preview</p>
-      <p class="text-(--text-micro) opacity-70">Secondary text</p>
+      <p class="text-micro opacity-70">Secondary text</p>
     </div>
   </div>
 
@@ -136,7 +136,7 @@
             y2="18.36"
           /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg
         >
-        <span class="text-(--text-2xs) font-medium text-(--color-text-muted)"
+        <span class="text-2xs font-medium text-(--color-text-muted)"
           >{t('settings.theme.light')}</span
         >
       </button>
@@ -161,7 +161,7 @@
           aria-hidden="true"
           class="theme-icon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg
         >
-        <span class="text-(--text-2xs) font-medium text-(--color-text-muted)"
+        <span class="text-2xs font-medium text-(--color-text-muted)"
           >{t('settings.theme.dark')}</span
         >
       </button>
@@ -189,7 +189,7 @@
             d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
           /></svg
         >
-        <span class="text-(--text-2xs) font-medium text-(--color-text-muted)"
+        <span class="text-2xs font-medium text-(--color-text-muted)"
           >{t('settings.theme.sepia')}</span
         >
       </button>
@@ -220,7 +220,7 @@
             y2="21"
           /><line x1="12" y1="17" x2="12" y2="21" /></svg
         >
-        <span class="text-(--text-2xs) font-medium text-(--color-text-muted)"
+        <span class="text-2xs font-medium text-(--color-text-muted)"
           >{t('settings.theme.system')}</span
         >
       </button>
@@ -256,7 +256,7 @@
   <div class="flex gap-2 justify-stretch mb-4">
     <button
       type="button"
-      class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-(--text-2xs) font-medium cursor-pointer"
+      class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-2xs font-medium cursor-pointer"
       class:border-(--color-primary)={readerThemeMode === 'paper'}
       class:border-[--preview-border,#e0e0e0]={readerThemeMode !== 'paper'}
       style="--preview-bg: #fafafa; --preview-text: #1a1a1a; --preview-border: #e0e0e0; background: var(--preview-bg); color: var(--preview-text);"
@@ -266,7 +266,7 @@
     </button>
     <button
       type="button"
-      class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-(--text-2xs) font-medium cursor-pointer"
+      class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-2xs font-medium cursor-pointer"
       class:border-(--color-primary)={readerThemeMode === 'sepia'}
       class:border-[--preview-border,#d4c4a8]={readerThemeMode !== 'sepia'}
       style="--preview-bg: #f4ecd8; --preview-text: #5b4636; --preview-border: #d4c4a8; background: var(--preview-bg); color: var(--preview-text);"
@@ -276,7 +276,7 @@
     </button>
     <button
       type="button"
-      class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-(--text-2xs) font-medium cursor-pointer"
+      class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-2xs font-medium cursor-pointer"
       class:border-(--color-primary)={readerThemeMode === 'night'}
       class:border-[--preview-border,#333333]={readerThemeMode !== 'night'}
       style="--preview-bg: #1a1a1a; --preview-text: #e8e8e8; --preview-border: #333333; background: var(--preview-bg); color: var(--preview-text);"

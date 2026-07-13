@@ -800,7 +800,7 @@
             </h4>
             {#if progressPct > 0}
               <div class="space-y-1">
-                <div class="flex items-center justify-between text-(--text-2xs) text-(--color-text-muted)">
+                <div class="flex items-center justify-between text-2xs text-(--color-text-muted)">
                   <span>{appState.t('shelf.progress')}</span>
                   <span>{progressPct}%</span>
                 </div>
@@ -811,7 +811,7 @@
                   ></div>
                 </div>
                 {#if shelfDetail.totalPages > 0}
-                  <p class="text-(--text-2xs) text-(--color-text-muted)">
+                  <p class="text-2xs text-(--color-text-muted)">
                     {appState.t('shelf.pageOf', { current: shelfDetail.currentPage, total: shelfDetail.totalPages })}
                   </p>
                 {/if}

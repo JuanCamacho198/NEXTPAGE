@@ -14,6 +14,11 @@
   --font-sans: 'Manrope', 'Segoe UI', Arial, sans-serif;
   --font-serif: 'Newsreader', 'Times New Roman', serif;
 
+  /* Font sizes */
+  --text-2xs: 0.6875rem;
+  --text-micro: 0.625rem;
+  --text-2sm: 0.8125rem;
+
   /* Spacing */
   --spacing-xs: 4px;
   --spacing-sm: 8px;

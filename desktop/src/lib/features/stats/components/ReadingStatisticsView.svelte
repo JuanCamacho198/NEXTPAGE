@@ -811,7 +811,7 @@
             {#each streakCalendar as day}
               <div class="flex flex-col items-center gap-2">
                 <div
-                  class={`flex h-8 w-8 items-center justify-center rounded-full text-(--text-2xs) ${day.active ? 'bg-(--gradient-accent) text-[#07111d]' : 'border border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted)'}`}
+                  class={`flex h-8 w-8 items-center justify-center rounded-full text-2xs ${day.active ? 'bg-(--gradient-accent) text-[#07111d]' : 'border border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted)'}`}
                 >
                   {day.label}
                 </div>

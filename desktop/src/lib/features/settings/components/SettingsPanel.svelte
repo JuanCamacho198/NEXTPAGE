@@ -503,7 +503,7 @@
         aria-controls="tabpanel-cuenta"
         id="tab-cuenta"
         tabindex={activeTab === 'cuenta' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-2sm text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
         class:bg-(--color-accent-soft)={activeTab === 'cuenta'}
         class:text-(--color-accent-start)={activeTab === 'cuenta'}
         class:border-(--color-accent-start)={activeTab === 'cuenta'}
@@ -520,7 +520,7 @@
         aria-controls="tabpanel-apariencia"
         id="tab-apariencia"
         tabindex={activeTab === 'apariencia' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-2sm text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
         class:bg-(--color-accent-soft)={activeTab === 'apariencia'}
         class:text-(--color-accent-start)={activeTab === 'apariencia'}
         class:border-(--color-accent-start)={activeTab === 'apariencia'}
@@ -537,7 +537,7 @@
         aria-controls="tabpanel-reader"
         id="tab-reader"
         tabindex={activeTab === 'reader' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-2sm text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
         class:bg-(--color-accent-soft)={activeTab === 'reader'}
         class:text-(--color-accent-start)={activeTab === 'reader'}
         class:border-(--color-accent-start)={activeTab === 'reader'}
@@ -554,7 +554,7 @@
         aria-controls="tabpanel-datos"
         id="tab-datos"
         tabindex={activeTab === 'datos' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-2sm text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
         class:bg-(--color-accent-soft)={activeTab === 'datos'}
         class:text-(--color-accent-start)={activeTab === 'datos'}
         class:border-(--color-accent-start)={activeTab === 'datos'}
@@ -571,7 +571,7 @@
         aria-controls="tabpanel-atajos"
         id="tab-atajos"
         tabindex={activeTab === 'atajos' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-2sm text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
         class:bg-(--color-accent-soft)={activeTab === 'atajos'}
         class:text-(--color-accent-start)={activeTab === 'atajos'}
         class:border-(--color-accent-start)={activeTab === 'atajos'}
@@ -588,7 +588,7 @@
         aria-controls="tabpanel-acerca"
         id="tab-acerca"
         tabindex={activeTab === 'acerca' ? 0 : -1}
-        class="flex-1 px-2 py-3 border-none cursor-pointer text-(--text-2sm) text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-2sm text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
         class:bg-(--color-accent-soft)={activeTab === 'acerca'}
         class:text-(--color-accent-start)={activeTab === 'acerca'}
         class:border-(--color-accent-start)={activeTab === 'acerca'}
@@ -613,7 +613,7 @@
                 <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
                   {t('settings.authentication')}
                 </h3>
-                <p class="text-(--text-2xs) text-(--color-text-muted) mb-3">
+                <p class="text-2xs text-(--color-text-muted) mb-3">
                   {t('settings.authDescription')}
                 </p>
                 <GoogleLoginButton {t} />
@@ -717,7 +717,7 @@
                         y2="4.22"
                       /></svg
                     >
-                    <span class="text-(--text-2xs) font-medium text-(--color-text-muted)"
+                    <span class="text-2xs font-medium text-(--color-text-muted)"
                       >{t('settings.theme.light')}</span
                     >
                   </button>
@@ -747,7 +747,7 @@
                       class="theme-icon"
                       ><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg
                     >
-                    <span class="text-(--text-2xs) font-medium text-(--color-text-muted)"
+                    <span class="text-2xs font-medium text-(--color-text-muted)"
                       >{t('settings.theme.dark')}</span
                     >
                   </button>
@@ -779,7 +779,7 @@
                         d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
                       /></svg
                     >
-                    <span class="text-(--text-2xs) font-medium text-(--color-text-muted)"
+                    <span class="text-2xs font-medium text-(--color-text-muted)"
                       >{t('settings.theme.sepia')}</span
                     >
                   </button>
@@ -814,7 +814,7 @@
                         y2="21"
                       /><line x1="12" y1="17" x2="12" y2="21" /></svg
                     >
-                    <span class="text-(--text-2xs) font-medium text-(--color-text-muted)"
+                    <span class="text-2xs font-medium text-(--color-text-muted)"
                       >{t('settings.theme.system')}</span
                     >
                   </button>
@@ -872,7 +872,7 @@
               <div class="flex gap-2 justify-stretch mb-4">
                 <button
                   type="button"
-                  class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-(--text-2xs) font-medium cursor-pointer"
+                  class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-2xs font-medium cursor-pointer"
                   class:border-(--color-primary)={readerThemeMode === 'paper'}
                   class:border-(--color-border)={readerThemeMode !== 'paper'}
                   style="--preview-bg: #fafafa; --preview-text: #1a1a1a; --preview-border: #e0e0e0; background: var(--preview-bg); color: var(--preview-text);"
@@ -882,7 +882,7 @@
                 </button>
                 <button
                   type="button"
-                  class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-(--text-2xs) font-medium cursor-pointer"
+                  class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-2xs font-medium cursor-pointer"
                   class:border-(--color-primary)={readerThemeMode === 'sepia'}
                   class:border-(--color-border)={readerThemeMode !== 'sepia'}
                   style="--preview-bg: #f4ecd8; --preview-text: #5b4636; --preview-border: #d4c4a8; background: var(--preview-bg); color: var(--preview-text);"
@@ -892,7 +892,7 @@
                 </button>
                 <button
                   type="button"
-                  class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-(--text-2xs) font-medium cursor-pointer"
+                  class="flex-1 py-3 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center text-2xs font-medium cursor-pointer"
                   class:border-(--color-primary)={readerThemeMode === 'night'}
                   class:border-(--color-border)={readerThemeMode !== 'night'}
                   style="--preview-bg: #1a1a1a; --preview-text: #e8e8e8; --preview-border: #333333; background: var(--preview-bg); color: var(--preview-text);"
@@ -987,7 +987,7 @@
                 <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
                   {t('settings.data.exportLibrary')}
                 </h3>
-                <p class="text-(--text-2xs) text-(--color-text-muted) mb-3">
+                <p class="text-2xs text-(--color-text-muted) mb-3">
                   {t('settings.data.exportLibraryDescription')}
                 </p>
                 <button
@@ -1014,7 +1014,7 @@
                 <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
                   {t('settings.data.exportHighlights')}
                 </h3>
-                <p class="text-(--text-2xs) text-(--color-text-muted) mb-3">
+                <p class="text-2xs text-(--color-text-muted) mb-3">
                   {t('settings.data.exportHighlightsDescription')}
                 </p>
                 <section
@@ -1069,7 +1069,7 @@
                 <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
                   {t('settings.data.clearCache')}
                 </h3>
-                <p class="text-(--text-2xs) text-(--color-text-muted) mb-3">
+                <p class="text-2xs text-(--color-text-muted) mb-3">
                   {t('settings.data.clearCacheDescription')}
                 </p>
                 <button
@@ -1112,14 +1112,14 @@
               <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
                 {t('settings.shortcuts.title')}
               </h3>
-              <p class="text-(--text-2xs) text-(--color-text-muted) mb-3">
+              <p class="text-2xs text-(--color-text-muted) mb-3">
                 {t('settings.shortcuts.description')}
               </p>
               <ul class="m-0 p-0 list-none grid gap-2">
                 {#each keyboardShortcuts as shortcut (shortcut.id)}
                   <li class="flex items-center gap-2">
                     <span
-                      class="inline-flex items-center justify-center min-w-[86px] px-2 py-1 rounded-md border border-(--color-border) font-mono text-(--text-2xs) text-(--color-primary) bg-(--color-background)"
+                      class="inline-flex items-center justify-center min-w-[86px] px-2 py-1 rounded-md border border-(--color-border) font-mono text-2xs text-(--color-primary) bg-(--color-background)"
                       >{shortcut.combo}</span
                     >
                     <span class="text-xs text-(--color-primary)">{t(shortcut.descriptionKey)}</span>

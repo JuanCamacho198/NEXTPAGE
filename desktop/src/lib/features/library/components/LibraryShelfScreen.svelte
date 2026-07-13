@@ -196,7 +196,7 @@
               bind:value={searchQuery}
             />
             <span
-              class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-(--color-border) px-1.5 py-0.5 text-(--text-micro) text-(--color-text-muted)"
+              class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-(--color-border) px-1.5 py-0.5 text-micro text-(--color-text-muted)"
             >
               Ctrl K
             </span>
@@ -222,7 +222,7 @@
         <h2 class="text-sm font-semibold text-(--color-primary)">
           {t('shelf.availableDevices')}
           <span
-            class="ml-2 rounded-full bg-(--color-primary)/20 px-2 py-0.5 text-(--text-micro) text-(--color-primary)"
+            class="ml-2 rounded-full bg-(--color-primary)/20 px-2 py-0.5 text-micro text-(--color-primary)"
           >
             {downloadableCatalog.count}
           </span>
@@ -254,7 +254,7 @@
               class="flex items-start gap-3 rounded-(--radius-xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-3 shadow-(--shadow-panel)"
             >
               <div
-                class="flex h-20 w-14 shrink-0 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] text-(--text-micro) uppercase tracking-[0.16em] text-(--color-primary)"
+                class="flex h-20 w-14 shrink-0 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] text-micro uppercase tracking-[0.16em] text-(--color-primary)"
               >
                 {row.format.toUpperCase()}
               </div>
@@ -268,11 +268,11 @@
                 </p>
                 <div class="mt-1 flex flex-wrap items-center gap-2">
                   <span
-                    class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-2 py-0.5 text-(--text-micro) uppercase tracking-[0.08em] text-(--color-text-muted)"
+                    class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-2 py-0.5 text-micro uppercase tracking-[0.08em] text-(--color-text-muted)"
                   >
                     {row.format.toUpperCase()}
                   </span>
-                  <span class="text-(--text-micro) text-(--color-text-muted)">
+                  <span class="text-micro text-(--color-text-muted)">
                     {t('shelf.fromDevice', { device: getSourceDeviceLabel(row) })}
                   </span>
                 </div>
@@ -537,7 +537,7 @@
                 >
                   {#snippet fallback()}
                     <div
-                      class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] px-2 text-center text-(--text-micro) uppercase tracking-[0.16em] text-(--color-primary)"
+                      class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] px-2 text-center text-micro uppercase tracking-[0.16em] text-(--color-primary)"
                     >
                       {t('shelf.noCover')}
                     </div>
@@ -551,7 +551,7 @@
                     {book.title}
                   </h3>
                   <span
-                    class="rounded-full border border-(--color-border) px-2 py-1 text-(--text-micro) uppercase tracking-[0.12em] text-(--color-text-muted)"
+                    class="rounded-full border border-(--color-border) px-2 py-1 text-micro uppercase tracking-[0.12em] text-(--color-text-muted)"
                   >
                     {getStateLabel(book)}
                   </span>

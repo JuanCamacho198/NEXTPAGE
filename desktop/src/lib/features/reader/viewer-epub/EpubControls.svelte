@@ -67,7 +67,7 @@
       </button>
       <span
         data-testid="epub-font-percent"
-        class="text-(--text-2xs) min-w-10 text-center text-(--color-primary)">{fontSize}%</span
+        class="text-2xs min-w-10 text-center text-(--color-primary)">{fontSize}%</span
       >
       <button
         type="button"

@@ -106,7 +106,7 @@
     >
       {#each assignedTags as tag (tag.id)}
         <span
-          class="max-w-full truncate rounded-full px-2 py-0.5 text-(--text-micro) font-medium text-(--color-text-inverse)"
+          class="max-w-full truncate rounded-full px-2 py-0.5 text-micro font-medium text-(--color-text-inverse)"
           style={tag.color
             ? `background-color: ${tag.color}33; border: 1px solid ${tag.color}66;`
             : 'background-color: rgba(255,255,255,0.1);'}

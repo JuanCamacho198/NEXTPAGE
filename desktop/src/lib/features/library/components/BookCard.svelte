@@ -61,7 +61,7 @@
         >
           {#snippet fallback()}
             <div
-              class={`${compact ? 'h-14 w-10' : 'h-16 w-12'} flex items-center justify-center rounded bg-(--color-surface) text-(--text-micro) uppercase tracking-widest text-(--color-text-muted)`}
+              class={`${compact ? 'h-14 w-10' : 'h-16 w-12'} flex items-center justify-center rounded bg-(--color-surface) text-micro uppercase tracking-widest text-(--color-text-muted)`}
             >
               {t('library.cover')}
             </div>
@@ -88,7 +88,7 @@
           {#if showProgress}
             <div class="mt-2">
               <div
-                class="mb-1 flex items-center justify-between text-(--text-2xs) text-(--color-text-muted)"
+                class="mb-1 flex items-center justify-between text-2xs text-(--color-text-muted)"
               >
                 <span>{t('home.shelfSort.progress')}</span>
                 <span>{progress}%</span>

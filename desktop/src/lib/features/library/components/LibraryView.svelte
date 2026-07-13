@@ -304,7 +304,7 @@
                     >
                       {#snippet fallback()}
                         <div
-                          class="flex h-14 w-10 items-center justify-center rounded bg-(--color-background) text-(--text-micro) uppercase text-(--color-text-muted)"
+                          class="flex h-14 w-10 items-center justify-center rounded bg-(--color-background) text-micro uppercase text-(--color-text-muted)"
                         >
                           {t('library.cover')}
                         </div>

@@ -302,7 +302,7 @@
               aria-label={theme.label}
             >
               <span
-                class="text-(--text-micro) font-normal"
+                class="text-micro font-normal"
                 class:text-white={theme.name === 'night' ||
                   theme.name === 'dark' ||
                   theme.name === 'blue'}

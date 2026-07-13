@@ -19,6 +19,12 @@
   let activePeriod = $state<PeriodKey>('month');
   let activeGranularity = $state<Granularity>('day');
 
+  // ─── Tooltip state (positioned via DOM mouse coords, not viewBox) ───
+  let hoveredPoint: { label: string; value: number } | null = $state(null);
+  let tooltipPos = $state<{ x: number; y: number } | null>(null);
+  const tooltipOffsetX = 14;
+  const tooltipOffsetY = -42;
+
   const periodDropdownOptions = $derived(
     Object.entries(periodLabels).map(([value]) => ({
       value,
@@ -129,10 +135,13 @@
       : [],
   );
 
+  /** Minimum pixels between x-axis labels to avoid overlap */
+  const MIN_LABEL_SPACING = 46;
+
   const chartMeta = $derived.by(() => {
     const max = Math.max(...activitySeries.map((point) => point.value), 1);
     const min = Math.min(...activitySeries.map((point) => point.value), 0);
-    const width = 560;
+    const width = 800;
     const height = 240;
     const step = activitySeries.length > 1 ? width / (activitySeries.length - 1) : width;
 
@@ -143,12 +152,37 @@
       return { ...point, x, y };
     });
 
+    // Smart label spacing: show fewer labels when many points
+    const maxVisibleLabels = Math.max(1, Math.floor(width / MIN_LABEL_SPACING));
+    const labelInterval = Math.max(1, Math.ceil(points.length / maxVisibleLabels));
+
     const line = points
       .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x},${point.y}`)
       .join(' ');
     const area = `${line} L ${width},${height} L 0,${height} Z`;
-    return { max, points, line, area, width, height };
+    return { max, points, line, area, width, height, labelInterval };
   });
+
+  /** Shorten date labels on x-axis to prevent crowding. */
+  function formatChartLabel(label: string): string {
+    if (activeGranularity === 'day') {
+      // "2026-06-24" → "6/24" | "06-24" → "6/24"
+      const m = label.match(/(?:^|\D)(\d{1,2})[\-/](\d{1,2})(?:$|\D)/);
+      if (m) return `${parseInt(m[1])}/${parseInt(m[2])}`;
+      if (/^\d{1,2}$/.test(label)) return label;
+    }
+    if (activeGranularity === 'week') {
+      // "2026-W03" → "W3" | "Semana 03" → "S3"
+      const w = label.match(/[WSws]\s*0*(\d+)/);
+      if (w) return `${label.match(/[WSws]/)?.[0]?.toUpperCase() ?? 'W'}${w[1]}`;
+    }
+    if (activeGranularity === 'month') {
+      const parts = label.split(/[\s-]+/);
+      const last = parts[parts.length - 1];
+      return last.length <= 4 ? last : last.slice(0, 3);
+    }
+    return label;
+  }
 
   const mostReadBooks = $derived.by(() =>
     [...appState.books].sort((left, right) => right.minutesRead - left.minutesRead).slice(0, 3),
@@ -224,9 +258,9 @@
       {/each}
     </div>
 
-    <div class="grid grid-cols-1 gap-4 2xl:grid-cols-[1.6fr_1fr]">
+    <div class="grid grid-cols-1 gap-4 2xl:grid-cols-[2.2fr_1fr]">
       <article
-        class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
+        class="relative rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
       >
         <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
@@ -244,10 +278,30 @@
           />
         </div>
 
+        <!-- Tooltip overlay (positioned via DOM mouse coords) -->
+        {#if hoveredPoint && tooltipPos}
+          <div
+            class="pointer-events-none absolute z-10 rounded-lg border border-(--color-border) bg-(--color-bg-panel) px-3 py-2 text-xs shadow-(--shadow-panel)"
+            style="left: {tooltipPos.x + tooltipOffsetX}px; top: {tooltipPos.y + tooltipOffsetY}px;"
+          >
+            <p class="font-medium text-(--color-primary)">{hoveredPoint.value} min</p>
+            <p class="mt-0.5 text-(--color-text-muted)">{hoveredPoint.label}</p>
+          </div>
+        {/if}
+
         <div
           class="rounded-[22px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(6,14,24,0.86),rgba(10,18,30,0.94))] p-4"
         >
-          <svg viewBox={`0 0 ${chartMeta.width} ${chartMeta.height + 28}`} class="h-[280px] w-full">
+          <svg
+            role="img"
+            aria-label={_t('stats.minutesReadChart')}
+            viewBox={`0 0 ${chartMeta.width} ${chartMeta.height + 28}`}
+            class="h-[280px] w-full"
+            onmouseleave={() => {
+              hoveredPoint = null;
+              tooltipPos = null;
+            }}
+          >
             <defs>
               <linearGradient id="lineStroke" x1="0%" x2="100%" y1="0%" y2="0%">
                 <stop offset="0%" stop-color="#4e8cff"></stop>
@@ -279,20 +333,76 @@
               stroke-linecap="round"
             ></path>
 
-            {#each chartMeta.points as point}
-              <circle cx={point.x} cy={point.y} r="4" fill="#49d4ff"></circle>
+            {#each chartMeta.points as point, i}
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="5"
+                fill="#49d4ff"
+                style="transition: r 0.15s ease;"
+                class="cursor-pointer"
+                role="button"
+                tabindex="0"
+                aria-label={`${point.value} min — ${point.label}`}
+                onmouseenter={(e) => {
+                  const circle = e.currentTarget as SVGCircleElement;
+                  circle.style.r = '7';
+                  hoveredPoint = { label: point.label, value: point.value };
+                  const article = circle.closest('article');
+                  if (article) {
+                    const rect = article.getBoundingClientRect();
+                    tooltipPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+                  }
+                }}
+                onmousemove={(e) => {
+                  const circle = e.currentTarget as SVGCircleElement;
+                  const article = circle.closest('article');
+                  if (article) {
+                    const rect = article.getBoundingClientRect();
+                    tooltipPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+                  }
+                }}
+                onmouseleave={(e) => {
+                  const circle = e.currentTarget as SVGCircleElement;
+                  circle.style.r = '5';
+                  hoveredPoint = null;
+                  tooltipPos = null;
+                }}
+                onfocus={(e) => {
+                  const circle = e.currentTarget as SVGCircleElement;
+                  circle.style.r = '7';
+                  hoveredPoint = { label: point.label, value: point.value };
+                  const ib = circle.getBoundingClientRect();
+                  const ab = circle.closest('article')!.getBoundingClientRect();
+                  tooltipPos = { x: ib.left - ab.left + 14, y: ib.top - ab.top - 30 };
+                }}
+                onblur={(e) => {
+                  const circle = e.currentTarget as SVGCircleElement;
+                  circle.style.r = '5';
+                  hoveredPoint = null;
+                  tooltipPos = null;
+                }}
+                onkeydown={(e) => {
+                  if (e.key === 'Escape') {
+                    hoveredPoint = null;
+                    tooltipPos = null;
+                  }
+                }}
+              ></circle>
             {/each}
 
-            {#each chartMeta.points as point}
-              <text
-                x={point.x}
-                y={chartMeta.height + 18}
-                text-anchor="middle"
-                font-size="11"
-                fill="var(--color-text-muted)"
-              >
-                {point.label}
-              </text>
+            {#each chartMeta.points as point, i}
+              {#if i % chartMeta.labelInterval === 0 || i === chartMeta.points.length - 1}
+                <text
+                  x={point.x}
+                  y={chartMeta.height + 18}
+                  text-anchor="middle"
+                  font-size="10"
+                  fill="var(--color-text-muted)"
+                >
+                  {formatChartLabel(point.label)}
+                </text>
+              {/if}
             {/each}
           </svg>
         </div>

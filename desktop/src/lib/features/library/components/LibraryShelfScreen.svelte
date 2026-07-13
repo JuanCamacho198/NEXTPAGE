@@ -34,7 +34,6 @@
     onStatusChange?: (book: ShelfBook, status: string) => void;
     onViewDetails?: (book: ShelfBook) => void;
     onRemoveBook?: (book: ShelfBook) => void;
-    onOpenDownloadedBook?: (bookId: string) => void;
   };
 
   let {
@@ -48,7 +47,6 @@
     onStatusChange,
     onViewDetails,
     onRemoveBook,
-    onOpenDownloadedBook,
   }: Props = $props();
 
   // ── Downloadable catalog helpers ──

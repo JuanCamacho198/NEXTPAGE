@@ -7,7 +7,6 @@
     profile: ProfileSessionViewModel;
     isProfileLoading: boolean;
     profileError: string | null;
-    profileAvatarBroken: boolean;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
@@ -15,13 +14,8 @@
     profile,
     isProfileLoading,
     profileError,
-    // profileAvatarBroken is accepted for backwards compatibility
-    profileAvatarBroken: _unused,
     t,
   }: Props = $props();
-
-  // Satisfy the unused-variable linter — the prop itself is still accepted
-  void _unused;
 </script>
 
 {#if profileError}

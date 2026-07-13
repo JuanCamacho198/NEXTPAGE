@@ -8,8 +8,6 @@ import {
   upsertBook,
   upsertBookCover,
   hideBookFromLibrary,
-  updateBookProgress,
-  saveProgress,
   extractEpubCover,
   deleteBookCover,
 } from '$lib/shared/api/tauriClient';

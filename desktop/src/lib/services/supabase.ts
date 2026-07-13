@@ -6,7 +6,7 @@
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { BaseDirectory, writeTextFile, readTextFile, remove, exists } from '@tauri-apps/plugin-fs';
+import { BaseDirectory, writeTextFile, readTextFile, exists } from '@tauri-apps/plugin-fs';
 
 const SESSION_FILE = 'supabase-session.json';
 const BASE_DIR = BaseDirectory.AppData;

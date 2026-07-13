@@ -27,8 +27,6 @@ import { authState } from '$lib/stores/authState.svelte';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 import { logger } from '$lib/shared/logger/Logger';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-
 let currentPort: number | null = null;
 let urlUnlisten: (() => void) | null = null;
 

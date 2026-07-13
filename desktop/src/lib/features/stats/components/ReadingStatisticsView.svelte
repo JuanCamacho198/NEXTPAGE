@@ -423,7 +423,7 @@
               stroke-linecap="round"
             ></path>
 
-            {#each chartMeta.points as point, i}
+            {#each chartMeta.points as point}
               <circle
                 cx={point.x}
                 cy={point.y}
@@ -550,7 +550,7 @@
                 <path d={chartMeta.area} fill="url(#lineFillModal)"></path>
                 <path d={chartMeta.line} fill="none" stroke="url(#lineStrokeModal)" stroke-width="3" stroke-linecap="round"></path>
 
-                {#each chartMeta.points as point, i}
+                {#each chartMeta.points as point}
                   <circle
                     cx={point.x}
                     cy={point.y}

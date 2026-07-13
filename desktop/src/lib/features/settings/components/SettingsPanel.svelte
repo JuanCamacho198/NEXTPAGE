@@ -68,7 +68,6 @@
   let pendingResetTab = $state<'cuenta' | 'apariencia' | 'reader' | null>(null);
   let isProfileLoading = $state(false);
   let profileError = $state<string | null>(null);
-  let profileAvatarBroken = $state(false);
   let profile = $state<ProfileSessionViewModel>(profileSessionFromAuthState());
   let devicesState = $state(createDevicesState());
 
@@ -284,11 +283,9 @@
 
     try {
       profile = profileSessionFromAuthState();
-      profileAvatarBroken = false;
     } catch (error) {
       profile = normalizeProfileSession(null);
       profileError = error instanceof Error ? error.message : t('errors.commandFailure');
-      profileAvatarBroken = false;
     } finally {
       isProfileLoading = false;
     }
@@ -461,7 +458,7 @@
 
   // Cleanup heartbeat on window close
   $effect(() => {
-    const handleBeforeUnload = () => devicesState.stopHeartbeat()
+    const handleBeforeUnload = (): void => devicesState.stopHeartbeat()
     window.addEventListener('beforeunload', handleBeforeUnload)
 
     return () => {
@@ -632,8 +629,7 @@
                   <p class="mb-2 rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-900">{settingsError}</p>
                 {/if}
               </div>
-              <div class="p-4 border-b border-(--color-border) last:border-b-0">
-                <ProfileCard {profile} {isProfileLoading} {profileError} {profileAvatarBroken} {t} />
+              <div class="p-4 border-b border-(--color-border) last:border-b-0">                  <ProfileCard {profile} {isProfileLoading} {profileError} {t} />
               </div>
               {#if authState.isSignedIn && authState.userId}
                 <div class="p-4 border-b border-(--color-border) last:border-b-0">
@@ -644,7 +640,6 @@
                     devices={devicesState.devices}
                     error={devicesState.error}
                     isLoading={devicesState.isLoading}
-                    currentDeviceId={devicesState.currentDeviceId}
                     onremove={(id: string) => void devicesState.remove(id, authState.userId!)}
                     {t}
                   />

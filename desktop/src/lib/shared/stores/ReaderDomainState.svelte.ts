@@ -235,7 +235,7 @@ class ReaderDomainState {
       }
 
       this.unsubscribeRemoteBookmarks = this.supabaseSync.subscribeToBookmarks((payload) => {
-        const { id, bookId, cfiLocation, titleSnippet, deletedAt, updatedAt } = payload;
+        const { id, bookId, titleSnippet, deletedAt, updatedAt } = payload;
 
         if (deletedAt) {
           // Soft-delete: propagate tombstone

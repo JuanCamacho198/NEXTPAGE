@@ -10,7 +10,6 @@ import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 // ---- Mock control variables ----
 const mockPluginStart = vi.fn();
 const mockPluginCancel = vi.fn();
-const mockPluginOnUrl = vi.fn();
 const mockOpenUrl = vi.fn();
 
 let capturedOnUrlHandler: ((url: string) => void) | null = null;

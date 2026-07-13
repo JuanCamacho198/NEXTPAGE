@@ -151,7 +151,6 @@ describe('SupabaseBookCatalogSync — upsertBook', () => {
   });
 
   it('throws on Supabase error', async () => {
-    const sync = new SupabaseBookCatalogSync('user-1');
     const book = makeUserBookRow();
 
     mockChainable.upsert = vi.fn().mockResolvedValue({ error: new Error('DB error') });

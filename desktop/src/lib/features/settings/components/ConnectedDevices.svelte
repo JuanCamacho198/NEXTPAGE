@@ -1,12 +1,11 @@
 <script lang="ts">
-  import type { DeviceViewModel, DeviceTypeIcon } from '$lib/services/devices'
+  import type { DeviceViewModel } from '$lib/services/devices'
   import type { MessageKey } from '$lib/shared/i18n'
 
   type Props = {
     devices: DeviceViewModel[]
     error: string | null
     isLoading: boolean
-    currentDeviceId: string | null
     onremove: (id: string) => void
     t: (key: MessageKey, params?: Record<string, string | number>) => string
   }
@@ -15,7 +14,6 @@
     devices,
     error,
     isLoading,
-    currentDeviceId,
     onremove,
     t,
   }: Props = $props()

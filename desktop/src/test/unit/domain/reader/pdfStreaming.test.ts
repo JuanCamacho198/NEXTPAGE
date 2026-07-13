@@ -68,7 +68,6 @@ import {
   documentCache,
 } from '$lib/features/reader/viewer-pdf/pdfStreaming';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- test mock
 function makeMockDocument(): any {
   return {
     numPages: 10,

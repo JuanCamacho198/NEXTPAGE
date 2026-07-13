@@ -21,14 +21,6 @@
 
   let { open, format, readerSettings, onSettingsChange, t, onClose }: Props = $props();
 
-  const themes: Array<{ name: ReaderThemeMode; bg: string; label: string }> = [
-    { name: 'paper', bg: '#ffffff', label: t('reader.themePaper') },
-    { name: 'sepia', bg: '#f4ecd8', label: t('reader.themeSepia') },
-    { name: 'night', bg: '#000000', label: t('reader.themeNight') },
-    { name: 'dark', bg: '#444444', label: t('reader.themeDark') },
-    { name: 'blue', bg: '#5b7fa3', label: t('reader.themeBlue') },
-  ];
-
   const LINE_HEIGHT_PRESETS = [1.4, 1.6, 1.8, 2.0, 2.2, 2.4];
   const PARAGRAPH_SPACING_PRESETS = [0, 0.5, 1, 1.5, 2, 3];
   const MARGIN_PRESETS: Array<ReaderSettings['margins']> = [
@@ -38,6 +30,14 @@
     { top: 2, bottom: 2, left: 2.5, right: 2.5 },
     { top: 2.5, bottom: 2.5, left: 3, right: 3 },
   ];
+  const themes = $derived<Array<{ name: ReaderThemeMode; bg: string; label: string }>>([
+    { name: 'paper', bg: '#ffffff', label: t('reader.themePaper') },
+    { name: 'sepia', bg: '#f4ecd8', label: t('reader.themeSepia') },
+    { name: 'night', bg: '#000000', label: t('reader.themeNight') },
+    { name: 'dark', bg: '#444444', label: t('reader.themeDark') },
+    { name: 'blue', bg: '#5b7fa3', label: t('reader.themeBlue') },
+  ]);
+
   const ALIGN_CYCLE: ReaderTextAlign[] = ['left', 'center', 'right', 'justify'];
 
   let sidebarEl: HTMLElement | undefined = $state();

@@ -53,7 +53,7 @@
     ...restProps
   }: Props = $props();
 
-  let pageValue = $state(currentPage);
+  let pageValue = $state(1);
 
   $effect(() => {
     pageValue = currentPage;

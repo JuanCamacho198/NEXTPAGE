@@ -77,7 +77,7 @@ export async function downloadBook(bookId: string): Promise<void> {
     // 2. Download with retry (up to 3 attempts, exponential backoff)
     const gdrive = new GDriveProvider();
     const fileName = `${book.id}.${book.format}`;
-    let bytes: Uint8Array;
+    let bytes: Uint8Array = new Uint8Array(0); // fallback, never used (throw guard below)
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -113,8 +113,7 @@ export async function downloadBook(bookId: string): Promise<void> {
     }
 
     // 3. Save locally
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await tauri.saveBookFile(bookId, Array.from(bytes!));
+    await tauri.saveBookFile(bookId, Array.from(bytes));
 
     // 4. Upsert BookEntity
     await tauri.upsertBook({

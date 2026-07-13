@@ -22,7 +22,18 @@ import {
   type DeviceViewModel,
 } from '$lib/services/devices';
 
-export function createDevicesState() {
+export function createDevicesState(): {
+  readonly devices: DeviceViewModel[];
+  readonly error: string | null;
+  readonly isLoading: boolean;
+  readonly currentDeviceId: string | null;
+  readonly deviceCount: number;
+  loadDevices: (userId: string) => Promise<void>;
+  remove: (deviceId: string, userId: string) => Promise<void>;
+  stopHeartbeat: () => void;
+  startHeartbeat: (id: string) => void;
+  destroy: () => void;
+} {
   let devices = $state<DeviceViewModel[]>([]);
   let error = $state<string | null>(null);
   let isLoading = $state(false);
@@ -35,14 +46,14 @@ export function createDevicesState() {
 
   // ── Heartbeat ──────────────────────────────────────────────────
 
-  function stopHeartbeat() {
+  function stopHeartbeat(): void {
     if (heartbeatTimer) {
       clearInterval(heartbeatTimer);
       heartbeatTimer = null;
     }
   }
 
-  function startHeartbeat(id: string) {
+  function startHeartbeat(id: string): void {
     stopHeartbeat();
     currentDeviceId = id;
     heartbeatTimer = setInterval(async () => {
@@ -61,7 +72,7 @@ export function createDevicesState() {
    * Any INSERT/UPDATE/DELETE from another device or session
    * will be reflected in real time.
    */
-  function subscribeToDeviceChanges(userId: string) {
+  function subscribeToDeviceChanges(userId: string): void {
     // Clean up previous subscription if any
     unsubscribeFromDeviceChanges();
 
@@ -107,7 +118,7 @@ export function createDevicesState() {
     };
   }
 
-  function unsubscribeFromDeviceChanges() {
+  function unsubscribeFromDeviceChanges(): void {
     if (realtimeUnsubscribe) {
       realtimeUnsubscribe();
       realtimeUnsubscribe = null;
@@ -116,7 +127,7 @@ export function createDevicesState() {
 
   // ── Load / register current device ─────────────────────────────
 
-  async function loadDevices(userId: string) {
+  async function loadDevices(userId: string): Promise<void> {
     isLoading = true;
     error = null;
     try {
@@ -149,7 +160,7 @@ export function createDevicesState() {
     }
   }
 
-  async function remove(deviceId: string, userId: string) {
+  async function remove(deviceId: string, userId: string): Promise<void> {
     const client = getSessionClient();
     await removeDevice(client, deviceId, userId);
     devices = devices.filter((d) => d.id !== deviceId);
@@ -157,7 +168,7 @@ export function createDevicesState() {
 
   // ── Cleanup ────────────────────────────────────────────────────
 
-  function destroy() {
+  function destroy(): void {
     stopHeartbeat();
     unsubscribeFromDeviceChanges();
   }

@@ -19,7 +19,11 @@ export const periodLabels: Record<PeriodKey, string> = {
   all: 'Todo el tiempo',
 };
 
-export const GENRE_COLORS = ['#43d3c4', '#f4b942', '#4d86ff', '#9d59ff', '#ff6b6b'] as const;
+export const GENRE_COLORS = [
+  '#4e8cff', '#43d3c4', '#f4b942', '#ff6b6b',
+  '#9d59ff', '#ff9f43', '#2ed573', '#a29bfe',
+  '#fd79a8', '#00cec9', '#e17055', '#6c5ce7',
+] as const;
 
 export function hashNumber(value: string): number {
   let hash = 0;
@@ -108,7 +112,7 @@ export function calculateGenreDistribution(
   const total = Array.from(groups.values()).reduce((sum, value) => sum + value, 0);
 
   return Array.from(groups.entries())
-    .sort(([left], [right]) => left.localeCompare(right, 'es'))
+    .sort(([, leftMin], [, rightMin]) => rightMin - leftMin)
     .map(([genre, minutes], index) => ({
       genre,
       minutes,

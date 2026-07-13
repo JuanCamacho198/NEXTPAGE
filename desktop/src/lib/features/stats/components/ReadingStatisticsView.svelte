@@ -253,7 +253,8 @@
 
 <section class="space-y-5">
   <div
-    class="rounded-(--radius-2xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-(--shadow-hero)"
+    class="sticky top-0 z-10 rounded-(--radius-2xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-(--shadow-hero)"
+    style="backdrop-filter: blur(8px);"
   >
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
@@ -309,6 +310,7 @@
             </p>
           </div>
 
+          <span class="text-xs text-(--color-text-muted)">{_t('stats.groupBy')}</span>
           <Dropdown
             options={granularityOptions.map((o) => ({ ...o, label: _t(o.label as MessageKey) }))}
             bind:value={activeGranularity}
@@ -618,7 +620,7 @@
           class="flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between"
         >
           <div
-            class="relative h-52 w-52 rounded-full"
+            class="donut-chart relative h-52 w-52 rounded-full"
             style={`background: conic-gradient(${genreDistribution
               .map((entry, index, array) => {
                 const start = array

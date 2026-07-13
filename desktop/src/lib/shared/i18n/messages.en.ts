@@ -573,6 +573,7 @@ export const messagesEn = {
   'stats.granularityDay': 'Day',
   'stats.granularityWeek': 'Week',
   'stats.granularityMonth': 'Month',
+  'stats.groupBy': 'Group by',
   'stats.timeByGenre': 'Time by genre',
   'stats.genreDistribution': 'Reading time distribution by category.',
   'stats.mostReadBooks': 'Most read books',

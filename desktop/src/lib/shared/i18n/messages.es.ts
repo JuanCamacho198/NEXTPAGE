@@ -535,6 +535,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'stats.granularityDay': 'Día',
   'stats.granularityWeek': 'Semana',
   'stats.granularityMonth': 'Mes',
+  'stats.groupBy': 'Agrupar por',
   'stats.timeByGenre': 'Tiempo por género',
   'stats.genreDistribution': 'Distribución del tiempo de lectura por categoría.',
   'stats.mostReadBooks': 'Libros más leídos',

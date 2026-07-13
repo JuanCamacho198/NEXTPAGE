@@ -586,6 +586,7 @@ export const messagesEn = {
   'stats.additionalInfo': 'Additional information',
   'stats.additionalDesc': 'Useful averages to understand reading habits.',
   'stats.noPriorData': 'No prior data',
+  'stats.firstPeriod': 'First period',
   'stats.vsPrevious': 'vs. previous {{period}}',
   'stats.periodWeek': 'This week',
   'stats.periodMonth': 'This month',

@@ -548,6 +548,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'stats.additionalInfo': 'Información adicional',
   'stats.additionalDesc': 'Promedios útiles para entender el hábito de lectura.',
   'stats.noPriorData': 'Sin datos previos',
+  'stats.firstPeriod': 'Nuevo',
   'stats.vsPrevious': 'vs. {{period}} anterior',
   'stats.periodWeek': 'Esta semana',
   'stats.periodMonth': 'Este mes',

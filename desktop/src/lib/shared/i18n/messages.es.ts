@@ -300,6 +300,15 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.discardChanges': 'Descartar cambios',
   'settings.discardChangesConfirm': 'Esto descartara todos los cambios sin guardar. Continuar?',
 
+  // Sidebar Navigation
+  'sidebar.home': 'Inicio',
+  'sidebar.library': 'Estantería',
+  'sidebar.stats': 'Estadísticas',
+  'sidebar.highlights': 'Notas y resaltados',
+  'sidebar.settings': 'Ajustes',
+  'sidebar.expand': 'Expandir sidebar',
+  'sidebar.collapse': 'Colapsar sidebar',
+
   // Common
   'settings.search': 'Buscar',
   'common.close': 'Cerrar',

@@ -1,43 +1,24 @@
 <script lang="ts">
   import type { AppRoute } from '$lib/shared/stores/homeState';
+  import type { NavItem } from '$lib/shared/stores/navigationState.svelte';
   import type { MessageKey } from '../../i18n';
   import ThemeToggle from '$lib/shared/ui/navigation/ThemeToggle.svelte';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
-import { theme, toggleTheme } from '$lib/shared/stores/theme';
+  import { theme, toggleTheme } from '$lib/shared/stores/theme';
+  import { authState } from '$lib/stores/authState.svelte';
+  import { profileSessionFromAuthState, getProfileInitials } from '$lib/features/settings/profileSession';
 
   type Props = {
     activeRoute: AppRoute;
-    onNavigateHome: () => void;
-    onNavigateLibrary: () => void;
-    onNavigateStats: () => void;
-    onNavigateHighlights: () => void;
-    onNavigateSettings: () => void;
+    navItems: NavItem[];
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
-  let {
-    activeRoute,
-    onNavigateHome,
-    onNavigateLibrary,
-    onNavigateStats,
-    onNavigateHighlights,
-    onNavigateSettings,
-  }: Props = $props();
+  let { activeRoute, navItems, t }: Props = $props();
 
   let collapsed = $state(false);
 
-  let navItems = $derived([
-    { id: 'home', label: 'Inicio', icon: 'home' as const, action: onNavigateHome },
-    { id: 'library', label: 'Estantería', icon: 'library' as const, action: onNavigateLibrary },
-    { id: 'stats', label: 'Estadísticas', icon: 'stats' as const, action: onNavigateStats },
-    {
-      id: 'highlights',
-      label: 'Notas y resaltados',
-      icon: 'highlights' as const,
-      action: onNavigateHighlights,
-    },
-    { id: 'settings', label: 'Ajustes', icon: 'settings' as const, action: onNavigateSettings },
-  ]);
+  let profile = $derived(profileSessionFromAuthState());
 </script>
 
 <aside
@@ -50,7 +31,7 @@ import { theme, toggleTheme } from '$lib/shared/stores/theme';
       <button
         onclick={() => (collapsed = !collapsed)}
         class="flex items-center justify-center rounded-lg p-1.5 text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary) transition-colors"
-        aria-label="Expandir sidebar"
+        aria-label={t('sidebar.expand')}
       >
         <Icon name="chevron-right" size="sm" />
       </button>
@@ -67,7 +48,7 @@ import { theme, toggleTheme } from '$lib/shared/stores/theme';
         <button
           onclick={() => (collapsed = !collapsed)}
           class="ml-auto flex items-center justify-center rounded-lg p-1.5 text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary) transition-colors shrink-0"
-          aria-label="Colapsar sidebar"
+          aria-label={t('sidebar.collapse')}
         >
           <Icon name="chevron-left" size="sm" />
         </button>
@@ -89,9 +70,9 @@ import { theme, toggleTheme } from '$lib/shared/stores/theme';
         }`}
         onclick={item.action}
       >
-        <Icon name={item.icon} size="md" title={item.label} />
+        <Icon name={item.icon} size="md" title={t(item.messageKey)} />
         {#if !collapsed}
-          {item.label}
+          {t(item.messageKey)}
         {/if}
       </button>
     {/each}
@@ -112,28 +93,35 @@ import { theme, toggleTheme } from '$lib/shared/stores/theme';
     {/if}
 
     <!-- User section -->
-    <button
-      class="w-full flex items-center rounded-xl p-3 transition-colors"
+    <div
+      class="w-full flex items-center rounded-xl p-3"
       class:justify-between={!collapsed}
       class:justify-center={collapsed}
       class:bg-(--color-surface)={!collapsed}
       class:border={!collapsed}
       class:border-(--color-border)={!collapsed}
-      class:hover:border-(--color-border-strong)={!collapsed}
     >
       <div class="flex items-center gap-3">
-        <div
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white"
-        >
-          U
-        </div>
+        {#if authState.isSignedIn && profile.avatarUrl}
+          <img
+            src={profile.avatarUrl}
+            alt={profile.name}
+            class="size-8 shrink-0 rounded-full object-cover"
+          />
+        {:else}
+          <div
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white"
+          >
+            {getProfileInitials(profile.name)}
+          </div>
+        {/if}
         {#if !collapsed}
           <div class="text-left">
-            <p class="text-sm font-medium text-(--color-primary)">Usuario</p>
-            <p class="text-xs text-(--color-text-muted)">Ver perfil</p>
+            <p class="text-sm font-medium text-(--color-primary) truncate max-w-36">{profile.name}</p>
+            <p class="text-xs text-(--color-text-muted) truncate max-w-36">{profile.email}</p>
           </div>
         {/if}
       </div>
-    </button>
+    </div>
   </div>
 </aside>

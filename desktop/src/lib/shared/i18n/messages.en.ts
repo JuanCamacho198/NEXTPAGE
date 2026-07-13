@@ -298,6 +298,15 @@ export const messagesEn = {
   'settings.discardChanges': 'Discard changes',
   'settings.discardChangesConfirm': 'This will discard all unsaved changes. Continue?',
 
+  // Sidebar Navigation
+  'sidebar.home': 'Home',
+  'sidebar.library': 'Library',
+  'sidebar.stats': 'Stats',
+  'sidebar.highlights': 'Highlights',
+  'sidebar.settings': 'Settings',
+  'sidebar.expand': 'Expand sidebar',
+  'sidebar.collapse': 'Collapse sidebar',
+
   // Common
   'settings.search': 'Search',
   'common.close': 'Close',

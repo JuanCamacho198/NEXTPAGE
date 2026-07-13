@@ -1,5 +1,6 @@
 <script lang="ts">
   import { appState } from '$lib/shared/stores/AppState.svelte';
+  import { getNavItems } from '$lib/shared/stores/navigationState.svelte';
   import { fly } from 'svelte/transition';
 
   import { Button } from '$lib/shared/ui';
@@ -13,6 +14,14 @@
   import WelcomeScreen from '$lib/features/welcome/WelcomeScreen.svelte';
 
   const showSidebar = $derived(appState.route !== 'reader' && appState.route !== 'welcome');
+
+  const navItems = $derived(getNavItems({
+    onNavigateHome: appState.navigateToHome,
+    onNavigateLibrary: appState.navigateToLibrary,
+    onNavigateStats: appState.navigateToStats,
+    onNavigateHighlights: appState.navigateToHighlights,
+    onNavigateSettings: appState.navigateToSettings,
+  }));
 </script>
 
 {#if !appState.isInitialized}
@@ -48,11 +57,7 @@
   <div class="flex min-h-screen">
     <AppSidebar
       activeRoute={appState.route}
-      onNavigateHome={appState.navigateToHome}
-      onNavigateLibrary={appState.navigateToLibrary}
-      onNavigateStats={appState.navigateToStats}
-      onNavigateHighlights={appState.navigateToHighlights}
-      onNavigateSettings={appState.navigateToSettings}
+      {navItems}
       t={appState.t}
     />
     <main

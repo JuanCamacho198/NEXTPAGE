@@ -476,7 +476,7 @@ describe('App desktop home redesign QA scenarios', () => {
     expect(await screen.findByTestId('home-desktop-view-stub')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Ajustes/ }));
-    expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+    expect(await screen.findByRole('tablist', { name: 'Settings' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Inicio/ }));
     expect(await screen.findByTestId('home-desktop-view-stub')).toBeInTheDocument();

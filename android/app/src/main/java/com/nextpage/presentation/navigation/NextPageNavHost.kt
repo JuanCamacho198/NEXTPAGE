@@ -138,6 +138,7 @@ fun NextPageNavHost(
             authRepository = appContainer.authRepository,
             syncService = appContainer.syncService,
             supabaseProgressSync = appContainer.supabaseProgressSync,
+            supabaseBookCatalogSync = appContainer.supabaseBookCatalogSync,
             isAuthConfigured = !appContainer.isAuthConfigError,
             hasAuthWiringIssue = false
         )

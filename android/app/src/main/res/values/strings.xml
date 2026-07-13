@@ -378,6 +378,14 @@
     <string name="settings_provider_email">Email</string>
     <string name="settings_provider_anonymous">Anonymous</string>
     <string name="settings_member_since">Member since %1$s</string>
+    <string name="settings_drive_section">Google Drive</string>
+    <string name="settings_drive_description">Sync books across devices using Google Drive</string>
+    <string name="settings_drive_authorize">Authorize Google Drive</string>
+    <string name="settings_drive_connected">Connected as %1$s</string>
+    <string name="settings_drive_disconnect">Disconnect</string>
+    <string name="settings_drive_authorizing">Authorizing…</string>
+    <string name="settings_drive_error_oauth">Failed to authorize Google Drive</string>
+    <string name="settings_drive_error_config">Google Drive is not configured</string>
 
     <!-- Statistics -->
     <string name="statistics_title">Statistics</string>

@@ -33,6 +33,7 @@ import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.GoogleDriveStorageRemoteDataSource
 import com.nextpage.data.remote.sync.GoogleDriveSyncService
+import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.data.session.SessionManager
 import com.nextpage.data.session.SupabaseSessionManager
@@ -117,6 +118,37 @@ class AppContainer(context: Context) {
 
     val readerPreferences: ReaderPreferences = ReaderPreferences(context.applicationContext)
 
+    /**
+     * Drive-based remote data source, lazily created when the user has
+     * authorized Google Drive via Settings → Data & Storage.
+     * Returns null when no Drive token is available — callers (e.g.,
+     * SupabaseBookCatalogSync.downloadRemoteBook) check and fall back.
+     */
+    private val driveStorageRemoteDataSource: StorageSyncRemoteDataSource? by lazy {
+        val token = readerPreferences.driveAccessToken
+        if (token != null) {
+            createDriveRemoteDataSource(token)
+        } else {
+            null
+        }
+    }
+
+    /**
+     * Build a [GoogleDriveStorageRemoteDataSource] from a stored access token.
+     * Uses the Google Drive REST API with the token as bearer auth.
+     */
+    private fun createDriveRemoteDataSource(accessToken: String): GoogleDriveStorageRemoteDataSource {
+        val transport = com.google.api.client.googleapis.javanet.GoogleNetHttpTransport.newTrustedTransport()
+        val jsonFactory = com.google.api.client.json.gson.GsonFactory.getDefaultInstance()
+        val initializer = com.google.api.client.http.HttpRequestInitializer { request ->
+            request.headers.setAuthorization("Bearer $accessToken")
+        }
+        val driveService = com.google.api.services.drive.Drive.Builder(transport, jsonFactory, initializer)
+            .setApplicationName("NextPage")
+            .build()
+        return GoogleDriveStorageRemoteDataSource(driveService)
+    }
+
     val dictionaryRepository: DictionaryRepository = DictionaryRepositoryImpl(
         dao = appDatabase.dictionaryWordDao()
     )
@@ -148,11 +180,11 @@ class AppContainer(context: Context) {
             sessionManager = sessionManager,
             remoteDataSource = NoopStorageSyncRemoteDataSource,
             localBooksDir = context.applicationContext.filesDir.resolve("books"),
-            isEnabled = false,
+            isEnabled = { readerPreferences.driveAccessToken != null },
             diagnosticError = AppError(
                 category = com.nextpage.domain.error.ErrorCategory.CONFIG_ERROR,
-                code = "SYNC_NEEDS_DRIVE_REFACTOR",
-                message = "Drive sync with provider_token not yet implemented on Android.",
+                code = "SYNC_DRIVE_NOT_AUTHORIZED",
+                message = "Google Drive not authorized. Authorize in Settings → Data & Storage.",
                 component = "AppContainer"
             )
         )
@@ -182,7 +214,9 @@ class AppContainer(context: Context) {
             outboxDao = appDatabase.syncOutboxDao(),
             bookDao = appDatabase.bookDao(),
             sessionManager = sessionManager,
-            dataSource = supabaseBookCatalogDataSource
+            dataSource = supabaseBookCatalogDataSource,
+            remoteDataSource = driveStorageRemoteDataSource,
+            localBooksDir = context.applicationContext.filesDir.resolve("books")
         )
     }
 

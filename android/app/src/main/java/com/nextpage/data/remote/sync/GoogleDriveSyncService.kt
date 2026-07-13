@@ -35,19 +35,19 @@ class GoogleDriveSyncService(
     private val sessionManager: SessionManager,
     private val remoteDataSource: StorageSyncRemoteDataSource,
     private val localBooksDir: File,
-    private val isEnabled: Boolean,
+    private val isEnabled: () -> Boolean = { false },
     private val diagnosticError: AppError? = null,
     private val maxRetries: Int = DEFAULT_MAX_RETRIES,
     private val jsonStateSync: GoogleDriveJsonStateSync = GoogleDriveJsonStateSync(remoteDataSource)
 ) : SyncService {
 
-    private val state = MutableStateFlow<SyncState>(if (isEnabled) SyncState.Idle else SyncState.Disabled)
+    private val state = MutableStateFlow<SyncState>(if (isEnabled()) SyncState.Idle else SyncState.Disabled)
 
     override val syncState: Flow<SyncState> = state.asStateFlow()
     override val pendingCount: Flow<Int> = outboxDao.observePendingCount()
 
     override suspend fun bootstrap(userId: String): Result<Unit> {
-        if (!isEnabled) {
+        if (!isEnabled()) {
             val disabledError = diagnosticError ?: AppError(
                 category = ErrorCategory.CONFIG_ERROR,
                 code = "SYNC_DISABLED",
@@ -75,7 +75,7 @@ class GoogleDriveSyncService(
     }
 
     override suspend fun schedulePush(): Result<Unit> {
-        if (!isEnabled) {
+        if (!isEnabled()) {
             val disabledError = diagnosticError ?: AppError(
                 category = ErrorCategory.CONFIG_ERROR,
                 code = "SYNC_DISABLED",
@@ -206,7 +206,7 @@ class GoogleDriveSyncService(
     }
 
     override suspend fun schedulePull(): Result<Unit> {
-        if (!isEnabled) {
+        if (!isEnabled()) {
             val disabledError = diagnosticError ?: AppError(
                 category = ErrorCategory.CONFIG_ERROR,
                 code = "SYNC_DISABLED",

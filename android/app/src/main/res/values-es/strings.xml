@@ -403,6 +403,14 @@
     <string name="settings_provider_email">Correo electrónico</string>
     <string name="settings_provider_anonymous">Anónimo</string>
     <string name="settings_member_since">Miembro desde %1$s</string>
+    <string name="settings_drive_section">Google Drive</string>
+    <string name="settings_drive_description">Sincroniza libros entre dispositivos usando Google Drive</string>
+    <string name="settings_drive_authorize">Autorizar Google Drive</string>
+    <string name="settings_drive_connected">Conectado como %1$s</string>
+    <string name="settings_drive_disconnect">Desconectar</string>
+    <string name="settings_drive_authorizing">Autorizando…</string>
+    <string name="settings_drive_error_oauth">Error al autorizar Google Drive</string>
+    <string name="settings_drive_error_config">Google Drive no está configurado</string>
 
     <!-- Statistics -->
     <string name="statistics_title">Estadísticas</string>

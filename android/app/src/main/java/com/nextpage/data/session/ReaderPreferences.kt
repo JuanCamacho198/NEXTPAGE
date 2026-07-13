@@ -91,6 +91,47 @@ class ReaderPreferences(context: Context) {
         return entries.find { it.name == name } ?: default
     }
 
+    // ── Drive token persistence ─────────────────────────────────────
+
+    /**
+     * The stored Google Drive access token. Null when not authorized.
+     * Persisted via SharedPreferences (backed by EncryptedSharedPreferences on API 23+).
+     */
+    var driveAccessToken: String?
+        get() = prefs.getString(KEY_DRIVE_ACCESS_TOKEN, null)
+        set(value) {
+            prefs.edit().putString(KEY_DRIVE_ACCESS_TOKEN, value).apply()
+        }
+
+    /**
+     * The stored Google Drive refresh token. Null when not available.
+     */
+    var driveRefreshToken: String?
+        get() = prefs.getString(KEY_DRIVE_REFRESH_TOKEN, null)
+        set(value) {
+            prefs.edit().putString(KEY_DRIVE_REFRESH_TOKEN, value).apply()
+        }
+
+    /**
+     * Save both Drive tokens atomically.
+     */
+    fun saveDriveTokens(accessToken: String, refreshToken: String?) {
+        prefs.edit()
+            .putString(KEY_DRIVE_ACCESS_TOKEN, accessToken)
+            .putString(KEY_DRIVE_REFRESH_TOKEN, refreshToken)
+            .apply()
+    }
+
+    /**
+     * Clear all stored Drive tokens.
+     */
+    fun clearDriveTokens() {
+        prefs.edit()
+            .remove(KEY_DRIVE_ACCESS_TOKEN)
+            .remove(KEY_DRIVE_REFRESH_TOKEN)
+            .apply()
+    }
+
     companion object {
         private const val PREFS_NAME = "nextpage_reader_prefs"
         private const val KEY_FONT_SIZE = "font_size"
@@ -100,5 +141,7 @@ class ReaderPreferences(context: Context) {
         private const val KEY_LEFT_MARGIN = "left_margin"
         private const val KEY_RIGHT_MARGIN = "right_margin"
         private const val KEY_PALETTE = "highlight_palette"
+        private const val KEY_DRIVE_ACCESS_TOKEN = "drive_access_token"
+        private const val KEY_DRIVE_REFRESH_TOKEN = "drive_refresh_token"
     }
 }

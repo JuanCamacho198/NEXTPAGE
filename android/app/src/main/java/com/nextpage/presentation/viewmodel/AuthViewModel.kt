@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.domain.error.AppError
@@ -73,6 +74,7 @@ data class AuthUiState(
  * @param authRepository Remote auth operations (Google, email, local session).
  * @param syncService Sync bootstrap and pull/push scheduler.
  * @param supabaseProgressSync Outbox-to-Supabase processor for reading progress.
+ * @param supabaseBookCatalogSync Catalog sync for pushing local books to Supabase.
  * @param isAuthConfigured Build-time flag indicating auth keys are wired in.
  * @param hasAuthWiringIssue Build-time flag indicating a DI wiring problem.
  */
@@ -80,6 +82,7 @@ class AuthViewModel(
     private val authRepository: AuthRepository,
     private val syncService: SyncService,
     private val supabaseProgressSync: SupabaseProgressSync? = null,
+    private val supabaseBookCatalogSync: SupabaseBookCatalogSync? = null,
     private val isAuthConfigured: Boolean,
     private val hasAuthWiringIssue: Boolean
 ) : ViewModel() {
@@ -361,6 +364,9 @@ class AuthViewModel(
         // Start Supabase outbox processing and Realtime subscription
         supabaseProgressSync?.startProcessing()
         supabaseProgressSync?.subscribeToRealtimeChanges()
+
+        // Push local Android books to Supabase catalog so Desktop discovers them
+        supabaseBookCatalogSync?.bootstrap()
     }
 
     /**
@@ -373,6 +379,7 @@ class AuthViewModel(
         private val authRepository: AuthRepository,
         private val syncService: SyncService,
         private val supabaseProgressSync: SupabaseProgressSync?,
+        private val supabaseBookCatalogSync: SupabaseBookCatalogSync?,
         private val isAuthConfigured: Boolean,
         private val hasAuthWiringIssue: Boolean
     ) : ViewModelProvider.Factory {
@@ -382,6 +389,7 @@ class AuthViewModel(
                 authRepository = authRepository,
                 syncService = syncService,
                 supabaseProgressSync = supabaseProgressSync,
+                supabaseBookCatalogSync = supabaseBookCatalogSync,
                 isAuthConfigured = isAuthConfigured,
                 hasAuthWiringIssue = hasAuthWiringIssue
             ) as T

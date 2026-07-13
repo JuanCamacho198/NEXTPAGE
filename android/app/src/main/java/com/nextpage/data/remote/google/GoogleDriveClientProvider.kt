@@ -1,6 +1,7 @@
 package com.nextpage.data.remote.google
 
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
+import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
@@ -23,6 +24,7 @@ data class GoogleDriveInitDiagnostic(
 
 class GoogleDriveClientProvider(
     val config: GoogleDriveConfig,
+    private val httpRequestInitializer: HttpRequestInitializer? = null,
     private val component: String = DEFAULT_COMPONENT,
     private val transportFactory: () -> NetHttpTransport = {
         GoogleNetHttpTransport.newTrustedTransport()
@@ -51,7 +53,7 @@ class GoogleDriveClientProvider(
             val created = runCatching {
                 val transport = transportFactory()
                 val jsonFactory = GsonFactory.getDefaultInstance()
-                Drive.Builder(transport, jsonFactory, null)
+                Drive.Builder(transport, jsonFactory, httpRequestInitializer)
                     .setApplicationName("NextPage")
                     .build()
             }

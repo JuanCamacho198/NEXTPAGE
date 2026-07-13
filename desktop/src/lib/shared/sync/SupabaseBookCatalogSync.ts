@@ -97,6 +97,34 @@ export class SupabaseBookCatalogSync {
   }
 
   /**
+   * Upload a cover image to Supabase Storage and return the public URL.
+   * Path: covers/{userId}/{bookId}.jpg
+   * Non-blocking: failure logs warning and returns null.
+   */
+  async uploadCover(userId: string, bookId: string, coverBytes: ArrayBuffer): Promise<string | null> {
+    try {
+      const path = `covers/${userId}/${bookId}.jpg`;
+      const { error: uploadError } = await this.supabase.storage
+        .from('book-covers')
+        .upload(path, coverBytes, { upsert: true });
+
+      if (uploadError) {
+        console.warn('Cover upload failed:', uploadError);
+        return null;
+      }
+
+      const { data: urlData } = this.supabase.storage
+        .from('book-covers')
+        .getPublicUrl(path);
+
+      return urlData.publicUrl;
+    } catch (e) {
+      console.warn('Cover upload failed', e);
+      return null;
+    }
+  }
+
+  /**
    * Find a book row by content hash for the current user.
    * Returns the first match or null if not found.
    * Used by content-hash dedup (PR 5) to check if a book with the

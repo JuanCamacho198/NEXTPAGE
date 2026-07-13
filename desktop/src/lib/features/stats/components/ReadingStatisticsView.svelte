@@ -25,6 +25,23 @@
   const tooltipOffsetX = 14;
   const tooltipOffsetY = -42;
 
+  // ─── Genre tooltip state ───
+  let genreTooltip: { genre: string; minutes: number; percent: number } | null = $state(null);
+  let genreTooltipPos = $state<{ x: number; y: number } | null>(null);
+
+  // ─── Chart expand/collapse ───
+  let chartExpanded = $state(false);
+
+  // ─── Month names via Intl.DateTimeFormat (zero-maintenance for any locale) ───
+  function getShortMonthName(monthIndex: number): string {
+    const date = new Date(2026, monthIndex, 1);
+    const name = new Intl.DateTimeFormat(appState.locale, { month: 'short' }).format(date);
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }
+
+  // Dynamic chart height: 240 normal, 420 expanded
+  const chartHeight = $derived(chartExpanded ? 420 : 240);
+
   const periodDropdownOptions = $derived(
     Object.entries(periodLabels).map(([value]) => ({
       value,
@@ -142,7 +159,7 @@
     const max = Math.max(...activitySeries.map((point) => point.value), 1);
     const min = Math.min(...activitySeries.map((point) => point.value), 0);
     const width = 800;
-    const height = 240;
+    const height = chartHeight;
     const step = activitySeries.length > 1 ? width / (activitySeries.length - 1) : width;
 
     const points = activitySeries.map((point, index) => {
@@ -177,6 +194,12 @@
       if (w) return `${label.match(/[WSws]/)?.[0]?.toUpperCase() ?? 'W'}${w[1]}`;
     }
     if (activeGranularity === 'month') {
+      // Extract month number from "2026-01" or "01" → locale-aware short name via Intl
+      const monthNum = parseInt(label.replace(/^\D+/, '').split(/[\s-]+/).pop() || '', 10);
+      if (monthNum >= 1 && monthNum <= 12) {
+        return getShortMonthName(monthNum - 1);
+      }
+      // Fallback: already a name like "January" → "Jan"
       const parts = label.split(/[\s-]+/);
       const last = parts[parts.length - 1];
       return last.length <= 4 ? last : last.slice(0, 3);
@@ -276,6 +299,29 @@
             bind:value={activeGranularity}
             class="min-w-[100px]"
           />
+
+          <button
+            type="button"
+            class="flex h-8 w-8 items-center justify-center rounded-lg border border-(--color-border) bg-(--color-surface-subtle) text-sm text-(--color-text-muted) cursor-pointer hover:border-(--color-primary) hover:text-(--color-primary) transition-colors duration-150"
+            onclick={() => (chartExpanded = !chartExpanded)}
+            aria-label={chartExpanded ? 'Colapsar gráfico' : 'Expandir gráfico'}
+            title={chartExpanded ? 'Colapsar gráfico' : 'Expandir gráfico'}
+          >
+            {#if chartExpanded}
+              <!-- Minus icon: collapse -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            {:else}
+              <!-- Max icon: expand -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+              </svg>
+            {/if}
+          </button>
         </div>
 
         <!-- Tooltip overlay (positioned via DOM mouse coords) -->
@@ -290,13 +336,14 @@
         {/if}
 
         <div
-          class="rounded-[22px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(6,14,24,0.86),rgba(10,18,30,0.94))] p-4"
+          class="rounded-[22px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(6,14,24,0.86),rgba(10,18,30,0.94))] p-4 overflow-hidden"
         >
           <svg
             role="img"
             aria-label={_t('stats.minutesReadChart')}
             viewBox={`0 0 ${chartMeta.width} ${chartMeta.height + 28}`}
-            class="h-[280px] w-full"
+            class="w-full"
+            style="height: {chartMeta.height + 40}px; transition: height 0.25s ease;"
             onmouseleave={() => {
               hoveredPoint = null;
               tooltipPos = null;
@@ -409,8 +456,19 @@
       </article>
 
       <article
-        class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
+        class="relative rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
       >
+        <!-- Genre tooltip overlay -->
+        {#if genreTooltip && genreTooltipPos}
+          <div
+            class="pointer-events-none absolute z-10 rounded-lg border border-(--color-border) bg-(--color-bg-panel) px-3 py-2 text-xs shadow-(--shadow-panel)"
+            style="left: {genreTooltipPos.x + 14}px; top: {genreTooltipPos.y - 38}px;"
+          >
+            <p class="font-medium text-(--color-primary)">{genreTooltip.genre}</p>
+            <p class="mt-0.5 text-(--color-text-muted)">{genreTooltip.minutes} min ({genreTooltip.percent}%)</p>
+          </div>
+        {/if}
+
         <div class="mb-4">
           <h2 class="text-base font-semibold text-(--color-primary)">{_t('stats.timeByGenre')}</h2>
           <p class="text-sm text-(--color-text-muted)">
@@ -445,7 +503,48 @@
 
           <div class="w-full space-y-3">
             {#each genreDistribution as entry}
-              <div class="flex items-center justify-between gap-3 text-sm">
+              <div
+                class="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors duration-150 hover:bg-(--color-surface-subtle)"
+                role="button"
+                tabindex="0"
+                aria-label={`${entry.genre}: ${entry.minutes} min, ${entry.percent}%`}
+                onmouseenter={(e) => {
+                  genreTooltip = { genre: entry.genre, minutes: entry.minutes, percent: entry.percent };
+                  const article = (e.currentTarget as HTMLElement).closest('article');
+                  if (article) {
+                    const rect = article.getBoundingClientRect();
+                    genreTooltipPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+                  }
+                }}
+                onmousemove={(e) => {
+                  const article = (e.currentTarget as HTMLElement).closest('article');
+                  if (article) {
+                    const rect = article.getBoundingClientRect();
+                    genreTooltipPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+                  }
+                }}
+                onmouseleave={() => {
+                  genreTooltip = null;
+                  genreTooltipPos = null;
+                }}
+                onfocus={(e) => {
+                  genreTooltip = { genre: entry.genre, minutes: entry.minutes, percent: entry.percent };
+                  const el = e.currentTarget as HTMLElement;
+                  const ab = el.closest('article')!.getBoundingClientRect();
+                  const ib = el.getBoundingClientRect();
+                  genreTooltipPos = { x: ib.left - ab.left + 14, y: ib.top - ab.top - 38 };
+                }}
+                onblur={() => {
+                  genreTooltip = null;
+                  genreTooltipPos = null;
+                }}
+                onkeydown={(e) => {
+                  if (e.key === 'Escape') {
+                    genreTooltip = null;
+                    genreTooltipPos = null;
+                  }
+                }}
+              >
                 <div class="flex items-center gap-3">
                   <span class="h-3 w-3 rounded-full" style={`background:${entry.color};`}></span>
                   <span class="text-(--color-secondary)">{entry.genre}</span>

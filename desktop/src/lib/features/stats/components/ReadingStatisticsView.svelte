@@ -8,25 +8,28 @@
     periodWindow,
     previousWindow,
     computeDelta,
-    periodDeltaLabels,
     type PeriodKey,
     type Granularity,
     type Props,
   } from './readingStatsState.svelte';
+  import type { MessageKey } from '$lib/shared/i18n';
 
-  let { appState }: Props = $props();
+  let { appState, t: tProp }: Props & { t?: (key: MessageKey, params?: Record<string, string | number>) => string } = $props();
 
   let activePeriod = $state<PeriodKey>('month');
   let activeGranularity = $state<Granularity>('day');
 
   const periodDropdownOptions = $derived(
-    Object.entries(periodLabels).map(([value, label]) => ({ value, label })),
+    Object.entries(periodLabels).map(([value]) => ({
+      value,
+      label: _t(`stats.period${value.charAt(0).toUpperCase() + value.slice(1)}` as MessageKey),
+    })),
   );
-  const granularityOptions: Array<{ value: string; label: string }> = [
-    { value: 'day', label: 'Día' },
-    { value: 'week', label: 'Semana' },
-    { value: 'month', label: 'Mes' },
-  ];
+  const granularityOptions = $derived<Array<{ value: string; label: string }>>([
+    { value: 'day', label: 'stats.granularityDay' },
+    { value: 'week', label: 'stats.granularityWeek' },
+    { value: 'month', label: 'stats.granularityMonth' },
+  ]);
 
   // ─── Data fetching effects ───
 
@@ -75,36 +78,40 @@
         : 0),
   );
 
+  const _t = (key: MessageKey, params?: Record<string, string | number>): string => {
+    return tProp ? tProp(key, params) : key;
+  };
+
   function deltaText(current: number | undefined, previous: number | undefined): string {
     const delta = computeDelta(current ?? 0, previous ?? 0);
-    if (delta === null) return 'Sin datos previos';
+    if (delta === null) return _t('stats.noPriorData');
     const sign = delta >= 0 ? '+' : '';
-    return `${sign}${delta}% ${periodDeltaLabels[activePeriod]}`;
+    return `${sign}${delta}% ${_t(`stats.delta${activePeriod.charAt(0).toUpperCase() + activePeriod.slice(1)}` as MessageKey)}`;
   }
 
   const metricCards = $derived([
     {
-      label: 'Minutos leidos',
+      label: _t('stats.minutesRead'),
       value: totalMinutes.toLocaleString('es-CO'),
       delta: deltaText(sd.currentStats?.totalMinutesRead, sd.previousStats?.totalMinutesRead),
     },
     {
-      label: 'Sesiones',
+      label: _t('stats.sessions'),
       value: totalSessions.toLocaleString('es-CO'),
       delta: deltaText(sd.currentStats?.totalSessions, sd.previousStats?.totalSessions),
     },
     {
-      label: 'Libros iniciados',
+      label: _t('stats.booksStarted'),
       value: booksStarted.toLocaleString('es-CO'),
       delta: deltaText(sd.currentStats?.booksStarted, sd.previousStats?.booksStarted),
     },
     {
-      label: 'Libros completados',
+      label: _t('stats.booksCompleted'),
       value: booksCompleted.toLocaleString('es-CO'),
       delta: deltaText(sd.currentStats?.booksCompleted, sd.previousStats?.booksCompleted),
     },
     {
-      label: 'Progreso promedio',
+      label: _t('stats.averageProgress'),
       value: `${Math.round(averageProgress)}%`,
       delta: deltaText(
         sd.currentStats?.avgProgressPercentage,
@@ -181,8 +188,8 @@
   >
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
-        <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">Estadísticas</h1>
-        <p class="mt-1 text-sm text-(--color-text-muted)">Tu progreso de lectura en detalle.</p>
+        <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">{_t('stats.title')}</h1>
+        <p class="mt-1 text-sm text-(--color-text-muted)">{_t('stats.subtitle')}</p>
       </div>
 
       <span class="sr-only">Periodo</span>
@@ -200,7 +207,7 @@
     <div
       class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-bg-panel) px-4 py-8 text-sm text-(--color-text-muted)"
     >
-      Cargando estadisticas...
+      {_t('stats.loading')}
     </div>
   {:else}
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-5">
@@ -223,15 +230,15 @@
       >
         <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 class="text-base font-semibold text-(--color-primary)">Minutos leidos</h2>
+            <h2 class="text-base font-semibold text-(--color-primary)">{_t('stats.minutesReadChart')}</h2>
             <p class="text-sm text-(--color-text-muted)">
-              Actividad de lectura a lo largo del tiempo.
+              {_t('stats.activityTimeline')}
             </p>
           </div>
 
-          <span class="text-xs text-(--color-text-muted)">Vista</span>
+          <span class="text-xs text-(--color-text-muted)">{_t('stats.view')}</span>
           <Dropdown
-            options={granularityOptions}
+            options={granularityOptions.map((o) => ({ ...o, label: _t(o.label as MessageKey) }))}
             bind:value={activeGranularity}
             class="min-w-[100px]"
           />
@@ -295,9 +302,9 @@
         class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
       >
         <div class="mb-4">
-          <h2 class="text-base font-semibold text-(--color-primary)">Tiempo por genero</h2>
+          <h2 class="text-base font-semibold text-(--color-primary)">{_t('stats.timeByGenre')}</h2>
           <p class="text-sm text-(--color-text-muted)">
-            Distribucion del tiempo de lectura por categoria.
+            {_t('stats.genreDistribution')}
           </p>
         </div>
 
@@ -322,7 +329,7 @@
               <span class="text-3xl font-semibold text-(--color-primary)"
                 >{totalMinutes.toLocaleString('es-CO')}</span
               >
-              <span class="text-xs text-(--color-text-muted)">minutos</span>
+              <span class="text-xs text-(--color-text-muted)">{_t('stats.minutes')}</span>
             </div>
           </div>
 
@@ -346,9 +353,9 @@
         class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
       >
         <div class="mb-4">
-          <h2 class="text-base font-semibold text-(--color-primary)">Libros mas leidos</h2>
+          <h2 class="text-base font-semibold text-(--color-primary)">{_t('stats.mostReadBooks')}</h2>
           <p class="text-sm text-(--color-text-muted)">
-            Titulos con mayor tiempo de lectura acumulado.
+            {_t('stats.mostReadBooksDesc')}
           </p>
         </div>
 
@@ -364,14 +371,14 @@
               >
                 <SafeCover
                   path={book.coverPath ?? ''}
-                  alt={`Portada de ${book.title}`}
+                  alt={_t('stats.bookCover', { title: book.title })}
                   className="h-full w-full object-cover"
                 >
                   {#snippet fallback()}
                     <div
                       class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] text-[9px] uppercase tracking-[0.16em] text-(--color-primary)"
                     >
-                      Libro
+                      {_t('stats.bookPlaceholder')}
                     </div>
                   {/snippet}
                 </SafeCover>
@@ -398,14 +405,14 @@
           class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
         >
           <div class="mb-3">
-            <h2 class="text-base font-semibold text-(--color-primary)">Racha actual</h2>
-            <p class="text-sm text-(--color-text-muted)">Consistencia reciente de lectura.</p>
+            <h2 class="text-base font-semibold text-(--color-primary)">{_t('stats.currentStreak')}</h2>
+            <p class="text-sm text-(--color-text-muted)">{_t('stats.streakDesc')}</p>
           </div>
 
           <p class="text-4xl font-semibold tracking-tight text-(--color-primary)">
-            {streakDays} dias
+            {_t('stats.days', { count: streakDays })}
           </p>
-          <p class="mt-1 text-sm text-(--color-text-muted)">Sigue asi.</p>
+          <p class="mt-1 text-sm text-(--color-text-muted)">{_t('stats.keepGoing')}</p>
 
           <div class="mt-5 flex flex-wrap gap-2">
             {#each streakCalendar as day}
@@ -424,9 +431,9 @@
           class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
         >
           <div class="mb-4">
-            <h2 class="text-base font-semibold text-(--color-primary)">Informacion adicional</h2>
+            <h2 class="text-base font-semibold text-(--color-primary)">{_t('stats.additionalInfo')}</h2>
             <p class="text-sm text-(--color-text-muted)">
-              Promedios utiles para entender el habito de lectura.
+              {_t('stats.additionalDesc')}
             </p>
           </div>
 
@@ -434,7 +441,7 @@
             <div
               class="rounded-[20px] border border-(--color-border) bg-(--color-surface-subtle) p-3"
             >
-              <p class="text-xs text-(--color-text-muted)">Promedio por sesion</p>
+              <p class="text-xs text-(--color-text-muted)">{_t('stats.averagePerSession')}</p>
               <p class="mt-2 text-2xl font-semibold text-(--color-primary)">
                 {averageMinutesPerSession} min
               </p>
@@ -442,7 +449,7 @@
             <div
               class="rounded-[20px] border border-(--color-border) bg-(--color-surface-subtle) p-3"
             >
-              <p class="text-xs text-(--color-text-muted)">Promedio por dia</p>
+              <p class="text-xs text-(--color-text-muted)">{_t('stats.averagePerDay')}</p>
               <p class="mt-2 text-2xl font-semibold text-(--color-primary)">
                 {averageMinutesPerDay} min
               </p>
@@ -450,7 +457,7 @@
             <div
               class="rounded-[20px] border border-(--color-border) bg-(--color-surface-subtle) p-3"
             >
-              <p class="text-xs text-(--color-text-muted)">Paginas leidas</p>
+              <p class="text-xs text-(--color-text-muted)">{_t('stats.pagesRead')}</p>
               <p class="mt-2 text-2xl font-semibold text-(--color-primary)">
                 {totalPagesRead.toLocaleString('es-CO')}
               </p>

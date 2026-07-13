@@ -37,7 +37,7 @@
 </script>
 
 <div class="space-y-6">
-  <HomeHero actions={navbarActions} />
+  <HomeHero actions={navbarActions} {t} />
 
   <HomeStatsGrid {stats} isLoading={isLoadingStats} disabledReason={statsUnavailableReason} {t} />
 

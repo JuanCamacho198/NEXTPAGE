@@ -1,6 +1,15 @@
 <script lang="ts">
   import { errorState } from '$lib/shared/stores/errorState';
   import Button from '../forms/Button.svelte';
+  import { i18n, type MessageKey } from '$lib/shared/i18n';
+
+  let locale = $state(i18n?.DEFAULT_LOCALE ?? 'es');
+  $effect(() => {
+    if (!i18n?.locale) return;
+    const unsub = i18n.locale.subscribe((l) => { locale = l; });
+    return () => unsub();
+  });
+  const t = (key: MessageKey): string => i18n?.t?.(locale, key) ?? key;
 
   const handleReload = (): void => {
     window.location.reload();
@@ -26,15 +35,15 @@
           </svg>
         </div>
 
-        <h2 class="mb-2 text-lg font-semibold text-gray-900">Something went wrong</h2>
+        <h2 class="mb-2 text-lg font-semibold text-gray-900">{t('error.somethingWrong')}</h2>
 
         <p class="mb-6 text-sm text-gray-600">
           {$errorState.currentError.message}
         </p>
 
         <div class="flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <Button onclick={handleReload}>Reload App</Button>
-          <Button variant="secondary" onclick={handleGoHome}>Try Again Later</Button>
+          <Button onclick={handleReload}>{t('error.reload')}</Button>
+          <Button variant="secondary" onclick={handleGoHome}>{t('error.tryAgainLater')}</Button>
         </div>
       </div>
     </div>

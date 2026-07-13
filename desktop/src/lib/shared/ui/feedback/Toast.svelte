@@ -1,5 +1,15 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import type { MessageKey } from '$lib/shared/i18n';
+  import { i18n } from '$lib/shared/i18n';
+
+  let locale = $state(i18n?.DEFAULT_LOCALE ?? 'es');
+  $effect(() => {
+    if (!i18n?.locale) return;
+    const unsub = i18n.locale.subscribe((l) => { locale = l; });
+    return () => unsub();
+  });
+  const tFn = (key: MessageKey): string => i18n?.t?.(locale, key) ?? key;
 
   type Props = {
     type?: 'success' | 'info' | 'error';
@@ -72,7 +82,7 @@
         <button
           class="transition-colors hover:opacity-70"
           onclick={handleDismiss}
-          aria-label="Dismiss"
+          aria-label={tFn('toast.dismissAria')}
         >
           ×
         </button>

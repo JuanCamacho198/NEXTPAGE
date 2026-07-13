@@ -1,6 +1,18 @@
 import { render, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import ColorPickerPopover from '$lib/features/reader/highlight/ColorPickerPopover.svelte';
+import type { MessageKey } from '$lib/shared/i18n';
+
+const t = (key: MessageKey): string => {
+  const map: Partial<Record<MessageKey, string>> = {
+    'colorPicker.save': 'Save',
+    'colorPicker.cancel': 'Cancel',
+    'colorPicker.hexLabel': 'Hex color',
+    'colorPicker.chooseColor': 'Choose color',
+    'colorPicker.title': 'Custom color picker',
+  };
+  return map[key] ?? key;
+};
 
 describe('ColorPickerPopover', () => {
   function createAnchor(): HTMLElement {
@@ -31,6 +43,7 @@ describe('ColorPickerPopover', () => {
         currentColor: '#FACC15',
         onSelect,
         onClose,
+        t,
       },
     });
 
@@ -51,6 +64,7 @@ describe('ColorPickerPopover', () => {
         currentColor: '#FACC15',
         onSelect,
         onClose: () => undefined,
+        t,
       },
     });
 

@@ -2,8 +2,9 @@
   import type { CollectionDto } from '$lib/shared/types';
   import { createCollection, deleteCollection, listCollections } from '$lib/shared/api/tauriClient';
   import { COLLECTION_COLOR_OPTIONS } from '../utils';
+  import type { MessageKey } from '$lib/shared/i18n';
 
-  let { open, onClose }: { open: boolean; onClose: () => void } = $props();
+  let { open, onClose, t }: { open: boolean; onClose: () => void; t: (key: MessageKey, params?: Record<string, string | number>) => string } = $props();
 
   let collections = $state<CollectionDto[]>([]);
   let loading = $state(false);
@@ -76,13 +77,13 @@
     >
       <div class="flex items-center justify-between mb-4">
         <h2 id="collection-manager-title" class="text-lg font-semibold text-(--color-primary)">
-          Manage Collections
+          {t('collection.managerTitle')}
         </h2>
         <button
           type="button"
           class="text-(--color-text-muted) hover:text-(--color-primary)"
           onclick={onClose}
-          aria-label="Close"
+          aria-label={t('collection.closeAria')}
         >
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -97,11 +98,11 @@
 
       <div class="space-y-4">
         <div class="space-y-2">
-          <h3 class="text-sm font-medium text-(--color-primary)">Create New Collection</h3>
+          <h3 class="text-sm font-medium text-(--color-primary)">{t('collection.createNew')}</h3>
           <div class="flex gap-2">
             <input
               type="text"
-              placeholder="Collection name"
+              placeholder={t('collection.namePlaceholder')}
               class="flex-1 rounded-lg border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-primary)"
               bind:value={newName}
             />
@@ -114,7 +115,7 @@
                     ? 'ring-2 ring-offset-2 ring-(--color-primary)'
                     : ''}"
                   onclick={() => (newColor = color)}
-                  aria-label="Select {color} color"
+                  aria-label={t('collection.selectColor', { color })}
                 ></button>
               {/each}
             </div>
@@ -125,16 +126,16 @@
             onclick={handleCreate}
             disabled={!newName.trim()}
           >
-            Create
+            {t('collection.create')}
           </button>
         </div>
 
         <div class="border-t border-(--color-border) pt-4">
-          <h3 class="text-sm font-medium text-(--color-primary) mb-2">Existing Collections</h3>
+          <h3 class="text-sm font-medium text-(--color-primary) mb-2">{t('collection.existing')}</h3>
           {#if loading}
-            <p class="text-sm text-(--color-text-muted)">Loading...</p>
+            <p class="text-sm text-(--color-text-muted)">{t('collection.loading')}</p>
           {:else if collections.length === 0}
-            <p class="text-sm text-(--color-text-muted)">No collections yet</p>
+            <p class="text-sm text-(--color-text-muted)">{t('collection.empty')}</p>
           {:else}
             <ul class="space-y-2">
               {#each collections as collection}
@@ -150,7 +151,7 @@
                       class="text-(--color-primary) hover:opacity-80"
                       onclick={cancelEdit}
                     >
-                      Cancel
+                      {t('collection.cancel')}
                     </button>
                   {:else}
                     <span
@@ -159,14 +160,14 @@
                     ></span>
                     <span class="flex-1 text-sm text-(--color-primary)">{collection.name}</span>
                     {#if collection.isSystem}
-                      <span class="text-xs text-(--color-text-muted)">System</span>
+                      <span class="text-xs text-(--color-text-muted)">{t('collection.system')}</span>
                     {:else}
                       <button
                         type="button"
                         class="text-xs text-(--color-text-muted) hover:text-(--color-error)"
                         onclick={() => handleDelete(collection.id)}
                       >
-                        Delete
+                        {t('collection.delete')}
                       </button>
                     {/if}
                   {/if}

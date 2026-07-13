@@ -1,4 +1,15 @@
 <script lang="ts">
+  import type { MessageKey } from '$lib/shared/i18n';
+  import { i18n } from '$lib/shared/i18n';
+
+  let locale = $state(i18n?.DEFAULT_LOCALE ?? 'es');
+  $effect(() => {
+    if (!i18n?.locale) return;
+    const unsub = i18n.locale.subscribe((l) => { locale = l; });
+    return () => unsub();
+  });
+  const tFn = (key: MessageKey): string => i18n?.t?.(locale, key) ?? key;
+
   type Props = {
     current?: number;
     total?: number;
@@ -46,7 +57,7 @@
     class="rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm text-(--color-primary) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-50"
     onclick={() => goTo(current - 1)}
     disabled={current <= 1}
-    aria-label="Previous page"
+    aria-label={tFn('pagination.prevAria')}
   >
     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -75,7 +86,7 @@
     class="rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm text-(--color-primary) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-50"
     onclick={() => goTo(current + 1)}
     disabled={current >= total}
-    aria-label="Next page"
+    aria-label={tFn('pagination.nextAria')}
   >
     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />

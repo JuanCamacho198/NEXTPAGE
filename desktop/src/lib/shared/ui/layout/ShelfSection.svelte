@@ -10,6 +10,7 @@
   import { readFile } from '@tauri-apps/plugin-fs';
   import { pickImage } from '$lib/shared/services/FilePicker';
   import { upsertBookCover } from '$lib/shared/api/tauriClient';
+  import type { MessageKey } from '$lib/shared/i18n';
 
   let showShelfModal = $state(false);
 
@@ -29,12 +30,12 @@
   });
 
   function formatMinutes(minutes: number): string {
-    if (minutes < 1) return '< 1 min';
+    if (minutes < 1) return appState.t('shelf.lessThanMinute');
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
-    if (h > 0 && m > 0) return `${h}h ${m}m`;
-    if (h > 0) return `${h}h`;
-    return `${m} min`;
+    if (h > 0 && m > 0) return appState.t('shelf.formatHoursMinutes', { h, m });
+    if (h > 0) return appState.t('shelf.formatHours', { h });
+    return appState.t('shelf.formatMins', { m });
   }
 
   function getCollectionNames(ids: number[] | undefined): string[] {
@@ -55,42 +56,43 @@
       const diffMin = Math.floor(diffMs / (1000 * 60));
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
       if (diffDays === 0) {
-        if (diffMin < 1) return 'Ahora';
-        if (diffMin < 60) return `Hace ${diffMin} min`;
+        if (diffMin < 1) return appState.t('shelf.now');
+        if (diffMin < 60) return appState.t('shelf.minutesAgo', { n: diffMin });
         const hours = Math.floor(diffMin / 60);
-        return `Hace ${hours} h`;
+        return appState.t('shelf.hoursAgo', { n: hours });
       }
-      if (diffDays === 1) return 'Ayer';
-      if (diffDays < 7) return `Hace ${diffDays} días`;
-      if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} sem.`;
-      if (diffDays < 365) return `Hace ${Math.floor(diffDays / 30)} meses`;
-      return `Hace ${Math.floor(diffDays / 365)} años`;
+      if (diffDays === 1) return appState.t('shelf.yesterday');
+      if (diffDays < 7) return appState.t('shelf.daysAgo', { n: diffDays });
+      if (diffDays < 30) return appState.t('shelf.weeksAgo', { n: Math.floor(diffDays / 7) });
+      if (diffDays < 365) return appState.t('shelf.monthsAgo', { n: Math.floor(diffDays / 30) });
+      return appState.t('shelf.yearsAgo', { n: Math.floor(diffDays / 365) });
     } catch {
       return '';
     }
   }
 
-  const LANGUAGE_NAMES: Record<string, string> = {
-    es: 'Español',
-    en: 'Inglés',
-    fr: 'Francés',
-    de: 'Alemán',
-    it: 'Italiano',
-    pt: 'Portugués',
-    ru: 'Ruso',
-    ja: 'Japonés',
-    zh: 'Chino',
-    ar: 'Árabe',
-    ko: 'Coreano',
-    nl: 'Neerlandés',
-    pl: 'Polaco',
-    sv: 'Sueco',
-    tr: 'Turco',
-    vi: 'Vietnamita',
+  const LANGUAGE_KEY_MAP: Record<string, string> = {
+    es: 'shelf.langSpanish',
+    en: 'shelf.langEnglish',
+    fr: 'shelf.langFrench',
+    de: 'shelf.langGerman',
+    it: 'shelf.langItalian',
+    pt: 'shelf.langPortuguese',
+    ru: 'shelf.langRussian',
+    ja: 'shelf.langJapanese',
+    zh: 'shelf.langChinese',
+    ar: 'shelf.langArabic',
+    ko: 'shelf.langKorean',
+    nl: 'shelf.langDutch',
+    pl: 'shelf.langPolish',
+    sv: 'shelf.langSwedish',
+    tr: 'shelf.langTurkish',
+    vi: 'shelf.langVietnamese',
   };
 
   function getLanguageName(code: string): string {
-    return LANGUAGE_NAMES[code.toLowerCase()] ?? code.toUpperCase();
+    const key = LANGUAGE_KEY_MAP[code.toLowerCase()];
+    return key ? appState.t(key as MessageKey) : code.toUpperCase();
   }
 
   function formatPublicationDate(iso: string): string {
@@ -119,11 +121,11 @@
     return map[ext] ?? 'image/png';
   }
 
-  const STATUS_OPTIONS = [
-    { value: 'reading', label: 'En lectura' },
-    { value: 'to_read', label: 'Por leer' },
-    { value: 'completed', label: 'Completado' },
-  ];
+  const STATUS_OPTIONS = $derived([
+    { value: 'reading', label: appState.t('shelf.statusReading') },
+    { value: 'to_read', label: appState.t('shelf.statusToRead') },
+    { value: 'completed', label: appState.t('shelf.statusCompleted') },
+  ]);
 
   function getCurrentStatus(book: typeof appState.selectedShelfBook): string {
     if (!book) return 'reading';
@@ -177,10 +179,31 @@
     'Clásicos',
   ] as const;
 
-  const GENRE_OPTIONS = [
-    ...KNOWN_GENRES.map((g) => ({ value: g, label: g })),
-    { value: '__other__', label: '✏️ Otro…' },
-  ];
+  const GENRE_LABEL_KEYS: Record<string, string> = {
+    'Novela': 'shelf.genreNovel',
+    'Ficción': 'shelf.genreFiction',
+    'No ficción': 'shelf.genreNonFiction',
+    'Ciencia ficción': 'shelf.genreSciFi',
+    'Fantasía': 'shelf.genreFantasy',
+    'Terror': 'shelf.genreHorror',
+    'Misterio': 'shelf.genreMystery',
+    'Romance': 'shelf.genreRomance',
+    'Thriller': 'shelf.genreThriller',
+    'Biografía / Memorias': 'shelf.genreBiography',
+    'Historia': 'shelf.genreHistory',
+    'Ciencia / Tecnología': 'shelf.genreScience',
+    'Autoayuda': 'shelf.genreSelfHelp',
+    'Filosofía': 'shelf.genrePhilosophy',
+    'Ensayo': 'shelf.genreEssay',
+    'Poesía': 'shelf.genrePoetry',
+    'Aventura': 'shelf.genreAdventure',
+    'Clásicos': 'shelf.genreClassics',
+  };
+
+  const GENRE_OPTIONS = $derived([
+    ...KNOWN_GENRES.map((g) => ({ value: g, label: appState.t(GENRE_LABEL_KEYS[g] as MessageKey) })),
+    { value: '__other__', label: appState.t('shelf.otherGenre') },
+  ]);
 
   // ─── Inline editing ───
   let isEditing = $state(false);
@@ -224,16 +247,16 @@
     const book = appState.selectedShelfBook;
     if (!book) return;
     if (!editTitle.trim()) {
-      editError = 'El título es obligatorio';
+      editError = appState.t('shelf.titleRequired');
       return;
     }
     const trimmedGenre = resolveGenre();
     if (trimmedGenre.length > MAX_GENRE_LENGTH) {
-      editError = 'El género no puede exceder 80 caracteres';
+      editError = appState.t('shelf.genreTooLong');
       return;
     }
     if (trimmedGenre.length > 0 && CONTROL_CHAR_REGEX.test(trimmedGenre)) {
-      editError = 'El género contiene caracteres inválidos';
+      editError = appState.t('shelf.genreInvalidChars');
       return;
     }
 
@@ -248,7 +271,7 @@
       });
       isEditing = false;
     } catch (e) {
-      editError = e instanceof Error ? e.message : 'Error al guardar';
+      editError = e instanceof Error ? e.message : appState.t('shelf.saveError');
     } finally {
       isSaving = false;
     }
@@ -296,14 +319,14 @@
         class="inline-flex rounded-md border-(--color-border) bg-(--color-background) p-1 border-0"
         data-testid="shelf-view-toggle"
       >
-        <legend class="sr-only">Vista de estantería</legend>
+        <legend class="sr-only">{appState.t('shelf.viewToggleAria')}</legend>
         <button
           type="button"
           class={`flex h-7 w-8 items-center justify-center rounded px-0 py-1 text-xs font-medium ${appState.shelfQueryState.viewMode === 'grid' ? 'bg-(--color-surface) text-(--color-primary)' : 'text-(--color-text-muted)'}`}
           onclick={() => {
             appState.setShelfViewMode('grid');
           }}
-          aria-label="Vista en cuadrícula"
+          aria-label={appState.t('shelf.viewGrid')}
         >
           <Icon name="list" size="sm" />
         </button>
@@ -313,7 +336,7 @@
           onclick={() => {
             appState.setShelfViewMode('list');
           }}
-          aria-label="Vista en lista"
+          aria-label={appState.t('shelf.viewList')}
         >
           <Icon name="grid" size="sm" />
         </button>
@@ -505,7 +528,7 @@
   {@const currentStatus = getCurrentStatus(shelfDetail)}
   <Modal
     bind:open={showShelfModal}
-    title={isEditing ? 'Editar metadatos' : shelfDetail.title}
+    title={isEditing ? appState.t('shelf.editMetadata') : shelfDetail.title}
     size="xl"
   >
     {#snippet children()}
@@ -534,7 +557,7 @@
                 type="button"
                 class="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
                 onclick={() => void appState.handleDeleteCover(shelfDetail)}
-                aria-label="Eliminar portada"
+                aria-label={appState.t('shelf.deleteCoverAria')}
               >
                 <svg
                   class="h-3.5 w-3.5"
@@ -565,7 +588,7 @@
                 type="button"
                 class="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
                 onclick={() => handleCoverImport(shelfDetail)}
-                aria-label="Importar portada"
+                aria-label={appState.t('shelf.importCoverAria')}
               >
                 <svg
                   class="h-3.5 w-3.5"
@@ -595,7 +618,7 @@
                   for="edit-title"
                   class="mb-1 block text-xs font-medium text-(--color-primary)"
                 >
-                  Título
+                  {appState.t('library.editMetadata.titleLabel')}
                 </label>
                 <input
                   id="edit-title"
@@ -609,7 +632,7 @@
                   for="edit-author"
                   class="mb-1 block text-xs font-medium text-(--color-primary)"
                 >
-                  Autor
+                  {appState.t('library.editMetadata.authorLabel')}
                 </label>
                 <input
                   id="edit-author"
@@ -623,12 +646,12 @@
                   for="edit-genre"
                   class="mb-1 block text-xs font-medium text-(--color-primary)"
                 >
-                  Género
+                  {appState.t('shelf.genreLabel')}
                 </label>
                 <Dropdown
                   options={GENRE_OPTIONS}
                   bind:value={selectedGenre}
-                  placeholder="Seleccionar género"
+                  placeholder={appState.t('shelf.selectGenre')}
                   class="w-full"
                 />
                 {#if selectedGenre === '__other__'}
@@ -637,7 +660,7 @@
                     type="text"
                     bind:value={customGenre}
                     maxlength={MAX_GENRE_LENGTH}
-                    placeholder="Escribir género personalizado"
+                    placeholder={appState.t('shelf.customGenre')}
                     class="mt-2 w-full rounded-md border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-primary) focus:border-(--color-primary) focus:outline-none"
                   />
                 {/if}
@@ -652,17 +675,17 @@
               <div class="grid grid-cols-2 gap-x-6 gap-y-2">
                 <!-- Autor -->
                 <p class="text-xs text-(--color-text-muted)">
-                  <span class="font-medium text-(--color-primary)">Autor:</span>
+                  <span class="font-medium text-(--color-primary)">{appState.t('shelf.authorLabel')}</span>
                   {#if shelfDetail.author}
                     {shelfDetail.author}
                   {:else}
-                    <span class="italic opacity-60">Sin autor</span>
+                    <span class="italic opacity-60">{appState.t('shelf.noAuthor')}</span>
                   {/if}
                 </p>
 
                 <!-- Formato -->
                 <p class="flex items-center gap-2 text-xs text-(--color-text-muted)">
-                  <span class="font-medium text-(--color-primary) shrink-0">Formato:</span>
+                  <span class="font-medium text-(--color-primary) shrink-0">{appState.t('shelf.formatLabel')}</span>
                   <span
                     class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border uppercase {shelfDetail.format ===
                     'epub'
@@ -675,21 +698,21 @@
 
                 <!-- Género -->
                 <p class="text-xs text-(--color-text-muted)">
-                  <span class="font-medium text-(--color-primary)">Género:</span>
+                  <span class="font-medium text-(--color-primary)">{appState.t('shelf.genreLabel')}</span>
                   {#if shelfDetail.genre}
                     {shelfDetail.genre}
                   {:else}
-                    <span class="italic opacity-60">Sin clasificar</span>
+                    <span class="italic opacity-60">{appState.t('shelf.noGenre')}</span>
                   {/if}
                 </p>
 
                 <!-- Idioma -->
                 <p class="text-xs text-(--color-text-muted)">
-                  <span class="font-medium text-(--color-primary)">Idioma:</span>
+                  <span class="font-medium text-(--color-primary)">{appState.t('shelf.languageLabel')}</span>
                   {#if shelfDetail.language}
                     {getLanguageName(shelfDetail.language)}
                   {:else}
-                    <span class="italic opacity-60">Sin especificar</span>
+                    <span class="italic opacity-60">{appState.t('shelf.noLanguage')}</span>
                   {/if}
                 </p>
               </div>
@@ -698,7 +721,7 @@
               <div class="flex flex-wrap items-center gap-2 pt-3">
                 <!-- Status dropdown -->
                 <div class="flex items-center gap-1.5">
-                  <span class="text-xs text-(--color-text-muted)">Estado:</span>
+                  <span class="text-xs text-(--color-text-muted)">{appState.t('shelf.statusLabel')}</span>
                   <Dropdown
                     options={STATUS_OPTIONS}
                     value={currentStatus}
@@ -718,8 +741,8 @@
                       : 'bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border) hover:border-amber-500/25'}"
                     onclick={() => void appState.handleToggleFavorite(shelfDetail)}
                     aria-label={fav
-                      ? 'Quitar de favoritos'
-                      : 'Agregar a favoritos'}
+                      ? appState.t('shelf.removeFavorite')
+                      : appState.t('shelf.markFavorite')}
                   >
                     <svg
                       class="h-3.5 w-3.5"
@@ -744,7 +767,7 @@
                         />
                       {/if}
                     </svg>
-                    {fav ? 'Favorito' : 'Favorito'}
+                    {appState.t('shelf.favorite')}
                   </button>
                 {/if}
 
@@ -762,7 +785,7 @@
                     >
                       <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
-                    Completado
+                    {appState.t('shelf.completed')}
                   </span>
                 {/if}
               </div>
@@ -773,12 +796,12 @@
           <div class="rounded-lg border border-(--color-border) p-4 space-y-3">
             <h4 class="text-xs font-semibold uppercase tracking-wider text-(--color-text-muted)">
               <Icon name="clock" size="sm" class="inline -mt-0.5 mr-1" />
-              Lectura
+              {appState.t('shelf.readingLabel')}
             </h4>
             {#if progressPct > 0}
               <div class="space-y-1">
                 <div class="flex items-center justify-between text-(--text-2xs) text-(--color-text-muted)">
-                  <span>Progreso</span>
+                  <span>{appState.t('shelf.progress')}</span>
                   <span>{progressPct}%</span>
                 </div>
                 <div class="h-1.5 w-full rounded-full bg-(--color-border)">
@@ -789,27 +812,27 @@
                 </div>
                 {#if shelfDetail.totalPages > 0}
                   <p class="text-(--text-2xs) text-(--color-text-muted)">
-                    Página {shelfDetail.currentPage} de {shelfDetail.totalPages}
+                    {appState.t('shelf.pageOf', { current: shelfDetail.currentPage, total: shelfDetail.totalPages })}
                   </p>
                 {/if}
               </div>
             {/if}
             <dl class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
               {#if shelfDetail.minutesRead > 0}
-                <dt class="sr-only">Tiempo de lectura</dt>
+                <dt class="sr-only">{appState.t('shelf.readingLabel')}</dt>
                 <dd class="font-medium text-(--color-primary)">
                   <Icon name="clock" size="sm" class="inline -mt-0.5 mr-0.5" />
-                  {formatMinutes(shelfDetail.minutesRead)} leídos
+                  {appState.t('shelf.minutesRead', { minutes: formatMinutes(shelfDetail.minutesRead) })}
                 </dd>
               {/if}
               {#if shelfDetail.updatedAt}
-                <dt class="sr-only">Última actividad</dt>
+                <dt class="sr-only">{appState.t('shelf.details')}</dt>
                 <dd>{formatRelativeDate(shelfDetail.updatedAt)}</dd>
               {/if}
             </dl>
             {#if shelfDetail.totalPages === 0 && shelfDetail.minutesRead === 0 && !shelfDetail.updatedAt}
               <p class="text-xs italic text-(--color-text-muted) opacity-60">
-                Sin datos de lectura todavía
+                {appState.t('shelf.noReadingData')}
               </p>
             {/if}
           </div>
@@ -818,25 +841,25 @@
           <div class="rounded-lg border border-(--color-border) p-4 space-y-3">
             <h4 class="text-xs font-semibold uppercase tracking-wider text-(--color-text-muted)">
               <Icon name="info" size="sm" class="inline -mt-0.5 mr-1" />
-              Detalles
+              {appState.t('shelf.details')}
             </h4>
             {#if shelfDetail.publicationDate}
               <p class="flex items-center gap-1.5 text-xs text-(--color-text-muted)">
                 <Icon name="calendar" size="sm" class="shrink-0" />
-                Publicado: {formatPublicationDate(shelfDetail.publicationDate)}
+                {appState.t('shelf.published')} {formatPublicationDate(shelfDetail.publicationDate)}
               </p>
             {/if}
             {#if shelfDetail.createdAt}
               <p class="flex items-center gap-1.5 text-xs text-(--color-text-muted)">
                 <Icon name="calendar" size="sm" class="shrink-0" />
-                Agregado: {formatRelativeDate(shelfDetail.createdAt)}
+                {appState.t('shelf.added')} {formatRelativeDate(shelfDetail.createdAt)}
               </p>
             {/if}
             {#if shelfDetail.collectionIds && shelfDetail.collectionIds.length > 0}
               {@const collNames = getCollectionNames(shelfDetail.collectionIds)}
               {#if collNames.length > 0}
                 <div class="flex flex-wrap items-center gap-1.5">
-                  <span class="text-xs text-(--color-text-muted)">Colecciones:</span>
+                  <span class="text-xs text-(--color-text-muted)">{appState.t('shelf.collections')}</span>
                   {#each collNames as name}
                     <span
                       class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-(--color-primary)/8 text-(--color-primary) border border-(--color-primary)/15"
@@ -854,14 +877,14 @@
     {#snippet footer()}
       {#if isEditing}
         <Button size="sm" variant="ghost" onclick={cancelEditing} disabled={isSaving}>
-          Cancelar
+          {appState.t('highlight.cancel')}
         </Button>
         <Button size="sm" onclick={saveEditing} disabled={isSaving}>
-          {isSaving ? 'Guardando…' : 'Guardar'}
+          {isSaving ? appState.t('shelf.saving') : appState.t('highlight.save')}
         </Button>
       {:else}
         <Button size="sm" variant="ghost" onclick={() => startEditing(shelfDetail)}>
-          <Icon name="edit" size="sm" /> Editar metadatos
+          <Icon name="edit" size="sm" /> {appState.t('shelf.editMetadata')}
         </Button>
         <Button size="sm" variant="ghost" onclick={appState.closeShelfDetails}
           >{appState.t('settings.close')}</Button

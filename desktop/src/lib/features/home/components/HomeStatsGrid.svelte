@@ -11,7 +11,7 @@
     t?: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
-  let { stats, isLoading = false, disabledReason = null }: Props = $props();
+  let { stats, isLoading = false, disabledReason = null, t: _t }: Props = $props();
 
   type StatItem = {
     label: string;
@@ -23,35 +23,35 @@
 
   const statItems = $derived<StatItem[]>([
     {
-      label: 'Iniciados', // Replace with t() key if available, like t("stats.booksStarted")
+      label: _t ? _t('stats.booksStartedLabel') : 'Iniciados',
       value: stats?.booksStarted?.toString() ?? '0',
       icon: 'book',
       color: 'var(--color-accent-blue)',
       bg: 'rgba(73, 212, 255, 0.1)',
     },
     {
-      label: 'Completados',
+      label: _t ? _t('stats.booksCompletedLabel') : 'Completados',
       value: stats?.booksCompleted?.toString() ?? '0',
       icon: 'check',
       color: 'var(--color-success)',
       bg: 'color-mix(in srgb, var(--color-success) 10%, transparent)',
     },
     {
-      label: 'Minutos leídos',
+      label: _t ? _t('stats.minutesReadLabel') : 'Minutos leídos',
       value: stats?.totalMinutesRead?.toString() ?? '0',
       icon: 'clock',
       color: '#a78bfa',
       bg: 'rgba(167, 139, 250, 0.1)',
     },
     {
-      label: 'Sesiones',
+      label: _t ? _t('stats.sessionsLabel') : 'Sesiones',
       value: stats?.totalSessions?.toString() ?? '0',
       icon: 'trend-up',
       color: 'var(--color-warning)',
       bg: 'color-mix(in srgb, var(--color-warning) 10%, transparent)',
     },
     {
-      label: 'Progreso promedio',
+      label: _t ? _t('stats.avgProgressLabel') : 'Progreso promedio',
       value: `${stats ? Math.round(stats.avgProgressPercentage) : 0}%`,
       icon: 'chart',
       color: '#60a5fa',

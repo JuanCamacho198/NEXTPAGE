@@ -13,6 +13,8 @@
     height: number;
   };
 
+  import type { MessageKey } from '$lib/shared/i18n';
+
   type Props = {
     selectionOverlayRects: SelectionOverlayRect[];
     persistedHighlights: PersistedHighlight[];
@@ -20,6 +22,7 @@
     scale: number;
     activeHighlightId: string | null;
     onHighlightClick: (hl: PersistedHighlight, event: MouseEvent) => void;
+    t?: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
   let {
@@ -29,6 +32,7 @@
     scale,
     activeHighlightId,
     onHighlightClick,
+    t: _t,
   }: Props = $props();
 </script>
 
@@ -62,7 +66,7 @@
         }}
         role="button"
         tabindex="0"
-        aria-label="Highlight"
+        aria-label={_t ? _t('pdf.highlightAria') : 'Highlight'}
         onclick={(e) => onHighlightClick(hl, e)}
         onkeydown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {

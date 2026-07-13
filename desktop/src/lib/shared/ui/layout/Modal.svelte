@@ -1,8 +1,18 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { createFocusTrap } from '$lib/shared/utils/focusTrap';
+  import type { MessageKey } from '$lib/shared/i18n';
+  import { i18n } from '$lib/shared/i18n';
 
   import { fly, fade } from 'svelte/transition';
+
+  let locale = $state(i18n?.DEFAULT_LOCALE ?? 'es');
+  $effect(() => {
+    if (!i18n?.locale) return;
+    const unsub = i18n.locale.subscribe((l) => { locale = l; });
+    return () => unsub();
+  });
+  const tFn = (key: MessageKey): string => i18n?.t?.(locale, key) ?? key;
 
   type Props = {
     open: boolean;
@@ -82,7 +92,7 @@
           <button
             class="flex items-center justify-center min-w-7 min-h-7 text-(--color-text-muted) transition-colors hover:text-(--color-primary)"
             onclick={() => (open = false)}
-            aria-label="Close"
+            aria-label={tFn('modal.closeAria')}
           >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path

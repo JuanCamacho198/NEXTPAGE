@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
     open: boolean;
@@ -7,9 +8,12 @@
     currentColor: string;
     onSelect: (color: string) => void;
     onClose: () => void;
+    t?: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
-  let { open, anchor, currentColor, onSelect, onClose }: Props = $props();
+  let { open, anchor, currentColor, onSelect, onClose, t: _t = undefined }: Props = $props();
+
+  const tFn = (key: MessageKey): string => _t ? _t(key) : key;
 
   let inputValue = $state('');
   let popoverEl = $state<HTMLDivElement | null>(null);
@@ -69,13 +73,13 @@
       Math.min(anchor.getBoundingClientRect().left, window.innerWidth - 224),
     )}px; top: {anchor.getBoundingClientRect().bottom + 8}px;"
     role="dialog"
-    aria-label="Custom color picker"
+    aria-label={tFn('colorPicker.title')}
     tabindex="-1"
     onclick={(e) => e.stopPropagation()}
     onkeydown={handleKeydown}
   >
     <label class="block text-xs font-medium text-(--color-text-inverse)" for="custom-color-input">
-      Hex color
+      {tFn('colorPicker.hexLabel')}
     </label>
     <div class="mt-1 flex items-center gap-2">
       <input
@@ -84,7 +88,7 @@
         value={inputValue}
         oninput={handleNativeInput}
         class="h-8 w-8 cursor-pointer rounded border-0 p-0"
-        aria-label="Choose color"
+        aria-label={tFn('colorPicker.chooseColor')}
       />
       <input
         id="custom-color-input"
@@ -102,7 +106,7 @@
         class="rounded-md px-2 py-1 text-xs text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
         onclick={onClose}
       >
-        Cancel
+        {tFn('colorPicker.cancel')}
       </button>
       <button
         type="button"
@@ -110,7 +114,7 @@
         disabled={!isValidHex(inputValue)}
         onclick={handleSave}
       >
-        Save
+        {tFn('colorPicker.save')}
       </button>
     </div>
   </div>

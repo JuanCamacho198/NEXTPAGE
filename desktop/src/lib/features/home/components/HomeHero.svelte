@@ -2,12 +2,14 @@
   import type { Snippet } from 'svelte';
   import { profileSessionFromAuthState } from '$lib/features/settings/profileSession';
   import Avatar from '$lib/shared/ui/forms/Avatar.svelte';
+  import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
     actions?: Snippet;
+    t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
-  let { actions }: Props = $props();
+  let { actions, t }: Props = $props();
 
   // Read the profile from reactive auth state. Updates automatically
   // when the user signs in / out or refreshes their Google profile.
@@ -36,14 +38,13 @@
       <div class="min-w-0">
         <h2 class="text-2xl font-bold tracking-tight text-(--color-primary)">
           {#if profile.isSignedIn}
-            Hola, {profile.name}
+            {t('home.greetingName', { name: profile.name })}
           {:else}
-            Hola
+            {t('home.greeting')}
           {/if}
         </h2>
         <p class="mt-1 text-sm leading-relaxed text-(--color-text-muted)">
-          Aquí tienes un resumen de tu progreso de lectura. Importa nuevos libros o retoma donde lo
-          dejaste.
+          {t('home.heroDescription')}
         </p>
       </div>
     </div>

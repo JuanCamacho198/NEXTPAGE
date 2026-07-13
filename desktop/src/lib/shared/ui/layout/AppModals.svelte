@@ -20,6 +20,7 @@
   onClose={() => {
     appState.isCollectionManagerOpen = false;
   }}
+  t={appState.t}
 />
 
 <BulkImportModal

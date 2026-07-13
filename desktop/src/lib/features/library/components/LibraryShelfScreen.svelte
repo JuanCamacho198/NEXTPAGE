@@ -152,7 +152,7 @@
     <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
       <div class="space-y-2">
         <div>
-          <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">Estantería</h1>
+          <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">{t('library.title')}</h1>
           <p class="mt-1 text-sm text-(--color-text-muted)">
             Todos tus libros organizados en un solo lugar.
           </p>
@@ -162,17 +162,17 @@
           <div
             class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-3 py-1.5"
           >
-            {totalBooks} libros
+            {t('shelf.booksCount', { count: totalBooks })}
           </div>
           <div
             class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-3 py-1.5"
           >
-            {readingBooks} leyendo
+            {t('shelf.readingCount', { count: readingBooks })}
           </div>
           <div
             class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-3 py-1.5"
           >
-            {completedBooks} completados
+            {t('shelf.completedCount', { count: completedBooks })}
           </div>
         </div>
       </div>
@@ -209,7 +209,7 @@
             disabled={isImporting}
             class="h-11 min-w-[170px] rounded-2xl bg-(--gradient-accent) !text-[#07111d] shadow-(--shadow-glow-strong)"
           >
-            {isImporting ? 'Importando...' : 'Importar libro'}
+            {isImporting ? t('shelf.importing') : t('shelf.importBook')}
           </Button>
         </div>
       </div>
@@ -222,7 +222,7 @@
     >
       <header class="mb-3 flex items-center justify-between">
         <h2 class="text-sm font-semibold text-(--color-primary)">
-          Disponibles desde otros dispositivos
+          {t('shelf.availableDevices')}
           <span
             class="ml-2 rounded-full bg-(--color-primary)/20 px-2 py-0.5 text-(--text-micro) text-(--color-primary)"
           >
@@ -240,7 +240,7 @@
             type="button"
             class="shrink-0 text-red-400 hover:text-red-300"
             onclick={() => { downloadErrorDismissed = true; downloadableCatalog.clearDownloadError(); }}
-            aria-label="Cerrar"
+            aria-label={t('shelf.closeAria')}
           >
             <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6L6 18M6 6l12 12"></path>
@@ -275,7 +275,7 @@
                     {row.format.toUpperCase()}
                   </span>
                   <span class="text-(--text-micro) text-(--color-text-muted)">
-                    Desde {getSourceDeviceLabel(row)}
+                    {t('shelf.fromDevice', { device: getSourceDeviceLabel(row) })}
                   </span>
                 </div>
               </div>
@@ -287,11 +287,11 @@
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    <span class="text-xs text-(--color-text-muted)">Descargando...</span>
+                    <span class="text-xs text-(--color-text-muted)">{t('shelf.downloading')}</span>
                   </div>
                 {:else}
                   <Button size="sm" class="rounded-xl bg-(--gradient-accent) !text-[#07111d] whitespace-nowrap" onclick={() => handleDownload(row.id)}>
-                    Descargar
+                    {t('shelf.download')}
                   </Button>
                 {/if}
               </div>
@@ -307,7 +307,7 @@
   >
     <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
       <fieldset class="border-0 p-0 m-0">
-        <legend class="sr-only">Filtrar por estado</legend>
+        <legend class="sr-only">{t('shelf.filterAria')}</legend>
         <div class="flex flex-wrap gap-2">
           {#each FILTER_OPTIONS as option}
             <button
@@ -324,7 +324,7 @@
       </fieldset>
 
       <div class="flex flex-col gap-3 md:flex-row md:items-center">
-        <span class="text-xs text-(--color-text-muted)">Ordenar por</span>
+        <span class="text-xs text-(--color-text-muted)">{t('shelf.sortBy')}</span>
         <Dropdown options={sortDropdownOptions} bind:value={activeSort} class="min-w-[130px]">
           {#snippet trigger()}
             <span class="text-sm text-(--color-primary)">{activeSortLabel}</span>
@@ -347,26 +347,26 @@
         <fieldset
           class="inline-flex rounded-2xl border-(--color-border) bg-(--color-surface-subtle) p-1 border-0"
         >
-          <legend class="sr-only">Vista de estantería</legend>
+          <legend class="sr-only">{t('shelf.viewToggleAria')}</legend>
           <button
             type="button"
             class={`flex h-9 w-10 items-center justify-center rounded-xl ${activeView === 'grid' ? 'bg-[rgba(78,140,255,0.2)] text-(--color-primary)' : 'text-(--color-text-muted)'}`}
-            aria-label="Vista en cuadrícula"
+            aria-label={t('shelf.gridView')}
             onclick={() => {
               activeView = 'grid';
             }}
           >
-            <Icon name="grid" size="sm" title="Cuadrícula" />
+            <Icon name="grid" size="sm" title={t('shelf.gridView')} />
           </button>
           <button
             type="button"
             class={`flex h-9 w-10 items-center justify-center rounded-xl ${activeView === 'list' ? 'bg-[rgba(78,140,255,0.2)] text-(--color-primary)' : 'text-(--color-text-muted)'}`}
-            aria-label="Vista en lista"
+            aria-label={t('shelf.listView')}
             onclick={() => {
               activeView = 'list';
             }}
           >
-            <Icon name="list" size="sm" title="Lista" />
+            <Icon name="list" size="sm" title={t('shelf.listView')} />
           </button>
         </fieldset>
       </div>
@@ -393,7 +393,7 @@
                   <button
                     type="button"
                     class="flex h-9 w-9 items-center justify-center rounded-xl border border-(--color-border) bg-[rgba(20,32,49,0.92)] text-(--color-text-muted)"
-                    aria-label={`Opciones para ${book.title}`}
+                    aria-label={t('shelf.bookOptions', { title: book.title })}
                   >
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                       <circle cx="5" cy="12" r="1.8"></circle>
@@ -404,25 +404,25 @@
                 {/snippet}
                 <button
                   class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]"
-                  onclick={() => onOpenBook?.(book)}>Abrir libro</button
+                  onclick={() => onOpenBook?.(book)}>{t('shelf.openBook')}</button
                 >
                 <button
                   class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]"
                   onclick={() => onToggleFavorite?.(book)}
                 >
-                  {book.collectionIds?.includes(1) ? 'Quitar de favoritos' : 'Marcar como favorito'}
+                  {book.collectionIds?.includes(1) ? t('shelf.removeFavorite') : t('shelf.markFavorite')}
                 </button>
                 <button
                   class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]"
-                  onclick={() => onStatusChange?.(book, 'completed')}>Marcar como completado</button
+                  onclick={() => onStatusChange?.(book, 'completed')}>{t('shelf.markCompleted')}</button
                 >
                 <button
                   class="w-full px-4 py-2.5 text-left text-sm text-(--color-primary) hover:bg-[rgba(255,255,255,0.08)]"
-                  onclick={() => onViewDetails?.(book)}>Ver detalles</button
+                  onclick={() => onViewDetails?.(book)}>{t('shelf.viewDetails')}</button
                 >
                 <button
                   class="w-full px-4 py-2.5 text-left text-sm text-(--color-danger) hover:bg-[rgba(255,255,255,0.08)]"
-                  onclick={() => onRemoveBook?.(book)}>Eliminar de la biblioteca</button
+                  onclick={() => onRemoveBook?.(book)}>{t('shelf.removeLibrary')}</button
                 >
               </DropMenu>
             </div>
@@ -439,7 +439,7 @@
                   <div
                     class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] px-6 text-center text-xs uppercase tracking-[0.18em] text-(--color-primary)"
                   >
-                    Sin portada
+                    {t('shelf.noCover')}
                   </div>
                 {/snippet}
               </SafeCover>
@@ -450,7 +450,7 @@
                 {book.title}
               </h3>
               <p class="line-clamp-1 text-xs text-(--color-text-muted)">
-                {book.author || 'Autor desconocido'}
+                {book.author || t('shelf.unknownAuthor')}
               </p>
             </div>
 
@@ -468,8 +468,8 @@
                 ></div>
               </div>
               <div class="flex items-center justify-between text-xs text-(--color-text-muted)">
-                <span>{formatPercent(book)} leido</span>
-                <span>{book.minutesRead} min</span>
+                <span>{t('shelf.percentRead', { percent: formatPercent(book) })}</span>
+                <span>{book.minutesRead} {t('library.min')}</span>
               </div>
             </div>
 
@@ -480,14 +480,14 @@
                 class="rounded-xl"
                 onclick={() => onOpenBook?.(book)}
               >
-                Abrir libro
+                {t('shelf.openBook')}
               </Button>
               <Button
                 size="sm"
                 class="rounded-xl bg-(--gradient-accent) !text-[#07111d]"
                 onclick={() => onContinueReading?.(book)}
               >
-                {getSafeProgressPercentage(book) > 0 ? 'Continuar' : 'Empezar'}
+                {getSafeProgressPercentage(book) > 0 ? t('app.continue') : t('shelf.start')}
               </Button>
             </div>
           </article>
@@ -515,8 +515,8 @@
             </svg>
           </div>
           <div>
-            <p class="text-sm font-semibold text-(--color-primary)">Añadir libro</p>
-            <p class="mt-1 text-xs">Importa un nuevo archivo a tu biblioteca.</p>
+            <p class="text-sm font-semibold text-(--color-primary)">{t('shelf.addBook')}</p>
+            <p class="mt-1 text-xs">{t('shelf.importDescription')}</p>
           </div>
         </button>
       </li>
@@ -534,14 +534,14 @@
               >
                 <SafeCover
                   path={book.coverPath ?? ''}
-                  alt={`Portada de ${book.title}`}
+                alt={`${t('library.cover')} ${book.title}`}
                   className="h-full w-full object-cover"
                 >
                   {#snippet fallback()}
                     <div
                       class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] px-2 text-center text-(--text-micro) uppercase tracking-[0.16em] text-(--color-primary)"
                     >
-                      Sin portada
+                      {t('shelf.noCover')}
                     </div>
                   {/snippet}
                 </SafeCover>
@@ -559,7 +559,7 @@
                   </span>
                 </div>
                 <p class="mt-1 text-sm text-(--color-text-muted)">
-                  {book.author || 'Autor desconocido'}
+                  {book.author || t('shelf.unknownAuthor')}
                 </p>
 
                 <div
@@ -578,9 +578,9 @@
                   <div
                     class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-(--color-text-muted)"
                   >
-                    <span>{formatPercent(book)} leido</span>
-                    <span>{book.minutesRead} min registrados</span>
-                    <span>{book.currentPage}/{book.totalPages || '-'}</span>
+                    <span>{t('shelf.percentRead', { percent: formatPercent(book) })}</span>
+                    <span>{t('shelf.minutesLogged', { minutes: book.minutesRead })}</span>
+                    <span>{t('shelf.pageProgress', { current: book.currentPage, total: book.totalPages || '-' })}</span>
                   </div>
                 </div>
               </div>
@@ -591,21 +591,21 @@
                 variant="secondary"
                 size="sm"
                 class="rounded-xl"
-                onclick={() => onOpenBook?.(book)}>Abrir</Button
+                onclick={() => onOpenBook?.(book)}>{t('shelf.read')}</Button
               >
               <Button
                 size="sm"
                 class="rounded-xl bg-(--gradient-accent) !text-[#07111d]"
                 onclick={() => onContinueReading?.(book)}
               >
-                {getSafeProgressPercentage(book) > 0 ? 'Continuar lectura' : 'Empezar lectura'}
+                {getSafeProgressPercentage(book) > 0 ? t('shelf.continueReading') : t('shelf.startReading')}
               </Button>
               <DropMenu position="bottom-right">
                 {#snippet trigger()}
                   <button
                     type="button"
                     class="flex h-10 w-10 items-center justify-center rounded-xl border border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted)"
-                    aria-label={`Opciones para ${book.title}`}
+                    aria-label={t('shelf.bookOptions', { title: book.title })}
                   >
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                       <circle cx="5" cy="12" r="1.8"></circle>
@@ -616,25 +616,25 @@
                 {/snippet}
                 <button
                   class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
-                  onclick={() => onOpenBook?.(book)}>Abrir libro</button
+                  onclick={() => onOpenBook?.(book)}>{t('shelf.openBook')}</button
                 >
                 <button
                   class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
                   onclick={() => onToggleFavorite?.(book)}
                 >
-                  {book.collectionIds?.includes(1) ? 'Quitar de favoritos' : 'Marcar como favorito'}
+                  {book.collectionIds?.includes(1) ? t('shelf.removeFavorite') : t('shelf.markFavorite')}
                 </button>
                 <button
                   class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
-                  onclick={() => onStatusChange?.(book, 'completed')}>Marcar como completado</button
+                  onclick={() => onStatusChange?.(book, 'completed')}>{t('shelf.markCompleted')}</button
                 >
                 <button
                   class="w-full px-4 py-2 text-left text-sm text-(--color-border)"
-                  onclick={() => onViewDetails?.(book)}>Ver detalles</button
+                  onclick={() => onViewDetails?.(book)}>{t('shelf.viewDetails')}</button
                 >
                 <button
                   class="w-full px-4 py-2 text-left text-sm text-(--color-danger) hover:bg-(--color-surface-hover)"
-                  onclick={() => onRemoveBook?.(book)}>Eliminar de la biblioteca</button
+                  onclick={() => onRemoveBook?.(book)}>{t('shelf.removeLibrary')}</button
                 >
               </DropMenu>
             </div>
@@ -663,8 +663,8 @@
             </svg>
           </div>
           <div>
-            <p class="text-sm font-semibold text-(--color-primary)">Añadir libro</p>
-            <p class="mt-1 text-xs">Importa nuevos archivos y manten tu biblioteca al dia.</p>
+            <p class="text-sm font-semibold text-(--color-primary)">{t('shelf.addBook')}</p>
+            <p class="mt-1 text-xs">{t('shelf.importMoreDescription')}</p>
           </div>
         </button>
       </li>

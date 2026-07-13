@@ -19,10 +19,10 @@
     >
       <div class="mb-4 flex items-center justify-between">
         <h3 class="text-base font-semibold tracking-tight text-(--color-primary)">
-          Continuar lectura
+          {t('home.continueReading')}
         </h3>
         <button class="text-xs font-medium text-(--color-accent-blue) hover:underline"
-          >Ver todo</button
+          >{t('home.viewAll')}</button
         >
       </div>
       <div class="space-y-4">
@@ -41,7 +41,7 @@
       class="rounded-[24px] border border-(--color-border) bg-(--color-surface) shadow-(--shadow-soft) p-5 h-full"
     >
       <div class="mb-4 flex items-center justify-between">
-        <h3 class="text-base font-semibold tracking-tight text-(--color-primary)">Mi estantería</h3>
+        <h3 class="text-base font-semibold tracking-tight text-(--color-primary)">{t('home.myShelf')}</h3>
       </div>
       <div>
         {#if shelfSection}

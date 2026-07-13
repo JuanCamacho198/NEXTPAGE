@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SafeCover } from '$lib/features/library';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
+  import { Modal } from '$lib/shared/ui/';
   import { getSafeProgressPercentage } from '$lib/shared/stores/homeState';
   import {
     periodLabels,
@@ -29,8 +30,8 @@
   let genreTooltip: { genre: string; minutes: number; percent: number } | null = $state(null);
   let genreTooltipPos = $state<{ x: number; y: number } | null>(null);
 
-  // ─── Chart expand/collapse ───
-  let chartExpanded = $state(false);
+  // ─── Chart fullscreen modal ───
+  let chartModalOpen = $state(false);
 
   // ─── Month names via Intl.DateTimeFormat (zero-maintenance for any locale) ───
   function getShortMonthName(monthIndex: number): string {
@@ -39,8 +40,8 @@
     return name.charAt(0).toUpperCase() + name.slice(1);
   }
 
-  // Dynamic chart height: 240 normal, 420 expanded
-  const chartHeight = $derived(chartExpanded ? 420 : 240);
+  // Chart height: 240 (modal scales via viewBox)
+  const chartHeight = 240;
 
   const periodDropdownOptions = $derived(
     Object.entries(periodLabels).map(([value]) => ({
@@ -308,7 +309,6 @@
             </p>
           </div>
 
-          <span class="text-xs text-(--color-text-muted)">{_t('stats.view')}</span>
           <Dropdown
             options={granularityOptions.map((o) => ({ ...o, label: _t(o.label as MessageKey) }))}
             bind:value={activeGranularity}
@@ -318,24 +318,17 @@
           <button
             type="button"
             class="flex h-8 w-8 items-center justify-center rounded-lg border border-(--color-border) bg-(--color-surface-subtle) text-sm text-(--color-text-muted) cursor-pointer hover:border-(--color-primary) hover:text-(--color-primary) transition-colors duration-150"
-            onclick={() => (chartExpanded = !chartExpanded)}
-            aria-label={chartExpanded ? 'Colapsar gráfico' : 'Expandir gráfico'}
-            title={chartExpanded ? 'Colapsar gráfico' : 'Expandir gráfico'}
+            onclick={() => (chartModalOpen = true)}
+            aria-label="Pantalla completa"
+            title="Pantalla completa"
           >
-            {#if chartExpanded}
-              <!-- Minus icon: collapse -->
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-            {:else}
-              <!-- Max icon: expand -->
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="15 3 21 3 21 9"></polyline>
-                <polyline points="9 21 3 21 3 15"></polyline>
-                <line x1="21" y1="3" x2="14" y2="10"></line>
-                <line x1="3" y1="21" x2="10" y2="14"></line>
-              </svg>
-            {/if}
+            <!-- Fullscreen / expand icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <polyline points="9 21 3 21 3 15"></polyline>
+              <line x1="21" y1="3" x2="14" y2="10"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
           </button>
         </div>
 
@@ -469,6 +462,136 @@
           </svg>
         </div>
       </article>
+
+      <!-- Fullscreen modal for chart (same viewBox, scales via SVG automatically) -->
+      <Modal bind:open={chartModalOpen} title={_t('stats.minutesReadChart')} size="xl" noCloseButton={false}>
+        {#snippet children()}
+          <div class="relative -mx-2 -mt-2">
+            <!-- Tooltip overlay for modal -->
+            {#if hoveredPoint && tooltipPos}
+              <div
+                class="pointer-events-none absolute z-10 rounded-lg border border-(--color-border) bg-(--color-bg-panel) px-3 py-2 text-xs shadow-(--shadow-panel)"
+                style="left: {tooltipPos.x + 14}px; top: {tooltipPos.y - 42}px;"
+              >
+                <p class="font-medium text-(--color-primary)">{hoveredPoint.value} min</p>
+                <p class="mt-0.5 text-(--color-text-muted)">{hoveredPoint.label}</p>
+              </div>
+            {/if}
+            <div
+              class="rounded-[22px] border border-(--color-border) bg-[linear-gradient(180deg,rgba(6,14,24,0.86),rgba(10,18,30,0.94))] p-4"
+            >
+              <svg
+                role="img"
+                aria-label={_t('stats.minutesReadChart')}
+                viewBox={`0 0 ${chartMeta.width} ${chartMeta.height + 28}`}
+                class="w-full"
+                style="height: {chartMeta.height + 320}px;"
+                onmouseleave={() => {
+                  hoveredPoint = null;
+                  tooltipPos = null;
+                }}
+              >
+                <defs>
+                  <linearGradient id="lineStrokeModal" x1="0%" x2="100%" y1="0%" y2="0%">
+                    <stop offset="0%" stop-color="#4e8cff"></stop>
+                    <stop offset="100%" stop-color="#49d4ff"></stop>
+                  </linearGradient>
+                  <linearGradient id="lineFillModal" x1="0%" x2="0%" y1="0%" y2="100%">
+                    <stop offset="0%" stop-color="rgba(78,140,255,0.35)"></stop>
+                    <stop offset="100%" stop-color="rgba(78,140,255,0.02)"></stop>
+                  </linearGradient>
+                </defs>
+
+                {#each [0, 0.25, 0.5, 0.75, 1] as tick}
+                  <line
+                    x1="0"
+                    y1={chartMeta.height - tick * (chartMeta.height - 18)}
+                    x2={chartMeta.width}
+                    y2={chartMeta.height - tick * (chartMeta.height - 18)}
+                    stroke="rgba(148,173,206,0.12)"
+                    stroke-width="1"
+                  ></line>
+                {/each}
+
+                <path d={chartMeta.area} fill="url(#lineFillModal)"></path>
+                <path d={chartMeta.line} fill="none" stroke="url(#lineStrokeModal)" stroke-width="3" stroke-linecap="round"></path>
+
+                {#each chartMeta.points as point, i}
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r="5"
+                    fill="#49d4ff"
+                    style="transition: r 0.15s ease;"
+                    class="cursor-pointer"
+                    role="button"
+                    tabindex="0"
+                    aria-label={`${point.value} min — ${point.label}`}
+                    onmouseenter={(e) => {
+                      const circle = e.currentTarget as SVGCircleElement;
+                      circle.style.r = '7';
+                      hoveredPoint = { label: point.label, value: point.value };
+                      const modal = circle.closest('[role="dialog"]');
+                      if (modal) {
+                        const rect = modal.getBoundingClientRect();
+                        tooltipPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+                      }
+                    }}
+                    onmousemove={(e) => {
+                      const modal = (e.currentTarget as SVGCircleElement).closest('[role="dialog"]');
+                      if (modal) {
+                        const rect = modal.getBoundingClientRect();
+                        tooltipPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+                      }
+                    }}
+                    onmouseleave={(e) => {
+                      const circle = e.currentTarget as SVGCircleElement;
+                      circle.style.r = '5';
+                      hoveredPoint = null;
+                      tooltipPos = null;
+                    }}
+                    onfocus={(e) => {
+                      const circle = e.currentTarget as SVGCircleElement;
+                      circle.style.r = '7';
+                      hoveredPoint = { label: point.label, value: point.value };
+                      const ib = circle.getBoundingClientRect();
+                      const modal = circle.closest('[role="dialog"]')!;
+                      const ab = modal.getBoundingClientRect();
+                      tooltipPos = { x: ib.left - ab.left + 14, y: ib.top - ab.top - 30 };
+                    }}
+                    onblur={(e) => {
+                      const circle = e.currentTarget as SVGCircleElement;
+                      circle.style.r = '5';
+                      hoveredPoint = null;
+                      tooltipPos = null;
+                    }}
+                    onkeydown={(e) => {
+                      if (e.key === 'Escape') {
+                        hoveredPoint = null;
+                        tooltipPos = null;
+                      }
+                    }}
+                  ></circle>
+                {/each}
+
+                {#each chartMeta.points as point, i}
+                  {#if i % chartMeta.labelInterval === 0 || i === chartMeta.points.length - 1}
+                    <text
+                      x={point.x}
+                      y={chartMeta.height + 18}
+                      text-anchor="middle"
+                      font-size="11"
+                      fill="var(--color-text-muted)"
+                    >
+                      {formatChartLabel(point.label)}
+                    </text>
+                  {/if}
+                {/each}
+              </svg>
+            </div>
+          </div>
+        {/snippet}
+      </Modal>
 
       <article
         class="relative rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"

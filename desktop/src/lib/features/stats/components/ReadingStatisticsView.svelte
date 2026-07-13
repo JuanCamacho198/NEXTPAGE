@@ -2,6 +2,7 @@
   import { SafeCover } from '$lib/features/library';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import { Modal } from '$lib/shared/ui/';
+  import { UNCLASSIFIED_GENRE } from '$lib/shared/services/genreHeuristic';
   import { getSafeProgressPercentage } from '$lib/shared/stores/homeState';
   import {
     periodLabels,
@@ -26,12 +27,26 @@
   const tooltipOffsetX = 14;
   const tooltipOffsetY = -42;
 
-  // ─── Genre tooltip state ───
-  let genreTooltip: { genre: string; minutes: number; percent: number } | null = $state(null);
+  // ─── Genre tooltip state (with books) ───
+  let genreTooltip: { genre: string; minutes: number; percent: number; books: string[] } | null = $state(null);
   let genreTooltipPos = $state<{ x: number; y: number } | null>(null);
 
   // ─── Chart fullscreen modal ───
   let chartModalOpen = $state(false);
+
+  // ─── Thin sticky toolbar visibility ───
+  let heroEl: HTMLDivElement | undefined = $state();
+  let heroVisible = $state(true);
+
+  $effect(() => {
+    if (!heroEl) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { heroVisible = entry.isIntersecting; },
+      { threshold: 0, rootMargin: '-1px 0px 0px 0px' },
+    );
+    observer.observe(heroEl);
+    return () => observer.disconnect();
+  });
 
   // ─── Month names via Intl.DateTimeFormat (zero-maintenance for any locale) ───
   function getShortMonthName(monthIndex: number): string {
@@ -42,6 +57,17 @@
 
   // Chart height: 240 (modal scales via viewBox)
   const chartHeight = 240;
+
+  // ─── Books grouped by genre for tooltip ───
+  const booksByGenre = $derived.by(() => {
+    const map = new Map<string, string[]>();
+    for (const book of appState.books) {
+      const genre = (book.genre?.trim()) || UNCLASSIFIED_GENRE;
+      if (!map.has(genre)) map.set(genre, []);
+      map.get(genre)!.push(book.title);
+    }
+    return map;
+  });
 
   const periodDropdownOptions = $derived(
     Object.entries(periodLabels).map(([value]) => ({
@@ -110,14 +136,14 @@
     const cur = current ?? 0;
     const prev = previous ?? 0;
 
-    // Ambos cero → sin datos en absoluto
+    // Both zero → no data at all
     if (cur === 0 && prev === 0) return '';
-    // Primer periodo con datos → "Nuevo"
+    // First period with data → "New"
     if (cur > 0 && prev === 0) return _t('stats.firstPeriod');
-    // Periodo actual vacío pero hay historial → no mostrar castigo
+    // Current period empty but history exists → do not show penalty
     if (cur === 0 && prev > 0) return '—';
 
-    // Ambos tienen datos reales → delta normal
+    // Both have real data → normal delta
     const delta = computeDelta(cur, prev);
     if (delta === null) return _t('stats.noPriorData');
     const sign = delta >= 0 ? '+' : '';
@@ -181,7 +207,6 @@
       return { ...point, x, y };
     });
 
-    // Smart label spacing: show fewer labels when many points
     const maxVisibleLabels = Math.max(1, Math.floor(width / MIN_LABEL_SPACING));
     const labelInterval = Math.max(1, Math.ceil(points.length / maxVisibleLabels));
 
@@ -201,12 +226,10 @@
       if (/^\d{1,2}$/.test(label)) return label;
     }
     if (activeGranularity === 'week') {
-      // "2026-W03" → "W3" | "Semana 03" → "S3"
       const w = label.match(/[WSws]\s*0*(\d+)/);
       if (w) return `${label.match(/[WSws]/)?.[0]?.toUpperCase() ?? 'W'}${w[1]}`;
     }
     if (activeGranularity === 'month') {
-      // Extract month number from "2026-01" or "01" → locale-aware short name via Intl
       const monthNum = parseInt(label.replace(/^\D+/, '').split(/[\s-]+/).pop() || '', 10);
       if (monthNum >= 1 && monthNum <= 12) {
         return getShortMonthName(monthNum - 1);
@@ -251,10 +274,23 @@
   );
 </script>
 
-<section class="space-y-5">
+<!-- Thin sticky toolbar (rendered outside <section> to avoid negative margin issues) -->
+{#if !heroVisible}
   <div
-    class="sticky top-0 z-10 rounded-(--radius-2xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-(--shadow-hero)"
-    style="backdrop-filter: blur(8px);"
+    class="sticky top-0 z-20 border-b border-(--color-border) bg-[rgba(10,18,31,0.97)] px-4 py-3 shadow-(--shadow-panel) md:px-6"
+  >
+    <div class="mx-auto flex max-w-7xl items-center justify-between">
+      <span class="text-sm font-semibold text-(--color-primary)">{_t('stats.title')}</span>
+      <Dropdown options={periodDropdownOptions} bind:value={activePeriod} class="min-w-[120px]" />
+    </div>
+  </div>
+{/if}
+
+<section class="space-y-5">
+  <!-- Hero header (not sticky, normal flow) -->
+  <div
+    bind:this={heroEl}
+    class="rounded-(--radius-2xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-(--shadow-hero)"
   >
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
@@ -290,7 +326,7 @@
             {metric.value}
           </p>
           {#if metric.delta}
-            <p class="mt-2 text-xs"            class:text-(--color-success)={!metric.delta.startsWith('—') && !metric.delta.startsWith('-')}>
+            <p class="mt-2 text-xs" class:text-(--color-success)={!metric.delta.startsWith('—') && !metric.delta.startsWith('-')}>
               {metric.delta}
             </p>
           {/if}
@@ -310,7 +346,6 @@
             </p>
           </div>
 
-          <span class="text-xs text-(--color-text-muted)">{_t('stats.groupBy')}</span>
           <Dropdown
             options={granularityOptions.map((o) => ({ ...o, label: _t(o.label as MessageKey) }))}
             bind:value={activeGranularity}
@@ -324,7 +359,6 @@
             aria-label="Pantalla completa"
             title="Pantalla completa"
           >
-            <!-- Fullscreen / expand icon -->
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="15 3 21 3 21 9"></polyline>
               <polyline points="9 21 3 21 3 15"></polyline>
@@ -334,7 +368,6 @@
           </button>
         </div>
 
-        <!-- Tooltip overlay (positioned via DOM mouse coords) -->
         {#if hoveredPoint && tooltipPos}
           <div
             class="pointer-events-none absolute z-10 rounded-lg border border-(--color-border) bg-(--color-bg-panel) px-3 py-2 text-xs shadow-(--shadow-panel)"
@@ -353,7 +386,7 @@
             aria-label={_t('stats.minutesReadChart')}
             viewBox={`0 0 ${chartMeta.width} ${chartMeta.height + 28}`}
             class="w-full"
-            style="height: {chartMeta.height + 40}px; transition: height 0.25s ease;"
+            style="height: {chartMeta.height + 40}px;"
             onmouseleave={() => {
               hoveredPoint = null;
               tooltipPos = null;
@@ -465,11 +498,10 @@
         </div>
       </article>
 
-      <!-- Fullscreen modal for chart (same viewBox, scales via SVG automatically) -->
-      <Modal bind:open={chartModalOpen} title={_t('stats.minutesReadChart')} size="xl" noCloseButton={false}>
+      <!-- Fullscreen modal for chart -->
+      <Modal bind:open={chartModalOpen} title={_t('stats.minutesReadChart')} size="xl">
         {#snippet children()}
           <div class="relative -mx-2 -mt-2">
-            <!-- Tooltip overlay for modal -->
             {#if hoveredPoint && tooltipPos}
               <div
                 class="pointer-events-none absolute z-10 rounded-lg border border-(--color-border) bg-(--color-bg-panel) px-3 py-2 text-xs shadow-(--shadow-panel)"
@@ -598,14 +630,24 @@
       <article
         class="relative rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
       >
-        <!-- Genre tooltip overlay -->
+        <!-- Genre tooltip overlay with books -->
         {#if genreTooltip && genreTooltipPos}
           <div
             class="pointer-events-none absolute z-10 rounded-lg border border-(--color-border) bg-(--color-bg-panel) px-3 py-2 text-xs shadow-(--shadow-panel)"
             style="left: {genreTooltipPos.x + 14}px; top: {genreTooltipPos.y - 38}px;"
           >
             <p class="font-medium text-(--color-primary)">{genreTooltip.genre}</p>
-            <p class="mt-0.5 text-(--color-text-muted)">{genreTooltip.minutes} min ({genreTooltip.percent}%)</p>
+            <p class="mt-0.5 text-(--color-text-muted)">{genreTooltip.minutes} min · {genreTooltip.percent}%</p>
+            {#if genreTooltip.books.length > 0}
+              <div class="mt-1.5 border-t border-(--color-border) pt-1.5">
+                {#each genreTooltip.books.slice(0, 3) as bookTitle}
+                  <p class="truncate text-(--color-text-muted)">📖 {bookTitle}</p>
+                {/each}
+                {#if genreTooltip.books.length > 3}
+                  <p class="mt-0.5 text-(--color-text-muted)">+{genreTooltip.books.length - 3} más</p>
+                {/if}
+              </div>
+            {/if}
           </div>
         {/if}
 
@@ -620,7 +662,7 @@
           class="flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between"
         >
           <div
-            class="donut-chart relative h-52 w-52 rounded-full"
+            class="relative h-52 w-52 rounded-full"
             style={`background: conic-gradient(${genreDistribution
               .map((entry, index, array) => {
                 const start = array
@@ -649,7 +691,8 @@
                 tabindex="0"
                 aria-label={`${entry.genre}: ${entry.minutes} min, ${entry.percent}%`}
                 onmouseenter={(e) => {
-                  genreTooltip = { genre: entry.genre, minutes: entry.minutes, percent: entry.percent };
+                  const titles = booksByGenre.get(entry.genre) ?? [];
+                  genreTooltip = { genre: entry.genre, minutes: entry.minutes, percent: entry.percent, books: titles };
                   const article = (e.currentTarget as HTMLElement).closest('article');
                   if (article) {
                     const rect = article.getBoundingClientRect();
@@ -668,7 +711,8 @@
                   genreTooltipPos = null;
                 }}
                 onfocus={(e) => {
-                  genreTooltip = { genre: entry.genre, minutes: entry.minutes, percent: entry.percent };
+                  const titles = booksByGenre.get(entry.genre) ?? [];
+                  genreTooltip = { genre: entry.genre, minutes: entry.minutes, percent: entry.percent, books: titles };
                   const el = e.currentTarget as HTMLElement;
                   const ab = el.closest('article')!.getBoundingClientRect();
                   const ib = el.getBoundingClientRect();

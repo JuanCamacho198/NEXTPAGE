@@ -155,7 +155,7 @@
             </div>
           {:else if appState.route === 'stats'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
-              <ReadingStatisticsView {appState} />
+              <ReadingStatisticsView {appState} t={appState.t} />
             </div>
           {:else if appState.route === 'highlights'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>

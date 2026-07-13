@@ -65,6 +65,7 @@ import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.util.getContentDisplayName
 import com.nextpage.presentation.viewmodel.DownloadState
 import com.nextpage.presentation.viewmodel.LibraryViewModel
+import com.nextpage.ui.components.atoms.CoverThumbnail
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageEmptyState
@@ -356,7 +357,8 @@ private fun DownloadableBooksSection(
 }
 
 /**
- * A single downloadable book card with title, author, source label, and download button.
+ * A single downloadable book card with cover thumbnail, title, author, source label,
+ * and download button. Matches [BookGridCard] styling for a consistent catalog look.
  */
 @Composable
 private fun DownloadableBookCard(
@@ -371,67 +373,72 @@ private fun DownloadableBookCard(
     }
 
     Card(
-        modifier = Modifier.width(160.dp),
+        modifier = Modifier.width(140.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         )
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
+        Column {
+            CoverThumbnail(
+                coverPath = book.coverUrl,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+            )
+
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
                     text = book.title,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (book.author != null) {
                     Text(
                         text = book.author,
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = sourceLabel,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.primary
                 )
-            }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (isDownloading) {
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .align(Alignment.CenterHorizontally),
-                    strokeWidth = 2.dp
-                )
-            } else {
-                FilledTonalButton(
-                    onClick = onDownload,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CloudDownload,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
+                if (isDownloading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .align(Alignment.CenterHorizontally),
+                        strokeWidth = 2.dp
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = stringResource(R.string.book_download),
-                        fontSize = 12.sp
-                    )
+                } else {
+                    FilledTonalButton(
+                        onClick = onDownload,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudDownload,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(R.string.book_download),
+                            fontSize = 12.sp
+                        )
+                    }
                 }
             }
         }

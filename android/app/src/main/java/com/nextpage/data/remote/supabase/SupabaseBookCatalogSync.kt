@@ -11,6 +11,7 @@ import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.decodeRecord
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
+import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -324,7 +326,32 @@ class SupabaseBookCatalogSync(
         }
     }
 
-    private fun BookEntity.toUserBookRow(userId: String): UserBookRow {
+    /**
+     * Upload a cover image to Supabase Storage and return the public URL.
+     * Path: covers/{userId}/{bookId}.jpg
+     * Non-blocking: failure logs warning and returns null.
+     */
+    private suspend fun uploadCover(userId: String, bookId: String, coverPath: String?): String? {
+        if (coverPath == null) return null
+        val coverFile = File(coverPath)
+        if (!coverFile.exists()) return null
+        return try {
+            val bytes = coverFile.readBytes()
+            val path = "covers/$userId/$bookId.jpg"
+            SupabaseClientProvider.client.storage.from("book-covers").upload(
+                path = path,
+                data = bytes,
+                options = { upsert = true }
+            )
+            SupabaseClientProvider.client.storage.from("book-covers").publicUrl(path)
+        } catch (e: Exception) {
+            Log.w(TAG, "Cover upload failed for book $bookId", e)
+            null
+        }
+    }
+
+    private suspend fun BookEntity.toUserBookRow(userId: String): UserBookRow {
+        val coverUrl = uploadCover(userId, id, coverPath)
         return UserBookRow(
             id = id,
             userId = userId,
@@ -333,12 +360,16 @@ class SupabaseBookCatalogSync(
             format = format,
             contentHash = contentHash,
             filePath = filePath,
-            coverUrl = null,
+            coverUrl = coverUrl,
             description = description,
             totalPages = totalPages,
             sourceDevice = "android",
             importedAt = dateFormat.format(Date(updatedAtEpochMillis)),
             updatedAt = dateFormat.format(Date(updatedAtEpochMillis))
         )
+    }
+
+    private companion object {
+        private const val TAG = "SupabaseBookCatalogSync"
     }
 }

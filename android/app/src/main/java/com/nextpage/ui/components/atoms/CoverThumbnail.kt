@@ -15,17 +15,16 @@ import coil.compose.AsyncImagePainter
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.nextpage.R
-import java.io.File
-
 /**
- * Small local-file cover thumbnail for the library grid. Loads a
- * `File` (not a URL) via Coil with an explicit 80×120 px decode
- * size and reports the loader state through [onImageState]. Sibling
- * of [NextPageBookCover], tuned for the in-library list view.
+ * Small cover thumbnail for the library grid. Loads from a local
+ * file path or a remote URL via Coil with an explicit 80×120 px
+ * decode size and reports the loader state through [onImageState].
+ * Sibling of [NextPageBookCover], tuned for the in-library list
+ * view.
  *
  * @param coverPath Absolute path to the cover image file on local
- *   storage. When `null` or blank, the request resolves to
- *   `fallback(R.drawable.cover_placeholder)`.
+ *   storage or a remote URL string. When `null` or blank, the
+ *   request resolves to `fallback(R.drawable.cover_placeholder)`.
  * @param modifier Modifier applied to the `AsyncImage`. Use it to set
  *   the rendered size — the decode size is fixed at 80×120 px and is
  *   decoupled from the render size.
@@ -35,10 +34,10 @@ import java.io.File
  *
  * **Visual**: `AsyncImage` with `ContentScale.Crop`, clipped to
  * `MaterialTheme.shapes.small`. `crossfade(true)` is enabled.
- * **Behavior**: pure rendering. The `File` and `ImageRequest` are
- * `remember`-ed keyed on `coverPath`/`(context, density, coverFile,
- * coverPath)` to avoid rebuilding the request on unrelated
- * recompositions. Both memory and disk cache policies are enabled.
+ * **Behavior**: pure rendering. The `ImageRequest` is `remember`-ed
+ * keyed on `coverPath`/`(context, density, coverPath)` to avoid
+ * rebuilding the request on unrelated recompositions. Both memory
+ * and disk cache policies are enabled.
  * **Recomposition**: recomposes when `coverPath` or `modifier`
  * change; [onImageState] is invoked from `AsyncImage`'s internal
  * `State`, not composition.
@@ -51,14 +50,9 @@ fun CoverThumbnail(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val coverFile = remember(coverPath) {
-        coverPath
-            ?.takeIf { it.isNotBlank() }
-            ?.let(::File)
-    }
-    val imageRequest = remember(context, density, coverFile, coverPath) {
+    val imageRequest = remember(context, density, coverPath) {
         ImageRequest.Builder(context)
-            .data(coverFile)
+            .data(coverPath?.takeIf { it.isNotBlank() })
             .size(
                 width = with(density) { 80.dp.toPx().toInt() },
                 height = with(density) { 120.dp.toPx().toInt() }

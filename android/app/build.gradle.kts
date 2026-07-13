@@ -172,6 +172,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:realtime-kt")
+    implementation("io.github.jan-tennert.supabase:storage-kt")
     // kotlinx-datetime — supabase-kt 3.5+ uses its own unix serializer (no
     // InstantIso8601Serializer). Readium 3.2.0 requires 0.7+ (atStartOfDayIn).
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")

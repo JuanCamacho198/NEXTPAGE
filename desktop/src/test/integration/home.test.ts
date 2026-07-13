@@ -206,6 +206,13 @@ const dictionary: Record<string, string> = {
   'library.editMetadata.title': 'Edit Metadata',
   'home.futureTitle': 'Workspace',
   'home.futurePlaceholder': 'Future widgets and shortcuts will be added here.',
+  'sidebar.home': 'Inicio',
+  'sidebar.library': 'Estantería',
+  'sidebar.stats': 'Estadísticas',
+  'sidebar.highlights': 'Notas y resaltados',
+  'sidebar.settings': 'Ajustes',
+  'sidebar.expand': 'Expandir sidebar',
+  'sidebar.collapse': 'Colapsar sidebar',
   'settings.close': 'Close',
   'settings.title': 'Settings',
   'errors.commandFailure': 'Command failed',
@@ -461,14 +468,14 @@ describe('App desktop home redesign QA scenarios', () => {
 
     expect(await screen.findByTestId('home-desktop-view-stub')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Highlights' }));
+    await user.click(screen.getByRole('button', { name: /Notas y resaltados/ }));
     expect(screen.getByRole('heading', { name: 'Highlights' })).toBeInTheDocument();
     expect(screen.queryByTestId('home-desktop-view-stub')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Inicio/ }));
     expect(await screen.findByTestId('home-desktop-view-stub')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: /Ajustes/ }));
     expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Inicio/ }));

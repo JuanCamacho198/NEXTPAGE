@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import AppSidebar from '$lib/shared/ui/layout/AppSidebar.svelte';
+import { getNavItems } from '$lib/shared/stores/navigationState.svelte';
 
 function fakeT(key: string): string {
   const labels: Record<string, string> = {
@@ -14,14 +15,27 @@ function fakeT(key: string): string {
   return labels[key] ?? key;
 }
 
-describe('AppSidebar', () => {
-  const defaultProps = {
-    activeRoute: 'home' as const,
+function makeNavItems(overrides: Partial<{
+  onNavigateHome: () => void;
+  onNavigateLibrary: () => void;
+  onNavigateStats: () => void;
+  onNavigateHighlights: () => void;
+  onNavigateSettings: () => void;
+}> = {}) {
+  return getNavItems({
     onNavigateHome: vi.fn(),
     onNavigateLibrary: vi.fn(),
     onNavigateStats: vi.fn(),
     onNavigateHighlights: vi.fn(),
     onNavigateSettings: vi.fn(),
+    ...overrides,
+  });
+}
+
+describe('AppSidebar', () => {
+  const defaultProps = {
+    activeRoute: 'home' as const,
+    navItems: makeNavItems(),
     t: fakeT,
   };
 
@@ -49,7 +63,10 @@ describe('AppSidebar', () => {
   it('calls onNavigateHome when home is clicked', async () => {
     const onNavigateHome = vi.fn();
     const user = userEvent.setup();
-    render(AppSidebar, { ...defaultProps, onNavigateHome });
+    render(AppSidebar, {
+      ...defaultProps,
+      navItems: makeNavItems({ onNavigateHome }),
+    });
     const btn = findNavButton('Inicio');
     expect(btn).not.toBeNull();
     await user.click(btn as HTMLElement);
@@ -59,7 +76,10 @@ describe('AppSidebar', () => {
   it('calls onNavigateLibrary when library is clicked', async () => {
     const onNavigateLibrary = vi.fn();
     const user = userEvent.setup();
-    render(AppSidebar, { ...defaultProps, onNavigateLibrary });
+    render(AppSidebar, {
+      ...defaultProps,
+      navItems: makeNavItems({ onNavigateLibrary }),
+    });
     const btn = findNavButton('Estantería');
     expect(btn).not.toBeNull();
     await user.click(btn as HTMLElement);
@@ -69,7 +89,10 @@ describe('AppSidebar', () => {
   it('calls onNavigateStats when stats is clicked', async () => {
     const onNavigateStats = vi.fn();
     const user = userEvent.setup();
-    render(AppSidebar, { ...defaultProps, onNavigateStats });
+    render(AppSidebar, {
+      ...defaultProps,
+      navItems: makeNavItems({ onNavigateStats }),
+    });
     const btn = findNavButton('Estadísticas');
     expect(btn).not.toBeNull();
     await user.click(btn as HTMLElement);
@@ -79,7 +102,10 @@ describe('AppSidebar', () => {
   it('calls onNavigateHighlights when highlights is clicked', async () => {
     const onNavigateHighlights = vi.fn();
     const user = userEvent.setup();
-    render(AppSidebar, { ...defaultProps, onNavigateHighlights });
+    render(AppSidebar, {
+      ...defaultProps,
+      navItems: makeNavItems({ onNavigateHighlights }),
+    });
     const btn = findNavButton('Notas y resaltados');
     expect(btn).not.toBeNull();
     await user.click(btn as HTMLElement);
@@ -89,7 +115,10 @@ describe('AppSidebar', () => {
   it('calls onNavigateSettings when settings is clicked', async () => {
     const onNavigateSettings = vi.fn();
     const user = userEvent.setup();
-    render(AppSidebar, { ...defaultProps, onNavigateSettings });
+    render(AppSidebar, {
+      ...defaultProps,
+      navItems: makeNavItems({ onNavigateSettings }),
+    });
     const btn = findNavButton('Ajustes');
     expect(btn).not.toBeNull();
     await user.click(btn as HTMLElement);

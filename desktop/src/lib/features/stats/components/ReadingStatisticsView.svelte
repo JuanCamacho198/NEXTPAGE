@@ -106,7 +106,18 @@
   };
 
   function deltaText(current: number | undefined, previous: number | undefined): string {
-    const delta = computeDelta(current ?? 0, previous ?? 0);
+    const cur = current ?? 0;
+    const prev = previous ?? 0;
+
+    // Ambos cero → sin datos en absoluto
+    if (cur === 0 && prev === 0) return '';
+    // Primer periodo con datos → "Nuevo"
+    if (cur > 0 && prev === 0) return _t('stats.firstPeriod');
+    // Periodo actual vacío pero hay historial → no mostrar castigo
+    if (cur === 0 && prev > 0) return '—';
+
+    // Ambos tienen datos reales → delta normal
+    const delta = computeDelta(cur, prev);
     if (delta === null) return _t('stats.noPriorData');
     const sign = delta >= 0 ? '+' : '';
     return `${sign}${delta}% ${_t(`stats.delta${activePeriod.charAt(0).toUpperCase() + activePeriod.slice(1)}` as MessageKey)}`;
@@ -276,7 +287,11 @@
           <p class="mt-3 text-3xl font-semibold tracking-tight text-(--color-primary)">
             {metric.value}
           </p>
-          <p class="mt-2 text-xs text-(--color-success)">{metric.delta}</p>
+          {#if metric.delta}
+            <p class="mt-2 text-xs"            class:text-(--color-success)={!metric.delta.startsWith('—') && !metric.delta.startsWith('-')}>
+              {metric.delta}
+            </p>
+          {/if}
         </article>
       {/each}
     </div>

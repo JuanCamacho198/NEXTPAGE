@@ -105,7 +105,7 @@ export async function importBook(
     let contentHash: string | undefined;
     try {
       const fileBytes = await getFileBytes(sourcePath);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', fileBytes as Uint8Array);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', new Uint8Array(fileBytes));
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
       contentHash = `sha256:${hashHex}`;

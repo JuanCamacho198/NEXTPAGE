@@ -105,6 +105,20 @@ export class SyncService {
           }
         }
 
+        // Cover upload: try to read the cover file and upload to Storage
+        let coverUrl: string | null = null;
+        try {
+          const allBooks = await tauri.listLibraryBooks();
+          const localBook = allBooks.find((b) => b.id === entityId);
+          if (localBook?.coverPath) {
+            const coverBytes = await tauri.getFileBytes(localBook.coverPath);
+            coverUrl = await bookSync.uploadCover(authState.userId, entityId, new Uint8Array(coverBytes).buffer as ArrayBuffer);
+          }
+        } catch (e) {
+          console.warn('Cover upload failed for book', entityId, e);
+          // Non-blocking — continue with null coverUrl
+        }
+
         await bookSync.upsertBook({
           id: entityId,
           userId: authState.userId,
@@ -113,7 +127,7 @@ export class SyncService {
           format: String(metadata.format ?? ''),
           contentHash: contentHash,
           filePath: null,
-          coverUrl: null,
+          coverUrl: coverUrl,
           description: null,
           totalPages: metadata.totalPages != null ? Number(metadata.totalPages) : null,
           sourceDevice: 'desktop',
@@ -150,8 +164,16 @@ export class SyncService {
       // 1. Fetch remote catalog
       const remoteBooks = await catalogSync.fetchCatalog();
 
-      // 2. Get local books
-      const localBooks = await tauri.listBooks();
+      // 2. Get local books — library listing for coverPath, book listing for filePath
+      const [booksWithCover, sourceBooks] = await Promise.all([
+        tauri.listLibraryBooks(),
+        tauri.listBooks(),
+      ]);
+      const filePathByBookId = new Map(sourceBooks.map((b) => [b.id, b.filePath]));
+      const localBooks = booksWithCover.map((lb) => ({
+        ...lb,
+        filePath: filePathByBookId.get(lb.id) ?? '',
+      }));
 
       const remoteIds = new Set(remoteBooks.map((b) => b.id));
       const localIds = new Set(localBooks.map((b) => b.id));
@@ -160,6 +182,17 @@ export class SyncService {
       for (const book of localBooks) {
         if (!remoteIds.has(book.id)) {
           try {
+            // Cover upload: try to read the cover file and upload to Storage
+            let coverUrl: string | null = null;
+            try {
+              if (book.coverPath) {
+                const coverBytes = await tauri.getFileBytes(book.coverPath);
+                coverUrl = await catalogSync.uploadCover(authState.userId, book.id, new Uint8Array(coverBytes).buffer as ArrayBuffer);
+              }
+            } catch (e) {
+              console.warn('Cover upload failed for book', book.id, e);
+            }
+
             await catalogSync.upsertBook({
               id: book.id,
               userId: authState.userId,
@@ -168,7 +201,7 @@ export class SyncService {
               format: book.format,
               contentHash: null,
               filePath: book.filePath || null,
-              coverUrl: null,
+              coverUrl: coverUrl,
               description: null,
               totalPages: book.totalPages > 0 ? book.totalPages : null,
               sourceDevice: 'desktop',

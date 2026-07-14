@@ -177,6 +177,7 @@
     'Poesía',
     'Aventura',
     'Clásicos',
+    'Sin clasificar',
   ] as const;
 
   const GENRE_LABEL_KEYS: Record<string, string> = {
@@ -198,6 +199,7 @@
     'Poesía': 'shelf.genrePoetry',
     'Aventura': 'shelf.genreAdventure',
     'Clásicos': 'shelf.genreClassics',
+    'Sin clasificar': 'shelf.genreUnclassified',
   };
 
   const GENRE_OPTIONS = $derived([
@@ -422,6 +424,8 @@
             favoriteAddLabel={appState.t('library.favoriteAdd')}
             favoriteRemoveLabel={appState.t('library.favoriteRemove')}
             triggerLabel={appState.t('library.optionsFor', { title: book.title })}
+            onViewDetails={() => appState.openShelfDetails(book)}
+            viewDetailsLabel={appState.t('shelf.viewDetails')}
             onEdit={() => {
               appState.handleEditBook(book);
             }}
@@ -452,31 +456,33 @@
               t={appState.t}
             >
               {#snippet actions()}
-                <ShelfActionMenu
-                  bookId={book.id}
-                  isFavorite={Boolean(book.collectionIds?.includes(1))}
-                  readLabel={appState.t('app.read')}
-                  editLabel={appState.t('library.editMetadata.title')}
-                  removeLabel={appState.t('library.removeFromShelf')}
-                  favoriteAddLabel={appState.t('library.favoriteAdd')}
-                  favoriteRemoveLabel={appState.t('library.favoriteRemove')}
-                  triggerLabel={appState.t('library.optionsFor', { title: book.title })}
-                  onEdit={() => {
-                    appState.handleEditBook(book);
-                  }}
-                  onRemove={() => {
-                    void appState.handleHideBook(book);
-                  }}
-                  onToggleFavorite={() => {
-                    void appState.handleToggleFavorite(book);
-                  }}
-                />
-              {/snippet}
-            </BookCard>
-          </li>
-        {/each}
-      </ul>
-    {/if}
+              <ShelfActionMenu
+                bookId={book.id}
+                isFavorite={Boolean(book.collectionIds?.includes(1))}
+                readLabel={appState.t('app.read')}
+                editLabel={appState.t('library.editMetadata.title')}
+                removeLabel={appState.t('library.removeFromShelf')}
+                favoriteAddLabel={appState.t('library.favoriteAdd')}
+                favoriteRemoveLabel={appState.t('library.favoriteRemove')}
+                triggerLabel={appState.t('library.optionsFor', { title: book.title })}
+                onViewDetails={() => appState.openShelfDetails(book)}
+                viewDetailsLabel={appState.t('shelf.viewDetails')}
+                onEdit={() => {
+                  appState.handleEditBook(book);
+                }}
+                onRemove={() => {
+                  void appState.handleHideBook(book);
+                }}
+                onToggleFavorite={() => {
+                  void appState.handleToggleFavorite(book);
+                }}
+              />
+            {/snippet}
+          </BookCard>
+        </li>
+      {/each}
+    </ul>
+  {/if}
   {:else}
     <ul class="space-y-2">
       {#each appState.shelfBooks as book}
@@ -504,6 +510,8 @@
                 favoriteAddLabel={appState.t('library.favoriteAdd')}
                 favoriteRemoveLabel={appState.t('library.favoriteRemove')}
                 triggerLabel={appState.t('library.optionsFor', { title: book.title })}
+                onViewDetails={() => appState.openShelfDetails(book)}
+                viewDetailsLabel={appState.t('shelf.viewDetails')}
                 onEdit={() => {
                   appState.handleEditBook(book);
                 }}

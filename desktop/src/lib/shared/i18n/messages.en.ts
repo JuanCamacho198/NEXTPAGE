@@ -184,6 +184,11 @@ export const messagesEn = {
   'settings.shortcuts.readerScrollUp': 'Scroll up in the current reader view',
   'settings.shortcuts.readerScrollDown': 'Scroll down in the current reader view',
   'settings.shortcuts.closeDialog': 'Close open dialogs and menus',
+  'settings.shortcuts.search': 'Search within book',
+  'settings.shortcuts.fullscreen': 'Fullscreen',
+  'settings.shortcuts.showHelp': 'Show keyboard shortcuts',
+  'settings.shortcuts.commandPalette': 'Command palette',
+  'settings.shortcuts.toggleDarkMode': 'Toggle dark mode',
   'settings.unknownBook': 'Unknown',
 
   // New Settings Tabs
@@ -714,6 +719,7 @@ export const messagesEn = {
   'shelf.genrePoetry': 'Poetry',
   'shelf.genreAdventure': 'Adventure',
   'shelf.genreClassics': 'Classics',
+  'shelf.genreUnclassified': 'Unclassified',
 
   // Connected Devices
   'settings.connectedDevices.title': 'Connected devices',

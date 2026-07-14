@@ -141,6 +141,8 @@ class LibraryDomainState {
           syncStatus: 'local' as const,
           currentPage: book.currentPage,
           totalPages: metadata.totalPages || book.totalPages || 0,
+          createdAt: book.createdAt,
+          updatedAt: book.updatedAt,
         });
       }
 
@@ -311,6 +313,8 @@ class LibraryDomainState {
         syncStatus: 'local' as const,
         currentPage: readerBook.currentPage,
         totalPages: readerBook.totalPages,
+        createdAt: readerBook.createdAt,
+        updatedAt: readerBook.updatedAt,
         genre: normalizedGenre,
       });
 

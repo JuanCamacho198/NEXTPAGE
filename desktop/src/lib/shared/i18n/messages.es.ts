@@ -182,6 +182,11 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.shortcuts.readerScrollUp': 'Desplazarse hacia arriba en la vista actual del lector',
   'settings.shortcuts.readerScrollDown': 'Desplazarse hacia abajo en la vista actual del lector',
   'settings.shortcuts.closeDialog': 'Cerrar dialogs y menus abiertos',
+  'settings.shortcuts.search': 'Buscar en el libro',
+  'settings.shortcuts.fullscreen': 'Pantalla completa',
+  'settings.shortcuts.showHelp': 'Mostrar atajos de teclado',
+  'settings.shortcuts.commandPalette': 'Paleta de comandos',
+  'settings.shortcuts.toggleDarkMode': 'Alternar modo oscuro',
   'settings.color.orange': 'Naranja',
 'settings.color.purple': 'Púrpura',
   'settings.page': 'Pagina',
@@ -676,6 +681,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'shelf.genrePoetry': 'Poesía',
   'shelf.genreAdventure': 'Aventura',
   'shelf.genreClassics': 'Clásicos',
+  'shelf.genreUnclassified': 'Sin clasificar',
 
   // Connected Devices
   'settings.connectedDevices.title': 'Dispositivos conectados',

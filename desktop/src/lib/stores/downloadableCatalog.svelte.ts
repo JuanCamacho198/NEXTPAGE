@@ -121,6 +121,8 @@ export async function downloadBook(bookId: string): Promise<void> {
       title: book.title,
       author: book.author ?? '',
       format: book.format,
+      createdAt: book.importedAt,
+      updatedAt: new Date().toISOString(),
     });
 
     // 5. Remove from downloadable list

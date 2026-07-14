@@ -33,7 +33,7 @@
   }: Props = $props();
 
   const progress = $derived(Math.round(getSafeProgressPercentage(book)));
-  const showProgress = $derived(variant === 'continue-reading');
+  const showProgress = $derived(variant === 'continue-reading' || book.readingStatus === 'completed');
 
   const containerClass = $derived.by(() => {
     const selectedClass = selected

@@ -110,6 +110,31 @@
       combo: 'Escape',
       descriptionKey: 'settings.shortcuts.closeDialog',
     },
+    {
+      id: 'reader-search',
+      combo: 'Ctrl+F',
+      descriptionKey: 'settings.shortcuts.search',
+    },
+    {
+      id: 'reader-fullscreen',
+      combo: 'F11',
+      descriptionKey: 'settings.shortcuts.fullscreen',
+    },
+    {
+      id: 'app-help',
+      combo: '?',
+      descriptionKey: 'settings.shortcuts.showHelp',
+    },
+    {
+      id: 'app-command-palette',
+      combo: 'Ctrl+K',
+      descriptionKey: 'settings.shortcuts.commandPalette',
+    },
+    {
+      id: 'app-toggle-dark',
+      combo: 'Ctrl+D',
+      descriptionKey: 'settings.shortcuts.toggleDarkMode',
+    },
   ];
 
   const DEFAULT_VALUES = {
@@ -355,6 +380,7 @@
       }
     } else {
       devicesState.stopHeartbeat();
+      devicesState.destroy();
     }
 
     if (tab === 'apariencia' || tab === 'reader') {

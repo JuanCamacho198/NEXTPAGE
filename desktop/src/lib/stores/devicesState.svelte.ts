@@ -43,6 +43,7 @@ export function createDevicesState(): {
 
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   let realtimeUnsubscribe: (() => void) | null = null;
+  let isSubscribed = $state(false);
 
   // ── Heartbeat ──────────────────────────────────────────────────
 
@@ -73,8 +74,7 @@ export function createDevicesState(): {
    * will be reflected in real time.
    */
   function subscribeToDeviceChanges(userId: string): void {
-    // Clean up previous subscription if any
-    unsubscribeFromDeviceChanges();
+    if (isSubscribed) return;
 
     const client = getSessionClient();
     const channel = client
@@ -113,8 +113,10 @@ export function createDevicesState(): {
       )
       .subscribe();
 
+    isSubscribed = true;
     realtimeUnsubscribe = () => {
-      client.removeChannel(channel);
+      channel.unsubscribe();
+      isSubscribed = false;
     };
   }
 
@@ -123,6 +125,7 @@ export function createDevicesState(): {
       realtimeUnsubscribe();
       realtimeUnsubscribe = null;
     }
+    isSubscribed = false;
   }
 
   // ── Load / register current device ─────────────────────────────

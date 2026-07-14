@@ -57,15 +57,6 @@
   - **Renamed classes in v4**: `break-words` → `wrap-break-word`, `flex-shrink-0` → `shrink-0`
   - **Arbitrary values with canonical names**: `min-w-[86px]` → `min-w-21.5`, `duration-[420ms]` → `duration-420`
   - **CSS conflictos**: NO pongas `flex` y `hidden` en el mismo elemento (usa `max-lg:hidden lg:flex`). NO combines `font-(--font-sans)` con `font-medium` (usa inline `style="font-family: var(--font-sans)"` para la font-family).
-  - **VS Code settings** (`.vscode/settings.json`):
-    ```jsonc
-    {
-      "tailwindCSS.lint.cssConflict": "warning",
-      "tailwindCSS.lint.suggestCanonicalClasses": "ignore",
-      "tailwindCSS.updateDebounce": 500,
-      "tailwindCSS.validate": true
-    }
-    ```
   - **Auto-detection**: Run `bun run lint` — the custom rule `local-rules/tailwind-v4-canonical` (in `eslint-local-rules/`) detects old syntax as warnings and can auto-fix with `bun run lint:fix`.
 - **Imports**: Use `$lib` alias (e.g., `import { something } from '$lib/stores'`)
 - **Types**: TypeScript with explicit return types on functions
@@ -114,12 +105,3 @@ Fast native tools installed to replace slow PowerShell cmdlets. USE these when e
 
 **Rule**: When you need to search content, find files, read files, or process JSON via bash, use these tools — NOT PowerShell `Select-String` or `Get-ChildItem`.
 
-## graphify
-
-This project has a graphify knowledge graph at graphify-out/.
-
-Rules:
-- Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
-- If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
-- For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` over grep — these traverse the graph's EXTRACTED + INFERRED edges instead of scanning files
-- After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)

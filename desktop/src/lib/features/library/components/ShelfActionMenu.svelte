@@ -15,6 +15,8 @@
     onEdit,
     onRemove,
     onToggleFavorite,
+    onViewDetails,
+    viewDetailsLabel = '',
   }: {
     bookId: string;
     isFavorite: boolean;
@@ -28,6 +30,8 @@
     onEdit: () => void;
     onRemove: () => void;
     onToggleFavorite: () => void;
+    onViewDetails?: () => void;
+    viewDetailsLabel?: string;
   } = $props();
 
   let isOpen = $state(false);
@@ -253,6 +257,19 @@
         >
           {editLabel}
         </button>
+
+        {#if onViewDetails}
+          <button
+            type="button"
+            role="menuitem"
+            tabindex="0"
+            data-menu-item="true"
+            class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
+            onclick={() => { handleAction(onViewDetails); }}
+          >
+            {viewDetailsLabel}
+          </button>
+        {/if}
 
         <button
           type="button"

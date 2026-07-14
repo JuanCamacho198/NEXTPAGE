@@ -29,6 +29,8 @@
         favoriteAddLabel={appState.t('library.favoriteAdd')}
         favoriteRemoveLabel={appState.t('library.favoriteRemove')}
         triggerLabel={appState.t('library.optionsFor', { title: book.title })}
+        onViewDetails={() => appState.openShelfDetails(book)}
+        viewDetailsLabel={appState.t('shelf.viewDetails')}
         onRead={() => {
           void appState.startReading(book);
         }}
@@ -71,6 +73,8 @@
               favoriteAddLabel={appState.t('library.favoriteAdd')}
               favoriteRemoveLabel={appState.t('library.favoriteRemove')}
               triggerLabel={appState.t('library.optionsFor', { title: book.title })}
+              onViewDetails={() => appState.openShelfDetails(book)}
+              viewDetailsLabel={appState.t('shelf.viewDetails')}
               onEdit={() => {
                 appState.handleEditBook(book);
               }}

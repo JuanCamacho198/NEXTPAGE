@@ -7,6 +7,20 @@
   import AppRouter from '$lib/shared/ui/layout/AppRouter.svelte';
   import AppModals from '$lib/shared/ui/layout/AppModals.svelte';
   import ImportProgressBanner from '$lib/shared/ui/feedback/ImportProgressBanner.svelte';
+  import CustomTitlebar from '$lib/shared/ui/layout/CustomTitlebar.svelte';
+  import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
+
+  let showCustomTitlebar = $state(false);
+
+  onMount(async () => {
+    try {
+      const { type } = await import('@tauri-apps/plugin-os');
+      showCustomTitlebar = type().includes('Windows');
+    } catch {
+      showCustomTitlebar = false;
+    }
+  });
+
   onMount(() => {
     appState.init();
 
@@ -48,17 +62,22 @@
   });
 </script>
 
-<main class="flex h-screen overflow-hidden bg-(--color-background) text-(--color-primary)">
-  <!-- Skip link: visible only on keyboard focus for keyboard/screen reader users -->
-  <a
-    href="#main-content"
-    class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-1/2 focus:-translate-x-1/2 focus:z-100 focus:px-4 focus:py-2.5 focus:rounded-lg focus:bg-(--color-accent-blue) focus:text-(--color-background) focus:text-sm focus:font-semibold focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50"
-  >
-    {appState.t('app.skipToContent')}
-  </a>
-  <AppRouter />
-  <AppModals />
-  <ImportProgressBanner />
-  <DebugToggle />
-  <DebugPanel />
-</main>
+<div class="flex flex-col h-screen bg-(--color-background) text-(--color-primary)">
+  {#if showCustomTitlebar}
+    <CustomTitlebar hidden={readerState.isFullscreen} />
+  {/if}
+  <main class="flex flex-1 overflow-hidden">
+    <!-- Skip link: visible only on keyboard focus for keyboard/screen reader users -->
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-1/2 focus:-translate-x-1/2 focus:z-100 focus:px-4 focus:py-2.5 focus:rounded-lg focus:bg-(--color-accent-blue) focus:text-(--color-background) focus:text-sm focus:font-semibold focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50"
+    >
+      {appState.t('app.skipToContent')}
+    </a>
+    <AppRouter />
+    <AppModals />
+    <ImportProgressBanner />
+    <DebugToggle />
+    <DebugPanel />
+  </main>
+</div>

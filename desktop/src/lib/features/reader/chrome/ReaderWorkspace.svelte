@@ -38,6 +38,7 @@
   import { createBookmarksState } from './bookmarksState.svelte';
   import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
   import { getReaderError } from '$lib/stores/readerErrorState.svelte';
+  import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
 
   const appWindow = getCurrentWebviewWindow();
 
@@ -298,6 +299,7 @@
     try {
       await appWindow.setFullscreen(!isFullscreen);
       isFullscreen = !isFullscreen;
+      readerState.isFullscreen = isFullscreen;
       syncDebugReaderInfo();
     } catch {
       console.warn('Tauri fullscreen API not available');

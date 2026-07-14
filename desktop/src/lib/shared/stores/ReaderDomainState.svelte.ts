@@ -24,6 +24,7 @@ class ReaderDomainState {
   percentage = $state(0);
   preloadedBytes = $state<{ filePath: string; data: Uint8Array } | null>(null);
   readerError = $state<string | null>(null);
+  isFullscreen = $state(false);
 
   // ─── Callbacks ───
   onStatsRefreshNeeded: ((bookId: string) => Promise<void>) | null = null;

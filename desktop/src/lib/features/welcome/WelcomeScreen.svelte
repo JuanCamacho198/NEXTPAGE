@@ -1,6 +1,7 @@
 <script lang="ts">
   import { authState, setLocalUser } from '$lib/stores/authState.svelte';
   import { savePersistedAuth } from '$lib/stores/authPersistence';
+  import { titlebarState } from '$lib/stores/titlebarState.svelte';
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import { GoogleLoginButton } from '$lib/features/library';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -93,15 +94,17 @@
   <header
     class="flex items-center justify-between px-6 py-3 border-b border-(--color-border) shrink-0"
   >
-    <div class="flex items-center gap-2.5">
-      <div
-        class="flex size-8 items-center justify-center rounded-lg bg-(--color-primary) text-(--color-background) font-bold text-sm shrink-0"
-        aria-hidden="true"
-      >
-        N
+    {#if !titlebarState.isCustomTitlebar}
+      <div class="flex items-center gap-2.5">
+        <div
+          class="flex size-8 items-center justify-center rounded-lg bg-(--color-primary) text-(--color-background) font-bold text-sm shrink-0"
+          aria-hidden="true"
+        >
+          N
+        </div>
+        <span class="text-base font-semibold tracking-tight">NextPage</span>
       </div>
-      <span class="text-base font-semibold tracking-tight">NextPage</span>
-    </div>
+    {/if}
     <nav class="flex items-center gap-1 text-sm text-(--color-text-muted)" aria-label="Welcome nav">
       <a
         href="#features"
@@ -214,14 +217,19 @@
       </ul>
     </section>
 
-    <!-- Right: login card. min-h-0 lets the card use available height without
-         pushing the parent. max-h-full keeps the card bounded so it cannot
-         grow past the main area; if it ever does, the card itself scrolls.
-         w-full on mobile (stacks full width), w-auto on lg so it sizes to
-         its content (capped by max-w-md) and justify-between on main pushes
+    <!-- Right: login card. The resolved height chain is:
+         App h-screen → main flex-1 overflow-hidden → welcome main flex-1
+         min-h-0 overflow-hidden → section max-h-full → card max-h-full
+         overflow-y-auto. The section carries the viewport cap (resolved
+         against main's definite height) so the card, whose max-height
+         resolves against the capped section, becomes the sole scroll
+         container when content is taller than the available area.
+         min-h-0 lets flex items shrink below content height. w-full on
+         mobile (stacks full width), w-auto on lg so it sizes to its
+         content (capped by max-w-md) and justify-between on main pushes
          it to the right edge. -->
     <section
-      class="flex min-w-0 min-h-0 items-center justify-center w-full lg:w-auto max-w-md"
+      class="flex min-w-0 min-h-0 max-h-full items-center justify-center w-full lg:w-auto max-w-md"
       aria-label="Sign in"
     >
       <div

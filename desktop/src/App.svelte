@@ -9,15 +9,15 @@
   import ImportProgressBanner from '$lib/shared/ui/feedback/ImportProgressBanner.svelte';
   import CustomTitlebar from '$lib/shared/ui/layout/CustomTitlebar.svelte';
   import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
-
-  let showCustomTitlebar = $state(false);
+  import { titlebarState } from '$lib/stores/titlebarState.svelte';
+  import { isCustomTitlebarPlatform } from '$lib/shared/utils/platform';
 
   onMount(async () => {
     try {
       const { type } = await import('@tauri-apps/plugin-os');
-      showCustomTitlebar = type().includes('Windows');
+      titlebarState.isCustomTitlebar = isCustomTitlebarPlatform(type());
     } catch {
-      showCustomTitlebar = false;
+      titlebarState.isCustomTitlebar = false;
     }
   });
 
@@ -63,7 +63,7 @@
 </script>
 
 <div class="flex flex-col h-screen bg-(--color-background) text-(--color-primary)">
-  {#if showCustomTitlebar}
+  {#if titlebarState.isCustomTitlebar}
     <CustomTitlebar hidden={readerState.isFullscreen} />
   {/if}
   <main class="flex flex-1 overflow-hidden">

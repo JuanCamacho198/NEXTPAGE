@@ -131,7 +131,7 @@
   >
     <!-- Left: branding + features -->
     <section
-      class="flex min-w-0 min-h-0 flex-col justify-center gap-4 lg:gap-5 max-w-xl w-full lg:w-auto"
+      class="flex min-w-0 min-h-0 flex-col justify-center gap-4 lg:gap-5 w-full lg:flex-1 lg:max-w-xl"
       aria-labelledby="welcome-headline"
     >
       <p
@@ -229,7 +229,7 @@
          content (capped by max-w-md) and justify-between on main pushes
          it to the right edge. -->
     <section
-      class="flex min-w-0 min-h-0 max-h-full items-center justify-center w-full lg:w-auto max-w-md"
+      class="flex min-w-0 min-h-0 max-h-full items-center justify-center w-full lg:w-auto lg:shrink-0 max-w-md"
       aria-label="Sign in"
     >
       <div

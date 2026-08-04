@@ -2,7 +2,7 @@
  * DESIGN TOKENS — CSS Custom Properties
  * Centralized semantic tokens for consistent design
  * ============================================
- * Usage: var(--color-primary), var(--spacing-md), etc.
+ * Usage: var(--color-primary), var(--space-md), etc.
  * ============================================ */
 
 @import 'tailwindcss';
@@ -20,11 +20,11 @@
   --text-2sm: 0.8125rem;
 
   /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
 
   /* Border radius */
   --radius-sm: 8px;
@@ -70,11 +70,11 @@
   --font-weight-bold: 700;
 
   /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
 
   /* Border radius */
   --radius-sm: 8px;
@@ -286,7 +286,7 @@ body {
   font-family: var(--font-sans);
   border: none;
   border-radius: var(--radius-lg);
-  padding: var(--spacing-sm) var(--spacing-lg);
+  padding: var(--space-sm) var(--space-lg);
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -324,7 +324,7 @@ body {
 .card {
   background: var(--color-surface);
   border-radius: var(--radius-xl);
-  padding: var(--spacing-md);
+  padding: var(--space-md);
   box-shadow: var(--shadow-soft);
 }
 

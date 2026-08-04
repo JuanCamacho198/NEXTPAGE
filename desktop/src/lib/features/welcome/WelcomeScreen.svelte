@@ -97,11 +97,11 @@
        lg:flex-row → side-by-side at ≥1024px, stacked below. min-h-0 lets
        flex items shrink so the whole layout fits the viewport. -->
   <main
-    class="flex-1 min-h-0 flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-14 px-5 sm:px-8 lg:px-12 py-8 lg:py-10 overflow-x-hidden overflow-y-auto"
+    class="flex-1 min-h-0 flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-14 px-5 sm:px-8 lg:px-12 py-6 lg:py-8 overflow-x-hidden overflow-y-auto"
   >
     <!-- Left: branding + features -->
     <section
-      class="flex w-full lg:flex-1 lg:max-w-[36rem] min-w-0 min-h-0 flex-col justify-center gap-5 overflow-y-auto"
+      class="flex w-full lg:flex-1 lg:max-w-xl min-w-0 min-h-0 max-h-full flex-col justify-center gap-4 overflow-y-auto"
       aria-labelledby="welcome-headline"
     >
       <div class="flex items-center gap-3.5">
@@ -132,7 +132,7 @@
         {t('welcome.subtitle')}
       </p>
 
-      <ul id="features" class="m-0 p-0 list-none flex flex-col gap-8 mt-2">
+      <ul id="features" class="m-0 p-0 list-none flex flex-col gap-5 mt-1">
         <li class="flex items-start gap-4 min-w-0">
           <div
             class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-(--welcome-feature-blue-bg) text-(--welcome-feature-blue-fg)"
@@ -245,7 +245,7 @@
          section max-h-full → card max-h-full overflow-y-auto, so the card
          becomes the sole scroll container on short viewports. -->
     <section
-      class="relative flex flex-col min-w-0 min-h-0 max-h-full items-center justify-center w-full max-w-[28rem]"
+      class="relative flex flex-col min-w-0 min-h-0 max-h-full items-center justify-center w-full max-w-md"
       aria-label="Sign in"
     >
       <!-- Decorative blue orb behind the card -->
@@ -327,7 +327,7 @@
   <!-- Footer: 3 trust items -->
   <footer
     id="trust"
-    class="flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-16 px-6 py-4 shrink-0"
+    class="flex flex-col lg:flex-row items-start lg:items-center justify-center gap-4 lg:gap-16 px-6 py-4 shrink-0"
   >
     <div class="flex items-center gap-3">
       <svg

@@ -15,13 +15,15 @@
 
   const showSidebar = $derived(appState.route !== 'reader' && appState.route !== 'welcome');
 
-  const navItems = $derived(getNavItems({
-    onNavigateHome: appState.navigateToHome,
-    onNavigateLibrary: appState.navigateToLibrary,
-    onNavigateStats: appState.navigateToStats,
-    onNavigateHighlights: appState.navigateToHighlights,
-    onNavigateSettings: appState.navigateToSettings,
-  }));
+  const navItems = $derived(
+    getNavItems({
+      onNavigateHome: appState.navigateToHome,
+      onNavigateLibrary: appState.navigateToLibrary,
+      onNavigateStats: appState.navigateToStats,
+      onNavigateHighlights: appState.navigateToHighlights,
+      onNavigateSettings: appState.navigateToSettings,
+    }),
+  );
 </script>
 
 {#if !appState.isInitialized}
@@ -54,12 +56,8 @@
   -->
   <WelcomeScreen t={appState.t} />
 {:else if showSidebar}
-  <div class="flex min-h-screen">
-    <AppSidebar
-      activeRoute={appState.route}
-      {navItems}
-      t={appState.t}
-    />
+  <div class="flex h-full">
+    <AppSidebar activeRoute={appState.route} {navItems} t={appState.t} />
     <main
       id="main-content"
       tabindex="-1"
@@ -206,11 +204,7 @@
     </main>
   </div>
 {:else}
-  <main
-    id="main-content"
-    tabindex="-1"
-    class="flex-1 overflow-y-auto relative"
-  >
+  <main id="main-content" tabindex="-1" class="flex-1 overflow-y-auto relative">
     <ReaderWorkspace
       activeReadingBook={appState.getBookById(appState.activeReadingBookId)}
       readerSettings={appState.readerSettings}
@@ -228,9 +222,7 @@
       onReaderLocationContext={appState.handleReaderLocationContext}
       onSearch={(query: string, page: number) => void appState.handleSearch(query, page)}
       onSearchJump={(target: unknown) =>
-        void appState.handleSearchJump(
-          target as Parameters<typeof appState.handleSearchJump>[0],
-        )}
+        void appState.handleSearchJump(target as Parameters<typeof appState.handleSearchJump>[0])}
     />
   </main>
 {/if}

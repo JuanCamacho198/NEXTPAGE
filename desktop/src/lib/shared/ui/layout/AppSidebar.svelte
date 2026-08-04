@@ -6,7 +6,10 @@
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
   import { theme, toggleTheme } from '$lib/shared/stores/theme';
   import { authState } from '$lib/stores/authState.svelte';
-  import { profileSessionFromAuthState, getProfileInitials } from '$lib/features/settings/profileSession';
+  import {
+    profileSessionFromAuthState,
+    getProfileInitials,
+  } from '$lib/features/settings/profileSession';
 
   type Props = {
     activeRoute: AppRoute;
@@ -22,7 +25,7 @@
 </script>
 
 <aside
-  class="sticky top-0 h-screen shrink-0 border-r border-(--color-border) bg-[rgba(12,20,32,0.6)] backdrop-blur-xl max-lg:hidden lg:flex lg:flex-col transition-all duration-300"
+  class="sticky top-0 h-full shrink-0 border-r border-(--color-border) bg-[rgba(12,20,32,0.6)] backdrop-blur-xl max-lg:hidden lg:flex lg:flex-col transition-all duration-300"
   class:w-64={!collapsed}
   class:w-18={collapsed}
 >
@@ -60,9 +63,7 @@
     {#each navItems as item}
       <button
         class={`w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-          collapsed
-            ? 'flex items-center justify-center'
-            : 'flex items-center gap-3'
+          collapsed ? 'flex items-center justify-center' : 'flex items-center gap-3'
         } ${
           activeRoute === item.id || (activeRoute === 'home' && item.id === 'home')
             ? 'bg-(--color-accent-blue) text-(--color-background) shadow-(--shadow-glow)'
@@ -117,7 +118,9 @@
         {/if}
         {#if !collapsed}
           <div class="text-left">
-            <p class="text-sm font-medium text-(--color-primary) truncate max-w-36">{profile.name}</p>
+            <p class="text-sm font-medium text-(--color-primary) truncate max-w-36">
+              {profile.name}
+            </p>
             <p class="text-xs text-(--color-text-muted) truncate max-w-36">{profile.email}</p>
           </div>
         {/if}

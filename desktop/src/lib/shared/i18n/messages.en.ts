@@ -742,7 +742,7 @@ export const messagesEn = {
   'welcome.headline': 'Your library.\nYour knowledge.',
   'welcome.subtitle':
     'Organize your books, track your reading, highlight ideas, and discover your progress — all in one quiet place.',
-  'welcome.cardTitle': 'Welcome to NextPage! 👋',
+  'welcome.cardTitle': 'Welcome to NextPage!',
   'welcome.cardSubtitle': 'Sign in to continue reading.',
   'welcome.divider': 'or',
   'welcome.continueGoogle': 'Continue with Google',

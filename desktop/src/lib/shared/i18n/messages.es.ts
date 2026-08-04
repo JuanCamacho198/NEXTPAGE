@@ -704,7 +704,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'welcome.headline': 'Tu biblioteca.\nTu conocimiento.',
   'welcome.subtitle':
     'Organiza tus libros, sigue tu lectura, resalta ideas y descubre tu progreso — todo en un solo lugar tranquilo.',
-  'welcome.cardTitle': '¡Bienvenido a NextPage! 👋',
+  'welcome.cardTitle': '¡Bienvenido a NextPage!',
   'welcome.cardSubtitle': 'Inicia sesión para continuar con tu lectura.',
   'welcome.divider': 'o',
   'welcome.continueGoogle': 'Continuar con Google',

@@ -4,7 +4,7 @@
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import { GoogleLoginButton } from '$lib/features/library';
   import type { MessageKey } from '$lib/shared/i18n';
-  import { Button } from '$lib/shared/ui';
+  import { Button, Icon } from '$lib/shared/ui';
   import LocalUserForm from './components/LocalUserForm.svelte';
   import type { LocalUserProfile } from '$lib/stores/authPersistence';
 
@@ -262,25 +262,7 @@
       >
         <h2 class="m-0 mb-1 flex items-center justify-center gap-2 text-2xl font-bold">
           <span>{t('welcome.cardTitle')}</span>
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="shrink-0 -rotate-6 text-(--color-accent-blue)"
-            aria-hidden="true"
-          >
-            <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
-            <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" />
-            <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" />
-            <path
-              d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"
-            />
-          </svg>
+          <Icon name="hand" size="lg" class="shrink-0 -rotate-6 text-(--color-accent-blue)" />
         </h2>
         <p class="m-0 mb-6 text-center text-sm text-(--color-text-muted)">
           {t('welcome.cardSubtitle')}

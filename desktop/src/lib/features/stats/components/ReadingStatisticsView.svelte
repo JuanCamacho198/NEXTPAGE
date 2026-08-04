@@ -1,7 +1,7 @@
 <script lang="ts">
   import { SafeCover } from '$lib/features/library';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
-  import { Modal } from '$lib/shared/ui/';
+  import { Icon, Modal } from '$lib/shared/ui/';
   import { UNCLASSIFIED_GENRE } from '$lib/shared/services/genreHeuristic';
   import { getSafeProgressPercentage } from '$lib/shared/stores/homeState';
   import {
@@ -641,7 +641,10 @@
             {#if genreTooltip.books.length > 0}
               <div class="mt-1.5 border-t border-(--color-border) pt-1.5">
                 {#each genreTooltip.books.slice(0, 3) as bookTitle}
-                  <p class="truncate text-(--color-text-muted)">📖 {bookTitle}</p>
+                  <p class="truncate text-(--color-text-muted)">
+                    <Icon name="book" size="sm" class="inline -mt-0.5 mr-1" />
+                    {bookTitle}
+                  </p>
                 {/each}
                 {#if genreTooltip.books.length > 3}
                   <p class="mt-0.5 text-(--color-text-muted)">+{genreTooltip.books.length - 3} más</p>

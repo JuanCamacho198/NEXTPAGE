@@ -8,6 +8,7 @@
   } from '$lib/shared/types';
   import { getDefaultReaderSettings } from '$lib/shared/api/tauriClient';
   import { createFocusTrap } from '$lib/shared/utils/focusTrap';
+  import { Icon } from '$lib/shared/ui';
   import { fly } from 'svelte/transition';
 
   type Props = {
@@ -176,10 +177,11 @@
       >
         {#if showSavedToast}
           <span
-            class="absolute -top-2 right-4 rounded-full bg-(--color-accent-blue)/20 px-2.5 py-0.5 text-xs text-(--color-accent-blue) transition-all"
+            class="absolute -top-2 right-4 flex items-center gap-1 rounded-full bg-(--color-accent-blue)/20 px-2.5 py-0.5 text-xs text-(--color-accent-blue) transition-all"
             transition:fly={{ y: -4, duration: 150 }}
           >
-            ✓ {t('reader.saved')}
+            <Icon name="check" size="sm" class="shrink-0" />
+            {t('reader.saved')}
           </span>
         {/if}
         <!-- Close button -->

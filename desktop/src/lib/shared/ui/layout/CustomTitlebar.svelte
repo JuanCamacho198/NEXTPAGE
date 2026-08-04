@@ -1,5 +1,6 @@
 <script lang="ts">
   import { titlebarState } from '$lib/stores/titlebarState.svelte';
+  import { Icon } from '$lib/shared/ui';
   import { onMount } from 'svelte';
 
   let { hidden = false }: { hidden?: boolean } = $props();
@@ -21,14 +22,23 @@
   <!-- Right: window controls -->
   <button
     onclick={titlebarState.handleMinimize}
-    class="w-11 h-9 flex items-center justify-center border-none text-(--color-text-secondary) hover:bg-(--color-surface-hover) cursor-pointer transition-colors text-sm"
-  >─</button>
+    class="w-11 h-9 flex items-center justify-center border-none text-(--color-text-secondary) hover:bg-(--color-surface-hover) cursor-pointer transition-colors"
+    aria-label="Minimize"
+  >
+    <Icon name="minimize" size="md" />
+  </button>
   <button
     onclick={titlebarState.handleMaximize}
-    class="w-11 h-9 flex items-center justify-center border-none text-(--color-text-secondary) hover:bg-(--color-surface-hover) cursor-pointer transition-colors text-sm"
-  >{titlebarState.isMaximized ? '❐' : '□'}</button>
+    class="w-11 h-9 flex items-center justify-center border-none text-(--color-text-secondary) hover:bg-(--color-surface-hover) cursor-pointer transition-colors"
+    aria-label="Maximize"
+  >
+    <Icon name={titlebarState.isMaximized ? 'restore' : 'maximize'} size="md" />
+  </button>
   <button
     onclick={titlebarState.handleClose}
-    class="w-11 h-9 flex items-center justify-center border-none text-(--color-text-secondary) hover:bg-(--color-error) hover:text-white cursor-pointer transition-colors text-sm"
-  >✕</button>
+    class="w-11 h-9 flex items-center justify-center border-none text-(--color-text-secondary) hover:bg-(--color-error) hover:text-white cursor-pointer transition-colors"
+    aria-label="Close"
+  >
+    <Icon name="close" size="md" />
+  </button>
 </div>

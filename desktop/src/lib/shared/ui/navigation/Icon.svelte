@@ -35,7 +35,10 @@
     | 'database'
     | 'info'
     | 'calendar'
-    | 'hand';
+    | 'hand'
+    | 'minimize'
+    | 'maximize'
+    | 'restore';
 
   type Props = {
     name: IconName;
@@ -103,6 +106,9 @@
       'M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
     hand:
       'M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15',
+    minimize: 'M5 12h14',
+    maximize: 'M5 5h14v14H5z',
+    restore: 'M5 5h11v11H5zM8 8h11v11H8z',
   };
 </script>
 

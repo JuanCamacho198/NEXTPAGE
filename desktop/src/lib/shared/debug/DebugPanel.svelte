@@ -236,7 +236,7 @@
                     fill={call.success ? '#3388ff' : '#ef4444'}
                     opacity={call.success ? 0.7 : 0.9}
                   >
-                    <title>{call.feature}: {call.durationMs}ms {call.success ? '✓' : '✗'}</title>
+                    <title>{call.feature}: {call.durationMs}ms {call.success ? 'ok' : 'fail'}</title>
                   </rect>
                 {/each}
               </svg>

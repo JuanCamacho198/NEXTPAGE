@@ -215,7 +215,13 @@ impl EpubExtractor {
 
             chapters.push(EpubChapterMeta {
                 index,
-                id: index.to_string(),
+                // The id must be unique per TOC entry. Multiple nav points can
+                // resolve to the same spine index (e.g. a "Part" heading and its
+                // first chapter pointing at the same file), so using the spine
+                // index here would produce duplicate ids and crash keyed each
+                // blocks in the frontend (each_key_duplicate). `chapters.len()`
+                // is a monotonic counter across the whole flattened TOC.
+                id: format!("chapter-{}", chapters.len()),
                 label: nav.label.clone(),
                 href: content_str.to_string(),
                 depth: 0,
@@ -247,7 +253,7 @@ impl EpubExtractor {
             });
             chapters.push(EpubChapterMeta {
                 index,
-                id: index.to_string(),
+                id: format!("chapter-{}", chapters.len()),
                 label: child.label.clone(),
                 href: content_str.to_string(),
                 depth: child_depth,
@@ -466,5 +472,46 @@ mod tests {
         let index = spine_map.get(&filename).copied().unwrap_or(0);
 
         assert_eq!(index, 0); // Falls back to 0
+    }
+
+    #[test]
+    fn test_toc_ids_unique_when_navpoints_share_spine_index() {
+        use std::collections::HashMap;
+        use std::path::PathBuf;
+
+        let mut spine_map: HashMap<String, usize> = HashMap::new();
+        spine_map.insert("chapter5.xhtml".to_string(), 5usize);
+
+        // Two nav points (a "Part" heading and its chapter) both point to
+        // chapter5.xhtml, so both resolve to spine index 5 — the exact
+        // duplicate-key scenario that crashed the frontend TOC
+        // (each_key_duplicate: duplicate key `5`).
+        let nav_points = vec![
+            epub::doc::NavPoint {
+                label: "Part Two".to_string(),
+                content: PathBuf::from("OEBPS/chapter5.xhtml"),
+                children: vec![],
+                play_order: Some(10),
+            },
+            epub::doc::NavPoint {
+                label: "Chapter 5".to_string(),
+                content: PathBuf::from("OEBPS/chapter5.xhtml"),
+                children: vec![],
+                play_order: Some(11),
+            },
+        ];
+
+        let chapters = EpubExtractor::build_toc(&nav_points, &spine_map);
+
+        assert_eq!(chapters.len(), 2);
+        assert_eq!(chapters[0].index, 5);
+        assert_eq!(chapters[1].index, 5);
+        // ids must still be unique even though both share spine index 5
+        assert_ne!(chapters[0].id, chapters[1].id);
+
+        let mut ids: Vec<&String> = chapters.iter().map(|c| &c.id).collect();
+        ids.sort();
+        ids.dedup();
+        assert_eq!(ids.len(), chapters.len());
     }
 }

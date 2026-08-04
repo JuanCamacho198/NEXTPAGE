@@ -68,7 +68,7 @@
         </div>
       {:else}
         <nav class="flex-1 overflow-y-auto py-2">
-          {#each entries as entry (entry.id)}
+          {#each entries as entry, i (i)}
             <button
               type="button"
               class="flex w-full cursor-pointer items-start px-5 py-2 text-left transition-colors hover:bg-(--color-surface-hover)"

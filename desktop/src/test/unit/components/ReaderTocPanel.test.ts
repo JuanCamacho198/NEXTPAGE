@@ -51,6 +51,22 @@ describe('ReaderTocPanel', () => {
     expect(screen.queryByText('Table of Contents')).not.toBeInTheDocument();
   });
 
+  it('renders entries with duplicate ids without crashing', () => {
+    // Regression: EPUB TOCs can contain multiple nav points that resolve to
+    // the same spine index (e.g. a "Part" heading + its first chapter), so
+    // ids may not be unique. The keyed each block must not throw
+    // each_key_duplicate and must still render every entry.
+    const dupEntries = [
+      { id: '5', title: 'Part Two', depth: 0 },
+      { id: '5', title: 'Chapter 5', depth: 0 },
+      { id: '6', title: 'Chapter 6', depth: 0 },
+    ];
+    render(ReaderTocPanel, { ...defaultProps, entries: dupEntries });
+    expect(screen.getByText('Part Two')).toBeInTheDocument();
+    expect(screen.getByText('Chapter 5')).toBeInTheDocument();
+    expect(screen.getByText('Chapter 6')).toBeInTheDocument();
+  });
+
   it('calls onNavigate when a chapter is clicked', async () => {
     const onNavigate = vi.fn();
     const user = userEvent.setup();

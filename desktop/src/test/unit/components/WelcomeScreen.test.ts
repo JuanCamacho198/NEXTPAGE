@@ -40,7 +40,7 @@ describe('WelcomeScreen', () => {
   it('bounds the login card with viewport cap and internal scroll classes', () => {
     render(WelcomeScreen, { props: { t } });
 
-    const section = screen.getByLabelText('Sign in');
+    const section = screen.getByLabelText('welcome.signInAria');
     expect(section.classList.contains('max-h-full')).toBe(true);
 
     const card = screen.getByTestId('welcome-login-card');

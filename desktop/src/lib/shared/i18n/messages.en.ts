@@ -781,6 +781,7 @@ export const messagesEn = {
   'welcome.footer.item2Desc': 'On all your devices',
   'welcome.footer.item3Desc': 'Sync everywhere',
   'welcome.brandDesktop': 'Desktop',
+  'welcome.signInAria': 'Sign in',
   'welcome.cardCreateAccount': "Don't have an account? Create account",
 } as const;
 

@@ -745,6 +745,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'welcome.footer.item2Desc': 'En todos tus dispositivos',
   'welcome.footer.item3Desc': 'Sincronización automática',
   'welcome.brandDesktop': 'Desktop',
+  'welcome.signInAria': 'Iniciar sesión',
   'welcome.cardCreateAccount': '¿No tienes cuenta? Crear cuenta',
 
   // Reader - Nueva rediseño

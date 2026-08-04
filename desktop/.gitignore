@@ -18,6 +18,7 @@ engram-export.json
 dist/
 build/
 target/
+.scripts
 
 # Dependencies
 node_modules/

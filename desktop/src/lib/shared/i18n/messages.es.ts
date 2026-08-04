@@ -704,8 +704,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'welcome.headline': 'Tu biblioteca.\nTu conocimiento.',
   'welcome.subtitle':
     'Organiza tus libros, sigue tu lectura, resalta ideas y descubre tu progreso — todo en un solo lugar tranquilo.',
-  'welcome.cardTitle': 'Comencemos',
-  'welcome.cardSubtitle': 'Elige como quieres empezar.',
+  'welcome.cardTitle': '¡Bienvenido a NextPage! 👋',
+  'welcome.cardSubtitle': 'Inicia sesión para continuar con tu lectura.',
   'welcome.divider': 'o',
   'welcome.continueGoogle': 'Continuar con Google',
   'welcome.continueLocal': 'Continuar en local',
@@ -741,6 +741,11 @@ export const messagesEs: Record<MessageKey, string> = {
   'welcome.footer.item1': 'Seguro y privado',
   'welcome.footer.item2': 'Sincroniza tu progreso',
   'welcome.footer.item3': 'Tu tienes el control',
+  'welcome.footer.item1Desc': 'Tus datos están protegidos',
+  'welcome.footer.item2Desc': 'En todos tus dispositivos',
+  'welcome.footer.item3Desc': 'Sincronización automática',
+  'welcome.brandDesktop': 'Desktop',
+  'welcome.cardCreateAccount': '¿No tienes cuenta? Crear cuenta',
 
   // Reader - Nueva rediseño
   'reader.copiar': 'Copiar',

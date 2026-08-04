@@ -742,8 +742,8 @@ export const messagesEn = {
   'welcome.headline': 'Your library.\nYour knowledge.',
   'welcome.subtitle':
     'Organize your books, track your reading, highlight ideas, and discover your progress — all in one quiet place.',
-  'welcome.cardTitle': 'Get started',
-  'welcome.cardSubtitle': 'Pick how you want to begin.',
+  'welcome.cardTitle': 'Welcome to NextPage! 👋',
+  'welcome.cardSubtitle': 'Sign in to continue reading.',
   'welcome.divider': 'or',
   'welcome.continueGoogle': 'Continue with Google',
   'welcome.continueLocal': 'Continue locally',
@@ -777,6 +777,11 @@ export const messagesEn = {
   'welcome.footer.item1': 'Safe and private',
   'welcome.footer.item2': 'Sync your progress',
   'welcome.footer.item3': 'You are in control',
+  'welcome.footer.item1Desc': 'Your data is protected',
+  'welcome.footer.item2Desc': 'On all your devices',
+  'welcome.footer.item3Desc': 'Sync everywhere',
+  'welcome.brandDesktop': 'Desktop',
+  'welcome.cardCreateAccount': "Don't have an account? Create account",
 } as const;
 
 export type MessageKey = keyof typeof messagesEn;

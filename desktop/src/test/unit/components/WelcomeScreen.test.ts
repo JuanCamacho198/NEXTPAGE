@@ -30,24 +30,11 @@ vi.mock('$lib/features/library', async () => {
   return { GoogleLoginButton: mod.default };
 });
 
-vi.mock('@tauri-apps/api/webviewWindow', () => ({
-  getCurrentWebviewWindow: () => ({
-    setFullscreen: vi.fn(),
-    minimize: vi.fn(),
-    toggleMaximize: vi.fn(),
-    close: vi.fn(),
-    isMaximized: vi.fn().mockResolvedValue(false),
-    onResized: vi.fn(),
-  }),
-}));
-
 import WelcomeScreen from '$lib/features/welcome/WelcomeScreen.svelte';
-import { titlebarState } from '$lib/stores/titlebarState.svelte';
 
 describe('WelcomeScreen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    titlebarState.isCustomTitlebar = false;
   });
 
   it('bounds the login card with viewport cap and internal scroll classes', () => {
@@ -56,25 +43,47 @@ describe('WelcomeScreen', () => {
     const section = screen.getByLabelText('Sign in');
     expect(section.classList.contains('max-h-full')).toBe(true);
 
-    const card = section.querySelector(':scope > div');
-    expect(card?.classList.contains('max-h-full')).toBe(true);
-    expect(card?.classList.contains('overflow-y-auto')).toBe(true);
+    const card = screen.getByTestId('welcome-login-card');
+    expect(card.classList.contains('max-h-full')).toBe(true);
+    expect(card.classList.contains('overflow-y-auto')).toBe(true);
   });
 
-  it('hides the logo row when the custom titlebar flag is true, keeps nav', () => {
-    titlebarState.isCustomTitlebar = true;
+  it('renders the brand block with glass logo, name and Desktop subtitle', () => {
     render(WelcomeScreen, { props: { t } });
 
-    expect(screen.queryByText('NextPage')).toBeNull();
-    expect(screen.getByText('welcome.nav.features')).toBeInTheDocument();
-    expect(screen.getByText('welcome.nav.trust')).toBeInTheDocument();
-  });
-
-  it('shows the logo row when the flag is false, keeps nav', () => {
-    render(WelcomeScreen, { props: { t } });
-
+    expect(screen.getByText('NP')).toBeInTheDocument();
     expect(screen.getByText('NextPage')).toBeInTheDocument();
-    expect(screen.getByText('welcome.nav.features')).toBeInTheDocument();
-    expect(screen.getByText('welcome.nav.trust')).toBeInTheDocument();
+    expect(screen.getByText('welcome.brandDesktop')).toBeInTheDocument();
+  });
+
+  it('renders the eyebrow, headline, subtitle and the 4 feature items', () => {
+    render(WelcomeScreen, { props: { t } });
+
+    expect(screen.getByText('welcome.eyebrow')).toBeInTheDocument();
+    expect(screen.getByText('welcome.headline')).toBeInTheDocument();
+    expect(screen.getByText('welcome.subtitle')).toBeInTheDocument();
+    for (const i of [1, 2, 3, 4]) {
+      expect(screen.getByText(`welcome.feature${i}Label`)).toBeInTheDocument();
+      expect(screen.getByText(`welcome.feature${i}Description`)).toBeInTheDocument();
+    }
+  });
+
+  it('renders the login card with auth options and the create-account link', () => {
+    render(WelcomeScreen, { props: { t } });
+
+    expect(screen.getByText('welcome.cardTitle')).toBeInTheDocument();
+    expect(screen.getByText('welcome.cardSubtitle')).toBeInTheDocument();
+    expect(screen.getByTestId('google-login-stub')).toBeInTheDocument();
+    expect(screen.getByText('welcome.continueLocal')).toBeInTheDocument();
+    expect(screen.getByText('welcome.cardCreateAccount')).toBeInTheDocument();
+  });
+
+  it('renders the 3 trust items with title and description', () => {
+    render(WelcomeScreen, { props: { t } });
+
+    for (const i of [1, 2, 3]) {
+      expect(screen.getByText(`welcome.footer.item${i}`)).toBeInTheDocument();
+      expect(screen.getByText(`welcome.footer.item${i}Desc`)).toBeInTheDocument();
+    }
   });
 });

@@ -71,7 +71,7 @@
 {:else}
   <Button
     variant="secondary"
-    class="w-full flex items-center justify-center gap-2 bg-white text-gray-900 border-gray-300 hover:bg-gray-100 px-3 py-2 text-sm"
+    class="w-full flex items-center justify-center gap-2 bg-white text-gray-900 border-gray-300 hover:bg-gray-100 px-3 py-2 text-sm rounded-xl"
     onclick={handleLogin}
     disabled={isLoggingIn}
   >

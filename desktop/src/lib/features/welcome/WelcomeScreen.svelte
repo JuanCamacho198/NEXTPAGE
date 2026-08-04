@@ -97,16 +97,13 @@
        lg:flex-row → side-by-side at ≥1024px, stacked below. min-h-0 lets
        flex items shrink so the whole layout fits the viewport. -->
   <main
-    class="flex-1 min-h-0 flex flex-col lg:flex-row lg:justify-center gap-10 lg:gap-14 px-5 sm:px-8 lg:px-12 py-6 lg:py-8 overflow-x-hidden overflow-y-auto"
+    class="flex-1 min-h-0 flex flex-col lg:flex-row lg:justify-center gap-10 lg:gap-14 px-5 sm:px-8 lg:px-12 py-5 lg:py-6 overflow-hidden"
   >
-    <!-- Left: branding + features -->
-    <!-- Left: branding + features. No internal scroll: the section sizes to
-         its content and `my-auto` centers it vertically without the classic
-         `justify-center` + `overflow` clipping that hid the top of the
-         brand block on short viewports. The <main> remains the scroll
-         container when everything cannot fit. -->
+    <!-- Left: branding + features. No internal scroll and no page scrollbar:
+         the screen is a fixed, overflow-hidden layout that fits the viewport
+         (tight spacing below keeps it fitting on short windows). -->
     <section
-      class="flex w-full lg:flex-1 lg:max-w-xl min-w-0 flex-col gap-4 my-auto"
+      class="flex w-full lg:flex-1 lg:max-w-xl min-w-0 flex-col gap-3 my-auto"
       aria-labelledby="welcome-headline"
     >
       <div class="flex items-center gap-3.5">
@@ -133,11 +130,11 @@
       >
         {t('welcome.headline')}
       </h1>
-      <p class="m-0 text-base text-(--color-text-muted) leading-relaxed">
+      <p class="m-0 text-base text-(--color-text-muted) leading-normal">
         {t('welcome.subtitle')}
       </p>
 
-      <ul id="features" class="m-0 p-0 list-none flex flex-col gap-5 mt-1">
+      <ul id="features" class="m-0 p-0 list-none flex flex-col gap-5 mt-0">
         <li class="flex items-start gap-4 min-w-0">
           <div
             class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-(--welcome-feature-blue-bg) text-(--welcome-feature-blue-fg)"
@@ -159,8 +156,8 @@
             </svg>
           </div>
           <div class="min-w-0">
-            <p class="m-0 text-lg font-semibold">{t('welcome.feature1Label')}</p>
-            <p class="mt-1 mb-0 text-sm text-(--color-text-muted) leading-snug">
+            <p class="m-0 text-base font-semibold">{t('welcome.feature1Label')}</p>
+            <p class="mt-0.5 mb-0 text-sm text-(--color-text-muted) leading-snug">
               {t('welcome.feature1Description')}
             </p>
           </div>
@@ -186,8 +183,8 @@
             </svg>
           </div>
           <div class="min-w-0">
-            <p class="m-0 text-lg font-semibold">{t('welcome.feature2Label')}</p>
-            <p class="mt-1 mb-0 text-sm text-(--color-text-muted) leading-snug">
+            <p class="m-0 text-base font-semibold">{t('welcome.feature2Label')}</p>
+            <p class="mt-0.5 mb-0 text-sm text-(--color-text-muted) leading-snug">
               {t('welcome.feature2Description')}
             </p>
           </div>
@@ -211,8 +208,8 @@
             </svg>
           </div>
           <div class="min-w-0">
-            <p class="m-0 text-lg font-semibold">{t('welcome.feature3Label')}</p>
-            <p class="mt-1 mb-0 text-sm text-(--color-text-muted) leading-snug">
+            <p class="m-0 text-base font-semibold">{t('welcome.feature3Label')}</p>
+            <p class="mt-0.5 mb-0 text-sm text-(--color-text-muted) leading-snug">
               {t('welcome.feature3Description')}
             </p>
           </div>
@@ -236,8 +233,8 @@
             </svg>
           </div>
           <div class="min-w-0">
-            <p class="m-0 text-lg font-semibold">{t('welcome.feature4Label')}</p>
-            <p class="mt-1 mb-0 text-sm text-(--color-text-muted) leading-snug">
+            <p class="m-0 text-base font-semibold">{t('welcome.feature4Label')}</p>
+            <p class="mt-0.5 mb-0 text-sm text-(--color-text-muted) leading-snug">
               {t('welcome.feature4Description')}
             </p>
           </div>

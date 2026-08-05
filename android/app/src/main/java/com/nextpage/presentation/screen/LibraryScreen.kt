@@ -260,7 +260,6 @@ private fun LibrarySyncStatus(viewModel: LibraryViewModel) {
     Box(modifier = Modifier.fillMaxSize()) {
         SyncStatusIndicator(
             syncState = syncState,
-            pendingCount = uiState.pendingCount,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()

@@ -31,7 +31,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -57,7 +56,6 @@ import java.io.InputStream
  * @property readingMinutesByBook Per-book reading time map (bookId → minutes) used for derived status.
  * @property isSyncing `true` while the [SyncService] is running.
  * @property isRefreshing `true` while a pull-to-refresh is in progress.
- * @property pendingCount Number of pending sync operations queued.
  * @property syncError Last sync error message, or `null`.
  * @property statusFilter Active status filter id: `"all" | "reading" | "pending" | "completed"`.
  * @property sortBy Active sort key: `"date_added" | "title" | "author" | "last_read"`.
@@ -80,7 +78,6 @@ data class LibraryUiState(
     // ── Sync state ──
     val isSyncing: Boolean = false,
     val isRefreshing: Boolean = false,
-    val pendingCount: Int = 0,
     val syncError: String? = null,
     // ── Cross-device download ──
     val downloadableBooks: List<UserBookRow> = emptyList(),
@@ -190,8 +187,8 @@ class LibraryViewModel(
      * Raw [LibraryUiState] for the Library screen.
      *
      * **Emits when**: any underlying source updates — Room library flow,
-     *                total/per-book reading-time flows, sync state/pending
-     *                count, or any UI action (filter, import, delete, edit,
+     *                total/per-book reading-time flows, sync state, or any
+     *                UI action (filter, import, delete, edit,
      *                share, pull-to-refresh).
      * **Initial value**: [LibraryUiState] with `isLoading = true`, empty lists.
      * **Lifecycle**: hot, lifetime-scoped to the ViewModel.
@@ -339,14 +336,6 @@ class LibraryViewModel(
                     )
                 }
             }
-        }
-
-        viewModelScope.launch(mainDispatcher) {
-            syncService.pendingCount
-                .distinctUntilChanged()
-                .collect { count ->
-                    mutableUiState.update { it.copy(pendingCount = count) }
-                }
         }
 
         // ── Cross-device downloadable books observation ──

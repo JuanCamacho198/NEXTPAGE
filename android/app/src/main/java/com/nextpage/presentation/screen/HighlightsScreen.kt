@@ -481,18 +481,26 @@ private fun StatWidget(
     }
 }
 
+/**
+ * Parses a hex color string into a [Color].
+ *
+ * Accepts 6-digit RGB (`RRGGBB`, rendered opaque) and 8-digit ARGB
+ * (`AARRGGBB`, rendered as-is). Anything else (invalid, non-hex, or a
+ * transparent-alpha value) resolves to `null`, so the caller can fall
+ * back to a theme-aware color that is always visible.
+ */
+internal fun resolveHighlightColorHex(hex: String): Color? {
+    val s = hex.trim().removePrefix("#")
+    return when (s.length) {
+        6 -> runCatching { Color(("FF" + s).toLong(16)) }.getOrNull()
+        8 -> runCatching { Color(s.toLong(16)) }.getOrNull()
+        else -> null
+    }.takeIf { it?.alpha != 0f }
+}
+
+@Composable
 private fun parseHighlightColor(hex: String): Color {
-    return try {
-        val sanitized = hex.removePrefix("#").trim()
-        val longHex = when (sanitized.length) {
-            6 -> "FF$sanitized"
-            8 -> sanitized
-            else -> "FF000000"
-        }
-        Color(longHex.toLong(16))
-    } catch (_: Exception) {
-        Color.Gray
-    }
+    return resolveHighlightColorHex(hex) ?: MaterialTheme.colorScheme.primary
 }
 
 @Composable

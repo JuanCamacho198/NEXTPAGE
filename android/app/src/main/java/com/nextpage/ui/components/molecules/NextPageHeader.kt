@@ -35,6 +35,10 @@ import com.nextpage.ui.components.atoms.NextPageIconButton
  * @param avatarInitials Two-character fallback for the avatar circle
  *   (e.g. `"JS"`). Default `"NP"`. Will be uppercased and truncated
  *   to 2 chars by [NextPageAvatar].
+ * @param onAvatarClick Optional avatar click handler. When `null`, the
+ *   avatar is non-interactive.
+ * @param avatarContentDescription Optional accessibility label for the
+ *   avatar (e.g. "Open account settings").
  * @param onSearchClick Optional search-button callback. When `null`,
  *   the search icon is not rendered.
  * @param onNotificationsClick Optional notifications-button callback.
@@ -60,6 +64,8 @@ fun NextPageHeader(
     modifier: Modifier = Modifier,
     avatarImageUrl: String? = null,
     avatarInitials: String = "NP",
+    onAvatarClick: (() -> Unit)? = null,
+    avatarContentDescription: String? = null,
     onSearchClick: (() -> Unit)? = null,
     onNotificationsClick: (() -> Unit)? = null,
     trailingActions: List<Pair<ImageVector, () -> Unit>> = emptyList()
@@ -75,7 +81,9 @@ fun NextPageHeader(
             NextPageAvatar(
                 imageUrl = avatarImageUrl,
                 initials = avatarInitials,
-                size = 40.dp
+                size = 40.dp,
+                onClick = onAvatarClick,
+                contentDescription = avatarContentDescription
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(

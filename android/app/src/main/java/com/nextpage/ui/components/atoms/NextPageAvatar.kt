@@ -1,6 +1,7 @@
 package com.nextpage.ui.components.atoms
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -11,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -30,30 +33,48 @@ import coil.compose.AsyncImage
  * @param modifier Modifier applied to the outer `Box`.
  * @param size Diameter of the avatar. Default `48.dp`. Width and height
  *   are forced equal via `Modifier.size(size)` on the `Box`.
+ * @param onClick Optional click handler. When `null`, the avatar is
+ *   non-interactive. When set, `clickable`'s built-in minimum-interactive
+ *   enforcement enlarges the touch target to the platform minimum
+ *   (≥48dp) while the visual stays at [size].
+ * @param contentDescription Optional accessibility label. Exposed as a
+ *   semantics `contentDescription` when provided (e.g. "Open account
+ *   settings").
  *
  * **Visual**: circle clipped to `CircleShape`, filled with
  * `colorScheme.primary`. On image: `AsyncImage` with
  * `ContentScale.Crop` filling the circle. On fallback: `titleMedium`
  * bold text in `colorScheme.onPrimary`, showing
  * `initials.take(2).uppercase()`.
- * **Behavior**: pure rendering. The `imageUrl` is passed straight to
- * Coil — no explicit decode size, no cache policy overrides (this is
- * an avatar, the default Coil pipeline is fine).
- * **Recomposition**: recomposes when `imageUrl`, `initials`, or
- * `size` change.
+ * **Behavior**: pure rendering when [onClick] is `null`; clicking the
+ * avatar invokes [onClick] and the Coil `AsyncImage` pipeline is kept.
+ * **Recomposition**: recomposes when `imageUrl`, `initials`, `size`,
+ * `onClick`, or `contentDescription` change.
  */
 @Composable
 fun NextPageAvatar(
     imageUrl: String?,
     initials: String,
     modifier: Modifier = Modifier,
-    size: Dp = 48.dp
+    size: Dp = 48.dp,
+    onClick: (() -> Unit)? = null,
+    contentDescription: String? = null
 ) {
     Box(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary),
+            .background(MaterialTheme.colorScheme.primary)
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(onClick = onClick)
+                } else Modifier
+            )
+            .then(
+                if (contentDescription != null) {
+                    Modifier.semantics { this.contentDescription = contentDescription }
+                } else Modifier
+            ),
         contentAlignment = Alignment.Center
     ) {
         if (!imageUrl.isNullOrBlank()) {

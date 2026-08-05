@@ -39,16 +39,10 @@ data class HomeUiState(
 ) 
 
 class HomeViewModel(
-    private val homeRepository: HomeRepository,
-    private val authSession: AuthSession? = null
+    private val homeRepository: HomeRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(
-        HomeUiState(
-            userName = authSession?.displayName ?: "Reader",
-            avatarUrl = authSession?.photoUrl
-        )
-    )
+    private val _uiState = MutableStateFlow(HomeUiState())
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
@@ -60,12 +54,10 @@ class HomeViewModel(
     private var searchJob: Job? = null
 
     init {
-        val userId = authSession?.userId
-
         // Single combine: all 5 flows merged into one state emission
         viewModelScope.launch {
             combine(
-                homeRepository.observeDailyStats(userId)
+                homeRepository.observeDailyStats()
                     .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load daily stats")); emit(ReadingStats()) },
                 homeRepository.observeCurrentBook()
                     .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load current book")); emit(null) },
@@ -77,8 +69,11 @@ class HomeViewModel(
                     .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load books")); emit(emptyList()) }
             ) { stats, book, progress, recent, allBooks ->
                 HomeUiState(
-                    userName = authSession?.displayName ?: "Reader",
-                    avatarUrl = authSession?.photoUrl,
+                    // Preserve current user identity across combine emissions —
+                    // updated reactively via setActiveSession, not via the (removed)
+                    // constructor authSession seed.
+                    userName = _uiState.value.userName,
+                    avatarUrl = _uiState.value.avatarUrl,
                     minutesReadToday = stats.minutesRead,
                     sessionsToday = stats.sessionCount,
                     dailyProgressPercent = stats.dailyProgressPercent,
@@ -95,6 +90,25 @@ class HomeViewModel(
     }
 
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    /**
+     * Reactively updates the home avatar identity from [session].
+     *
+     * Called from the NavHost via a `LaunchedEffect` on the current session's
+     * `userId`/`photoUrl`, so the cached ViewModel (keyed by factory, never
+     * rebuilt) still picks up a photo that arrives after async session restore.
+     *
+     * @param session The current auth session, or `null` on logout (no-op —
+     *   keeps the last known identity).
+     */
+    fun setActiveSession(session: AuthSession?) {
+        _uiState.update {
+            it.copy(
+                userName = session?.displayName?.takeIf { name -> name.isNotBlank() } ?: it.userName,
+                avatarUrl = session?.photoUrl ?: it.avatarUrl
+            )
+        }
+    }
 
     fun onToggleSearch() {
         _uiState.update { it.copy(
@@ -125,13 +139,12 @@ class HomeViewModel(
 }
 
 class HomeViewModelFactory(
-    private val homeRepository: HomeRepository,
-    private val authSession: AuthSession? = null
+    private val homeRepository: HomeRepository
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
-            return HomeViewModel(homeRepository, authSession) as T
+            return HomeViewModel(homeRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

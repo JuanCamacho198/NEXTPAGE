@@ -57,6 +57,7 @@
     <string name="home_no_current_book">No current book</string>
     <string name="home_today_summary_title">Today\'s summary</string>
     <string name="home_nextpage_title">NextPage</string>
+    <string name="home_avatar_content_description">Open account settings</string>
     <string name="home_search_results">Results</string>
     <string name="home_close_search">Close search</string>
     <string name="home_bookshelf_empty_title">Your bookshelf is empty</string>

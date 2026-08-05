@@ -150,10 +150,16 @@ fun NextPageNavHost(
 
     val homeViewModel: HomeViewModel = viewModel(
         factory = HomeViewModelFactory(
-            homeRepository = appContainer.homeRepository,
-            authSession = authState.currentSession
+            homeRepository = appContainer.homeRepository
         )
     )
+
+    // Reactively push the restored/later auth session into the cached Home VM
+    // so the avatar photo updates after async session restore (the VM keyed by
+    // factory is never rebuilt, so the constructor seed alone would stay null).
+    LaunchedEffect(authState.currentSession?.userId, authState.currentSession?.photoUrl) {
+        homeViewModel.setActiveSession(authState.currentSession)
+    }
 
     val debugViewModel: DebugViewModel = viewModel(
         factory = DebugViewModel.Factory(appContainer)

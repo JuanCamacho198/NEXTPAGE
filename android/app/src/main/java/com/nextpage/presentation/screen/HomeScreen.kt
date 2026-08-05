@@ -55,6 +55,7 @@ fun HomeScreen(
     onNavigateToLibrary: () -> Unit,
     onNavigateToHighlights: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onOpenAccount: () -> Unit = {},
     onNavigateToStatistics: () -> Unit,
     onBookSelected: (String, String, String) -> Unit,
     onContinueReading: (String, String?, String) -> Unit,
@@ -118,6 +119,8 @@ fun HomeScreen(
                     title = stringResource(R.string.home_nextpage_title),
                     avatarImageUrl = uiState.avatarUrl,
                     avatarInitials = uiState.userName.take(1).uppercase(),
+                    onAvatarClick = onOpenAccount,
+                    avatarContentDescription = stringResource(R.string.home_avatar_content_description),
                     onSearchClick = { viewModel.onToggleSearch() },
                     onNotificationsClick = { showNotifications = true }
                 )

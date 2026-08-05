@@ -42,6 +42,8 @@ fun SettingsScreen(
     contentPadding: PaddingValues,
     authSession: AuthSession?,
     appThemeMode: ThemeMode = ThemeMode.SYSTEM,
+    initialRoute: String? = null,
+    onInitialRouteConsumed: () -> Unit = {},
     onAppThemeModeChanged: (ThemeMode) -> Unit = {},
     onLogout: () -> Unit = {},
     customHighlightColors: List<String>? = null,
@@ -58,6 +60,14 @@ fun SettingsScreen(
         dictionaryRepository?.let { DictionaryViewModel(it) }
     }
 
+    val start = initialRoute ?: NextPageDestination.SettingsList.route
+
+    // One-shot: consume the deep-link after the NavHost first composes so a
+    // later bottom-nav Settings tap uses the default start route instead.
+    LaunchedEffect(Unit) {
+        onInitialRouteConsumed()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -65,7 +75,7 @@ fun SettingsScreen(
     ) {
         NavHost(
             navController = nestedNavController,
-            startDestination = NextPageDestination.SettingsList.route,
+            startDestination = start,
             modifier = Modifier.fillMaxSize()
         ) {
             composable(route = NextPageDestination.SettingsList.route) {
@@ -107,7 +117,14 @@ fun SettingsScreen(
                 SettingsAccountScreen(
                     authSession = authSession,
                     onLogout = onLogout,
-                    onBack = { nestedNavController.popBackStack() }
+                    // When Account is the start destination, popBackStack returns
+                    // false (no List in the stack) — fall back to the Settings list
+                    // so the back arrow never gets stuck.
+                    onBack = {
+                        if (!nestedNavController.popBackStack()) {
+                            nestedNavController.navigate(NextPageDestination.SettingsList.route)
+                        }
+                    }
                 )
             }
 

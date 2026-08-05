@@ -310,7 +310,7 @@ class SupabaseBookCatalogSync(
                     filePath = targetFile.absolutePath,
                     description = row.description,
                     totalPages = row.totalPages ?: 0,
-                    coverPath = null,
+                    coverPath = row.coverUrl,
                     updatedAtEpochMillis = System.currentTimeMillis()
                 )
             )

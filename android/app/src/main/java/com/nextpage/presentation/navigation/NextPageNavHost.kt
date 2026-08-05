@@ -96,6 +96,11 @@ fun NextPageNavHost(
     var selectedBookFilePath by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedBookFormat by rememberSaveable { mutableStateOf("epub") }
 
+    // One-shot deep-link target for the nested Settings NavHost (e.g. account).
+    // Consumed on first composition so a later bottom-nav Settings tap doesn't
+    // re-open the stale route.
+    var settingsInitialRoute by rememberSaveable { mutableStateOf<String?>(null) }
+
     val libraryViewModel: LibraryViewModel = viewModel(
         factory = LibraryViewModelFactory(
             libraryRepository = appContainer.libraryRepository,
@@ -431,6 +436,12 @@ fun NextPageNavHost(
                                 launchSingleTop = true
                             }
                         },
+                        onOpenAccount = {
+                            settingsInitialRoute = NextPageDestination.SettingsAccount.route
+                            navController.navigate(NextPageDestination.Settings.route) {
+                                launchSingleTop = true
+                            }
+                        },
                         onNavigateToStatistics = {
                             navController.navigate(NextPageDestination.Statistics.route)
                         },
@@ -551,6 +562,8 @@ fun NextPageNavHost(
                     SettingsScreen(
                         contentPadding = innerPadding,
                         authSession = authState.currentSession,
+                        initialRoute = settingsInitialRoute,
+                        onInitialRouteConsumed = { settingsInitialRoute = null },
                         appThemeMode = appThemeMode,
                         onAppThemeModeChanged = onAppThemeModeChanged,
                         onLogout = {

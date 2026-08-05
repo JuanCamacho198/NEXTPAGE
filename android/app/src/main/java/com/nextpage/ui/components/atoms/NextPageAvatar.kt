@@ -34,9 +34,9 @@ import coil.compose.AsyncImage
  * @param size Diameter of the avatar. Default `48.dp`. Width and height
  *   are forced equal via `Modifier.size(size)` on the `Box`.
  * @param onClick Optional click handler. When `null`, the avatar is
- *   non-interactive. When set, `clickable`'s built-in minimum-interactive
- *   enforcement enlarges the touch target to the platform minimum
- *   (≥48dp) while the visual stays at [size].
+ *   non-interactive. When set, the interactive region grows to the
+ *   platform minimum (≥48dp) via an enlarged clickable wrapper while
+ *   the visual circle stays at [size].
  * @param contentDescription Optional accessibility label. Exposed as a
  *   semantics `contentDescription` when provided (e.g. "Open account
  *   settings").
@@ -60,11 +60,13 @@ fun NextPageAvatar(
     onClick: (() -> Unit)? = null,
     contentDescription: String? = null
 ) {
+    // The interactive (clickable) wrapper is at least 48dp so the touch
+    // target meets the accessibility minimum even when the visual circle
+    // is smaller (e.g. 40dp in headers). The visual disc keeps [size].
+    val interactiveSize = if (onClick != null && size < 48.dp) 48.dp else size
     Box(
         modifier = modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary)
+            .size(if (onClick != null) interactiveSize else size)
             .then(
                 if (onClick != null) {
                     Modifier.clickable(onClick = onClick)
@@ -77,20 +79,28 @@ fun NextPageAvatar(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (!imageUrl.isNullOrBlank()) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.matchParentSize()
-            )
-        } else {
-            Text(
-                text = initials.take(2).uppercase(),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
+        Box(
+            modifier = Modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.matchParentSize()
+                )
+            } else {
+                Text(
+                    text = initials.take(2).uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            }
         }
     }
 }

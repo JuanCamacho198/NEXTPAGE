@@ -70,7 +70,8 @@ describe('continuity golden fixture — cross-engine (desktop side)', () => {
     const nodes = textNodes(chapterDoc);
     const found = nodes.find((n) => (n.nodeValue ?? '').includes(golden.paragraphText));
     expect(found, `golden paragraph text missing in ${golden.chapterHref}`).toBeTruthy();
-    const text = found.nodeValue as string;
+    if (!found) throw new Error(`golden paragraph text missing in ${golden.chapterHref}`);
+    const text = found.nodeValue ?? '';
     const start = text.indexOf(golden.paragraphText);
     const range = chapterDoc.createRange();
     range.setStart(found, start);

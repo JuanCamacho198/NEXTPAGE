@@ -13,7 +13,8 @@ describe('Accessibility basics', () => {
       title: 'Test Modal',
     });
     const results = await axe(container);
-    expect(results).toHaveNoViolations();
+    const assertion = toHaveNoViolations(results);
+    expect(assertion.pass, assertion.message()).toBe(true);
   });
 
   it('closed modal should not render', () => {

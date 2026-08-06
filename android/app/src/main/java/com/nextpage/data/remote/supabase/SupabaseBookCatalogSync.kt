@@ -51,6 +51,7 @@ class SupabaseBookCatalogSync(
     private val dataSource: SupabaseBookCatalogDataSource = SupabaseBookCatalogDataSource(),
     private val remoteDataSource: StorageSyncRemoteDataSource? = null,
     private val localBooksDir: File? = null,
+    private val driveTokenRefresher: suspend () -> Result<String> = { Result.failure(AppError(ErrorCategory.CONFIG_ERROR, "SYNC_NO_REFRESHER", "Drive token refresher not configured.", "SupabaseBookCatalogSync")) },
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var processJob: Job? = null
@@ -190,18 +191,27 @@ class SupabaseBookCatalogSync(
     }
 
     /**
-     * When a remote catalog change arrives via Realtime, apply it locally.
-     * Currently a no-op placeholder — the download UI (PR 4) will consume
-     * the catalog changes reactively. This subscription ensures the
-     * Realtime channel is active so events are delivered.
+     * When a remote catalog change arrives via Realtime, apply it locally:
+     * upsert the local cover/coverPath from the remote row so the cover is
+     * surfaced in the library (D5). Books marked deleted in the catalog are
+     * skipped — only a fresh re-push/import revives a book.
      */
     private suspend fun applyRemoteBook(row: UserBookRow) {
-        // Remote book catalog entries are consumed by the download UI flow.
-        // Local book entities are not modified by remote catalog inserts
-        // (that would add books without user consent). The Realtime
-        // subscription keeps the channel alive so events are received
-        // by the download catalog store in the UI layer (PR 4).
+        if (row.isCatalogDeleted()) return
+
+        val existing = bookDao.getBookById(row.id) ?: return
+
+        // Skip DELETE-marked local books: a tombstoned book stays deleted.
+        if (existing.deletedAtEpochMillis != null) return
+
+        val updated = if (row.coverUrl != null) existing.copy(coverPath = row.coverUrl) else existing
+        if (updated != existing) {
+            bookDao.upsert(updated)
+        }
     }
+
+    /** True when a remote row represents a catalog deletion (drive file absent). */
+    private fun UserBookRow.isCatalogDeleted(): Boolean = filePath.isNullOrBlank()
 
     /**
      * Fetch the full catalog from Supabase.
@@ -279,6 +289,13 @@ class SupabaseBookCatalogSync(
             )
         }
 
+        // D6: never resurrect a locally DELETE-marked book.
+        if (bookDao.getBookById(bookId)?.deletedAtEpochMillis != null) {
+            return Result.failure(
+                AppError(ErrorCategory.NOT_FOUND, "BOOK_TOMBSTONED", "Book $bookId was deleted and cannot be downloaded again without re-importing", "SupabaseBookCatalogSync")
+            )
+        }
+
         val catalog = try {
             dataSource.listUserBooks(userId)
         } catch (e: Exception) {
@@ -291,11 +308,22 @@ class SupabaseBookCatalogSync(
                 AppError(ErrorCategory.NOT_FOUND, "BOOK_NOT_IN_CATALOG", "Book $bookId not found in catalog", "SupabaseBookCatalogSync")
             )
 
+        // A catalog row without a remote drive file is effectively deleted — don't download.
+        if (row.filePath.isNullOrBlank()) {
+            return Result.failure(
+                AppError(ErrorCategory.NOT_FOUND, "BOOK_NOT_IN_CATALOG", "Book $bookId has no remote file in the catalog", "SupabaseBookCatalogSync")
+            )
+        }
+
         val bookFormat = row.format.ifBlank { "epub" }
         val drivePath = "books/$userId/$bookId.$bookFormat"
 
         return try {
-            val bytes = remoteDataSource.download(drivePath)
+            // D4: 401/403 -> refresh token -> retry once. Refresh failure surfaces
+            // an authorization-needed result instead of failing silently.
+            val bytes = if (bookId.isNotBlank()) downloadWithRetry(drivePath) else return Result.failure(
+                AppError(ErrorCategory.VALIDATION, "INVALID_BOOK_ID", "Invalid book id", "SupabaseBookCatalogSync")
+            )
             val targetFile = File(localBooksDir, "$bookId.$bookFormat")
 
             if (!localBooksDir.exists()) localBooksDir.mkdirs()
@@ -310,7 +338,7 @@ class SupabaseBookCatalogSync(
                     filePath = targetFile.absolutePath,
                     description = row.description,
                     totalPages = row.totalPages ?: 0,
-                    coverPath = row.coverUrl,
+                    coverPath = row.coverUrl, // D5: cover from public URL when present
                     updatedAtEpochMillis = System.currentTimeMillis()
                 )
             )
@@ -324,6 +352,28 @@ class SupabaseBookCatalogSync(
                 AppError(ErrorCategory.UNKNOWN, "DOWNLOAD_ERROR", "Unexpected error downloading book $bookId: ${e.message}", "SupabaseBookCatalogSync")
             )
         }
+    }
+
+    /**
+     * Downloads [drivePath] from Drive, refreshing the access token once on
+     * 401/403 and retrying (D4). Throws on final failure.
+     */
+    private suspend fun downloadWithRetry(drivePath: String): ByteArray {
+        val firstAttempt = try {
+            remoteDataSource?.download(drivePath)
+        } catch (unauthorized: AppError) {
+            if (unauthorized.category == ErrorCategory.AUTH || unauthorized.code == "GOOGLE_DRIVE_UNAUTHORIZED") {
+                val refreshed = runCatching { driveTokenRefresher() }.getOrNull()
+                if (refreshed?.isSuccess == true) {
+                    remoteDataSource?.download(drivePath)
+                } else {
+                    throw unauthorized
+                }
+            } else {
+                throw unauthorized
+            }
+        } ?: throw IOException("Drive download not configured")
+        return firstAttempt
     }
 
     /**

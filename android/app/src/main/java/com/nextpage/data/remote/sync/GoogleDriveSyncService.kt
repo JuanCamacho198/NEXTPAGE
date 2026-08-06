@@ -36,6 +36,7 @@ class GoogleDriveSyncService(
     private val remoteDataSource: StorageSyncRemoteDataSource,
     private val localBooksDir: File,
     private val isEnabled: () -> Boolean = { false },
+    private val tokenRefresher: suspend () -> Result<String> = { Result.failure(AppError(ErrorCategory.CONFIG_ERROR, "SYNC_NO_REFRESHER", "Drive token refresher not configured.", COMPONENT)) },
     private val diagnosticError: AppError? = null,
     private val maxRetries: Int = DEFAULT_MAX_RETRIES,
     private val jsonStateSync: GoogleDriveJsonStateSync = GoogleDriveJsonStateSync(remoteDataSource)
@@ -243,6 +244,11 @@ class GoogleDriveSyncService(
             val bookId = mapping?.bookId ?: parsed.bookId
             val extension = parsed.extension
 
+            // D6: never resurrect a locally DELETE-marked book.
+            if (isTombstoned(bookId)) {
+                continue
+            }
+
             val existingBook = bookDao.getBookById(bookId)
             val localPath = mapping?.localPath
                 ?: existingBook?.filePath
@@ -282,6 +288,7 @@ class GoogleDriveSyncService(
         val allMappings = mappingDao.getByUserId(session.userId)
         val bookIds = allMappings.map { it.bookId }.distinct()
         for (bookId in bookIds) {
+            if (isTombstoned(bookId)) continue
             val localProgress = readingProgressDao.getProgressForBook(bookId)?.toDomain()
             val localHighlights = highlightDao.getHighlightsForBook(bookId).map { it.toDomain() }
             val localBookmarks = bookmarkDao.getBookmarksForBook(bookId).map { it.toDomain() }
@@ -314,10 +321,11 @@ class GoogleDriveSyncService(
         extension: String
     ): BookEntity {
         return if (existing != null) {
+            // D6: do NOT clear deletedAtEpochMillis — a DELETE-marked book must
+            // stay deleted (no resurrection). Only the local path is refreshed.
             existing.copy(
                 filePath = localPath,
-                updatedAtEpochMillis = System.currentTimeMillis(),
-                deletedAtEpochMillis = null
+                updatedAtEpochMillis = System.currentTimeMillis()
             )
         } else {
             BookEntity(
@@ -333,6 +341,14 @@ class GoogleDriveSyncService(
         }
     }
 
+    /**
+     * Skips a remote book when it is locally DELETE-marked (tombstoned), so
+     * schedulePull/downloadRemoteBook never resurrect it (D6).
+     */
+    private suspend fun isTombstoned(bookId: String): Boolean {
+        return bookDao.getBookById(bookId)?.deletedAtEpochMillis != null
+    }
+
     private suspend fun <T> retryable(block: suspend () -> T): Result<T> {
         var attempt = 0
         var lastError: Throwable? = null
@@ -342,6 +358,9 @@ class GoogleDriveSyncService(
                 return result
             }
             val error = result.exceptionOrNull()
+            if (isUnauthorized(error)) {
+                return driveCall(block = block, lastError = error)
+            }
             if (!isTransient(error)) {
                 return Result.failure(error ?: IllegalStateException("Unknown sync failure"))
             }
@@ -349,6 +368,41 @@ class GoogleDriveSyncService(
             attempt++
         }
         return Result.failure(lastError ?: IllegalStateException("Sync retries exhausted"))
+    }
+
+    /**
+     * Handles Drive 401/403 (D4): refreshes the access token once, waits for the
+     * caller to rebuild the source (the refreshed token is read lazily on next
+     * call), and retries the operation once. On refresh failure it surfaces an
+     * "authorization needed" state instead of failing silently.
+     */
+    private suspend fun <T> driveCall(block: suspend () -> T, lastError: Throwable?): Result<T> {
+        return runCatching { tokenRefresher() }
+            .fold(
+                onSuccess = { refreshResult ->
+                    if (refreshResult.isFailure) {
+                        state.value = SyncState.AuthorizationNeeded
+                        return Result.failure(
+                            refreshResult.exceptionOrNull()
+                                ?: lastError ?: IllegalStateException("Drive authorization needed")
+                        )
+                    }
+                    runCatching { block() }.let { retry ->
+                        if (retry.isSuccess) retry
+                        else Result.failure(retry.exceptionOrNull() ?: lastError ?: IllegalStateException("Drive retry failed"))
+                    }
+                },
+                onFailure = { refreshThrown ->
+                    state.value = SyncState.AuthorizationNeeded
+                    Result.failure(refreshThrown)
+                }
+            )
+    }
+
+    private fun isUnauthorized(error: Throwable?): Boolean {
+        val authError = error as? AppError
+        return authError?.category == ErrorCategory.AUTH ||
+            authError?.code == "GOOGLE_DRIVE_UNAUTHORIZED"
     }
 
     private fun isTransient(error: Throwable?): Boolean {

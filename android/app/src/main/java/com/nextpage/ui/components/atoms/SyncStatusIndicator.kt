@@ -53,6 +53,7 @@ fun SyncStatusIndicator(
         is SyncState.Disabled -> Color(0xFF9CA3AF) to R.string.sync_status_off
         is SyncState.Running -> Color(0xFF60A5FA) to R.string.sync_status_syncing
         is SyncState.Error -> Color(0xFFF87171) to R.string.sync_status_error
+        is SyncState.AuthorizationNeeded -> Color(0xFFFBBF24) to R.string.sync_status_authorization_needed
     }
     val label = stringResource(labelRes)
 

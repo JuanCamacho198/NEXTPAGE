@@ -22,6 +22,12 @@ import com.nextpage.data.repository.ReaderRepositoryImpl
 import com.nextpage.data.repository.ReadingStatsRepositoryImpl
 import com.nextpage.data.repository.DictionaryRepositoryImpl
 import com.nextpage.data.repository.SupabaseAuthRepository
+import com.nextpage.data.remote.drive.DriveCoordinator
+import com.nextpage.data.remote.drive.DriveTokenApi
+import com.nextpage.data.remote.drive.DriveTokenStore
+import com.nextpage.data.remote.drive.EncryptedDriveTokenStore
+import com.nextpage.data.remote.drive.InMemoryDriveTokenStore
+import com.nextpage.data.remote.drive.KtorAuthApi
 import com.nextpage.data.remote.google.GoogleDriveConfig
 import com.nextpage.data.remote.google.GoogleDriveClientProvider
 import com.nextpage.data.remote.google.GoogleDriveInitDiagnostic
@@ -46,6 +52,7 @@ import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.presentation.theme.CoilModule
+import io.ktor.client.HttpClient
 
 class AppContainer(context: Context) {
     companion object {
@@ -118,36 +125,28 @@ class AppContainer(context: Context) {
 
     val readerPreferences: ReaderPreferences = ReaderPreferences(context.applicationContext)
 
-    /**
-     * Drive-based remote data source, lazily created when the user has
-     * authorized Google Drive via Settings → Data & Storage.
-     * Returns null when no Drive token is available — callers (e.g.,
-     * SupabaseBookCatalogSync.downloadRemoteBook) check and fall back.
-     */
-    private val driveStorageRemoteDataSource: StorageSyncRemoteDataSource? by lazy {
-        val token = readerPreferences.driveAccessToken
-        if (token != null) {
-            createDriveRemoteDataSource(token)
-        } else {
-            null
-        }
+    private val driveTokenStore: DriveTokenStore by lazy {
+        runCatching { EncryptedDriveTokenStore(context.applicationContext) }
+            .getOrElse { InMemoryDriveTokenStore() }
+    }
+
+    private val driveTokenApi: DriveTokenApi = KtorAuthApi(HttpClient())
+
+    private val driveCoordinator: DriveCoordinator by lazy {
+        DriveCoordinator(
+            context = context.applicationContext,
+            tokenStore = driveTokenStore,
+            tokenApi = driveTokenApi,
+            clientId = BuildConfig.GOOGLE_OAUTH_CLIENT_ID
+        )
     }
 
     /**
-     * Build a [GoogleDriveStorageRemoteDataSource] from a stored access token.
-     * Uses the Google Drive REST API with the token as bearer auth.
+     * Real, non-null, non-lazy Drive data source built from the current token.
+     * `isEnabled` is driven by `token == null` (see [DriveCoordinator.isEnabled]).
+     * Replaced the previous Noop wiring and the `by lazy` null-cache.
      */
-    private fun createDriveRemoteDataSource(accessToken: String): GoogleDriveStorageRemoteDataSource {
-        val transport = com.google.api.client.googleapis.javanet.GoogleNetHttpTransport.newTrustedTransport()
-        val jsonFactory = com.google.api.client.json.gson.GsonFactory.getDefaultInstance()
-        val initializer = com.google.api.client.http.HttpRequestInitializer { request ->
-            request.headers.setAuthorization("Bearer $accessToken")
-        }
-        val driveService = com.google.api.services.drive.Drive.Builder(transport, jsonFactory, initializer)
-            .setApplicationName("NextPage")
-            .build()
-        return GoogleDriveStorageRemoteDataSource(driveService)
-    }
+    val driveRemoteDataSource: StorageSyncRemoteDataSource = driveCoordinator.buildDataSource()
 
     val dictionaryRepository: DictionaryRepository = DictionaryRepositoryImpl(
         dao = appDatabase.dictionaryWordDao()
@@ -178,9 +177,10 @@ class AppContainer(context: Context) {
             highlightDao = appDatabase.highlightDao(),
             bookmarkDao = appDatabase.bookmarkDao(),
             sessionManager = sessionManager,
-            remoteDataSource = NoopStorageSyncRemoteDataSource,
+            remoteDataSource = driveRemoteDataSource,
             localBooksDir = context.applicationContext.filesDir.resolve("books"),
-            isEnabled = { readerPreferences.driveAccessToken != null },
+            isEnabled = driveCoordinator::isEnabled,
+            tokenRefresher = { driveCoordinator.refreshAccessToken() },
             diagnosticError = AppError(
                 category = com.nextpage.domain.error.ErrorCategory.CONFIG_ERROR,
                 code = "SYNC_DRIVE_NOT_AUTHORIZED",
@@ -215,7 +215,8 @@ class AppContainer(context: Context) {
             bookDao = appDatabase.bookDao(),
             sessionManager = sessionManager,
             dataSource = supabaseBookCatalogDataSource,
-            remoteDataSource = driveStorageRemoteDataSource,
+            remoteDataSource = driveRemoteDataSource,
+            driveTokenRefresher = { driveCoordinator.refreshAccessToken() },
             localBooksDir = context.applicationContext.filesDir.resolve("books")
         )
     }
@@ -248,19 +249,5 @@ class AppContainer(context: Context) {
     // ── Debug actions ───────────────────────────────────────────────
     fun clearAllData() {
         appDatabase.clearAllTables()
-    }
-
-    private data object NoopStorageSyncRemoteDataSource : com.nextpage.data.remote.sync.StorageSyncRemoteDataSource {
-        override suspend fun upload(path: String, bytes: ByteArray) {
-            throw IllegalStateException("Remote storage is not configured.")
-        }
-
-        override suspend fun download(path: String): ByteArray {
-            throw IllegalStateException("Remote storage is not configured.")
-        }
-
-        override suspend fun list(prefix: String): List<String> {
-            throw IllegalStateException("Remote storage is not configured.")
-        }
     }
 }

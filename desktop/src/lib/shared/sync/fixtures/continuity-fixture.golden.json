@@ -1,0 +1,15 @@
+{
+  "chapterHref": "OEBPS/Text/chapter3.xhtml",
+  "paragraphText": "Bravo paragraph",
+  "expectedCfi": "epubcfi(/6/3!/4/6,/1:0,/1:15)",
+  "chapterChars": 413,
+  "expectedProgression": 0.133172,
+  "tolerance": 0.02,
+  "readingOrder": [
+    "OEBPS/Text/chapter1.xhtml",
+    "OEBPS/Text/chapter2.xhtml",
+    "OEBPS/Text/chapter3.xhtml",
+    "OEBPS/Text/chapter4.xhtml"
+  ],
+  "note": "Deterministic fixture — see desktop/tools/gen_continuity_fixture.py. Both engines must resolve Locator.href === chapterHref and |progression - expectedProgression| <= tolerance (mid-chapter exact; chapter-start fallback NOT accepted)."
+}

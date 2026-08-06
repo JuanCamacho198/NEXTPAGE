@@ -42,6 +42,9 @@ coverage/
 
 # Test's
 fixtures/
+# Cross-device continuity golden fixture (committed — design T1 requires it)
+!src/lib/shared/sync/fixtures/
+!src/lib/shared/sync/fixtures/**
 
 # ESlint local rules
 /eslint-local-rules/

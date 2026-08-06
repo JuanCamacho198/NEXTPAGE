@@ -68,6 +68,19 @@ class SupabaseProgressSync(
         }
     }
 
+    /** Pulls one book without blocking the reader's local open path. */
+    suspend fun resumeForBook(bookId: String, onProgressApplied: (ReadingProgressRow) -> Unit = {}) {
+        val session = sessionManager.ensureFreshSession().getOrNull() ?: return
+        runCatching {
+            val state = dataSource.fetchBookState(session.userId, bookId)
+            state.progress?.let { row ->
+                if (applyRemoteProgress(row)) onProgressApplied(row)
+            }
+            state.bookmarks.forEach { applyRemoteBookmark(it) }
+            state.highlights.forEach { applyRemoteHighlight(it) }
+        }
+    }
+
     private val dateFormat: SimpleDateFormat = SimpleDateFormat(
         "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US
     ).apply { timeZone = TimeZone.getTimeZone("UTC") }
@@ -101,6 +114,7 @@ class SupabaseProgressSync(
             bookId = localProgress.bookId,
             cfiLocation = localProgress.cfiLocation,
             percentage = localProgress.percentage.toDouble(),
+            locatorJson = localProgress.locatorJson,
             updatedAt = dateFormat.format(Date(localProgress.updatedAtEpochMillis))
         )
 
@@ -275,7 +289,7 @@ class SupabaseProgressSync(
         }
     }
 
-    private suspend fun applyRemoteProgress(row: ReadingProgressRow) {
+    private suspend fun applyRemoteProgress(row: ReadingProgressRow): Boolean {
         // Only apply if remote is newer than local
         val localProgress = readingProgressDao.getProgressForBook(row.bookId)
         val remoteTime = try {
@@ -297,10 +311,12 @@ class SupabaseProgressSync(
                     percentage = row.percentage.toFloat(),
                     currentPage = localProgress?.currentPage,
                     updatedAtEpochMillis = remoteTime,
-                    locatorJson = localProgress?.locatorJson
+                    locatorJson = row.locatorJson
                 )
             )
+            return true
         }
+        return false
     }
 
     private suspend fun applyRemoteBookmark(row: BookmarkRow) {

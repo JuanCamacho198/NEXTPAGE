@@ -118,7 +118,8 @@ fun NextPageNavHost(
             readingStatsRepository = appContainer.readingStatsRepository,
             readerPreferences = appContainer.readerPreferences,
             defaultBookId = selectedBookId,
-            dictionaryRepository = appContainer.dictionaryRepository
+            dictionaryRepository = appContainer.dictionaryRepository,
+            supabaseProgressSync = appContainer.supabaseProgressSync
         )
     )
 

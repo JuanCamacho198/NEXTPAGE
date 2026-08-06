@@ -14,6 +14,7 @@ import type { ReaderBook, ReadingSessionInput, ReadingProgressDto, SaveProgressI
 import { authState } from '$lib/stores/authState.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
+import type { SupabaseProgressRow } from '$lib/shared/sync/SupabaseProgressSync';
 
 const outboxDao = new SyncOutboxDao();
 
@@ -58,6 +59,7 @@ class ReaderDomainState {
   // ─── Reading lifecycle ───
 
   async startReading(book: ReaderBook): Promise<void> {
+    const epoch = ++this.openEpoch;
     this.activeReadingBookId = book.id;
     this.preloadedBytes = null;
 
@@ -84,13 +86,88 @@ class ReaderDomainState {
     if (format === 'epub') {
       try {
         const progress = await getProgress(book.id);
+        if (epoch !== this.openEpoch) return;
         this.cfiLocation = progress?.cfiLocation ?? '';
         this.percentage = progress?.percentage ?? 0;
       } catch {
+        if (epoch !== this.openEpoch) return;
         this.cfiLocation = '';
         this.percentage = 0;
       }
+      if (authState.userId) {
+        const sync = this.supabaseSync ?? new SupabaseProgressSync(authState.userId);
+        this.supabaseSync = sync;
+        const localUpdatedAt = await getProgress(book.id)
+          .then((value) => value?.updatedAt ?? null)
+          .catch(() => null);
+        void this.fetchAndApplyBookState(sync, book.id, epoch, localUpdatedAt);
+      }
     }
+  }
+
+  private async fetchAndApplyBookState(
+    sync: SupabaseProgressSync,
+    bookId: string,
+    epoch: number,
+    localUpdatedAt: string | null,
+  ): Promise<void> {
+    try {
+      const remote = await sync.fetchBookState(bookId);
+      if (epoch !== this.openEpoch || this.activeReadingBookId !== bookId) return;
+      if (remote.progress && (!localUpdatedAt || Date.parse(remote.progress.updatedAt) > Date.parse(localUpdatedAt))) {
+        this.applyRemoteProgress(remote.progress);
+      }
+      for (const bookmark of remote.bookmarks) {
+        this.appliedRemote.set(`bookmark:${bookmark.id ?? bookmark.cfiLocation}`, bookmark.updatedAt);
+        if (bookmark.deletedAt && bookmark.id) {
+          void deleteBookmark(bookmark.id);
+        } else {
+          void saveBookmark({
+            id: bookmark.id ?? crypto.randomUUID(),
+            bookId: bookmark.bookId,
+            pageNumber: 0,
+            title: bookmark.titleSnippet ?? undefined,
+            createdAt: bookmark.updatedAt,
+          });
+        }
+      }
+      for (const highlight of remote.highlights) {
+        this.appliedRemote.set(`highlight:${highlight.id ?? highlight.cfiRange}`, highlight.updatedAt);
+        if (highlight.deletedAt && highlight.id) {
+          void deleteHighlight(highlight.id);
+        } else {
+          void saveHighlight({
+            id: highlight.id ?? crypto.randomUUID(),
+            bookId: highlight.bookId,
+            text: highlight.textContent,
+            color: highlight.color,
+            pageNumber: highlight.page ?? 0,
+            rectLeft: 0,
+            rectRight: 0,
+            rectTop: 0,
+            rectBottom: 0,
+            cfi: highlight.cfiRange || null,
+            note: highlight.note,
+          });
+        }
+      }
+    } catch {
+      // Offline-first: local state and the existing outbox remain usable.
+    }
+  }
+
+  private applyRemoteProgress(progress: SupabaseProgressRow): void {
+    this.cfiLocation = progress.cfiLocation;
+    this.percentage = progress.percentage;
+    this.locatorJson = progress.locatorJson ?? null;
+    this.appliedRemote.set(`progress:${progress.bookId}`, progress.updatedAt);
+    void upsertProgressCmd({
+      id: progress.id ?? crypto.randomUUID(),
+      bookId: progress.bookId,
+      cfiLocation: progress.cfiLocation,
+      percentage: progress.percentage,
+      updatedAt: progress.updatedAt,
+    });
   }
 
   // ─── Progress ───
@@ -184,6 +261,8 @@ class ReaderDomainState {
   private unsubscribeRemote: (() => void) | null = null;
   private unsubscribeRemoteBookmarks: (() => void) | null = null;
   private unsubscribeRemoteHighlights: (() => void) | null = null;
+  private openEpoch = 0;
+  private appliedRemote = new Map<string, string>();
 
   /**
    * Start listening for reading_progress changes from Supabase Realtime.
@@ -201,6 +280,10 @@ class ReaderDomainState {
 
       this.unsubscribeRemote = this.supabaseSync.subscribeToProgress((payload) => {
         const { bookId, cfiLocation, percentage, updatedAt } = payload;
+        const key = `progress:${bookId}`;
+        const previous = this.appliedRemote.get(key);
+        if (previous && Date.parse(updatedAt) <= Date.parse(previous)) return;
+        this.appliedRemote.set(key, updatedAt);
 
         // Upsert the remote progress into local SQLite
         const progressInput: ReadingProgressDto = {
@@ -216,9 +299,7 @@ class ReaderDomainState {
 
         // If the user is currently reading this book, update in-memory state
         if (this.activeReadingBookId === bookId) {
-          // Only apply if remote is newer — trust the upsert
-          this.cfiLocation = cfiLocation;
-          this.percentage = percentage;
+          this.applyRemoteProgress(payload);
         }
       });
     } catch (e) {
@@ -241,6 +322,10 @@ class ReaderDomainState {
 
       this.unsubscribeRemoteBookmarks = this.supabaseSync.subscribeToBookmarks((payload) => {
         const { id, bookId, titleSnippet, deletedAt, updatedAt } = payload;
+        const key = `bookmark:${id ?? payload.cfiLocation}`;
+        const previous = this.appliedRemote.get(key);
+        if (previous && Date.parse(updatedAt) <= Date.parse(previous)) return;
+        this.appliedRemote.set(key, updatedAt);
 
         if (deletedAt) {
           // Soft-delete: propagate tombstone
@@ -279,6 +364,10 @@ class ReaderDomainState {
 
       this.unsubscribeRemoteHighlights = this.supabaseSync.subscribeToHighlights((payload) => {
         const { id, bookId, cfiRange, textContent, note, color, deletedAt } = payload;
+        const key = `highlight:${id ?? cfiRange}`;
+        const previous = this.appliedRemote.get(key);
+        if (previous && Date.parse(payload.updatedAt) <= Date.parse(previous)) return;
+        this.appliedRemote.set(key, payload.updatedAt);
 
         if (deletedAt) {
           deleteHighlight(id ?? '').catch((e) => {
@@ -361,6 +450,7 @@ class ReaderDomainState {
   // ─── Reset ───
 
   resetReader(): void {
+    this.openEpoch += 1;
     this.activeReadingBookId = null;
     this.cfiLocation = '';
     this.percentage = 0;

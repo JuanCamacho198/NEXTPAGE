@@ -12,6 +12,8 @@ const mockGetProgress = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 const mockSaveProgress = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockSaveReadingSession = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockUpdateBookProgress = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockFetchBookState = vi.hoisted(() => vi.fn().mockResolvedValue({ progress: null, bookmarks: [], highlights: [] }));
+const mockAuthState = vi.hoisted(() => ({ userId: null as string | null }));
 
 // ─── Module mocks ───
 
@@ -25,6 +27,16 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
   saveProgress: mockSaveProgress,
   saveReadingSession: mockSaveReadingSession,
   updateBookProgress: mockUpdateBookProgress,
+}));
+
+vi.mock('$lib/stores/authState.svelte', () => ({ authState: mockAuthState }));
+vi.mock('$lib/shared/sync/SupabaseProgressSync', () => ({
+  SupabaseProgressSync: class {
+    fetchBookState = mockFetchBookState;
+    subscribeToProgress = vi.fn();
+    subscribeToBookmarks = vi.fn();
+    subscribeToHighlights = vi.fn();
+  },
 }));
 
 // Mock pdfStreaming for startReading PDF path
@@ -58,7 +70,9 @@ function resetReaderState(): void {
   readerState.preloadedBytes = null;
   readerState.readerError = null;
   readerState.onStatsRefreshNeeded = null;
-  readerState.onPageChangeCallback = null;
+    readerState.onPageChangeCallback = null;
+    mockAuthState.userId = null;
+    mockFetchBookState.mockResolvedValue({ progress: null, bookmarks: [], highlights: [] });
 }
 
 // ─── Tests ───
@@ -209,6 +223,32 @@ describe('ReaderDomainState', () => {
     await readerState.startReading(book);
     expect(readerState.cfiLocation).toBe('');
     expect(readerState.percentage).toBe(0);
+  });
+
+  it('applies a newer remote progress and canonical locator after local open', async () => {
+    mockAuthState.userId = 'user-1';
+    mockGetProgress
+      .mockResolvedValueOnce({ bookId: 'b1', cfiLocation: 'local', percentage: 10, updatedAt: '2026-01-01T00:00:00.000Z' })
+      .mockResolvedValueOnce({ bookId: 'b1', cfiLocation: 'local', percentage: 10, updatedAt: '2026-01-01T00:00:00.000Z' });
+    let release!: (value: unknown) => void;
+    mockFetchBookState.mockReturnValueOnce(new Promise((resolve) => { release = resolve; }));
+    await readerState.startReading(makeBook({ id: 'b1' }));
+    expect(readerState.cfiLocation).toBe('local');
+    release({ progress: { bookId: 'b1', cfiLocation: 'remote', percentage: 80, updatedAt: '2026-01-02T00:00:00.000Z', locatorJson: '{"href":"chapter-7.xhtml"}' }, bookmarks: [], highlights: [] });
+    await vi.waitFor(() => expect(readerState.cfiLocation).toBe('remote'));
+    expect(readerState.locatorJson).toContain('chapter-7');
+  });
+
+  it('ignores a stale response from a previous book open', async () => {
+    mockAuthState.userId = 'user-1';
+    const resolvers: Array<(value: unknown) => void> = [];
+    mockFetchBookState.mockImplementation(() => new Promise((resolve) => resolvers.push(resolve)));
+    await readerState.startReading(makeBook({ id: 'b1' }));
+    await readerState.startReading(makeBook({ id: 'b2' }));
+    resolvers[0]({ progress: { bookId: 'b1', cfiLocation: 'stale', percentage: 90, updatedAt: '2026-02-01T00:00:00.000Z' }, bookmarks: [], highlights: [] });
+    await Promise.resolve();
+    expect(readerState.activeReadingBookId).toBe('b2');
+    expect(readerState.cfiLocation).not.toBe('stale');
   });
 
   // ─── startReading PDF ───

@@ -72,6 +72,14 @@ class SupabaseProgressDataSource {
             .decodeSingleOrNull<ReadingProgressRow>()
     }
 
+    suspend fun fetchBookState(userId: String, bookId: String): SupabaseBookState {
+        return SupabaseBookState(
+            progress = getProgress(userId, bookId),
+            bookmarks = listBookmarks(userId, bookId, includeDeleted = true),
+            highlights = listHighlights(userId, bookId, includeDeleted = true)
+        )
+    }
+
     suspend fun listProgress(userId: String): List<ReadingProgressRow> {
         return postgrest["reading_progress"]
             .select {
@@ -115,13 +123,13 @@ class SupabaseProgressDataSource {
             .decodeSingleOrNull<BookmarkRow>()
     }
 
-    suspend fun listBookmarks(userId: String, bookId: String? = null): List<BookmarkRow> {
+    suspend fun listBookmarks(userId: String, bookId: String? = null, includeDeleted: Boolean = false): List<BookmarkRow> {
         return postgrest["bookmarks"]
             .select {
                 filter {
                     eq("user_id", userId)
                     if (bookId != null) eq("book_id", bookId)
-                    exact("deleted_at", null)
+                    if (!includeDeleted) exact("deleted_at", null)
                 }
                 order("updated_at", Order.DESCENDING)
             }
@@ -178,13 +186,13 @@ class SupabaseProgressDataSource {
             .decodeSingleOrNull<HighlightRow>()
     }
 
-    suspend fun listHighlights(userId: String, bookId: String? = null): List<HighlightRow> {
+    suspend fun listHighlights(userId: String, bookId: String? = null, includeDeleted: Boolean = false): List<HighlightRow> {
         return postgrest["highlights"]
             .select {
                 filter {
                     eq("user_id", userId)
                     if (bookId != null) eq("book_id", bookId)
-                    exact("deleted_at", null)
+                    if (!includeDeleted) exact("deleted_at", null)
                 }
                 order("updated_at", Order.DESCENDING)
             }
@@ -341,8 +349,16 @@ data class ReadingProgressRow(
     @SerialName("cfi_location")
     val cfiLocation: String = "",
     val percentage: Double = 0.0,
+    @SerialName("locator_json")
+    val locatorJson: String? = null,
     @SerialName("updated_at")
     val updatedAt: String,
+)
+
+data class SupabaseBookState(
+    val progress: ReadingProgressRow?,
+    val bookmarks: List<BookmarkRow>,
+    val highlights: List<HighlightRow>
 )
 
 /**

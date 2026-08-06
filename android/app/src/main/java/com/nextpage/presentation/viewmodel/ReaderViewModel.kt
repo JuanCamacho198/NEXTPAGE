@@ -19,6 +19,7 @@ import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
+import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.viewmodel.reader.FullscreenManager
 import com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder
@@ -450,7 +451,8 @@ class ReaderViewModel(
     private val readerPreferences: ReaderPreferences? = null,
     defaultBookId: String?,
     private val dictionaryRepository: DictionaryRepository? = null,
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val supabaseProgressSync: SupabaseProgressSync? = null
 ) : AndroidViewModel(application) {
     private val mutableUiState = MutableStateFlow(
         ReaderUiState(selectedBookId = defaultBookId)
@@ -533,7 +535,8 @@ class ReaderViewModel(
         onSelectionCleared = { interactionHolder.onSelectionClearedFromLifecycle() },
         onNavigateToLocator = { loc -> viewModelScope.launch { _navigateToLocator.emit(loc) } },
         onBookLoaded = { bookId -> interactionHolder.observeBook(bookId) },
-        mainDispatcher = mainDispatcher
+        mainDispatcher = mainDispatcher,
+        supabaseProgressSync = supabaseProgressSync
     )
 
     // ── Cluster B state holder ────────────────────────────────────────
@@ -1232,7 +1235,8 @@ class ReaderViewModelFactory(
     private val readingStatsRepository: ReadingStatsRepository,
     private val readerPreferences: ReaderPreferences,
     private val defaultBookId: String?,
-    private val dictionaryRepository: DictionaryRepository? = null
+    private val dictionaryRepository: DictionaryRepository? = null,
+    private val supabaseProgressSync: SupabaseProgressSync? = null
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -1244,7 +1248,8 @@ class ReaderViewModelFactory(
                 updateReadingProgressUseCase = UpdateReadingProgressUseCase(readerRepository),
                 readerPreferences = readerPreferences,
                 defaultBookId = defaultBookId,
-                dictionaryRepository = dictionaryRepository
+                dictionaryRepository = dictionaryRepository,
+                supabaseProgressSync = supabaseProgressSync
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

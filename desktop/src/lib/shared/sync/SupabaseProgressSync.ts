@@ -60,6 +60,12 @@ export type ProgressChangeCallback = (row: SupabaseProgressRow) => void;
 export type BookmarkChangeCallback = (row: SupabaseBookmarkRow) => void;
 export type HighlightChangeCallback = (row: SupabaseHighlightRow) => void;
 
+export interface SupabaseBookState {
+  progress: SupabaseProgressRow | null;
+  bookmarks: SupabaseBookmarkRow[];
+  highlights: SupabaseHighlightRow[];
+}
+
 export class SupabaseProgressSync {
   private supabase: SupabaseClient;
   private userId: string;
@@ -108,6 +114,26 @@ export class SupabaseProgressSync {
     if (error) throw error;
 
     return (data ?? []).map(this.mapRow);
+  }
+
+  async fetchBookState(bookId: string): Promise<SupabaseBookState> {
+    const [progress, bookmarks, highlights] = await Promise.all([
+      this.fetchProgressForBook(bookId),
+      this.fetchBookmarks(bookId),
+      this.fetchHighlights(bookId),
+    ]);
+    return { progress, bookmarks, highlights };
+  }
+
+  async fetchProgressForBook(bookId: string): Promise<SupabaseProgressRow | null> {
+    const { data, error } = await this.supabase
+      .from('reading_progress')
+      .select('*')
+      .eq('user_id', this.userId)
+      .eq('book_id', bookId)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? this.mapRow(data as Record<string, unknown>) : null;
   }
 
   /**

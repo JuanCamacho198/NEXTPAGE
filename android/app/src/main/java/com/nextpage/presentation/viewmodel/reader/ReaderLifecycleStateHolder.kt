@@ -9,6 +9,7 @@ import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
+import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.viewmodel.CfiMigrator
 import kotlinx.coroutines.*
@@ -42,7 +43,8 @@ class ReaderLifecycleStateHolder(
     private val onSelectionCleared: () -> Unit = {},
     private val onNavigateToLocator: (Locator) -> Unit = {},
     private val onBookLoaded: (bookId: String) -> Unit = {},
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val supabaseProgressSync: SupabaseProgressSync? = null
 ) {
 
     private val _state = MutableStateFlow(ReaderLifecycleState())
@@ -51,6 +53,7 @@ class ReaderLifecycleStateHolder(
     private var observeProgressJob: Job? = null
     private var readingTimeTickerJob: Job? = null
     private var sessionStartTime: Long = 0L
+    private var loadEpoch: Long = 0L
 
     companion object {
         private const val TAG = "ReaderLifecycleStateHolder"
@@ -95,6 +98,7 @@ class ReaderLifecycleStateHolder(
      * [loadEpubBook] after Phase 2).
      */
     fun loadEpubBook(bookId: String, filePath: String) {
+        val epoch = ++loadEpoch
         val startTime = System.currentTimeMillis()
         _state.update {
             it.copy(
@@ -166,6 +170,19 @@ class ReaderLifecycleStateHolder(
                         isLoading = false,
                         loadTimeMs = loadTime
                     )
+                }
+                // SWR: local Room position is rendered immediately. A remote pull
+                // can replace it later, but never prevents offline reading.
+                supabaseProgressSync?.let { sync ->
+                    scope.launch(Dispatchers.IO) {
+                        sync.resumeForBook(bookId) { remote ->
+                            val locator = remote.locatorJson?.let(CfiMigrator::jsonToLocator)
+                            if (locator != null && epoch == loadEpoch && _state.value.selectedBookId == bookId) {
+                                _state.update { current -> current.copy(readiumLocator = locator) }
+                                scope.launch(mainDispatcher) { onNavigateToLocator(locator) }
+                            }
+                        }
+                    }
                 }
                 // Migrate legacy CFI data to Readium Locator format (idempotent)
                 withContext(Dispatchers.IO) {

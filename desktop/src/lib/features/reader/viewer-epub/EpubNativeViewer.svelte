@@ -15,6 +15,7 @@
   import { IFRAME_CFI_BRIDGE_SCRIPT } from '$lib/features/reader/viewer-epub/cfiBridgeIframe';
   import { IFRAME_HIGHLIGHT_OVERLAY_SCRIPT } from '$lib/features/reader/viewer-epub/epubHighlightOverlayIframe';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
+  import { locatorFromCfi, locatorToJson } from '$lib/shared/sync/LocatorCodec';
 
   // ─── Types ───────────────────────────────────────────────
   interface EpubChapterMeta {
@@ -943,6 +944,56 @@
     syncIframeHeight();
   }
 
+  /** Emit the precise CFI at the top visible text node in the chapter iframe. */
+  function emitPreciseLocation(): void {
+    if (!metadata || !iframeEl?.contentDocument || !iframeEl.contentWindow) return;
+
+    const doc = iframeEl.contentDocument;
+    const bridge = (iframeEl.contentWindow as Window & {
+      __cfiBridge?: { rangeToCFI: (range: Range, href: string, document: Document) => string | null };
+    }).__cfiBridge;
+    const chapterHref = metadata.chapters[currentChapterIndex]?.href ?? '';
+    if (!bridge || !chapterHref) return;
+
+    const nodes: Text[] = [];
+    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node) {
+      if ((node.nodeValue ?? '').trim().length > 0) nodes.push(node as Text);
+      node = walker.nextNode();
+    }
+    const chapterChars = nodes.reduce((total, textNode) => total + (textNode.data?.length ?? 0), 0);
+    if (chapterChars <= 0) return;
+
+    const visibleNode = nodes.find((textNode) => {
+      const range = doc.createRange();
+      range.selectNodeContents(textNode);
+      const rect = range.getBoundingClientRect();
+      return rect.bottom >= 0 && rect.top <= (iframeEl?.clientHeight ?? window.innerHeight);
+    });
+    if (!visibleNode) return;
+
+    const range = doc.createRange();
+    range.setStart(visibleNode, 0);
+    range.setEnd(visibleNode, Math.min(1, visibleNode.data.length));
+    const preciseCfi = bridge.rangeToCFI(range, chapterHref, doc);
+    if (!preciseCfi) return;
+
+    const charOffset = nodes
+      .slice(0, nodes.indexOf(visibleNode))
+      .reduce((total, textNode) => total + textNode.data.length, 0);
+    const locator = locatorFromCfi(metadata.chapters.map((chapter) => chapter.href), preciseCfi, {
+      chapterChars,
+      charOffset,
+    });
+    if (!locator) return;
+
+    const progression = locator.locations.progression ?? 0;
+    const percentage = ((currentChapterIndex + progression) / totalChapters) * 100;
+    onLocationChange?.(preciseCfi, percentage);
+    onLocationContext?.({ locator: locatorToJson(locator), percentage });
+  }
+
   // ─── Render Chapter ──────────────────────────────────────
   async function renderChapter(index: number): Promise<void> {
     if (!metadata || !iframeEl) return;
@@ -976,8 +1027,8 @@
         missingFonts,
       );
 
-      iframeEl.onload = () => {
-        syncIframeHeight();
+       iframeEl.onload = () => {
+         syncIframeHeight();
         if (zoomContainerEl) {
           zoomContainerEl.scrollTop = 0;
         }
@@ -1005,18 +1056,16 @@
           // Render persisted highlights for the new chapter.
           if (win?.__epubHighlightOverlay) {
             win.__epubHighlightOverlay.render(persistedHighlights, chapterHref, index);
-          }
-        } catch (e) {
-          console.warn('epub-cfi: failed to re-init iframe on load', e);
-        }
-      };
+           }
+         } catch (e) {
+           console.warn('epub-cfi: failed to re-init iframe on load', e);
+         }
+         requestAnimationFrame(emitPreciseLocation);
+       };
       iframeEl.srcdoc = srcdoc;
       lastRenderedChapter = index;
 
-      const pct = ((index + 0.5) / totalChapters) * 100;
-      onLocationChange?.(`chapter:${index}`, pct);
-      onLocationContext?.({ locator: `chapter:${index}`, percentage: pct });
-    } catch (err) {
+     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
       setReaderError(error);
     }
@@ -1163,8 +1212,9 @@
     <div
       class="flex-1 w-full min-h-0 overflow-y-auto pb-16"
       style="background: {getThemeBgColor()};"
-      bind:this={zoomContainerEl}
-      onwheel={handleWheel}
+       bind:this={zoomContainerEl}
+       onwheel={handleWheel}
+       onscroll={emitPreciseLocation}
     >
       <iframe
         bind:this={iframeEl}

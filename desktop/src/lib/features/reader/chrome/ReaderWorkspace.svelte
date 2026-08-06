@@ -39,6 +39,10 @@
   import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
   import { getReaderError } from '$lib/stores/readerErrorState.svelte';
   import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
+  import { authState } from '$lib/stores/authState.svelte';
+  import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
+
+  const outboxDao = new SyncOutboxDao();
 
   const appWindow = getCurrentWebviewWindow();
 
@@ -483,6 +487,18 @@
           rectBottom: bounds.bottom,
           cfi,
         });
+        if (authState.userId) {
+          void outboxDao.add('HIGHLIGHT', highlightId, 'UPSERT', JSON.stringify({
+            userId: authState.userId,
+            bookId: activeReadingBook.id,
+            cfiRange: cfi ?? '',
+            textContent: data.text,
+            color,
+            page: pageNumber,
+            locatorJson: readerState.locatorJson,
+            updatedAt: new Date().toISOString(),
+          }));
+        }
       } catch (err) {
         debugState.epub.saveHighlightLastError = String(err);
         // Mirror the failed highlight id into the debug state for the
@@ -569,6 +585,7 @@
     updateHighlight({ id, color }).catch((err) => {
       console.error('Failed to update highlight color:', err);
     });
+    enqueueHighlightUpdate(id, { color });
   }
 
   function updateHighlightNote(id: string, note: string | null): void {
@@ -576,12 +593,45 @@
     updateHighlight({ id, note: note ?? undefined }).catch((err) => {
       console.error('Failed to update highlight note:', err);
     });
+    enqueueHighlightUpdate(id, { note });
   }
 
   function deleteHighlightById(id: string): void {
+    const highlight = persistedHighlights.find((item) => item.id === id);
     persistedHighlights = persistedHighlights.filter((h) => h.id !== id);
     closeHighlightMenu();
     deleteHighlight(id).catch((err) => console.error('Failed to delete highlight:', err));
+    if (authState.userId && highlight) {
+      const updatedAt = new Date().toISOString();
+      void outboxDao.add('HIGHLIGHT', id, 'DELETE', JSON.stringify({
+        userId: authState.userId,
+        bookId: activeReadingBook?.id ?? id,
+        cfiRange: highlight.cfi ?? '',
+        textContent: highlight.text ?? '',
+        color: highlight.color,
+        page: highlight.pageNumber,
+        locatorJson: readerState.locatorJson,
+        deletedAt: updatedAt,
+        updatedAt,
+      }));
+    }
+  }
+
+  function enqueueHighlightUpdate(id: string, changes: { color?: string; note?: string | null }): void {
+    if (!authState.userId) return;
+    const highlight = persistedHighlights.find((item) => item.id === id);
+    if (!highlight) return;
+    void outboxDao.add('HIGHLIGHT', id, 'UPSERT', JSON.stringify({
+      userId: authState.userId,
+      bookId: activeReadingBook?.id ?? id,
+      cfiRange: highlight.cfi ?? '',
+      textContent: highlight.text ?? '',
+      color: changes.color ?? highlight.color,
+      note: changes.note ?? highlight.note ?? null,
+      page: highlight.pageNumber,
+      locatorJson: readerState.locatorJson,
+      updatedAt: new Date().toISOString(),
+    }));
   }
 
   function handleMenuCustomColor(): void {
@@ -965,6 +1015,7 @@
               bookmarksState.addBookmark(
                 activeReadingBook.id,
                 isEpub ? currentEpubChapter + 1 : currentPdfPage || 1,
+                { cfiLocation: readerState.cfiLocation, locatorJson: readerState.locatorJson },
               )}
             class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-(--color-accent-blue) text-xs font-bold text-(--color-bg-deep) transition-colors hover:bg-(--color-accent-sky)"
             title={t('reader.bookmark')}

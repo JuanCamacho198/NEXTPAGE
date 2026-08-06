@@ -87,10 +87,59 @@ export class SyncService {
 
     this.outboxService = new SyncOutboxService();
     this.outboxService.setHandler(async (entityType, entityId, operation, payloadJson) => {
-      if (!authState.userId || !entityId) return;
+      if (!authState.userId) throw new Error('Cannot flush outbox while signed out');
+      if (!entityId) throw new Error(`Outbox entity ${entityType} is missing entityId`);
+
+      const progressSync = new SupabaseProgressSync(authState.userId);
+      const payload = JSON.parse(payloadJson) as Record<string, unknown>;
+
+      if (entityType === 'READING_PROGRESS' && operation === 'UPSERT') {
+        await progressSync.upsertProgress({
+          userId: authState.userId,
+          bookId: entityId,
+          cfiLocation: String(payload.cfiLocation ?? ''),
+          percentage: Number(payload.percentage ?? 0),
+          currentPage: payload.currentPage != null ? Number(payload.currentPage) : null,
+          locatorJson: payload.locatorJson != null ? String(payload.locatorJson) : null,
+          updatedAt: String(payload.updatedAt ?? new Date().toISOString()),
+        });
+        return;
+      }
+
+      if (entityType === 'HIGHLIGHT') {
+        await progressSync.upsertHighlight({
+          id: entityId,
+          userId: authState.userId,
+          bookId: String(payload.bookId ?? entityId),
+          cfiRange: String(payload.cfiRange ?? payload.cfi ?? ''),
+          textContent: String(payload.textContent ?? payload.text ?? ''),
+          note: payload.note != null ? String(payload.note) : null,
+          color: String(payload.color ?? 'yellow'),
+          page: payload.page != null ? Number(payload.page) : null,
+          rectJson: (payload.rectJson as Record<string, number> | null | undefined) ?? null,
+          locatorJson: payload.locatorJson != null ? String(payload.locatorJson) : null,
+          deletedAt: operation === 'DELETE' ? String(payload.deletedAt ?? new Date().toISOString()) : null,
+          updatedAt: String(payload.updatedAt ?? new Date().toISOString()),
+        });
+        return;
+      }
+
+      if (entityType === 'BOOKMARK') {
+        await progressSync.upsertBookmark({
+          id: entityId,
+          userId: authState.userId,
+          bookId: String(payload.bookId ?? entityId),
+          cfiLocation: String(payload.cfiLocation ?? ''),
+          titleSnippet: payload.titleSnippet != null ? String(payload.titleSnippet) : null,
+          locatorJson: payload.locatorJson != null ? String(payload.locatorJson) : null,
+          deletedAt: operation === 'DELETE' ? String(payload.deletedAt ?? new Date().toISOString()) : null,
+          updatedAt: String(payload.updatedAt ?? new Date().toISOString()),
+        });
+        return;
+      }
 
       if (entityType === 'BOOK' && operation === 'UPSERT') {
-        const metadata = JSON.parse(payloadJson) as Record<string, unknown>;
+        const metadata = payload;
         const bookSync = new SupabaseBookCatalogSync(authState.userId);
 
         const contentHash = metadata.content_hash != null ? String(metadata.content_hash) : null;
@@ -137,9 +186,9 @@ export class SyncService {
       } else if (entityType === 'BOOK' && operation === 'DELETE') {
         const bookSync = new SupabaseBookCatalogSync(authState.userId);
         await bookSync.deleteBook(entityId);
+      } else {
+        throw new Error(`Unsupported outbox entity: ${entityType}/${operation}`);
       }
-      // READING_PROGRESS and other types are handled downstream by
-      // existing SupabaseProgressSync / Drive sync flows.
     });
 
     this.outboxService.start();

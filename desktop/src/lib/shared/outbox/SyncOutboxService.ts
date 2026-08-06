@@ -24,7 +24,7 @@ export type OutboxHandler = (
 ) => Promise<void>;
 
 export class SyncOutboxService {
-  private dao = new SyncOutboxDao();
+  constructor(private readonly dao: SyncOutboxDao = new SyncOutboxDao()) {}
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private handler: OutboxHandler | null = null;
   private flushing = false;

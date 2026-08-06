@@ -477,8 +477,8 @@ export class AppState {
   handleLocaleChange = (nextLocale: UiLocale): void => {
     this.settings.handleLocaleChange(nextLocale);
   };
-  handleReaderLocationContext = (): void => {
-    this.reader.handleReaderLocationContext();
+  handleReaderLocationContext = (ctx?: unknown): void => {
+    this.reader.handleReaderLocationContext(ctx);
   };
 
   // ─── Search methods ───

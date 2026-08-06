@@ -22,6 +22,7 @@ class ReaderDomainState {
   activeReadingBookId = $state<string | null>(null);
   cfiLocation = $state('');
   percentage = $state(0);
+  locatorJson = $state<string | null>(null);
   preloadedBytes = $state<{ filePath: string; data: Uint8Array } | null>(null);
   readerError = $state<string | null>(null);
   isFullscreen = $state(false);
@@ -118,6 +119,7 @@ class ReaderDomainState {
           bookId,
           cfiLocation: nextLocation,
           percentage: this.percentage,
+          locatorJson: this.locatorJson,
           updatedAt: new Date().toISOString(),
         };
         void outboxDao.add('READING_PROGRESS', bookId, 'UPSERT', JSON.stringify(outboxPayload));
@@ -170,8 +172,10 @@ class ReaderDomainState {
     }
   }
 
-  handleReaderLocationContext(): void {
-    // Reserved for index_book_text integration
+  handleReaderLocationContext(ctx?: unknown): void {
+    if (!ctx || typeof ctx !== 'object' || !('locator' in ctx)) return;
+    const locator = (ctx as { locator?: unknown }).locator;
+    this.locatorJson = typeof locator === 'string' ? locator : null;
   }
 
   // ─── Realtime subscription (cross-device sync) ───

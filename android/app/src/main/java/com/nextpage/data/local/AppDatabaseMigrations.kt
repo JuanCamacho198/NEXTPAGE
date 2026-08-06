@@ -167,6 +167,18 @@ object AppDatabaseMigrations {
         }
     }
 
+    val MIGRATION_17_18 = object : Migration(17, 18) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE books ADD COLUMN reading_state TEXT NOT NULL DEFAULT 'to_read'")
+            db.execSQL("ALTER TABLE books ADD COLUMN started_at INTEGER DEFAULT NULL")
+            db.execSQL("ALTER TABLE books ADD COLUMN completed_at INTEGER DEFAULT NULL")
+            db.execSQL("ALTER TABLE books ADD COLUMN progress_percentage REAL NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE books ADD COLUMN progress_updated_at INTEGER DEFAULT NULL")
+            db.execSQL("ALTER TABLE books ADD COLUMN state_version INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("UPDATE books SET reading_state = CASE WHEN status = 'completed' THEN 'completed' WHEN status = 'reading' THEN 'reading' ELSE 'to_read' END")
+        }
+    }
+
     val MIGRATION_14_15 = object : Migration(14, 15) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE books ADD COLUMN status TEXT DEFAULT NULL")
@@ -261,6 +273,7 @@ object AppDatabaseMigrations {
         MIGRATION_13_14,
         MIGRATION_14_15,
         MIGRATION_15_16,
-        MIGRATION_16_17
+        MIGRATION_16_17,
+        MIGRATION_17_18
     )
 }

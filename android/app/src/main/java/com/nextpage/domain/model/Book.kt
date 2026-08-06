@@ -16,7 +16,13 @@ data class Book(
     val userRating: Int? = null,
     val updatedAtEpochMillis: Long,
     /** Explicit reading status set by the user; null means derive from reading time. */
-    val status: String? = null
+    val status: String? = null,
+    val readingState: String = ReadingState.TO_READ,
+    val startedAtEpochMillis: Long? = null,
+    val completedAtEpochMillis: Long? = null,
+    val progressPercentage: Float = 0f,
+    val progressUpdatedAtEpochMillis: Long? = null,
+    val stateVersion: Long = 0L
 )
 
 /** Persisted book status values stored in [Book.status]. */
@@ -24,6 +30,21 @@ object BookStatus {
     const val COMPLETED = "completed"
     const val PLAN_TO_READ = "plan_to_read"
     const val READING = "reading"
+}
+
+object ReadingState {
+    const val TO_READ = "to_read"
+    const val READING = "reading"
+    const val COMPLETED = "completed"
+}
+
+fun resolveReadingState(explicitState: String?, progressPercentage: Float): String {
+    val progress = progressPercentage.coerceIn(0f, 100f)
+    return when {
+        explicitState == ReadingState.COMPLETED || progress >= 100f -> ReadingState.COMPLETED
+        explicitState == ReadingState.READING || progress > 0f -> ReadingState.READING
+        else -> ReadingState.TO_READ
+    }
 }
 
 /**

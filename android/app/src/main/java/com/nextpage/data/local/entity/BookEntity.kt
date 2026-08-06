@@ -33,5 +33,17 @@ data class BookEntity(
     @ColumnInfo(name = "status")
     val status: String? = null,
     @ColumnInfo(name = "content_hash")
-    val contentHash: String? = null
+    val contentHash: String? = null,
+    @ColumnInfo(name = "reading_state")
+    val readingState: String = "to_read",
+    @ColumnInfo(name = "started_at")
+    val startedAtEpochMillis: Long? = null,
+    @ColumnInfo(name = "completed_at")
+    val completedAtEpochMillis: Long? = null,
+    @ColumnInfo(name = "progress_percentage")
+    val progressPercentage: Float = 0f,
+    @ColumnInfo(name = "progress_updated_at")
+    val progressUpdatedAtEpochMillis: Long? = null,
+    @ColumnInfo(name = "state_version")
+    val stateVersion: Long = 0L
 )

@@ -8,6 +8,7 @@ import {
   partitionHomeBooks,
   promoteBookForReading,
   reconcileHomeState,
+  resolveReadingState,
   selectShelfBooks,
   type HomeStateSnapshot,
 } from '$lib/shared/stores/homeState';
@@ -36,6 +37,14 @@ const makeState = (state: Partial<HomeStateSnapshot>): HomeStateSnapshot => {
 };
 
 describe('homeState progress guards', () => {
+  it('resolves lifecycle state with completed > reading > to_read precedence', () => {
+    expect(resolveReadingState(undefined, 0)).toBe('to_read');
+    expect(resolveReadingState('reading', 0)).toBe('reading');
+    expect(resolveReadingState(undefined, 25)).toBe('reading');
+    expect(resolveReadingState('to_read', 100)).toBe('completed');
+    expect(resolveReadingState('completed', 0)).toBe('completed');
+  });
+
   it('normalizes null/undefined/non-finite progress values', () => {
     expect(getSafeProgressPercentage({ progressPercentage: undefined })).toBe(0);
     expect(getSafeProgressPercentage({ progressPercentage: null })).toBe(0);
@@ -58,7 +67,7 @@ describe('homeState progress guards', () => {
 });
 
 describe('homeState section membership', () => {
-  it('partitions books without duplication and filters duplicate ids', () => {
+  it('keeps every unique book shelved while deriving only started books', () => {
     const books: TestBook[] = [
       { id: 'a', title: 'A', progressPercentage: 0 },
       { id: 'b', title: 'B', progressPercentage: 10 },
@@ -69,7 +78,7 @@ describe('homeState section membership', () => {
     const { continueReadingBooks, myShelfBooks } = partitionHomeBooks(books);
 
     expect(continueReadingBooks.map((book) => book.id)).toEqual(['b']);
-    expect(myShelfBooks.map((book) => book.id)).toEqual(['a', 'c']);
+    expect(myShelfBooks.map((book) => book.id)).toEqual(['a', 'b', 'c']);
     expect(new Set([...continueReadingBooks, ...myShelfBooks].map((book) => book.id)).size).toBe(3);
   });
 });
@@ -113,7 +122,7 @@ describe('homeState reconciliation', () => {
     expect(result.shelfDetailsBookId).toBeNull();
   });
 
-  it('closes shelf modal if selected book moved to continue reading', () => {
+  it('keeps shelf selection when a book also enters continue reading', () => {
     const books: TestBook[] = [{ id: 'book-1', title: 'Book 1', progressPercentage: 10 }];
     const result = reconcileHomeState(
       books,
@@ -126,7 +135,7 @@ describe('homeState reconciliation', () => {
     );
 
     expect(result.previewBookId).toBe('book-1');
-    expect(result.shelfDetailsBookId).toBeNull();
+    expect(result.shelfDetailsBookId).toBe('book-1');
   });
 
   it('keeps valid shelf modal selection in home mode', () => {

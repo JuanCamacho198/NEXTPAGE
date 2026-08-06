@@ -237,7 +237,13 @@ class LibraryRepositoryImpl(
         totalPages = totalPages,
         userRating = userRating,
         updatedAtEpochMillis = updatedAtEpochMillis,
-        status = status
+        status = status,
+        readingState = readingState,
+        startedAtEpochMillis = startedAtEpochMillis,
+        completedAtEpochMillis = completedAtEpochMillis,
+        progressPercentage = progressPercentage,
+        progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
+        stateVersion = stateVersion
     )
 
     private fun ReadingProgressEntity.toDomain(): ReadingProgress = ReadingProgress(
@@ -261,7 +267,13 @@ class LibraryRepositoryImpl(
         chapterCount = chapterCount,
         userRating = userRating,
         updatedAtEpochMillis = updatedAtEpochMillis,
-        status = status
+        status = status,
+        readingState = readingState,
+        startedAtEpochMillis = startedAtEpochMillis,
+        completedAtEpochMillis = completedAtEpochMillis,
+        progressPercentage = progressPercentage,
+        progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
+        stateVersion = stateVersion
     )
 
     /**

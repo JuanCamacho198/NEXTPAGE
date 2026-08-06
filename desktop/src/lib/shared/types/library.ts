@@ -50,6 +50,7 @@ export type BulkImportSummary = {
 };
 
 export type ReadingStatus = 'to_read' | 'reading' | 'completed';
+export type ReadingStateVersion = number;
 
 export type LibraryBookDto = {
   id: string;
@@ -69,6 +70,10 @@ export type LibraryBookDto = {
   language?: string;
   coverUserDeleted?: boolean;
   readingStatus?: ReadingStatus | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  progressUpdatedAt?: string | null;
+  stateVersion?: ReadingStateVersion;
 };
 
 export type CollectionDto = {

@@ -356,4 +356,31 @@ class AppDatabaseMigrationTest {
 
         db.close()
     }
+
+    @Test
+    fun migrate17To18_backfillsCanonicalReadingState() {
+        val dbName = "migration-test-17-18"
+        helper.createDatabase(dbName, 17).apply {
+            execSQL("""
+                CREATE TABLE books (
+                    id TEXT NOT NULL PRIMARY KEY, title TEXT NOT NULL, author TEXT,
+                    cover_path TEXT, file_path TEXT NOT NULL, format TEXT NOT NULL,
+                    updated_at INTEGER NOT NULL, deleted_at INTEGER, status TEXT,
+                    content_hash TEXT
+                )
+            """.trimIndent())
+            execSQL("INSERT INTO books VALUES ('zero', 'Zero', NULL, NULL, '/zero', 'epub', 1, NULL, NULL, NULL)")
+            execSQL("INSERT INTO books VALUES ('reading', 'Reading', NULL, NULL, '/reading', 'epub', 2, NULL, 'reading', NULL)")
+            execSQL("INSERT INTO books VALUES ('done', 'Done', NULL, NULL, '/done', 'epub', 3, NULL, 'completed', NULL)")
+            close()
+        }
+
+        helper.runMigrationsAndValidate(dbName, 18, true, AppDatabaseMigrations.MIGRATION_17_18)
+            .query("SELECT id, reading_state FROM books ORDER BY id").use { cursor ->
+                val states = buildList {
+                    while (cursor.moveToNext()) add(cursor.getString(1))
+                }
+                assertEquals(listOf("completed", "reading", "to_read"), states)
+            }
+    }
 }

@@ -108,6 +108,12 @@ class HomeRepositoryImpl(
         totalPages = totalPages,
         userRating = userRating,
         updatedAtEpochMillis = updatedAtEpochMillis,
-        status = status
+        status = status,
+        readingState = readingState,
+        startedAtEpochMillis = startedAtEpochMillis,
+        completedAtEpochMillis = completedAtEpochMillis,
+        progressPercentage = progressPercentage,
+        progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
+        stateVersion = stateVersion
     )
 }

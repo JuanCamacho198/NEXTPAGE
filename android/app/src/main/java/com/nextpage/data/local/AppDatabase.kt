@@ -33,7 +33,7 @@ import com.nextpage.data.local.entity.SyncOutboxEntity
         SyncFileMappingEntity::class,
         DictionaryWordEntity::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

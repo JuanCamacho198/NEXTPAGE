@@ -1,6 +1,21 @@
 export type ProgressLike = {
   id: string;
   progressPercentage?: number | null;
+  readingStatus?: ReadingState | null;
+};
+
+export type ReadingState = 'to_read' | 'reading' | 'completed';
+
+export const resolveReadingState = (
+  explicitState: ReadingState | null | undefined,
+  progressPercentage: number | null | undefined,
+): ReadingState => {
+  const progress = typeof progressPercentage === 'number' && Number.isFinite(progressPercentage)
+    ? Math.min(100, Math.max(0, progressPercentage))
+    : 0;
+  if (explicitState === 'completed' || progress >= 100) return 'completed';
+  if (explicitState === 'reading' || progress > 0) return 'reading';
+  return 'to_read';
 };
 
 export type AppRoute =
@@ -550,9 +565,10 @@ export const getSafeProgressPercentage = (
   return clamp(raw, 0, 100);
 };
 
-export const isBookInProgress = (book: Pick<ProgressLike, 'progressPercentage'>): boolean => {
-  const progress = getSafeProgressPercentage(book);
-  return progress > 0 && progress < 100;
+export const isBookInProgress = (
+  book: Pick<ProgressLike, 'progressPercentage' | 'readingStatus'>,
+): boolean => {
+  return resolveReadingState(book.readingStatus, book.progressPercentage) === 'reading';
 };
 
 export const partitionHomeBooks = <TBook extends ProgressLike>(
@@ -570,7 +586,6 @@ export const partitionHomeBooks = <TBook extends ProgressLike>(
     seenIds.add(book.id);
     if (isBookInProgress(book)) {
       continueReadingBooks.push(book);
-      continue;
     }
 
     myShelfBooks.push(book);

@@ -180,14 +180,8 @@ fun LibraryScreen(
 
                     val firstDownloadError by viewModel.firstDownloadError.collectAsState()
 
-                    DownloadableBooksSection(
-                        books = uiState.downloadableBooks,
-                        downloadStateMap = uiState.downloadState,
-                        firstError = firstDownloadError,
-                        onDownload = { bookId -> viewModel.downloadBook(bookId) },
-                        onDismissError = { viewModel.dismissDownloadError(it) }
-                    )
-
+                    // D7: Disponibles section lives INSIDE the shared scroll
+                    // container as the first (full-span) item so it scrolls away.
                     BookGridSection(
                         books = searchedBooks,
                         readingMinutesByBook = uiState.readingMinutesByBook,
@@ -198,7 +192,16 @@ fun LibraryScreen(
                         onEdit = { book -> viewModel.requestEditBook(book) },
                         onMarkCompleted = { book -> viewModel.onMenuMarkCompleted(book) },
                         onMarkPlanToRead = { book -> viewModel.onMenuMarkPlanToRead(book) },
-                        onShare = { book -> viewModel.onMenuShare(book) }
+                        onShare = { book -> viewModel.onMenuShare(book) },
+                        headerContent = {
+                            DownloadableBooksSection(
+                                books = uiState.downloadableBooks,
+                                downloadStateMap = uiState.downloadState,
+                                firstError = firstDownloadError,
+                                onDownload = { bookId -> viewModel.downloadBook(bookId) },
+                                onDismissError = { viewModel.dismissDownloadError(it) }
+                            )
+                        }
                     )
                 }
             }

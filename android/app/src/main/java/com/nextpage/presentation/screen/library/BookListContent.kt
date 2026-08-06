@@ -11,6 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nextpage.domain.model.Book
 
+/**
+ * List view: ONE shared [LazyColumn] where the Disponibles section (header)
+ * is the first item and scrolls away with the list (D7). No pinned Column.
+ */
 @Composable
 fun BookList(
     books: List<Book>,
@@ -20,7 +24,8 @@ fun BookList(
     onEdit: (Book) -> Unit,
     onMarkCompleted: (Book) -> Unit,
     onMarkPlanToRead: (Book) -> Unit,
-    onShare: (Book) -> Unit
+    onShare: (Book) -> Unit,
+    headerContent: (@Composable () -> Unit)? = null
 ) {
     LazyColumn(
         modifier = Modifier
@@ -29,6 +34,11 @@ fun BookList(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
+        if (headerContent != null) {
+            item(key = "downloadable_header", contentType = { "header" }) {
+                headerContent()
+            }
+        }
         items(books, key = { it.id }) { book ->
             BookListCard(
                 book = book,

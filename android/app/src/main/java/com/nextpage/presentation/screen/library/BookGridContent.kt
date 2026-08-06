@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -24,7 +25,8 @@ fun BookGridSection(
     onEdit: (Book) -> Unit,
     onMarkCompleted: (Book) -> Unit,
     onMarkPlanToRead: (Book) -> Unit,
-    onShare: (Book) -> Unit
+    onShare: (Book) -> Unit,
+    headerContent: (@Composable () -> Unit)? = null
 ) {
     if (isGridView) {
         BookGrid(
@@ -36,7 +38,8 @@ fun BookGridSection(
             onEdit = onEdit,
             onMarkCompleted = onMarkCompleted,
             onMarkPlanToRead = onMarkPlanToRead,
-            onShare = onShare
+            onShare = onShare,
+            headerContent = headerContent
         )
     } else {
         BookList(
@@ -47,11 +50,17 @@ fun BookGridSection(
             onEdit = onEdit,
             onMarkCompleted = onMarkCompleted,
             onMarkPlanToRead = onMarkPlanToRead,
-            onShare = onShare
+            onShare = onShare,
+            headerContent = headerContent
         )
     }
 }
 
+/**
+ * Grid view: ONE shared [LazyVerticalStaggeredGrid] where the Disponibles
+ * section (header) is the full-span first item and scrolls away with the grid
+ * (D7). No pinned Column.
+ */
 @Composable
 fun BookGrid(
     books: List<Book>,
@@ -62,7 +71,8 @@ fun BookGrid(
     onEdit: (Book) -> Unit,
     onMarkCompleted: (Book) -> Unit,
     onMarkPlanToRead: (Book) -> Unit,
-    onShare: (Book) -> Unit
+    onShare: (Book) -> Unit,
+    headerContent: (@Composable () -> Unit)? = null
 ) {
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(2),
@@ -73,6 +83,11 @@ fun BookGrid(
         verticalItemSpacing = 16.dp,
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
+        if (headerContent != null) {
+            item(span = StaggeredGridItemSpan.FullLine, key = "downloadable_header", contentType = { "header" }) {
+                headerContent()
+            }
+        }
         items(books, key = { it.id }, contentType = { "book" }) { book ->
             BookGridCard(
                 book = book,

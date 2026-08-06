@@ -1,6 +1,8 @@
 package com.nextpage.presentation.screen.settings
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,7 +33,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nextpage.BuildConfig
 import com.nextpage.R
+import com.nextpage.data.remote.drive.DriveTokenStore
+import com.nextpage.data.remote.drive.EncryptedDriveTokenStore
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
+import com.nextpage.data.remote.drive.InMemoryDriveTokenStore
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.ui.components.molecules.NextPagePreferenceItem
 import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
@@ -45,10 +50,41 @@ fun SettingsDataStorageScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val readerPreferences = remember { ReaderPreferences(context) }
-    val driveAuthHelper = remember { GoogleDriveAuthHelper(context) }
+    val tokenStore: DriveTokenStore = remember {
+        runCatching { EncryptedDriveTokenStore(context) }
+            .getOrElse { InMemoryDriveTokenStore() }
+    }
 
     var isAuthorizing by remember { mutableStateOf(false) }
-    var driveAuthorized by remember { mutableStateOf(readerPreferences.driveAccessToken != null) }
+    var driveAuthorized by remember { mutableStateOf(tokenStore.isAuthorized()) }
+
+    val oauthErrorText = stringResource(R.string.settings_drive_error_oauth)
+
+    val driveAuthHelper = remember {
+        GoogleDriveAuthHelper(
+            context = context,
+            clientId = BuildConfig.GOOGLE_OAUTH_CLIENT_ID,
+            tokenStore = tokenStore
+        )
+    }
+
+    val signInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        scope.launch {
+            val token = driveAuthHelper.handleSignInResult(result.data)
+            isAuthorizing = false
+            if (token != null) {
+                driveAuthorized = true
+            } else {
+                Toast.makeText(
+                    context,
+                    oauthErrorText,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
 
     NextPageSettingsSubPage(
         title = stringResource(R.string.settings_data_storage_title),
@@ -105,7 +141,7 @@ fun SettingsDataStorageScreen(
             driveAuthorized -> {
                 OutlinedButton(
                     onClick = {
-                        readerPreferences.clearDriveTokens()
+                        tokenStore.clear()
                         driveAuthorized = false
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -116,7 +152,6 @@ fun SettingsDataStorageScreen(
             }
             else -> {
                 val errorConfigText = stringResource(R.string.settings_drive_error_config)
-                val errorOAuthText = stringResource(R.string.settings_drive_error_oauth)
                 Button(
                     onClick = {
                         val clientId = BuildConfig.GOOGLE_OAUTH_CLIENT_ID
@@ -130,20 +165,7 @@ fun SettingsDataStorageScreen(
                         }
 
                         isAuthorizing = true
-                        scope.launch {
-                            val token = driveAuthHelper.authorize(clientId)
-                            isAuthorizing = false
-                            if (token != null) {
-                                readerPreferences.driveAccessToken = token
-                                driveAuthorized = true
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    errorOAuthText,
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        }
+                        signInLauncher.launch(driveAuthHelper.signInClient().signInIntent)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),

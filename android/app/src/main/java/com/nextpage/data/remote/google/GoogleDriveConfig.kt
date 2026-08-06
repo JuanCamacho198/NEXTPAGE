@@ -51,5 +51,14 @@ data class GoogleDriveConfig(
 
     companion object {
         const val COMPONENT = "GoogleDriveConfig"
+
+        /** OAuth scope required for Drive access via the `drive.file` grant. */
+        const val DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file"
+
+        /** Google OAuth token endpoint for exchanging auth/refresh codes. */
+        const val GOOGLE_OAUTH_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
+
+        /** Google OAuth authorization endpoint used by the OAuth authorization-code flow. */
+        const val GOOGLE_OAUTH_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
     }
 }

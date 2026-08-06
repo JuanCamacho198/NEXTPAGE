@@ -9,6 +9,7 @@
  */
 import { getSessionClient } from '$lib/services/supabase';
 import type { SupabaseClient, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import type { ReadingStatus } from '$lib/shared/types';
 
 export interface SupabaseProgressRow {
   id?: string;
@@ -19,6 +20,9 @@ export interface SupabaseProgressRow {
   currentPage?: number | null;
   locatorJson?: string | null;
   version?: number;
+  readingState?: ReadingStatus;
+  stateVersion?: number;
+  deviceId?: string;
   updatedAt: string;
 }
 
@@ -91,6 +95,9 @@ export class SupabaseProgressSync {
         percentage: progress.percentage,
         current_page: progress.currentPage ?? null,
         locator_json: progress.locatorJson ?? null,
+        reading_state: progress.readingState ?? null,
+        state_version: progress.stateVersion ?? progress.version ?? 1,
+        device_id: progress.deviceId ?? null,
         updated_at: progress.updatedAt,
       },
       {
@@ -500,6 +507,9 @@ export class SupabaseProgressSync {
       currentPage: row.current_page != null ? Number(row.current_page) : null,
       locatorJson: row.locator_json != null ? String(row.locator_json) : null,
       version: Number(row.version ?? 1),
+      readingState: row.reading_state as ReadingStatus | undefined,
+      stateVersion: Number(row.state_version ?? row.version ?? 1),
+      deviceId: row.device_id != null ? String(row.device_id) : undefined,
       updatedAt: String(row.updated_at ?? new Date().toISOString()),
     };
   }

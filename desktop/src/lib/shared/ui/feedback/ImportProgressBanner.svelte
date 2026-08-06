@@ -89,6 +89,7 @@
     data-status={notice.status}
     role={notice.status === 'error' ? 'alert' : 'status'}
     aria-live={notice.status === 'error' ? 'assertive' : 'polite'}
+    tabindex="-1"
     class="fixed top-0 left-0 right-0 z-40 border-b shadow-sm {containerClass}"
     transition:fly={{ y: -24, duration: 220, easing: cubicOut, opacity: 0 }}
   >

@@ -140,6 +140,7 @@
     <string name="book_card_options">Options</string>
     <string name="book_card_edit_metadata">Edit metadata</string>
     <string name="book_card_remove_from_library">Remove from library</string>
+    <string name="book_card_progress">Reading progress: %1$d percent</string>
 
     <!-- Sync -->
     <string name="sync_status_synced">Synced</string>

@@ -10,6 +10,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageBookCover
 import com.nextpage.ui.components.atoms.NextPageProgressBar
@@ -55,11 +57,13 @@ fun BookCard(
     onDeleteClick: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val progressDescription = stringResource(R.string.book_card_progress, (progress.coerceIn(0f, 1f) * 100).toInt())
     
     Box(modifier = modifier) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
+                .semantics { contentDescription = "$title, $progressDescription" }
                 .clickable(onClick = onClick),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surface,
@@ -88,10 +92,12 @@ fun BookCard(
                     maxLines = 1
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                NextPageProgressBar(
-                    progress = progress,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            NextPageProgressBar(
+                progress = progress,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = progressDescription }
+            )
             }
         }
         

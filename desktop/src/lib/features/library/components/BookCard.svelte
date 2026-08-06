@@ -48,7 +48,10 @@
   });
 </script>
 
-<article class={`${containerClass} transition-all duration-200`}>
+<article
+  class={`${containerClass} transition-all duration-200`}
+  aria-label={`${book.title}, ${book.author || t('app.unknownAuthor')}, ${progress}%`}
+>
   <div class="flex items-start justify-between gap-3">
     <button type="button" class="min-w-0 flex-1 text-left" onclick={onSelect}>
       <div class="flex items-start gap-3">
@@ -94,7 +97,15 @@
                 <span>{progress}%</span>
               </div>
               <div class="h-1.5 w-full overflow-hidden rounded bg-(--color-border)">
-                <div class="h-full rounded bg-(--color-primary)" style={`width:${progress}%`}></div>
+                <div
+                  class="h-full rounded bg-(--color-primary)"
+                  style={`width:${progress}%`}
+                  role="progressbar"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow={progress}
+                  aria-label={t('home.shelfSort.progress')}
+                ></div>
               </div>
             </div>
           {/if}

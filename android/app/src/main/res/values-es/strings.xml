@@ -359,6 +359,7 @@
     <string name="book_card_options">Opciones</string>
     <string name="book_card_edit_metadata">Editar metadatos</string>
     <string name="book_card_remove_from_library">Eliminar de estantería</string>
+    <string name="book_card_progress">Progreso de lectura: %1$d por ciento</string>
 
     <!-- Sync -->
     <string name="sync_status_synced">Sincronizado</string>

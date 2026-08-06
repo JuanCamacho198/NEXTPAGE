@@ -44,6 +44,9 @@ export class SyncService {
   /** Singleton outbox service for processing queued sync items. */
   private static outboxService: SyncOutboxService | null = null;
 
+  /** Shared in-flight startup sync so repeated auth wiring cannot duplicate work. */
+  private static metadataSyncPromise: Promise<void> | null = null;
+
   /**
    * Override the sync mode at runtime.
    * - 'drive': legacy Drive-only (no Supabase writes)
@@ -276,7 +279,21 @@ export class SyncService {
   static async syncMetadata(): Promise<void> {
     if (!authState.isSignedIn) return;
 
-    await Promise.all([this.syncBooks(), this.syncState(), this.syncBookCatalog()]);
+    if (this.metadataSyncPromise) return this.metadataSyncPromise;
+
+    const syncPromise = Promise.all([this.syncBooks(), this.syncState(), this.syncBookCatalog()])
+      .then(() => undefined)
+      .catch((error: unknown) => {
+        console.error('Failed to sync startup metadata:', error);
+      })
+      .finally(() => {
+        if (this.metadataSyncPromise === syncPromise) {
+          this.metadataSyncPromise = null;
+        }
+      });
+
+    this.metadataSyncPromise = syncPromise;
+    return syncPromise;
   }
 
   /**

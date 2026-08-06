@@ -642,10 +642,12 @@ export class AppState {
     // router never renders a flash of the wrong screen. Cache read failures
     // are non-fatal: the app degrades to the welcome screen.
     let initialRoute: AppRoute = 'welcome';
+    let restoredAuthenticatedSession = false;
     try {
       // 1. Try restoring a Supabase session (persisted via TauriStorage adapter)
       const supabaseSession = await restoreSession();
       if (supabaseSession) {
+        restoredAuthenticatedSession = true;
         setSupabaseSession({
           accessToken: supabaseSession.access_token,
           refreshToken: supabaseSession.refresh_token,
@@ -663,12 +665,7 @@ export class AppState {
           providerToken: supabaseSession.provider_token ?? null,
         });
 
-        // Start cross-device progress sync via Realtime
-        this.reader.subscribeToRemoteProgress();
-
-        // Start cross-device book catalog sync via outbox + reconciliation
-        SyncService.setupOutboxProcessor();
-        SyncService.syncBookCatalog(); // fire-and-forget
+        this.startAuthenticatedSync();
 
         initialRoute = 'home';
       } else {
@@ -700,7 +697,7 @@ export class AppState {
     // exists (restored session, anonymous sign-in, or error recovery).
     // Idempotent — safe if already started in the restored-session branch.
     SyncService.setupOutboxProcessor();
-    if (authState.userId) {
+    if (authState.userId && !restoredAuthenticatedSession) {
       SyncService.syncBookCatalog(); // fire-and-forget
     }
 
@@ -708,9 +705,7 @@ export class AppState {
     // runtime (via the loopback callback handler) trigger a navigation to home.
     getSessionClient().auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        // Start book catalog sync on sign-in
-        SyncService.setupOutboxProcessor(); // idempotent
-        SyncService.syncBookCatalog();      // fire-and-forget
+        this.startAuthenticatedSync();
 
         // Only navigate away from welcome — if already elsewhere, stay put
         if (this.navigation.route === 'welcome') {
@@ -754,9 +749,16 @@ export class AppState {
     authState.clearSupabaseSession();
     await clearPersistedAuth();
     await signOut();
-    this.reader.unsubscribeFromRemoteProgress();
+    this.reader.unsubscribeFromAllRemoteChanges();
     this.navigateToWelcome();
   };
+  private startAuthenticatedSync(): void {
+    SyncService.setupOutboxProcessor();
+    this.reader.subscribeToAllRemoteChanges();
+    void SyncService.syncMetadata().catch((error: unknown) => {
+      console.error('Startup sync failed; continuing offline:', error);
+    });
+  }
   // ─── Internal helpers ───
   // (removed _reconcileAfterBookChange — replaced by full reconcileHomeState in handleHideBook and handleMarkCompleted)
 }

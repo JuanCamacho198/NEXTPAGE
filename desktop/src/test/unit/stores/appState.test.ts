@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { appState } from '$lib/shared/stores/AppState.svelte';
 import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
+import { authState } from '$lib/stores/authState.svelte';
 
 const mockReadFile = vi.hoisted(() =>
   vi.fn<(...args: unknown[]) => Promise<Uint8Array>>().mockResolvedValue(new Uint8Array([1, 2, 3])),
@@ -37,6 +38,10 @@ vi.mock('$lib/shared/i18n', () => ({
 
 const mockGetProgress = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 const mockGetReadingStats = vi.hoisted(() => vi.fn().mockResolvedValue(null));
+const mockRestoreSession = vi.hoisted(() => vi.fn().mockResolvedValue(null));
+const mockSyncMetadata = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockSetupOutboxProcessor = vi.hoisted(() => vi.fn());
+const mockOnAuthStateChange = vi.hoisted(() => vi.fn().mockReturnValue({ data: { subscription: null } }));
 
 vi.mock('$lib/shared/api/tauriClient', () => {
   const rf = vi.fn(function () {
@@ -99,12 +104,26 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 }));
 
 vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
-  restoreSession: vi.fn(async () => null),
+  restoreSession: mockRestoreSession,
   signInAnonymously: vi.fn(async () => undefined),
   signOut: vi.fn(async () => undefined),
   getDriveToken: vi.fn(async () => null),
   registerSupabaseCallbackHandler: vi.fn(async () => undefined),
   unregisterCallbackHandler: vi.fn(),
+}));
+
+vi.mock('$lib/shared/services/SyncService', () => ({
+  SyncService: {
+    setupOutboxProcessor: mockSetupOutboxProcessor,
+    syncMetadata: mockSyncMetadata,
+    syncBookCatalog: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+vi.mock('$lib/services/supabase', () => ({
+  getSessionClient: vi.fn(() => ({
+    auth: { onAuthStateChange: mockOnAuthStateChange },
+  })),
 }));
 
 vi.mock('$lib/stores/authPersistence', () => ({
@@ -206,6 +225,53 @@ describe('AppState', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetAppState();
+    authState.clearSupabaseSession();
+    mockRestoreSession.mockResolvedValue(null);
+    mockSyncMetadata.mockResolvedValue(undefined);
+    mockOnAuthStateChange.mockReturnValue({ data: { subscription: null } });
+  });
+
+  it('restored authenticated startup syncs metadata and all realtime changes once', async () => {
+    mockRestoreSession.mockResolvedValue({
+      access_token: 'access-token',
+      refresh_token: 'refresh-token',
+      expires_at: 1_900_000_000,
+      user: { id: 'user-1', email: 'user@example.com', user_metadata: {} },
+      provider_token: null,
+    });
+    const subscribeAll = vi
+      .spyOn(appState.reader, 'subscribeToAllRemoteChanges')
+      .mockImplementation(() => undefined);
+
+    await appState.init();
+
+    expect(mockSyncMetadata).toHaveBeenCalledTimes(1);
+    expect(subscribeAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not block startup when restored-session sync fails', async () => {
+    mockRestoreSession.mockResolvedValue({
+      access_token: 'access-token',
+      refresh_token: 'refresh-token',
+      expires_at: 1_900_000_000,
+      user: { id: 'user-1', email: 'user@example.com', user_metadata: {} },
+      provider_token: null,
+    });
+    mockSyncMetadata.mockRejectedValue(new Error('offline'));
+    vi.spyOn(appState.reader, 'subscribeToAllRemoteChanges').mockImplementation(() => undefined);
+
+    await expect(appState.init()).resolves.toBeUndefined();
+    expect(appState.isInitialized).toBe(true);
+  });
+
+  it('logout clears every remote realtime subscription', async () => {
+    const unsubscribeAll = vi
+      .spyOn(appState.reader, 'unsubscribeFromAllRemoteChanges')
+      .mockImplementation(() => undefined);
+
+    await appState.signOutAndReturnToWelcome();
+
+    expect(unsubscribeAll).toHaveBeenCalledTimes(1);
   });
 
   // ─── Preload (startReading) ───

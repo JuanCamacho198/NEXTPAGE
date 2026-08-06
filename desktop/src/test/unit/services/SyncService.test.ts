@@ -137,6 +137,21 @@ describe('SyncService — auth gate', () => {
 
     expect(mockListBooks).toHaveBeenCalled();
   });
+
+  it('shares one in-flight metadata sync across concurrent callers', async () => {
+    mockIsSignedIn.mockReturnValue(true);
+    let releaseDriveList!: () => void;
+    mockGDriveList.mockImplementation(
+      () => new Promise<string[]>((resolve) => { releaseDriveList = () => resolve([]); }),
+    );
+
+    const first = SyncService.syncMetadata();
+    const second = SyncService.syncMetadata();
+
+    expect(mockGDriveList).toHaveBeenCalledTimes(1);
+    releaseDriveList();
+    await Promise.all([first, second]);
+  });
 });
 
 describe('SyncService — book file sync', () => {

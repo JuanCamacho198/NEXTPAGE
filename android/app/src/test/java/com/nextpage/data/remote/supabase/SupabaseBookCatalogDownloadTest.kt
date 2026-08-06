@@ -230,6 +230,9 @@ class SupabaseBookCatalogDownloadTest {
             val existing = byId[bookId] ?: return
             byId[bookId] = existing.copy(status = status, updatedAtEpochMillis = updatedAt)
         }
+        override suspend fun startReading(bookId: String, updatedAt: Long) {}
+        override suspend fun updateReadingProgress(bookId: String, progress: Float, updatedAt: Long) {}
+        override suspend fun completeReading(bookId: String, updatedAt: Long) {}
         override suspend fun updateMetadata(
             bookId: String, title: String, author: String?, description: String?, coverPath: String?, updatedAt: Long
         ) {

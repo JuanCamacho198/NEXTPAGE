@@ -36,6 +36,15 @@ interface BookDao {
     @Query("UPDATE books SET status = :status, updated_at = :updatedAt WHERE id = :bookId")
     suspend fun updateStatus(bookId: String, status: String?, updatedAt: Long)
 
+    @Query("UPDATE books SET reading_state = 'reading', started_at = COALESCE(started_at, :updatedAt), updated_at = :updatedAt, state_version = state_version + 1 WHERE id = :bookId AND deleted_at IS NULL")
+    suspend fun startReading(bookId: String, updatedAt: Long)
+
+    @Query("UPDATE books SET reading_state = CASE WHEN :progress >= 100 THEN 'completed' ELSE 'reading' END, completed_at = CASE WHEN :progress >= 100 THEN :updatedAt ELSE completed_at END, progress_percentage = :progress, progress_updated_at = :updatedAt, updated_at = :updatedAt, state_version = state_version + 1 WHERE id = :bookId AND deleted_at IS NULL")
+    suspend fun updateReadingProgress(bookId: String, progress: Float, updatedAt: Long)
+
+    @Query("UPDATE books SET reading_state = 'completed', completed_at = :updatedAt, progress_percentage = 100, progress_updated_at = :updatedAt, updated_at = :updatedAt, state_version = state_version + 1 WHERE id = :bookId AND deleted_at IS NULL")
+    suspend fun completeReading(bookId: String, updatedAt: Long)
+
     @Query("UPDATE books SET title = :title, author = :author, description = :description, cover_path = :coverPath, updated_at = :updatedAt WHERE id = :bookId")
     suspend fun updateMetadata(
         bookId: String,

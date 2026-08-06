@@ -9,6 +9,7 @@ import {
   deleteBookmark,
   saveHighlight,
   deleteHighlight,
+  setReadingStatus,
 } from '$lib/shared/api/tauriClient';
 import type { ReaderBook, ReadingSessionInput, ReadingProgressDto, SaveProgressInput } from '$lib/shared/types';
 import { authState } from '$lib/stores/authState.svelte';
@@ -62,6 +63,10 @@ class ReaderDomainState {
     const epoch = ++this.openEpoch;
     this.activeReadingBookId = book.id;
     this.preloadedBytes = null;
+
+    // Persist the lifecycle transition before reader data becomes available.
+    // This keeps a zero-progress start visible in Continue Reading.
+    await setReadingStatus(book.id, 'reading').catch(() => {});
 
     const format = book.format.toLowerCase();
 
@@ -188,6 +193,7 @@ class ReaderDomainState {
 
     try {
       await saveProgress(payload);
+      await setReadingStatus(bookId, this.percentage >= 100 ? 'completed' : 'reading');
 
       // If signed in, queue Supabase sync via outbox
       if (authState.userId) {

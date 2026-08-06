@@ -45,4 +45,10 @@ interface LibraryRepository {
     ): Result<Unit>
 
     suspend fun getBookById(bookId: String): Book?
+
+    suspend fun startReading(bookId: String): Result<Unit> = Result.success(Unit)
+
+    suspend fun updateReadingProgress(bookId: String, progress: Float): Result<Unit> = Result.success(Unit)
+
+    suspend fun completeReading(bookId: String): Result<Unit> = Result.success(Unit)
 }

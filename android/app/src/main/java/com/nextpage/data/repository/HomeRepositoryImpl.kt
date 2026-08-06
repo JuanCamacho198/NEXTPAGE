@@ -32,10 +32,15 @@ class HomeRepositoryImpl(
         }
 
     override fun observeCurrentBook(): Flow<Book?> =
-        // Current book is the most recently read book
-        // (simplified: use the most recently updated book)
         bookDao.observeAllBooks().map { entities ->
-            entities.maxByOrNull { it.updatedAtEpochMillis }?.toBook()
+            entities.asSequence()
+                .filter { it.readingState == "reading" && it.progressPercentage < 100f }
+                .sortedWith(
+                    compareByDescending<com.nextpage.data.local.entity.BookEntity> {
+                        it.progressUpdatedAtEpochMillis ?: Long.MIN_VALUE
+                    }.thenByDescending { it.updatedAtEpochMillis }.thenBy { it.id }
+                )
+                .firstOrNull()?.toBook()
         }
 
     override fun observeCurrentBookProgress(): Flow<Float> =

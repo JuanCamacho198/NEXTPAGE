@@ -12,6 +12,7 @@ const mockGetProgress = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 const mockSaveProgress = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockSaveReadingSession = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockUpdateBookProgress = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockSetReadingStatus = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockFetchBookState = vi.hoisted(() => vi.fn().mockResolvedValue({ progress: null, bookmarks: [], highlights: [] }));
 const mockAuthState = vi.hoisted(() => ({ userId: null as string | null }));
 
@@ -27,6 +28,7 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
   saveProgress: mockSaveProgress,
   saveReadingSession: mockSaveReadingSession,
   updateBookProgress: mockUpdateBookProgress,
+  setReadingStatus: mockSetReadingStatus,
 }));
 
 vi.mock('$lib/stores/authState.svelte', () => ({ authState: mockAuthState }));

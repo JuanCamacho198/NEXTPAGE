@@ -146,6 +146,19 @@ class LibraryRepositoryImpl(
     override suspend fun getBookById(bookId: String): Book? =
         bookDao.getBookById(bookId)?.toDomain()
 
+    override suspend fun startReading(bookId: String): Result<Unit> = runCatching {
+        bookDao.startReading(bookId, System.currentTimeMillis())
+    }
+
+    override suspend fun updateReadingProgress(bookId: String, progress: Float): Result<Unit> = runCatching {
+        val bounded = progress.coerceIn(0f, 100f)
+        bookDao.updateReadingProgress(bookId, bounded, System.currentTimeMillis())
+    }
+
+    override suspend fun completeReading(bookId: String): Result<Unit> = runCatching {
+        bookDao.completeReading(bookId, System.currentTimeMillis())
+    }
+
     override suspend fun deleteBook(bookId: String): Result<Unit> = runCatching {
         // Clean up cover file first (idempotent — no-op if missing)
         coverStorage.deleteCover(bookId).getOrNull()

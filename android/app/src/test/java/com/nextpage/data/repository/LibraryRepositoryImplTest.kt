@@ -459,6 +459,9 @@ class LibraryRepositoryImplTest {
                 if (book.id == bookId) book.copy(status = status, updatedAtEpochMillis = updatedAt) else book
             }
         }
+        override suspend fun startReading(bookId: String, updatedAt: Long) {}
+        override suspend fun updateReadingProgress(bookId: String, progress: Float, updatedAt: Long) {}
+        override suspend fun completeReading(bookId: String, updatedAt: Long) {}
 
         override suspend fun updateMetadata(
             bookId: String,

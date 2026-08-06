@@ -5,6 +5,7 @@ Thumbs.db
 # IDE
 .idea/
 *.iml
+.codegraph
 
 # Android / Gradle
 .gradle/

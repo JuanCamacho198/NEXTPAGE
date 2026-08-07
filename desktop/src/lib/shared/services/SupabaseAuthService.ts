@@ -26,6 +26,7 @@ import { savePersistedAuth } from '$lib/stores/authPersistence';
 import { authState } from '$lib/stores/authState.svelte';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 import { logger } from '$lib/shared/logger/Logger';
+import { DRIVE_SCOPE } from '$lib/shared/protocol/DriveCatalogContract';
 
 let currentPort: number | null = null;
 let urlUnlisten: (() => void) | null = null;
@@ -214,7 +215,7 @@ export async function signInWithGoogle(): Promise<void> {
       queryParams: {
         access_type: 'offline',
         prompt: 'consent',
-        scope: 'openid email profile https://www.googleapis.com/auth/drive.appdata',
+        scope: `openid email profile ${DRIVE_SCOPE}`,
       },
     },
   });

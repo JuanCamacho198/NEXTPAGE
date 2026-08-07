@@ -292,42 +292,67 @@ export class SyncService {
       const remoteIds = new Set(remoteBooks.map((b) => b.id));
       const localIds = new Set(localBooks.map((b) => b.id));
 
-      // 3. Reconcile: push any local book missing from remote catalog
+      // 3. Reconcile: push any local book missing from remote catalog, or
+      // present in the catalog but without a Drive remote ref (the outbox
+      // BOOK/UPSERT may have been lost silently, leaving metadata-only rows).
       for (const book of localBooks) {
-        if (!remoteIds.has(book.id)) {
+        const remoteBook = remoteBooks.find((rb) => rb.id === book.id);
+        const missingFromCatalog = !remoteIds.has(book.id);
+        const missingRemoteRef = Boolean(remoteBook && !remoteBook.remoteProvider);
+        if (!missingFromCatalog && !missingRemoteRef) continue;
+        try {
+          // Cover upload: try to read the cover file and upload to Storage
+          let coverUrl: string | null = null;
           try {
-            // Cover upload: try to read the cover file and upload to Storage
-            let coverUrl: string | null = null;
-            try {
-              if (book.coverPath) {
-                const coverBytes = await tauri.getFileBytes(book.coverPath);
-                coverUrl = await catalogSync.uploadCover(
-                  authState.userId,
-                  book.id,
-                  new Uint8Array(coverBytes).buffer as ArrayBuffer,
-                );
-              }
-            } catch (e) {
-              console.warn('Cover upload failed for book', book.id, e);
+            if (book.coverPath) {
+              const coverBytes = await tauri.getFileBytes(book.coverPath);
+              coverUrl = await catalogSync.uploadCover(
+                authState.userId,
+                book.id,
+                new Uint8Array(coverBytes).buffer as ArrayBuffer,
+              );
             }
-
-            await catalogSync.upsertBook({
-              id: book.id,
-              userId: authState.userId,
-              title: book.title,
-              author: book.author || null,
-              format: book.format,
-              filePath: book.filePath || null,
-              coverUrl: coverUrl,
-              description: null,
-              totalPages: book.totalPages > 0 ? book.totalPages : null,
-              sourceDevice: 'desktop',
-              importedAt: book.createdAt,
-              updatedAt: book.updatedAt,
-            });
           } catch (e) {
-            console.error(`Failed to push local book ${book.id} to catalog:`, e);
+            console.warn('Cover upload failed for book', book.id, e);
           }
+
+          // Binary upload to Drive + remote-ref persistence (DRP-1) when the
+          // local file exists and the catalog row has no remote ref yet. The
+          // upload must succeed before refs are written; on failure the error
+          // is non-blocking for metadata but no partial refs are persisted.
+          let remoteRefs: ReturnType<typeof buildRemoteRefs> | null = null;
+          if (book.filePath && missingRemoteRef) {
+            try {
+              const fileBytes = await tauri.getFileBytes(book.filePath);
+              const expectedName = canonicalBookName(book.id, book.format);
+              const fileId = await this.gdrive.upload(
+                book.id,
+                new Uint8Array(fileBytes),
+                expectedName,
+              );
+              remoteRefs = buildRemoteRefs(book.id, book.format, fileId);
+            } catch (e) {
+              console.error(`Failed to upload book file for ${book.id}:`, e);
+            }
+          }
+
+          await catalogSync.upsertBook({
+            id: book.id,
+            userId: authState.userId,
+            title: book.title,
+            author: book.author || null,
+            format: book.format,
+            filePath: book.filePath || null,
+            coverUrl: coverUrl,
+            description: null,
+            totalPages: book.totalPages > 0 ? book.totalPages : null,
+            sourceDevice: 'desktop',
+            importedAt: book.createdAt,
+            updatedAt: book.updatedAt,
+            ...(remoteRefs ?? {}),
+          });
+        } catch (e) {
+          console.error(`Failed to push local book ${book.id} to catalog:`, e);
         }
       }
 

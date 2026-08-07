@@ -14,6 +14,7 @@ let mockPushState = vi.fn();
 let mockPullState = vi.fn();
 let mockListStateFiles = vi.fn();
 let mockListBooks = vi.fn();
+let mockListLibraryBooks = vi.fn();
 let mockGetProgress = vi.fn();
 let mockUpsertProgress = vi.fn();
 let mockUpsertBook = vi.fn();
@@ -102,7 +103,7 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
   fileExists: (path: string) => mockFileExists(path),
   saveBookFile: (id: string, data: number[]) => mockSaveBookFile(id, data),
   getFileBytes: (path: string) => mockGetFileBytes(path),
-  listLibraryBooks: () => Promise.resolve([]),
+  listLibraryBooks: () => mockListLibraryBooks(),
 }));
 
 vi.mock('$lib/shared/sync/SupabaseBookCatalogSync', async () => {
@@ -156,6 +157,7 @@ beforeEach(() => {
   mockHasLiveSession.mockReturnValue(true);
   mockReportAuthError.mockReturnValue(false);
   mockListBooks.mockResolvedValue([]);
+  mockListLibraryBooks.mockResolvedValue([]);
   mockGetProgress.mockResolvedValue(null);
   mockListHighlights.mockResolvedValue([]);
   mockListBookmarks.mockResolvedValue([]);
@@ -444,6 +446,87 @@ describe('SyncService — syncBooks persists remote refs for local-only uploads 
         recoveryProtocol: 'recovery_protocol_v1',
       }),
     );
+  });
+});
+
+describe('SyncService — syncBookCatalog reconciles books missing Drive refs (DRP-1 gap)', () => {
+  it('uploads binary + persists remote refs when the catalog row has no remoteProvider', async () => {
+    mockIsSignedIn.mockReturnValue(true);
+    // Local book exists with a file on disk.
+    const localBook = makeLocalBook('book-gap', 'Gap Book', '/tmp/book-gap.epub');
+    mockListBooks.mockResolvedValue([localBook]);
+    // Library listing provides coverPath for the same book.
+    mockListLibraryBooks.mockResolvedValue([{ ...localBook, coverPath: null }]);
+    // Remote catalog already has the row (metadata-only import), but no Drive ref.
+    mockCatalogFetchCatalog.mockResolvedValue([
+      {
+        id: 'book-gap',
+        userId: 'user-1',
+        title: 'Gap Book',
+        format: 'epub',
+        filePath: null,
+        coverUrl: null,
+        lifecycle: 'imported',
+        remoteProvider: null,
+        remoteFileId: null,
+        remotePath: null,
+        remoteName: null,
+        protocolVersion: null,
+        catalogVersion: 1,
+        recoveryProtocol: 'legacy',
+      },
+    ]);
+    mockGDriveUpload.mockResolvedValue('drive-file-gap');
+
+    await SyncService.syncMetadata();
+
+    // Binary upload under the canonical name, then refs persisted on the row.
+    expect(mockGDriveUpload).toHaveBeenCalledWith(
+      'book-gap',
+      new Uint8Array([1, 2, 3]),
+      'book-gap.epub',
+    );
+    expect(mockCatalogUpsertBook).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'book-gap',
+        remoteFileId: 'drive-file-gap',
+        remoteProvider: 'google_drive',
+        protocolVersion: 1,
+        recoveryProtocol: 'recovery_protocol_v1',
+      }),
+    );
+  });
+
+  it('skips binary upload when the catalog row already has a remote ref', async () => {
+    mockIsSignedIn.mockReturnValue(true);
+    const localBook = makeLocalBook('book-ok', 'Ok Book', '/tmp/book-ok.epub');
+    mockListBooks.mockResolvedValue([localBook]);
+    mockListLibraryBooks.mockResolvedValue([{ ...localBook, coverPath: null }]);
+    // File already on Drive → syncBooks() skips it; only the catalog reconcile runs.
+    mockGDriveList.mockResolvedValue(['book-ok.epub']);
+    mockCatalogFetchCatalog.mockResolvedValue([
+      {
+        id: 'book-ok',
+        userId: 'user-1',
+        title: 'Ok Book',
+        format: 'epub',
+        filePath: null,
+        coverUrl: null,
+        lifecycle: 'imported',
+        remoteProvider: 'google_drive',
+        remoteFileId: 'drive-file-ok',
+        remotePath: 'NextPage/Books/book-ok.epub',
+        remoteName: 'book-ok.epub',
+        protocolVersion: 1,
+        catalogVersion: 1,
+        recoveryProtocol: 'recovery_protocol_v1',
+      },
+    ]);
+
+    await SyncService.syncMetadata();
+
+    expect(mockGDriveUpload).not.toHaveBeenCalled();
+    expect(mockCatalogUpsertBook).not.toHaveBeenCalled();
   });
 });
 

@@ -127,9 +127,12 @@ export async function importBook(
         importedAt: book.createdAt,
         updatedAt: book.updatedAt,
       }));
-    } catch {
-      // Non-blocking — outbox write failure does not break the import UX.
-      // The reconciliation pass in syncBookCatalog() will catch any gaps.
+    } catch (e) {
+      // Non-blocking for the import UX, but must not be silent: if the outbox
+      // write fails, the metadata would only reach Supabase via the
+      // syncBookCatalog() reconciliation pass — and that pass needs to know the
+      // gap exists. Logging here keeps the failure observable.
+      console.error('Failed to enqueue BOOK outbox entry; syncBookCatalog will reconcile', e);
     }
 
     onProgress?.({

@@ -24,6 +24,7 @@ const mockSignOut = vi.fn();
 const mockSignInAnonymously = vi.fn();
 const mockRefreshSession = vi.fn();
 const mockDriveRefreshToken = vi.fn<() => string | null>();
+const mockGetLiveSession = vi.fn<() => unknown>(() => null);
 
 // ---- Mock layers ----
 
@@ -69,6 +70,7 @@ vi.mock('$lib/services/supabase', () => ({
       refreshSession: mockRefreshSession,
     },
   }),
+  getLiveSession: () => mockGetLiveSession(),
 }));
 
 vi.mock('$lib/shared/logger/Logger', () => ({
@@ -117,6 +119,7 @@ beforeEach(async () => {
   mockSignInAnonymously.mockResolvedValue({ data: { session: null }, error: null });
   mockRefreshSession.mockResolvedValue({ data: { session: null }, error: null });
   mockDriveRefreshToken.mockReturnValue(null);
+  mockGetLiveSession.mockReturnValue(null);
   globalThis.fetch = vi.fn();
 
   // 2. Clear module-level state (currentPort may be set from previous test)
@@ -471,6 +474,32 @@ describe('SupabaseAuthService — signInAnonymously', () => {
 
     // Should not throw — warning is logged
     await expect(sut.signInAnonymously()).resolves.toBeUndefined();
+    expect(mockSetSupabaseSession).not.toHaveBeenCalled();
+  });
+
+  it('no-ops entirely when a live session already exists (anon-clobber guard, DA-3)', async () => {
+    mockGetLiveSession.mockReturnValue({ user: { id: 'real-user-1' } });
+
+    await sut.signInAnonymously();
+
+    // Never reaches the Supabase client, never touches authState
+    expect(mockSignInAnonymously).not.toHaveBeenCalled();
+    expect(mockSetSupabaseSession).not.toHaveBeenCalled();
+  });
+
+  it('discards the anonymous result if a live session lands during the await (DA-3.1)', async () => {
+    const anonSession = makeMockSession({
+      email: null,
+      user: { id: 'anon-1', email: null, user_metadata: {} },
+      provider_token: null,
+    });
+    mockSignInAnonymously.mockResolvedValue({ data: { session: anonSession }, error: null });
+    // Passes the pre-check (cache empty), then a real session lands mid-flight
+    mockGetLiveSession.mockReturnValueOnce(null).mockReturnValue({ user: { id: 'real-user-1' } });
+
+    await sut.signInAnonymously();
+
+    expect(mockSignInAnonymously).toHaveBeenCalledTimes(1);
     expect(mockSetSupabaseSession).not.toHaveBeenCalled();
   });
 });

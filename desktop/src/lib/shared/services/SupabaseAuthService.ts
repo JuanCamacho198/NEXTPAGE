@@ -21,7 +21,7 @@ import { start, cancel, onUrl } from '@fabianlars/tauri-plugin-oauth';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import type { Session } from '@supabase/supabase-js';
 
-import { getSessionClient } from '$lib/services/supabase';
+import { getSessionClient, getLiveSession } from '$lib/services/supabase';
 import { savePersistedAuth } from '$lib/stores/authPersistence';
 import { authState } from '$lib/stores/authState.svelte';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
@@ -374,8 +374,14 @@ export async function signOut(): Promise<void> {
 /**
  * Sign in anonymously to get an auth context for RLS.
  * Used on app start when no session exists.
+ *
+ * DA-3: anonymous fallback applies ONLY when no real session can be restored.
+ * If any live session exists (real or anon), this no-ops — an anonymous
+ * sign-in must never clobber a real persisted session.
  */
 export async function signInAnonymously(): Promise<void> {
+  if (getLiveSession() !== null) return;
+
   const supabase = getSessionClient();
   const { data, error } = await supabase.auth.signInAnonymously();
 
@@ -384,7 +390,10 @@ export async function signInAnonymously(): Promise<void> {
     return;
   }
 
-  if (data.session) {
+  // Re-check after the await: a real session may have landed while the
+  // anonymous sign-in was in flight (e.g. OAuth callback completing) — in
+  // that case discard the anon result and keep the real session (DA-3.1).
+  if (data.session && getLiveSession() === null) {
     authState.setSupabaseSession({
       accessToken: data.session.access_token,
       refreshToken: data.session.refresh_token,

@@ -8,14 +8,20 @@ import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
 import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
 import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
 import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
-import { authState, setSupabaseSession } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/stores/authState.svelte';
 import {
   clearPersistedAuth,
   loadDriveRefreshToken,
   loadPersistedAuth,
   type LocalUserProfile,
 } from '$lib/stores/authPersistence';
-import { getSessionClient } from '$lib/services/supabase';
+import {
+  getSessionClient,
+  setLiveSession,
+  clearLiveSession,
+  getLiveSession,
+} from '$lib/services/supabase';
+import type { Session } from '@supabase/supabase-js';
 import {
   signInAnonymously,
   restoreSession,
@@ -657,23 +663,11 @@ export class AppState {
         // sign-in; survives supabase-js auto-refresh) — restore it for Drive
         // token refresh after restart (DTL-1).
         const driveRefreshToken = await loadDriveRefreshToken();
-        setSupabaseSession({
-          accessToken: supabaseSession.access_token,
-          refreshToken: supabaseSession.refresh_token,
-          expiresAt: supabaseSession.expires_at ? supabaseSession.expires_at * 1000 : null,
-          userId: supabaseSession.user.id,
-          email: supabaseSession.user.email ?? null,
-          displayName:
-            supabaseSession.user.user_metadata?.full_name ??
-            supabaseSession.user.user_metadata?.name ??
-            null,
-          photoUrl:
-            supabaseSession.user.user_metadata?.avatar_url ??
-            supabaseSession.user.user_metadata?.picture ??
-            null,
-          providerToken: supabaseSession.provider_token ?? null,
-          driveRefreshToken,
-        });
+        // Mirror the live session in the module-level cache BEFORE any gate
+        // runs; the INITIAL_SESSION event after subscribe is idempotent with
+        // this (D1/D2).
+        setLiveSession(supabaseSession);
+        this.hydrateAuthState(supabaseSession, driveRefreshToken);
 
         this.startAuthenticatedSync();
 
@@ -688,17 +682,22 @@ export class AppState {
           }
           // Legacy 'google' kind is discarded per MG-01
         } else {
-          // 3. No session at all — sign in anonymously for RLS context
+          // 3. No session at all — sign in anonymously for RLS context.
+          // signInAnonymously() itself no-ops when a live session exists (DA-3).
           await signInAnonymously();
         }
       }
     } catch (error) {
       console.error('Failed to read auth cache during init:', error);
-      // Ensure we have at least an anon session
-      try {
-        await signInAnonymously();
-      } catch {
-        // silent
+      // Ensure we have at least an anon session — but ONLY when no live
+      // session or profile exists (DA-3.1/DA-3.2). Never let the catch path
+      // clobber a real persisted session with an anonymous one.
+      if (getLiveSession() === null && authState.userId === null) {
+        try {
+          await signInAnonymously();
+        } catch {
+          // silent
+        }
       }
     }
     this.navigation.route = initialRoute;
@@ -713,8 +712,14 @@ export class AppState {
 
     // Subscribe to auth state changes so OAuth sign-ins that complete during
     // runtime (via the loopback callback handler) trigger a navigation to home.
+    // The live session mirror (liveSessionCache) is maintained here — this is
+    // the single onAuthStateChange subscription in the app (D1).
     getSessionClient().auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
+        setLiveSession(session);
+        // D4: fresh tokens clear any auth-class breaker pause from a stale/absent
+        // session so the outbox flush resumes immediately.
+        SyncService.resetOutboxBreaker();
         this.startAuthenticatedSync();
 
         // Only navigate away from welcome — if already elsewhere, stay put
@@ -722,6 +727,48 @@ export class AppState {
           this.navigation.route = 'home';
           this.loadLibrary();
           this.statsDomain.loadStats(undefined);
+        }
+        return;
+      }
+
+      if (event === 'SIGNED_OUT') {
+        // Session lost (refresh rejection, restore failure, sign-out): clear
+        // the live mirror + authState and halt authenticated sync within this
+        // event cycle (DA-1.1/DA-2.1). No silent anonymous fallback here — the
+        // app stays local-only until the user re-auths (DA-3).
+        clearLiveSession();
+        authState.clearSupabaseSession();
+        this.reader.unsubscribeFromAllRemoteChanges();
+        this.navigateToWelcome();
+        return;
+      }
+
+      if (event === 'TOKEN_REFRESHED' && session) {
+        // Access token rotated: refresh the mirror + authState tokens only;
+        // isSignedIn stays true and sync continues (DA-2.2). Never re-runs
+        // startAuthenticatedSync() — no double startup sync (D2).
+        setLiveSession(session);
+        // D4: the rotation is itself the auth recovery — clear any breaker pause.
+        SyncService.resetOutboxBreaker();
+        this.hydrateAuthState(
+          session,
+          authState.driveRefreshToken ?? session.provider_refresh_token ?? null,
+        );
+        return;
+      }
+
+      if (event === 'INITIAL_SESSION') {
+        // Emitted on subscribe with the stored session (or null). Hydrate-only:
+        // init() already restored + synced exactly once, so NEVER
+        // startAuthenticatedSync() here (D2/DA-2.3) — this is what prevents the
+        // double startup sync. Hydrate authState only when it has no user yet.
+        if (session) {
+          setLiveSession(session);
+          if (authState.userId === null) {
+            this.hydrateAuthState(session, session.provider_refresh_token ?? null);
+          }
+        } else {
+          clearLiveSession();
         }
       }
     });
@@ -767,6 +814,26 @@ export class AppState {
     this.reader.subscribeToAllRemoteChanges();
     void SyncService.syncMetadata().catch((error: unknown) => {
       console.error('Startup sync failed; continuing offline:', error);
+    });
+  }
+  /**
+   * Map a live supabase-js session into the public `authState` shape.
+   * Shared by the init restore path and the auth lifecycle handler so every
+   * hydration site maps user metadata identically.
+   */
+  private hydrateAuthState(session: Session, driveRefreshToken: string | null): void {
+    authState.setSupabaseSession({
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token,
+      expiresAt: session.expires_at ? session.expires_at * 1000 : null,
+      userId: session.user.id,
+      email: session.user.email ?? null,
+      displayName:
+        session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? null,
+      photoUrl:
+        session.user.user_metadata?.avatar_url ?? session.user.user_metadata?.picture ?? null,
+      providerToken: session.provider_token ?? null,
+      driveRefreshToken,
     });
   }
   // ─── Internal helpers ───

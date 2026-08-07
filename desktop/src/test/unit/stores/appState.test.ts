@@ -39,10 +39,21 @@ vi.mock('$lib/shared/i18n', () => ({
 const mockGetProgress = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 const mockGetReadingStats = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 const mockRestoreSession = vi.hoisted(() => vi.fn().mockResolvedValue(null));
+const mockSignInAnonymously = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockSyncMetadata = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockSetupOutboxProcessor = vi.hoisted(() => vi.fn());
+const mockResetOutboxBreaker = vi.hoisted(() => vi.fn());
+const mockSetLiveSession = vi.hoisted(() => vi.fn());
+const mockClearLiveSession = vi.hoisted(() => vi.fn());
+const mockGetLiveSession = vi.hoisted(() => vi.fn(() => null));
+const mockHasLiveSession = vi.hoisted(() => vi.fn(() => false));
+const mockLoadPersistedAuth = vi.hoisted(() => vi.fn().mockResolvedValue(null));
+let capturedAuthHandler: ((event: string, session: unknown) => void) | null = null;
 const mockOnAuthStateChange = vi.hoisted(() =>
-  vi.fn().mockReturnValue({ data: { subscription: null } }),
+  vi.fn(function (handler: (event: string, session: unknown) => void) {
+    capturedAuthHandler = handler;
+    return { data: { subscription: null } };
+  }),
 );
 
 vi.mock('$lib/shared/api/tauriClient', () => {
@@ -110,7 +121,7 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 
 vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
   restoreSession: mockRestoreSession,
-  signInAnonymously: vi.fn(async () => undefined),
+  signInAnonymously: mockSignInAnonymously,
   signOut: vi.fn(async () => undefined),
   getDriveToken: vi.fn(async () => null),
   registerSupabaseCallbackHandler: vi.fn(async () => undefined),
@@ -122,6 +133,7 @@ vi.mock('$lib/shared/services/SyncService', () => ({
     setupOutboxProcessor: mockSetupOutboxProcessor,
     syncMetadata: mockSyncMetadata,
     syncBookCatalog: vi.fn().mockResolvedValue(undefined),
+    resetOutboxBreaker: mockResetOutboxBreaker,
   },
 }));
 
@@ -129,10 +141,14 @@ vi.mock('$lib/services/supabase', () => ({
   getSessionClient: vi.fn(() => ({
     auth: { onAuthStateChange: mockOnAuthStateChange },
   })),
+  setLiveSession: mockSetLiveSession,
+  clearLiveSession: mockClearLiveSession,
+  getLiveSession: mockGetLiveSession,
+  hasLiveSession: mockHasLiveSession,
 }));
 
 vi.mock('$lib/stores/authPersistence', () => ({
-  loadPersistedAuth: vi.fn(async () => null),
+  loadPersistedAuth: mockLoadPersistedAuth,
   loadDriveRefreshToken: vi.fn(async () => null),
   savePersistedAuth: vi.fn(async () => undefined),
   clearPersistedAuth: vi.fn(async () => undefined),
@@ -233,8 +249,12 @@ describe('AppState', () => {
     resetAppState();
     authState.clearSupabaseSession();
     mockRestoreSession.mockResolvedValue(null);
+    mockSignInAnonymously.mockResolvedValue(undefined);
     mockSyncMetadata.mockResolvedValue(undefined);
-    mockOnAuthStateChange.mockReturnValue({ data: { subscription: null } });
+    mockGetLiveSession.mockReturnValue(null);
+    mockHasLiveSession.mockReturnValue(false);
+    mockLoadPersistedAuth.mockResolvedValue(null);
+    capturedAuthHandler = null;
   });
 
   it('restored authenticated startup syncs metadata and all realtime changes once', async () => {
@@ -728,3 +748,161 @@ describe('AppState — Preload edge cases', () => {
 });
 
 type AppStateRoute = 'home' | 'library' | 'stats' | 'reader' | 'highlights' | 'settings';
+
+// ─── Live-session auth gate (WU1) ──────────────────────────────────
+
+function makeSession(overrides: Record<string, unknown> = {}) {
+  return {
+    access_token: 'access-123',
+    refresh_token: 'refresh-123',
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    provider_token: null,
+    provider_refresh_token: null,
+    user: { id: 'user-1', email: 'user@example.com', user_metadata: {} },
+    ...overrides,
+  };
+}
+
+function hydrateSignedInAuthState(userId = 'user-1'): void {
+  authState.setSupabaseSession({
+    accessToken: 'access-123',
+    refreshToken: 'refresh-123',
+    expiresAt: Date.now() + 3_600_000,
+    userId,
+    email: 'user@example.com',
+    displayName: null,
+    photoUrl: null,
+    providerToken: null,
+  });
+}
+
+describe('AppState — auth lifecycle (live-session gate)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetAppState();
+    authState.clearSupabaseSession();
+    mockRestoreSession.mockResolvedValue(null);
+    mockSignInAnonymously.mockResolvedValue(undefined);
+    mockSyncMetadata.mockResolvedValue(undefined);
+    mockGetLiveSession.mockReturnValue(null);
+    mockHasLiveSession.mockReturnValue(false);
+    mockLoadPersistedAuth.mockResolvedValue(null);
+    capturedAuthHandler = null;
+  });
+
+  it('SIGNED_OUT clears authState + live cache, halts realtime, routes to welcome (one cycle)', async () => {
+    const unsubscribeAll = vi
+      .spyOn(appState.reader, 'unsubscribeFromAllRemoteChanges')
+      .mockImplementation(() => undefined);
+    hydrateSignedInAuthState();
+    expect(authState.isSignedIn).toBe(true);
+
+    await appState.init();
+    expect(capturedAuthHandler).not.toBeNull();
+
+    capturedAuthHandler!('SIGNED_OUT', null);
+
+    expect(authState.isSignedIn).toBe(false);
+    expect(authState.userId).toBeNull();
+    expect(mockClearLiveSession).toHaveBeenCalledTimes(1);
+    expect(unsubscribeAll).toHaveBeenCalledTimes(1);
+    expect(appState.route).toBe('welcome');
+  });
+
+  it('TOKEN_REFRESHED hydrates tokens only: signed-in stays true, no re-sync', async () => {
+    hydrateSignedInAuthState();
+    await appState.init();
+    expect(capturedAuthHandler).not.toBeNull();
+
+    capturedAuthHandler!('TOKEN_REFRESHED', makeSession({ access_token: 'access-refreshed' }));
+
+    expect(authState.accessToken).toBe('access-refreshed');
+    expect(authState.userId).toBe('user-1');
+    expect(authState.isSignedIn).toBe(true);
+    expect(mockSetLiveSession).toHaveBeenCalledWith(
+      expect.objectContaining({ access_token: 'access-refreshed' }),
+    );
+    // TOKEN_REFRESHED must never re-run startup sync (no double sync)
+    expect(mockSyncMetadata).not.toHaveBeenCalled();
+    // D4: the token rotation is auth recovery — the breaker pause must clear
+    expect(mockResetOutboxBreaker).toHaveBeenCalledTimes(1);
+  });
+
+  it('INITIAL_SESSION hydrates an empty authState without starting sync (no double sync)', async () => {
+    await appState.init();
+    expect(capturedAuthHandler).not.toBeNull();
+
+    capturedAuthHandler!('INITIAL_SESSION', makeSession());
+
+    expect(authState.userId).toBe('user-1');
+    expect(authState.accessToken).toBe('access-123');
+    expect(mockSetLiveSession).toHaveBeenCalledTimes(1);
+    expect(mockSyncMetadata).not.toHaveBeenCalled();
+  });
+
+  it('INITIAL_SESSION never overwrites an already-hydrated authState nor double-syncs', async () => {
+    const subscribeAll = vi
+      .spyOn(appState.reader, 'subscribeToAllRemoteChanges')
+      .mockImplementation(() => undefined);
+    mockRestoreSession.mockResolvedValue(makeSession());
+
+    await appState.init(); // restore branch: hydrate + startAuthenticatedSync once
+    expect(mockSyncMetadata).toHaveBeenCalledTimes(1);
+    expect(authState.accessToken).toBe('access-123');
+    expect(capturedAuthHandler).not.toBeNull();
+
+    capturedAuthHandler!('INITIAL_SESSION', makeSession({ access_token: 'from-event' }));
+
+    expect(authState.accessToken).toBe('access-123'); // event did not clobber
+    expect(authState.userId).toBe('user-1');
+    expect(mockSyncMetadata).toHaveBeenCalledTimes(1); // still one sync total
+    expect(subscribeAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('SIGNED_IN at runtime starts authenticated sync and routes away from welcome', async () => {
+    await appState.init();
+    expect(appState.route).toBe('welcome');
+
+    capturedAuthHandler!('SIGNED_IN', makeSession());
+
+    expect(mockSetLiveSession).toHaveBeenCalledTimes(1);
+    expect(mockSyncMetadata).toHaveBeenCalledTimes(1);
+    // D4: fresh tokens clear any auth-class breaker pause from a stale session
+    expect(mockResetOutboxBreaker).toHaveBeenCalledTimes(1);
+    expect(appState.route).toBe('home');
+  });
+
+  it('restore-without-session signs in anonymously exactly once per init (no loop)', async () => {
+    mockRestoreSession.mockResolvedValue(null);
+    await appState.init();
+    expect(mockSignInAnonymously).toHaveBeenCalledTimes(1);
+  });
+
+  it('init catch path skips anonymous sign-in when a live session exists (DA-3.1)', async () => {
+    mockRestoreSession.mockRejectedValue(new Error('corrupt session file'));
+    mockGetLiveSession.mockReturnValue({ user: { id: 'real-user' } } as never);
+
+    await appState.init();
+
+    expect(mockSignInAnonymously).not.toHaveBeenCalled();
+    expect(authState.userId).toBeNull();
+  });
+
+  it('corrupt session file + real profile in auth.json does not anon-sign-in (DA-3.2/DA-4.3)', async () => {
+    // restoreSession() returns null (corrupt supabase-session.json → adapter
+    // getItem returns null, never throws) but auth.json holds a real profile.
+    mockRestoreSession.mockResolvedValue(null);
+    mockLoadPersistedAuth.mockResolvedValue({
+      kind: 'supabase',
+      session: { access_token: 'real-token', user: { id: 'real-user' } },
+    });
+
+    await appState.init();
+
+    // No silent anonymous fallback under a real profile: app stays on the
+    // welcome (re-auth) route with no anon session.
+    expect(mockSignInAnonymously).not.toHaveBeenCalled();
+    expect(authState.userId).toBeNull();
+    expect(appState.route).toBe('welcome');
+  });
+});

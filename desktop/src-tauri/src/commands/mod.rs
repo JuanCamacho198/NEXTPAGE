@@ -850,7 +850,7 @@ pub fn markSyncOutboxFailed(
             |row| row.get(0),
         )
         .map_err(|e| format!("Failed to read retry_count: {}", e))?;
-    let next_delay = std::cmp::min(60, 2_i32.pow((current_retry + 1) as u32));
+    let next_delay = std::cmp::min(60, 2_i32.saturating_pow((current_retry + 1) as u32));
     let next_retry_at =
         (chrono::Utc::now() + chrono::Duration::seconds(next_delay as i64)).to_rfc3339();
     conn.execute(

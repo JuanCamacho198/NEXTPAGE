@@ -22,9 +22,39 @@ const t = (key: string) => {
   return dictionary[key] ?? key;
 };
 
-vi.mock('$lib/shared/api/tauriClient', () => ({
-  searchBookText: vi.fn(),
-}));
+// The reader feature barrel (`$lib/features/reader`) loads ReaderWorkspace,
+// bookmarks state, pdfStreaming and ReaderDomainState at import time; the
+// tauriClient mock must expose every export those modules bind at load.
+// NOTE: no top-level variables inside the factory — vi.mock is hoisted.
+vi.mock('$lib/shared/api/tauriClient', () => {
+  const defaults = {
+    themeMode: 'paper',
+    brightness: 100,
+    contrast: 100,
+    selectionColor: '#3b82f6',
+    epub: { fontSize: 16, fontFamily: 'serif' },
+  };
+  return {
+    searchBookText: vi.fn(),
+    getDefaultReaderSettings: vi.fn(() => defaults),
+    getReaderSettings: vi.fn().mockResolvedValue(defaults),
+    upsertReaderSettings: vi.fn().mockResolvedValue(defaults),
+    saveHighlight: vi.fn().mockResolvedValue(undefined),
+    deleteHighlight: vi.fn().mockResolvedValue(undefined),
+    updateHighlight: vi.fn().mockResolvedValue(undefined),
+    saveHighlightTags: vi.fn().mockResolvedValue(undefined),
+    createTag: vi.fn().mockResolvedValue({ id: 1, name: 'tag' }),
+    listTags: vi.fn().mockResolvedValue([]),
+    listTagsForHighlight: vi.fn().mockResolvedValue([]),
+    addDictionaryWord: vi.fn().mockResolvedValue({ id: 1, word: 'w' }),
+    listHighlights: vi.fn().mockResolvedValue([]),
+    listBookmarks: vi.fn().mockResolvedValue([]),
+    saveBookmark: vi.fn().mockResolvedValue(undefined),
+    deleteBookmark: vi.fn().mockResolvedValue(undefined),
+    getFileBytes: vi.fn().mockResolvedValue([]),
+    setReadingStatus: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 // Use type cast since vi.mocked is not available in vitest 4.x
 const mockedSearchBookText = searchBookText as unknown as ReturnType<typeof vi.fn>;

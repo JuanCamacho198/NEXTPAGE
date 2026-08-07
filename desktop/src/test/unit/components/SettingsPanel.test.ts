@@ -168,6 +168,7 @@ const baseDictionaryEntries: Array<[string, string]> = [
   ['errors.commandFailure', 'Unknown error'],
   ['errors.settingsCommandFailed', 'Settings failed'],
   ['errors.importCommandFailed', 'Import failed'],
+  ['app.backToHome', 'Close settings'],
 ];
 
 const baseDictionary = Object.fromEntries(baseDictionaryEntries);
@@ -183,6 +184,66 @@ const t = (key: string, _params?: Record<string, string | number>) => {
   }
   return result;
 };
+
+// SettingsPanel imports getSettings/upsertSettings/getLocaleSetting/
+// getReaderSettings/upsertReaderSettings from tauriClient and loads
+// AppState (full tauriClient surface) at module scope — mock them so the
+// panel mounts and loads settings deterministically in jsdom.
+vi.mock('$lib/shared/api/tauriClient', () => {
+  const rf = vi.fn(function () {
+    return Promise.resolve([]);
+  }) as unknown as (...args: unknown[]) => Promise<unknown[]>;
+  const defaults = {
+    themeMode: 'paper',
+    brightness: 100,
+    contrast: 100,
+    selectionColor: '#3b82f6',
+    epub: { fontSize: 16, fontFamily: 'serif' },
+  };
+  return {
+    listLibraryBooks: rf,
+    listBooks: rf,
+    listCollections: rf,
+    getDefaultReaderSettings: vi.fn(function () {
+      return defaults;
+    }),
+    getReaderSettings: vi.fn(async function () {
+      return defaults;
+    }),
+    upsertReaderSettings: vi.fn(async function () {
+      return defaults;
+    }),
+    resetReaderSettingsToDefaults: vi.fn(async function () {
+      return defaults;
+    }),
+    getSettings: vi.fn(async function () {
+      return [];
+    }),
+    upsertSettings: vi.fn(function () {
+      return Promise.resolve(undefined);
+    }),
+    getLocaleSetting: vi.fn(async function () {
+      return null;
+    }),
+    getProgress: vi.fn().mockResolvedValue(null),
+    getReadingStats: vi.fn().mockResolvedValue(null),
+    saveProgress: vi.fn().mockResolvedValue(undefined),
+    saveReadingSession: vi.fn().mockResolvedValue(undefined),
+    hideBookFromLibrary: vi.fn().mockResolvedValue(undefined),
+    upsertBook: vi.fn().mockResolvedValue(undefined),
+    upsertBookCover: vi.fn().mockResolvedValue(undefined),
+    extractEpubCover: vi.fn().mockResolvedValue(false),
+    updateBookProgress: vi.fn().mockResolvedValue(undefined),
+    setReadingStatus: vi.fn().mockResolvedValue(undefined),
+    searchBookText: vi.fn().mockResolvedValue(null),
+    scanFolder: vi.fn().mockResolvedValue({ files: [] }),
+    listHighlights: vi.fn().mockResolvedValue([]),
+    listBookmarks: vi.fn().mockResolvedValue([]),
+    getFileBytes: vi.fn().mockResolvedValue([]),
+    getLogs: vi.fn().mockResolvedValue([]),
+    diagnose: vi.fn(),
+  };
+});
 
 describe('SettingsPanel', () => {
   const defaultProps = {
@@ -202,42 +263,44 @@ describe('SettingsPanel', () => {
 
   it('renders the settings panel with title', () => {
     render(SettingsPanel, defaultProps);
-    expect(screen.getByText('Settings')).toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: 'Settings' })).toBeInTheDocument();
   });
 
-  it('renders all five tab buttons', () => {
+  it('renders all tab buttons', () => {
     render(SettingsPanel, defaultProps);
-    expect(screen.getByText('Account')).toBeInTheDocument();
-    expect(screen.getByText('Profile')).toBeInTheDocument();
-    expect(screen.getByText('Reader')).toBeInTheDocument();
-    expect(screen.getByText('App Theme')).toBeInTheDocument();
-    expect(screen.getByText('About')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Account' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Appearance' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Reader' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Data' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Keyboard Shortcuts' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'About' })).toBeInTheDocument();
   });
 
-  it('switches to profile tab when clicked', async () => {
+  it('switches to shortcuts tab when clicked', async () => {
     const user = userEvent.setup();
     render(SettingsPanel, defaultProps);
-    await user.click(screen.getByText('Profile'));
-    expect(screen.getByText('Keyboard Shortcuts')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Keyboard Shortcuts' }));
+    expect(screen.getByText('Available shortcuts')).toBeInTheDocument();
   });
 
   it('switches to about tab when clicked', async () => {
     const user = userEvent.setup();
     render(SettingsPanel, defaultProps);
-    await user.click(screen.getByText('About'));
-    expect(screen.getByText('About NextPage')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'About' }));
+    expect(screen.getByText('NextPage')).toBeInTheDocument();
   });
 
   it('switches to about tab when clicked', async () => {
     const user = userEvent.setup();
     render(SettingsPanel, defaultProps);
-    await user.click(screen.getByText('About'));
-    expect(screen.getByText('About NextPage')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'About' }));
+    expect(screen.getByText('NextPage')).toBeInTheDocument();
   });
 
   it('shows reset modal when reset button clicked', async () => {
     const user = userEvent.setup();
     render(SettingsPanel, defaultProps);
+    await user.click(screen.getByRole('tab', { name: 'Appearance' }));
     const resetButtons = screen.getAllByText('Reset to defaults');
     await user.click(resetButtons[0]);
     expect(screen.getByText('Reset settings?')).toBeInTheDocument();
@@ -274,10 +337,10 @@ describe('SettingsPanel', () => {
     expect(screen.getByText('English')).toBeInTheDocument();
   });
 
-  it('renders keyboard shortcuts section in profile tab', async () => {
+  it('renders keyboard shortcuts section in shortcuts tab', async () => {
     const user = userEvent.setup();
     render(SettingsPanel, defaultProps);
-    await user.click(screen.getByText('Profile'));
-    expect(screen.getByText('Keyboard Shortcuts')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Keyboard Shortcuts' }));
+    expect(screen.getByText('Available shortcuts')).toBeInTheDocument();
   });
 });

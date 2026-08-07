@@ -84,6 +84,9 @@ vi.mock('$lib/shared/api/tauriClient', () => {
     updateBookProgress: vi.fn(function () {
       return Promise.resolve(undefined);
     }),
+    setReadingStatus: vi.fn(function () {
+      return Promise.resolve(undefined);
+    }),
     searchBookText: vi.fn(function () {
       return Promise.resolve(null);
     }),

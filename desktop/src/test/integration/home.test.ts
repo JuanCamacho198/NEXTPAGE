@@ -45,6 +45,7 @@ const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoi
       saveProgress: vi.fn(),
       saveReadingSession: vi.fn(),
       searchBookText: vi.fn(),
+      setReadingStatus: vi.fn().mockResolvedValue(undefined),
       upsertBook: vi.fn(),
       upsertBookCover: vi.fn(),
       updateBookProgress: vi.fn(),
@@ -85,6 +86,17 @@ const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoi
 });
 
 vi.mock('$lib/shared/api/tauriClient', () => tauriClientMock);
+
+// AppState.init() calls SyncService.setupOutboxProcessor() at boot; without a
+// mock the real outbox processor fires invoke('listSyncOutboxReady') in jsdom
+// and produces an unhandled rejection.
+vi.mock('$lib/shared/services/SyncService', () => ({
+  SyncService: {
+    setupOutboxProcessor: vi.fn(),
+    syncMetadata: vi.fn().mockResolvedValue(undefined),
+    syncBookCatalog: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 
 // `AppState.init()` first calls `restoreSession()` from SupabaseAuthService.
 // Mock it to return null so it falls through to `loadPersistedAuth()`.

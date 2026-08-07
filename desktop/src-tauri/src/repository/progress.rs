@@ -385,6 +385,7 @@ fn build_dense_series(
             out.push(ActivityPoint { bucket: final_key, minutes });
         }
     }
+
     Ok(out)
 }
 

@@ -111,7 +111,7 @@ class SupabaseBookCatalogSyncTest {
     }
 
     @Test
-    fun processOutbox_handlesDeleteOperation() = runBlocking {
+    fun processOutbox_handlesDeleteOperationAsTombstone() = runBlocking {
         fakeOutboxDao.insert(
             SyncOutboxEntity(
                 id = "outbox-2",
@@ -123,14 +123,16 @@ class SupabaseBookCatalogSyncTest {
             )
         )
 
-        coEvery { mockDataSource.deleteUserBook(any(), any()) } returns Unit
+        coEvery { mockDataSource.getUserBook("test-user", "book-1") } returns null
+        coEvery { mockDataSource.upsertBook(any()) } returns mockk()
 
         sync.startProcessing()
         Thread.sleep(500)
 
         val pendingItems = fakeOutboxDao.getPendingItems()
         assertEquals(0, pendingItems.size)
-        coVerify { mockDataSource.deleteUserBook("test-user", "book-1") }
+        coVerify { mockDataSource.upsertBook(match { it.id == "book-1" && it.lifecycle == "deleted" }) }
+        coVerify(inverse = true) { mockDataSource.deleteUserBook(any(), any()) }
     }
 
     @Test
@@ -378,6 +380,20 @@ class SupabaseBookCatalogSyncTest {
     }
 
     @Test
+    fun reconcile_reinstallWithNoLocalBooksNeverDeletesRemoteRows() = runBlocking {
+        coEvery { mockDataSource.listUserBooks("test-user") } returns listOf(
+            UserBookRow(
+                id = "remote-only", userId = "test-user", title = "Remote", format = "epub",
+                importedAt = "2026-07-12T12:00:00.000Z", updatedAt = "2026-07-12T12:00:00.000Z"
+            )
+        )
+
+        sync.reconcileLocalBooks()
+
+        coVerify(inverse = true) { mockDataSource.deleteUserBook(any(), any()) }
+    }
+
+    @Test
     fun reconcile_skipsWhenNoSession() = runBlocking {
         coEvery { mockSessionManager.ensureFreshSession() } returns Result.failure(
             Exception("Not signed in")
@@ -443,6 +459,93 @@ class SupabaseBookCatalogSyncTest {
         coVerify { mockDataSource.listUserBooks("test-user") }
     }
 
+    // ─── Realtime apply-if-newer (PR5) ──────────────────────────────
+
+    @Test
+    fun applyRemoteBook_missingLocalNeverBecomesDeletion() = runBlocking {
+        val row = UserBookRow(
+            id = "ghost", userId = "test-user", title = "Ghost", format = "epub",
+            lifecycle = "deleted", catalogVersion = 9,
+            importedAt = "2026-07-12T12:00:00.000Z", updatedAt = "2026-07-12T12:00:00.000Z"
+        )
+        sync.applyRemoteBook(row)
+
+        assertEquals(0, fakeBookDao.count()) // no local row created, never a deletion
+        coVerify(inverse = true) { mockDataSource.deleteUserBook(any(), any()) }
+    }
+
+    @Test
+    fun applyRemoteBook_staleEventIsIgnored() = runBlocking {
+        val existing = createSampleBook("book-v5").copy(remoteCatalogVersion = 5L)
+        fakeBookDao.upsert(existing)
+
+        sync.applyRemoteBook(
+            UserBookRow(
+                id = "book-v5", userId = "test-user", title = "Stale", format = "epub",
+                lifecycle = "available", catalogVersion = 4, coverUrl = "https://stale.example/c.jpg",
+                importedAt = "2026-07-12T12:00:00.000Z", updatedAt = "2026-07-12T12:00:00.000Z"
+            )
+        )
+
+        val local = fakeBookDao.getBookById("book-v5")
+        assertEquals(5L, local?.remoteCatalogVersion)
+        assertEquals(null, local?.coverPath) // stale cover not applied
+    }
+
+    @Test
+    fun applyRemoteBook_equalVersionIsIdempotent() = runBlocking {
+        val existing = createSampleBook("book-v5").copy(remoteCatalogVersion = 5L)
+        fakeBookDao.upsert(existing)
+
+        sync.applyRemoteBook(
+            UserBookRow(
+                id = "book-v5", userId = "test-user", title = "Equal", format = "epub",
+                lifecycle = "available", catalogVersion = 5, coverUrl = "https://equal.example/c.jpg",
+                importedAt = "2026-07-12T12:00:00.000Z", updatedAt = "2026-07-12T12:00:00.000Z"
+            )
+        )
+
+        val local = fakeBookDao.getBookById("book-v5")
+        assertEquals(null, local?.coverPath) // no change on equal version
+    }
+
+    @Test
+    fun applyRemoteBook_newerTombstoneDeletesLocalBook() = runBlocking {
+        val existing = createSampleBook("book-del").copy(remoteCatalogVersion = 3L)
+        fakeBookDao.upsert(existing)
+
+        sync.applyRemoteBook(
+            UserBookRow(
+                id = "book-del", userId = "test-user", title = "Gone", format = "epub",
+                lifecycle = "deleted", catalogVersion = 4,
+                importedAt = "2026-07-12T12:00:00.000Z", updatedAt = "2026-07-12T12:00:00.000Z"
+            )
+        )
+
+        assertTrue(fakeBookDao.getBookById("book-del")?.deletedAtEpochMillis != null)
+    }
+
+    @Test
+    fun applyRemoteBook_newerEventAppliesCoverAndVersion() = runBlocking {
+        val existing = createSampleBook("book-cov").copy(remoteCatalogVersion = 1L)
+        fakeBookDao.upsert(existing)
+
+        sync.applyRemoteBook(
+            UserBookRow(
+                id = "book-cov", userId = "test-user", title = "Covered", format = "epub",
+                lifecycle = "available", catalogVersion = 2, coverUrl = "https://cdn.example/c.jpg",
+                coverObjectPath = "user-1/book-cov/cover.jpg", remoteFileId = "file-1",
+                importedAt = "2026-07-12T12:00:00.000Z", updatedAt = "2026-07-12T12:00:00.000Z"
+            )
+        )
+
+        val local = fakeBookDao.getBookById("book-cov")
+        assertEquals(2L, local?.remoteCatalogVersion)
+        assertEquals("https://cdn.example/c.jpg", local?.coverPath)
+        assertEquals("user-1/book-cov/cover.jpg", local?.remoteCoverRef)
+        assertEquals("file-1", local?.remoteFileId)
+    }
+
     // ─── Factory helpers ─────────────────────────────────────────
 
     private fun createSampleBook(id: String): BookEntity {
@@ -491,6 +594,9 @@ class SupabaseBookCatalogSyncTest {
                     deletedAtEpochMillis = deletedAt
                 ) else book
             }
+        }
+        override suspend fun deleteById(bookId: String) {
+            booksState.value = booksState.value.filterNot { it.id == bookId }
         }
 
         override suspend fun updateRating(bookId: String, rating: Int?) {

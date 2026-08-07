@@ -179,6 +179,23 @@ object AppDatabaseMigrations {
         }
     }
 
+    val MIGRATION_18_19 = object : Migration(18, 19) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE books ADD COLUMN remote_file_id TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE books ADD COLUMN remote_path TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE books ADD COLUMN remote_lifecycle TEXT NOT NULL DEFAULT 'imported'")
+            db.execSQL("ALTER TABLE books ADD COLUMN remote_catalog_version INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE books ADD COLUMN remote_cover_ref TEXT DEFAULT NULL")
+        }
+    }
+
+    val MIGRATION_19_20 = object : Migration(19, 20) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE books ADD COLUMN remote_provider TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE books ADD COLUMN remote_protocol_version INTEGER DEFAULT NULL")
+        }
+    }
+
     val MIGRATION_14_15 = object : Migration(14, 15) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE books ADD COLUMN status TEXT DEFAULT NULL")
@@ -274,6 +291,8 @@ object AppDatabaseMigrations {
         MIGRATION_14_15,
         MIGRATION_15_16,
         MIGRATION_16_17,
-        MIGRATION_17_18
+        MIGRATION_17_18,
+        MIGRATION_18_19,
+        MIGRATION_19_20
     )
 }

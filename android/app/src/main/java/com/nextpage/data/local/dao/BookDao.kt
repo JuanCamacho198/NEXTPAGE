@@ -30,6 +30,9 @@ interface BookDao {
     @Query("UPDATE books SET deleted_at = :deletedAt, updated_at = :deletedAt WHERE id = :bookId")
     suspend fun deleteBook(bookId: String, deletedAt: Long)
 
+    @Query("DELETE FROM books WHERE id = :bookId")
+    suspend fun deleteById(bookId: String)
+
     @Query("UPDATE books SET user_rating = :rating WHERE id = :bookId")
     suspend fun updateRating(bookId: String, rating: Int?)
 

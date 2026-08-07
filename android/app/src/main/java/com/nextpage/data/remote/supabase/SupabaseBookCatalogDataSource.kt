@@ -157,4 +157,11 @@ data class UserBookRow(
     val importedAt: String,
     @SerialName("updated_at")
     val updatedAt: String,
+    val lifecycle: String = "available",
+    @SerialName("catalog_version") val catalogVersion: Long = 1,
+    @SerialName("remote_provider") val remoteProvider: String? = null,
+    @SerialName("remote_file_id") val remoteFileId: String? = null,
+    @SerialName("remote_path") val remotePath: String? = null,
+    @SerialName("cover_object_path") val coverObjectPath: String? = null
+    ,@SerialName("protocol_version") val protocolVersion: Int = 1
 )

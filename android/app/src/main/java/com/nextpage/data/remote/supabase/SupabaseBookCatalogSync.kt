@@ -5,6 +5,7 @@ import com.nextpage.data.local.dao.SyncOutboxDao
 import com.nextpage.data.local.entity.BookEntity
 import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncOperation
+import com.nextpage.data.remote.drive.SyncErrorCodes
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
 import com.nextpage.data.session.SessionManager
 import com.nextpage.domain.error.AppError
@@ -28,6 +29,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.security.MessageDigest
 
 /**
  * Processes the local outbox for BOOK entries and upserts them
@@ -113,7 +115,18 @@ class SupabaseBookCatalogSync(
         try {
             when (operation) {
                 SyncOperation.DELETE -> {
-                    dataSource.deleteUserBook(userId, bookId)
+                    val localBook = bookDao.getBookById(bookId)
+                    val remoteBook = dataSource.getUserBook(userId, bookId)
+                    val tombstone = (localBook?.toUserBookRow(userId) ?: remoteBook
+                        ?: UserBookRow(
+                            id = bookId, userId = userId, title = "", format = "unknown",
+                            importedAt = dateFormat.format(Date()), updatedAt = dateFormat.format(Date())
+                        )).copy(
+                        lifecycle = "deleted", filePath = null,
+                        catalogVersion = maxOf(localBook?.remoteCatalogVersion ?: 0L,
+                            remoteBook?.catalogVersion ?: 0L) + 1
+                    )
+                    dataSource.upsertBook(tombstone)
                 }
                 else -> {
                     val localBook = bookDao.getBookById(bookId)
@@ -191,27 +204,38 @@ class SupabaseBookCatalogSync(
     }
 
     /**
-     * When a remote catalog change arrives via Realtime, apply it locally:
-     * upsert the local cover/coverPath from the remote row so the cover is
-     * surfaced in the library (D5). Books marked deleted in the catalog are
-     * skipped — only a fresh re-push/import revives a book.
+     * When a remote catalog change arrives via Realtime, apply it locally using
+     * monotonic version ordering (PR5 convergence):
+     * - Missing local state never becomes deletion: no local row means no-op.
+     * - A locally tombstoned book is never resurrected.
+     * - Stale events (lower version) are ignored; equal events are idempotent.
+     * - A newer explicit tombstone wins and tombstones the local book (never hard-delete).
+     * - Otherwise newer metadata/cover fields are merged into the local row.
      */
-    private suspend fun applyRemoteBook(row: UserBookRow) {
-        if (row.isCatalogDeleted()) return
-
+    internal suspend fun applyRemoteBook(row: UserBookRow) {
         val existing = bookDao.getBookById(row.id) ?: return
-
-        // Skip DELETE-marked local books: a tombstoned book stays deleted.
         if (existing.deletedAtEpochMillis != null) return
 
-        val updated = if (row.coverUrl != null) existing.copy(coverPath = row.coverUrl) else existing
+        if (row.catalogVersion < existing.remoteCatalogVersion) return
+        if (row.catalogVersion == existing.remoteCatalogVersion) return
+
+        if (row.lifecycle == "deleted") {
+            bookDao.deleteBook(row.id, System.currentTimeMillis())
+            return
+        }
+
+        val updated = existing.copy(
+            coverPath = row.coverUrl ?: existing.coverPath,
+            remoteFileId = row.remoteFileId ?: existing.remoteFileId,
+            remotePath = row.remotePath ?: row.filePath ?: existing.remotePath,
+            remoteLifecycle = row.lifecycle,
+            remoteCatalogVersion = row.catalogVersion,
+            remoteCoverRef = row.coverObjectPath ?: existing.remoteCoverRef
+        )
         if (updated != existing) {
             bookDao.upsert(updated)
         }
     }
-
-    /** True when a remote row represents a catalog deletion (drive file absent). */
-    private fun UserBookRow.isCatalogDeleted(): Boolean = filePath.isNullOrBlank()
 
     /**
      * Fetch the full catalog from Supabase.
@@ -261,7 +285,7 @@ class SupabaseBookCatalogSync(
             val catalog = dataSource.listUserBooks(userId)
             val localBooks = bookDao.observeAllBooks().first()
             val localBookIds = localBooks.map { it.id }.toSet()
-            val downloadable = catalog.filterNot { it.id in localBookIds }
+            val downloadable = catalog.filter { it.lifecycle == "available" && it.id !in localBookIds }
             Result.success(downloadable)
         } catch (e: Exception) {
             Result.failure(AppError(ErrorCategory.STORAGE, "CATALOG_FETCH", "Failed to fetch downloadable books: ${e.message}", "SupabaseBookCatalogSync"))
@@ -309,14 +333,14 @@ class SupabaseBookCatalogSync(
             )
 
         // A catalog row without a remote drive file is effectively deleted — don't download.
-        if (row.filePath.isNullOrBlank()) {
+        if (row.lifecycle != "available" || row.filePath.isNullOrBlank()) {
             return Result.failure(
-                AppError(ErrorCategory.NOT_FOUND, "BOOK_NOT_IN_CATALOG", "Book $bookId has no remote file in the catalog", "SupabaseBookCatalogSync")
+                AppError(ErrorCategory.NOT_FOUND, if (row.lifecycle == "unavailable") "UNAVAILABLE" else "BOOK_NOT_IN_CATALOG", "Book $bookId is not available for import", "SupabaseBookCatalogSync")
             )
         }
 
         val bookFormat = row.format.ifBlank { "epub" }
-        val drivePath = "books/$userId/$bookId.$bookFormat"
+        val drivePath = row.remotePath ?: "books/$userId/$bookId.$bookFormat"
 
         return try {
             // D4: 401/403 -> refresh token -> retry once. Refresh failure surfaces
@@ -325,12 +349,22 @@ class SupabaseBookCatalogSync(
                 AppError(ErrorCategory.VALIDATION, "INVALID_BOOK_ID", "Invalid book id", "SupabaseBookCatalogSync")
             )
             val targetFile = File(localBooksDir, "$bookId.$bookFormat")
+            val tempFile = File(localBooksDir, ".${targetFile.name}.part")
+            val backupFile = File(localBooksDir, ".${targetFile.name}.backup")
 
             if (!localBooksDir.exists()) localBooksDir.mkdirs()
-            targetFile.writeBytes(bytes)
-
-            bookDao.upsert(
-                BookEntity(
+            recoverInterruptedImport(targetFile, tempFile, backupFile)
+            tempFile.writeBytes(bytes)
+            val actualHash = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+            val expectedHash = row.contentHash?.removePrefix("sha256:")?.trim()?.takeIf { it.isNotEmpty() }
+                ?: throw AppError(ErrorCategory.VALIDATION, "HASH_REQUIRED", "Catalog SHA-256 is required", "SupabaseBookCatalogSync")
+            if (!expectedHash.matches(Regex("[0-9a-fA-F]{64}")) || actualHash != expectedHash.lowercase()) {
+                throw AppError(ErrorCategory.VALIDATION, "HASH_MISMATCH", "Downloaded content does not match catalog", "SupabaseBookCatalogSync")
+            }
+            val previousBook = bookDao.getBookById(bookId)
+            if (targetFile.exists() && !targetFile.renameTo(backupFile)) throw IOException("Import backup failed")
+            try {
+                bookDao.upsert(BookEntity(
                     id = bookId,
                     title = row.title,
                     author = row.author,
@@ -339,11 +373,35 @@ class SupabaseBookCatalogSync(
                     description = row.description,
                     totalPages = row.totalPages ?: 0,
                     coverPath = row.coverUrl, // D5: cover from public URL when present
-                    updatedAtEpochMillis = System.currentTimeMillis()
-                )
-            )
+                    updatedAtEpochMillis = System.currentTimeMillis(),
+                    contentHash = row.contentHash,
+                    remoteFileId = row.remoteFileId,
+                    remotePath = row.remotePath ?: row.filePath,
+                    remoteLifecycle = row.lifecycle,
+                    remoteCatalogVersion = row.catalogVersion,
+                    remoteCoverRef = row.coverObjectPath,
+                    remoteProvider = row.remoteProvider,
+                    remoteProtocolVersion = row.protocolVersion
+                ))
+                if (!tempFile.renameTo(targetFile)) throw IOException("Atomic import rename failed")
+                backupFile.delete()
+            } catch (failure: Exception) {
+                tempFile.delete()
+                targetFile.delete()
+                if (backupFile.exists()) backupFile.renameTo(targetFile)
+                if (previousBook != null) bookDao.upsert(previousBook) else bookDao.deleteById(bookId)
+                throw failure
+            }
             Result.success(Unit)
+        } catch (e: AppError) {
+            File(localBooksDir, ".${bookId}.${bookFormat}.part").delete()
+            File(localBooksDir, ".${bookId}.${bookFormat}.backup").delete()
+            if (e.category == ErrorCategory.AUTH) Result.failure(
+                AppError(ErrorCategory.AUTH, "DOWNLOAD_ERROR", e.message, "SupabaseBookCatalogSync")
+            ) else Result.failure(e)
         } catch (e: IOException) {
+            File(localBooksDir, ".${bookId}.${bookFormat}.part").delete()
+            File(localBooksDir, ".${bookId}.${bookFormat}.backup").delete()
             Result.failure(
                 AppError(ErrorCategory.STORAGE, "DOWNLOAD_FAILED", "Failed to download/save book $bookId: ${e.message}", "SupabaseBookCatalogSync")
             )
@@ -376,10 +434,16 @@ class SupabaseBookCatalogSync(
         return firstAttempt
     }
 
+    private fun recoverInterruptedImport(target: File, temp: File, backup: File) {
+        temp.delete()
+        if (!target.exists() && backup.exists()) backup.renameTo(target) else backup.delete()
+    }
+
     /**
      * Upload a cover image to Supabase Storage and return the public URL.
      * Path: covers/{userId}/{bookId}.jpg
-     * Non-blocking: failure logs warning and returns null.
+     * Non-blocking: failure is mapped to the stable COVER_FAILED code
+     * (spec REQ-07) and returns null so book import never blocks.
      */
     private suspend fun uploadCover(userId: String, bookId: String, coverPath: String?): String? {
         if (coverPath == null) return null
@@ -395,7 +459,7 @@ class SupabaseBookCatalogSync(
             )
             SupabaseClientProvider.client.storage.from("book-covers").publicUrl(path)
         } catch (e: Exception) {
-            Log.w(TAG, "Cover upload failed for book $bookId", e)
+            Log.w(TAG, "Cover upload failed for book $bookId (${SyncErrorCodes.COVER_FAILED})", e)
             null
         }
     }
@@ -415,7 +479,14 @@ class SupabaseBookCatalogSync(
             totalPages = totalPages,
             sourceDevice = "android",
             importedAt = dateFormat.format(Date(updatedAtEpochMillis)),
-            updatedAt = dateFormat.format(Date(updatedAtEpochMillis))
+            updatedAt = dateFormat.format(Date(updatedAtEpochMillis)),
+            lifecycle = remoteLifecycle,
+            catalogVersion = remoteCatalogVersion,
+            remoteProvider = "google_drive",
+            remoteFileId = remoteFileId,
+            remotePath = remotePath,
+            coverObjectPath = remoteCoverRef,
+            protocolVersion = remoteProtocolVersion ?: 1
         )
     }
 

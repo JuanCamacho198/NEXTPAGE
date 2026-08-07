@@ -45,5 +45,12 @@ data class BookEntity(
     @ColumnInfo(name = "progress_updated_at")
     val progressUpdatedAtEpochMillis: Long? = null,
     @ColumnInfo(name = "state_version")
-    val stateVersion: Long = 0L
+    val stateVersion: Long = 0L,
+    @ColumnInfo(name = "remote_file_id") val remoteFileId: String? = null,
+    @ColumnInfo(name = "remote_path") val remotePath: String? = null,
+    @ColumnInfo(name = "remote_lifecycle") val remoteLifecycle: String = "imported",
+    @ColumnInfo(name = "remote_catalog_version") val remoteCatalogVersion: Long = 0L,
+    @ColumnInfo(name = "remote_cover_ref") val remoteCoverRef: String? = null,
+    @ColumnInfo(name = "remote_provider") val remoteProvider: String? = null,
+    @ColumnInfo(name = "remote_protocol_version") val remoteProtocolVersion: Int? = null
 )

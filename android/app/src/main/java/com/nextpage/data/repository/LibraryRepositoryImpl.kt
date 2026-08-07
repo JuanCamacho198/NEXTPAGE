@@ -18,6 +18,7 @@ import com.nextpage.data.local.entity.ReadingProgressEntity
 import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.local.entity.SyncOutboxEntity
+import com.nextpage.data.remote.drive.coverFailureError
 import com.nextpage.data.storage.CoverStorage
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.Book
@@ -92,8 +93,7 @@ class LibraryRepositoryImpl(
         val coverBytes = extractReadiumCover(request.sourcePath)
             ?: metadata.coverImageBytes
 
-        val coverPath = coverBytes
-            ?.let { coverStorage.saveCover(bookId = bookId, coverBytes = it).getOrNull() }
+        val coverPath = coverBytes?.let { persistCoverNonBlocking(bookId, it) }
 
         val book = Book(
             id = bookId,
@@ -123,7 +123,7 @@ class LibraryRepositoryImpl(
         val bookId = UUID.randomUUID().toString()
 
         val coverPath = metadata.coverBytes
-            ?.let { coverStorage.saveCover(bookId = bookId, coverBytes = it).getOrNull() }
+            ?.let { persistCoverNonBlocking(bookId, it) }
 
         val book = Book(
             id = bookId,
@@ -165,6 +165,7 @@ class LibraryRepositoryImpl(
         val now = System.currentTimeMillis()
         bookDao.deleteBook(bookId, now)
         readingStatsDao.deleteForBook(bookId)
+        queueBookOutboxEntry(bookId, SyncOperation.DELETE)
     }
 
     override suspend fun updateBookRating(bookId: String, rating: Int?) {
@@ -239,6 +240,17 @@ class LibraryRepositoryImpl(
             }
     }.getOrNull()
 
+    /**
+     * Persist a cover without ever blocking book import. A cover save
+     * failure is mapped to the stable COVER_FAILED error code (REQ-07)
+     * and yields a null cover path so the import proceeds with a fallback.
+     */
+    private suspend fun persistCoverNonBlocking(bookId: String, coverBytes: ByteArray): String? =
+        coverStorage.saveCover(bookId = bookId, coverBytes = coverBytes).getOrElse {
+            coverFailureError(correlationId = bookId, bookId = bookId)
+            null
+        }
+
     private fun BookEntity.toDomain(): Book = Book(
         id = id,
         title = title,
@@ -296,14 +308,14 @@ class LibraryRepositoryImpl(
      * Non-blocking on failure — the reconciliation pass in
      * [SupabaseBookCatalogSync.reconcileLocalBooks] covers gaps.
      */
-    private suspend fun queueBookOutboxEntry(bookId: String) {
+    private suspend fun queueBookOutboxEntry(bookId: String, operation: SyncOperation = SyncOperation.CREATE) {
         try {
             outboxDao.insert(
                 SyncOutboxEntity(
                     id = UUID.randomUUID().toString(),
                     entityType = SyncEntityType.BOOK.name,
                     entityId = bookId,
-                    operation = SyncOperation.CREATE.name,
+                    operation = operation.name,
                     payloadJson = """{}""",
                     createdAtEpochMillis = System.currentTimeMillis()
                 )

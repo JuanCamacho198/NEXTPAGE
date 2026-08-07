@@ -22,6 +22,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
+import java.security.MessageDigest
 
 /**
  * Unit tests for [SupabaseBookCatalogSync.downloadRemoteBook] — the Drive
@@ -100,12 +101,27 @@ class SupabaseBookCatalogDownloadTest {
         coVerify(inverse = true) { mockRemote.download(any()) }
     }
 
+    @Test
+    fun download_preservesPermissionDenied_distinctFromUnavailable() = runBlocking {
+        val bytes = "bytes".toByteArray()
+        coEvery { mockCatalog.listUserBooks("test-user") } returns listOf(
+            catalogRow("permission", "/permission.epub").copy(contentHash = sha256(bytes))
+        )
+        coEvery { mockRemote.download(any()) } throws AppError(
+            ErrorCategory.STORAGE, "PERMISSION_DENIED", "Drive access denied", "test"
+        )
+        val result = newSync().downloadRemoteBook("permission")
+        assertEquals("PERMISSION_DENIED", (result.exceptionOrNull() as? AppError)?.code)
+        assertEquals(ErrorCategory.STORAGE, (result.exceptionOrNull() as? AppError)?.category)
+        assertTrue(fakeBookDao.getBookById("permission") == null)
+    }
+
     // ─── D4: refresh-then-retry on 401/403 ──────────────────────────────────
 
     @Test
     fun download_refreshesOnceThenRetriesAndSucceeds() = runBlocking {
         coEvery { mockCatalog.listUserBooks("test-user") } returns listOf(
-            catalogRow(id = "auth-1", filePath = "/auth-1.epub")
+            catalogRow(id = "auth-1", filePath = "/auth-1.epub").copy(contentHash = sha256("file-bytes".toByteArray()))
         )
         var calls = 0
         coEvery { mockRemote.download("books/test-user/auth-1.epub") } answers {
@@ -165,6 +181,7 @@ class SupabaseBookCatalogDownloadTest {
     fun download_persistsCoverFromCatalog() = runBlocking {
         coEvery { mockCatalog.listUserBooks("test-user") } returns listOf(
             catalogRow(id = "cover-1", filePath = "/cover-1.epub", coverUrl = "https://cdn.example/cover-1.jpg")
+                .copy(contentHash = sha256("bytes".toByteArray()))
         )
         coEvery { mockRemote.download(any()) } returns "bytes".toByteArray()
 
@@ -173,6 +190,64 @@ class SupabaseBookCatalogDownloadTest {
         assertTrue(result.isSuccess)
         assertEquals("https://cdn.example/cover-1.jpg", fakeBookDao.getBookById("cover-1")?.coverPath)
     }
+
+    @Test
+    fun download_hashMismatch_removesTempAndDoesNotPersist() = runBlocking {
+        coEvery { mockCatalog.listUserBooks("test-user") } returns listOf(
+            catalogRow("bad-hash", "/bad-hash.epub").copy(contentHash = "00")
+        )
+        coEvery { mockRemote.download(any()) } returns "bytes".toByteArray()
+
+        val result = newSync().downloadRemoteBook("bad-hash")
+
+        assertEquals("HASH_MISMATCH", (result.exceptionOrNull() as? AppError)?.code)
+        assertTrue(!File(localDir, "bad-hash.epub").exists())
+        assertTrue(!File(localDir, ".bad-hash.epub.part").exists())
+        assertTrue(fakeBookDao.getBookById("bad-hash") == null)
+    }
+
+    @Test
+    fun download_requiresNonEmptySha256_beforePersistence() = runBlocking {
+        coEvery { mockCatalog.listUserBooks("test-user") } returns listOf(catalogRow("missing-hash", "/missing.epub"))
+        coEvery { mockRemote.download(any()) } returns "bytes".toByteArray()
+        val result = newSync().downloadRemoteBook("missing-hash")
+        assertEquals("HASH_REQUIRED", (result.exceptionOrNull() as? AppError)?.code)
+        assertTrue(fakeBookDao.getBookById("missing-hash") == null)
+        assertTrue(localDir.listFiles()?.none { it.name.contains("missing-hash") } != false)
+    }
+
+    @Test
+    fun download_dbFailure_rollsBackFileAndRetryArtifacts() = runBlocking {
+        val bytes = "bytes".toByteArray()
+        coEvery { mockCatalog.listUserBooks("test-user") } returns listOf(
+            catalogRow("db-failure", "/db-failure.epub").copy(contentHash = sha256(bytes))
+        )
+        coEvery { mockRemote.download(any()) } returns bytes
+        fakeBookDao.failUpsert = true
+        val result = newSync().downloadRemoteBook("db-failure")
+        assertTrue(result.isFailure)
+        assertTrue(localDir.listFiles()?.none { it.name.contains("db-failure") } != false)
+    }
+
+    @Test
+    fun download_persistsCompleteRemoteMapping() = runBlocking {
+        val bytes = "bytes".toByteArray()
+        coEvery { mockCatalog.listUserBooks("test-user") } returns listOf(
+            catalogRow("mapping", "/mapping.epub").copy(
+                contentHash = sha256(bytes), remoteProvider = "google_drive", remoteFileId = "drive-1",
+                remotePath = "NextPage/Books/mapping.epub", protocolVersion = 7
+            )
+        )
+        coEvery { mockRemote.download(any()) } returns bytes
+        assertTrue(newSync().downloadRemoteBook("mapping").isSuccess)
+        val book = fakeBookDao.getBookById("mapping")!!
+        assertEquals("google_drive", book.remoteProvider)
+        assertEquals(7, book.remoteProtocolVersion)
+        assertEquals("drive-1", book.remoteFileId)
+    }
+
+    private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes)
+        .joinToString("") { "%02x".format(it) }
 
     // ─── Factory helpers ───────────────────────────────────────────────────
 
@@ -209,10 +284,11 @@ class SupabaseBookCatalogDownloadTest {
     // ── Fake BookDao ───────────────────────────────────────────────────────
     private class FakeBookDao : BookDao {
         private val byId = mutableMapOf<String, BookEntity>()
+        var failUpsert = false
 
         override suspend fun getBookById(bookId: String): BookEntity? = byId[bookId]
 
-        override suspend fun upsert(book: BookEntity) { byId[book.id] = book }
+        override suspend fun upsert(book: BookEntity) { if (failUpsert) throw IllegalStateException("db down"); byId[book.id] = book }
         override suspend fun upsertAll(books: List<BookEntity>) { books.forEach { upsert(it) } }
         override fun observeAllBooks(): Flow<List<BookEntity>> = MutableStateFlow(byId.values.toList())
         override fun observeBookById(bookId: String): Flow<BookEntity?> = MutableStateFlow(byId[bookId])
@@ -222,6 +298,7 @@ class SupabaseBookCatalogDownloadTest {
             val existing = byId[bookId] ?: return
             byId[bookId] = existing.copy(deletedAtEpochMillis = deletedAt)
         }
+        override suspend fun deleteById(bookId: String) { byId.remove(bookId) }
         override suspend fun updateRating(bookId: String, rating: Int?) {
             val existing = byId[bookId] ?: return
             byId[bookId] = existing.copy(userRating = rating)

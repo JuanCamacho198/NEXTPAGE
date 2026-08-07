@@ -109,6 +109,46 @@ class LibraryRepositoryImplTest {
     }
 
     @Test
+    fun importBookFromPdf_succeedsEvenWhenCoverSaveFails() = runBlocking {
+        // REQ-07: cover save failure is mapped to COVER_FAILED and never blocks import.
+        val fakeDao = FakeBookDao()
+        val repository = LibraryRepositoryImpl(
+            appContext = mockk(),
+            bookDao = fakeDao,
+            readingProgressDao = FakeReadingProgressDao(),
+            readingStatsDao = FakeReadingStatsDao(),
+            epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("Should not be called"))),
+            pdfParserService = FakePdfParserService(
+                Result.success(
+                    PdfMetadata(
+                        title = "PDF With Cover",
+                        author = "Cover Author",
+                        pageCount = 120,
+                        fileSizeBytes = 1024L,
+                        coverBytes = byteArrayOf(1, 2, 3)
+                    )
+                )
+            ),
+            coverStorage = FailingCoverStorage(),
+            outboxDao = mockk()
+        )
+
+        val result = repository.importBookFromPdf(
+            request = com.nextpage.domain.model.BookImportRequest(
+                sourcePath = "content://books/cover.pdf",
+                fallbackTitle = "cover.pdf"
+            ),
+            file = java.io.File("cover.pdf")
+        )
+
+        assertTrue(result.isSuccess)
+        val inserted = fakeDao.lastUpserted
+        assertNotNull(inserted)
+        assertEquals("PDF With Cover", inserted?.title)
+        assertEquals(null, inserted?.coverPath)
+    }
+
+    @Test
     fun importBookFromPdf_returnsFailureWhenMetadataExtractionFails() = runBlocking {
         val fakeDao = FakeBookDao()
         val repository = LibraryRepositoryImpl(
@@ -459,6 +499,9 @@ class LibraryRepositoryImplTest {
                 if (book.id == bookId) book.copy(status = status, updatedAtEpochMillis = updatedAt) else book
             }
         }
+        override suspend fun deleteById(bookId: String) {
+            booksState.value = booksState.value.filterNot { it.id == bookId }
+        }
         override suspend fun startReading(bookId: String, updatedAt: Long) {}
         override suspend fun updateReadingProgress(bookId: String, progress: Float, updatedAt: Long) {}
         override suspend fun completeReading(bookId: String, updatedAt: Long) {}
@@ -490,6 +533,14 @@ class LibraryRepositoryImplTest {
     private class FakeCoverStorage : CoverStorage {
         override suspend fun saveCover(bookId: String, coverBytes: ByteArray): Result<String> {
             return Result.success("/tmp/$bookId.jpg")
+        }
+
+        override suspend fun deleteCover(bookId: String): Result<Unit> = Result.success(Unit)
+    }
+
+    private class FailingCoverStorage : CoverStorage {
+        override suspend fun saveCover(bookId: String, coverBytes: ByteArray): Result<String> {
+            return Result.failure(IllegalStateException("disk full"))
         }
 
         override suspend fun deleteCover(bookId: String): Result<Unit> = Result.success(Unit)

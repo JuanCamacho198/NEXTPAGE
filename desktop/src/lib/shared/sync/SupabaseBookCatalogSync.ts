@@ -8,6 +8,7 @@
  * - subscribeToCatalog: Realtime subscription for cross-device book sync
  */
 import { getSessionClient } from '$lib/services/supabase';
+import { coverError } from '$lib/shared/protocol/DriveCatalogContract';
 import type { SupabaseClient, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export interface SupabaseUserBookRow {
@@ -24,9 +25,53 @@ export interface SupabaseUserBookRow {
   sourceDevice: string | null;
   importedAt: string;
   updatedAt: string;
+  /** Recovery catalog fields (PR4): lifecycle, monotonic version, remote mapping, cover refs. */
+  lifecycle?: 'available' | 'imported' | 'unavailable' | 'deleted';
+  catalogVersion?: number;
+  remoteProvider?: string | null;
+  remoteFileId?: string | null;
+  remotePath?: string | null;
+  remoteName?: string | null;
+  protocolVersion?: string | null;
+  deletedAt?: string | null;
+  deletedByDevice?: string | null;
+  coverBucket?: string | null;
+  coverObjectPath?: string | null;
+  coverHash?: string | null;
+  coverMediaType?: string | null;
 }
-
 export type CatalogChangeCallback = (row: SupabaseUserBookRow) => void;
+
+export type CatalogChangeDecision =
+  | 'apply'
+  | 'ignore-stale'
+  | 'ignore-equal'
+  | 'ignore-missing-local'
+  | 'ignore-local-tombstone';
+
+/**
+ * PR5 Realtime convergence: decide whether an incoming catalog/tombstone
+ * change applies to the current local row, using monotonic version ordering.
+ * - Missing local state never becomes deletion: a tombstone with no local row
+ *   is ignored (reinstall emits no delete).
+ * - A local tombstone is never resurrected by a stale/equal/older event.
+ * - Equal-version events are idempotent; stale events are ignored.
+ * - Only a strictly newer row applies (metadata or explicit tombstone).
+ */
+export function decideCatalogChange(
+  local: Pick<SupabaseUserBookRow, 'catalogVersion' | 'lifecycle'> | null | undefined,
+  incoming: Pick<SupabaseUserBookRow, 'catalogVersion' | 'lifecycle'>,
+): CatalogChangeDecision {
+  if (!local) {
+    return incoming.lifecycle === 'deleted' ? 'ignore-missing-local' : 'apply';
+  }
+  if (local.lifecycle === 'deleted') return 'ignore-local-tombstone';
+  const localVersion = local.catalogVersion ?? 0;
+  const incomingVersion = incoming.catalogVersion ?? 0;
+  if (incomingVersion > localVersion) return 'apply';
+  if (incomingVersion === localVersion) return 'ignore-equal';
+  return 'ignore-stale';
+}
 
 export class SupabaseBookCatalogSync {
   private supabase: SupabaseClient;
@@ -58,6 +103,19 @@ export class SupabaseBookCatalogSync {
         source_device: book.sourceDevice ?? null,
         imported_at: book.importedAt,
         updated_at: book.updatedAt,
+        lifecycle: book.lifecycle ?? 'imported',
+        catalog_version: book.catalogVersion ?? 1,
+        remote_provider: book.remoteProvider ?? null,
+        remote_file_id: book.remoteFileId ?? null,
+        remote_path: book.remotePath ?? null,
+        remote_name: book.remoteName ?? null,
+        protocol_version: book.protocolVersion ?? null,
+        deleted_at: book.deletedAt ?? null,
+        deleted_by_device: book.deletedByDevice ?? null,
+        cover_bucket: book.coverBucket ?? null,
+        cover_object_path: book.coverObjectPath ?? null,
+        cover_hash: book.coverHash ?? null,
+        cover_media_type: book.coverMediaType ?? null,
       },
       {
         onConflict: 'user_id, id',
@@ -84,7 +142,8 @@ export class SupabaseBookCatalogSync {
   }
 
   /**
-   * Delete a book row for the current user.
+   * Delete a book row for the current user (legacy hard-delete; explicit
+   * user deletion uses tombstoneBook() for versioned tombstones).
    */
   async deleteBook(bookId: string): Promise<void> {
     const { error } = await this.supabase
@@ -96,10 +155,28 @@ export class SupabaseBookCatalogSync {
     if (error) throw error;
   }
 
+  async tombstoneBook(bookId: string): Promise<void> {
+    const now = new Date().toISOString();
+    const { data: current, error: fetchError } = await this.supabase
+      .from('user_books').select('title, format, catalog_version')
+      .eq('user_id', this.userId).eq('id', bookId).maybeSingle();
+    if (fetchError) throw fetchError;
+    const { error } = await this.supabase.from('user_books').upsert({
+      id: bookId, user_id: this.userId,
+      title: current ? String(current.title ?? bookId) : bookId,
+      format: current ? String(current.format ?? 'epub') : 'epub',
+      lifecycle: 'deleted',
+      catalog_version: (current?.catalog_version != null ? Number(current.catalog_version) : 1) + 1,
+      deleted_at: now, deleted_by_device: 'desktop', updated_at: now,
+    }, { onConflict: 'user_id, id', ignoreDuplicates: false });
+    if (error) throw error;
+  }
+
   /**
    * Upload a cover image to Supabase Storage and return the public URL.
    * Path: covers/{userId}/{bookId}.jpg
-   * Non-blocking: failure logs warning and returns null.
+   * Non-blocking: failure is mapped to the stable COVER_FAILED error code,
+   * logged for observability, and returns null so book import never blocks.
    */
   async uploadCover(userId: string, bookId: string, coverBytes: ArrayBuffer): Promise<string | null> {
     try {
@@ -109,7 +186,8 @@ export class SupabaseBookCatalogSync {
         .upload(path, coverBytes, { upsert: true });
 
       if (uploadError) {
-        console.warn('Cover upload failed:', uploadError);
+        const failed = coverError(crypto.randomUUID(), bookId);
+        console.warn(`${failed.code}: Cover upload failed for book ${bookId}:`, uploadError);
         return null;
       }
 
@@ -119,7 +197,8 @@ export class SupabaseBookCatalogSync {
 
       return urlData.publicUrl;
     } catch (e) {
-      console.warn('Cover upload failed', e);
+      const failed = coverError(crypto.randomUUID(), bookId);
+      console.warn(`${failed.code}: Cover upload failed for book ${bookId}`, e);
       return null;
     }
   }
@@ -193,6 +272,19 @@ export class SupabaseBookCatalogSync {
       sourceDevice: row.source_device != null ? String(row.source_device) : null,
       importedAt: String(row.imported_at ?? new Date().toISOString()),
       updatedAt: String(row.updated_at ?? new Date().toISOString()),
+      lifecycle: (row.lifecycle as SupabaseUserBookRow['lifecycle']) ?? 'imported',
+      catalogVersion: row.catalog_version != null ? Number(row.catalog_version) : 1,
+      remoteProvider: row.remote_provider != null ? String(row.remote_provider) : null,
+      remoteFileId: row.remote_file_id != null ? String(row.remote_file_id) : null,
+      remotePath: row.remote_path != null ? String(row.remote_path) : null,
+      remoteName: row.remote_name != null ? String(row.remote_name) : null,
+      protocolVersion: row.protocol_version != null ? String(row.protocol_version) : null,
+      deletedAt: row.deleted_at != null ? String(row.deleted_at) : null,
+      deletedByDevice: row.deleted_by_device != null ? String(row.deleted_by_device) : null,
+      coverBucket: row.cover_bucket != null ? String(row.cover_bucket) : null,
+      coverObjectPath: row.cover_object_path != null ? String(row.cover_object_path) : null,
+      coverHash: row.cover_hash != null ? String(row.cover_hash) : null,
+      coverMediaType: row.cover_media_type != null ? String(row.cover_media_type) : null,
     };
   }
 }

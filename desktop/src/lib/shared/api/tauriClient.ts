@@ -754,8 +754,12 @@ export const fileExists = async (path: string): Promise<boolean> => {
   return invoke<boolean>('fileExists', { path });
 };
 
-export const saveBookFile = async (id: string, data: number[]): Promise<void> => {
-  await invoke('saveBookFile', { id, data });
+export const saveBookFile = async (
+  id: string,
+  data: number[],
+  meta?: { title?: string; author?: string; format?: string },
+): Promise<void> => {
+  await invoke('saveBookFile', { id, data, title: meta?.title, author: meta?.author, format: meta?.format });
 };
 
 export const upsertBookCover = async (payload: UpsertBookCoverInput): Promise<void> => {

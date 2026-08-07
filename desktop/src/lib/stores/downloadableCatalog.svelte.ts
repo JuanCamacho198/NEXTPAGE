@@ -8,8 +8,10 @@
  * and error state management.
  */
 import type { SupabaseUserBookRow } from '$lib/shared/sync/SupabaseBookCatalogSync';
+import { SupabaseBookCatalogSync } from '$lib/shared/sync/SupabaseBookCatalogSync';
 import { GDriveProvider } from '$lib/shared/services/storage/GDriveProvider';
 import { getDriveToken } from '$lib/shared/services/SupabaseAuthService';
+import { importRecoveredBook } from '$lib/shared/recovery/desktopRecoveryImport';
 import * as tauri from '$lib/shared/api/tauriClient';
 
 // ─── Reactive State ───────────────────────────────────────────────────
@@ -45,13 +47,10 @@ export function clearDownloadError(): void {
 /**
  * Download a remote book from another device.
  *
- * Flow:
- * 1. Check Drive auth state
- * 2. Download file from Drive via GDriveProvider (with retry + backoff)
- * 3. Save locally via tauri.saveBookFile()
- * 4. Upsert local BookEntity via tauri.upsertBook()
- * 5. Remove from downloadable list on success
- * 6. On retry exhaustion: set error state, keep book in list for later retry
+ * Flow: auth check → resolve stable remote ref (fileId first, canonical
+ * name fallback) → download temp bytes → verify SHA-256 BEFORE persistence →
+ * atomic persist (Rust saveBookFile creates row + temp/rename) → mark the
+ * remote row imported (version bump) → remove from downloadable on success.
  */
 export async function downloadBook(bookId: string): Promise<void> {
   if (isDownloadingSet.has(bookId)) return;
@@ -66,7 +65,6 @@ export async function downloadBook(bookId: string): Promise<void> {
   downloadErrorMsg = null;
 
   try {
-    // 1. Check Drive auth
     const driveToken = await getDriveToken();
     if (!driveToken) {
       throw new Error(
@@ -74,59 +72,27 @@ export async function downloadBook(bookId: string): Promise<void> {
       );
     }
 
-    // 2. Download with retry (up to 3 attempts, exponential backoff)
     const gdrive = new GDriveProvider();
-    const fileName = `${book.id}.${book.format}`;
-    let bytes: Uint8Array = new Uint8Array(0); // fallback, never used (throw guard below)
-    let lastError: Error | null = null;
-
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        if (attempt > 0) {
-          // Exponential backoff: 1s, 2s
-          await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
-        }
-        bytes = await gdrive.download(fileName);
-        lastError = null;
-        break;
-      } catch (e) {
-        lastError = e instanceof Error ? e : new Error(String(e));
-
-        // If 401/Unauthorized, try triggering a session refresh
-        if (
-          lastError.message.includes('401') ||
-          lastError.message.includes('Unauthorized')
-        ) {
-          const refreshed = await refreshDriveToken();
-          if (!refreshed) {
-            throw new Error(
-              'Your Google Drive session has expired. Please sign in with Google again to download books from other devices.',
-            );
-          }
-          // Token refreshed, retry will use new token
-        }
-      }
-    }
-
-    if (lastError !== null) {
-      throw lastError;
-    }
-
-    // 3. Save locally
-    await tauri.saveBookFile(bookId, Array.from(bytes));
-
-    // 4. Upsert BookEntity
-    await tauri.upsertBook({
-      id: bookId,
-      title: book.title,
-      author: book.author ?? '',
-      format: book.format,
-      createdAt: book.importedAt,
-      updatedAt: new Date().toISOString(),
+    const catalogSync = new SupabaseBookCatalogSync(book.userId);
+    const result = await importRecoveredBook(book, {
+      download: (ref) => gdrive.download(ref),
+      persist: (id, bytes, meta) =>
+        tauri.saveBookFile(id, Array.from(bytes), meta),
+      markImported: (id, version) =>
+        catalogSync.upsertBook({
+          ...book, id, lifecycle: 'imported',
+          catalogVersion: version, updatedAt: new Date().toISOString(),
+        }),
+      findByHash: (hash) => catalogSync.findByHash(hash),
     });
 
-    // 5. Remove from downloadable list
-    removeDownloadableBook(bookId);
+    if (result.outcome === 'imported' || result.outcome === 'already_imported') {
+      removeDownloadableBook(bookId);
+    } else if (result.error) {
+      downloadErrorMsg = result.error.message;
+    } else {
+      downloadErrorMsg = 'Download failed unexpectedly';
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Download failed unexpectedly';
     downloadErrorMsg = msg;
@@ -134,34 +100,6 @@ export async function downloadBook(bookId: string): Promise<void> {
     throw e;
   } finally {
     isDownloadingSet.delete(bookId);
-  }
-}
-
-/**
- * Attempt to refresh the Supabase session, which may yield a new
- * provider_token for Drive access.
- */
-async function refreshDriveToken(): Promise<boolean> {
-  try {
-    const { getSessionClient } = await import('$lib/services/supabase');
-    const supabase = getSessionClient();
-    const { data, error } = await supabase.auth.refreshSession();
-    if (error || !data.session?.provider_token) return false;
-    // Update auth state with refreshed session
-    const { authState } = await import('$lib/stores/authState.svelte');
-    authState.setSupabaseSession({
-      accessToken: data.session.access_token,
-      refreshToken: data.session.refresh_token,
-      expiresAt: data.session.expires_at ? data.session.expires_at * 1000 : null,
-      userId: data.session.user.id,
-      email: data.session.user.email ?? null,
-      displayName: data.session.user.user_metadata?.full_name ?? null,
-      photoUrl: data.session.user.user_metadata?.avatar_url ?? null,
-      providerToken: data.session.provider_token ?? null,
-    });
-    return true;
-  } catch {
-    return false;
   }
 }
 

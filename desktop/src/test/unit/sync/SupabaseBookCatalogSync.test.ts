@@ -4,10 +4,12 @@
  * and reconciliation gap detection.
  */
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { decideCatalogChange } from '$lib/shared/sync/SupabaseBookCatalogSync';
 
 // ---- Mock control variables ----
 let mockFrom = vi.fn();
 let mockChannel = vi.fn();
+let mockStorage: { from: ReturnType<typeof vi.fn> } = { from: vi.fn() };
 let mockChainable: Record<string, ReturnType<typeof vi.fn>>;
 
 // ---- Mock supabase client factory ----
@@ -15,6 +17,7 @@ vi.mock('$lib/services/supabase', () => ({
   getSessionClient: () => ({
     from: mockFrom,
     channel: mockChannel,
+    storage: mockStorage,
   }),
 }));
 
@@ -92,6 +95,13 @@ beforeEach(() => {
   };
 
   mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+  mockStorage = {
+    from: vi.fn().mockReturnValue({
+      upload: vi.fn().mockResolvedValue({ error: null }),
+      getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://cdn.example/cover.jpg' } }),
+    }),
+  };
 
   mockChannel = vi.fn().mockReturnValue({
     on: vi.fn().mockReturnThis(),
@@ -239,6 +249,19 @@ describe('SupabaseBookCatalogSync — fetchCatalog', () => {
       sourceDevice: 'android',
       importedAt: '2025-03-01T00:00:00Z',
       updatedAt: '2025-06-15T00:00:00Z',
+      lifecycle: 'imported',
+      catalogVersion: 1,
+      remoteProvider: null,
+      remoteFileId: null,
+      remotePath: null,
+      remoteName: null,
+      protocolVersion: null,
+      deletedAt: null,
+      deletedByDevice: null,
+      coverBucket: null,
+      coverObjectPath: null,
+      coverHash: null,
+      coverMediaType: null,
     });
   });
 });
@@ -388,6 +411,52 @@ describe('SupabaseBookCatalogSync — findByHash (PR 5 dedup)', () => {
   });
 });
 
+describe('SupabaseBookCatalogSync — tombstoneBook (PR4 explicit delete)', () => {
+  it('upserts a versioned tombstone instead of hard-deleting', async () => {
+    // maybeSingle returns an existing row with catalog_version 3
+    mockChainable.maybeSingle = vi.fn().mockResolvedValue({
+      data: makeRawRow({ title: 'Keep Me', format: 'epub', catalog_version: 3 }),
+      error: null,
+    });
+    mockChainable.eq = vi.fn().mockReturnThis();
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    await sync.tombstoneBook('book-1');
+
+    // Must NOT call delete()
+    expect(mockChainable.delete).not.toHaveBeenCalled();
+    expect(mockChainable.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'book-1',
+        user_id: 'user-1',
+        lifecycle: 'deleted',
+        catalog_version: 4,
+        deleted_by_device: 'desktop',
+        deleted_at: expect.any(String),
+      }),
+      expect.objectContaining({ onConflict: 'user_id, id' }),
+    );
+  });
+
+  it('bumps version from 1 when row has no catalog_version', async () => {
+    mockChainable.maybeSingle = vi.fn().mockResolvedValue({
+      data: makeRawRow({ title: 'Legacy', format: 'epub', catalog_version: null }),
+      error: null,
+    });
+    mockChainable.eq = vi.fn().mockReturnThis();
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    await sync.tombstoneBook('book-1');
+
+    expect(mockChainable.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ lifecycle: 'deleted', catalog_version: 2 }),
+      expect.any(Object),
+    );
+  });
+});
+
 describe('SupabaseBookCatalogSync — destroy', () => {
   it('unsubscribes from Realtime channel and clears reference', () => {
     const sync = new SupabaseBookCatalogSync('user-1');
@@ -400,6 +469,33 @@ describe('SupabaseBookCatalogSync — destroy', () => {
 
     // destroy() calls the stored unsubscribe function which invokes channel.unsubscribe
     expect(channelObj.unsubscribe).toHaveBeenCalled();
+  });
+});
+
+describe('decideCatalogChange — PR5 Realtime apply-if-newer convergence', () => {
+  const local = (catalogVersion: number, lifecycle: 'available' | 'deleted' = 'available') => ({ catalogVersion, lifecycle });
+  it('missing local state never becomes deletion: tombstone with no local row is ignored', () => {
+    expect(decideCatalogChange(null, local(4, 'deleted'))).toBe('ignore-missing-local');
+  });
+  it('missing local state accepts a new available row', () => {
+    expect(decideCatalogChange(null, local(1, 'available'))).toBe('apply');
+  });
+  it('local tombstone is never resurrected by any event', () => {
+    expect(decideCatalogChange(local(5, 'deleted'), local(6, 'available'))).toBe('ignore-local-tombstone');
+  });
+  it('stale event (older version) is ignored', () => {
+    expect(decideCatalogChange(local(5), local(4))).toBe('ignore-stale');
+  });
+  it('equal-version event is idempotent (ignored)', () => {
+    expect(decideCatalogChange(local(5), local(5))).toBe('ignore-equal');
+  });
+  it('newer event applies (metadata or explicit tombstone)', () => {
+    expect(decideCatalogChange(local(5), local(6))).toBe('apply');
+    expect(decideCatalogChange(local(5), local(6, 'deleted'))).toBe('apply');
+  });
+  it('missing catalogVersion defaults to 0 for ordering', () => {
+    expect(decideCatalogChange({ catalogVersion: 0, lifecycle: 'available' }, { catalogVersion: 1, lifecycle: 'available' })).toBe('apply');
+    expect(decideCatalogChange({ catalogVersion: 1, lifecycle: 'available' }, { catalogVersion: 0, lifecycle: 'available' })).toBe('ignore-stale');
   });
 });
 
@@ -446,5 +542,33 @@ describe('Reconciliation — gap detection logic', () => {
 
     expect(needPush).toHaveLength(1);
     expect(needPush[0].id).toBe('local-2');
+  });
+});
+
+describe('SupabaseBookCatalogSync — uploadCover COVER_FAILED mapping', () => {
+  it('maps upload failure to the stable COVER_FAILED code and never returns a blocking error', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    mockStorage = {
+      from: vi.fn().mockReturnValue({
+        upload: vi.fn().mockResolvedValue({ error: new Error('storage denied') }),
+        getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://cdn.example/cover.jpg' } }),
+      }),
+    };
+    const sync = new SupabaseBookCatalogSync('user-1');
+    const url = await sync.uploadCover('user-1', 'book-1', new Uint8Array([1]).buffer);
+    expect(url).toBeNull();
+    expect(mockStorage.from).toHaveBeenCalledWith('book-covers');
+    // The failure is typed with the stable code (observability) while import stays non-blocking.
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('COVER_FAILED'), expect.anything());
+    warn.mockRestore();
+  });
+
+  it('returns the signed public URL and no COVER_FAILED warning on success', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const sync = new SupabaseBookCatalogSync('user-1');
+    const url = await sync.uploadCover('user-1', 'book-1', new Uint8Array([1]).buffer);
+    expect(url).toBe('https://cdn.example/cover.jpg');
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

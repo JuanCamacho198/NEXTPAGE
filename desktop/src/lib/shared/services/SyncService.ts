@@ -187,8 +187,9 @@ export class SyncService {
           updatedAt: metadata.updatedAt != null ? String(metadata.updatedAt) : new Date().toISOString(),
         });
       } else if (entityType === 'BOOK' && operation === 'DELETE') {
+        // Explicit deletion is versioned: tombstone the remote row, never hard-delete.
         const bookSync = new SupabaseBookCatalogSync(authState.userId);
-        await bookSync.deleteBook(entityId);
+        await bookSync.tombstoneBook(entityId);
       } else {
         throw new Error(`Unsupported outbox entity: ${entityType}/${operation}`);
       }
@@ -266,8 +267,14 @@ export class SyncService {
         }
       }
 
-      // 4. Compute downloadable: remote books not in local set
-      const downloadable = remoteBooks.filter((rb) => !localIds.has(rb.id));
+      // 4. Compute downloadable: remote rows not in local set, excluding
+      //    deleted/unavailable rows. Local absence never emits deletion and
+      //    existing local books never hard-delete remote rows (reconcile is
+      //    additive upsert only).
+      const excluded = new Set(['deleted', 'unavailable']);
+      const downloadable = remoteBooks.filter(
+        (rb) => !localIds.has(rb.id) && !excluded.has(rb.lifecycle ?? 'available'),
+      );
 
       // 5. Store in reactive store
       setDownloadableBooks(downloadable);

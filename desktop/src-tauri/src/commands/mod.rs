@@ -365,12 +365,18 @@ pub async fn fileExists(path: String) -> Result<bool, String> {
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
 pub async fn saveBookFile(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     id: String,
     data: Vec<u8>,
+    title: Option<String>,
+    author: Option<String>,
+    format: Option<String>,
 ) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository.save_book_file(&id, &data).map_err(map_command_error)
+    repository
+        .save_book_file(&app, &id, &data, title.as_deref(), author.as_deref(), format.as_deref())
+        .map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]

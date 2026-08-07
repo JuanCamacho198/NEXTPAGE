@@ -407,10 +407,17 @@ impl LibraryRepository {
         files::update_book_progress(self, book_id, current_page)
     }
 
-    pub fn save_book_file(&self, id: &str, data: &[u8]) -> AppResult<()> {
-        files::save_book_file(self, id, data)
+    pub fn save_book_file(
+        &self,
+        app: &tauri::AppHandle,
+        id: &str,
+        data: &[u8],
+        title: Option<&str>,
+        author: Option<&str>,
+        format: Option<&str>,
+    ) -> AppResult<()> {
+        files::save_book_file(self, app, id, data, title, author, format)
     }
-
     pub fn hide_book_from_library(&self, book_id: &str) -> AppResult<()> {
         files::hide_book_from_library(self, book_id)
     }

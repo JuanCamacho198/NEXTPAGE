@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 
 // ---- Mock control variables (set before each test) ----
 let mockIsSignedIn = vi.fn<() => boolean>();
+let mockUserId = vi.fn<() => string | null>();
 let mockGDriveUpload = vi.fn();
 let mockGDriveDownload = vi.fn();
 let mockGDriveList = vi.fn();
@@ -25,6 +26,21 @@ let mockSaveBookFile = vi.fn();
 let mockGetFileBytes = vi.fn();
 let mockDeleteHighlight = vi.fn();
 let mockDeleteBookmark = vi.fn();
+let mockCatalogFindByHash = vi.fn();
+let mockCatalogUploadCover = vi.fn();
+let mockCatalogUpsertBook = vi.fn();
+let mockCatalogTombstone = vi.fn();
+let mockCatalogFetchCatalog = vi.fn();
+const capturedOutboxHandler = vi.hoisted(() => ({
+  value: null as
+    | ((
+        entityType: string,
+        entityId: string | null,
+        operation: 'UPSERT' | 'DELETE',
+        payloadJson: string,
+      ) => Promise<void>)
+    | null,
+}));
 
 // ---- Mock layers (must be hoisted by vitest) ----
 
@@ -32,6 +48,9 @@ vi.mock('$lib/stores/authState.svelte.ts', () => ({
   authState: {
     get isSignedIn(): boolean {
       return mockIsSignedIn();
+    },
+    get userId(): string | null {
+      return mockUserId();
     },
   },
 }));
@@ -70,6 +89,43 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
   fileExists: (path: string) => mockFileExists(path),
   saveBookFile: (id: string, data: number[]) => mockSaveBookFile(id, data),
   getFileBytes: (path: string) => mockGetFileBytes(path),
+  listLibraryBooks: () => Promise.resolve([]),
+}));
+
+vi.mock('$lib/shared/sync/SupabaseBookCatalogSync', async () => {
+  const actual = await vi.importActual<typeof import('$lib/shared/sync/SupabaseBookCatalogSync')>(
+    '$lib/shared/sync/SupabaseBookCatalogSync',
+  );
+  return {
+    ...actual,
+    SupabaseBookCatalogSync: vi.fn(function () {
+      return {
+        findByHash: mockCatalogFindByHash,
+        uploadCover: mockCatalogUploadCover,
+        upsertBook: mockCatalogUpsertBook,
+        tombstoneBook: mockCatalogTombstone,
+        fetchCatalog: mockCatalogFetchCatalog,
+      };
+    }),
+  };
+});
+
+vi.mock('$lib/shared/sync/SupabaseProgressSync', () => ({
+  SupabaseProgressSync: vi.fn(function () {
+    return {};
+  }),
+}));
+
+vi.mock('$lib/shared/outbox/SyncOutboxService', () => ({
+  SyncOutboxService: vi.fn(function (this: {
+    setHandler: (h: (typeof capturedOutboxHandler)['value']) => void;
+    start: () => void;
+  }) {
+    this.setHandler = (h) => {
+      capturedOutboxHandler.value = h;
+    };
+    this.start = () => undefined;
+  }),
 }));
 
 // Dynamic import
@@ -103,6 +159,13 @@ beforeEach(() => {
   mockDeleteBookmark.mockResolvedValue(undefined);
   mockSaveBookFile.mockResolvedValue(undefined);
   mockGetFileBytes.mockResolvedValue([1, 2, 3]);
+  // A signed-in session always carries a userId (mirrors the real authState).
+  mockUserId.mockReturnValue('user-1');
+  mockCatalogFindByHash.mockResolvedValue(null);
+  mockCatalogUploadCover.mockResolvedValue(null);
+  mockCatalogUpsertBook.mockResolvedValue(undefined);
+  mockCatalogTombstone.mockResolvedValue(undefined);
+  mockCatalogFetchCatalog.mockResolvedValue([]);
 });
 
 function makeLocalBook(id: string, title: string, filePath: string) {
@@ -142,7 +205,10 @@ describe('SyncService — auth gate', () => {
     mockIsSignedIn.mockReturnValue(true);
     let releaseDriveList!: () => void;
     mockGDriveList.mockImplementation(
-      () => new Promise<string[]>((resolve) => { releaseDriveList = () => resolve([]); }),
+      () =>
+        new Promise<string[]>((resolve) => {
+          releaseDriveList = () => resolve([]);
+        }),
     );
 
     const first = SyncService.syncMetadata();
@@ -213,6 +279,107 @@ describe('SyncService — book file sync', () => {
     // No book file should be downloaded since it exists locally
     expect(downloadBookCallCount).toBe(0);
     expect(mockSaveBookFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('SyncService — outbox BOOK handler remote-ref persistence (DRP-1/DRP-4)', () => {
+  const bookPayload = (overrides: Record<string, unknown> = {}) =>
+    JSON.stringify({
+      title: 'Imported Book',
+      author: 'Author',
+      format: 'epub',
+      content_hash: null,
+      importedAt: '2025-01-01T00:00:00Z',
+      updatedAt: '2025-06-01T00:00:00Z',
+      ...overrides,
+    });
+
+  beforeEach(() => {
+    // Handler is registered once (setupOutboxProcessor is idempotent) and its
+    // closure reads the current mock functions at call time.
+    mockUserId.mockReturnValue('user-1');
+    SyncService.setupOutboxProcessor();
+  });
+
+  it('RED: uploads the binary, persists remote refs, then succeeds (row delete is outbox contract)', async () => {
+    mockListBooks.mockResolvedValue([makeLocalBook('book-1', 'Imported Book', '/tmp/book-1.epub')]);
+    mockGDriveUpload.mockResolvedValue('drive-file-1');
+    mockGetFileBytes.mockResolvedValue([9, 8, 7]);
+
+    await capturedOutboxHandler.value!('BOOK', 'book-1', 'UPSERT', bookPayload());
+
+    // Binary uploaded under the canonical name
+    expect(mockGDriveUpload).toHaveBeenCalledWith(
+      'book-1',
+      new Uint8Array([9, 8, 7]),
+      'book-1.epub',
+    );
+    // Remote refs persisted with the real Drive file ID (DRP-1)
+    expect(mockCatalogUpsertBook).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'book-1',
+        remoteProvider: 'google_drive',
+        remoteFileId: 'drive-file-1',
+        remotePath: 'NextPage/Books/book-1.epub',
+        remoteName: 'book-1.epub',
+        protocolVersion: 1,
+        recoveryProtocol: 'recovery_protocol_v1',
+      }),
+    );
+  });
+
+  it('RED: upload failure → handler rejects, NO refs written, NO partial upsert', async () => {
+    mockListBooks.mockResolvedValue([makeLocalBook('book-1', 'Imported Book', '/tmp/book-1.epub')]);
+    mockGDriveUpload.mockRejectedValue(new Error('network drop'));
+
+    await expect(
+      capturedOutboxHandler.value!('BOOK', 'book-1', 'UPSERT', bookPayload()),
+    ).rejects.toThrow('network drop');
+
+    expect(mockCatalogUpsertBook).not.toHaveBeenCalled();
+  });
+
+  it('RED: content-hash dedup still short-circuits before upload (no Drive file for duplicate)', async () => {
+    mockCatalogFindByHash.mockResolvedValue({ id: 'existing', title: 'Same Book' });
+
+    await capturedOutboxHandler.value!(
+      'BOOK',
+      'book-1',
+      'UPSERT',
+      bookPayload({ content_hash: 'sha256:dup' }),
+    );
+
+    expect(mockGDriveUpload).not.toHaveBeenCalled();
+    expect(mockCatalogUpsertBook).not.toHaveBeenCalled();
+  });
+});
+
+describe('SyncService — syncBooks persists remote refs for local-only uploads (DRP-1)', () => {
+  it('RED: captures the upload fileId and persists refs on the row', async () => {
+    mockIsSignedIn.mockReturnValue(true);
+    const localBook = makeLocalBook('book-9', 'Local Only', '/tmp/book-9.epub');
+    mockListBooks.mockResolvedValue([localBook]);
+    mockGDriveList.mockResolvedValue([]); // no remote files → upload path
+    mockFileExists.mockResolvedValue(true);
+    mockGetFileBytes.mockResolvedValue([1, 2, 3]);
+    mockGDriveUpload.mockResolvedValue('drive-file-9');
+
+    await SyncService.syncMetadata();
+
+    expect(mockGDriveUpload).toHaveBeenCalledWith(
+      'book-9.epub',
+      new Uint8Array([1, 2, 3]),
+      'book-9.epub',
+    );
+    expect(mockCatalogUpsertBook).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'book-9',
+        remoteFileId: 'drive-file-9',
+        remoteProvider: 'google_drive',
+        protocolVersion: 1,
+        recoveryProtocol: 'recovery_protocol_v1',
+      }),
+    );
   });
 });
 

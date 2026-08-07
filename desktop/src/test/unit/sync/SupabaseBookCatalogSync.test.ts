@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { decideCatalogChange } from '$lib/shared/sync/SupabaseBookCatalogSync';
+import type { SupabaseUserBookRow } from '$lib/shared/sync/SupabaseBookCatalogSync';
 
 // ---- Mock control variables ----
 let mockFrom = vi.fn();
@@ -22,21 +23,7 @@ vi.mock('$lib/services/supabase', () => ({
 }));
 
 // ---- Test data ----
-function makeUserBookRow(overrides: Partial<{
-  id: string;
-  userId: string;
-  title: string;
-  author: string | null;
-  format: string;
-  contentHash: string | null;
-  filePath: string | null;
-  coverUrl: string | null;
-  description: string | null;
-  totalPages: number | null;
-  sourceDevice: string | null;
-  importedAt: string;
-  updatedAt: string;
-}> = {}) {
+function makeUserBookRow(overrides: Partial<SupabaseUserBookRow> = {}) {
   return {
     id: 'book-1',
     userId: 'user-1',
@@ -99,7 +86,9 @@ beforeEach(() => {
   mockStorage = {
     from: vi.fn().mockReturnValue({
       upload: vi.fn().mockResolvedValue({ error: null }),
-      getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://cdn.example/cover.jpg' } }),
+      getPublicUrl: vi
+        .fn()
+        .mockReturnValue({ data: { publicUrl: 'https://cdn.example/cover.jpg' } }),
     }),
   };
 
@@ -170,6 +159,147 @@ describe('SupabaseBookCatalogSync — upsertBook', () => {
     const sync2 = new SupabaseBookCatalogSync('user-1');
     await expect(sync2.upsertBook(book)).rejects.toThrow('DB error');
   });
+
+  it('maps null fields correctly when no current row exists', async () => {
+    const sync = new SupabaseBookCatalogSync('user-1');
+    const book = makeUserBookRow({
+      author: null,
+      contentHash: null,
+      filePath: null,
+      coverUrl: null,
+      description: null,
+      totalPages: null,
+      sourceDevice: null,
+    });
+
+    await sync.upsertBook(book);
+
+    expect(mockChainable.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        author: null,
+        content_hash: null,
+        file_path: null,
+        cover_url: null,
+        description: null,
+        total_pages: null,
+        source_device: null,
+      }),
+      expect.any(Object),
+    );
+  });
+});
+
+describe('SupabaseBookCatalogSync — upsertBook merge semantics (DRP-2/DRP-5)', () => {
+  /** Current row as returned by the read-before-upsert maybeSingle. */
+  function currentRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: 'book-1',
+      user_id: 'user-1',
+      title: 'Existing',
+      format: 'epub',
+      catalog_version: 3,
+      content_hash: 'sha256:existing',
+      remote_provider: 'google_drive',
+      remote_file_id: 'file-keep-1',
+      remote_path: 'NextPage/Books/book-1.epub',
+      remote_name: 'book-1.epub',
+      protocol_version: '1',
+      recovery_protocol: 'recovery_protocol_v1',
+      ...overrides,
+    };
+  }
+
+  function upsertPayload(): Record<string, unknown> {
+    return mockChainable.upsert.mock.calls[0]?.[0] as Record<string, unknown>;
+  }
+
+  it('RED: upsert without remote fields preserves existing refs + catalog_version (not reset to 1)', async () => {
+    mockChainable.maybeSingle = vi.fn().mockResolvedValue({ data: currentRow(), error: null });
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    await sync.upsertBook(makeUserBookRow({ contentHash: null }));
+
+    const payload = upsertPayload();
+    expect(payload.catalog_version).toBe(3);
+    expect(payload.remote_provider).toBe('google_drive');
+    expect(payload.remote_file_id).toBe('file-keep-1');
+    expect(payload.remote_path).toBe('NextPage/Books/book-1.epub');
+    expect(payload.remote_name).toBe('book-1.epub');
+  });
+
+  it('RED: content_hash is preserved when incoming is null (no null write)', async () => {
+    mockChainable.maybeSingle = vi.fn().mockResolvedValue({ data: currentRow(), error: null });
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    await sync.upsertBook(makeUserBookRow({ contentHash: null }));
+
+    expect(upsertPayload().content_hash).toBe('sha256:existing');
+  });
+
+  it('RED: recovery_protocol_v1 is never downgraded when incoming omits it', async () => {
+    mockChainable.maybeSingle = vi.fn().mockResolvedValue({ data: currentRow(), error: null });
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    await sync.upsertBook(makeUserBookRow());
+
+    expect(upsertPayload().recovery_protocol).toBe('recovery_protocol_v1');
+  });
+
+  it('RED: protocol_version survives as text when incoming omits it', async () => {
+    mockChainable.maybeSingle = vi.fn().mockResolvedValue({ data: currentRow(), error: null });
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    await sync.upsertBook(makeUserBookRow());
+
+    expect(upsertPayload().protocol_version).toBe('1');
+  });
+
+  it('RED: new row with remote refs writes recovery_protocol_v1 and catalog_version 1', async () => {
+    // No current row (fresh insert path)
+    const sync = new SupabaseBookCatalogSync('user-1');
+    await sync.upsertBook(
+      makeUserBookRow({
+        catalogVersion: 1,
+        remoteProvider: 'google_drive',
+        remoteFileId: 'file-new-1',
+        remotePath: 'NextPage/Books/book-1.epub',
+        remoteName: 'book-1.epub',
+        protocolVersion: 1,
+        recoveryProtocol: 'recovery_protocol_v1',
+      }),
+    );
+
+    const payload = upsertPayload();
+    expect(payload.recovery_protocol).toBe('recovery_protocol_v1');
+    expect(payload.remote_file_id).toBe('file-new-1');
+    expect(payload.protocol_version).toBe('1');
+    expect(payload.catalog_version).toBe(1);
+  });
+
+  it('RED: new row without refs keeps recovery_protocol legacy and catalog_version 1', async () => {
+    const sync = new SupabaseBookCatalogSync('user-1');
+    await sync.upsertBook(makeUserBookRow({ contentHash: null }));
+
+    const payload = upsertPayload();
+    expect(payload.recovery_protocol).toBe('legacy');
+    expect(payload.catalog_version).toBe(1);
+  });
+
+  it('RED: catalog_version takes max(current, incoming) — incoming bump wins', async () => {
+    mockChainable.maybeSingle = vi
+      .fn()
+      .mockResolvedValue({ data: currentRow({ catalog_version: 3 }), error: null });
+    mockFrom = vi.fn().mockReturnValue(mockChainable);
+
+    const sync = new SupabaseBookCatalogSync('user-1');
+    await sync.upsertBook(makeUserBookRow({ catalogVersion: 5 }));
+
+    expect(upsertPayload().catalog_version).toBe(5);
+  });
 });
 
 describe('SupabaseBookCatalogSync — fetchCatalog', () => {
@@ -203,7 +333,9 @@ describe('SupabaseBookCatalogSync — fetchCatalog', () => {
   });
 
   it('throws on Supabase error during fetch', async () => {
-    mockChainable.order = vi.fn().mockResolvedValue({ data: null, error: new Error('Network error') });
+    mockChainable.order = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: new Error('Network error') });
     mockFrom = vi.fn().mockReturnValue(mockChainable);
 
     const sync = new SupabaseBookCatalogSync('user-1');
@@ -212,21 +344,23 @@ describe('SupabaseBookCatalogSync — fetchCatalog', () => {
 
   it('maps all columns from snake_case DB to camelCase interface', async () => {
     mockChainable.order = vi.fn().mockResolvedValue({
-      data: [makeRawRow({
-        id: 'b2',
-        user_id: 'u1',
-        title: '1984',
-        author: 'Orwell',
-        format: 'pdf',
-        content_hash: 'sha256:abc123',
-        file_path: 'books/u1/b2.pdf',
-        cover_url: 'https://example.com/cover.jpg',
-        description: 'A dystopian novel',
-        total_pages: 328,
-        source_device: 'android',
-        imported_at: '2025-03-01T00:00:00Z',
-        updated_at: '2025-06-15T00:00:00Z',
-      })],
+      data: [
+        makeRawRow({
+          id: 'b2',
+          user_id: 'u1',
+          title: '1984',
+          author: 'Orwell',
+          format: 'pdf',
+          content_hash: 'sha256:abc123',
+          file_path: 'books/u1/b2.pdf',
+          cover_url: 'https://example.com/cover.jpg',
+          description: 'A dystopian novel',
+          total_pages: 328,
+          source_device: 'android',
+          imported_at: '2025-03-01T00:00:00Z',
+          updated_at: '2025-06-15T00:00:00Z',
+        }),
+      ],
       error: null,
     });
     mockFrom = vi.fn().mockReturnValue(mockChainable);
@@ -256,6 +390,7 @@ describe('SupabaseBookCatalogSync — fetchCatalog', () => {
       remotePath: null,
       remoteName: null,
       protocolVersion: null,
+      recoveryProtocol: null,
       deletedAt: null,
       deletedByDevice: null,
       coverBucket: null,
@@ -270,9 +405,10 @@ describe('SupabaseBookCatalogSync — deleteBook', () => {
   it('deletes a book row by user_id and id', async () => {
     mockChainable.delete = vi.fn().mockReturnThis();
     // First eq call returns this, second resolves
-    mockChainable.eq = vi.fn()
-      .mockReturnValueOnce(mockChainable)  // user_id eq
-      .mockResolvedValueOnce({ error: null });  // id eq
+    mockChainable.eq = vi
+      .fn()
+      .mockReturnValueOnce(mockChainable) // user_id eq
+      .mockResolvedValueOnce({ error: null }); // id eq
     mockFrom = vi.fn().mockReturnValue(mockChainable);
 
     const sync = new SupabaseBookCatalogSync('user-1');
@@ -286,7 +422,8 @@ describe('SupabaseBookCatalogSync — deleteBook', () => {
 
   it('throws on Supabase error during delete', async () => {
     mockChainable.delete = vi.fn().mockReturnThis();
-    mockChainable.eq = vi.fn()
+    mockChainable.eq = vi
+      .fn()
       .mockReturnValueOnce(mockChainable)
       .mockResolvedValueOnce({ error: new Error('Delete failed') });
     mockFrom = vi.fn().mockReturnValue(mockChainable);
@@ -473,7 +610,10 @@ describe('SupabaseBookCatalogSync — destroy', () => {
 });
 
 describe('decideCatalogChange — PR5 Realtime apply-if-newer convergence', () => {
-  const local = (catalogVersion: number, lifecycle: 'available' | 'deleted' = 'available') => ({ catalogVersion, lifecycle });
+  const local = (catalogVersion: number, lifecycle: 'available' | 'deleted' = 'available') => ({
+    catalogVersion,
+    lifecycle,
+  });
   it('missing local state never becomes deletion: tombstone with no local row is ignored', () => {
     expect(decideCatalogChange(null, local(4, 'deleted'))).toBe('ignore-missing-local');
   });
@@ -481,7 +621,9 @@ describe('decideCatalogChange — PR5 Realtime apply-if-newer convergence', () =
     expect(decideCatalogChange(null, local(1, 'available'))).toBe('apply');
   });
   it('local tombstone is never resurrected by any event', () => {
-    expect(decideCatalogChange(local(5, 'deleted'), local(6, 'available'))).toBe('ignore-local-tombstone');
+    expect(decideCatalogChange(local(5, 'deleted'), local(6, 'available'))).toBe(
+      'ignore-local-tombstone',
+    );
   });
   it('stale event (older version) is ignored', () => {
     expect(decideCatalogChange(local(5), local(4))).toBe('ignore-stale');
@@ -494,8 +636,18 @@ describe('decideCatalogChange — PR5 Realtime apply-if-newer convergence', () =
     expect(decideCatalogChange(local(5), local(6, 'deleted'))).toBe('apply');
   });
   it('missing catalogVersion defaults to 0 for ordering', () => {
-    expect(decideCatalogChange({ catalogVersion: 0, lifecycle: 'available' }, { catalogVersion: 1, lifecycle: 'available' })).toBe('apply');
-    expect(decideCatalogChange({ catalogVersion: 1, lifecycle: 'available' }, { catalogVersion: 0, lifecycle: 'available' })).toBe('ignore-stale');
+    expect(
+      decideCatalogChange(
+        { catalogVersion: 0, lifecycle: 'available' },
+        { catalogVersion: 1, lifecycle: 'available' },
+      ),
+    ).toBe('apply');
+    expect(
+      decideCatalogChange(
+        { catalogVersion: 1, lifecycle: 'available' },
+        { catalogVersion: 0, lifecycle: 'available' },
+      ),
+    ).toBe('ignore-stale');
   });
 });
 
@@ -507,15 +659,51 @@ describe('Reconciliation — gap detection logic', () => {
     ];
 
     const remoteBooks = [
-      { id: 'local-1', title: 'Local Book', userId: 'u1', author: null, format: 'epub',
-        contentHash: null, filePath: null, coverUrl: null, description: null,
-        totalPages: null, sourceDevice: null, importedAt: '', updatedAt: '' },
-      { id: 'remote-1', title: 'Remote Book', userId: 'u1', author: 'Remote Author', format: 'pdf',
-        contentHash: null, filePath: null, coverUrl: null, description: null,
-        totalPages: 300, sourceDevice: 'android', importedAt: '', updatedAt: '' },
-      { id: 'remote-2', title: 'Another Remote', userId: 'u1', author: null, format: 'epub',
-        contentHash: null, filePath: null, coverUrl: null, description: null,
-        totalPages: null, sourceDevice: null, importedAt: '', updatedAt: '' },
+      {
+        id: 'local-1',
+        title: 'Local Book',
+        userId: 'u1',
+        author: null,
+        format: 'epub',
+        contentHash: null,
+        filePath: null,
+        coverUrl: null,
+        description: null,
+        totalPages: null,
+        sourceDevice: null,
+        importedAt: '',
+        updatedAt: '',
+      },
+      {
+        id: 'remote-1',
+        title: 'Remote Book',
+        userId: 'u1',
+        author: 'Remote Author',
+        format: 'pdf',
+        contentHash: null,
+        filePath: null,
+        coverUrl: null,
+        description: null,
+        totalPages: 300,
+        sourceDevice: 'android',
+        importedAt: '',
+        updatedAt: '',
+      },
+      {
+        id: 'remote-2',
+        title: 'Another Remote',
+        userId: 'u1',
+        author: null,
+        format: 'epub',
+        contentHash: null,
+        filePath: null,
+        coverUrl: null,
+        description: null,
+        totalPages: null,
+        sourceDevice: null,
+        importedAt: '',
+        updatedAt: '',
+      },
     ];
 
     const localIds = new Set(localBooks.map((b) => b.id));
@@ -532,9 +720,21 @@ describe('Reconciliation — gap detection logic', () => {
     ];
 
     const remoteBooks = [
-      { id: 'local-1', title: 'Shared Book', userId: 'u1', author: null, format: 'epub',
-        contentHash: null, filePath: null, coverUrl: null, description: null,
-        totalPages: null, sourceDevice: null, importedAt: '', updatedAt: '' },
+      {
+        id: 'local-1',
+        title: 'Shared Book',
+        userId: 'u1',
+        author: null,
+        format: 'epub',
+        contentHash: null,
+        filePath: null,
+        coverUrl: null,
+        description: null,
+        totalPages: null,
+        sourceDevice: null,
+        importedAt: '',
+        updatedAt: '',
+      },
     ];
 
     const remoteIds = new Set(remoteBooks.map((b) => b.id));
@@ -551,7 +751,9 @@ describe('SupabaseBookCatalogSync — uploadCover COVER_FAILED mapping', () => {
     mockStorage = {
       from: vi.fn().mockReturnValue({
         upload: vi.fn().mockResolvedValue({ error: new Error('storage denied') }),
-        getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://cdn.example/cover.jpg' } }),
+        getPublicUrl: vi
+          .fn()
+          .mockReturnValue({ data: { publicUrl: 'https://cdn.example/cover.jpg' } }),
       }),
     };
     const sync = new SupabaseBookCatalogSync('user-1');

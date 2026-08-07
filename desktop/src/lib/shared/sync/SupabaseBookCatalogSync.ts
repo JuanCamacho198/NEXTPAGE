@@ -8,7 +8,13 @@
  * - subscribeToCatalog: Realtime subscription for cross-device book sync
  */
 import { getSessionClient } from '$lib/services/supabase';
-import { coverError } from '$lib/shared/protocol/DriveCatalogContract';
+import {
+  DRIVE_PROVIDER,
+  PROTOCOL_VERSION,
+  canonicalBookName,
+  canonicalBookPath,
+  coverError,
+} from '$lib/shared/protocol/DriveCatalogContract';
 import type { SupabaseClient, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export interface SupabaseUserBookRow {
@@ -17,7 +23,8 @@ export interface SupabaseUserBookRow {
   title: string;
   author: string | null;
   format: string;
-  contentHash: string | null;
+  /** Optional so merge-upsert callers can omit it and preserve the existing hash (DRP-2). */
+  contentHash?: string | null;
   filePath: string | null;
   coverUrl: string | null;
   description: string | null;
@@ -32,7 +39,8 @@ export interface SupabaseUserBookRow {
   remoteFileId?: string | null;
   remotePath?: string | null;
   remoteName?: string | null;
-  protocolVersion?: string | null;
+  protocolVersion?: number | null;
+  recoveryProtocol?: string | null;
   deletedAt?: string | null;
   deletedByDevice?: string | null;
   coverBucket?: string | null;
@@ -73,6 +81,35 @@ export function decideCatalogChange(
   return 'ignore-stale';
 }
 
+/**
+ * Build the remote-reference fields persisted on `user_books` after a
+ * successful Drive upload (DRP-1). `recovery_protocol_v1` is set iff a remote
+ * ref is written (DRP-5 gate). Protocol version is persisted as text '1'
+ * (D5: Android persists Int 1 → text '1'; byte parity).
+ */
+export function buildRemoteRefs(
+  bookId: string,
+  format: string,
+  fileId: string,
+): Pick<
+  SupabaseUserBookRow,
+  | 'remoteProvider'
+  | 'remoteFileId'
+  | 'remotePath'
+  | 'remoteName'
+  | 'protocolVersion'
+  | 'recoveryProtocol'
+> {
+  return {
+    remoteProvider: DRIVE_PROVIDER,
+    remoteFileId: fileId,
+    remotePath: canonicalBookPath(bookId, format),
+    remoteName: canonicalBookName(bookId, format),
+    protocolVersion: PROTOCOL_VERSION,
+    recoveryProtocol: 'recovery_protocol_v1',
+  };
+}
+
 export class SupabaseBookCatalogSync {
   private supabase: SupabaseClient;
   private userId: string;
@@ -86,8 +123,45 @@ export class SupabaseBookCatalogSync {
   /**
    * Upsert a single book row.
    * ON CONFLICT(user_id, id) DO UPDATE with all fields.
+   *
+   * Merge semantics (DRP-2/DRP-5): read the current row before upsert and
+   * preserve existing remote fields, `content_hash`, and `catalog_version` —
+   * remote fields and `content_hash` are written only when the caller provides
+   * a non-null value; `catalog_version = max(current ?? 1, incoming ?? 1)`
+   * (never lowered); `recovery_protocol` is included in the column set and
+   * never downgraded from `recovery_protocol_v1`.
    */
   async upsertBook(book: SupabaseUserBookRow): Promise<void> {
+    // Read-before-upsert: mirror tombstoneBook — single extra read.
+    const { data: current, error: fetchError } = await this.supabase
+      .from('user_books')
+      .select(
+        'remote_provider, remote_file_id, remote_path, remote_name, protocol_version, catalog_version, content_hash, recovery_protocol',
+      )
+      .eq('user_id', this.userId)
+      .eq('id', book.id)
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+
+    const remoteProvider = book.remoteProvider ?? current?.remote_provider ?? null;
+    const remoteFileId = book.remoteFileId ?? current?.remote_file_id ?? null;
+    const remotePath = book.remotePath ?? current?.remote_path ?? null;
+    const remoteName = book.remoteName ?? current?.remote_name ?? null;
+    const protocolVersion =
+      book.protocolVersion ??
+      (current?.protocol_version != null ? Number(current.protocol_version) : null);
+    const contentHash = book.contentHash ?? current?.content_hash ?? null;
+    const catalogVersion = Math.max(
+      current?.catalog_version != null ? Number(current.catalog_version) : 1,
+      book.catalogVersion ?? 1,
+    );
+    const currentRecovery = String(current?.recovery_protocol ?? 'legacy');
+    // Never downgrade an existing v1 row (DRP-5).
+    const recoveryProtocol =
+      currentRecovery === 'recovery_protocol_v1'
+        ? 'recovery_protocol_v1'
+        : (book.recoveryProtocol ?? currentRecovery);
+
     const { error } = await this.supabase.from('user_books').upsert(
       {
         id: book.id,
@@ -95,7 +169,7 @@ export class SupabaseBookCatalogSync {
         title: book.title,
         author: book.author ?? null,
         format: book.format,
-        content_hash: book.contentHash ?? null,
+        content_hash: contentHash,
         file_path: book.filePath ?? null,
         cover_url: book.coverUrl ?? null,
         description: book.description ?? null,
@@ -104,12 +178,13 @@ export class SupabaseBookCatalogSync {
         imported_at: book.importedAt,
         updated_at: book.updatedAt,
         lifecycle: book.lifecycle ?? 'imported',
-        catalog_version: book.catalogVersion ?? 1,
-        remote_provider: book.remoteProvider ?? null,
-        remote_file_id: book.remoteFileId ?? null,
-        remote_path: book.remotePath ?? null,
-        remote_name: book.remoteName ?? null,
-        protocol_version: book.protocolVersion ?? null,
+        catalog_version: catalogVersion,
+        remote_provider: remoteProvider,
+        remote_file_id: remoteFileId,
+        remote_path: remotePath,
+        remote_name: remoteName,
+        protocol_version: protocolVersion != null ? String(protocolVersion) : null,
+        recovery_protocol: recoveryProtocol,
         deleted_at: book.deletedAt ?? null,
         deleted_by_device: book.deletedByDevice ?? null,
         cover_bucket: book.coverBucket ?? null,
@@ -158,17 +233,27 @@ export class SupabaseBookCatalogSync {
   async tombstoneBook(bookId: string): Promise<void> {
     const now = new Date().toISOString();
     const { data: current, error: fetchError } = await this.supabase
-      .from('user_books').select('title, format, catalog_version')
-      .eq('user_id', this.userId).eq('id', bookId).maybeSingle();
+      .from('user_books')
+      .select('title, format, catalog_version')
+      .eq('user_id', this.userId)
+      .eq('id', bookId)
+      .maybeSingle();
     if (fetchError) throw fetchError;
-    const { error } = await this.supabase.from('user_books').upsert({
-      id: bookId, user_id: this.userId,
-      title: current ? String(current.title ?? bookId) : bookId,
-      format: current ? String(current.format ?? 'epub') : 'epub',
-      lifecycle: 'deleted',
-      catalog_version: (current?.catalog_version != null ? Number(current.catalog_version) : 1) + 1,
-      deleted_at: now, deleted_by_device: 'desktop', updated_at: now,
-    }, { onConflict: 'user_id, id', ignoreDuplicates: false });
+    const { error } = await this.supabase.from('user_books').upsert(
+      {
+        id: bookId,
+        user_id: this.userId,
+        title: current ? String(current.title ?? bookId) : bookId,
+        format: current ? String(current.format ?? 'epub') : 'epub',
+        lifecycle: 'deleted',
+        catalog_version:
+          (current?.catalog_version != null ? Number(current.catalog_version) : 1) + 1,
+        deleted_at: now,
+        deleted_by_device: 'desktop',
+        updated_at: now,
+      },
+      { onConflict: 'user_id, id', ignoreDuplicates: false },
+    );
     if (error) throw error;
   }
 
@@ -178,7 +263,11 @@ export class SupabaseBookCatalogSync {
    * Non-blocking: failure is mapped to the stable COVER_FAILED error code,
    * logged for observability, and returns null so book import never blocks.
    */
-  async uploadCover(userId: string, bookId: string, coverBytes: ArrayBuffer): Promise<string | null> {
+  async uploadCover(
+    userId: string,
+    bookId: string,
+    coverBytes: ArrayBuffer,
+  ): Promise<string | null> {
     try {
       const path = `covers/${userId}/${bookId}.jpg`;
       const { error: uploadError } = await this.supabase.storage
@@ -191,9 +280,7 @@ export class SupabaseBookCatalogSync {
         return null;
       }
 
-      const { data: urlData } = this.supabase.storage
-        .from('book-covers')
-        .getPublicUrl(path);
+      const { data: urlData } = this.supabase.storage.from('book-covers').getPublicUrl(path);
 
       return urlData.publicUrl;
     } catch (e) {
@@ -278,7 +365,8 @@ export class SupabaseBookCatalogSync {
       remoteFileId: row.remote_file_id != null ? String(row.remote_file_id) : null,
       remotePath: row.remote_path != null ? String(row.remote_path) : null,
       remoteName: row.remote_name != null ? String(row.remote_name) : null,
-      protocolVersion: row.protocol_version != null ? String(row.protocol_version) : null,
+      protocolVersion: row.protocol_version != null ? Number(row.protocol_version) : null,
+      recoveryProtocol: row.recovery_protocol != null ? String(row.recovery_protocol) : null,
       deletedAt: row.deleted_at != null ? String(row.deleted_at) : null,
       deletedByDevice: row.deleted_by_device != null ? String(row.deleted_by_device) : null,
       coverBucket: row.cover_bucket != null ? String(row.cover_bucket) : null,

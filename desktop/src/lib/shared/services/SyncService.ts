@@ -14,10 +14,15 @@ import { authState } from '$lib/stores/authState.svelte';
 import { GDriveProvider } from './storage/GDriveProvider';
 import { GoogleDriveStateSync } from './GoogleDriveStateSync';
 import { SupabaseProgressSync } from '../sync/SupabaseProgressSync';
-import { SupabaseBookCatalogSync } from '../sync/SupabaseBookCatalogSync';
+import { SupabaseBookCatalogSync, buildRemoteRefs } from '../sync/SupabaseBookCatalogSync';
+import { canonicalBookName } from '$lib/shared/protocol/DriveCatalogContract';
 import { SyncOutboxService } from '../outbox/SyncOutboxService';
 import { setDownloadableBooks } from '$lib/stores/downloadableCatalog.svelte';
-import type { ProgressStateJson, HighlightStateJson, BookmarkStateJson } from './GoogleDriveStateSync';
+import type {
+  ProgressStateJson,
+  HighlightStateJson,
+  BookmarkStateJson,
+} from './GoogleDriveStateSync';
 import type { TagDto } from '$lib/shared/types';
 import * as tauri from '$lib/shared/api/tauriClient';
 
@@ -121,7 +126,8 @@ export class SyncService {
           page: payload.page != null ? Number(payload.page) : null,
           rectJson: (payload.rectJson as Record<string, number> | null | undefined) ?? null,
           locatorJson: payload.locatorJson != null ? String(payload.locatorJson) : null,
-          deletedAt: operation === 'DELETE' ? String(payload.deletedAt ?? new Date().toISOString()) : null,
+          deletedAt:
+            operation === 'DELETE' ? String(payload.deletedAt ?? new Date().toISOString()) : null,
           updatedAt: String(payload.updatedAt ?? new Date().toISOString()),
         });
         return;
@@ -135,7 +141,8 @@ export class SyncService {
           cfiLocation: String(payload.cfiLocation ?? ''),
           titleSnippet: payload.titleSnippet != null ? String(payload.titleSnippet) : null,
           locatorJson: payload.locatorJson != null ? String(payload.locatorJson) : null,
-          deletedAt: operation === 'DELETE' ? String(payload.deletedAt ?? new Date().toISOString()) : null,
+          deletedAt:
+            operation === 'DELETE' ? String(payload.deletedAt ?? new Date().toISOString()) : null,
           updatedAt: String(payload.updatedAt ?? new Date().toISOString()),
         });
         return;
@@ -164,11 +171,39 @@ export class SyncService {
           const localBook = allBooks.find((b) => b.id === entityId);
           if (localBook?.coverPath) {
             const coverBytes = await tauri.getFileBytes(localBook.coverPath);
-            coverUrl = await bookSync.uploadCover(authState.userId, entityId, new Uint8Array(coverBytes).buffer as ArrayBuffer);
+            coverUrl = await bookSync.uploadCover(
+              authState.userId,
+              entityId,
+              new Uint8Array(coverBytes).buffer as ArrayBuffer,
+            );
           }
         } catch (e) {
           console.warn('Cover upload failed for book', entityId, e);
           // Non-blocking — continue with null coverUrl
+        }
+
+        // Binary upload to Drive + remote-ref persistence (DRP-1). The upload
+        // must succeed before refs are written; on failure the error propagates
+        // so the outbox marks the row failed with backoff and no partial refs
+        // are persisted (DRP-4). On retry, DRP-3 find-by-name updates the same
+        // Drive file — no duplicates.
+        let remoteRefs: ReturnType<typeof buildRemoteRefs> | null = null;
+        try {
+          const sourceBooks = await tauri.listBooks();
+          const localSource = sourceBooks.find((b) => b.id === entityId);
+          const format = String(metadata.format ?? localSource?.format ?? 'epub');
+          const expectedName = canonicalBookName(entityId, format);
+          if (localSource?.filePath) {
+            const fileBytes = await tauri.getFileBytes(localSource.filePath);
+            const fileId = await this.gdrive.upload(
+              entityId,
+              new Uint8Array(fileBytes),
+              expectedName,
+            );
+            remoteRefs = buildRemoteRefs(entityId, format, fileId);
+          }
+        } catch (e) {
+          throw e;
         }
 
         await bookSync.upsertBook({
@@ -183,8 +218,11 @@ export class SyncService {
           description: null,
           totalPages: metadata.totalPages != null ? Number(metadata.totalPages) : null,
           sourceDevice: 'desktop',
-          importedAt: metadata.importedAt != null ? String(metadata.importedAt) : new Date().toISOString(),
-          updatedAt: metadata.updatedAt != null ? String(metadata.updatedAt) : new Date().toISOString(),
+          importedAt:
+            metadata.importedAt != null ? String(metadata.importedAt) : new Date().toISOString(),
+          updatedAt:
+            metadata.updatedAt != null ? String(metadata.updatedAt) : new Date().toISOString(),
+          ...(remoteRefs ?? {}),
         });
       } else if (entityType === 'BOOK' && operation === 'DELETE') {
         // Explicit deletion is versioned: tombstone the remote row, never hard-delete.
@@ -240,7 +278,11 @@ export class SyncService {
             try {
               if (book.coverPath) {
                 const coverBytes = await tauri.getFileBytes(book.coverPath);
-                coverUrl = await catalogSync.uploadCover(authState.userId, book.id, new Uint8Array(coverBytes).buffer as ArrayBuffer);
+                coverUrl = await catalogSync.uploadCover(
+                  authState.userId,
+                  book.id,
+                  new Uint8Array(coverBytes).buffer as ArrayBuffer,
+                );
               }
             } catch (e) {
               console.warn('Cover upload failed for book', book.id, e);
@@ -252,7 +294,6 @@ export class SyncService {
               title: book.title,
               author: book.author || null,
               format: book.format,
-              contentHash: null,
               filePath: book.filePath || null,
               coverUrl: coverUrl,
               description: null,
@@ -309,7 +350,12 @@ export class SyncService {
    */
   private static async ensureSupabaseImport(): Promise<void> {
     if (this.supabaseImportDone) return;
-    if (this.readingProgressSync === 'drive' && this.bookmarkSync === 'drive' && this.highlightSync === 'drive') return;
+    if (
+      this.readingProgressSync === 'drive' &&
+      this.bookmarkSync === 'drive' &&
+      this.highlightSync === 'drive'
+    )
+      return;
     if (!authState.userId) return;
 
     try {
@@ -404,9 +450,7 @@ export class SyncService {
               textContent: h.text,
               note: h.note ?? null,
               color: h.color,
-              rectJson: h.pageNumber
-                ? { left: 0, right: 0, top: 0, bottom: 0 }
-                : null,
+              rectJson: h.pageNumber ? { left: 0, right: 0, top: 0, bottom: 0 } : null,
               updatedAt: h.createdAt,
             });
           }
@@ -449,6 +493,9 @@ export class SyncService {
    * Book metadata (title, author) stays local-only (no table sync).
    */
   private static async syncBooks(): Promise<void> {
+    const userId = authState.userId;
+    if (!userId) return;
+
     // 1. List remote book files from Drive
     const remoteFiles = await this.gdrive.list('');
     const remoteBookFiles = remoteFiles.filter((f) => !f.endsWith('_state.json'));
@@ -487,7 +534,34 @@ export class SyncService {
           const existsLocally = await tauri.fileExists(localBook.filePath);
           if (existsLocally) {
             const fileBytes = await tauri.getFileBytes(localBook.filePath);
-            await this.gdrive.upload(expectedName, new Uint8Array(fileBytes), expectedName);
+            const fileId = await this.gdrive.upload(
+              expectedName,
+              new Uint8Array(fileBytes),
+              expectedName,
+            );
+            // Persist the remote ref (DRP-1): the upload fileId was previously
+            // discarded. The merge upsert preserves existing fields and never
+            // lowers catalog_version (DRP-2).
+            try {
+              const bookSync = new SupabaseBookCatalogSync(userId);
+              await bookSync.upsertBook({
+                id: localBook.id,
+                userId,
+                title: localBook.title,
+                author: localBook.author || null,
+                format: localBook.format,
+                filePath: null,
+                coverUrl: null,
+                description: null,
+                totalPages: null,
+                sourceDevice: 'desktop',
+                ...buildRemoteRefs(localBook.id, localBook.format, fileId),
+                importedAt: localBook.createdAt,
+                updatedAt: new Date().toISOString(),
+              });
+            } catch (persistError) {
+              console.error(`Failed to persist Drive refs for book ${localBook.id}:`, persistError);
+            }
           }
         } catch (e) {
           console.error(`Failed to upload book file for ${localBook.id}:`, e);
@@ -595,7 +669,12 @@ export class SyncService {
           }
         }
         // Also upsert local-only progress that wasn't in Drive
-        else if (this.readingProgressSync !== 'drive' && authState.userId && localProgress && !remote.progress) {
+        else if (
+          this.readingProgressSync !== 'drive' &&
+          authState.userId &&
+          localProgress &&
+          !remote.progress
+        ) {
           try {
             const sync = new SupabaseProgressSync(authState.userId);
             await sync.upsertProgress({

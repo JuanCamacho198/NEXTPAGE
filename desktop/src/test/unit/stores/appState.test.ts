@@ -41,7 +41,9 @@ const mockGetReadingStats = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 const mockRestoreSession = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 const mockSyncMetadata = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockSetupOutboxProcessor = vi.hoisted(() => vi.fn());
-const mockOnAuthStateChange = vi.hoisted(() => vi.fn().mockReturnValue({ data: { subscription: null } }));
+const mockOnAuthStateChange = vi.hoisted(() =>
+  vi.fn().mockReturnValue({ data: { subscription: null } }),
+);
 
 vi.mock('$lib/shared/api/tauriClient', () => {
   const rf = vi.fn(function () {
@@ -131,6 +133,7 @@ vi.mock('$lib/services/supabase', () => ({
 
 vi.mock('$lib/stores/authPersistence', () => ({
   loadPersistedAuth: vi.fn(async () => null),
+  loadDriveRefreshToken: vi.fn(async () => null),
   savePersistedAuth: vi.fn(async () => undefined),
   clearPersistedAuth: vi.fn(async () => undefined),
 }));

@@ -42,6 +42,13 @@ export interface SupabaseSessionData {
   displayName: string | null;
   photoUrl: string | null;
   providerToken: string | null;
+  /**
+   * Google OAuth refresh token from the session's `provider_refresh_token`
+   * (issued because sign-in requests `access_type=offline`). Distinct from
+   * `refreshToken` (the Supabase session refresh token — never reusable as a
+   * Google refresh token). Persisted to auth.json so it survives restart.
+   */
+  driveRefreshToken?: string | null;
 }
 
 let accessToken: string | null = $state(null);
@@ -53,6 +60,7 @@ let photoUrl: string | null = $state(null);
 let userId: string | null = $state(null);
 let localUser: LocalUserProfile | null = $state(null);
 let providerToken: string | null = $state(null);
+let driveRefreshToken: string | null = $state(null);
 
 const isSignedIn = $derived(accessToken !== null);
 const isLocalUser = $derived(localUser !== null);
@@ -72,6 +80,7 @@ export function setSupabaseSession(data: SupabaseSessionData): void {
   displayName = data.displayName;
   photoUrl = data.photoUrl;
   providerToken = data.providerToken;
+  driveRefreshToken = data.driveRefreshToken ?? null;
   localUser = null; // Clear local user when supabase session is set
 }
 
@@ -87,6 +96,7 @@ export function clearSupabaseSession(): void {
   photoUrl = null;
   userId = null;
   providerToken = null;
+  driveRefreshToken = null;
 }
 
 /**
@@ -159,6 +169,9 @@ export const authState = {
   },
   get providerToken(): string | null {
     return providerToken;
+  },
+  get driveRefreshToken(): string | null {
+    return driveRefreshToken;
   },
   get localUser(): LocalUserProfile | null {
     return localUser;

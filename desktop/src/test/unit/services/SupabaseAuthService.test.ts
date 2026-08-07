@@ -22,6 +22,8 @@ const mockExchangeCodeForSession = vi.fn();
 const mockGetSession = vi.fn();
 const mockSignOut = vi.fn();
 const mockSignInAnonymously = vi.fn();
+const mockRefreshSession = vi.fn();
+const mockDriveRefreshToken = vi.fn<() => string | null>();
 
 // ---- Mock layers ----
 
@@ -46,6 +48,9 @@ vi.mock('$lib/stores/authState.svelte', () => ({
   authState: {
     setSupabaseSession: (...args: unknown[]) => mockSetSupabaseSession(...args),
     clearSupabaseSession: (...args: unknown[]) => mockClearSupabaseSession(...args),
+    get driveRefreshToken(): string | null {
+      return mockDriveRefreshToken();
+    },
   },
 }));
 
@@ -61,6 +66,7 @@ vi.mock('$lib/services/supabase', () => ({
       getSession: mockGetSession,
       signOut: mockSignOut,
       signInAnonymously: mockSignInAnonymously,
+      refreshSession: mockRefreshSession,
     },
   }),
 }));
@@ -101,11 +107,17 @@ beforeEach(async () => {
   mockSetSupabaseSession.mockReturnValue(undefined);
   mockClearSupabaseSession.mockReturnValue(undefined);
   mockSavePersistedAuth.mockResolvedValue(undefined);
-  mockSignInWithOAuth.mockResolvedValue({ data: { url: 'https://example.supabase.co/auth/v1/callback', provider: null }, error: null });
+  mockSignInWithOAuth.mockResolvedValue({
+    data: { url: 'https://example.supabase.co/auth/v1/callback', provider: null },
+    error: null,
+  });
   mockExchangeCodeForSession.mockResolvedValue({ data: { session: null }, error: null });
   mockGetSession.mockResolvedValue({ data: { session: null } });
   mockSignOut.mockResolvedValue({ error: null });
   mockSignInAnonymously.mockResolvedValue({ data: { session: null }, error: null });
+  mockRefreshSession.mockResolvedValue({ data: { session: null }, error: null });
+  mockDriveRefreshToken.mockReturnValue(null);
+  globalThis.fetch = vi.fn();
 
   // 2. Clear module-level state (currentPort may be set from previous test)
   sut.unregisterCallbackHandler();
@@ -124,6 +136,7 @@ function makeMockSession(overrides: Record<string, unknown> = {}) {
     refresh_token: 'refresh-123',
     expires_at: Math.floor(Date.now() / 1000) + 3600,
     provider_token: 'ya29.provider-token',
+    provider_refresh_token: 'google-refresh-token',
     user: {
       id: 'user-1',
       email: 'test@example.com',
@@ -137,7 +150,13 @@ function makeMockSession(overrides: Record<string, unknown> = {}) {
 }
 
 function makeMockOAuthData(url?: string) {
-  return { data: { url: url ?? 'https://test-project.supabase.co/auth/v1/authorize?provider=google', provider: null }, error: null };
+  return {
+    data: {
+      url: url ?? 'https://test-project.supabase.co/auth/v1/authorize?provider=google',
+      provider: null,
+    },
+    error: null,
+  };
 }
 
 function makeMockSessionData(session: Record<string, unknown>) {
@@ -178,7 +197,10 @@ describe('SupabaseAuthService — signInWithGoogle', () => {
 
   it('throws when Supabase OAuth URL generation fails', async () => {
     mockPluginStart.mockResolvedValue(48723);
-    mockSignInWithOAuth.mockResolvedValue({ data: { url: null }, error: { message: 'OAuth config missing' } });
+    mockSignInWithOAuth.mockResolvedValue({
+      data: { url: null },
+      error: { message: 'OAuth config missing' },
+    });
 
     await expect(sut.signInWithGoogle()).rejects.toThrow('Supabase OAuth error');
     expect(mockOpenUrl).not.toHaveBeenCalled();
@@ -222,6 +244,8 @@ describe('SupabaseAuthService — registerSupabaseCallbackHandler', () => {
     expect(mockSetSupabaseSession.mock.calls[0]?.[0]).toMatchObject({
       accessToken: 'access-123',
       providerToken: 'ya29.provider-token',
+      // DTL-1: provider_refresh_token must be persisted at sign-in (not dropped)
+      driveRefreshToken: 'google-refresh-token',
     });
     expect(mockSavePersistedAuth).toHaveBeenCalledTimes(1);
   });
@@ -270,6 +294,110 @@ describe('SupabaseAuthService — getDriveToken', () => {
 
     const token = await sut.getDriveToken();
     expect(token).toBeNull();
+  });
+});
+
+describe('SupabaseAuthService — refreshDriveToken layered refresh (DTL-1/DTL-2/DTL-3)', () => {
+  function mockGoogleTokenResponse(data: Record<string, unknown>, ok = true) {
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      ok,
+      status: ok ? 200 : 400,
+      json: async () => data,
+    } as Response);
+  }
+
+  it('uses the re-issued provider_token from GoTrue refreshSession (path 1)', async () => {
+    mockRefreshSession.mockResolvedValue({
+      data: { session: makeMockSession({ provider_token: 'ya29.reissued' }) },
+      error: null,
+    });
+
+    const token = await sut.refreshDriveToken();
+    expect(token).toBe('ya29.reissued');
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('falls through to the Google token endpoint when GoTrue drops provider_token (path 2)', async () => {
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', 'client-123');
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', 'secret-456');
+    mockRefreshSession.mockResolvedValue({
+      data: { session: makeMockSession({ provider_token: null }) },
+      error: null,
+    });
+    mockDriveRefreshToken.mockReturnValue('google-refresh-token');
+    mockGoogleTokenResponse({ access_token: 'ya29.direct-exchange' });
+
+    const token = await sut.refreshDriveToken();
+
+    expect(token).toBe('ya29.direct-exchange');
+    const [url, init] = vi.mocked(globalThis.fetch).mock.calls[0];
+    expect(url).toBe('https://oauth2.googleapis.com/token');
+    const body = (init?.body as URLSearchParams).toString();
+    expect(body).toContain('grant_type=refresh_token');
+    expect(body).toContain('client_id=client-123');
+    expect(body).toContain('refresh_token=google-refresh-token');
+  });
+
+  it('throws typed AUTH_REQUIRED when no refresh token is persisted (path 3, retryable=false)', async () => {
+    mockRefreshSession.mockResolvedValue({
+      data: { session: makeMockSession({ provider_token: null }) },
+      error: null,
+    });
+    mockDriveRefreshToken.mockReturnValue(null);
+
+    const err = (await sut.refreshDriveToken().catch((e: Error) => e)) as Error & {
+      code?: string;
+      retryable?: boolean;
+    };
+    expect(err.message).toContain('sign in with Google again');
+    expect(err.code).toBe('AUTH_REQUIRED');
+    expect(err.retryable).toBe(false);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('throws typed AUTH_REQUIRED when env client credentials are missing (path 3)', async () => {
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', '');
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', '');
+    mockRefreshSession.mockResolvedValue({
+      data: { session: makeMockSession({ provider_token: null }) },
+      error: null,
+    });
+    mockDriveRefreshToken.mockReturnValue('google-refresh-token');
+
+    const err = (await sut.refreshDriveToken().catch((e: Error) => e)) as Error & { code?: string };
+    expect(err.code).toBe('AUTH_REQUIRED');
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('throws typed AUTH_REQUIRED when the Google token endpoint rejects (no raw token in error)', async () => {
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', 'client-123');
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', 'secret-456');
+    mockRefreshSession.mockResolvedValue({
+      data: { session: makeMockSession({ provider_token: null }) },
+      error: null,
+    });
+    mockDriveRefreshToken.mockReturnValue('google-refresh-token');
+    mockGoogleTokenResponse({ error: 'invalid_grant' }, false);
+
+    const err = (await sut.refreshDriveToken().catch((e: Error) => e)) as Error;
+    expect(err.message).toContain('sign in with Google again');
+    expect(err.message).not.toContain('google-refresh-token');
+    expect(err.message).not.toContain('secret-456');
+  });
+
+  it('never retries refresh in a hot loop — single attempt then typed failure', async () => {
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', 'client-123');
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', 'secret-456');
+    mockRefreshSession.mockResolvedValue({
+      data: { session: makeMockSession({ provider_token: null }) },
+      error: null,
+    });
+    mockDriveRefreshToken.mockReturnValue('google-refresh-token');
+    mockGoogleTokenResponse({ error: 'invalid_grant' }, false);
+
+    await expect(sut.refreshDriveToken()).rejects.toThrow();
+    // Exactly one Google token endpoint call
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -336,7 +464,10 @@ describe('SupabaseAuthService — signInAnonymously', () => {
   });
 
   it('handles anonymous sign-in failure gracefully', async () => {
-    mockSignInAnonymously.mockResolvedValue({ data: { session: null }, error: { message: 'not available' } });
+    mockSignInAnonymously.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'not available' },
+    });
 
     // Should not throw — warning is logged
     await expect(sut.signInAnonymously()).resolves.toBeUndefined();

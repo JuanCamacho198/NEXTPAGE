@@ -109,6 +109,53 @@ export async function clearPersistedAuth(): Promise<void> {
   }
 }
 
+/**
+ * Persist the Google `provider_refresh_token` inside the auth.json supabase
+ * record (D2). auth.json is written only at sign-in and survives supabase-js
+ * auto-refresh, so it is the durable store for the Drive refresh token.
+ * Best-effort: never throws, never logs the token (DTL-3).
+ */
+export async function saveDriveRefreshToken(token: string): Promise<void> {
+  try {
+    const current = await loadPersistedAuth();
+    const session =
+      current?.kind === 'supabase' ? { ...(current.session as Record<string, unknown>) } : {};
+    await savePersistedAuth({
+      kind: 'supabase',
+      session: { ...session, provider_refresh_token: token },
+    });
+  } catch (error) {
+    logger.warn(
+      createErrorEvent({
+        severity: 'low',
+        category: 'runtime',
+        code: 'AUTH_CACHE_SAVE_TOKEN_FAILED',
+        message: 'Failed to persist Drive refresh token.',
+        context: { reason: error instanceof Error ? error.message : String(error) },
+        source: 'app_shell',
+        recoverable: true,
+      }),
+    );
+  }
+}
+
+/**
+ * Load the persisted Google `provider_refresh_token` from auth.json.
+ * Returns `null` when missing, corrupt, or malformed — never throws, so a
+ * corrupt token file degrades to a re-sign-in prompt instead of a crash
+ * (threat matrix: corrupt-token-file resilience).
+ */
+export async function loadDriveRefreshToken(): Promise<string | null> {
+  try {
+    const current = await loadPersistedAuth();
+    if (current?.kind !== 'supabase') return null;
+    const value = (current.session as Record<string, unknown>).provider_refresh_token;
+    return typeof value === 'string' && value.length > 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Internal validation ───
 
 function isObject(value: unknown): value is Record<string, unknown> {

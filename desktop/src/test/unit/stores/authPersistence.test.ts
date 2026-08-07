@@ -17,7 +17,9 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { TokenSet } from '$lib/stores/authState.svelte';
 import {
   clearPersistedAuth,
+  loadDriveRefreshToken,
   loadPersistedAuth,
+  saveDriveRefreshToken,
   savePersistedAuth,
   type LocalUserProfile,
   type PersistedAuth,
@@ -224,6 +226,69 @@ describe('clearPersistedAuth', () => {
     mockRemove.mockRejectedValue(new Error('permission denied'));
 
     await expect(clearPersistedAuth()).resolves.toBeUndefined();
+  });
+});
+
+describe('drive refresh token persistence (D2 + corrupt-file resilience)', () => {
+  it('loadDriveRefreshToken returns the persisted provider_refresh_token', async () => {
+    mockExists.mockResolvedValue(true);
+    mockReadTextFile.mockResolvedValue(
+      JSON.stringify({
+        kind: 'supabase',
+        session: { access_token: 'x', provider_refresh_token: 'google-refresh-1' },
+      }),
+    );
+
+    const token = await loadDriveRefreshToken();
+    expect(token).toBe('google-refresh-1');
+  });
+
+  it('loadDriveRefreshToken returns null on corrupt file (no crash)', async () => {
+    mockExists.mockResolvedValue(true);
+    mockReadTextFile.mockResolvedValue('{not valid json');
+
+    const token = await loadDriveRefreshToken();
+    expect(token).toBeNull();
+  });
+
+  it('loadDriveRefreshToken returns null when the record is a local profile', async () => {
+    mockExists.mockResolvedValue(true);
+    mockReadTextFile.mockResolvedValue(
+      JSON.stringify({
+        kind: 'local',
+        profile: { name: 'Dev', email: null, avatarUrl: null, localOnly: true },
+      }),
+    );
+
+    const token = await loadDriveRefreshToken();
+    expect(token).toBeNull();
+  });
+
+  it('saveDriveRefreshToken merges into the supabase session record (atomic write path)', async () => {
+    mockWriteTextFile.mockResolvedValue();
+    mockRename.mockResolvedValue();
+    mockExists.mockResolvedValue(true);
+    mockReadTextFile.mockResolvedValue(
+      JSON.stringify({
+        kind: 'supabase',
+        session: { access_token: 'existing-access', provider_refresh_token: 'old-token' },
+      }),
+    );
+
+    await saveDriveRefreshToken('new-google-token');
+
+    expect(mockWriteTextFile).toHaveBeenCalledTimes(1);
+    const written = JSON.parse((mockWriteTextFile.mock.calls[0]?.[1] as string) ?? '{}');
+    expect(written.kind).toBe('supabase');
+    expect(written.session.access_token).toBe('existing-access');
+    expect(written.session.provider_refresh_token).toBe('new-google-token');
+    expect(mockRename).toHaveBeenCalledTimes(1);
+  });
+
+  it('saveDriveRefreshToken swallows platform errors and never throws', async () => {
+    mockExists.mockRejectedValue(new Error('disk gone'));
+
+    await expect(saveDriveRefreshToken('token')).resolves.toBeUndefined();
   });
 });
 

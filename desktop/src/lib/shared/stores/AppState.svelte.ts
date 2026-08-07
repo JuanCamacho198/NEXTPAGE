@@ -11,11 +11,16 @@ import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
 import { authState, setSupabaseSession } from '$lib/stores/authState.svelte';
 import {
   clearPersistedAuth,
+  loadDriveRefreshToken,
   loadPersistedAuth,
   type LocalUserProfile,
 } from '$lib/stores/authPersistence';
 import { getSessionClient } from '$lib/services/supabase';
-import { signInAnonymously, restoreSession, signOut } from '$lib/shared/services/SupabaseAuthService';
+import {
+  signInAnonymously,
+  restoreSession,
+  signOut,
+} from '$lib/shared/services/SupabaseAuthService';
 import { SyncService } from '$lib/shared/services/SyncService';
 
 import type {
@@ -648,6 +653,10 @@ export class AppState {
       const supabaseSession = await restoreSession();
       if (supabaseSession) {
         restoredAuthenticatedSession = true;
+        // auth.json is the durable store for provider_refresh_token (written at
+        // sign-in; survives supabase-js auto-refresh) — restore it for Drive
+        // token refresh after restart (DTL-1).
+        const driveRefreshToken = await loadDriveRefreshToken();
         setSupabaseSession({
           accessToken: supabaseSession.access_token,
           refreshToken: supabaseSession.refresh_token,
@@ -663,6 +672,7 @@ export class AppState {
             supabaseSession.user.user_metadata?.picture ??
             null,
           providerToken: supabaseSession.provider_token ?? null,
+          driveRefreshToken,
         });
 
         this.startAuthenticatedSync();

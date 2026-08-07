@@ -26,7 +26,7 @@ import { savePersistedAuth } from '$lib/stores/authPersistence';
 import { authState } from '$lib/stores/authState.svelte';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 import { logger } from '$lib/shared/logger/Logger';
-import { DRIVE_SCOPE } from '$lib/shared/protocol/DriveCatalogContract';
+import { DRIVE_SCOPE, redactLogLine, syncError } from '$lib/shared/protocol/DriveCatalogContract';
 
 let currentPort: number | null = null;
 let urlUnlisten: (() => void) | null = null;
@@ -231,9 +231,13 @@ export async function signInWithGoogle(): Promise<void> {
 
 /**
  * Handle a Supabase session — store it in authState and persist it.
+ * Persists `provider_refresh_token` (issued because sign-in requests
+ * `access_type=offline`) so Drive tokens can be refreshed after supabase-js
+ * auto-refresh drops `provider_token` (DTL-1).
  */
 async function handleSession(session: Session): Promise<void> {
   const providerToken = session.provider_token ?? null;
+  const providerRefreshToken = session.provider_refresh_token ?? null;
 
   authState.setSupabaseSession({
     accessToken: session.access_token,
@@ -244,9 +248,13 @@ async function handleSession(session: Session): Promise<void> {
     displayName: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? null,
     photoUrl: session.user.user_metadata?.avatar_url ?? session.user.user_metadata?.picture ?? null,
     providerToken,
+    driveRefreshToken: providerRefreshToken,
   });
 
-  await savePersistedAuth({ kind: 'supabase', session: session as unknown as Record<string, unknown> });
+  await savePersistedAuth({
+    kind: 'supabase',
+    session: session as unknown as Record<string, unknown>,
+  });
 }
 
 /**
@@ -257,6 +265,87 @@ export async function getDriveToken(): Promise<string | null> {
   const supabase = getSessionClient();
   const { data } = await supabase.auth.getSession();
   return data.session?.provider_token ?? null;
+}
+
+/**
+ * Layered Google Drive token refresh (DTL-1/DTL-2):
+ * 1. `supabase.auth.refreshSession()` → use the re-issued `provider_token`
+ *    when GoTrue provides one (project-dependent; see apply-progress 4.1).
+ * 2. Direct Google token endpoint (`oauth2.googleapis.com/token`,
+ *    `grant_type=refresh_token`) with `VITE_GOOGLE_OAUTH_CLIENT_ID` +
+ *    `VITE_GOOGLE_OAUTH_CLIENT_SECRET` and the persisted
+ *    `provider_refresh_token`. Only valid when the env Google client is the
+ *    one configured in the Supabase dashboard (apply-progress 4.2).
+ * 3. Typed `AUTH_REQUIRED` (retryable=false) — single attempt, no hot loop.
+ *
+ * Never logs tokens; every message passes through `redactLogLine` (DTL-3).
+ */
+export async function refreshDriveToken(): Promise<string> {
+  const supabase = getSessionClient();
+
+  // Path 1: GoTrue session refresh may re-issue provider_token.
+  try {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (!error && data.session?.provider_token) {
+      return data.session.provider_token;
+    }
+  } catch (e) {
+    logger.warn(
+      createErrorEvent({
+        severity: 'low',
+        category: 'runtime',
+        code: 'DRIVE_TOKEN_REFRESH_GOTRUE_FAILED',
+        message: redactLogLine('Drive token refresh via GoTrue failed; falling back'),
+        context: { reason: e instanceof Error ? redactLogLine(e.message) : 'unknown' },
+        source: 'sync',
+        recoverable: true,
+      }),
+    );
+  }
+
+  // Path 2: direct Google token exchange with the persisted refresh token.
+  const refreshToken = authState.driveRefreshToken;
+  const clientId = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID as string | undefined;
+  const clientSecret = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET as string | undefined;
+  if (refreshToken && clientId && clientSecret) {
+    try {
+      const response = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          client_id: clientId,
+          client_secret: clientSecret,
+          refresh_token: refreshToken,
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (typeof data.access_token === 'string' && data.access_token) {
+          return data.access_token;
+        }
+      }
+    } catch (e) {
+      logger.warn(
+        createErrorEvent({
+          severity: 'low',
+          category: 'runtime',
+          code: 'DRIVE_TOKEN_REFRESH_GOOGLE_FAILED',
+          message: redactLogLine('Direct Google token refresh failed'),
+          context: { reason: e instanceof Error ? redactLogLine(e.message) : 'unknown' },
+          source: 'sync',
+          recoverable: true,
+        }),
+      );
+    }
+  }
+
+  // Path 3: typed re-auth fallback — never a silent no-op, never a hot loop.
+  throw syncError(
+    'AUTH_REQUIRED',
+    'Google Drive access expired. Please sign in with Google again.',
+    false,
+  );
 }
 
 /**

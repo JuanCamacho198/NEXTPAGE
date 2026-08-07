@@ -11,7 +11,12 @@ import {
   deleteHighlight,
   setReadingStatus,
 } from '$lib/shared/api/tauriClient';
-import type { ReaderBook, ReadingSessionInput, ReadingProgressDto, SaveProgressInput } from '$lib/shared/types';
+import type {
+  ReaderBook,
+  ReadingSessionInput,
+  ReadingProgressDto,
+  SaveProgressInput,
+} from '$lib/shared/types';
 import { authState } from '$lib/stores/authState.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
@@ -119,11 +124,17 @@ class ReaderDomainState {
     try {
       const remote = await sync.fetchBookState(bookId);
       if (epoch !== this.openEpoch || this.activeReadingBookId !== bookId) return;
-      if (remote.progress && (!localUpdatedAt || Date.parse(remote.progress.updatedAt) > Date.parse(localUpdatedAt))) {
+      if (
+        remote.progress &&
+        (!localUpdatedAt || Date.parse(remote.progress.updatedAt) > Date.parse(localUpdatedAt))
+      ) {
         this.applyRemoteProgress(remote.progress);
       }
       for (const bookmark of remote.bookmarks) {
-        this.appliedRemote.set(`bookmark:${bookmark.id ?? bookmark.cfiLocation}`, bookmark.updatedAt);
+        this.appliedRemote.set(
+          `bookmark:${bookmark.id ?? bookmark.cfiLocation}`,
+          bookmark.updatedAt,
+        );
         if (bookmark.deletedAt && bookmark.id) {
           void deleteBookmark(bookmark.id);
         } else {
@@ -137,7 +148,10 @@ class ReaderDomainState {
         }
       }
       for (const highlight of remote.highlights) {
-        this.appliedRemote.set(`highlight:${highlight.id ?? highlight.cfiRange}`, highlight.updatedAt);
+        this.appliedRemote.set(
+          `highlight:${highlight.id ?? highlight.cfiRange}`,
+          highlight.updatedAt,
+        );
         if (highlight.deletedAt && highlight.id) {
           void deleteHighlight(highlight.id);
         } else {
@@ -195,7 +209,10 @@ class ReaderDomainState {
       await saveProgress(payload);
       await setReadingStatus(bookId, this.percentage >= 100 ? 'completed' : 'reading');
 
-      // If signed in, queue Supabase sync via outbox
+      // If signed in, queue Supabase sync via outbox. Coalesced enqueue (D5,
+      // SR-4.1): one IPC per location change, transactional UPDATE-else-INSERT
+      // per (user_id, book_id) with the latest client updatedAt winning (D6) —
+      // the per-location-change flood collapses to a single outbox row.
       if (authState.userId) {
         const outboxPayload = {
           userId: authState.userId,
@@ -205,7 +222,12 @@ class ReaderDomainState {
           locatorJson: this.locatorJson,
           updatedAt: new Date().toISOString(),
         };
-        void outboxDao.add('READING_PROGRESS', bookId, 'UPSERT', JSON.stringify(outboxPayload));
+        void outboxDao.addCoalesced(
+          'READING_PROGRESS',
+          bookId,
+          'UPSERT',
+          JSON.stringify(outboxPayload),
+        );
       }
     } catch {
       // Keep UI usable even when save fails

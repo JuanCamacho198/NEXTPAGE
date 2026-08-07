@@ -13,8 +13,12 @@ const mockSaveProgress = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockSaveReadingSession = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockUpdateBookProgress = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockSetReadingStatus = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-const mockFetchBookState = vi.hoisted(() => vi.fn().mockResolvedValue({ progress: null, bookmarks: [], highlights: [] }));
+const mockFetchBookState = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({ progress: null, bookmarks: [], highlights: [] }),
+);
 const mockAuthState = vi.hoisted(() => ({ userId: null as string | null }));
+const mockOutboxAddCoalesced = vi.hoisted(() => vi.fn().mockResolvedValue('row-id'));
+const mockOutboxAdd = vi.hoisted(() => vi.fn().mockResolvedValue('row-id'));
 
 // ─── Module mocks ───
 
@@ -38,6 +42,13 @@ vi.mock('$lib/shared/sync/SupabaseProgressSync', () => ({
     subscribeToProgress = vi.fn();
     subscribeToBookmarks = vi.fn();
     subscribeToHighlights = vi.fn();
+  },
+}));
+
+vi.mock('$lib/shared/outbox/SyncOutboxDao', () => ({
+  SyncOutboxDao: class {
+    addCoalesced = mockOutboxAddCoalesced;
+    add = mockOutboxAdd;
   },
 }));
 
@@ -72,9 +83,9 @@ function resetReaderState(): void {
   readerState.preloadedBytes = null;
   readerState.readerError = null;
   readerState.onStatsRefreshNeeded = null;
-    readerState.onPageChangeCallback = null;
-    mockAuthState.userId = null;
-    mockFetchBookState.mockResolvedValue({ progress: null, bookmarks: [], highlights: [] });
+  readerState.onPageChangeCallback = null;
+  mockAuthState.userId = null;
+  mockFetchBookState.mockResolvedValue({ progress: null, bookmarks: [], highlights: [] });
 }
 
 // ─── Tests ───
@@ -230,13 +241,37 @@ describe('ReaderDomainState', () => {
   it('applies a newer remote progress and canonical locator after local open', async () => {
     mockAuthState.userId = 'user-1';
     mockGetProgress
-      .mockResolvedValueOnce({ bookId: 'b1', cfiLocation: 'local', percentage: 10, updatedAt: '2026-01-01T00:00:00.000Z' })
-      .mockResolvedValueOnce({ bookId: 'b1', cfiLocation: 'local', percentage: 10, updatedAt: '2026-01-01T00:00:00.000Z' });
+      .mockResolvedValueOnce({
+        bookId: 'b1',
+        cfiLocation: 'local',
+        percentage: 10,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      })
+      .mockResolvedValueOnce({
+        bookId: 'b1',
+        cfiLocation: 'local',
+        percentage: 10,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      });
     let release!: (value: unknown) => void;
-    mockFetchBookState.mockReturnValueOnce(new Promise((resolve) => { release = resolve; }));
+    mockFetchBookState.mockReturnValueOnce(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    );
     await readerState.startReading(makeBook({ id: 'b1' }));
     expect(readerState.cfiLocation).toBe('local');
-    release({ progress: { bookId: 'b1', cfiLocation: 'remote', percentage: 80, updatedAt: '2026-01-02T00:00:00.000Z', locatorJson: '{"href":"chapter-7.xhtml"}' }, bookmarks: [], highlights: [] });
+    release({
+      progress: {
+        bookId: 'b1',
+        cfiLocation: 'remote',
+        percentage: 80,
+        updatedAt: '2026-01-02T00:00:00.000Z',
+        locatorJson: '{"href":"chapter-7.xhtml"}',
+      },
+      bookmarks: [],
+      highlights: [],
+    });
     await vi.waitFor(() => expect(readerState.cfiLocation).toBe('remote'));
     expect(readerState.locatorJson).toContain('chapter-7');
   });
@@ -247,7 +282,16 @@ describe('ReaderDomainState', () => {
     mockFetchBookState.mockImplementation(() => new Promise((resolve) => resolvers.push(resolve)));
     await readerState.startReading(makeBook({ id: 'b1' }));
     await readerState.startReading(makeBook({ id: 'b2' }));
-    resolvers[0]({ progress: { bookId: 'b1', cfiLocation: 'stale', percentage: 90, updatedAt: '2026-02-01T00:00:00.000Z' }, bookmarks: [], highlights: [] });
+    resolvers[0]({
+      progress: {
+        bookId: 'b1',
+        cfiLocation: 'stale',
+        percentage: 90,
+        updatedAt: '2026-02-01T00:00:00.000Z',
+      },
+      bookmarks: [],
+      highlights: [],
+    });
     await Promise.resolve();
     expect(readerState.activeReadingBookId).toBe('b2');
     expect(readerState.cfiLocation).not.toBe('stale');
@@ -433,5 +477,54 @@ describe('ReaderDomainState', () => {
     expect(readerState.percentage).toBe(0);
     expect(readerState.preloadedBytes).toBeNull();
     expect(readerState.readerError).toBeNull();
+  });
+
+  // ─── Outbox coalesced enqueue (D5, SR-4.1) ───
+
+  it('enqueues READING_PROGRESS via addCoalesced with latest client updatedAt (D5/D6)', async () => {
+    mockAuthState.userId = 'user-1';
+
+    await readerState.handleEpubLocationChange('b1', 'epubcfi(/6/4)', 45);
+
+    expect(mockOutboxAdd).not.toHaveBeenCalled();
+    expect(mockOutboxAddCoalesced).toHaveBeenCalledTimes(1);
+    const [entityType, entityId, operation, payloadJson] = mockOutboxAddCoalesced.mock.calls[0];
+    expect(entityType).toBe('READING_PROGRESS');
+    expect(entityId).toBe('b1');
+    expect(operation).toBe('UPSERT');
+    const payload = JSON.parse(payloadJson as string);
+    expect(payload.userId).toBe('user-1');
+    expect(payload.bookId).toBe('b1');
+    expect(payload.cfiLocation).toBe('epubcfi(/6/4)');
+    expect(payload.percentage).toBe(45);
+    expect(typeof payload.updatedAt).toBe('string');
+    expect(Date.parse(payload.updatedAt)).not.toBeNaN();
+  });
+
+  it('one coalesced enqueue per location change — the flood stays one IPC per event (SR-4.1)', async () => {
+    mockAuthState.userId = 'user-1';
+
+    // 50 rapid location changes for one book: each is a single addCoalesced IPC
+    // (the transactional UPDATE-else-INSERT in Rust collapses them to one row).
+    for (let i = 0; i < 50; i++) {
+      await readerState.handleEpubLocationChange('b1', `epubcfi(/6/${i + 1})`, i + 1);
+    }
+
+    expect(mockOutboxAddCoalesced).toHaveBeenCalledTimes(50);
+    expect(mockOutboxAdd).not.toHaveBeenCalled();
+    // Every enqueue targets the same (entityType, entityId) key — the latest
+    // payload holds the newest location.
+    const lastPayload = JSON.parse(mockOutboxAddCoalesced.mock.calls[49][3] as string);
+    expect(lastPayload.cfiLocation).toBe('epubcfi(/6/50)');
+    expect(lastPayload.percentage).toBe(50);
+  });
+
+  it('does not enqueue anything when not signed in (gate, SR-1)', async () => {
+    mockAuthState.userId = null;
+
+    await readerState.handleEpubLocationChange('b1', 'epubcfi(/6/4)', 45);
+
+    expect(mockOutboxAddCoalesced).not.toHaveBeenCalled();
+    expect(mockOutboxAdd).not.toHaveBeenCalled();
   });
 });

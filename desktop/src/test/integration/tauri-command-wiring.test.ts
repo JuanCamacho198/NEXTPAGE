@@ -40,4 +40,17 @@ describe('tauri command wiring compatibility', () => {
       ).toBe(true);
     }
   });
+
+  it('registers addCoalescedSyncOutboxItem end-to-end (WU4 IPC surface)', () => {
+    const mainRs = readFileSync(resolve(root, 'main.rs'), 'utf8');
+    const commandMod = readFileSync(resolve(root, 'commands/mod.rs'), 'utf8');
+    const outboxRs = readFileSync(resolve(root, 'commands/outbox.rs'), 'utf8');
+    const symbol = 'addCoalescedSyncOutboxItem';
+    // 1. Registered in the tauri invoke_handler.
+    expect(mainRs.includes(`commands::${symbol}`)).toBe(true);
+    // 2. Public command fn exists in the commands module.
+    expect(commandMod.includes(`pub fn ${symbol}`)).toBe(true);
+    // 3. Re-exported through the outbox feature module.
+    expect(outboxRs.includes(symbol)).toBe(true);
+  });
 });

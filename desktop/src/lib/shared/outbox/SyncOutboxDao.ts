@@ -41,6 +41,28 @@ export class SyncOutboxDao {
   }
 
   /**
+   * Coalesced enqueue (D5, SR-4.1): transactionally UPDATE-else-INSERT the row
+   * keyed by (entityType, entityId) + payload `userId`, latest client
+   * `updatedAt` wins (D6). One IPC per location change — the flood of progress
+   * events collapses to a single row per (user_id, book_id) in SQLite, so the
+   * flush never re-sends a stale event. Never drops rows. Returns the id of the
+   * row that now holds the event (existing row updated in place, or the new id).
+   */
+  async addCoalesced(
+    entityType: string,
+    entityId: string,
+    operation: 'UPSERT',
+    payloadJson: string,
+  ): Promise<string> {
+    return invoke<string>('addCoalescedSyncOutboxItem', {
+      entityType,
+      entityId,
+      operation,
+      payloadJson,
+    });
+  }
+
+  /**
    * Return all rows that are ready for retry (next_retry_at <= now),
    * ordered by created_at ASC (FIFO). Excludes items with retry_count >= 50.
    */
@@ -74,4 +96,18 @@ export class SyncOutboxDao {
   async prune(): Promise<number> {
     return invoke<number>('pruneSyncOutbox');
   }
+}
+
+/**
+ * Auth-class failure detection (D4, R2): the outbox circuit breaker pauses on
+ * these and only these failures. A PostgrestError with HTTP status 400 (RLS
+ * denial) or 401 (invalid/expired JWT), or a typed SyncError with code
+ * AUTH_REQUIRED / AUTH_EXPIRED. Anything else is a normal failure that keeps
+ * the existing per-row exponential backoff — never the breaker.
+ */
+export function isAuthClassError(error: unknown): boolean {
+  const status = (error as { status?: unknown } | null)?.status;
+  if (typeof status === 'number' && (status === 400 || status === 401)) return true;
+  const code = (error as { code?: unknown } | null)?.code;
+  return code === 'AUTH_REQUIRED' || code === 'AUTH_EXPIRED';
 }

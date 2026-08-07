@@ -88,6 +88,7 @@ fn main() {
             commands::getBookCollections,
             commands::setReadingStatus,
             commands::addSyncOutboxItem,
+            commands::addCoalescedSyncOutboxItem,
             commands::listSyncOutboxReady,
             commands::markSyncOutboxFailed,
             commands::deleteSyncOutboxItem,

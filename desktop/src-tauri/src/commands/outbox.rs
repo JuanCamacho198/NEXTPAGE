@@ -1,4 +1,4 @@
 pub use super::{
-    addSyncOutboxItem, deleteSyncOutboxItem, listSyncOutboxReady, markSyncOutboxFailed,
-    pruneSyncOutbox,
+    addCoalescedSyncOutboxItem, addSyncOutboxItem, deleteSyncOutboxItem, listSyncOutboxReady,
+    markSyncOutboxFailed, pruneSyncOutbox,
 };

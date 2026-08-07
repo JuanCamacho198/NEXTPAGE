@@ -60,5 +60,7 @@ data class GoogleDriveConfig(
 
         /** Google OAuth authorization endpoint used by the OAuth authorization-code flow. */
         const val GOOGLE_OAUTH_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
+        const val DRIVE_BOOKS_PATH = "NextPage/Books"
+        const val DRIVE_PROTOCOL_VERSION = 1
     }
 }

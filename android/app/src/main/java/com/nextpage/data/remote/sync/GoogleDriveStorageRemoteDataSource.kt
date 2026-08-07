@@ -6,13 +6,14 @@ import com.google.api.services.drive.Drive
 import com.google.api.services.drive.model.File
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
+import com.nextpage.data.remote.drive.DriveCatalogContract
 import java.io.ByteArrayOutputStream
 
 /**
  * Implements [StorageSyncRemoteDataSource] using Google Drive REST API v3,
  * unifying Android on the **desktop protocol**.
  *
- * Files live in a single shared visible folder `NextPage/Books` and are named
+     * Files live in the shared `NextPage/Books` protocol folder and are named
  * `{bookId}.{ext}` (no per-user subfolders). Lookup is by
  * `name='{bookId}.{ext}' and trashed=false`. Uses the `drive.file` scope.
  *
@@ -59,14 +60,14 @@ class GoogleDriveStorageRemoteDataSource(
             val folder = booksFolderIdOrNull()
                 ?: throw AppError(
                     category = ErrorCategory.NOT_FOUND,
-                    code = "GOOGLE_DRIVE_FILE_NOT_FOUND",
+                    code = "REMOTE_NOT_FOUND",
                     message = "File not found in Drive: $path",
                     component = component
                 )
             val file = findFileByName(folderId = folder, name = physicalName)
                 ?: throw AppError(
                     category = ErrorCategory.NOT_FOUND,
-                    code = "GOOGLE_DRIVE_FILE_NOT_FOUND",
+                    code = "REMOTE_NOT_FOUND",
                     message = "File not found in Drive: $path",
                     component = component
                 )
@@ -116,8 +117,8 @@ class GoogleDriveStorageRemoteDataSource(
     }
 
     private fun booksFolderIdOrNull(): String? {
-        val parent = findFolder("NextPage") ?: return null
-        return findFolder("Books", parentId = parent)
+        val parent = findFolder(DriveCatalogContract.BOOKS_PATH.substringBefore('/')) ?: return null
+        return findFolder(DriveCatalogContract.BOOKS_PATH.substringAfter('/'), parentId = parent)
     }
 
     /**
@@ -138,19 +139,19 @@ class GoogleDriveStorageRemoteDataSource(
 
     private fun createBooksFolder(): String {
         // Create NextPage root if missing
-        val nextPageId = findFolder("NextPage")
+        val nextPageId = findFolder(DriveCatalogContract.BOOKS_PATH.substringBefore('/'))
             ?: driveService.files().create(
                 File().apply {
-                    name = "NextPage"
+                    name = DriveCatalogContract.BOOKS_PATH.substringBefore('/')
                     mimeType = "application/vnd.google-apps.folder"
                 }
             ).setFields("id").execute().id
 
         // Create Books subfolder if missing
-        val booksId = findFolder("Books", parentId = nextPageId)
+        val booksId = findFolder(DriveCatalogContract.BOOKS_PATH.substringAfter('/'), parentId = nextPageId)
             ?: driveService.files().create(
                 File().apply {
-                    name = "Books"
+                    name = DriveCatalogContract.BOOKS_PATH.substringAfter('/')
                     mimeType = "application/vnd.google-apps.folder"
                     parents = listOf(nextPageId!!)
                 }
@@ -179,7 +180,12 @@ class GoogleDriveStorageRemoteDataSource(
         val statusCode = (throwable as? HttpResponseException)?.statusCode
         val unauthorized = statusCode == HTTP_UNAUTHORIZED || statusCode == HTTP_FORBIDDEN
         val category = if (unauthorized) ErrorCategory.AUTH else ErrorCategory.WIRING_ERROR
-        val errorCode = if (unauthorized) "GOOGLE_DRIVE_UNAUTHORIZED" else code
+        val errorCode = when {
+            statusCode == HTTP_UNAUTHORIZED -> "AUTH_EXPIRED"
+            statusCode == HTTP_FORBIDDEN -> "PERMISSION_DENIED"
+            code == "GOOGLE_DRIVE_FILE_NOT_FOUND" -> "REMOTE_NOT_FOUND"
+            else -> code
+        }
         return AppError(
             category = category,
             code = errorCode,

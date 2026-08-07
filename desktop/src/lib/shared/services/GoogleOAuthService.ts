@@ -24,7 +24,7 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID as string;
 const CLIENT_SECRET = (import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET ?? '') as string;
 const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
-const SCOPES = ['https://www.googleapis.com/auth/drive.appdata', 'email', 'profile'].join(' ');
+const SCOPES = ['https://www.googleapis.com/auth/drive.file', 'email', 'profile'].join(' ');
 
 let currentPort: number | null = null;
 let expectedState: string | null = null;

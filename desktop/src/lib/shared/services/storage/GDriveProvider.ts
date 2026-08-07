@@ -1,9 +1,10 @@
 import { getDriveToken } from '$lib/shared/services/SupabaseAuthService';
+import { DRIVE_BOOKS_PATH } from '$lib/shared/protocol/DriveCatalogContract';
 import type { StorageProvider } from './StorageProvider';
 
 export class GDriveProvider implements StorageProvider {
   private static readonly GDRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
-  private static readonly FOLDER_NAME = 'NextPage/Books';
+  private static readonly FOLDER_NAME = DRIVE_BOOKS_PATH;
 
   private async getAccessToken(): Promise<string> {
     const token = await getDriveToken();
@@ -14,22 +15,9 @@ export class GDriveProvider implements StorageProvider {
   }
 
   private async getOrCreateFolder(accessToken: string): Promise<string> {
-    // Search for the folder first
-    const query = encodeURIComponent(
-      `name = 'Books' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-    );
-    const searchResponse = await fetch(`${GDriveProvider.GDRIVE_API_BASE}/files?q=${query}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    const searchData = await searchResponse.json();
-
-    if (searchData.files && searchData.files.length > 0) {
-      return searchData.files[0].id;
-    }
-
-    // Create the folder if not found
-    // Note: This simplified version creates 'Books' at the root.
-    // In a real app, we might want to create 'NextPage' first then 'Books' inside it.
+    const root = await this.findFolder(accessToken, 'NextPage') ?? await this.createFolder(accessToken, 'NextPage');
+    const books = await this.findFolder(accessToken, 'Books', root);
+    if (books) return books;
     const createResponse = await fetch(`${GDriveProvider.GDRIVE_API_BASE}/files`, {
       method: 'POST',
       headers: {
@@ -39,10 +27,30 @@ export class GDriveProvider implements StorageProvider {
       body: JSON.stringify({
         name: 'Books',
         mimeType: 'application/vnd.google-apps.folder',
+        parents: [root],
       }),
     });
     const createData = await createResponse.json();
     return createData.id;
+  }
+
+  private async findFolder(accessToken: string, name: string, parentId?: string): Promise<string | null> {
+    const parent = parentId ? ` and '${parentId}' in parents` : '';
+    const query = encodeURIComponent(`name = '${name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false${parent}`);
+    const response = await fetch(`${GDriveProvider.GDRIVE_API_BASE}/files?q=${query}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const data = await response.json();
+    return data.files?.[0]?.id ?? null;
+  }
+
+  private async createFolder(accessToken: string, name: string): Promise<string> {
+    const response = await fetch(`${GDriveProvider.GDRIVE_API_BASE}/files`, {
+      method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder' }),
+    });
+    if (!response.ok) throw new Error(`GDrive folder creation failed: ${response.status}`);
+    return (await response.json()).id;
   }
 
   async upload(id: string, file: Uint8Array, name?: string): Promise<string> {

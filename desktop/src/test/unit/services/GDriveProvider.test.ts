@@ -69,6 +69,7 @@ describe('GDriveProvider — token source swap', () => {
     mockAuth('token-123');
     // Mock folder found, then upload
     mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-abc' }] }) },
       { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-abc' }] }) },
       { ok: true, json: () => Promise.resolve({ id: 'file-xyz' }) },
     ]);
@@ -77,8 +78,8 @@ describe('GDriveProvider — token source swap', () => {
     const result = await provider.upload('book-001', data, 'book-001_state.json');
 
     expect(result).toBe('file-xyz');
-    // Verify the second fetch call (upload) was made
-    const uploadCall = vi.mocked(globalThis.fetch).mock.calls[1];
+    // Root and Books folder lookups precede the upload.
+    const uploadCall = vi.mocked(globalThis.fetch).mock.calls[2];
     expect(uploadCall[0]).toContain('upload/drive/v3/files');
     // Verify the FormData contains the custom name
     const formData = uploadCall[1]?.body as FormData;
@@ -92,6 +93,7 @@ describe('GDriveProvider — token source swap', () => {
   it('upload without name defaults to id as filename', async () => {
     mockAuth('token-456');
     mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-def' }] }) },
       { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-def' }] }) },
       { ok: true, json: () => Promise.resolve({ id: 'file-ghi' }) },
     ]);
@@ -101,7 +103,7 @@ describe('GDriveProvider — token source swap', () => {
 
     expect(result).toBe('file-ghi');
     // Verify metadata name defaults to id
-    const uploadCall = vi.mocked(globalThis.fetch).mock.calls[1];
+    const uploadCall = vi.mocked(globalThis.fetch).mock.calls[2];
     const formData = uploadCall[1]?.body as FormData;
     const metadataBlob = formData?.get('metadata') as Blob;
     const metadataText = await metadataBlob?.text();

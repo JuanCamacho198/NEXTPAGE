@@ -390,7 +390,7 @@ describe('App desktop home redesign QA scenarios', () => {
     expect(screen.getByTestId('shelf-section')).toBeInTheDocument();
   });
 
-  it('partitions continue reading and shelf without duplication', async () => {
+  it('shows in-progress books in both continue reading and shelf', async () => {
     configureLibrary([
       makeLibraryBook({ id: 'shelf-a', title: 'Shelf A', progressPercentage: 0 }),
       makeLibraryBook({ id: 'progress-b', title: 'Progress B', progressPercentage: 17 }),
@@ -409,7 +409,7 @@ describe('App desktop home redesign QA scenarios', () => {
 
       expect(shelfSection).toHaveTextContent('Shelf A');
       expect(shelfSection).toHaveTextContent('Complete C');
-      expect(shelfSection).not.toHaveTextContent('Progress B');
+      expect(shelfSection).toHaveTextContent('Progress B');
     });
   });
 
@@ -470,7 +470,7 @@ describe('App desktop home redesign QA scenarios', () => {
     const continueSection = screen.getByTestId('continue-section');
     const shelfSection = screen.getByTestId('shelf-section');
     expect(continueSection).toHaveTextContent('Shelf A');
-    expect(shelfSection).not.toHaveTextContent('Shelf A');
+    expect(shelfSection).toHaveTextContent('Shelf A');
   });
 
   it('updates preview context when a continue-reading card is selected', async () => {
@@ -633,7 +633,6 @@ describe('App desktop home redesign QA scenarios', () => {
         author: 'Only Author',
         progressPercentage: 0,
       }),
-      makeShelfBook({ id: 'active-continue', title: 'Active Continue', progressPercentage: 30 }),
     ]);
 
     render(App);

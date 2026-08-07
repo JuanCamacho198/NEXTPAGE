@@ -17,6 +17,9 @@
   let objectUrl = $state<string | null>(null);
   let error = $state(false);
 
+  /** Remote cover references (signed/public URL) bypass Tauri fs and render directly. */
+  const isRemote = $derived(/^https?:\/\//i.test(path.trim()));
+
   const releaseObjectUrl = (): void => {
     if (!objectUrl) {
       return;
@@ -30,6 +33,13 @@
     if (!path || path.trim().length === 0) {
       releaseObjectUrl();
       error = true;
+      return;
+    }
+
+    // Remote URLs load through the browser HTTP cache; failures fall back below.
+    if (isRemote) {
+      releaseObjectUrl();
+      error = false;
       return;
     }
 
@@ -63,7 +73,17 @@
   });
 </script>
 
-{#if objectUrl && !error}
+{#if isRemote && !error}
+  <img
+    src={path}
+    {alt}
+    class={className}
+    loading="lazy"
+    onerror={() => {
+      error = true;
+    }}
+  />
+{:else if objectUrl && !error}
   <img
     src={objectUrl}
     {alt}

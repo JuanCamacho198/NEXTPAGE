@@ -7,7 +7,8 @@
  * - subscribeToProgress: Realtime subscription for cross-device sync
  * - importFromDrive: one-time import of existing Drive progress to Supabase
  */
-import { getSessionClient } from '$lib/services/supabase';
+import { getSessionClient, hasLiveSession } from '$lib/services/supabase';
+import { authState } from '$lib/stores/authState.svelte';
 import type { SupabaseClient, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { ReadingStatus } from '$lib/shared/types';
 
@@ -83,10 +84,22 @@ export class SupabaseProgressSync {
   }
 
   /**
+   * Hot-path auth gate (D1, SR-1): no PostgREST request may fire without a
+   * live session whose user matches the current `authState` user. The
+   * `this.userId` check also closes the stale-instance hole (a sync instance
+   * built for a previous user must never write under another user's session).
+   * Gated calls no-op immediately — no request, no throw, no markFailed.
+   */
+  private isGated(): boolean {
+    return !hasLiveSession() || this.userId !== authState.userId;
+  }
+
+  /**
    * Upsert a single progress row.
    * ON CONFLICT(user_id, book_id) DO UPDATE with all fields.
    */
   async upsertProgress(progress: SupabaseProgressRow): Promise<void> {
+    if (this.isGated()) return;
     const { error } = await this.supabase.from('reading_progress').upsert(
       {
         user_id: progress.userId,
@@ -113,6 +126,7 @@ export class SupabaseProgressSync {
    * Fetch all reading_progress rows for the current user.
    */
   async fetchProgress(): Promise<SupabaseProgressRow[]> {
+    if (this.isGated()) return [];
     const { data, error } = await this.supabase
       .from('reading_progress')
       .select('*')
@@ -124,6 +138,7 @@ export class SupabaseProgressSync {
   }
 
   async fetchBookState(bookId: string): Promise<SupabaseBookState> {
+    if (this.isGated()) return { progress: null, bookmarks: [], highlights: [] };
     const [progress, bookmarks, highlights] = await Promise.all([
       this.fetchProgressForBook(bookId),
       this.fetchBookmarks(bookId),
@@ -133,6 +148,7 @@ export class SupabaseProgressSync {
   }
 
   async fetchProgressForBook(bookId: string): Promise<SupabaseProgressRow | null> {
+    if (this.isGated()) return null;
     const { data, error } = await this.supabase
       .from('reading_progress')
       .select('*')
@@ -177,7 +193,7 @@ export class SupabaseProgressSync {
    * Batches upserts in chunks of 100.
    */
   async importFromDrive(driveProgressData: SupabaseProgressRow[]): Promise<void> {
-    if (driveProgressData.length === 0) return;
+    if (this.isGated() || driveProgressData.length === 0) return;
 
     const chunkSize = 100;
     for (let i = 0; i < driveProgressData.length; i += chunkSize) {
@@ -210,6 +226,7 @@ export class SupabaseProgressSync {
    * but only for rows WHERE deleted_at IS NULL.
    */
   async upsertBookmark(bookmark: SupabaseBookmarkRow): Promise<void> {
+    if (this.isGated()) return;
     const payload: Record<string, unknown> = {
       id: bookmark.id,
       user_id: bookmark.userId,
@@ -233,10 +250,8 @@ export class SupabaseProgressSync {
    * Fetch all bookmarks for the current user, optionally filtered by book.
    */
   async fetchBookmarks(bookId?: string): Promise<SupabaseBookmarkRow[]> {
-    let query = this.supabase
-      .from('bookmarks')
-      .select('*')
-      .eq('user_id', this.userId);
+    if (this.isGated()) return [];
+    let query = this.supabase.from('bookmarks').select('*').eq('user_id', this.userId);
 
     if (bookId) {
       query = query.eq('book_id', bookId);
@@ -283,6 +298,7 @@ export class SupabaseProgressSync {
    * ON CONFLICT(id) DO UPDATE with all fields.
    */
   async upsertHighlight(highlight: SupabaseHighlightRow): Promise<void> {
+    if (this.isGated()) return;
     const payload: Record<string, unknown> = {
       id: highlight.id,
       user_id: highlight.userId,
@@ -311,10 +327,8 @@ export class SupabaseProgressSync {
    * Fetch all highlights for the current user, optionally filtered by book.
    */
   async fetchHighlights(bookId?: string): Promise<SupabaseHighlightRow[]> {
-    let query = this.supabase
-      .from('highlights')
-      .select('*')
-      .eq('user_id', this.userId);
+    if (this.isGated()) return [];
+    let query = this.supabase.from('highlights').select('*').eq('user_id', this.userId);
 
     if (bookId) {
       query = query.eq('book_id', bookId);
@@ -362,6 +376,9 @@ export class SupabaseProgressSync {
    * Returns the tag row (with id).
    */
   async upsertTag(tag: SupabaseTagRow): Promise<SupabaseTagRow> {
+    // Gate (SR-1): no request without a live session; no-op returns the input
+    // unpersisted rather than throwing or fabricating an id.
+    if (this.isGated()) return { ...tag };
     // Try to find existing tag
     const { data: existing, error: findError } = await this.supabase
       .from('tags')
@@ -409,6 +426,7 @@ export class SupabaseProgressSync {
    * ON CONFLICT DO NOTHING (idempotent).
    */
   async linkTagToHighlight(highlightId: string, tagId: string): Promise<void> {
+    if (this.isGated()) return;
     const { error } = await this.supabase.from('highlight_tags').upsert(
       {
         highlight_id: highlightId,
@@ -426,7 +444,7 @@ export class SupabaseProgressSync {
    * Import bookmark data from Drive (batched upsert).
    */
   async importBookmarksFromDrive(bookmarks: SupabaseBookmarkRow[]): Promise<void> {
-    if (bookmarks.length === 0) return;
+    if (this.isGated() || bookmarks.length === 0) return;
 
     const chunkSize = 100;
     for (let i = 0; i < bookmarks.length; i += chunkSize) {
@@ -455,7 +473,7 @@ export class SupabaseProgressSync {
    * Import highlight data from Drive (batched upsert).
    */
   async importHighlightsFromDrive(highlights: SupabaseHighlightRow[]): Promise<void> {
-    if (highlights.length === 0) return;
+    if (this.isGated() || highlights.length === 0) return;
 
     const chunkSize = 100;
     for (let i = 0; i < highlights.length; i += chunkSize) {

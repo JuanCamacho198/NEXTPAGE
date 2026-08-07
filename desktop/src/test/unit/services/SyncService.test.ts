@@ -42,7 +42,20 @@ const capturedOutboxHandler = vi.hoisted(() => ({
     | null,
 }));
 
+// WU2 gate controls (desktop-session-persistence): live-session gate + alert store.
+let mockHasLiveSession = vi.fn<() => boolean>();
+let mockReportAuthError = vi.fn<(error: unknown) => boolean>();
+
 // ---- Mock layers (must be hoisted by vitest) ----
+
+vi.mock('$lib/services/supabase', () => ({
+  hasLiveSession: () => mockHasLiveSession(),
+  recheckLiveSession: async () => mockHasLiveSession(),
+}));
+
+vi.mock('$lib/shared/stores/syncAlert.svelte', () => ({
+  reportAuthError: (error: unknown) => mockReportAuthError(error),
+}));
 
 vi.mock('$lib/stores/authState.svelte.ts', () => ({
   authState: {
@@ -140,6 +153,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   // Defaults
   mockIsSignedIn.mockReturnValue(false);
+  mockHasLiveSession.mockReturnValue(true);
+  mockReportAuthError.mockReturnValue(false);
   mockListBooks.mockResolvedValue([]);
   mockGetProgress.mockResolvedValue(null);
   mockListHighlights.mockResolvedValue([]);
@@ -214,9 +229,58 @@ describe('SyncService — auth gate', () => {
     const first = SyncService.syncMetadata();
     const second = SyncService.syncMetadata();
 
+    // The async live-session gate adds microtask hops before syncBooks reaches
+    // gdrive.list — flush them so the shared in-flight memo is exercised.
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
     expect(mockGDriveList).toHaveBeenCalledTimes(1);
     releaseDriveList();
     await Promise.all([first, second]);
+  });
+
+  it('no-ops when the live session is stale even if authState claims signed-in (DA-1.2)', async () => {
+    mockIsSignedIn.mockReturnValue(true);
+    mockHasLiveSession.mockReturnValue(false);
+
+    await SyncService.syncMetadata();
+
+    expect(mockListBooks).not.toHaveBeenCalled();
+    expect(mockGDriveList).not.toHaveBeenCalled();
+    expect(mockReportAuthError).not.toHaveBeenCalled();
+  });
+
+  it('surfaces typed AUTH_REQUIRED from a Drive failure to the alert store (SR-3)', async () => {
+    mockIsSignedIn.mockReturnValue(true);
+    mockHasLiveSession.mockReturnValue(true);
+    const authErr = Object.assign(
+      new Error('Google Drive access expired. Please sign in with Google again.'),
+      { code: 'AUTH_REQUIRED', retryable: false },
+    );
+    mockGDriveList.mockRejectedValue(authErr);
+
+    await SyncService.syncMetadata();
+
+    expect(mockReportAuthError).toHaveBeenCalledWith(authErr);
+  });
+
+  it('outbox handler silently skips rows without a live session (SR-1: no throw, no request)', async () => {
+    mockHasLiveSession.mockReturnValue(false);
+    mockUserId.mockReturnValue('user-1');
+    SyncService.setupOutboxProcessor();
+
+    await expect(
+      capturedOutboxHandler.value!(
+        'BOOK',
+        'book-1',
+        'UPSERT',
+        JSON.stringify({ title: 'Imported Book' }),
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(mockCatalogUpsertBook).not.toHaveBeenCalled();
+    expect(mockGDriveUpload).not.toHaveBeenCalled();
   });
 });
 

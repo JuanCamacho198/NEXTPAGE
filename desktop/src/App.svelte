@@ -7,6 +7,7 @@
   import AppRouter from '$lib/shared/ui/layout/AppRouter.svelte';
   import AppModals from '$lib/shared/ui/layout/AppModals.svelte';
   import ImportProgressBanner from '$lib/shared/ui/feedback/ImportProgressBanner.svelte';
+  import SyncAuthBanner from '$lib/shared/ui/feedback/SyncAuthBanner.svelte';
   import CustomTitlebar from '$lib/shared/ui/layout/CustomTitlebar.svelte';
   import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
   import { titlebarState } from '$lib/stores/titlebarState.svelte';
@@ -77,6 +78,7 @@
     <AppRouter />
     <AppModals />
     <ImportProgressBanner />
+    <SyncAuthBanner />
     <DebugToggle />
     <DebugPanel />
   </main>

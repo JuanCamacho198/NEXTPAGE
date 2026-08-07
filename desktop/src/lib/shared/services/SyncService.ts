@@ -11,6 +11,8 @@
  * - setupOutboxProcessor(): wires outbox handler for BOOK entity dispatch
  */
 import { authState } from '$lib/stores/authState.svelte';
+import { hasLiveSession, recheckLiveSession } from '$lib/services/supabase';
+import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
 import { GDriveProvider } from './storage/GDriveProvider';
 import { GoogleDriveStateSync } from './GoogleDriveStateSync';
 import { SupabaseProgressSync } from '../sync/SupabaseProgressSync';
@@ -95,15 +97,25 @@ export class SyncService {
 
     this.outboxService = new SyncOutboxService();
     this.outboxService.setHandler(async (entityType, entityId, operation, payloadJson) => {
-      if (!authState.userId) throw new Error('Cannot flush outbox while signed out');
+      // Gate (SR-1): never process a row without a live session. Silent skip —
+      // no throw (a throw would markFailed + backoff, feeding the retry loop)
+      // and no request with a dead JWT. The flush-level gate in
+      // SyncOutboxService makes this reachable only in a mid-flush race.
+      if (!hasLiveSession()) return;
       if (!entityId) throw new Error(`Outbox entity ${entityType} is missing entityId`);
 
-      const progressSync = new SupabaseProgressSync(authState.userId);
+      // The live-session gate guarantees the cached user matches authState (D3),
+      // so a null userId here is impossible; the guard keeps the handler
+      // type-safe with the same silent-skip contract.
+      const userId = authState.userId;
+      if (!userId) return;
+
+      const progressSync = new SupabaseProgressSync(userId);
       const payload = JSON.parse(payloadJson) as Record<string, unknown>;
 
       if (entityType === 'READING_PROGRESS' && operation === 'UPSERT') {
         await progressSync.upsertProgress({
-          userId: authState.userId,
+          userId: userId,
           bookId: entityId,
           cfiLocation: String(payload.cfiLocation ?? ''),
           percentage: Number(payload.percentage ?? 0),
@@ -117,7 +129,7 @@ export class SyncService {
       if (entityType === 'HIGHLIGHT') {
         await progressSync.upsertHighlight({
           id: entityId,
-          userId: authState.userId,
+          userId: userId,
           bookId: String(payload.bookId ?? entityId),
           cfiRange: String(payload.cfiRange ?? payload.cfi ?? ''),
           textContent: String(payload.textContent ?? payload.text ?? ''),
@@ -136,7 +148,7 @@ export class SyncService {
       if (entityType === 'BOOKMARK') {
         await progressSync.upsertBookmark({
           id: entityId,
-          userId: authState.userId,
+          userId: userId,
           bookId: String(payload.bookId ?? entityId),
           cfiLocation: String(payload.cfiLocation ?? ''),
           titleSnippet: payload.titleSnippet != null ? String(payload.titleSnippet) : null,
@@ -150,7 +162,7 @@ export class SyncService {
 
       if (entityType === 'BOOK' && operation === 'UPSERT') {
         const metadata = payload;
-        const bookSync = new SupabaseBookCatalogSync(authState.userId);
+        const bookSync = new SupabaseBookCatalogSync(userId);
 
         const contentHash = metadata.content_hash != null ? String(metadata.content_hash) : null;
 
@@ -172,7 +184,7 @@ export class SyncService {
           if (localBook?.coverPath) {
             const coverBytes = await tauri.getFileBytes(localBook.coverPath);
             coverUrl = await bookSync.uploadCover(
-              authState.userId,
+              userId,
               entityId,
               new Uint8Array(coverBytes).buffer as ArrayBuffer,
             );
@@ -208,7 +220,7 @@ export class SyncService {
 
         await bookSync.upsertBook({
           id: entityId,
-          userId: authState.userId,
+          userId: userId,
           title: String(metadata.title ?? ''),
           author: metadata.author != null ? String(metadata.author) : null,
           format: String(metadata.format ?? ''),
@@ -226,7 +238,7 @@ export class SyncService {
         });
       } else if (entityType === 'BOOK' && operation === 'DELETE') {
         // Explicit deletion is versioned: tombstone the remote row, never hard-delete.
-        const bookSync = new SupabaseBookCatalogSync(authState.userId);
+        const bookSync = new SupabaseBookCatalogSync(userId);
         await bookSync.tombstoneBook(entityId);
       } else {
         throw new Error(`Unsupported outbox entity: ${entityType}/${operation}`);
@@ -234,6 +246,15 @@ export class SyncService {
     });
 
     this.outboxService.start();
+  }
+
+  /**
+   * Reset the outbox auth circuit breaker. Wired to SIGNED_IN / TOKEN_REFRESHED
+   * (D4): fresh tokens mean an auth-class pause no longer applies, so the flush
+   * may resume immediately instead of waiting out the backoff window.
+   */
+  static resetOutboxBreaker(): void {
+    this.outboxService?.resetAuthBreaker();
   }
 
   /**
@@ -248,6 +269,8 @@ export class SyncService {
    */
   static async syncBookCatalog(): Promise<void> {
     if (!authState.userId) return;
+    // D1: re-verify the live session once for silent drops (DA-1 "stale without event").
+    if (!(await recheckLiveSession())) return;
 
     try {
       const catalogSync = new SupabaseBookCatalogSync(authState.userId);
@@ -320,18 +343,23 @@ export class SyncService {
       // 5. Store in reactive store
       setDownloadableBooks(downloadable);
     } catch (e) {
+      // SR-3: typed AUTH_REQUIRED/AUTH_EXPIRED must surface, never console.error-only.
+      reportAuthError(e);
       console.error('Failed to sync book catalog:', e);
     }
   }
 
   static async syncMetadata(): Promise<void> {
     if (!authState.isSignedIn) return;
+    // D1: async sync path re-verifies the live session once (DA-1.2).
+    if (!(await recheckLiveSession())) return;
 
     if (this.metadataSyncPromise) return this.metadataSyncPromise;
 
     const syncPromise = Promise.all([this.syncBooks(), this.syncState(), this.syncBookCatalog()])
       .then(() => undefined)
       .catch((error: unknown) => {
+        reportAuthError(error);
         console.error('Failed to sync startup metadata:', error);
       })
       .finally(() => {
@@ -357,6 +385,8 @@ export class SyncService {
     )
       return;
     if (!authState.userId) return;
+    // D1: re-verify the live session once for silent drops (DA-1.2).
+    if (!(await recheckLiveSession())) return;
 
     try {
       const sync = new SupabaseProgressSync(authState.userId);
@@ -495,6 +525,8 @@ export class SyncService {
   private static async syncBooks(): Promise<void> {
     const userId = authState.userId;
     if (!userId) return;
+    // D1: re-verify the live session once for silent drops (DA-1.2).
+    if (!(await recheckLiveSession())) return;
 
     // 1. List remote book files from Drive
     const remoteFiles = await this.gdrive.list('');
@@ -518,6 +550,7 @@ export class SyncService {
             const fileData = await this.gdrive.download(remoteFile);
             await tauri.saveBookFile(localBook.id, Array.from(fileData));
           } catch (e) {
+            reportAuthError(e);
             console.error(`Failed to sync book file for ${localBook.id}:`, e);
           }
         }
@@ -564,6 +597,7 @@ export class SyncService {
             }
           }
         } catch (e) {
+          reportAuthError(e);
           console.error(`Failed to upload book file for ${localBook.id}:`, e);
         }
       }
@@ -575,6 +609,8 @@ export class SyncService {
    * Uses GoogleDriveStateSync for push/pull with LWW conflict resolution.
    */
   private static async syncState(): Promise<void> {
+    // D1: async sync path re-verifies the live session once (DA-1.2).
+    if (!(await recheckLiveSession())) return;
     // Import existing progress to Supabase on first sync (if in dual/supabase mode)
     await this.ensureSupabaseImport();
 
@@ -665,6 +701,7 @@ export class SyncService {
               updatedAt: new Date(remote.progress.updated_at).toISOString(),
             });
           } catch (e) {
+            reportAuthError(e);
             console.error(`Failed to sync progress to Supabase for book ${book.id}:`, e);
           }
         }
@@ -685,6 +722,7 @@ export class SyncService {
               updatedAt: new Date(localProgress.updated_at).toISOString(),
             });
           } catch (e) {
+            reportAuthError(e);
             console.error(`Failed to sync local progress to Supabase for book ${book.id}:`, e);
           }
         }

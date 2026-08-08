@@ -57,7 +57,12 @@
   <WelcomeScreen t={appState.t} />
 {:else if showSidebar}
   <div class="flex h-full">
-    <AppSidebar activeRoute={appState.route} {navItems} t={appState.t} />
+    <AppSidebar
+      activeRoute={appState.route}
+      {navItems}
+      t={appState.t}
+      onNavigateSettings={appState.navigateToSettings}
+    />
     <main
       id="main-content"
       tabindex="-1"
@@ -147,7 +152,7 @@
                 }}
                 onViewDetails={appState.openShelfDetails}
                 onRemoveBook={(book: Parameters<typeof appState.handleHideBook>[0]) => {
-                  void appState.handleHideBook(book);
+                  appState.requestRemoveBook(book);
                 }}
               />
             </div>

@@ -430,7 +430,7 @@
               appState.handleEditBook(book);
             }}
             onRemove={() => {
-              void appState.handleHideBook(book);
+              appState.requestRemoveBook(book);
             }}
             onToggleFavorite={() => {
               void appState.handleToggleFavorite(book);
@@ -471,7 +471,7 @@
                   appState.handleEditBook(book);
                 }}
                 onRemove={() => {
-                  void appState.handleHideBook(book);
+                  appState.requestRemoveBook(book);
                 }}
                 onToggleFavorite={() => {
                   void appState.handleToggleFavorite(book);
@@ -516,7 +516,7 @@
                   appState.handleEditBook(book);
                 }}
                 onRemove={() => {
-                  void appState.handleHideBook(book);
+                  appState.requestRemoveBook(book);
                 }}
                 onToggleFavorite={() => {
                   void appState.handleToggleFavorite(book);

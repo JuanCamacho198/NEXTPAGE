@@ -221,6 +221,14 @@ const dictionary: Record<string, string> = {
   'library.favoriteRemove': 'Remove from favorites',
   'library.removeFromShelf': 'Remove from shelf',
   'library.editMetadata.title': 'Edit Metadata',
+  'shelf.removeConfirmTitle': 'Remove from shelf?',
+  'shelf.removeConfirmBody': '{{title}} will be removed from your shelf.',
+  'shelf.removeCancel': 'Cancel',
+  'shelf.removeContinue': 'Continue',
+  'shelf.removeLocalOnly': 'Local only',
+  'shelf.removeLocalOnlySubtitle': 'Removes the book from this library. The Drive file is kept.',
+  'shelf.removeLocalAndDrive': 'Local + Drive',
+  'shelf.removeLocalAndDriveSubtitle': 'Moves the file to the Drive trash and notes the deletion.',
   'home.futureTitle': 'Workspace',
   'home.futurePlaceholder': 'Future widgets and shortcuts will be added here.',
   'sidebar.home': 'Inicio',
@@ -723,6 +731,19 @@ describe('App desktop home redesign QA scenarios', () => {
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole('menuitem', { name: 'Remove from shelf' }));
+
+    // Step 1: confirmation modal opens (REQ-09, SCN-10)
+    const removeDialog = await screen.findByRole('dialog', { name: 'Remove from shelf?' });
+    expect(removeDialog).toBeInTheDocument();
+    await user.click(within(removeDialog).getByRole('button', { name: 'Continue' }));
+
+    // Step 2: "Local only" keeps current behavior — no Drive request (SCN-12)
+    expect(within(removeDialog).getByRole('button', { name: /Local only/ })).toBeInTheDocument();
+    expect(
+      within(removeDialog).getByRole('button', { name: /Local \+ Drive/ }),
+    ).toBeInTheDocument();
+    await user.click(within(removeDialog).getByRole('button', { name: /Local only/ }));
+
     await waitFor(() => {
       expect(tauriClientMock.hideBookFromLibrary).toHaveBeenCalledWith('actions-1');
     });

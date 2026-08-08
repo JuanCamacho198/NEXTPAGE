@@ -17,6 +17,10 @@ const mockRecordMetric = vi.hoisted(() => vi.fn());
 const mockAddBookToCollection = vi.hoisted(() => vi.fn());
 const mockRemoveBookFromCollection = vi.hoisted(() => vi.fn());
 const mockSetReadingStatus = vi.hoisted(() => vi.fn());
+const mockGDriveDelete = vi.hoisted(() => vi.fn());
+const mockFetchCatalog = vi.hoisted(() => vi.fn());
+const mockTombstoneBook = vi.hoisted(() => vi.fn());
+const mockAuthUserId = vi.hoisted(() => ({ current: null as string | null }));
 
 // ─── Module mocks ───
 
@@ -37,6 +41,29 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
 
 vi.mock('$lib/shared/services/pdfThumbnail', () => ({
   extractPdfMetadata: mockExtractPdfMetadata,
+}));
+
+vi.mock('$lib/shared/services/storage/GDriveProvider', () => ({
+  GDriveProvider: vi.fn(function () {
+    return { delete: mockGDriveDelete };
+  }),
+}));
+
+vi.mock('$lib/shared/sync/SupabaseBookCatalogSync', () => ({
+  SupabaseBookCatalogSync: vi.fn(function () {
+    return {
+      fetchCatalog: mockFetchCatalog,
+      tombstoneBook: mockTombstoneBook,
+    };
+  }),
+}));
+
+vi.mock('$lib/stores/authState.svelte', () => ({
+  authState: {
+    get userId(): string | null {
+      return mockAuthUserId.current;
+    },
+  },
 }));
 
 vi.mock('$lib/shared/logger/MetricsStore', () => ({
@@ -120,6 +147,7 @@ function resetLibraryState(): void {
   libraryState.readerError = null;
   libraryState.editingBook = null;
   libraryState.isCollectionManagerOpen = false;
+  libraryState.pendingRemoveBook = null;
   libraryState.setShelfTab('all');
   libraryState.setShelfSort('date');
   libraryState.setShelfViewMode('grid');
@@ -146,6 +174,10 @@ function setupDefaultMocks(): void {
     thumbnailBytes: null,
   });
   mockRecordMetric.mockReturnValue(undefined);
+  mockGDriveDelete.mockResolvedValue(undefined);
+  mockFetchCatalog.mockResolvedValue([]);
+  mockTombstoneBook.mockResolvedValue(undefined);
+  mockAuthUserId.current = null;
 }
 
 // ─── Tests ───
@@ -166,6 +198,7 @@ describe('LibraryDomainState', () => {
     expect(libraryState.readerError).toBeNull();
     expect(libraryState.editingBook).toBeNull();
     expect(libraryState.isCollectionManagerOpen).toBe(false);
+    expect(libraryState.pendingRemoveBook).toBeNull();
     expect(libraryState.thumbnailGenerationInFlight.size).toBe(0);
     expect(libraryState.thumbnailGenerationAttempted.size).toBe(0);
   });
@@ -334,6 +367,112 @@ describe('LibraryDomainState', () => {
 
     await libraryState.handleHideBook(makeBook({ id: 'b1' }) as any);
 
+    expect(libraryState.readerError).toBe('Cannot hide');
+  });
+
+  // ─── handleRemoveBookFromDrive (SCN-12/SCN-13 + partial failures) ───
+
+  it('SCN-12 handleHideBook (Local only) never touches Drive', async () => {
+    mockAuthUserId.current = 'user-1';
+    mockFetchCatalog.mockResolvedValue([{ id: 'b1', remoteFileId: 'drive-file-1' }]);
+    const rows = [makeLibraryRow({ id: 'b1', format: 'epub' })];
+    mockListLibraryBooks.mockResolvedValue(rows);
+    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1' })]);
+
+    await libraryState.handleHideBook(makeBook({ id: 'b1' }) as any);
+
+    expect(mockHideBookFromLibrary).toHaveBeenCalledWith('b1');
+    expect(mockGDriveDelete).not.toHaveBeenCalled();
+    expect(mockTombstoneBook).not.toHaveBeenCalled();
+  });
+
+  it('SCN-13 handleRemoveBookFromDrive trashes Drive, tombstones, hides locally', async () => {
+    mockAuthUserId.current = 'user-1';
+    mockFetchCatalog.mockResolvedValue([
+      { id: 'b1', remoteFileId: 'drive-file-1', remoteName: 'b1.epub' },
+    ]);
+    const rows = [makeLibraryRow({ id: 'b1', format: 'epub' })];
+    mockListLibraryBooks.mockResolvedValue(rows);
+    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1' })]);
+
+    await libraryState.handleRemoveBookFromDrive(makeBook({ id: 'b1' }) as any);
+
+    expect(mockGDriveDelete).toHaveBeenCalledWith('drive-file-1');
+    expect(mockTombstoneBook).toHaveBeenCalledWith('b1');
+    expect(mockHideBookFromLibrary).toHaveBeenCalledWith('b1');
+    expect(mockListLibraryBooks).toHaveBeenCalled();
+    expect(libraryState.readerError).toBeNull();
+  });
+
+  it('handleRemoveBookFromDrive falls back to remoteName when remoteFileId is absent', async () => {
+    mockAuthUserId.current = 'user-1';
+    mockFetchCatalog.mockResolvedValue([{ id: 'b1', remoteFileId: null, remoteName: 'b1.epub' }]);
+
+    await libraryState.handleRemoveBookFromDrive(makeBook({ id: 'b1' }) as any);
+
+    expect(mockGDriveDelete).toHaveBeenCalledWith('b1.epub');
+    expect(mockTombstoneBook).toHaveBeenCalledWith('b1');
+    expect(mockHideBookFromLibrary).toHaveBeenCalledWith('b1');
+  });
+
+  it('handleRemoveBookFromDrive skips Drive trash when no remote row/ref exists', async () => {
+    mockAuthUserId.current = 'user-1';
+    mockFetchCatalog.mockResolvedValue([]);
+
+    await libraryState.handleRemoveBookFromDrive(makeBook({ id: 'b1' }) as any);
+
+    expect(mockGDriveDelete).not.toHaveBeenCalled();
+    expect(mockTombstoneBook).toHaveBeenCalledWith('b1');
+    expect(mockHideBookFromLibrary).toHaveBeenCalledWith('b1');
+  });
+
+  it('handleRemoveBookFromDrive hides locally only when no session (nothing remote)', async () => {
+    mockAuthUserId.current = null;
+
+    await libraryState.handleRemoveBookFromDrive(makeBook({ id: 'b1' }) as any);
+
+    expect(mockFetchCatalog).not.toHaveBeenCalled();
+    expect(mockGDriveDelete).not.toHaveBeenCalled();
+    expect(mockTombstoneBook).not.toHaveBeenCalled();
+    expect(mockHideBookFromLibrary).toHaveBeenCalledWith('b1');
+  });
+
+  it('handleRemoveBookFromDrive aborts everything when Drive trash fails', async () => {
+    mockAuthUserId.current = 'user-1';
+    mockFetchCatalog.mockResolvedValue([{ id: 'b1', remoteFileId: 'drive-file-1' }]);
+    mockGDriveDelete.mockRejectedValue(new Error('Drive permission denied'));
+
+    await expect(
+      libraryState.handleRemoveBookFromDrive(makeBook({ id: 'b1' }) as any),
+    ).rejects.toThrow('Drive permission denied');
+
+    expect(mockTombstoneBook).not.toHaveBeenCalled();
+    expect(mockHideBookFromLibrary).not.toHaveBeenCalled();
+    expect(libraryState.readerError).toBe('Drive permission denied');
+  });
+
+  it('handleRemoveBookFromDrive continues with local hide when tombstone fails', async () => {
+    mockAuthUserId.current = 'user-1';
+    mockFetchCatalog.mockResolvedValue([{ id: 'b1', remoteFileId: 'drive-file-1' }]);
+    mockTombstoneBook.mockRejectedValue(new Error('Tombstone failed'));
+
+    await libraryState.handleRemoveBookFromDrive(makeBook({ id: 'b1' }) as any);
+
+    expect(mockGDriveDelete).toHaveBeenCalledWith('drive-file-1');
+    expect(mockHideBookFromLibrary).toHaveBeenCalledWith('b1');
+    expect(mockListLibraryBooks).toHaveBeenCalled();
+    expect(libraryState.readerError).toBe('Tombstone failed');
+  });
+
+  it('handleRemoveBookFromDrive reports hide failure via readerError', async () => {
+    mockAuthUserId.current = 'user-1';
+    mockFetchCatalog.mockResolvedValue([{ id: 'b1', remoteFileId: 'drive-file-1' }]);
+    mockHideBookFromLibrary.mockRejectedValue(new Error('Cannot hide'));
+
+    await libraryState.handleRemoveBookFromDrive(makeBook({ id: 'b1' }) as any);
+
+    expect(mockGDriveDelete).toHaveBeenCalledWith('drive-file-1');
+    expect(mockTombstoneBook).toHaveBeenCalledWith('b1');
     expect(libraryState.readerError).toBe('Cannot hide');
   });
 

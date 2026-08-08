@@ -7,6 +7,7 @@ export { default as CollectionManager } from './components/CollectionManager.sve
 export { default as CollectionPicker } from './components/CollectionPicker.svelte';
 export { default as EditMetadataModal } from './components/EditMetadataModal.svelte';
 export { default as LibraryView } from './components/LibraryView.svelte';
+export { default as RemoveBookModal } from './components/RemoveBookModal.svelte';
 export { default as ShelfActionMenu } from './components/ShelfActionMenu.svelte';
 
 export { default as GoogleLoginButton } from './components/GoogleLoginButton.svelte';

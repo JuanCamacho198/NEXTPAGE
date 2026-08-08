@@ -6,6 +6,10 @@ import { authState } from '$lib/stores/authState.svelte';
 const mockReadFile = vi.hoisted(() =>
   vi.fn<(...args: unknown[]) => Promise<Uint8Array>>().mockResolvedValue(new Uint8Array([1, 2, 3])),
 );
+const mockHideBook = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockGDriveDelete = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockFetchCatalog = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+const mockTombstoneBook = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 // Mock ALL AppState dependencies upfront
 vi.mock('$lib/shared/services/BookImportService', () => {
@@ -82,9 +86,7 @@ vi.mock('$lib/shared/api/tauriClient', () => {
     saveReadingSession: vi.fn(function () {
       return Promise.resolve(undefined);
     }),
-    hideBookFromLibrary: vi.fn(function () {
-      return Promise.resolve(undefined);
-    }),
+    hideBookFromLibrary: mockHideBook,
     upsertBook: vi.fn(function () {
       return Promise.resolve(undefined);
     }),
@@ -135,6 +137,21 @@ vi.mock('$lib/shared/services/SyncService', () => ({
     syncBookCatalog: vi.fn().mockResolvedValue(undefined),
     resetOutboxBreaker: mockResetOutboxBreaker,
   },
+}));
+
+vi.mock('$lib/shared/services/storage/GDriveProvider', () => ({
+  GDriveProvider: vi.fn(function () {
+    return { delete: mockGDriveDelete };
+  }),
+}));
+
+vi.mock('$lib/shared/sync/SupabaseBookCatalogSync', () => ({
+  SupabaseBookCatalogSync: vi.fn(function () {
+    return {
+      fetchCatalog: mockFetchCatalog,
+      tombstoneBook: mockTombstoneBook,
+    };
+  }),
 }));
 
 vi.mock('$lib/services/supabase', () => ({
@@ -228,6 +245,7 @@ function resetAppState(): void {
   appState.readerError = null;
   appState.locale = 'es';
   appState.editingBook = null;
+  appState.pendingRemoveBook = null;
   appState.collections = [];
   appState.isCollectionManagerOpen = false;
   appState.isBulkImportOpen = false;
@@ -255,6 +273,11 @@ describe('AppState', () => {
     mockHasLiveSession.mockReturnValue(false);
     mockLoadPersistedAuth.mockResolvedValue(null);
     capturedAuthHandler = null;
+    // Removal-flow mocks: clearAllMocks keeps implementations, so reset the
+    // defaults here to avoid leaking rejections between tests.
+    mockGDriveDelete.mockResolvedValue(undefined);
+    mockFetchCatalog.mockResolvedValue([]);
+    mockTombstoneBook.mockResolvedValue(undefined);
   });
 
   it('restored authenticated startup syncs metadata and all realtime changes once', async () => {
@@ -607,6 +630,69 @@ describe('AppState', () => {
     appState.shelfDetailsBookId = 'b1';
     appState.closeShelfDetails();
     expect(appState.shelfDetailsBookId).toBeNull();
+  });
+
+  // ─── Removal flow (T-10, REQ-09/10/11) ───
+
+  it('requestRemoveBook opens the modal state without any Drive request (SCN-12)', () => {
+    const book = asBook({ id: 'b1' }) as unknown as Parameters<
+      typeof appState.requestRemoveBook
+    >[0];
+    appState.requestRemoveBook(book);
+    expect(appState.pendingRemoveBook?.id).toBe('b1');
+    expect(mockGDriveDelete).not.toHaveBeenCalled();
+    expect(mockTombstoneBook).not.toHaveBeenCalled();
+    expect(mockHideBook).not.toHaveBeenCalled();
+  });
+
+  it('handleRemoveBookFromDrive trashes, tombstones, hides, closes modal (SCN-13)', async () => {
+    hydrateSignedInAuthState('user-1');
+    mockFetchCatalog.mockResolvedValue([{ id: 'b1', remoteFileId: 'drive-file-1' }]);
+    const book = asBook({ id: 'b1' }) as unknown as Parameters<
+      typeof appState.handleRemoveBookFromDrive
+    >[0];
+    appState.pendingRemoveBook = book;
+
+    await appState.handleRemoveBookFromDrive(book);
+
+    expect(mockGDriveDelete).toHaveBeenCalledWith('drive-file-1');
+    expect(mockTombstoneBook).toHaveBeenCalledWith('b1');
+    expect(mockHideBook).toHaveBeenCalledWith('b1');
+    expect(appState.pendingRemoveBook).toBeNull();
+    expect(appState.readerError).toBeNull();
+  });
+
+  it('handleRemoveBookFromDrive aborts when Drive fails and closes the modal', async () => {
+    hydrateSignedInAuthState('user-1');
+    mockFetchCatalog.mockResolvedValue([{ id: 'b1', remoteFileId: 'drive-file-1' }]);
+    mockGDriveDelete.mockRejectedValue(new Error('Drive expired'));
+    const book = asBook({ id: 'b1' }) as unknown as Parameters<
+      typeof appState.handleRemoveBookFromDrive
+    >[0];
+    appState.pendingRemoveBook = book;
+
+    await appState.handleRemoveBookFromDrive(book);
+
+    expect(mockHideBook).not.toHaveBeenCalled();
+    expect(mockTombstoneBook).not.toHaveBeenCalled();
+    expect(appState.pendingRemoveBook).toBeNull();
+    expect(appState.readerError).toBe('Drive expired');
+  });
+
+  it('handleRemoveBookFromDrive reports tombstone failure without blocking the hide', async () => {
+    hydrateSignedInAuthState('user-1');
+    mockFetchCatalog.mockResolvedValue([{ id: 'b1', remoteFileId: 'drive-file-1' }]);
+    mockTombstoneBook.mockRejectedValue(new Error('Tombstone failed'));
+    const book = asBook({ id: 'b1' }) as unknown as Parameters<
+      typeof appState.handleRemoveBookFromDrive
+    >[0];
+
+    await appState.handleRemoveBookFromDrive(book);
+
+    expect(mockGDriveDelete).toHaveBeenCalledWith('drive-file-1');
+    expect(mockHideBook).toHaveBeenCalledWith('b1');
+    expect(appState.pendingRemoveBook).toBeNull();
+    expect(appState.readerError).toBe('Tombstone failed');
   });
 
   it('setShelfTab updates tab', () => {

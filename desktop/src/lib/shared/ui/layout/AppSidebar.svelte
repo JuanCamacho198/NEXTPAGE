@@ -15,13 +15,21 @@
     activeRoute: AppRoute;
     navItems: NavItem[];
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
+    onNavigateSettings?: () => void;
   };
 
-  let { activeRoute, navItems, t }: Props = $props();
+  let { activeRoute, navItems, t, onNavigateSettings }: Props = $props();
 
   let collapsed = $state(false);
 
   let profile = $derived(profileSessionFromAuthState());
+
+  const handleUserBlockKeydown = (event: KeyboardEvent): void => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onNavigateSettings?.();
+    }
+  };
 </script>
 
 <aside
@@ -93,14 +101,18 @@
       <ThemeToggle />
     {/if}
 
-    <!-- User section -->
+    <!-- User section (REQ-12): clickable → Settings → Cuenta -->
     <div
-      class="w-full flex items-center rounded-xl p-3"
+      class="w-full flex items-center rounded-xl p-3 cursor-pointer transition-colors hover:bg-(--color-panel-accent)"
       class:justify-between={!collapsed}
       class:justify-center={collapsed}
       class:bg-(--color-surface)={!collapsed}
       class:border={!collapsed}
       class:border-(--color-border)={!collapsed}
+      role="button"
+      tabindex="0"
+      onclick={onNavigateSettings}
+      onkeydown={handleUserBlockKeydown}
     >
       <div class="flex items-center gap-3">
         {#if authState.isSignedIn && profile.avatarUrl}

@@ -125,6 +125,42 @@ describe('AppSidebar', () => {
     expect(onNavigateSettings).toHaveBeenCalledTimes(1);
   });
 
+  it('renders the user block as a clickable button (REQ-12)', () => {
+    render(AppSidebar, defaultProps);
+    const userBlock = screen.getByRole('button', { name: /Reader/ });
+    expect(userBlock).toHaveAttribute('role', 'button');
+    expect(userBlock).toHaveAttribute('tabindex', '0');
+  });
+
+  it('calls onNavigateSettings when the user block is clicked (REQ-12)', async () => {
+    const onNavigateSettings = vi.fn();
+    const user = userEvent.setup();
+    render(AppSidebar, { ...defaultProps, onNavigateSettings });
+    const userBlock = screen.getByRole('button', { name: /Reader/ });
+    await user.click(userBlock);
+    expect(onNavigateSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onNavigateSettings from the user block via Enter and Space (REQ-12)', async () => {
+    const onNavigateSettings = vi.fn();
+    const user = userEvent.setup();
+    render(AppSidebar, { ...defaultProps, onNavigateSettings });
+    const userBlock = screen.getByRole('button', { name: /Reader/ });
+    userBlock.focus();
+    await user.keyboard('{Enter}');
+    expect(onNavigateSettings).toHaveBeenCalledTimes(1);
+    await user.keyboard(' ');
+    expect(onNavigateSettings).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not throw when onNavigateSettings is omitted', async () => {
+    const user = userEvent.setup();
+    render(AppSidebar, defaultProps);
+    const userBlock = screen.getByRole('button', { name: /Reader/ });
+    await user.click(userBlock);
+    expect(userBlock).toBeTruthy();
+  });
+
   it('has semantic aside element', () => {
     const { container } = render(AppSidebar, defaultProps);
     expect(container.querySelector('aside')).toBeInTheDocument();

@@ -12,6 +12,10 @@ import {
   deleteBookCover,
 } from '$lib/shared/api/tauriClient';
 import { extractPdfMetadata } from '$lib/shared/services/pdfThumbnail';
+import { GDriveProvider } from '$lib/shared/services/storage/GDriveProvider';
+import { SupabaseBookCatalogSync } from '$lib/shared/sync/SupabaseBookCatalogSync';
+import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
+import { authState } from '$lib/stores/authState.svelte';
 import { recordMetric } from '$lib/shared/logger/MetricsStore';
 import { METRIC_NAMES } from '$lib/shared/logger/metricTypes';
 import {
@@ -37,6 +41,8 @@ class LibraryDomainState {
   readerError = $state<string | null>(null);
   editingBook = $state<ReaderBook | null>(null);
   isCollectionManagerOpen = $state(false);
+  /** Book pending the 2-step removal decision (null = modal closed). */
+  pendingRemoveBook = $state<ReaderBook | null>(null);
 
   // Internal state (class properties, not reactive)
   thumbnailGenerationInFlight = new Set<string>();
@@ -251,6 +257,88 @@ class LibraryDomainState {
       this.readerError =
         typed.commandError?.message ?? (error instanceof Error ? error.message : 'Unknown error');
     }
+  }
+
+  /**
+   * "Local + Drive" removal (REQ-11, SCN-13): trash the Drive file, write a
+   * remote tombstone, then hide the book locally. Partial-failure contract:
+   * - Drive trash fails (AUTH/PERMISSION/NET): ABORT everything — no local
+   *   hide, no tombstone; the typed error surfaces via readerError + the
+   *   auth banner and is rethrown so the coordinator can stop.
+   * - Tombstone fails after a successful trash: continue with the local hide
+   *   and report the tombstone failure (non-blocking) — with the file trashed
+   *   the book can no longer be downloaded, so hiding locally prevents a
+   *   confusing ghost entry.
+   * - Local hide fails: report via the readerError pattern (retryable).
+   */
+  async handleRemoveBookFromDrive(book: ReaderBook): Promise<void> {
+    const catalogSync = authState.userId
+      ? new SupabaseBookCatalogSync(authState.userId)
+      : null;
+    const gdrive = new GDriveProvider();
+
+    // Step 1 — trash the Drive file (skipped when no remote ref exists).
+    // Drive failure aborts the whole flow.
+    try {
+      if (catalogSync) {
+        const remoteRef = await this.resolveRemoteFileRef(book.id, catalogSync);
+        if (remoteRef) {
+          await gdrive.delete(remoteRef);
+        }
+      }
+    } catch (error) {
+      reportAuthError(error);
+      this.readerError = this.messageFrom(error);
+      throw error;
+    }
+
+    // Step 2 — remote tombstone (non-blocking failure).
+    let tombstoneError: unknown = null;
+    if (catalogSync) {
+      try {
+        await catalogSync.tombstoneBook(book.id);
+      } catch (error) {
+        tombstoneError = error;
+      }
+    }
+
+    // Step 3 — hide locally (core of handleHideBook).
+    let hideError: unknown = null;
+    try {
+      await hideBookFromLibrary(book.id);
+      await this.loadLibrary();
+    } catch (error) {
+      hideError = error;
+    }
+
+    // A failed local hide is the actionable error; a tombstone failure is
+    // reported only when the hide itself succeeded.
+    if (hideError) {
+      this.readerError = this.messageFrom(hideError);
+    } else if (tombstoneError) {
+      this.readerError = this.messageFrom(tombstoneError);
+    }
+  }
+
+  /**
+   * Resolve the Drive file reference for a book from the user_books catalog:
+   * prefer `remoteFileId` (REQ-11), fall back to `remoteName` (legacy/name
+   * lookup). Returns null when no row or remote ref exists — nothing to trash.
+   */
+  private async resolveRemoteFileRef(
+    bookId: string,
+    catalogSync: SupabaseBookCatalogSync,
+  ): Promise<string | null> {
+    const rows = await catalogSync.fetchCatalog();
+    const row = rows.find((entry) => entry.id === bookId);
+    return row?.remoteFileId ?? row?.remoteName ?? null;
+  }
+
+  private messageFrom(error: unknown): string {
+    const typed = error as MaybeCommandError;
+    return (
+      typed.commandError?.message ?? (error instanceof Error ? error.message : 'Unknown error')
+    );
   }
 
   async handleToggleFavorite(book: ReaderBook): Promise<void> {

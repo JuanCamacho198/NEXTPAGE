@@ -16,6 +16,8 @@ let capturedOnUrlHandler: ((url: string) => void) | null = null;
 const mockSetSupabaseSession = vi.fn();
 const mockClearSupabaseSession = vi.fn();
 const mockSavePersistedAuth = vi.fn();
+const mockLoadDriveRefreshToken = vi.fn<() => Promise<string | null>>(async () => null);
+const mockSaveDriveRefreshToken = vi.fn(async () => undefined);
 
 const mockSignInWithOAuth = vi.fn();
 const mockExchangeCodeForSession = vi.fn();
@@ -57,6 +59,8 @@ vi.mock('$lib/stores/authState.svelte', () => ({
 
 vi.mock('$lib/stores/authPersistence', () => ({
   savePersistedAuth: (...args: unknown[]) => mockSavePersistedAuth(...args),
+  loadDriveRefreshToken: (...args: unknown[]) => mockLoadDriveRefreshToken(...args),
+  saveDriveRefreshToken: (...args: unknown[]) => mockSaveDriveRefreshToken(...args),
 }));
 
 vi.mock('$lib/services/supabase', () => ({
@@ -109,6 +113,8 @@ beforeEach(async () => {
   mockSetSupabaseSession.mockReturnValue(undefined);
   mockClearSupabaseSession.mockReturnValue(undefined);
   mockSavePersistedAuth.mockResolvedValue(undefined);
+  mockLoadDriveRefreshToken.mockResolvedValue(null);
+  mockSaveDriveRefreshToken.mockResolvedValue(undefined);
   mockSignInWithOAuth.mockResolvedValue({
     data: { url: 'https://example.supabase.co/auth/v1/callback', provider: null },
     error: null,
@@ -251,6 +257,25 @@ describe('SupabaseAuthService — registerSupabaseCallbackHandler', () => {
       driveRefreshToken: 'google-refresh-token',
     });
     expect(mockSavePersistedAuth).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves a previously persisted Drive refresh token when GoTrue omits it (DRIVE_TOKEN_LOST)', async () => {
+    await sut.registerSupabaseCallbackHandler();
+    // The persisted token from a prior sign-in (e.g. manual OAuth or earlier login).
+    mockLoadDriveRefreshToken.mockResolvedValue('persisted-drive-refresh-token');
+    // GoTrue session WITHOUT provider_refresh_token (the common case for this project).
+    const session = makeMockSession({ provider_refresh_token: null });
+    mockExchangeCodeForSession.mockResolvedValue(makeMockSessionData(session));
+
+    await capturedOnUrlHandler!('http://127.0.0.1:48723/callback?code=valid-code');
+
+    expect(mockSetSupabaseSession).toHaveBeenCalledTimes(1);
+    expect(mockSetSupabaseSession.mock.calls[0]?.[0]).toMatchObject({
+      accessToken: 'access-123',
+      driveRefreshToken: 'persisted-drive-refresh-token',
+    });
+    // The preserved token is re-written to auth.json so it survives the re-login.
+    expect(mockSaveDriveRefreshToken).toHaveBeenCalledWith('persisted-drive-refresh-token');
   });
 
   it('ignores callback when code is missing', async () => {

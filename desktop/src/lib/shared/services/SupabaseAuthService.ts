@@ -22,7 +22,7 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import type { Session } from '@supabase/supabase-js';
 
 import { getSessionClient, getLiveSession } from '$lib/services/supabase';
-import { savePersistedAuth } from '$lib/stores/authPersistence';
+import { savePersistedAuth, loadDriveRefreshToken, saveDriveRefreshToken } from '$lib/stores/authPersistence';
 import { authState } from '$lib/stores/authState.svelte';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 import { logger } from '$lib/shared/logger/Logger';
@@ -237,7 +237,11 @@ export async function signInWithGoogle(): Promise<void> {
  */
 async function handleSession(session: Session): Promise<void> {
   const providerToken = session.provider_token ?? null;
-  const providerRefreshToken = session.provider_refresh_token ?? null;
+  // GoTrue does not always re-issue the Google provider refresh token on every
+  // sign-in (project-dependent, DTL-1). Preserve a previously persisted token
+  // so Drive sync survives re-login instead of losing it (DRIVE_TOKEN_LOST).
+  const previous = await loadDriveRefreshToken();
+  const providerRefreshToken = session.provider_refresh_token ?? previous;
 
   authState.setSupabaseSession({
     accessToken: session.access_token,
@@ -255,6 +259,12 @@ async function handleSession(session: Session): Promise<void> {
     kind: 'supabase',
     session: session as unknown as Record<string, unknown>,
   });
+
+  // Ensure the (possibly preserved) Drive refresh token survives in auth.json
+  // even when GoTrue omits provider_refresh_token on this login (DRIVE_TOKEN_LOST).
+  if (providerRefreshToken && !session.provider_refresh_token) {
+    await saveDriveRefreshToken(providerRefreshToken);
+  }
 }
 
 /**

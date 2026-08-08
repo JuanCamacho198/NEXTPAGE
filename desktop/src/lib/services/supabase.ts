@@ -176,6 +176,11 @@ export function getSessionClient(): SupabaseClient {
         storage: tauriStorageAdapter,
         autoRefreshToken: true,
         detectSessionInUrl: false,
+        // PKCE is required for the OAuth callback to receive Google provider
+        // tokens. The implicit flow (the default) drops provider_token, which
+        // broke Drive sync after restart: login worked in-memory but the
+        // restored session had no Drive token (DRIVE_TOKEN_MISSING).
+        flowType: 'pkce',
       },
     });
   }

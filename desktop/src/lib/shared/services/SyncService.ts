@@ -19,7 +19,6 @@ import { SupabaseProgressSync } from '../sync/SupabaseProgressSync';
 import { SupabaseBookCatalogSync, buildRemoteRefs } from '../sync/SupabaseBookCatalogSync';
 import { canonicalBookName } from '$lib/shared/protocol/DriveCatalogContract';
 import { SyncOutboxService } from '../outbox/SyncOutboxService';
-import { setDownloadableBooks } from '$lib/stores/downloadableCatalog.svelte';
 import type {
   ProgressStateJson,
   HighlightStateJson,
@@ -264,8 +263,10 @@ export class SyncService {
    * 1. Fetch remote catalog from user_books table
    * 2. Get local books from SQLite
    * 3. Reconcile: push local books that are missing from the remote catalog
-   * 4. Compute downloadable: remote books not present locally
-   * 5. Store downloadable list in reactive store for UI
+   *
+   * The shelf "Available from other devices" section is no longer fed from
+   * user_books — it lists Drive directly via
+   * `downloadableCatalog.loadAvailableFromDrive()` (T-03).
    */
   static async syncBookCatalog(): Promise<void> {
     if (!authState.userId) return;
@@ -290,7 +291,6 @@ export class SyncService {
       }));
 
       const remoteIds = new Set(remoteBooks.map((b) => b.id));
-      const localIds = new Set(localBooks.map((b) => b.id));
 
       // 3. Reconcile: push any local book missing from remote catalog, or
       // present in the catalog but without a Drive remote ref (the outbox
@@ -356,17 +356,6 @@ export class SyncService {
         }
       }
 
-      // 4. Compute downloadable: remote rows not in local set, excluding
-      //    deleted/unavailable rows. Local absence never emits deletion and
-      //    existing local books never hard-delete remote rows (reconcile is
-      //    additive upsert only).
-      const excluded = new Set(['deleted', 'unavailable']);
-      const downloadable = remoteBooks.filter(
-        (rb) => !localIds.has(rb.id) && !excluded.has(rb.lifecycle ?? 'available'),
-      );
-
-      // 5. Store in reactive store
-      setDownloadableBooks(downloadable);
     } catch (e) {
       // SR-3: typed AUTH_REQUIRED/AUTH_EXPIRED must surface, never console.error-only.
       reportAuthError(e);

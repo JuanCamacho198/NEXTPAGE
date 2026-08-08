@@ -11,6 +11,21 @@ import type { StorageProvider } from './StorageProvider';
  */
 export type DriveError = Error & { code?: SyncErrorCode; retryable?: boolean };
 
+/**
+ * Module-level folder-resolution cache shared across ALL GDriveProvider
+ * instances (SyncService.gdrive and GoogleDriveStateSync.gdrive are separate
+ * instances). Without it, concurrent sync paths (syncBooks + syncState in
+ * Promise.all) race to create duplicate NextPage/Books trees on first run.
+ */
+let folderIds: string | null = null;
+let folderIdsPromise: Promise<string> | null = null;
+
+/** Reset the module-level folder cache (used by tests between cases). */
+export function __resetGDriveFolderCache(): void {
+  folderIds = null;
+  folderIdsPromise = null;
+}
+
 export class GDriveProvider implements StorageProvider {
   private static readonly GDRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
   private static readonly GDRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
@@ -75,11 +90,25 @@ export class GDriveProvider implements StorageProvider {
   }
 
   private async getOrCreateFolder(accessToken: string): Promise<string> {
+    // Module-level memoization: the first caller resolves the folder tree,
+    // concurrent callers await the SAME promise instead of racing to create
+    // duplicate NextPage/Books folders (DRIVE_DUP_FOLDERS).
+    if (folderIds !== null) return folderIds;
+    if (folderIdsPromise === null) {
+      folderIdsPromise = this.resolveFolderIds(accessToken);
+    }
+    return folderIdsPromise;
+  }
+
+  private async resolveFolderIds(accessToken: string): Promise<string> {
     const root =
       (await this.findFolder(accessToken, 'NextPage')) ??
       (await this.createFolder(accessToken, 'NextPage'));
     const books = await this.findFolder(accessToken, 'Books', root);
-    if (books) return books;
+    if (books) {
+      folderIds = books;
+      return books;
+    }
     const createResponse = await fetch(`${GDriveProvider.GDRIVE_API_BASE}/files`, {
       method: 'POST',
       headers: {
@@ -95,6 +124,7 @@ export class GDriveProvider implements StorageProvider {
     if (!createResponse.ok)
       throw await this.driveError('GDrive folder creation failed', createResponse);
     const createData = await createResponse.json();
+    folderIds = createData.id;
     return createData.id;
   }
 

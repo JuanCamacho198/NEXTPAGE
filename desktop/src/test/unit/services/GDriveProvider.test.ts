@@ -10,7 +10,7 @@ vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
   refreshDriveToken: vi.fn(),
 }));
 
-import { GDriveProvider } from '$lib/shared/services/storage/GDriveProvider';
+import { GDriveProvider, __resetGDriveFolderCache } from '$lib/shared/services/storage/GDriveProvider';
 import { getDriveToken, refreshDriveToken } from '$lib/shared/services/SupabaseAuthService';
 
 function mockDriveApiResponses(
@@ -49,6 +49,7 @@ describe('GDriveProvider — token source swap', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     globalThis.fetch = vi.fn();
+    __resetGDriveFolderCache();
     provider = new GDriveProvider();
   });
 
@@ -128,6 +129,7 @@ describe('GDriveProvider — idempotent upload (DRP-3)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     globalThis.fetch = vi.fn();
+    __resetGDriveFolderCache();
     provider = new GDriveProvider();
     vi.mocked(refreshDriveToken).mockResolvedValue('ya29.refreshed-token');
   });
@@ -215,6 +217,7 @@ describe('GDriveProvider — token refresh layers (DTL-1/DTL-2/DTL-3)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     globalThis.fetch = vi.fn();
+    __resetGDriveFolderCache();
     provider = new GDriveProvider();
     vi.mocked(refreshDriveToken).mockResolvedValue('ya29.refreshed-token');
   });

@@ -21,7 +21,12 @@ class GoogleDriveStorageRemoteDataSourceTest {
     private val listResults = mutableListOf<FileList>()
     private var downloadBytes: ByteArray = byteArrayOf()
 
-    @Before fun setUp() { files = mockk(); listResults.clear(); downloadBytes = byteArrayOf() }
+    @Before fun setUp() {
+        files = mockk()
+        listResults.clear()
+        downloadBytes = byteArrayOf()
+        GoogleDriveStorageRemoteDataSource.__resetGDriveFolderCache()
+    }
     @After fun tearDown() = unmockkAll()
 
     private fun source(): GoogleDriveStorageRemoteDataSource {
@@ -68,5 +73,17 @@ class GoogleDriveStorageRemoteDataSourceTest {
         listResults.add(id("next")); listResults.add(id("books"))
         listResults.add(FileList().apply { files = listOf(File().setName("a.epub"), File().setName("b.pdf")) })
         assertEquals(listOf("books/u1/a.epub", "books/u1/b.pdf"), source().list("books/u1/"))
+    }
+
+    @Test fun secondUpload_reusesResolvedFolder_noDuplicateFolders() = runBlocking {
+        // First upload: find NextPage (empty) → create; find Books (empty) → create; find file (empty) → upload.
+        // Second upload (cache hit): find file (empty) → upload — NO folder creations.
+        repeat(5) { listResults.add(empty()) }
+        val src = source()
+        src.upload("books/u1/a.epub", "a".toByteArray())
+        src.upload("books/u1/b.epub", "b".toByteArray())
+        // Exactly TWO folder creates total (one NextPage + one Books), never four.
+        verify(exactly = 2) { files.create(any<File>()) }
+        verify(exactly = 2) { files.create(match { it.name == "a.epub" || it.name == "b.epub" }, any<AbstractInputStreamContent>()) }
     }
 }

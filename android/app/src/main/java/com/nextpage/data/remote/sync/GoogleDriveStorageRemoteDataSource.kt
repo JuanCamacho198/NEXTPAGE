@@ -8,6 +8,9 @@ import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.data.remote.drive.DriveCatalogContract
 import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 /**
  * Implements [StorageSyncRemoteDataSource] using Google Drive REST API v3,
@@ -111,9 +114,26 @@ class GoogleDriveStorageRemoteDataSource(
 
     /**
      * Finds the shared `NextPage/Books` folder id, creating it if missing.
+     *
+     * Memoized at companion level so concurrent callers (e.g. push of several
+     * books in parallel, or push + state sync racing on first run) resolve the
+     * SAME folder instead of creating duplicate NextPage/Books trees
+     * (DRIVE_DUP_FOLDERS, desktop parity).
      */
     private suspend fun ensureBooksFolder(): String {
-        return booksFolderIdOrNull() ?: createBooksFolder()
+        booksFolderId?.let { return it }
+        booksFolderDeferred?.let { return it.await() }
+        return coroutineScope {
+            val deferred = async { resolveBooksFolder() }
+            booksFolderDeferred = deferred
+            deferred.await()
+        }
+    }
+
+    private suspend fun resolveBooksFolder(): String {
+        val id = booksFolderIdOrNull() ?: createBooksFolder()
+        booksFolderId = id
+        return id
     }
 
     private fun booksFolderIdOrNull(): String? {
@@ -198,5 +218,19 @@ class GoogleDriveStorageRemoteDataSource(
         const val COMPONENT = "GoogleDriveStorageRemoteDataSource"
         private const val HTTP_UNAUTHORIZED = 401
         private const val HTTP_FORBIDDEN = 403
+
+        /**
+         * Module-level (companion) folder cache shared across ALL data-source
+         * instances. Without it, concurrent sync paths race to create duplicate
+         * NextPage/Books trees on first run.
+         */
+        private var booksFolderId: String? = null
+        private var booksFolderDeferred: Deferred<String>? = null
+
+        /** Reset the module-level folder cache (used by tests between cases). */
+        fun __resetGDriveFolderCache() {
+            booksFolderId = null
+            booksFolderDeferred = null
+        }
     }
 }

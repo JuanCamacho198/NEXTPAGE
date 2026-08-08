@@ -1,5 +1,6 @@
 package com.nextpage.presentation.screen.settings
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,10 +22,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -33,56 +34,59 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nextpage.BuildConfig
 import com.nextpage.R
-import com.nextpage.data.remote.drive.DriveTokenStore
-import com.nextpage.data.remote.drive.EncryptedDriveTokenStore
+import com.nextpage.data.remote.drive.DriveAuthResult
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
-import com.nextpage.data.remote.drive.InMemoryDriveTokenStore
-import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.ui.components.molecules.NextPagePreferenceItem
 import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
-import kotlinx.coroutines.launch
 
+/**
+ * Data & Storage settings: Google Drive authorization via the PKCE browser flow.
+ *
+ * The flow is driven by the [GoogleDriveAuthHelper] singleton (see [driveAuthHelper]):
+ * the authorize button launches the browser intent; the redirect arrives through
+ * `MainActivity.onNewIntent` → helper, and the outcome is observed on
+ * [GoogleDriveAuthHelper.authResult]. Per spec, **cancellation is silent** — the
+ * spinner stops and NO toast is shown — while failures surface an actionable toast.
+ */
 @Composable
 fun SettingsDataStorageScreen(
+    driveAuthHelper: GoogleDriveAuthHelper,
     onNavigateToStatistics: () -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val readerPreferences = remember { ReaderPreferences(context) }
-    val tokenStore: DriveTokenStore = remember {
-        runCatching { EncryptedDriveTokenStore(context) }
-            .getOrElse { InMemoryDriveTokenStore() }
-    }
-
     var isAuthorizing by remember { mutableStateOf(false) }
-    var driveAuthorized by remember { mutableStateOf(tokenStore.isAuthorized()) }
+    var driveAuthorized by remember { mutableStateOf(driveAuthHelper.isAuthorized()) }
 
     val oauthErrorText = stringResource(R.string.settings_drive_error_oauth)
 
-    val driveAuthHelper = remember {
-        GoogleDriveAuthHelper(
-            context = context,
-            clientId = BuildConfig.GOOGLE_OAUTH_CLIENT_ID,
-            tokenStore = tokenStore
-        )
+    // Redirect-driven outcome (browser → MainActivity.onNewIntent → helper.onRedirect):
+    // Success → authorized; Failure → actionable toast; Canceled → silent (no toast).
+    LaunchedEffect(driveAuthHelper) {
+        driveAuthHelper.authResult.collect { result ->
+            if (result != null) {
+                isAuthorizing = false
+                when (result) {
+                    is DriveAuthResult.Success -> driveAuthorized = true
+                    is DriveAuthResult.Failure -> Toast.makeText(
+                        context,
+                        oauthErrorText,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    DriveAuthResult.Canceled -> Unit // cancellation is not an error — no toast
+                }
+                driveAuthHelper.consumeResult()
+            }
+        }
     }
 
     val signInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        scope.launch {
-            val token = driveAuthHelper.handleSignInResult(result.data)
+        // The browser task closed without a redirect (user pressed back) — canceled.
+        // Spinner off, NO toast. Redirect results arrive through driveAuthHelper.authResult.
+        if (result.resultCode != Activity.RESULT_OK) {
             isAuthorizing = false
-            if (token != null) {
-                driveAuthorized = true
-            } else {
-                Toast.makeText(
-                    context,
-                    oauthErrorText,
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
         }
     }
 
@@ -141,7 +145,7 @@ fun SettingsDataStorageScreen(
             driveAuthorized -> {
                 OutlinedButton(
                     onClick = {
-                        tokenStore.clear()
+                        driveAuthHelper.disconnect()
                         driveAuthorized = false
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -165,7 +169,7 @@ fun SettingsDataStorageScreen(
                         }
 
                         isAuthorizing = true
-                        signInLauncher.launch(driveAuthHelper.signInClient().signInIntent)
+                        signInLauncher.launch(driveAuthHelper.beginAuth())
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),

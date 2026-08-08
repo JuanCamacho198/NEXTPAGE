@@ -14,7 +14,8 @@
         android:theme="@style/Theme.NextPage">
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -32,6 +33,20 @@
                     android:scheme="nextpage"
                     android:host="auth"
                     android:pathPrefix="/callback" />
+            </intent-filter>
+
+            <!-- Google Drive OAuth redirect (authorization-code + PKCE).
+                 Must match DRIVE_OAUTH_REDIRECT_URI (nextpage://oauth2/drive). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="nextpage"
+                    android:host="oauth2"
+                    android:pathPrefix="/drive" />
             </intent-filter>
         </activity>
 

@@ -2,110 +2,151 @@ package com.nextpage.data.remote.drive
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.util.Log
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
-import com.google.android.gms.common.api.Scope
 import com.nextpage.data.remote.google.GoogleDriveConfig
-import io.ktor.client.HttpClient
+import com.nextpage.domain.error.AppError
+import com.nextpage.domain.error.ErrorCategory
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
- * Encapsulates the Google Sign-In OAuth flow for Google Drive
- * (Authorization Code + PKCE, `drive.file` scope).
+ * Thin Android layer for the Google Drive OAuth flow (authorization-code + PKCE,
+ * `drive.file` scope). The actual protocol lives in the pure, JVM-testable
+ * [DriveOAuthSession]; this class only:
  *
- * Replaces the broken ID-token-as-Bearer flow. The sign-in request produces a
- * short-lived **authorization code** ([GoogleSignInAccount.serverAuthCode])
- * plus an ID token. The auth code is exchanged at Google's OAuth token endpoint
- * for an access + refresh token pair, which is persisted in [DriveTokenStore].
- * The refresh token re-issues access tokens without re-prompting on restart.
+ * 1. Builds the Google authorize URL (`client_id`, `redirect_uri=nextpage://oauth2/drive`,
+ *    S256 `code_challenge`, `state`, `scope=drive.file`, `access_type=offline`, `prompt=consent`).
+ * 2. Launches it in the browser via a plain [Intent.ACTION_VIEW] (no Custom Tabs / GoogleSignIn dep).
+ * 3. Receives the redirect in [onRedirect] (driven from `MainActivity.onNewIntent`),
+ *    parses `code`/`state`/`error`, and delegates to [DriveOAuthSession.complete].
+ * 4. Exposes the outcome on [authResult] so any UI (Settings, and later the import prompt)
+ *    observes the singleton flow and pending redirect state.
+ *
+ * The prior GoogleSignIn `requestServerAuthCode` path is gone: that API cannot carry a
+ * PKCE challenge, which is exactly why the exchange always failed with `invalid_client`.
+ * This flow mirrors the working desktop implementation against the same OAuth endpoints.
  *
  * This is a separate, independent OAuth flow from Supabase auth.
  */
 class GoogleDriveAuthHelper(
     private val context: Context,
-    private val clientId: String,
-    private val tokenStore: DriveTokenStore = EncryptedDriveTokenStore(context),
-    private val tokenApi: DriveTokenApi = KtorAuthApi(HttpClient())
+    private val session: DriveOAuthSession
 ) {
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** The in-flight [AuthStart] between [beginAuth] and the redirect — singleton-pending. */
+    private var pendingAuth: AuthStart? = null
+
+    private val _authResult = MutableStateFlow<DriveAuthResult?>(null)
+
+    /**
+     * Outcome of the most recent authorization attempt, or null while idle.
+     *
+     * UI collects this to receive redirect-driven results: [DriveAuthResult.Success] →
+     * authorized, [DriveAuthResult.Failure] → actionable toast, [DriveAuthResult.Canceled]
+     * → silent. Consumers must call [consumeResult] after handling so the next attempt
+     * starts clean.
+     */
+    val authResult: StateFlow<DriveAuthResult?> = _authResult.asStateFlow()
+
+    /** True when Drive tokens are present. */
+    fun isAuthorized(): Boolean = session.isAuthorized()
+
+    /** Remove all stored Drive tokens (disconnect). */
+    fun disconnect() {
+        session.disconnect()
+    }
+
+    /**
+     * Start a fresh authorization attempt and return the browser [Intent] to launch
+     * (via an activity-result launcher). The pending verifier/state is stored on this
+     * singleton so [onRedirect] can complete the same attempt.
+     */
+    fun beginAuth(): Intent {
+        val auth = session.beginAuth()
+        pendingAuth = auth
+        val authUrl = buildAuthUrl(auth)
+        Log.d(TAG, "Launching Drive OAuth browser flow")
+        return Intent(Intent.ACTION_VIEW, Uri.parse(authUrl))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    /**
+     * Handle the `nextpage://oauth2/drive` redirect (called from
+     * `MainActivity.onNewIntent`). [uri] carries `code` + `state`, or `error` when the
+     * user denied the grant. Parses and delegates to [DriveOAuthSession.complete], then
+     * publishes the result on [authResult].
+     */
+    fun onRedirect(uri: Uri?) {
+        val pending = pendingAuth ?: run {
+            Log.w(TAG, "Drive OAuth redirect received with no pending authorization — ignoring")
+            return
+        }
+        pendingAuth = null
+
+        if (uri == null) {
+            _authResult.value = DriveAuthResult.Canceled
+            return
+        }
+        val error = uri.getQueryParameter("error")
+        if (!error.isNullOrBlank()) {
+            _authResult.value = DriveAuthResult.Failure(userDeniedError(error))
+            return
+        }
+        val code = uri.getQueryParameter("code")
+        val returnedState = uri.getQueryParameter("state")
+        scope.launch {
+            _authResult.value = session.complete(code, pending.state, returnedState, pending.verifier)
+        }
+    }
+
+    /** Reset the outcome channel after a consumer handled [authResult]. */
+    fun consumeResult() {
+        _authResult.value = null
+    }
+
+    private fun buildAuthUrl(auth: AuthStart): String =
+        Uri.parse(GoogleDriveConfig.GOOGLE_OAUTH_AUTH_ENDPOINT).buildUpon()
+            .appendQueryParameter("client_id", session.clientId)
+            .appendQueryParameter("redirect_uri", session.redirectUri)
+            .appendQueryParameter("response_type", "code")
+            .appendQueryParameter("scope", GoogleDriveConfig.DRIVE_FILE_SCOPE)
+            .appendQueryParameter("code_challenge", auth.challenge)
+            .appendQueryParameter("code_challenge_method", "S256")
+            .appendQueryParameter("state", auth.state)
+            .appendQueryParameter("access_type", "offline")
+            .appendQueryParameter("prompt", "consent")
+            .build()
+            .toString()
+
+    private fun userDeniedError(error: String): AppError = AppError(
+        category = ErrorCategory.AUTH,
+        code = if (error == "access_denied") "DRIVE_OAUTH_DENIED" else "DRIVE_OAUTH_ERROR",
+        message = if (error == "access_denied") {
+            "Google Drive authorization was declined."
+        } else {
+            "Google Drive authorization failed: $error"
+        },
+        component = COMPONENT
+    )
 
     companion object {
         private const val TAG = "GoogleDriveAuthHelper"
-    }
-
-    /**
-     * Build the [GoogleSignInOptions] for Drive authorization.
-     *
-     * Requests the Drive scope along with a server auth code via [redirecting
-     * `requestServerAuthCode`], so [handleSignInResult] can exchange it for
-     * non-expiring offline tokens. Uses the `drive.file` scope saved in
-     * [GoogleDriveConfig].
-     */
-    fun authOptions(): GoogleSignInOptions {
-        return GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestScopes(Scope(GoogleDriveConfig.DRIVE_FILE_SCOPE))
-            .requestServerAuthCode(clientId)
-            .build()
-    }
-
-    /**
-     * Create the Google Sign-In client configured for Drive authorization.
-     * The caller launches [GoogleSignInClient.signInIntent] and forwards the
-     * result [Intent] to [handleSignInResult].
-     */
-    fun signInClient(): GoogleSignInClient = GoogleSignIn.getClient(context, authOptions())
-
-    /**
-     * Handle a Google Sign-In [Activity] result.
-     *
-     * On success: extracts the server auth code, exchanges it via [tokenApi]
-     * for an access+refresh pair, persists in [tokenStore], and returns the
-     * access token. Returns null on cancellation, cancellation of the sign-in intent,
-     * or a failed exchange (no crash).
-     */
-    suspend fun handleSignInResult(activityIntent: Intent?): String? = withContext(Dispatchers.IO) {
-        val account = extractAccount(activityIntent) ?: return@withContext null
-
-        val authCode = account.serverAuthCode
-        if (authCode.isNullOrBlank()) {
-            Log.w(TAG, "Google Sign-In returned no server auth code")
-            return@withContext null
-        }
-
-        val pairResult = tokenApi.exchange(
-            clientId = clientId,
-            authCode = authCode,
-            redirectUri = null,
-            codeVerifier = null
-        )
-        val result = pairResult.getOrNull() ?: run {
-            Log.w(TAG, "Drive OAuth token exchange failed")
-            return@withContext null
-        }
-
-        tokenStore.persist(result)
-        Log.d(TAG, "Drive OAuth successful, tokens persisted")
-        return@withContext result.accessToken
-    }
-
-    private fun extractAccount(activityIntent: Intent?): GoogleSignInAccount? {
-        return try {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(activityIntent)
-            task.getResult(ApiException::class.java)
-        } catch (e: Exception) {
-            Log.w(TAG, "Google Sign-In failed or cancelled: ${e.message}", e)
-            null
-        }
+        private const val COMPONENT = "GoogleDriveAuthHelper"
     }
 }
 
 /**
- * Purely in-memory [DriveTokenStore] used internally when authorization is exercised.
- * Not used in production; kept for symmetry and trivial testability.
+ * Purely in-memory [DriveTokenStore] fallback used when EncryptedSharedPreferences
+ * cannot be built (e.g., key corruption). Not used in production; kept for symmetry
+ * and trivial testability.
  */
 class InMemoryDriveTokenStore : DriveTokenStore {
     private var access: String? = null

@@ -19,6 +19,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.ThemeMode
 import com.nextpage.domain.repository.DictionaryRepository
@@ -53,7 +54,8 @@ fun SettingsScreen(
     onResetCustomHighlightColors: () -> Unit = {},
     onNavigateToLogViewer: () -> Unit = {},
     statisticsViewModel: StatisticsViewModel,
-    dictionaryRepository: DictionaryRepository? = null
+    dictionaryRepository: DictionaryRepository? = null,
+    driveAuthHelper: GoogleDriveAuthHelper? = null
 ) {
     val nestedNavController = rememberNavController()
     val dictionaryViewModel = remember(dictionaryRepository) {
@@ -155,6 +157,7 @@ fun SettingsScreen(
 
             composable(route = NextPageDestination.SettingsDataStorage.route) {
                 SettingsDataStorageScreen(
+                    driveAuthHelper = driveAuthHelper ?: return@composable,
                     onNavigateToStatistics = {
                         nestedNavController.navigate(NextPageDestination.SettingsStatistics.route)
                     },

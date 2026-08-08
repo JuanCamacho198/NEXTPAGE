@@ -1,6 +1,7 @@
 package com.nextpage
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -37,7 +38,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         appContainer = AppContainer(context = this)
-
         // Debug-only: capture pending crash from previous run, ensure the
         // notification channel exists, and request POST_NOTIFICATIONS on 33+.
         if (BuildConfig.DEBUG && DebugPrefs.isEnabled(this)) {
@@ -66,6 +66,20 @@ class MainActivity : AppCompatActivity() {
                     }
                 )
             }
+        }
+    }
+
+    /**
+     * Receives the `nextpage://oauth2/drive` redirect (singleTop launch mode) after the
+     * user completes/denies the Google Drive OAuth consent screen in the browser.
+     * Forwards the URI to the singleton helper, which completes the pending PKCE attempt
+     * and publishes the outcome for the UI that started the flow.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val uri = intent.data
+        if (uri != null && uri.scheme == "nextpage" && uri.host == "oauth2") {
+            appContainer.googleDriveAuthHelper.onRedirect(uri)
         }
     }
 

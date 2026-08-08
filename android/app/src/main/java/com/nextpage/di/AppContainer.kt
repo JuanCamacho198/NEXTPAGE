@@ -22,10 +22,13 @@ import com.nextpage.data.repository.ReaderRepositoryImpl
 import com.nextpage.data.repository.ReadingStatsRepositoryImpl
 import com.nextpage.data.repository.DictionaryRepositoryImpl
 import com.nextpage.data.repository.SupabaseAuthRepository
+import com.nextpage.data.remote.drive.DRIVE_OAUTH_REDIRECT_URI
 import com.nextpage.data.remote.drive.DriveCoordinator
+import com.nextpage.data.remote.drive.DriveOAuthSession
 import com.nextpage.data.remote.drive.DriveTokenApi
 import com.nextpage.data.remote.drive.DriveTokenStore
 import com.nextpage.data.remote.drive.EncryptedDriveTokenStore
+import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
 import com.nextpage.data.remote.drive.InMemoryDriveTokenStore
 import com.nextpage.data.remote.drive.KtorAuthApi
 import com.nextpage.data.remote.google.GoogleDriveConfig
@@ -132,7 +135,35 @@ class AppContainer(context: Context) {
 
     private val driveTokenApi: DriveTokenApi = KtorAuthApi(HttpClient())
 
-    private val driveCoordinator: DriveCoordinator by lazy {
+    /**
+     * Pure, JVM-testable core of the Drive OAuth authorization-code + PKCE flow.
+     * Singleton so the Settings screen and (later) the import prompt share one flow
+     * and pending redirect state; reuses [driveTokenStore], [driveTokenApi] and the
+     * Android OAuth client ID from BuildConfig.
+     */
+    val driveOAuthSession: DriveOAuthSession by lazy {
+        DriveOAuthSession(
+            clientId = BuildConfig.GOOGLE_OAUTH_CLIENT_ID,
+            redirectUri = DRIVE_OAUTH_REDIRECT_URI,
+            tokenStore = driveTokenStore,
+            tokenApi = driveTokenApi
+        )
+    }
+
+    /**
+     * Thin Android layer over [driveOAuthSession]: builds the authorize URL, launches
+     * the browser, and receives the `nextpage://oauth2/drive` redirect via
+     * `MainActivity.onNewIntent`. Singleton by design — the pending PKCE attempt must
+     * survive across screens.
+     */
+    val googleDriveAuthHelper: GoogleDriveAuthHelper by lazy {
+        GoogleDriveAuthHelper(
+            context = context.applicationContext,
+            session = driveOAuthSession
+        )
+    }
+
+    val driveCoordinator: DriveCoordinator by lazy {
         DriveCoordinator(
             context = context.applicationContext,
             tokenStore = driveTokenStore,

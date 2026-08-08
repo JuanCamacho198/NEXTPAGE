@@ -193,6 +193,23 @@
         <ellipse cx="12" cy="12" rx="4" ry="10" />
         <path d="M2 12h20" />
       </svg>
+    {:else}
+      <!-- Fallback: unknown/null icon renders the laptop glyph (defensive) -->
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        class="shrink-0 text-(--color-text-muted)"
+        aria-hidden="true"
+      >
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <line x1="2" y1="20" x2="22" y2="20" />
+        <path d="M8 20l.5-2h7l.5 2" />
+      </svg>
     {/if}
 
     <!-- Info -->

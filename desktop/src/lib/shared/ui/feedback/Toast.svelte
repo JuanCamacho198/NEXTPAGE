@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { fly, fade } from 'svelte/transition';
   import type { MessageKey } from '$lib/shared/i18n';
   import { i18n } from '$lib/shared/i18n';
 
@@ -65,33 +66,37 @@
 </script>
 
 {#if visible}
-  <div
-    class="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border p-4 shadow-lg {variants[
-      type
-    ]} {className}"
-    role="alert"
-  >
-    <div class="flex items-start gap-3">
-      <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={iconPaths[type]} />
-      </svg>
-      <div class="flex-1">
-        <p class="text-sm font-medium">{message}</p>
+  <!-- Wrapper fades; the toast flies in/out (Modal.svelte pattern) -->
+  <div transition:fade={{ duration: 200 }}>
+    <div
+      class="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border p-4 shadow-lg {variants[
+        type
+      ]} {className}"
+      role="alert"
+      transition:fly={{ y: 8, duration: 200, opacity: 0 }}
+    >
+      <div class="flex items-start gap-3">
+        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={iconPaths[type]} />
+        </svg>
+        <div class="flex-1">
+          <p class="text-sm font-medium">{message}</p>
+        </div>
+        {#if dismissible}
+          <button
+            class="transition-colors hover:opacity-70"
+            onclick={handleDismiss}
+            aria-label={tFn('toast.dismissAria')}
+          >
+            ×
+          </button>
+        {/if}
       </div>
-      {#if dismissible}
-        <button
-          class="transition-colors hover:opacity-70"
-          onclick={handleDismiss}
-          aria-label={tFn('toast.dismissAria')}
-        >
-          ×
-        </button>
+      {#if action}
+        <div class="mt-3 flex gap-2">
+          {@render action()}
+        </div>
       {/if}
     </div>
-    {#if action}
-      <div class="mt-3 flex gap-2">
-        {@render action()}
-      </div>
-    {/if}
   </div>
 {/if}

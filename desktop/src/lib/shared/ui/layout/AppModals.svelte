@@ -1,8 +1,14 @@
 <script lang="ts">
   import { appState } from '$lib/shared/stores/AppState.svelte';
-  import { EditMetadataModal, CollectionManager, BulkImportModal } from '$lib/features/library';
+  import {
+    EditMetadataModal,
+    CollectionManager,
+    BulkImportModal,
+    RemoveBookModal,
+  } from '$lib/features/library';
   import ErrorToast from '$lib/shared/ui/feedback/ErrorToast.svelte';
   import ErrorFallback from '$lib/shared/ui/feedback/ErrorFallback.svelte';
+  import ToastHost from '$lib/shared/ui/feedback/ToastHost.svelte';
 </script>
 
 <EditMetadataModal
@@ -43,3 +49,15 @@
 
 <ErrorToast />
 <ErrorFallback />
+
+<!-- 2-step removal modal: "Local only" vs "Local + Drive" (REQ-09/10/11) -->
+<RemoveBookModal
+  open={appState.pendingRemoveBook !== null}
+  onClose={() => {
+    appState.pendingRemoveBook = null;
+  }}
+  t={appState.t}
+/>
+
+<!-- Mounted outside AppRouter: toasts survive route changes (REQ-05) -->
+<ToastHost />

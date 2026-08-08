@@ -12,7 +12,6 @@
     upsertReaderSettings,
   } from '$lib/shared/api/tauriClient';
 
-  import Toast from '$lib/shared/ui/feedback/Toast.svelte';
   import { i18n, type MessageKey } from '$lib/shared/i18n';
   import {
     normalizeProfileSession,
@@ -20,6 +19,7 @@
     type ProfileSessionViewModel,
   } from '../profileSession';
   import { authState } from '$lib/stores/authState.svelte';
+  import { pushToast } from '$lib/stores/toastQueue.svelte';
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import type {
     AppSettingDto,
@@ -244,7 +244,6 @@
   }
 
   let isSigningOut = $state(false);
-  let showSignOutToast = $state(false);
 
   // Auto-load connected devices when the panel mounts and user is signed in
   $effect(() => {
@@ -258,7 +257,6 @@
     isSigningOut = true;
     try {
       await appState.signOutAndReturnToWelcome();
-      showSignOutToast = true;
     } catch (error) {
       console.error('Sign out failed:', error);
     } finally {
@@ -447,6 +445,7 @@
     try {
       await new Promise((resolve) => setTimeout(resolve, 500));
       cacheCleared = true;
+      pushToast('success', t('settings.data.cacheClearedToast'));
     } finally {
       isClearingCache = false;
     }
@@ -1247,13 +1246,6 @@
       {t}
       onClose={closeResetModal}
       onConfirm={confirmReset}
-    />
-
-    <Toast
-      type="success"
-      message={t('welcome.signedOutToast')}
-      bind:visible={showSignOutToast}
-      onDismiss={() => (showSignOutToast = false)}
     />
   </aside>
 {/if}

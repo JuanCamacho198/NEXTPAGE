@@ -9,6 +9,7 @@ import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte
 import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
 import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
 import { authState } from '$lib/stores/authState.svelte';
+import { pushToast } from '$lib/stores/toastQueue.svelte';
 import {
   clearPersistedAuth,
   loadDriveRefreshToken,
@@ -154,6 +155,12 @@ export class AppState {
   }
   set editingBook(v: ReaderBook | null) {
     this.library.editingBook = v;
+  }
+  get pendingRemoveBook(): ReaderBook | null {
+    return this.library.pendingRemoveBook;
+  }
+  set pendingRemoveBook(v: ReaderBook | null) {
+    this.library.pendingRemoveBook = v;
   }
   get isCollectionManagerOpen(): boolean {
     return this.library.isCollectionManagerOpen;
@@ -452,6 +459,50 @@ export class AppState {
     if (error) {
       this.navigation.setDomainUnavailable('library', error.message);
     }
+  };
+  /**
+   * Open the 2-step removal modal for a book (REQ-09): both shelf entry points
+   * (LibraryShelfScreen.onRemoveBook and ShelfActionMenu.onRemove) route here.
+   * `handleHideBook` remains the "Local only" path chosen inside the modal.
+   */
+  requestRemoveBook = (book: ReaderBook): void => {
+    this.library.pendingRemoveBook = book;
+  };
+  /**
+   * "Local + Drive" removal (REQ-11): delegates the trash → tombstone → hide
+   * flow to LibraryDomainState. A Drive failure aborts and surfaces a typed
+   * error (readerError / auth banner); later failures are reported without
+   * blocking. The modal closes so the user can re-decide (e.g. "Local only").
+   */
+  handleRemoveBookFromDrive = async (book: ReaderBook): Promise<void> => {
+    const snapshot = {
+      route: this.navigation.route,
+      previewBookId: this.navigation.previewBookId,
+      activeReadingBookId: this.reader.activeReadingBookId,
+      shelfDetailsBookId: this.navigation.shelfDetailsBookId,
+    };
+
+    try {
+      await this.library.handleRemoveBookFromDrive(book);
+    } catch {
+      // Drive abort: the error is already surfaced (readerError / auth banner).
+      // Keep the flow moving so the modal closes and the user can re-decide.
+    }
+
+    if (this.library.consumeBooksJustChanged()) {
+      const reconciled = reconcileHomeState(this.library.books, snapshot);
+      this.navigation.route = reconciled.route;
+      this.navigation.previewBookId = reconciled.previewBookId;
+      this.reader.activeReadingBookId = reconciled.activeReadingBookId;
+      this.navigation.shelfDetailsBookId = reconciled.shelfDetailsBookId;
+    }
+
+    const error = this.library.consumeLastRecoverableError();
+    if (error) {
+      this.navigation.setDomainUnavailable('library', error.message);
+    }
+
+    this.library.pendingRemoveBook = null;
   };
   handleToggleFavorite = async (book: ReaderBook): Promise<void> => {
     await this.library.handleToggleFavorite(book);
@@ -808,6 +859,9 @@ export class AppState {
     await signOut();
     this.reader.unsubscribeFromAllRemoteChanges();
     this.navigateToWelcome();
+    // Toast survives the panel unmount because ToastHost lives outside AppRouter
+    // in AppModals (REQ-05).
+    pushToast('success', this.t('welcome.signedOutToast'));
   };
   private startAuthenticatedSync(): void {
     SyncService.setupOutboxProcessor();

@@ -78,13 +78,14 @@ export function formatRelativeTime(dateStr: string): { value: number; unit: 'now
   return { value: days, unit: 'day' }
 }
 
-/** Map device type to icon name */
-function deviceTypeToIcon(type: DeviceRow['type']): DeviceTypeIcon {
+/** Map device type to icon name; null/unknown types fall back to laptop */
+function deviceTypeToIcon(type: DeviceRow['type'] | null | undefined): DeviceTypeIcon {
   switch (type) {
     case 'desktop': return 'laptop'
     case 'mobile':  return 'phone'
     case 'tablet':  return 'tablet'
     case 'web':     return 'globe'
+    default:        return 'laptop'
   }
 }
 

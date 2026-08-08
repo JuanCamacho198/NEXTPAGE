@@ -212,10 +212,15 @@ export async function signInWithGoogle(): Promise<void> {
     options: {
       redirectTo,
       skipBrowserRedirect: true,
+      // Additional provider scopes MUST go in `options.scopes`, not
+      // `queryParams.scope`. supabase-js merges these into Google's
+      // authorization URL; putting drive.file in queryParams meant Google
+      // never issued a token with the Drive scope, so GoTrue returned no
+      // provider_token/provider_refresh_token (DRIVE_TOKEN_MISSING).
+      scopes: DRIVE_SCOPE,
       queryParams: {
         access_type: 'offline',
         prompt: 'consent',
-        scope: `openid email profile ${DRIVE_SCOPE}`,
       },
     },
   });

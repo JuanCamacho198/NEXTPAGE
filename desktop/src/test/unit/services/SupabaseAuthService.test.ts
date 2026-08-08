@@ -197,6 +197,25 @@ describe('SupabaseAuthService — signInWithGoogle', () => {
     expect(mockOpenUrl).toHaveBeenCalledTimes(1);
   });
 
+  it('requests the Drive scope via options.scopes, not queryParams.scope (DRIVE_TOKEN_MISSING)', async () => {
+    mockPluginStart.mockResolvedValue(48723);
+    mockSignInWithOAuth.mockResolvedValue(makeMockOAuthData());
+
+    await sut.signInWithGoogle();
+
+    const options = mockSignInWithOAuth.mock.calls[0]?.[0];
+    // Drive scope must be a provider scope (supabase-js merges options.scopes
+    // into Google's authorization URL). Putting it in queryParams.scope meant
+    // Google never issued a Drive-scoped token → no provider_token came back.
+    expect(options.options.scopes).toContain('https://www.googleapis.com/auth/drive.file');
+    // offline access + consent still go through queryParams (Google params).
+    expect(options.options.queryParams).toMatchObject({
+      access_type: 'offline',
+      prompt: 'consent',
+    });
+    expect(options.options.queryParams.scope).toBeUndefined();
+  });
+
   it('throws when plugin.start() fails', async () => {
     mockPluginStart.mockRejectedValue(new Error('port bind failed'));
 

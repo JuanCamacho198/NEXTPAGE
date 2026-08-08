@@ -19,7 +19,7 @@ const { mockDestroy, mockGetOutline, mockPdfDocument, mockGetFileBytes } = vi.ho
 
   const pdfDoc = {
     numPages: 10,
-    destroy,
+    loadingTask: { destroy },
     getOutline,
     getPage: vi.fn(),
     getDestination: vi.fn(),
@@ -71,7 +71,7 @@ import {
 function makeMockDocument(): any {
   return {
     numPages: 10,
-    destroy: mockDestroy,
+    loadingTask: { destroy: mockDestroy },
     getOutline: mockGetOutline,
     getPage: vi.fn(),
     getDestination: vi.fn(),

@@ -125,7 +125,6 @@ export const extractPdfMetadata = async (
 
     return { author, title, subject, totalPages: numPages, thumbnailBytes };
   } finally {
-    await pdfDoc.destroy();
     loadingTask.destroy();
   }
 };

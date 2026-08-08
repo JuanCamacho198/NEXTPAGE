@@ -33,7 +33,7 @@ export function setCachedDocument(filePath: string, entry: PdfCacheEntry): void 
 export function removeCachedDocument(filePath: string): void {
   const entry = documentCache.get(filePath);
   if (entry) {
-    entry.document.destroy().catch(() => {
+    entry.document.loadingTask.destroy().catch(() => {
       // swallow teardown errors
     });
     documentCache.delete(filePath);

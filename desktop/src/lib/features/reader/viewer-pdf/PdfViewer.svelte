@@ -281,7 +281,7 @@
     const cachedPath = lastLoadedFilePath ?? filePath;
     removeCachedDocument(cachedPath);
     try {
-      await current.destroy();
+      await current.loadingTask.destroy();
     } catch {
       /* swallow */
     }
@@ -452,7 +452,7 @@
       }
 
       if (isStaleLoad(loadRequestId)) {
-        await loadedDoc.destroy();
+        await loadedDoc.loadingTask.destroy();
         return;
       }
 

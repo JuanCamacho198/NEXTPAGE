@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { DRIVE_BOOKS_PATH, DRIVE_SCOPE, canonicalBookName, canonicalBookPath, mergeCatalogVersion, reconcileLegacyReference, coverError, type Lifecycle, type SyncErrorCode } from '$lib/shared/protocol/DriveCatalogContract';
+import { DRIVE_BOOKS_PATH, DRIVE_SCOPE, canonicalBookName, canonicalBookPath, mergeCatalogVersion, reconcileLegacyReference, coverError, parseCanonicalBookName, type Lifecycle, type SyncErrorCode } from '$lib/shared/protocol/DriveCatalogContract';
 const files = [{ fileId: 'legacy-id', name: 'old-name.epub', download: async () => new TextEncoder().encode('legacy') }, { fileId: 'canonical-id', name: 'book-1.epub', download: async () => new TextEncoder().encode('book') }];
 describe('Drive catalog contract', () => {
   it('builds the canonical folder/file protocol', () => { expect(DRIVE_SCOPE).toContain('/drive.file'); expect(DRIVE_BOOKS_PATH).toBe('NextPage/Books'); expect(canonicalBookName('book-1', '.EPUB')).toBe('book-1.epub'); expect(canonicalBookPath('book-1', 'epub')).toBe('NextPage/Books/book-1.epub'); });
+  it('parses canonical filenames into bookId + lowercase ext', () => {
+    expect(parseCanonicalBookName('uuid.epub')).toEqual({ bookId: 'uuid', ext: 'epub' });
+    expect(parseCanonicalBookName('uuid.PDF')).toEqual({ bookId: 'uuid', ext: 'pdf' });
+    expect(parseCanonicalBookName('book-1.epub')).toEqual({ bookId: 'book-1', ext: 'epub' });
+  });
+  it('returns null for state files, empty, dotless, and trailing-dot names', () => {
+    expect(parseCanonicalBookName('uuid_state.json')).toBeNull();
+    expect(parseCanonicalBookName('')).toBeNull();
+    expect(parseCanonicalBookName('uuid')).toBeNull();
+    expect(parseCanonicalBookName('uuid.')).toBeNull();
+  });
   it('reconciles by id, name, then independently verified hash', async () => { const r = await reconcileLegacyReference('legacy-id', files, 'book-1', 'epub', 'sha256:c49fea7425fa7f8699897a97c159c6690267d9003bb78c53fafa8fc15c325d84'); expect(r?.fileId).toBe('legacy-id'); expect(r?.fileName).toBe('book-1.epub'); expect(r?.canonicalPath).toBe('NextPage/Books/book-1.epub'); expect((await reconcileLegacyReference('missing', files, 'book-1', 'epub', null))?.fileId).toBe('canonical-id'); expect((await reconcileLegacyReference(null, files, 'book-1', 'epub', 'sha256:92719fe0cf8cd51592af31ee8a5736d79f7273777fa3f7b70bfe993a4cd32180'))?.fileId).toBe('canonical-id'); expect(await reconcileLegacyReference('canonical-id', files, 'book-1', 'epub', 'sha256:wrong')).toBeNull(); expect(await reconcileLegacyReference('legacy-id', [{ ...files[0], download: async () => { throw new Error('403'); } }], 'book-1', 'epub', 'sha256:c49fea7425fa7f8699897a97c159c6690267d9003bb78c53fafa8fc15c325d84')).toBeNull(); });
   it('ignores stale events and accepts equal/newer versions', () => { const current = { catalogVersion: 4, lifecycle: 'available' as Lifecycle }; expect(mergeCatalogVersion(current, { catalogVersion: 3, lifecycle: 'deleted' })).toBe(current); expect(mergeCatalogVersion(current, { catalogVersion: 4, lifecycle: 'deleted' }).lifecycle).toBe('deleted'); });
   it('exports COVER_FAILED as a stable SyncErrorCode', () => {

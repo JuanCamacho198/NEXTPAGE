@@ -63,6 +63,19 @@ export function syncError(
 export function canonicalBookName(bookId: string, format: string): string {
   return `${bookId}.${format.replace(/^\./, '').toLowerCase()}`;
 }
+/**
+ * Inverse of `canonicalBookName`: parse a Drive filename into `{ bookId, ext }`.
+ * Returns null for sync-state files (`_state.json`), empty names, names without
+ * a dot, and trailing-dot names. Splits on the LAST dot (bookIds are UUIDs
+ * without dots, so the last dot is always the extension separator) and
+ * lowercases the extension.
+ */
+export function parseCanonicalBookName(fileName: string): { bookId: string; ext: string } | null {
+  if (!fileName || fileName.endsWith('_state.json')) return null;
+  const idx = fileName.lastIndexOf('.');
+  if (idx <= 0 || idx === fileName.length - 1) return null;
+  return { bookId: fileName.slice(0, idx), ext: fileName.slice(idx + 1).toLowerCase() };
+}
 export function canonicalBookPath(bookId: string, format: string): string {
   return `${DRIVE_BOOKS_PATH}/${canonicalBookName(bookId, format)}`;
 }

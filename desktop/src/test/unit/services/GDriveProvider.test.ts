@@ -10,7 +10,11 @@ vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
   refreshDriveToken: vi.fn(),
 }));
 
-import { GDriveProvider, __resetGDriveFolderCache } from '$lib/shared/services/storage/GDriveProvider';
+import {
+  GDriveProvider,
+  __resetGDriveFolderCache,
+  type DriveError,
+} from '$lib/shared/services/storage/GDriveProvider';
 import { getDriveToken, refreshDriveToken } from '$lib/shared/services/SupabaseAuthService';
 
 function mockDriveApiResponses(
@@ -333,5 +337,100 @@ describe('GDriveProvider — token refresh layers (DTL-1/DTL-2/DTL-3)', () => {
     expect(err.message).not.toContain('SECRET-TOKEN');
     // The redacted form replaces it
     expect(err.message).toContain('[REDACTED]');
+  });
+});
+
+describe('GDriveProvider — delete (trash, REQ-11)', () => {
+  let provider: GDriveProvider;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    globalThis.fetch = vi.fn();
+    __resetGDriveFolderCache();
+    provider = new GDriveProvider();
+    vi.mocked(refreshDriveToken).mockResolvedValue('ya29.refreshed-token');
+  });
+
+  it('trashes a file directly by ID (PATCH to the file ID)', async () => {
+    mockAuth('token-del-1');
+    mockDriveApiResponses([{ ok: true, json: () => Promise.resolve({}) }]);
+
+    await provider.delete('1AbCdefGhIjKlMnOpQrStUvWxYz');
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    const [url, init] = vi.mocked(globalThis.fetch).mock.calls[0];
+    expect(String(url)).toContain('/files/1AbCdefGhIjKlMnOpQrStUvWxYz');
+    expect(init?.method).toBe('PATCH');
+    // fetchWithToken only forwards Authorization — content-type comes from the Blob
+    expect(init?.headers).not.toHaveProperty('Content-Type');
+    const body = init?.body as Blob;
+    expect(body.type).toBe('application/json');
+    expect(JSON.parse(await body.text())).toEqual({ trashed: true });
+  });
+
+  it('trashes by name: searches NextPage/Books then PATCHes the found ID', async () => {
+    mockAuth('token-del-2');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-del-2' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-del-2' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'file-del-2' }] }) },
+      { ok: true, json: () => Promise.resolve({}) },
+    ]);
+
+    await provider.delete('book-1.epub');
+
+    const calls = vi.mocked(globalThis.fetch).mock.calls;
+    // Search request scoped to NextPage/Books with trashed = false
+    const searchUrl = decodeURIComponent(String(calls[2][0]));
+    expect(searchUrl).toContain(
+      "name = 'book-1.epub' and 'folder-del-2' in parents and trashed = false",
+    );
+    // PATCH goes to the resolved file ID
+    const [url, init] = calls[3];
+    expect(String(url)).toContain('/files/file-del-2');
+    expect(init?.method).toBe('PATCH');
+    const body = init?.body as Blob;
+    expect(body.type).toBe('application/json');
+    expect(JSON.parse(await body.text())).toEqual({ trashed: true });
+  });
+
+  it('no-ops (idempotent) when no non-trashed file matches the name', async () => {
+    mockAuth('token-del-3');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-del-3' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-del-3' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [] }) },
+    ]);
+
+    await expect(provider.delete('missing.epub')).resolves.toBeUndefined();
+
+    const patchCalls = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.filter(([, init]) => init?.method === 'PATCH');
+    expect(patchCalls).toHaveLength(0);
+  });
+
+  it('maps 401 to typed AUTH_EXPIRED (parity with upload/download)', async () => {
+    mockAuth('token-del-4');
+    mockDriveApiResponses([{ ok: false, status: 401, json: () => Promise.resolve({}) }]);
+
+    const err = (await provider
+      .delete('1AbCdefGhIjKlMnOpQrStUvWxYz')
+      .catch((e) => e)) as DriveError;
+
+    expect(err.code).toBe('AUTH_EXPIRED');
+    expect(err.retryable).toBe(false);
+  });
+
+  it('maps 403 to typed PERMISSION_DENIED (parity with upload/download)', async () => {
+    mockAuth('token-del-5');
+    mockDriveApiResponses([{ ok: false, status: 403, json: () => Promise.resolve({}) }]);
+
+    const err = (await provider
+      .delete('1AbCdefGhIjKlMnOpQrStUvWxYz')
+      .catch((e) => e)) as DriveError;
+
+    expect(err.code).toBe('PERMISSION_DENIED');
+    expect(err.retryable).toBe(false);
   });
 });

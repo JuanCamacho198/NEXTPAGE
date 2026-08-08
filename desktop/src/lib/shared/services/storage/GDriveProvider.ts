@@ -240,10 +240,50 @@ export class GDriveProvider implements StorageProvider {
     return new Uint8Array(buffer);
   }
 
-  async delete(_remotePath: string): Promise<void> {
-    await this.getAccessToken();
-    // Implementation omitted for brevity or if not strictly required by task but part of interface
-    console.warn(redactLogLine('GDrive delete not implemented'));
+  /**
+   * Trash a Drive book (NOT permanent delete, REQ-11): resolve the file ID
+   * when `remotePath` is not ID-shaped (search by name inside `NextPage/Books`,
+   * same heuristic as `download`), then `PATCH /files/{fileId}` with
+   * `{ trashed: true }` (files.update). Idempotent: a missing file is a no-op.
+   * Trashed files stop appearing in `list()` (its query filters
+   * `trashed = false`), so the shelf section self-cleans.
+   */
+  async delete(remotePath: string): Promise<void> {
+    const accessToken = await this.getAccessToken();
+
+    let fileId = remotePath;
+    if (!remotePath.match(/^[a-zA-Z0-9_-]{25,}$/)) {
+      // Name-shaped path: resolve the ID inside NextPage/Books (upload parity).
+      const folderId = await this.getOrCreateFolder(accessToken);
+      const query = encodeURIComponent(
+        `name = '${remotePath}' and '${folderId}' in parents and trashed = false`,
+      );
+      const searchResponse = await this.fetchWithToken(
+        `${GDriveProvider.GDRIVE_API_BASE}/files?q=${query}`,
+        { method: 'GET' },
+        accessToken,
+      );
+      if (!searchResponse.ok) throw await this.driveError('GDrive search failed', searchResponse);
+      const searchData = await searchResponse.json();
+      const file = (searchData.files ?? []).find(
+        (f: { trashed?: boolean }) => !f.trashed,
+      );
+      if (!file) return; // nothing to trash — idempotent no-op
+      fileId = file.id;
+    }
+
+    // fetchWithToken overwrites headers (Authorization only) — the JSON
+    // Content-Type must come from the Blob, never from init.headers (upload
+    // parity). Reusing the Blob on the refresh-retry is safe (Blobs re-read).
+    const body = new Blob([JSON.stringify({ trashed: true })], {
+      type: 'application/json',
+    });
+    const response = await this.fetchWithToken(
+      `${GDriveProvider.GDRIVE_API_BASE}/files/${fileId}`,
+      { method: 'PATCH', body },
+      accessToken,
+    );
+    if (!response.ok) throw await this.driveError('GDrive trash failed', response);
   }
 
   async list(_prefix: string): Promise<string[]> {

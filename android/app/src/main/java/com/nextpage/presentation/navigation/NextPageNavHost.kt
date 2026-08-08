@@ -44,6 +44,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.nextpage.data.remote.drive.DriveAuthResult
+import com.nextpage.data.remote.drive.DriveConnectPromptGate
+import com.nextpage.data.session.DriveConnectPromptPrefs
 import com.nextpage.di.AppContainer
 import com.nextpage.domain.usecase.GetStatisticsUseCase
 import com.nextpage.presentation.screen.AuthScreen
@@ -55,6 +58,7 @@ import com.nextpage.presentation.screen.ReaderScreen
 import com.nextpage.presentation.screen.SettingsScreen
 import com.nextpage.presentation.screen.StatisticsScreen
 import com.nextpage.presentation.viewmodel.library.BookImportState
+import com.nextpage.ui.components.atoms.NextPageDialog
 import com.nextpage.ui.components.atoms.NextPageImportOverlay
 import com.nextpage.ui.components.atoms.NextPageSnackbar
 import com.nextpage.presentation.viewmodel.AuthViewModel
@@ -77,9 +81,18 @@ import com.nextpage.presentation.debug.DebugViewModel
 import com.nextpage.debug.DebugPrefs
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.saveable.rememberSaveable
+
+/**
+ * Max time an import may stay non-Idle before the overlay watchdog force-
+ * resets it. Generous enough for legitimate large-book imports (the timer
+ * restarts on every stage change), yet bounded so a genuinely stuck overlay
+ * never blocks the UI forever.
+ */
+private const val IMPORT_OVERLAY_WATCHDOG_TIMEOUT_MS = 120_000L
 
 @Composable
 fun NextPageNavHost(
@@ -91,6 +104,18 @@ fun NextPageNavHost(
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // ── Drive connect prompt (one-time, per Google account) ───────────
+    // SharedPreferences-backed per-account decline + pure decision gate. The
+    // accept path reuses the PR2 singleton helper (same pending PKCE state and
+    // authResult channel as the Settings screen).
+    val driveConnectPromptPrefs = remember { DriveConnectPromptPrefs(context) }
+    val driveAuthHelper = appContainer.googleDriveAuthHelper
+    var showDriveConnectPrompt by rememberSaveable { mutableStateOf(false) }
+    // True while the browser flow launched BY THIS PROMPT is in flight: the
+    // authResult collector below only surfaces feedback for this flow (Settings
+    // owns feedback for the flows it launches — avoids double toasts).
+    var drivePromptAuthInFlight by remember { mutableStateOf(false) }
 
     var selectedBookId by rememberSaveable { mutableStateOf("") }
     var selectedBookFilePath by rememberSaveable { mutableStateOf<String?>(null) }
@@ -246,13 +271,70 @@ fun NextPageNavHost(
 
     LaunchedEffect(libraryViewModel.importEvents) {
         libraryViewModel.importEvents.collect { event ->
-            val message = when (event) {
-                is com.nextpage.presentation.viewmodel.LibraryImportEvent.Success -> 
-                    context.getString(com.nextpage.R.string.library_import_success, event.title)
-                is com.nextpage.presentation.viewmodel.LibraryImportEvent.Failure -> 
-                    context.getString(com.nextpage.R.string.library_import_failure, event.message)
+            when (event) {
+                is com.nextpage.presentation.viewmodel.LibraryImportEvent.Success -> {
+                    snackbarHostState.showSnackbar(
+                        context.getString(com.nextpage.R.string.library_import_success, event.title)
+                    )
+                    // One-time "connect Google Drive?" prompt (spec drive-import-connect):
+                    // only for a Google-signed-in account with Drive still unauthorized
+                    // and no prior per-account decline. Pure gate — no Compose state read
+                    // needed for the decision itself.
+                    val session = authState.currentSession
+                    val shouldOfferPrompt = DriveConnectPromptGate.shouldShow(
+                        importSucceeded = true,
+                        driveEnabled = driveAuthHelper.isAuthorized(),
+                        providerIsGoogle = session?.provider == "google",
+                        declinedForUser = driveConnectPromptPrefs.declinedForUser(),
+                        currentUser = session?.userId
+                    )
+                    if (shouldOfferPrompt) {
+                        showDriveConnectPrompt = true
+                    }
+                }
+                is com.nextpage.presentation.viewmodel.LibraryImportEvent.Failure -> {
+                    snackbarHostState.showSnackbar(
+                        context.getString(com.nextpage.R.string.library_import_failure, event.message)
+                    )
+                }
             }
-            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    // Browser launcher for prompt-initiated Drive auth. The redirect outcome
+    // arrives through the helper's authResult (MainActivity.onNewIntent → onRedirect);
+    // a plain browser-back close without a redirect is a cancellation — silent.
+    val driveConnectAuthLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode != android.app.Activity.RESULT_OK) {
+            drivePromptAuthInFlight = false
+        }
+    }
+
+    // Redirect-driven outcome for prompt-initiated auth (same singleton flow as
+    // Settings): Success → clear the per-account decline so a later Settings
+    // disconnect MAY re-offer; Failure → actionable toast (only when this prompt
+    // started the flow — Settings toasts its own); Canceled → silent.
+    LaunchedEffect(driveAuthHelper) {
+        driveAuthHelper.authResult.collect { result ->
+            if (result != null) {
+                when (result) {
+                    is DriveAuthResult.Success -> driveConnectPromptPrefs.clearDeclined()
+                    is DriveAuthResult.Failure -> {
+                        if (drivePromptAuthInFlight) {
+                            android.widget.Toast.makeText(
+                                context,
+                                context.getString(com.nextpage.R.string.settings_drive_error_oauth),
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                    DriveAuthResult.Canceled -> Unit // cancellation is not an error — no toast
+                }
+                drivePromptAuthInFlight = false
+                driveAuthHelper.consumeResult()
+            }
         }
     }
 
@@ -313,13 +395,10 @@ fun NextPageNavHost(
                             destinations = bottomNavItems,
                             currentRoute = currentRoute,
                             onTabSelected = { route ->
-                                navController.navigate(route) {
-                                    launchSingleTop = true
-                                    restoreState = true
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
-                                    }
-                                }
+                                navController.navigateToBottomTab(
+                                    route = route,
+                                    homeRoute = NextPageDestination.Home.route
+                                )
                             }
                         )
                 }
@@ -611,7 +690,8 @@ fun NextPageNavHost(
                             navController.navigate(NextPageDestination.LogViewer.route)
                         },
                         statisticsViewModel = statisticsViewModel,
-                        dictionaryRepository = appContainer.dictionaryRepository
+                        dictionaryRepository = appContainer.dictionaryRepository,
+                        driveAuthHelper = appContainer.googleDriveAuthHelper
                     )
                 }
 
@@ -624,9 +704,60 @@ fun NextPageNavHost(
 
             // ── Import Overlay (inside wrapper Box, below NavHost) ──
             val importState by libraryViewModel.importState.collectAsState()
-            NextPageImportOverlay(
-                importState = importState,
-                modifier = Modifier.fillMaxSize()
+
+            // Watchdog (defense-in-depth): if the import state is stuck
+            // non-Idle past the timeout, force it back to Idle so the overlay
+            // can never permanently swallow taps. The holder already returns
+            // to Idle on success/failure/exception via try/finally; this
+            // covers pathological hangs (e.g. a blocking input stream).
+            LaunchedEffect(importState) {
+                if (importState !is BookImportState.Idle) {
+                    delay(IMPORT_OVERLAY_WATCHDOG_TIMEOUT_MS)
+                    libraryViewModel.resetImportState()
+                }
+            }
+
+            // Compose the overlay only while an import is actually running —
+            // an Idle/stuck overlay must not intercept input.
+            if (importState !is BookImportState.Idle) {
+                NextPageImportOverlay(
+                    importState = importState,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        // ── Drive connect prompt dialog ────────────────────────────────
+        // Shown once per Google account after a successful import while Drive is
+        // unauthorized. Accept → launch the shared PKCE browser flow; any dismiss
+        // (decline, outside-tap, back) persists the per-account decline.
+        if (showDriveConnectPrompt) {
+            NextPageDialog(
+                title = context.getString(com.nextpage.R.string.drive_connect_prompt_title),
+                body = context.getString(com.nextpage.R.string.drive_connect_prompt_body),
+                confirmText = context.getString(com.nextpage.R.string.drive_connect_prompt_accept),
+                dismissText = context.getString(com.nextpage.R.string.drive_connect_prompt_decline),
+                onConfirm = {
+                    showDriveConnectPrompt = false
+                    val clientId = com.nextpage.BuildConfig.GOOGLE_OAUTH_CLIENT_ID
+                    if (clientId.isBlank()) {
+                        android.widget.Toast.makeText(
+                            context,
+                            context.getString(com.nextpage.R.string.settings_drive_error_config),
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                        return@NextPageDialog
+                    }
+                    drivePromptAuthInFlight = true
+                    driveConnectAuthLauncher.launch(driveAuthHelper.beginAuth())
+                },
+                onDismiss = {
+                    showDriveConnectPrompt = false
+                    val userId = authState.currentSession?.userId
+                    DriveConnectPromptGate.markDeclined(userId)?.let {
+                        driveConnectPromptPrefs.persistDeclined(it)
+                    }
+                }
             )
         }
 

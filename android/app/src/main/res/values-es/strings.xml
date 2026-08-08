@@ -415,6 +415,12 @@
     <string name="settings_drive_error_oauth">Error al autorizar Google Drive</string>
     <string name="settings_drive_error_config">Google Drive no está configurado</string>
 
+    <!-- Drive connect prompt (one-time, after successful import) -->
+    <string name="drive_connect_prompt_title">¿Conectar Google Drive?</string>
+    <string name="drive_connect_prompt_body">Sincroniza tus libros entre dispositivos conectando Google Drive.</string>
+    <string name="drive_connect_prompt_accept">Conectar</string>
+    <string name="drive_connect_prompt_decline">Ahora no</string>
+
     <!-- Statistics -->
     <string name="statistics_title">Estadísticas</string>
     <string name="statistics_subtitle">Tu actividad de lectura</string>

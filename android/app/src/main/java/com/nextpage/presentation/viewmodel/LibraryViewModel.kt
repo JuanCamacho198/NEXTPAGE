@@ -451,6 +451,15 @@ class LibraryViewModel(
         pdfFile: File
     ) = bookImportStateHolder.importPdfBook(sourcePath, fallbackTitle, pdfFile)
 
+    /**
+     * Force-resets the import state to [BookImportState.Idle].
+     *
+     * Called by the NavHost overlay watchdog when the import state is stuck
+     * non-Idle past a timeout, so the import overlay can never block input
+     * indefinitely.
+     */
+    fun resetImportState() = bookImportStateHolder.resetImportState()
+
     // ── Delegation: Actions (Delete / Edit / Share / Status) ──────────
 
     /**

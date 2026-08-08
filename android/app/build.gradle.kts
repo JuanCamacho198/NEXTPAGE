@@ -137,6 +137,7 @@ dependencies {
     implementation("androidx.webkit:webkit:1.12.1")
 
     implementation("androidx.navigation:navigation-compose:2.8.2")
+    androidTestImplementation("androidx.navigation:navigation-testing:2.8.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
 
     implementation("androidx.room:room-runtime:2.8.4")

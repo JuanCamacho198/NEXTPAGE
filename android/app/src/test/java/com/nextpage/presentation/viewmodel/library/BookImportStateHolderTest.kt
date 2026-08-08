@@ -8,6 +8,7 @@ import com.nextpage.presentation.viewmodel.LibraryImportEvent
 import com.nextpage.testutil.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
@@ -195,6 +196,92 @@ class BookImportStateHolderTest {
         assertFalse("isImporting should be false after failure", holder.state.value.isImporting)
         assertTrue("Should emit Failure event", emittedEvent is LibraryImportEvent.Failure)
         assertNotNull((emittedEvent as LibraryImportEvent.Failure).message)
+    }
+
+    // ── Import EPUB — use case throws (stuck-overlay hardening) ───────
+
+    @Test
+    fun `importBookFromEpub resets state to Idle when use case throws`() = runTest(StandardTestDispatcher()) {
+        testScheduler.advanceUntilIdle()
+
+        val mockUseCase = mockk<ImportEpubBookUseCase>()
+        val mockRepository = mockk<LibraryRepository>(relaxed = true)
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val thrown = mutableListOf<Throwable>()
+        val scope = CoroutineScope(
+            dispatcher + SupervisorJob() +
+                CoroutineExceptionHandler { _, throwable -> thrown += throwable }
+        )
+
+        coEvery {
+            mockUseCase(any<BookImportRequest>(), any<suspend () -> InputStream?>())
+        } throws IllegalStateException("use case exploded")
+
+        var emittedEvent: LibraryImportEvent? = null
+        val holder = BookImportStateHolder(
+            importEpubBookUseCase = mockUseCase,
+            libraryRepository = mockRepository,
+            scope = scope,
+            onImportEvent = { emittedEvent = it },
+            mainDispatcher = dispatcher
+        )
+
+        holder.importBookFromEpub(
+            sourcePath = "content://books/boom.epub",
+            fallbackTitle = "Boom EPUB",
+            inputStreamProvider = { null }
+        )
+
+        assertTrue("isImporting should be true immediately", holder.state.value.isImporting)
+        advanceUntilIdle()
+
+        assertEquals("use case exception must be delivered", 1, thrown.size)
+        assertTrue(thrown.single() is IllegalStateException)
+        assertFalse("state must return to Idle even when the use case throws", holder.state.value.isImporting)
+        assertEquals("no success/failure event may be emitted on a thrown use case", null, emittedEvent)
+    }
+
+    // ── Import PDF — repository throws (stuck-overlay hardening) ──────
+
+    @Test
+    fun `importPdfBook resets state to Idle when repository throws`() = runTest(StandardTestDispatcher()) {
+        testScheduler.advanceUntilIdle()
+
+        val mockUseCase = mockk<ImportEpubBookUseCase>()
+        val mockRepository = mockk<LibraryRepository>()
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val thrown = mutableListOf<Throwable>()
+        val scope = CoroutineScope(
+            dispatcher + SupervisorJob() +
+                CoroutineExceptionHandler { _, throwable -> thrown += throwable }
+        )
+
+        coEvery {
+            mockRepository.importBookFromPdf(any<BookImportRequest>(), any<File>())
+        } throws IllegalStateException("repository exploded")
+
+        var emittedEvent: LibraryImportEvent? = null
+        val holder = BookImportStateHolder(
+            importEpubBookUseCase = mockUseCase,
+            libraryRepository = mockRepository,
+            scope = scope,
+            onImportEvent = { emittedEvent = it },
+            mainDispatcher = dispatcher
+        )
+
+        holder.importPdfBook(
+            sourcePath = "content://books/boom.pdf",
+            fallbackTitle = "Boom PDF",
+            pdfFile = File("/tmp/boom.pdf")
+        )
+
+        assertTrue("isImporting should be true immediately", holder.state.value.isImporting)
+        advanceUntilIdle()
+
+        assertEquals("repository exception must be delivered", 1, thrown.size)
+        assertTrue(thrown.single() is IllegalStateException)
+        assertFalse("state must return to Idle even when the repository throws", holder.state.value.isImporting)
+        assertEquals("no success/failure event may be emitted on a thrown repository call", null, emittedEvent)
     }
 
     // ── Helpers ────────────────────────────────────────────────────────

@@ -59,37 +59,42 @@ class BookImportStateHolder(
         onStateChanged(_state.value)
 
         scope.launch(mainDispatcher) {
-            delay(200L)
-            _state.update { BookImportState.Analyzing(0.6f) }
-            onStateChanged(_state.value)
+            try {
+                delay(200L)
+                _state.update { BookImportState.Analyzing(0.6f) }
+                onStateChanged(_state.value)
 
-            delay(200L)
-            _state.update { BookImportState.Saving(0.9f) }
-            onStateChanged(_state.value)
+                delay(200L)
+                _state.update { BookImportState.Saving(0.9f) }
+                onStateChanged(_state.value)
 
-            val result = importEpubBookUseCase(
-                request = BookImportRequest(
-                    sourcePath = sourcePath,
-                    fallbackTitle = fallbackTitle
-                ),
-                inputStreamProvider = inputStreamProvider
-            )
+                val result = importEpubBookUseCase(
+                    request = BookImportRequest(
+                        sourcePath = sourcePath,
+                        fallbackTitle = fallbackTitle
+                    ),
+                    inputStreamProvider = inputStreamProvider
+                )
 
-            _state.update { BookImportState.Idle }
-            onStateChanged(_state.value)
-
-            result.fold(
-                onSuccess = { book ->
-                    onImportEvent(LibraryImportEvent.Success(book.title))
-                },
-                onFailure = { error ->
-                    onImportEvent(
-                        LibraryImportEvent.Failure(
-                            error.message ?: "Failed to import EPUB"
+                result.fold(
+                    onSuccess = { book ->
+                        onImportEvent(LibraryImportEvent.Success(book.title))
+                    },
+                    onFailure = { error ->
+                        onImportEvent(
+                            LibraryImportEvent.Failure(
+                                error.message ?: "Failed to import EPUB"
+                            )
                         )
-                    )
-                }
-            )
+                    }
+                )
+            } finally {
+                // Always return to Idle, even when the use case or the input
+                // stream provider throws — a stuck non-Idle state would leave
+                // the import overlay swallowing every tap.
+                _state.update { BookImportState.Idle }
+                onStateChanged(_state.value)
+            }
         }
     }
 
@@ -106,37 +111,54 @@ class BookImportStateHolder(
         onStateChanged(_state.value)
 
         scope.launch(mainDispatcher) {
-            delay(200L)
-            _state.update { BookImportState.Analyzing(0.6f) }
-            onStateChanged(_state.value)
+            try {
+                delay(200L)
+                _state.update { BookImportState.Analyzing(0.6f) }
+                onStateChanged(_state.value)
 
-            delay(200L)
-            _state.update { BookImportState.Saving(0.9f) }
-            onStateChanged(_state.value)
+                delay(200L)
+                _state.update { BookImportState.Saving(0.9f) }
+                onStateChanged(_state.value)
 
-            val result = libraryRepository.importBookFromPdf(
-                request = BookImportRequest(
-                    sourcePath = sourcePath,
-                    fallbackTitle = fallbackTitle
-                ),
-                file = pdfFile
-            )
+                val result = libraryRepository.importBookFromPdf(
+                    request = BookImportRequest(
+                        sourcePath = sourcePath,
+                        fallbackTitle = fallbackTitle
+                    ),
+                    file = pdfFile
+                )
 
-            _state.update { BookImportState.Idle }
-            onStateChanged(_state.value)
-
-            result.fold(
-                onSuccess = { book ->
-                    onImportEvent(LibraryImportEvent.Success(book.title))
-                },
-                onFailure = { error ->
-                    onImportEvent(
-                        LibraryImportEvent.Failure(
-                            error.message ?: "Failed to import PDF"
+                result.fold(
+                    onSuccess = { book ->
+                        onImportEvent(LibraryImportEvent.Success(book.title))
+                    },
+                    onFailure = { error ->
+                        onImportEvent(
+                            LibraryImportEvent.Failure(
+                                error.message ?: "Failed to import PDF"
+                            )
                         )
-                    )
-                }
-            )
+                    }
+                )
+            } finally {
+                // Always return to Idle, even when the repository or the file
+                // stream throws — a stuck non-Idle state would leave the
+                // import overlay swallowing every tap.
+                _state.update { BookImportState.Idle }
+                onStateChanged(_state.value)
+            }
         }
+    }
+
+    /**
+     * Force-resets the import state to [BookImportState.Idle].
+     *
+     * Defense-in-depth used by the NavHost overlay watchdog: guarantees a
+     * stuck non-Idle state (e.g. a hung import job) can never keep the
+     * import overlay blocking input indefinitely.
+     */
+    fun resetImportState() {
+        _state.update { BookImportState.Idle }
+        onStateChanged(_state.value)
     }
 }

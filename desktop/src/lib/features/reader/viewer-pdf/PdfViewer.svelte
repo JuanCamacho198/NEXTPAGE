@@ -1036,7 +1036,7 @@
         if (activeRenderTask === renderTask) activeRenderTask = null;
         if (isStaleNavigation(navRequestId)) return;
 
-        // SafeTextLayer.update() re-sets CSS vars, dimensions, and patches #scale
+        // SafeTextLayer.update() re-sets CSS vars and dimensions
         textLayerInstance.update({ viewport });
 
         // Re-apply pointer-events to repositioned spans

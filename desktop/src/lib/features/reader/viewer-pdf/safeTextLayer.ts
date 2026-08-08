@@ -17,8 +17,12 @@ export interface SafeTextLayerUpdateParams {
  * 1. Sets CSS custom properties on the container (`--scale-factor`, `--total-scale-factor`,
  *    `--scale-round-x`, `--scale-round-y`) on construction and update.
  * 2. Sets container `width` / `height` from viewport dimensions.
- * 3. Fixes the DPR-inflation bug (`#scale` multiplied by `OutputScale.pixelRatio`
- *    in pdfjs-dist v5.6.205) by patching `instance['#scale']` back to `viewport.scale`.
+ *
+ * NOTE: A previous version "fixed" a DPR-inflation bug by patching `instance['#scale']`
+ * back to `viewport.scale`. That patch is REMOVED: `#scale` is a native ES private
+ * field, unreachable via bracket notation (`instance['#scale']` is `undefined`), so the
+ * patch was a silent no-op. The DPR-inflated `#scale` is upstream-intended device-pixel
+ * measurement — the official pdfjs viewer relies on the same code.
  *
  * The fallback `pdfjsLib.renderTextLayer?.()` path is NOT wrapped — it remains
  * PdfViewer's responsibility.
@@ -51,9 +55,6 @@ export class SafeTextLayer {
       viewport: params.viewport,
       textContentSource: params.textContentSource,
     });
-
-    // Fix DPR inflation that pdfjs-dist applies in its constructor
-    this.fixScale(params.viewport);
   }
 
   /**
@@ -71,8 +72,7 @@ export class SafeTextLayer {
 
   /**
    * Update the text layer with a new viewport (e.g. after zoom).
-   * Re-sets CSS vars + dimensions, delegates to `instance.update()`,
-   * then re-patches `#scale` because the update path also inflates DPR.
+   * Re-sets CSS vars + dimensions, delegates to `instance.update()`.
    */
   update(params: SafeTextLayerUpdateParams): void {
     if (this.cancelled) return;
@@ -88,9 +88,6 @@ export class SafeTextLayer {
     ) {
       (instance as unknown as { update: (p: SafeTextLayerUpdateParams) => void }).update(params);
     }
-
-    // update() re-inflates #scale with DPR, so we patch again
-    this.fixScale(params.viewport);
   }
 
   /**
@@ -117,11 +114,5 @@ export class SafeTextLayer {
   private setLayerDimensions(viewport: { width: number; height: number }): void {
     this.container.style.width = `${viewport.width}px`;
     this.container.style.height = `${viewport.height}px`;
-  }
-
-  private fixScale(viewport: { scale: number }): void {
-    if (this.instance && this.instance['#scale'] !== undefined) {
-      this.instance['#scale'] = viewport.scale;
-    }
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-// ── Mock pdfjs-dist TextLayer simulating DPR-inflation bug ──
+// ── Mock pdfjs-dist TextLayer (reality-based) ──
 const { mockTextLayer } = vi.hoisted(() => {
   // NOTE: must be a `function`, not an arrow — arrow functions lack [[Construct]]
   // and are rejected by `new TextLayer(...)`.
@@ -11,17 +11,11 @@ const { mockTextLayer } = vi.hoisted(() => {
     container: HTMLElement;
     viewport: { scale: number; width: number; height: number };
   }) {
-    // Simulate pdfjs-dist v5.6.205 DPR inflation: #scale multiplied by 2
-    // AND setLayerDimensions writing container width/height
+    // Real pdfjs-dist exposes `#scale` as a native private field — unreachable via
+    // bracket notation — so the mock must NOT define a string-keyed '#scale' prop.
     const instance: Record<string, unknown> = {
-      '#scale': viewport.scale * 2,
       render: vi.fn().mockResolvedValue(undefined),
-      update: vi.fn().mockImplementation(function (
-        this: Record<string, unknown>,
-        opts: { viewport: { scale: number } },
-      ) {
-        this['#scale'] = opts.viewport.scale * 2; // re-inflates on update
-      }),
+      update: vi.fn(),
       cancel: vi.fn(),
     };
     container.style.width = `${viewport.width}px`;
@@ -116,7 +110,7 @@ describe('SafeTextLayer', () => {
       expect(container.style.height).toBe('1100px');
     });
 
-    it('fixes DPR-inflated #scale back to viewport.scale', () => {
+    it('mock exposes no #scale property (reality-based)', () => {
       new SafeTextLayer({
         container,
         viewport: createViewport({ scale: 1.5 }),
@@ -124,7 +118,8 @@ describe('SafeTextLayer', () => {
       });
 
       const instance = getLastMockInstance();
-      expect(instance['#scale']).toBe(1.5);
+      expect(instance['#scale']).toBeUndefined();
+      expect('#scale' in instance).toBe(false);
     });
 
     it('calls TextLayer constructor with container, viewport and textContentSource', () => {
@@ -186,20 +181,6 @@ describe('SafeTextLayer', () => {
 
       expect(container.style.width).toBe('1067px');
       expect(container.style.height).toBe('1467px');
-    });
-
-    it('re-patches DPR-inflated #scale after update', () => {
-      const layer = new SafeTextLayer({
-        container,
-        viewport: createViewport({ scale: 1.5 }),
-        textContentSource: makeEmptyTextSource(),
-      });
-      const newVp = createViewport({ scale: 2.0 });
-
-      layer.update({ viewport: newVp });
-
-      const instance = getLastMockInstance();
-      expect(instance['#scale']).toBe(2.0);
     });
 
     it('delegates to instance.update() with the new viewport', () => {

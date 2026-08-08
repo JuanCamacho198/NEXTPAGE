@@ -285,6 +285,32 @@ describe('GDriveProvider — token refresh layers (DTL-1/DTL-2/DTL-3)', () => {
     expect(refreshDriveToken).toHaveBeenCalledTimes(1);
   });
 
+  it('RED: concurrent uploads share the same folder resolution (no duplicate NextPage/Books)', async () => {
+    mockAuth('token-conc');
+    // First upload: find root (none) → create NextPage → find Books (none) → create Books → find file (none) → upload
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [] }) }, // find NextPage → none
+      { ok: true, json: () => Promise.resolve({ id: 'root-new' }) }, // create NextPage
+      { ok: true, json: () => Promise.resolve({ files: [] }) }, // find Books under root → none
+      { ok: true, json: () => Promise.resolve({ id: 'books-new' }) }, // create Books
+      { ok: true, json: () => Promise.resolve({ files: [] }) }, // find file → none
+      { ok: true, json: () => Promise.resolve({ id: 'file-a' }) }, // upload A
+    ]);
+
+    const [a, b] = await Promise.all([
+      provider.upload('book-a', new Uint8Array([1]), 'book-a.epub'),
+      provider.upload('book-b', new Uint8Array([2]), 'book-b.epub'),
+    ]);
+
+    expect(a).toBe('file-a');
+    expect(b).toBe('file-a');
+    // Exactly ONE folder-create call (NextPage or Books), never two of the same.
+    const createCalls = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.filter((c) => String(c[1]?.body).includes('google-apps.folder'));
+    expect(createCalls).toHaveLength(2); // one NextPage + one Books
+  });
+
   it('RED: upload failure message redacts tokens (DTL-3 — no raw bearer in errors)', async () => {
     mockAuth('token-r5');
     mockDriveApiResponses([

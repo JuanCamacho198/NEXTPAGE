@@ -17,7 +17,7 @@ const mockSetSupabaseSession = vi.fn();
 const mockClearSupabaseSession = vi.fn();
 const mockSavePersistedAuth = vi.fn();
 const mockLoadDriveRefreshToken = vi.fn<() => Promise<string | null>>(async () => null);
-const mockSaveDriveRefreshToken = vi.fn(async () => undefined);
+const mockSaveDriveRefreshToken = vi.fn(async (_token: string) => undefined);
 
 const mockSignInWithOAuth = vi.fn();
 const mockExchangeCodeForSession = vi.fn();
@@ -59,8 +59,8 @@ vi.mock('$lib/stores/authState.svelte', () => ({
 
 vi.mock('$lib/stores/authPersistence', () => ({
   savePersistedAuth: (...args: unknown[]) => mockSavePersistedAuth(...args),
-  loadDriveRefreshToken: (...args: unknown[]) => mockLoadDriveRefreshToken(...args),
-  saveDriveRefreshToken: (...args: unknown[]) => mockSaveDriveRefreshToken(...args),
+  loadDriveRefreshToken: () => mockLoadDriveRefreshToken(),
+  saveDriveRefreshToken: (token: string) => mockSaveDriveRefreshToken(token),
 }));
 
 vi.mock('$lib/services/supabase', () => ({

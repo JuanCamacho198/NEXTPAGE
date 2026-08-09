@@ -686,4 +686,38 @@ object NextPageIcons {
             moveTo(5f, 16f); lineTo(6f, 18.2f)
         }
     }
+
+    // ── PR2c sweep constants (remaining screens) ──
+
+    /** Flame (statistics streak). Source: `Icons.Outlined.LocalFireDepartment`. */
+    val Flame = nextPageIcon("Flame") {
+        strokePath {
+            moveTo(12f, 3f); curveTo(15.5f, 7.5f, 18.5f, 10f, 18.5f, 14.5f); curveTo(18.5f, 18.5f, 15.6f, 21f, 12f, 21f)
+            curveTo(8.4f, 21f, 5.5f, 18.5f, 5.5f, 14.5f); curveTo(5.5f, 10.5f, 8.8f, 7.5f, 12f, 3f)
+            moveTo(12f, 21f); curveTo(9.8f, 21f, 8f, 19.5f, 8f, 17.3f); curveTo(8f, 15.3f, 9.5f, 13.8f, 11.5f, 12.8f)
+            curveTo(11.8f, 15f, 13f, 16.5f, 14.8f, 16.5f); curveTo(14f, 19f, 13.2f, 21f, 12f, 21f)
+        }
+    }
+
+    /** Chevron up. Source: `Icons.Filled.ExpandLess`. */
+    val ChevronUp = nextPageIcon("ChevronUp") {
+        strokePath {
+            moveTo(6f, 15f); lineTo(12f, 9f); lineTo(18f, 15f)
+        }
+    }
+
+    /** Chevron down. Source: `Icons.Filled.ExpandMore`. */
+    val ChevronDown = nextPageIcon("ChevronDown") {
+        strokePath {
+            moveTo(6f, 9f); lineTo(12f, 15f); lineTo(18f, 9f)
+        }
+    }
+
+    /** Envelope. Source: `Icons.Filled.Email`. */
+    val Email = nextPageIcon("Email") {
+        strokePath {
+            moveTo(4f, 6f); lineTo(20f, 6f); lineTo(20f, 18f); lineTo(4f, 18f); lineTo(4f, 6f)
+            moveTo(4f, 6f); lineTo(12f, 13f); lineTo(20f, 6f)
+        }
+    }
 }

@@ -253,6 +253,17 @@ class GoogleDriveSyncService(
             }
 
             val existingBook = bookDao.getBookById(bookId)
+
+            // CRITICAL: do NOT create local books from a raw Drive pull. A remote
+            // file without an existing local book or mapping belongs to the Supabase
+            // catalog flow ("available from other devices" + explicit Download),
+            // which carries the real title/metadata. Auto-creating here produced
+            // books titled "Recovered {uuid}" and bypassed the catalog download UI.
+            if (existingBook == null && mapping == null) {
+                DebugLog.info(COMPONENT, "schedulePull: skipping unknown remote file $remotePath (no local book/mapping) — catalog owns new imports")
+                continue
+            }
+
             val localPath = mapping?.localPath
                 ?: existingBook?.filePath
                 ?: File(localBooksDir, "$bookId.$extension").absolutePath
@@ -323,25 +334,14 @@ class GoogleDriveSyncService(
         localPath: String,
         extension: String
     ): BookEntity {
-        return if (existing != null) {
-            // D6: do NOT clear deletedAtEpochMillis — a DELETE-marked book must
-            // stay deleted (no resurrection). Only the local path is refreshed.
-            existing.copy(
-                filePath = localPath,
-                updatedAtEpochMillis = System.currentTimeMillis()
-            )
-        } else {
-            BookEntity(
-                id = bookId,
-                title = "Recovered $bookId",
-                author = null,
-                coverPath = null,
-                filePath = localPath,
-                format = extension,
-                updatedAtEpochMillis = System.currentTimeMillis(),
-                deletedAtEpochMillis = null
-            )
-        }
+        // Only ever called with an existing local book (schedulePull skips unknown
+        // remote files — the Supabase catalog owns new imports). Keep the original
+        // title/metadata; only refresh the local path. D6: never clear deletedAt.
+        require(existing != null) { "mergeBook requires an existing local book (id=$bookId)" }
+        return existing.copy(
+            filePath = localPath,
+            updatedAtEpochMillis = System.currentTimeMillis()
+        )
     }
 
     /**

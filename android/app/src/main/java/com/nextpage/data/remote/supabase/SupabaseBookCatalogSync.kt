@@ -318,7 +318,14 @@ class SupabaseBookCatalogSync(
             val catalog = dataSource.listUserBooks(userId)
             val localBooks = bookDao.observeAllBooks().first()
             val localBookIds = localBooks.map { it.id }.toSet()
-            val downloadable = catalog.filter { it.lifecycle == "available" && it.id !in localBookIds }
+            // A remote book is "downloadable" when it is not deleted/unavailable and
+            // not already local. Desktop uploads with lifecycle "imported"; the strict
+            // `available`-only filter hid those books from the cross-device section.
+            val downloadable = catalog.filter {
+                it.lifecycle != "deleted" &&
+                    it.lifecycle != "unavailable" &&
+                    it.id !in localBookIds
+            }
             Result.success(downloadable)
         } catch (e: Exception) {
             Result.failure(AppError(ErrorCategory.STORAGE, "CATALOG_FETCH", "Failed to fetch downloadable books: ${e.message}", "SupabaseBookCatalogSync"))

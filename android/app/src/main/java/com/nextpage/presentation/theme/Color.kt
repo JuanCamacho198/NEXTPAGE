@@ -74,6 +74,14 @@ val PrimaryBlueHover = Color(0xFF2563EB) // $primary-blue-hover
  * Contrast: 5.8:1 against PrimaryBlue (AA)
  */
 val IconBgBlue = Color(0xFF1E3A8A)      // $icon-bg-blue: Darker blue for icon backgrounds
+/**
+ * WelcomeBrandBlueDark - Dark-scheme welcome/brand blue (parity with desktop
+ * `--welcome-brand-blue` #5f82ff, tokens.css:173).
+ *
+ * Used by: AuthScreen welcome logo circle and Google button chrome in dark
+ * scheme (light scheme uses the existing [PrimaryBlue]).
+ */
+val WelcomeBrandBlueDark = Color(0xFF5F82FF)
 
 // ─── Design Tokens - Text ────────────────────────────────────────────
 /**

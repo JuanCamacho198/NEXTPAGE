@@ -14,11 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.ReaderViewModel
+import com.nextpage.ui.icons.NextPageIcons
 
 private val DARK_BG = Color(0xFF0D1322)
 private val DARK_SURFACE = Color(0xFF1A1F36)
@@ -153,7 +149,7 @@ fun DebugPanel(
                 modifier = Modifier.padding(bottom = 16.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.BugReport,
+                    imageVector = NextPageIcons.BugReport,
                     contentDescription = null,
                     tint = ACCENT,
                     modifier = Modifier.size(24.dp)
@@ -269,14 +265,14 @@ fun DebugPanel(
             Spacer(Modifier.height(8.dp))
 
             QuickActionButton(
-                icon = Icons.Default.Delete,
+                icon = NextPageIcons.Trash,
                 label = "Clear DB",
                 color = Color(0xFFE53935),
                 onClick = { showClearConfirm = true }
             )
             Spacer(Modifier.height(8.dp))
             QuickActionButton(
-                icon = Icons.Default.Sync,
+                icon = NextPageIcons.Sync,
                 label = "Force Sync Push",
                 onClick = {
                     viewModel.forceSyncPush()
@@ -285,7 +281,7 @@ fun DebugPanel(
             )
             Spacer(Modifier.height(8.dp))
             QuickActionButton(
-                icon = Icons.Default.Sync,
+                icon = NextPageIcons.Sync,
                 label = "Force Sync Pull",
                 onClick = {
                     viewModel.forceSyncPull()
@@ -294,7 +290,7 @@ fun DebugPanel(
             )
             Spacer(Modifier.height(8.dp))
             QuickActionButton(
-                icon = Icons.Default.ContentCopy,
+                icon = NextPageIcons.Copy,
                 label = "Copy Session Info",
                 onClick = {
                     viewModel.copySessionInfo(context, authState.currentSession)

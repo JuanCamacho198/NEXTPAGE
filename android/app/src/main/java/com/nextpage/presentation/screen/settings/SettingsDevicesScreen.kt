@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,11 +37,8 @@ import com.nextpage.R
 import com.nextpage.domain.model.Device
 import com.nextpage.ui.components.atoms.NextPageDialog
 import com.nextpage.ui.components.atoms.NextPageDialogVariant
+import com.nextpage.ui.icons.NextPageIcons
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.outlined.DesktopMac
-import androidx.compose.material.icons.outlined.DesktopWindows
-import androidx.compose.material.icons.outlined.DevicesOther
-import androidx.compose.material.icons.outlined.PhoneAndroid
 import com.nextpage.presentation.viewmodel.SettingsDevicesUiState
 import java.time.Duration
 import java.time.Instant
@@ -61,7 +56,7 @@ fun SettingsDevicesScreen(
                 title = { Text(stringResource(R.string.settings_devices_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(NextPageIcons.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -124,10 +119,10 @@ private fun DeviceItem(
         ) {
             Icon(
                 imageVector = when {
-                    device.os.contains("Android") -> Icons.Outlined.PhoneAndroid
-                    device.os.contains("Windows") -> Icons.Outlined.DesktopWindows
-                    device.os.contains("macOS") || device.os.contains("Darwin") -> Icons.Outlined.DesktopMac
-                    else -> Icons.Outlined.DevicesOther
+                    device.os.contains("Android") -> NextPageIcons.Smartphone
+                    device.os.contains("Windows") -> NextPageIcons.Monitor
+                    device.os.contains("macOS") || device.os.contains("Darwin") -> NextPageIcons.Laptop
+                    else -> NextPageIcons.Devices
                 },
                 contentDescription = null,
                 modifier = Modifier.size(28.dp),

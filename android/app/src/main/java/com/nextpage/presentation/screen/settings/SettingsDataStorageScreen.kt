@@ -10,11 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Cloud
-import androidx.compose.material.icons.outlined.CloudSync
-import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,6 +33,7 @@ import com.nextpage.data.remote.drive.DriveAuthResult
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
 import com.nextpage.ui.components.molecules.NextPagePreferenceItem
 import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Data & Storage settings: Google Drive authorization via the PKCE browser flow.
@@ -97,19 +93,19 @@ fun SettingsDataStorageScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         NextPagePreferenceItem(
-            icon = Icons.Outlined.Storage,
+            icon = NextPageIcons.Storage,
             label = stringResource(R.string.settings_storage),
             onClick = {}
         )
 
         NextPagePreferenceItem(
-            icon = Icons.Outlined.CloudSync,
+            icon = NextPageIcons.CloudSync,
             label = stringResource(R.string.settings_sync),
             onClick = {}
         )
 
         NextPagePreferenceItem(
-            icon = Icons.Outlined.BarChart,
+            icon = NextPageIcons.ChartBar,
             label = stringResource(R.string.settings_statistics_title),
             onClick = onNavigateToStatistics
         )

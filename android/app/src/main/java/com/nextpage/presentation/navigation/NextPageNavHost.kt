@@ -276,6 +276,13 @@ fun NextPageNavHost(
                     snackbarHostState.showSnackbar(
                         context.getString(com.nextpage.R.string.library_import_success, event.title)
                     )
+                    // Auto-push after import: when Drive is authorized, push the
+                    // just-imported book to Drive and the Supabase catalog WITHOUT
+                    // requiring a manual pull-to-refresh. Idempotent — processed
+                    // outbox entries are deleted; failures surface via syncState.
+                    scope.launch {
+                        appContainer.syncService.schedulePush()
+                    }
                     // One-time "connect Google Drive?" prompt (spec drive-import-connect):
                     // only for a Google-signed-in account with Drive still unauthorized
                     // and no prior per-account decline. Pure gate — no Compose state read

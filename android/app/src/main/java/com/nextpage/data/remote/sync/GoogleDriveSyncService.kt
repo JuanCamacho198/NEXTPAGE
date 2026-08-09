@@ -11,6 +11,7 @@ import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncFileMappingEntity
 import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.session.SessionManager
+import com.nextpage.debug.DebugLog
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import kotlinx.coroutines.flow.Flow
@@ -101,6 +102,7 @@ class GoogleDriveSyncService(
                     val pushResult = pushBook(item, session.userId)
                     if (pushResult.isFailure) {
                         val mapped = mapError(pushResult.exceptionOrNull(), defaultCode = "SYNC_BOOK_PUSH_FAILED")
+                        DebugLog.error(COMPONENT, "pushBook failed for ${item.entityId}: ${mapped.code} — ${mapped.message}")
                         outboxDao.incrementRetryCount(item.id, mapped.message)
                         outboxDao.pruneFailedItems(maxRetries)
                         state.value = SyncState.Error(mapped.message)
@@ -114,6 +116,7 @@ class GoogleDriveSyncService(
                     val pushResult = pushState(item, session.userId)
                     if (pushResult.isFailure) {
                         val mapped = mapError(pushResult.exceptionOrNull(), defaultCode = "SYNC_STATE_PUSH_FAILED")
+                        DebugLog.error(COMPONENT, "pushState failed for ${item.entityId}: ${mapped.code} — ${mapped.message}")
                         outboxDao.incrementRetryCount(item.id, mapped.message)
                         outboxDao.pruneFailedItems(maxRetries)
                         state.value = SyncState.Error(mapped.message)

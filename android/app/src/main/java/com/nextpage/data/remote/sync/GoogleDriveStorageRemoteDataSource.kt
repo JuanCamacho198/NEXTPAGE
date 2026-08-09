@@ -4,13 +4,16 @@ import com.google.api.client.http.ByteArrayContent
 import com.google.api.client.http.HttpResponseException
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.model.File
+import com.nextpage.data.remote.drive.DriveCatalogContract
+import com.nextpage.debug.DebugLog
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
-import com.nextpage.data.remote.drive.DriveCatalogContract
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 
 /**
  * Implements [StorageSyncRemoteDataSource] using Google Drive REST API v3,
@@ -195,6 +198,8 @@ class GoogleDriveStorageRemoteDataSource(
     /**
      * Maps a Drive API failure to an [AppError], tagging HTTP 401/403 as an
      * AUTH error so sync can refresh the token and retry (see D4).
+     * Also surfaces the full detail to the in-app LogViewer (Ajustes → Log Viewer
+     * → Live) so sync failures are debuggable without adb.
      */
     private fun mapDriveError(throwable: Throwable, code: String, message: String): AppError {
         val statusCode = (throwable as? HttpResponseException)?.statusCode
@@ -206,6 +211,10 @@ class GoogleDriveStorageRemoteDataSource(
             code == "GOOGLE_DRIVE_FILE_NOT_FOUND" -> "REMOTE_NOT_FOUND"
             else -> code
         }
+        DebugLog.error(
+            component,
+            "$errorCode: $message | status=$statusCode | ${throwable.javaClass.simpleName}: ${throwable.message}"
+        )
         return AppError(
             category = category,
             code = errorCode,

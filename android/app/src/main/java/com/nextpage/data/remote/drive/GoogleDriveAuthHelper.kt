@@ -20,7 +20,8 @@ import kotlinx.coroutines.launch
  * `drive.file` scope). The actual protocol lives in the pure, JVM-testable
  * [DriveOAuthSession]; this class only:
  *
- * 1. Builds the Google authorize URL (`client_id`, `redirect_uri=nextpage://oauth2/drive`,
+ * 1. Builds the Google authorize URL (`client_id`, `redirect_uri` following Google's
+ *    reserved native-app pattern `com.googleusercontent.apps.<android-client-id>:/oauth2redirect`,
  *    S256 `code_challenge`, `state`, `scope=drive.file`, `access_type=offline`, `prompt=consent`).
  * 2. Launches it in the browser via a plain [Intent.ACTION_VIEW] (no Custom Tabs / GoogleSignIn dep).
  * 3. Receives the redirect in [onRedirect] (driven from `MainActivity.onNewIntent`),
@@ -30,7 +31,8 @@ import kotlinx.coroutines.launch
  *
  * The prior GoogleSignIn `requestServerAuthCode` path is gone: that API cannot carry a
  * PKCE challenge, which is exactly why the exchange always failed with `invalid_client`.
- * This flow mirrors the working desktop implementation against the same OAuth endpoints.
+ * The client ID used is the ANDROID OAuth client (public client, no secret); the web
+ * client ID would require `client_secret` and must NOT be used here.
  *
  * This is a separate, independent OAuth flow from Supabase auth.
  */
@@ -79,10 +81,10 @@ class GoogleDriveAuthHelper(
     }
 
     /**
-     * Handle the `nextpage://oauth2/drive` redirect (called from
-     * `MainActivity.onNewIntent`). [uri] carries `code` + `state`, or `error` when the
-     * user denied the grant. Parses and delegates to [DriveOAuthSession.complete], then
-     * publishes the result on [authResult].
+     * Handle the Drive OAuth redirect (called from `MainActivity.onNewIntent`).
+     * [uri] carries `code` + `state`, or `error` when the user denied the grant.
+     * Parses and delegates to [DriveOAuthSession.complete], then publishes the
+     * result on [authResult].
      */
     fun onRedirect(uri: Uri?) {
         val pending = pendingAuth ?: run {

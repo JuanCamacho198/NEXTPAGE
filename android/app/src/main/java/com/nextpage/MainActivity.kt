@@ -70,15 +70,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Receives the `nextpage://oauth2/drive` redirect (singleTop launch mode) after the
-     * user completes/denies the Google Drive OAuth consent screen in the browser.
-     * Forwards the URI to the singleton helper, which completes the pending PKCE attempt
-     * and publishes the outcome for the UI that started the flow.
+     * Receives the Drive OAuth redirect (singleTop launch mode) after the user
+     * completes/denies the Google Drive OAuth consent screen in the browser.
+     * The redirect URI follows Google's reserved native-app pattern
+     * `com.googleusercontent.apps.<android-client-id>:/oauth2redirect`; the scheme
+     * is derived from the Android client ID (no literal in code).
+     * Forwards the URI to the singleton helper, which completes the pending PKCE
+     * attempt and publishes the outcome for the UI that started the flow.
      */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         val uri = intent.data
-        if (uri != null && uri.scheme == "nextpage" && uri.host == "oauth2") {
+        val driveRedirectScheme = "com.googleusercontent.apps.${
+            BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID.removeSuffix(".apps.googleusercontent.com")
+        }"
+        if (uri != null && uri.scheme == driveRedirectScheme) {
             appContainer.googleDriveAuthHelper.onRedirect(uri)
         }
     }

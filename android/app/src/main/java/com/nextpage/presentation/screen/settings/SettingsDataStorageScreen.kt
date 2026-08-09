@@ -158,7 +158,7 @@ fun SettingsDataStorageScreen(
                 val errorConfigText = stringResource(R.string.settings_drive_error_config)
                 Button(
                     onClick = {
-                        val clientId = BuildConfig.GOOGLE_OAUTH_CLIENT_ID
+                        val clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID
                         if (clientId.isBlank()) {
                             Toast.makeText(
                                 context,

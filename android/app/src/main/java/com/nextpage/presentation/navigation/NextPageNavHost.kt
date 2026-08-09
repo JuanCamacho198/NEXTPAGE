@@ -739,7 +739,7 @@ fun NextPageNavHost(
                 dismissText = context.getString(com.nextpage.R.string.drive_connect_prompt_decline),
                 onConfirm = {
                     showDriveConnectPrompt = false
-                    val clientId = com.nextpage.BuildConfig.GOOGLE_OAUTH_CLIENT_ID
+                    val clientId = com.nextpage.BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID
                     if (clientId.isBlank()) {
                         android.widget.Toast.makeText(
                             context,

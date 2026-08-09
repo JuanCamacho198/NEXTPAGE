@@ -22,7 +22,7 @@ import com.nextpage.data.repository.ReaderRepositoryImpl
 import com.nextpage.data.repository.ReadingStatsRepositoryImpl
 import com.nextpage.data.repository.DictionaryRepositoryImpl
 import com.nextpage.data.repository.SupabaseAuthRepository
-import com.nextpage.data.remote.drive.DRIVE_OAUTH_REDIRECT_URI
+import com.nextpage.data.remote.drive.driveOAuthRedirectUri
 import com.nextpage.data.remote.drive.DriveCoordinator
 import com.nextpage.data.remote.drive.DriveOAuthSession
 import com.nextpage.data.remote.drive.DriveTokenApi
@@ -139,12 +139,12 @@ class AppContainer(context: Context) {
      * Pure, JVM-testable core of the Drive OAuth authorization-code + PKCE flow.
      * Singleton so the Settings screen and (later) the import prompt share one flow
      * and pending redirect state; reuses [driveTokenStore], [driveTokenApi] and the
-     * Android OAuth client ID from BuildConfig.
+     * ANDROID OAuth client ID from BuildConfig (public client, no secret needed).
      */
     val driveOAuthSession: DriveOAuthSession by lazy {
         DriveOAuthSession(
-            clientId = BuildConfig.GOOGLE_OAUTH_CLIENT_ID,
-            redirectUri = DRIVE_OAUTH_REDIRECT_URI,
+            clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID,
+            redirectUri = driveOAuthRedirectUri(BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID),
             tokenStore = driveTokenStore,
             tokenApi = driveTokenApi
         )
@@ -152,7 +152,7 @@ class AppContainer(context: Context) {
 
     /**
      * Thin Android layer over [driveOAuthSession]: builds the authorize URL, launches
-     * the browser, and receives the `nextpage://oauth2/drive` redirect via
+     * the browser, and receives the Drive OAuth redirect via
      * `MainActivity.onNewIntent`. Singleton by design — the pending PKCE attempt must
      * survive across screens.
      */
@@ -168,7 +168,7 @@ class AppContainer(context: Context) {
             context = context.applicationContext,
             tokenStore = driveTokenStore,
             tokenApi = driveTokenApi,
-            clientId = BuildConfig.GOOGLE_OAUTH_CLIENT_ID
+            clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID
         )
     }
 

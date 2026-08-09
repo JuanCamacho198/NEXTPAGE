@@ -23,7 +23,7 @@ class DriveOAuthSessionTest {
     private val api = mockk<DriveTokenApi>()
     private val session = DriveOAuthSession(
         clientId = CLIENT_ID,
-        redirectUri = "nextpage://oauth2/drive",
+        redirectUri = "com.googleusercontent.apps.client-id:/oauth2redirect",
         tokenStore = store,
         tokenApi = api
     )
@@ -32,7 +32,7 @@ class DriveOAuthSessionTest {
     fun matchingVerifier_persistsTokenPairAndReturnsSuccess() = runBlocking {
         val pair = DriveTokenPair(accessToken = "access-1", refreshToken = "refresh-1")
         coEvery {
-            api.exchange(CLIENT_ID, "code-1", "nextpage://oauth2/drive", VERIFIER)
+            api.exchange(CLIENT_ID, "code-1", "com.googleusercontent.apps.client-id:/oauth2redirect", VERIFIER)
         } returns Result.success(pair)
 
         val result = session.complete("code-1", "state-1", "state-1", VERIFIER)

@@ -4,11 +4,22 @@ import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 
 /**
- * OAuth redirect URI for the Android Drive flow. Must match the `nextpage://oauth2/drive`
- * intent-filter registered on MainActivity (see AndroidManifest.xml) and the authorized
- * redirect URI configured on the Android OAuth client in Google Cloud Console.
+ * Builds the OAuth redirect URI for the Android Drive flow, following Google's
+ * reserved native-app pattern (`com.googleusercontent.apps.<client_id>:/oauth2redirect`).
+ *
+ * The scheme is derived from the ANDROID OAuth client ID (`GOOGLE_OAUTH_ANDROID_CLIENT_ID`
+ * from local.properties) so no client-ID literal lives in Kotlin code. Arbitrary custom
+ * URI schemes (e.g. `nextpage://...`) are no longer supported by Google on Android.
+ * The Android client is a PUBLIC client — it needs no `client_secret`; the web client
+ * ID would require a secret and fails with `invalid_client`.
+ *
+ * Must match the intent-filter scheme injected into AndroidManifest.xml
+ * (`driveRedirectScheme` manifest placeholder, derived the same way).
  */
-const val DRIVE_OAUTH_REDIRECT_URI = "nextpage://oauth2/drive"
+fun driveOAuthRedirectUri(clientId: String): String {
+    val schemePrefix = clientId.removeSuffix(".apps.googleusercontent.com")
+    return "com.googleusercontent.apps.$schemePrefix:/oauth2redirect"
+}
 
 /**
  * One PKCE authorization attempt, produced by [DriveOAuthSession.beginAuth].
@@ -55,7 +66,7 @@ sealed interface DriveAuthResult {
  * owns URI parsing / browser launching and delegates the protocol here.
  *
  * @param clientId Android OAuth client ID (no client_secret needed for public clients).
- * @param redirectUri Must equal [DRIVE_OAUTH_REDIRECT_URI] (used both in the authorize
+ * @param redirectUri Must equal [driveOAuthRedirectUri] output (used both in the authorize
  *   URL and, critically, in the token exchange — Google rejects mismatched redirect URIs).
  * @param tokenStore Persisted token sink; written exclusively on [DriveAuthResult.Success].
  * @param tokenApi Token-endpoint boundary (mocked in unit tests).

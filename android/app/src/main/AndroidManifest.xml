@@ -36,7 +36,10 @@
             </intent-filter>
 
             <!-- Google Drive OAuth redirect (authorization-code + PKCE).
-                 Must match DRIVE_OAUTH_REDIRECT_URI (nextpage://oauth2/drive). -->
+                 Scheme injected from build.gradle.kts (driveRedirectScheme) —
+                 Google's reserved native-app pattern
+                 com.googleusercontent.apps.<android-client-id>:/oauth2redirect.
+                 Arbitrary custom URI schemes are no longer supported on Android. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -44,9 +47,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:scheme="nextpage"
-                    android:host="oauth2"
-                    android:pathPrefix="/drive" />
+                    android:scheme="${driveRedirectScheme}"
+                    android:pathPrefix="/oauth2redirect" />
             </intent-filter>
         </activity>
 

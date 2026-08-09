@@ -56,6 +56,20 @@ android {
         val googleOAuthClientId = (localProperties.getProperty("google.oauth.client.id") ?: "").escapeForBuildConfig()
         buildConfigField("String", "GOOGLE_OAUTH_CLIENT_ID", "\"$googleOAuthClientId\"")
 
+        // Android OAuth client ID for the Drive authorization-code + PKCE flow.
+        // Public client identifier (it ships inside the APK). Configured in
+        // local.properties (google.oauth.android.client.id) like the web client —
+        // must match the "Nextpage Android" OAuth client in Google Cloud Console
+        // (package com.nextpage + the debug/release SHA-1 fingerprints).
+        val googleOAuthAndroidClientId = (localProperties.getProperty("google.oauth.android.client.id") ?: "").escapeForBuildConfig()
+        buildConfigField("String", "GOOGLE_OAUTH_ANDROID_CLIENT_ID", "\"$googleOAuthAndroidClientId\"")
+
+        // Drive OAuth redirect scheme injected into AndroidManifest.xml intent-filter.
+        // Derived from the Android client ID (Google's reserved native-app pattern)
+        // so the client ID literal never lives in the manifest or in Kotlin code.
+        val driveRedirectScheme = "com.googleusercontent.apps.${googleOAuthAndroidClientId.removeSuffix(".apps.googleusercontent.com")}"
+        manifestPlaceholders["driveRedirectScheme"] = driveRedirectScheme
+
         val supabaseUrl = (localProperties.getProperty("SUPABASE_URL") ?: "").escapeForBuildConfig()
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         val supabaseAnonKey = (localProperties.getProperty("SUPABASE_ANON_KEY") ?: "").escapeForBuildConfig()

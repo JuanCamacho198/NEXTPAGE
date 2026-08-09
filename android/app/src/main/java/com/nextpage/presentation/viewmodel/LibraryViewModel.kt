@@ -9,6 +9,7 @@ import com.nextpage.data.remote.supabase.UserBookRow
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.data.storage.CoverStorage
+import com.nextpage.debug.DebugLog
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.BookStatus
 import com.nextpage.domain.model.effectiveStatus
@@ -543,6 +544,7 @@ class LibraryViewModel(
                     mutableDownloadState.update { it - bookId }
                 }
                 .onFailure { error ->
+                    DebugLog.error(TAG, "downloadBook: FAILED for $bookId — ${error.message}")
                     val err = DownloadState.Error(bookId, error.message ?: "Download failed")
                     mutableDownloadState.update { it + (bookId to err) }
                 }
@@ -587,6 +589,10 @@ class LibraryViewModel(
                 mutableUiState.update { it.copy(isRefreshing = false) }
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "LibraryViewModel"
     }
 }
 

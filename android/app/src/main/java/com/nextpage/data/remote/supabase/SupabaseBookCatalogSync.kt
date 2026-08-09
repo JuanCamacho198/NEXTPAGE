@@ -345,12 +345,16 @@ class SupabaseBookCatalogSync(
      */
     suspend fun downloadRemoteBook(bookId: String): Result<Unit> {
         val session = sessionManager.getCurrentSession().getOrNull()
-            ?: return Result.failure(
-                AppError(ErrorCategory.AUTH, "NO_SESSION", "User must sign in to download books", "SupabaseBookCatalogSync")
-            )
+            ?: run {
+                DebugLog.warn(TAG, "downloadRemoteBook: rejected $bookId — no session")
+                return Result.failure(
+                    AppError(ErrorCategory.AUTH, "NO_SESSION", "User must sign in to download books", "SupabaseBookCatalogSync")
+                )
+            }
         val userId = session.userId
 
         if (remoteDataSource == null || localBooksDir == null) {
+            DebugLog.warn(TAG, "downloadRemoteBook: rejected $bookId — Drive download not configured")
             return Result.failure(
                 AppError(ErrorCategory.CONFIG_ERROR, "DRIVE_NOT_CONFIGURED", "Drive download not configured", "SupabaseBookCatalogSync")
             )
@@ -358,6 +362,7 @@ class SupabaseBookCatalogSync(
 
         // D6: never resurrect a locally DELETE-marked book.
         if (bookDao.getBookById(bookId)?.deletedAtEpochMillis != null) {
+            DebugLog.warn(TAG, "downloadRemoteBook: rejected $bookId — locally tombstoned")
             return Result.failure(
                 AppError(ErrorCategory.NOT_FOUND, "BOOK_TOMBSTONED", "Book $bookId was deleted and cannot be downloaded again without re-importing", "SupabaseBookCatalogSync")
             )
@@ -371,12 +376,18 @@ class SupabaseBookCatalogSync(
             )
         }
         val row = catalog.firstOrNull { it.id == bookId }
-            ?: return Result.failure(
-                AppError(ErrorCategory.NOT_FOUND, "BOOK_NOT_IN_CATALOG", "Book $bookId not found in catalog", "SupabaseBookCatalogSync")
-            )
+            ?: run {
+                DebugLog.warn(TAG, "downloadRemoteBook: rejected $bookId — not in catalog")
+                return Result.failure(
+                    AppError(ErrorCategory.NOT_FOUND, "BOOK_NOT_IN_CATALOG", "Book $bookId not found in catalog", "SupabaseBookCatalogSync")
+                )
+            }
 
-        // A catalog row without a remote drive file is effectively deleted — don't download.
-        if (row.lifecycle != "available" || row.filePath.isNullOrBlank()) {
+        // Accept "imported"/"available" rows even when filePath is null (Desktop
+        // Drive-hosted rows legitimately carry file_path = null); reject only
+        // "deleted"/"unavailable" rows — matches the getDownloadableBooks filter.
+        if (row.lifecycle == "deleted" || row.lifecycle == "unavailable") {
+            DebugLog.warn(TAG, "downloadRemoteBook: rejected $bookId lifecycle=${row.lifecycle} remotePath=${row.remotePath}")
             return Result.failure(
                 AppError(ErrorCategory.NOT_FOUND, if (row.lifecycle == "unavailable") "UNAVAILABLE" else "BOOK_NOT_IN_CATALOG", "Book $bookId is not available for import", "SupabaseBookCatalogSync")
             )
@@ -435,20 +446,24 @@ class SupabaseBookCatalogSync(
                 if (previousBook != null) bookDao.upsert(previousBook) else bookDao.deleteById(bookId)
                 throw failure
             }
+            DebugLog.success(TAG, "downloadRemoteBook: '$bookId' downloaded and saved OK")
             Result.success(Unit)
         } catch (e: AppError) {
+            DebugLog.error(TAG, "downloadRemoteBook: FAILED for $bookId (${e.code}) — ${e.message}")
             File(localBooksDir, ".${bookId}.${bookFormat}.part").delete()
             File(localBooksDir, ".${bookId}.${bookFormat}.backup").delete()
             if (e.category == ErrorCategory.AUTH) Result.failure(
                 AppError(ErrorCategory.AUTH, "DOWNLOAD_ERROR", e.message, "SupabaseBookCatalogSync")
             ) else Result.failure(e)
         } catch (e: IOException) {
+            DebugLog.error(TAG, "downloadRemoteBook: FAILED for $bookId (IOException) — ${e.message}")
             File(localBooksDir, ".${bookId}.${bookFormat}.part").delete()
             File(localBooksDir, ".${bookId}.${bookFormat}.backup").delete()
             Result.failure(
                 AppError(ErrorCategory.STORAGE, "DOWNLOAD_FAILED", "Failed to download/save book $bookId: ${e.message}", "SupabaseBookCatalogSync")
             )
         } catch (e: Exception) {
+            DebugLog.error(TAG, "downloadRemoteBook: FAILED for $bookId (${e.javaClass.simpleName}) — ${e.message}")
             Result.failure(
                 AppError(ErrorCategory.UNKNOWN, "DOWNLOAD_ERROR", "Unexpected error downloading book $bookId: ${e.message}", "SupabaseBookCatalogSync")
             )

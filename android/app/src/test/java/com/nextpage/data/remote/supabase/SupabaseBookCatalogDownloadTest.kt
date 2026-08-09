@@ -89,16 +89,49 @@ class SupabaseBookCatalogDownloadTest {
     }
 
     @Test
-    fun download_rejectsCatalogRowWithoutRemoteFile() = runBlocking {
+    fun download_rejectsDeletedRowWithoutCallingRemote() = runBlocking {
         coEvery { mockCatalog.listUserBooks("test-user") } returns listOf(
-            catalogRow(id = "no-file", filePath = null)
+            catalogRow(id = "deleted-1", filePath = null).copy(lifecycle = "deleted")
         )
 
-        val result = newSync().downloadRemoteBook("no-file")
+        val result = newSync().downloadRemoteBook("deleted-1")
 
         assertTrue(result.isFailure)
         assertEquals("BOOK_NOT_IN_CATALOG", (result.exceptionOrNull() as? AppError)?.code)
         coVerify(inverse = true) { mockRemote.download(any()) }
+    }
+
+    @Test
+    fun download_rejectsUnavailableRowWithoutCallingRemote() = runBlocking {
+        coEvery { mockCatalog.listUserBooks("test-user") } returns listOf(
+            catalogRow(id = "unavailable-1", filePath = null).copy(lifecycle = "unavailable")
+        )
+
+        val result = newSync().downloadRemoteBook("unavailable-1")
+
+        assertTrue(result.isFailure)
+        assertEquals("UNAVAILABLE", (result.exceptionOrNull() as? AppError)?.code)
+        coVerify(inverse = true) { mockRemote.download(any()) }
+    }
+
+    @Test
+    fun download_importedRowWithNullFilePathSucceedsAndPersistsRealTitle() = runBlocking {
+        val bytes = "imported-bytes".toByteArray()
+        coEvery { mockCatalog.listUserBooks("test-user") } returns listOf(
+            catalogRow(id = "imported-1", filePath = null).copy(
+                lifecycle = "imported",
+                title = "Pensar rápido, pensar despacio",
+                contentHash = sha256(bytes)
+            )
+        )
+        coEvery { mockRemote.download(any()) } returns bytes
+
+        val result = newSync().downloadRemoteBook("imported-1")
+
+        assertTrue(result.isSuccess)
+        val book = fakeBookDao.getBookById("imported-1")
+        assertEquals("Pensar rápido, pensar despacio", book?.title)
+        coVerify(exactly = 1) { mockRemote.download("books/test-user/imported-1.epub") }
     }
 
     @Test

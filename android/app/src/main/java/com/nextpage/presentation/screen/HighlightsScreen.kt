@@ -20,14 +20,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Book
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.FormatQuote
-import androidx.compose.material.icons.outlined.Lightbulb
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -42,6 +34,7 @@ import com.nextpage.domain.model.HighlightColor
 import com.nextpage.presentation.theme.NextPageColors
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
+import com.nextpage.ui.icons.NextPageIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -91,15 +84,15 @@ fun HighlightsScreen(
     var showTagSelector by remember { mutableStateOf(false) }
 
     val typeTabs = listOf(
-        FilterTab("all", R.string.highlights_tab_all, Icons.Outlined.AutoAwesome),
-        FilterTab("quotes", R.string.highlights_tab_quotes, Icons.Outlined.FormatQuote),
-        FilterTab("ideas", R.string.highlights_tab_ideas, Icons.Outlined.Lightbulb),
-        FilterTab("passages", R.string.highlights_tab_passages, Icons.Outlined.AutoAwesome)
+        FilterTab("all", R.string.highlights_tab_all, NextPageIcons.Sparkle),
+        FilterTab("quotes", R.string.highlights_tab_quotes, NextPageIcons.Quote),
+        FilterTab("ideas", R.string.highlights_tab_ideas, NextPageIcons.Lightbulb),
+        FilterTab("passages", R.string.highlights_tab_passages, NextPageIcons.Sparkle)
     )
 
     val bookOptions = remember(uiState.books) {
         listOf(
-            SelectorOption("all", R.string.highlights_filter_all_books, icon = Icons.Outlined.Book)
+            SelectorOption("all", R.string.highlights_filter_all_books, icon = NextPageIcons.Book)
         ) + uiState.books.map { SelectorOption(it.id, labelRes = null, label = it.title) }
     }
 
@@ -188,7 +181,7 @@ fun HighlightsScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(24.dp),
                     modifier = Modifier.fillMaxWidth(),
-                    trailingIcon = Icons.Outlined.Close,
+                    trailingIcon = NextPageIcons.Close,
                     trailingIconContentDescription = stringResource(R.string.reader_settings_close)
                 )
             }
@@ -277,7 +270,7 @@ fun HighlightsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     NextPageEmptyState(
-                        icon = Icons.Outlined.FormatQuote,
+                        icon = NextPageIcons.Quote,
                         title = stringResource(R.string.highlights_empty),
                         subtitle = stringResource(R.string.highlights_empty_subtitle)
                     )
@@ -566,7 +559,7 @@ private fun ColorSwatchRow(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Check,
+                            imageVector = NextPageIcons.Check,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
                             tint = Color.Black

@@ -6,9 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ViewList
-import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Row shown above the library list: a sort-by label and selector
@@ -117,7 +115,7 @@ fun SortControlRow(
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             IconButton(onClick = { if (!isGridView) onViewToggle() }) {
                 Icon(
-                    imageVector = Icons.Outlined.GridView,
+                    imageVector = NextPageIcons.GridView,
                     contentDescription = stringResource(R.string.library_view_grid),
                     tint = if (isGridView) MaterialTheme.colorScheme.primary
                            else MaterialTheme.colorScheme.onSurfaceVariant
@@ -125,7 +123,7 @@ fun SortControlRow(
             }
             IconButton(onClick = { if (isGridView) onViewToggle() }) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ViewList,
+                    imageVector = NextPageIcons.ViewList,
                     contentDescription = stringResource(R.string.library_view_list),
                     tint = if (!isGridView) MaterialTheme.colorScheme.primary
                            else MaterialTheme.colorScheme.onSurfaceVariant

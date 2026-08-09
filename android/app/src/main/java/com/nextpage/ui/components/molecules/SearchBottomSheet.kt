@@ -19,9 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.SearchResult
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Modal bottom sheet for full-text search inside the current book.
@@ -143,7 +141,7 @@ fun SearchBottomSheet(
                 },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Default.Search,
+                        imageVector = NextPageIcons.Search,
                         contentDescription = null,
                         tint = Color(0xFF718096)
                     )
@@ -152,7 +150,7 @@ fun SearchBottomSheet(
                     if (query.isNotEmpty()) {
                         IconButton(onClick = onClearQuery) {
                             Icon(
-                                imageVector = Icons.Default.Clear,
+                                imageVector = NextPageIcons.Close,
                                 contentDescription = stringResource(R.string.search_clear),
                                 tint = Color(0xFF718096)
                             )

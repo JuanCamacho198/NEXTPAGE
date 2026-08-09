@@ -15,11 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
-import androidx.compose.material.icons.outlined.AutoGraph
-import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageDivider
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Plain-data model for a single row in [NotificationSheet].
@@ -93,19 +89,19 @@ fun NotificationSheet(
     val mockNotifications = listOf(
         NotificationItem(
             id = "1",
-            icon = Icons.Outlined.EmojiEvents,
+            icon = NextPageIcons.Trophy,
             title = stringResource(R.string.notifications_mock_welcome_title),
             body = stringResource(R.string.notifications_mock_welcome_body)
         ),
         NotificationItem(
             id = "2",
-            icon = Icons.Outlined.AutoGraph,
+            icon = NextPageIcons.ChartLine,
             title = stringResource(R.string.notifications_mock_streak_title),
             body = stringResource(R.string.notifications_mock_streak_body)
         ),
         NotificationItem(
             id = "3",
-            icon = Icons.AutoMirrored.Outlined.LibraryBooks,
+            icon = NextPageIcons.LibraryBooks,
             title = stringResource(R.string.notifications_mock_library_title),
             body = stringResource(R.string.notifications_mock_library_body)
         )
@@ -137,7 +133,7 @@ fun NotificationSheet(
                 )
                 IconButton(onClick = onDismiss) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        imageVector = NextPageIcons.Close,
                         contentDescription = stringResource(R.string.reader_settings_close)
                     )
                 }

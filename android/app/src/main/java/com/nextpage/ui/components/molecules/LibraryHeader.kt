@@ -8,9 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageTextField
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Top header for the library screen: large title, search and filter
@@ -75,13 +73,13 @@ fun LibraryHeader(
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 IconButton(onClick = onSearchToggle) {
                     Icon(
-                        imageVector = Icons.Outlined.Search,
+                        imageVector = NextPageIcons.Search,
                         contentDescription = stringResource(R.string.library_search_placeholder)
                     )
                 }
                 IconButton(onClick = onFilterToggle) {
                     Icon(
-                        imageVector = Icons.Outlined.FilterList,
+                        imageVector = NextPageIcons.FilterList,
                         contentDescription = stringResource(R.string.library_filter_label)
                     )
                 }

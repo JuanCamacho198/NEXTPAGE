@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -26,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Placeholder card shown in the library grid/list to trigger the
@@ -87,7 +86,7 @@ fun AddBookCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
-                imageVector = Icons.Outlined.Add,
+                imageVector = NextPageIcons.Add,
                 contentDescription = stringResource(R.string.library_import_book),
                 modifier = Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.primary

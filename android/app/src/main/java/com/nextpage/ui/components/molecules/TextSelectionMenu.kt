@@ -11,10 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.contentColorFor
@@ -28,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Floating action menu shown when the user makes a NEW text
@@ -113,21 +110,21 @@ fun TextSelectionMenu(
 
         // ── Actions ─────────────────────────────────────────────
         SelectionMenuIcon(
-            icon = Icons.Default.ContentCopy,
+            icon = NextPageIcons.Copy,
             contentDescription = stringResource(R.string.text_selection_copy),
             tint = contentColor,
             onClick = onCopy
         )
 
         SelectionMenuIcon(
-            icon = Icons.Default.MenuBook,
+            icon = NextPageIcons.BookOpen,
             contentDescription = stringResource(R.string.context_menu_dictionary),
             tint = contentColor,
             onClick = onDictionary
         )
 
         SelectionMenuIcon(
-            icon = Icons.Default.Share,
+            icon = NextPageIcons.Share,
             contentDescription = stringResource(R.string.context_menu_share),
             tint = contentColor,
             onClick = onShare

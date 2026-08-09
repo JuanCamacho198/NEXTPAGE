@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Reader's progress bar with a draggable thumb and a row of
@@ -192,7 +191,7 @@ fun ReadingProgressBar(
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ScreenRotation,
+                        imageVector = NextPageIcons.ScreenRotation,
                         contentDescription = stringResource(R.string.reader_rotate_screen),
                         tint = Color(0xFF718096),
                         modifier = Modifier.size(18.dp)

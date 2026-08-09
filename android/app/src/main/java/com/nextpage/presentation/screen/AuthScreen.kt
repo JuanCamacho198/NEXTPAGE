@@ -8,8 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,6 +41,7 @@ import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageTextField
+import com.nextpage.ui.icons.NextPageIcons
 import kotlinx.coroutines.launch
 
 private const val AUTH_SCREEN_TAG = "AuthScreen"
@@ -276,7 +275,7 @@ fun AuthScreen(
                     .height(48.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Email,
+                        imageVector = NextPageIcons.Email,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp)
@@ -356,7 +355,7 @@ fun AuthScreen(
                 variant = NextPageButtonVariant.TEXT
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Person,
+                    imageVector = NextPageIcons.Person,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)

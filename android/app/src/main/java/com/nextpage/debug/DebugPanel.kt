@@ -21,8 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
 import com.nextpage.presentation.viewmodel.ReaderUiState
+import com.nextpage.ui.icons.NextPageIcons
 import android.os.SystemClock
 
 /**
@@ -98,7 +97,7 @@ fun DebugPanel(
                 )
                 IconButton(onClick = onClose) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        imageVector = NextPageIcons.Close,
                         contentDescription = stringResource(R.string.debug_close),
                         tint = Color(0xFFDDE2F8)
                     )

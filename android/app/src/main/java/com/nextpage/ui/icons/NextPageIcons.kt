@@ -48,6 +48,18 @@ object NextPageIcons {
             pathBuilder = block
         )
 
+    /**
+     * Filled path for the rare glyphs that must read as solid (e.g. a rated
+     * `Star`). Still `SolidColor(Color.Black)` so `Icon(tint = ...)` colors it
+     * uniformly (REQ-I-09/10). Deliberate exception to the stroke-only rule.
+     */
+    private fun ImageVector.Builder.fillPath(block: PathBuilder.() -> Unit): ImageVector.Builder =
+        path(
+            fill = SolidColor(Color.Black),
+            stroke = null,
+            pathBuilder = block
+        )
+
     /** Bottom nav "Home" tab. Source: `ic_nav_home`. */
     val Home = nextPageIcon("Home") {
         strokePath {
@@ -554,6 +566,124 @@ object NextPageIcons {
             moveTo(15.5f, 15.5f); lineTo(13.5f, 15.6f)
             moveTo(15.5f, 15.5f); curveTo(14f, 13.5f, 10.5f, 13.3f, 8.5f, 14.8f)
             moveTo(8.5f, 14.8f); lineTo(10.5f, 14.7f)
+        }
+    }
+
+    // ── PR2b-2 sweep constants (Reader/BookDetail/SplitSettings/Dictionary) ──
+
+    /** "Aa" text glyph. Source: `Icons.Default.FontDownload`. */
+    val TextAa = nextPageIcon("TextAa") {
+        strokePath {
+            moveTo(6f, 19f); lineTo(11f, 6f); lineTo(16f, 19f)
+            moveTo(8.3f, 14.5f); lineTo(13.7f, 14.5f)
+            moveTo(19f, 11f); curveTo(19f, 9.3f, 17.7f, 8f, 16f, 8f); curveTo(14.3f, 8f, 13f, 9.3f, 13f, 11f)
+            curveTo(13f, 12.7f, 14.3f, 14f, 16f, 14f); curveTo(17.7f, 14f, 19f, 12.7f, 19f, 11f)
+            moveTo(19f, 11f); lineTo(19f, 14.5f)
+        }
+    }
+
+    /** Left-aligned text lines. RTL mirrors. Source: `Icons.AutoMirrored.Filled.FormatAlignLeft`. */
+    val AlignLeft = nextPageIcon("AlignLeft", autoMirror = true) {
+        strokePath {
+            moveTo(4f, 6f); lineTo(20f, 6f)
+            moveTo(4f, 10f); lineTo(14f, 10f)
+            moveTo(4f, 14f); lineTo(20f, 14f)
+            moveTo(4f, 18f); lineTo(14f, 18f)
+        }
+    }
+
+    /** Center-aligned text lines. Source: `Icons.Default.FormatAlignCenter`. */
+    val AlignCenter = nextPageIcon("AlignCenter") {
+        strokePath {
+            moveTo(4f, 6f); lineTo(20f, 6f)
+            moveTo(7f, 10f); lineTo(17f, 10f)
+            moveTo(4f, 14f); lineTo(20f, 14f)
+            moveTo(7f, 18f); lineTo(17f, 18f)
+        }
+    }
+
+    /** Right-aligned text lines. RTL mirrors. Source: `Icons.AutoMirrored.Filled.FormatAlignRight`. */
+    val AlignRight = nextPageIcon("AlignRight", autoMirror = true) {
+        strokePath {
+            moveTo(4f, 6f); lineTo(20f, 6f)
+            moveTo(10f, 10f); lineTo(20f, 10f)
+            moveTo(4f, 14f); lineTo(20f, 14f)
+            moveTo(10f, 18f); lineTo(20f, 18f)
+        }
+    }
+
+    /** Justified text lines. Source: `Icons.Default.FormatAlignJustify`. */
+    val AlignJustify = nextPageIcon("AlignJustify") {
+        strokePath {
+            moveTo(4f, 6f); lineTo(20f, 6f)
+            moveTo(4f, 10f); lineTo(20f, 10f)
+            moveTo(4f, 14f); lineTo(20f, 14f)
+            moveTo(4f, 18f); lineTo(20f, 18f)
+        }
+    }
+
+    /** Left chevron arrow. RTL mirrors. Source: `Icons.AutoMirrored.Filled.KeyboardArrowLeft`. */
+    val ArrowLeft = nextPageIcon("ArrowLeft", autoMirror = true) {
+        strokePath {
+            moveTo(15f, 6f); lineTo(9f, 12f); lineTo(15f, 18f)
+        }
+    }
+
+    /** Forward (right) arrow. RTL mirrors. Source: `Icons.AutoMirrored.Filled.ArrowForward`. */
+    val ArrowForward = nextPageIcon("ArrowForward", autoMirror = true) {
+        strokePath {
+            moveTo(4f, 12f); lineTo(19f, 12f)
+            moveTo(14f, 6f); lineTo(19f, 12f); lineTo(14f, 18f)
+        }
+    }
+
+    /** "A" with up arrow (font size). Source: `Icons.Default.TextIncrease`. */
+    val TextSize = nextPageIcon("TextSize") {
+        strokePath {
+            moveTo(5f, 20f); lineTo(10.5f, 5f); lineTo(16f, 20f)
+            moveTo(7.7f, 15f); lineTo(13.3f, 15f)
+            moveTo(19.5f, 4f); lineTo(19.5f, 12f)
+            moveTo(16.5f, 7f); lineTo(19.5f, 4f); lineTo(22.5f, 7f)
+        }
+    }
+
+    /** Bullet list with dots. RTL mirrors. Source: `Icons.AutoMirrored.Filled.Toc`. */
+    val ListBullets = nextPageIcon("ListBullets", autoMirror = true) {
+        strokePath {
+            moveTo(4.6f, 7f); arcTo(0.9f, 0.9f, 0f, true, true, 6.4f, 7f); arcTo(0.9f, 0.9f, 0f, true, true, 4.6f, 7f)
+            moveTo(9f, 7f); lineTo(20f, 7f)
+            moveTo(4.6f, 12f); arcTo(0.9f, 0.9f, 0f, true, true, 6.4f, 12f); arcTo(0.9f, 0.9f, 0f, true, true, 4.6f, 12f)
+            moveTo(9f, 12f); lineTo(20f, 12f)
+            moveTo(4.6f, 17f); arcTo(0.9f, 0.9f, 0f, true, true, 6.4f, 17f); arcTo(0.9f, 0.9f, 0f, true, true, 4.6f, 17f)
+            moveTo(9f, 17f); lineTo(20f, 17f)
+        }
+    }
+
+    /** Filled five-point star (rated). Family exception: filled path via [fillPath]. Source: `Icons.Filled.Star`. */
+    val Star = nextPageIcon("Star") {
+        fillPath {
+            moveTo(12f, 4f); lineTo(14.5f, 9.5f); lineTo(20.5f, 10.2f); lineTo(16f, 14.2f); lineTo(17.3f, 20f)
+            lineTo(12f, 17f); lineTo(6.7f, 20f); lineTo(8f, 14.2f); lineTo(3.5f, 10.2f); lineTo(9.5f, 9.5f); close()
+        }
+    }
+
+    /** Outlined five-point star (unrated). Source: `Icons.Outlined.Star`. */
+    val StarBorder = nextPageIcon("StarBorder") {
+        strokePath {
+            moveTo(12f, 4f); lineTo(14.5f, 9.5f); lineTo(20.5f, 10.2f); lineTo(16f, 14.2f); lineTo(17.3f, 20f)
+            lineTo(12f, 17f); lineTo(6.7f, 20f); lineTo(8f, 14.2f); lineTo(3.5f, 10.2f); lineTo(9.5f, 9.5f)
+            lineTo(12f, 4f)
+        }
+    }
+
+    /** Phone with rotation arrows. Source: `Icons.Default.ScreenRotation`. */
+    val ScreenRotation = nextPageIcon("ScreenRotation") {
+        strokePath {
+            moveTo(7f, 5f); lineTo(17f, 5f); lineTo(17f, 19f); lineTo(7f, 19f); lineTo(7f, 5f)
+            moveTo(19f, 8f); curveTo(19f, 6f, 17.5f, 4.5f, 15.5f, 4.5f)
+            moveTo(19f, 8f); lineTo(18f, 5.8f)
+            moveTo(5f, 16f); curveTo(5f, 18f, 6.5f, 19.5f, 8.5f, 19.5f)
+            moveTo(5f, 16f); lineTo(6f, 18.2f)
         }
     }
 }

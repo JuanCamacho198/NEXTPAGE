@@ -163,5 +163,10 @@ data class UserBookRow(
     @SerialName("remote_file_id") val remoteFileId: String? = null,
     @SerialName("remote_path") val remotePath: String? = null,
     @SerialName("cover_object_path") val coverObjectPath: String? = null
-    ,@SerialName("protocol_version") val protocolVersion: Int = 1
+    ,
+    // Desktop persists protocol_version as NULL when the row was never written
+    // by the recovery protocol. Declare it nullable so kotlinx.serialization
+    // does NOT crash decoding "protocol_version":null (JsonDecodingException
+    // "Unexpected symbol 'n' in numeric literal"). Consumers default to 1.
+    @SerialName("protocol_version") val protocolVersion: Int? = null
 )

@@ -405,7 +405,7 @@ fun NextPageNavHost(
                     val currentRoute = currentBackStack?.destination?.route
                     if (currentRoute != null && currentRoute in bottomNavRoutes) {
                         val bottomNavItems = bottomNavDestinations.map { dest ->
-                            BottomNavItem(dest.route, dest.labelRes, dest.iconRes)
+                            BottomNavItem(dest.route, dest.labelRes, checkNotNull(dest.icon))
                         }
                         NextPageBottomNavBar(
                             destinations = bottomNavItems,

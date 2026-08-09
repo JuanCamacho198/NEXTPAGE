@@ -1,6 +1,5 @@
 package com.nextpage.ui.components.molecules
 
-import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,8 +10,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -21,9 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,7 +32,7 @@ import com.nextpage.presentation.theme.NextPageDimens
 data class BottomNavItem(
     val route: String,
     @StringRes val labelRes: Int,
-    @DrawableRes val iconRes: Int
+    val icon: ImageVector
 )
 
 /**
@@ -45,7 +43,7 @@ data class BottomNavItem(
  * `navigationBarsPadding` so it sits above the system nav bar.
  *
  * @param destinations Ordered list of tabs to render. Each item is a
- *   [BottomNavItem] with `route`, `labelRes`, and `iconRes`.
+ *   [BottomNavItem] with `route`, `labelRes`, and `icon`.
  * @param currentRoute Currently active route, or `null` if no tab is
  *   active. Matched against each `dest.route` for the active state.
  * @param onTabSelected Invoked with the selected tab's `route` when
@@ -54,7 +52,7 @@ data class BottomNavItem(
  *
  * **Visual**: 64dp tall, `SpaceEvenly` layout, 20dp horizontal
  *   padding, `NextPageColors.surface` background. Each tab shows an
- *   icon (height `NextPageDimens.iconNavBar`) + 4dp gap + a
+ *   icon (size `NextPageDimens.iconNavBar`) + 4dp gap + a
  *   12sp medium-weight label.
  * **Behavior**: tap a tab → [onTabSelected] with its `route`. No
  *   internal state. Designed to be wired with the navigation graph's
@@ -95,12 +93,10 @@ fun NextPageBottomNavBar(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        painter = painterResource(id = dest.iconRes),
+                        imageVector = dest.icon,
                         contentDescription = stringResource(id = dest.labelRes),
                         tint = iconTint,
-                        modifier = Modifier
-                            .height(NextPageDimens.iconNavBar)
-                            .width(IntrinsicSize.Min)
+                        modifier = Modifier.size(NextPageDimens.iconNavBar)
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))

@@ -388,4 +388,172 @@ object NextPageIcons {
             moveTo(8.5f, 16f); lineTo(12f, 19.5f); lineTo(15.5f, 16f)
         }
     }
+
+    // ── PR2b-1 sweep constants (Settings area) ──
+
+    /** Monitor and phone (settings devices). Source: `Icons.Outlined.Devices` / `Icons.Outlined.DevicesOther`. */
+    val Devices = nextPageIcon("Devices") {
+        strokePath {
+            moveTo(4f, 5f); lineTo(16f, 5f); lineTo(16f, 13f); lineTo(4f, 13f); lineTo(4f, 5f)
+            moveTo(10f, 13f); lineTo(10f, 17f)
+            moveTo(7f, 17f); lineTo(13f, 17f)
+            moveTo(18f, 7f); lineTo(20f, 7f); lineTo(20f, 19f); lineTo(18f, 19f); lineTo(18f, 7f)
+        }
+    }
+
+    /** Crescent moon. Source: `Icons.Outlined.DarkMode`. */
+    val DarkMode = nextPageIcon("DarkMode") {
+        strokePath {
+            moveTo(16f, 4f); curveTo(9f, 5.5f, 4.5f, 10.5f, 5f, 16f)
+            curveTo(5.5f, 21f, 10f, 23f, 14.5f, 22f)
+            curveTo(12.5f, 20.5f, 11.5f, 18f, 11.5f, 15f)
+            curveTo(11.5f, 11f, 13.5f, 7f, 16f, 4f)
+        }
+    }
+
+    /** Sun with rays. Source: `Icons.Outlined.LightMode`. */
+    val LightMode = nextPageIcon("LightMode") {
+        strokePath {
+            moveTo(8.5f, 12f); arcTo(3.5f, 3.5f, 0f, true, true, 15.5f, 12f); arcTo(3.5f, 3.5f, 0f, true, true, 8.5f, 12f)
+            moveTo(12f, 4.5f); lineTo(12f, 7f)
+            moveTo(12f, 17f); lineTo(12f, 19.5f)
+            moveTo(4.5f, 12f); lineTo(7f, 12f)
+            moveTo(17f, 12f); lineTo(19.5f, 12f)
+        }
+    }
+
+    /** Brightness auto — sun inside a ring. Source: `Icons.Outlined.SettingsBrightness`. */
+    val BrightnessAuto = nextPageIcon("BrightnessAuto") {
+        strokePath {
+            moveTo(4.5f, 12f); arcTo(7.5f, 7.5f, 0f, true, true, 19.5f, 12f); arcTo(7.5f, 7.5f, 0f, true, true, 4.5f, 12f)
+            moveTo(5f, 5f); lineTo(6.8f, 6.8f)
+            moveTo(19f, 5f); lineTo(17.2f, 6.8f)
+            moveTo(19f, 19f); lineTo(17.2f, 17.2f)
+            moveTo(5f, 19f); lineTo(6.8f, 17.2f)
+        }
+    }
+
+    /** Globe with meridians. Source: `Icons.Outlined.Language`. */
+    val Language = nextPageIcon("Language") {
+        strokePath {
+            moveTo(4f, 12f); arcTo(8f, 8f, 0f, true, true, 20f, 12f); arcTo(8f, 8f, 0f, true, true, 4f, 12f)
+            moveTo(5f, 12f); curveTo(5f, 16f, 19f, 16f, 19f, 12f); curveTo(19f, 8f, 5f, 8f, 5f, 12f)
+            moveTo(12f, 4f); lineTo(12f, 20f)
+        }
+    }
+
+    /** Storage cylinder. Source: `Icons.Outlined.Storage`. */
+    val Storage = nextPageIcon("Storage") {
+        strokePath {
+            moveTo(4f, 7f); curveTo(4f, 4.8f, 20f, 4.8f, 20f, 7f); curveTo(20f, 9.2f, 4f, 9.2f, 4f, 7f)
+            moveTo(4f, 7f); lineTo(4f, 17f)
+            moveTo(20f, 7f); lineTo(20f, 17f)
+            moveTo(4f, 17f); curveTo(4f, 19.2f, 20f, 19.2f, 20f, 17f)
+        }
+    }
+
+    /** Info circle with exclamation. Source: `Icons.Outlined.Info`. */
+    val Info = nextPageIcon("Info") {
+        strokePath {
+            moveTo(4f, 12f); arcTo(8f, 8f, 0f, true, true, 20f, 12f); arcTo(8f, 8f, 0f, true, true, 4f, 12f)
+            moveTo(12f, 11f); lineTo(12f, 17f)
+            moveTo(11.2f, 8f); arcTo(0.8f, 0.8f, 0f, true, true, 12.8f, 8f); arcTo(0.8f, 0.8f, 0f, true, true, 11.2f, 8f)
+        }
+    }
+
+    /** Bug with legs and antennae. Source: `Icons.Outlined.BugReport` / `Icons.Default.BugReport`. */
+    val BugReport = nextPageIcon("BugReport") {
+        strokePath {
+            moveTo(12f, 7f); curveTo(8f, 7f, 6.5f, 9.5f, 6.5f, 12f); curveTo(6.5f, 14.5f, 8f, 17f, 12f, 17f)
+            curveTo(16f, 17f, 17.5f, 14.5f, 17.5f, 12f); curveTo(17.5f, 9.5f, 16f, 7f, 12f, 7f)
+            moveTo(10f, 4.5f); lineTo(12f, 6.5f); lineTo(14f, 4.5f)
+            moveTo(6.5f, 10f); lineTo(4f, 9f)
+            moveTo(6.5f, 12f); lineTo(4f, 12f)
+            moveTo(6.5f, 14f); lineTo(4f, 15f)
+            moveTo(17.5f, 10f); lineTo(20f, 9f)
+            moveTo(17.5f, 12f); lineTo(20f, 12f)
+            moveTo(17.5f, 14f); lineTo(20f, 15f)
+        }
+    }
+
+    /** Sign-out — door with exit arrow. RTL mirrors. Source: `Icons.AutoMirrored.Outlined.ExitToApp`. */
+    val SignOut = nextPageIcon("SignOut", autoMirror = true) {
+        strokePath {
+            moveTo(5f, 4f); lineTo(13f, 4f); lineTo(13f, 20f); lineTo(5f, 20f); lineTo(5f, 4f)
+            moveTo(9f, 12f); lineTo(18f, 12f)
+            moveTo(15f, 9f); lineTo(18f, 12f); lineTo(15f, 15f)
+        }
+    }
+
+    /** Smartphone. Source: `Icons.Outlined.PhoneAndroid`. */
+    val Smartphone = nextPageIcon("Smartphone") {
+        strokePath {
+            moveTo(8f, 3f); lineTo(16f, 3f); lineTo(16f, 21f); lineTo(8f, 21f); lineTo(8f, 3f)
+            moveTo(8f, 7f); lineTo(16f, 7f)
+            moveTo(11f, 18.5f); lineTo(13f, 18.5f)
+        }
+    }
+
+    /** Desktop monitor with stand. Source: `Icons.Outlined.DesktopWindows`. */
+    val Monitor = nextPageIcon("Monitor") {
+        strokePath {
+            moveTo(4f, 5f); lineTo(20f, 5f); lineTo(20f, 15f); lineTo(4f, 15f); lineTo(4f, 5f)
+            moveTo(12f, 15f); lineTo(12f, 19f)
+            moveTo(8f, 19f); lineTo(16f, 19f)
+        }
+    }
+
+    /** Laptop — screen over base. Source: `Icons.Outlined.DesktopMac`. */
+    val Laptop = nextPageIcon("Laptop") {
+        strokePath {
+            moveTo(5f, 5f); lineTo(19f, 5f); lineTo(19f, 13f); lineTo(5f, 13f); lineTo(5f, 5f)
+            moveTo(3f, 17f); lineTo(21f, 17f); lineTo(19.5f, 13.5f); lineTo(4.5f, 13.5f)
+        }
+    }
+
+    /** Chevron (settings row affordance). RTL mirrors. Source: `Icons.Default.ChevronRight`. */
+    val ChevronRight = nextPageIcon("ChevronRight", autoMirror = true) {
+        strokePath {
+            moveTo(9f, 7f); curveTo(11f, 9f, 13f, 9f, 15f, 12f); curveTo(13f, 15f, 11f, 15f, 9f, 17f)
+        }
+    }
+
+    /** Back arrow. RTL mirrors. Source: `Icons.AutoMirrored.Filled.ArrowBack` / `Icons.AutoMirrored.Outlined.ArrowBack`. */
+    val ArrowBack = nextPageIcon("ArrowBack", autoMirror = true) {
+        strokePath {
+            moveTo(20f, 12f); lineTo(5f, 12f)
+            moveTo(10f, 6f); lineTo(5f, 12f); lineTo(10f, 18f)
+        }
+    }
+
+    /** Sharp right chevron (settings row affordance). RTL mirrors. Source: `Icons.AutoMirrored.Outlined.KeyboardArrowRight`. */
+    val ArrowRight = nextPageIcon("ArrowRight", autoMirror = true) {
+        strokePath {
+            moveTo(9f, 6f); lineTo(15f, 12f); lineTo(9f, 18f)
+        }
+    }
+
+    /** Sync — two chasing arrows. Source: `Icons.Default.Sync`. */
+    val Sync = nextPageIcon("Sync") {
+        strokePath {
+            moveTo(5.5f, 12f); curveTo(5.5f, 8.3f, 8.3f, 5.5f, 12f, 5.5f); curveTo(15.7f, 5.5f, 18.5f, 8.3f, 18.5f, 12f)
+            moveTo(18.5f, 12f); lineTo(16.2f, 10.6f)
+            moveTo(18.5f, 12f); curveTo(18.5f, 15.7f, 15.7f, 18.5f, 12f, 18.5f); curveTo(8.3f, 18.5f, 5.5f, 15.7f, 5.5f, 12f)
+            moveTo(5.5f, 12f); lineTo(7.8f, 13.4f)
+        }
+    }
+
+    /** Cloud with sync arrows. Source: `Icons.Outlined.CloudSync`. */
+    val CloudSync = nextPageIcon("CloudSync") {
+        strokePath {
+            moveTo(7f, 11.5f); curveTo(4.5f, 11.5f, 3.5f, 9.7f, 4.4f, 8.1f)
+            curveTo(5.1f, 6.9f, 6.6f, 6.4f, 7.8f, 6.8f)
+            curveTo(8.8f, 5f, 11.6f, 4.7f, 13f, 6.1f)
+            curveTo(15.4f, 6.4f, 17f, 8.1f, 17f, 10.1f)
+            moveTo(8.5f, 14.8f); curveTo(10f, 16.8f, 13.5f, 17f, 15.5f, 15.5f)
+            moveTo(15.5f, 15.5f); lineTo(13.5f, 15.6f)
+            moveTo(15.5f, 15.5f); curveTo(14f, 13.5f, 10.5f, 13.3f, 8.5f, 14.8f)
+            moveTo(8.5f, 14.8f); lineTo(10.5f, 14.7f)
+        }
+    }
 }

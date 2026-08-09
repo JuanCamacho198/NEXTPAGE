@@ -8,11 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.outlined.SettingsBrightness
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -26,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.ThemeMode
 import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
+import com.nextpage.ui.icons.NextPageIcons
 
 private data class ThemeOption(
     val mode: ThemeMode,
@@ -40,9 +36,9 @@ fun SettingsThemeScreen(
     onBack: () -> Unit
 ) {
     val options = listOf(
-        ThemeOption(ThemeMode.LIGHT, R.string.settings_theme_light, Icons.Outlined.LightMode),
-        ThemeOption(ThemeMode.DARK, R.string.settings_theme_dark, Icons.Outlined.DarkMode),
-        ThemeOption(ThemeMode.SYSTEM, R.string.settings_theme_system, Icons.Outlined.SettingsBrightness)
+        ThemeOption(ThemeMode.LIGHT, R.string.settings_theme_light, NextPageIcons.LightMode),
+        ThemeOption(ThemeMode.DARK, R.string.settings_theme_dark, NextPageIcons.DarkMode),
+        ThemeOption(ThemeMode.SYSTEM, R.string.settings_theme_system, NextPageIcons.BrightnessAuto)
     )
 
     NextPageSettingsSubPage(
@@ -79,7 +75,7 @@ fun SettingsThemeScreen(
                     )
                     if (selected) {
                         Icon(
-                            imageVector = Icons.Outlined.Check,
+                            imageVector = NextPageIcons.Check,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )

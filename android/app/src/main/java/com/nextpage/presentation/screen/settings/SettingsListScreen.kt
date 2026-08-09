@@ -14,17 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.LibraryBooks
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Palette
-import androidx.compose.material.icons.outlined.Devices
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,6 +38,7 @@ import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.ui.components.atoms.NextPageAvatar
 import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.components.molecules.NextPagePreferenceItem
+import com.nextpage.ui.icons.NextPageIcons
 
 private data class SettingsRow(
     val labelRes: Int,
@@ -98,12 +88,12 @@ fun SettingsListScreen(
             rows = listOf(
                 SettingsRow(
                     labelRes = R.string.settings_account_title,
-                    icon = Icons.Outlined.Person,
+                    icon = NextPageIcons.Person,
                     onClick = onNavigateToAccount
                 ),
                 SettingsRow(
                     labelRes = R.string.settings_devices_title,
-                    icon = Icons.Outlined.Devices,
+                    icon = NextPageIcons.Devices,
                     onClick = onNavigateToDevices
                 )
             )
@@ -113,19 +103,19 @@ fun SettingsListScreen(
             rows = listOf(
                 SettingsRow(
                     labelRes = R.string.settings_pref_theme,
-                    icon = Icons.Outlined.DarkMode,
+                    icon = NextPageIcons.DarkMode,
                     value = stringResource(currentThemeLabel),
                     onClick = onNavigateToTheme
                 ),
                 SettingsRow(
                     labelRes = R.string.settings_pref_language,
-                    icon = Icons.Outlined.Language,
+                    icon = NextPageIcons.Language,
                     value = stringResource(currentLanguageLabel),
                     onClick = onNavigateToLanguage
                 ),
                 SettingsRow(
                     labelRes = R.string.palette_section_title,
-                    icon = Icons.Outlined.Palette,
+                    icon = NextPageIcons.Palette,
                     onClick = onNavigateToPalette
                 )
             )
@@ -135,17 +125,17 @@ fun SettingsListScreen(
             rows = listOf(
                 SettingsRow(
                     labelRes = R.string.settings_data_storage_title,
-                    icon = Icons.Outlined.Storage,
+                    icon = NextPageIcons.Storage,
                     onClick = onNavigateToDataStorage
                 ),
                 SettingsRow(
                     labelRes = R.string.settings_pref_notifications,
-                    icon = Icons.Outlined.Notifications,
+                    icon = NextPageIcons.Notifications,
                     onClick = onNavigateToNotifications
                 ),
                 SettingsRow(
                     labelRes = R.string.settings_dictionary_label,
-                    icon = Icons.Outlined.LibraryBooks,
+                    icon = NextPageIcons.LibraryBooks,
                     onClick = onNavigateToDictionary
                 )
             )
@@ -155,7 +145,7 @@ fun SettingsListScreen(
             rows = listOf(
                 SettingsRow(
                     labelRes = R.string.settings_pref_about,
-                    icon = Icons.Outlined.Info,
+                    icon = NextPageIcons.Info,
                     onClick = onNavigateToAbout
                 )
             )
@@ -202,7 +192,7 @@ fun SettingsListScreen(
                     fontWeight = FontWeight.SemiBold
                 )
                 NextPagePreferenceItem(
-                    icon = Icons.Outlined.BugReport,
+                    icon = NextPageIcons.BugReport,
                     label = stringResource(R.string.debug_settings_log_viewer),
                     onClick = onNavigateToLogViewer
                 )

@@ -1,10 +1,9 @@
 package com.nextpage.ui.components.atoms
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.nextpage.R
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Convenience wrapper around [NextPageDialog] with
@@ -20,7 +19,7 @@ fun NextPageLogoutDialog(
     onDismiss: () -> Unit
 ) {
     NextPageDialog(
-        icon = Icons.AutoMirrored.Outlined.ExitToApp,
+        icon = NextPageIcons.SignOut,
         variant = NextPageDialogVariant.DESTRUCTIVE,
         title = stringResource(R.string.settings_logout_title),
         body = stringResource(R.string.settings_logout_message),

@@ -2,6 +2,7 @@ package com.nextpage.data.remote.supabase
 
 import com.nextpage.domain.model.Device
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
+import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.mapNotNull
  * Supports Realtime subscriptions for live device list updates.
  * Call [subscribeToChanges] to start listening, [unsubscribe] to stop.
  */
+@OptIn(SupabaseExperimental::class)
 class SupabaseDeviceDataSource {
 
     private val postgrest get() = SupabaseClientProvider.client.postgrest
@@ -89,6 +91,7 @@ class SupabaseDeviceDataSource {
         return postgrest["devices"]
             .upsert(device) {
                 onConflict = "user_id,hardware_id"
+                headers.append("Prefer", "return=representation")
             }
             .decodeSingle<Device>()
     }

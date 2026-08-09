@@ -1,5 +1,6 @@
 package com.nextpage.data.remote.supabase
 
+import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
@@ -21,6 +22,7 @@ import kotlinx.serialization.Serializable
  * Supports Realtime subscriptions for live cross-device progress sync.
  * Call [subscribeToUserChanges] to start listening, [unsubscribe] to stop.
  */
+@OptIn(SupabaseExperimental::class)
 class SupabaseProgressDataSource {
 
     private val postgrest get() = SupabaseClientProvider.client.postgrest
@@ -57,6 +59,7 @@ class SupabaseProgressDataSource {
         return postgrest["reading_progress"]
             .upsert(progress) {
                 onConflict = "user_id, book_id"
+                headers.append("Prefer", "return=representation")
             }
             .decodeSingle<ReadingProgressRow>()
     }
@@ -107,6 +110,7 @@ class SupabaseProgressDataSource {
         return postgrest["bookmarks"]
             .upsert(bookmark) {
                 onConflict = "user_id, book_id, cfi_location"
+                headers.append("Prefer", "return=representation")
             }
             .decodeSingle<BookmarkRow>()
     }
@@ -174,6 +178,7 @@ class SupabaseProgressDataSource {
         return postgrest["highlights"]
             .upsert(highlight) {
                 onConflict = "id"
+                headers.append("Prefer", "return=representation")
             }
             .decodeSingle<HighlightRow>()
     }
@@ -249,6 +254,7 @@ class SupabaseProgressDataSource {
         return             postgrest["tags"]
             .upsert(tag) {
                 onConflict = "user_id, name"
+                headers.append("Prefer", "return=representation")
             }
             .decodeSingle<TagRow>()
     }

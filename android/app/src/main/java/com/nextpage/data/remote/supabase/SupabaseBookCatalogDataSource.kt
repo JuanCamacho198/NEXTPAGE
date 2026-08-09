@@ -1,6 +1,7 @@
 package com.nextpage.data.remote.supabase
 
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
@@ -23,6 +24,7 @@ import kotlinx.serialization.Serializable
  * Supports Realtime subscriptions for live cross-device catalog sync.
  * Call [subscribeToCatalogChanges] to start listening, [unsubscribe] to stop.
  */
+@OptIn(SupabaseExperimental::class)
 class SupabaseBookCatalogDataSource(
     private val client: SupabaseClient = SupabaseClientProvider.client
 ) {
@@ -41,6 +43,7 @@ class SupabaseBookCatalogDataSource(
         return postgrest["user_books"]
             .upsert(row) {
                 onConflict = "user_id, id"
+                headers.append("Prefer", "return=representation")
             }
             .decodeSingle<UserBookRow>()
     }

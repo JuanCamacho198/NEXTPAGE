@@ -28,6 +28,10 @@ export interface AvailableDriveBook {
   ext: string;
   remoteName: string;
   displayTitle: string;
+  /** Author from the Supabase catalog metadata, when a user session exists. */
+  author?: string | null;
+  /** Remote cover URL from the Supabase catalog metadata, when available. */
+  coverUrl?: string | null;
 }
 
 // ─── Reactive State ───────────────────────────────────────────────────
@@ -66,10 +70,12 @@ let availableLoadPromise: Promise<void> | null = null;
 /**
  * List `NextPage/Books/` via Drive and expose the books absent from the local
  * library (SCN-01/SCN-02). Unparseable filenames (`_state.json`, no dot,
- * trailing dot) are dropped; `displayTitle` is the filename minus its
- * extension (no catalog lookup — spec-optional). Auth-class failures surface
- * on the global banner via `reportAuthError` and in `error` for the inline
- * banner. Never clears a previously loaded list on failure.
+ * trailing dot) are dropped. When a live user session exists the Supabase
+ * catalog is fetched once and used to enrich titles/author/cover (falling back
+ * to the filename minus its extension when absent); a catalog failure never
+ * breaks the Drive listing. Auth-class failures surface on the global banner
+ * via `reportAuthError` and in `error` for the inline banner. Never clears a
+ * previously loaded list on failure.
  */
 export async function loadAvailableFromDrive(): Promise<void> {
   if (availableLoadPromise) return availableLoadPromise;
@@ -77,6 +83,14 @@ export async function loadAvailableFromDrive(): Promise<void> {
   const promise = (async () => {
     try {
       const gdrive = new GDriveProvider();
+      const userId = authState.userId;
+      const catalogRows = userId
+        ? await new SupabaseBookCatalogSync(userId)
+            .fetchCatalog()
+            .catch(() => [] as SupabaseUserBookRow[])
+        : [];
+      const catalogByBookId = new Map(catalogRows.map((r) => [r.id, r]));
+
       const [remoteNames, localBooks] = await Promise.all([
         gdrive.list(''),
         tauri.listLibraryBooks(),
@@ -87,11 +101,17 @@ export async function loadAvailableFromDrive(): Promise<void> {
         const parsed = parseCanonicalBookName(name);
         if (!parsed) continue; // sync-state / malformed names are not books
         if (localIds.has(parsed.bookId)) continue; // already local (SCN-02)
+        const meta = catalogByBookId.get(parsed.bookId);
         available.push({
           id: parsed.bookId,
           ext: parsed.ext,
           remoteName: name,
-          displayTitle: name.slice(0, name.lastIndexOf('.')),
+          displayTitle:
+            meta?.title && meta.title.trim().length > 0
+              ? meta.title
+              : name.slice(0, name.lastIndexOf('.')),
+          author: meta?.author ?? null,
+          coverUrl: meta?.coverUrl ?? null,
         });
       }
       downloadableBooks = available;

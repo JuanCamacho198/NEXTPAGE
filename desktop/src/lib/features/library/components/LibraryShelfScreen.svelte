@@ -3,6 +3,7 @@
   import DropMenu from '$lib/shared/ui/navigation/DropMenu.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import SafeCover from './SafeCover.svelte';
+  import Toast from '$lib/shared/ui/feedback/Toast.svelte';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import {
@@ -33,6 +34,7 @@
     onStatusChange?: (book: ShelfBook, status: string) => void;
     onViewDetails?: (book: ShelfBook) => void;
     onRemoveBook?: (book: ShelfBook) => void;
+    onDownloaded?: () => void;
   };
 
   let {
@@ -46,11 +48,13 @@
     onStatusChange,
     onViewDetails,
     onRemoveBook,
+    onDownloaded,
   }: Props = $props();
 
   // ── Downloadable catalog helpers ──
 
   let downloadErrorDismissed = $state(false);
+  let downloadSuccessVisible = $state(false);
 
   $effect(() => {
     // Reset dismiss banner when a new error appears
@@ -70,8 +74,17 @@
     try {
       await downloadBook(bookId);
     } catch {
-      // Error is captured in downloadableCatalog.error state
+      // Thrown failure — error is captured in downloadableCatalog.error state
+      return;
     }
+    // `downloadBook` also resolves on outcome errors (result.error) without
+    // throwing; the inline banner owns that path, so only succeed when the
+    // book was actually removed from the downloadable list.
+    if (downloadableCatalog.error || downloadableCatalog.books.some((b) => b.id === bookId)) {
+      return;
+    }
+    downloadSuccessVisible = true;
+    onDownloaded?.();
   }
 
   let searchQuery = $state('');
@@ -585,7 +598,7 @@
 
   {#if downloadableCatalog.books.length > 0}
     <section
-      class="rounded-(--radius-2xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(78,140,255,0.08),rgba(12,20,33,0.94))] p-4 shadow-(--shadow-section)"
+      class="mt-6 rounded-(--radius-2xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(78,140,255,0.08),rgba(12,20,33,0.94))] p-4 shadow-(--shadow-section)"
     >
       <header class="mb-3 flex items-center justify-between">
         <h2 class="text-sm font-semibold text-(--color-primary)">
@@ -623,15 +636,30 @@
               class="flex items-start gap-3 rounded-(--radius-xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-3 shadow-(--shadow-panel)"
             >
               <div
-                class="flex h-20 w-14 shrink-0 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] text-micro uppercase tracking-[0.16em] text-(--color-primary)"
+                class="h-20 w-14 shrink-0 overflow-hidden rounded-[18px] bg-(--color-surface-subtle)"
               >
-                {row.ext.toUpperCase()}
+                <SafeCover
+                  path={row.coverUrl ?? ''}
+                  alt={`Portada de ${row.displayTitle}`}
+                  className="h-full w-full object-cover"
+                >
+                  {#snippet fallback()}
+                    <div
+                      class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] text-micro uppercase tracking-[0.16em] text-(--color-primary)"
+                    >
+                      {row.ext.toUpperCase()}
+                    </div>
+                  {/snippet}
+                </SafeCover>
               </div>
 
               <div class="min-w-0 flex-1">
                 <h3 class="line-clamp-1 text-sm font-semibold text-(--color-primary)">
                   {row.displayTitle}
                 </h3>
+                <p class="mt-0.5 line-clamp-1 text-xs text-(--color-text-muted)">
+                  {row.author || t('shelf.unknownAuthor')}
+                </p>
                 <div class="mt-1 flex flex-wrap items-center gap-2">
                   <span
                     class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-2 py-0.5 text-micro uppercase tracking-[0.08em] text-(--color-text-muted)"
@@ -666,4 +694,11 @@
       </ul>
     </section>
   {/if}
+
+  <Toast
+    type="success"
+    message={t('shelf.downloadSuccess')}
+    bind:visible={downloadSuccessVisible}
+    onDismiss={() => (downloadSuccessVisible = false)}
+  />
 </section>

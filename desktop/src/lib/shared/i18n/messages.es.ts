@@ -497,6 +497,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'shelf.availableDevices': 'Disponibles desde otros dispositivos',
   'shelf.downloading': 'Descargando...',
   'shelf.download': 'Descargar',
+  'shelf.downloadSuccess': 'Descarga completada',
   'shelf.fromDevice': 'Desde {{device}}',
   'shelf.unknownAuthor': 'Autor desconocido',
   'shelf.noCover': 'Sin portada',

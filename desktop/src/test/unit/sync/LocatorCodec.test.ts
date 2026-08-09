@@ -18,7 +18,7 @@
  * DOM-char-offset derivation is left to the caller (it needs the rendered
  * chapter DOM in the iframe); this codec is a pure serializer + resolver.
  */
-import { describe, expect, it, beforeAll } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   locatorFromCfi,
   cfiFromLocator,
@@ -38,7 +38,6 @@ const READING_ORDER = [
 
 // A precise CFI anchored in spine item 3. spineIndex is parsed to resolve href.
 const PRECISE_CFI = 'epubcfi(/6/3!/8/1:2,/8/1:8)';
-const APPENDIX_CFI = 'epubcfi(/6/4!/8/1:0,/8/1:5)';
 
 describe('LocatorCodec', () => {
   describe('locatorFromCfi', () => {

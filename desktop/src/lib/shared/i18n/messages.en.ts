@@ -535,6 +535,7 @@ export const messagesEn = {
   'shelf.availableDevices': 'Available from other devices',
   'shelf.downloading': 'Downloading...',
   'shelf.download': 'Download',
+  'shelf.downloadSuccess': 'Downloaded successfully',
   'shelf.fromDevice': 'From {{device}}',
   'shelf.unknownAuthor': 'Unknown author',
   'shelf.noCover': 'No cover',

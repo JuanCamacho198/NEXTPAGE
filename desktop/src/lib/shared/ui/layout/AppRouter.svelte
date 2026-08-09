@@ -154,6 +154,9 @@
                 onRemoveBook={(book: Parameters<typeof appState.handleHideBook>[0]) => {
                   appState.requestRemoveBook(book);
                 }}
+                onDownloaded={() => {
+                  void appState.loadLibrary();
+                }}
               />
             </div>
           {:else if appState.route === 'stats'}

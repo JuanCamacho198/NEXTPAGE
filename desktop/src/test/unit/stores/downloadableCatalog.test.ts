@@ -6,7 +6,7 @@
  * pre-existing Drive token (GDriveProvider's refresh fallback handles auth —
  * the store performs no manual `getDriveToken` check).
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mockGDriveList = vi.hoisted(() => vi.fn());
 const mockGDriveDownload = vi.hoisted(() => vi.fn());
@@ -14,6 +14,8 @@ const mockListLibraryBooks = vi.hoisted(() => vi.fn());
 const mockSaveBookFile = vi.hoisted(() => vi.fn());
 const mockCatalogUpsertBook = vi.hoisted(() => vi.fn());
 const mockCatalogFindByHash = vi.hoisted(() => vi.fn());
+const mockCatalogFetchCatalog = vi.hoisted(() => vi.fn());
+const mockAuthUserId = vi.hoisted(() => ({ value: null as string | null }));
 
 vi.mock('$lib/shared/services/storage/GDriveProvider', () => ({
   GDriveProvider: vi.fn(function () {
@@ -28,7 +30,11 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
 
 vi.mock('$lib/shared/sync/SupabaseBookCatalogSync', () => ({
   SupabaseBookCatalogSync: vi.fn(function () {
-    return { upsertBook: mockCatalogUpsertBook, findByHash: mockCatalogFindByHash };
+    return {
+      upsertBook: mockCatalogUpsertBook,
+      findByHash: mockCatalogFindByHash,
+      fetchCatalog: mockCatalogFetchCatalog,
+    };
   }),
 }));
 
@@ -42,7 +48,7 @@ vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
 vi.mock('$lib/stores/authState.svelte.ts', () => ({
   authState: {
     get userId(): string | null {
-      return null;
+      return mockAuthUserId.value;
     },
   },
 }));
@@ -57,6 +63,7 @@ import {
 describe('downloadableCatalog — loadAvailableFromDrive (REQ-01)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuthUserId.value = null;
     clearDownloadableBooks();
     downloadableCatalog.clearDownloadError();
     mockGDriveList.mockResolvedValue([]);
@@ -71,8 +78,22 @@ describe('downloadableCatalog — loadAvailableFromDrive (REQ-01)', () => {
 
     expect(mockGDriveList).toHaveBeenCalledWith('');
     expect(downloadableCatalog.books).toEqual([
-      { id: 'book-1', ext: 'epub', remoteName: 'book-1.epub', displayTitle: 'book-1' },
-      { id: 'book-3', ext: 'mobi', remoteName: 'book-3.mobi', displayTitle: 'book-3' },
+      {
+        id: 'book-1',
+        ext: 'epub',
+        remoteName: 'book-1.epub',
+        displayTitle: 'book-1',
+        author: null,
+        coverUrl: null,
+      },
+      {
+        id: 'book-3',
+        ext: 'mobi',
+        remoteName: 'book-3.mobi',
+        displayTitle: 'book-3',
+        author: null,
+        coverUrl: null,
+      },
     ]);
   });
 
@@ -88,7 +109,14 @@ describe('downloadableCatalog — loadAvailableFromDrive (REQ-01)', () => {
     await loadAvailableFromDrive();
 
     expect(downloadableCatalog.books).toEqual([
-      { id: 'book-1', ext: 'epub', remoteName: 'book-1.epub', displayTitle: 'book-1' },
+      {
+        id: 'book-1',
+        ext: 'epub',
+        remoteName: 'book-1.epub',
+        displayTitle: 'book-1',
+        author: null,
+        coverUrl: null,
+      },
     ]);
   });
 
@@ -102,9 +130,98 @@ describe('downloadableCatalog — loadAvailableFromDrive (REQ-01)', () => {
   });
 });
 
+describe('downloadableCatalog — catalog metadata enrichment (REQ-01)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuthUserId.value = 'user-123';
+    clearDownloadableBooks();
+    downloadableCatalog.clearDownloadError();
+    mockGDriveList.mockResolvedValue([]);
+    mockListLibraryBooks.mockResolvedValue([]);
+    mockCatalogFetchCatalog.mockResolvedValue([
+      {
+        id: 'book-1',
+        userId: 'user-123',
+        title: 'The Great Book',
+        author: 'Jane Doe',
+        format: 'epub',
+        filePath: null,
+        coverUrl: 'https://example.com/cover.jpg',
+        description: null,
+        totalPages: null,
+        sourceDevice: null,
+        importedAt: '',
+        updatedAt: '',
+      },
+    ]);
+  });
+
+  afterEach(() => {
+    mockAuthUserId.value = null;
+  });
+
+  it('uses catalog title/author/cover, falling back to filename otherwise', async () => {
+    mockGDriveList.mockResolvedValue(['book-1.epub', 'book-2.pdf']);
+    mockListLibraryBooks.mockResolvedValue([]);
+
+    await loadAvailableFromDrive();
+
+    expect(mockCatalogFetchCatalog).toHaveBeenCalledTimes(1);
+    expect(downloadableCatalog.books).toEqual([
+      {
+        id: 'book-1',
+        ext: 'epub',
+        remoteName: 'book-1.epub',
+        displayTitle: 'The Great Book',
+        author: 'Jane Doe',
+        coverUrl: 'https://example.com/cover.jpg',
+      },
+      {
+        id: 'book-2',
+        ext: 'pdf',
+        remoteName: 'book-2.pdf',
+        displayTitle: 'book-2',
+        author: null,
+        coverUrl: null,
+      },
+    ]);
+  });
+
+  it('skips the catalog lookup without a live user session', async () => {
+    mockAuthUserId.value = null;
+    mockGDriveList.mockResolvedValue(['book-1.epub']);
+    mockListLibraryBooks.mockResolvedValue([]);
+
+    await loadAvailableFromDrive();
+
+    expect(mockCatalogFetchCatalog).not.toHaveBeenCalled();
+  });
+
+  it('falls back to filename titles when the catalog fetch fails', async () => {
+    mockCatalogFetchCatalog.mockRejectedValue(new Error('catalog down'));
+    mockGDriveList.mockResolvedValue(['book-1.epub']);
+    mockListLibraryBooks.mockResolvedValue([]);
+
+    await loadAvailableFromDrive();
+
+    expect(downloadableCatalog.books).toEqual([
+      {
+        id: 'book-1',
+        ext: 'epub',
+        remoteName: 'book-1.epub',
+        displayTitle: 'book-1',
+        author: null,
+        coverUrl: null,
+      },
+    ]);
+    expect(downloadableCatalog.error).toBeNull();
+  });
+});
+
 describe('downloadableCatalog — downloadBook without a token (REQ-02, SCN-03)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuthUserId.value = null;
     clearDownloadableBooks();
     downloadableCatalog.clearDownloadError();
     mockGDriveList.mockResolvedValue(['Mi.Libro.PDF']);
@@ -114,7 +231,14 @@ describe('downloadableCatalog — downloadBook without a token (REQ-02, SCN-03)'
   it('downloads using the original Drive name and removes the book on success', async () => {
     await loadAvailableFromDrive();
     expect(downloadableCatalog.books).toEqual([
-      { id: 'Mi.Libro', ext: 'pdf', remoteName: 'Mi.Libro.PDF', displayTitle: 'Mi.Libro' },
+      {
+        id: 'Mi.Libro',
+        ext: 'pdf',
+        remoteName: 'Mi.Libro.PDF',
+        displayTitle: 'Mi.Libro',
+        author: null,
+        coverUrl: null,
+      },
     ]);
 
     mockGDriveDownload.mockResolvedValue(new Uint8Array([1, 2, 3, 4]));

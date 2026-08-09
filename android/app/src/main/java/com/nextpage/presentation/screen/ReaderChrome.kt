@@ -20,14 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Toc
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.TextIncrease
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +40,7 @@ import androidx.compose.ui.zIndex
 import com.nextpage.R
 import com.nextpage.debug.DebugPrefs
 import com.nextpage.presentation.viewmodel.ReaderUiState
+import com.nextpage.ui.icons.NextPageIcons
 
 // ── Reader Design Colors ──────────────────────────────────────────
 private val READER_BG = Color(0xFF0D1322)
@@ -171,7 +164,7 @@ fun ReaderHeader(
                 .background(BUTTON_BG)
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = NextPageIcons.ArrowBack,
                 contentDescription = stringResource(R.string.reader_back),
                 tint = HEADER_FG,
                 modifier = Modifier.size(20.dp)
@@ -210,14 +203,14 @@ fun ReaderHeader(
         ) {
             // Search
             HeaderActionButton(
-                icon = Icons.Default.Search,
+                icon = NextPageIcons.Search,
                 contentDescription = stringResource(R.string.search_label),
                 onClick = onToggleSearch
             )
 
             // aA Typography
             HeaderActionButton(
-                icon = Icons.Default.TextIncrease,
+                icon = NextPageIcons.TextSize,
                 contentDescription = stringResource(R.string.reader_typography),
                 onClick = onToggleSplitSettings
             )
@@ -225,7 +218,7 @@ fun ReaderHeader(
             // Index / TOC — hidden for books with no chapter list
             if (uiState.chapters.isNotEmpty()) {
                 HeaderActionButton(
-                    icon = Icons.AutoMirrored.Filled.Toc,
+                    icon = NextPageIcons.ListBullets,
                     contentDescription = stringResource(R.string.reader_toc),
                     onClick = onToggleToc
                 )
@@ -238,14 +231,14 @@ fun ReaderHeader(
             // selection overlay was already open. Both call sites now go
             // through safe state-only toggles.
             HeaderActionButton(
-                icon = Icons.Default.Create,
+                icon = NextPageIcons.Pencil,
                 contentDescription = stringResource(R.string.reader_highlights_button),
                 onClick = onToggleHighlights
             )
 
             // Bookmark
             HeaderActionButton(
-                icon = Icons.Default.BookmarkBorder,
+                icon = NextPageIcons.Bookmark,
                 contentDescription = stringResource(R.string.reader_add_bookmark),
                 onClick = onCreateBookmark
             )
@@ -254,7 +247,7 @@ fun ReaderHeader(
             // in release builds when the debug toggle is enabled in Settings.
             if (DebugPrefs.isEnabled(LocalContext.current)) {
                 HeaderActionButton(
-                    icon = Icons.Default.BugReport,
+                    icon = NextPageIcons.BugReport,
                     contentDescription = stringResource(R.string.debug_panel_title),
                     onClick = onToggleDebugPanel
                 )

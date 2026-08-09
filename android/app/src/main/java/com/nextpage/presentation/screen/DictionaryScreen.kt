@@ -16,10 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.LibraryBooks
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -45,6 +41,7 @@ import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageEmptyState
 import com.nextpage.ui.components.atoms.NextPageTextField
 import com.nextpage.ui.components.molecules.NextPageHeader
+import com.nextpage.ui.icons.NextPageIcons
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -108,7 +105,7 @@ fun DictionaryScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     NextPageEmptyState(
-                        icon = Icons.Outlined.LibraryBooks,
+                        icon = NextPageIcons.LibraryBooks,
                         title = stringResource(R.string.dictionary_empty),
                         subtitle = stringResource(R.string.dictionary_empty_subtitle)
                     )
@@ -166,7 +163,7 @@ fun DictionaryScreen(
                                     modifier = Modifier.size(40.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Outlined.Delete,
+                                        imageVector = NextPageIcons.Trash,
                                         contentDescription = stringResource(R.string.dictionary_delete_confirm),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(20.dp)
@@ -188,7 +185,7 @@ fun DictionaryScreen(
             containerColor = MaterialTheme.colorScheme.primary
         ) {
             Icon(
-                imageVector = Icons.Default.Add,
+                imageVector = NextPageIcons.Add,
                 contentDescription = stringResource(R.string.dictionary_add_word),
                 tint = MaterialTheme.colorScheme.onPrimary
             )

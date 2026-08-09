@@ -10,10 +10,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nextpage.domain.model.Book
+import com.nextpage.ui.components.molecules.AddBookCard
 
 /**
- * List view: ONE shared [LazyColumn] where the Disponibles section (header)
- * is the first item and scrolls away with the list (D7). No pinned Column.
+ * List view: ONE shared [LazyColumn] where the empty placeholder (when the
+ * shelf is empty) renders first, then local books, then the Disponibles
+ * section (footer, AFTER local books). The add-book card is always last.
+ * No pinned Column.
  */
 @Composable
 fun BookList(
@@ -21,11 +24,13 @@ fun BookList(
     readingMinutesByBook: Map<String, Long>,
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
+    onImportClick: () -> Unit,
     onEdit: (Book) -> Unit,
     onMarkCompleted: (Book) -> Unit,
     onMarkPlanToRead: (Book) -> Unit,
     onShare: (Book) -> Unit,
-    headerContent: (@Composable () -> Unit)? = null
+    emptyContent: (@Composable () -> Unit)? = null,
+    footerContent: (@Composable () -> Unit)? = null
 ) {
     LazyColumn(
         modifier = Modifier
@@ -34,9 +39,9 @@ fun BookList(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
-        if (headerContent != null) {
-            item(key = "downloadable_header", contentType = { "header" }) {
-                headerContent()
+        if (books.isEmpty() && emptyContent != null) {
+            item(key = "empty_state", contentType = { "empty" }) {
+                emptyContent()
             }
         }
         items(books, key = { it.id }) { book ->
@@ -50,6 +55,14 @@ fun BookList(
                 onMarkPlanToRead = { onMarkPlanToRead(book) },
                 onShare = { onShare(book) }
             )
+        }
+        if (footerContent != null) {
+            item(key = "downloadable_footer", contentType = { "footer" }) {
+                footerContent()
+            }
+        }
+        item(key = "add_book", contentType = { "add" }) {
+            AddBookCard(onImportClick = onImportClick)
         }
     }
 }

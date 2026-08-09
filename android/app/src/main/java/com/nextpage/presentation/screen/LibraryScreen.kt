@@ -147,63 +147,63 @@ fun LibraryScreen(
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (uiState.books.isEmpty()) {
-            EmptyLibrary(
-                contentPadding = contentPadding,
-                isImporting = uiState.isImporting,
-                onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }
-            )
-        } else {
-            PullToRefreshBox(
-                isRefreshing = uiState.isRefreshing,
-                onRefresh = { viewModel.onPullToRefresh() },
-                modifier = Modifier.fillMaxSize()
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.onPullToRefresh() },
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(contentPadding)
-                ) {
-                    LibraryToolbar(
-                        showSearch = uiState.showSearch,
-                        onSearchToggle = { viewModel.onToggleSearch() },
-                        searchQuery = uiState.searchQuery,
-                        onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
-                        onFilterToggle = { viewModel.onToggleFilterSheet() },
-                        statusFilter = uiState.statusFilter,
-                        onStatusFilterChanged = { viewModel.onStatusFilterChanged(it) },
-                        sortBy = uiState.sortBy,
-                        onSortByChanged = { viewModel.onSortByChanged(it) },
-                        isGridView = uiState.isGridView,
-                        onViewToggle = { viewModel.onToggleView() }
-                    )
+                LibraryToolbar(
+                    showSearch = uiState.showSearch,
+                    onSearchToggle = { viewModel.onToggleSearch() },
+                    searchQuery = uiState.searchQuery,
+                    onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
+                    onFilterToggle = { viewModel.onToggleFilterSheet() },
+                    statusFilter = uiState.statusFilter,
+                    onStatusFilterChanged = { viewModel.onStatusFilterChanged(it) },
+                    sortBy = uiState.sortBy,
+                    onSortByChanged = { viewModel.onSortByChanged(it) },
+                    isGridView = uiState.isGridView,
+                    onViewToggle = { viewModel.onToggleView() }
+                )
 
-                    val firstDownloadError by viewModel.firstDownloadError.collectAsState()
+                val firstDownloadError by viewModel.firstDownloadError.collectAsState()
 
-                    // D7: Disponibles section lives INSIDE the shared scroll
-                    // container as the first (full-span) item so it scrolls away.
-                    BookGridSection(
-                        books = searchedBooks,
-                        readingMinutesByBook = uiState.readingMinutesByBook,
-                        isGridView = uiState.isGridView,
-                        onBookSelected = onBookSelected,
-                        onBookLongPress = { book -> viewModel.requestDeleteBook(book) },
-                        onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) },
-                        onEdit = { book -> viewModel.requestEditBook(book) },
-                        onMarkCompleted = { book -> viewModel.onMenuMarkCompleted(book) },
-                        onMarkPlanToRead = { book -> viewModel.onMenuMarkPlanToRead(book) },
-                        onShare = { book -> viewModel.onMenuShare(book) },
-                        headerContent = {
-                            DownloadableBooksSection(
-                                books = uiState.downloadableBooks,
-                                downloadStateMap = uiState.downloadState,
-                                firstError = firstDownloadError,
-                                onDownload = { bookId -> viewModel.downloadBook(bookId) },
-                                onDismissError = { viewModel.dismissDownloadError(it) }
+                BookGridSection(
+                    books = searchedBooks,
+                    readingMinutesByBook = uiState.readingMinutesByBook,
+                    isGridView = uiState.isGridView,
+                    onBookSelected = onBookSelected,
+                    onBookLongPress = { book -> viewModel.requestDeleteBook(book) },
+                    onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) },
+                    onEdit = { book -> viewModel.requestEditBook(book) },
+                    onMarkCompleted = { book -> viewModel.onMenuMarkCompleted(book) },
+                    onMarkPlanToRead = { book -> viewModel.onMenuMarkPlanToRead(book) },
+                    onShare = { book -> viewModel.onMenuShare(book) },
+                    emptyContent = if (uiState.books.isEmpty()) {
+                        {
+                            EmptyShelfPlaceholder(
+                                isImporting = uiState.isImporting,
+                                onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }
                             )
                         }
-                    )
-                }
+                    } else {
+                        null
+                    },
+                    footerContent = {
+                        DownloadableBooksSection(
+                            books = uiState.downloadableBooks,
+                            downloadStateMap = uiState.downloadState,
+                            firstError = firstDownloadError,
+                            onDownload = { bookId -> viewModel.downloadBook(bookId) },
+                            onDismissError = { viewModel.dismissDownloadError(it) }
+                        )
+                    }
+                )
             }
         }
 
@@ -273,7 +273,9 @@ private fun LibrarySyncStatus(viewModel: LibraryViewModel) {
 
 /**
  * Section showing books available from other devices.
- * Appears above the main book grid when there are downloadable books.
+ * Rendered as a footer AFTER local books (or after the empty placeholder when
+ * the shelf is empty) inside the shared scroll container. Hidden when there
+ * are no downloadable books.
  */
 @Composable
 private fun DownloadableBooksSection(
@@ -447,32 +449,31 @@ private fun DownloadableBookCard(
     }
 }
 
+/**
+ * Inline empty-shelf placeholder rendered INSIDE the shared scroll container
+ * (as the first item of the grid/list) when the local shelf is empty. Full
+ * width and centered; no own scroll container — pull-to-refresh stays active.
+ */
 @Composable
-private fun EmptyLibrary(
-    contentPadding: PaddingValues,
+private fun EmptyShelfPlaceholder(
     isImporting: Boolean,
     onImportClick: () -> Unit
 ) {
-    Box(
+    NextPageEmptyState(
+        icon = Icons.AutoMirrored.Outlined.LibraryBooks,
+        title = stringResource(R.string.library_empty),
+        subtitle = stringResource(R.string.library_import_formats),
         modifier = Modifier
-            .fillMaxSize()
-            .padding(contentPadding),
-        contentAlignment = Alignment.Center
-    ) {
-        NextPageEmptyState(
-            icon = Icons.AutoMirrored.Outlined.LibraryBooks,
-            title = stringResource(R.string.library_empty),
-            subtitle = stringResource(R.string.library_import_formats),
-            modifier = Modifier.padding(NextPageDimens.spacingLg),
-            action = {
-                NextPageButton(
-                    onClick = onImportClick,
-                    enabled = !isImporting,
-                    variant = NextPageButtonVariant.TEXT
-                ) {
-                    Text(text = stringResource(R.string.library_import_book))
-                }
+            .fillMaxWidth()
+            .padding(vertical = NextPageDimens.spacingLg),
+        action = {
+            NextPageButton(
+                onClick = onImportClick,
+                enabled = !isImporting,
+                variant = NextPageButtonVariant.TEXT
+            ) {
+                Text(text = stringResource(R.string.library_import_book))
             }
-        )
-    }
+        }
+    )
 }

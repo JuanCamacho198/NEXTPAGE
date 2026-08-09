@@ -26,7 +26,8 @@ fun BookGridSection(
     onMarkCompleted: (Book) -> Unit,
     onMarkPlanToRead: (Book) -> Unit,
     onShare: (Book) -> Unit,
-    headerContent: (@Composable () -> Unit)? = null
+    emptyContent: (@Composable () -> Unit)? = null,
+    footerContent: (@Composable () -> Unit)? = null
 ) {
     if (isGridView) {
         BookGrid(
@@ -39,7 +40,8 @@ fun BookGridSection(
             onMarkCompleted = onMarkCompleted,
             onMarkPlanToRead = onMarkPlanToRead,
             onShare = onShare,
-            headerContent = headerContent
+            emptyContent = emptyContent,
+            footerContent = footerContent
         )
     } else {
         BookList(
@@ -47,19 +49,22 @@ fun BookGridSection(
             readingMinutesByBook = readingMinutesByBook,
             onBookSelected = onBookSelected,
             onBookLongPress = onBookLongPress,
+            onImportClick = onImportClick,
             onEdit = onEdit,
             onMarkCompleted = onMarkCompleted,
             onMarkPlanToRead = onMarkPlanToRead,
             onShare = onShare,
-            headerContent = headerContent
+            emptyContent = emptyContent,
+            footerContent = footerContent
         )
     }
 }
 
 /**
- * Grid view: ONE shared [LazyVerticalStaggeredGrid] where the Disponibles
- * section (header) is the full-span first item and scrolls away with the grid
- * (D7). No pinned Column.
+ * Grid view: ONE shared [LazyVerticalStaggeredGrid] where the empty placeholder
+ * (when the shelf is empty) and the Disponibles section (footer, AFTER local
+ * books) are full-span items that scroll away with the grid. The add-book card
+ * is always the last item. No pinned Column.
  */
 @Composable
 fun BookGrid(
@@ -72,7 +77,8 @@ fun BookGrid(
     onMarkCompleted: (Book) -> Unit,
     onMarkPlanToRead: (Book) -> Unit,
     onShare: (Book) -> Unit,
-    headerContent: (@Composable () -> Unit)? = null
+    emptyContent: (@Composable () -> Unit)? = null,
+    footerContent: (@Composable () -> Unit)? = null
 ) {
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(2),
@@ -83,9 +89,9 @@ fun BookGrid(
         verticalItemSpacing = 16.dp,
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
-        if (headerContent != null) {
-            item(span = StaggeredGridItemSpan.FullLine, key = "downloadable_header", contentType = { "header" }) {
-                headerContent()
+        if (books.isEmpty() && emptyContent != null) {
+            item(span = StaggeredGridItemSpan.FullLine, key = "empty_state", contentType = { "empty" }) {
+                emptyContent()
             }
         }
         items(books, key = { it.id }, contentType = { "book" }) { book ->
@@ -99,6 +105,11 @@ fun BookGrid(
                 onMarkPlanToRead = { onMarkPlanToRead(book) },
                 onShare = { onShare(book) }
             )
+        }
+        if (footerContent != null) {
+            item(span = StaggeredGridItemSpan.FullLine, key = "downloadable_footer", contentType = { "footer" }) {
+                footerContent()
+            }
         }
         item(key = "add_book", contentType = { "add" }) {
             AddBookCard(onImportClick = onImportClick)

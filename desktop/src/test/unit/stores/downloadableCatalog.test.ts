@@ -16,6 +16,7 @@ const mockCatalogUpsertBook = vi.hoisted(() => vi.fn());
 const mockCatalogFindByHash = vi.hoisted(() => vi.fn());
 const mockCatalogFetchCatalog = vi.hoisted(() => vi.fn());
 const mockAuthUserId = vi.hoisted(() => ({ value: null as string | null }));
+const mockExtractEpubMetadata = vi.hoisted(() => vi.fn());
 
 vi.mock('$lib/shared/services/storage/GDriveProvider', () => ({
   GDriveProvider: vi.fn(function () {
@@ -26,6 +27,10 @@ vi.mock('$lib/shared/services/storage/GDriveProvider', () => ({
 vi.mock('$lib/shared/api/tauriClient', () => ({
   listLibraryBooks: mockListLibraryBooks,
   saveBookFile: mockSaveBookFile,
+}));
+
+vi.mock('$lib/shared/services/epubImportMetadata', () => ({
+  extractEpubMetadataFromBytes: mockExtractEpubMetadata,
 }));
 
 vi.mock('$lib/shared/sync/SupabaseBookCatalogSync', () => ({
@@ -256,6 +261,106 @@ describe('downloadableCatalog — downloadBook without a token (REQ-02, SCN-03)'
     });
     // No live session → markImported is a no-op (no catalog upsert).
     expect(mockCatalogUpsertBook).not.toHaveBeenCalled();
+    expect(downloadableCatalog.books).toEqual([]);
+  });
+});
+
+describe('downloadableCatalog — real EPUB title extraction on download', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuthUserId.value = null;
+    clearDownloadableBooks();
+    downloadableCatalog.clearDownloadError();
+    mockGDriveList.mockResolvedValue([]);
+    mockListLibraryBooks.mockResolvedValue([]);
+  });
+
+  const UUID = '9f3a7d1e-6b2c-4a8f-b5c2-0d7e1f2a3b4c';
+
+  it('extracts the real title/author from the EPUB bytes when the catalog title is a UUID', async () => {
+    mockGDriveList.mockResolvedValue([`${UUID}.epub`]);
+    await loadAvailableFromDrive();
+    expect(downloadableCatalog.books).toEqual([
+      {
+        id: UUID,
+        ext: 'epub',
+        remoteName: `${UUID}.epub`,
+        displayTitle: UUID,
+        author: null,
+        coverUrl: null,
+      },
+    ]);
+
+    const bytes = new Uint8Array([9, 8, 7]);
+    mockGDriveDownload.mockResolvedValue(bytes);
+    mockSaveBookFile.mockResolvedValue(undefined);
+    mockExtractEpubMetadata.mockResolvedValue({
+      title: 'Don Quijote',
+      author: 'Cervantes',
+      subject: null,
+      subjects: [],
+    });
+
+    await downloadBook(UUID);
+
+    expect(mockExtractEpubMetadata).toHaveBeenCalledWith(bytes);
+    expect(mockSaveBookFile).toHaveBeenCalledWith(UUID, [9, 8, 7], {
+      title: 'Don Quijote',
+      author: 'Cervantes',
+      format: 'epub',
+    });
+    expect(downloadableCatalog.books).toEqual([]);
+  });
+
+  it('keeps the catalog title for a non-UUID title (no extraction)', async () => {
+    mockAuthUserId.value = 'user-123';
+    mockCatalogFetchCatalog.mockResolvedValue([
+      {
+        id: 'book-1',
+        userId: 'user-123',
+        title: 'The Great Book',
+        author: 'Jane Doe',
+        format: 'epub',
+        filePath: null,
+        coverUrl: null,
+        description: null,
+        totalPages: null,
+        sourceDevice: null,
+        importedAt: '',
+        updatedAt: '',
+      },
+    ]);
+    mockGDriveList.mockResolvedValue(['book-1.epub']);
+    await loadAvailableFromDrive();
+
+    mockGDriveDownload.mockResolvedValue(new Uint8Array([1, 2, 3]));
+    mockSaveBookFile.mockResolvedValue(undefined);
+
+    await downloadBook('book-1');
+
+    expect(mockExtractEpubMetadata).not.toHaveBeenCalled();
+    expect(mockSaveBookFile).toHaveBeenCalledWith('book-1', [1, 2, 3], {
+      title: 'The Great Book',
+      author: '',
+      format: 'epub',
+    });
+  });
+
+  it('falls back to the catalog title when EPUB extraction fails', async () => {
+    mockGDriveList.mockResolvedValue([`${UUID}.epub`]);
+    await loadAvailableFromDrive();
+
+    mockGDriveDownload.mockResolvedValue(new Uint8Array([5, 6]));
+    mockSaveBookFile.mockResolvedValue(undefined);
+    mockExtractEpubMetadata.mockRejectedValue(new Error('epub parse boom'));
+
+    await downloadBook(UUID);
+
+    expect(mockSaveBookFile).toHaveBeenCalledWith(UUID, [5, 6], {
+      title: UUID,
+      author: '',
+      format: 'epub',
+    });
     expect(downloadableCatalog.books).toEqual([]);
   });
 });

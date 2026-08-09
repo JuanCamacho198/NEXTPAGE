@@ -18,6 +18,7 @@ import { parseCanonicalBookName } from '$lib/shared/protocol/DriveCatalogContrac
 import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
 import { authState } from '$lib/stores/authState.svelte';
 import { importRecoveredBook } from '$lib/shared/recovery/desktopRecoveryImport';
+import { extractEpubMetadataFromBytes } from '$lib/shared/services/epubImportMetadata';
 import * as tauri from '$lib/shared/api/tauriClient';
 
 // ─── Types ─────────────────────────────────────────────────────────────
@@ -129,6 +130,11 @@ export async function loadAvailableFromDrive(): Promise<void> {
 
 // ─── Download Orchestration (REQ-02) ─────────────────────────────────
 
+/** Books whose catalog row was never enriched carry the UUID as title. */
+const UUID_LIKE_TITLE_RE = /^[0-9a-f-]{36}$/i;
+const isFallbackTitle = (title: string, id: string): boolean =>
+  title === id || UUID_LIKE_TITLE_RE.test(title);
+
 /**
  * Download a Drive book from the shelf section.
  *
@@ -177,7 +183,23 @@ export async function downloadBook(bookId: string): Promise<void> {
       // book.remoteName is a non-null string (AvailableDriveBook) — the
       // synthetic row's optional remoteName would widen to `string | null`.
       download: () => gdrive.download(book.remoteName),
-      persist: (id, bytes, meta) => tauri.saveBookFile(id, Array.from(bytes), meta),
+      persist: async (id, bytes, meta) => {
+        // When the catalog row only carried the UUID as its title (book was
+        // originally imported without extracted metadata), pull the REAL
+        // title/author from the EPUB bytes before persisting. Falls back to
+        // the catalog title on any parse failure — never breaks the download.
+        let { title, author } = meta;
+        if (book.ext === 'epub' && isFallbackTitle(title, id)) {
+          try {
+            const real = await extractEpubMetadataFromBytes(bytes);
+            if (real.title) title = real.title;
+            if (real.author) author = real.author;
+          } catch {
+            // keep catalog title
+          }
+        }
+        await tauri.saveBookFile(id, Array.from(bytes), { title, author, format: meta.format });
+      },
       // Catalog upsert only when a live user session exists (no auth → no-op).
       markImported: row.userId
         ? (id, version) =>

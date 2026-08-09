@@ -65,13 +65,14 @@ export function canonicalBookName(bookId: string, format: string): string {
 }
 /**
  * Inverse of `canonicalBookName`: parse a Drive filename into `{ bookId, ext }`.
- * Returns null for sync-state files (`_state.json`), empty names, names without
- * a dot, and trailing-dot names. Splits on the LAST dot (bookIds are UUIDs
- * without dots, so the last dot is always the extension separator) and
- * lowercases the extension.
+ * Returns null for sync-state files (`_state.json`, bare `state.json`), empty
+ * names, names without a dot, trailing-dot names, and any `.json` file (the
+ * Books folder only carries book binaries + JSON state). Splits on the LAST dot
+ * (bookIds are UUIDs without dots, so the last dot is always the extension
+ * separator) and lowercases the extension.
  */
 export function parseCanonicalBookName(fileName: string): { bookId: string; ext: string } | null {
-  if (!fileName || fileName.endsWith('_state.json')) return null;
+  if (!fileName || fileName.endsWith('_state.json') || fileName.endsWith('.json')) return null;
   const idx = fileName.lastIndexOf('.');
   if (idx <= 0 || idx === fileName.length - 1) return null;
   return { bookId: fileName.slice(0, idx), ext: fileName.slice(idx + 1).toLowerCase() };

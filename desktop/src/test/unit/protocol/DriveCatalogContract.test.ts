@@ -10,6 +10,8 @@ describe('Drive catalog contract', () => {
   });
   it('returns null for state files, empty, dotless, and trailing-dot names', () => {
     expect(parseCanonicalBookName('uuid_state.json')).toBeNull();
+    expect(parseCanonicalBookName('state.json')).toBeNull();
+    expect(parseCanonicalBookName('metadata.json')).toBeNull();
     expect(parseCanonicalBookName('')).toBeNull();
     expect(parseCanonicalBookName('uuid')).toBeNull();
     expect(parseCanonicalBookName('uuid.')).toBeNull();

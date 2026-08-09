@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -39,6 +37,7 @@ import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.ui.components.atoms.CoverThumbnail
 import com.nextpage.ui.components.molecules.BookContextMenu
+import com.nextpage.ui.icons.NextPageIcons
 
 private const val READING_TARGET_MINUTES = 300L
 private const val SURFACE_ALPHA = 0.3f
@@ -116,7 +115,7 @@ fun BookListCard(
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
+                        imageVector = NextPageIcons.MoreVert,
                         contentDescription = stringResource(R.string.context_menu_more),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
@@ -187,7 +186,7 @@ fun BookGridCard(
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
+                        imageVector = NextPageIcons.MoreVert,
                         contentDescription = stringResource(R.string.context_menu_more),
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp)

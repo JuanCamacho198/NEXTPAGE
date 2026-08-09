@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +24,7 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.nextpage.R
 import com.nextpage.debug.DebugLog
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Book cover image atom with three render branches: loading spinner,
@@ -112,7 +111,7 @@ fun NextPageBookCover(
             }
             else -> {
                 Icon(
-                    imageVector = Icons.Outlined.Book,
+                    imageVector = NextPageIcons.Book,
                     contentDescription = contentDescription,
                     modifier = Modifier.size(40.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant

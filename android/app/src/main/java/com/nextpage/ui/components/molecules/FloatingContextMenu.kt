@@ -5,13 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Label
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
@@ -22,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import com.nextpage.R
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Horizontal pill of icon actions shown when the user taps an
@@ -84,7 +78,7 @@ fun FloatingContextMenu(
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         SelectionMenuIcon(
-            icon = Icons.Default.Palette,
+            icon = NextPageIcons.Palette,
             contentDescription = stringResource(R.string.context_menu_color),
             tint = parseColorHex(selectedColor),
             onClick = onColorSelected
@@ -93,21 +87,21 @@ fun FloatingContextMenu(
         MenuVerticalDivider(dividerColor)
 
         SelectionMenuIcon(
-            icon = Icons.Default.ContentCopy,
+            icon = NextPageIcons.Copy,
             contentDescription = stringResource(R.string.text_selection_copy),
             tint = contentColor,
             onClick = onCopy
         )
 
         SelectionMenuIcon(
-            icon = Icons.AutoMirrored.Filled.Label,
+            icon = NextPageIcons.Tag,
             contentDescription = stringResource(R.string.context_menu_tag),
             tint = contentColor,
             onClick = onAddTag
         )
 
         SelectionMenuIcon(
-            icon = Icons.Default.EditNote,
+            icon = NextPageIcons.Pencil,
             contentDescription = stringResource(R.string.context_menu_annotate),
             tint = contentColor,
             onClick = onAnnotate
@@ -116,14 +110,14 @@ fun FloatingContextMenu(
         MenuVerticalDivider(dividerColor)
 
         SelectionMenuIcon(
-            icon = Icons.Default.Share,
+            icon = NextPageIcons.Share,
             contentDescription = stringResource(R.string.context_menu_share),
             tint = contentColor,
             onClick = onShare
         )
 
         SelectionMenuIcon(
-            icon = Icons.Default.Delete,
+            icon = NextPageIcons.Trash,
             contentDescription = stringResource(R.string.context_menu_delete),
             tint = MaterialTheme.colorScheme.error,
             onClick = onDelete

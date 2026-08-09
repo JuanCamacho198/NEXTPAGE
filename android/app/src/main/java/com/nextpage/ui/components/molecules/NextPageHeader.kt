@@ -6,9 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageAvatar
 import com.nextpage.ui.components.atoms.NextPageIconButton
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Top app header: avatar (or initials) + title on the left, optional
@@ -96,7 +94,7 @@ fun NextPageHeader(
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             onSearchClick?.let {
                 NextPageIconButton(
-                    icon = Icons.Outlined.Search,
+                    icon = NextPageIcons.Search,
                     contentDescription = stringResource(R.string.search_label),
                     onClick = it,
                     size = 40.dp
@@ -104,7 +102,7 @@ fun NextPageHeader(
             }
             onNotificationsClick?.let {
                 NextPageIconButton(
-                    icon = Icons.Outlined.Notifications,
+                    icon = NextPageIcons.Notifications,
                     contentDescription = stringResource(R.string.notifications_title),
                     onClick = it,
                     size = 40.dp

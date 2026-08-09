@@ -25,10 +25,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -58,6 +54,7 @@ import com.nextpage.R
 import com.nextpage.data.remote.supabase.UserBookRow
 import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.presentation.screen.library.BookGridSection
+import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.screen.library.FilterSheetContent
 import com.nextpage.presentation.screen.library.LibraryDialogs
 import com.nextpage.presentation.screen.library.LibraryToolbar
@@ -309,7 +306,7 @@ private fun DownloadableBooksSection(
                 modifier = Modifier.size(24.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Close,
+                    imageVector = NextPageIcons.Close,
                     contentDescription = stringResource(R.string.action_dismiss),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(16.dp)
@@ -433,7 +430,7 @@ private fun DownloadableBookCard(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.CloudDownload,
+                            imageVector = NextPageIcons.CloudDownload,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
@@ -460,7 +457,7 @@ private fun EmptyShelfPlaceholder(
     onImportClick: () -> Unit
 ) {
     NextPageEmptyState(
-        icon = Icons.AutoMirrored.Outlined.LibraryBooks,
+        icon = NextPageIcons.LibraryBooks,
         title = stringResource(R.string.library_empty),
         subtitle = stringResource(R.string.library_import_formats),
         modifier = Modifier

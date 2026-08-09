@@ -8,16 +8,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ShowChart
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Bookmark
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.UploadFile
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -47,6 +37,7 @@ import com.nextpage.ui.components.atoms.NextPageEmptyState
 import com.nextpage.ui.components.atoms.NextPageTextField
 import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.components.molecules.NotificationSheet
+import com.nextpage.ui.icons.NextPageIcons
 
 @Composable
 fun HomeScreen(
@@ -102,7 +93,7 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         NextPageEmptyState(
-                            icon = Icons.Outlined.Search,
+                            icon = NextPageIcons.Search,
                             title = stringResource(R.string.library_search_no_results),
                             subtitle = stringResource(R.string.library_search_empty_subtitle)
                         )
@@ -232,19 +223,19 @@ private fun TodaySummarySection(viewModel: HomeViewModel) {
             horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
         ) {
             StatCard(
-                icon = Icons.Outlined.Schedule,
+                icon = NextPageIcons.Clock,
                 value = "${uiState.minutesReadToday}",
                 label = stringResource(R.string.home_minutes),
                 modifier = Modifier.weight(1f)
             )
             StatCard(
-                icon = Icons.AutoMirrored.Outlined.ShowChart,
+                icon = NextPageIcons.ChartLine,
                 value = "${uiState.sessionsToday}",
                 label = stringResource(R.string.home_sessions),
                 modifier = Modifier.weight(1f)
             )
             StatCard(
-                icon = Icons.Outlined.BarChart,
+                icon = NextPageIcons.ChartBar,
                 value = stringResource(R.string.format_percent, (uiState.dailyProgressPercent * 100).toInt()),
                 label = stringResource(R.string.home_progress),
                 modifier = Modifier.weight(1f)
@@ -437,7 +428,7 @@ private fun MyBookshelfSection(
             }
         } else {
             NextPageEmptyState(
-                icon = Icons.Outlined.Bookmark,
+                icon = NextPageIcons.Bookmark,
                 title = stringResource(R.string.home_bookshelf_empty_title),
                 subtitle = stringResource(R.string.home_bookshelf_empty_subtitle),
                 modifier = Modifier
@@ -507,13 +498,13 @@ private fun QuickAccessSection(
                 horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
             ) {
                 QuickAccessButton(
-                    icon = Icons.Outlined.UploadFile,
+                    icon = NextPageIcons.Upload,
                     label = stringResource(R.string.home_action_import_book),
                     onClick = onImportBook,
                     modifier = Modifier.weight(1f)
                 )
                 QuickAccessButton(
-                    icon = Icons.Outlined.Bookmark,
+                    icon = NextPageIcons.Bookmark,
                     label = stringResource(R.string.home_highlights),
                     onClick = onHighlights,
                     modifier = Modifier.weight(1f)
@@ -524,13 +515,13 @@ private fun QuickAccessSection(
                 horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
             ) {
                 QuickAccessButton(
-                    icon = Icons.Outlined.BarChart,
+                    icon = NextPageIcons.ChartBar,
                     label = stringResource(R.string.home_action_stats),
                     onClick = onStatistics,
                     modifier = Modifier.weight(1f)
                 )
                 QuickAccessButton(
-                    icon = Icons.Outlined.Settings,
+                    icon = NextPageIcons.Settings,
                     label = stringResource(R.string.home_settings),
                     onClick = onSettings,
                     modifier = Modifier.weight(1f)
@@ -568,7 +559,7 @@ private fun SearchBarSection(
             variant = NextPageButtonVariant.ICON
         ) {
             Icon(
-                imageVector = Icons.Outlined.Close,
+                imageVector = NextPageIcons.Close,
                 contentDescription = stringResource(R.string.home_close_search)
             )
         }

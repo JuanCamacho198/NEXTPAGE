@@ -2,8 +2,6 @@ package com.nextpage.ui.components.molecules
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +14,7 @@ import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageBookCover
 import com.nextpage.ui.components.atoms.NextPageProgressBar
 import com.nextpage.ui.components.atoms.NextPageTypography
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Card representing a single book in the library list/grid. Shows a
@@ -107,7 +106,7 @@ fun BookCard(
             modifier = Modifier.align(Alignment.TopEnd)
         ) {
             Icon(
-                imageVector = Icons.Filled.MoreVert,
+                imageVector = NextPageIcons.MoreVert,
                 contentDescription = stringResource(R.string.book_card_options),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )

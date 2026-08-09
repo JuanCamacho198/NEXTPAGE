@@ -202,10 +202,10 @@ object NextPageIcons {
     /** Grid of four rounded squares (library view toggle). Source: `Icons.Outlined.GridView`. */
     val GridView = nextPageIcon("GridView") {
         strokePath {
-            moveTo(5f, 5f); lineTo(10f, 5f); lineTo(10f, 10f); lineTo(5f, 10f)
-            moveTo(14f, 5f); lineTo(19f, 5f); lineTo(19f, 10f); lineTo(14f, 10f)
-            moveTo(5f, 14f); lineTo(10f, 14f); lineTo(10f, 19f); lineTo(5f, 19f)
-            moveTo(14f, 14f); lineTo(19f, 14f); lineTo(19f, 19f); lineTo(14f, 19f)
+            moveTo(5f, 5f); lineTo(10f, 5f); lineTo(10f, 10f); lineTo(5f, 10f); lineTo(5f, 5f)
+            moveTo(14f, 5f); lineTo(19f, 5f); lineTo(19f, 10f); lineTo(14f, 10f); lineTo(14f, 5f)
+            moveTo(5f, 14f); lineTo(10f, 14f); lineTo(10f, 19f); lineTo(5f, 19f); lineTo(5f, 14f)
+            moveTo(14f, 14f); lineTo(19f, 14f); lineTo(19f, 19f); lineTo(14f, 19f); lineTo(14f, 14f)
         }
     }
 
@@ -230,8 +230,8 @@ object NextPageIcons {
         }
     }
 
-    /** Ascending trend line. Source: `Icons.AutoMirrored.Outlined.ShowChart`. */
-    val ChartLine = nextPageIcon("ChartLine") {
+    /** Ascending trend line. RTL mirrors. Source: `Icons.AutoMirrored.Outlined.ShowChart`. */
+    val ChartLine = nextPageIcon("ChartLine", autoMirror = true) {
         strokePath {
             moveTo(3f, 18f); lineTo(9f, 12f); lineTo(13f, 15f); lineTo(21f, 7f)
             moveTo(3f, 21f); lineTo(21f, 21f)
@@ -378,8 +378,8 @@ object NextPageIcons {
         }
     }
 
-    /** Stacked books. Source: `Icons.AutoMirrored.Outlined.LibraryBooks`. */
-    val LibraryBooks = nextPageIcon("LibraryBooks") {
+    /** Stacked books. RTL mirrors. Source: `Icons.AutoMirrored.Outlined.LibraryBooks`. */
+    val LibraryBooks = nextPageIcon("LibraryBooks", autoMirror = true) {
         strokePath {
             moveTo(4f, 4f); lineTo(20f, 4f)
             moveTo(4f, 12f); lineTo(20f, 12f)

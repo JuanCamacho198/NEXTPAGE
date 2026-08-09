@@ -7,7 +7,7 @@ import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Convenience wrapper around [NextPageDialog] with
- * [NextPageDialogVariant.DESTRUCTIVE] and an [ExitToApp] icon,
+ * [NextPageDialogVariant.DESTRUCTIVE] and a [NextPageIcons.SignOut] icon,
  * pre-configured for logout confirmation.
  *
  * @param onConfirm Invoked when the user confirms logout.

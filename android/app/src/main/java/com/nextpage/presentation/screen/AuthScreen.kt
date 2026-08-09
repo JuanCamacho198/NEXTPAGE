@@ -4,10 +4,9 @@ import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,9 +16,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -35,6 +36,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.nextpage.BuildConfig
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.AuthFailureKind
 import com.nextpage.presentation.viewmodel.AuthUiState
 import com.nextpage.presentation.viewmodel.AuthViewModel
@@ -123,7 +125,7 @@ fun AuthScreen(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
+                    .background(NextPageTheme.colors.welcomeBrandBlue),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -216,6 +218,10 @@ fun AuthScreen(
                 enabled = buttonEnabled,
                 variant = NextPageButtonVariant.OUTLINED,
                 shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = NextPageTheme.colors.welcomeBrandBlue
+                ),
+                border = BorderStroke(1.dp, NextPageTheme.colors.welcomeBrandBlue),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (uiState.isLoading) {
@@ -225,9 +231,9 @@ fun AuthScreen(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Filled.AccountCircle,
+                        painter = painterResource(R.drawable.ic_google_g),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = Color.Unspecified,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))

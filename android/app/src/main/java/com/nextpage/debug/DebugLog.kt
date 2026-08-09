@@ -91,7 +91,11 @@ object DebugLog {
             Level.ERROR -> Log.ERROR
             Level.SUCCESS -> Log.INFO
         }
-        Log.println(priority, tag, message)
+        // android.util.Log is not mocked in JVM unit tests; swallow the failure so
+        // the in-memory event log still works there (tests assert on events, not logcat).
+        runCatching {
+            Log.println(priority, tag, message)
+        }
 
         // Fire-and-forget disk write — never blocks the calling thread
         scope?.launch {

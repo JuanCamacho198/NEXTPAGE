@@ -161,7 +161,7 @@ class SupabaseBookCatalogSync(
             outboxDao.deleteById(item.id)
         } catch (e: Exception) {
             DebugLog.error(TAG, "processBookItem: FAILED for book $bookId (${item.operation}) — ${e.javaClass.simpleName}: ${e.message}")
-            Log.w(TAG, "processBookItem: failed for book $bookId", e)
+            runCatching { Log.w(TAG, "processBookItem: failed for book $bookId", e) }
             outboxDao.incrementRetryCount(item.id, e.message ?: "Unknown error")
             outboxDao.pruneFailedItems(3)
         }
@@ -187,7 +187,7 @@ class SupabaseBookCatalogSync(
             dataSource.listUserBooks(userId)
         } catch (e: Exception) {
             DebugLog.error(TAG, "reconcileLocalBooks: failed to list remote catalog — ${e.javaClass.simpleName}: ${e.message}")
-            Log.w(TAG, "reconcileLocalBooks: failed to list remote catalog, aborting reconcile", e)
+            runCatching { Log.w(TAG, "reconcileLocalBooks: failed to list remote catalog, aborting reconcile", e) }
             return
         }
         val remoteIds = remoteBooks.map { it.id }.toSet()
@@ -204,7 +204,7 @@ class SupabaseBookCatalogSync(
                     // A single book must never crash the reconcile pass; the
                     // outbox/reconcile will retry it later.
                     DebugLog.error(TAG, "reconcileLocalBooks: FAILED to push '${book.title}' (${book.id}) — ${e.javaClass.simpleName}: ${e.message}")
-                    Log.w(TAG, "reconcileLocalBooks: failed to push book ${book.id} (${book.title})", e)
+                    runCatching { Log.w(TAG, "reconcileLocalBooks: failed to push book ${book.id} (${book.title})", e) }
                 }
             }
         }
@@ -492,7 +492,8 @@ class SupabaseBookCatalogSync(
             )
             SupabaseClientProvider.client.storage.from("book-covers").publicUrl(path)
         } catch (e: Exception) {
-            Log.w(TAG, "Cover upload failed for book $bookId (${SyncErrorCodes.COVER_FAILED})", e)
+            DebugLog.warn(TAG, "Cover upload failed for book $bookId (${SyncErrorCodes.COVER_FAILED}): ${e.message}")
+            runCatching { Log.w(TAG, "Cover upload failed for book $bookId (${SyncErrorCodes.COVER_FAILED})", e) }
             null
         }
     }

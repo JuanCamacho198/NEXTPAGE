@@ -202,10 +202,10 @@ object NextPageIcons {
     /** Grid of four rounded squares (library view toggle). Source: `Icons.Outlined.GridView`. */
     val GridView = nextPageIcon("GridView") {
         strokePath {
-            moveTo(5f, 5f); lineTo(10f, 5f); lineTo(10f, 10f); lineTo(5f, 10f)
-            moveTo(14f, 5f); lineTo(19f, 5f); lineTo(19f, 10f); lineTo(14f, 10f)
-            moveTo(5f, 14f); lineTo(10f, 14f); lineTo(10f, 19f); lineTo(5f, 19f)
-            moveTo(14f, 14f); lineTo(19f, 14f); lineTo(19f, 19f); lineTo(14f, 19f)
+            moveTo(5f, 5f); lineTo(10f, 5f); lineTo(10f, 10f); lineTo(5f, 10f); lineTo(5f, 5f)
+            moveTo(14f, 5f); lineTo(19f, 5f); lineTo(19f, 10f); lineTo(14f, 10f); lineTo(14f, 5f)
+            moveTo(5f, 14f); lineTo(10f, 14f); lineTo(10f, 19f); lineTo(5f, 19f); lineTo(5f, 14f)
+            moveTo(14f, 14f); lineTo(19f, 14f); lineTo(19f, 19f); lineTo(14f, 19f); lineTo(14f, 14f)
         }
     }
 
@@ -230,8 +230,8 @@ object NextPageIcons {
         }
     }
 
-    /** Ascending trend line. Source: `Icons.AutoMirrored.Outlined.ShowChart`. */
-    val ChartLine = nextPageIcon("ChartLine") {
+    /** Ascending trend line. RTL mirrors. Source: `Icons.AutoMirrored.Outlined.ShowChart`. */
+    val ChartLine = nextPageIcon("ChartLine", autoMirror = true) {
         strokePath {
             moveTo(3f, 18f); lineTo(9f, 12f); lineTo(13f, 15f); lineTo(21f, 7f)
             moveTo(3f, 21f); lineTo(21f, 21f)
@@ -378,8 +378,8 @@ object NextPageIcons {
         }
     }
 
-    /** Stacked books. Source: `Icons.AutoMirrored.Outlined.LibraryBooks`. */
-    val LibraryBooks = nextPageIcon("LibraryBooks") {
+    /** Stacked books. RTL mirrors. Source: `Icons.AutoMirrored.Outlined.LibraryBooks`. */
+    val LibraryBooks = nextPageIcon("LibraryBooks", autoMirror = true) {
         strokePath {
             moveTo(4f, 4f); lineTo(20f, 4f)
             moveTo(4f, 12f); lineTo(20f, 12f)
@@ -684,6 +684,40 @@ object NextPageIcons {
             moveTo(19f, 8f); lineTo(18f, 5.8f)
             moveTo(5f, 16f); curveTo(5f, 18f, 6.5f, 19.5f, 8.5f, 19.5f)
             moveTo(5f, 16f); lineTo(6f, 18.2f)
+        }
+    }
+
+    // ── PR2c sweep constants (remaining screens) ──
+
+    /** Flame (statistics streak). Source: `Icons.Outlined.LocalFireDepartment`. */
+    val Flame = nextPageIcon("Flame") {
+        strokePath {
+            moveTo(12f, 3f); curveTo(15.5f, 7.5f, 18.5f, 10f, 18.5f, 14.5f); curveTo(18.5f, 18.5f, 15.6f, 21f, 12f, 21f)
+            curveTo(8.4f, 21f, 5.5f, 18.5f, 5.5f, 14.5f); curveTo(5.5f, 10.5f, 8.8f, 7.5f, 12f, 3f)
+            moveTo(12f, 21f); curveTo(9.8f, 21f, 8f, 19.5f, 8f, 17.3f); curveTo(8f, 15.3f, 9.5f, 13.8f, 11.5f, 12.8f)
+            curveTo(11.8f, 15f, 13f, 16.5f, 14.8f, 16.5f); curveTo(14f, 19f, 13.2f, 21f, 12f, 21f)
+        }
+    }
+
+    /** Chevron up. Source: `Icons.Filled.ExpandLess`. */
+    val ChevronUp = nextPageIcon("ChevronUp") {
+        strokePath {
+            moveTo(6f, 15f); lineTo(12f, 9f); lineTo(18f, 15f)
+        }
+    }
+
+    /** Chevron down. Source: `Icons.Filled.ExpandMore`. */
+    val ChevronDown = nextPageIcon("ChevronDown") {
+        strokePath {
+            moveTo(6f, 9f); lineTo(12f, 15f); lineTo(18f, 9f)
+        }
+    }
+
+    /** Envelope. Source: `Icons.Filled.Email`. */
+    val Email = nextPageIcon("Email") {
+        strokePath {
+            moveTo(4f, 6f); lineTo(20f, 6f); lineTo(20f, 18f); lineTo(4f, 18f); lineTo(4f, 6f)
+            moveTo(4f, 6f); lineTo(12f, 13f); lineTo(20f, 6f)
         }
     }
 }

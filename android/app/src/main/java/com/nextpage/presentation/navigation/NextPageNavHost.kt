@@ -24,8 +24,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -79,6 +77,7 @@ import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.debug.DebugPanel
 import com.nextpage.presentation.debug.DebugViewModel
 import com.nextpage.debug.DebugPrefs
+import com.nextpage.ui.icons.NextPageIcons
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -791,7 +790,7 @@ fun NextPageNavHost(
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer
             ) {
                 Icon(
-                    imageVector = Icons.Default.BugReport,
+                    imageVector = NextPageIcons.BugReport,
                     contentDescription = "Debug"
                 )
             }

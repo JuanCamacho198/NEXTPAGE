@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,6 +22,7 @@ import androidx.core.os.LocaleListCompat
 import com.nextpage.R
 import com.nextpage.data.session.AppLanguagePreferences
 import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
+import com.nextpage.ui.icons.NextPageIcons
 
 private data class LanguageOption(
     val code: String?,
@@ -83,7 +82,7 @@ fun SettingsLanguageScreen(
                     )
                     if (selected) {
                         Icon(
-                            imageVector = Icons.Outlined.Check,
+                            imageVector = NextPageIcons.Check,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )

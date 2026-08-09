@@ -18,11 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Book
-import androidx.compose.material.icons.outlined.LocalFireDepartment
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -51,6 +46,7 @@ import com.nextpage.ui.components.atoms.NextPageErrorState
 import com.nextpage.ui.components.atoms.NextPageLoadingIndicator
 import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.components.molecules.NextPageSectionHeader
+import com.nextpage.ui.icons.NextPageIcons
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -147,21 +143,21 @@ private fun SummarySection(uiState: StatisticsUiState) {
             horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
         ) {
             SummaryCard(
-                icon = Icons.Outlined.Schedule,
+                icon = NextPageIcons.Clock,
                 value = "${uiState.totalMinutesRead}",
                 label = stringResource(R.string.statistics_total_reading_time),
                 unit = stringResource(R.string.statistics_minutes),
                 modifier = Modifier.weight(1f)
             )
             SummaryCard(
-                icon = Icons.Outlined.LocalFireDepartment,
+                icon = NextPageIcons.Flame,
                 value = "${uiState.currentStreak}",
                 label = stringResource(R.string.statistics_current_streak),
                 unit = stringResource(R.string.statistics_days),
                 modifier = Modifier.weight(1f)
             )
             SummaryCard(
-                icon = Icons.Outlined.Book,
+                icon = NextPageIcons.Book,
                 value = "${uiState.booksRead}",
                 label = stringResource(R.string.statistics_books_read),
                 unit = "",
@@ -337,7 +333,7 @@ private fun FavoriteGenresSection(genres: List<String>) {
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
         if (genres.isEmpty()) {
             NextPageEmptyState(
-                icon = androidx.compose.material.icons.Icons.Outlined.BarChart,
+                icon = NextPageIcons.ChartBar,
                 title = stringResource(R.string.statistics_no_genres),
                 subtitle = stringResource(R.string.statistics_no_genres_subtitle)
             )

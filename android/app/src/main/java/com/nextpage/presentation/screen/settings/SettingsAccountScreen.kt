@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,6 +30,7 @@ import com.nextpage.domain.model.AuthSession
 import com.nextpage.ui.components.atoms.NextPageAvatar
 import com.nextpage.ui.components.atoms.NextPageLogoutDialog
 import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
+import com.nextpage.ui.icons.NextPageIcons
 
 @Composable
 fun SettingsAccountScreen(
@@ -133,7 +132,7 @@ fun SettingsAccountScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
+                    imageVector = NextPageIcons.SignOut,
                     contentDescription = stringResource(R.string.settings_logout),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(24.dp)

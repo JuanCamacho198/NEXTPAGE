@@ -36,76 +36,86 @@ class GoogleDriveStorageRemoteDataSource(
 ) : StorageSyncRemoteDataSource {
 
     override suspend fun upload(path: String, bytes: ByteArray) {
-        runCatching {
-            val physicalName = path.substringAfterLast('/')
-            val folder = ensureBooksFolder()
+        // Google Drive REST calls are BLOCKING (non-suspend). They must run on
+        // Dispatchers.IO — calling them on Main throws NetworkOnMainThreadException,
+        // which is exactly what the Log Viewer showed (GOOGLE_DRIVE_UPLOAD_FAILED,
+        // status=null, NetworkOnMainThreadException).
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val physicalName = path.substringAfterLast('/')
+                val folder = ensureBooksFolder()
 
-            val existing = findFileByName(folderId = folder, name = physicalName)
+                val existing = findFileByName(folderId = folder, name = physicalName)
 
-            val fileMetadata = File().apply {
-                name = physicalName
-                parents = listOf(folder)
+                val fileMetadata = File().apply {
+                    name = physicalName
+                    parents = listOf(folder)
+                }
+                val mediaContent = ByteArrayContent("application/octet-stream", bytes)
+
+                if (existing != null) {
+                    driveService.files().update(existing.id, fileMetadata, mediaContent).execute()
+                } else {
+                    driveService.files().create(fileMetadata, mediaContent)
+                        .setFields("name")
+                        .execute()
+                }
+            }.getOrElse { throwable ->
+                throw mapDriveError(throwable, "GOOGLE_DRIVE_UPLOAD_FAILED", "Failed to upload to Google Drive: $path")
             }
-            val mediaContent = ByteArrayContent("application/octet-stream", bytes)
-
-            if (existing != null) {
-                driveService.files().update(existing.id, fileMetadata, mediaContent).execute()
-            } else {
-                driveService.files().create(fileMetadata, mediaContent)
-                    .setFields("name")
-                    .execute()
-            }
-        }.getOrElse { throwable ->
-            throw mapDriveError(throwable, "GOOGLE_DRIVE_UPLOAD_FAILED", "Failed to upload to Google Drive: $path")
         }
     }
 
     override suspend fun download(path: String): ByteArray {
-        return runCatching {
-            val physicalName = path.substringAfterLast('/')
-            val folder = booksFolderIdOrNull()
-                ?: throw AppError(
-                    category = ErrorCategory.NOT_FOUND,
-                    code = "REMOTE_NOT_FOUND",
-                    message = "File not found in Drive: $path",
-                    component = component
-                )
-            val file = findFileByName(folderId = folder, name = physicalName)
-                ?: throw AppError(
-                    category = ErrorCategory.NOT_FOUND,
-                    code = "REMOTE_NOT_FOUND",
-                    message = "File not found in Drive: $path",
-                    component = component
-                )
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val physicalName = path.substringAfterLast('/')
+                val folder = booksFolderIdOrNull()
+                    ?: throw AppError(
+                        category = ErrorCategory.NOT_FOUND,
+                        code = "REMOTE_NOT_FOUND",
+                        message = "File not found in Drive: $path",
+                        component = component
+                    )
+                val file = findFileByName(folderId = folder, name = physicalName)
+                    ?: throw AppError(
+                        category = ErrorCategory.NOT_FOUND,
+                        code = "REMOTE_NOT_FOUND",
+                        message = "File not found in Drive: $path",
+                        component = component
+                    )
 
-            val outputStream = ByteArrayOutputStream()
-            driveService.files().get(file.id)
-                .executeMediaAndDownloadTo(outputStream)
-            outputStream.toByteArray()
-        }.getOrElse { throwable ->
-            if (throwable is AppError) throw throwable
-            throw mapDriveError(throwable, "GOOGLE_DRIVE_DOWNLOAD_FAILED", "Failed to download from Google Drive: $path")
+                val outputStream = ByteArrayOutputStream()
+                driveService.files().get(file.id)
+                    .executeMediaAndDownloadTo(outputStream)
+                outputStream.toByteArray()
+            }.getOrElse { throwable ->
+                if (throwable is AppError) throw throwable
+                throw mapDriveError(throwable, "GOOGLE_DRIVE_DOWNLOAD_FAILED", "Failed to download from Google Drive: $path")
+            }
         }
     }
 
     override suspend fun list(prefix: String): List<String> {
-        return runCatching {
-            val folder = booksFolderIdOrNull() ?: return@runCatching emptyList()
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val folder = booksFolderIdOrNull() ?: return@runCatching emptyList()
 
-            // Every file in the shared NextPage/Books folder belongs to this
-            // Drive account, so map physical names back under the caller's prefix.
-            val userId = prefix.trim('/').substringAfter("books/").substringBefore('/')
+                // Every file in the shared NextPage/Books folder belongs to this
+                // Drive account, so map physical names back under the caller's prefix.
+                val userId = prefix.trim('/').substringAfter("books/").substringBefore('/')
 
-            val files = driveService.files().list()
-                .setQ("'$folder' in parents and trashed = false")
-                .setSpaces("drive")
-                .setFields("files(name)")
-                .execute()
-            files.files.orEmpty()
-                .mapNotNull { it.name }
-                .map { name -> logicalPath(userId, name) }
-        }.getOrElse { throwable ->
-            throw mapDriveError(throwable, "GOOGLE_DRIVE_LIST_FAILED", "Failed to list files in Google Drive: $prefix")
+                val files = driveService.files().list()
+                    .setQ("'$folder' in parents and trashed = false")
+                    .setSpaces("drive")
+                    .setFields("files(name)")
+                    .execute()
+                files.files.orEmpty()
+                    .mapNotNull { it.name }
+                    .map { name -> logicalPath(userId, name) }
+            }.getOrElse { throwable ->
+                throw mapDriveError(throwable, "GOOGLE_DRIVE_LIST_FAILED", "Failed to list files in Google Drive: $prefix")
+            }
         }
     }
 

@@ -256,7 +256,10 @@ class SupabaseBookCatalogSync(
         }
 
         val updated = existing.copy(
-            coverPath = row.coverUrl ?: existing.coverPath,
+            // Preserve a working local cover; only fill from the remote URL when
+            // the local one is missing (D5: never clobber a working local cover
+            // with a remote URL that may be dead).
+            coverPath = if (existing.coverPath.isNullOrBlank()) row.coverUrl ?: existing.coverPath else existing.coverPath,
             remoteFileId = row.remoteFileId ?: existing.remoteFileId,
             remotePath = row.remotePath ?: row.filePath ?: existing.remotePath,
             remoteLifecycle = row.lifecycle,

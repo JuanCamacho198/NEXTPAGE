@@ -15,6 +15,7 @@ import coil.compose.AsyncImagePainter
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.nextpage.R
+import com.nextpage.debug.DebugLog
 /**
  * Small cover thumbnail for the library grid. Loads from a local
  * file path or a remote URL via Coil with an explicit 80×120 px
@@ -68,9 +69,16 @@ fun CoverThumbnail(
 
     AsyncImage(
         model = imageRequest,
-        onState = { state -> onImageState?.invoke(state) },
+        onState = { state ->
+            if (state is AsyncImagePainter.State.Error) {
+                DebugLog.error(TAG, "CoverThumbnail: cover load failed for $coverPath")
+            }
+            onImageState?.invoke(state)
+        },
         contentDescription = stringResource(R.string.library_cover_content_description),
         contentScale = ContentScale.Crop,
         modifier = modifier.clip(MaterialTheme.shapes.small)
     )
 }
+
+private const val TAG = "CoverThumbnail"

@@ -440,7 +440,9 @@ private fun MyBookshelfSection(
                 icon = Icons.Outlined.Bookmark,
                 title = stringResource(R.string.home_bookshelf_empty_title),
                 subtitle = stringResource(R.string.home_bookshelf_empty_subtitle),
-                modifier = Modifier.padding(vertical = NextPageDimens.spacingMd)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = NextPageDimens.spacingMd)
             )
         }
     }

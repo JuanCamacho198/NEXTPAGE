@@ -108,6 +108,7 @@
     <string name="book_detail_no_pages">-- / --</string>
     <string name="book_detail_rating_content_description">Calificar %1$d estrella(s)</string>
     <!-- Library / Bookshelf - New Pencil design -->
+    <string name="library_empty">Todavía no hay libros locales.</string>
     <string name="library_search_placeholder">Buscar libros...</string>
     <string name="library_filter_label">Filtrar</string>
     <string name="library_tab_all">Todos</string>

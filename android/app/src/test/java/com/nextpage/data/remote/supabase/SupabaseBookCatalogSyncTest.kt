@@ -526,7 +526,8 @@ class SupabaseBookCatalogSyncTest {
     }
 
     @Test
-    fun applyRemoteBook_newerEventAppliesCoverAndVersion() = runBlocking {
+    fun applyRemoteBook_newerEventFillsMissingCoverAndAppliesVersion() = runBlocking {
+        // Existing local cover is MISSING (null) → remote coverUrl fills it.
         val existing = createSampleBook("book-cov").copy(remoteCatalogVersion = 1L)
         fakeBookDao.upsert(existing)
 
@@ -542,6 +543,33 @@ class SupabaseBookCatalogSyncTest {
         val local = fakeBookDao.getBookById("book-cov")
         assertEquals(2L, local?.remoteCatalogVersion)
         assertEquals("https://cdn.example/c.jpg", local?.coverPath)
+        assertEquals("user-1/book-cov/cover.jpg", local?.remoteCoverRef)
+        assertEquals("file-1", local?.remoteFileId)
+    }
+
+    @Test
+    fun applyRemoteBook_newerEventPreservesExistingLocalCover() = runBlocking {
+        // Existing local cover is PRESENT (working local file) → remote coverUrl
+        // must NOT clobber it, even though the remote event is newer.
+        val existing = createSampleBook("book-cov").copy(
+            remoteCatalogVersion = 1L,
+            coverPath = "/data/user/0/com.nextpage/files/covers/book-cov.jpg"
+        )
+        fakeBookDao.upsert(existing)
+
+        sync.applyRemoteBook(
+            UserBookRow(
+                id = "book-cov", userId = "test-user", title = "Covered", format = "epub",
+                lifecycle = "available", catalogVersion = 2, coverUrl = "https://cdn.example/c.jpg",
+                coverObjectPath = "user-1/book-cov/cover.jpg", remoteFileId = "file-1",
+                importedAt = "2026-07-12T12:00:00.000Z", updatedAt = "2026-07-12T12:00:00.000Z"
+            )
+        )
+
+        val local = fakeBookDao.getBookById("book-cov")
+        assertEquals(2L, local?.remoteCatalogVersion)
+        // Working local cover wins over the remote URL.
+        assertEquals("/data/user/0/com.nextpage/files/covers/book-cov.jpg", local?.coverPath)
         assertEquals("user-1/book-cov/cover.jpg", local?.remoteCoverRef)
         assertEquals("file-1", local?.remoteFileId)
     }

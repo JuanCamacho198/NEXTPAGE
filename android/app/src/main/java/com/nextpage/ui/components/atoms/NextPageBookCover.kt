@@ -21,9 +21,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.nextpage.R
+import com.nextpage.debug.DebugLog
 
 /**
  * Book cover image atom with three render branches: loading spinner,
@@ -98,6 +100,11 @@ fun NextPageBookCover(
                 }
                 AsyncImage(
                     model = imageRequest,
+                    onState = { state ->
+                        if (state is AsyncImagePainter.State.Error) {
+                            DebugLog.error(TAG, "NextPageBookCover: cover load failed for $coverUrl")
+                        }
+                    },
                     contentDescription = contentDescription,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -114,3 +121,5 @@ fun NextPageBookCover(
         }
     }
 }
+
+private const val TAG = "NextPageBookCover"

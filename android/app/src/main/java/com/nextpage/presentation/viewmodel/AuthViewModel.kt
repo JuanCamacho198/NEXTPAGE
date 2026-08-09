@@ -354,18 +354,23 @@ class AuthViewModel(
     }
 
     private suspend fun triggerSyncForSession(session: AuthSession) {
+        // Drive sync only runs when Drive is authorized; a Drive failure here is
+        // NON-FATAL (no early return) — Supabase catalog/progress sync are
+        // independent of Drive and must still run so imported books reach the
+        // catalog even when Drive authorization is pending or missing.
         val bootstrap = syncService.bootstrap(session.userId)
-        if (bootstrap.isFailure) {
-            return
+        if (bootstrap.isSuccess) {
+            syncService.schedulePull()
+            syncService.schedulePush()
         }
-        syncService.schedulePull()
-        syncService.schedulePush()
 
         // Start Supabase outbox processing and Realtime subscription
+        // (independent of Drive authorization).
         supabaseProgressSync?.startProcessing()
         supabaseProgressSync?.subscribeToRealtimeChanges()
 
         // Push local Android books to Supabase catalog so Desktop discovers them
+        // (independent of Drive authorization).
         supabaseBookCatalogSync?.bootstrap()
     }
 

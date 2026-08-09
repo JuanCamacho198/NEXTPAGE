@@ -168,13 +168,24 @@ class SupabaseBookCatalogSync(
         val userId = session.userId
 
         val localBooks = bookDao.observeAllBooks().first()
-        val remoteBooks = dataSource.listUserBooks(userId)
+        val remoteBooks = try {
+            dataSource.listUserBooks(userId)
+        } catch (e: Exception) {
+            Log.w(TAG, "reconcileLocalBooks: failed to list remote catalog, aborting reconcile", e)
+            return
+        }
         val remoteIds = remoteBooks.map { it.id }.toSet()
 
         for (book in localBooks) {
             if (book.id !in remoteIds) {
-                val row = book.toUserBookRow(userId)
-                dataSource.upsertBook(row)
+                try {
+                    val row = book.toUserBookRow(userId)
+                    dataSource.upsertBook(row)
+                } catch (e: Exception) {
+                    // A single book must never crash the reconcile pass; the
+                    // outbox/reconcile will retry it later.
+                    Log.w(TAG, "reconcileLocalBooks: failed to push book ${book.id} (${book.title})", e)
+                }
             }
         }
     }
@@ -481,7 +492,10 @@ class SupabaseBookCatalogSync(
             importedAt = dateFormat.format(Date(updatedAtEpochMillis)),
             updatedAt = dateFormat.format(Date(updatedAtEpochMillis)),
             lifecycle = remoteLifecycle,
-            catalogVersion = remoteCatalogVersion,
+            // The DB enforces CHECK (catalog_version > 0); a locally imported book
+            // has remoteCatalogVersion = 0 until the first remote write, so clamp
+            // to a valid minimum instead of violating the constraint.
+            catalogVersion = remoteCatalogVersion.coerceAtLeast(1L),
             remoteProvider = "google_drive",
             remoteFileId = remoteFileId,
             remotePath = remotePath,

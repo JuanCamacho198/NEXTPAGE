@@ -320,7 +320,16 @@ fun NextPageNavHost(
         driveAuthHelper.authResult.collect { result ->
             if (result != null) {
                 when (result) {
-                    is DriveAuthResult.Success -> driveConnectPromptPrefs.clearDeclined()
+                    is DriveAuthResult.Success -> {
+                        driveConnectPromptPrefs.clearDeclined()
+                        // Re-trigger sync after Drive authorization so any outbox
+                        // entries queued before authorization (e.g. an imported book)
+                        // are pushed to Drive and the Supabase catalog now that a
+                        // token exists. Idempotent: processed entries are deleted.
+                        scope.launch {
+                            appContainer.syncService.schedulePush()
+                        }
+                    }
                     is DriveAuthResult.Failure -> {
                         if (drivePromptAuthInFlight) {
                             android.widget.Toast.makeText(

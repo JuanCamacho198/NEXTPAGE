@@ -197,7 +197,7 @@ class SupabaseBookCatalogSync(
             if (book.id !in remoteIds) {
                 try {
                     val row = book.toUserBookRow(userId)
-                    DebugLog.info(TAG, "reconcileLocalBooks: pushing '${book.title}' ($bookId=${book.id}) catalogVersion=${row.catalogVersion}")
+                    DebugLog.info(TAG, "reconcileLocalBooks: pushing '${book.title}' (id=${book.id}) catalogVersion=${row.catalogVersion}")
                     dataSource.upsertBook(row)
                     DebugLog.success(TAG, "reconcileLocalBooks: '${book.title}' upserted OK")
                 } catch (e: Exception) {

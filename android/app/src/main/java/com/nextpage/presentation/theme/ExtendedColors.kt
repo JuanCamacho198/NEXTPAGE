@@ -16,13 +16,15 @@ import androidx.compose.ui.graphics.Color
  * @property chartAccent Accent color for the Statistics screen charts and insights.
  * @property bgHeader Top app bar / header strip background.
  * @property borderSubtle Hairline dividers and outline strokes.
+ * @property welcomeBrandBlue Welcome/brand blue (logo circle + Google button chrome; light = PrimaryBlue, dark = WelcomeBrandBlueDark).
  */
 @Immutable
 data class ExtendedColors(
     val readingBackground: Color,
     val chartAccent: Color,
     val bgHeader: Color,
-    val borderSubtle: Color
+    val borderSubtle: Color,
+    val welcomeBrandBlue: Color
 )
 
 /**
@@ -38,7 +40,8 @@ val LocalExtendedColors = staticCompositionLocalOf {
         readingBackground = Color.Unspecified,
         chartAccent = Color.Unspecified,
         bgHeader = Color.Unspecified,
-        borderSubtle = Color.Unspecified
+        borderSubtle = Color.Unspecified,
+        welcomeBrandBlue = Color.Unspecified
     )
 }
 
@@ -49,7 +52,8 @@ val darkExtendedColors = ExtendedColors(
     readingBackground = ReadingBackgroundDark,
     chartAccent = ChartAccent,
     bgHeader = BgHeader,
-    borderSubtle = BorderSubtle
+    borderSubtle = BorderSubtle,
+    welcomeBrandBlue = WelcomeBrandBlueDark
 )
 
 /**
@@ -59,5 +63,6 @@ val lightExtendedColors = ExtendedColors(
     readingBackground = ReadingBackgroundLight,
     chartAccent = ChartAccent,
     bgHeader = BgHeader,
-    borderSubtle = BorderSubtle
+    borderSubtle = BorderSubtle,
+    welcomeBrandBlue = PrimaryBlue
 )

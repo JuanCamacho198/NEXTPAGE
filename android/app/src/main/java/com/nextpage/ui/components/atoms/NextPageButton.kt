@@ -1,8 +1,10 @@
 package com.nextpage.ui.components.atoms
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +39,13 @@ enum class NextPageButtonVariant {
  *   container) and by [NextPageButtonVariant.ICON] (circle).
  * @param contentPadding Inner padding around [content]. Uses Material 3
  *   default (`ButtonDefaults.ContentPadding`) if not provided.
+ * @param colors Optional `ButtonColors` override. `null` (default) keeps the
+ *   variant's theme-derived colors; provide e.g.
+ *   `ButtonDefaults.outlinedButtonColors(...)` to brand a specific instance.
+ *   NOTE: the bundled Material3 `outlinedButtonColors` has no `borderColor`
+ *   parameter — brand the outline via [border] instead.
+ * @param border Optional [BorderStroke] override. `null` (default) keeps the
+ *   variant's default border. Only applied to [NextPageButtonVariant.OUTLINED].
  * @param content Slot for the button label — typically one or two
  *   `Text`/`Icon` composables.
  *
@@ -59,6 +68,8 @@ fun NextPageButton(
     enabled: Boolean = true,
     shape: Shape = MaterialTheme.shapes.small,
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    colors: ButtonColors? = null,
+    border: BorderStroke? = null,
     content: @Composable () -> Unit
 ) {
     when (variant) {
@@ -68,7 +79,7 @@ fun NextPageButton(
                 modifier = modifier,
                 enabled = enabled,
                 shape = shape,
-                colors = ButtonDefaults.buttonColors(
+                colors = colors ?: ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
@@ -83,9 +94,10 @@ fun NextPageButton(
                 modifier = modifier,
                 enabled = enabled,
                 shape = shape,
-                colors = ButtonDefaults.outlinedButtonColors(
+                colors = colors ?: ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.primary
                 ),
+                border = border,
                 contentPadding = contentPadding
             ) {
                 RowScopeContent(content = content)
@@ -107,7 +119,7 @@ fun NextPageButton(
                 modifier = modifier,
                 enabled = enabled,
                 shape = shape,
-                colors = ButtonDefaults.buttonColors(
+                colors = colors ?: ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                 ),

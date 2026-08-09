@@ -7,9 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,6 +17,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.ui.icons.NextPageIcons
 
 // ── Reader Design Colors ──────────────────────────────────────────
 private val HEADER_FG = Color(0xFFDDE2F8)
@@ -47,7 +45,7 @@ fun ReaderFullscreenArrows(
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         FullscreenArrowButton(
-            icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            icon = NextPageIcons.ArrowLeft,
             contentDescription = stringResource(R.string.fullscreen_prev_page),
             onClick = onPrevious,
             modifier = Modifier
@@ -55,7 +53,7 @@ fun ReaderFullscreenArrows(
                 .padding(start = 8.dp)
         )
         FullscreenArrowButton(
-            icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            icon = NextPageIcons.ArrowRight,
             contentDescription = stringResource(R.string.fullscreen_next_page),
             onClick = onNext,
             modifier = Modifier

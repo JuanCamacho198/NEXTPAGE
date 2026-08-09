@@ -17,15 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
-import androidx.compose.material.icons.automirrored.filled.FormatAlignRight
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.FontDownload
-import androidx.compose.material.icons.filled.FormatAlignCenter
-import androidx.compose.material.icons.filled.FormatAlignJustify
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -60,6 +51,7 @@ import com.nextpage.domain.model.LayoutPreferences
 import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.domain.model.ReaderTheme
 import com.nextpage.domain.model.ScrollMode
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Split-layout settings panel for the reader. Top 40% is a live text
@@ -229,7 +221,7 @@ fun SplitSettingsSheet(
                     onClick = onDismiss
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        imageVector = NextPageIcons.Close,
                         contentDescription = stringResource(R.string.aa_close_settings),
                         tint = Color(0xFF718096)
                     )
@@ -251,7 +243,7 @@ fun SplitSettingsSheet(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.FontDownload,
+                        imageVector = NextPageIcons.TextAa,
                         contentDescription = null,
                         tint = Color(0xFFADC6FF),
                         modifier = Modifier.size(20.dp)
@@ -264,7 +256,7 @@ fun SplitSettingsSheet(
                     )
                 }
                 Icon(
-                    imageVector = Icons.Default.ChevronRight,
+                    imageVector = NextPageIcons.ChevronRight,
                     contentDescription = null,
                     tint = Color(0xFF718096),
                     modifier = Modifier.size(20.dp)
@@ -412,10 +404,10 @@ fun SplitSettingsSheet(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         val alignmentOptions = listOf(
-                            LayoutPreferences.Alignment.LEFT to Icons.AutoMirrored.Filled.FormatAlignLeft,
-                            LayoutPreferences.Alignment.CENTER to Icons.Default.FormatAlignCenter,
-                            LayoutPreferences.Alignment.RIGHT to Icons.AutoMirrored.Filled.FormatAlignRight,
-                            LayoutPreferences.Alignment.JUSTIFY to Icons.Default.FormatAlignJustify
+                            LayoutPreferences.Alignment.LEFT to NextPageIcons.AlignLeft,
+                            LayoutPreferences.Alignment.CENTER to NextPageIcons.AlignCenter,
+                            LayoutPreferences.Alignment.RIGHT to NextPageIcons.AlignRight,
+                            LayoutPreferences.Alignment.JUSTIFY to NextPageIcons.AlignJustify
                         )
                         alignmentOptions.forEach { (alignment, icon) ->
                             val isSelected = settings.layoutPrefs.alignment == alignment
@@ -620,9 +612,9 @@ private fun ExpandableSection(
             )
             Icon(
                 imageVector = if (isExpanded)
-                    Icons.AutoMirrored.Filled.KeyboardArrowLeft
+                    NextPageIcons.ArrowLeft
                 else
-                    Icons.Default.ChevronRight,
+                    NextPageIcons.ChevronRight,
                 contentDescription = if (isExpanded) stringResource(R.string.aa_collapse) else stringResource(R.string.aa_expand),
                 tint = Color(0xFF718096),
                 modifier = Modifier.size(20.dp)

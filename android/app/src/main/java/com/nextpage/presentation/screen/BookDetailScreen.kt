@@ -16,10 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -63,6 +59,7 @@ import com.nextpage.presentation.viewmodel.BookDetailViewModel
 import com.nextpage.ui.components.atoms.CoverThumbnail
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
+import com.nextpage.ui.icons.NextPageIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +85,7 @@ fun BookDetailScreen(
                         variant = NextPageButtonVariant.ICON
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = NextPageIcons.ArrowBack,
                             contentDescription = stringResource(R.string.reader_cancel)
                         )
                     }
@@ -239,7 +236,7 @@ private fun RatingStars(
                 onRatingChanged(newRating)
             }) {
                 Icon(
-                    imageVector = if (star <= currentRating) Icons.Filled.Star else Icons.Outlined.Star,
+                    imageVector = if (star <= currentRating) NextPageIcons.Star else NextPageIcons.StarBorder,
                     contentDescription = stringResource(
                         R.string.book_detail_rating_content_description, star
                     ),

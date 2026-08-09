@@ -8,6 +8,7 @@ import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.remote.drive.SyncErrorCodes
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
 import com.nextpage.data.session.SessionManager
+import com.nextpage.debug.DebugLog
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import io.github.jan.supabase.realtime.PostgresAction
@@ -87,10 +88,14 @@ class SupabaseBookCatalogSync(
     }
 
     private suspend fun processOutbox() {
-        val session = sessionManager.ensureFreshSession().getOrNull() ?: return
+        val session = sessionManager.ensureFreshSession().getOrNull() ?: run {
+            DebugLog.warn(TAG, "processOutbox: no fresh session — skipping book outbox processing")
+            return
+        }
 
         _state.value = State.Running
         val pendingItems = outboxDao.getPendingItems()
+        DebugLog.info(TAG, "processOutbox: ${pendingItems.size} pending items for user ${session.userId}")
 
         for (item in pendingItems) {
             if (item.entityType == SyncEntityType.BOOK.name) {
@@ -131,26 +136,32 @@ class SupabaseBookCatalogSync(
                 else -> {
                     val localBook = bookDao.getBookById(bookId)
                     if (localBook == null) {
+                        DebugLog.warn(TAG, "processBookItem: local book $bookId not found — deleting outbox entry")
                         outboxDao.deleteById(item.id)
                         return
                     }
                     val row = localBook.toUserBookRow(userId)
+                    DebugLog.info(TAG, "processBookItem: pushing book '${row.title}' ($bookId) to Supabase — catalogVersion=${row.catalogVersion}, hash=${row.contentHash?.take(16)}…")
 
                     // Content-hash dedup: skip upsert if same SHA-256 hash
                     // already exists in the catalog for this user.
                     if (row.contentHash != null) {
                         val existing = dataSource.getUserBookByHash(userId, row.contentHash!!)
                         if (existing != null) {
+                            DebugLog.info(TAG, "processBookItem: duplicate hash ${row.contentHash!!.take(16)}… already in catalog — skipping")
                             outboxDao.deleteById(item.id)
                             return  // Already in catalog from other device
                         }
                     }
 
                     dataSource.upsertBook(row)
+                    DebugLog.success(TAG, "processBookItem: book '${row.title}' upserted to Supabase OK")
                 }
             }
             outboxDao.deleteById(item.id)
         } catch (e: Exception) {
+            DebugLog.error(TAG, "processBookItem: FAILED for book $bookId (${item.operation}) — ${e.javaClass.simpleName}: ${e.message}")
+            Log.w(TAG, "processBookItem: failed for book $bookId", e)
             outboxDao.incrementRetryCount(item.id, e.message ?: "Unknown error")
             outboxDao.pruneFailedItems(3)
         }
@@ -164,26 +175,35 @@ class SupabaseBookCatalogSync(
      * Designed to be called once per session during sync bootstrap.
      */
     suspend fun reconcileLocalBooks() {
-        val session = sessionManager.ensureFreshSession().getOrNull() ?: return
+        val session = sessionManager.ensureFreshSession().getOrNull() ?: run {
+            DebugLog.warn(TAG, "reconcileLocalBooks: no fresh session — skipping reconcile")
+            return
+        }
         val userId = session.userId
 
         val localBooks = bookDao.observeAllBooks().first()
+        DebugLog.info(TAG, "reconcileLocalBooks: ${localBooks.size} local books, user $userId")
         val remoteBooks = try {
             dataSource.listUserBooks(userId)
         } catch (e: Exception) {
+            DebugLog.error(TAG, "reconcileLocalBooks: failed to list remote catalog — ${e.javaClass.simpleName}: ${e.message}")
             Log.w(TAG, "reconcileLocalBooks: failed to list remote catalog, aborting reconcile", e)
             return
         }
         val remoteIds = remoteBooks.map { it.id }.toSet()
+        DebugLog.info(TAG, "reconcileLocalBooks: ${remoteBooks.size} remote books, ${localBooks.count { it.id !in remoteIds }} to push")
 
         for (book in localBooks) {
             if (book.id !in remoteIds) {
                 try {
                     val row = book.toUserBookRow(userId)
+                    DebugLog.info(TAG, "reconcileLocalBooks: pushing '${book.title}' ($bookId=${book.id}) catalogVersion=${row.catalogVersion}")
                     dataSource.upsertBook(row)
+                    DebugLog.success(TAG, "reconcileLocalBooks: '${book.title}' upserted OK")
                 } catch (e: Exception) {
                     // A single book must never crash the reconcile pass; the
                     // outbox/reconcile will retry it later.
+                    DebugLog.error(TAG, "reconcileLocalBooks: FAILED to push '${book.title}' (${book.id}) — ${e.javaClass.simpleName}: ${e.message}")
                     Log.w(TAG, "reconcileLocalBooks: failed to push book ${book.id} (${book.title})", e)
                 }
             }
@@ -262,9 +282,11 @@ class SupabaseBookCatalogSync(
      * and subscribe to Realtime changes.
      */
     suspend fun bootstrap() {
+        DebugLog.info(TAG, "bootstrap: starting catalog sync bootstrap")
         reconcileLocalBooks()
         startProcessing()
         subscribeToCatalogChanges()
+        DebugLog.info(TAG, "bootstrap: catalog sync bootstrap complete")
     }
 
     /**

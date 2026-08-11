@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
@@ -88,6 +89,27 @@ fun AuthScreen(
     onContinueLocal: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    AuthScreenContent(
+        uiState = uiState,
+        onAuthenticated = onAuthenticated,
+        onContinueLocal = onContinueLocal,
+        onGoogleIdToken = viewModel::handleGoogleIdToken,
+        onSetError = viewModel::setError,
+        onSignIn = viewModel::signIn,
+        onSignUp = viewModel::signUp
+    )
+}
+
+@Composable
+private fun AuthScreenContent(
+    uiState: AuthUiState,
+    onAuthenticated: () -> Unit,
+    onContinueLocal: () -> Unit,
+    onGoogleIdToken: (String) -> Unit,
+    onSetError: (String) -> Unit,
+    onSignIn: (email: String, password: String) -> Unit,
+    onSignUp: (email: String, password: String) -> Unit
+) {
     val buttonDisabledReason = resolveGoogleButtonDisabledReason(uiState)
     val buttonEnabled = buttonDisabledReason == GoogleButtonDisabledReason.NONE
 
@@ -199,19 +221,19 @@ fun AuthScreen(
                                     Log.e(AUTH_SCREEN_TAG, "Failed to parse Google ID token", e)
                                     return@launch
                                 }
-                                viewModel.handleGoogleIdToken(googleIdTokenCredential.idToken)
+                                onGoogleIdToken(googleIdTokenCredential.idToken)
                             } else {
                                     Log.w(AUTH_SCREEN_TAG, "Unexpected credential type: ${credential.type}")
-                                    viewModel.setError("Tipo de credencial inesperado: ${credential.type}")
+                                    onSetError("Tipo de credencial inesperado: ${credential.type}")
                                 }
                             } catch (e: GetCredentialCancellationException) {
                                 Log.d(AUTH_SCREEN_TAG, "Google sign-in cancelled by user")
                             } catch (e: GetCredentialException) {
                                 Log.e(AUTH_SCREEN_TAG, "Google credential error: type=${e.type} msg=${e.message}", e)
-                                viewModel.setError("Error de credencial (${e.type}): ${e.message}")
+                                onSetError("Error de credencial (${e.type}): ${e.message}")
                             } catch (e: Exception) {
                                 Log.e(AUTH_SCREEN_TAG, "Unexpected error in Google sign-in", e)
-                                viewModel.setError("Error inesperado: ${e.message}")
+                                onSetError("Error inesperado: ${e.message}")
                             }
                     }
                 },
@@ -231,7 +253,7 @@ fun AuthScreen(
                     )
                 } else {
                     Icon(
-                        painter = painterResource(R.drawable.ic_google_g),
+                        painter = painterResource(R.drawable.ic_google_logo),
                         contentDescription = null,
                         tint = Color.Unspecified,
                         modifier = Modifier.size(20.dp)
@@ -331,7 +353,7 @@ fun AuthScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         NextPageButton(
-                            onClick = { viewModel.signIn(email, password) },
+                            onClick = { onSignIn(email, password) },
                             enabled = !uiState.isLoading,
                             variant = NextPageButtonVariant.FILLED,
                             shape = RoundedCornerShape(28.dp),
@@ -341,7 +363,7 @@ fun AuthScreen(
                         }
 
                         NextPageButton(
-                            onClick = { viewModel.signUp(email, password) },
+                            onClick = { onSignUp(email, password) },
                             enabled = !uiState.isLoading,
                             variant = NextPageButtonVariant.OUTLINED,
                             shape = RoundedCornerShape(28.dp),
@@ -388,4 +410,26 @@ fun AuthScreen(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AuthScreenPreview() {
+    AuthScreenContent(
+        uiState = AuthUiState(
+            currentSession = null,
+            isCheckingSession = false,
+            isConfigured = true,
+            hasWiringIssue = false,
+            isLoading = false,
+            errorMessage = null,
+            failureKind = AuthFailureKind.NONE
+        ),
+        onAuthenticated = {},
+        onContinueLocal = {},
+        onGoogleIdToken = {},
+        onSetError = {},
+        onSignIn = { _, _ -> },
+        onSignUp = { _, _ -> }
+    )
 }

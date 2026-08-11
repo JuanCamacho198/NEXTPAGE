@@ -25,10 +25,12 @@ import androidx.compose.ui.text.font.FontWeight
 import coil.compose.AsyncImage
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageDimens
+import com.nextpage.presentation.viewmodel.HomeUiState
 import com.nextpage.presentation.viewmodel.HomeViewModel
 import com.nextpage.ui.components.atoms.CoverThumbnail
 import com.nextpage.ui.components.atoms.NextPageButton
@@ -53,6 +55,43 @@ fun HomeScreen(
     onImportBook: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    HomeScreenContent(
+        uiState = uiState,
+        contentPadding = contentPadding,
+        onNavigateToLibrary = onNavigateToLibrary,
+        onNavigateToHighlights = onNavigateToHighlights,
+        onNavigateToSettings = onNavigateToSettings,
+        onOpenAccount = onOpenAccount,
+        onNavigateToStatistics = onNavigateToStatistics,
+        onBookSelected = onBookSelected,
+        onContinueReading = onContinueReading,
+        onImportBook = onImportBook,
+        onSearchQueryChange = viewModel::onSearchQueryChanged,
+        onToggleSearch = viewModel::onToggleSearch
+    )
+}
+
+/**
+ * Stateless content for the home screen.
+ *
+ * Takes the full [HomeUiState] plus callbacks instead of a [HomeViewModel], so
+ * it can be rendered from `@Preview` without a ViewModel instance.
+ */
+@Composable
+private fun HomeScreenContent(
+    uiState: HomeUiState,
+    contentPadding: PaddingValues,
+    onNavigateToLibrary: () -> Unit,
+    onNavigateToHighlights: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onOpenAccount: () -> Unit = {},
+    onNavigateToStatistics: () -> Unit,
+    onBookSelected: (String, String, String) -> Unit,
+    onContinueReading: (String, String?, String) -> Unit,
+    onImportBook: () -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onToggleSearch: () -> Unit
+) {
     var showNotifications by remember { mutableStateOf(false) }
 
     if (showNotifications) {
@@ -71,8 +110,8 @@ fun HomeScreen(
             item {
                 SearchBarSection(
                     searchQuery = uiState.searchQuery,
-                    onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
-                    onCloseSearch = { viewModel.onToggleSearch() }
+                    onSearchQueryChange = onSearchQueryChange,
+                    onCloseSearch = onToggleSearch
                 )
             }
 
@@ -112,16 +151,22 @@ fun HomeScreen(
                     avatarInitials = uiState.userName.take(1).uppercase(),
                     onAvatarClick = onOpenAccount,
                     avatarContentDescription = stringResource(R.string.home_avatar_content_description),
-                    onSearchClick = { viewModel.onToggleSearch() },
+                    onSearchClick = onToggleSearch,
                     onNotificationsClick = { showNotifications = true }
                 )
             }
 
-            // 2. Greeting — collects own state
-            item { GreetingSection(viewModel = viewModel) }
+            // 2. Greeting
+            item { GreetingSection(userName = uiState.userName) }
 
-            // 3. TodaySummary — collects own state
-            item { TodaySummarySection(viewModel = viewModel) }
+            // 3. TodaySummary
+            item {
+                TodaySummarySection(
+                    minutesReadToday = uiState.minutesReadToday,
+                    sessionsToday = uiState.sessionsToday,
+                    dailyProgressPercent = uiState.dailyProgressPercent
+                )
+            }
 
             // 4. ContinueReading
             item {
@@ -130,7 +175,7 @@ fun HomeScreen(
                     progress = uiState.currentBookProgress,
                     onBookSelected = onBookSelected,
                     onContinueReading = onContinueReading
-            )
+                )
             }
 
             // 5. MyBookshelf
@@ -189,11 +234,10 @@ fun HomeScreen(
 // ─── Section 2: Greeting ─────────────────────────────────────────────
 
 @Composable
-private fun GreetingSection(viewModel: HomeViewModel) {
-    val uiState by viewModel.uiState.collectAsState()
+private fun GreetingSection(userName: String) {
     Column {
         Text(
-            text = stringResource(R.string.home_greeting, uiState.userName),
+            text = stringResource(R.string.home_greeting, userName),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
@@ -209,8 +253,11 @@ private fun GreetingSection(viewModel: HomeViewModel) {
 // ─── Section 3: Today Summary ────────────────────────────────────────
 
 @Composable
-private fun TodaySummarySection(viewModel: HomeViewModel) {
-    val uiState by viewModel.uiState.collectAsState()
+private fun TodaySummarySection(
+    minutesReadToday: Int,
+    sessionsToday: Int,
+    dailyProgressPercent: Float
+) {
     Column {
         Text(
             text = stringResource(R.string.home_today_summary_title),
@@ -224,19 +271,19 @@ private fun TodaySummarySection(viewModel: HomeViewModel) {
         ) {
             StatCard(
                 icon = NextPageIcons.Clock,
-                value = "${uiState.minutesReadToday}",
+                value = "$minutesReadToday",
                 label = stringResource(R.string.home_minutes),
                 modifier = Modifier.weight(1f)
             )
             StatCard(
                 icon = NextPageIcons.ChartLine,
-                value = "${uiState.sessionsToday}",
+                value = "$sessionsToday",
                 label = stringResource(R.string.home_sessions),
                 modifier = Modifier.weight(1f)
             )
             StatCard(
                 icon = NextPageIcons.ChartBar,
-                value = stringResource(R.string.format_percent, (uiState.dailyProgressPercent * 100).toInt()),
+                value = stringResource(R.string.format_percent, (dailyProgressPercent * 100).toInt()),
                 label = stringResource(R.string.home_progress),
                 modifier = Modifier.weight(1f)
             )
@@ -670,4 +717,43 @@ private fun QuickAccessButton(
             )
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun HomeScreenPreview() {
+    val sampleBook = Book(
+        id = "book-1",
+        title = "The Pragmatic Programmer",
+        author = "David Thomas",
+        coverPath = null,
+        filePath = "/books/pragmatic.epub",
+        format = "epub",
+        updatedAtEpochMillis = 1L
+    )
+    HomeScreenContent(
+        uiState = HomeUiState(
+            userName = "María",
+            minutesReadToday = 42,
+            sessionsToday = 3,
+            dailyProgressPercent = 0.5f,
+            currentBook = sampleBook,
+            currentBookProgress = 67f,
+            recentBooks = listOf(sampleBook),
+            isLoading = false,
+            showSearch = false,
+            searchQuery = "",
+            searchResults = emptyList()
+        ),
+        contentPadding = PaddingValues(16.dp),
+        onNavigateToLibrary = {},
+        onNavigateToHighlights = {},
+        onNavigateToSettings = {},
+        onNavigateToStatistics = {},
+        onBookSelected = { _, _, _ -> },
+        onContinueReading = { _, _, _ -> },
+        onImportBook = {},
+        onSearchQueryChange = {},
+        onToggleSearch = {}
+    )
 }

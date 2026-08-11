@@ -29,10 +29,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import com.nextpage.R
+import com.nextpage.domain.model.Book
+import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
 import com.nextpage.presentation.theme.NextPageColors
 import com.nextpage.presentation.theme.NextPageDimens
+import com.nextpage.presentation.viewmodel.HighlightsUiState
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.ui.icons.NextPageIcons
 import androidx.compose.runtime.Composable
@@ -53,6 +56,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
@@ -78,6 +82,59 @@ fun HighlightsScreen(
     viewModel: HighlightsViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    HighlightsScreenContent(
+        uiState = uiState,
+        contentPadding = contentPadding,
+        onBookFilterChanged = viewModel::onBookFilterChanged,
+        onTagFilterChanged = viewModel::onTagFilterChanged,
+        onSearchQueryChange = viewModel::onSearchQueryChanged,
+        onTypeFilterChanged = viewModel::onTypeFilterChanged,
+        onColorFilterChanged = viewModel::onColorFilterChanged,
+        onColorFilterReset = viewModel::onColorFilterReset,
+        onCopyHighlight = viewModel::onCopyHighlight,
+        onEditHighlightNote = viewModel::onEditHighlightNote,
+        onChangeHighlightColor = viewModel::onChangeHighlightColor,
+        onViewInBook = viewModel::onViewInBook,
+        onAddHighlightTag = viewModel::onAddHighlightTag,
+        onDeleteHighlight = viewModel::onDeleteHighlight,
+        onSaveHighlightNote = viewModel::onSaveHighlightNote,
+        onDismissEditHighlight = viewModel::dismissEditHighlight,
+        onDismissDeleteHighlightDialog = viewModel::dismissDeleteHighlightDialog,
+        onConfirmDeleteHighlight = viewModel::confirmDeleteHighlight,
+        onDismissColorPicker = viewModel::dismissColorPicker,
+        onConfirmColorChange = viewModel::onConfirmColorChange,
+        onDismissTagEdit = viewModel::dismissTagEdit,
+        onTagEditTextChanged = viewModel::onTagEditTextChanged,
+        onSaveHighlightTag = viewModel::onSaveHighlightTag
+    )
+}
+
+@Composable
+private fun HighlightsScreenContent(
+    uiState: HighlightsUiState,
+    contentPadding: PaddingValues,
+    onBookFilterChanged: (String?) -> Unit,
+    onTagFilterChanged: (String?) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onTypeFilterChanged: (String) -> Unit,
+    onColorFilterChanged: (String) -> Unit,
+    onColorFilterReset: () -> Unit,
+    onCopyHighlight: (Highlight) -> Unit,
+    onEditHighlightNote: (Highlight) -> Unit,
+    onChangeHighlightColor: (Highlight) -> Unit,
+    onViewInBook: (Highlight) -> Unit,
+    onAddHighlightTag: (Highlight) -> Unit,
+    onDeleteHighlight: (Highlight) -> Unit,
+    onSaveHighlightNote: (String) -> Unit,
+    onDismissEditHighlight: () -> Unit,
+    onDismissDeleteHighlightDialog: () -> Unit,
+    onConfirmDeleteHighlight: () -> Unit,
+    onDismissColorPicker: () -> Unit,
+    onConfirmColorChange: (String) -> Unit,
+    onDismissTagEdit: () -> Unit,
+    onTagEditTextChanged: (String) -> Unit,
+    onSaveHighlightTag: (String) -> Unit
+) {
     var showSearch by remember { mutableStateOf(false) }
     var showBookSelector by remember { mutableStateOf(false) }
 
@@ -102,7 +159,7 @@ fun HighlightsScreen(
             options = bookOptions,
             selectedOptionId = uiState.bookFilter ?: "all",
             onOptionSelected = { option ->
-                viewModel.onBookFilterChanged(if (option.id == "all") null else option.id)
+                onBookFilterChanged(if (option.id == "all") null else option.id)
                 showBookSelector = false
             },
             onDismiss = { showBookSelector = false }
@@ -121,7 +178,7 @@ fun HighlightsScreen(
             options = tagOptions,
             selectedOptionId = uiState.tagFilter ?: "all",
             onOptionSelected = { option ->
-                viewModel.onTagFilterChanged(if (option.id == "all") null else option.id)
+                onTagFilterChanged(if (option.id == "all") null else option.id)
                 showTagSelector = false
             },
             onDismiss = { showTagSelector = false }
@@ -176,7 +233,7 @@ fun HighlightsScreen(
             item {
                 NextPageTextField(
                     value = uiState.searchQuery,
-                    onValueChange = { viewModel.onSearchQueryChanged(it) },
+                    onValueChange = onSearchQueryChange,
                     placeholder = stringResource(R.string.highlights_search),
                     singleLine = true,
                     shape = RoundedCornerShape(24.dp),
@@ -191,7 +248,7 @@ fun HighlightsScreen(
             NextPageFilterTabs(
                 tabs = typeTabs,
                 selectedTabId = uiState.typeFilter,
-                onTabSelected = { viewModel.onTypeFilterChanged(it) }
+                onTabSelected = onTypeFilterChanged
             )
         }
 
@@ -208,8 +265,8 @@ fun HighlightsScreen(
             ColorSwatchRow(
                 selectedColors = uiState.colorFilter,
                 highlightColors = HighlightColor.entries,
-                onColorToggled = { viewModel.onColorFilterChanged(it) },
-                onTodosSelected = { viewModel.onColorFilterReset() }
+                onColorToggled = onColorFilterChanged,
+                onTodosSelected = onColorFilterReset
             )
         }
 
@@ -256,7 +313,7 @@ fun HighlightsScreen(
                 ColorStatsRow(
                     colorCounts = uiState.colorCounts,
                     selectedColors = uiState.colorFilter,
-                    onColorToggled = { viewModel.onColorFilterChanged(it) }
+                    onColorToggled = onColorFilterChanged
                 )
             }
         }
@@ -286,13 +343,13 @@ fun HighlightsScreen(
                     note = highlight.note,
                     tag = highlight.tag,
                     attribution = bookMap[highlight.bookId],
-                    onCopyText = { viewModel.onCopyHighlight(highlight) },
-                    onEditNote = { viewModel.onEditHighlightNote(highlight) },
-                    onChangeColor = { viewModel.onChangeHighlightColor(highlight) },
-                    onViewInBook = { viewModel.onViewInBook(highlight) },
-                    onAddTag = { viewModel.onAddHighlightTag(highlight) },
-                    onDelete = { viewModel.onDeleteHighlight(highlight) },
-                    onTagClick = { tag -> viewModel.onTagFilterChanged(tag) }
+                    onCopyText = { onCopyHighlight(highlight) },
+                    onEditNote = { onEditHighlightNote(highlight) },
+                    onChangeColor = { onChangeHighlightColor(highlight) },
+                    onViewInBook = { onViewInBook(highlight) },
+                    onAddTag = { onAddHighlightTag(highlight) },
+                    onDelete = { onDeleteHighlight(highlight) },
+                    onTagClick = { tag -> onTagFilterChanged(tag) }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -309,15 +366,15 @@ fun HighlightsScreen(
             snippetLabelRes = R.string.annotation_snippet_label,
                     selectedText = highlight.textContent.replace("\\n", " ").replace("\n", " "),
             initialText = uiState.editNoteText,
-            onSave = { viewModel.onSaveHighlightNote(it) },
-            onDismiss = { viewModel.dismissEditHighlight() }
+            onSave = onSaveHighlightNote,
+            onDismiss = onDismissEditHighlight
         )
     }
 
     // ── Delete Confirmation Dialog ─────────────────────────────
     uiState.highlightToDelete?.let { highlight ->
         AlertDialog(
-            onDismissRequest = { viewModel.dismissDeleteHighlightDialog() },
+            onDismissRequest = onDismissDeleteHighlightDialog,
             title = { Text(text = stringResource(R.string.highlights_delete_title)) },
             text = {
                 Text(
@@ -329,7 +386,7 @@ fun HighlightsScreen(
             },
             confirmButton = {
                 NextPageButton(
-                    onClick = { viewModel.confirmDeleteHighlight() },
+                    onClick = onConfirmDeleteHighlight,
                     variant = NextPageButtonVariant.TEXT
                 ) {
                     Text(text = stringResource(R.string.highlights_delete_confirm))
@@ -337,7 +394,7 @@ fun HighlightsScreen(
             },
             dismissButton = {
                 NextPageButton(
-                    onClick = { viewModel.dismissDeleteHighlightDialog() },
+                    onClick = onDismissDeleteHighlightDialog,
                     variant = NextPageButtonVariant.TEXT
                 ) {
                     Text(text = stringResource(R.string.reader_cancel))
@@ -349,7 +406,7 @@ fun HighlightsScreen(
     // ── Change Color Dialog ──────────────────────────────────────
     uiState.selectedHighlightForColorChange?.let { highlight ->
         AlertDialog(
-            onDismissRequest = { viewModel.dismissColorPicker() },
+            onDismissRequest = onDismissColorPicker,
             title = { Text(stringResource(R.string.highlights_menu_change_color)) },
             text = {
                 Row(
@@ -363,7 +420,7 @@ fun HighlightsScreen(
                                 .size(40.dp)
                                 .clip(CircleShape)
                                 .background(parseHighlightColor(color.hex))
-                                .clickable { viewModel.onConfirmColorChange(color.hex) },
+                                .clickable { onConfirmColorChange(color.hex) },
                             contentAlignment = Alignment.Center
                         ) {
                             if (isActive) {
@@ -379,7 +436,7 @@ fun HighlightsScreen(
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissColorPicker() }) {
+                TextButton(onClick = onDismissColorPicker) {
                     Text(stringResource(R.string.reader_cancel))
                 }
             }
@@ -389,7 +446,7 @@ fun HighlightsScreen(
     // ── Tag Edit Dialog ──────────────────────────────────────────
     uiState.selectedHighlightForTagEdit?.let { _ ->
         AlertDialog(
-            onDismissRequest = { viewModel.dismissTagEdit() },
+            onDismissRequest = onDismissTagEdit,
             title = {
                 Text(
                     stringResource(
@@ -401,18 +458,18 @@ fun HighlightsScreen(
             text = {
                 OutlinedTextField(
                     value = uiState.editTagText,
-                    onValueChange = { viewModel.onTagEditTextChanged(it) },
+                    onValueChange = onTagEditTextChanged,
                     placeholder = { Text(stringResource(R.string.highlights_tag_dialog_hint)) },
                     singleLine = true
                 )
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.onSaveHighlightTag(uiState.editTagText) }) {
+                TextButton(onClick = { onSaveHighlightTag(uiState.editTagText) }) {
                     Text(stringResource(R.string.reader_save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissTagEdit() }) {
+                TextButton(onClick = onDismissTagEdit) {
                     Text(stringResource(R.string.reader_cancel))
                 }
             }
@@ -615,4 +672,84 @@ private fun ColorStatsRow(
 
 private fun stripSurroundingQuotes(text: String): String {
     return text.removeSurrounding("\"").removeSurrounding("'")
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun HighlightsScreenPreview() {
+    val sampleBook = Book(
+        id = "book-1",
+        title = "Deep Work",
+        author = "Cal Newport",
+        coverPath = null,
+        filePath = "/books/deep-work.epub",
+        format = "epub",
+        updatedAtEpochMillis = 1L
+    )
+    val sampleHighlight = Highlight(
+        id = "hl-1",
+        bookId = "book-1",
+        cfiRange = "epubcfi(/6/14)",
+        textContent = "Deep work is the ability to focus without distraction on a cognitively demanding task.",
+        note = "Core definition.",
+        color = HighlightColor.YELLOW.hex,
+        updatedAtEpochMillis = 1L,
+        deletedAtEpochMillis = null,
+        tag = "focus",
+        type = "quote"
+    )
+    HighlightsScreenContent(
+        uiState = HighlightsUiState(
+            highlights = listOf(sampleHighlight),
+            bookmarks = listOf(
+                Bookmark(
+                    id = "bm-1",
+                    bookId = "book-1",
+                    cfiLocation = "epubcfi(/6/20)",
+                    titleOrSnippet = "Deep work",
+                    updatedAtEpochMillis = 1L,
+                    deletedAtEpochMillis = null
+                )
+            ),
+            books = listOf(sampleBook),
+            typeFilter = "all",
+            bookFilter = null,
+            colorFilter = emptySet(),
+            tagFilter = null,
+            searchQuery = "",
+            filteredHighlights = listOf(sampleHighlight),
+            availableTags = listOf("focus"),
+            isLoading = false,
+            errorMessage = null,
+            highlightToEdit = null,
+            highlightToDelete = null,
+            editNoteText = "",
+            colorCounts = mapOf(HighlightColor.YELLOW.hex to 1),
+            selectedHighlightForColorChange = null,
+            selectedHighlightForTagEdit = null,
+            editTagText = ""
+        ),
+        contentPadding = PaddingValues(16.dp),
+        onBookFilterChanged = {},
+        onTagFilterChanged = {},
+        onSearchQueryChange = {},
+        onTypeFilterChanged = {},
+        onColorFilterChanged = {},
+        onColorFilterReset = {},
+        onCopyHighlight = {},
+        onEditHighlightNote = {},
+        onChangeHighlightColor = {},
+        onViewInBook = {},
+        onAddHighlightTag = {},
+        onDeleteHighlight = {},
+        onSaveHighlightNote = {},
+        onDismissEditHighlight = {},
+        onDismissDeleteHighlightDialog = {},
+        onConfirmDeleteHighlight = {},
+        onDismissColorPicker = {},
+        onConfirmColorChange = {},
+        onDismissTagEdit = {},
+        onTagEditTextChanged = {},
+        onSaveHighlightTag = {}
+    )
 }

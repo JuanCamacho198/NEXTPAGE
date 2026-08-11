@@ -2,6 +2,7 @@ package com.nextpage.presentation.screen
 
 import android.net.Uri
 import java.io.File
+import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -48,11 +49,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
 import com.nextpage.data.remote.supabase.UserBookRow
 import com.nextpage.data.remote.sync.SyncState
+import com.nextpage.domain.model.Book
 import com.nextpage.presentation.screen.library.BookGridSection
 import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.screen.library.FilterSheetContent
@@ -61,6 +64,7 @@ import com.nextpage.presentation.screen.library.LibraryToolbar
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.util.getContentDisplayName
 import com.nextpage.presentation.viewmodel.DownloadState
+import com.nextpage.presentation.viewmodel.LibraryUiState
 import com.nextpage.presentation.viewmodel.LibraryViewModel
 import com.nextpage.ui.components.atoms.CoverThumbnail
 import com.nextpage.ui.components.atoms.NextPageButton
@@ -76,6 +80,77 @@ fun LibraryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val searchedBooks by viewModel.searchedBooks.collectAsState()
+    val firstDownloadError by viewModel.firstDownloadError.collectAsState()
+
+    LibraryScreenContent(
+        uiState = uiState,
+        searchedBooks = searchedBooks,
+        firstDownloadError = firstDownloadError,
+        contentPadding = contentPadding,
+        onBookSelected = onBookSelected,
+        onRefresh = viewModel::onPullToRefresh,
+        onSearchToggle = viewModel::onToggleSearch,
+        onSearchQueryChange = viewModel::onSearchQueryChanged,
+        onFilterToggle = viewModel::onToggleFilterSheet,
+        onStatusFilterChanged = viewModel::onStatusFilterChanged,
+        onSortByChanged = viewModel::onSortByChanged,
+        onViewToggle = viewModel::onToggleView,
+        onRequestDeleteBook = viewModel::requestDeleteBook,
+        onRequestEditBook = viewModel::requestEditBook,
+        onMarkCompleted = viewModel::onMenuMarkCompleted,
+        onMarkPlanToRead = viewModel::onMenuMarkPlanToRead,
+        onShare = viewModel::onMenuShare,
+        onDownload = viewModel::downloadBook,
+        onDismissDownloadError = viewModel::dismissDownloadError,
+        onDismissDelete = viewModel::dismissDeleteDialog,
+        onConfirmDelete = viewModel::confirmDeleteBook,
+        onDismissEdit = viewModel::dismissEditDialog,
+        onConfirmEditBook = viewModel::confirmEditBook,
+        onFormatSelected = viewModel::onFilterFormatChanged,
+        onImportPdf = viewModel::importPdfBook,
+        onImportEpub = viewModel::importBookFromEpub
+    )
+}
+
+@Composable
+private fun LibraryScreenContent(
+    uiState: LibraryUiState,
+    searchedBooks: List<Book>,
+    firstDownloadError: DownloadState.Error?,
+    contentPadding: PaddingValues,
+    onBookSelected: (String, String, String) -> Unit,
+    onRefresh: () -> Unit,
+    onSearchToggle: () -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onFilterToggle: () -> Unit,
+    onStatusFilterChanged: (String) -> Unit,
+    onSortByChanged: (String) -> Unit,
+    onViewToggle: () -> Unit,
+    onRequestDeleteBook: (Book) -> Unit,
+    onRequestEditBook: (Book) -> Unit,
+    onMarkCompleted: (Book) -> Unit,
+    onMarkPlanToRead: (Book) -> Unit,
+    onShare: (Book) -> Unit,
+    onDownload: (String) -> Unit,
+    onDismissDownloadError: (String) -> Unit,
+    onDismissDelete: () -> Unit,
+    onConfirmDelete: () -> Unit,
+    onDismissEdit: () -> Unit,
+    onConfirmEditBook: (
+        book: Book,
+        title: String,
+        author: String?,
+        description: String?,
+        coverBytes: ByteArray?
+    ) -> Unit,
+    onFormatSelected: (String) -> Unit,
+    onImportPdf: (sourcePath: String, fallbackTitle: String?, pdfFile: File) -> Unit,
+    onImportEpub: (
+        sourcePath: String,
+        fallbackTitle: String?,
+        inputStreamProvider: suspend () -> InputStream?
+    ) -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -114,10 +189,10 @@ fun LibraryScreen(
                                 }
                             }
                         }
-                        viewModel.importPdfBook(
-                            sourcePath = pdfFile.absolutePath,
-                            fallbackTitle = fileName.removeSuffix(".pdf"),
-                            pdfFile = pdfFile
+                        onImportPdf(
+                            pdfFile.absolutePath,
+                            fileName.removeSuffix(".pdf"),
+                            pdfFile
                         )
                     } else {
                         val epubDir = File(context.filesDir, "epubs")
@@ -130,10 +205,10 @@ fun LibraryScreen(
                                 }
                             }
                         }
-                        viewModel.importBookFromEpub(
-                            sourcePath = epubFile.absolutePath,
-                            fallbackTitle = fileName.removeSuffix(".epub"),
-                            inputStreamProvider = {
+                        onImportEpub(
+                            epubFile.absolutePath,
+                            fileName.removeSuffix(".epub"),
+                            {
                                 epubFile.inputStream()
                             }
                         )
@@ -146,7 +221,7 @@ fun LibraryScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         PullToRefreshBox(
             isRefreshing = uiState.isRefreshing,
-            onRefresh = { viewModel.onPullToRefresh() },
+            onRefresh = onRefresh,
             modifier = Modifier.fillMaxSize()
         ) {
             Column(
@@ -156,31 +231,29 @@ fun LibraryScreen(
             ) {
                 LibraryToolbar(
                     showSearch = uiState.showSearch,
-                    onSearchToggle = { viewModel.onToggleSearch() },
+                    onSearchToggle = onSearchToggle,
                     searchQuery = uiState.searchQuery,
-                    onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
-                    onFilterToggle = { viewModel.onToggleFilterSheet() },
+                    onSearchQueryChange = onSearchQueryChange,
+                    onFilterToggle = onFilterToggle,
                     statusFilter = uiState.statusFilter,
-                    onStatusFilterChanged = { viewModel.onStatusFilterChanged(it) },
+                    onStatusFilterChanged = onStatusFilterChanged,
                     sortBy = uiState.sortBy,
-                    onSortByChanged = { viewModel.onSortByChanged(it) },
+                    onSortByChanged = onSortByChanged,
                     isGridView = uiState.isGridView,
-                    onViewToggle = { viewModel.onToggleView() }
+                    onViewToggle = onViewToggle
                 )
-
-                val firstDownloadError by viewModel.firstDownloadError.collectAsState()
 
                 BookGridSection(
                     books = searchedBooks,
                     readingMinutesByBook = uiState.readingMinutesByBook,
                     isGridView = uiState.isGridView,
                     onBookSelected = onBookSelected,
-                    onBookLongPress = { book -> viewModel.requestDeleteBook(book) },
+                    onBookLongPress = onRequestDeleteBook,
                     onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) },
-                    onEdit = { book -> viewModel.requestEditBook(book) },
-                    onMarkCompleted = { book -> viewModel.onMenuMarkCompleted(book) },
-                    onMarkPlanToRead = { book -> viewModel.onMenuMarkPlanToRead(book) },
-                    onShare = { book -> viewModel.onMenuShare(book) },
+                    onEdit = onRequestEditBook,
+                    onMarkCompleted = onMarkCompleted,
+                    onMarkPlanToRead = onMarkPlanToRead,
+                    onShare = onShare,
                     emptyContent = if (uiState.books.isEmpty()) {
                         {
                             EmptyShelfPlaceholder(
@@ -196,8 +269,8 @@ fun LibraryScreen(
                             books = uiState.downloadableBooks,
                             downloadStateMap = uiState.downloadState,
                             firstError = firstDownloadError,
-                            onDownload = { bookId -> viewModel.downloadBook(bookId) },
-                            onDismissError = { viewModel.dismissDownloadError(it) }
+                            onDownload = onDownload,
+                            onDismissError = onDismissDownloadError
                         )
                     }
                 )
@@ -206,11 +279,11 @@ fun LibraryScreen(
 
         LibraryDialogs(
             bookToDelete = uiState.bookToDelete,
-            onDismissDelete = { viewModel.dismissDeleteDialog() },
-            onConfirmDelete = { viewModel.confirmDeleteBook() },
+            onDismissDelete = onDismissDelete,
+            onConfirmDelete = onConfirmDelete,
             bookToEdit = uiState.bookToEdit,
             editCoverUri = editCoverUri,
-            onDismissEdit = { viewModel.dismissEditDialog() },
+            onDismissEdit = onDismissEdit,
             onSaveEdit = { book, title, author, description ->
                 scope.launch {
                     val coverBytes = editCoverUri?.let { uri ->
@@ -221,40 +294,42 @@ fun LibraryScreen(
                         }
                     }
                     editCoverUri = null
-                    viewModel.confirmEditBook(
-                        book = book,
-                        title = title,
-                        author = author,
-                        description = description,
-                        coverBytes = coverBytes
+                    onConfirmEditBook(
+                        book,
+                        title,
+                        author,
+                        description,
+                        coverBytes
                     )
                 }
             },
             onChangeCover = { coverPickerLauncher.launch("image/*") }
         )
 
-        // ── Sync status indicator (top-right; collects own state) ──
-        LibrarySyncStatus(viewModel = viewModel)
+        // ── Sync status indicator (top-right) ──
+        LibrarySyncStatus(syncError = uiState.syncError, isSyncing = uiState.isSyncing)
 
         FilterSheetContent(
             showFilterSheet = uiState.showFilterSheet,
             filterFormat = uiState.filterFormat,
-            onFormatSelected = { viewModel.onFilterFormatChanged(it) },
-            onDismiss = { viewModel.onToggleFilterSheet() }
+            onFormatSelected = onFormatSelected,
+            onDismiss = onFilterToggle
         )
     }
 }
 
 /**
- * Sync status indicator that collects its own state from [viewModel],
+ * Sync status indicator that takes the sync state values it renders directly,
  * isolating recomposition to only the indicator when sync state changes.
  */
 @Composable
-private fun LibrarySyncStatus(viewModel: LibraryViewModel) {
-    val uiState by viewModel.uiState.collectAsState()
+private fun LibrarySyncStatus(
+    syncError: String?,
+    isSyncing: Boolean
+) {
     val syncState = when {
-        uiState.syncError != null -> SyncState.Error(uiState.syncError!!)
-        uiState.isSyncing -> SyncState.Running
+        syncError != null -> SyncState.Error(syncError)
+        isSyncing -> SyncState.Running
         else -> SyncState.Idle
     }
     Box(modifier = Modifier.fillMaxSize()) {
@@ -472,5 +547,64 @@ private fun EmptyShelfPlaceholder(
                 Text(text = stringResource(R.string.library_import_book))
             }
         }
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LibraryScreenPreview() {
+    val sampleBook = Book(
+        id = "book-1",
+        title = "Clean Code",
+        author = "Robert C. Martin",
+        coverPath = null,
+        filePath = "/books/clean-code.epub",
+        format = "epub",
+        updatedAtEpochMillis = 1L
+    )
+    LibraryScreenContent(
+        uiState = LibraryUiState(
+            books = listOf(sampleBook),
+            isLoading = false,
+            isGridView = true,
+            readingMinutesByBook = mapOf("book-1" to 40L),
+            isSyncing = false,
+            isRefreshing = false,
+            syncError = null,
+            downloadableBooks = emptyList(),
+            downloadState = emptyMap(),
+            statusFilter = "all",
+            sortBy = "date_added",
+            searchQuery = "",
+            debouncedSearchQuery = "",
+            showSearch = false,
+            showFilterSheet = false,
+            filterFormat = "all"
+        ),
+        searchedBooks = listOf(sampleBook),
+        firstDownloadError = null,
+        contentPadding = PaddingValues(16.dp),
+        onBookSelected = { _, _, _ -> },
+        onRefresh = {},
+        onSearchToggle = {},
+        onSearchQueryChange = {},
+        onFilterToggle = {},
+        onStatusFilterChanged = {},
+        onSortByChanged = {},
+        onViewToggle = {},
+        onRequestDeleteBook = {},
+        onRequestEditBook = {},
+        onMarkCompleted = {},
+        onMarkPlanToRead = {},
+        onShare = {},
+        onDownload = {},
+        onDismissDownloadError = {},
+        onDismissDelete = {},
+        onConfirmDelete = {},
+        onDismissEdit = {},
+        onConfirmEditBook = { _, _, _, _, _ -> },
+        onFormatSelected = {},
+        onImportPdf = { _, _, _ -> },
+        onImportEpub = { _, _, _ -> }
     )
 }

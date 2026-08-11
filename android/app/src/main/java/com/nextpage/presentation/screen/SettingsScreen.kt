@@ -12,6 +12,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -21,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
 import com.nextpage.domain.model.AuthSession
+import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.ThemeMode
 import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.presentation.navigation.NextPageDestination
@@ -54,6 +57,45 @@ fun SettingsScreen(
     onResetCustomHighlightColors: () -> Unit = {},
     onNavigateToLogViewer: () -> Unit = {},
     statisticsViewModel: StatisticsViewModel,
+    dictionaryRepository: DictionaryRepository? = null,
+    driveAuthHelper: GoogleDriveAuthHelper? = null
+) {
+    SettingsScreenContent(
+        contentPadding = contentPadding,
+        authSession = authSession,
+        appThemeMode = appThemeMode,
+        initialRoute = initialRoute,
+        onInitialRouteConsumed = onInitialRouteConsumed,
+        onAppThemeModeChanged = onAppThemeModeChanged,
+        onLogout = onLogout,
+        customHighlightColors = customHighlightColors,
+        onUpdateCustomHighlightColor = onUpdateCustomHighlightColor,
+        onAddCustomHighlightColor = onAddCustomHighlightColor,
+        onDeleteCustomHighlightColor = onDeleteCustomHighlightColor,
+        onResetCustomHighlightColors = onResetCustomHighlightColors,
+        onNavigateToLogViewer = onNavigateToLogViewer,
+        statisticsViewModel = statisticsViewModel,
+        dictionaryRepository = dictionaryRepository,
+        driveAuthHelper = driveAuthHelper
+    )
+}
+
+@Composable
+private fun SettingsScreenContent(
+    contentPadding: PaddingValues,
+    authSession: AuthSession?,
+    appThemeMode: ThemeMode = ThemeMode.SYSTEM,
+    initialRoute: String? = null,
+    onInitialRouteConsumed: () -> Unit = {},
+    onAppThemeModeChanged: (ThemeMode) -> Unit = {},
+    onLogout: () -> Unit = {},
+    customHighlightColors: List<String>? = null,
+    onUpdateCustomHighlightColor: (Int, String) -> Unit = { _, _ -> },
+    onAddCustomHighlightColor: () -> Unit = {},
+    onDeleteCustomHighlightColor: (Int) -> Unit = {},
+    onResetCustomHighlightColors: () -> Unit = {},
+    onNavigateToLogViewer: () -> Unit = {},
+    statisticsViewModel: StatisticsViewModel? = null,
     dictionaryRepository: DictionaryRepository? = null,
     driveAuthHelper: GoogleDriveAuthHelper? = null
 ) {
@@ -178,10 +220,12 @@ fun SettingsScreen(
             }
 
             composable(route = NextPageDestination.SettingsStatistics.route) {
-                SettingsStatisticsScreen(
-                    viewModel = statisticsViewModel,
-                    onBack = { nestedNavController.popBackStack() }
-                )
+                statisticsViewModel?.let { vm ->
+                    SettingsStatisticsScreen(
+                        viewModel = vm,
+                        onBack = { nestedNavController.popBackStack() }
+                    )
+                }
             }
 
             composable(route = NextPageDestination.SettingsDictionary.route) {
@@ -233,4 +277,27 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsScreenPreview() {
+    SettingsScreenContent(
+        contentPadding = PaddingValues(16.dp),
+        authSession = AuthSession(
+            userId = "local-1",
+            email = "reader@nextpage.app",
+            displayName = "Reader",
+            provider = "email"
+        ),
+        appThemeMode = ThemeMode.SYSTEM,
+        customHighlightColors = HighlightColor.defaultHexList(),
+        onAppThemeModeChanged = {},
+        onLogout = {},
+        onUpdateCustomHighlightColor = { _, _ -> },
+        onAddCustomHighlightColor = {},
+        onDeleteCustomHighlightColor = {},
+        onResetCustomHighlightColors = {},
+        onNavigateToLogViewer = {}
+    )
 }

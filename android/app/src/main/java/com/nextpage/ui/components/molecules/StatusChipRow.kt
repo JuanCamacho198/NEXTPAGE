@@ -2,6 +2,7 @@ package com.nextpage.ui.components.molecules
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import com.nextpage.R
 import com.nextpage.ui.components.molecules.FilterTab
 
@@ -46,5 +47,14 @@ fun StatusChipRow(
         selectedTabId = selectedTab,
         onTabSelected = onTabSelected,
         modifier = modifier
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun StatusChipRowPreview() {
+    StatusChipRow(
+        selectedTab = "reading",
+        onTabSelected = {}
     )
 }

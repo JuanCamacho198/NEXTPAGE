@@ -1,5 +1,6 @@
 package com.nextpage.ui.components.atoms
 
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -9,6 +10,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
@@ -82,3 +84,12 @@ fun CoverThumbnail(
 }
 
 private const val TAG = "CoverThumbnail"
+
+@Preview(showBackground = true)
+@Composable
+private fun CoverThumbnailPlaceholderPreview() {
+    CoverThumbnail(
+        coverPath = null,
+        modifier = Modifier.size(80.dp, 120.dp)
+    )
+}

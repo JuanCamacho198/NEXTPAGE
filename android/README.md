@@ -1,158 +1,75 @@
 # NextPage 📖
 
-**NextPage** es una app de lectura Android moderna construida con **Kotlin + Jetpack Compose + Material 3**. 
-Soporta **EPUB** y **PDF** con una experiencia de lectura customizable, sincronización con Supabase y modo local offline.
+Aplicación de lectura para Android. Lee **EPUB** y **PDF** con ajustes de lectura (tamaño de fuente, tema claro/oscuro/sepia, temporizador), sincronización con Supabase (progreso, resaltados y marcadores) y modo local offline.
 
-## ✨ Features
+Construida con **Kotlin + Jetpack Compose + Material 3** y Clean Architecture.
 
-### 📚 Lector
-- **EPUB**: Renderizado de capítulos con WebView, navegación entre capítulos, soporte de CSS
-- **PDF**: Renderizado página por página con soporte de zoom (tap zones)
-- **Ajustes de lectura**: Tamaño de fuente, interlineado, tema (Dark/Sepia/Light)
-- **Sleep Timer**: Temporizador de lectura con presets de 5/10/15/30 min + modo **"Fin de capítulo"**
-- **Bookmarks + Highlights**: Creá marcadores y resaltados mientras leés
+## Requisitos
 
-### 🏠 Home
-- Resumen diario (minutos, sesiones, progreso)
-- "Continue reading" con libro en curso
-- Estantería horizontal con libros recientes
-- Accesos rápidos: importar libro, resaltados, ajustes
-- **Notificaciones**: Campana con bottom sheet de notificaciones mock
+- **Android Studio** Hedgehog o más reciente (Ladybug o Koala recomendado)
+- **JDK 17+**
+- **Android SDK 36** (Android 16) — Android Studio lo instala al abrir el proyecto
+- Gradle 8.13 (el wrapper lo descarga solo, no hace falta instalarlo)
 
-### 📖 Estantería (Library)
-- Grid 2 columnas con covers reales (Coil)
-- Tabs: Todos / Leyendo / Pendientes / Completados
-- Sort: fecha agregada, título, autor, última lectura
-- Importar EPUB/PDF desde archivo
+## Instalación paso a paso
 
-### 🔖 Resaltados
-- Tabs con iconos por color (Citas / Ideas / Pasajes)
-- Stats widgets con contadores
-- Búsqueda y filtro
+1. **Clonar el repositorio**
 
-### ⚙️ Ajustes
-- Sección de Cuenta con datos del usuario
-- Preferencias: Tema, Tamaño de fuente, Sincronización, Acerca de
-- Notificaciones integradas
+   ```powershell
+   git clone <url-del-repositorio>
+   cd NEXTPAGE/android
+   ```
 
-### ☁️ Sincronización
-- Auth con Supabase (Google OAuth + Email/Password)
-- Sincronización de progreso, highlights y bookmarks
-- Modo local offline sin configuración de Supabase
+2. **Abrir el proyecto en Android Studio**
 
-## 🏗️ Stack
+   - File → Open → seleccioná la carpeta `android/`
+   - Esperá a que Gradle sincronice (primera vez puede tardar varios minutos)
 
-| Capa | Tecnología |
-|------|-----------|
-| **UI** | Jetpack Compose + Material 3 |
-| **Arquitectura** | Clean Architecture (presentation → domain → data) |
-| **Navegación** | Jetpack Navigation Compose + BottomNavigation |
-| **Persistencia Local** | Room (SQLite) |
-| **Backend** | Supabase (Auth, PostgREST, Storage) |
-| **EPUB** | Custom parser con ZipInputStream + WebView |
-| **PDF** | PdfRenderer API de Android |
-| **Imágenes** | Coil (Compose integration) |
-| **DI** | Manual (AppContainer) |
-| **Testing** | JUnit + MockK + Coroutines Test |
-| **Lint** | Detekt |
+3. **(Opcional) Configurar Supabase**
 
-## 🚀 Build & Run
+   La app funciona sin configuración en **modo local offline**. Para habilitar la sincronización, creá un archivo `local.properties` en la raíz del proyecto (`android/local.properties`) con las claves del proyecto:
 
-### Prerequisitos
-- Android Studio Hedgehog o más reciente
-- JDK 17+
-- Gradle 8.9
+   ```properties
+   SUPABASE_URL=https://tu-proyecto.supabase.co
+   SUPABASE_ANON_KEY=tu-anon-key
+   google.oauth.client.id=tu-web-client-id
+   google.oauth.android.client.id=tu-android-client-id
+   ```
 
-### Comandos
+   > ⚠️ `local.properties` contiene claves secretas y **no se commitea**. Android Studio lo crea automáticamente al configurar el SDK.
+
+4. **Ejecutar la app**
+
+   - Conectá un dispositivo Android con depuración USB habilitada o iniciá un emulador
+   - Run ▶️ (botón verde) en Android Studio
+
+## Build desde línea de comandos
 
 ```powershell
-# Build debug APK
+# Compilar APK de debug
 .\gradlew.bat assembleDebug
 
-# Build release APK
+# Compilar APK de release
 .\gradlew.bat assembleRelease
 
-# Run unit tests
+# Correr los tests unitarios
 .\gradlew.bat testDebugUnitTest
-
-# Run all tests
-.\gradlew.bat test
-
-# Run a specific test class
-.\gradlew.bat testDebugUnitTest --tests "com.nextpage.presentation.viewmodel.AuthViewModelTest"
-
-# Static analysis
-.\gradlew.bat detekt
-
-# Verify no hardcoded strings in AuthScreen
-.\gradlew.bat verifyAuthScreenNoHardcodedStrings
 ```
 
-### Configuración de Supabase (opcional)
+El APK queda en `app/build/outputs/apk/`.
 
-Si querés sincronización con Supabase, agregá las keys en `local.properties`:
-
-```
-supabase.url=https://your-project.supabase.co
-supabase.anonkey=your-anon-key
-supabase.auth.redirect.scheme=nextpage
-supabase.auth.redirect.host=auth
-supabase.auth.redirect.path=/callback
-supabase.storage.books.bucket=books
-```
-
-Sin estas keys, la app funciona en **modo local offline** sin problemas.
-
-## 🧪 Tests
-
-| Suite | Tests |
-|-------|-------|
-| ViewModel — Auth | 20+ |
-| ViewModel — Home | 10+ |
-| ViewModel — Library | 10+ |
-| ViewModel — Reader (Progress) | 10+ |
-| ViewModel — Reader (Sleep Timer) | 10 |
-| Repository | 10+ |
-| Domain — Use Cases | 5+ |
-| UI — Screens | 5+ |
-
-**Total: ~80 tests unitarios**
-
-## 📁 Estructura del Proyecto
+## Estructura rápida
 
 ```
 android/
-├── app/
-│   └── src/
-│       ├── main/java/com/nextpage/
-│       │   ├── data/           # Data layer (Room, Supabase, EPUB, PDF)
-│       │   ├── domain/         # Domain layer (models, repos, usecases)
-│       │   ├── presentation/   # UI layer (screens, viewmodels, theme)
-│       │   ├── ui/             # Reusable components (atoms, molecules)
-│       │   ├── di/             # Dependency injection
-│       │   └── MainActivity.kt
-│       ├── test/               # Unit tests (JVM)
-│       └── androidTest/        # Instrumented tests
-├── .apks/                      # Pre-built APKs
-├── config/detekt/              # Detekt configuration
-├── design/                     # Design tokens (Pencil file)
-├── openspec/                   # SDD artifacts (specs, proposals)
-└── build.gradle.kts
+├── app/src/main/java/com/nextpage/
+│   ├── data/           # Capa de datos (Room, Supabase, EPUB, PDF)
+│   ├── domain/         # Capa de dominio (modelos, repositorios, use cases)
+│   ├── presentation/   # UI (pantallas, ViewModels, tema, navegación)
+│   └── di/             # Inyección de dependencias
+└── app/src/test/       # Tests unitarios
 ```
 
-## 🧭 Navegación
-
-- **Auth** (no autenticado) → tras login → **Home**
-- **Bottom Nav** (autenticado): Home | Estantería | Resaltados | Ajustes
-- **Reader** se abre al seleccionar un libro desde Home o Estantería
-
-## 📐 SDD (Spec-Driven Development)
-
-Este proyecto usa un flujo SDD documentado en `openspec/`. Cada cambio mayor pasa por:
-1. **Proposal** → 2. **Specs** → 3. **Design** → 4. **Tasks** → 5. **Apply** → 6. **Verify** → 7. **Archive**
-
-La memoria de decisiones se persiste en **Engram** (proyecto `nextpage`).
-
-## 📄 Licencia
+## Licencia
 
 Uso interno — NextPage

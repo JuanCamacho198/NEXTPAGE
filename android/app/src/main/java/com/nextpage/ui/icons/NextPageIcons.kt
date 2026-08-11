@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathBuilder
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
@@ -70,6 +71,19 @@ object NextPageIcons {
             fill = SolidColor(Color.Black),
             stroke = null,
             pathBuilder = block
+        )
+
+    /**
+     * Filled path from a raw SVG/vector-drawable `pathData` string, parsed
+     * verbatim via [PathParser] so arcs/curves survive untouched. Used to port
+     * user-uploaded `ic_*.xml` drawables into the icon object with zero manual
+     * coordinate transcription. Still `SolidColor(Color.Black)` so
+     * `Icon(tint = ...)` colors it uniformly (REQ-I-09/10).
+     */
+    private fun ImageVector.Builder.filledPathFromXml(pathData: String): ImageVector.Builder =
+        addPath(
+            pathData = PathParser().parsePathString(pathData).toNodes(),
+            fill = SolidColor(Color.Black)
         )
 
     /**
@@ -198,7 +212,7 @@ object NextPageIcons {
 
     /**
      * Bottom nav "Statistics" tab — bar chart. Filled exception to the stroke-only
-     * family. Source: `ic_stadistics.xml` (filled bar chart, note spelling).
+     * family. Source: `ic_statistics.xml` (filled bar chart).
      */
     val Statistics = nextPageIcon("Statistics") {
         fillPath {
@@ -254,30 +268,21 @@ object NextPageIcons {
         }
     }
 
-    /** Auth route icon. Source: `ic_nav_home` placeholder — dedicated glyph (REQ-I-04). */
+    /** Auth route icon — user/account circle. Filled exception. Source: `ic_account.xml`. */
     val Person = nextPageIcon("Person") {
-        strokePath {
-            moveTo(9.5f, 6.5f); arcTo(2.5f, 2.5f, 0f, true, true, 14.5f, 6.5f); arcTo(2.5f, 2.5f, 0f, true, true, 9.5f, 6.5f)
-            moveTo(5f, 20f); curveTo(5f, 15.8f, 7.6f, 13.8f, 12f, 13.8f); curveTo(16.4f, 13.8f, 19f, 15.8f, 19f, 20f)
-        }
+        filledPathFromXml("M12,12A6,6 0,1 0,6 6,6.006 6.006,0 0,0 12,12ZM12,2A4,4 0,1 1,8 6,4 4,0 0,1 12,2ZM12,14a9.01,9.01 0,0 0,-9 9,1 1,0 0,0 2,0 7,7 0,0 1,14 0,1 1,0 0,0 2,0A9.01,9.01 0,0 0,12 14Z")
     }
 
     // ── PR2a sweep constants (Home/Library/Highlights + shared molecules) ──
 
-    /** Search field magnifier. Source: `Icons.Outlined.Search` / `Icons.Default.Search`. */
+    /** Search field magnifier. Filled exception. Source: `ic_search.xml`. */
     val Search = nextPageIcon("Search") {
-        strokePath {
-            moveTo(6f, 10f); arcTo(4f, 4f, 0f, true, true, 14f, 10f); arcTo(4f, 4f, 0f, true, true, 6f, 10f)
-            moveTo(13f, 13f); lineTo(18f, 18f)
-        }
+        filledPathFromXml("M23.707,22.293l-5.969,-5.969a10.016,10.016 0,1 0,-1.414 1.414l5.969,5.969a1,1 0,0 0,1.414 -1.414ZM10,18a8,8 0,1 1,8 -8A8.009,8.009 0,0 1,10 18Z")
     }
 
-    /** Dismiss/clear X. Source: `Icons.Outlined.Close` / `Icons.Default.Close`. */
-    val Close = nextPageIcon("Close") {
-        strokePath {
-            moveTo(6f, 6f); lineTo(18f, 18f)
-            moveTo(18f, 6f); lineTo(6f, 18f)
-        }
+    /** Dismiss/clear X in a circle. Filled exception. Source: `ic_cross_circle.xml` (512 viewport). */
+    val Close = nextPageIcon("Close", viewportWidth = 512f, viewportHeight = 512f) {
+        filledPathFromXml("M256,0C114.61,0 0,114.61 0,256s114.61,256 256,256s256,-114.61 256,-256C511.85,114.68 397.32,0.15 256,0zM341.33,311.19c8.67,7.98 9.23,21.48 1.25,30.14c-7.98,8.67 -21.48,9.23 -30.14,1.25c-0.43,-0.4 -0.85,-0.82 -1.25,-1.25L256,286.17l-55.17,55.17c-8.48,8.19 -21.98,7.95 -30.17,-0.52c-7.98,-8.27 -7.98,-21.37 0,-29.64L225.84,256l-55.17,-55.17c-8.19,-8.48 -7.95,-21.98 0.52,-30.17c8.27,-7.98 21.37,-7.98 29.64,0L256,225.84l55.19,-55.17c7.98,-8.67 21.48,-9.23 30.14,-1.25c8.67,7.98 9.23,21.48 1.25,30.14c-0.4,0.43 -0.82,0.85 -1.25,1.25L286.17,256L341.33,311.19z")
     }
 
     /** Vertical overflow menu — three dots. Source: `Icons.Default.MoreVert` / `Icons.Filled.MoreVert`. */
@@ -364,20 +369,19 @@ object NextPageIcons {
         }
     }
 
-    /** Bookmark ribbon. Source: `Icons.Outlined.Bookmark`. */
+    /** Bookmark ribbon (outline — default reader bookmark). Filled exception. Source: `ic_marcador.xml`. */
     val Bookmark = nextPageIcon("Bookmark") {
-        strokePath {
-            moveTo(7f, 4f); lineTo(17f, 4f); lineTo(17f, 20f); lineTo(12f, 16f); lineTo(7f, 20f); lineTo(7f, 4f)
-        }
+        filledPathFromXml("M20.137,24a2.8,2.8 0,0 1,-1.987 -0.835L12,17.051 5.85,23.169a2.8,2.8 0,0 1,-3.095 0.609A2.8,2.8 0,0 1,1 21.154V5A5,5 0,0 1,6 0H18a5,5 0,0 1,5 5V21.154a2.8,2.8 0,0 1,-1.751 2.624A2.867,2.867 0,0 1,20.137 24ZM6,2A3,3 0,0 0,3 5V21.154a0.843,0.843 0,0 0,1.437 0.6h0L11.3,14.933a1,1 0,0 1,1.41 0l6.855,6.819a0.843,0.843 0,0 0,1.437 -0.6V5a3,3 0,0 0,-3 -3Z")
     }
 
-    /** Upload — tray with up arrow. Source: `Icons.Outlined.UploadFile`. */
+    /** Filled variant of [Bookmark] — used by the reader bookmark toggle animation. Filled exception. Source: `ic_marcador_relleno.xml`. */
+    val BookmarkFilled = nextPageIcon("BookmarkFilled") {
+        filledPathFromXml("M2.849,23.55a2.954,2.954 0,0 0,3.266 -0.644L12,17.053l5.885,5.853a2.956,2.956 0,0 0,2.1 0.881,3.05 3.05,0 0,0 1.17,-0.237A2.953,2.953 0,0 0,23 20.779V5a5.006,5.006 0,0 0,-5 -5H6A5.006,5.006 0,0 0,1 5V20.779A2.953,2.953 0,0 0,2.849 23.55Z")
+    }
+
+    /** Upload — tray with up arrow. Filled exception. Source: `ic_subir_archivo.xml`. */
     val Upload = nextPageIcon("Upload") {
-        strokePath {
-            moveTo(4f, 15f); lineTo(4f, 19f); lineTo(20f, 19f); lineTo(20f, 15f)
-            moveTo(12f, 14f); lineTo(12f, 6f)
-            moveTo(8f, 10f); lineTo(12f, 6f); lineTo(16f, 10f)
-        }
+        filledPathFromXml("M11.007,2.578 L11,18.016a1,1 0,0 0,1 1h0a1,1 0,0 0,1 -1l0.007,-15.421 2.912,2.913a1,1 0,0 0,1.414 0h0a1,1 0,0 0,0 -1.414L14.122,0.879a3,3 0,0 0,-4.244 0L6.667,4.091a1,1 0,0 0,0 1.414h0a1,1 0,0 0,1.414 0ZM22,17v4a1,1 0,0 1,-1 1H3a1,1 0,0 1,-1 -1V17a1,1 0,0 0,-1 -1H1a1,1 0,0 0,-1 1v4a3,3 0,0 0,3 3H21a3,3 0,0 0,3 -3V17a1,1 0,0 0,-1 -1h0A1,1 0,0 0,22 17Z")
     }
 
     /** Four-point sparkle star. Source: `Icons.Outlined.AutoAwesome`. */
@@ -472,26 +476,14 @@ object NextPageIcons {
         }
     }
 
-    /** Share — three connected dots. Source: `Icons.Default.Share` / `Icons.Filled.Share`. */
+    /** Share — three connected dots. Filled exception. Source: `ic_share.xml`. */
     val Share = nextPageIcon("Share") {
-        strokePath {
-            moveTo(10f, 12f); arcTo(2f, 2f, 0f, true, true, 14f, 12f); arcTo(2f, 2f, 0f, true, true, 10f, 12f)
-            moveTo(17.5f, 5f); arcTo(1.5f, 1.5f, 0f, true, true, 20.5f, 5f); arcTo(1.5f, 1.5f, 0f, true, true, 17.5f, 5f)
-            moveTo(3.5f, 19f); arcTo(1.5f, 1.5f, 0f, true, true, 6.5f, 19f); arcTo(1.5f, 1.5f, 0f, true, true, 3.5f, 19f)
-            moveTo(13.6f, 10.9f); lineTo(18.2f, 6.1f)
-            moveTo(10.4f, 13.1f); lineTo(5.8f, 17.9f)
-        }
+        filledPathFromXml("M19.333,14.667a4.66,4.66 0,0 0,-3.839 2.024L8.985,13.752a4.574,4.574 0,0 0,0.005 -3.488l6.5,-2.954a4.66,4.66 0,1 0,-0.827 -2.643,4.633 4.633,0 0,0 0.08,0.786L7.833,8.593a4.668,4.668 0,1 0,-0.015 6.827l6.928,3.128a4.736,4.736 0,0 0,-0.079 0.785,4.667 4.667,0 1,0 4.666,-4.666ZM19.333,2a2.667,2.667 0,1 1,-2.666 2.667A2.669,2.669 0,0 1,19.333 2ZM4.667,14.667A2.667,2.667 0,1 1,7.333 12,2.67 2.67,0 0,1 4.667,14.667ZM19.333,22A2.667,2.667 0,1 1,22 19.333,2.669 2.669,0 0,1 19.333,22Z")
     }
 
-    /** Trash can — lid, body, ribs. Source: `Icons.Filled.Delete` / `Icons.Default.Delete`. */
+    /** Trash can — lid, body, ribs. Filled exception. Source: `ic_trash.xml`. */
     val Trash = nextPageIcon("Trash") {
-        strokePath {
-            moveTo(5f, 6f); lineTo(19f, 6f)
-            moveTo(9.5f, 4f); lineTo(14.5f, 4f)
-            moveTo(7f, 6f); lineTo(7f, 19f); lineTo(17f, 19f); lineTo(17f, 6f)
-            moveTo(10f, 9f); lineTo(10f, 16f)
-            moveTo(14f, 9f); lineTo(14f, 16f)
-        }
+        filledPathFromXml("M21,4L17.9,4A5.009,5.009 0,0 0,13 0L11,0A5.009,5.009 0,0 0,6.1 4L3,4A1,1 0,0 0,3 6L4,6L4,19a5.006,5.006 0,0 0,5 5h6a5.006,5.006 0,0 0,5 -5L20,6h1a1,1 0,0 0,0 -2ZM11,2h2a3.006,3.006 0,0 1,2.829 2L8.171,4A3.006,3.006 0,0 1,11 2ZM18,19a3,3 0,0 1,-3 3L9,22a3,3 0,0 1,-3 -3L6,6L18,6ZM10,18a1,1 0,0 0,1 -1V11a1,1 0,0 0,-2 0v6A1,1 0,0 0,10 18ZM14,18a1,1 0,0 0,1 -1V11a1,1 0,0 0,-2 0v6A1,1 0,0 0,14 18Z")
     }
 
     /** Stacked books. RTL mirrors. Source: `Icons.AutoMirrored.Outlined.LibraryBooks`. */
@@ -587,6 +579,16 @@ object NextPageIcons {
             moveTo(12f, 11f); lineTo(12f, 17f)
             moveTo(11.2f, 8f); arcTo(0.8f, 0.8f, 0f, true, true, 12.8f, 8f); arcTo(0.8f, 0.8f, 0f, true, true, 11.2f, 8f)
         }
+    }
+
+    /** Help — question mark in a circle. Filled exception. Source: `ic_interrogation.xml`. */
+    val Help = nextPageIcon("Help") {
+        filledPathFromXml("M12,0A12,12 0,1 0,24 12,12.013 12.013,0 0,0 12,0ZM12,22A10,10 0,1 1,22 12,10.011 10.011,0 0,1 12,22ZM12.717,5.063A4,4 0,0 0,8 9a1,1 0,0 0,2 0,2 2,0 0,1 2.371,-1.967 2.024,2.024 0,0 1,1.6 1.595,2 2,0 0,1 -1,2.125A3.954,3.954 0,0 0,11 14.257V15a1,1 0,0 0,2 0v-0.743a1.982,1.982 0,0 1,0.93 -1.752,4 4,0 0,0 -1.213,-7.442ZM12,17L12,17A1,1 0,0 1,13 18L13,18A1,1 0,0 1,12 19L12,19A1,1 0,0 1,11 18L11,18A1,1 0,0 1,12 17z")
+    }
+
+    /** Hamburger menu — three stacked lines. Filled exception. Source: `ic_menu_burger.xml` (512 viewport). */
+    val MenuBurger = nextPageIcon("MenuBurger", viewportWidth = 512f, viewportHeight = 512f) {
+        filledPathFromXml("M480,224H32c-17.67,0 -32,14.33 -32,32s14.33,32 32,32h448c17.67,0 32,-14.33 32,-32S497.67,224 480,224zM32,138.67h448c17.67,0 32,-14.33 32,-32s-14.33,-32 -32,-32H32c-17.67,0 -32,14.33 -32,32S14.33,138.67 32,138.67zM480,373.33H32c-17.67,0 -32,14.33 -32,32s14.33,32 32,32h448c17.67,0 32,-14.33 32,-32S497.67,373.33 480,373.33z")
     }
 
     /** Bug with legs and antennae. Source: `Icons.Outlined.BugReport` / `Icons.Default.BugReport`. */
@@ -829,12 +831,9 @@ object NextPageIcons {
         }
     }
 
-    /** Envelope. Source: `Icons.Filled.Email`. */
+    /** Envelope. Filled exception. Source: `ic_email.xml`. */
     val Email = nextPageIcon("Email") {
-        strokePath {
-            moveTo(4f, 6f); lineTo(20f, 6f); lineTo(20f, 18f); lineTo(4f, 18f); lineTo(4f, 6f)
-            moveTo(4f, 6f); lineTo(12f, 13f); lineTo(20f, 6f)
-        }
+        filledPathFromXml("M19,1H5A5.006,5.006 0,0 0,0 6V18a5.006,5.006 0,0 0,5 5H19a5.006,5.006 0,0 0,5 -5V6A5.006,5.006 0,0 0,19 1ZM5,3H19a3,3 0,0 1,2.78 1.887l-7.658,7.659a3.007,3.007 0,0 1,-4.244 0L2.22,4.887A3,3 0,0 1,5 3ZM19,21H5a3,3 0,0 1,-3 -3V7.5L8.464,13.96a5.007,5.007 0,0 0,7.072 0L22,7.5V18A3,3 0,0 1,19 21Z")
     }
 }
 
@@ -909,7 +908,10 @@ private fun NextPageIconsGalleryPreview() {
         "Flame" to NextPageIcons.Flame,
         "ChevronUp" to NextPageIcons.ChevronUp,
         "ChevronDown" to NextPageIcons.ChevronDown,
-        "Email" to NextPageIcons.Email
+        "Email" to NextPageIcons.Email,
+        "BookmarkFilled" to NextPageIcons.BookmarkFilled,
+        "Help" to NextPageIcons.Help,
+        "MenuBurger" to NextPageIcons.MenuBurger
     )
 
     Column(

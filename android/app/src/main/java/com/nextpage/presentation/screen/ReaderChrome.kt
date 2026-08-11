@@ -1,12 +1,16 @@
 package com.nextpage.presentation.screen
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +29,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +50,8 @@ import com.nextpage.R
 import com.nextpage.debug.DebugPrefs
 import com.nextpage.presentation.viewmodel.ReaderUiState
 import com.nextpage.ui.icons.NextPageIcons
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // ── Reader Design Colors ──────────────────────────────────────────
 private val READER_BG = Color(0xFF0D1322)
@@ -50,6 +61,9 @@ private val BUTTON_BG = Color(0xFF2F3445)
 
 /** Duration (ms) of the header/footer show/hide animation. */
 private const val CHROME_ANIM_MS = 300
+
+/** Duration (ms) the bookmark icon stays filled after a press (pulse feedback). */
+private const val BOOKMARK_PULSE_MS = 600L
 
 // ── ReaderChrome: structural layout ────────────────────────────────
 
@@ -236,11 +250,38 @@ fun ReaderHeader(
                 onClick = onToggleHighlights
             )
 
-            // Bookmark
+            // Bookmark — outline→filled pulse on press (visual feedback only;
+            // bookmark creation itself stays in the ViewModel).
+            var bookmarkFilled by remember { mutableStateOf(false) }
+            val bookmarkScope = rememberCoroutineScope()
             HeaderActionButton(
                 icon = NextPageIcons.Bookmark,
                 contentDescription = stringResource(R.string.reader_add_bookmark),
-                onClick = onCreateBookmark
+                onClick = {
+                    bookmarkFilled = true
+                    onCreateBookmark()
+                    bookmarkScope.launch {
+                        delay(BOOKMARK_PULSE_MS)
+                        bookmarkFilled = false
+                    }
+                },
+                animatedIcon = {
+                    AnimatedContent(
+                        targetState = bookmarkFilled,
+                        transitionSpec = {
+                            (fadeIn(tween(120)) + scaleIn(tween(120)))
+                                .togetherWith(fadeOut(tween(120)) + scaleOut(tween(120)))
+                        },
+                        label = "bookmarkToggle"
+                    ) { filled ->
+                        Icon(
+                            imageVector = if (filled) NextPageIcons.BookmarkFilled else NextPageIcons.Bookmark,
+                            contentDescription = stringResource(R.string.reader_add_bookmark),
+                            tint = HEADER_FG,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             )
 
             // Debug panel toggle — gated on runtime DebugPrefs so it works
@@ -263,7 +304,8 @@ fun HeaderActionButton(
     icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    animatedIcon: (@Composable () -> Unit)? = null
 ) {
     IconButton(
         onClick = onClick,
@@ -272,11 +314,15 @@ fun HeaderActionButton(
             .clip(CircleShape)
             .background(BUTTON_BG)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = HEADER_FG,
-            modifier = Modifier.size(18.dp)
-        )
+        if (animatedIcon != null) {
+            animatedIcon()
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = HEADER_FG,
+                modifier = Modifier.size(18.dp)
+            )
+        }
     }
 }

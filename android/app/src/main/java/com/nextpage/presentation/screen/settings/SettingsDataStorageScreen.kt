@@ -105,7 +105,7 @@ fun SettingsDataStorageScreen(
         )
 
         NextPagePreferenceItem(
-            icon = NextPageIcons.ChartBar,
+            icon = NextPageIcons.Statistics,
             label = stringResource(R.string.settings_statistics_title),
             onClick = onNavigateToStatistics
         )

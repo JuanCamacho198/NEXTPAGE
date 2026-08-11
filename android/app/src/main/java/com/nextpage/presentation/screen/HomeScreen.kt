@@ -562,7 +562,7 @@ private fun QuickAccessSection(
                 horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
             ) {
                 QuickAccessButton(
-                    icon = NextPageIcons.ChartBar,
+                    icon = NextPageIcons.Statistics,
                     label = stringResource(R.string.home_action_stats),
                     onClick = onStatistics,
                     modifier = Modifier.weight(1f)

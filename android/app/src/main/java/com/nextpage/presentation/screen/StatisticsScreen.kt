@@ -333,7 +333,7 @@ private fun FavoriteGenresSection(genres: List<String>) {
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
         if (genres.isEmpty()) {
             NextPageEmptyState(
-                icon = NextPageIcons.ChartBar,
+                icon = NextPageIcons.Statistics,
                 title = stringResource(R.string.statistics_no_genres),
                 subtitle = stringResource(R.string.statistics_no_genres_subtitle)
             )

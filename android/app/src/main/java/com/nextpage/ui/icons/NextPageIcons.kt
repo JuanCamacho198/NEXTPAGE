@@ -1,6 +1,16 @@
 package com.nextpage.ui.icons
 
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -24,14 +34,16 @@ object NextPageIcons {
     private fun nextPageIcon(
         name: String,
         autoMirror: Boolean = false,
+        viewportWidth: Float = 24f,
+        viewportHeight: Float = 24f,
         block: ImageVector.Builder.() -> ImageVector.Builder
     ): ImageVector {
         val builder = ImageVector.Builder(
             name = "NextPageIcons.$name",
             defaultWidth = 24.dp,
             defaultHeight = 24.dp,
-            viewportWidth = 24f,
-            viewportHeight = 24f,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
             autoMirror = autoMirror
         )
         block(builder)
@@ -60,59 +72,163 @@ object NextPageIcons {
             pathBuilder = block
         )
 
-    /** Bottom nav "Home" tab. Source: `ic_nav_home`. */
-    val Home = nextPageIcon("Home") {
-        strokePath {
-            moveTo(4f, 11f); lineTo(12f, 4f); lineTo(20f, 11f)
-            moveTo(6f, 10f); lineTo(6f, 20f); lineTo(18f, 20f); lineTo(18f, 10f)
-            moveTo(10f, 20f); lineTo(10f, 15f); lineTo(14f, 15f); lineTo(14f, 20f)
+    /**
+     * Bottom nav "Home" tab. Filled exception to the stroke-only family.
+     * Source: `ic_home.xml` (filled Material Symbols home, 512 viewport).
+     */
+    val Home = nextPageIcon("Home", viewportWidth = 512f, viewportHeight = 512f) {
+        fillPath {
+            moveTo(256f, 319.84f)
+            curveTo(220.65f, 319.84f, 192f, 348.49f, 192f, 383.84f)
+            lineTo(192f, 511.84f); lineTo(320f, 511.84f); lineTo(320f, 383.84f)
+            curveTo(320f, 348.49f, 291.35f, 319.84f, 256f, 319.84f); close()
+            moveTo(362.67f, 383.84f); lineTo(362.67f, 511.84f); lineTo(448f, 511.84f)
+            curveTo(483.35f, 511.84f, 512f, 483.19f, 512f, 447.84f); lineTo(512f, 253.26f)
+            curveTo(512f, 242.18f, 507.7f, 231.53f, 499.99f, 223.56f)
+            lineTo(318.7f, 27.57f)
+            curveTo(286.71f, -7.04f, 232.72f, -9.17f, 198.11f, 22.82f)
+            curveTo(196.47f, 24.34f, 194.88f, 25.92f, 193.36f, 27.57f); lineTo(12.4f, 223.5f)
+            curveTo(4.45f, 231.5f, 0f, 242.31f, 0f, 253.58f); lineTo(0f, 447.84f)
+            curveTo(0f, 483.19f, 28.65f, 511.84f, 64f, 511.84f)
+            lineTo(149.33f, 511.84f); lineTo(149.33f, 383.84f)
+            curveTo(149.73f, 325.67f, 196.7f, 278.16f, 253.4f, 276.8f)
+            curveTo(312.01f, 275.38f, 362.22f, 323.7f, 362.67f, 383.84f); close()
         }
     }
 
-    /** Bottom nav "Library" tab — bookshelf with two rows of books. Source: `ic_nav_library`. */
+    /**
+     * Bottom nav "Library" tab — bookshelf with two rows of books. Filled exception
+     * to the stroke-only family. Source: `ic_library.xml` (filled library books).
+     */
     val Library = nextPageIcon("Library") {
-        strokePath {
-            moveTo(5f, 4f); lineTo(5f, 20f)
-            moveTo(19f, 4f); lineTo(19f, 20f)
-            moveTo(4f, 4f); lineTo(20f, 4f)
-            moveTo(4f, 12f); lineTo(20f, 12f)
-            moveTo(4f, 20f); lineTo(20f, 20f)
-            moveTo(8f, 11f); lineTo(8f, 5f)
-            moveTo(11f, 11f); lineTo(11f, 5f)
-            moveTo(14f, 11f); lineTo(14f, 5f)
-            moveTo(8f, 19f); lineTo(8f, 14f)
-            moveTo(11f, 19f); lineTo(11f, 14f)
-            moveTo(14f, 19f); lineTo(14f, 14f)
+        fillPath {
+            moveTo(8f, 12f)
+            curveTo(8f, 12.55f, 7.55f, 13f, 7f, 13f); lineTo(5f, 13f); lineTo(5f, 15f)
+            curveTo(5f, 15.55f, 4.55f, 16f, 4f, 16f)
+            curveTo(3.45f, 16f, 3f, 15.55f, 3f, 15f); lineTo(3f, 13f); lineTo(1f, 13f)
+            curveTo(0.45f, 13f, 0f, 12.55f, 0f, 12f)
+            curveTo(0f, 11.45f, 0.45f, 11f, 1f, 11f); lineTo(3f, 11f); lineTo(3f, 9f)
+            curveTo(3f, 8.45f, 3.45f, 8f, 4f, 8f)
+            curveTo(4.55f, 8f, 5f, 8.45f, 5f, 9f); lineTo(5f, 11f); lineTo(7f, 11f)
+            curveTo(7.55f, 11f, 8f, 11.45f, 8f, 12f); close()
+            moveTo(3f, 21f); curveTo(3f, 22.66f, 4.34f, 24f, 6f, 24f); lineTo(8f, 24f); lineTo(8f, 19f)
+            lineTo(3f, 19f); lineTo(3f, 21f); close()
+            moveTo(3f, 3f); lineTo(3f, 5f); lineTo(8f, 5f); lineTo(8f, 0f); lineTo(6f, 0f)
+            curveTo(4.34f, 0f, 3f, 1.34f, 3f, 3f); close()
+            moveTo(10f, 17f); lineTo(15f, 17f); lineTo(15f, 7f); lineTo(10f, 7f); lineTo(10f, 17f); close()
+            moveTo(10f, 24f); lineTo(12f, 24f); curveTo(13.66f, 24f, 15f, 22.66f, 15f, 21f)
+            lineTo(15f, 19f); lineTo(10f, 19f); lineTo(10f, 24f); close()
+            moveTo(20.94f, 6.09f); lineTo(15.34f, 7.16f); lineTo(17.51f, 18.01f); lineTo(23.11f, 16.95f)
+            lineTo(20.94f, 6.09f); close()
+            moveTo(23.97f, 21.31f); lineTo(23.49f, 18.92f); lineTo(17.89f, 19.98f); lineTo(18.37f, 22.38f)
+            curveTo(18.57f, 23.46f, 19.62f, 24.17f, 20.7f, 23.97f)
+            lineTo(22.38f, 23.65f); curveTo(23.46f, 23.44f, 24.17f, 22.39f, 23.97f, 21.31f); close()
+            moveTo(20.57f, 4.13f); lineTo(20.09f, 1.63f)
+            curveTo(19.88f, 0.54f, 18.84f, -0.17f, 17.75f, 0.04f)
+            lineTo(16.08f, 0.35f)
+            curveTo(15.4f, 0.48f, 14.86f, 0.95f, 14.61f, 1.55f)
+            curveTo(14.1f, 0.63f, 13.13f, 0f, 12f, 0f); lineTo(10f, 0f); lineTo(10f, 5f)
+            lineTo(15.97f, 5f); lineTo(20.57f, 4.13f); close()
         }
     }
 
-    /** Bottom nav "Highlights" tab — highlighter marker. Source: `ic_nav_highlights`. */
+    /**
+     * Bottom nav "Highlights" tab — highlighter marker. Filled exception to the
+     * stroke-only family. Source: `ic_highlights.xml` (filled highlight/pen).
+     */
     val Highlights = nextPageIcon("Highlights") {
-        strokePath {
-            moveTo(8f, 4f); lineTo(18f, 14f); lineTo(14f, 18f); lineTo(4f, 8f); close()
-            moveTo(4f, 8f); lineTo(1.8f, 5.8f)
+        fillPath {
+            moveTo(8.02f, 19f)
+            curveTo(9.8f, 19f, 11.5f, 18.24f, 12.72f, 16.87f); lineTo(19.82f, 8.35f)
+            curveTo(21.47f, 6.45f, 21.37f, 3.56f, 19.59f, 1.77f); lineTo(19.22f, 1.4f)
+            curveTo(17.44f, -0.38f, 14.55f, -0.48f, 12.67f, 1.15f); lineTo(4.09f, 8.31f)
+            curveTo(2.76f, 9.49f, 2f, 11.19f, 2f, 12.97f); lineTo(2f, 16.87f)
+            lineTo(0.44f, 18.43f)
+            curveTo(-0.15f, 19.02f, -0.15f, 19.97f, 0.44f, 20.55f)
+            curveTo(0.73f, 20.84f, 1.12f, 20.99f, 1.5f, 20.99f)
+            curveTo(1.88f, 20.99f, 2.27f, 20.84f, 2.56f, 20.55f); lineTo(4.12f, 18.99f)
+            lineTo(8.02f, 18.99f); close()
+            moveTo(6.05f, 10.59f); lineTo(14.61f, 3.45f)
+            curveTo(15.33f, 2.83f, 16.42f, 2.86f, 17.1f, 3.54f); lineTo(17.47f, 3.91f)
+            curveTo(18.14f, 4.58f, 18.18f, 5.68f, 17.54f, 6.42f); lineTo(10.45f, 14.92f)
+            curveTo(10.22f, 15.17f, 9.96f, 15.39f, 9.67f, 15.56f); lineTo(5.45f, 11.34f)
+            curveTo(5.61f, 11.06f, 5.82f, 10.81f, 6.05f, 10.59f); close()
+            moveTo(24f, 22.5f); curveTo(24f, 23.33f, 23.33f, 24f, 22.5f, 24f)
+            lineTo(5.5f, 24f); curveTo(4.67f, 24f, 4f, 23.33f, 4f, 22.5f)
+            curveTo(4f, 21.67f, 4.67f, 21f, 5.5f, 21f); lineTo(22.5f, 21f)
+            curveTo(23.33f, 21f, 24f, 21.67f, 24f, 22.5f); close()
         }
     }
 
-    /** Bottom nav "Settings" tab — gear. Source: `ic_nav_settings`. */
-    val Settings = nextPageIcon("Settings") {
-        strokePath {
-            moveTo(4.5f, 12f); arcTo(7.5f, 7.5f, 0f, true, true, 19.5f, 12f); arcTo(7.5f, 7.5f, 0f, true, true, 4.5f, 12f)
-            moveTo(9.2f, 12f); arcTo(2.8f, 2.8f, 0f, true, true, 14.8f, 12f); arcTo(2.8f, 2.8f, 0f, true, true, 9.2f, 12f)
-            moveTo(7.7f, 7.7f); lineTo(9.5f, 9.5f)
-            moveTo(16.3f, 7.7f); lineTo(14.5f, 9.5f)
-            moveTo(16.3f, 16.3f); lineTo(14.5f, 14.5f)
-            moveTo(7.7f, 16.3f); lineTo(9.5f, 14.5f)
+    /**
+     * Bottom nav "Settings" tab — gear. Filled exception to the stroke-only family.
+     * Source: `ic_settings.xml` (filled Material Symbols settings, 512 viewport).
+     */
+    val Settings = nextPageIcon("Settings", viewportWidth = 512f, viewportHeight = 512f) {
+        fillPath {
+            moveTo(34.28f, 384f)
+            curveTo(51.93f, 414.63f, 91.06f, 425.15f, 121.68f, 407.5f)
+            curveTo(121.7f, 407.49f, 121.72f, 407.48f, 121.74f, 407.46f); lineTo(131.23f, 401.98f)
+            curveTo(149.15f, 417.31f, 169.75f, 429.2f, 191.99f, 437.05f); lineTo(191.99f, 448f)
+            curveTo(191.99f, 483.35f, 220.64f, 512f, 255.99f, 512f)
+            curveTo(291.34f, 512f, 319.99f, 483.35f, 319.99f, 448f); lineTo(319.99f, 437.06f)
+            curveTo(342.23f, 429.2f, 362.83f, 417.29f, 380.75f, 401.94f); lineTo(390.29f, 407.44f)
+            curveTo(420.92f, 425.11f, 460.08f, 414.61f, 477.76f, 383.97f)
+            curveTo(495.43f, 353.34f, 484.93f, 314.18f, 454.29f, 296.5f); lineTo(454.29f, 296.5f)
+            lineTo(444.82f, 291.04f)
+            curveTo(449.08f, 267.84f, 449.08f, 244.05f, 444.82f, 220.85f); lineTo(454.29f, 215.39f)
+            curveTo(484.92f, 197.72f, 495.43f, 158.56f, 477.76f, 127.92f)
+            curveTo(460.09f, 97.29f, 420.93f, 86.78f, 390.29f, 104.45f); lineTo(380.8f, 109.93f)
+            curveTo(362.86f, 94.64f, 342.25f, 82.77f, 320f, 74.94f); lineTo(320f, 64f)
+            curveTo(320f, 28.65f, 291.35f, 0f, 256f, 0f)
+            curveTo(220.65f, 0f, 192f, 28.65f, 192f, 64f); lineTo(192f, 74.94f)
+            curveTo(169.76f, 82.8f, 149.16f, 94.71f, 131.24f, 110.06f); lineTo(121.7f, 104.53f)
+            curveTo(91.07f, 86.86f, 51.91f, 97.37f, 34.24f, 128f)
+            curveTo(16.57f, 158.63f, 27.07f, 197.79f, 57.71f, 215.47f); lineTo(57.71f, 215.47f)
+            lineTo(67.18f, 220.93f)
+            curveTo(62.92f, 244.13f, 62.92f, 267.92f, 67.18f, 291.12f); lineTo(57.71f, 296.58f)
+            curveTo(27.16f, 314.3f, 16.69f, 353.38f, 34.28f, 384f); close()
+            moveTo(256f, 170.67f)
+            curveTo(303.13f, 170.67f, 341.33f, 208.88f, 341.33f, 256f)
+            curveTo(341.33f, 303.12f, 303.13f, 341.33f, 256f, 341.33f)
+            curveTo(208.87f, 341.33f, 170.67f, 303.13f, 170.67f, 256f)
+            curveTo(170.67f, 208.87f, 208.87f, 170.67f, 256f, 170.67f); close()
         }
     }
 
-    /** Bottom nav "Statistics" tab — bar chart. Source: `ic_nav_statistics` (re-drawn in family, REQ-I-11). */
+    /**
+     * Bottom nav "Statistics" tab — bar chart. Filled exception to the stroke-only
+     * family. Source: `ic_stadistics.xml` (filled bar chart, note spelling).
+     */
     val Statistics = nextPageIcon("Statistics") {
-        strokePath {
-            moveTo(4f, 20f); lineTo(20f, 20f)
-            moveTo(7f, 20f); lineTo(7f, 12f)
-            moveTo(12f, 20f); lineTo(12f, 7f)
-            moveTo(17f, 20f); lineTo(17f, 15f)
+        fillPath {
+            moveTo(23f, 22f); lineTo(5f, 22f)
+            arcTo(3f, 3f, 0f, false, true, 2f, 19f); lineTo(2f, 1f)
+            arcTo(1f, 1f, 0f, false, false, 0f, 1f); lineTo(0f, 19f)
+            arcTo(5.006f, 5.006f, 0f, false, false, 5f, 24f); lineTo(23f, 24f)
+            arcTo(1f, 1f, 0f, false, false, 23f, 22f); close()
+            moveTo(6f, 20f); arcTo(1f, 1f, 0f, false, false, 7f, 19f); lineTo(7f, 12f)
+            arcTo(1f, 1f, 0f, false, false, 5f, 12f); lineTo(5f, 19f)
+            arcTo(1f, 1f, 0f, false, false, 6f, 20f); close()
+            moveTo(10f, 10f); lineTo(10f, 19f)
+            arcTo(1f, 1f, 0f, false, false, 12f, 19f); lineTo(12f, 10f)
+            arcTo(1f, 1f, 0f, false, false, 10f, 10f); close()
+            moveTo(15f, 13f); lineTo(15f, 19f)
+            arcTo(1f, 1f, 0f, false, false, 17f, 19f); lineTo(17f, 13f)
+            arcTo(1f, 1f, 0f, false, false, 15f, 13f); close()
+            moveTo(20f, 9f); lineTo(20f, 19f)
+            arcTo(1f, 1f, 0f, false, false, 22f, 19f); lineTo(22f, 9f)
+            arcTo(1f, 1f, 0f, false, false, 20f, 9f); close()
+            moveTo(6f, 9f); arcTo(1f, 1f, 0f, false, false, 6.71f, 8.71f)
+            lineTo(10.29f, 5.12f)
+            arcTo(1.025f, 1.025f, 0f, false, true, 11.71f, 5.12f)
+            lineTo(13.88f, 7.29f)
+            arcTo(3f, 3f, 0f, false, false, 18.12f, 7.29f)
+            lineTo(23.71f, 1.71f)
+            arcTo(1f, 1f, 0f, false, false, 22.29f, 0.29f); lineTo(16.71f, 5.88f)
+            arcTo(1f, 1f, 0f, false, true, 15.29f, 5.88f); lineTo(13.12f, 3.71f)
+            arcTo(3f, 3f, 0f, false, false, 8.88f, 3.71f); lineTo(5.29f, 7.29f)
+            arcTo(1f, 1f, 0f, false, false, 6f, 9f); close()
         }
     }
 
@@ -718,6 +834,114 @@ object NextPageIcons {
         strokePath {
             moveTo(4f, 6f); lineTo(20f, 6f); lineTo(20f, 18f); lineTo(4f, 18f); lineTo(4f, 6f)
             moveTo(4f, 6f); lineTo(12f, 13f); lineTo(20f, 6f)
+        }
+    }
+}
+
+@Preview(showBackground = true, heightDp = 1200)
+@Composable
+private fun NextPageIconsGalleryPreview() {
+    val icons = listOf<Pair<String, ImageVector>>(
+        "Home" to NextPageIcons.Home,
+        "Library" to NextPageIcons.Library,
+        "Highlights" to NextPageIcons.Highlights,
+        "Settings" to NextPageIcons.Settings,
+        "Statistics" to NextPageIcons.Statistics,
+        "BookOpen" to NextPageIcons.BookOpen,
+        "Book" to NextPageIcons.Book,
+        "Person" to NextPageIcons.Person,
+        "Search" to NextPageIcons.Search,
+        "Close" to NextPageIcons.Close,
+        "MoreVert" to NextPageIcons.MoreVert,
+        "Add" to NextPageIcons.Add,
+        "FilterList" to NextPageIcons.FilterList,
+        "Notifications" to NextPageIcons.Notifications,
+        "GridView" to NextPageIcons.GridView,
+        "ViewList" to NextPageIcons.ViewList,
+        "Clock" to NextPageIcons.Clock,
+        "ChartLine" to NextPageIcons.ChartLine,
+        "ChartBar" to NextPageIcons.ChartBar,
+        "Bookmark" to NextPageIcons.Bookmark,
+        "Upload" to NextPageIcons.Upload,
+        "Sparkle" to NextPageIcons.Sparkle,
+        "Quote" to NextPageIcons.Quote,
+        "Lightbulb" to NextPageIcons.Lightbulb,
+        "Check" to NextPageIcons.Check,
+        "ErrorOutline" to NextPageIcons.ErrorOutline,
+        "Trophy" to NextPageIcons.Trophy,
+        "Palette" to NextPageIcons.Palette,
+        "Copy" to NextPageIcons.Copy,
+        "Tag" to NextPageIcons.Tag,
+        "Pencil" to NextPageIcons.Pencil,
+        "Share" to NextPageIcons.Share,
+        "Trash" to NextPageIcons.Trash,
+        "LibraryBooks" to NextPageIcons.LibraryBooks,
+        "CloudDownload" to NextPageIcons.CloudDownload,
+        "Devices" to NextPageIcons.Devices,
+        "DarkMode" to NextPageIcons.DarkMode,
+        "LightMode" to NextPageIcons.LightMode,
+        "BrightnessAuto" to NextPageIcons.BrightnessAuto,
+        "Language" to NextPageIcons.Language,
+        "Storage" to NextPageIcons.Storage,
+        "Info" to NextPageIcons.Info,
+        "BugReport" to NextPageIcons.BugReport,
+        "SignOut" to NextPageIcons.SignOut,
+        "Smartphone" to NextPageIcons.Smartphone,
+        "Monitor" to NextPageIcons.Monitor,
+        "Laptop" to NextPageIcons.Laptop,
+        "ChevronRight" to NextPageIcons.ChevronRight,
+        "ArrowBack" to NextPageIcons.ArrowBack,
+        "ArrowRight" to NextPageIcons.ArrowRight,
+        "Sync" to NextPageIcons.Sync,
+        "CloudSync" to NextPageIcons.CloudSync,
+        "TextAa" to NextPageIcons.TextAa,
+        "AlignLeft" to NextPageIcons.AlignLeft,
+        "AlignCenter" to NextPageIcons.AlignCenter,
+        "AlignRight" to NextPageIcons.AlignRight,
+        "AlignJustify" to NextPageIcons.AlignJustify,
+        "ArrowLeft" to NextPageIcons.ArrowLeft,
+        "ArrowForward" to NextPageIcons.ArrowForward,
+        "TextSize" to NextPageIcons.TextSize,
+        "ListBullets" to NextPageIcons.ListBullets,
+        "Star" to NextPageIcons.Star,
+        "StarBorder" to NextPageIcons.StarBorder,
+        "ScreenRotation" to NextPageIcons.ScreenRotation,
+        "Flame" to NextPageIcons.Flame,
+        "ChevronUp" to NextPageIcons.ChevronUp,
+        "ChevronDown" to NextPageIcons.ChevronDown,
+        "Email" to NextPageIcons.Email
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        icons.chunked(6).forEach { rowIcons ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                rowIcons.forEach { (name, icon) ->
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = Color(0xFF000000)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+            }
         }
     }
 }

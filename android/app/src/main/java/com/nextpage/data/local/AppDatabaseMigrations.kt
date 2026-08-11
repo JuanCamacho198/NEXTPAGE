@@ -196,6 +196,13 @@ object AppDatabaseMigrations {
         }
     }
 
+    val MIGRATION_20_21 = object : Migration(20, 21) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_id ON sync_outbox(entity_id)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_file_mappings_book_id ON sync_file_mappings(book_id)")
+        }
+    }
+
     val MIGRATION_14_15 = object : Migration(14, 15) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE books ADD COLUMN status TEXT DEFAULT NULL")
@@ -293,6 +300,7 @@ object AppDatabaseMigrations {
         MIGRATION_16_17,
         MIGRATION_17_18,
         MIGRATION_18_19,
-        MIGRATION_19_20
+        MIGRATION_19_20,
+        MIGRATION_20_21
     )
 }

@@ -3,10 +3,12 @@ package com.nextpage.data.local.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "sync_file_mappings",
+    indices = [Index(value = ["book_id"])],
     foreignKeys = [
         ForeignKey(
             entity = BookEntity::class,

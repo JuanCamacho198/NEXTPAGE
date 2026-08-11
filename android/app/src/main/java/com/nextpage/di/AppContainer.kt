@@ -70,7 +70,7 @@ class AppContainer(context: Context) {
         name = "nextpage.db"
     ).addMigrations(*AppDatabaseMigrations.ALL).let { builder ->
         if (BuildConfig.DEBUG) {
-            builder.fallbackToDestructiveMigration()
+            builder.fallbackToDestructiveMigration(dropAllTables = true)
         } else {
             builder
         }

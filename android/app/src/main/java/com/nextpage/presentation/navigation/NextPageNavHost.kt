@@ -595,6 +595,7 @@ fun NextPageNavHost(
                     LibraryScreen(
                         contentPadding = innerPadding,
                         viewModel = libraryViewModel,
+                        driveAuthHelper = driveAuthHelper,
                         onBookSelected = { bookId, filePath, format ->
                             selectedBookId = bookId
                             selectedBookFilePath = filePath

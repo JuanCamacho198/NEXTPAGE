@@ -1,6 +1,8 @@
 package com.nextpage.presentation.screen
 
+import android.app.Activity
 import android.net.Uri
+import android.widget.Toast
 import java.io.File
 import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,7 +55,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nextpage.BuildConfig
 import com.nextpage.R
+import com.nextpage.data.remote.drive.DriveAuthResult
+import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
 import com.nextpage.data.remote.supabase.UserBookRow
 import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.domain.model.Book
@@ -69,6 +75,7 @@ import com.nextpage.presentation.viewmodel.LibraryViewModel
 import com.nextpage.ui.components.atoms.CoverThumbnail
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
+import com.nextpage.ui.components.atoms.NextPageDialog
 import com.nextpage.ui.components.atoms.NextPageEmptyState
 import com.nextpage.ui.components.atoms.SyncStatusIndicator
 
@@ -76,6 +83,7 @@ import com.nextpage.ui.components.atoms.SyncStatusIndicator
 fun LibraryScreen(
     contentPadding: PaddingValues,
     viewModel: LibraryViewModel,
+    driveAuthHelper: GoogleDriveAuthHelper,
     onBookSelected: (String, String, String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -87,6 +95,7 @@ fun LibraryScreen(
         searchedBooks = searchedBooks,
         firstDownloadError = firstDownloadError,
         contentPadding = contentPadding,
+        driveAuthHelper = driveAuthHelper,
         onBookSelected = onBookSelected,
         onRefresh = viewModel::onPullToRefresh,
         onSearchToggle = viewModel::onToggleSearch,
@@ -118,6 +127,7 @@ private fun LibraryScreenContent(
     searchedBooks: List<Book>,
     firstDownloadError: DownloadState.Error?,
     contentPadding: PaddingValues,
+    driveAuthHelper: GoogleDriveAuthHelper?,
     onBookSelected: (String, String, String) -> Unit,
     onRefresh: () -> Unit,
     onSearchToggle: () -> Unit,
@@ -155,6 +165,53 @@ private fun LibraryScreenContent(
     val scope = rememberCoroutineScope()
 
     var editCoverUri by remember { mutableStateOf<Uri?>(null) }
+
+    // ── Drive connect gate for cloud downloads ──────────────────────
+    // When the user taps Download on a cloud book but Drive is not
+    // authorized, show a connect dialog; on accept, run the shared PKCE
+    // browser flow inline and retry the pending download on success.
+    var showDriveConnectDialog by remember { mutableStateOf(false) }
+    var pendingDownloadId by remember { mutableStateOf<String?>(null) }
+    var isAuthorizingDrive by remember { mutableStateOf(false) }
+
+    val driveOauthErrorText = stringResource(R.string.settings_drive_error_oauth)
+    val driveConfigErrorText = stringResource(R.string.settings_drive_error_config)
+
+    val driveAuthLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        // Browser task closed without a redirect (user pressed back) — canceled.
+        if (result.resultCode != Activity.RESULT_OK) {
+            isAuthorizingDrive = false
+        }
+    }
+
+    // Redirect-driven outcome (browser → MainActivity.onNewIntent → helper.onRedirect).
+    LaunchedEffect(driveAuthHelper) {
+        val helper = driveAuthHelper ?: return@LaunchedEffect
+        helper.authResult.collect { result ->
+            if (result != null) {
+                isAuthorizingDrive = false
+                when (result) {
+                    is DriveAuthResult.Success -> {
+                        // Authorized — retry the download that was blocked.
+                        val bookId = pendingDownloadId
+                        pendingDownloadId = null
+                        if (bookId != null) {
+                            onDownload(bookId)
+                        }
+                    }
+                    is DriveAuthResult.Failure -> Toast.makeText(
+                        context,
+                        driveOauthErrorText,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    DriveAuthResult.Canceled -> Unit // cancellation is not an error — no toast
+                }
+                helper.consumeResult()
+            }
+        }
+    }
 
     val coverPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -269,7 +326,15 @@ private fun LibraryScreenContent(
                             books = uiState.downloadableBooks,
                             downloadStateMap = uiState.downloadState,
                             firstError = firstDownloadError,
-                            onDownload = onDownload,
+                            onDownload = { bookId ->
+                                val helper = driveAuthHelper
+                                if (helper == null || helper.isAuthorized()) {
+                                    onDownload(bookId)
+                                } else {
+                                    pendingDownloadId = bookId
+                                    showDriveConnectDialog = true
+                                }
+                            },
                             onDismissError = onDismissDownloadError
                         )
                     }
@@ -315,6 +380,36 @@ private fun LibraryScreenContent(
             onFormatSelected = onFormatSelected,
             onDismiss = onFilterToggle
         )
+
+        // ── Drive connect dialog (gate before cloud download) ────────
+        if (showDriveConnectDialog) {
+            NextPageDialog(
+                title = stringResource(R.string.drive_connect_prompt_title),
+                body = stringResource(R.string.drive_connect_prompt_body),
+                confirmText = stringResource(R.string.drive_connect_prompt_accept),
+                dismissText = stringResource(R.string.drive_connect_prompt_decline),
+                onConfirm = {
+                    showDriveConnectDialog = false
+                    val helper = driveAuthHelper
+                    val clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID
+                    if (helper == null || clientId.isBlank()) {
+                        Toast.makeText(
+                            context,
+                            driveConfigErrorText,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        pendingDownloadId = null
+                        return@NextPageDialog
+                    }
+                    isAuthorizingDrive = true
+                    driveAuthLauncher.launch(helper.beginAuth())
+                },
+                onDismiss = {
+                    showDriveConnectDialog = false
+                    pendingDownloadId = null
+                }
+            )
+        }
     }
 }
 
@@ -584,6 +679,7 @@ private fun LibraryScreenPreview() {
         searchedBooks = listOf(sampleBook),
         firstDownloadError = null,
         contentPadding = PaddingValues(16.dp),
+        driveAuthHelper = null,
         onBookSelected = { _, _, _ -> },
         onRefresh = {},
         onSearchToggle = {},

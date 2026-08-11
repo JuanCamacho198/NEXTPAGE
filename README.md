@@ -9,9 +9,6 @@ A modern Android ebook reader built with Kotlin and Jetpack Compose.
   <a href="https://kotlinlang.org">
     <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-1.9.24-7F52FF?style=flat&logo=kotlin&logoColor=white" />
   </a>
-  <a href="https://developer.android.com/compose">
-    <img alt="Jetpack Compose" name="Compose BOM" src="img.shields.io/badge/Jetpack%20Compose-2024.09.03-4285F4?style=flat&logo=android&logoColor=white" />
-  </a>
   <a href="https://opensource.org/licenses/Apache-2.0">
     <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-FE5212?style=flat&logo=open-source-initiative&logoColor=white" />
   </a>

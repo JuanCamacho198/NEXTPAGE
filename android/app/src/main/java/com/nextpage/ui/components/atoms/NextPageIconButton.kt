@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 
 /**
  * Circular, filled-background icon button. Lightweight alternative to
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.dp
  * **Recomposition**: recomposes when `icon`, `onClick`, `size`,
  * `iconSize`, `containerColor`, or `iconTint` change.
  */
+@Preview
 @Composable
 fun NextPageIconButton(
     icon: ImageVector,

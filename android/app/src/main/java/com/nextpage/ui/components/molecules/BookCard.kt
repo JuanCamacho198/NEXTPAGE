@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -132,5 +133,19 @@ fun BookCard(
                 }
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun BookCardPreview() {
+    Box(modifier = Modifier.padding(16.dp)) {
+        BookCard(
+            title = "The Pragmatic Programmer",
+            author = "Hunt & Thomas",
+            progress = 0.65f,
+            onClick = {},
+            onDeleteClick = {}
+        )
     }
 }

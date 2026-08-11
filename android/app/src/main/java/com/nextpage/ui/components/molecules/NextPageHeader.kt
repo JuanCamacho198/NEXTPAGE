@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageAvatar
@@ -118,4 +119,17 @@ fun NextPageHeader(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageHeaderPreview() {
+    NextPageHeader(
+        title = "My Library",
+        avatarInitials = "JS",
+        onAvatarClick = {},
+        avatarContentDescription = "Open account settings",
+        onSearchClick = {},
+        onNotificationsClick = {}
+    )
 }

@@ -1,10 +1,8 @@
 package com.nextpage.ui.components.molecules
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,21 +11,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
+import com.nextpage.R
+import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.theme.NextPageColors
 import com.nextpage.presentation.theme.NextPageDimens
+import com.nextpage.ui.icons.NextPageIcons
 
 data class BottomNavItem(
     val route: String,
@@ -111,4 +111,37 @@ fun NextPageBottomNavBar(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageBottomNavBarPreview() {
+    val destinations = listOf(
+        BottomNavItem(
+            route = NextPageDestination.Home.route,
+            labelRes = R.string.nav_home,
+            icon = NextPageIcons.Home
+        ),
+        BottomNavItem(
+            route = NextPageDestination.Library.route,
+            labelRes = R.string.nav_library,
+            icon = NextPageIcons.Library
+        ),
+        BottomNavItem(
+            route = NextPageDestination.Highlights.route,
+            labelRes = R.string.nav_highlights,
+            icon = NextPageIcons.Highlights
+        ),
+        BottomNavItem(
+            route = NextPageDestination.Settings.route,
+            labelRes = R.string.nav_settings,
+            icon = NextPageIcons.Settings
+        )
+    )
+
+    NextPageBottomNavBar(
+        destinations = destinations,
+        currentRoute = NextPageDestination.Home.route,
+        onTabSelected = {}
+    )
 }

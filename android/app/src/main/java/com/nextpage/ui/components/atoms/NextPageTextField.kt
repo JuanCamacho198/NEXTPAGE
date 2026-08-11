@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 
 /**
  * Material 3 `OutlinedTextField` preconfigured with the NextPage color
@@ -96,5 +97,28 @@ fun NextPageTextField(
             unfocusedBorderColor = MaterialTheme.colorScheme.outline,
             errorBorderColor = MaterialTheme.colorScheme.error
         )
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageTextFieldPreview() {
+    NextPageTextField(
+        value = "hello@nextpage.app",
+        onValueChange = {},
+        label = "Email",
+        placeholder = "you@example.com"
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageTextFieldErrorPreview() {
+    NextPageTextField(
+        value = "invalid",
+        onValueChange = {},
+        label = "Email",
+        placeholder = "you@example.com",
+        errorMessage = "Invalid email address"
     )
 }

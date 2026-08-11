@@ -13,7 +13,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Full-screen empty state: a decorative vector icon, title, optional
@@ -79,4 +81,14 @@ fun NextPageEmptyState(
             action()
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageEmptyStatePreview() {
+    NextPageEmptyState(
+        icon = NextPageIcons.LibraryBooks,
+        title = "No books yet",
+        subtitle = "Import your first book to start reading"
+    )
 }

@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.ui.components.atoms.NextPageBottomSheet
 import com.nextpage.ui.icons.NextPageIcons
@@ -108,4 +109,20 @@ fun NextPageSelector(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageSelectorPreview() {
+    NextPageSelector(
+        title = "Sort by",
+        options = listOf(
+            SelectorOption(id = "recent", label = "Recently added"),
+            SelectorOption(id = "title", label = "Title A-Z"),
+            SelectorOption(id = "author", label = "Author")
+        ),
+        selectedOptionId = "title",
+        onOptionSelected = {},
+        onDismiss = {}
+    )
 }

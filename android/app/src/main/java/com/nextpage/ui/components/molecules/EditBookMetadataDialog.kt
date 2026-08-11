@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -183,5 +184,26 @@ fun EditBookMetadataDialog(
                 Text(stringResource(R.string.reader_cancel))
             }
         }
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun EditBookMetadataDialogPreview() {
+    EditBookMetadataDialog(
+        book = Book(
+            id = "book-1",
+            title = "The Old Man and the Sea",
+            author = "Ernest Hemingway",
+            coverPath = null,
+            filePath = "/books/book-1.epub",
+            format = "epub",
+            description = "An old fisherman struggles against a giant marlin in the Gulf Stream.",
+            updatedAtEpochMillis = 1_700_000_000_000L
+        ),
+        selectedCoverUri = null,
+        onDismiss = {},
+        onSave = { _, _, _ -> },
+        onChangeCover = {}
     )
 }

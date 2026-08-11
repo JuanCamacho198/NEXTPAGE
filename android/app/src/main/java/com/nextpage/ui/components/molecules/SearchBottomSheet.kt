@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
@@ -286,4 +287,31 @@ private fun parseColorHex(hex: String): Color {
     } catch (_: Exception) {
         Color.Magenta
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SearchBottomSheetPreview() {
+    SearchBottomSheet(
+        query = "times",
+        results = listOf(
+            SearchResult(
+                text = "It was the best of times, it was the worst of times.",
+                offset = 12,
+                chapterIndex = 0,
+                chapterTitle = "Book I — Chapter 1"
+            ),
+            SearchResult(
+                text = "In the ensuing silence, the word hung in the air.",
+                offset = 8,
+                chapterIndex = 1,
+                chapterTitle = "Book I — Chapter 2"
+            )
+        ),
+        isSearching = false,
+        onQueryChange = {},
+        onClearQuery = {},
+        onResultSelected = {},
+        onDismiss = {}
+    )
 }

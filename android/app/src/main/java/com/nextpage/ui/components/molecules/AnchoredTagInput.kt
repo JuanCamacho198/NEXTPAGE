@@ -33,6 +33,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 
@@ -147,6 +148,19 @@ fun AnchoredTagInput(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AnchoredTagInputPreview() {
+    AnchoredTagInput(
+        tag = "philosophy",
+        suggestions = listOf("philosophy", "classics", "to-review"),
+        onTagChange = {},
+        onSuggestionClick = {},
+        onSave = {},
+        onDismiss = {}
+    )
 }
 
 @Composable

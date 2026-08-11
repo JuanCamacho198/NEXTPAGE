@@ -2,6 +2,7 @@ package com.nextpage.ui.components.atoms
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import com.nextpage.R
 import com.nextpage.ui.icons.NextPageIcons
 
@@ -27,5 +28,14 @@ fun NextPageLogoutDialog(
         dismissText = stringResource(R.string.reader_cancel),
         onConfirm = onConfirm,
         onDismiss = onDismiss
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageLogoutDialogPreview() {
+    NextPageLogoutDialog(
+        onConfirm = {},
+        onDismiss = {}
     )
 }

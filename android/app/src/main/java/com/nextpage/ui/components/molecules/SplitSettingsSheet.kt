@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
@@ -641,4 +642,15 @@ private fun parseColorHex(hex: String): Color {
     } catch (_: Exception) {
         Color.Magenta
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SplitSettingsSheetPreview() {
+    SplitSettingsSheet(
+        settings = ReaderSettings(),
+        previewText = "The quick brown fox jumps over the lazy dog.",
+        onSettingsChanged = {},
+        onDismiss = {}
+    )
 }

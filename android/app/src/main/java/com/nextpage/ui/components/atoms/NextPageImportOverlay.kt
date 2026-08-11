@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.presentation.viewmodel.library.BookImportState
@@ -163,4 +164,12 @@ fun NextPageImportOverlay(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageImportOverlayPreview() {
+    NextPageImportOverlay(
+        importState = BookImportState.Extracting(progress = 0.6f)
+    )
 }

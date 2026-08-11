@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
@@ -271,4 +272,18 @@ fun HighlightAnnotationModal(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun HighlightAnnotationModalPreview() {
+    HighlightAnnotationModal(
+        titleRes = R.string.comment_modal_title,
+        hintRes = R.string.annotation_textarea_comment_hint,
+        snippetLabelRes = R.string.annotation_snippet_label,
+        selectedText = "It was the best of times, it was the worst of times, it was the age of wisdom.",
+        initialText = "",
+        onSave = {},
+        onDismiss = {}
+    )
 }

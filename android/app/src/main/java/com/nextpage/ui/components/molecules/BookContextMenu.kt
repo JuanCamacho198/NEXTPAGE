@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import com.nextpage.R
 
 /**
@@ -91,4 +92,18 @@ fun BookContextMenu(
             }
         )
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun BookContextMenuPreview() {
+    BookContextMenu(
+        expanded = true,
+        onDismissRequest = {},
+        onEdit = {},
+        onMarkCompleted = {},
+        onMarkPlanToRead = {},
+        onShare = {},
+        onDelete = {}
+    )
 }

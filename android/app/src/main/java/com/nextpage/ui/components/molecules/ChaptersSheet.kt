@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.presentation.viewmodel.reader.BookChapter
@@ -194,4 +195,19 @@ private fun ChapterRow(
             )
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ChaptersSheetPreview() {
+    ChaptersSheet(
+        chapters = listOf(
+            BookChapter(index = 0, id = "c0", title = "The Beginning", href = "ch1.xhtml"),
+            BookChapter(index = 1, id = "c1", title = "A Quiet Storm", href = "ch2.xhtml"),
+            BookChapter(index = 2, id = "c2", title = "The Turning Point", href = "ch3.xhtml")
+        ),
+        currentChapterIndex = 1,
+        onChapterSelected = {},
+        onDismiss = {}
+    )
 }

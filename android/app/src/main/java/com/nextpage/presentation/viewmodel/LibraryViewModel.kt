@@ -83,6 +83,7 @@ data class LibraryUiState(
     // ── Cross-device download ──
     val downloadableBooks: List<UserBookRow> = emptyList(),
     val downloadState: Map<String, DownloadState> = emptyMap(),
+    val isDownloadableLoading: Boolean = true,
     // ── UI State (filters, sort, search) ──
     val statusFilter: String = "all",
     val sortBy: String = "date_added",
@@ -343,11 +344,40 @@ class LibraryViewModel(
         viewModelScope.launch(mainDispatcher) {
             // Re-fetch downloadable books periodically (on each session poll cycle).
             // A more reactive approach would listen to Supabase Realtime changes.
+            // `isDownloadableLoading` starts `true` so the UI can render a loading
+            // placeholder while the first fetch is in flight; it is cleared once the
+            // first poll completes (success or failure).
             while (true) {
-                catalogSync.getDownloadableBooks().onSuccess { books ->
-                    mutableDownloadableBooks.value = books
-                    mutableUiState.update { it.copy(downloadableBooks = books) }
-                }
+                catalogSync.getDownloadableBooks()
+                    .onSuccess { books ->
+                        // 1. Emit the fast catalog (no Drive calls) so books render
+                        //    immediately and the loading state clears right away.
+                        mutableDownloadableBooks.value = books
+                        mutableUiState.update {
+                            it.copy(downloadableBooks = books, isDownloadableLoading = false)
+                        }
+                        // 2. Resolve Drive file sizes in a parallel, non-blocking pass
+                        //    and re-emit when it completes — sizes pop in ~1s instead
+                        //    of waiting for the next poll. Best-effort: on failure the
+                        //    fast list from step 1 stays visible.
+                        if (books.any { it.fileSize == null }) {
+                            val userId = catalogSync.currentUserId()
+                            if (userId != null) {
+                                viewModelScope.launch(Dispatchers.IO) {
+                                    val enriched = catalogSync.enrichFileSizes(books, userId)
+                                    if (enriched != books) {
+                                        mutableDownloadableBooks.value = enriched
+                                        mutableUiState.update {
+                                            it.copy(downloadableBooks = enriched)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .onFailure {
+                        mutableUiState.update { it.copy(isDownloadableLoading = false) }
+                    }
                 kotlinx.coroutines.delay(CATALOG_POLL_INTERVAL_MS) // poll every 30s
             }
         }
@@ -545,6 +575,10 @@ class LibraryViewModel(
                 }
                 .onFailure { error ->
                     DebugLog.error(TAG, "downloadBook: FAILED for $bookId — ${error.message}")
+                    // Surface as a transient toast (NavHost collects uiEvent) so the
+                    // error never renders as an inline banner that collides with the
+                    // cross-device section header.
+                    _uiEvent.tryEmit(UiEvent.ShowToast(error.message ?: "Download failed"))
                     val err = DownloadState.Error(bookId, error.message ?: "Download failed")
                     mutableDownloadState.update { it + (bookId to err) }
                 }

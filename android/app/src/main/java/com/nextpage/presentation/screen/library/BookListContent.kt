@@ -14,9 +14,8 @@ import com.nextpage.ui.components.molecules.AddBookCard
 
 /**
  * List view: ONE shared [LazyColumn] where the empty placeholder (when the
- * shelf is empty) renders first, then local books, then the Disponibles
- * section (footer, AFTER local books). The add-book card is always last.
- * No pinned Column.
+ * shelf is empty) renders first, then local books, then the add-book card,
+ * and the Disponibles section (footer) last. No pinned Column.
  */
 @Composable
 fun BookList(
@@ -56,17 +55,17 @@ fun BookList(
                 onShare = { onShare(book) }
             )
         }
-        if (footerContent != null) {
-            item(key = "downloadable_footer", contentType = { "footer" }) {
-                footerContent()
-            }
-        }
         // The add-book card is the primary import affordance when the shelf
         // has books. When the shelf is empty, the empty-state placeholder
         // provides the import button instead, so the card is hidden.
         if (books.isNotEmpty()) {
             item(key = "add_book", contentType = { "add" }) {
                 AddBookCard(onImportClick = onImportClick)
+            }
+        }
+        if (footerContent != null) {
+            item(key = "downloadable_footer", contentType = { "footer" }) {
+                footerContent()
             }
         }
     }

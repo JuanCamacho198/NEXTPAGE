@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -337,14 +338,13 @@ private fun LibraryScreenContent(
                         DownloadableBooksSection(
                             books = uiState.downloadableBooks,
                             downloadStateMap = uiState.downloadState,
-                            firstError = firstDownloadError,
+                            isLoading = uiState.isDownloadableLoading,
                             isDriveAuthorized = driveAuthHelper == null || driveAuthHelper.isAuthorized(),
                             onConnectDrive = { row ->
                                 pendingDownloadId = row.id
                                 showDriveConnectDialog = true
                             },
-                            onConfirmDownload = onDownload,
-                            onDismissError = onDismissDownloadError
+                            onConfirmDownload = onDownload
                         )
                     }
                 )
@@ -462,46 +462,45 @@ private fun LibrarySyncStatus(
 private fun DownloadableBooksSection(
     books: List<UserBookRow>,
     downloadStateMap: Map<String, DownloadState>,
-    firstError: DownloadState.Error?,
     isDriveAuthorized: Boolean,
+    isLoading: Boolean,
     onConnectDrive: (UserBookRow) -> Unit,
-    onConfirmDownload: (bookId: String) -> Unit,
-    onDismissError: (bookId: String) -> Unit
+    onConfirmDownload: (bookId: String) -> Unit
 ) {
     var pendingDownloadBook by remember { mutableStateOf<UserBookRow?>(null) }
 
-    if (firstError != null) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer
-            )
-        ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    if (isLoading && books.isEmpty()) {
+        // First catalog fetch still in flight — show a loading placeholder so the
+        // cross-device section doesn't pop in ~5s after the screen renders.
+        Column(modifier = Modifier.padding(top = 8.dp)) {
             Text(
-                text = firstError.message,
-                modifier = Modifier.weight(1f),
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                text = stringResource(R.string.book_available_from_other_device),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
-            IconButton(
-                onClick = { onDismissError(firstError.bookId) },
-                modifier = Modifier.size(24.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                Icon(
-                    imageVector = NextPageIcons.Close,
-                    contentDescription = stringResource(R.string.action_dismiss),
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.size(16.dp)
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.cloud_books_loading),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-        }
+        return
     }
 
     if (books.isEmpty()) return
@@ -589,13 +588,19 @@ private fun DownloadableBookCard(
         )
     ) {
         Column {
-            CoverThumbnail(
-                coverPath = book.coverUrl,
+            // Fixed cover box (2:3 ratio) so every card renders identically
+            // regardless of the source image's intrinsic size or aspect.
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
+                    .aspectRatio(2f / 3f)
                     .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-            )
+            ) {
+                CoverThumbnail(
+                    coverPath = book.coverUrl,
+                    modifier = Modifier.matchParentSize()
+                )
+            }
 
             Column(
                 modifier = Modifier.padding(12.dp),
@@ -617,7 +622,7 @@ private fun DownloadableBookCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                book.fileSize?.let { bytes ->
+                book.fileSize?.takeIf { it > 0 }?.let { bytes ->
                     Text(
                         text = formatFileSize(bytes),
                         fontSize = 11.sp,

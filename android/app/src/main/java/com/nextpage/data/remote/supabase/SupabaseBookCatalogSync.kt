@@ -140,6 +140,17 @@ class SupabaseBookCatalogSync(
                         outboxDao.deleteById(item.id)
                         return
                     }
+                    // A locally imported book is only cloud-visible once its file
+                    // actually exists in Drive (remotePath is set by the Drive sync
+                    // push). Registering it without a remote file creates a "ghost"
+                    // catalog row: it appears in "Available from other devices" but
+                    // download fails with REMOTE_NOT_FOUND. Leave the outbox entry
+                    // so the Drive push (which sets remotePath) can complete first;
+                    // reconciliation covers stragglers.
+                    if (localBook.remotePath.isNullOrBlank()) {
+                        DebugLog.info(TAG, "processBookItem: book $bookId has no remote file yet — deferring catalog upsert until Drive push completes")
+                        return
+                    }
                     val row = localBook.toUserBookRow(userId)
                     DebugLog.info(TAG, "processBookItem: pushing book '${row.title}' ($bookId) to Supabase — catalogVersion=${row.catalogVersion}, hash=${row.contentHash?.take(16)}…")
 
@@ -307,7 +318,18 @@ class SupabaseBookCatalogSync(
     }
 
     /**
+     * Returns the id of the currently signed-in user, or null when no session is active.
+     */
+    suspend fun currentUserId(): String? =
+        sessionManager.getCurrentSession().getOrNull()?.userId
+
+    /**
      * Returns book rows in the catalog that are NOT yet downloaded locally.
+     *
+     * The returned list is the RAW catalog filtered to downloadable rows — it does
+     * NOT call Drive to resolve file sizes. Drive enrichment happens separately via
+     * [enrichFileSizes] so the first emission is never blocked by remote latency.
+     *
      * @return List of [UserBookRow] from remote devices, excluding locally-owned books,
      *         or failure if no session is active.
      */
@@ -329,23 +351,36 @@ class SupabaseBookCatalogSync(
                     it.lifecycle != "unavailable" &&
                     it.id !in localBookIds
             }
-            // Enrich rows that lack a persisted file_size by asking the remote
-            // provider (Drive). Best-effort — a null result keeps the row as-is.
-            val remote = remoteDataSource
-            val enriched = if (remote == null) {
-                downloadable
-            } else {
-                downloadable.map { row ->
-                    if (row.fileSize != null || row.remotePath == null) {
-                        row
-                    } else {
-                        row.copy(fileSize = remote.getFileSize(row.remotePath))
-                    }
-                }
-            }
-            Result.success(enriched)
+            Result.success(downloadable)
         } catch (e: Exception) {
             Result.failure(AppError(ErrorCategory.STORAGE, "CATALOG_FETCH", "Failed to fetch downloadable books: ${e.message}", "SupabaseBookCatalogSync"))
+        }
+    }
+
+    /**
+     * Best-effort enrichment of [rows] with remote file sizes (Drive) for the
+     * given [userId]. Rows that already have a persisted [UserBookRow.fileSize]
+     * are returned unchanged; unresolvable rows keep their current value.
+     *
+     * The path mirrors [downloadRemoteBook]'s fallback: `books/{userId}/{bookId}.{format}`
+     * so Android-imported rows (`remotePath == null`) still resolve their size.
+     *
+     * Runs independently of [getDownloadableBooks] so callers can emit the fast
+     * catalog first and fill sizes in a separate, non-blocking pass.
+     *
+     * @return The input [rows] with [UserBookRow.fileSize] filled in where resolvable.
+     */
+    suspend fun enrichFileSizes(rows: List<UserBookRow>, userId: String): List<UserBookRow> {
+        val remote = remoteDataSource ?: return rows
+        return rows.map { row ->
+            if (row.fileSize != null) {
+                row
+            } else {
+                val format = row.format.ifBlank { "epub" }
+                val path = row.remotePath ?: "books/$userId/${row.id}.$format"
+                val size = runCatching { remote.getFileSize(path) }.getOrNull()
+                if (size != null) row.copy(fileSize = size) else row
+            }
         }
     }
 

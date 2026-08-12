@@ -62,9 +62,10 @@ fun BookGridSection(
 
 /**
  * Grid view: ONE shared [LazyVerticalStaggeredGrid] where the empty placeholder
- * (when the shelf is empty) and the Disponibles section (footer, AFTER local
- * books) are full-span items that scroll away with the grid. The add-book card
- * is always the last item. No pinned Column.
+ * (when the shelf is empty) and the Disponibles section (footer) are full-span
+ * items that scroll away with the grid. The add-book card fills the next grid
+ * position after the local books (completing an odd row or starting a new one),
+ * and the Disponibles section renders last. No pinned Column.
  */
 @Composable
 fun BookGrid(
@@ -106,17 +107,17 @@ fun BookGrid(
                 onShare = { onShare(book) }
             )
         }
-        if (footerContent != null) {
-            item(span = StaggeredGridItemSpan.FullLine, key = "downloadable_footer", contentType = { "footer" }) {
-                footerContent()
-            }
-        }
         // The add-book card is the primary import affordance when the shelf
         // has books. When the shelf is empty, the empty-state placeholder
         // provides the import button instead, so the card is hidden.
         if (books.isNotEmpty()) {
             item(key = "add_book", contentType = { "add" }) {
                 AddBookCard(onImportClick = onImportClick)
+            }
+        }
+        if (footerContent != null) {
+            item(span = StaggeredGridItemSpan.FullLine, key = "downloadable_footer", contentType = { "footer" }) {
+                footerContent()
             }
         }
     }

@@ -108,6 +108,7 @@ class AppContainer(context: Context) {
         readingProgressDao = appDatabase.readingProgressDao(),
         highlightDao = appDatabase.highlightDao(),
         bookmarkDao = appDatabase.bookmarkDao(),
+        bookDao = appDatabase.bookDao(),
         outboxDao = appDatabase.syncOutboxDao()
     )
     private val readerRepoInitTime = System.currentTimeMillis() - readerRepoStartTime

@@ -587,7 +587,10 @@ class SupabaseBookCatalogSyncTest {
             totalPages = 100,
             description = "Description for $id",
             updatedAtEpochMillis = 1000L,
-            deletedAtEpochMillis = null
+            deletedAtEpochMillis = null,
+            // Catalog upsert requires a remote file (Drive push sets this);
+            // without it processBookItem defers the row as local-only.
+            remotePath = "books/user-1/$id.epub"
         )
     }
 

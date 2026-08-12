@@ -535,6 +535,7 @@
 
     <!-- Download from other devices -->
     <string name="book_available_from_other_device">Disponibles desde otros dispositivos</string>
+    <string name="cloud_books_loading">Cargando libros de la nube…</string>
     <string name="book_download">Descargar</string>
     <string name="book_downloading">Descargando…</string>
     <string name="book_download_error">No se pudo descargar el libro. Verificá tu conexión e intentá de nuevo.</string>

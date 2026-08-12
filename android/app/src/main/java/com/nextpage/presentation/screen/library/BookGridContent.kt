@@ -111,8 +111,13 @@ fun BookGrid(
                 footerContent()
             }
         }
-        item(key = "add_book", contentType = { "add" }) {
-            AddBookCard(onImportClick = onImportClick)
+        // The add-book card is the primary import affordance when the shelf
+        // has books. When the shelf is empty, the empty-state placeholder
+        // provides the import button instead, so the card is hidden.
+        if (books.isNotEmpty()) {
+            item(key = "add_book", contentType = { "add" }) {
+                AddBookCard(onImportClick = onImportClick)
+            }
         }
     }
 }

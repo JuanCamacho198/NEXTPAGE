@@ -22,7 +22,11 @@ fun LibraryToolbar(
     sortBy: String,
     onSortByChanged: (String) -> Unit,
     isGridView: Boolean,
-    onViewToggle: () -> Unit
+    onViewToggle: () -> Unit,
+    avatarImageUrl: String? = null,
+    avatarInitials: String = "NP",
+    onAvatarClick: (() -> Unit)? = null,
+    avatarContentDescription: String? = null
 ) {
     Column {
         LibraryHeader(
@@ -30,7 +34,11 @@ fun LibraryToolbar(
             onSearchToggle = onSearchToggle,
             searchQuery = searchQuery,
             onSearchQueryChange = onSearchQueryChange,
-            onFilterToggle = onFilterToggle
+            onFilterToggle = onFilterToggle,
+            avatarImageUrl = avatarImageUrl,
+            avatarInitials = avatarInitials,
+            onAvatarClick = onAvatarClick,
+            avatarContentDescription = avatarContentDescription
         )
 
         StatusChipRow(

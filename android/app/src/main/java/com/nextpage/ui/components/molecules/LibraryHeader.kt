@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -20,14 +21,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.ui.components.atoms.NextPageAvatar
 import com.nextpage.ui.components.atoms.NextPageTextField
 import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.theme.NextPageTheme
 
 /**
- * Top header for the library screen: large title, search and filter
- * icon buttons, and an optional inline search field that toggles
- * in/out based on [showSearch].
+ * Top header for the library screen: user avatar + large title on the
+ * left, search and filter icon buttons on the right, and an optional
+ * inline search field that toggles in/out based on [showSearch].
  *
  * @param showSearch When `true`, the search field is rendered below
  *   the title row. Toggle this from the parent to show/hide search.
@@ -39,6 +41,14 @@ import com.nextpage.presentation.theme.NextPageTheme
  *   search field.
  * @param onFilterToggle Invoked when the user taps the filter icon.
  *   Typically opens the [FilterBottomSheet].
+ * @param avatarImageUrl Remote avatar URL. When `null`/blank, the
+ *   [avatarInitials] fallback is used. Default `null`.
+ * @param avatarInitials Fallback initials for the avatar circle.
+ *   Default `"NP"`.
+ * @param onAvatarClick Optional avatar click handler. When `null`, the
+ *   avatar is non-interactive.
+ * @param avatarContentDescription Optional accessibility label for the
+ *   avatar (e.g. "Open account settings").
  *
  * **Visual**: `headlineMedium` bold title on the left, two
  * `IconButton`s (Search, FilterList) on the right, with 4dp spacing
@@ -57,7 +67,11 @@ fun LibraryHeader(
     onSearchToggle: () -> Unit,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    onFilterToggle: () -> Unit
+    onFilterToggle: () -> Unit,
+    avatarImageUrl: String? = null,
+    avatarInitials: String = "NP",
+    onAvatarClick: (() -> Unit)? = null,
+    avatarContentDescription: String? = null
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -67,11 +81,21 @@ fun LibraryHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stringResource(R.string.nav_library),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                NextPageAvatar(
+                    imageUrl = avatarImageUrl,
+                    initials = avatarInitials,
+                    size = 40.dp,
+                    onClick = onAvatarClick,
+                    contentDescription = avatarContentDescription
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = stringResource(R.string.nav_library),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 IconButton(onClick = onSearchToggle) {
                     Icon(

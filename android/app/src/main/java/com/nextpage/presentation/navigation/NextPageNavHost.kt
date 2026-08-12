@@ -596,6 +596,13 @@ fun NextPageNavHost(
                         contentPadding = innerPadding,
                         viewModel = libraryViewModel,
                         driveAuthHelper = driveAuthHelper,
+                        authSession = authState.currentSession,
+                        onOpenAccount = {
+                            settingsInitialRoute = NextPageDestination.SettingsAccount.route
+                            navController.navigate(NextPageDestination.Settings.route) {
+                                launchSingleTop = true
+                            }
+                        },
                         onBookSelected = { bookId, filePath, format ->
                             selectedBookId = bookId
                             selectedBookFilePath = filePath
@@ -753,6 +760,7 @@ fun NextPageNavHost(
                 body = context.getString(com.nextpage.R.string.drive_connect_prompt_body),
                 confirmText = context.getString(com.nextpage.R.string.drive_connect_prompt_accept),
                 dismissText = context.getString(com.nextpage.R.string.drive_connect_prompt_decline),
+                icon = NextPageIcons.CloudDownload,
                 onConfirm = {
                     showDriveConnectPrompt = false
                     val clientId = com.nextpage.BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID

@@ -61,6 +61,7 @@ import com.nextpage.data.remote.drive.DriveAuthResult
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
 import com.nextpage.data.remote.supabase.UserBookRow
 import com.nextpage.data.remote.sync.SyncState
+import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.Book
 import com.nextpage.presentation.screen.library.BookGridSection
 import com.nextpage.ui.icons.NextPageIcons
@@ -85,6 +86,8 @@ fun LibraryScreen(
     contentPadding: PaddingValues,
     viewModel: LibraryViewModel,
     driveAuthHelper: GoogleDriveAuthHelper,
+    authSession: AuthSession?,
+    onOpenAccount: () -> Unit,
     onBookSelected: (String, String, String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -97,6 +100,8 @@ fun LibraryScreen(
         firstDownloadError = firstDownloadError,
         contentPadding = contentPadding,
         driveAuthHelper = driveAuthHelper,
+        authSession = authSession,
+        onOpenAccount = onOpenAccount,
         onBookSelected = onBookSelected,
         onRefresh = viewModel::onPullToRefresh,
         onSearchToggle = viewModel::onToggleSearch,
@@ -129,6 +134,8 @@ private fun LibraryScreenContent(
     firstDownloadError: DownloadState.Error?,
     contentPadding: PaddingValues,
     driveAuthHelper: GoogleDriveAuthHelper?,
+    authSession: AuthSession?,
+    onOpenAccount: () -> Unit,
     onBookSelected: (String, String, String) -> Unit,
     onRefresh: () -> Unit,
     onSearchToggle: () -> Unit,
@@ -298,7 +305,11 @@ private fun LibraryScreenContent(
                     sortBy = uiState.sortBy,
                     onSortByChanged = onSortByChanged,
                     isGridView = uiState.isGridView,
-                    onViewToggle = onViewToggle
+                    onViewToggle = onViewToggle,
+                    avatarImageUrl = authSession?.photoUrl,
+                    avatarInitials = authSession?.displayName?.take(2)?.uppercase() ?: "NP",
+                    onAvatarClick = onOpenAccount,
+                    avatarContentDescription = stringResource(R.string.home_avatar_content_description)
                 )
 
                 BookGridSection(
@@ -327,15 +338,12 @@ private fun LibraryScreenContent(
                             books = uiState.downloadableBooks,
                             downloadStateMap = uiState.downloadState,
                             firstError = firstDownloadError,
-                            onDownload = { bookId ->
-                                val helper = driveAuthHelper
-                                if (helper == null || helper.isAuthorized()) {
-                                    onDownload(bookId)
-                                } else {
-                                    pendingDownloadId = bookId
-                                    showDriveConnectDialog = true
-                                }
+                            isDriveAuthorized = driveAuthHelper == null || driveAuthHelper.isAuthorized(),
+                            onConnectDrive = { row ->
+                                pendingDownloadId = row.id
+                                showDriveConnectDialog = true
                             },
+                            onConfirmDownload = onDownload,
                             onDismissError = onDismissDownloadError
                         )
                     }
@@ -389,6 +397,7 @@ private fun LibraryScreenContent(
                 body = stringResource(R.string.drive_connect_prompt_body),
                 confirmText = stringResource(R.string.drive_connect_prompt_accept),
                 dismissText = stringResource(R.string.drive_connect_prompt_decline),
+                icon = NextPageIcons.CloudDownload,
                 onConfirm = {
                     showDriveConnectDialog = false
                     val helper = driveAuthHelper
@@ -444,15 +453,23 @@ private fun LibrarySyncStatus(
  * Rendered as a footer AFTER local books (or after the empty placeholder when
  * the shelf is empty) inside the shared scroll container. Hidden when there
  * are no downloadable books.
+ *
+ * Tapping Download gates through [isDriveAuthorized]: when Drive is not
+ * connected the [onConnectDrive] callback is invoked; when authorized a
+ * confirmation [NextPageDialog] is shown before [onConfirmDownload] runs.
  */
 @Composable
 private fun DownloadableBooksSection(
     books: List<UserBookRow>,
     downloadStateMap: Map<String, DownloadState>,
     firstError: DownloadState.Error?,
-    onDownload: (bookId: String) -> Unit,
+    isDriveAuthorized: Boolean,
+    onConnectDrive: (UserBookRow) -> Unit,
+    onConfirmDownload: (bookId: String) -> Unit,
     onDismissError: (bookId: String) -> Unit
 ) {
+    var pendingDownloadBook by remember { mutableStateOf<UserBookRow?>(null) }
+
     if (firstError != null) {
         Card(
             modifier = Modifier
@@ -519,18 +536,44 @@ private fun DownloadableBooksSection(
                 DownloadableBookCard(
                     book = row,
                     isDownloading = downloadStateMap[row.id] is DownloadState.Downloading,
-                    onDownload = { onDownload(row.id) }
+                    onDownload = {
+                        if (isDriveAuthorized) {
+                            pendingDownloadBook = row
+                        } else {
+                            onConnectDrive(row)
+                        }
+                    }
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
     }
+
+    pendingDownloadBook?.let { book ->
+        NextPageDialog(
+            title = stringResource(R.string.download_confirm_title),
+            body = if (book.author.isNullOrBlank()) {
+                stringResource(R.string.download_confirm_body_no_author, book.title)
+            } else {
+                stringResource(R.string.download_confirm_body, book.title, book.author)
+            },
+            confirmText = stringResource(R.string.book_download),
+            dismissText = stringResource(R.string.action_cancel),
+            onConfirm = {
+                onConfirmDownload(book.id)
+                pendingDownloadBook = null
+            },
+            onDismiss = { pendingDownloadBook = null },
+            icon = NextPageIcons.CloudDownload
+        )
+    }
 }
 
 /**
  * A single downloadable book card with cover thumbnail, title, author, source label,
- * and download button. Matches [BookGridCard] styling for a consistent catalog look.
+ * and download button (replaced by a spinner + "Downloading…" label while in progress).
+ * Matches [BookGridCard] styling for a consistent catalog look.
  */
 @Composable
 private fun DownloadableBookCard(
@@ -538,12 +581,6 @@ private fun DownloadableBookCard(
     isDownloading: Boolean,
     onDownload: () -> Unit
 ) {
-    val sourceLabel = when (book.sourceDevice) {
-        "android" -> stringResource(R.string.book_download_source_android)
-        "desktop" -> stringResource(R.string.book_download_source_desktop)
-        else -> stringResource(R.string.book_download_source_unknown)
-    }
-
     Card(
         modifier = Modifier.width(140.dp),
         shape = RoundedCornerShape(12.dp),
@@ -580,19 +617,24 @@ private fun DownloadableBookCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Text(
-                    text = sourceLabel,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
 
                 if (isDownloading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .align(Alignment.CenterHorizontally),
-                        strokeWidth = 2.dp
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.book_downloading),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 } else {
                     FilledTonalButton(
                         onClick = onDownload,
@@ -618,9 +660,10 @@ private fun DownloadableBookCard(
 }
 
 /**
- * Inline empty-shelf placeholder rendered INSIDE the shared scroll container
- * (as the first item of the grid/list) when the local shelf is empty. Full
- * width and centered; no own scroll container — pull-to-refresh stays active.
+ * Empty-shelf placeholder shown INSIDE the shared scroll container (as the
+ * first item of the grid/list) when the local shelf is empty. Renders an
+ * outlined "Import book" button so the empty state still offers the import
+ * action without the add-book card (which is hidden when the shelf is empty).
  */
 @Composable
 private fun EmptyShelfPlaceholder(
@@ -638,7 +681,7 @@ private fun EmptyShelfPlaceholder(
             NextPageButton(
                 onClick = onImportClick,
                 enabled = !isImporting,
-                variant = NextPageButtonVariant.TEXT
+                variant = NextPageButtonVariant.OUTLINED
             ) {
                 Text(text = stringResource(R.string.library_import_book))
             }
@@ -682,6 +725,8 @@ private fun LibraryScreenDarkPreview() {
             firstDownloadError = null,
             contentPadding = PaddingValues(16.dp),
             driveAuthHelper = null,
+            authSession = null,
+            onOpenAccount = {},
             onBookSelected = { _, _, _ -> },
             onRefresh = {},
             onSearchToggle = {},
@@ -744,6 +789,8 @@ private fun LibraryScreenLightPreview() {
             firstDownloadError = null,
             contentPadding = PaddingValues(16.dp),
             driveAuthHelper = null,
+            authSession = null,
+            onOpenAccount = {},
             onBookSelected = { _, _, _ -> },
             onRefresh = {},
             onSearchToggle = {},

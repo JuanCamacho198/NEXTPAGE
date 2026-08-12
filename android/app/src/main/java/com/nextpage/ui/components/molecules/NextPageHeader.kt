@@ -99,7 +99,8 @@ fun NextPageHeader(
                     icon = NextPageIcons.Search,
                     contentDescription = stringResource(R.string.search_label),
                     onClick = it,
-                    size = 40.dp
+                    size = 40.dp,
+                    iconSize = 20.dp
                 )
             }
             onNotificationsClick?.let {

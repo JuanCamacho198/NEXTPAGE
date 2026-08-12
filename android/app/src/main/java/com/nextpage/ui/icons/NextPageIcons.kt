@@ -21,6 +21,8 @@ import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
 import androidx.compose.material.icons.automirrored.rounded.Label
 import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
 import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.automirrored.rounded.ViewList
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -271,8 +273,8 @@ object NextPageIcons {
 
     // ── Icons delegated to official Material icons (material-icons-extended) ──
 
-    /** Reader route icon. Source: `Icons.Rounded.MenuBook`. */
-    val BookOpen = Icons.Rounded.MenuBook
+    /** Reader route icon. Source: `Icons.AutoMirrored.Rounded.MenuBook`. */
+    val BookOpen = Icons.AutoMirrored.Rounded.MenuBook
 
     /** BookDetail route icon. Source: `Icons.Rounded.Book`. */
     val Book = Icons.Rounded.Book
@@ -298,8 +300,8 @@ object NextPageIcons {
     /** Clock face with hands. Source: `Icons.Rounded.Schedule`. */
     val Clock = Icons.Rounded.Schedule
 
-    /** Ascending trend line. RTL mirrors. Source: `Icons.Rounded.ShowChart`. */
-    val ChartLine = Icons.Rounded.ShowChart
+    /** Ascending trend line. RTL mirrors. Source: `Icons.AutoMirrored.Rounded.ShowChart`. */
+    val ChartLine = Icons.AutoMirrored.Rounded.ShowChart
 
     /** Three vertical bars on a baseline. Source: `Icons.Rounded.BarChart`. */
     val ChartBar = Icons.Rounded.BarChart

@@ -29,7 +29,7 @@ import com.nextpage.presentation.theme.NextPageTheme
 
 data class FilterTab(
     val id: String,
-    @StringRes val labelRes: Int,
+    @param:StringRes val labelRes: Int,
     val icon: ImageVector? = null
 )
 

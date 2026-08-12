@@ -24,7 +24,7 @@ import com.nextpage.presentation.theme.NextPageTheme
 
 data class SelectorOption(
     val id: String,
-    @StringRes val labelRes: Int? = null,
+    @param:StringRes val labelRes: Int? = null,
     val label: String? = null,
     val icon: ImageVector? = null
 )

@@ -7,7 +7,7 @@ import com.nextpage.ui.icons.NextPageIcons
 
 sealed class NextPageDestination(
     val route: String,
-    @StringRes val labelRes: Int = -1,
+    @param:StringRes val labelRes: Int = -1,
     val icon: ImageVector? = null
 ) {
     data object Auth : NextPageDestination("auth", R.string.tab_auth, NextPageIcons.Person)

@@ -1,3 +1,5 @@
+@file:OptIn(org.readium.r2.shared.ExperimentalReadiumApi::class)
+
 package com.nextpage.presentation.screen
 
 import android.graphics.RectF

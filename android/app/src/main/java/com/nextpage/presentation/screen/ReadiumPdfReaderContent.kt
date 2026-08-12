@@ -37,6 +37,7 @@ import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.SelectableNavigator
 import org.readium.r2.navigator.pdf.PdfNavigatorFactory
 import org.readium.r2.navigator.pdf.PdfNavigatorFragment
+import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.adapter.pdfium.navigator.PdfiumEngineProvider
@@ -65,6 +66,7 @@ private object SuppressPdfSelectionActionMode : ActionMode.Callback {
  * to set up the fragment for native PDF rendering.
  */
 @Composable
+@OptIn(ExperimentalReadiumApi::class)
 fun ReadiumPdfReaderContent(
     publication: Publication,
     highlights: List<Highlight>,

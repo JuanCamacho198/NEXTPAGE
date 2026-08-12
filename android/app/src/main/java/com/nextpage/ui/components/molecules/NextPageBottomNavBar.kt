@@ -46,7 +46,7 @@ import com.nextpage.ui.icons.NextPageIcons
 
 data class BottomNavItem(
     val route: String,
-    @StringRes val labelRes: Int,
+    @param:StringRes val labelRes: Int,
     val icon: ImageVector
 )
 

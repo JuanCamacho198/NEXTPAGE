@@ -91,12 +91,12 @@ class HighlightsViewModel(
      */
     @Suppress("MagicNumber")
     private fun buildUiState(values: Array<Any?>): HighlightsUiState {
-        val highlights = values[0] as List<Highlight>
-        val bookmarks = values[1] as List<Bookmark>
-        val books = values[2] as List<Book>
+        val highlights = (values[0] as? List<*>)?.filterIsInstance<Highlight>() ?: emptyList()
+        val bookmarks = (values[1] as? List<*>)?.filterIsInstance<Bookmark>() ?: emptyList()
+        val books = (values[2] as? List<*>)?.filterIsInstance<Book>() ?: emptyList()
         val type = values[3] as String
         val book = values[4] as String?
-        val color = values[5] as Set<String>
+        val color = (values[5] as? Set<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet()
         val tag = values[6] as String?
         val query = values[7] as String
         val highlightToEdit = values[8] as Highlight?

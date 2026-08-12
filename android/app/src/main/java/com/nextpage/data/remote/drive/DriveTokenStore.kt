@@ -118,7 +118,7 @@ class KtorAuthApi(
         }.mapError()
     }
 
-    private inline fun <T> Result<T>.mapError(): Result<T> {
+    private fun <T> Result<T>.mapError(): Result<T> {
         return this
     }
 

@@ -1,3 +1,7 @@
+// Legacy backward-compat implementation, kept until the Supabase migration is
+// complete. Uses the deprecated Google Sign-In API by design.
+@file:Suppress("DEPRECATION")
+
 package com.nextpage.data.session
 
 import com.google.android.gms.auth.api.signin.GoogleSignInClient

@@ -35,8 +35,6 @@ fun SettingsNotificationsScreen(
         title = stringResource(R.string.settings_notifications_title),
         onBack = onBack
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
         NotificationToggleRow(
             label = stringResource(R.string.notifications_mock_streak_title),
             checked = readingReminders,

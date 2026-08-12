@@ -26,8 +26,6 @@ fun SettingsAboutScreen(
         title = stringResource(R.string.settings_about_title),
         onBack = onBack
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),

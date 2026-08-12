@@ -54,8 +54,6 @@ fun SettingsAccountScreen(
         title = stringResource(R.string.settings_account_title),
         onBack = onBack
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),

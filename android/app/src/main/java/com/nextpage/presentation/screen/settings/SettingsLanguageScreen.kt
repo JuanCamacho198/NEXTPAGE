@@ -47,8 +47,6 @@ fun SettingsLanguageScreen(
         title = stringResource(R.string.settings_language_title),
         onBack = onBack
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
         options.forEach { option ->
             val selected = currentCode == option.code
             Surface(

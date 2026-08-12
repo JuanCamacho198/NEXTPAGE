@@ -45,8 +45,6 @@ fun SettingsThemeScreen(
         title = stringResource(R.string.settings_theme_title),
         onBack = onBack
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
         options.forEach { option ->
             val selected = appThemeMode == option.mode
             Surface(

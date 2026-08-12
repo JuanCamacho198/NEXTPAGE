@@ -90,8 +90,6 @@ fun SettingsDataStorageScreen(
         title = stringResource(R.string.settings_data_storage_title),
         onBack = onBack
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
         NextPagePreferenceItem(
             icon = NextPageIcons.Storage,
             label = stringResource(R.string.settings_storage),

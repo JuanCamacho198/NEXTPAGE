@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -48,7 +49,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
@@ -65,14 +65,37 @@ val DEFAULT_HIGHLIGHT_PRESETS = listOf(
 )
 
 /**
+ * Mutable state backing the color picker controls (preset swatches,
+ * spectrum bar, hue slider, hex input).
+ *
+ * Lifted out of [ColorPickerContent] so a picker survives recompositions
+ * and reopens with the user's last selection instead of resetting to the
+ * first preset. Created via [rememberColorPickerState].
+ */
+class ColorPickerState(initialColor: String) {
+    var selectedColor by mutableStateOf(initialColor)
+    var hexInput by mutableStateOf(initialColor.removePrefix("#"))
+    var hue by mutableFloatStateOf(hueFromHex(initialColor))
+    var spectrumPosition by mutableFloatStateOf(0.5f)
+}
+
+/** Creates a [ColorPickerState] remembered for this composition. */
+@Composable
+fun rememberColorPickerState(initialColor: String): ColorPickerState =
+    remember { ColorPickerState(initialColor) }
+
+/**
  * Reusable color picker controls extracted from
  * [HighlightColorPickerPopover]. Contains preset swatches, a spectrum
  * bar, a hue slider, and a hex text field. Does NOT include a popover
  * card wrapper — use inside a card, dialog, or column as needed.
  *
  * @param presets List of hex color presets shown as swatches.
- * @param selectedColor Currently selected hex color (with or without
- *   `#`). The matching swatch gets a 2dp `#1F2937` border.
+ * @param state Shared [ColorPickerState] owning the selected color, hex
+ *   input, hue, and spectrum position. Callers create it via
+ *   [rememberColorPickerState] so the picker keeps its state across
+ *   recompositions. The matching preset swatch gets a 2dp
+ *   `MaterialTheme.colorScheme.outline` border.
  * @param onColorSelected Invoked with the chosen hex when the user
  *   taps a preset. Spectrum/hue/hex updates happen locally but do NOT
  *   emit this callback.
@@ -83,16 +106,11 @@ val DEFAULT_HIGHLIGHT_PRESETS = listOf(
 @Composable
 fun ColorPickerContent(
     presets: List<String>,
-    selectedColor: String,
+    state: ColorPickerState,
     onColorSelected: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedColorInternal by remember { mutableStateOf(selectedColor) }
-    var hexInput by remember { mutableStateOf(selectedColor.removePrefix("#")) }
-    var hue by remember { mutableFloatStateOf(hueFromHex(selectedColor)) }
-    var spectrumPosition by remember { mutableFloatStateOf(0.5f) }
-
     val focusManager = LocalFocusManager.current
 
     Column(
@@ -105,7 +123,7 @@ fun ColorPickerContent(
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             presets.take(5).forEach { hex ->
-                val isActive = hex.equals(selectedColorInternal, ignoreCase = true)
+                val isActive = hex.equals(state.selectedColor, ignoreCase = true)
                 Box(
                     modifier = Modifier
                         .size(24.dp)
@@ -114,14 +132,14 @@ fun ColorPickerContent(
                         .then(
                             if (isActive) Modifier.border(
                                 2.dp,
-                                Color(0xFF1F2937),
+                                MaterialTheme.colorScheme.outline,
                                 CircleShape
                             ) else Modifier
                         )
                         .clickable {
-                            selectedColorInternal = hex
-                            hexInput = hex.removePrefix("#")
-                            hue = hueFromHex(hex)
+                            state.selectedColor = hex
+                            state.hexInput = hex.removePrefix("#")
+                            state.hue = hueFromHex(hex)
                             onColorSelected(hex)
                             onDismiss()
                         }
@@ -133,12 +151,12 @@ fun ColorPickerContent(
 
         // ── Spectrum Gradient Canvas ───────────────────────────────
         SpectrumBar(
-            currentPosition = spectrumPosition,
-            hue = hue,
+            currentPosition = state.spectrumPosition,
+            hue = state.hue,
             onPositionChange = { pos ->
-                spectrumPosition = pos
-                selectedColorInternal = spectrumColorAt(pos)
-                hexInput = selectedColorInternal.removePrefix("#")
+                state.spectrumPosition = pos
+                state.selectedColor = spectrumColorAt(pos, state.hue)
+                state.hexInput = state.selectedColor.removePrefix("#")
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -149,11 +167,11 @@ fun ColorPickerContent(
 
         // ── Hue Slider ─────────────────────────────────────────────
         HueSlider(
-            hue = hue,
+            hue = state.hue,
             onHueChange = { newHue ->
-                hue = newHue
-                selectedColorInternal = hslToHex(newHue)
-                hexInput = selectedColorInternal.removePrefix("#")
+                state.hue = newHue
+                state.selectedColor = hslToHex(newHue)
+                state.hexInput = state.selectedColor.removePrefix("#")
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -164,30 +182,28 @@ fun ColorPickerContent(
 
         // ── Hex Input ──────────────────────────────────────────────
         OutlinedTextField(
-            value = hexInput.uppercase(),
+            value = state.hexInput.uppercase(),
             onValueChange = { input ->
                 val clean = input.filter { it in "0123456789ABCDEFabcdef" }.take(6)
-                hexInput = clean
+                state.hexInput = clean
                 if (clean.length == 6) {
                     val hex = "#$clean"
-                    selectedColorInternal = hex
-                    hue = hueFromHex(hex)
+                    state.selectedColor = hex
+                    state.hue = hueFromHex(hex)
                 }
             },
             textStyle = TextStyle(
                 fontFamily = FontFamily.Monospace,
                 fontSize = 12.sp,
-                color = Color(0xFF6B7280),
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
             ),
             singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp),
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color(0xFFF3F4F6),
-                unfocusedContainerColor = Color(0xFFF3F4F6),
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                 focusedBorderColor = Color.Transparent,
                 unfocusedBorderColor = Color.Transparent
             ),
@@ -204,9 +220,8 @@ fun ColorPickerContent(
                     style = TextStyle(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp,
-                        color = Color(0xFF9CA3AF)
-                    ),
-                    modifier = Modifier.padding(start = 12.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 )
             }
         )
@@ -217,7 +232,7 @@ fun ColorPickerContent(
         Text(
             text = stringResource(R.string.color_picker_confirm),
             fontSize = 10.sp,
-            color = Color(0xFF9CA3AF),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
     }
@@ -229,8 +244,11 @@ fun ColorPickerContent(
  * spectrum bar, hue slider, and hex input.
  *
  * Design matches Pencil node `kixeV`:
- * - White `#FFFFFF` container, 16dp rounded, 12dp shadow, 220dp wide.
+ * - `MaterialTheme.colorScheme.surface` container, 16dp rounded, 12dp
+ *   shadow, 220dp wide.
  * - Delegates to [ColorPickerContent] for the actual controls.
+ * - The picker state is remembered via [rememberColorPickerState] so the
+ *   selected color / hue / spectrum position survive recompositions.
  *
  * @param customColors Custom 5-color preset list. Falls back to
  *   [DEFAULT_HIGHLIGHT_PRESETS] when `null` or fewer than 5 entries.
@@ -265,19 +283,19 @@ fun HighlightColorPickerPopover(
     val presets = (customColors?.takeIf { it.size >= 5 } ?: DEFAULT_HIGHLIGHT_PRESETS)
         .take(5)
 
-    val selectedColor by remember { mutableStateOf(presets.first()) }
+    val pickerState = rememberColorPickerState(presets.first())
 
     Column(
         modifier = modifier
             .width(220.dp)
             .shadow(12.dp, RoundedCornerShape(16.dp))
-            .background(Color.White, RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         ColorPickerContent(
             presets = presets,
-            selectedColor = selectedColor,
+            state = pickerState,
             onColorSelected = onColorSelected,
             onDismiss = onDismiss
         )
@@ -342,30 +360,23 @@ private fun SpectrumBar(
                 size = size
             )
 
-            // Thumb indicator line
+            // Thumb indicator: a circular thumb drawn INSIDE this Canvas
+            // (so it always tracks the gradient and never misaligns, no
+            // hardcoded width offsets). White fill with a dark border.
             val thumbX = currentPosition * size.width
-            drawLine(
+            val thumbCenter = Offset(thumbX, size.height / 2f)
+            drawCircle(
+                color = Color.White,
+                radius = thumbRadius.toPx(),
+                center = thumbCenter
+            )
+            drawCircle(
                 color = Color(0xFF1F2937),
-                start = Offset(thumbX, 0f),
-                end = Offset(thumbX, size.height),
-                strokeWidth = 2.dp.toPx()
+                radius = thumbRadius.toPx(),
+                center = thumbCenter,
+                style = Stroke(width = 2.dp.toPx())
             )
         }
-
-        // Draggable thumb circle
-        Box(
-            modifier = Modifier
-                .offset {
-                    IntOffset(
-                        ((currentPosition * 220.dp.toPx()) - thumbRadius.toPx()).roundToInt(),
-                        0
-                    )
-                }
-                .size(thumbRadius * 2)
-                .clip(CircleShape)
-                .background(Color.White)
-                .border(2.dp, Color(0xFF1F2937), CircleShape)
-        )
     }
 }
 
@@ -378,29 +389,41 @@ private fun HueSlider(
     onHueChange: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Slider(
-        value = hue,
-        onValueChange = onHueChange,
-        valueRange = 0f..360f,
-        modifier = modifier,
-        colors = SliderDefaults.colors(
-            thumbColor = Color.White,
-            activeTrackColor = Color.Transparent, // custom track via drawBehind
-            inactiveTrackColor = Color.Transparent
-        ),
-        thumb = {
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .border(2.dp, Color(0xFFD1D5DB), CircleShape)
-            )
-        }
-    )
-    // The gradient track is drawn by the parent via Modifier.background with
-    // hue colors. For simplicity here we use the Slider defaults.
-    // A production version would draw the rainbow gradient behind.
+    // Rainbow gradient drawn behind the Slider as its track. The Slider
+    // itself renders transparent tracks, so only the white thumb shows.
+    val rainbowColors = remember {
+        List(12) { i -> hslToColor(i * 30f, 1f, 0.5f) }
+    }
+
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(Brush.horizontalGradient(rainbowColors))
+        )
+        Slider(
+            value = hue,
+            onValueChange = onHueChange,
+            valueRange = 0f..360f,
+            modifier = Modifier.fillMaxWidth(),
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.Transparent,
+                inactiveTrackColor = Color.Transparent
+            ),
+            thumb = {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .border(2.dp, Color(0xFFD1D5DB), CircleShape)
+                )
+            }
+        )
+    }
 }
 
 // ── Color Utilities ─────────────────────────────────────────────────
@@ -432,12 +455,17 @@ private fun hueFromHex(hex: String): Float {
     return if (h < 0f) h + 360f else h
 }
 
-/** Returns a pseudo-spectrum colour at [position] (0..1) with the given [hue]. */
-private fun spectrumColorAt(position: Float): String {
-    val r = ((1f - position) * 0 + position * hslToColor(hue = 120f, saturation = 1f, lightness = 0.5f).red * 255f).roundToInt()
-        .coerceIn(0, 255)
-    val g = ((1f - position) * 0 + position * 255).roundToInt().coerceIn(0, 255)
-    val b = ((1f - position) * 0 + position * 255).roundToInt().coerceIn(0, 255)
+/**
+ * Returns the spectrum colour at [position] (0..1) for the given [hue].
+ *
+ * Matches the spectrum bar gradient exactly: black at 0, fully-saturated
+ * [hue] at 0.5, white at 1 — i.e. HSL lightness sweeps 0 → 0.5 → 1.
+ */
+private fun spectrumColorAt(position: Float, hue: Float): String {
+    val color = hslToColor(hue, saturation = 1f, lightness = position.coerceIn(0f, 1f))
+    val r = (color.red * 255).roundToInt().coerceIn(0, 255)
+    val g = (color.green * 255).roundToInt().coerceIn(0, 255)
+    val b = (color.blue * 255).roundToInt().coerceIn(0, 255)
     return "#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}"
 }
 

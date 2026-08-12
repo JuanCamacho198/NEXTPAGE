@@ -174,7 +174,7 @@ fun HighlightPaletteSection(
             text = {
                 ColorPickerContent(
                     presets = colors,
-                    selectedColor = editorHex,
+                    state = rememberColorPickerState(editorHex),
                     onColorSelected = { hex ->
                         onUpdateColor(editingIndex!!, hex)
                         editingIndex = null

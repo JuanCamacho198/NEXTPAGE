@@ -1,10 +1,22 @@
 package com.nextpage.ui.components.atoms
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarData
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Material 3 `Snackbar` pre-colored with the NextPage inverse theme
@@ -38,4 +50,54 @@ fun NextPageSnackbar(
         contentColor = MaterialTheme.colorScheme.inverseOnSurface,
         actionColor = MaterialTheme.colorScheme.inversePrimary
     )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SnackbarDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        val hostState = remember { SnackbarHostState() }
+        LaunchedEffect(hostState) {
+            hostState.showSnackbar(
+                message = "Sample message",
+                withDismissAction = true,
+                duration = SnackbarDuration.Indefinite
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            SnackbarHost(hostState = hostState) { data ->
+                NextPageSnackbar(snackbarData = data)
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SnackbarLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        val hostState = remember { SnackbarHostState() }
+        LaunchedEffect(hostState) {
+            hostState.showSnackbar(
+                message = "Sample message",
+                withDismissAction = true,
+                duration = SnackbarDuration.Indefinite
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            SnackbarHost(hostState = hostState) { data ->
+                NextPageSnackbar(snackbarData = data)
+            }
+        }
+    }
 }

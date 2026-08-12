@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -58,8 +59,6 @@ import kotlinx.coroutines.launch
 // ── Reader Design Colors ──────────────────────────────────────────
 private val READER_BG = Color(0xFF0D1322)
 private val HEADER_FG = Color(0xFFDDE2F8)
-private val HEADER_AUTHOR_FG = Color(0xFFC2C6D6)
-private val BUTTON_BG = Color(0xFF2F3445)
 
 /** Duration (ms) of the header/footer show/hide animation. */
 private const val CHROME_ANIM_MS = 300
@@ -177,7 +176,6 @@ fun ReaderHeader(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(BUTTON_BG)
         ) {
             Icon(
                 imageVector = NextPageIcons.ArrowBack,
@@ -187,30 +185,20 @@ fun ReaderHeader(
             )
         }
 
-        // Title + Author centered
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+        // Chapter title centered (single line — replaces the old
+        // "Lector" + chapter two-line header)
+        Text(
+            text = uiState.chapters.getOrNull(uiState.currentChapterIndex)?.title
+                ?: stringResource(R.string.reader_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = HEADER_FG,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 18.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
             modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.reader_title),
-                style = MaterialTheme.typography.titleSmall,
-                color = HEADER_FG,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 18.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = uiState.chapters.getOrNull(uiState.currentChapterIndex)?.title
-                    ?: stringResource(R.string.reader_author_placeholder),
-                style = MaterialTheme.typography.bodySmall,
-                color = HEADER_AUTHOR_FG,
-                fontSize = 12.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        )
 
         // Action buttons row
         Row(
@@ -314,7 +302,6 @@ fun HeaderActionButton(
         modifier = modifier
             .size(36.dp)
             .clip(CircleShape)
-            .background(BUTTON_BG)
     ) {
         if (animatedIcon != null) {
             animatedIcon()

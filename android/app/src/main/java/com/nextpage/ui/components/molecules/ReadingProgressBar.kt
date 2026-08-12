@@ -128,14 +128,33 @@ fun ReadingProgressBar(
                     // track's local coordinate space (0..trackWidth). This
                     // makes the drag work in BOTH directions, anywhere on
                     // the track, and the formula below is correct.
+                    //
+                    // detectDragGestures's onDragStart captures the initial
+                    // touch position; without it the first drag delta is
+                    // relative to an unknown origin and the thumb jumps when
+                    // dragging backwards. We track the last reported fraction
+                    // and update it from the ABSOLUTE pointer x each move so
+                    // the thumb follows the finger exactly in both directions.
                     if (onProgressChange != null) {
-                        detectDragGestures { change, _ ->
-                            change.consume()
-                            if (trackWidth <= 0) return@detectDragGestures
-                            val newFraction =
-                                (change.position.x / trackWidth).coerceIn(0f, 1f)
-                            onProgressChange(newFraction * 100f)
-                        }
+                        var dragFraction by androidx.compose.runtime.mutableFloatStateOf(-1f)
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                dragFraction = if (trackWidth > 0) {
+                                    (offset.x / trackWidth).coerceIn(0f, 1f)
+                                } else {
+                                    0f
+                                }
+                                onProgressChange(dragFraction * 100f)
+                            },
+                            onDrag = { change, _ ->
+                                change.consume()
+                                if (trackWidth <= 0) return@detectDragGestures
+                                val newFraction =
+                                    (change.position.x / trackWidth).coerceIn(0f, 1f)
+                                dragFraction = newFraction
+                                onProgressChange(newFraction * 100f)
+                            }
+                        )
                     }
                 }
         ) {

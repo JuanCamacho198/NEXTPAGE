@@ -688,7 +688,10 @@ private fun EmptyShelfPlaceholder(
         subtitle = stringResource(R.string.library_import_formats),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = NextPageDimens.spacingLg),
+            .padding(
+                horizontal = NextPageDimens.spacingMd,
+                vertical = NextPageDimens.spacingLg
+            ),
         action = {
             NextPageButton(
                 onClick = onImportClick,

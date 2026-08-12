@@ -71,7 +71,9 @@ import com.nextpage.presentation.theme.NextPageTheme
  *   `settings.theme.textHex`, with the configured
  *   `fontSize`/`lineHeight`/`fontFamily`/`alignment` and
  *   `leftMargin`/`rightMargin`.
- * - Config panel: `#191F2F` background, 24dp top corners, 8dp shadow.
+ * - Config panel: `#191F2F` background with a straight top edge that
+ *   meets the preview — no rounded seam and no double shadow, so no
+ *   light line appears at the junction.
  *
  * @param settings Current reader settings. Drives the preview AND
  *   the form controls (selected theme, slider position, switch
@@ -90,7 +92,7 @@ import com.nextpage.presentation.theme.NextPageTheme
  * **Visual**: outer `Column` with 12dp shadow, 24dp top corners.
  *   Top half (weight 0.4f): live preview block with 20dp vertical
  *   padding and the configured side margins. Bottom half
- *   (weight 0.6f): 24dp top corners, scrollable, 20dp horizontal
+ *   (weight 0.6f): straight top edge, scrollable, 20dp horizontal
  *   padding, 32dp bottom padding. Contents: drag handle + header
  *   (title + close X), font selector (`DropdownMenu` with Georgia/
  *   Arial/Merriweather), 4 theme circles (Light/Sepia/Dark/OLED)
@@ -186,11 +188,7 @@ fun SplitSettingsSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(0.6f)
-                .shadow(8.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                .background(
-                    color = Color(0xFF191F2F),
-                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-                )
+                .background(color = Color(0xFF191F2F))
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp)

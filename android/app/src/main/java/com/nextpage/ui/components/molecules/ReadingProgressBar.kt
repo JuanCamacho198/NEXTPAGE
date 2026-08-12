@@ -2,6 +2,7 @@ package com.nextpage.ui.components.molecules
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,7 +52,9 @@ import com.nextpage.presentation.theme.NextPageTheme
  * Design (dark theme):
  * - Track: `#2F3445`, 4dp height, full width.
  * - Fill: `#ADC6FF`, 4dp height, animated width.
- * - Thumb: 12dp circle, `#ADC6FF` with 4dp shadow, draggable.
+ * - Thumb: 12dp circle, white fill with 2dp `#ADC6FF` border and 4dp
+ *   shadow, draggable — contrasted against the fill so it reads as a
+ *   handle, not a same-color dot.
  * - Below: [Rotate icon] — position label centered — "NN%" right.
  * - Outer padding: 16/20/32/20 (start/end/bottom/top).
  *
@@ -160,7 +163,9 @@ fun ReadingProgressBar(
 
             // Draggable thumb (visual only — drag is handled by the outer
             // track's `pointerInput` above so the entire track is a
-            // touch target, not just the 12dp thumb circle).
+            // touch target, not just the 12dp thumb circle). White fill
+            // with a bar-color border so it reads as a handle instead of
+            // a same-color dot fused to the end of the fill.
             Box(
                 modifier = Modifier
                     .size(12.dp)
@@ -174,7 +179,8 @@ fun ReadingProgressBar(
                     )
                     .shadow(4.dp, CircleShape)
                     .clip(CircleShape)
-                    .background(Color(0xFFADC6FF))
+                    .background(Color(0xFFF2F4F8))
+                    .border(2.dp, Color(0xFFADC6FF), CircleShape)
             )
         }
 

@@ -185,21 +185,6 @@ fun ReaderHeader(
             )
         }
 
-        // Chapter title centered (single line — replaces the old
-        // "Lector" + chapter two-line header)
-        Text(
-            text = uiState.chapters.getOrNull(uiState.currentChapterIndex)?.title
-                ?: stringResource(R.string.reader_title),
-            style = MaterialTheme.typography.titleSmall,
-            color = HEADER_FG,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 18.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-        )
-
         // Action buttons row
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),

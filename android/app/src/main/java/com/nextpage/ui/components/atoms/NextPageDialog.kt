@@ -1,11 +1,16 @@
 package com.nextpage.ui.components.atoms
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,14 +40,13 @@ enum class NextPageDialogVariant {
 
 /**
  * Material 3 `AlertDialog` with a fixed two-button layout
- * (confirm + dismiss). Wraps the buttons in `TextButton`s to match the
- * app's chrome.
+ * (filled confirm + dismiss `TextButton`).
  *
  * @param title Dialog title rendered as Material 3 default `headlineSmall`
  *   (the `AlertDialog` title slot).
  * @param body Dialog body text rendered in the `AlertDialog` text slot
  *   with Material 3 default body styling.
- * @param confirmText Label of the confirm `TextButton`.
+ * @param confirmText Label of the confirm [Button].
  * @param dismissText Label of the dismiss `TextButton`.
  * @param onConfirm Invoked when the user taps the confirm button. NOT
  *   called on outside-tap or back-press — those go through [onDismiss].
@@ -50,15 +54,19 @@ enum class NextPageDialogVariant {
  *   taps outside the dialog, or presses back. Use this to clear the
  *   dialog state in the ViewModel.
  * @param modifier Modifier applied to the underlying `AlertDialog`.
- * @param icon Optional icon rendered centered above the title. Tint
- *   follows [variant] unless [confirmColor] is explicitly set.
- * @param variant Controls the confirm button color and icon tint.
+ * @param icon Optional icon rendered centered above the title inside a
+ *   circular `surfaceVariant` container. Tint follows [variant] unless
+ *   [confirmColor] is explicitly set.
+ * @param variant Controls the confirm button color/content and icon tint.
  *   Default [NextPageDialogVariant.INFO].
  * @param confirmColor Optional explicit color override for the confirm
- *   button. When provided, takes precedence over [variant].
+ *   button container. When provided, takes precedence over [variant] for
+ *   the container color; the content color still follows [variant].
  *
- * **Visual**: standard Material 3 dialog with confirm on the right
- * and dismiss on the left (Material 3 reverses them in RTL locales).
+ * **Visual**: rounded `AlertDialog` with `extraLarge` corners; when [icon]
+ * is set it renders inside a circular `surfaceVariant` container above the
+ * title. The confirm action is a filled [Button] in the variant color with
+ * `onPrimary`/`onError` contrast; the dismiss action is a `TextButton`.
  * **Behavior**: non-cancelable programmatically — the dialog can only
  * be dismissed via [onConfirm] or [onDismiss].
  * **Recomposition**: recomposes when any parameter changes.
@@ -81,31 +89,47 @@ fun NextPageDialog(
         NextPageDialogVariant.DESTRUCTIVE -> MaterialTheme.colorScheme.error
         NextPageDialogVariant.SUCCESS -> MaterialTheme.colorScheme.primary
     }
+    val effectiveContentColor = when (variant) {
+        NextPageDialogVariant.INFO -> MaterialTheme.colorScheme.onPrimary
+        NextPageDialogVariant.DESTRUCTIVE -> MaterialTheme.colorScheme.onError
+        NextPageDialogVariant.SUCCESS -> MaterialTheme.colorScheme.onPrimary
+    }
 
     AlertDialog(
         modifier = modifier,
+        shape = MaterialTheme.shapes.extraLarge,
         onDismissRequest = onDismiss,
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (icon != null) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = effectiveConfirmColor,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = effectiveConfirmColor,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
                 Text(text = title)
             }
         },
         text = { Text(text = body) },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(
-                    text = confirmText,
-                    color = effectiveConfirmColor
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = effectiveConfirmColor,
+                    contentColor = effectiveContentColor
                 )
+            ) {
+                Text(text = confirmText)
             }
         },
         dismissButton = {

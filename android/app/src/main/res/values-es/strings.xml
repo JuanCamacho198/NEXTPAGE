@@ -418,7 +418,7 @@
 
     <!-- Drive connect prompt (one-time, after successful import) -->
     <string name="drive_connect_prompt_title">¿Conectar Google Drive?</string>
-    <string name="drive_connect_prompt_body">Sincroniza tus libros entre dispositivos conectando Google Drive.</string>
+    <string name="drive_connect_prompt_body">Conecta Google Drive para sincronizar y descargar tus libros entre dispositivos.</string>
     <string name="drive_connect_prompt_accept">Conectar</string>
     <string name="drive_connect_prompt_decline">Ahora no</string>
 
@@ -541,7 +541,11 @@
     <string name="book_download_source_android">Desde Android</string>
     <string name="book_download_source_desktop">Desde Desktop</string>
     <string name="book_download_source_unknown">Desde otro dispositivo</string>
+    <string name="download_confirm_title">¿Descargar libro?</string>
+    <string name="download_confirm_body">Se descargará "%1$s" de %2$s.</string>
+    <string name="download_confirm_body_no_author">Se descargará "%1$s".</string>
     <string name="book_empty_downloadable">No hay libros disponibles desde otros dispositivos</string>
     <string name="action_dismiss">Descartar</string>
+    <string name="action_cancel">Cancelar</string>
     <string name="library_count">%1$d disponibles</string>
 </resources>

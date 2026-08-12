@@ -34,6 +34,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.presentation.viewmodel.reader.BookChapter
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Modal bottom sheet that lists the book's chapters as a
@@ -199,15 +200,35 @@ private fun ChapterRow(
 
 @Preview(showBackground = true)
 @Composable
-private fun ChaptersSheetPreview() {
-    ChaptersSheet(
-        chapters = listOf(
-            BookChapter(index = 0, id = "c0", title = "The Beginning", href = "ch1.xhtml"),
-            BookChapter(index = 1, id = "c1", title = "A Quiet Storm", href = "ch2.xhtml"),
-            BookChapter(index = 2, id = "c2", title = "The Turning Point", href = "ch3.xhtml")
-        ),
-        currentChapterIndex = 1,
-        onChapterSelected = {},
-        onDismiss = {}
-    )
+private fun ChaptersSheetDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        ChaptersSheet(
+            chapters = listOf(
+                BookChapter(index = 0, id = "c0", title = "The Beginning", href = "ch1.xhtml"),
+                BookChapter(index = 1, id = "c1", title = "A Quiet Storm", href = "ch2.xhtml"),
+                BookChapter(index = 2, id = "c2", title = "The Turning Point", href = "ch3.xhtml")
+            ),
+            currentChapterIndex = 1,
+            onChapterSelected = {},
+            onDismiss = {}
+        )
+    }
+}
+
+// Preview-only: fixed dark palette — light render is intentionally broken (see sdd/ui-previews-both-themes spec R7; color migration deferred)
+@Preview(showBackground = true)
+@Composable
+private fun ChaptersSheetLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        ChaptersSheet(
+            chapters = listOf(
+                BookChapter(index = 0, id = "c0", title = "The Beginning", href = "ch1.xhtml"),
+                BookChapter(index = 1, id = "c1", title = "A Quiet Storm", href = "ch2.xhtml"),
+                BookChapter(index = 2, id = "c2", title = "The Turning Point", href = "ch3.xhtml")
+            ),
+            currentChapterIndex = 1,
+            onChapterSelected = {},
+            onDismiss = {}
+        )
+    }
 }

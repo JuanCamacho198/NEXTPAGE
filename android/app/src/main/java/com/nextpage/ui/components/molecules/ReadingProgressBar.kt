@@ -40,6 +40,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Reader's progress bar with a draggable thumb and a row of
@@ -224,11 +225,27 @@ fun ReadingProgressBar(
 
 @Preview(showBackground = true)
 @Composable
-private fun ReadingProgressBarPreview() {
-    ReadingProgressBar(
-        progressPercent = 35f,
-        label = "45 / 200",
-        onProgressChange = {},
-        onRotateScreen = {}
-    )
+private fun ReadingProgressBarDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        ReadingProgressBar(
+            progressPercent = 35f,
+            label = "45 / 200",
+            onProgressChange = {},
+            onRotateScreen = {}
+        )
+    }
+}
+
+// Preview-only: fixed dark palette — light render is intentionally broken (see sdd/ui-previews-both-themes spec R7; color migration deferred)
+@Preview(showBackground = true)
+@Composable
+private fun ReadingProgressBarLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        ReadingProgressBar(
+            progressPercent = 35f,
+            label = "45 / 200",
+            onProgressChange = {},
+            onRotateScreen = {}
+        )
+    }
 }

@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Glassmorphic full-screen modal for adding or editing a personal
@@ -276,14 +277,33 @@ fun HighlightAnnotationModal(
 
 @Preview(showBackground = true)
 @Composable
-private fun HighlightAnnotationModalPreview() {
-    HighlightAnnotationModal(
-        titleRes = R.string.comment_modal_title,
-        hintRes = R.string.annotation_textarea_comment_hint,
-        snippetLabelRes = R.string.annotation_snippet_label,
-        selectedText = "It was the best of times, it was the worst of times, it was the age of wisdom.",
-        initialText = "",
-        onSave = {},
-        onDismiss = {}
-    )
+private fun HighlightAnnotationModalDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        HighlightAnnotationModal(
+            titleRes = R.string.comment_modal_title,
+            hintRes = R.string.annotation_textarea_comment_hint,
+            snippetLabelRes = R.string.annotation_snippet_label,
+            selectedText = "It was the best of times, it was the worst of times, it was the age of wisdom.",
+            initialText = "",
+            onSave = {},
+            onDismiss = {}
+        )
+    }
+}
+
+// Preview-only: fixed dark palette — light render is intentionally broken (see sdd/ui-previews-both-themes spec R7; color migration deferred)
+@Preview(showBackground = true)
+@Composable
+private fun HighlightAnnotationModalLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        HighlightAnnotationModal(
+            titleRes = R.string.comment_modal_title,
+            hintRes = R.string.annotation_textarea_comment_hint,
+            snippetLabelRes = R.string.annotation_snippet_label,
+            selectedText = "It was the best of times, it was the worst of times, it was the age of wisdom.",
+            initialText = "",
+            onSave = {},
+            onDismiss = {}
+        )
+    }
 }

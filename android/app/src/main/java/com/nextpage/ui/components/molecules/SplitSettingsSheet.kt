@@ -53,6 +53,7 @@ import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.domain.model.ReaderTheme
 import com.nextpage.domain.model.ScrollMode
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Split-layout settings panel for the reader. Top 40% is a live text
@@ -646,11 +647,27 @@ private fun parseColorHex(hex: String): Color {
 
 @Preview(showBackground = true)
 @Composable
-private fun SplitSettingsSheetPreview() {
-    SplitSettingsSheet(
-        settings = ReaderSettings(),
-        previewText = "The quick brown fox jumps over the lazy dog.",
-        onSettingsChanged = {},
-        onDismiss = {}
-    )
+private fun SplitSettingsSheetDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        SplitSettingsSheet(
+            settings = ReaderSettings(),
+            previewText = "The quick brown fox jumps over the lazy dog.",
+            onSettingsChanged = {},
+            onDismiss = {}
+        )
+    }
+}
+
+// Preview-only: fixed dark palette — light render is intentionally broken (see sdd/ui-previews-both-themes spec R7; color migration deferred)
+@Preview(showBackground = true)
+@Composable
+private fun SplitSettingsSheetLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        SplitSettingsSheet(
+            settings = ReaderSettings(),
+            previewText = "The quick brown fox jumps over the lazy dog.",
+            onSettingsChanged = {},
+            onDismiss = {}
+        )
+    }
 }

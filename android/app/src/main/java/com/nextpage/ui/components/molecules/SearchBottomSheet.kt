@@ -44,6 +44,7 @@ import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.SearchResult
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Modal bottom sheet for full-text search inside the current book.
@@ -291,27 +292,59 @@ private fun parseColorHex(hex: String): Color {
 
 @Preview(showBackground = true)
 @Composable
-private fun SearchBottomSheetPreview() {
-    SearchBottomSheet(
-        query = "times",
-        results = listOf(
-            SearchResult(
-                text = "It was the best of times, it was the worst of times.",
-                offset = 12,
-                chapterIndex = 0,
-                chapterTitle = "Book I — Chapter 1"
+private fun SearchBottomSheetDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        SearchBottomSheet(
+            query = "times",
+            results = listOf(
+                SearchResult(
+                    text = "It was the best of times, it was the worst of times.",
+                    offset = 12,
+                    chapterIndex = 0,
+                    chapterTitle = "Book I — Chapter 1"
+                ),
+                SearchResult(
+                    text = "In the ensuing silence, the word hung in the air.",
+                    offset = 8,
+                    chapterIndex = 1,
+                    chapterTitle = "Book I — Chapter 2"
+                )
             ),
-            SearchResult(
-                text = "In the ensuing silence, the word hung in the air.",
-                offset = 8,
-                chapterIndex = 1,
-                chapterTitle = "Book I — Chapter 2"
-            )
-        ),
-        isSearching = false,
-        onQueryChange = {},
-        onClearQuery = {},
-        onResultSelected = {},
-        onDismiss = {}
-    )
+            isSearching = false,
+            onQueryChange = {},
+            onClearQuery = {},
+            onResultSelected = {},
+            onDismiss = {}
+        )
+    }
+}
+
+// Preview-only: fixed dark palette — light render is intentionally broken (see sdd/ui-previews-both-themes spec R7; color migration deferred)
+@Preview(showBackground = true)
+@Composable
+private fun SearchBottomSheetLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        SearchBottomSheet(
+            query = "times",
+            results = listOf(
+                SearchResult(
+                    text = "It was the best of times, it was the worst of times.",
+                    offset = 12,
+                    chapterIndex = 0,
+                    chapterTitle = "Book I — Chapter 1"
+                ),
+                SearchResult(
+                    text = "In the ensuing silence, the word hung in the air.",
+                    offset = 8,
+                    chapterIndex = 1,
+                    chapterTitle = "Book I — Chapter 2"
+                )
+            ),
+            isSearching = false,
+            onQueryChange = {},
+            onClearQuery = {},
+            onResultSelected = {},
+            onDismiss = {}
+        )
+    }
 }

@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 import kotlin.math.roundToInt
 
 /** Default Pencil kixeV design color presets (5 hex values). */
@@ -285,12 +286,27 @@ fun HighlightColorPickerPopover(
 
 @Preview(showBackground = true)
 @Composable
-private fun HighlightColorPickerPopoverPreview() {
-    HighlightColorPickerPopover(
-        customColors = null,
-        onColorSelected = {},
-        onDismiss = {}
-    )
+private fun HighlightColorPickerPopoverDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        HighlightColorPickerPopover(
+            customColors = null,
+            onColorSelected = {},
+            onDismiss = {}
+        )
+    }
+}
+
+// Preview-only: fixed dark palette — light render is intentionally broken (see sdd/ui-previews-both-themes spec R7; color migration deferred)
+@Preview(showBackground = true)
+@Composable
+private fun HighlightColorPickerPopoverLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        HighlightColorPickerPopover(
+            customColors = null,
+            onColorSelected = {},
+            onDismiss = {}
+        )
+    }
 }
 
 // ── Spectrum Bar ────────────────────────────────────────────────────

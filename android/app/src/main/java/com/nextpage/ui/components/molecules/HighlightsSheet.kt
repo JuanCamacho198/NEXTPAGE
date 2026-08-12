@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Modal bottom sheet that lists all highlights for the current book
@@ -329,31 +330,67 @@ private fun ColorFilterCircle(
 
 @Preview(showBackground = true)
 @Composable
-private fun HighlightsSheetPreview() {
-    HighlightsSheet(
-        highlights = listOf(
-            Highlight(
-                id = "h1",
-                bookId = "book-1",
-                cfiRange = "epubcfi(/6/4[chap1]!/4[body]/2/1:10)",
-                textContent = "It was a bright cold day in April, and the clocks were striking thirteen.",
-                note = "Opening line",
-                color = HighlightColor.YELLOW.hex,
-                updatedAtEpochMillis = 1_700_000_000_000L,
-                deletedAtEpochMillis = null
+private fun HighlightsSheetDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        HighlightsSheet(
+            highlights = listOf(
+                Highlight(
+                    id = "h1",
+                    bookId = "book-1",
+                    cfiRange = "epubcfi(/6/4[chap1]!/4[body]/2/1:10)",
+                    textContent = "It was a bright cold day in April, and the clocks were striking thirteen.",
+                    note = "Opening line",
+                    color = HighlightColor.YELLOW.hex,
+                    updatedAtEpochMillis = 1_700_000_000_000L,
+                    deletedAtEpochMillis = null
+                ),
+                Highlight(
+                    id = "h2",
+                    bookId = "book-1",
+                    cfiRange = "epubcfi(/6/4[chap2]!/4[body]/2/1:5)",
+                    textContent = "War is peace. Freedom is slavery. Ignorance is strength.",
+                    note = null,
+                    color = HighlightColor.BLUE.hex,
+                    updatedAtEpochMillis = 1_700_000_000_000L,
+                    deletedAtEpochMillis = null
+                )
             ),
-            Highlight(
-                id = "h2",
-                bookId = "book-1",
-                cfiRange = "epubcfi(/6/4[chap2]!/4[body]/2/1:5)",
-                textContent = "War is peace. Freedom is slavery. Ignorance is strength.",
-                note = null,
-                color = HighlightColor.BLUE.hex,
-                updatedAtEpochMillis = 1_700_000_000_000L,
-                deletedAtEpochMillis = null
-            )
-        ),
-        onHighlightSelected = {},
-        onDismiss = {}
-    )
+            onHighlightSelected = {},
+            onDismiss = {}
+        )
+    }
+}
+
+// Preview-only: fixed dark palette — light render is intentionally broken (see sdd/ui-previews-both-themes spec R7; color migration deferred)
+@Preview(showBackground = true)
+@Composable
+private fun HighlightsSheetLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        HighlightsSheet(
+            highlights = listOf(
+                Highlight(
+                    id = "h1",
+                    bookId = "book-1",
+                    cfiRange = "epubcfi(/6/4[chap1]!/4[body]/2/1:10)",
+                    textContent = "It was a bright cold day in April, and the clocks were striking thirteen.",
+                    note = "Opening line",
+                    color = HighlightColor.YELLOW.hex,
+                    updatedAtEpochMillis = 1_700_000_000_000L,
+                    deletedAtEpochMillis = null
+                ),
+                Highlight(
+                    id = "h2",
+                    bookId = "book-1",
+                    cfiRange = "epubcfi(/6/4[chap2]!/4[body]/2/1:5)",
+                    textContent = "War is peace. Freedom is slavery. Ignorance is strength.",
+                    note = null,
+                    color = HighlightColor.BLUE.hex,
+                    updatedAtEpochMillis = 1_700_000_000_000L,
+                    deletedAtEpochMillis = null
+                )
+            ),
+            onHighlightSelected = {},
+            onDismiss = {}
+        )
+    }
 }

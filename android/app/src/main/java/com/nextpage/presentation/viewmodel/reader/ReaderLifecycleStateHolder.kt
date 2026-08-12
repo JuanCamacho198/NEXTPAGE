@@ -57,6 +57,9 @@ class ReaderLifecycleStateHolder(
 
     companion object {
         private const val TAG = "ReaderLifecycleStateHolder"
+        private const val MAX_PROGRESS_PERCENT = 99f
+        private const val READING_TIME_TICK_MS = 60_000L
+        private const val MILLIS_PER_MINUTE = 60_000L
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -577,7 +580,7 @@ class ReaderLifecycleStateHolder(
             // Chapter-based percentage: cap at 99% so the last chapter doesn't show 100%
             // until Readium's locator totalProgression confirms it.
             val percentage = (((chapterIndex + 1).toFloat() / totalChapters) * 100f)
-                .coerceIn(0f, 99f)
+                .coerceIn(0f, MAX_PROGRESS_PERCENT)
             val cfiLocation = "epubcfi(/6/${chapterIndex + 1})"
 
             scope.launch(mainDispatcher) {
@@ -618,7 +621,7 @@ class ReaderLifecycleStateHolder(
         } else if (currentState.chapters.isNotEmpty()) {
             val current = currentState.currentChapterIndex + 1
             val total = currentState.chapters.size
-            percent = ((current.toFloat() / total) * 100f).coerceIn(0f, 99f)
+            percent = ((current.toFloat() / total) * 100f).coerceIn(0f, MAX_PROGRESS_PERCENT)
             label = "$current / $total"
         } else {
             percent = 0f
@@ -787,7 +790,7 @@ class ReaderLifecycleStateHolder(
         readingTimeTickerJob?.cancel()
         readingTimeTickerJob = scope.launch(mainDispatcher) {
             while (isActive) {
-                delay(60_000L)
+                delay(READING_TIME_TICK_MS)
                 flushReadingTime(minimumMinutes = 1L)
             }
         }
@@ -815,7 +818,7 @@ class ReaderLifecycleStateHolder(
 
         val now = System.currentTimeMillis()
         val elapsedMs = now - sessionStartTime
-        val computedMinutes = elapsedMs / 60000L
+        val computedMinutes = elapsedMs / MILLIS_PER_MINUTE
         val additionalMinutes = if (minimumMinutes > 0L) {
             computedMinutes.coerceAtLeast(minimumMinutes)
         } else {

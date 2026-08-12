@@ -781,7 +781,7 @@ class ReaderViewModel(
                     .replace(Regex("<[^>]*>"), "")
                     .replace(Regex("\\s+"), " ")
                     .trim()
-                    .take(600)
+                    .take(CHAPTER_TEXT_LIMIT)
             } catch (_: Exception) {
                 null
             }
@@ -1141,6 +1141,7 @@ class ReaderViewModel(
 
     companion object {
         private const val TAG = "ReaderViewModel"
+        private const val CHAPTER_TEXT_LIMIT = 600
     }
 
     // ── aA Settings ──────────────────────────────────────────────────

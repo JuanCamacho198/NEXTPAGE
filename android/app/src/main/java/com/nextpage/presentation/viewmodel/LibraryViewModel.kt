@@ -348,7 +348,7 @@ class LibraryViewModel(
                     mutableDownloadableBooks.value = books
                     mutableUiState.update { it.copy(downloadableBooks = books) }
                 }
-                kotlinx.coroutines.delay(30_000L) // poll every 30s
+                kotlinx.coroutines.delay(CATALOG_POLL_INTERVAL_MS) // poll every 30s
             }
         }
     }
@@ -533,7 +533,7 @@ class LibraryViewModel(
                 .onSuccess {
                     mutableDownloadState.update { it + (bookId to DownloadState.Success(title)) }
                     // Remove from downloadable list after a short delay
-                    kotlinx.coroutines.delay(2_000L)
+                    kotlinx.coroutines.delay(DOWNLOAD_REMOVAL_DELAY_MS)
                     mutableDownloadableBooks.value = mutableDownloadableBooks.value.filter { it.id != bookId }
                     mutableUiState.update { current ->
                         current.copy(
@@ -593,6 +593,8 @@ class LibraryViewModel(
 
     companion object {
         private const val TAG = "LibraryViewModel"
+        private const val CATALOG_POLL_INTERVAL_MS = 30_000L
+        private const val DOWNLOAD_REMOVAL_DELAY_MS = 2_000L
     }
 }
 

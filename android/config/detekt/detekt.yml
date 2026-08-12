@@ -15,9 +15,12 @@ complexity:
 style:
   MagicNumber:
     active: true
+    excludes: ['**/test/**', '**/androidTest/**']
     ignoreNumbers: ['-1', '0', '1', '2', '3', '4', '5', '6', '7', '8', '11', '12', '14', '16', '20', '24', '28', '30', '32', '36', '40', '48', '56', '60', '80', '100', '120', '140', '180', '220', '300', '1000']
     ignoreHashCodeFunction: true
     ignorePropertyDeclaration: true
+    ignoreAnnotated: ['Composable', 'Preview']
+    ignoreEnums: true
   WildcardImport:
     active: true
     excludeImports:

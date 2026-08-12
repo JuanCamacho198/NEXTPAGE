@@ -42,6 +42,13 @@ class BookImportStateHolder(
     private val _state = MutableStateFlow<BookImportState>(BookImportState.Idle)
     val state: StateFlow<BookImportState> = _state.asStateFlow()
 
+    private companion object {
+        const val EXTRACTING_PROGRESS = 0.3f
+        const val ANALYZING_PROGRESS = 0.6f
+        const val SAVING_PROGRESS = 0.9f
+        const val STAGE_DELAY_MS = 200L
+    }
+
     init {
         onStateChanged(_state.value)
     }
@@ -55,17 +62,17 @@ class BookImportStateHolder(
         fallbackTitle: String?,
         inputStreamProvider: suspend () -> InputStream?
     ) {
-        _state.update { BookImportState.Extracting(0.3f) }
+        _state.update { BookImportState.Extracting(EXTRACTING_PROGRESS) }
         onStateChanged(_state.value)
 
         scope.launch(mainDispatcher) {
             try {
-                delay(200L)
-                _state.update { BookImportState.Analyzing(0.6f) }
+                delay(STAGE_DELAY_MS)
+                _state.update { BookImportState.Analyzing(ANALYZING_PROGRESS) }
                 onStateChanged(_state.value)
 
-                delay(200L)
-                _state.update { BookImportState.Saving(0.9f) }
+                delay(STAGE_DELAY_MS)
+                _state.update { BookImportState.Saving(SAVING_PROGRESS) }
                 onStateChanged(_state.value)
 
                 val result = importEpubBookUseCase(
@@ -107,17 +114,17 @@ class BookImportStateHolder(
         fallbackTitle: String?,
         pdfFile: File
     ) {
-        _state.update { BookImportState.Extracting(0.3f) }
+        _state.update { BookImportState.Extracting(EXTRACTING_PROGRESS) }
         onStateChanged(_state.value)
 
         scope.launch(mainDispatcher) {
             try {
-                delay(200L)
-                _state.update { BookImportState.Analyzing(0.6f) }
+                delay(STAGE_DELAY_MS)
+                _state.update { BookImportState.Analyzing(ANALYZING_PROGRESS) }
                 onStateChanged(_state.value)
 
-                delay(200L)
-                _state.update { BookImportState.Saving(0.9f) }
+                delay(STAGE_DELAY_MS)
+                _state.update { BookImportState.Saving(SAVING_PROGRESS) }
                 onStateChanged(_state.value)
 
                 val result = libraryRepository.importBookFromPdf(

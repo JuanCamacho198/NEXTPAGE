@@ -78,7 +78,19 @@ class HighlightsViewModel(
         _highlightToChangeColor,
         _highlightToEditTag,
         _editTagText
-    ) { values ->
+    ) { values -> buildUiState(values) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = HighlightsUiState()
+        )
+
+    /**
+     * Maps the positional [values] tuple from the [combine] upstream into a [HighlightsUiState].
+     * Indices below correspond to the source list order in [uiState]'s combine call.
+     */
+    @Suppress("MagicNumber")
+    private fun buildUiState(values: Array<Any?>): HighlightsUiState {
         val highlights = values[0] as List<Highlight>
         val bookmarks = values[1] as List<Bookmark>
         val books = values[2] as List<Book>
@@ -102,7 +114,7 @@ class HighlightsViewModel(
             .filter { it.deletedAtEpochMillis == null }
             .groupBy { it.color }
             .mapValues { it.value.size }
-        HighlightsUiState(
+        return HighlightsUiState(
             highlights = highlights,
             bookmarks = bookmarks,
             books = books,
@@ -123,11 +135,6 @@ class HighlightsViewModel(
             isLoading = false
         )
     }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = HighlightsUiState()
-        )
 
     fun onTypeFilterChanged(filter: String) {
         typeFilter.update { filter }

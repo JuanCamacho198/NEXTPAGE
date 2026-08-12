@@ -63,6 +63,8 @@ class ReaderInteractionStateHolder(
 
     companion object {
         private const val TAG = "ReaderInteractionStateHolder"
+        private const val DEBUG_LOG_TEXT_LIMIT = 50
+        private val DEBUG_FORCE_MENU_RECT = Rect(200, 200, 600, 250)
 
         private val DEFAULT_TAG_SUGGESTIONS = listOf(
             "cita", "pasaje", "idea", "ficción", "no-ficción", "favoritos"
@@ -126,7 +128,7 @@ class ReaderInteractionStateHolder(
         text: String,
         existingHighlights: List<Highlight>
     ) {
-        Log.d("SelectionDebug", "VM.onReadiumSelection: text='${text.take(50)}', " +
+        Log.d("SelectionDebug", "VM.onReadiumSelection: text='\', " +
             "rect=[${rect.left},${rect.top},${rect.right},${rect.bottom}], " +
             "locator.href=${locator.href}")
 
@@ -206,7 +208,7 @@ class ReaderInteractionStateHolder(
             )
         } catch (e: Throwable) {
             Log.e("SelectionDebug", "Rect creation THREW: ${e::class.simpleName}: ${e.message}", e)
-            Rect(0, 0, 100, 50) // Safe fallback rect
+            Rect(0, 0, 100, DEBUG_LOG_TEXT_LIMIT) // Safe fallback rect
         }
 
         try {
@@ -294,7 +296,7 @@ class ReaderInteractionStateHolder(
     }
 
     fun onTextSelection(text: String, rect: Rect) {
-        Log.d("ReaderVM", "onTextSelection: \"${text.take(50)}\" rect=$rect")
+        Log.d("ReaderVM", "onTextSelection: \"${text.take(DEBUG_LOG_TEXT_LIMIT)}\" rect=$rect")
         coordinator = SelectionCoordinator.NewSelection(text, rect, null)
         _state.update {
             it.copy(
@@ -874,7 +876,7 @@ class ReaderInteractionStateHolder(
             return
         }
         try {
-            val rect = Rect(200, 200, 600, 250)
+            val rect = DEBUG_FORCE_MENU_RECT
             val highlight = Highlight(
                 id = "debug-highlight",
                 bookId = "debug-book",
@@ -917,7 +919,7 @@ class ReaderInteractionStateHolder(
             return
         }
         try {
-            val rect = Rect(200, 200, 600, 250)
+            val rect = DEBUG_FORCE_MENU_RECT
             coordinator = SelectionCoordinator.NewSelection("Texto de prueba debug", rect, null)
             _state.update {
                 it.copy(

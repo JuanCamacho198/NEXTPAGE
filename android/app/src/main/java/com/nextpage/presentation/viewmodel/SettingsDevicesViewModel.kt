@@ -35,6 +35,10 @@ class SettingsDevicesViewModel(
 
     private var heartbeatJob: Job? = null
 
+    private companion object {
+        const val HEARTBEAT_INTERVAL_MS = 120_000L
+    }
+
     fun loadDevices() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
@@ -98,7 +102,7 @@ class SettingsDevicesViewModel(
         stopHeartbeat()
         heartbeatJob = viewModelScope.launch {
             while (true) {
-                delay(120_000)
+                delay(HEARTBEAT_INTERVAL_MS)
                 repository.updateHeartbeat(deviceId)
             }
         }

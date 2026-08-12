@@ -12,11 +12,13 @@ import java.security.MessageDigest
  *
  * Used at import time to enable content-hash dedup across devices.
  */
+private const val SHA256_BUFFER_SIZE = 8192
+
 fun computeSha256(filePath: String): String? {
     return try {
         val digest = MessageDigest.getInstance("SHA-256")
         FileInputStream(filePath).use { fis ->
-            val buffer = ByteArray(8192)
+            val buffer = ByteArray(SHA256_BUFFER_SIZE)
             var bytesRead: Int
             while (fis.read(buffer).also { bytesRead = it } != -1) {
                 digest.update(buffer, 0, bytesRead)

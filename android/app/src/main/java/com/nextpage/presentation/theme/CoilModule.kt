@@ -10,6 +10,8 @@ import java.util.concurrent.TimeUnit
 object CoilModule {
     private const val CONNECT_TIMEOUT_SECONDS = 15L
     private const val READ_TIMEOUT_SECONDS = 30L
+    private const val MEMORY_CACHE_SIZE_PERCENT = 0.25
+    private const val DISK_CACHE_SIZE_BYTES = 64L * 1024L * 1024L
 
     fun imageLoader(context: Context): ImageLoader {
         val okHttpClient = OkHttpClient.Builder()
@@ -22,13 +24,13 @@ object CoilModule {
             .okHttpClient { okHttpClient }
             .memoryCache {
                 MemoryCache.Builder(context)
-                    .maxSizePercent(0.25)
+                    .maxSizePercent(MEMORY_CACHE_SIZE_PERCENT)
                     .build()
             }
             .diskCache {
                 DiskCache.Builder()
                     .directory(context.cacheDir.resolve("coil-images"))
-                    .maxSizeBytes(64L * 1024L * 1024L) // 64MB
+                    .maxSizeBytes(DISK_CACHE_SIZE_BYTES)
                     .build()
             }
             .crossfade(true)

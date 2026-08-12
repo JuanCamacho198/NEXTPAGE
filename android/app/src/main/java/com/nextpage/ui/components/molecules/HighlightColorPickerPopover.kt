@@ -437,22 +437,28 @@ private fun parseColorHex(hex: String): Color {
     }
 }
 
+// HSL/HEX conversion constants.
+private const val HUE_EPSILON = 0.001f
+private const val FULL_HUE_DEGREES = 360f
+private const val HUE_SECTOR_240 = 240f
+private const val BYTE_CHANNEL_MAX = 255
+
 /** Extracts approximate hue (0-360) from a hex colour string. */
 private fun hueFromHex(hex: String): Float {
     val c = parseColorHex(hex)
     val r = c.red
     val g = c.green
     val b = c.blue
-    val max = maxOf(r, g, b).coerceAtLeast(0.001f)
+    val max = maxOf(r, g, b).coerceAtLeast(HUE_EPSILON)
     val min = minOf(r, g, b)
     val delta = max - min
-    if (delta < 0.001f) return 0f
+    if (delta < HUE_EPSILON) return 0f
     val h = when (max) {
         r -> 60f * (((g - b) / delta) % 6f)
         g -> 60f * (((b - r) / delta) + 2f)
         else -> 60f * (((r - g) / delta) + 4f)
     }
-    return if (h < 0f) h + 360f else h
+    return if (h < 0f) h + FULL_HUE_DEGREES else h
 }
 
 /**
@@ -463,9 +469,9 @@ private fun hueFromHex(hex: String): Float {
  */
 private fun spectrumColorAt(position: Float, hue: Float): String {
     val color = hslToColor(hue, saturation = 1f, lightness = position.coerceIn(0f, 1f))
-    val r = (color.red * 255).roundToInt().coerceIn(0, 255)
-    val g = (color.green * 255).roundToInt().coerceIn(0, 255)
-    val b = (color.blue * 255).roundToInt().coerceIn(0, 255)
+    val r = (color.red * BYTE_CHANNEL_MAX).roundToInt().coerceIn(0, BYTE_CHANNEL_MAX)
+    val g = (color.green * BYTE_CHANNEL_MAX).roundToInt().coerceIn(0, BYTE_CHANNEL_MAX)
+    val b = (color.blue * BYTE_CHANNEL_MAX).roundToInt().coerceIn(0, BYTE_CHANNEL_MAX)
     return "#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}"
 }
 
@@ -478,7 +484,7 @@ private fun hslToColor(hue: Float, saturation: Float, lightness: Float): Color {
         hue < 60f -> Triple(c, x, 0f)
         hue < 120f -> Triple(x, c, 0f)
         hue < 180f -> Triple(0f, c, x)
-        hue < 240f -> Triple(0f, x, c)
+        hue < HUE_SECTOR_240 -> Triple(0f, x, c)
         hue < 300f -> Triple(x, 0f, c)
         else -> Triple(c, 0f, x)
     }
@@ -488,8 +494,8 @@ private fun hslToColor(hue: Float, saturation: Float, lightness: Float): Color {
 /** Converts a hue (0-360) to a fully-saturated hex string. */
 private fun hslToHex(hue: Float): String {
     val color = hslToColor(hue, saturation = 1f, lightness = 0.5f)
-    val r = (color.red * 255).roundToInt().coerceIn(0, 255)
-    val g = (color.green * 255).roundToInt().coerceIn(0, 255)
-    val b = (color.blue * 255).roundToInt().coerceIn(0, 255)
+    val r = (color.red * BYTE_CHANNEL_MAX).roundToInt().coerceIn(0, BYTE_CHANNEL_MAX)
+    val g = (color.green * BYTE_CHANNEL_MAX).roundToInt().coerceIn(0, BYTE_CHANNEL_MAX)
+    val b = (color.blue * BYTE_CHANNEL_MAX).roundToInt().coerceIn(0, BYTE_CHANNEL_MAX)
     return "#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}"
 }

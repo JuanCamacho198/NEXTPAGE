@@ -199,12 +199,14 @@ class ZipEpubParserService : EpubParserService {
             totalChars += entryBytes.size
         }
         if (totalChars == 0) return null
-        val estimatedWords = totalChars / 5
-        val estimatedPages = estimatedWords / 250
+        val estimatedWords = totalChars / AVG_BYTES_PER_WORD
+        val estimatedPages = estimatedWords / WORDS_PER_PAGE
         return estimatedPages.coerceAtLeast(1)
     }
 
     private companion object {
         const val CONTAINER_XML_PATH = "META-INF/container.xml"
+        const val AVG_BYTES_PER_WORD = 5
+        const val WORDS_PER_PAGE = 250
     }
 }

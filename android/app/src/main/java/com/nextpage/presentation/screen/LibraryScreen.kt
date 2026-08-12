@@ -703,8 +703,10 @@ private fun EmptyShelfPlaceholder(
 /**
  * Formats a file size in bytes as a compact MB string (e.g. "2.4 MB").
  */
+private const val BYTES_PER_MB = 1024.0 * 1024.0
+
 private fun formatFileSize(bytes: Long): String {
-    val mb = bytes / (1024.0 * 1024.0)
+    val mb = bytes / BYTES_PER_MB
     return if (mb >= 100) {
         "${mb.toInt()} MB"
     } else {

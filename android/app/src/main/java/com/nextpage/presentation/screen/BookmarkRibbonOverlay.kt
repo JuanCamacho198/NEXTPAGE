@@ -33,10 +33,12 @@ import kotlinx.coroutines.delay
 
 private val RIBBON_COLOR = Color(0xFFEF4444)
 
+private const val NOTCH_DEPTH_RATIO = 0.45f
+
 private val RibbonShape = GenericShape { size, _ ->
     val w = size.width
     val h = size.height
-    val notchDepth = w * 0.45f
+    val notchDepth = w * NOTCH_DEPTH_RATIO
     moveTo(0f, 0f)
     lineTo(w, 0f)
     lineTo(w, h)

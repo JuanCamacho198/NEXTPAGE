@@ -34,6 +34,7 @@ class CrashDetailActivity : AppCompatActivity() {
 
     companion object {
         private const val TIMESTAMP_FORMAT = "yyyy-MM-dd HH:mm:ss"
+        private const val BODY_TEXT_SIZE = 13f
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,7 +81,7 @@ class CrashDetailActivity : AppCompatActivity() {
                 append("Thread:    ").append(threadName)
             }
             setTextColor(Color.parseColor("#C2C6D6"))
-            textSize = 13f
+            textSize = BODY_TEXT_SIZE
             setTypeface(Typeface.MONOSPACE, Typeface.NORMAL)
             setPadding(0, 24, 0, 12)
         }
@@ -89,7 +90,7 @@ class CrashDetailActivity : AppCompatActivity() {
         val messageLabel = TextView(this).apply {
             text = "Message"
             setTextColor(Color.parseColor("#FFB4AB"))
-            textSize = 13f
+            textSize = BODY_TEXT_SIZE
             setTypeface(typeface, Typeface.BOLD)
             setPadding(0, 12, 0, 4)
         }
@@ -107,7 +108,7 @@ class CrashDetailActivity : AppCompatActivity() {
         val stackLabel = TextView(this).apply {
             text = "Stack trace"
             setTextColor(Color.parseColor("#FFB4AB"))
-            textSize = 13f
+            textSize = BODY_TEXT_SIZE
             setTypeface(typeface, Typeface.BOLD)
             setPadding(0, 12, 0, 4)
         }

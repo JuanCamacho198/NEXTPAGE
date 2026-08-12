@@ -56,6 +56,7 @@ class SearchStateHolder(
     companion object {
         private const val SEARCH_DEBOUNCE_MS = 300L
         private const val TAG = "SearchStateHolder"
+        private const val LOCATOR_HIGHLIGHT_LIMIT = 50
     }
 
     /**
@@ -238,7 +239,7 @@ class SearchStateHolder(
             })
             put("text", JSONObject().apply {
                 put("before", "")
-                put("highlight", result.text.take(50))
+                put("highlight", result.text.take(LOCATOR_HIGHLIGHT_LIMIT))
                 put("after", "")
             })
         }

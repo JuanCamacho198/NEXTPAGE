@@ -14,8 +14,13 @@ import java.io.File
  */
 class CrashLogStore(
     private val logDir: File,
-    private val maxFileSize: Long = 200 * 1024 // 200 KB
+    private val maxFileSize: Long = DEFAULT_MAX_FILE_SIZE
 ) : LogWriter {
+
+    private companion object {
+        const val DEFAULT_MAX_FILE_SIZE = 200L * 1024L
+        const val SNAPSHOT_LINE_LIMIT = 200
+    }
 
     private val currentFile: File get() = File(logDir, "log.0.txt")
     private val previousFile: File get() = File(logDir, "log.1.txt")
@@ -58,7 +63,7 @@ class CrashLogStore(
             }
         }
         // Return newest first, capped at 200 lines
-        return lines.reversed().take(200)
+        return lines.reversed().take(SNAPSHOT_LINE_LIMIT)
     }
 
     override fun copySnapshotTo(target: File) {

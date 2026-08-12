@@ -5,6 +5,20 @@ package com.nextpage.data.session
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.domain.model.AuthSession
 import io.github.jan.supabase.auth.auth
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
+
+/**
+ * Reads a string value from Supabase user metadata.
+ *
+ * `UserInfo.userMetadata` is a `JsonObject` whose values are [JsonElement]s,
+ * NOT Kotlin [String]s — the naive `as? String` cast always yields null, which
+ * silently drops `full_name`/`avatar_url` and leaves the UI on fallback
+ * ("Reader" + initial avatar) even though Supabase has the data.
+ */
+internal fun JsonElement?.asMetadataString(): String? =
+    this?.jsonPrimitive?.contentOrNull
 
 /**
  * SessionManager backed by Supabase Auth.
@@ -32,12 +46,12 @@ class SupabaseSessionManager : SessionManager {
                     AuthSession(
                         userId = user.id,
                         email = user.email,
-                        displayName = user.userMetadata?.get("full_name") as? String
-                            ?: user.userMetadata?.get("name") as? String,
-                        photoUrl = user.userMetadata?.get("avatar_url") as? String
-                            ?: user.userMetadata?.get("picture") as? String,
+                        displayName = user.userMetadata?.get("full_name").asMetadataString()
+                            ?: user.userMetadata?.get("name").asMetadataString(),
+                        photoUrl = user.userMetadata?.get("avatar_url").asMetadataString()
+                            ?: user.userMetadata?.get("picture").asMetadataString(),
                         providerToken = s.providerToken,
-                        provider = user.userMetadata?.get("provider") as? String,
+                        provider = user.userMetadata?.get("provider").asMetadataString(),
                         createdAt = user.createdAt?.toString()
                     )
                 }
@@ -60,12 +74,12 @@ class SupabaseSessionManager : SessionManager {
                     AuthSession(
                         userId = user.id,
                         email = user.email,
-                        displayName = user.userMetadata?.get("full_name") as? String
-                            ?: user.userMetadata?.get("name") as? String,
-                        photoUrl = user.userMetadata?.get("avatar_url") as? String
-                            ?: user.userMetadata?.get("picture") as? String,
+                        displayName = user.userMetadata?.get("full_name").asMetadataString()
+                            ?: user.userMetadata?.get("name").asMetadataString(),
+                        photoUrl = user.userMetadata?.get("avatar_url").asMetadataString()
+                            ?: user.userMetadata?.get("picture").asMetadataString(),
                         providerToken = freshSession.providerToken,
-                        provider = user.userMetadata?.get("provider") as? String,
+                        provider = user.userMetadata?.get("provider").asMetadataString(),
                         createdAt = user.createdAt?.toString()
                     )
                 } ?: return Result.failure(Exception("No user in session after refresh"))

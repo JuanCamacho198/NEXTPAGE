@@ -5,6 +5,7 @@ package com.nextpage.data.repository
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.data.session.SessionManager
 import com.nextpage.data.session.SupabaseSessionManager
+import com.nextpage.data.session.asMetadataString
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.repository.AuthRepository
 import io.github.jan.supabase.auth.auth
@@ -131,11 +132,11 @@ class SupabaseAuthRepository(
             AuthSession(
                 userId = it.id,
                 email = it.email,
-                displayName = it.userMetadata?.get("full_name") as? String
-                    ?: it.userMetadata?.get("name") as? String,
-                photoUrl = it.userMetadata?.get("avatar_url") as? String
-                    ?: it.userMetadata?.get("picture") as? String,
-                provider = it.userMetadata?.get("provider") as? String,
+                displayName = it.userMetadata?.get("full_name").asMetadataString()
+                    ?: it.userMetadata?.get("name").asMetadataString(),
+                photoUrl = it.userMetadata?.get("avatar_url").asMetadataString()
+                    ?: it.userMetadata?.get("picture").asMetadataString(),
+                provider = it.userMetadata?.get("provider").asMetadataString(),
                 createdAt = it.createdAt?.toString()
             )
         }

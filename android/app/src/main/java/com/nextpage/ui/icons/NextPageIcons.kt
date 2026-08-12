@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Hand-authored thin-stroke icon family for NextPage.
@@ -839,108 +840,223 @@ object NextPageIcons {
 
 @Preview(showBackground = true, heightDp = 1200)
 @Composable
-private fun NextPageIconsGalleryPreview() {
-    val icons = listOf<Pair<String, ImageVector>>(
-        "Home" to NextPageIcons.Home,
-        "Library" to NextPageIcons.Library,
-        "Highlights" to NextPageIcons.Highlights,
-        "Settings" to NextPageIcons.Settings,
-        "Statistics" to NextPageIcons.Statistics,
-        "BookOpen" to NextPageIcons.BookOpen,
-        "Book" to NextPageIcons.Book,
-        "Person" to NextPageIcons.Person,
-        "Search" to NextPageIcons.Search,
-        "Close" to NextPageIcons.Close,
-        "MoreVert" to NextPageIcons.MoreVert,
-        "Add" to NextPageIcons.Add,
-        "FilterList" to NextPageIcons.FilterList,
-        "Notifications" to NextPageIcons.Notifications,
-        "GridView" to NextPageIcons.GridView,
-        "ViewList" to NextPageIcons.ViewList,
-        "Clock" to NextPageIcons.Clock,
-        "ChartLine" to NextPageIcons.ChartLine,
-        "ChartBar" to NextPageIcons.ChartBar,
-        "Bookmark" to NextPageIcons.Bookmark,
-        "Upload" to NextPageIcons.Upload,
-        "Sparkle" to NextPageIcons.Sparkle,
-        "Quote" to NextPageIcons.Quote,
-        "Lightbulb" to NextPageIcons.Lightbulb,
-        "Check" to NextPageIcons.Check,
-        "ErrorOutline" to NextPageIcons.ErrorOutline,
-        "Trophy" to NextPageIcons.Trophy,
-        "Palette" to NextPageIcons.Palette,
-        "Copy" to NextPageIcons.Copy,
-        "Tag" to NextPageIcons.Tag,
-        "Pencil" to NextPageIcons.Pencil,
-        "Share" to NextPageIcons.Share,
-        "Trash" to NextPageIcons.Trash,
-        "LibraryBooks" to NextPageIcons.LibraryBooks,
-        "CloudDownload" to NextPageIcons.CloudDownload,
-        "Devices" to NextPageIcons.Devices,
-        "DarkMode" to NextPageIcons.DarkMode,
-        "LightMode" to NextPageIcons.LightMode,
-        "BrightnessAuto" to NextPageIcons.BrightnessAuto,
-        "Language" to NextPageIcons.Language,
-        "Storage" to NextPageIcons.Storage,
-        "Info" to NextPageIcons.Info,
-        "BugReport" to NextPageIcons.BugReport,
-        "SignOut" to NextPageIcons.SignOut,
-        "Smartphone" to NextPageIcons.Smartphone,
-        "Monitor" to NextPageIcons.Monitor,
-        "Laptop" to NextPageIcons.Laptop,
-        "ChevronRight" to NextPageIcons.ChevronRight,
-        "ArrowBack" to NextPageIcons.ArrowBack,
-        "ArrowRight" to NextPageIcons.ArrowRight,
-        "Sync" to NextPageIcons.Sync,
-        "CloudSync" to NextPageIcons.CloudSync,
-        "TextAa" to NextPageIcons.TextAa,
-        "AlignLeft" to NextPageIcons.AlignLeft,
-        "AlignCenter" to NextPageIcons.AlignCenter,
-        "AlignRight" to NextPageIcons.AlignRight,
-        "AlignJustify" to NextPageIcons.AlignJustify,
-        "ArrowLeft" to NextPageIcons.ArrowLeft,
-        "ArrowForward" to NextPageIcons.ArrowForward,
-        "TextSize" to NextPageIcons.TextSize,
-        "ListBullets" to NextPageIcons.ListBullets,
-        "Star" to NextPageIcons.Star,
-        "StarBorder" to NextPageIcons.StarBorder,
-        "ScreenRotation" to NextPageIcons.ScreenRotation,
-        "Flame" to NextPageIcons.Flame,
-        "ChevronUp" to NextPageIcons.ChevronUp,
-        "ChevronDown" to NextPageIcons.ChevronDown,
-        "Email" to NextPageIcons.Email,
-        "BookmarkFilled" to NextPageIcons.BookmarkFilled,
-        "Help" to NextPageIcons.Help,
-        "MenuBurger" to NextPageIcons.MenuBurger
-    )
+private fun NextPageIconsGalleryDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        val icons = listOf<Pair<String, ImageVector>>(
+            "Home" to NextPageIcons.Home,
+            "Library" to NextPageIcons.Library,
+            "Highlights" to NextPageIcons.Highlights,
+            "Settings" to NextPageIcons.Settings,
+            "Statistics" to NextPageIcons.Statistics,
+            "BookOpen" to NextPageIcons.BookOpen,
+            "Book" to NextPageIcons.Book,
+            "Person" to NextPageIcons.Person,
+            "Search" to NextPageIcons.Search,
+            "Close" to NextPageIcons.Close,
+            "MoreVert" to NextPageIcons.MoreVert,
+            "Add" to NextPageIcons.Add,
+            "FilterList" to NextPageIcons.FilterList,
+            "Notifications" to NextPageIcons.Notifications,
+            "GridView" to NextPageIcons.GridView,
+            "ViewList" to NextPageIcons.ViewList,
+            "Clock" to NextPageIcons.Clock,
+            "ChartLine" to NextPageIcons.ChartLine,
+            "ChartBar" to NextPageIcons.ChartBar,
+            "Bookmark" to NextPageIcons.Bookmark,
+            "Upload" to NextPageIcons.Upload,
+            "Sparkle" to NextPageIcons.Sparkle,
+            "Quote" to NextPageIcons.Quote,
+            "Lightbulb" to NextPageIcons.Lightbulb,
+            "Check" to NextPageIcons.Check,
+            "ErrorOutline" to NextPageIcons.ErrorOutline,
+            "Trophy" to NextPageIcons.Trophy,
+            "Palette" to NextPageIcons.Palette,
+            "Copy" to NextPageIcons.Copy,
+            "Tag" to NextPageIcons.Tag,
+            "Pencil" to NextPageIcons.Pencil,
+            "Share" to NextPageIcons.Share,
+            "Trash" to NextPageIcons.Trash,
+            "LibraryBooks" to NextPageIcons.LibraryBooks,
+            "CloudDownload" to NextPageIcons.CloudDownload,
+            "Devices" to NextPageIcons.Devices,
+            "DarkMode" to NextPageIcons.DarkMode,
+            "LightMode" to NextPageIcons.LightMode,
+            "BrightnessAuto" to NextPageIcons.BrightnessAuto,
+            "Language" to NextPageIcons.Language,
+            "Storage" to NextPageIcons.Storage,
+            "Info" to NextPageIcons.Info,
+            "BugReport" to NextPageIcons.BugReport,
+            "SignOut" to NextPageIcons.SignOut,
+            "Smartphone" to NextPageIcons.Smartphone,
+            "Monitor" to NextPageIcons.Monitor,
+            "Laptop" to NextPageIcons.Laptop,
+            "ChevronRight" to NextPageIcons.ChevronRight,
+            "ArrowBack" to NextPageIcons.ArrowBack,
+            "ArrowRight" to NextPageIcons.ArrowRight,
+            "Sync" to NextPageIcons.Sync,
+            "CloudSync" to NextPageIcons.CloudSync,
+            "TextAa" to NextPageIcons.TextAa,
+            "AlignLeft" to NextPageIcons.AlignLeft,
+            "AlignCenter" to NextPageIcons.AlignCenter,
+            "AlignRight" to NextPageIcons.AlignRight,
+            "AlignJustify" to NextPageIcons.AlignJustify,
+            "ArrowLeft" to NextPageIcons.ArrowLeft,
+            "ArrowForward" to NextPageIcons.ArrowForward,
+            "TextSize" to NextPageIcons.TextSize,
+            "ListBullets" to NextPageIcons.ListBullets,
+            "Star" to NextPageIcons.Star,
+            "StarBorder" to NextPageIcons.StarBorder,
+            "ScreenRotation" to NextPageIcons.ScreenRotation,
+            "Flame" to NextPageIcons.Flame,
+            "ChevronUp" to NextPageIcons.ChevronUp,
+            "ChevronDown" to NextPageIcons.ChevronDown,
+            "Email" to NextPageIcons.Email,
+            "BookmarkFilled" to NextPageIcons.BookmarkFilled,
+            "Help" to NextPageIcons.Help,
+            "MenuBurger" to NextPageIcons.MenuBurger
+        )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        icons.chunked(6).forEach { rowIcons ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                rowIcons.forEach { (name, icon) ->
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = Color(0xFF000000)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = name,
-                            style = MaterialTheme.typography.labelSmall
-                        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            icons.chunked(6).forEach { rowIcons ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    rowIcons.forEach { (name, icon) ->
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = Color(0xFF000000)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true, heightDp = 1200)
+@Composable
+private fun NextPageIconsGalleryLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        val icons = listOf<Pair<String, ImageVector>>(
+            "Home" to NextPageIcons.Home,
+            "Library" to NextPageIcons.Library,
+            "Highlights" to NextPageIcons.Highlights,
+            "Settings" to NextPageIcons.Settings,
+            "Statistics" to NextPageIcons.Statistics,
+            "BookOpen" to NextPageIcons.BookOpen,
+            "Book" to NextPageIcons.Book,
+            "Person" to NextPageIcons.Person,
+            "Search" to NextPageIcons.Search,
+            "Close" to NextPageIcons.Close,
+            "MoreVert" to NextPageIcons.MoreVert,
+            "Add" to NextPageIcons.Add,
+            "FilterList" to NextPageIcons.FilterList,
+            "Notifications" to NextPageIcons.Notifications,
+            "GridView" to NextPageIcons.GridView,
+            "ViewList" to NextPageIcons.ViewList,
+            "Clock" to NextPageIcons.Clock,
+            "ChartLine" to NextPageIcons.ChartLine,
+            "ChartBar" to NextPageIcons.ChartBar,
+            "Bookmark" to NextPageIcons.Bookmark,
+            "Upload" to NextPageIcons.Upload,
+            "Sparkle" to NextPageIcons.Sparkle,
+            "Quote" to NextPageIcons.Quote,
+            "Lightbulb" to NextPageIcons.Lightbulb,
+            "Check" to NextPageIcons.Check,
+            "ErrorOutline" to NextPageIcons.ErrorOutline,
+            "Trophy" to NextPageIcons.Trophy,
+            "Palette" to NextPageIcons.Palette,
+            "Copy" to NextPageIcons.Copy,
+            "Tag" to NextPageIcons.Tag,
+            "Pencil" to NextPageIcons.Pencil,
+            "Share" to NextPageIcons.Share,
+            "Trash" to NextPageIcons.Trash,
+            "LibraryBooks" to NextPageIcons.LibraryBooks,
+            "CloudDownload" to NextPageIcons.CloudDownload,
+            "Devices" to NextPageIcons.Devices,
+            "DarkMode" to NextPageIcons.DarkMode,
+            "LightMode" to NextPageIcons.LightMode,
+            "BrightnessAuto" to NextPageIcons.BrightnessAuto,
+            "Language" to NextPageIcons.Language,
+            "Storage" to NextPageIcons.Storage,
+            "Info" to NextPageIcons.Info,
+            "BugReport" to NextPageIcons.BugReport,
+            "SignOut" to NextPageIcons.SignOut,
+            "Smartphone" to NextPageIcons.Smartphone,
+            "Monitor" to NextPageIcons.Monitor,
+            "Laptop" to NextPageIcons.Laptop,
+            "ChevronRight" to NextPageIcons.ChevronRight,
+            "ArrowBack" to NextPageIcons.ArrowBack,
+            "ArrowRight" to NextPageIcons.ArrowRight,
+            "Sync" to NextPageIcons.Sync,
+            "CloudSync" to NextPageIcons.CloudSync,
+            "TextAa" to NextPageIcons.TextAa,
+            "AlignLeft" to NextPageIcons.AlignLeft,
+            "AlignCenter" to NextPageIcons.AlignCenter,
+            "AlignRight" to NextPageIcons.AlignRight,
+            "AlignJustify" to NextPageIcons.AlignJustify,
+            "ArrowLeft" to NextPageIcons.ArrowLeft,
+            "ArrowForward" to NextPageIcons.ArrowForward,
+            "TextSize" to NextPageIcons.TextSize,
+            "ListBullets" to NextPageIcons.ListBullets,
+            "Star" to NextPageIcons.Star,
+            "StarBorder" to NextPageIcons.StarBorder,
+            "ScreenRotation" to NextPageIcons.ScreenRotation,
+            "Flame" to NextPageIcons.Flame,
+            "ChevronUp" to NextPageIcons.ChevronUp,
+            "ChevronDown" to NextPageIcons.ChevronDown,
+            "Email" to NextPageIcons.Email,
+            "BookmarkFilled" to NextPageIcons.BookmarkFilled,
+            "Help" to NextPageIcons.Help,
+            "MenuBurger" to NextPageIcons.MenuBurger
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            icons.chunked(6).forEach { rowIcons ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    rowIcons.forEach { (name, icon) ->
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = Color(0xFF000000)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
                     }
                 }
             }

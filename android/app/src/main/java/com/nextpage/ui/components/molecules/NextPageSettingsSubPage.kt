@@ -2,6 +2,7 @@ package com.nextpage.ui.components.molecules
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -73,7 +74,12 @@ fun NextPageSettingsSubPage(
                             contentDescription = stringResource(R.string.nav_back)
                         )
                     }
-                }
+                },
+                // The host (SettingsScreenContent → outer Scaffold innerPadding)
+                // already applies the status-bar inset to this NavHost. Letting
+                // the TopAppBar consume it again created a ~24dp dead gap above
+                // every settings sub-page toolbar.
+                windowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)
             )
         }
     ) { innerPadding ->

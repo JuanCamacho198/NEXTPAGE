@@ -268,10 +268,7 @@ class ReaderLifecycleStateHolder(
                 onBookLoaded(bookId)
             } catch (e: Exception) {
                 Log.e(TAG, "Readium failed to open PDF", e)
-                val userMessage = when (e) {
-                    is OutOfMemoryError -> "The PDF is too large to display on this device."
-                    else -> e.message ?: "Failed to open PDF with Readium"
-                }
+                val userMessage = e.message ?: "Failed to open PDF with Readium"
                 _state.update { it.copy(isLoading = false, error = userMessage) }
                 onErrorEvent(UiEvent.ShowSnackbar(userMessage))
             }

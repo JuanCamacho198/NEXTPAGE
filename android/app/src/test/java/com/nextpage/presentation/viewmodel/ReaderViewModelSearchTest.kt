@@ -141,6 +141,7 @@ class ReaderViewModelSearchTest {
     private class FakeReaderRepository : ReaderRepository {
         override fun observeProgress(bookId: String): Flow<ReadingProgress?> = MutableStateFlow(null)
         override suspend fun upsertProgress(progress: ReadingProgress) = Unit
+        override suspend fun updateBookReadingState(bookId: String, progressPercent: Float, updatedAt: Long) = Unit
         override fun observeAllHighlights(): Flow<List<Highlight>> = MutableStateFlow(emptyList())
         override fun observeAllHighlightsPaged(): Flow<androidx.paging.PagingData<Highlight>> =
             kotlinx.coroutines.flow.flowOf(androidx.paging.PagingData.empty())

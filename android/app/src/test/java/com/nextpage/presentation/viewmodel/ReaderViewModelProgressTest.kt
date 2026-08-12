@@ -312,6 +312,10 @@ class ReaderViewModelProgressTest {
             progressFlow.value = progress
         }
 
+        override suspend fun updateBookReadingState(bookId: String, progressPercent: Float, updatedAt: Long) {
+            // No-op in fake
+        }
+
         override fun observeAllHighlights(): Flow<List<Highlight>> = MutableStateFlow(emptyList())
 
         override fun observeAllHighlightsPaged(): Flow<androidx.paging.PagingData<Highlight>> =

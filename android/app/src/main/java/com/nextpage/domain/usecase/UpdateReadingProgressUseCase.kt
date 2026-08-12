@@ -12,14 +12,22 @@ class UpdateReadingProgressUseCase(
         percentage: Float,
         locatorJson: String? = null
     ) {
+        val clamped = percentage.coerceIn(0f, 100f)
         val progress = ReadingProgress(
             id = "progress-$bookId",
             bookId = bookId,
             cfiLocation = cfiLocation,
-            percentage = percentage.coerceIn(0f, 100f),
+            percentage = clamped,
             updatedAtEpochMillis = System.currentTimeMillis(),
             locatorJson = locatorJson
         )
         readerRepository.upsertProgress(progress)
+        // Keep the book's reading_state in sync so the Home "Continue reading"
+        // section (which filters on reading_state == "reading") shows it.
+        readerRepository.updateBookReadingState(
+            bookId = bookId,
+            progressPercent = clamped,
+            updatedAt = System.currentTimeMillis()
+        )
     }
 }

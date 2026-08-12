@@ -346,6 +346,7 @@ class HighlightsViewModelTest {
         override fun observeProgress(bookId: String): Flow<com.nextpage.domain.model.ReadingProgress?> =
             MutableStateFlow(null)
         override suspend fun upsertProgress(progress: com.nextpage.domain.model.ReadingProgress) = Unit
+        override suspend fun updateBookReadingState(bookId: String, progressPercent: Float, updatedAt: Long) = Unit
         override suspend fun getProgressForBook(bookId: String): com.nextpage.domain.model.ReadingProgress? = null
         override fun observeAllHighlights(): Flow<List<Highlight>> = highlightsFlow
         override fun observeAllHighlightsPaged(): Flow<androidx.paging.PagingData<Highlight>> =

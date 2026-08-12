@@ -5,6 +5,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
+import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.BookmarkDao
 import com.nextpage.data.local.dao.HighlightDao
 import com.nextpage.data.local.dao.ReadingProgressDao
@@ -29,6 +30,7 @@ class ReaderRepositoryImpl(
     private val readingProgressDao: ReadingProgressDao,
     private val highlightDao: HighlightDao,
     private val bookmarkDao: BookmarkDao,
+    private val bookDao: BookDao,
     private val outboxDao: SyncOutboxDao? = null
 ) : ReaderRepository {
     override fun observeProgress(bookId: String): Flow<ReadingProgress?> =
@@ -37,6 +39,11 @@ class ReaderRepositoryImpl(
             .map { progress -> progress?.toDomain() }
 
     override suspend fun upsertProgress(progress: ReadingProgress) {
+        // Guard: reading_progress.book_id has a FK to books.id. After a cloud
+        // download (or a stale sync), progress may reference a book that is not
+        // present locally — upserting would throw SQLiteConstraintException and
+        // crash the app (seen when opening a freshly downloaded book).
+        if (bookDao.getBookById(progress.bookId) == null) return
         readingProgressDao.upsert(progress.toEntity())
         outboxDao?.insert(
             SyncOutboxEntity(
@@ -47,6 +54,14 @@ class ReaderRepositoryImpl(
                 payloadJson = "{}",
                 createdAtEpochMillis = System.currentTimeMillis()
             )
+        )
+    }
+
+    override suspend fun updateBookReadingState(bookId: String, progressPercent: Float, updatedAt: Long) {
+        bookDao.updateReadingProgress(
+            bookId = bookId,
+            progress = progressPercent.coerceIn(0f, 100f),
+            updatedAt = updatedAt
         )
     }
 
@@ -76,6 +91,8 @@ class ReaderRepositoryImpl(
         highlightDao.observeAllTags()
 
     override suspend fun upsertHighlight(highlight: Highlight) {
+        // Guard: highlights.book_id has a FK to books.id (see upsertProgress).
+        if (bookDao.getBookById(highlight.bookId) == null) return
         highlightDao.upsert(highlight.toEntity())
         outboxDao?.insert(
             SyncOutboxEntity(
@@ -103,6 +120,8 @@ class ReaderRepositoryImpl(
             .map { list -> list.map { it.toDomain() } }
 
     override suspend fun upsertBookmark(bookmark: Bookmark) {
+        // Guard: bookmarks.book_id has a FK to books.id (see upsertProgress).
+        if (bookDao.getBookById(bookmark.bookId) == null) return
         bookmarkDao.upsert(bookmark.toEntity())
         outboxDao?.insert(
             SyncOutboxEntity(

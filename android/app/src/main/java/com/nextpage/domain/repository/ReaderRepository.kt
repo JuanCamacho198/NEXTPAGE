@@ -12,6 +12,13 @@ interface ReaderRepository {
     suspend fun upsertProgress(progress: ReadingProgress)
     suspend fun getProgressForBook(bookId: String): ReadingProgress?
 
+    /**
+     * Marks a book as being read and updates its stored progress percentage.
+     * The Home "Continue reading" section filters on `reading_state == "reading"`,
+     * so a book only appears there once this is called.
+     */
+    suspend fun updateBookReadingState(bookId: String, progressPercent: Float, updatedAt: Long)
+
     fun observeAllHighlights(): Flow<List<Highlight>>
 
     fun observeAllHighlightsPaged(): Flow<PagingData<Highlight>>

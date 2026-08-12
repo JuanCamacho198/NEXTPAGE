@@ -37,9 +37,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 
@@ -623,13 +626,28 @@ class ReaderViewModel(
                         progressPercent = lifecycle.progressPercent,
                         progressLabel = lifecycle.progressLabel,
                         showTocSheet = lifecycle.showTocSheet,
-                        previewText = lifecycle.previewText,
                         isLoading = lifecycle.isLoading,
                         loadTimeMs = lifecycle.loadTimeMs,
                         error = lifecycle.error
                     )
                 }
             }
+        }
+
+        // Derive the split-settings preview text from the current chapter's
+        // real content (EPUB only). Refreshes when the book or chapter
+        // changes; PDFs have no extractable HTML text, so `previewText`
+        // falls back to blank and the UI shows the selection/title instead.
+        viewModelScope.launch(mainDispatcher) {
+            lifecycleHolder.state
+                .map { Triple(it.bookFormat, it.readiumPublication, it.currentChapterIndex) }
+                .distinctUntilChanged()
+                .collect { (bookFormat, publication, chapterIndex) ->
+                    val excerpt = extractChapterPreviewText(publication, bookFormat, chapterIndex)
+                    mutableUiState.update { current ->
+                        current.copy(previewText = excerpt ?: "")
+                    }
+                }
         }
 
         // Merge Cluster B interaction state into ReaderUiState
@@ -739,6 +757,36 @@ class ReaderViewModel(
     }
 
     // ── Readium Bridge ──────────────────────────────────────────────
+
+    /**
+     * Extracts a plain-text excerpt (~600 chars) of the chapter at
+     * [chapterIndex] from the current Readium [Publication], mirroring
+     * [SearchStateHolder]'s extraction pattern (HTML stripped, whitespace
+     * collapsed). Returns `null` for PDFs and any resource that cannot be
+     * read — callers fall back to the selected text / chapter title.
+     */
+    private suspend fun extractChapterPreviewText(
+        publication: Publication?,
+        bookFormat: String?,
+        chapterIndex: Int
+    ): String? {
+        if (publication == null || bookFormat != "epub") return null
+        return withContext(Dispatchers.IO) {
+            try {
+                val link = publication.readingOrder.getOrNull(chapterIndex) ?: return@withContext null
+                val resource = publication.get(link) ?: return@withContext null
+                val readResult = resource.read()
+                val bytes = readResult.getOrNull() ?: return@withContext null
+                bytes.decodeToString()
+                    .replace(Regex("<[^>]*>"), "")
+                    .replace(Regex("\\s+"), " ")
+                    .trim()
+                    .take(600)
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
 
     /**
      * Notifies the ViewModel that the Readium navigator moved to [locator]

@@ -509,11 +509,16 @@ fun ReaderScreen(
 
             // ── Split Settings Sheet ────────────────────────────
             if (uiState.showSplitSettings && uiState.chapters.isNotEmpty()) {
-                // Derive previewText from selected text or chapter title
-                val previewText = remember(uiState.selectedText, uiState.currentChapterIndex, uiState.chapters) {
-                    uiState.selectedText?.takeIf { it.isNotBlank() }
-                        ?: uiState.chapters.getOrNull(uiState.currentChapterIndex)?.title
-                        ?: ""
+                // Prefer the real current-chapter text (populated from the
+                // book by the ViewModel); fall back to the selected text,
+                // then the chapter title, then blank. Kept as a remember so
+                // the Compose preview (no book) still renders lorem-ipsum.
+                val previewText = remember(uiState.previewText, uiState.selectedText, uiState.currentChapterIndex, uiState.chapters) {
+                    uiState.previewText.ifBlank {
+                        uiState.selectedText?.takeIf { it.isNotBlank() }
+                            ?: uiState.chapters.getOrNull(uiState.currentChapterIndex)?.title
+                            ?: ""
+                    }
                 }
                 SplitSettingsSheet(
                     settings = uiState.readerSettings,

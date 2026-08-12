@@ -124,9 +124,15 @@ class AuthViewModel(
 
     private fun restoreSessionOnStart() {
         viewModelScope.launch {
+            val t0 = System.currentTimeMillis()
             val sessionResult = authRepository.getCurrentSession()
+            logDebug("restore: getCurrentSession took ${System.currentTimeMillis() - t0}ms")
             val session = sessionResult.getOrNull()
-            session?.let { triggerSyncForSession(it) }
+
+            // Release the splash the moment the session is known. Sync must NEVER
+            // gate the first frame: on a slow network its sequential retries (Drive
+            // ×3 × 10s timeout) held the logo for ~30s. Sync runs afterwards in its
+            // own coroutine, fully async from the splash.
             if (_uiState.value.currentSession == null) {
                 _uiState.update { it.copy(
                     currentSession = session,
@@ -136,6 +142,15 @@ class AuthViewModel(
                 ) }
             } else {
                 _uiState.update { it.copy(isCheckingSession = false) }
+            }
+            logDebug("restore: isCheckingSession=false after ${System.currentTimeMillis() - t0}ms from start")
+
+            session?.let { restored ->
+                viewModelScope.launch {
+                    val t1 = System.currentTimeMillis()
+                    triggerSyncForSession(restored)
+                    logDebug("restore: triggerSyncForSession took ${System.currentTimeMillis() - t1}ms")
+                }
             }
         }
     }
@@ -345,6 +360,11 @@ class AuthViewModel(
         }
     }
 
+    /** Debug timing log — safe in JVM tests where android.util.Log is not mocked. */
+    private fun logDebug(message: String) {
+        runCatching { Log.d(AUTH_VM_TAG, message) }
+    }
+
     private fun classifyFailure(error: Throwable?): AuthFailureKind {
         return when ((error as? AppError)?.category) {
             ErrorCategory.CONFIG_ERROR -> AuthFailureKind.CONFIG_ERROR
@@ -358,20 +378,30 @@ class AuthViewModel(
         // NON-FATAL (no early return) — Supabase catalog/progress sync are
         // independent of Drive and must still run so imported books reach the
         // catalog even when Drive authorization is pending or missing.
+        var stepStart = System.currentTimeMillis()
         val bootstrap = syncService.bootstrap(session.userId)
+        logDebug("triggerSync: Drive bootstrap took ${System.currentTimeMillis() - stepStart}ms success=${bootstrap.isSuccess}")
         if (bootstrap.isSuccess) {
+            stepStart = System.currentTimeMillis()
             syncService.schedulePull()
+            logDebug("triggerSync: schedulePull took ${System.currentTimeMillis() - stepStart}ms")
+            stepStart = System.currentTimeMillis()
             syncService.schedulePush()
+            logDebug("triggerSync: schedulePush took ${System.currentTimeMillis() - stepStart}ms")
         }
 
         // Start Supabase outbox processing and Realtime subscription
         // (independent of Drive authorization).
+        stepStart = System.currentTimeMillis()
         supabaseProgressSync?.startProcessing()
         supabaseProgressSync?.subscribeToRealtimeChanges()
+        logDebug("triggerSync: progress sync launch took ${System.currentTimeMillis() - stepStart}ms")
 
         // Push local Android books to Supabase catalog so Desktop discovers them
         // (independent of Drive authorization).
+        stepStart = System.currentTimeMillis()
         supabaseBookCatalogSync?.bootstrap()
+        logDebug("triggerSync: catalog bootstrap took ${System.currentTimeMillis() - stepStart}ms")
     }
 
     /**

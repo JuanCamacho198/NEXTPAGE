@@ -4,12 +4,14 @@ import android.app.Application
 import android.util.Log
 import coil.ImageLoader
 import coil.ImageLoaderFactory
+import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.debug.CrashLogStore
 import com.nextpage.debug.DebugLog
 import com.nextpage.presentation.theme.CoilModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.File
 
@@ -38,6 +40,8 @@ class NextPageApplication : Application(), ImageLoaderFactory {
     private lateinit var crashLogStore: CrashLogStore
     private lateinit var crashDir: File
 
+    private val supabaseWarmupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onCreate() {
         super.onCreate()
         crashDir = File(cacheDir, "crashes").also { it.mkdirs() }
@@ -47,6 +51,14 @@ class NextPageApplication : Application(), ImageLoaderFactory {
         crashLogStore.cleanup(crashDir)
         DebugLog.init(debugLogScope, crashLogStore)
         installCrashHandler()
+
+        // Warm the Supabase client on a background thread so the first Activity
+        // frame never pays the ~2s client-construction cost on the main thread
+        // (measured via logcat: AppContainer fully initialized in ~1950ms).
+        // The client is created lazily on first use if this warm-up races.
+        supabaseWarmupScope.launch {
+            runCatching { SupabaseClientProvider.client }
+        }
     }
 
     override fun newImageLoader(): ImageLoader = CoilModule.imageLoader(this)

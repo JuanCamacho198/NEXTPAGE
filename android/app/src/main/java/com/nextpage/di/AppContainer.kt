@@ -36,7 +36,6 @@ import com.nextpage.data.remote.google.GoogleDriveClientProvider
 import com.nextpage.data.remote.google.GoogleDriveInitDiagnostic
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogDataSource
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
-import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.data.remote.supabase.SupabaseProgressDataSource
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.SyncService
@@ -134,7 +133,9 @@ class AppContainer(context: Context) {
             .getOrElse { InMemoryDriveTokenStore() }
     }
 
-    private val driveTokenApi: DriveTokenApi = KtorAuthApi(HttpClient())
+    private val driveTokenApi: DriveTokenApi by lazy {
+        KtorAuthApi(HttpClient())
+    }
 
     /**
      * Pure, JVM-testable core of the Drive OAuth authorization-code + PKCE flow.
@@ -174,11 +175,14 @@ class AppContainer(context: Context) {
     }
 
     /**
-     * Real, non-null, non-lazy Drive data source built from the current token.
+     * Real, non-null Drive data source built from the current token.
      * `isEnabled` is driven by `token == null` (see [DriveCoordinator.isEnabled]).
-     * Replaced the previous Noop wiring and the `by lazy` null-cache.
+     * Lazy: only created when Drive sync actually runs, never during the
+     * Activity's cold-start path.
      */
-    val driveRemoteDataSource: StorageSyncRemoteDataSource = driveCoordinator.buildDataSource()
+    val driveRemoteDataSource: StorageSyncRemoteDataSource by lazy {
+        driveCoordinator.buildDataSource()
+    }
 
     val dictionaryRepository: DictionaryRepository = DictionaryRepositoryImpl(
         dao = appDatabase.dictionaryWordDao()
@@ -186,9 +190,11 @@ class AppContainer(context: Context) {
 
     // ── Supabase Auth ───────────────────────────────────────────────
 
-    // Initialise Supabase client eagerly so GoTrue session is ready.
-    // This also checks that SUPABASE_URL and SUPABASE_ANON_KEY are set.
-    private val supabaseInit = runCatching { SupabaseClientProvider.client }
+    // The Supabase client is intentionally NOT created here anymore:
+    // constructing it cost ~2s on the main thread during cold start
+    // (measured via logcat: AppContainer fully initialized in ~1950ms).
+    // It is now warmed asynchronously from NextPageApplication.onCreate
+    // on Dispatchers.IO and created lazily on first use.
 
     val sessionManager: SessionManager by lazy {
         SupabaseSessionManager()
@@ -257,7 +263,7 @@ class AppContainer(context: Context) {
     // ── Diagnostic properties ───────────────────────────────────────
 
     val isAuthConfigError: Boolean
-        get() = supabaseInit.isFailure
+        get() = BuildConfig.SUPABASE_URL.isBlank() || BuildConfig.SUPABASE_ANON_KEY.isBlank()
 
     // ── Init timing ─────────────────────────────────────────────────
 

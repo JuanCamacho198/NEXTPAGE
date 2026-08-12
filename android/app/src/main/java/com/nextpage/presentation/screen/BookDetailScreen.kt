@@ -46,15 +46,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.ReadingProgress
-import com.nextpage.presentation.theme.BgHeader
-import com.nextpage.presentation.theme.BgMain
-import com.nextpage.presentation.theme.BgSurface
-import com.nextpage.presentation.theme.BorderSubtle
-import com.nextpage.presentation.theme.NextPageColors
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.domain.repository.LibraryRepository
-import com.nextpage.presentation.theme.TextPrimary
-import com.nextpage.presentation.theme.TextSecondary
 import com.nextpage.presentation.viewmodel.BookDetailViewModel
 import com.nextpage.ui.components.atoms.CoverThumbnail
 import com.nextpage.ui.components.atoms.NextPageButton
@@ -91,12 +84,12 @@ fun BookDetailScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = BgHeader,
-                    navigationIconContentColor = TextPrimary
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
-        containerColor = BgMain
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -114,7 +107,7 @@ fun BookDetailScreen(
                     Text(
                         text = stringResource(R.string.book_detail_error_not_found),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
@@ -199,7 +192,7 @@ private fun BookHeroSection(
         Text(
             text = book.title,
             style = MaterialTheme.typography.headlineMedium,
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             maxLines = 2,
@@ -210,7 +203,7 @@ private fun BookHeroSection(
         Text(
             text = book.author ?: stringResource(R.string.library_author_unknown),
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -240,7 +233,7 @@ private fun RatingStars(
                     contentDescription = stringResource(
                         R.string.book_detail_rating_content_description, star
                     ),
-                    tint = if (star <= currentRating) com.nextpage.presentation.theme.AccentYellow else BorderSubtle,
+                    tint = if (star <= currentRating) com.nextpage.presentation.theme.AccentYellow else MaterialTheme.colorScheme.outline,
                     modifier = Modifier.size(28.dp)
                 )
             }
@@ -259,9 +252,9 @@ private fun MetadataGridCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(NextPageDimens.cardCornerRadius),
         colors = CardDefaults.cardColors(
-            containerColor = BgSurface
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle)
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Row(
             modifier = Modifier
@@ -330,14 +323,14 @@ private fun MetadataCell(
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = TextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -352,14 +345,14 @@ private fun SynopsisSection(synopsis: String?) {
         Text(
             text = stringResource(R.string.book_detail_synopsis),
             style = MaterialTheme.typography.titleMedium,
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = synopsis ?: stringResource(R.string.book_detail_no_synopsis),
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = if (expanded) Int.MAX_VALUE else 4,
             overflow = TextOverflow.Ellipsis
         )
@@ -392,7 +385,7 @@ private fun ReadingProgressSection(
         Text(
             text = stringResource(R.string.book_detail_progress_label),
             style = MaterialTheme.typography.titleMedium,
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(modifier = Modifier.height(12.dp))
@@ -401,7 +394,7 @@ private fun ReadingProgressSection(
         Text(
             text = getPageDisplayText(progress, book),
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -412,8 +405,8 @@ private fun ReadingProgressSection(
                 .fillMaxWidth()
                 .height(NextPageDimens.progressBarHeight)
                 .clip(RoundedCornerShape(9999.dp)),
-            color = NextPageColors.primary,
-            trackColor = BorderSubtle,
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.outline,
         )
         Spacer(modifier = Modifier.height(16.dp))
 

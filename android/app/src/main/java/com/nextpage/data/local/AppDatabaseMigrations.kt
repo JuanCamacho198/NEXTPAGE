@@ -203,6 +203,26 @@ object AppDatabaseMigrations {
         }
     }
 
+    /**
+     * Orphan cleanup: reading_progress/bookmarks/highlights/reading_stats can
+     * reference a book_id that no longer exists in books (e.g. the local copy
+     * was removed while cloud progress remained, or a stale sync mapping).
+     * Those rows violate the FK and crash the app at startup when remote
+     * progress is applied (SQLiteConstraintException). This migration deletes
+     * the orphans so a corrupt DB self-heals without requiring reinstall.
+     */
+    val MIGRATION_21_22 = object : Migration(21, 22) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("DELETE FROM reading_progress WHERE book_id NOT IN (SELECT id FROM books)")
+            db.execSQL("DELETE FROM bookmarks WHERE book_id NOT IN (SELECT id FROM books)")
+            db.execSQL("DELETE FROM highlights WHERE book_id NOT IN (SELECT id FROM books)")
+            db.execSQL("DELETE FROM reading_stats WHERE book_id NOT IN (SELECT id FROM books)")
+            db.execSQL("DELETE FROM reading_sessions WHERE book_id NOT IN (SELECT id FROM books)")
+            // Sync outbox references may point to a removed book — drop those too.
+            db.execSQL("DELETE FROM sync_outbox WHERE entity_id NOT IN (SELECT id FROM books) AND entity_type IN ('READING_PROGRESS','BOOKMARK','HIGHLIGHT')")
+        }
+    }
+
     val MIGRATION_14_15 = object : Migration(14, 15) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE books ADD COLUMN status TEXT DEFAULT NULL")
@@ -301,6 +321,7 @@ object AppDatabaseMigrations {
         MIGRATION_17_18,
         MIGRATION_18_19,
         MIGRATION_19_20,
-        MIGRATION_20_21
+        MIGRATION_20_21,
+        MIGRATION_21_22
     )
 }

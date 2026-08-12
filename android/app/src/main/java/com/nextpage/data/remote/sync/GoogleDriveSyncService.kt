@@ -174,6 +174,15 @@ class GoogleDriveSyncService(
             return uploadResult.map { }
         }
 
+        // Persist the remote path on the local book so the Supabase catalog
+        // sync can register it as cloud-available (it defers rows without a
+        // remote file to avoid creating ghost downloads). Without this, a
+        // locally imported book would stay invisible to other devices even
+        // though its file IS in Drive.
+        if (book.remotePath != drivePath) {
+            bookDao.upsert(book.copy(remotePath = drivePath))
+        }
+
         // Look up existing mapping to get driveFileId, or use the path as ID
         val existingMapping = mappingDao.getByDriveFileId(drivePath)
         val driveFileId = existingMapping?.driveFileId ?: drivePath
@@ -316,16 +325,23 @@ class GoogleDriveSyncService(
                 if (innerResult.isSuccess) {
                     val resolved = innerResult.getOrThrow()
                     // Guard: reading_progress/highlight/bookmark book_id have FKs
-                    // to books.id. A stale Drive mapping may reference a book that
-                    // is not present locally (deleted or never imported); upserting
-                    // would throw SQLiteConstraintException and crash the app.
-                    val bookExists = bookDao.getBookById(bookId) != null
-                    if (resolved.progress != null && bookExists) {
+                    // to books.id. The state JSON carries its OWN bookId which may
+                    // differ from the mapping's bookId (stale/renamed mapping) —
+                    // verify the ID of each row we actually insert, not the loop id.
+                    if (resolved.progress != null &&
+                        bookDao.getBookById(resolved.progress.bookId) != null
+                    ) {
                         readingProgressDao.upsert(resolved.progress.toEntity())
                     }
-                    if (bookExists) {
-                        resolved.highlights.forEach { highlightDao.upsert(it.toEntity()) }
-                        resolved.bookmarks.forEach { bookmarkDao.upsert(it.toEntity()) }
+                    resolved.highlights.forEach { h ->
+                        if (bookDao.getBookById(h.bookId) != null) {
+                            highlightDao.upsert(h.toEntity())
+                        }
+                    }
+                    resolved.bookmarks.forEach { b ->
+                        if (bookDao.getBookById(b.bookId) != null) {
+                            bookmarkDao.upsert(b.toEntity())
+                        }
                     }
                 }
             }

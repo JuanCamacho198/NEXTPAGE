@@ -37,6 +37,7 @@ import com.nextpage.presentation.screen.settings.SettingsNotificationsScreen
 import com.nextpage.presentation.screen.settings.SettingsPaletteScreen
 import com.nextpage.presentation.screen.settings.SettingsStatisticsScreen
 import com.nextpage.presentation.screen.settings.SettingsThemeScreen
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.DictionaryViewModel
 import com.nextpage.presentation.viewmodel.SettingsDevicesViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
@@ -281,23 +282,50 @@ private fun SettingsScreenContent(
 
 @Preview(showBackground = true)
 @Composable
-private fun SettingsScreenPreview() {
-    SettingsScreenContent(
-        contentPadding = PaddingValues(16.dp),
-        authSession = AuthSession(
-            userId = "local-1",
-            email = "reader@nextpage.app",
-            displayName = "Reader",
-            provider = "email"
-        ),
-        appThemeMode = ThemeMode.SYSTEM,
-        customHighlightColors = HighlightColor.defaultHexList(),
-        onAppThemeModeChanged = {},
-        onLogout = {},
-        onUpdateCustomHighlightColor = { _, _ -> },
-        onAddCustomHighlightColor = {},
-        onDeleteCustomHighlightColor = {},
-        onResetCustomHighlightColors = {},
-        onNavigateToLogViewer = {}
-    )
+private fun SettingsScreenDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        SettingsScreenContent(
+            contentPadding = PaddingValues(16.dp),
+            authSession = AuthSession(
+                userId = "local-1",
+                email = "reader@nextpage.app",
+                displayName = "Reader",
+                provider = "email"
+            ),
+            appThemeMode = ThemeMode.SYSTEM,
+            customHighlightColors = HighlightColor.defaultHexList(),
+            onAppThemeModeChanged = {},
+            onLogout = {},
+            onUpdateCustomHighlightColor = { _, _ -> },
+            onAddCustomHighlightColor = {},
+            onDeleteCustomHighlightColor = {},
+            onResetCustomHighlightColors = {},
+            onNavigateToLogViewer = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsScreenLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        SettingsScreenContent(
+            contentPadding = PaddingValues(16.dp),
+            authSession = AuthSession(
+                userId = "local-1",
+                email = "reader@nextpage.app",
+                displayName = "Reader",
+                provider = "email"
+            ),
+            appThemeMode = ThemeMode.SYSTEM,
+            customHighlightColors = HighlightColor.defaultHexList(),
+            onAppThemeModeChanged = {},
+            onLogout = {},
+            onUpdateCustomHighlightColor = { _, _ -> },
+            onAddCustomHighlightColor = {},
+            onDeleteCustomHighlightColor = {},
+            onResetCustomHighlightColors = {},
+            onNavigateToLogViewer = {}
+        )
+    }
 }

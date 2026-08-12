@@ -25,8 +25,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 import kotlinx.coroutines.delay
 
 private val RIBBON_COLOR = Color(0xFFEF4444)
@@ -108,5 +110,21 @@ fun BookmarkRibbonOverlay(
                     .semantics { contentDescription = announcement }
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun BookmarkRibbonOverlayDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        BookmarkRibbonOverlay(visible = true, onAnimationEnd = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun BookmarkRibbonOverlayLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        BookmarkRibbonOverlay(visible = true, onAnimationEnd = {})
     }
 }

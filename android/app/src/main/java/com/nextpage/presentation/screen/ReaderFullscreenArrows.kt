@@ -15,8 +15,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.icons.NextPageIcons
 
 // ── Reader Design Colors ──────────────────────────────────────────
@@ -83,6 +85,18 @@ private fun FullscreenArrowButton(
             contentDescription = contentDescription,
             tint = HEADER_FG,
             modifier = Modifier.size(40.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ReaderFullscreenArrowsDarkPreview() {
+    // Reader chrome renders only over the always-dark reader surface
+    NextPageTheme(darkTheme = true) {
+        ReaderFullscreenArrows(
+            onPrevious = {},
+            onNext = {}
         )
     }
 }

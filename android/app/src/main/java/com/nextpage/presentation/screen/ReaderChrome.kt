@@ -43,11 +43,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.nextpage.R
 import com.nextpage.debug.DebugPrefs
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.ReaderUiState
 import com.nextpage.ui.icons.NextPageIcons
 import kotlinx.coroutines.delay
@@ -324,5 +326,44 @@ fun HeaderActionButton(
                 modifier = Modifier.size(18.dp)
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ReaderChromeDarkPreview() {
+    // Reader chrome renders only over the always-dark reader surface
+    NextPageTheme(darkTheme = true) {
+        ReaderChrome(
+            contentPadding = PaddingValues(0.dp),
+            header = {
+                Text(
+                    text = "NextPage Reader",
+                    color = HEADER_FG,
+                    style = MaterialTheme.typography.titleSmall
+                )
+            },
+            footer = {
+                Text(
+                    text = "42%",
+                    color = HEADER_FG,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            },
+            content = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(READER_BG),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Reader content",
+                        color = HEADER_FG,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        )
     }
 }

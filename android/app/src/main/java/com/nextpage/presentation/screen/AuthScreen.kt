@@ -414,22 +414,48 @@ private fun AuthScreenContent(
 
 @Preview(showBackground = true)
 @Composable
-private fun AuthScreenPreview() {
-    AuthScreenContent(
-        uiState = AuthUiState(
-            currentSession = null,
-            isCheckingSession = false,
-            isConfigured = true,
-            hasWiringIssue = false,
-            isLoading = false,
-            errorMessage = null,
-            failureKind = AuthFailureKind.NONE
-        ),
-        onAuthenticated = {},
-        onContinueLocal = {},
-        onGoogleIdToken = {},
-        onSetError = {},
-        onSignIn = { _, _ -> },
-        onSignUp = { _, _ -> }
-    )
+private fun AuthScreenDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        AuthScreenContent(
+            uiState = AuthUiState(
+                currentSession = null,
+                isCheckingSession = false,
+                isConfigured = true,
+                hasWiringIssue = false,
+                isLoading = false,
+                errorMessage = null,
+                failureKind = AuthFailureKind.NONE
+            ),
+            onAuthenticated = {},
+            onContinueLocal = {},
+            onGoogleIdToken = {},
+            onSetError = {},
+            onSignIn = { _, _ -> },
+            onSignUp = { _, _ -> }
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AuthScreenLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        AuthScreenContent(
+            uiState = AuthUiState(
+                currentSession = null,
+                isCheckingSession = false,
+                isConfigured = true,
+                hasWiringIssue = false,
+                isLoading = false,
+                errorMessage = null,
+                failureKind = AuthFailureKind.NONE
+            ),
+            onAuthenticated = {},
+            onContinueLocal = {},
+            onGoogleIdToken = {},
+            onSetError = {},
+            onSignIn = { _, _ -> },
+            onSignUp = { _, _ -> }
+        )
+    }
 }

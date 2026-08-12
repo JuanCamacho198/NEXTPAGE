@@ -35,10 +35,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.DailyReadingActivity
 import com.nextpage.presentation.theme.NextPageDimens
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.StatisticsUiState
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
 import com.nextpage.ui.components.atoms.NextPageEmptyState
@@ -353,5 +355,72 @@ private fun FavoriteGenresSection(genres: List<String>) {
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun StatisticsScreenDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        StatisticsScreenPreviewContent()
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun StatisticsScreenLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        StatisticsScreenPreviewContent()
+    }
+}
+
+@Composable
+private fun StatisticsScreenPreviewContent() {
+    val uiState = StatisticsUiState(
+        isLoading = false,
+        totalMinutesRead = 1240,
+        currentStreak = 6,
+        booksRead = 12,
+        weeklyActivity = List(7) { index ->
+            DailyReadingActivity(
+                dateEpochMillis = System.currentTimeMillis() - (6 - index) * 86_400_000L,
+                minutesRead = listOf(30, 45, 20, 60, 40, 25, 35)[index]
+            )
+        },
+        goalProgress = 0.8f,
+        favoriteGenres = listOf("Sci-Fi", "Fantasy", "Non-fiction")
+    )
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
+    ) {
+        item {
+            NextPageHeader(
+                title = stringResource(R.string.home_nextpage_title),
+                avatarInitials = stringResource(R.string.app_logo_initials)
+            )
+        }
+        item {
+            Column {
+                Text(
+                    text = stringResource(R.string.statistics_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.statistics_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        item { SummarySection(uiState) }
+        item { ReadingActivitySection(uiState.weeklyActivity) }
+        item { GoalsSection(uiState.goalProgress) }
+        item { FavoriteGenresSection(uiState.favoriteGenres) }
+        item { Spacer(modifier = Modifier.height(NextPageDimens.spacingMd)) }
     }
 }

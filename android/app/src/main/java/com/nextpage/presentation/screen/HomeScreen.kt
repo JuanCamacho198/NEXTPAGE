@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageDimens
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.HomeUiState
 import com.nextpage.presentation.viewmodel.HomeViewModel
 import com.nextpage.ui.components.atoms.CoverThumbnail
@@ -721,39 +722,82 @@ private fun QuickAccessButton(
 
 @Preview(showBackground = true)
 @Composable
-private fun HomeScreenPreview() {
-    val sampleBook = Book(
-        id = "book-1",
-        title = "The Pragmatic Programmer",
-        author = "David Thomas",
-        coverPath = null,
-        filePath = "/books/pragmatic.epub",
-        format = "epub",
-        updatedAtEpochMillis = 1L
-    )
-    HomeScreenContent(
-        uiState = HomeUiState(
-            userName = "María",
-            minutesReadToday = 42,
-            sessionsToday = 3,
-            dailyProgressPercent = 0.5f,
-            currentBook = sampleBook,
-            currentBookProgress = 67f,
-            recentBooks = listOf(sampleBook),
-            isLoading = false,
-            showSearch = false,
-            searchQuery = "",
-            searchResults = emptyList()
-        ),
-        contentPadding = PaddingValues(16.dp),
-        onNavigateToLibrary = {},
-        onNavigateToHighlights = {},
-        onNavigateToSettings = {},
-        onNavigateToStatistics = {},
-        onBookSelected = { _, _, _ -> },
-        onContinueReading = { _, _, _ -> },
-        onImportBook = {},
-        onSearchQueryChange = {},
-        onToggleSearch = {}
-    )
+private fun HomeScreenDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        val sampleBook = Book(
+            id = "book-1",
+            title = "The Pragmatic Programmer",
+            author = "David Thomas",
+            coverPath = null,
+            filePath = "/books/pragmatic.epub",
+            format = "epub",
+            updatedAtEpochMillis = 1L
+        )
+        HomeScreenContent(
+            uiState = HomeUiState(
+                userName = "María",
+                minutesReadToday = 42,
+                sessionsToday = 3,
+                dailyProgressPercent = 0.5f,
+                currentBook = sampleBook,
+                currentBookProgress = 67f,
+                recentBooks = listOf(sampleBook),
+                isLoading = false,
+                showSearch = false,
+                searchQuery = "",
+                searchResults = emptyList()
+            ),
+            contentPadding = PaddingValues(16.dp),
+            onNavigateToLibrary = {},
+            onNavigateToHighlights = {},
+            onNavigateToSettings = {},
+            onNavigateToStatistics = {},
+            onBookSelected = { _, _, _ -> },
+            onContinueReading = { _, _, _ -> },
+            onImportBook = {},
+            onSearchQueryChange = {},
+            onToggleSearch = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun HomeScreenLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        val sampleBook = Book(
+            id = "book-1",
+            title = "The Pragmatic Programmer",
+            author = "David Thomas",
+            coverPath = null,
+            filePath = "/books/pragmatic.epub",
+            format = "epub",
+            updatedAtEpochMillis = 1L
+        )
+        HomeScreenContent(
+            uiState = HomeUiState(
+                userName = "María",
+                minutesReadToday = 42,
+                sessionsToday = 3,
+                dailyProgressPercent = 0.5f,
+                currentBook = sampleBook,
+                currentBookProgress = 67f,
+                recentBooks = listOf(sampleBook),
+                isLoading = false,
+                showSearch = false,
+                searchQuery = "",
+                searchResults = emptyList()
+            ),
+            contentPadding = PaddingValues(16.dp),
+            onNavigateToLibrary = {},
+            onNavigateToHighlights = {},
+            onNavigateToSettings = {},
+            onNavigateToStatistics = {},
+            onBookSelected = { _, _, _ -> },
+            onContinueReading = { _, _, _ -> },
+            onImportBook = {},
+            onSearchQueryChange = {},
+            onToggleSearch = {}
+        )
+    }
 }

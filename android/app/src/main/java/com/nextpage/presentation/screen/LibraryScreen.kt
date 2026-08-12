@@ -68,6 +68,7 @@ import com.nextpage.presentation.screen.library.FilterSheetContent
 import com.nextpage.presentation.screen.library.LibraryDialogs
 import com.nextpage.presentation.screen.library.LibraryToolbar
 import com.nextpage.presentation.theme.NextPageDimens
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.util.getContentDisplayName
 import com.nextpage.presentation.viewmodel.DownloadState
 import com.nextpage.presentation.viewmodel.LibraryUiState
@@ -647,60 +648,124 @@ private fun EmptyShelfPlaceholder(
 
 @Preview(showBackground = true)
 @Composable
-private fun LibraryScreenPreview() {
-    val sampleBook = Book(
-        id = "book-1",
-        title = "Clean Code",
-        author = "Robert C. Martin",
-        coverPath = null,
-        filePath = "/books/clean-code.epub",
-        format = "epub",
-        updatedAtEpochMillis = 1L
-    )
-    LibraryScreenContent(
-        uiState = LibraryUiState(
-            books = listOf(sampleBook),
-            isLoading = false,
-            isGridView = true,
-            readingMinutesByBook = mapOf("book-1" to 40L),
-            isSyncing = false,
-            isRefreshing = false,
-            syncError = null,
-            downloadableBooks = emptyList(),
-            downloadState = emptyMap(),
-            statusFilter = "all",
-            sortBy = "date_added",
-            searchQuery = "",
-            debouncedSearchQuery = "",
-            showSearch = false,
-            showFilterSheet = false,
-            filterFormat = "all"
-        ),
-        searchedBooks = listOf(sampleBook),
-        firstDownloadError = null,
-        contentPadding = PaddingValues(16.dp),
-        driveAuthHelper = null,
-        onBookSelected = { _, _, _ -> },
-        onRefresh = {},
-        onSearchToggle = {},
-        onSearchQueryChange = {},
-        onFilterToggle = {},
-        onStatusFilterChanged = {},
-        onSortByChanged = {},
-        onViewToggle = {},
-        onRequestDeleteBook = {},
-        onRequestEditBook = {},
-        onMarkCompleted = {},
-        onMarkPlanToRead = {},
-        onShare = {},
-        onDownload = {},
-        onDismissDownloadError = {},
-        onDismissDelete = {},
-        onConfirmDelete = {},
-        onDismissEdit = {},
-        onConfirmEditBook = { _, _, _, _, _ -> },
-        onFormatSelected = {},
-        onImportPdf = { _, _, _ -> },
-        onImportEpub = { _, _, _ -> }
-    )
+private fun LibraryScreenDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        val sampleBook = Book(
+            id = "book-1",
+            title = "Clean Code",
+            author = "Robert C. Martin",
+            coverPath = null,
+            filePath = "/books/clean-code.epub",
+            format = "epub",
+            updatedAtEpochMillis = 1L
+        )
+        LibraryScreenContent(
+            uiState = LibraryUiState(
+                books = listOf(sampleBook),
+                isLoading = false,
+                isGridView = true,
+                readingMinutesByBook = mapOf("book-1" to 40L),
+                isSyncing = false,
+                isRefreshing = false,
+                syncError = null,
+                downloadableBooks = emptyList(),
+                downloadState = emptyMap(),
+                statusFilter = "all",
+                sortBy = "date_added",
+                searchQuery = "",
+                debouncedSearchQuery = "",
+                showSearch = false,
+                showFilterSheet = false,
+                filterFormat = "all"
+            ),
+            searchedBooks = listOf(sampleBook),
+            firstDownloadError = null,
+            contentPadding = PaddingValues(16.dp),
+            driveAuthHelper = null,
+            onBookSelected = { _, _, _ -> },
+            onRefresh = {},
+            onSearchToggle = {},
+            onSearchQueryChange = {},
+            onFilterToggle = {},
+            onStatusFilterChanged = {},
+            onSortByChanged = {},
+            onViewToggle = {},
+            onRequestDeleteBook = {},
+            onRequestEditBook = {},
+            onMarkCompleted = {},
+            onMarkPlanToRead = {},
+            onShare = {},
+            onDownload = {},
+            onDismissDownloadError = {},
+            onDismissDelete = {},
+            onConfirmDelete = {},
+            onDismissEdit = {},
+            onConfirmEditBook = { _, _, _, _, _ -> },
+            onFormatSelected = {},
+            onImportPdf = { _, _, _ -> },
+            onImportEpub = { _, _, _ -> }
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LibraryScreenLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        val sampleBook = Book(
+            id = "book-1",
+            title = "Clean Code",
+            author = "Robert C. Martin",
+            coverPath = null,
+            filePath = "/books/clean-code.epub",
+            format = "epub",
+            updatedAtEpochMillis = 1L
+        )
+        LibraryScreenContent(
+            uiState = LibraryUiState(
+                books = listOf(sampleBook),
+                isLoading = false,
+                isGridView = true,
+                readingMinutesByBook = mapOf("book-1" to 40L),
+                isSyncing = false,
+                isRefreshing = false,
+                syncError = null,
+                downloadableBooks = emptyList(),
+                downloadState = emptyMap(),
+                statusFilter = "all",
+                sortBy = "date_added",
+                searchQuery = "",
+                debouncedSearchQuery = "",
+                showSearch = false,
+                showFilterSheet = false,
+                filterFormat = "all"
+            ),
+            searchedBooks = listOf(sampleBook),
+            firstDownloadError = null,
+            contentPadding = PaddingValues(16.dp),
+            driveAuthHelper = null,
+            onBookSelected = { _, _, _ -> },
+            onRefresh = {},
+            onSearchToggle = {},
+            onSearchQueryChange = {},
+            onFilterToggle = {},
+            onStatusFilterChanged = {},
+            onSortByChanged = {},
+            onViewToggle = {},
+            onRequestDeleteBook = {},
+            onRequestEditBook = {},
+            onMarkCompleted = {},
+            onMarkPlanToRead = {},
+            onShare = {},
+            onDownload = {},
+            onDismissDownloadError = {},
+            onDismissDelete = {},
+            onConfirmDelete = {},
+            onDismissEdit = {},
+            onConfirmEditBook = { _, _, _, _, _ -> },
+            onFormatSelected = {},
+            onImportPdf = { _, _, _ -> },
+            onImportEpub = { _, _, _ -> }
+        )
+    }
 }

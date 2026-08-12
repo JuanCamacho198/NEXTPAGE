@@ -41,12 +41,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.presentation.theme.NextPageDimens
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.presentation.viewmodel.BookDetailViewModel
 import com.nextpage.ui.components.atoms.CoverThumbnail
@@ -457,4 +459,49 @@ private fun getPageDisplayText(
         total != null -> stringResource(R.string.book_detail_page_x_of_y, 0, total)
         else -> stringResource(R.string.book_detail_no_pages)
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun BookDetailScreenDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        BookDetailScreenPreviewContent()
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun BookDetailScreenLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        BookDetailScreenPreviewContent()
+    }
+}
+
+@Composable
+private fun BookDetailScreenPreviewContent() {
+    val sampleBook = Book(
+        id = "book-1",
+        title = "Clean Architecture",
+        author = "Robert C. Martin",
+        coverPath = null,
+        filePath = "/books/clean-architecture.epub",
+        format = "epub",
+        totalPages = 432,
+        chapterCount = 34,
+        description = "Practical Software Architecture Solutions from the Legendary Robert C. Martin.",
+        updatedAtEpochMillis = 1L
+    )
+    val sampleProgress = ReadingProgress(
+        id = "progress-1",
+        bookId = "book-1",
+        cfiLocation = "epubcfi(/6/10)",
+        percentage = 67f,
+        updatedAtEpochMillis = 1L
+    )
+    BookDetailContent(
+        book = sampleBook,
+        progress = sampleProgress,
+        onRatingChanged = {},
+        onContinueReading = { _, _, _ -> }
+    )
 }

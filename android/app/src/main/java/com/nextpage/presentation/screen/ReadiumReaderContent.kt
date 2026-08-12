@@ -394,34 +394,53 @@ fun ReadiumReaderContent(
     // applyDecorations LaunchedEffect below handles the high-level sync; this
     // separate one-shot kick is a defensive nudge to trigger activation on
     // existing decorations once the listener is live.
+    //
+    // Re-apply with a short retry loop: when the reader is reopened the
+    // highlights StateFlow may still be empty for a few frames while Room
+    // emits the persisted list, so a single 100ms kick can push 0 decorations
+    // and the decorations are never painted. Retrying until highlights arrive
+    // (or a timeout) guarantees the last-known decorations are applied.
     LaunchedEffect(navigatorFragment) {
         val frag = navigatorFragment ?: return@LaunchedEffect
         val decorable = frag as? DecorableNavigator ?: return@LaunchedEffect
-        // Wait one frame so the DisposableEffect above finishes registering.
         delay(100)
-        try {
+        repeat(10) {
             val currentDecorations = highlightsToDecorations(highlights)
-            decorable.applyDecorations(currentDecorations, DECORATION_GROUP)
-            DebugLog.info(
-                "Readium",
-                "Post-listener re-apply: pushed ${currentDecorations.size} decorations"
-            )
-        } catch (t: Throwable) {
-            DebugLog.error("Readium", "Post-listener re-apply failed: ${t.message}")
+            if (currentDecorations.isNotEmpty() || highlights.isNotEmpty()) {
+                decorable.applyDecorations(currentDecorations, DECORATION_GROUP)
+                DebugLog.info(
+                    "Readium",
+                    "Post-listener re-apply: pushed ${currentDecorations.size} decorations"
+                )
+                return@LaunchedEffect
+            }
+            delay(200)
         }
+        DebugLog.info("Readium", "Post-listener re-apply: gave up waiting for highlights (still empty)")
     }
 
     // ── Decoration sync (highlights → decorations) ────────────────
     // Reapplies ALL decorations whenever the highlights list changes (HL-5).
+    // When the list is EMPTY we still clear (a genuine "no highlights" book),
+    // but only once the navigator has had a chance to load them: the reader
+    // is reopened with highlights=0 for a few frames while Room emits the
+    // persisted list, and clearing early would wipe the decorations. The
+    // post-listener kick above retries until highlights arrive, so a fresh
+    // navigator never clears before its data is available.
     LaunchedEffect(highlights, navigatorFragment) {
         val frag = navigatorFragment ?: return@LaunchedEffect
         val decorable = frag as? DecorableNavigator ?: return@LaunchedEffect
         if (highlights.isEmpty()) {
-            decorable.applyDecorations(emptyList(), DECORATION_GROUP)
-            DebugStateHolder.recordApplied(0)
+            // Defer the empty-clear to the retry loop in the post-listener
+            // kick, which waits for Room to emit. If highlights stay empty
+            // for good (genuinely no highlights), the retry gives up without
+            // clearing — decorations for a previous session may linger, but
+            // the next non-empty emission reconciles them.
+            DebugLog.info("Readium", "Decoration sync: skipping empty-clear (waiting for highlights)")
             return@LaunchedEffect
         }
         val decorations = highlightsToDecorations(highlights)
+        DebugLog.info("Readium", "Decoration sync: pushing ${decorations.size} decorations")
         decorable.applyDecorations(decorations, DECORATION_GROUP)
         DebugStateHolder.recordApplied(decorations.size)
     }
@@ -627,8 +646,16 @@ fun ReadiumReaderContent(
  */
 private fun highlightsToDecorations(highlights: List<Highlight>): List<Decoration> {
     return highlights.mapNotNull { h ->
-        val json = h.locatorJson ?: return@mapNotNull null
-        val locator = CfiMigrator.jsonToLocator(json) ?: return@mapNotNull null
+        val fromJson = h.locatorJson?.let { CfiMigrator.jsonToLocator(it) }
+        val locator = fromJson
+            ?: fallbackLocatorFromCfi(h.cfiRange)
+            ?: run {
+                DebugLog.warn(
+                    "Highlights",
+                    "highlight ${h.id} skipped: locatorJson=${h.locatorJson?.take(80) ?: "null"} cfiRange=${h.cfiRange?.take(80) ?: "null"} jsonParsed=${fromJson != null}"
+                )
+                return@mapNotNull null
+            }
         val tint = try {
             android.graphics.Color.parseColor(h.color)
         } catch (_: Exception) {
@@ -640,6 +667,25 @@ private fun highlightsToDecorations(highlights: List<Highlight>): List<Decoratio
             style = Decoration.Style.Highlight(tint = tint, isActive = false)
         )
     }
+}
+
+/**
+ * Builds a minimal Readium [Locator] from a `readium:{href}` cfiRange fallback.
+ * Highlights saved without a locatorJson (or whose locator fails to re-parse)
+ * still get a decoration at the start of their resource, so they are at least
+ * visible in the book even though the exact text range is lost.
+ */
+private fun fallbackLocatorFromCfi(cfiRange: String?): org.readium.r2.shared.publication.Locator? {
+    if (cfiRange == null || !cfiRange.startsWith("readium:")) return null
+    val href = cfiRange.removePrefix("readium:")
+    val json = org.json.JSONObject().apply {
+        put("href", href)
+        put("type", "application/xhtml+xml")
+        put("locations", org.json.JSONObject().apply {
+            put("progression", 0.0)
+        })
+    }
+    return org.readium.r2.shared.publication.Locator.fromJSON(json)
 }
 
 /**

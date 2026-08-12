@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -107,7 +108,13 @@ fun NextPageHighlightCard(
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
-        Row(modifier = Modifier.padding(start = 0.dp)) {
+        Row(
+            modifier = Modifier.height(IntrinsicSize.Min)
+        ) {
+            // Colored left edge. The Row is sized with IntrinsicSize.Min so
+            // fillMaxHeight() resolves to the content height — without it the
+            // stripe measures 0dp tall (the Row has no fixed height) and the
+            // accent color becomes invisible.
             Box(
                 modifier = Modifier
                     .width(6.dp)

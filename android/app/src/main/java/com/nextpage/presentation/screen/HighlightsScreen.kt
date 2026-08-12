@@ -73,11 +73,6 @@ import com.nextpage.ui.components.molecules.NextPageSectionHeader
 import com.nextpage.ui.components.molecules.NextPageSelector
 import com.nextpage.ui.components.molecules.SelectorOption
 
-private val ColorQuotes = NextPageColors.accentBlue
-private val ColorIdeas = NextPageColors.accentPurple
-private val ColorPassages = NextPageColors.accentGreen
-private val ColorFavorites = NextPageColors.accentYellow
-
 @Composable
 fun HighlightsScreen(
     contentPadding: PaddingValues,
@@ -198,10 +193,6 @@ private fun HighlightsScreenContent(
             uiState.books.find { it.id == bookId }?.title
         }
     }
-    val quoteCount by remember { derivedStateOf { uiState.highlights.count { it.type == "quote" } } }
-    val ideaCount by remember { derivedStateOf { uiState.highlights.count { it.type == "idea" } } }
-    val passageCount by remember { derivedStateOf { uiState.highlights.count { it.type == "passage" } } }
-    val bookmarkCount by remember { derivedStateOf { uiState.bookmarks.size } }
     val bookMap = remember(uiState.books) {
         uiState.books.associate { it.id to it.title }
     }
@@ -287,46 +278,6 @@ private fun HighlightsScreenContent(
                 actionLabel = stringResource(R.string.home_ver_todo),
                 onActionClick = { }
             )
-        }
-
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                StatWidget(
-                    value = "${quoteCount}",
-                    label = stringResource(R.string.highlights_summary_quotes),
-                    color = ColorQuotes
-                )
-                StatWidget(
-                    value = "${ideaCount}",
-                    label = stringResource(R.string.highlights_summary_ideas),
-                    color = ColorIdeas
-                )
-                StatWidget(
-                    value = "${passageCount}",
-                    label = stringResource(R.string.highlights_summary_passages),
-                    color = ColorPassages
-                )
-                StatWidget(
-                    value = "${bookmarkCount}",
-                    label = stringResource(R.string.highlights_summary_favorites),
-                    color = ColorFavorites
-                )
-            }
-        }
-
-        item {
-            if (uiState.colorCounts.isNotEmpty()) {
-                ColorStatsRow(
-                    colorCounts = uiState.colorCounts,
-                    selectedColors = uiState.colorFilter,
-                    onColorToggled = onColorFilterChanged
-                )
-            }
         }
 
         if (uiState.filteredHighlights.isEmpty()) {
@@ -520,28 +471,6 @@ private fun FilterControlsRow(
     }
 }
 
-@Composable
-private fun StatWidget(
-    value: String,
-    label: String,
-    color: Color
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = color
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
 /**
  * Parses a hex color string into a [Color].
  *
@@ -634,48 +563,6 @@ private fun ColorSwatchRow(
                         )
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ColorStatsRow(
-    colorCounts: Map<String, Int>,
-    selectedColors: Set<String>,
-    onColorToggled: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        HighlightColor.entries.forEach { highlightColor ->
-            val count = colorCounts[highlightColor.hex] ?: return@forEach
-            val isSelected = highlightColor.hex in selectedColors
-            Row(
-                modifier = Modifier
-                    .clickable { onColorToggled(highlightColor.hex) }
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(16.dp)
-                        .clip(CircleShape)
-                        .background(parseHighlightColor(highlightColor.hex))
-                        .then(
-                            if (isSelected) Modifier.border(1.5.dp, Color.White, CircleShape)
-                            else Modifier
-                        )
-                )
-                Text(
-                    text = "$count",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }

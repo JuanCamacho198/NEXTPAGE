@@ -97,9 +97,12 @@ class ReaderInteractionStateHolder(
      * Cancels any previous observation jobs first.
      */
     fun observeBook(bookId: String) {
+        DebugLog.info(TAG, "observeBook called for bookId=$bookId")
         observeHighlightsJob?.cancel()
         observeHighlightsJob = scope.launch(mainDispatcher) {
+            DebugLog.info(TAG, "observeHighlights collect started for bookId=$bookId")
             readerRepository.observeHighlights(bookId).collect { highlights ->
+                DebugLog.info(TAG, "observeHighlights emitted ${highlights.size} highlights")
                 _state.update { it.copy(highlights = highlights) }
             }
         }

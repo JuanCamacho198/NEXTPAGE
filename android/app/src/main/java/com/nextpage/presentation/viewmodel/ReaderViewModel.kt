@@ -10,6 +10,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nextpage.data.session.ReaderPreferences
+import com.nextpage.debug.DebugLog
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReadingProgress
@@ -38,7 +39,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -653,6 +656,7 @@ class ReaderViewModel(
         // Merge Cluster B interaction state into ReaderUiState
         viewModelScope.launch(mainDispatcher) {
             interactionHolder.state.collect { interaction ->
+                DebugLog.info("ReaderVM", "merge Cluster B: highlights=${interaction.highlights.size}")
                 mutableUiState.update { current ->
                     current.copy(
                         highlights = interaction.highlights,
@@ -673,6 +677,31 @@ class ReaderViewModel(
                     )
                 }
             }
+        }
+
+        // Direct highlights observation — belt-and-suspenders for the merge
+        // above. The Cluster B merge depends on the interaction holder's
+        // StateFlow updating after observeBook() is called; when the reader
+        // is reopened there is a window where the holder has the list but the
+        // merge has not propagated it (the composable then renders with 0
+        // highlights and the decorations are never applied). This direct
+        // collect guarantees the persisted highlights reach ReaderUiState
+        // regardless of merge timing.
+        //
+        // flatMapLatest restarts the Room highlights flow on EVERY lifecycle
+        // emission of selectedBookId (including reopening the same book),
+        // which the merge path misses.
+        viewModelScope.launch(mainDispatcher) {
+            lifecycleHolder.state
+                .map { it.selectedBookId }
+                .filter { it != null }
+                .flatMapLatest { bookId ->
+                    readerRepository.observeHighlights(bookId!!)
+                }
+                .collect { highlights ->
+                    DebugLog.info("ReaderVM", "direct highlights collect: ${highlights.size}")
+                    mutableUiState.update { it.copy(highlights = highlights) }
+                }
         }
     }
 

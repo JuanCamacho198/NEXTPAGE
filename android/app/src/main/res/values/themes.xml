@@ -4,4 +4,13 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+
+    <!-- Native splash screen (Android 12+ via core-splashscreen).
+         Shows the NextPage logo instantly at launch, before Compose starts,
+         then hands off to Theme.NextPage. -->
+    <style name="Theme.NextPage.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/nextpage_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.NextPage</item>
+    </style>
 </resources>

@@ -9,6 +9,7 @@ import android.view.ActionMode
 import android.view.View
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
@@ -16,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.nextpage.data.session.AppThemePreferences
 import com.nextpage.debug.CrashNotificationHelper
 import com.nextpage.debug.DebugLog
@@ -25,6 +27,7 @@ import com.nextpage.di.AppContainer
 import com.nextpage.domain.model.ThemeMode
 import com.nextpage.presentation.navigation.NextPageNavHost
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.presentation.viewmodel.AuthViewModel
 
 class MainActivity : AppCompatActivity() {
 
@@ -38,6 +41,27 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         appContainer = AppContainer(context = this)
+
+        // Native splash (Android 12+ via core-splashscreen): the NextPage logo
+        // renders instantly at launch. Keep it on screen until the auth session
+        // finishes restoring so there is no flash of an empty screen. The
+        // AuthViewModel is shared with the NavHost through the Activity's
+        // ViewModelStore (same factory = same instance).
+        val splashScreen = installSplashScreen()
+        val authViewModel: AuthViewModel by viewModels {
+            AuthViewModel.Factory(
+                authRepository = appContainer.authRepository,
+                syncService = appContainer.syncService,
+                supabaseProgressSync = appContainer.supabaseProgressSync,
+                supabaseBookCatalogSync = appContainer.supabaseBookCatalogSync,
+                isAuthConfigured = !appContainer.isAuthConfigError,
+                hasAuthWiringIssue = false
+            )
+        }
+        splashScreen.setKeepOnScreenCondition {
+            authViewModel.uiState.value.isCheckingSession
+        }
+
         // Debug-only: capture pending crash from previous run, ensure the
         // notification channel exists, and request POST_NOTIFICATIONS on 33+.
         if (BuildConfig.DEBUG && DebugPrefs.isEnabled(this)) {

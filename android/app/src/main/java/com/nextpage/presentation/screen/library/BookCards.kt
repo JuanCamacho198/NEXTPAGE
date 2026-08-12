@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.ui.components.atoms.CoverThumbnail
+import com.nextpage.ui.components.atoms.NextPageProgressBar
 import com.nextpage.ui.components.molecules.BookContextMenu
 import com.nextpage.ui.icons.NextPageIcons
 
@@ -93,14 +93,9 @@ fun BookListCard(
                 )
                 if (progressFraction > 0f) {
                     Spacer(modifier = Modifier.height(4.dp))
-                    LinearProgressIndicator(
-                        progress = { progressFraction.coerceIn(0f, 1f) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp)),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    NextPageProgressBar(
+                        progress = progressFraction,
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Text(
                         text = stringResource(R.string.library_status_in_progress, minutesRead),
@@ -233,14 +228,10 @@ fun BookGridCard(
 
                 if (progressFraction in 0.01f..0.99f) {
                     Spacer(modifier = Modifier.height(2.dp))
-                    LinearProgressIndicator(
-                        progress = { progressFraction },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.dp)
-                            .clip(RoundedCornerShape(1.dp)),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    NextPageProgressBar(
+                        progress = progressFraction,
+                        modifier = Modifier.fillMaxWidth(),
+                        height = 2.dp
                     )
                 }
             }

@@ -617,6 +617,13 @@ private fun DownloadableBookCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+                book.fileSize?.let { bytes ->
+                    Text(
+                        text = formatFileSize(bytes),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 if (isDownloading) {
                     Row(
@@ -681,12 +688,28 @@ private fun EmptyShelfPlaceholder(
             NextPageButton(
                 onClick = onImportClick,
                 enabled = !isImporting,
-                variant = NextPageButtonVariant.OUTLINED
+                variant = NextPageButtonVariant.OUTLINED,
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
             ) {
                 Text(text = stringResource(R.string.library_import_book))
             }
         }
     )
+}
+
+/**
+ * Formats a file size in bytes as a compact MB string (e.g. "2.4 MB").
+ */
+private fun formatFileSize(bytes: Long): String {
+    val mb = bytes / (1024.0 * 1024.0)
+    return if (mb >= 100) {
+        "${mb.toInt()} MB"
+    } else {
+        String.format(java.util.Locale.US, "%.1f MB", mb)
+    }
 }
 
 @Preview(showBackground = true)

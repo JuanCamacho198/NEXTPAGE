@@ -165,6 +165,7 @@ data class UserBookRow(
     @SerialName("remote_provider") val remoteProvider: String? = null,
     @SerialName("remote_file_id") val remoteFileId: String? = null,
     @SerialName("remote_path") val remotePath: String? = null,
+    @SerialName("file_size") val fileSize: Long? = null,
     @SerialName("cover_object_path") val coverObjectPath: String? = null
     ,
     // Desktop persists protocol_version as NULL when the row was never written

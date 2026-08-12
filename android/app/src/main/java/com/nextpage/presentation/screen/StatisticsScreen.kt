@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.DailyReadingActivity
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.theme.NextPageTheme
@@ -55,7 +56,9 @@ import java.util.Locale
 @Composable
 fun StatisticsScreen(
     contentPadding: PaddingValues,
-    viewModel: StatisticsViewModel
+    viewModel: StatisticsViewModel,
+    authSession: AuthSession? = null,
+    onOpenAccount: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -69,7 +72,10 @@ fun StatisticsScreen(
         item {
             NextPageHeader(
                 title = stringResource(R.string.home_nextpage_title),
-                avatarInitials = stringResource(R.string.app_logo_initials)
+                avatarImageUrl = authSession?.photoUrl,
+                avatarInitials = authSession?.displayName?.take(2)?.uppercase() ?: "NP",
+                onAvatarClick = onOpenAccount,
+                avatarContentDescription = stringResource(R.string.home_avatar_content_description)
             )
         }
 
@@ -399,7 +405,10 @@ private fun StatisticsScreenPreviewContent() {
         item {
             NextPageHeader(
                 title = stringResource(R.string.home_nextpage_title),
-                avatarInitials = stringResource(R.string.app_logo_initials)
+                avatarImageUrl = null,
+                avatarInitials = "NP",
+                onAvatarClick = null,
+                avatarContentDescription = stringResource(R.string.home_avatar_content_description)
             )
         }
         item {

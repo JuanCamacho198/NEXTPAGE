@@ -29,6 +29,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import com.nextpage.R
+import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
@@ -80,12 +81,16 @@ private val ColorFavorites = NextPageColors.accentYellow
 @Composable
 fun HighlightsScreen(
     contentPadding: PaddingValues,
-    viewModel: HighlightsViewModel
+    viewModel: HighlightsViewModel,
+    authSession: AuthSession? = null,
+    onOpenAccount: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     HighlightsScreenContent(
         uiState = uiState,
         contentPadding = contentPadding,
+        authSession = authSession,
+        onOpenAccount = onOpenAccount,
         onBookFilterChanged = viewModel::onBookFilterChanged,
         onTagFilterChanged = viewModel::onTagFilterChanged,
         onSearchQueryChange = viewModel::onSearchQueryChanged,
@@ -114,6 +119,8 @@ fun HighlightsScreen(
 private fun HighlightsScreenContent(
     uiState: HighlightsUiState,
     contentPadding: PaddingValues,
+    authSession: AuthSession? = null,
+    onOpenAccount: () -> Unit = {},
     onBookFilterChanged: (String?) -> Unit,
     onTagFilterChanged: (String?) -> Unit,
     onSearchQueryChange: (String) -> Unit,
@@ -209,7 +216,10 @@ private fun HighlightsScreenContent(
         item {
             NextPageHeader(
                 title = stringResource(R.string.home_nextpage_title),
-                avatarInitials = stringResource(R.string.app_logo_initials),
+                avatarImageUrl = authSession?.photoUrl,
+                avatarInitials = authSession?.displayName?.take(2)?.uppercase() ?: "NP",
+                onAvatarClick = onOpenAccount,
+                avatarContentDescription = stringResource(R.string.home_avatar_content_description),
                 onSearchClick = { showSearch = !showSearch }
             )
         }

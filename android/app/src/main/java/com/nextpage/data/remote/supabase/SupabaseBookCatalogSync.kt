@@ -329,7 +329,21 @@ class SupabaseBookCatalogSync(
                     it.lifecycle != "unavailable" &&
                     it.id !in localBookIds
             }
-            Result.success(downloadable)
+            // Enrich rows that lack a persisted file_size by asking the remote
+            // provider (Drive). Best-effort — a null result keeps the row as-is.
+            val remote = remoteDataSource
+            val enriched = if (remote == null) {
+                downloadable
+            } else {
+                downloadable.map { row ->
+                    if (row.fileSize != null || row.remotePath == null) {
+                        row
+                    } else {
+                        row.copy(fileSize = remote.getFileSize(row.remotePath))
+                    }
+                }
+            }
+            Result.success(enriched)
         } catch (e: Exception) {
             Result.failure(AppError(ErrorCategory.STORAGE, "CATALOG_FETCH", "Failed to fetch downloadable books: ${e.message}", "SupabaseBookCatalogSync"))
         }

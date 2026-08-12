@@ -388,9 +388,14 @@ fun NextPageNavHost(
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (isCheckingSession) {
-            // Splash screen while session is being restored — prevents white
-            // flash between Auth and Home when startDestination is unknown.
-            CircularProgressIndicator()
+            // Fallback while session is being restored. The native splash
+            // screen (MainActivity) normally covers this window via
+            // setKeepOnScreenCondition; this centered spinner guards against
+            // any gap after the splash dismisses before navigation settles.
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center),
+                color = MaterialTheme.colorScheme.primary
+            )
         } else {
         Scaffold(
             snackbarHost = {
@@ -638,7 +643,14 @@ fun NextPageNavHost(
                 ) {
                     HighlightsScreen(
                         contentPadding = innerPadding,
-                        viewModel = highlightsViewModel
+                        viewModel = highlightsViewModel,
+                        authSession = authState.currentSession,
+                        onOpenAccount = {
+                            settingsInitialRoute = NextPageDestination.SettingsAccount.route
+                            navController.navigate(NextPageDestination.Settings.route) {
+                                launchSingleTop = true
+                            }
+                        }
                     )
                 }
 
@@ -651,7 +663,14 @@ fun NextPageNavHost(
                 ) {
                     StatisticsScreen(
                         contentPadding = innerPadding,
-                        viewModel = statisticsViewModel
+                        viewModel = statisticsViewModel,
+                        authSession = authState.currentSession,
+                        onOpenAccount = {
+                            settingsInitialRoute = NextPageDestination.SettingsAccount.route
+                            navController.navigate(NextPageDestination.Settings.route) {
+                                launchSingleTop = true
+                            }
+                        }
                     )
                 }
 

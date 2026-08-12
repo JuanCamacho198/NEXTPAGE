@@ -119,6 +119,22 @@ class GoogleDriveStorageRemoteDataSource(
         }
     }
 
+    override suspend fun getFileSize(path: String): Long? {
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val physicalName = path.substringAfterLast('/')
+                val folder = booksFolderIdOrNull() ?: return@runCatching null
+                val file = findFileByName(folderId = folder, name = physicalName) ?: return@runCatching null
+                val size: Long? = driveService.files().get(file.id)
+                    .setFields("size")
+                    .execute()
+                    .size
+                    ?.toLong()
+                size
+            }.getOrNull()
+        }
+    }
+
     /**
      * Store paths [logical] (books/{userId}/{file}) so Sync parsing stays intact.
      */

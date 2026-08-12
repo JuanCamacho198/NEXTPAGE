@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 
 data class FilterTab(
     val id: String,
@@ -136,17 +137,38 @@ fun NextPageFilterTabs(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageFilterTabsPreview() {
-    val tabs = listOf(
-        FilterTab("all", R.string.library_tab_all),
-        FilterTab("reading", R.string.library_tab_reading),
-        FilterTab("pending", R.string.library_tab_pending),
-        FilterTab("completed", R.string.library_tab_completed)
-    )
+private fun NextPageFilterTabsDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        val tabs = listOf(
+            FilterTab("all", R.string.library_tab_all),
+            FilterTab("reading", R.string.library_tab_reading),
+            FilterTab("pending", R.string.library_tab_pending),
+            FilterTab("completed", R.string.library_tab_completed)
+        )
 
-    NextPageFilterTabs(
-        tabs = tabs,
-        selectedTabId = "reading",
-        onTabSelected = {}
-    )
+        NextPageFilterTabs(
+            tabs = tabs,
+            selectedTabId = "reading",
+            onTabSelected = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageFilterTabsLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        val tabs = listOf(
+            FilterTab("all", R.string.library_tab_all),
+            FilterTab("reading", R.string.library_tab_reading),
+            FilterTab("pending", R.string.library_tab_pending),
+            FilterTab("completed", R.string.library_tab_completed)
+        )
+
+        NextPageFilterTabs(
+            tabs = tabs,
+            selectedTabId = "reading",
+            onTabSelected = {}
+        )
+    }
 }

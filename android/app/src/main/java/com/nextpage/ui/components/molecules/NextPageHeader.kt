@@ -20,6 +20,7 @@ import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageAvatar
 import com.nextpage.ui.components.atoms.NextPageIconButton
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Top app header: avatar (or initials) + title on the left, optional
@@ -123,13 +124,30 @@ fun NextPageHeader(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageHeaderPreview() {
-    NextPageHeader(
-        title = "My Library",
-        avatarInitials = "JS",
-        onAvatarClick = {},
-        avatarContentDescription = "Open account settings",
-        onSearchClick = {},
-        onNotificationsClick = {}
-    )
+private fun NextPageHeaderDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageHeader(
+            title = "My Library",
+            avatarInitials = "JS",
+            onAvatarClick = {},
+            avatarContentDescription = "Open account settings",
+            onSearchClick = {},
+            onNotificationsClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageHeaderLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageHeader(
+            title = "My Library",
+            avatarInitials = "JS",
+            onAvatarClick = {},
+            avatarContentDescription = "Open account settings",
+            onSearchClick = {},
+            onNotificationsClick = {}
+        )
+    }
 }

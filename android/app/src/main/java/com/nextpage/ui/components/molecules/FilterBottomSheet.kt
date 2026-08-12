@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Modal bottom sheet for filtering the library by file format. Shows
@@ -125,10 +126,24 @@ private fun FormatChip(
 
 @Preview(showBackground = true)
 @Composable
-private fun FilterBottomSheetPreview() {
-    FilterBottomSheet(
-        selectedFormat = "epub",
-        onFormatSelected = {},
-        onDismiss = {}
-    )
+private fun FilterBottomSheetDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        FilterBottomSheet(
+            selectedFormat = "epub",
+            onFormatSelected = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun FilterBottomSheetLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        FilterBottomSheet(
+            selectedFormat = "epub",
+            onFormatSelected = {},
+            onDismiss = {}
+        )
+    }
 }

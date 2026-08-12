@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Simple row that pairs a section title with an optional action
@@ -61,11 +62,26 @@ fun NextPageSectionHeader(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageSectionHeaderPreview() {
-    NextPageSectionHeader(
-        title = "Recently added",
-        modifier = Modifier.padding(16.dp),
-        actionLabel = "See all",
-        onActionClick = {}
-    )
+private fun NextPageSectionHeaderDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageSectionHeader(
+            title = "Recently added",
+            modifier = Modifier.padding(16.dp),
+            actionLabel = "See all",
+            onActionClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageSectionHeaderLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageSectionHeader(
+            title = "Recently added",
+            modifier = Modifier.padding(16.dp),
+            actionLabel = "See all",
+            onActionClick = {}
+        )
+    }
 }

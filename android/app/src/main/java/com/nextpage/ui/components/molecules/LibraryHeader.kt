@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageTextField
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Top header for the library screen: large title, search and filter
@@ -104,12 +105,28 @@ fun LibraryHeader(
 
 @Preview(showBackground = true)
 @Composable
-private fun LibraryHeaderPreview() {
-    LibraryHeader(
-        showSearch = false,
-        onSearchToggle = {},
-        searchQuery = "",
-        onSearchQueryChange = {},
-        onFilterToggle = {}
-    )
+private fun LibraryHeaderDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        LibraryHeader(
+            showSearch = false,
+            onSearchToggle = {},
+            searchQuery = "",
+            onSearchQueryChange = {},
+            onFilterToggle = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LibraryHeaderLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        LibraryHeader(
+            showSearch = false,
+            onSearchToggle = {},
+            searchQuery = "",
+            onSearchQueryChange = {},
+            onFilterToggle = {}
+        )
+    }
 }

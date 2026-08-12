@@ -16,6 +16,7 @@ import com.nextpage.ui.components.atoms.NextPageBookCover
 import com.nextpage.ui.components.atoms.NextPageProgressBar
 import com.nextpage.ui.components.atoms.NextPageTypography
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Card representing a single book in the library list/grid. Shows a
@@ -138,14 +139,32 @@ fun BookCard(
 
 @Preview(showBackground = true)
 @Composable
-private fun BookCardPreview() {
-    Box(modifier = Modifier.padding(16.dp)) {
-        BookCard(
-            title = "The Pragmatic Programmer",
-            author = "Hunt & Thomas",
-            progress = 0.65f,
-            onClick = {},
-            onDeleteClick = {}
-        )
+private fun BookCardDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        Box(modifier = Modifier.padding(16.dp)) {
+            BookCard(
+                title = "The Pragmatic Programmer",
+                author = "Hunt & Thomas",
+                progress = 0.65f,
+                onClick = {},
+                onDeleteClick = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun BookCardLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        Box(modifier = Modifier.padding(16.dp)) {
+            BookCard(
+                title = "The Pragmatic Programmer",
+                author = "Hunt & Thomas",
+                progress = 0.65f,
+                onClick = {},
+                onDeleteClick = {}
+            )
+        }
     }
 }

@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Placeholder card shown in the library grid/list to trigger the
@@ -108,8 +109,18 @@ fun AddBookCard(
 
 @Preview(showBackground = true)
 @Composable
-private fun AddBookCardPreview() {
-    AddBookCard(onImportClick = {})
+private fun AddBookCardDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        AddBookCard(onImportClick = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AddBookCardLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        AddBookCard(onImportClick = {})
+    }
 }
 
 private fun Modifier.dashedBorder(

@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Horizontal pill of icon actions shown when the user taps an
@@ -143,14 +144,32 @@ private fun parseColorHex(hex: String): Color {
 
 @Preview(showBackground = true)
 @Composable
-private fun FloatingContextMenuPreview() {
-    FloatingContextMenu(
-        selectedColor = HighlightColor.YELLOW.hex,
-        onColorSelected = {},
-        onCopy = {},
-        onAddTag = {},
-        onAnnotate = {},
-        onShare = {},
-        onDelete = {}
-    )
+private fun FloatingContextMenuDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        FloatingContextMenu(
+            selectedColor = HighlightColor.YELLOW.hex,
+            onColorSelected = {},
+            onCopy = {},
+            onAddTag = {},
+            onAnnotate = {},
+            onShare = {},
+            onDelete = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun FloatingContextMenuLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        FloatingContextMenu(
+            selectedColor = HighlightColor.YELLOW.hex,
+            onColorSelected = {},
+            onCopy = {},
+            onAddTag = {},
+            onAnnotate = {},
+            onShare = {},
+            onDelete = {}
+        )
+    }
 }

@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Anchored 280dp-wide card for attaching a tag to a highlight. Shows
@@ -152,15 +153,32 @@ fun AnchoredTagInput(
 
 @Preview(showBackground = true)
 @Composable
-private fun AnchoredTagInputPreview() {
-    AnchoredTagInput(
-        tag = "philosophy",
-        suggestions = listOf("philosophy", "classics", "to-review"),
-        onTagChange = {},
-        onSuggestionClick = {},
-        onSave = {},
-        onDismiss = {}
-    )
+private fun AnchoredTagInputDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        AnchoredTagInput(
+            tag = "philosophy",
+            suggestions = listOf("philosophy", "classics", "to-review"),
+            onTagChange = {},
+            onSuggestionClick = {},
+            onSave = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AnchoredTagInputLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        AnchoredTagInput(
+            tag = "philosophy",
+            suggestions = listOf("philosophy", "classics", "to-review"),
+            onTagChange = {},
+            onSuggestionClick = {},
+            onSave = {},
+            onDismiss = {}
+        )
+    }
 }
 
 @Composable

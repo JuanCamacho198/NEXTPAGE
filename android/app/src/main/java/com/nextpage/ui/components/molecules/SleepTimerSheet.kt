@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Plain-data model for a sleep-timer duration preset.
@@ -304,19 +305,42 @@ private fun EndOfChapterChip(
 
 @Preview(showBackground = true)
 @Composable
-private fun SleepTimerSheetPreview() {
-    SleepTimerSheet(
-        isActive = true,
-        remainingFormatted = "04:32",
-        presets = listOf(
-            SleepTimerPreset(label = "5", minutes = 5),
-            SleepTimerPreset(label = "10", minutes = 10),
-            SleepTimerPreset(label = "15", minutes = 15),
-            SleepTimerPreset(label = "30", minutes = 30),
-            SleepTimerPreset(label = "End of chapter", minutes = 0, isEndOfChapter = true)
-        ),
-        onPresetSelected = {},
-        onCancel = {},
-        onDismiss = {}
-    )
+private fun SleepTimerSheetDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        SleepTimerSheet(
+            isActive = true,
+            remainingFormatted = "04:32",
+            presets = listOf(
+                SleepTimerPreset(label = "5", minutes = 5),
+                SleepTimerPreset(label = "10", minutes = 10),
+                SleepTimerPreset(label = "15", minutes = 15),
+                SleepTimerPreset(label = "30", minutes = 30),
+                SleepTimerPreset(label = "End of chapter", minutes = 0, isEndOfChapter = true)
+            ),
+            onPresetSelected = {},
+            onCancel = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SleepTimerSheetLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        SleepTimerSheet(
+            isActive = true,
+            remainingFormatted = "04:32",
+            presets = listOf(
+                SleepTimerPreset(label = "5", minutes = 5),
+                SleepTimerPreset(label = "10", minutes = 10),
+                SleepTimerPreset(label = "15", minutes = 15),
+                SleepTimerPreset(label = "30", minutes = 30),
+                SleepTimerPreset(label = "End of chapter", minutes = 0, isEndOfChapter = true)
+            ),
+            onPresetSelected = {},
+            onCancel = {},
+            onDismiss = {}
+        )
+    }
 }

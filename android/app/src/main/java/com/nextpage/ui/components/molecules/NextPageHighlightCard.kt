@@ -38,6 +38,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Card showing a single saved highlight: the highlight text, an
@@ -241,14 +242,32 @@ fun NextPageHighlightCard(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageHighlightCardPreview() {
-    NextPageHighlightCard(
-        content = "To be, or not to be, that is the question.",
-        accentColor = Color(0xFFFBBF24),
-        attribution = "Chapter 3",
-        note = "This passage makes me think about choices.",
-        tag = "Philosophy",
-        onCopyText = {},
-        onDelete = {}
-    )
+private fun NextPageHighlightCardDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageHighlightCard(
+            content = "To be, or not to be, that is the question.",
+            accentColor = Color(0xFFFBBF24),
+            attribution = "Chapter 3",
+            note = "This passage makes me think about choices.",
+            tag = "Philosophy",
+            onCopyText = {},
+            onDelete = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageHighlightCardLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageHighlightCard(
+            content = "To be, or not to be, that is the question.",
+            accentColor = Color(0xFFFBBF24),
+            attribution = "Chapter 3",
+            note = "This passage makes me think about choices.",
+            tag = "Philosophy",
+            onCopyText = {},
+            onDelete = {}
+        )
+    }
 }

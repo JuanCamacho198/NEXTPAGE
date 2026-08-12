@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.nextpage.R
 import com.nextpage.ui.components.molecules.FilterTab
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Pre-configured [NextPageFilterTabs] instance with the four library
@@ -52,9 +53,22 @@ fun StatusChipRow(
 
 @Preview(showBackground = true)
 @Composable
-private fun StatusChipRowPreview() {
-    StatusChipRow(
-        selectedTab = "reading",
-        onTabSelected = {}
-    )
+private fun StatusChipRowDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        StatusChipRow(
+            selectedTab = "reading",
+            onTabSelected = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun StatusChipRowLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        StatusChipRow(
+            selectedTab = "reading",
+            onTabSelected = {}
+        )
+    }
 }

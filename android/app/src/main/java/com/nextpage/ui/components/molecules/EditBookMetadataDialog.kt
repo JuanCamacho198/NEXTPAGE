@@ -38,6 +38,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.nextpage.R
 import com.nextpage.domain.model.Book
+import com.nextpage.presentation.theme.NextPageTheme
 import java.io.File
 
 /**
@@ -189,21 +190,46 @@ fun EditBookMetadataDialog(
 
 @Preview(showBackground = true)
 @Composable
-private fun EditBookMetadataDialogPreview() {
-    EditBookMetadataDialog(
-        book = Book(
-            id = "book-1",
-            title = "The Old Man and the Sea",
-            author = "Ernest Hemingway",
-            coverPath = null,
-            filePath = "/books/book-1.epub",
-            format = "epub",
-            description = "An old fisherman struggles against a giant marlin in the Gulf Stream.",
-            updatedAtEpochMillis = 1_700_000_000_000L
-        ),
-        selectedCoverUri = null,
-        onDismiss = {},
-        onSave = { _, _, _ -> },
-        onChangeCover = {}
-    )
+private fun EditBookMetadataDialogDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        EditBookMetadataDialog(
+            book = Book(
+                id = "book-1",
+                title = "The Old Man and the Sea",
+                author = "Ernest Hemingway",
+                coverPath = null,
+                filePath = "/books/book-1.epub",
+                format = "epub",
+                description = "An old fisherman struggles against a giant marlin in the Gulf Stream.",
+                updatedAtEpochMillis = 1_700_000_000_000L
+            ),
+            selectedCoverUri = null,
+            onDismiss = {},
+            onSave = { _, _, _ -> },
+            onChangeCover = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun EditBookMetadataDialogLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        EditBookMetadataDialog(
+            book = Book(
+                id = "book-1",
+                title = "The Old Man and the Sea",
+                author = "Ernest Hemingway",
+                coverPath = null,
+                filePath = "/books/book-1.epub",
+                format = "epub",
+                description = "An old fisherman struggles against a giant marlin in the Gulf Stream.",
+                updatedAtEpochMillis = 1_700_000_000_000L
+            ),
+            selectedCoverUri = null,
+            onDismiss = {},
+            onSave = { _, _, _ -> },
+            onChangeCover = {}
+        )
+    }
 }

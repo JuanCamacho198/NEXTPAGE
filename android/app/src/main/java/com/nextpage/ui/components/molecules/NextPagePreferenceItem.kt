@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Settings-list row: leading icon + label on the left, optional
@@ -107,19 +108,42 @@ fun NextPagePreferenceItem(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPagePreferenceItemPreview() {
-    Column(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        NextPagePreferenceItem(
-            icon = NextPageIcons.Settings,
-            label = "Account",
-            value = "user@example.com"
-        )
-        NextPagePreferenceItem(
-            icon = NextPageIcons.Info,
-            label = "About NextPage"
-        )
+private fun NextPagePreferenceItemDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            NextPagePreferenceItem(
+                icon = NextPageIcons.Settings,
+                label = "Account",
+                value = "user@example.com"
+            )
+            NextPagePreferenceItem(
+                icon = NextPageIcons.Info,
+                label = "About NextPage"
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPagePreferenceItemLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            NextPagePreferenceItem(
+                icon = NextPageIcons.Settings,
+                label = "Account",
+                value = "user@example.com"
+            )
+            NextPagePreferenceItem(
+                icon = NextPageIcons.Info,
+                label = "About NextPage"
+            )
+        }
     }
 }

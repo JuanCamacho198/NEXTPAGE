@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.ui.components.atoms.NextPageDivider
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Plain-data model for a single row in [NotificationSheet].
@@ -226,6 +227,16 @@ private fun NotificationRow(
 
 @Preview(showBackground = true)
 @Composable
-private fun NotificationSheetPreview() {
-    NotificationSheet(onDismiss = {})
+private fun NotificationSheetDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NotificationSheet(onDismiss = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NotificationSheetLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NotificationSheet(onDismiss = {})
+    }
 }

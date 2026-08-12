@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Anchored 280dp-wide card for adding/editing the user-supplied
@@ -140,12 +141,28 @@ fun AnchoredDefinitionInput(
 
 @Preview(showBackground = true)
 @Composable
-private fun AnchoredDefinitionInputPreview() {
-    AnchoredDefinitionInput(
-        word = "serendipity",
-        definition = "The occurrence of events by chance in a happy or beneficial way.",
-        onDefinitionChange = {},
-        onSave = {},
-        onDismiss = {}
-    )
+private fun AnchoredDefinitionInputDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        AnchoredDefinitionInput(
+            word = "serendipity",
+            definition = "The occurrence of events by chance in a happy or beneficial way.",
+            onDefinitionChange = {},
+            onSave = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AnchoredDefinitionInputLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        AnchoredDefinitionInput(
+            word = "serendipity",
+            definition = "The occurrence of events by chance in a happy or beneficial way.",
+            onDefinitionChange = {},
+            onSave = {},
+            onDismiss = {}
+        )
+    }
 }

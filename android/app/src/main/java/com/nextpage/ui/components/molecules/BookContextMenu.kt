@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Dropdown menu of book-level actions (edit, mark completed, mark
@@ -96,14 +97,32 @@ fun BookContextMenu(
 
 @Preview(showBackground = true)
 @Composable
-private fun BookContextMenuPreview() {
-    BookContextMenu(
-        expanded = true,
-        onDismissRequest = {},
-        onEdit = {},
-        onMarkCompleted = {},
-        onMarkPlanToRead = {},
-        onShare = {},
-        onDelete = {}
-    )
+private fun BookContextMenuDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        BookContextMenu(
+            expanded = true,
+            onDismissRequest = {},
+            onEdit = {},
+            onMarkCompleted = {},
+            onMarkPlanToRead = {},
+            onShare = {},
+            onDelete = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun BookContextMenuLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        BookContextMenu(
+            expanded = true,
+            onDismissRequest = {},
+            onEdit = {},
+            onMarkCompleted = {},
+            onMarkPlanToRead = {},
+            onShare = {},
+            onDelete = {}
+        )
+    }
 }

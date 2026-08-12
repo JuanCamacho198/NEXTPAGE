@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Settings section that displays the five customizable highlight
@@ -261,12 +262,28 @@ private fun parseColorHex(hex: String): Color {
 
 @Preview(showBackground = true)
 @Composable
-private fun HighlightPaletteSectionPreview() {
-    HighlightPaletteSection(
-        customColors = HighlightColor.defaultHexList(),
-        onUpdateColor = { _, _ -> },
-        onAddColor = {},
-        onDeleteColor = {},
-        onReset = {}
-    )
+private fun HighlightPaletteSectionDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        HighlightPaletteSection(
+            customColors = HighlightColor.defaultHexList(),
+            onUpdateColor = { _, _ -> },
+            onAddColor = {},
+            onDeleteColor = {},
+            onReset = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun HighlightPaletteSectionLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        HighlightPaletteSection(
+            customColors = HighlightColor.defaultHexList(),
+            onUpdateColor = { _, _ -> },
+            onAddColor = {},
+            onDeleteColor = {},
+            onReset = {}
+        )
+    }
 }

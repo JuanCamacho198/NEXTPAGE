@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Floating action menu shown when the user makes a NEW text
@@ -185,13 +186,30 @@ private fun parseColorHex(hex: String): Color {
 
 @Preview(showBackground = true)
 @Composable
-private fun TextSelectionMenuPreview() {
-    TextSelectionMenu(
-        paletteColors = HighlightColor.defaultHexList(),
-        selectedColor = HighlightColor.YELLOW.hex,
-        onColorSelected = {},
-        onCopy = {},
-        onDictionary = {},
-        onShare = {}
-    )
+private fun TextSelectionMenuDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        TextSelectionMenu(
+            paletteColors = HighlightColor.defaultHexList(),
+            selectedColor = HighlightColor.YELLOW.hex,
+            onColorSelected = {},
+            onCopy = {},
+            onDictionary = {},
+            onShare = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TextSelectionMenuLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        TextSelectionMenu(
+            paletteColors = HighlightColor.defaultHexList(),
+            selectedColor = HighlightColor.YELLOW.hex,
+            onColorSelected = {},
+            onCopy = {},
+            onDictionary = {},
+            onShare = {}
+        )
+    }
 }

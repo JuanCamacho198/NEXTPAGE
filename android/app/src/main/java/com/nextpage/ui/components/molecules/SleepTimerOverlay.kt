@@ -23,6 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Full-screen overlay shown when the sleep timer fires. Centers a
@@ -100,6 +101,16 @@ fun SleepTimerOverlay(
 
 @Preview(showBackground = true)
 @Composable
-private fun SleepTimerOverlayPreview() {
-    SleepTimerOverlay(onDismiss = {})
+private fun SleepTimerOverlayDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        SleepTimerOverlay(onDismiss = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SleepTimerOverlayLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        SleepTimerOverlay(onDismiss = {})
+    }
 }

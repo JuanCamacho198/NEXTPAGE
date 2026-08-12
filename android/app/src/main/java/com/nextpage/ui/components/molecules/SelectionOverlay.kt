@@ -1,12 +1,18 @@
 package com.nextpage.ui.components.molecules
 
 import android.graphics.Rect
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -16,11 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 
 /**
@@ -395,3 +403,96 @@ private const val HEADER_RESERVE_DP = 80
 /** Reserve at the bottom (progress bar + nav) so the menu never tucks
  *  behind the footer when flipped below. */
 private const val FOOTER_RESERVE_DP = 72
+
+// ── Preview host ──────────────────────────────────────────────────────────
+// Caveat: anchors are px-space against the preview ROOT view
+// (`LocalView.current`), so per-index rect bands keep the five surfaces
+// roughly separated. Cosmetic-only, must never throw.
+
+private enum class SelectionSurface { TEXT_MENU, CONTEXT_MENU, TAG_INPUT, DEFINITION_INPUT, COLOR_PICKER }
+
+@Composable
+private fun SelectionOverlayHost(surface: SelectionSurface, index: Int) {
+    val rect = remember { android.graphics.Rect(50, 100 + index * 600, 250, 150 + index * 600) }
+    val highlight = remember {
+        Highlight(
+            id = "h1",
+            bookId = "b1",
+            cfiRange = "/4/2[ch2]!/4/14",
+            textContent = "Selected sample text",
+            note = null,
+            color = HighlightColor.YELLOW.hex,
+            updatedAtEpochMillis = 0L,
+            deletedAtEpochMillis = null
+        )
+    }
+    Box(
+        modifier = Modifier
+            .size(340.dp, 380.dp)
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        SelectionOverlay(
+            selectionState = when (surface) {
+                SelectionSurface.TEXT_MENU -> ReaderSelectionState.New(rect, "Selected sample text", null)
+                SelectionSurface.CONTEXT_MENU -> ReaderSelectionState.Existing(highlight, rect)
+                else -> ReaderSelectionState.None
+            },
+            showColorPickerPopover = surface == SelectionSurface.COLOR_PICKER,
+            showTagInput = surface == SelectionSurface.TAG_INPUT,
+            showDefinitionInput = surface == SelectionSurface.DEFINITION_INPUT,
+            selectionRect = rect,
+            selectedText = "Selected sample text",
+            highlights = listOf(highlight),
+            activeHighlightColor = HighlightColor.YELLOW.hex,
+            customHighlightColors = HighlightColor.defaultHexList(),
+            onColorSelected = {},
+            onCopy = {},
+            onDismissContextMenu = {},
+            onDelete = {},
+            onAddTag = {},
+            onAnnotate = {},
+            onShare = {},
+            onDictionary = {},
+            onShowColorPickerPopover = {},
+            onDismissColorPickerPopover = {},
+            onTagTextChanged = {},
+            onSaveTag = {},
+            onDismissTagInput = {},
+            onDefinitionTextChanged = {},
+            onSaveDefinition = {},
+            onDismissDefinitionInput = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SelectionOverlayDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState())
+        ) {
+            SelectionOverlayHost(SelectionSurface.TEXT_MENU, 0)
+            SelectionOverlayHost(SelectionSurface.CONTEXT_MENU, 1)
+            SelectionOverlayHost(SelectionSurface.TAG_INPUT, 2)
+            SelectionOverlayHost(SelectionSurface.DEFINITION_INPUT, 3)
+            SelectionOverlayHost(SelectionSurface.COLOR_PICKER, 4)
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SelectionOverlayLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState())
+        ) {
+            SelectionOverlayHost(SelectionSurface.TEXT_MENU, 0)
+            SelectionOverlayHost(SelectionSurface.CONTEXT_MENU, 1)
+            SelectionOverlayHost(SelectionSurface.TAG_INPUT, 2)
+            SelectionOverlayHost(SelectionSurface.DEFINITION_INPUT, 3)
+            SelectionOverlayHost(SelectionSurface.COLOR_PICKER, 4)
+        }
+    }
+}

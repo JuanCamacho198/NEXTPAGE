@@ -1,5 +1,6 @@
 package com.nextpage.data.remote.supabase
 
+import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.BookmarkDao
 import com.nextpage.data.local.dao.HighlightDao
 import com.nextpage.data.local.dao.ReadingProgressDao
@@ -36,6 +37,7 @@ import java.util.UUID
  */
 class SupabaseProgressSync(
     private val outboxDao: SyncOutboxDao,
+    private val bookDao: BookDao,
     private val readingProgressDao: ReadingProgressDao,
     private val bookmarkDao: BookmarkDao,
     private val highlightDao: HighlightDao,
@@ -290,6 +292,12 @@ class SupabaseProgressSync(
     }
 
     private suspend fun applyRemoteProgress(row: ReadingProgressRow): Boolean {
+        // Guard: reading_progress.book_id has a FK to books.id. Remote progress
+        // may arrive for a book that is not present locally (e.g. read on the
+        // desktop, or the local copy was removed while cloud progress remains).
+        // Upserting would throw SQLiteConstraintException and crash the app.
+        if (bookDao.getBookById(row.bookId) == null) return false
+
         // Only apply if remote is newer than local
         val localProgress = readingProgressDao.getProgressForBook(row.bookId)
         val remoteTime = try {
@@ -322,6 +330,10 @@ class SupabaseProgressSync(
     private suspend fun applyRemoteBookmark(row: BookmarkRow) {
         val isDeleted = row.deletedAt != null
         val localBookmark = bookmarkDao.getBookmarkById(row.id ?: return)
+
+        // Guard: bookmark.book_id has a FK to books.id — never insert a
+        // bookmark for a book that is not present locally (see applyRemoteProgress).
+        if (!isDeleted && bookDao.getBookById(row.bookId) == null) return
 
         if (isDeleted) {
             // Soft-delete tombstone: mark locally
@@ -362,6 +374,10 @@ class SupabaseProgressSync(
     private suspend fun applyRemoteHighlight(row: HighlightRow) {
         val isDeleted = row.deletedAt != null
         val localHighlight = highlightDao.getHighlightById(row.id ?: return)
+
+        // Guard: highlight.book_id has a FK to books.id — never insert a
+        // highlight for a book that is not present locally (see applyRemoteProgress).
+        if (!isDeleted && bookDao.getBookById(row.bookId) == null) return
 
         if (isDeleted) {
             if (localHighlight != null) {

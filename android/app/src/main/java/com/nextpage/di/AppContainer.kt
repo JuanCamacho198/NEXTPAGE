@@ -228,6 +228,7 @@ class AppContainer(context: Context) {
     val supabaseProgressSync: SupabaseProgressSync by lazy {
         SupabaseProgressSync(
             outboxDao = appDatabase.syncOutboxDao(),
+            bookDao = appDatabase.bookDao(),
             readingProgressDao = appDatabase.readingProgressDao(),
             bookmarkDao = appDatabase.bookmarkDao(),
             highlightDao = appDatabase.highlightDao(),

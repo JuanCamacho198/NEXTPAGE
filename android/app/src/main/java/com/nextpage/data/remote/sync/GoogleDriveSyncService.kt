@@ -315,11 +315,18 @@ class GoogleDriveSyncService(
                 val innerResult = pullResult.getOrThrow()
                 if (innerResult.isSuccess) {
                     val resolved = innerResult.getOrThrow()
-                    if (resolved.progress != null) {
+                    // Guard: reading_progress/highlight/bookmark book_id have FKs
+                    // to books.id. A stale Drive mapping may reference a book that
+                    // is not present locally (deleted or never imported); upserting
+                    // would throw SQLiteConstraintException and crash the app.
+                    val bookExists = bookDao.getBookById(bookId) != null
+                    if (resolved.progress != null && bookExists) {
                         readingProgressDao.upsert(resolved.progress.toEntity())
                     }
-                    resolved.highlights.forEach { highlightDao.upsert(it.toEntity()) }
-                    resolved.bookmarks.forEach { bookmarkDao.upsert(it.toEntity()) }
+                    if (bookExists) {
+                        resolved.highlights.forEach { highlightDao.upsert(it.toEntity()) }
+                        resolved.bookmarks.forEach { bookmarkDao.upsert(it.toEntity()) }
+                    }
                 }
             }
         }

@@ -234,7 +234,12 @@ fun ReadingProgressBar(
                 style = MaterialTheme.typography.labelMedium,
                 color = Color(0xFF718096),
                 fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp)
             )
 
             // Percentage
@@ -242,7 +247,8 @@ fun ReadingProgressBar(
                 text = "${clampedProgress.toInt()}%",
                 style = MaterialTheme.typography.labelMedium,
                 color = Color(0xFFADC6FF),
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 8.dp)
             )
         }
     }

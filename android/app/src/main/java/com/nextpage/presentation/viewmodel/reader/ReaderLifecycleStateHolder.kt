@@ -3,18 +3,19 @@ package com.nextpage.presentation.viewmodel.reader
 import android.app.Application
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
-import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.viewmodel.CfiMigrator
+import kotlin.math.roundToInt
 import kotlinx.coroutines.*
-import org.json.JSONObject
 import kotlinx.coroutines.flow.*
+import org.json.JSONObject
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
@@ -57,9 +58,16 @@ class ReaderLifecycleStateHolder(
 
     companion object {
         private const val TAG = "ReaderLifecycleStateHolder"
-        private const val MAX_PROGRESS_PERCENT = 99f
-        private const val READING_TIME_TICK_MS = 60_000L
-        private const val MILLIS_PER_MINUTE = 60_000L
+    private const val MAX_PROGRESS_PERCENT = 99f
+    private const val READING_TIME_TICK_MS = 60_000L
+    private const val MILLIS_PER_MINUTE = 60_000L
+    /**
+     * Estimated pages per chapter used to render "X págs. restantes" in the
+     * progress label. EPUB reflowable documents don't expose a physical page
+     * count, so the per-chapter Readium progression (0..1) is scaled against
+     * this constant.
+     */
+    private const val ESTIMATED_PAGES_PER_CHAPTER = 20
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -426,6 +434,7 @@ class ReaderLifecycleStateHolder(
             _state.update { it.copy(currentChapterIndex = newIndex) }
             updateProgressForChapter(newIndex)
             onChapterChanged()
+            navigateToChapter(newIndex)
         }
     }
 
@@ -437,6 +446,7 @@ class ReaderLifecycleStateHolder(
             _state.update { it.copy(currentChapterIndex = newIndex) }
             updateProgressForChapter(newIndex)
             onChapterChanged()
+            navigateToChapter(newIndex)
         }
     }
 
@@ -446,7 +456,21 @@ class ReaderLifecycleStateHolder(
             _state.update { it.copy(currentChapterIndex = index) }
             updateProgressForChapter(index)
             onChapterChanged()
+            navigateToChapter(index)
         }
+    }
+
+    /**
+     * Emits a Readium [Locator] so the navigator actually moves to [chapterIndex].
+     * Without this, only the state index changes and the reader stays on the
+     * current page even though the TOC / next-prev controls report a new chapter.
+     */
+    private fun navigateToChapter(chapterIndex: Int) {
+        val publication = _state.value.readiumPublication ?: return
+        val link = publication.readingOrder.getOrNull(chapterIndex) ?: return
+        val total = publication.readingOrder.size.coerceAtLeast(1)
+        val totalProgression = (chapterIndex.toFloat() / total).coerceIn(0f, 1f)
+        emitEpubNavigateLocator(chapterIndex, totalProgression, link)
     }
 
     /**
@@ -612,9 +636,32 @@ class ReaderLifecycleStateHolder(
             // Use Readium's totalProgression for real overall percentage
             val totalProgression = currentState.readiumLocator.locations.totalProgression?.toFloat() ?: 0f
             percent = (totalProgression * 100f).coerceIn(0f, 100f)
-            val current = currentState.currentChapterIndex + 1
-            val total = currentState.chapters.size.coerceAtLeast(1)
-            label = "$current / $total"
+            // Chapter title + estimated pages remaining in this chapter.
+            // Readium's per-chapter `progression` (0..1) is reliable; EPUB
+            // reflowable pages aren't known, so estimate with a fixed pages
+            // per chapter constant.
+            val chapterTitle = currentState.chapters
+                .getOrNull(currentState.currentChapterIndex)?.title
+                ?.takeIf { it.isNotBlank() }
+            if (chapterTitle != null) {
+                val chapterProgression = currentState.readiumLocator.locations.progression?.toFloat() ?: 0f
+                val remaining = ((1f - chapterProgression) * ESTIMATED_PAGES_PER_CHAPTER)
+                    .roundToInt()
+                    .coerceAtLeast(0)
+                label = if (remaining > 0) {
+                    application.getString(
+                        com.nextpage.R.string.reader_pages_remaining,
+                        chapterTitle,
+                        remaining
+                    )
+                } else {
+                    chapterTitle
+                }
+            } else {
+                val current = currentState.currentChapterIndex + 1
+                val total = currentState.chapters.size.coerceAtLeast(1)
+                label = "$current / $total"
+            }
         } else if (currentState.chapters.isNotEmpty()) {
             val current = currentState.currentChapterIndex + 1
             val total = currentState.chapters.size
@@ -849,43 +896,62 @@ class ReaderLifecycleStateHolder(
      * EPUBs) the reading order is used directly.
      */
     private fun buildChaptersFromPublication(publication: Publication): List<BookChapter> {
-        val titlesByHref = LinkedHashMap<String, String>()
+        // Walk the EPUB nav (TOC) TREE so every entry — including nested
+        // sub-chapters and parts — keeps its real title and hierarchy depth.
+        // Matching by raw href fails when the TOC href and the spine href
+        // differ in formatting (fragment, query, "./"), so each entry is
+        // resolved to a reading-order index via the same fuzzy linkWithHref
+        // used for live navigation. Books without a TOC fall back to the
+        // flat reading order.
         if (publication.tableOfContents.isNotEmpty()) {
+            val result = ArrayList<BookChapter>()
             for (link in publication.tableOfContents) {
-                collectTocTitles(link, titlesByHref)
+                collectTocChapters(link, publication, 0, result)
             }
+            return result
         }
         return publication.readingOrder.mapIndexed { readingIndex, link ->
             val href = link.href.toString()
-            val title = titlesByHref[href]
-                ?: link.title?.takeIf { it.isNotBlank() }
-                ?: "Chapter ${readingIndex + 1}"
             BookChapter(
                 index = readingIndex,
                 id = href,
-                title = title,
-                href = href
+                title = link.title?.takeIf { it.isNotBlank() } ?: "Chapter ${readingIndex + 1}",
+                href = href,
+                depth = 0
             )
         }
     }
 
     /**
-     * Recursively walks a TOC [Link] (and any [Link.children]) collecting
-     * `href -> title` pairs into [out]. The first title seen for a given
-     * href wins, matching how the EPUB spec defines the relationship
-     * between the nav map and the spine.
+     * Recursively walks a TOC [Link] (and any [Link.children]) appending a
+     * [BookChapter] per entry. [depth] tracks the hierarchy level (0 = top,
+     * 1 = sub-chapter, …). The reading-order index is resolved via
+     * [Publication.linkWithHref] so navigation still works even when the TOC
+     * href formatting differs from the spine.
      */
-    private fun collectTocTitles(
+    private fun collectTocChapters(
         link: org.readium.r2.shared.publication.Link,
-        out: MutableMap<String, String>
+        publication: Publication,
+        depth: Int,
+        out: MutableList<BookChapter>
     ) {
         val href = link.href.toString()
-        val title = link.title
-        if (title != null && title.isNotBlank() && !out.containsKey(href)) {
-            out[href] = title
-        }
+        val title = link.title?.takeIf { it.isNotBlank() }
+            ?: "Chapter ${out.size + 1}"
+        val index = publication.linkWithHref(link.href.resolve())
+            ?.let { publication.readingOrder.indexOf(it) }
+            ?: out.size
+        out.add(
+            BookChapter(
+                index = index.coerceAtLeast(0),
+                id = href,
+                title = title,
+                href = href,
+                depth = depth
+            )
+        )
         for (child in link.children) {
-            collectTocTitles(child, out)
+            collectTocChapters(child, publication, depth + 1, out)
         }
     }
 

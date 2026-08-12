@@ -136,7 +136,7 @@ class ReaderViewModelNavigationTest {
             BookChapter(2, "ch3", "Chapter 3", "ch3.xhtml")
         )
         // Simulate a book that is already loaded (isLoading = false, readiumPublication != null)
-        viewModel.lifecycleHolder.setBookLoadedForTest(publication = mockk())
+        viewModel.lifecycleHolder.setBookLoadedForTest(publication = mockk(relaxed = true))
         viewModel.lifecycleHolder.setEpubStateForTest(chapters = chapters)
 
         viewModel.navigateToCfiAfterLoad("epubcfi(/6/3)")

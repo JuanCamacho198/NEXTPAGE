@@ -60,11 +60,15 @@ import com.nextpage.presentation.theme.NextPageTheme
  * **Visual**: dark-themed `ModalBottomSheet` with 24dp top corners.
  *   Drag handle, `titleLarge` bold header, `HorizontalDivider`,
  *   then a 420dp `LazyColumn` of `ChapterRow`s. Each row: 8dp dot
- *   (current only) + title, 2-line ellipsized. Current row: blue
- *   text (`#ADC6FF`), semibold, `#2F3445` background.
- * **Behavior**: tap a row → [onChapterSelected(index)] + sheet
- *   dismissal. No internal state. The list height is hard-capped at
- *   420dp — if the book has more chapters, the list scrolls.
+ *   (current only) + title, 2-line ellipsized. Nested sub-chapters
+ *   are indented by their [BookChapter.depth] (20dp per level, capped
+ *   at 80dp) and rendered in `bodySmall`. Current row: blue text
+ *   (`#ADC6FF`), semibold, `#2F3445` background.
+ * **Behavior**: tap a row → [onChapterSelected(chapter.index)] + sheet
+ *   dismissal. The index passed is the chapter's reading-order index
+ *   (which several nested entries may share when they live in the same
+ *   spine resource). No internal state. The list height is hard-capped
+ *   at 420dp — if the book has more chapters, the list scrolls.
  * **Recomposition**: recomposes when `chapters`, `currentChapterIndex`,
  *   or callbacks change. New `LazyColumn` items are keyed implicitly
  *   by their position in the list.
@@ -139,13 +143,13 @@ fun ChaptersSheet(
                         .height(420.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    itemsIndexed(chapters) { index, chapter ->
+                    itemsIndexed(chapters) { _, chapter ->
                         ChapterRow(
-                            index = index,
                             title = chapter.title,
-                            isCurrent = index == currentChapterIndex,
+                            depth = chapter.depth,
+                            isCurrent = chapter.index == currentChapterIndex,
                             onClick = {
-                                onChapterSelected(index)
+                                onChapterSelected(chapter.index)
                                 onDismiss()
                             }
                         )
@@ -158,8 +162,8 @@ fun ChaptersSheet(
 
 @Composable
 private fun ChapterRow(
-    index: Int,
     title: String,
+    depth: Int,
     isCurrent: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -167,6 +171,9 @@ private fun ChapterRow(
     val titleColor = if (isCurrent) Color(0xFFADC6FF) else Color(0xFFDDE2F8)
     val weight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal
     val rowBg = if (isCurrent) Color(0xFF2F3445) else Color.Transparent
+    // Indent nested sub-chapters: each level adds 20dp, capped so deep
+    // hierarchies don't squeeze the text off-screen.
+    val indent = (depth * 20).coerceAtMost(80).dp
 
     Row(
         modifier = modifier
@@ -174,7 +181,7 @@ private fun ChapterRow(
             .clip(RoundedCornerShape(8.dp))
             .background(rowBg)
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 14.dp),
+            .padding(start = 14.dp + indent, end = 14.dp, top = 14.dp, bottom = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Current chapter indicator dot
@@ -187,8 +194,12 @@ private fun ChapterRow(
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = title.ifBlank { stringResource(R.string.reader_chapter_fallback, index + 1) },
-                style = MaterialTheme.typography.bodyMedium,
+                text = title.ifBlank { stringResource(R.string.reader_chapter_fallback, depth + 1) },
+                style = if (depth > 0) {
+                    MaterialTheme.typography.bodySmall
+                } else {
+                    MaterialTheme.typography.bodyMedium
+                },
                 color = titleColor,
                 fontWeight = weight,
                 maxLines = 2,
@@ -204,9 +215,11 @@ private fun ChaptersSheetDarkPreview() {
     NextPageTheme(darkTheme = true) {
         ChaptersSheet(
             chapters = listOf(
-                BookChapter(index = 0, id = "c0", title = "The Beginning", href = "ch1.xhtml"),
-                BookChapter(index = 1, id = "c1", title = "A Quiet Storm", href = "ch2.xhtml"),
-                BookChapter(index = 2, id = "c2", title = "The Turning Point", href = "ch3.xhtml")
+                BookChapter(index = 0, id = "c0", title = "Capítulo 1", href = "ch1.xhtml", depth = 0),
+                BookChapter(index = 0, id = "c0a", title = "Sección 1.1", href = "ch1.xhtml#s1", depth = 1),
+                BookChapter(index = 0, id = "c0b", title = "Sección 1.1.1", href = "ch1.xhtml#s1a", depth = 2),
+                BookChapter(index = 1, id = "c1", title = "Capítulo 2", href = "ch2.xhtml", depth = 0),
+                BookChapter(index = 2, id = "c2", title = "Capítulo 3", href = "ch3.xhtml", depth = 0)
             ),
             currentChapterIndex = 1,
             onChapterSelected = {},
@@ -222,9 +235,10 @@ private fun ChaptersSheetLightPreview() {
     NextPageTheme(darkTheme = false) {
         ChaptersSheet(
             chapters = listOf(
-                BookChapter(index = 0, id = "c0", title = "The Beginning", href = "ch1.xhtml"),
-                BookChapter(index = 1, id = "c1", title = "A Quiet Storm", href = "ch2.xhtml"),
-                BookChapter(index = 2, id = "c2", title = "The Turning Point", href = "ch3.xhtml")
+                BookChapter(index = 0, id = "c0", title = "Capítulo 1", href = "ch1.xhtml", depth = 0),
+                BookChapter(index = 0, id = "c0a", title = "Sección 1.1", href = "ch1.xhtml#s1", depth = 1),
+                BookChapter(index = 1, id = "c1", title = "Capítulo 2", href = "ch2.xhtml", depth = 0),
+                BookChapter(index = 2, id = "c2", title = "Capítulo 3", href = "ch3.xhtml", depth = 0)
             ),
             currentChapterIndex = 1,
             onChapterSelected = {},

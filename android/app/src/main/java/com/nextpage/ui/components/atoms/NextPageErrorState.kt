@@ -17,6 +17,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Full-screen error state: error icon, title, message, and an optional
@@ -113,10 +114,24 @@ fun NextPageErrorState(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageErrorStatePreview() {
-    NextPageErrorState(
-        title = "Something went wrong",
-        message = "We couldn't load your highlights.",
-        retryAction = {}
-    )
+private fun NextPageErrorStateDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageErrorState(
+            title = "Something went wrong",
+            message = "We couldn't load your highlights.",
+            retryAction = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageErrorStateLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageErrorState(
+            title = "Something went wrong",
+            message = "We couldn't load your highlights.",
+            retryAction = {}
+        )
+    }
 }

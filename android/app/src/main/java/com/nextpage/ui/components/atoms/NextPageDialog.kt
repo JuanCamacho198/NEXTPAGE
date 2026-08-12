@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Visual variant for [NextPageDialog] that drives the confirm button
@@ -117,45 +118,102 @@ fun NextPageDialog(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageDialogDestructivePreview() {
-    NextPageDialog(
-        title = "Delete book?",
-        body = "This removes it from your library.",
-        confirmText = "Delete",
-        dismissText = "Cancel",
-        onConfirm = {},
-        onDismiss = {},
-        icon = NextPageIcons.Trash,
-        variant = NextPageDialogVariant.DESTRUCTIVE
-    )
+private fun NextPageDialogDestructiveDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageDialog(
+            title = "Delete book?",
+            body = "This removes it from your library.",
+            confirmText = "Delete",
+            dismissText = "Cancel",
+            onConfirm = {},
+            onDismiss = {},
+            icon = NextPageIcons.Trash,
+            variant = NextPageDialogVariant.DESTRUCTIVE
+        )
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageDialogInfoPreview() {
-    NextPageDialog(
-        title = "Info",
-        body = "This is an informational message.",
-        confirmText = "OK",
-        dismissText = "Close",
-        onConfirm = {},
-        onDismiss = {},
-        icon = NextPageIcons.Info,
-        variant = NextPageDialogVariant.INFO
-    )
+private fun NextPageDialogDestructiveLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageDialog(
+            title = "Delete book?",
+            body = "This removes it from your library.",
+            confirmText = "Delete",
+            dismissText = "Cancel",
+            onConfirm = {},
+            onDismiss = {},
+            icon = NextPageIcons.Trash,
+            variant = NextPageDialogVariant.DESTRUCTIVE
+        )
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageDialogSuccessPreview() {
-    NextPageDialog(
-        title = "Saved",
-        body = "Your changes were saved.",
-        confirmText = "Great",
-        dismissText = "Close",
-        onConfirm = {},
-        onDismiss = {},
-        icon = NextPageIcons.Check,
-        variant = NextPageDialogVariant.SUCCESS
-    )
+private fun NextPageDialogInfoDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageDialog(
+            title = "Info",
+            body = "This is an informational message.",
+            confirmText = "OK",
+            dismissText = "Close",
+            onConfirm = {},
+            onDismiss = {},
+            icon = NextPageIcons.Info,
+            variant = NextPageDialogVariant.INFO
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageDialogInfoLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageDialog(
+            title = "Info",
+            body = "This is an informational message.",
+            confirmText = "OK",
+            dismissText = "Close",
+            onConfirm = {},
+            onDismiss = {},
+            icon = NextPageIcons.Info,
+            variant = NextPageDialogVariant.INFO
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageDialogSuccessDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageDialog(
+            title = "Saved",
+            body = "Your changes were saved.",
+            confirmText = "Great",
+            dismissText = "Close",
+            onConfirm = {},
+            onDismiss = {},
+            icon = NextPageIcons.Check,
+            variant = NextPageDialogVariant.SUCCESS
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageDialogSuccessLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageDialog(
+            title = "Saved",
+            body = "Your changes were saved.",
+            confirmText = "Great",
+            dismissText = "Close",
+            onConfirm = {},
+            onDismiss = {},
+            icon = NextPageIcons.Check,
+            variant = NextPageDialogVariant.SUCCESS
+        )
+    }
 }

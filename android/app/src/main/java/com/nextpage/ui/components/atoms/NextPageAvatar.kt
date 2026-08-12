@@ -22,6 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Circular user avatar: either a Coil-loaded remote image, or a
@@ -111,16 +112,36 @@ fun NextPageAvatar(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageAvatarPreview() {
-    Row(
-        modifier = Modifier.padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        NextPageAvatar(imageUrl = null, initials = "JS")
-        NextPageAvatar(
-            imageUrl = "https://example.com/avatar.png",
-            initials = "JS",
-            onClick = {}
-        )
+private fun NextPageAvatarDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            NextPageAvatar(imageUrl = null, initials = "JS")
+            NextPageAvatar(
+                imageUrl = "https://example.com/avatar.png",
+                initials = "JS",
+                onClick = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageAvatarLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            NextPageAvatar(imageUrl = null, initials = "JS")
+            NextPageAvatar(
+                imageUrl = "https://example.com/avatar.png",
+                initials = "JS",
+                onClick = {}
+            )
+        }
     }
 }

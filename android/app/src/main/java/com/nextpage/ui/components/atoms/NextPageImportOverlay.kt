@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.presentation.viewmodel.library.BookImportState
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Animated full-screen import overlay that covers the content area
@@ -168,8 +169,20 @@ fun NextPageImportOverlay(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageImportOverlayPreview() {
-    NextPageImportOverlay(
-        importState = BookImportState.Extracting(progress = 0.6f)
-    )
+private fun NextPageImportOverlayDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageImportOverlay(
+            importState = BookImportState.Extracting(progress = 0.6f)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageImportOverlayLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageImportOverlay(
+            importState = BookImportState.Extracting(progress = 0.6f)
+        )
+    }
 }

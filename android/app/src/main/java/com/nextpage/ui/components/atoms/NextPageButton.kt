@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 enum class NextPageButtonVariant {
     FILLED,
@@ -189,17 +190,38 @@ fun NextPageButton(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageButtonVariantsPreview() {
-    Column(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        NextPageButton(text = "Filled", onClick = {})
-        NextPageButton(text = "Outlined", onClick = {}, variant = NextPageButtonVariant.OUTLINED)
-        NextPageButton(text = "Text", onClick = {}, variant = NextPageButtonVariant.TEXT)
-        NextPageButton(text = "Tonal", onClick = {}, variant = NextPageButtonVariant.TONAL)
-        NextPageButton(onClick = {}, variant = NextPageButtonVariant.ICON) {
-            Icon(NextPageIcons.Add, contentDescription = null)
+private fun NextPageButtonVariantsDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            NextPageButton(text = "Filled", onClick = {})
+            NextPageButton(text = "Outlined", onClick = {}, variant = NextPageButtonVariant.OUTLINED)
+            NextPageButton(text = "Text", onClick = {}, variant = NextPageButtonVariant.TEXT)
+            NextPageButton(text = "Tonal", onClick = {}, variant = NextPageButtonVariant.TONAL)
+            NextPageButton(onClick = {}, variant = NextPageButtonVariant.ICON) {
+                Icon(NextPageIcons.Add, contentDescription = null)
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageButtonVariantsLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            NextPageButton(text = "Filled", onClick = {})
+            NextPageButton(text = "Outlined", onClick = {}, variant = NextPageButtonVariant.OUTLINED)
+            NextPageButton(text = "Text", onClick = {}, variant = NextPageButtonVariant.TEXT)
+            NextPageButton(text = "Tonal", onClick = {}, variant = NextPageButtonVariant.TONAL)
+            NextPageButton(onClick = {}, variant = NextPageButtonVariant.ICON) {
+                Icon(NextPageIcons.Add, contentDescription = null)
+            }
         }
     }
 }

@@ -21,6 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.data.remote.sync.SyncState
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Compact pill that surfaces the current cloud-sync state. Used in
@@ -85,13 +86,30 @@ fun SyncStatusIndicator(
 
 @Preview(showBackground = true)
 @Composable
-private fun SyncStatusIndicatorPreview() {
-    Column(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        SyncStatusIndicator(syncState = SyncState.Idle)
-        SyncStatusIndicator(syncState = SyncState.Running)
-        SyncStatusIndicator(syncState = SyncState.Error("Sync failed"))
+private fun SyncStatusIndicatorDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SyncStatusIndicator(syncState = SyncState.Idle)
+            SyncStatusIndicator(syncState = SyncState.Running)
+            SyncStatusIndicator(syncState = SyncState.Error("Sync failed"))
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SyncStatusIndicatorLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SyncStatusIndicator(syncState = SyncState.Idle)
+            SyncStatusIndicator(syncState = SyncState.Running)
+            SyncStatusIndicator(syncState = SyncState.Error("Sync failed"))
+        }
     }
 }

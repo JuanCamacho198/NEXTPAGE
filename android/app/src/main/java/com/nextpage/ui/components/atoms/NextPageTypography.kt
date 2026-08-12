@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Thin, opinionated wrapper over Material 3 `Text`. Centralizes the
@@ -67,24 +68,52 @@ fun NextPageTypography(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageTypographyPreview() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        NextPageTypography(
-            text = "The quick brown fox jumps over the lazy dog",
-            style = MaterialTheme.typography.titleMedium
-        )
-        NextPageTypography(
-            text = "Body copy rendered with the default bodyMedium reading style.",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        NextPageTypography(
-            text = "Label small — captions and metadata",
-            style = MaterialTheme.typography.labelSmall
-        )
+private fun NextPageTypographyDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            NextPageTypography(
+                text = "The quick brown fox jumps over the lazy dog",
+                style = MaterialTheme.typography.titleMedium
+            )
+            NextPageTypography(
+                text = "Body copy rendered with the default bodyMedium reading style.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            NextPageTypography(
+                text = "Label small — captions and metadata",
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageTypographyLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            NextPageTypography(
+                text = "The quick brown fox jumps over the lazy dog",
+                style = MaterialTheme.typography.titleMedium
+            )
+            NextPageTypography(
+                text = "Body copy rendered with the default bodyMedium reading style.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            NextPageTypography(
+                text = "Label small — captions and metadata",
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
     }
 }

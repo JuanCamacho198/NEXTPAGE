@@ -5,6 +5,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.nextpage.R
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Convenience wrapper around [NextPageDialog] with
@@ -33,9 +34,22 @@ fun NextPageLogoutDialog(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageLogoutDialogPreview() {
-    NextPageLogoutDialog(
-        onConfirm = {},
-        onDismiss = {}
-    )
+private fun NextPageLogoutDialogDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageLogoutDialog(
+            onConfirm = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageLogoutDialogLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageLogoutDialog(
+            onConfirm = {},
+            onDismiss = {}
+        )
+    }
 }

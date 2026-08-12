@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Material 3 `OutlinedTextField` preconfigured with the NextPage color
@@ -102,23 +103,54 @@ fun NextPageTextField(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageTextFieldPreview() {
-    NextPageTextField(
-        value = "hello@nextpage.app",
-        onValueChange = {},
-        label = "Email",
-        placeholder = "you@example.com"
-    )
+private fun NextPageTextFieldDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageTextField(
+            value = "hello@nextpage.app",
+            onValueChange = {},
+            label = "Email",
+            placeholder = "you@example.com"
+        )
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageTextFieldErrorPreview() {
-    NextPageTextField(
-        value = "invalid",
-        onValueChange = {},
-        label = "Email",
-        placeholder = "you@example.com",
-        errorMessage = "Invalid email address"
-    )
+private fun NextPageTextFieldLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageTextField(
+            value = "hello@nextpage.app",
+            onValueChange = {},
+            label = "Email",
+            placeholder = "you@example.com"
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageTextFieldErrorDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageTextField(
+            value = "invalid",
+            onValueChange = {},
+            label = "Email",
+            placeholder = "you@example.com",
+            errorMessage = "Invalid email address"
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageTextFieldErrorLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageTextField(
+            value = "invalid",
+            onValueChange = {},
+            label = "Email",
+            placeholder = "you@example.com",
+            errorMessage = "Invalid email address"
+        )
+    }
 }

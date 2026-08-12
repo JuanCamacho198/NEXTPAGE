@@ -16,6 +16,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Full-screen empty state: a decorative vector icon, title, optional
@@ -85,10 +86,24 @@ fun NextPageEmptyState(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageEmptyStatePreview() {
-    NextPageEmptyState(
-        icon = NextPageIcons.LibraryBooks,
-        title = "No books yet",
-        subtitle = "Import your first book to start reading"
-    )
+private fun NextPageEmptyStateDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageEmptyState(
+            icon = NextPageIcons.LibraryBooks,
+            title = "No books yet",
+            subtitle = "Import your first book to start reading"
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageEmptyStateLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageEmptyState(
+            icon = NextPageIcons.LibraryBooks,
+            title = "No books yet",
+            subtitle = "Import your first book to start reading"
+        )
+    }
 }

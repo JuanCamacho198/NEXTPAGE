@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Thin horizontal divider using the Material 3 `HorizontalDivider`
@@ -32,6 +33,16 @@ fun NextPageDivider(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageDividerPreview() {
-    NextPageDivider(modifier = Modifier.fillMaxWidth())
+private fun NextPageDividerDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageDivider(modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageDividerLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageDivider(modifier = Modifier.fillMaxWidth())
+    }
 }

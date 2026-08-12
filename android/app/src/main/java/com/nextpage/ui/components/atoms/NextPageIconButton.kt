@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Circular, filled-background icon button. Lightweight alternative to
@@ -75,10 +76,24 @@ fun NextPageIconButton(
 
 @Preview
 @Composable
-private fun NextPageIconButtonPreview() {
-    NextPageIconButton(
-        icon = NextPageIcons.Add,
-        contentDescription = "Add",
-        onClick = {}
-    )
+private fun NextPageIconButtonDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageIconButton(
+            icon = NextPageIcons.Add,
+            contentDescription = "Add",
+            onClick = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun NextPageIconButtonLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageIconButton(
+            icon = NextPageIcons.Add,
+            contentDescription = "Add",
+            onClick = {}
+        )
+    }
 }

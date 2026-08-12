@@ -18,6 +18,7 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.nextpage.R
 import com.nextpage.debug.DebugLog
+import com.nextpage.presentation.theme.NextPageTheme
 /**
  * Small cover thumbnail for the library grid. Loads from a local
  * file path or a remote URL via Coil with an explicit 80×120 px
@@ -87,9 +88,22 @@ private const val TAG = "CoverThumbnail"
 
 @Preview(showBackground = true)
 @Composable
-private fun CoverThumbnailPlaceholderPreview() {
-    CoverThumbnail(
-        coverPath = null,
-        modifier = Modifier.size(80.dp, 120.dp)
-    )
+private fun CoverThumbnailPlaceholderDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        CoverThumbnail(
+            coverPath = null,
+            modifier = Modifier.size(80.dp, 120.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun CoverThumbnailPlaceholderLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        CoverThumbnail(
+            coverPath = null,
+            modifier = Modifier.size(80.dp, 120.dp)
+        )
+    }
 }

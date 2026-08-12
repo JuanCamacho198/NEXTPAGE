@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Centered indeterminate loading state: a 48dp `CircularProgressIndicator`
@@ -61,9 +62,22 @@ fun NextPageLoadingIndicator(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageLoadingIndicatorPreview() {
-    NextPageLoadingIndicator(
-        modifier = Modifier.fillMaxSize(),
-        label = "Loading books..."
-    )
+private fun NextPageLoadingIndicatorDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageLoadingIndicator(
+            modifier = Modifier.fillMaxSize(),
+            label = "Loading books..."
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageLoadingIndicatorLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageLoadingIndicator(
+            modifier = Modifier.fillMaxSize(),
+            label = "Loading books..."
+        )
+    }
 }

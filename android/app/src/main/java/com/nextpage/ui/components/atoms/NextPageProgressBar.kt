@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Determinate linear progress indicator (Material 3
@@ -40,11 +41,26 @@ fun NextPageProgressBar(
 
 @Preview(showBackground = true)
 @Composable
-private fun NextPageProgressBarPreview() {
-    NextPageProgressBar(
-        progress = 0.65f,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    )
+private fun NextPageProgressBarDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        NextPageProgressBar(
+            progress = 0.65f,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NextPageProgressBarLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        NextPageProgressBar(
+            progress = 0.65f,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        )
+    }
 }

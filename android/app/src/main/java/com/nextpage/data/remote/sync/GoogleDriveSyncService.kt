@@ -124,6 +124,12 @@ class GoogleDriveSyncService(
                     }
                     outboxDao.deleteById(item.id)
                 }
+                SyncEntityType.READING_SESSION.name -> {
+                    // Reading sessions are synced EXCLUSIVELY by
+                    // SupabaseProgressSync (reading_sessions table + RLS). Drive
+                    // must leave these items in the outbox — deleting them here
+                    // would silently drop every recorded session.
+                }
                 else -> {
                     // Unknown types are silently skipped and removed
                     outboxDao.deleteById(item.id)

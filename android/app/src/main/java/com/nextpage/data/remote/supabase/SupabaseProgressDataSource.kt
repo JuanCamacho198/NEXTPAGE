@@ -31,6 +31,7 @@ class SupabaseProgressDataSource {
     private var changesChannel: RealtimeChannel? = null
     private var bookmarksChannel: RealtimeChannel? = null
     private var highlightsChannel: RealtimeChannel? = null
+    private var sessionsChannel: RealtimeChannel? = null
 
     /**
      * Subscribe to realtime reading_progress changes for a given [userId].
@@ -331,6 +332,35 @@ class SupabaseProgressDataSource {
         }
     }
 
+    // ─── Reading sessions (REQ-reading-sessions-sync-3/4) ────────────
+
+    /**
+     * Upsert a reading-session row. Idempotent via the deterministic `id`
+     * primary key + `onConflict = "id"` (SCEN-reading-sessions-sync-3/7).
+     */
+    suspend fun upsertReadingSession(session: ReadingSessionRow): ReadingSessionRow {
+        return postgrest["reading_sessions"]
+            .upsert(session) {
+                onConflict = "id"
+                headers.append("Prefer", "return=representation")
+            }
+            .decodeSingle<ReadingSessionRow>()
+    }
+
+    /**
+     * Subscribe to realtime reading_session changes for a given [userId].
+     */
+    suspend fun subscribeToReadingSessionChanges(userId: String): Flow<PostgresAction> {
+        sessionsChannel?.unsubscribe()
+        sessionsChannel = SupabaseClientProvider.client.channel("reading-session-changes")
+        val flow = sessionsChannel!!.postgresChangeFlow<PostgresAction>(schema = "public") {
+            table = "reading_sessions"
+            filter("user_id", FilterOperator.EQ, userId)
+        }
+        sessionsChannel!!.subscribe()
+        return flow
+    }
+
     // ─── Channel cleanup ────────────────────────────────────────
 
     suspend fun unsubscribeAll() {
@@ -339,6 +369,8 @@ class SupabaseProgressDataSource {
         bookmarksChannel = null
         highlightsChannel?.unsubscribe()
         highlightsChannel = null
+        sessionsChannel?.unsubscribe()
+        sessionsChannel = null
     }
 }
 
@@ -427,4 +459,29 @@ data class TagRow(
     val userId: String,
     val name: String,
     val color: String? = null,
+)
+
+/**
+ * Represents a row in the `reading_sessions` Supabase table
+ * (REQ-reading-sessions-sync-5). Field names mirror the remote DDL exactly.
+ */
+@Serializable
+data class ReadingSessionRow(
+    val id: String,
+    @SerialName("user_id")
+    val userId: String,
+    @SerialName("book_id")
+    val bookId: String,
+    @SerialName("started_at")
+    val startedAt: String,
+    @SerialName("duration_minutes")
+    val durationMinutes: Int,
+    val date: String,
+    val device: String = "android",
+    @SerialName("updated_at")
+    val updatedAt: String,
+    @SerialName("start_percentage")
+    val startPercentage: Double? = null,
+    @SerialName("end_percentage")
+    val endPercentage: Double? = null,
 )

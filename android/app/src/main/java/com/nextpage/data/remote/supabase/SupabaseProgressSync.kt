@@ -4,9 +4,11 @@ import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.BookmarkDao
 import com.nextpage.data.local.dao.HighlightDao
 import com.nextpage.data.local.dao.ReadingProgressDao
+import com.nextpage.data.local.dao.ReadingSessionDao
 import com.nextpage.data.local.dao.SyncOutboxDao
 import com.nextpage.data.local.entity.BookmarkEntity
 import com.nextpage.data.local.entity.HighlightEntity
+import com.nextpage.data.local.entity.ReadingSessionEntity
 import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.session.SessionManager
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -41,6 +44,7 @@ class SupabaseProgressSync(
     private val readingProgressDao: ReadingProgressDao,
     private val bookmarkDao: BookmarkDao,
     private val highlightDao: HighlightDao,
+    private val readingSessionDao: ReadingSessionDao,
     private val sessionManager: SessionManager,
     private val dataSource: SupabaseProgressDataSource = SupabaseProgressDataSource(),
 ) {
@@ -98,6 +102,7 @@ class SupabaseProgressSync(
                 SyncEntityType.READING_PROGRESS.name -> processProgressItem(item, session.userId)
                 SyncEntityType.BOOKMARK.name -> processBookmarkItem(item, session.userId)
                 SyncEntityType.HIGHLIGHT.name -> processHighlightItem(item, session.userId)
+                SyncEntityType.READING_SESSION.name -> processSessionItem(item, session.userId)
             }
         }
 
@@ -229,8 +234,8 @@ class SupabaseProgressSync(
     }
 
     /**
-     * Subscribe to Realtime changes so remote progress, bookmark, and highlight
-     * updates are applied to the local Room database.
+     * Subscribe to Realtime changes so remote progress, bookmark, highlight,
+     * and reading-session updates are applied to the local Room database.
      */
     fun subscribeToRealtimeChanges() {
         if (realtimeJob?.isActive == true) return
@@ -283,6 +288,23 @@ class SupabaseProgressSync(
                         is PostgresAction.Update -> {
                             val row = action.decodeRecord<HighlightRow>()
                             applyRemoteHighlight(row)
+                        }
+                        is PostgresAction.Delete, is PostgresAction.Select -> { /* no-op */ }
+                    }
+                }
+            }
+
+            // Reading-session changes (REQ-reading-sessions-sync-4, SCEN-sync-6/7)
+            launch {
+                dataSource.subscribeToReadingSessionChanges(session.userId).collect { action ->
+                    when (action) {
+                        is PostgresAction.Insert -> {
+                            val row = action.decodeRecord<ReadingSessionRow>()
+                            applyRemoteSession(row)
+                        }
+                        is PostgresAction.Update -> {
+                            val row = action.decodeRecord<ReadingSessionRow>()
+                            applyRemoteSession(row)
                         }
                         is PostgresAction.Delete, is PostgresAction.Select -> { /* no-op */ }
                     }
@@ -415,6 +437,100 @@ class SupabaseProgressSync(
                 )
             }
         }
+    }
+
+    /**
+     * Push a READING_SESSION outbox item (REQ-reading-sessions-sync-3).
+     *
+     * The remote row uses the FRESH session [userId] (pre-auth flushes recorded
+     * with '' merge into the syncing account) and reuses the deterministic id
+     * from the payload, so `onConflict = "id"` keeps the upsert idempotent.
+     */
+    private suspend fun processSessionItem(
+        item: com.nextpage.data.local.entity.SyncOutboxEntity,
+        userId: String
+    ) {
+        val payload = try {
+            JSONObject(item.payloadJson)
+        } catch (_: Exception) {
+            outboxDao.deleteById(item.id)
+            return
+        }
+
+        val id = payload.optString("id", "")
+        val bookId = payload.optString("bookId", item.entityId ?: "")
+        val startTimeEpochMillis = payload.optLong("startTimeEpochMillis", 0L)
+        val durationMinutes = payload.optInt("durationMinutes", 0)
+        val date = payload.optLong("date", 0L)
+        val updatedAtEpochMillis = payload.optLong("updatedAtEpochMillis", 0L)
+
+        if (id.isBlank() || bookId.isBlank() || durationMinutes <= 0) {
+            outboxDao.deleteById(item.id)
+            return
+        }
+
+        val row = ReadingSessionRow(
+            id = id,
+            userId = userId,
+            bookId = bookId,
+            startedAt = dateFormat.format(Date(startTimeEpochMillis)),
+            durationMinutes = durationMinutes,
+            date = dateFormat.format(Date(date)),
+            device = "android",
+            updatedAt = dateFormat.format(Date(updatedAtEpochMillis))
+        )
+
+        try {
+            dataSource.upsertReadingSession(row)
+            outboxDao.deleteById(item.id)
+        } catch (e: Exception) {
+            outboxDao.incrementRetryCount(item.id, e.message ?: "Unknown error")
+            outboxDao.pruneFailedItems(3)
+        }
+    }
+
+    /**
+     * Apply a remote reading session (REQ-reading-sessions-sync-4).
+     *
+     * FK guard first: reading_sessions.book_id references books.id, so a remote
+     * session for a book not present locally is skipped (SCEN-sync-6). Then LWW:
+     * the remote `updated_at` beats the local `updatedAtEpochMillis`; on equal or
+     * older remote clocks nothing changes. The deterministic id REPLACEs the local
+     * row (insert REPLACE by PK — SCEN-sync-7).
+     */
+    internal suspend fun applyRemoteSession(row: ReadingSessionRow): Boolean {
+        if (bookDao.getBookById(row.bookId) == null) return false
+
+        val remoteTime = try {
+            dateFormat.parse(row.updatedAt)?.time ?: 0L
+        } catch (_: Exception) {
+            System.currentTimeMillis()
+        }
+
+        val local = readingSessionDao.getById(row.id)
+        if (local == null || remoteTime > local.updatedAtEpochMillis) {
+            readingSessionDao.insert(
+                ReadingSessionEntity(
+                    id = row.id,
+                    bookId = row.bookId,
+                    startTimeEpochMillis = try {
+                        dateFormat.parse(row.startedAt)?.time ?: System.currentTimeMillis()
+                    } catch (_: Exception) {
+                        System.currentTimeMillis()
+                    },
+                    durationMinutes = row.durationMinutes,
+                    date = try {
+                        dateFormat.parse(row.date)?.time ?: System.currentTimeMillis()
+                    } catch (_: Exception) {
+                        System.currentTimeMillis()
+                    },
+                    userId = row.userId,
+                    updatedAtEpochMillis = remoteTime
+                )
+            )
+            return true
+        }
+        return false
     }
 
     /**

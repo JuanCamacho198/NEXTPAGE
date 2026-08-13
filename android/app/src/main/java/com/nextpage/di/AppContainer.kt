@@ -265,6 +265,7 @@ class AppContainer(context: Context) {
             readingProgressDao = appDatabase.readingProgressDao(),
             bookmarkDao = appDatabase.bookmarkDao(),
             highlightDao = appDatabase.highlightDao(),
+            readingSessionDao = appDatabase.readingSessionDao(),
             sessionManager = sessionManager,
             dataSource = supabaseProgressDataSource
         )

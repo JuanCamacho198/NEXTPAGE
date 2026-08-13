@@ -54,6 +54,7 @@ import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
+import com.nextpage.domain.usecase.GetStatisticsUseCase
 import com.nextpage.presentation.theme.CoilModule
 import io.ktor.client.HttpClient
 
@@ -118,7 +119,8 @@ class AppContainer(context: Context) {
 
     val readingStatsRepository: ReadingStatsRepository = ReadingStatsRepositoryImpl(
         readingStatsDao = appDatabase.readingStatsDao(),
-        readingSessionDao = appDatabase.readingSessionDao()
+        readingSessionDao = appDatabase.readingSessionDao(),
+        outboxDao = appDatabase.syncOutboxDao()
     )
     
     val homeRepository: HomeRepository = HomeRepositoryImpl(
@@ -126,6 +128,26 @@ class AppContainer(context: Context) {
         readingProgressDao = appDatabase.readingProgressDao(),
         readingSessionDao = appDatabase.readingSessionDao()
     )
+
+    /**
+     * User's daily reading goal in minutes, falling back to 30 when unset
+     * (REQ-daily-reading-goal-1/3). Shared by Home + Statistics so both screens
+     * compute progress against the SAME goal.
+     */
+    val dailyGoalProvider: () -> Int = { readingGoalPreferences.load() ?: 30 }
+
+    /**
+     * Single shared streak/statistics source (REQ-streak-widget-1): injected into
+     * both the Home and Statistics factories so currentStreak and goalProgress are
+     * computed once, with the same user scope.
+     */
+    val getStatisticsUseCase: GetStatisticsUseCase by lazy {
+        GetStatisticsUseCase(
+            readingStatsRepository = readingStatsRepository,
+            homeRepository = homeRepository,
+            dailyGoalProvider = dailyGoalProvider
+        )
+    }
 
     val readerPreferences: ReaderPreferences = ReaderPreferences(context.applicationContext)
 

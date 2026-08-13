@@ -236,7 +236,7 @@ class GetStatisticsUseCaseTest {
         override fun observeBooks(): Flow<List<Book>> = MutableStateFlow(emptyList())
         override fun observeRecentBooks(limit: Int): Flow<List<Book>> = MutableStateFlow(emptyList())
         override fun observeCurrentBooks(): Flow<List<Book>> = MutableStateFlow(emptyList())
-        override fun observeDailyStats(userId: String?): Flow<com.nextpage.domain.model.ReadingStats> =
+        override fun observeDailyStats(userId: String?, goalMinutes: Int): Flow<com.nextpage.domain.model.ReadingStats> =
             MutableStateFlow(com.nextpage.domain.model.ReadingStats(0, 0, 0f))
         override suspend fun deleteBook(bookId: String): Result<Unit> = Result.success(Unit)
     }

@@ -373,7 +373,7 @@ class HighlightsViewModelTest {
         override fun observeBooks(): Flow<List<Book>> = booksFlow
         override fun observeRecentBooks(limit: Int): Flow<List<Book>> = booksFlow
         override fun observeCurrentBooks(): Flow<List<Book>> = booksFlow
-        override fun observeDailyStats(userId: String?): Flow<ReadingStats> =
+        override fun observeDailyStats(userId: String?, goalMinutes: Int): Flow<ReadingStats> =
             MutableStateFlow(ReadingStats())
         override suspend fun deleteBook(bookId: String): Result<Unit> = Result.success(Unit)
     }

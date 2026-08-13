@@ -46,7 +46,6 @@ import com.nextpage.data.remote.drive.DriveAuthResult
 import com.nextpage.data.remote.drive.DriveConnectPromptGate
 import com.nextpage.data.session.DriveConnectPromptPrefs
 import com.nextpage.di.AppContainer
-import com.nextpage.domain.usecase.GetStatisticsUseCase
 import com.nextpage.presentation.screen.AuthScreen
 import com.nextpage.presentation.screen.BookDetailScreen
 import com.nextpage.presentation.screen.ForgotScreen
@@ -159,10 +158,7 @@ fun NextPageNavHost(
 
     val statisticsViewModel: StatisticsViewModel = viewModel(
         factory = StatisticsViewModelFactory(
-            GetStatisticsUseCase(
-                readingStatsRepository = appContainer.readingStatsRepository,
-                homeRepository = appContainer.homeRepository
-            )
+            appContainer.getStatisticsUseCase
         )
     )
 
@@ -183,15 +179,21 @@ fun NextPageNavHost(
 
     val homeViewModel: HomeViewModel = viewModel(
         factory = HomeViewModelFactory(
-            homeRepository = appContainer.homeRepository
+            homeRepository = appContainer.homeRepository,
+            getStatisticsUseCase = appContainer.getStatisticsUseCase,
+            dailyGoalProvider = appContainer.dailyGoalProvider
         )
     )
 
     // Reactively push the restored/later auth session into the cached Home VM
     // so the avatar photo updates after async session restore (the VM keyed by
     // factory is never rebuilt, so the constructor seed alone would stay null).
+    // Also re-scopes daily stats/streak and recorded reading sessions to the user
+    // (REQ-reading-sessions-sync-6, REQ-streak-widget-1).
     LaunchedEffect(authState.currentSession?.userId, authState.currentSession?.photoUrl) {
         homeViewModel.setActiveSession(authState.currentSession)
+        appContainer.getStatisticsUseCase.setUserId(authState.currentSession?.userId)
+        readerViewModel.setActiveUserId(authState.currentSession?.userId.orEmpty())
     }
 
     val debugViewModel: DebugViewModel = viewModel(

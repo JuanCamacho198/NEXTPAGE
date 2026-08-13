@@ -33,7 +33,7 @@ class HomeRepositoryImpl(
         }
 
 
-    override fun observeDailyStats(userId: String?): Flow<ReadingStats> {
+    override fun observeDailyStats(userId: String?, goalMinutes: Int): Flow<ReadingStats> {
         val todayStart = getTodayStartMillis()
         return if (userId != null && userId.isNotBlank()) {
             combine(
@@ -43,7 +43,7 @@ class HomeRepositoryImpl(
                 ReadingStats(
                     minutesRead = minutes,
                     sessionCount = sessions,
-                    dailyProgressPercent = calculateProgress(minutes)
+                    dailyProgressPercent = calculateProgress(minutes, goalMinutes)
                 )
             }
         } else {
@@ -54,7 +54,7 @@ class HomeRepositoryImpl(
                 ReadingStats(
                     minutesRead = minutes,
                     sessionCount = sessions,
-                    dailyProgressPercent = calculateProgress(minutes)
+                    dailyProgressPercent = calculateProgress(minutes, goalMinutes)
                 )
             }
         }
@@ -76,10 +76,9 @@ class HomeRepositoryImpl(
         return calendar.timeInMillis
     }
 
-    private fun calculateProgress(minutesRead: Int): Float {
-        // Daily goal is 30 minutes by default
-        val dailyGoal = 30
-        return (minutesRead.toFloat() / dailyGoal).coerceIn(0f, 1f)
+    private fun calculateProgress(minutesRead: Int, dailyGoal: Int): Float {
+        // Daily goal comes from the injected provider (user's own goal), never hardcoded.
+        return (minutesRead.toFloat() / dailyGoal.coerceAtLeast(1)).coerceIn(0f, 1f)
     }
 
     private fun com.nextpage.data.local.entity.BookEntity.toBook(): Book = Book(

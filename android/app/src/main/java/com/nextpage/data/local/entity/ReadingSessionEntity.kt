@@ -28,5 +28,7 @@ data class ReadingSessionEntity(
     @ColumnInfo(name = "duration_minutes")
     val durationMinutes: Int,
     val date: Long, // Date only (no time) - epoch days or epoch millis at midnight
-    val userId: String = ""
+    val userId: String = "",
+    @ColumnInfo(name = "updated_at_epoch_millis")
+    val updatedAtEpochMillis: Long = 0L
 )

@@ -223,6 +223,18 @@ object AppDatabaseMigrations {
         }
     }
 
+    /**
+     * Additive LWW write clock for reading_sessions (REQ-reading-sessions-sync-2).
+     * `updated_at_epoch_millis` is the local write clock compared against the
+     * remote `updated_at` during sync; `start_time` is immutable so it can't
+     * serve as the clock. Additive, no data loss.
+     */
+    val MIGRATION_22_23 = object : Migration(22, 23) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE reading_sessions ADD COLUMN updated_at_epoch_millis INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
     val MIGRATION_14_15 = object : Migration(14, 15) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE books ADD COLUMN status TEXT DEFAULT NULL")
@@ -322,6 +334,7 @@ object AppDatabaseMigrations {
         MIGRATION_18_19,
         MIGRATION_19_20,
         MIGRATION_20_21,
-        MIGRATION_21_22
+        MIGRATION_21_22,
+        MIGRATION_22_23
     )
 }

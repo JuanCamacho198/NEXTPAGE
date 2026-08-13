@@ -383,4 +383,87 @@ class AppDatabaseMigrationTest {
                 assertEquals(listOf("completed", "reading", "to_read"), states)
             }
     }
+
+    @Test
+    fun migrate22To23_addsUpdatedAtColumnAndPreservesRows() {
+        val dbName = "migration-test-22-23"
+
+        // Seed a v22 database with a book + a legacy reading_sessions row.
+        helper.createDatabase(dbName, 22).apply {
+            execSQL("""
+                CREATE TABLE IF NOT EXISTS books (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    author TEXT,
+                    cover_path TEXT,
+                    file_path TEXT NOT NULL,
+                    format TEXT NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    deleted_at INTEGER,
+                    status TEXT,
+                    content_hash TEXT,
+                    reading_state TEXT NOT NULL DEFAULT 'to_read',
+                    started_at INTEGER,
+                    completed_at INTEGER,
+                    progress_percentage REAL NOT NULL DEFAULT 0,
+                    progress_updated_at INTEGER,
+                    state_version INTEGER NOT NULL DEFAULT 0,
+                    remote_file_id TEXT,
+                    remote_path TEXT,
+                    remote_lifecycle TEXT NOT NULL DEFAULT 'imported',
+                    remote_catalog_version INTEGER NOT NULL DEFAULT 0,
+                    remote_cover_ref TEXT,
+                    remote_provider TEXT,
+                    remote_protocol_version INTEGER,
+                    total_pages INTEGER,
+                    user_rating INTEGER,
+                    description TEXT,
+                    chapter_count INTEGER
+                )
+            """.trimIndent())
+            execSQL("INSERT INTO books (id, title, file_path, format, updated_at, reading_state) VALUES ('book-1', 'B1', '/b1.epub', 'epub', 100, 'reading')")
+
+            // v22 reading_sessions — NO updated_at_epoch_millis column yet.
+            execSQL("""
+                CREATE TABLE IF NOT EXISTS reading_sessions (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    book_id TEXT NOT NULL,
+                    start_time INTEGER NOT NULL,
+                    duration_minutes INTEGER NOT NULL,
+                    date INTEGER NOT NULL,
+                    userId TEXT NOT NULL DEFAULT ''
+                )
+            """.trimIndent())
+            execSQL("INSERT INTO reading_sessions VALUES ('sess-1', 'book-1', 500, 10, 20240101, '')")
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(
+            dbName,
+            23,
+            true,
+            AppDatabaseMigrations.MIGRATION_22_23
+        )
+
+        // R1: the LWW column exists after migration.
+        db.query("PRAGMA table_info(reading_sessions)").use { cursor ->
+            var hasColumn = false
+            val nameColumn = cursor.getColumnIndex("name")
+            while (cursor.moveToNext()) {
+                if (cursor.getString(nameColumn) == "updated_at_epoch_millis") {
+                    hasColumn = true
+                }
+            }
+            assertEquals(true, hasColumn)
+        }
+
+        // R2: existing rows are preserved with the default clock (0).
+        db.query("SELECT id, updated_at_epoch_millis FROM reading_sessions").use { cursor ->
+            check(cursor.moveToFirst()) { "Expected migrated reading_sessions row to exist" }
+            assertEquals("sess-1", cursor.getString(0))
+            assertEquals(0L, cursor.getLong(1))
+        }
+
+        db.close()
+    }
 }

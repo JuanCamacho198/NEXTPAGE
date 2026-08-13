@@ -144,6 +144,133 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun signUp_forwardsFullNameAndSetsSession_whenSucceeds() = runTest {
+        val session = AuthSession(userId = "new-u1", email = "new@test.com", displayName = "Ana García")
+        val repository = FakeAuthRepository(
+            signUpResult = Result.success(session)
+        )
+        val viewModel = AuthViewModel(
+            authRepository = repository,
+            syncService = FakeSyncService(),
+            isAuthConfigured = true,
+            hasAuthWiringIssue = false
+        )
+        advanceUntilIdle()
+
+        viewModel.signUp("new@test.com", "password123", "Ana García")
+        advanceUntilIdle()
+
+        assertEquals("Ana García", repository.lastSignUpFullName)
+        assertEquals("new@test.com", repository.lastSignUpEmail)
+        assertEquals(session, viewModel.uiState.value.currentSession)
+        assertEquals(AuthFailureKind.NONE, viewModel.uiState.value.failureKind)
+    }
+
+    @Test
+    fun signUp_setsFailureKind_whenFails() = runTest {
+        val repository = FakeAuthRepository(
+            signUpResult = Result.failure(
+                AppError(
+                    category = ErrorCategory.AUTH,
+                    code = "SIGNUP_STALE_SESSION",
+                    message = "already registered",
+                    component = "SupabaseAuthRepository"
+                )
+            )
+        )
+        val viewModel = AuthViewModel(
+            authRepository = repository,
+            syncService = FakeSyncService(),
+            isAuthConfigured = true,
+            hasAuthWiringIssue = false
+        )
+        advanceUntilIdle()
+
+        viewModel.signUp("taken@test.com", "password123", "Ana García")
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.currentSession)
+        assertEquals("already registered", viewModel.uiState.value.errorMessage)
+        // Stale-session fix: a failure must classify (UNKNOWN here — AppError AUTH
+        // is not CONFIG/WIRING), never leak a previous kind.
+        assertEquals(AuthFailureKind.UNKNOWN, viewModel.uiState.value.failureKind)
+    }
+
+    @Test
+    fun signIn_setsFailureKind_whenFails() = runTest {
+        val repository = FakeAuthRepository(
+            signInResult = Result.failure(
+                AppError(
+                    category = ErrorCategory.WIRING_ERROR,
+                    code = "AUTH_WIRING",
+                    message = "wiring broken",
+                    component = "SupabaseAuthRepository"
+                )
+            )
+        )
+        val viewModel = AuthViewModel(
+            authRepository = repository,
+            syncService = FakeSyncService(),
+            isAuthConfigured = true,
+            hasAuthWiringIssue = false
+        )
+        advanceUntilIdle()
+
+        viewModel.signIn("user@test.com", "password123")
+        advanceUntilIdle()
+
+        assertEquals(AuthFailureKind.WIRING_ERROR, viewModel.uiState.value.failureKind)
+    }
+
+    @Test
+    fun resetPassword_sendsEmailAndClearsError_whenSucceeds() = runTest {
+        val repository = FakeAuthRepository(
+            resetPasswordResult = Result.success(Unit)
+        )
+        val viewModel = AuthViewModel(
+            authRepository = repository,
+            syncService = FakeSyncService(),
+            isAuthConfigured = true,
+            hasAuthWiringIssue = false
+        )
+        advanceUntilIdle()
+
+        viewModel.resetPassword("user@test.com")
+        advanceUntilIdle()
+
+        assertEquals("user@test.com", repository.lastResetPasswordEmail)
+        assertNull(viewModel.uiState.value.errorMessage)
+        assertEquals(AuthFailureKind.NONE, viewModel.uiState.value.failureKind)
+    }
+
+    @Test
+    fun resetPassword_setsError_whenFails() = runTest {
+        val repository = FakeAuthRepository(
+            resetPasswordResult = Result.failure(
+                AppError(
+                    category = ErrorCategory.AUTH,
+                    code = "RESET_PASSWORD_FAILED",
+                    message = "no account",
+                    component = "SupabaseAuthRepository"
+                )
+            )
+        )
+        val viewModel = AuthViewModel(
+            authRepository = repository,
+            syncService = FakeSyncService(),
+            isAuthConfigured = true,
+            hasAuthWiringIssue = false
+        )
+        advanceUntilIdle()
+
+        viewModel.resetPassword("missing@test.com")
+        advanceUntilIdle()
+
+        assertEquals("no account", viewModel.uiState.value.errorMessage)
+        assertEquals(AuthFailureKind.UNKNOWN, viewModel.uiState.value.failureKind)
+    }
+
     private class FakeAuthRepository(
         private val startGoogleResult: Result<String> = Result.failure(IllegalStateException("not set")),
         private val completeGoogleResult: Result<AuthSession?> = Result.success(null),

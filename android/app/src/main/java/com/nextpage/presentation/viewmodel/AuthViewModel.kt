@@ -221,25 +221,34 @@ class AuthViewModel(
     }
 
     /**
-     * Signs the user up with email and password.
+     * Signs the user up with email, password, and full name.
      *
      * Side effects:
-     * 1. Sets `isLoading = true`, clears `errorMessage`.
-     * 2. Calls [AuthRepository.signUp].
-     * 3. On result: clears loading, sets `currentSession` (or leaves null on failure).
+     * 1. Sets `isLoading = true`, clears `errorMessage`/`failureKind`.
+     * 2. Calls [AuthRepository.signUp] with the full name (persisted as
+     *    `full_name` metadata).
+     * 3. On result: clears loading, sets `currentSession` (or leaves null on
+     *    failure) and classifies `failureKind` (stale-session fix: a previous
+     *    failure must never leak its kind into this call's result).
      * 4. On failure: emits a `ShowSnackbar` event with the error message.
      *
      * @param email User email address.
      * @param password Account password.
+     * @param fullName User's full name (shown in the Home header).
      */
-    fun signUp(email: String, password: String) {
+    fun signUp(email: String, password: String, fullName: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val result = authRepository.signUp(email, password)
+            _uiState.update { it.copy(
+                isLoading = true,
+                errorMessage = null,
+                failureKind = AuthFailureKind.NONE
+            ) }
+            val result = authRepository.signUp(email, password, fullName)
             _uiState.update { it.copy(
                 isLoading = false,
                 currentSession = result.getOrNull(),
-                errorMessage = result.exceptionOrNull()?.message
+                errorMessage = result.exceptionOrNull()?.message,
+                failureKind = classifyFailure(result.exceptionOrNull())
             ) }
             result.exceptionOrNull()?.let {
                 _uiEvent.emit(UiEvent.ShowSnackbar(it.message ?: "Sign up failed"))
@@ -251,9 +260,11 @@ class AuthViewModel(
      * Signs the user in with email and password.
      *
      * Side effects:
-     * 1. Sets `isLoading = true`, clears `errorMessage`.
+     * 1. Sets `isLoading = true`, clears `errorMessage`/`failureKind`.
      * 2. Calls [AuthRepository.signIn].
-     * 3. On result: clears loading, sets `currentSession` (or leaves null on failure).
+     * 3. On result: clears loading, sets `currentSession` (or leaves null on
+     *    failure) and classifies `failureKind` (stale-session fix — same as
+     *    [signUp]).
      * 4. On failure: emits a `ShowSnackbar` event with the error message.
      *
      * @param email User email address.
@@ -261,16 +272,59 @@ class AuthViewModel(
      */
     fun signIn(email: String, password: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(
+                isLoading = true,
+                errorMessage = null,
+                failureKind = AuthFailureKind.NONE
+            ) }
             val result = authRepository.signIn(email, password)
             _uiState.update { it.copy(
                 isLoading = false,
                 currentSession = result.getOrNull(),
-                errorMessage = result.exceptionOrNull()?.message
+                errorMessage = result.exceptionOrNull()?.message,
+                failureKind = classifyFailure(result.exceptionOrNull())
             ) }
             result.exceptionOrNull()?.let {
                 _uiEvent.emit(UiEvent.ShowSnackbar(it.message ?: "Sign in failed"))
             }
+        }
+    }
+
+    /**
+     * Sends a password-reset email for [email].
+     *
+     * Side effects:
+     * 1. Sets `isLoading = true`, clears `errorMessage`/`failureKind`.
+     * 2. Calls [AuthRepository.resetPassword].
+     * 3. On success: clears any error and emits a `ShowSnackbar` confirming
+     *    the reset email was sent.
+     * 4. On failure: sets `errorMessage`/`failureKind` and emits a
+     *    `ShowSnackbar` event.
+     *
+     * @param email User email address.
+     */
+    fun resetPassword(email: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(
+                isLoading = true,
+                errorMessage = null,
+                failureKind = AuthFailureKind.NONE
+            ) }
+            val result = authRepository.resetPassword(email)
+            _uiState.update { it.copy(
+                isLoading = false,
+                errorMessage = result.exceptionOrNull()?.message,
+                failureKind = classifyFailure(result.exceptionOrNull())
+            ) }
+            result.fold(
+                onSuccess = {
+                    _uiState.update { it.copy(errorMessage = null, failureKind = AuthFailureKind.NONE) }
+                    _uiEvent.emit(UiEvent.ShowSnackbar("Reset email sent"))
+                },
+                onFailure = { error ->
+                    _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to send reset email"))
+                }
+            )
         }
     }
 

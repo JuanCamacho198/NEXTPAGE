@@ -1,7 +1,9 @@
 package com.nextpage.ui.components.atoms
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -12,6 +14,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.nextpage.presentation.theme.NextPageTheme
 
 /**
@@ -35,6 +38,12 @@ import com.nextpage.presentation.theme.NextPageTheme
  *   visibility toggle for passwords).
  * @param trailingIconContentDescription Accessibility label for
  *   [trailingIcon]. Pass `null` for a decorative icon.
+ * @param trailingIconOnClick When set, [trailingIcon] becomes a clickable
+ *   [IconButton] (48.dp touch target) invoking this callback. When `null`,
+ *   the trailing icon stays decorative — fully backwards-compatible.
+ * @param hint Neutral supporting text shown below the field when there is
+ *   no error (e.g. "Minimum 8 characters"). Ignored while [errorMessage]
+ *   is non-blank (the error message wins).
  * @param singleLine `true` (default) restricts input to one line and
  *   collapses newlines; `false` allows multi-line input.
  * @param enabled `false` disables input and dims the field.
@@ -50,7 +59,7 @@ import com.nextpage.presentation.theme.NextPageTheme
  * `colorScheme.error` when [errorMessage] is non-blank. Supporting text
  * is shown only in the error state.
  * **Behavior**: drives the value via [onValueChange]; parent owns the
- * state. Trailing icon is purely decorative here (no click handling).
+ * state. Trailing icon is decorative unless [trailingIconOnClick] is set.
  * **Recomposition**: recomposes when any parameter changes; the
  * `OutlinedTextField` internally skips work if `value` is unchanged.
  */
@@ -64,6 +73,8 @@ fun NextPageTextField(
     errorMessage: String? = null,
     trailingIcon: ImageVector? = null,
     trailingIconContentDescription: String? = null,
+    trailingIconOnClick: (() -> Unit)? = null,
+    hint: String? = null,
     singleLine: Boolean = true,
     enabled: Boolean = true,
     readOnly: Boolean = false,
@@ -83,14 +94,32 @@ fun NextPageTextField(
         label = label?.let { { Text(it) } },
         placeholder = placeholder?.let { { Text(it) } },
         trailingIcon = trailingIcon?.let { icon ->
-            {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = trailingIconContentDescription
-                )
+            if (trailingIconOnClick != null) {
+                {
+                    IconButton(
+                        onClick = trailingIconOnClick,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = trailingIconContentDescription
+                        )
+                    }
+                }
+            } else {
+                {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = trailingIconContentDescription
+                    )
+                }
             }
         },
-        supportingText = errorMessage?.let { { Text(it) } },
+        supportingText = if (isError) {
+            errorMessage?.let { { Text(it) } }
+        } else {
+            hint?.let { { Text(it) } }
+        },
         visualTransformation = visualTransformation,
         shape = shape ?: OutlinedTextFieldDefaults.shape,
         colors = OutlinedTextFieldDefaults.colors(

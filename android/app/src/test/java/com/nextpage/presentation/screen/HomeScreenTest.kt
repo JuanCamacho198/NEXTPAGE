@@ -6,8 +6,6 @@ import com.nextpage.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -33,7 +31,7 @@ class HomeScreenTest {
         // 1. Header — static "NextPage" title (no data field needed)
         // 2. Greeting — userName
         // 3. TodaySummary — minutesReadToday, sessionsToday, dailyProgressPercent
-        // 4. ContinueReading — currentBook
+        // 4. ContinueReading — currentBooks
         // 5. MyBookshelf — recentBooks
         // 6. QuickAccess — static icons (no data field needed)
         // 7. Bottom spacer — structural (no data field needed)
@@ -43,7 +41,7 @@ class HomeScreenTest {
             minutesReadToday = 42,
             sessionsToday = 3,
             dailyProgressPercent = 0.75f,
-            currentBook = null,
+            currentBooks = emptyList(),
             recentBooks = emptyList(),
             isLoading = false
         )
@@ -57,29 +55,31 @@ class HomeScreenTest {
         assertEquals(0.75f, state.dailyProgressPercent, 0.001f)
 
         // Section 4: ContinueReading
-        assertNull(state.currentBook)
+        assertTrue(state.currentBooks.isEmpty())
 
         // Section 5: MyBookshelf
         assertTrue(state.recentBooks.isEmpty())
     }
 
     @Test
-    fun homeUiState_supportsCurrentBookForContinueReading() = runTest {
+    fun homeUiState_supportsCurrentBooksForContinueReading() = runTest {
         val state = HomeUiState(
-            currentBook = Book(
-                id = "book-1",
-                title = "Test Book",
-                author = "Test Author",
-                coverPath = null,
-                filePath = "/path/to/book.epub",
-                format = "epub",
-                updatedAtEpochMillis = 1000L
+            currentBooks = listOf(
+                Book(
+                    id = "book-1",
+                    title = "Test Book",
+                    author = "Test Author",
+                    coverPath = null,
+                    filePath = "/path/to/book.epub",
+                    format = "epub",
+                    updatedAtEpochMillis = 1000L
+                )
             )
         )
 
-        assertNotNull(state.currentBook)
-        assertEquals("Test Book", state.currentBook!!.title)
-        assertEquals("Test Author", state.currentBook!!.author)
+        assertEquals(1, state.currentBooks.size)
+        assertEquals("Test Book", state.currentBooks[0].title)
+        assertEquals("Test Author", state.currentBooks[0].author)
     }
 
     @Test

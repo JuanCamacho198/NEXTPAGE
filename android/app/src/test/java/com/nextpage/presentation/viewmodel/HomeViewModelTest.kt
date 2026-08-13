@@ -21,16 +21,14 @@ class HomeViewModelTest {
 
     private fun createViewModel(): HomeViewModel {
         val mockRepo = mockk<HomeRepository>(relaxed = true)
-        // Wire flows to avoid NPE when collecting (all 5 needed for R9 combine)
+        // Wire flows to avoid NPE when collecting (all 4 needed for combine)
         val dailyStatsFlow = MutableStateFlow(ReadingStats())
-        val currentBookFlow = MutableStateFlow<Book?>(null)
-        val progressFlow = MutableStateFlow(0f)
+        val currentBooksFlow = MutableStateFlow<List<Book>>(emptyList())
         val recentBooksFlow = MutableStateFlow<List<Book>>(emptyList())
         val allBooksFlow = MutableStateFlow<List<Book>>(emptyList())
 
         io.mockk.every { mockRepo.observeDailyStats() } returns dailyStatsFlow
-        io.mockk.every { mockRepo.observeCurrentBook() } returns currentBookFlow
-        io.mockk.every { mockRepo.observeCurrentBookProgress() } returns progressFlow
+        io.mockk.every { mockRepo.observeCurrentBooks() } returns currentBooksFlow
         io.mockk.every { mockRepo.observeRecentBooks(any()) } returns recentBooksFlow
         io.mockk.every { mockRepo.observeBooks() } returns allBooksFlow
 
@@ -66,10 +64,10 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun homeUiState_currentBook_defaultsToNull() = runTest {
+    fun homeUiState_currentBooks_defaultsToEmptyList() = runTest {
         val viewModel = createViewModel()
         val state = viewModel.uiState.value
-        assertEquals("currentBook should default to null", null, state.currentBook)
+        assertEquals("currentBooks should default to empty list", emptyList<Any>(), state.currentBooks)
     }
 
     @Test
@@ -92,16 +90,16 @@ class HomeViewModelTest {
     fun combine_emitsCorrectState_whenAllFlowsEmit() = runTest {
         val mockRepo = mockk<HomeRepository>(relaxed = true)
         val dailyStatsFlow = MutableStateFlow(ReadingStats(minutesRead = 30, sessionCount = 2, dailyProgressPercent = 0.5f))
-        val currentBookFlow = MutableStateFlow<Book?>(
-            Book(id = "b1", title = "Test", author = "Author", coverPath = null, filePath = "/path", format = "epub", totalPages = 200, updatedAtEpochMillis = 1L)
+        val currentBooksFlow = MutableStateFlow<List<Book>>(
+            listOf(
+                Book(id = "b1", title = "Test", author = "Author", coverPath = null, filePath = "/path", format = "epub", totalPages = 200, updatedAtEpochMillis = 1L)
+            )
         )
-        val progressFlow = MutableStateFlow(0.75f)
         val recentBooksFlow = MutableStateFlow<List<Book>>(emptyList())
         val allBooksFlow = MutableStateFlow<List<Book>>(emptyList())
 
         io.mockk.every { mockRepo.observeDailyStats() } returns dailyStatsFlow
-        io.mockk.every { mockRepo.observeCurrentBook() } returns currentBookFlow
-        io.mockk.every { mockRepo.observeCurrentBookProgress() } returns progressFlow
+        io.mockk.every { mockRepo.observeCurrentBooks() } returns currentBooksFlow
         io.mockk.every { mockRepo.observeRecentBooks(any()) } returns recentBooksFlow
         io.mockk.every { mockRepo.observeBooks() } returns allBooksFlow
 
@@ -112,8 +110,8 @@ class HomeViewModelTest {
         assertEquals("combine should set minutesReadToday", 30, state.minutesReadToday)
         assertEquals("combine should set sessionsToday", 2, state.sessionsToday)
         assertEquals("combine should set dailyProgressPercent", 0.5f, state.dailyProgressPercent, 0.001f)
-        assertEquals("combine should set currentBook id", "b1", state.currentBook?.id)
-        assertEquals("combine should set currentBookProgress", 0.75f, state.currentBookProgress, 0.001f)
+        assertEquals("combine should set currentBooks size", 1, state.currentBooks.size)
+        assertEquals("combine should set currentBooks id", "b1", state.currentBooks[0].id)
         assertEquals("combine should set isLoading to false", false, state.isLoading)
     }
 }

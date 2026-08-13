@@ -173,8 +173,7 @@ private fun HomeScreenContent(
             // 4. ContinueReading
             item {
                 ContinueReadingSection(
-                    currentBook = uiState.currentBook,
-                    progress = uiState.currentBookProgress,
+                    books = uiState.currentBooks,
                     onBookSelected = onBookSelected,
                     onContinueReading = onContinueReading
                 )
@@ -337,8 +336,7 @@ private fun StatCard(
 
 @Composable
 private fun ContinueReadingSection(
-    currentBook: Book?,
-    progress: Float = 0f,
+    books: List<Book>,
     onBookSelected: (String, String, String) -> Unit,
     onContinueReading: (String, String?, String) -> Unit
 ) {
@@ -350,71 +348,17 @@ private fun ContinueReadingSection(
         )
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
 
-        if (currentBook != null) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        onBookSelected(currentBook.id, currentBook.filePath, currentBook.format)
-                    },
-                shape = RoundedCornerShape(NextPageDimens.spacingSm),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                tonalElevation = 1.dp
+        if (books.isNotEmpty()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(modifier = Modifier.padding(NextPageDimens.spacingMd)) {
-                    // Cover thumbnail — 80x120dp rounded
-                    CoverThumbnail(
-                        coverPath = currentBook.coverPath,
-                        modifier = Modifier
-                            .width(80.dp)
-                            .height(120.dp)
-                            .clip(RoundedCornerShape(NextPageDimens.spacingXs))
+                items(books, key = { it.id }) { book ->
+                    ContinueReadingCard(
+                        book = book,
+                        onBookSelected = onBookSelected,
+                        onContinueReading = onContinueReading
                     )
-
-                    Spacer(modifier = Modifier.width(NextPageDimens.spacingMd))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = currentBook.title,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        currentBook.author?.let { author ->
-                            Text(
-                                text = author,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
-
-                        // Progress bar
-                        NextPageProgressBar(
-                            progress = progress / 100f,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
-
-                        NextPageButton(
-                            onClick = {
-                                onContinueReading(currentBook.id, currentBook.filePath, currentBook.format)
-                            },
-                            variant = NextPageButtonVariant.FILLED,
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                            modifier = Modifier.height(36.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.home_continuar),
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
-                    }
                 }
             }
         } else {
@@ -428,6 +372,80 @@ private fun ContinueReadingSection(
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(NextPageDimens.spacingMd)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContinueReadingCard(
+    book: Book,
+    onBookSelected: (String, String, String) -> Unit,
+    onContinueReading: (String, String?, String) -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .width(240.dp)
+            .clickable {
+                onBookSelected(book.id, book.filePath, book.format)
+            },
+        shape = RoundedCornerShape(NextPageDimens.spacingSm),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 1.dp
+    ) {
+        Row(modifier = Modifier.padding(NextPageDimens.spacingMd)) {
+            // Cover thumbnail — 80x120dp rounded
+            CoverThumbnail(
+                coverPath = book.coverPath,
+                modifier = Modifier
+                    .width(80.dp)
+                    .height(120.dp)
+                    .clip(RoundedCornerShape(NextPageDimens.spacingXs))
+            )
+
+            Spacer(modifier = Modifier.width(NextPageDimens.spacingMd))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = book.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                book.author?.let { author ->
+                    Text(
+                        text = author,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
+
+                // Progress bar
+                NextPageProgressBar(
+                    progress = book.progressPercentage / 100f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
+
+                NextPageButton(
+                    onClick = {
+                        onContinueReading(book.id, book.filePath, book.format)
+                    },
+                    variant = NextPageButtonVariant.FILLED,
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.home_continuar),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             }
         }
     }
@@ -738,8 +756,7 @@ private fun HomeScreenDarkPreview() {
                 minutesReadToday = 42,
                 sessionsToday = 3,
                 dailyProgressPercent = 0.5f,
-                currentBook = sampleBook,
-                currentBookProgress = 67f,
+                currentBooks = listOf(sampleBook),
                 recentBooks = listOf(sampleBook),
                 isLoading = false,
                 showSearch = false,
@@ -779,8 +796,7 @@ private fun HomeScreenLightPreview() {
                 minutesReadToday = 42,
                 sessionsToday = 3,
                 dailyProgressPercent = 0.5f,
-                currentBook = sampleBook,
-                currentBookProgress = 67f,
+                currentBooks = listOf(sampleBook),
                 recentBooks = listOf(sampleBook),
                 isLoading = false,
                 showSearch = false,

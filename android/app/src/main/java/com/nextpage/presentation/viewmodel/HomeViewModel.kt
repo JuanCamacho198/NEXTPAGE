@@ -27,8 +27,7 @@ data class HomeUiState(
     val minutesReadToday: Int = 0,
     val sessionsToday: Int = 0,
     val dailyProgressPercent: Float = 0f,
-    val currentBook: Book? = null,
-    val currentBookProgress: Float = 0f,
+    val currentBooks: List<Book> = emptyList(),
     val recentBooks: List<Book> = emptyList(),
     val isLoading: Boolean = true,
     // Search
@@ -54,20 +53,18 @@ class HomeViewModel(
     private var searchJob: Job? = null
 
     init {
-        // Single combine: all 5 flows merged into one state emission
+        // Single combine: all 4 flows merged into one state emission
         viewModelScope.launch {
             combine(
                 homeRepository.observeDailyStats()
                     .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load daily stats")); emit(ReadingStats()) },
-                homeRepository.observeCurrentBook()
-                    .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load current book")); emit(null) },
-                homeRepository.observeCurrentBookProgress()
-                    .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load progress")); emit(0f) },
+                homeRepository.observeCurrentBooks()
+                    .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load current books")); emit(emptyList()) },
                 homeRepository.observeRecentBooks(5)
                     .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load recent books")); emit(emptyList()) },
                 homeRepository.observeBooks()
                     .catch { e -> _uiEvent.tryEmit(UiEvent.ShowSnackbar(e.message ?: "Failed to load books")); emit(emptyList()) }
-            ) { stats, book, progress, recent, allBooks ->
+            ) { stats, books, recent, allBooks ->
                 HomeUiState(
                     // Preserve current user identity across combine emissions —
                     // updated reactively via setActiveSession, not via the (removed)
@@ -77,8 +74,7 @@ class HomeViewModel(
                     minutesReadToday = stats.minutesRead,
                     sessionsToday = stats.sessionCount,
                     dailyProgressPercent = stats.dailyProgressPercent,
-                    currentBook = book,
-                    currentBookProgress = progress,
+                    currentBooks = books,
                     recentBooks = recent,
                     allBooks = allBooks,
                     isLoading = false

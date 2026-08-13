@@ -6,15 +6,11 @@ import com.nextpage.data.local.dao.ReadingSessionDao
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.ReadingStats
 import com.nextpage.domain.repository.HomeRepository
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import java.util.Calendar
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class HomeRepositoryImpl(
     private val bookDao: BookDao,
     private val readingProgressDao: ReadingProgressDao,
@@ -31,33 +27,11 @@ class HomeRepositoryImpl(
             entities.take(limit).map { it.toBook() }
         }
 
-    override fun observeCurrentBook(): Flow<Book?> =
-        bookDao.observeAllBooks().map { entities ->
-            entities.asSequence()
-                .filter { it.readingState == "reading" && it.progressPercentage < 100f }
-                .sortedWith(
-                    compareByDescending<com.nextpage.data.local.entity.BookEntity> {
-                        it.progressUpdatedAtEpochMillis ?: Long.MIN_VALUE
-                    }.thenByDescending { it.updatedAtEpochMillis }.thenBy { it.id }
-                )
-                .firstOrNull()?.toBook()
-        }
-
     override fun observeCurrentBooks(): Flow<List<Book>> =
         bookDao.observeReadingBooks().map { entities ->
             entities.map { it.toBook() }
         }
 
-
-    override fun observeCurrentBookProgress(): Flow<Float> =
-        observeCurrentBook().flatMapLatest { book ->
-            if (book != null) {
-                readingProgressDao.observeProgressForBook(book.id)
-                    .map { it?.percentage ?: 0f }
-            } else {
-                flowOf(0f)
-            }
-        }
 
     override fun observeDailyStats(userId: String?): Flow<ReadingStats> {
         val todayStart = getTodayStartMillis()

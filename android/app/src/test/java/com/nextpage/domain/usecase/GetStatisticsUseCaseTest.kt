@@ -80,8 +80,6 @@ class GetStatisticsUseCaseTest {
     private class FakeHomeRepository : HomeRepository {
         override fun observeBooks(): Flow<List<Book>> = MutableStateFlow(emptyList())
         override fun observeRecentBooks(limit: Int): Flow<List<Book>> = MutableStateFlow(emptyList())
-        override fun observeCurrentBook(): Flow<Book?> = MutableStateFlow(null)
-        override fun observeCurrentBookProgress(): Flow<Float> = MutableStateFlow(0f)
         override fun observeCurrentBooks(): Flow<List<Book>> = MutableStateFlow(emptyList())
         override fun observeDailyStats(userId: String?): Flow<com.nextpage.domain.model.ReadingStats> =
             MutableStateFlow(com.nextpage.domain.model.ReadingStats(0, 0, 0f))

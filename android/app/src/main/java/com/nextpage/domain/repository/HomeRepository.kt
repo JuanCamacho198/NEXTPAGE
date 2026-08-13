@@ -7,8 +7,6 @@ import kotlinx.coroutines.flow.Flow
 interface HomeRepository {
     fun observeBooks(): Flow<List<Book>>
     fun observeRecentBooks(limit: Int = 5): Flow<List<Book>>
-    fun observeCurrentBook(): Flow<Book?>
-    fun observeCurrentBookProgress(): Flow<Float>
     fun observeCurrentBooks(): Flow<List<Book>>
     fun observeDailyStats(userId: String? = null): Flow<ReadingStats>
     suspend fun deleteBook(bookId: String): Result<Unit>

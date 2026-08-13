@@ -149,8 +149,16 @@ class AuthViewModelTest {
         private val completeGoogleResult: Result<AuthSession?> = Result.success(null),
         private val signInWithGoogleResult: Result<AuthSession> = Result.failure(IllegalStateException("not set")),
         private val currentSessionResult: Result<AuthSession?> = Result.success(null),
-        private val signOutResult: Result<Unit> = Result.success(Unit)
+        private val signOutResult: Result<Unit> = Result.success(Unit),
+        private val signInResult: Result<AuthSession> = Result.failure(UnsupportedOperationException()),
+        private val signUpResult: Result<AuthSession> = Result.failure(UnsupportedOperationException()),
+        private val resetPasswordResult: Result<Unit> = Result.failure(UnsupportedOperationException())
     ) : AuthRepository {
+        var lastSignInEmail: String? = null
+        var lastSignUpEmail: String? = null
+        var lastSignUpFullName: String? = null
+        var lastResetPasswordEmail: String? = null
+
         override suspend fun startGoogleSignIn(): Result<String> = startGoogleResult
 
         override suspend fun completeGoogleSignIn(callbackUri: String): Result<AuthSession?> = completeGoogleResult
@@ -160,11 +168,19 @@ class AuthViewModelTest {
         override suspend fun signInWithGoogleIdToken(idToken: String): Result<AuthSession> = signInWithGoogleResult
 
         override suspend fun signIn(email: String, password: String): Result<AuthSession> {
-            return Result.failure(UnsupportedOperationException())
+            lastSignInEmail = email
+            return signInResult
         }
 
-        override suspend fun signUp(email: String, password: String): Result<AuthSession> {
-            return Result.failure(UnsupportedOperationException())
+        override suspend fun signUp(email: String, password: String, fullName: String): Result<AuthSession> {
+            lastSignUpEmail = email
+            lastSignUpFullName = fullName
+            return signUpResult
+        }
+
+        override suspend fun resetPassword(email: String): Result<Unit> {
+            lastResetPasswordEmail = email
+            return resetPasswordResult
         }
 
         override suspend fun signOut(): Result<Unit> = signOutResult

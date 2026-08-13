@@ -23,7 +23,23 @@ interface AuthRepository {
      */
     suspend fun signInWithGoogleIdToken(idToken: String): Result<AuthSession>
     suspend fun signIn(email: String, password: String): Result<AuthSession>
-    suspend fun signUp(email: String, password: String): Result<AuthSession>
+    /**
+     * Registers a new account with email and password.
+     *
+     * @param email User email address.
+     * @param password Account password.
+     * @param fullName User's full name, persisted as `full_name` metadata.
+     */
+    suspend fun signUp(email: String, password: String, fullName: String): Result<AuthSession>
+    /**
+     * Sends a password-reset email for [email].
+     *
+     * Default implementation returns [UnsupportedOperationException] so existing
+     * fakes/stubs keep compiling; only the Supabase-backed repository implements it.
+     */
+    suspend fun resetPassword(email: String): Result<Unit> {
+        return Result.failure(UnsupportedOperationException("Not implemented"))
+    }
     suspend fun signOut(): Result<Unit>
     suspend fun getCurrentSession(): Result<AuthSession?>
     suspend fun signInLocally(): Result<AuthSession>

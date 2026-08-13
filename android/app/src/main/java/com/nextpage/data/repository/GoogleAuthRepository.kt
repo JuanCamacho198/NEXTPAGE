@@ -191,7 +191,7 @@ class GoogleAuthRepository(
         )
     }
 
-    override suspend fun signUp(email: String, password: String): Result<AuthSession> {
+    override suspend fun signUp(email: String, password: String, fullName: String): Result<AuthSession> {
         return Result.failure(
             UnsupportedOperationException("Email/password sign-up is disabled; use Google sign-in.")
         )

@@ -45,4 +45,10 @@ interface ReadingSessionDao {
 
     @Query("SELECT date, COALESCE(SUM(duration_minutes), 0) as total_minutes FROM reading_sessions WHERE date >= :startDate GROUP BY date ORDER BY date ASC")
     suspend fun getDailyMinutesFromDate(startDate: Long): List<DailyReadingMinutes>
+
+    @Query("SELECT * FROM reading_sessions WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): ReadingSessionEntity?
+
+    @Query("SELECT date, COALESCE(SUM(duration_minutes), 0) as total_minutes FROM reading_sessions WHERE (userId = :userId OR userId = '') GROUP BY date ORDER BY date DESC")
+    suspend fun getDailyMinutesForUser(userId: String?): List<DailyReadingMinutes>
 }

@@ -2,8 +2,11 @@ package com.nextpage.data.repository
 
 import com.nextpage.data.local.dao.ReadingSessionDao
 import com.nextpage.data.local.dao.ReadingStatsDao
+import com.nextpage.data.local.dao.SyncOutboxDao
 import com.nextpage.data.local.entity.ReadingSessionEntity
 import com.nextpage.data.local.entity.ReadingStatsEntity
+import com.nextpage.data.local.entity.SyncEntityType
+import com.nextpage.data.local.entity.SyncOutboxEntity
 import com.nextpage.data.local.model.DailyReadingMinutes
 import com.nextpage.domain.model.DailyReadingActivity
 import com.nextpage.domain.repository.ReadingStatsData
@@ -24,7 +27,7 @@ class ReadingStatsRepositoryImplTest {
     @Test
     fun getDailyActivity_aggregatesSessionsByDateFromSuspendDao() = runBlocking {
         val fakeSessionDao = FakeReadingSessionDao().apply {
-            getDailyMinutesResult = listOf(
+            getDailyMinutesForUserResult = listOf(
                 DailyReadingMinutes(dateEpochMillis = 20240101L, totalMinutes = 25),
                 DailyReadingMinutes(dateEpochMillis = 20240102L, totalMinutes = 10)
             )
@@ -44,7 +47,7 @@ class ReadingStatsRepositoryImplTest {
     @Test
     fun getDailyActivity_isSuspendNotFlow_doesNotEmitOnSessionInsert() = runBlocking {
         val fakeSessionDao = FakeReadingSessionDao().apply {
-            getDailyMinutesResult = listOf(
+            getDailyMinutesForUserResult = listOf(
                 DailyReadingMinutes(dateEpochMillis = 20240101L, totalMinutes = 5)
             )
         }
@@ -60,7 +63,7 @@ class ReadingStatsRepositoryImplTest {
         // Mutate the underlying "table" — since getDailyActivity is a suspend
         // function (not a Flow), observers of the old call site do not receive
         // automatic updates. A fresh suspend call re-reads the data.
-        fakeSessionDao.getDailyMinutesResult = listOf(
+        fakeSessionDao.getDailyMinutesForUserResult = listOf(
             DailyReadingMinutes(dateEpochMillis = 20240101L, totalMinutes = 99)
         )
 
@@ -73,7 +76,7 @@ class ReadingStatsRepositoryImplTest {
     @Test
     fun getDailyActivity_returnsEmptyListWhenNoSessions() = runBlocking {
         val fakeSessionDao = FakeReadingSessionDao().apply {
-            getDailyMinutesResult = emptyList()
+            getDailyMinutesForUserResult = emptyList()
         }
         val repository = ReadingStatsRepositoryImpl(
             readingStatsDao = FakeReadingStatsDao(),
@@ -82,6 +85,78 @@ class ReadingStatsRepositoryImplTest {
 
         val result = repository.getDailyActivity()
         assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun getDailyActivity_passesUserIdThroughToScopedDao() = runBlocking {
+        val fakeSessionDao = FakeReadingSessionDao().apply {
+            getDailyMinutesForUserResult = listOf(
+                DailyReadingMinutes(dateEpochMillis = 20240101L, totalMinutes = 25)
+            )
+        }
+        val repository = ReadingStatsRepositoryImpl(
+            readingStatsDao = FakeReadingStatsDao(),
+            readingSessionDao = fakeSessionDao
+        )
+
+        val result = repository.getDailyActivity(userId = "user-42")
+
+        assertEquals(1, result.size)
+        assertEquals(DailyReadingActivity(dateEpochMillis = 20240101L, minutesRead = 25), result[0])
+        assertEquals("user-42", fakeSessionDao.lastUserId)
+    }
+
+    @Test
+    fun recordReadingSession_insertsSessionAndEnqueuesReadingSessionOutbox() = runBlocking {
+        val fakeSessionDao = FakeReadingSessionDao()
+        val fakeOutboxDao = FakeSyncOutboxDao()
+        val repository = ReadingStatsRepositoryImpl(
+            readingStatsDao = FakeReadingStatsDao(),
+            readingSessionDao = fakeSessionDao,
+            outboxDao = fakeOutboxDao
+        )
+
+        repository.recordReadingSession(
+            bookId = "book-1",
+            startTimeEpochMillis = 1000L,
+            durationMinutes = 5,
+            userId = "user-42"
+        )
+
+        val inserted = fakeSessionDao.insertedSessions.single()
+        assertEquals("book-1", inserted.bookId)
+        assertEquals(1000L, inserted.startTimeEpochMillis)
+        assertEquals(5, inserted.durationMinutes)
+        assertEquals("user-42", inserted.userId)
+        assertTrue("id should be deterministic sess_", inserted.id.startsWith("sess_"))
+        assertTrue("updatedAtEpochMillis should be the LWW clock", inserted.updatedAtEpochMillis > 0L)
+
+        val outbox = fakeOutboxDao.items.single()
+        assertEquals(SyncEntityType.READING_SESSION.name, outbox.entityType)
+        assertEquals("book-1", outbox.entityId)
+        assertTrue(outbox.payloadJson.contains("\"id\":\"${inserted.id}\""))
+        assertTrue(outbox.payloadJson.contains("\"userId\":\"user-42\""))
+        assertTrue(outbox.payloadJson.contains("\"updatedAtEpochMillis\""))
+    }
+
+    @Test
+    fun recordReadingSession_nullOutboxDao_recordsLocallyOnly() = runBlocking {
+        val fakeSessionDao = FakeReadingSessionDao()
+        val repository = ReadingStatsRepositoryImpl(
+            readingStatsDao = FakeReadingStatsDao(),
+            readingSessionDao = fakeSessionDao,
+            outboxDao = null
+        )
+
+        repository.recordReadingSession(
+            bookId = "book-1",
+            startTimeEpochMillis = 2000L,
+            durationMinutes = 3,
+            userId = ""
+        )
+
+        assertEquals(1, fakeSessionDao.insertedSessions.size)
+        assertEquals("", fakeSessionDao.insertedSessions.single().userId)
     }
 
     @Test
@@ -122,8 +197,14 @@ class ReadingStatsRepositoryImplTest {
     private class FakeReadingSessionDao : ReadingSessionDao {
         var getDailyMinutesResult: List<DailyReadingMinutes> = emptyList()
         var getDailyMinutesFromDateResult: List<DailyReadingMinutes> = emptyList()
+        var getDailyMinutesForUserResult: List<DailyReadingMinutes> = emptyList()
+        var lastUserId: String? = null
+        val insertedSessions = mutableListOf<ReadingSessionEntity>()
 
-        override suspend fun insert(session: ReadingSessionEntity) = Unit
+        override suspend fun insert(session: ReadingSessionEntity) {
+            insertedSessions.add(session)
+        }
+
         override fun getTotalMinutesForDate(date: Long): Flow<Int> = MutableStateFlow(0)
         override fun getTotalMinutesForDateAndUser(date: Long, userId: String): Flow<Int> = MutableStateFlow(0)
         override fun getTotalMinutes(): Flow<Int> = MutableStateFlow(0)
@@ -137,6 +218,12 @@ class ReadingStatsRepositoryImplTest {
         override suspend fun getDailyMinutes(): List<DailyReadingMinutes> = getDailyMinutesResult
         override suspend fun getDailyMinutesFromDate(startDate: Long): List<DailyReadingMinutes> =
             getDailyMinutesFromDateResult
+        override suspend fun getById(id: String): ReadingSessionEntity? =
+            insertedSessions.firstOrNull { it.id == id }
+        override suspend fun getDailyMinutesForUser(userId: String?): List<DailyReadingMinutes> {
+            lastUserId = userId
+            return getDailyMinutesForUserResult
+        }
     }
 
     private class FakeReadingStatsDao : ReadingStatsDao {
@@ -156,5 +243,22 @@ class ReadingStatsRepositoryImplTest {
         override suspend fun deleteForBook(bookId: String) {
             allStatsState.value = allStatsState.value.filterNot { it.bookId == bookId }
         }
+    }
+
+    private class FakeSyncOutboxDao : SyncOutboxDao {
+        val items = mutableListOf<SyncOutboxEntity>()
+
+        override suspend fun getPendingItems(): List<SyncOutboxEntity> = items.toList()
+        override suspend fun insert(item: SyncOutboxEntity) {
+            items.add(item)
+        }
+
+        override suspend fun deleteById(id: String) {
+            items.removeAll { it.id == id }
+        }
+
+        override suspend fun incrementRetryCount(id: String, error: String) = Unit
+        override suspend fun pruneFailedItems(maxRetries: Int) = Unit
+        override fun observePendingCount(): Flow<Int> = MutableStateFlow(items.size)
     }
 }

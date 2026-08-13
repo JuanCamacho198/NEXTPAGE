@@ -42,5 +42,5 @@ enum class SyncOperation {
 }
 
 enum class SyncEntityType {
-    BOOK, READING_PROGRESS, HIGHLIGHT, BOOKMARK
+    BOOK, READING_PROGRESS, HIGHLIGHT, BOOKMARK, READING_SESSION
 }

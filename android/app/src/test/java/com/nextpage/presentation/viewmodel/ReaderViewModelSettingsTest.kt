@@ -176,6 +176,6 @@ class ReaderViewModelSettingsTest {
         override suspend fun deleteStats(bookId: String) = Unit
         override fun observeBookStats(): kotlinx.coroutines.flow.Flow<List<com.nextpage.domain.repository.ReadingStatsData>> =
             kotlinx.coroutines.flow.MutableStateFlow(emptyList())
-        override suspend fun getDailyActivity(): List<com.nextpage.domain.model.DailyReadingActivity> = emptyList()
+        override suspend fun getDailyActivity(userId: String?): List<com.nextpage.domain.model.DailyReadingActivity> = emptyList()
     }
 }

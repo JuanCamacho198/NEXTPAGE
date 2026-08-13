@@ -172,6 +172,6 @@ class ReaderViewModelNavigationTest {
         override suspend fun updateReadingTime(bookId: String, additionalMinutes: Long) = Unit
         override suspend fun deleteStats(bookId: String) = Unit
         override fun observeBookStats(): Flow<List<ReadingStatsData>> = MutableStateFlow(emptyList())
-        override suspend fun getDailyActivity(): List<com.nextpage.domain.model.DailyReadingActivity> = emptyList()
+        override suspend fun getDailyActivity(userId: String?): List<com.nextpage.domain.model.DailyReadingActivity> = emptyList()
     }
 }

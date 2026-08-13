@@ -72,7 +72,7 @@ class GetStatisticsUseCaseTest {
         override fun observeStats(bookId: String): Flow<ReadingStatsData?> = stats
         override fun observeTotalTime(): Flow<Long> = total
         override fun observeBookStats(): Flow<List<ReadingStatsData>> = allStats
-        override suspend fun getDailyActivity(): List<DailyReadingActivity> = dailyActivity
+        override suspend fun getDailyActivity(userId: String?): List<DailyReadingActivity> = dailyActivity
         override suspend fun updateReadingTime(bookId: String, additionalMinutes: Long) = Unit
         override suspend fun deleteStats(bookId: String) = Unit
     }

@@ -23,6 +23,7 @@ import {
   saveHighlightTags,
   updateHighlight,
   upsertReaderSettings,
+  upsertRemoteReadingSessions,
 } from '$lib/shared/api/tauriClient';
 
 describe('tauriClient reader settings', () => {
@@ -403,15 +404,28 @@ describe('tauriClient reading stats commands', () => {
     ).rejects.toThrow();
   });
 
-  it('getReadingStreak invokes the command with bookId', async () => {
+  it('getReadingStreak invokes the command with bookId and userId', async () => {
     invokeMock.mockResolvedValueOnce(5);
+
+    const result = await getReadingStreak('book-1', 'user-1');
+
+    expect(invokeMock).toHaveBeenCalledWith('getReadingStreak', {
+      bookId: 'book-1',
+      userId: 'user-1',
+    });
+    expect(result).toBe(5);
+  });
+
+  it('getReadingStreak defaults userId to empty string (legacy rows)', async () => {
+    invokeMock.mockResolvedValueOnce(0);
 
     const result = await getReadingStreak('book-1');
 
     expect(invokeMock).toHaveBeenCalledWith('getReadingStreak', {
       bookId: 'book-1',
+      userId: '',
     });
-    expect(result).toBe(5);
+    expect(result).toBe(0);
   });
 
   it('getReadingStreak without bookId passes undefined', async () => {
@@ -421,6 +435,7 @@ describe('tauriClient reading stats commands', () => {
 
     expect(invokeMock).toHaveBeenCalledWith('getReadingStreak', {
       bookId: undefined,
+      userId: '',
     });
     expect(result).toBe(0);
   });
@@ -429,5 +444,27 @@ describe('tauriClient reading stats commands', () => {
     invokeMock.mockRejectedValueOnce(new Error('streak unavailable'));
 
     await expect(getReadingStreak()).rejects.toThrow();
+  });
+
+  it('upsertRemoteReadingSessions invokes the command with the rows array', async () => {
+    invokeMock.mockResolvedValueOnce(2);
+    const rows = [
+      {
+        id: 'sess_1',
+        userId: 'u1',
+        bookId: 'b1',
+        startedAt: '2026-08-13T10:00:00.000Z',
+        durationMinutes: 25,
+        date: '2026-08-13T00:00:00.000Z',
+        updatedAtEpochMillis: 1786615200000,
+        startPercentage: null,
+        endPercentage: null,
+      },
+    ];
+
+    const result = await upsertRemoteReadingSessions(rows);
+
+    expect(invokeMock).toHaveBeenCalledWith('upsertRemoteReadingSessions', { rows });
+    expect(result).toBe(2);
   });
 });

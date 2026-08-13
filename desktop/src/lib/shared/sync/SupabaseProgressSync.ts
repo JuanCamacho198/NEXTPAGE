@@ -10,7 +10,7 @@
 import { getSessionClient, hasLiveSession } from '$lib/services/supabase';
 import { authState } from '$lib/stores/authState.svelte';
 import type { SupabaseClient, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import type { ReadingStatus } from '$lib/shared/types';
+import type { ReadingStatus, RemoteReadingSessionRow } from '$lib/shared/types';
 
 export interface SupabaseProgressRow {
   id?: string;
@@ -83,6 +83,7 @@ export interface SupabaseReadingSessionRow {
 export type ProgressChangeCallback = (row: SupabaseProgressRow) => void;
 export type BookmarkChangeCallback = (row: SupabaseBookmarkRow) => void;
 export type HighlightChangeCallback = (row: SupabaseHighlightRow) => void;
+export type ReadingSessionChangeCallback = (row: RemoteReadingSessionRow) => void;
 
 export interface SupabaseBookState {
   progress: SupabaseProgressRow | null;
@@ -96,6 +97,7 @@ export class SupabaseProgressSync {
   private unsubscribeRealtime: (() => void) | null = null;
   private unsubscribeBookmarksRealtime: (() => void) | null = null;
   private unsubscribeHighlightsRealtime: (() => void) | null = null;
+  private unsubscribeReadingSessionsRealtime: (() => void) | null = null;
 
   constructor(userId: string) {
     this.supabase = getSessionClient();
@@ -389,6 +391,91 @@ export class SupabaseProgressSync {
     return (data ?? []).map(this.mapHighlightRow);
   }
 
+  // ─── Reading sessions (pull) ─────────────────────────────────────
+
+  /**
+   * Fetch all reading_sessions rows for the current user (initial pull).
+   * Mirrors fetchProgress: gated, full-table select filtered by user_id,
+   * rows mapped to RemoteReadingSessionRow for the Rust merge command.
+   * The caller chunks the result into 500-row invokes (D11 — bounded IPC).
+   */
+  async fetchReadingSessions(): Promise<RemoteReadingSessionRow[]> {
+    if (this.isGated()) return [];
+    const { data, error } = await this.supabase
+      .from('reading_sessions')
+      .select('*')
+      .eq('user_id', this.userId);
+
+    if (error) throw error;
+
+    return (data ?? []).map((row) => this.mapReadingSessionRow(row as Record<string, unknown>));
+  }
+
+  /**
+   * Subscribe to realtime changes on reading_sessions for this user.
+   * Handles Insert/Update only — Delete and Select are no-ops (Android
+   * parity: the local table is the merged source of truth; remote deletes
+   * never un-merge local rows).
+   * Returns an unsubscribe function.
+   */
+  subscribeToReadingSessions(callback: ReadingSessionChangeCallback): () => void {
+    const channel = this.supabase.channel(`sessions:${this.userId}`);
+
+    const handleChange = (
+      payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
+    ): void => {
+      if (payload.new && typeof payload.new === 'object') {
+        callback(this.mapReadingSessionRow(payload.new as Record<string, unknown>));
+      }
+    };
+
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'reading_sessions',
+        filter: `user_id=eq.${this.userId}`,
+      },
+      handleChange,
+    );
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'reading_sessions',
+        filter: `user_id=eq.${this.userId}`,
+      },
+      handleChange,
+    );
+
+    channel.subscribe();
+    this.unsubscribeReadingSessionsRealtime = () => channel.unsubscribe();
+
+    return this.unsubscribeReadingSessionsRealtime;
+  }
+
+  /**
+   * Convert a raw Supabase `reading_sessions` row (snake_case) to the typed
+   * RemoteReadingSessionRow the Rust upsertRemoteReadingSessions command
+   * expects (serde camelCase). `updated_at` ISO string → epoch millis
+   * (mirrors Android applyRemoteSession `remoteTime`); percentages nullable.
+   */
+  mapReadingSessionRow(raw: Record<string, unknown>): RemoteReadingSessionRow {
+    return {
+      id: String(raw.id ?? ''),
+      userId: String(raw.user_id ?? ''),
+      bookId: String(raw.book_id ?? ''),
+      startedAt: String(raw.started_at ?? ''),
+      durationMinutes: Number(raw.duration_minutes ?? 0),
+      date: String(raw.date ?? ''),
+      updatedAtEpochMillis: Date.parse(String(raw.updated_at ?? '')),
+      startPercentage: raw.start_percentage != null ? Number(raw.start_percentage) : null,
+      endPercentage: raw.end_percentage != null ? Number(raw.end_percentage) : null,
+    };
+  }
+
   /**
    * Subscribe to realtime changes on highlights for this user.
    * Returns an unsubscribe function.
@@ -562,6 +649,8 @@ export class SupabaseProgressSync {
     this.unsubscribeBookmarksRealtime = null;
     this.unsubscribeHighlightsRealtime?.();
     this.unsubscribeHighlightsRealtime = null;
+    this.unsubscribeReadingSessionsRealtime?.();
+    this.unsubscribeReadingSessionsRealtime = null;
   }
 
   private mapRow(row: Record<string, unknown>): SupabaseProgressRow {

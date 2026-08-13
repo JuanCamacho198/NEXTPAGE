@@ -14,6 +14,7 @@ import type {
   ReadingProgressDto,
   ReadingSessionInput,
   ReadingSessionSavedDto,
+  RemoteReadingSessionRow,
   ReadingStatsSummaryDto,
   SaveHighlightInput,
   SaveProgressInput,
@@ -239,6 +240,17 @@ export const saveReadingSession = async (
   return invoke<ReadingSessionSavedDto>('saveReadingSession', { payload });
 };
 
+/**
+ * Merge remote `reading_sessions` rows into local SQLite via the Rust
+ * `upsertRemoteReadingSessions` command (FK guard → LWW → INSERT OR REPLACE).
+ * Returns the number of rows applied (SCEN-pull-1..5).
+ */
+export const upsertRemoteReadingSessions = async (
+  rows: RemoteReadingSessionRow[],
+): Promise<number> => {
+  return invoke<number>('upsertRemoteReadingSessions', { rows });
+};
+
 export const upsertProgress = async (progress: ReadingProgressDto): Promise<void> => {
   await invoke('upsertProgress', { progress });
 };
@@ -277,9 +289,9 @@ export const getReadingStatsForRange = async (
   }
 };
 
-export const getReadingStreak = async (bookId?: string): Promise<number> => {
+export const getReadingStreak = async (bookId?: string, userId = ''): Promise<number> => {
   try {
-    return await invoke<number>('getReadingStreak', { bookId });
+    return await invoke<number>('getReadingStreak', { bookId, userId });
   } catch (error) {
     return attachCommandError(error);
   }

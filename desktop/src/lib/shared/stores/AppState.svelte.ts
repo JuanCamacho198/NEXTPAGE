@@ -71,6 +71,15 @@ export class AppState {
     // assigned here, so handleImportFile silently no-op'd the post-import
     // refresh and the user had to Ctrl+R to see the new book.
     this.bulkImport.onLibraryRefreshNeeded = () => this.loadLibrary();
+
+    // D15 (REQ-refresh): make the reader's stats-refresh hook live — stats
+    // and streak reload after a session save (236/248/274) and after a remote
+    // session merge (subscribeToRemoteSessions). userId is passed through so
+    // the streak is scoped to the current account (legacy rows stay '').
+    this.reader.onStatsRefreshNeeded = async (bookId) => {
+      await this.statsDomain.loadStats(bookId);
+      await this.statsDomain.loadStreak(bookId, authState.userId ?? '');
+    };
   }
 
   // ─── Init gate ───
@@ -611,7 +620,7 @@ export class AppState {
   };
 
   loadStatsStreak = async (bookId?: string): Promise<void> => {
-    return this.statsDomain.loadStreak(bookId);
+    return this.statsDomain.loadStreak(bookId, authState.userId ?? '');
   };
 
   // ─── Cross-domain: loadLibrary ───

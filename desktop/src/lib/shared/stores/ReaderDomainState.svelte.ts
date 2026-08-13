@@ -5,6 +5,7 @@ import {
   saveReadingSession,
   updateBookProgress,
   upsertProgress as upsertProgressCmd,
+  upsertRemoteReadingSessions as upsertRemoteReadingSessionsCmd,
   saveBookmark,
   deleteBookmark,
   saveHighlight,
@@ -323,6 +324,7 @@ class ReaderDomainState {
   private unsubscribeRemote: (() => void) | null = null;
   private unsubscribeRemoteBookmarks: (() => void) | null = null;
   private unsubscribeRemoteHighlights: (() => void) | null = null;
+  private unsubscribeRemoteSessions: (() => void) | null = null;
   private openEpoch = 0;
   private appliedRemote = new Map<string, string>();
 
@@ -459,6 +461,53 @@ class ReaderDomainState {
   }
 
   /**
+   * Subscribe to Realtime changes for reading sessions (4th channel, D14).
+   * (1) Initial pull: fetch all remote sessions for the user and merge them
+   * into local SQLite in 500-row chunks via the Rust LWW command (D11).
+   * (2) Realtime: on each remote INSERT/UPDATE, merge the single row and
+   * refresh stats/streak for the affected book (REQ-refresh).
+   */
+  subscribeToRemoteSessions(): void {
+    if (this.unsubscribeRemoteSessions) return;
+    if (!authState.userId) return;
+
+    try {
+      if (!this.supabaseSync) {
+        this.supabaseSync = new SupabaseProgressSync(authState.userId);
+      }
+
+      // (1) Initial pull — merge the full remote set in chunks of 500.
+      void this.supabaseSync
+        .fetchReadingSessions()
+        .then((rows) => {
+          const chunkSize = 500;
+          for (let i = 0; i < rows.length; i += chunkSize) {
+            const chunk = rows.slice(i, i + chunkSize);
+            void upsertRemoteReadingSessionsCmd(chunk).catch((e) => {
+              console.error('Failed to apply remote reading sessions locally:', e);
+            });
+          }
+        })
+        .catch((e) => {
+          console.error('Failed to fetch remote reading sessions:', e);
+        });
+
+      // (2) Realtime — merge each remote row as it arrives.
+      this.unsubscribeRemoteSessions = this.supabaseSync.subscribeToReadingSessions((row) => {
+        void upsertRemoteReadingSessionsCmd([row])
+          .then(() => {
+            void this.onStatsRefreshNeeded?.(row.bookId);
+          })
+          .catch((e) => {
+            console.error('Failed to apply remote reading session locally:', e);
+          });
+      });
+    } catch (e) {
+      console.error('Failed to subscribe to remote reading sessions:', e);
+    }
+  }
+
+  /**
    * Stop the Realtime subscription for progress. Call on logout or dispose.
    */
   unsubscribeFromRemoteProgress(): void {
@@ -484,6 +533,14 @@ class ReaderDomainState {
   }
 
   /**
+   * Stop the Realtime subscription for reading sessions.
+   */
+  unsubscribeFromRemoteSessions(): void {
+    this.unsubscribeRemoteSessions?.();
+    this.unsubscribeRemoteSessions = null;
+  }
+
+  /**
    * Re-subscribe all — useful when userId changes (login/logout cycle).
    */
   refreshRemoteProgressSubscription(): void {
@@ -498,6 +555,7 @@ class ReaderDomainState {
     this.subscribeToRemoteProgress();
     this.subscribeToRemoteBookmarks();
     this.subscribeToRemoteHighlights();
+    this.subscribeToRemoteSessions();
   }
 
   /**
@@ -507,6 +565,7 @@ class ReaderDomainState {
     this.unsubscribeFromRemoteProgress();
     this.unsubscribeFromRemoteBookmarks();
     this.unsubscribeFromRemoteHighlights();
+    this.unsubscribeFromRemoteSessions();
   }
 
   // ─── Reset ───

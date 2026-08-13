@@ -24,6 +24,12 @@ import type { SupabaseProgressRow } from '$lib/shared/sync/SupabaseProgressSync'
 
 const outboxDao = new SyncOutboxDao();
 
+/**
+ * D6 (SCEN-duration-1): sessions shorter than this are dropped entirely —
+ * not stored locally, not enqueued. Single tunable constant.
+ */
+const MIN_SESSION_DURATION_SECONDS = 30;
+
 class ReaderDomainState {
   // ─── State ───
   activeReadingBookId = $state<string | null>(null);
@@ -258,6 +264,10 @@ class ReaderDomainState {
       endPercentage?: number;
     },
   ): Promise<void> {
+    // D6 (SCEN-duration-1): drop sub-30s sessions BEFORE validation — they are
+    // neither stored nor enqueued (the flush-side gate would no-op anyway).
+    if (event.durationSeconds < MIN_SESSION_DURATION_SECONDS) return;
+
     if (!this.isValidSessionProgressEvent(event)) return;
 
     const payload: ReadingSessionInput = {
@@ -267,11 +277,35 @@ class ReaderDomainState {
       durationSeconds: event.durationSeconds,
       startPercentage: event.startPercentage,
       endPercentage: event.endPercentage,
+      userId: authState.userId ?? '',
     };
 
     try {
-      await saveReadingSession(payload);
+      const saved = await saveReadingSession(payload);
       void this.onStatsRefreshNeeded?.(bookId);
+
+      // D9 (SCEN-push-1/5): enqueue AFTER the local save succeeded. Plain
+      // add() — NEVER addCoalescedSyncOutboxItem (bookId-keyed coalesce would
+      // collapse distinct sessions into one remote row). The local row is
+      // already safe, so an enqueue failure is logged and swallowed — never
+      // a throw that could mask the successful save.
+      const outboxPayload = {
+        id: saved.id,
+        bookId,
+        startedAt: event.startedAt,
+        endedAt: event.endedAt,
+        durationMinutes: saved.durationMinutes,
+        date: saved.date,
+        userId: authState.userId ?? '',
+        updatedAtEpochMillis: saved.updatedAtEpochMillis,
+        startPercentage: event.startPercentage,
+        endPercentage: event.endPercentage,
+      };
+      try {
+        await outboxDao.add('READING_SESSION', bookId, 'UPSERT', JSON.stringify(outboxPayload));
+      } catch (enqueueError) {
+        console.error('Failed to enqueue reading session for sync:', enqueueError);
+      }
     } catch {
       // Non-blocking
     }

@@ -10,7 +10,14 @@ const mockReadFile = vi.hoisted(() =>
 
 const mockGetProgress = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 const mockSaveProgress = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-const mockSaveReadingSession = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockSaveReadingSession = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({
+    id: 'sess_test',
+    durationMinutes: 2,
+    date: '2026-08-13T00:00:00.000Z',
+    updatedAtEpochMillis: 1786615200000,
+  }),
+);
 const mockUpdateBookProgress = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockSetReadingStatus = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockFetchBookState = vi.hoisted(() =>
@@ -427,6 +434,7 @@ describe('ReaderDomainState', () => {
       durationSeconds: 120,
       startPercentage: 10,
       endPercentage: 30,
+      userId: '',
     });
     expect(refreshFn).toHaveBeenCalledWith('b1');
   });
@@ -453,6 +461,114 @@ describe('ReaderDomainState', () => {
         durationSeconds: 60,
       }),
     ).resolves.toBeUndefined();
+  });
+
+  // ─── handlePdfSessionProgress — 30s threshold + READING_SESSION outbox (D6/D9) ───
+
+  it('drops sub-30s sessions — no save command, no outbox enqueue (SCEN-duration-1)', async () => {
+    mockAuthState.userId = 'user-1';
+    const startedAt = new Date(Date.now() - 20000).toISOString();
+    const endedAt = new Date().toISOString();
+
+    await readerState.handlePdfSessionProgress('b1', {
+      startedAt,
+      endedAt,
+      durationSeconds: 20,
+      startPercentage: 0,
+      endPercentage: 5,
+    });
+
+    expect(mockSaveReadingSession).not.toHaveBeenCalled();
+    expect(mockOutboxAdd).not.toHaveBeenCalled();
+    expect(mockOutboxAddCoalesced).not.toHaveBeenCalled();
+  });
+
+  it('stores 30-59s sessions with durationMinutes 0 and enqueues them (SCEN-duration-2)', async () => {
+    mockAuthState.userId = 'user-1';
+    const startedAt = new Date(Date.now() - 45000).toISOString();
+    const endedAt = new Date().toISOString();
+    mockSaveReadingSession.mockResolvedValueOnce({
+      id: 'sess_45s',
+      durationMinutes: 0,
+      date: '2026-08-13T00:00:00.000Z',
+      updatedAtEpochMillis: 1786615200000,
+    });
+
+    await readerState.handlePdfSessionProgress('b1', {
+      startedAt,
+      endedAt,
+      durationSeconds: 45,
+      startPercentage: 10,
+      endPercentage: 15,
+    });
+
+    expect(mockSaveReadingSession).toHaveBeenCalledTimes(1);
+    expect(mockOutboxAdd).toHaveBeenCalledTimes(1);
+    const [entityType, entityId, operation, payloadJson] = mockOutboxAdd.mock.calls[0];
+    expect(entityType).toBe('READING_SESSION');
+    expect(entityId).toBe('b1');
+    expect(operation).toBe('UPSERT');
+    const payload = JSON.parse(payloadJson as string);
+    expect(payload.durationMinutes).toBe(0);
+    expect(payload.date).toBe('2026-08-13T00:00:00.000Z');
+  });
+
+  it('enqueues the exact READING_SESSION payload via plain add(), never addCoalesced (SCEN-push-1)', async () => {
+    mockAuthState.userId = 'user-1';
+    const startedAt = new Date(Date.now() - 120000).toISOString();
+    const endedAt = new Date().toISOString();
+    mockSaveReadingSession.mockResolvedValueOnce({
+      id: 'sess_abc123',
+      durationMinutes: 2,
+      date: '2026-08-13T00:00:00.000Z',
+      updatedAtEpochMillis: 1786615200000,
+    });
+
+    await readerState.handlePdfSessionProgress('b1', {
+      startedAt,
+      endedAt,
+      durationSeconds: 120,
+      startPercentage: 10,
+      endPercentage: 30,
+    });
+
+    // Plain add() — bookId-keyed coalesce would collapse distinct sessions (D9).
+    expect(mockOutboxAdd).toHaveBeenCalledTimes(1);
+    expect(mockOutboxAddCoalesced).not.toHaveBeenCalled();
+    const [entityType, entityId, operation, payloadJson] = mockOutboxAdd.mock.calls[0];
+    expect(entityType).toBe('READING_SESSION');
+    expect(entityId).toBe('b1');
+    expect(operation).toBe('UPSERT');
+    expect(JSON.parse(payloadJson as string)).toEqual({
+      id: 'sess_abc123',
+      bookId: 'b1',
+      startedAt,
+      endedAt,
+      durationMinutes: 2,
+      date: '2026-08-13T00:00:00.000Z',
+      userId: 'user-1',
+      updatedAtEpochMillis: 1786615200000,
+      startPercentage: 10,
+      endPercentage: 30,
+    });
+  });
+
+  it('local row survives enqueue failure — save precedes enqueue, throw swallowed (SCEN-push-5)', async () => {
+    mockAuthState.userId = 'user-1';
+    mockOutboxAdd.mockRejectedValueOnce(new Error('outbox write failed'));
+    const startedAt = new Date(Date.now() - 60000).toISOString();
+    const endedAt = new Date().toISOString();
+
+    await expect(
+      readerState.handlePdfSessionProgress('b1', {
+        startedAt,
+        endedAt,
+        durationSeconds: 60,
+      }),
+    ).resolves.toBeUndefined();
+
+    // Local save already happened before the enqueue attempt (and before the throw).
+    expect(mockSaveReadingSession).toHaveBeenCalledTimes(1);
   });
 
   // ─── handleReaderLocationContext ───

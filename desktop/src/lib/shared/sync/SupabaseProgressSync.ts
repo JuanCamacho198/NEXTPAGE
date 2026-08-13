@@ -61,6 +61,25 @@ export interface SupabaseTagRow {
   color?: string | null;
 }
 
+/**
+ * A row in the `reading_sessions` Supabase table. Field names mirror the
+ * remote DDL (Android-deployed) exactly; `device` defaults to 'desktop' on
+ * the push path. `updatedAt` is the client LWW clock carried in the outbox
+ * payload (NOT `now()`), so pull-back of an own push is a tie → no-op.
+ */
+export interface SupabaseReadingSessionRow {
+  id: string;
+  userId: string;
+  bookId: string;
+  startedAt: string;
+  durationMinutes: number;
+  date: string;
+  device: string;
+  updatedAt: string;
+  startPercentage?: number | null;
+  endPercentage?: number | null;
+}
+
 export type ProgressChangeCallback = (row: SupabaseProgressRow) => void;
 export type BookmarkChangeCallback = (row: SupabaseBookmarkRow) => void;
 export type HighlightChangeCallback = (row: SupabaseHighlightRow) => void;
@@ -316,6 +335,36 @@ export class SupabaseProgressSync {
     };
 
     const { error } = await this.supabase.from('highlights').upsert(payload, {
+      onConflict: 'id',
+      ignoreDuplicates: false,
+    });
+
+    if (error) throw error;
+  }
+
+  /**
+   * Upsert a single reading session row.
+   * ON CONFLICT(id) DO UPDATE — the deterministic session id is the PK on both
+   * sides, so re-flushing the same session (or an Android push of the same id)
+   * collapses to exactly one remote row (SCEN-push-4). `updated_at` is the
+   * client clock from the outbox payload, never `now()` (SCEN-pull-3).
+   */
+  async upsertReadingSession(session: SupabaseReadingSessionRow): Promise<void> {
+    if (this.isGated()) return;
+    const payload: Record<string, unknown> = {
+      id: session.id,
+      user_id: session.userId,
+      book_id: session.bookId,
+      started_at: session.startedAt,
+      duration_minutes: session.durationMinutes,
+      date: session.date,
+      device: session.device,
+      updated_at: session.updatedAt,
+      start_percentage: session.startPercentage ?? null,
+      end_percentage: session.endPercentage ?? null,
+    };
+
+    const { error } = await this.supabase.from('reading_sessions').upsert(payload, {
       onConflict: 'id',
       ignoreDuplicates: false,
     });

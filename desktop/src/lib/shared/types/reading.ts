@@ -40,6 +40,19 @@ export type ReadingSessionInput = {
   durationSeconds: number;
   startPercentage?: number;
   endPercentage?: number;
+  userId: string;
+};
+
+/**
+ * DTO returned by the Rust `saveReadingSession` command (serde camelCase).
+ * The deterministic id is computed in Rust — the frontend cannot know it — so
+ * this DTO is the single source for the READING_SESSION outbox payload.
+ */
+export type ReadingSessionSavedDto = {
+  id: string;
+  durationMinutes: number;
+  date: string;
+  updatedAtEpochMillis: number;
 };
 
 export type CommandErrorDto = {

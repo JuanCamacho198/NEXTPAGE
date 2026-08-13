@@ -147,6 +147,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
+    // Lottie for the Home streak widget (REQ-streak-widget-4). 6.6.6 verified
+    // against Kotlin 1.9.24 (kotlin-stdlib 1.9.22 metadata); fallback 6.5.2.
+    implementation("com.airbnb.android:lottie-compose:6.6.6")
     implementation("io.coil-kt:coil:$coilVersion")
     implementation("io.coil-kt:coil-compose:$coilVersion")
     implementation("androidx.webkit:webkit:1.12.1")

@@ -2,6 +2,7 @@ package com.nextpage.domain.usecase
 
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.DailyReadingActivity
+import com.nextpage.domain.model.Statistics
 import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.ReadingStatsData
 import com.nextpage.domain.repository.ReadingStatsRepository
@@ -11,14 +12,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 /**
- * Tests for the refresh trigger behavior of [GetStatisticsUseCase] (R5):
- * - `getDailyActivity()` is a suspend function, not a Flow
- * - The use case re-aggregates only when `refresh()` is called
+ * Tests for [GetStatisticsUseCase]:
+ * - refresh trigger re-aggregation (R5)
+ * - injected daily goal (REQ-daily-reading-goal-3, SCEN-3)
+ * - user scoping via setUserId (REQ-reading-sessions-sync-6)
+ * - today-anchored streak (REQ-streak-widget-3, SCEN-streak-1/2/3)
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class GetStatisticsUseCaseTest {
@@ -32,6 +36,8 @@ class GetStatisticsUseCaseTest {
         }
         cal.timeInMillis
     }
+
+    private fun daysAgo(days: Long): Long = todayStart - TimeUnit.DAYS.toMillis(days)
 
     @Test
     fun refreshTrigger_picksUpNewDailyActivityOnRefresh() = runBlocking {
@@ -63,8 +69,156 @@ class GetStatisticsUseCaseTest {
         assertEquals(0, stats.weeklyActivity.sumOf { it.minutesRead })
     }
 
+    // ── Daily goal (REQ-daily-reading-goal-3, SCEN-daily-reading-goal-3) ──
+
+    @Test
+    fun goalProgress_usesInjectedGoalProvider_notHardcoded30() = runBlocking {
+        val statsRepo = FakeReadingStatsRepository().apply {
+            dailyActivity = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 22))
+        }
+        val useCase = GetStatisticsUseCase(
+            statsRepo,
+            FakeHomeRepository(),
+            dailyGoalProvider = { 45 }
+        )
+
+        val stats = useCase().first()
+
+        assertEquals(22L, stats.weeklyActivity.find { it.dateEpochMillis == todayStart }?.minutesRead?.toLong())
+        // 22/45 ≈ 0.4889, NOT 22/30 ≈ 0.7333
+        assertEquals(22f / 45f, stats.goalProgress, 0.001f)
+    }
+
+    @Test
+    fun goalProgress_isClampedToOneWhenAboveGoal() = runBlocking {
+        val statsRepo = FakeReadingStatsRepository().apply {
+            dailyActivity = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 90))
+        }
+        val useCase = GetStatisticsUseCase(
+            statsRepo,
+            FakeHomeRepository(),
+            dailyGoalProvider = { 30 }
+        )
+
+        val stats = useCase().first()
+
+        assertEquals(1f, stats.goalProgress, 0.001f)
+    }
+
+    @Test
+    fun goalProgress_neverDividesByZero() = runBlocking {
+        val statsRepo = FakeReadingStatsRepository().apply {
+            dailyActivity = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 22))
+        }
+        val useCase = GetStatisticsUseCase(
+            statsRepo,
+            FakeHomeRepository(),
+            dailyGoalProvider = { 0 }
+        )
+
+        val stats = useCase().first()
+
+        assertEquals(1f, stats.goalProgress, 0.001f)
+    }
+
+    // ── User scoping (REQ-reading-sessions-sync-6, SCEN-sync-9) ──
+
+    @Test
+    fun setUserId_scopesDailyAggregationToThatUser() = runBlocking {
+        val statsRepo = FakeReadingStatsRepository().apply {
+            scopedActivity["user-a"] = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 30))
+            scopedActivity["user-b"] = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 7))
+        }
+        val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+
+        useCase.setUserId("user-a")
+        val statsA: Statistics = useCase().first()
+        assertEquals(
+            30L,
+            statsA.weeklyActivity.find { it.dateEpochMillis == todayStart }?.minutesRead?.toLong()
+        )
+
+        useCase.setUserId("user-b")
+        val statsB: Statistics = useCase().first()
+        assertEquals(
+            7L,
+            statsB.weeklyActivity.find { it.dateEpochMillis == todayStart }?.minutesRead?.toLong()
+        )
+    }
+
+    @Test
+    fun setUserId_nullFallsBackToLegacyRows() = runBlocking {
+        val statsRepo = FakeReadingStatsRepository().apply {
+            scopedActivity[null] = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 3))
+        }
+        val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+
+        useCase.setUserId(null)
+        val stats = useCase().first()
+
+        assertEquals(
+            3L,
+            stats.weeklyActivity.find { it.dateEpochMillis == todayStart }?.minutesRead?.toLong()
+        )
+    }
+
+    // ── Streak (REQ-streak-widget-3, SCEN-streak-1/2/3) ──
+
+    @Test
+    fun streak_fiveConsecutiveDaysIncludingToday_isFive() = runBlocking {
+        val activity = (0L..4L).map { dayOffset ->
+            DailyReadingActivity(dateEpochMillis = daysAgo(dayOffset), minutesRead = 10)
+        }
+        val statsRepo = FakeReadingStatsRepository().apply { dailyActivity = activity }
+        val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+
+        val stats = useCase().first()
+
+        assertEquals(5, stats.currentStreak)
+    }
+
+    @Test
+    fun streak_yesterdayOnly_isZeroBecauseTodayAnchored() = runBlocking {
+        // Sessions yesterday but NONE today → streak must be 0 (SCEN-streak-2).
+        val activity = listOf(
+            DailyReadingActivity(dateEpochMillis = daysAgo(1), minutesRead = 10),
+            DailyReadingActivity(dateEpochMillis = daysAgo(2), minutesRead = 10)
+        )
+        val statsRepo = FakeReadingStatsRepository().apply { dailyActivity = activity }
+        val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+
+        val stats = useCase().first()
+
+        assertEquals(0, stats.currentStreak)
+    }
+
+    @Test
+    fun streak_gapThenToday_isOne() = runBlocking {
+        // 3-day streak, a gap day, then reading today → streak = 1 (SCEN-streak-3).
+        val activity = listOf(
+            DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 10),
+            DailyReadingActivity(dateEpochMillis = daysAgo(2), minutesRead = 10),
+            DailyReadingActivity(dateEpochMillis = daysAgo(3), minutesRead = 10),
+            DailyReadingActivity(dateEpochMillis = daysAgo(4), minutesRead = 10)
+        )
+        val statsRepo = FakeReadingStatsRepository().apply { dailyActivity = activity }
+        val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+
+        val stats = useCase().first()
+
+        assertEquals(1, stats.currentStreak)
+    }
+
+    @Test
+    fun streak_noActivity_isZero() = runBlocking {
+        val useCase = GetStatisticsUseCase(FakeReadingStatsRepository(), FakeHomeRepository())
+        val stats = useCase().first()
+        assertEquals(0, stats.currentStreak)
+    }
+
     private class FakeReadingStatsRepository : ReadingStatsRepository {
         var dailyActivity: List<DailyReadingActivity> = emptyList()
+        val scopedActivity = mutableMapOf<String?, List<DailyReadingActivity>>()
         private val stats = MutableStateFlow<ReadingStatsData?>(null)
         private val total = MutableStateFlow(0L)
         private val allStats = MutableStateFlow<List<ReadingStatsData>>(emptyList())
@@ -72,7 +226,8 @@ class GetStatisticsUseCaseTest {
         override fun observeStats(bookId: String): Flow<ReadingStatsData?> = stats
         override fun observeTotalTime(): Flow<Long> = total
         override fun observeBookStats(): Flow<List<ReadingStatsData>> = allStats
-        override suspend fun getDailyActivity(userId: String?): List<DailyReadingActivity> = dailyActivity
+        override suspend fun getDailyActivity(userId: String?): List<DailyReadingActivity> =
+            scopedActivity[userId] ?: dailyActivity
         override suspend fun updateReadingTime(bookId: String, additionalMinutes: Long) = Unit
         override suspend fun deleteStats(bookId: String) = Unit
     }
@@ -86,4 +241,3 @@ class GetStatisticsUseCaseTest {
         override suspend fun deleteBook(bookId: String): Result<Unit> = Result.success(Unit)
     }
 }
-

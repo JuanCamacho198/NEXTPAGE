@@ -13,6 +13,7 @@ import type {
   LibraryBookDto,
   ReadingProgressDto,
   ReadingSessionInput,
+  ReadingSessionSavedDto,
   ReadingStatsSummaryDto,
   SaveHighlightInput,
   SaveProgressInput,
@@ -232,8 +233,10 @@ export const saveProgress = async (payload: SaveProgressInput): Promise<void> =>
   await invoke('saveProgress', { payload });
 };
 
-export const saveReadingSession = async (payload: ReadingSessionInput): Promise<void> => {
-  await invoke('saveReadingSession', { payload });
+export const saveReadingSession = async (
+  payload: ReadingSessionInput,
+): Promise<ReadingSessionSavedDto> => {
+  return invoke<ReadingSessionSavedDto>('saveReadingSession', { payload });
 };
 
 export const upsertProgress = async (progress: ReadingProgressDto): Promise<void> => {
@@ -759,7 +762,13 @@ export const saveBookFile = async (
   data: number[],
   meta?: { title?: string; author?: string; format?: string },
 ): Promise<void> => {
-  await invoke('saveBookFile', { id, data, title: meta?.title, author: meta?.author, format: meta?.format });
+  await invoke('saveBookFile', {
+    id,
+    data,
+    title: meta?.title,
+    author: meta?.author,
+    format: meta?.format,
+  });
 };
 
 export const upsertBookCover = async (payload: UpsertBookCoverInput): Promise<void> => {

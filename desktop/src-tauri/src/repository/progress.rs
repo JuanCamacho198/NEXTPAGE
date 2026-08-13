@@ -1,12 +1,25 @@
 use super::LibraryRepository;
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    ActivityPoint, ReadingProgressDto, ReadingSessionInput, ReadingStatsSummaryDto,
-    SaveProgressInput,
+    ActivityPoint, ReadingProgressDto, ReadingSessionInput, ReadingSessionSavedDto,
+    ReadingStatsSummaryDto, RemoteReadingSessionRow, SaveProgressInput,
 };
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
 use rusqlite::{params, OptionalExtension};
+use sha2::{Digest, Sha256};
 use uuid::Uuid;
+
+/// Deterministic session id shared with Android:
+/// `"sess_" + sha256("$userId|$bookId|$startTimeEpochMillis").hex.take(32)`.
+/// The hash input is exactly `{userId}|{bookId}|{epochMillis}` — pipe separators,
+/// no quotes, epoch millis as decimal digits. Byte-parity with the Android
+/// implementation is the convergence contract (any drift duplicates minutes).
+fn reading_session_id(user_id: &str, book_id: &str, started_epoch_millis: i64) -> String {
+    let hash_input = format!("{}|{}|{}", user_id, book_id, started_epoch_millis);
+    let digest = Sha256::digest(hash_input.as_bytes());
+    let hex = format!("{:x}", digest);
+    format!("sess_{}", hex.chars().take(32).collect::<String>())
+}
 
 pub fn get_progress(
     repo: &LibraryRepository,
@@ -108,7 +121,7 @@ pub fn upsert_progress(repo: &LibraryRepository, progress: ReadingProgressDto) -
 pub fn save_reading_session(
     repo: &LibraryRepository,
     session: ReadingSessionInput,
-) -> AppResult<()> {
+) -> AppResult<ReadingSessionSavedDto> {
     let book_id = session.book_id.trim();
     if book_id.is_empty() {
         return Err(AppError::MissingBookId);
@@ -155,11 +168,18 @@ pub fn save_reading_session(
         }
     }
 
+    let started_utc = started_at.with_timezone(&Utc);
+    let started_epoch_millis = started_utc.timestamp_millis();
+    let id = reading_session_id(&session.user_id, book_id, started_epoch_millis);
+    let duration_minutes = session.duration_seconds / 60;
+    let date = started_utc.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc().to_rfc3339();
+    let updated_at_epoch_millis = Utc::now().timestamp_millis();
+
     repo.connection.execute(
-            "INSERT INTO reading_sessions (id, book_id, started_at, ended_at, duration_seconds, start_percentage, end_percentage, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            "INSERT OR REPLACE INTO reading_sessions (id, book_id, started_at, ended_at, duration_seconds, start_percentage, end_percentage, created_at, user_id, date, updated_at_epoch_millis)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
-                Uuid::new_v4().to_string(),
+                &id,
                 book_id,
                 session.started_at,
                 session.ended_at,
@@ -167,10 +187,13 @@ pub fn save_reading_session(
                 session.start_percentage,
                 session.end_percentage,
                 Utc::now().to_rfc3339(),
+                session.user_id,
+                &date,
+                updated_at_epoch_millis,
             ],
         )?;
 
-    Ok(())
+    Ok(ReadingSessionSavedDto { id, duration_minutes, date, updated_at_epoch_millis })
 }
 
 pub fn get_reading_stats(
@@ -520,7 +543,11 @@ pub fn get_reading_stats_for_range(
     })
 }
 
-pub fn get_reading_streak(repo: &LibraryRepository, book_id: Option<&str>) -> AppResult<i64> {
+pub fn get_reading_streak(
+    repo: &LibraryRepository,
+    book_id: Option<&str>,
+    user_id: &str,
+) -> AppResult<i64> {
     if let Some(id) = book_id {
         if id.trim().is_empty() {
             return Err(AppError::MissingBookId);
@@ -537,11 +564,12 @@ pub fn get_reading_streak(repo: &LibraryRepository, book_id: Option<&str>) -> Ap
          FROM reading_sessions
          WHERE started_at >= ?1
            AND (?2 IS NULL OR book_id = ?2)
+           AND (user_id = ?3 OR user_id = '')
          ORDER BY day DESC",
     )?;
 
     let days: Vec<NaiveDate> = statement
-        .query_map(params![since_str, book_id], |row| {
+        .query_map(params![since_str, book_id, user_id], |row| {
             let raw: String = row.get(0)?;
             Ok(raw)
         })?
@@ -578,4 +606,333 @@ pub fn get_reading_streak(repo: &LibraryRepository, book_id: Option<&str>) -> Ap
     }
 
     Ok(count)
+}
+
+/// Merge remote (Supabase) reading sessions into the local table (D11).
+/// Per row: FK guard (book absent locally -> skip, documented) -> LWW
+/// (local `updated_at_epoch_millis >= remote` -> skip; tie = no-op so pull-back
+/// of rows this device just pushed never double-counts) -> INSERT OR REPLACE by
+/// deterministic id. Remote rows have no ended_at (stored NULL) and carry
+/// `duration_minutes` (mapped back to seconds via minutes * 60, documented
+/// precision loss). Returns the number of rows applied.
+pub fn upsert_remote_reading_sessions(
+    repo: &LibraryRepository,
+    rows: &[RemoteReadingSessionRow],
+) -> AppResult<i64> {
+    let mut applied = 0_i64;
+
+    for row in rows {
+        let book_exists: bool = repo.connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM books WHERE id = ?1)",
+            params![&row.book_id],
+            |r| r.get(0),
+        )?;
+        if !book_exists {
+            continue;
+        }
+
+        let local_clock: Option<i64> = repo
+            .connection
+            .query_row(
+                "SELECT updated_at_epoch_millis FROM reading_sessions WHERE id = ?1",
+                params![&row.id],
+                |r| r.get(0),
+            )
+            .optional()?;
+        if let Some(local) = local_clock {
+            if local >= row.updated_at_epoch_millis {
+                continue;
+            }
+        }
+
+        repo.connection.execute(
+            "INSERT OR REPLACE INTO reading_sessions (id, book_id, started_at, ended_at, duration_seconds, start_percentage, end_percentage, created_at, user_id, date, updated_at_epoch_millis)
+             VALUES (?1, ?2, ?3, NULL, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![
+                &row.id,
+                &row.book_id,
+                &row.started_at,
+                row.duration_minutes * 60,
+                row.start_percentage,
+                row.end_percentage,
+                Utc::now().to_rfc3339(),
+                &row.user_id,
+                &row.date,
+                row.updated_at_epoch_millis,
+            ],
+        )?;
+        applied += 1;
+    }
+
+    Ok(applied)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::tests::{insert_book, new_repository};
+    use chrono::Duration as ChronoDuration;
+    use rusqlite::params;
+
+    fn session_input(
+        user_id: &str,
+        book_id: &str,
+        started_at: &str,
+        duration_seconds: i64,
+    ) -> ReadingSessionInput {
+        let started = DateTime::parse_from_rfc3339(started_at).unwrap();
+        let ended = started + ChronoDuration::seconds(duration_seconds);
+        ReadingSessionInput {
+            user_id: user_id.to_string(),
+            book_id: book_id.to_string(),
+            started_at: started_at.to_string(),
+            ended_at: Some(ended.to_rfc3339()),
+            duration_seconds,
+            start_percentage: Some(10.0),
+            end_percentage: Some(20.0),
+        }
+    }
+
+    fn remote_row(id: &str, book_id: &str, minutes: i64, clock: i64) -> RemoteReadingSessionRow {
+        RemoteReadingSessionRow {
+            id: id.to_string(),
+            user_id: "u-remote".to_string(),
+            book_id: book_id.to_string(),
+            started_at: "2026-08-13T10:00:00Z".to_string(),
+            duration_minutes: minutes,
+            date: "2026-08-13T00:00:00+00:00".to_string(),
+            updated_at_epoch_millis: clock,
+            start_percentage: Some(0.0),
+            end_percentage: Some(50.0),
+        }
+    }
+
+    #[test]
+    fn reading_session_id_is_deterministic_and_matches_android_vector() {
+        let id1 = reading_session_id("u1", "b1", 1786615200000);
+        let id2 = reading_session_id("u1", "b1", 1786615200000);
+        assert_eq!(id1, id2);
+        // Known-good vector computed independently (sha256("u1|b1|1786615200000") hex[..32]).
+        assert_eq!(id1, "sess_953ac281a5845cd84a6522795bc747ff");
+        assert!(id1.starts_with("sess_"));
+        assert_eq!(id1.len(), 5 + 32);
+        assert!(id1[5..].chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn reading_session_id_changes_when_start_time_changes() {
+        let id1 = reading_session_id("u1", "b1", 1786615200000);
+        let id2 = reading_session_id("u1", "b1", 1786615201000);
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn save_reading_session_populates_user_columns_and_floor_duration() {
+        let repo = new_repository();
+        insert_book(&repo, "book-floor", "C:/library/book-floor.epub");
+
+        // Distinct start times (same UTC day) so each save is its own row.
+        let cases = [
+            ("2026-08-13T10:00:00Z", 45_i64, 0_i64),
+            ("2026-08-13T11:00:00Z", 119_i64, 1_i64),
+            ("2026-08-13T12:00:00Z", 120_i64, 2_i64),
+        ];
+        for (started_at, seconds, expected_minutes) in cases {
+            let saved = save_reading_session(
+                &repo,
+                session_input("u-floor", "book-floor", started_at, seconds),
+            )
+            .unwrap();
+            assert_eq!(saved.duration_minutes, expected_minutes);
+            assert_eq!(saved.date, "2026-08-13T00:00:00+00:00");
+            assert!(saved.updated_at_epoch_millis > 0);
+
+            let (user_id, date, clock): (String, Option<String>, i64) = repo
+                .connection
+                .query_row(
+                    "SELECT user_id, date, updated_at_epoch_millis FROM reading_sessions WHERE id = ?1",
+                    params![saved.id],
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+                )
+                .unwrap();
+            assert_eq!(user_id, "u-floor");
+            assert_eq!(date.as_deref(), Some("2026-08-13T00:00:00+00:00"));
+            assert_eq!(clock, saved.updated_at_epoch_millis);
+        }
+    }
+
+    #[test]
+    fn save_reading_session_same_triple_replaces_no_duplicate() {
+        let repo = new_repository();
+        insert_book(&repo, "book-replace", "C:/library/book-replace.epub");
+
+        let first = save_reading_session(
+            &repo,
+            session_input("u-r", "book-replace", "2026-08-13T10:00:00Z", 300),
+        )
+        .unwrap();
+        let second = save_reading_session(
+            &repo,
+            session_input("u-r", "book-replace", "2026-08-13T10:00:00Z", 600),
+        )
+        .unwrap();
+        assert_eq!(first.id, second.id);
+
+        let count: i64 = repo
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM reading_sessions WHERE id = ?1",
+                params![first.id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+
+        // OR REPLACE keeps the latest payload.
+        let duration: i64 = repo
+            .connection
+            .query_row(
+                "SELECT duration_seconds FROM reading_sessions WHERE id = ?1",
+                params![first.id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(duration, 600);
+    }
+
+    #[test]
+    fn upsert_remote_skips_unknown_book_fk_guard() {
+        let repo = new_repository();
+        insert_book(&repo, "book-known", "C:/library/book-known.epub");
+
+        let applied = upsert_remote_reading_sessions(
+            &repo,
+            &[
+                remote_row("sess_absent", "book-absent", 10, 1000),
+                remote_row("sess_known", "book-known", 10, 1000),
+            ],
+        )
+        .unwrap();
+        assert_eq!(applied, 1);
+
+        let count: i64 = repo
+            .connection
+            .query_row("SELECT COUNT(*) FROM reading_sessions", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn upsert_remote_lww_newer_applies_older_and_tie_skip() {
+        let repo = new_repository();
+        insert_book(&repo, "book-lww", "C:/library/book-lww.epub");
+
+        // Seed local row at clock 1000.
+        let applied =
+            upsert_remote_reading_sessions(&repo, &[remote_row("sess_lww", "book-lww", 10, 1000)])
+                .unwrap();
+        assert_eq!(applied, 1);
+
+        // Newer remote (2000) applies.
+        let applied =
+            upsert_remote_reading_sessions(&repo, &[remote_row("sess_lww", "book-lww", 20, 2000)])
+                .unwrap();
+        assert_eq!(applied, 1);
+        let seconds: i64 = repo
+            .connection
+            .query_row(
+                "SELECT duration_seconds FROM reading_sessions WHERE id = 'sess_lww'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(seconds, 20 * 60);
+
+        // Older remote (500) skipped.
+        let applied =
+            upsert_remote_reading_sessions(&repo, &[remote_row("sess_lww", "book-lww", 30, 500)])
+                .unwrap();
+        assert_eq!(applied, 0);
+
+        // Tie (2000 == local) skipped.
+        let applied =
+            upsert_remote_reading_sessions(&repo, &[remote_row("sess_lww", "book-lww", 40, 2000)])
+                .unwrap();
+        assert_eq!(applied, 0);
+
+        let (seconds, ended_at): (i64, Option<String>) = repo
+            .connection
+            .query_row(
+                "SELECT duration_seconds, ended_at FROM reading_sessions WHERE id = 'sess_lww'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(seconds, 20 * 60);
+        assert!(ended_at.is_none());
+    }
+
+    #[test]
+    fn upsert_remote_duplicate_id_results_in_single_row() {
+        let repo = new_repository();
+        insert_book(&repo, "book-dup", "C:/library/book-dup.epub");
+
+        let applied = upsert_remote_reading_sessions(
+            &repo,
+            &[
+                remote_row("sess_dup", "book-dup", 5, 100),
+                remote_row("sess_dup", "book-dup", 6, 200),
+            ],
+        )
+        .unwrap();
+        assert_eq!(applied, 2);
+
+        let count: i64 = repo
+            .connection
+            .query_row("SELECT COUNT(*) FROM reading_sessions WHERE id = 'sess_dup'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn get_reading_streak_filters_by_user_and_includes_legacy_rows() {
+        use chrono::Duration;
+
+        let repo = new_repository();
+        insert_book(&repo, "book-iso", "C:/library/book-iso.epub");
+
+        let today = Utc::now().date_naive().and_hms_opt(10, 0, 0).unwrap().and_utc();
+        let yesterday = (today - Duration::days(1)).to_rfc3339();
+        let two_days_ago = (today - Duration::days(2)).to_rfc3339();
+        let today_rfc = today.to_rfc3339();
+
+        // u1: three consecutive days (today, yesterday, day-before).
+        let _ = save_reading_session(&repo, session_input("u1", "book-iso", &two_days_ago, 300))
+            .unwrap();
+        let _ =
+            save_reading_session(&repo, session_input("u1", "book-iso", &yesterday, 300)).unwrap();
+        let _ =
+            save_reading_session(&repo, session_input("u1", "book-iso", &today_rfc, 300)).unwrap();
+
+        // u2: today only.
+        let _ = save_reading_session(
+            &repo,
+            session_input("u2", "book-iso", &(today + Duration::seconds(1)).to_rfc3339(), 300),
+        )
+        .unwrap();
+
+        // Legacy (''): yesterday only — visible to every user via OR user_id = ''.
+        // Same timestamp as u1's yesterday row but different user -> different id.
+        let _ =
+            save_reading_session(&repo, session_input("", "book-iso", &yesterday, 300)).unwrap();
+
+        // u1: {D, D-1, D-2} (+ legacy D-1) -> 3.
+        assert_eq!(get_reading_streak(&repo, None, "u1").unwrap(), 3);
+        // u2: {D} + legacy {D-1} -> 2 (today-alive walk-back).
+        assert_eq!(get_reading_streak(&repo, None, "u2").unwrap(), 2);
+        // Other user: only legacy {D-1} -> yesterday-alive counts that day -> 1.
+        assert_eq!(get_reading_streak(&repo, None, "u-other").unwrap(), 1);
+    }
 }

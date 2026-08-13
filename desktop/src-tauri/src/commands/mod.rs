@@ -44,9 +44,10 @@ use crate::models::{
     BookDto, BookImportInput, BookmarkDto, CollectionDto, CommandErrorDto, CreateCollectionInput,
     CreateTagInput, DictionaryWordDto, HideBookInput, HighlightDto, IndexBookTextInput,
     LibraryBookDto, ListLibraryBooksInput, ReadingProgressDto, ReadingSessionInput,
-    ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput, SaveHighlightTagsInput,
-    SaveProgressInput, ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse,
-    SyncOutboxRowDto, TagDto, UpdateHighlightInput, UpsertBookCoverInput,
+    ReadingSessionSavedDto, ReadingStatsSummaryDto, RemoteReadingSessionRow, SaveBookmarkInput,
+    SaveHighlightInput, SaveHighlightTagsInput, SaveProgressInput, ScanFolderResultDto,
+    SearchBookTextInput, SearchBookTextResponse, SyncOutboxRowDto, TagDto, UpdateHighlightInput,
+    UpsertBookCoverInput,
 };
 use crate::state::AppState;
 
@@ -185,7 +186,7 @@ pub fn upsertProgress(
 pub fn saveReadingSession(
     state: State<'_, AppState>,
     payload: ReadingSessionInput,
-) -> Result<(), String> {
+) -> Result<ReadingSessionSavedDto, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository.save_reading_session(payload).map_err(map_command_error)
 }
@@ -255,12 +256,23 @@ pub fn getReadingStatsForRange(
 pub fn getReadingStreak(
     state: State<'_, AppState>,
     book_id: Option<String>,
+    user_id: String,
 ) -> Result<i64, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     if !repository.has_desktop_parity_schema().unwrap_or(true) {
         return Ok(0);
     }
-    repository.get_reading_streak(book_id.as_deref()).map_err(map_command_error)
+    repository.get_reading_streak(book_id.as_deref(), &user_id).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn upsertRemoteReadingSessions(
+    state: State<'_, AppState>,
+    rows: Vec<RemoteReadingSessionRow>,
+) -> Result<i64, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.upsert_remote_reading_sessions(&rows).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -879,7 +891,7 @@ pub fn pruneSyncOutbox(state: State<'_, AppState>) -> Result<i32, String> {
     let cutoff = (chrono::Utc::now() - chrono::Duration::days(7)).to_rfc3339();
     let deleted = conn
         .execute(
-            "DELETE FROM sync_outbox WHERE created_at < ?1 AND retry_count >= 10",
+            "DELETE FROM sync_outbox WHERE created_at < ?1 AND retry_count >= 10 AND entity_type <> 'READING_SESSION'",
             rusqlite::params![cutoff],
         )
         .map_err(|e| format!("Failed to prune outbox: {}", e))?;

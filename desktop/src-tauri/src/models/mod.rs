@@ -263,10 +263,34 @@ pub struct ActivityPoint {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReadingSessionInput {
+    pub user_id: String,
     pub book_id: String,
     pub started_at: String,
     pub ended_at: Option<String>,
     pub duration_seconds: i64,
+    pub start_percentage: Option<f64>,
+    pub end_percentage: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReadingSessionSavedDto {
+    pub id: String,
+    pub duration_minutes: i64,
+    pub date: String,
+    pub updated_at_epoch_millis: i64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteReadingSessionRow {
+    pub id: String,
+    pub user_id: String,
+    pub book_id: String,
+    pub started_at: String,
+    pub duration_minutes: i64,
+    pub date: String,
+    pub updated_at_epoch_millis: i64,
     pub start_percentage: Option<f64>,
     pub end_percentage: Option<f64>,
 }

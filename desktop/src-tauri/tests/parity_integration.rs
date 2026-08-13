@@ -6,6 +6,7 @@ use nextpage_desktop::commands::list_library_books_internal;
 use nextpage_desktop::db::open_and_migrate;
 use nextpage_desktop::models::{
     ActivityPoint, AppSettingDto, BookDto, ListLibraryBooksInput, ReadingSessionInput,
+    RemoteReadingSessionRow,
 };
 use nextpage_desktop::repository::LibraryRepository;
 use uuid::Uuid;
@@ -117,6 +118,7 @@ fn restart_roundtrip_preserves_settings_and_stats() {
 
         repository
             .save_reading_session(ReadingSessionInput {
+                user_id: "u-parity".to_string(),
                 book_id: "book-restart".to_string(),
                 started_at: now.clone(),
                 ended_at: Some((Utc::now() + chrono::Duration::seconds(300)).to_rfc3339()),
@@ -295,6 +297,7 @@ fn reading_stats_activity_command_round_trips_through_repository() {
         let session_time = (today - Duration::days(i)).and_hms_opt(10, 0, 0).unwrap().and_utc();
         repository
             .save_reading_session(ReadingSessionInput {
+                user_id: "u-activity".to_string(),
                 book_id: format!("book-{}", i + 1),
                 started_at: session_time.to_rfc3339(),
                 ended_at: Some((session_time + Duration::seconds(300)).to_rfc3339()),
@@ -317,6 +320,206 @@ fn reading_stats_activity_command_round_trips_through_repository() {
     for point in &on_days {
         assert_eq!(point.minutes, 5);
     }
+
+    let _ = fs::remove_file(db_path);
+}
+
+fn insert_test_book(repository: &LibraryRepository, id: &str) {
+    let now = Utc::now().to_rfc3339();
+    repository
+        .upsert_book(BookDto {
+            id: id.to_string(),
+            title: "Sync Test".to_string(),
+            author: "Tester".to_string(),
+            file_path: format!("C:/library/{}.epub", id),
+            format: "epub".to_string(),
+            sync_status: "local".to_string(),
+            current_page: 0,
+            total_pages: 100,
+            created_at: now.clone(),
+            updated_at: now,
+            genre: None,
+            language: None,
+            publication_date: None,
+        })
+        .unwrap();
+}
+
+#[test]
+fn migration_0014_adds_reading_sessions_sync_columns() {
+    let db_path = temp_db_path();
+    let connection = open_and_migrate(&db_path).unwrap();
+    let repository = LibraryRepository::new(connection);
+
+    let columns: Vec<String> = repository
+        .connection()
+        .prepare("PRAGMA table_info(reading_sessions)")
+        .unwrap()
+        .query_map([], |row| row.get(1))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert!(columns.iter().any(|c| c == "user_id"));
+    assert!(columns.iter().any(|c| c == "date"));
+    assert!(columns.iter().any(|c| c == "updated_at_epoch_millis"));
+
+    let _ = fs::remove_file(db_path);
+}
+
+#[test]
+fn save_reading_session_returns_deterministic_id_and_dto_roundtrip() {
+    let db_path = temp_db_path();
+    let connection = open_and_migrate(&db_path).unwrap();
+    let repository = LibraryRepository::new(connection);
+    insert_test_book(&repository, "book-id-deterministic");
+
+    let input = ReadingSessionInput {
+        user_id: "u1".to_string(),
+        book_id: "book-id-deterministic".to_string(),
+        started_at: "2026-08-13T10:00:00Z".to_string(),
+        ended_at: Some("2026-08-13T10:05:00Z".to_string()),
+        duration_seconds: 300,
+        start_percentage: Some(0.0),
+        end_percentage: Some(5.0),
+    };
+
+    let saved = repository.save_reading_session(input).unwrap();
+
+    // Independent known-good vector: sha256("u1|book-id-deterministic|1786615200000") hex[..32].
+    assert_eq!(saved.id, "sess_32acb535647f5ecd3a4ce86be6b5dcf9");
+    assert_eq!(saved.duration_minutes, 5);
+    assert_eq!(saved.date, "2026-08-13T00:00:00+00:00");
+    assert!(saved.updated_at_epoch_millis > 0);
+
+    // Re-save same triple -> OR REPLACE -> exactly one row.
+    let saved2 = repository
+        .save_reading_session(ReadingSessionInput {
+            user_id: "u1".to_string(),
+            book_id: "book-id-deterministic".to_string(),
+            started_at: "2026-08-13T10:00:00Z".to_string(),
+            ended_at: Some("2026-08-13T10:06:00Z".to_string()),
+            duration_seconds: 360,
+            start_percentage: Some(0.0),
+            end_percentage: Some(6.0),
+        })
+        .unwrap();
+    assert_eq!(saved2.id, saved.id);
+
+    let count: i64 = repository
+        .connection()
+        .query_row(
+            "SELECT COUNT(*) FROM reading_sessions WHERE id = ?1",
+            rusqlite::params![saved.id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(count, 1);
+
+    let _ = fs::remove_file(db_path);
+}
+
+#[test]
+fn reading_streak_counts_legacy_and_user_scoped_rows_union() {
+    use chrono::Duration;
+
+    let db_path = temp_db_path();
+    let connection = open_and_migrate(&db_path).unwrap();
+    let repository = LibraryRepository::new(connection);
+    insert_test_book(&repository, "book-streak-union");
+
+    let today = Utc::now().date_naive().and_hms_opt(10, 0, 0).unwrap().and_utc();
+    let yesterday = (today - Duration::days(1)).to_rfc3339();
+    let today_rfc = today.to_rfc3339();
+
+    // Legacy ('' user) session yesterday — still counted for any user.
+    repository
+        .save_reading_session(ReadingSessionInput {
+            user_id: "".to_string(),
+            book_id: "book-streak-union".to_string(),
+            started_at: yesterday.clone(),
+            ended_at: Some(
+                (chrono::DateTime::parse_from_rfc3339(&yesterday).unwrap()
+                    + Duration::seconds(300))
+                .to_rfc3339(),
+            ),
+            duration_seconds: 300,
+            start_percentage: Some(0.0),
+            end_percentage: Some(10.0),
+        })
+        .unwrap();
+
+    // User-scoped session today.
+    repository
+        .save_reading_session(ReadingSessionInput {
+            user_id: "u1".to_string(),
+            book_id: "book-streak-union".to_string(),
+            started_at: today_rfc.clone(),
+            ended_at: Some(
+                (chrono::DateTime::parse_from_rfc3339(&today_rfc).unwrap()
+                    + Duration::seconds(300))
+                .to_rfc3339(),
+            ),
+            duration_seconds: 300,
+            start_percentage: Some(0.0),
+            end_percentage: Some(10.0),
+        })
+        .unwrap();
+
+    // u1: today (u1) + yesterday (legacy '') -> 2-day streak.
+    let streak = repository.get_reading_streak(None, "u1").unwrap();
+    assert_eq!(streak, 2);
+
+    let _ = fs::remove_file(db_path);
+}
+
+#[test]
+fn upsert_remote_reading_sessions_merges_through_facade() {
+    let db_path = temp_db_path();
+    let connection = open_and_migrate(&db_path).unwrap();
+    let repository = LibraryRepository::new(connection);
+    insert_test_book(&repository, "book-remote-merge");
+
+    let rows = vec![RemoteReadingSessionRow {
+        id: "sess_remote_1".to_string(),
+        user_id: "u-remote".to_string(),
+        book_id: "book-remote-merge".to_string(),
+        started_at: "2026-08-13T09:00:00Z".to_string(),
+        duration_minutes: 12,
+        date: "2026-08-13T00:00:00+00:00".to_string(),
+        updated_at_epoch_millis: 1786615200000,
+        start_percentage: Some(0.0),
+        end_percentage: Some(25.0),
+    }];
+
+    let applied = repository.upsert_remote_reading_sessions(&rows).unwrap();
+    assert_eq!(applied, 1);
+
+    let (seconds, ended_at, user_id): (i64, Option<String>, String) = repository
+        .connection()
+        .query_row(
+            "SELECT duration_seconds, ended_at, user_id FROM reading_sessions WHERE id = 'sess_remote_1'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!(seconds, 12 * 60);
+    assert!(ended_at.is_none());
+    assert_eq!(user_id, "u-remote");
+
+    // Non-local book is FK-guarded out.
+    let skipped = vec![RemoteReadingSessionRow {
+        id: "sess_remote_2".to_string(),
+        user_id: "u-remote".to_string(),
+        book_id: "book-not-installed".to_string(),
+        started_at: "2026-08-13T09:30:00Z".to_string(),
+        duration_minutes: 5,
+        date: "2026-08-13T00:00:00+00:00".to_string(),
+        updated_at_epoch_millis: 1786615200001,
+        start_percentage: None,
+        end_percentage: None,
+    }];
+    let applied = repository.upsert_remote_reading_sessions(&skipped).unwrap();
+    assert_eq!(applied, 0);
 
     let _ = fs::remove_file(db_path);
 }

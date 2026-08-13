@@ -29,9 +29,9 @@ use crate::models::{
     ActivityPoint, AddDictionaryWordInput, AppSettingDto, BookCoverDto, BookDeleteInput, BookDto,
     BookImportInput, BookmarkDto, CollectionDto, CreateTagInput, DictionaryWordDto, HighlightDto,
     IndexBookTextInput, LibraryBookDto, ReadingProgressDto, ReadingSessionInput,
-    ReadingStatsSummaryDto, SaveBookmarkInput, SaveHighlightInput, SaveHighlightTagsInput,
-    SaveProgressInput, ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse, TagDto,
-    UpdateHighlightInput,
+    ReadingSessionSavedDto, ReadingStatsSummaryDto, RemoteReadingSessionRow, SaveBookmarkInput,
+    SaveHighlightInput, SaveHighlightTagsInput, SaveProgressInput, ScanFolderResultDto,
+    SearchBookTextInput, SearchBookTextResponse, TagDto, UpdateHighlightInput,
 };
 
 const MAX_SETTING_BATCH: usize = 100;
@@ -503,7 +503,10 @@ impl LibraryRepository {
         Ok(books)
     }
 
-    pub fn save_reading_session(&self, session: ReadingSessionInput) -> AppResult<()> {
+    pub fn save_reading_session(
+        &self,
+        session: ReadingSessionInput,
+    ) -> AppResult<ReadingSessionSavedDto> {
         progress::save_reading_session(self, session)
     }
 
@@ -529,8 +532,15 @@ impl LibraryRepository {
         progress::get_reading_stats_for_range(self, from, to, book_id)
     }
 
-    pub fn get_reading_streak(&self, book_id: Option<&str>) -> AppResult<i64> {
-        progress::get_reading_streak(self, book_id)
+    pub fn get_reading_streak(&self, book_id: Option<&str>, user_id: &str) -> AppResult<i64> {
+        progress::get_reading_streak(self, book_id, user_id)
+    }
+
+    pub fn upsert_remote_reading_sessions(
+        &self,
+        rows: &[RemoteReadingSessionRow],
+    ) -> AppResult<i64> {
+        progress::upsert_remote_reading_sessions(self, rows)
     }
 
     pub fn index_book_text(&mut self, payload: IndexBookTextInput) -> AppResult<()> {
@@ -1149,8 +1159,10 @@ mod tests {
             .unwrap();
         connection.execute_batch(include_str!("../../migrations/0010_book_genre.sql")).unwrap();
         connection.execute_batch(include_str!("../../migrations/0011_book_metadata.sql")).unwrap();
+        connection.execute_batch(include_str!("../../migrations/0012_reading_status.sql")).unwrap();
+        connection.execute_batch(include_str!("../../migrations/0013_sync_outbox.sql")).unwrap();
         connection
-            .execute_batch(include_str!("../../migrations/0012_reading_status.sql"))
+            .execute_batch(include_str!("../../migrations/0014_reading_sessions_sync.sql"))
             .unwrap();
     }
 
@@ -1408,6 +1420,7 @@ mod tests {
 
         repository
             .save_reading_session(ReadingSessionInput {
+                user_id: "u-test".to_string(),
                 book_id: "book-a".to_string(),
                 started_at: Utc::now().to_rfc3339(),
                 ended_at: Some((Utc::now() + chrono::Duration::seconds(120)).to_rfc3339()),
@@ -1418,6 +1431,7 @@ mod tests {
             .unwrap();
         repository
             .save_reading_session(ReadingSessionInput {
+                user_id: "u-test".to_string(),
                 book_id: "book-b".to_string(),
                 started_at: Utc::now().to_rfc3339(),
                 ended_at: Some((Utc::now() + chrono::Duration::seconds(180)).to_rfc3339()),
@@ -1502,6 +1516,7 @@ mod tests {
 
         let now = Utc::now().to_rfc3339();
         let result = repository.save_reading_session(ReadingSessionInput {
+            user_id: "u-test".to_string(),
             book_id: "book-session-guard".to_string(),
             started_at: now.clone(),
             ended_at: Some(now),
@@ -1523,6 +1538,7 @@ mod tests {
 
         repository
             .save_reading_session(ReadingSessionInput {
+                user_id: "u-test".to_string(),
                 book_id: "book-valid-session".to_string(),
                 started_at: started_at.to_rfc3339(),
                 ended_at: Some(ended_at.to_rfc3339()),
@@ -1652,7 +1668,7 @@ mod tests {
     #[test]
     fn get_reading_streak_returns_zero_for_empty_table() {
         let repository = new_repository();
-        let streak = repository.get_reading_streak(None).unwrap();
+        let streak = repository.get_reading_streak(None, "").unwrap();
         assert_eq!(streak, 0);
     }
 
@@ -1663,7 +1679,7 @@ mod tests {
         let now = Utc::now().date_naive().and_hms_opt(10, 0, 0).unwrap().and_utc();
         insert_reading_session(&repository, "book-streak-1", &now.to_rfc3339(), 600);
 
-        let streak = repository.get_reading_streak(None).unwrap();
+        let streak = repository.get_reading_streak(None, "").unwrap();
         assert_eq!(streak, 1);
     }
 
@@ -1682,7 +1698,7 @@ mod tests {
             insert_reading_session(&repository, "book-streak-3", &at.to_rfc3339(), 600);
         }
 
-        let streak = repository.get_reading_streak(None).unwrap();
+        let streak = repository.get_reading_streak(None, "").unwrap();
         assert_eq!(streak, 3);
     }
 
@@ -1703,7 +1719,7 @@ mod tests {
         let today = Utc::now().date_naive().and_hms_opt(9, 0, 0).unwrap().and_utc();
         insert_reading_session(&repository, "book-streak-gap", &today.to_rfc3339(), 600);
 
-        let streak = repository.get_reading_streak(None).unwrap();
+        let streak = repository.get_reading_streak(None, "").unwrap();
         assert_eq!(streak, 1);
     }
 
@@ -1722,7 +1738,7 @@ mod tests {
             insert_reading_session(&repository, "book-streak-cap", &at.to_rfc3339(), 600);
         }
 
-        let streak = repository.get_reading_streak(None).unwrap();
+        let streak = repository.get_reading_streak(None, "").unwrap();
         assert_eq!(streak, 45);
     }
 }

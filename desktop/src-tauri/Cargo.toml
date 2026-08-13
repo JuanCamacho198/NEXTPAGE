@@ -28,6 +28,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 zip = "8.6.0"
 epub = "2.1"
 lopdf = "0.44.0"
+sha2 = "0.10"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

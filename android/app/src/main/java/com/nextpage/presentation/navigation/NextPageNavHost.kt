@@ -53,6 +53,7 @@ import com.nextpage.presentation.screen.ForgotScreen
 import com.nextpage.presentation.screen.HighlightsScreen
 import com.nextpage.presentation.screen.HomeScreen
 import com.nextpage.presentation.screen.LibraryScreen
+import com.nextpage.presentation.screen.OnboardingGoalScreen
 import com.nextpage.presentation.screen.ReaderScreen
 import com.nextpage.presentation.screen.RegisterScreen
 import com.nextpage.presentation.screen.SettingsScreen
@@ -382,10 +383,14 @@ fun NextPageNavHost(
     // Whitelist de rutas donde el BottomNav debe mostrarse
     val bottomNavRoutes = bottomNavDestinations.map { it.route }.toSet()
 
-    val startDestination = if (!isAuthenticated) {
-        NextPageDestination.Auth.route
-    } else {
-        NextPageDestination.Home.route
+    // Onboarding goal gating (REQ-daily-reading-goal-2, SCEN-daily-reading-goal-1/2):
+    // authenticated users with no stored goal land on onboarding/goal first.
+    val hasDailyGoal = appContainer.readingGoalPreferences.load() != null
+
+    val startDestination = when {
+        !isAuthenticated -> NextPageDestination.Auth.route
+        !hasDailyGoal -> NextPageDestination.OnboardingGoal.route
+        else -> NextPageDestination.Home.route
     }
 
     // ── Password-reset deep link (nextpage://auth/reset-password) ──────
@@ -458,7 +463,12 @@ fun NextPageNavHost(
                     AuthScreen(
                         viewModel = authViewModel,
                         onAuthenticated = {
-                            navController.navigate(NextPageDestination.Home.route) {
+                            val destination = if (appContainer.readingGoalPreferences.load() == null) {
+                                NextPageDestination.OnboardingGoal.route
+                            } else {
+                                NextPageDestination.Home.route
+                            }
+                            navController.navigate(destination) {
                                 popUpTo(NextPageDestination.Auth.route) { inclusive = true }
                             }
                         },
@@ -491,7 +501,12 @@ fun NextPageNavHost(
                     RegisterScreen(
                         viewModel = authViewModel,
                         onAuthenticated = {
-                            navController.navigate(NextPageDestination.Home.route) {
+                            val destination = if (appContainer.readingGoalPreferences.load() == null) {
+                                NextPageDestination.OnboardingGoal.route
+                            } else {
+                                NextPageDestination.Home.route
+                            }
+                            navController.navigate(destination) {
                                 popUpTo(NextPageDestination.Auth.route) { inclusive = true }
                             }
                         },
@@ -509,11 +524,33 @@ fun NextPageNavHost(
                     ForgotScreen(
                         viewModel = authViewModel,
                         onAuthenticated = {
-                            navController.navigate(NextPageDestination.Home.route) {
+                            val destination = if (appContainer.readingGoalPreferences.load() == null) {
+                                NextPageDestination.OnboardingGoal.route
+                            } else {
+                                NextPageDestination.Home.route
+                            }
+                            navController.navigate(destination) {
                                 popUpTo(NextPageDestination.Auth.route) { inclusive = true }
                             }
                         },
                         onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(
+                    route = NextPageDestination.OnboardingGoal.route,
+                    enterTransition = { fadeIn() },
+                    exitTransition = { fadeOut() },
+                    popEnterTransition = { fadeIn() },
+                    popExitTransition = { fadeOut() }
+                ) {
+                    OnboardingGoalScreen(
+                        onSave = { minutes ->
+                            appContainer.readingGoalPreferences.save(minutes)
+                            navController.navigate(NextPageDestination.Home.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
                     )
                 }
 

@@ -43,6 +43,7 @@ import com.nextpage.data.remote.sync.GoogleDriveStorageRemoteDataSource
 import com.nextpage.data.remote.sync.GoogleDriveSyncService
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
 import com.nextpage.data.session.ReaderPreferences
+import com.nextpage.data.session.ReadingGoalPreferences
 import com.nextpage.data.session.SessionManager
 import com.nextpage.data.session.SupabaseSessionManager
 import com.nextpage.data.storage.AppInternalCoverStorage
@@ -127,6 +128,9 @@ class AppContainer(context: Context) {
     )
 
     val readerPreferences: ReaderPreferences = ReaderPreferences(context.applicationContext)
+
+    val readingGoalPreferences: ReadingGoalPreferences =
+        ReadingGoalPreferences(context.applicationContext)
 
     private val driveTokenStore: DriveTokenStore by lazy {
         runCatching { EncryptedDriveTokenStore(context.applicationContext) }

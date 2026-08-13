@@ -103,6 +103,10 @@
     <string name="home_bookshelf_empty_title">Tu estanter\u00eda est\u00e1 vac\u00eda</string>
     <string name="home_bookshelf_empty_subtitle">Import\u00e1 un libro para empezar tu biblioteca.</string>
     <string name="home_today_summary_title">Resumen de hoy</string>
+    <string name="home_streak_days">d\u00edas</string>
+    <string name="onboarding_goal_title">Establece tu meta de lectura diaria</string>
+    <string name="onboarding_goal_minutes">minutos</string>
+    <string name="onboarding_goal_continue">Continuar</string>
     <string name="home_nextpage_title">NextPage</string>
     <string name="home_avatar_content_description">Abrir cuenta</string>
     <string name="home_search_results">Resultados</string>

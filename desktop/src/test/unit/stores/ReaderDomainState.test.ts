@@ -23,6 +23,11 @@ const mockSetReadingStatus = vi.hoisted(() => vi.fn().mockResolvedValue(undefine
 const mockFetchBookState = vi.hoisted(() =>
   vi.fn().mockResolvedValue({ progress: null, bookmarks: [], highlights: [] }),
 );
+const mockUpsertRemoteReadingSessions = vi.hoisted(() => vi.fn().mockResolvedValue(0));
+const mockFetchReadingSessions = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+const mockSubscribeToReadingSessions = vi.hoisted(() =>
+  vi.fn((_cb?: (row: unknown) => void) => () => undefined),
+);
 const mockAuthState = vi.hoisted(() => ({ userId: null as string | null }));
 const mockOutboxAddCoalesced = vi.hoisted(() => vi.fn().mockResolvedValue('row-id'));
 const mockOutboxAdd = vi.hoisted(() => vi.fn().mockResolvedValue('row-id'));
@@ -40,6 +45,7 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
   saveReadingSession: mockSaveReadingSession,
   updateBookProgress: mockUpdateBookProgress,
   setReadingStatus: mockSetReadingStatus,
+  upsertRemoteReadingSessions: mockUpsertRemoteReadingSessions,
 }));
 
 vi.mock('$lib/stores/authState.svelte', () => ({ authState: mockAuthState }));
@@ -49,6 +55,8 @@ vi.mock('$lib/shared/sync/SupabaseProgressSync', () => ({
     subscribeToProgress = vi.fn();
     subscribeToBookmarks = vi.fn();
     subscribeToHighlights = vi.fn();
+    fetchReadingSessions = mockFetchReadingSessions;
+    subscribeToReadingSessions = mockSubscribeToReadingSessions;
   },
 }));
 
@@ -91,8 +99,12 @@ function resetReaderState(): void {
   readerState.readerError = null;
   readerState.onStatsRefreshNeeded = null;
   readerState.onPageChangeCallback = null;
+  readerState.unsubscribeFromAllRemoteChanges();
   mockAuthState.userId = null;
   mockFetchBookState.mockResolvedValue({ progress: null, bookmarks: [], highlights: [] });
+  mockFetchReadingSessions.mockResolvedValue([]);
+  mockSubscribeToReadingSessions.mockImplementation(() => () => undefined);
+  mockUpsertRemoteReadingSessions.mockResolvedValue(0);
 }
 
 // ─── Tests ───
@@ -642,5 +654,96 @@ describe('ReaderDomainState', () => {
 
     expect(mockOutboxAddCoalesced).not.toHaveBeenCalled();
     expect(mockOutboxAdd).not.toHaveBeenCalled();
+  });
+
+  // ─── subscribeToRemoteSessions (D14 — 4th channel, REQ-pull/REQ-refresh) ───
+
+  it('subscribeToRemoteSessions no-ops without a signed-in user', () => {
+    mockAuthState.userId = null;
+
+    readerState.subscribeToRemoteSessions();
+
+    expect(mockFetchReadingSessions).not.toHaveBeenCalled();
+    expect(mockSubscribeToReadingSessions).not.toHaveBeenCalled();
+  });
+
+  it('subscribeToRemoteSessions fetches remote sessions and merges in 500-row chunks (SCEN-pull-1)', async () => {
+    mockAuthState.userId = 'user-1';
+    const rows = Array.from({ length: 750 }, (_, i) => ({
+      id: `sess_${i}`,
+      userId: 'user-1',
+      bookId: 'b1',
+      startedAt: '2026-08-13T10:00:00.000Z',
+      durationMinutes: 1,
+      date: '2026-08-13T00:00:00.000Z',
+      updatedAtEpochMillis: 1786615200000,
+      startPercentage: null,
+      endPercentage: null,
+    }));
+    mockFetchReadingSessions.mockResolvedValueOnce(rows);
+
+    readerState.subscribeToRemoteSessions();
+
+    await vi.waitFor(() => {
+      expect(mockUpsertRemoteReadingSessions).toHaveBeenCalledTimes(2);
+    });
+    expect(mockUpsertRemoteReadingSessions.mock.calls[0][0]).toHaveLength(500);
+    expect(mockUpsertRemoteReadingSessions.mock.calls[1][0]).toHaveLength(250);
+    expect(mockSubscribeToReadingSessions).toHaveBeenCalledTimes(1);
+  });
+
+  it('subscribeToRemoteSessions merges a remote insert and refreshes stats (REQ-refresh, SCEN-refresh-1)', async () => {
+    mockAuthState.userId = 'user-1';
+    const refreshFn = vi.fn().mockResolvedValue(undefined);
+    readerState.onStatsRefreshNeeded = refreshFn;
+
+    let sessionCallback: ((row: unknown) => void) | null = null;
+    mockSubscribeToReadingSessions.mockImplementation((cb?: (row: unknown) => void) => {
+      sessionCallback = cb ?? null;
+      return () => undefined;
+    });
+
+    readerState.subscribeToRemoteSessions();
+
+    expect(mockSubscribeToReadingSessions).toHaveBeenCalledTimes(1);
+    expect(sessionCallback).not.toBeNull();
+
+    const remoteRow = {
+      id: 'sess_remote',
+      userId: 'user-1',
+      bookId: 'b1',
+      startedAt: '2026-08-13T10:00:00.000Z',
+      durationMinutes: 5,
+      date: '2026-08-13T00:00:00.000Z',
+      updatedAtEpochMillis: 1786615200000,
+      startPercentage: null,
+      endPercentage: null,
+    };
+
+    sessionCallback!(remoteRow);
+
+    await vi.waitFor(() => {
+      expect(mockUpsertRemoteReadingSessions).toHaveBeenCalledWith([remoteRow]);
+      expect(refreshFn).toHaveBeenCalledWith('b1');
+    });
+  });
+
+  it('subscribeToAllRemoteChanges registers the reading-sessions channel too', () => {
+    mockAuthState.userId = 'user-1';
+
+    readerState.subscribeToAllRemoteChanges();
+
+    expect(mockSubscribeToReadingSessions).toHaveBeenCalledTimes(1);
+  });
+
+  it('unsubscribeFromAllRemoteChanges tears down the reading-sessions channel', () => {
+    mockAuthState.userId = 'user-1';
+    const unsubscribeSessions = vi.fn();
+    mockSubscribeToReadingSessions.mockImplementation(() => unsubscribeSessions);
+
+    readerState.subscribeToAllRemoteChanges();
+    readerState.unsubscribeFromAllRemoteChanges();
+
+    expect(unsubscribeSessions).toHaveBeenCalledTimes(1);
   });
 });

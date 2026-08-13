@@ -105,12 +105,12 @@ class StatsDomainState {
     }
   }
 
-  async loadStreak(bookId?: string): Promise<void> {
+  async loadStreak(bookId?: string, userId = ''): Promise<void> {
     this.isLoadingStreak = true;
     this.streakUnavailableReason = null;
 
     try {
-      this.streakDays = await getReadingStreak(bookId);
+      this.streakDays = await getReadingStreak(bookId, userId);
     } catch (error) {
       const typed = error as MaybeCommandError;
       if (typed.commandError?.recoverable) {

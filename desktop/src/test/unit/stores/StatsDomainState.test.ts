@@ -133,6 +133,23 @@ describe('StatsDomainState', () => {
       expect(statsState.isLoadingStreak).toBe(false);
     });
 
+    it('passes userId through to getReadingStreak (D13)', async () => {
+      mockGetReadingStreak.mockResolvedValueOnce(5);
+
+      await statsState.loadStreak('book-1', 'user-42');
+
+      expect(mockGetReadingStreak).toHaveBeenCalledWith('book-1', 'user-42');
+      expect(statsState.streakDays).toBe(5);
+    });
+
+    it('defaults userId to empty string so legacy rows still count (D12)', async () => {
+      mockGetReadingStreak.mockResolvedValueOnce(3);
+
+      await statsState.loadStreak('book-1');
+
+      expect(mockGetReadingStreak).toHaveBeenCalledWith('book-1', '');
+    });
+
     it('sets streakUnavailableReason on CommandError rejection', async () => {
       mockGetReadingStreak.mockRejectedValueOnce(makeCommandError('Streak data unavailable'));
 

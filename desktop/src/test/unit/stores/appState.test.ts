@@ -42,6 +42,7 @@ vi.mock('$lib/shared/i18n', () => ({
 
 const mockGetProgress = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 const mockGetReadingStats = vi.hoisted(() => vi.fn().mockResolvedValue(null));
+const mockGetReadingStreak = vi.hoisted(() => vi.fn().mockResolvedValue(0));
 const mockRestoreSession = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 const mockSignInAnonymously = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockSyncMetadata = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
@@ -80,6 +81,7 @@ vi.mock('$lib/shared/api/tauriClient', () => {
     getReaderSettings: vi.fn().mockResolvedValue(null),
     getProgress: mockGetProgress,
     getReadingStats: mockGetReadingStats,
+    getReadingStreak: mockGetReadingStreak,
     saveProgress: vi.fn(function () {
       return Promise.resolve(undefined);
     }),
@@ -693,6 +695,20 @@ describe('AppState', () => {
     expect(mockHideBook).toHaveBeenCalledWith('b1');
     expect(appState.pendingRemoveBook).toBeNull();
     expect(appState.readerError).toBe('Tombstone failed');
+  });
+
+  it('onStatsRefreshNeeded is assigned in the ctor and refreshes stats + streak (D15, REQ-refresh)', async () => {
+    hydrateSignedInAuthState('user-1');
+
+    // AppState ctor assigns the reader's stats-refresh hook (D15); firing it
+    // after a session save/remote merge must reload stats AND the user-scoped
+    // streak (REQ-refresh, SCEN-refresh-1).
+    expect(appState.reader.onStatsRefreshNeeded).not.toBeNull();
+
+    await appState.reader.onStatsRefreshNeeded!('b1');
+
+    expect(mockGetReadingStats).toHaveBeenCalledWith('b1');
+    expect(mockGetReadingStreak).toHaveBeenCalledWith('b1', 'user-1');
   });
 
   it('setShelfTab updates tab', () => {

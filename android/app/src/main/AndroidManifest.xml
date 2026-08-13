@@ -34,6 +34,14 @@
                     android:scheme="nextpage"
                     android:host="auth"
                     android:pathPrefix="/callback" />
+
+                <!-- Password-reset email link (Supabase resetPasswordForEmail
+                     redirectUrl = nextpage://auth/reset-password). The app
+                     resolves this cold-start and lands on the forgot screen. -->
+                <data
+                    android:scheme="nextpage"
+                    android:host="auth"
+                    android:pathPrefix="/reset-password" />
             </intent-filter>
 
             <!-- Google Drive OAuth redirect (authorization-code + PKCE).

@@ -49,10 +49,12 @@ import com.nextpage.di.AppContainer
 import com.nextpage.domain.usecase.GetStatisticsUseCase
 import com.nextpage.presentation.screen.AuthScreen
 import com.nextpage.presentation.screen.BookDetailScreen
+import com.nextpage.presentation.screen.ForgotScreen
 import com.nextpage.presentation.screen.HighlightsScreen
 import com.nextpage.presentation.screen.HomeScreen
 import com.nextpage.presentation.screen.LibraryScreen
 import com.nextpage.presentation.screen.ReaderScreen
+import com.nextpage.presentation.screen.RegisterScreen
 import com.nextpage.presentation.screen.SettingsScreen
 import com.nextpage.presentation.screen.StatisticsScreen
 import com.nextpage.presentation.viewmodel.library.BookImportState
@@ -386,6 +388,22 @@ fun NextPageNavHost(
         NextPageDestination.Home.route
     }
 
+    // ── Password-reset deep link (nextpage://auth/reset-password) ──────
+    // Cold-start resolution: if the app was opened from a reset-password
+    // email link while signed out, land on the forgot-password screen.
+    // (Warm-start / onNewIntent is intentionally not handled — cold start
+    // is the documented scope; see design §deep-link.)
+    val launchIntent = remember { (context as? com.nextpage.MainActivity)?.intent?.data }
+    LaunchedEffect(launchIntent, isCheckingSession) {
+        val isResetPasswordLink = launchIntent?.scheme == "nextpage" &&
+            launchIntent.path?.contains("reset-password") == true
+        if (isResetPasswordLink && !isCheckingSession && !isAuthenticated) {
+            navController.navigate(NextPageDestination.AuthForgot.route) {
+                launchSingleTop = true
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         if (isCheckingSession) {
             // Fallback while session is being restored. The native splash
@@ -449,7 +467,53 @@ fun NextPageNavHost(
                             navController.navigate(NextPageDestination.Home.route) {
                                 popUpTo(NextPageDestination.Auth.route) { inclusive = true }
                             }
+                        },
+                        onNavigateToRegister = {
+                            navController.navigate(NextPageDestination.AuthRegister.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToForgot = {
+                            navController.navigate(NextPageDestination.AuthForgot.route) {
+                                launchSingleTop = true
+                            }
                         }
+                    )
+                }
+
+                composable(
+                    route = NextPageDestination.AuthRegister.route,
+                    enterTransition = { fadeIn() },
+                    exitTransition = { fadeOut() },
+                    popEnterTransition = { fadeIn() },
+                    popExitTransition = { fadeOut() }
+                ) {
+                    RegisterScreen(
+                        viewModel = authViewModel,
+                        onAuthenticated = {
+                            navController.navigate(NextPageDestination.Home.route) {
+                                popUpTo(NextPageDestination.Auth.route) { inclusive = true }
+                            }
+                        },
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(
+                    route = NextPageDestination.AuthForgot.route,
+                    enterTransition = { fadeIn() },
+                    exitTransition = { fadeOut() },
+                    popEnterTransition = { fadeIn() },
+                    popExitTransition = { fadeOut() }
+                ) {
+                    ForgotScreen(
+                        viewModel = authViewModel,
+                        onAuthenticated = {
+                            navController.navigate(NextPageDestination.Home.route) {
+                                popUpTo(NextPageDestination.Auth.route) { inclusive = true }
+                            }
+                        },
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
 

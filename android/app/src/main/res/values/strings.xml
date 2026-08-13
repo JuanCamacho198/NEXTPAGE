@@ -47,6 +47,9 @@
     <string name="auth_password_show">Show password</string>
     <string name="auth_password_hide">Hide password</string>
     <string name="auth_signup_stale_session">This email is already registered or verification is pending — check your inbox or sign in</string>
+    <string name="auth_google_unexpected_credential">Unexpected credential type: %1$s</string>
+    <string name="auth_google_credential_error">Credential error (%1$s): %2$s</string>
+    <string name="auth_google_unexpected_error">Unexpected error: %1$s</string>
 
     <!-- Home -->
     <string name="home_welcome">Welcome back</string>

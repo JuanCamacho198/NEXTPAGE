@@ -11,6 +11,8 @@ sealed class NextPageDestination(
     val icon: ImageVector? = null
 ) {
     data object Auth : NextPageDestination("auth", R.string.tab_auth, NextPageIcons.Person)
+    data object AuthRegister : NextPageDestination("auth/register")
+    data object AuthForgot : NextPageDestination("auth/forgot")
     data object Home : NextPageDestination("home", R.string.nav_home, NextPageIcons.Home)
     data object Library : NextPageDestination("library", R.string.nav_library, NextPageIcons.Library)
     data object Reader : NextPageDestination("reader", R.string.tab_reader, NextPageIcons.BookOpen)

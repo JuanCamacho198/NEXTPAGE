@@ -39,6 +39,9 @@
     <string name="auth_password_show">Mostrar contraseña</string>
     <string name="auth_password_hide">Ocultar contraseña</string>
     <string name="auth_signup_stale_session">Este correo ya está registrado o la verificación está pendiente — revisa tu bandeja o inicia sesión</string>
+    <string name="auth_google_unexpected_credential">Tipo de credencial inesperado: %1$s</string>
+    <string name="auth_google_credential_error">Error de credencial (%1$s): %2$s</string>
+    <string name="auth_google_unexpected_error">Error inesperado: %1$s</string>
     <string name="highlights_title">Resaltados</string>
     <string name="highlights_subtitle">Tus notas y pasajes destacados</string>
     <string name="highlights_tab_all">Todos</string>

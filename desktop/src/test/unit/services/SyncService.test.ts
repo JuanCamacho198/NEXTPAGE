@@ -32,6 +32,7 @@ let mockCatalogUploadCover = vi.fn();
 let mockCatalogUpsertBook = vi.fn();
 let mockCatalogTombstone = vi.fn();
 let mockCatalogFetchCatalog = vi.fn();
+let mockUpsertReadingSession = vi.fn();
 const capturedOutboxHandler = vi.hoisted(() => ({
   value: null as
     | ((
@@ -126,7 +127,10 @@ vi.mock('$lib/shared/sync/SupabaseBookCatalogSync', async () => {
 
 vi.mock('$lib/shared/sync/SupabaseProgressSync', () => ({
   SupabaseProgressSync: vi.fn(function () {
-    return {};
+    return {
+      upsertProgress: mockUpsertProgress,
+      upsertReadingSession: mockUpsertReadingSession,
+    };
   }),
 }));
 
@@ -183,6 +187,7 @@ beforeEach(() => {
   mockCatalogUpsertBook.mockResolvedValue(undefined);
   mockCatalogTombstone.mockResolvedValue(undefined);
   mockCatalogFetchCatalog.mockResolvedValue([]);
+  mockUpsertReadingSession.mockResolvedValue(undefined);
 });
 
 function makeLocalBook(id: string, title: string, filePath: string) {
@@ -623,5 +628,70 @@ describe('SyncService — state sync', () => {
 
     expect(mockPushState).toHaveBeenCalled();
     expect(mockSaveHighlight).toHaveBeenCalled();
+  });
+});
+
+describe('SyncService — outbox READING_SESSION handler (D10)', () => {
+  beforeEach(() => {
+    mockUserId.mockReturnValue('user-1');
+    SyncService.setupOutboxProcessor();
+  });
+
+  const sessionPayload = (overrides: Record<string, unknown> = {}) =>
+    JSON.stringify({
+      id: 'sess_abc123',
+      bookId: 'book-1',
+      startedAt: '2026-08-13T10:00:00.000Z',
+      endedAt: '2026-08-13T10:02:00.000Z',
+      durationMinutes: 2,
+      date: '2026-08-13T00:00:00.000Z',
+      userId: 'user-1',
+      updatedAtEpochMillis: 1786615200000,
+      startPercentage: 10,
+      endPercentage: 30,
+      ...overrides,
+    });
+
+  it('READING_SESSION&&UPSERT → upserts remote row with fresh userId, device desktop, payload-clock updatedAt', async () => {
+    await capturedOutboxHandler.value!('READING_SESSION', 'book-1', 'UPSERT', sessionPayload());
+
+    expect(mockUpsertReadingSession).toHaveBeenCalledWith({
+      id: 'sess_abc123',
+      userId: 'user-1',
+      bookId: 'book-1',
+      startedAt: '2026-08-13T10:00:00.000Z',
+      durationMinutes: 2,
+      date: '2026-08-13T00:00:00.000Z',
+      device: 'desktop',
+      // updated_at derived from the payload LWW clock (NOT now()) — SCEN-pull-3.
+      updatedAt: new Date(1786615200000).toISOString(),
+      startPercentage: 10,
+      endPercentage: 30,
+    });
+    expect(mockUpsertReadingSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the FRESH live-session userId, not a stale payload userId', async () => {
+    // The live session gate guarantees the cached user matches authState (D3);
+    // userId is read from the session, never trusted from the outbox payload.
+    mockUserId.mockReturnValue('user-2');
+    await capturedOutboxHandler.value!(
+      'READING_SESSION',
+      'book-1',
+      'UPSERT',
+      sessionPayload({ userId: 'user-stale' }),
+    );
+
+    expect(mockUpsertReadingSession).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'user-2' }),
+    );
+  });
+
+  it('propagates upsert failure so the existing backoff/retry handles the row (SCEN-push-3)', async () => {
+    mockUpsertReadingSession.mockRejectedValueOnce(new Error('network drop'));
+
+    await expect(
+      capturedOutboxHandler.value!('READING_SESSION', 'book-1', 'UPSERT', sessionPayload()),
+    ).rejects.toThrow('network drop');
   });
 });

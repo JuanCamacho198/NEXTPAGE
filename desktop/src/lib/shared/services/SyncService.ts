@@ -125,6 +125,26 @@ export class SyncService {
         return;
       }
 
+      // D10 (SCEN-push-2/3/4): READING_SESSION upsert — one outbox row per
+      // session (never coalesced). Remote updated_at MUST come from the payload
+      // clock, NOT now(): pull-back of an own push is then a tie → no-op
+      // (SCEN-pull-3). Success → outbox delete; throw → existing backoff.
+      if (entityType === 'READING_SESSION' && operation === 'UPSERT') {
+        await progressSync.upsertReadingSession({
+          id: String(payload.id ?? ''),
+          userId: userId,
+          bookId: entityId,
+          startedAt: String(payload.startedAt ?? ''),
+          durationMinutes: Number(payload.durationMinutes ?? 0),
+          date: String(payload.date ?? ''),
+          device: 'desktop',
+          updatedAt: new Date(Number(payload.updatedAtEpochMillis)).toISOString(),
+          startPercentage: payload.startPercentage != null ? Number(payload.startPercentage) : null,
+          endPercentage: payload.endPercentage != null ? Number(payload.endPercentage) : null,
+        });
+        return;
+      }
+
       if (entityType === 'HIGHLIGHT') {
         await progressSync.upsertHighlight({
           id: entityId,
@@ -355,7 +375,6 @@ export class SyncService {
           console.error(`Failed to push local book ${book.id} to catalog:`, e);
         }
       }
-
     } catch (e) {
       // SR-3: typed AUTH_REQUIRED/AUTH_EXPIRED must surface, never console.error-only.
       reportAuthError(e);

@@ -27,6 +27,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageDimens
@@ -166,7 +170,7 @@ private fun HomeScreenContent(
                 TodaySummarySection(
                     minutesReadToday = uiState.minutesReadToday,
                     sessionsToday = uiState.sessionsToday,
-                    dailyProgressPercent = uiState.dailyProgressPercent
+                    currentStreak = uiState.currentStreak
                 )
             }
 
@@ -257,7 +261,7 @@ private fun GreetingSection(userName: String) {
 private fun TodaySummarySection(
     minutesReadToday: Int,
     sessionsToday: Int,
-    dailyProgressPercent: Float
+    currentStreak: Int
 ) {
     Column {
         Text(
@@ -282,11 +286,53 @@ private fun TodaySummarySection(
                 label = stringResource(R.string.home_sessions),
                 modifier = Modifier.weight(1f)
             )
-            StatCard(
-                icon = NextPageIcons.ChartBar,
-                value = stringResource(R.string.format_percent, (dailyProgressPercent * 100).toInt()),
-                label = stringResource(R.string.home_progress),
+            StreakStatCard(
+                streakDays = currentStreak,
                 modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+/**
+ * Streak card (REQ-streak-widget-2): Lottie flame + "X días". Replaces the old
+ * daily-progress (ChartBar) card; the minutes and sessions cards remain.
+ */
+@Composable
+private fun StreakStatCard(
+    streakDays: Int,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(NextPageDimens.spacingSm),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 1.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(NextPageDimens.spacingMd),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            val composition by rememberLottieComposition(
+                LottieCompositionSpec.RawRes(R.raw.fire_streak)
+            )
+            LottieAnimation(
+                composition = composition,
+                modifier = Modifier.size(32.dp),
+                iterations = LottieConstants.IterateForever
+            )
+            Spacer(modifier = Modifier.height(NextPageDimens.spacingXs))
+            Text(
+                text = "$streakDays",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = stringResource(R.string.home_streak_days),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

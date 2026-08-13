@@ -1281,6 +1281,13 @@ class ReaderViewModel(
     fun restoreProgressForBook(bookId: String) = lifecycleHolder.restoreProgressForBook(bookId)
 
     /**
+     * Drives the user id stamped on recorded reading sessions
+     * (REQ-reading-sessions-sync-1). Called from the NavHost session effect
+     * alongside `HomeViewModel.setActiveSession`; blank keeps sessions local-only.
+     */
+    fun setActiveUserId(userId: String) = lifecycleHolder.setActiveUserId(userId)
+
+    /**
      * Persists the current reading position.
      * @param bookId Database id of the book.
      * @param cfiLocation CFI string (EPUB) or `"pdfpage:<n>"` marker.

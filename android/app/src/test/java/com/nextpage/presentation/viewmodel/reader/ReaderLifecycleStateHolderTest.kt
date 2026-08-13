@@ -2,7 +2,9 @@ package com.nextpage.presentation.viewmodel.reader
 
 import android.app.Application
 import android.util.Log
+import com.nextpage.domain.model.DailyReadingActivity
 import com.nextpage.domain.repository.ReaderRepository
+import com.nextpage.domain.repository.ReadingStatsData
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import com.nextpage.testutil.MainDispatcherRule
@@ -12,6 +14,8 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.runTest
@@ -269,6 +273,59 @@ class ReaderLifecycleStateHolderTest {
         coVerify(exactly = 1) { readingStatsRepo.updateReadingTime("test-book", 1) }
     }
 
+    // ── Reading Session Recording (REQ-reading-sessions-sync-1, SCEN-sync-1/2) ──
+
+    @Test
+    fun `flushReadingTime records a reading session with the active user`() = runTest {
+        val readingStatsRepo = FakeCountingReadingStatsRepository()
+        val holder = ReaderLifecycleStateHolder(
+            application = mockk<Application>(relaxed = true),
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            updateReadingProgressUseCase = mockk<UpdateReadingProgressUseCase>(relaxed = true),
+            readingStatsRepository = readingStatsRepo,
+            scope = this,
+            onChapterChanged = {},
+            onErrorEvent = {},
+            mainDispatcher = StandardTestDispatcher(testScheduler)
+        )
+        holder.setActiveUserId("user-42")
+        holder.loadBook("test-book", "/path/file.pdf", "pdf")
+
+        holder.onReaderOpened()
+        holder.onReaderPaused()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, readingStatsRepo.recordedSessions.size)
+        val session = readingStatsRepo.recordedSessions.single()
+        assertEquals("test-book", session.bookId)
+        assertEquals("user-42", session.userId)
+        assertEquals(1, session.durationMinutes)
+        assertTrue("startTimeEpochMillis must be captured before the interval reset", session.startTimeEpochMillis > 0L)
+    }
+
+    @Test
+    fun `flushReadingTime records blank user session when no active user`() = runTest {
+        val readingStatsRepo = FakeCountingReadingStatsRepository()
+        val holder = ReaderLifecycleStateHolder(
+            application = mockk<Application>(relaxed = true),
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            updateReadingProgressUseCase = mockk<UpdateReadingProgressUseCase>(relaxed = true),
+            readingStatsRepository = readingStatsRepo,
+            scope = this,
+            onChapterChanged = {},
+            onErrorEvent = {},
+            mainDispatcher = StandardTestDispatcher(testScheduler)
+        )
+        holder.loadBook("test-book", "/path/file.pdf", "pdf")
+
+        holder.onReaderOpened()
+        holder.onReaderPaused()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, readingStatsRepo.recordedSessions.size)
+        assertEquals("", readingStatsRepo.recordedSessions.single().userId)
+    }
+
     // ── Chapter callback ─────────────────────────────────────────────
 
     @Test
@@ -312,5 +369,39 @@ class ReaderLifecycleStateHolderTest {
             onErrorEvent = {},
             mainDispatcher = dispatcher
         )
+    }
+
+    /**
+     * Counting fake for the session-recording path (REQ-reading-sessions-sync-1):
+     * records [ReadingStatsRepository.recordReadingSession] invocations without
+     * touching a real DB.
+     */
+    private class FakeCountingReadingStatsRepository : ReadingStatsRepository {
+        data class RecordedSession(
+            val bookId: String,
+            val startTimeEpochMillis: Long,
+            val durationMinutes: Int,
+            val userId: String
+        )
+
+        val recordedSessions = mutableListOf<RecordedSession>()
+
+        override fun observeStats(bookId: String): Flow<ReadingStatsData?> = MutableStateFlow(null)
+        override fun observeTotalTime(): Flow<Long> = MutableStateFlow(0L)
+        override fun observeBookStats(): Flow<List<ReadingStatsData>> = MutableStateFlow(emptyList())
+        override suspend fun getDailyActivity(userId: String?): List<DailyReadingActivity> = emptyList()
+        override suspend fun updateReadingTime(bookId: String, additionalMinutes: Long) = Unit
+        override suspend fun deleteStats(bookId: String) = Unit
+
+        override suspend fun recordReadingSession(
+            bookId: String,
+            startTimeEpochMillis: Long,
+            durationMinutes: Int,
+            userId: String
+        ) {
+            recordedSessions.add(
+                RecordedSession(bookId, startTimeEpochMillis, durationMinutes, userId)
+            )
+        }
     }
 }

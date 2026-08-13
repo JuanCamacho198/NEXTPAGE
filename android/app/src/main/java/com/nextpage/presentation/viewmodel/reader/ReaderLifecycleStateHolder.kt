@@ -56,6 +56,19 @@ class ReaderLifecycleStateHolder(
     private var sessionStartTime: Long = 0L
     private var loadEpoch: Long = 0L
 
+    /**
+     * User id recorded on reading-session flushes (REQ-reading-sessions-sync-1).
+     * Driven from the NavHost session effect via [setActiveUserId]; defaults to
+     * "" so pre-auth / local users still record locally (visible via the
+     * `userId = :userId OR userId = ''` aggregation convention).
+     */
+    @Volatile
+    private var activeUserId: String = ""
+
+    fun setActiveUserId(userId: String) {
+        activeUserId = userId
+    }
+
     companion object {
         private const val TAG = "ReaderLifecycleStateHolder"
     private const val MAX_PROGRESS_PERCENT = 99f
@@ -873,8 +886,18 @@ class ReaderLifecycleStateHolder(
             return
         }
 
+        // Capture BEFORE resetting: the deterministic session id and payload are
+        // derived from this interval's start, not from the next interval.
+        val intervalStart = sessionStartTime
+
         scope.launch(mainDispatcher) {
             readingStatsRepository.updateReadingTime(bookId, additionalMinutes)
+            readingStatsRepository.recordReadingSession(
+                bookId = bookId,
+                startTimeEpochMillis = intervalStart,
+                durationMinutes = additionalMinutes.toInt(),
+                userId = activeUserId
+            )
             Log.d(TAG, "Recorded $additionalMinutes minutes for book $bookId")
         }
         sessionStartTime = now

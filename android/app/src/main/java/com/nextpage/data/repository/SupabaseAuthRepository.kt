@@ -6,6 +6,8 @@ import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.data.session.SessionManager
 import com.nextpage.data.session.SupabaseSessionManager
 import com.nextpage.data.session.asMetadataString
+import com.nextpage.domain.error.AppError
+import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.repository.AuthRepository
 import io.github.jan.supabase.auth.auth
@@ -13,6 +15,8 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.user.UserInfo
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * AuthRepository backed by Supabase Auth.
@@ -72,16 +76,35 @@ class SupabaseAuthRepository(
         }
     }
 
-    override suspend fun signUp(email: String, password: String): Result<AuthSession> {
+    override suspend fun signUp(email: String, password: String, fullName: String): Result<AuthSession> {
         return runCatching {
+            val prior = supabase.auth.currentSessionOrNull()
             supabase.auth.signUpWith(Email) {
                 this.email = email
                 this.password = password
+                // Extra user metadata on signup; surfaced back via
+                // `userMetadata["full_name"]` (see mapToAuthSession).
+                data = buildJsonObject { put("full_name", fullName) }
             }
-            val authSession = supabase.auth.currentSessionOrNull()?.user?.let { mapToAuthSession(it) }
+            val fresh = supabase.auth.currentSessionOrNull()
+            if (!isSignUpNewSession(prior?.user?.id, fresh?.user?.id)) {
+                throw AppError(
+                    category = ErrorCategory.AUTH,
+                    code = "SIGNUP_STALE_SESSION",
+                    message = SIGNUP_UNIFIED_MESSAGE,
+                    component = COMPONENT
+                )
+            }
+            val authSession = mapToAuthSession(fresh!!.user)
                 ?: throw Exception("No user info returned after sign-up")
             sessionManager.setCurrentSession(authSession)
             authSession
+        }
+    }
+
+    override suspend fun resetPassword(email: String): Result<Unit> {
+        return runCatching {
+            supabase.auth.resetPasswordForEmail(email, redirectUrl = RESET_PASSWORD_REDIRECT_URL)
         }
     }
 
@@ -141,4 +164,35 @@ class SupabaseAuthRepository(
             )
         }
     }
+
+    companion object {
+        const val COMPONENT = "SupabaseAuthRepository"
+        const val RESET_PASSWORD_REDIRECT_URL = "nextpage://auth/reset-password"
+
+        /**
+         * Unified failure message for sign-up when no fresh session is created.
+         * Indistinguishable on purpose: "email already registered" and
+         * "confirmation email pending" look the same without an extra call
+         * (REQ-auth-email-register-login-3).
+         */
+        const val SIGNUP_UNIFIED_MESSAGE =
+            "This email is already registered or verification is pending — check your inbox or sign in"
+    }
 }
+
+/**
+ * Decides whether [signUpWith] produced a NEW account session.
+ *
+ * A stale persisted session is the failure mode fixed here: supabase-kt keeps
+ * the previous session readable after a `signUpWith(Email)` call that did not
+ * create a new session (already-registered email, or confirmation-pending
+ * sign-up), so reading `currentSessionOrNull()` naively returns the OLD user
+ * and the app would navigate a wrong account into Home.
+ *
+ * @param priorUserId user id of the session captured BEFORE `signUpWith`.
+ * @param freshUserId user id of the session read AFTER `signUpWith`.
+ * @return `true` only when a fresh session exists AND it differs from (or the
+ *   prior was absent) — i.e. sign-up genuinely created a new account.
+ */
+internal fun isSignUpNewSession(priorUserId: String?, freshUserId: String?): Boolean =
+    freshUserId != null && (priorUserId == null || priorUserId != freshUserId)

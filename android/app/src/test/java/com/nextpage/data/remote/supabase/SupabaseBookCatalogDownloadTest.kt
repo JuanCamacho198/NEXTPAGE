@@ -324,6 +324,9 @@ class SupabaseBookCatalogDownloadTest {
         override suspend fun upsert(book: BookEntity) { if (failUpsert) throw IllegalStateException("db down"); byId[book.id] = book }
         override suspend fun upsertAll(books: List<BookEntity>) { books.forEach { upsert(it) } }
         override fun observeAllBooks(): Flow<List<BookEntity>> = MutableStateFlow(byId.values.toList())
+        override fun observeReadingBooks(): Flow<List<BookEntity>> = MutableStateFlow(
+            byId.values.filter { it.deletedAtEpochMillis == null && it.readingState == "reading" && it.progressPercentage < 100f }
+        )
         override fun observeBookById(bookId: String): Flow<BookEntity?> = MutableStateFlow(byId[bookId])
         override fun observeAllBooksPaged(): androidx.paging.PagingSource<Int, BookEntity> =
             com.nextpage.testutil.FakePagingSource(emptyList())

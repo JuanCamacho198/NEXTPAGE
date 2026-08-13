@@ -43,6 +43,12 @@ class HomeRepositoryImpl(
                 .firstOrNull()?.toBook()
         }
 
+    override fun observeCurrentBooks(): Flow<List<Book>> =
+        bookDao.observeReadingBooks().map { entities ->
+            entities.map { it.toBook() }
+        }
+
+
     override fun observeCurrentBookProgress(): Flow<Float> =
         observeCurrentBook().flatMapLatest { book ->
             if (book != null) {

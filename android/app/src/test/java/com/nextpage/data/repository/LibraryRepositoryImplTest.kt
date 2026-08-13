@@ -456,6 +456,11 @@ class LibraryRepositoryImplTest {
         override fun observeAllBooks(): Flow<List<BookEntity>> =
             booksState.map { books -> books.filter { it.deletedAtEpochMillis == null } }
 
+        override fun observeReadingBooks(): Flow<List<BookEntity>> =
+            booksState.map { books ->
+                books.filter { it.deletedAtEpochMillis == null && it.readingState == "reading" && it.progressPercentage < 100f }
+            }
+
         override suspend fun upsert(book: BookEntity) {
             lastUpserted = book
             booksState.value = booksState.value

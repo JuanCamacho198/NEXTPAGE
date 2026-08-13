@@ -12,6 +12,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC")
     fun observeAllBooks(): Flow<List<BookEntity>>
 
+    @Query("SELECT * FROM books WHERE deleted_at IS NULL AND reading_state='reading' AND progress_percentage < 100 ORDER BY progress_updated_at DESC, updated_at DESC")
+    fun observeReadingBooks(): Flow<List<BookEntity>>
+
     @Query("SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC")
     fun observeAllBooksPaged(): PagingSource<Int, BookEntity>
 

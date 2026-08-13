@@ -55,6 +55,24 @@ export type ReadingSessionSavedDto = {
   updatedAtEpochMillis: number;
 };
 
+/**
+ * DTO row sent to the Rust `upsertRemoteReadingSessions` command (serde
+ * camelCase). Produced on the pull path by mapping a Supabase
+ * `reading_sessions` row via SupabaseProgressSync.mapReadingSessionRow (D11):
+ * `updated_at` ISO string → `updatedAtEpochMillis`, percentages stay nullable.
+ */
+export type RemoteReadingSessionRow = {
+  id: string;
+  userId: string;
+  bookId: string;
+  startedAt: string;
+  durationMinutes: number;
+  date: string;
+  updatedAtEpochMillis: number;
+  startPercentage?: number | null;
+  endPercentage?: number | null;
+};
+
 export type CommandErrorDto = {
   code: string;
   message: string;

@@ -183,12 +183,20 @@ class LibraryRepositoryImpl(
         description: String?,
         coverPath: String?
     ): Result<Unit> = runCatching {
+        // The extended metadata fields (genre/language/publisher/tags/publishedDate)
+        // are not exposed through the repository API yet — the full-screen editor
+        // (T5) extends this signature. Pass null so existing edits never clobber them.
         bookDao.updateMetadata(
             bookId = bookId,
             title = title,
             author = author,
             description = description,
             coverPath = coverPath,
+            genre = null,
+            language = null,
+            publisher = null,
+            tags = null,
+            publishedDate = null,
             updatedAt = System.currentTimeMillis()
         )
     }
@@ -268,7 +276,12 @@ class LibraryRepositoryImpl(
         completedAtEpochMillis = completedAtEpochMillis,
         progressPercentage = progressPercentage,
         progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
-        stateVersion = stateVersion
+        stateVersion = stateVersion,
+        genre = genre,
+        language = language,
+        publisher = publisher,
+        tags = tags,
+        publishedDate = publishedDate
     )
 
     private fun ReadingProgressEntity.toDomain(): ReadingProgress = ReadingProgress(
@@ -298,7 +311,12 @@ class LibraryRepositoryImpl(
         completedAtEpochMillis = completedAtEpochMillis,
         progressPercentage = progressPercentage,
         progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
-        stateVersion = stateVersion
+        stateVersion = stateVersion,
+        genre = genre,
+        language = language,
+        publisher = publisher,
+        tags = tags,
+        publishedDate = publishedDate
     )
 
     /**

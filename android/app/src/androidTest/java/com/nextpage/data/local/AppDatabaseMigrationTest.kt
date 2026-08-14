@@ -466,4 +466,99 @@ class AppDatabaseMigrationTest {
 
         db.close()
     }
+
+    @Test
+    fun migrate23To24_addsMetadataColumnsAndDoublesRatings() {
+        val dbName = "migration-test-23-24"
+
+        // Seed a v23 database with the exact books schema exported in 23.json,
+        // plus rows covering rated (1..5) and unrated (NULL) books.
+        helper.createDatabase(dbName, 23).apply {
+            execSQL("""
+                CREATE TABLE IF NOT EXISTS books (
+                    id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    author TEXT,
+                    cover_path TEXT,
+                    file_path TEXT NOT NULL,
+                    format TEXT NOT NULL,
+                    total_pages INTEGER,
+                    chapter_count INTEGER,
+                    description TEXT,
+                    user_rating INTEGER,
+                    updated_at INTEGER NOT NULL,
+                    deleted_at INTEGER,
+                    status TEXT,
+                    content_hash TEXT,
+                    reading_state TEXT NOT NULL,
+                    started_at INTEGER,
+                    completed_at INTEGER,
+                    progress_percentage REAL NOT NULL,
+                    progress_updated_at INTEGER,
+                    state_version INTEGER NOT NULL,
+                    remote_file_id TEXT,
+                    remote_path TEXT,
+                    remote_lifecycle TEXT NOT NULL,
+                    remote_catalog_version INTEGER NOT NULL,
+                    remote_cover_ref TEXT,
+                    remote_provider TEXT,
+                    remote_protocol_version INTEGER,
+                    PRIMARY KEY(id)
+                )
+            """.trimIndent())
+            execSQL("CREATE INDEX IF NOT EXISTS index_books_deleted_at_updated_at ON books(deleted_at, updated_at DESC)")
+            execSQL("INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r1', 'R1', '/r1.epub', 'epub', 1, 'to_read', 1)")
+            execSQL("INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r3', 'R3', '/r3.epub', 'epub', 2, 'to_read', 3)")
+            execSQL("INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r5', 'R5', '/r5.epub', 'epub', 3, 'to_read', 5)")
+            execSQL("INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r0', 'R0', '/r0.epub', 'epub', 4, 'to_read', NULL)")
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(
+            dbName,
+            24,
+            true,
+            AppDatabaseMigrations.MIGRATION_23_24
+        )
+
+        // R1: the 5 new metadata columns exist and are nullable.
+        db.query("PRAGMA table_info(books)").use { cursor ->
+            val nameColumn = cursor.getColumnIndex("name")
+            val notNullColumn = cursor.getColumnIndex("notnull")
+            val expected = mapOf(
+                "genre" to false,
+                "language" to false,
+                "publisher" to false,
+                "tags" to false,
+                "published_date" to false
+            )
+            val actual = mutableMapOf<String, Boolean>()
+            while (cursor.moveToNext()) {
+                val name = cursor.getString(nameColumn)
+                if (expected.containsKey(name)) {
+                    actual[name] = cursor.getInt(notNullColumn) == 1
+                }
+            }
+            assertEquals(expected.keys, actual.keys)
+            assertEquals(expected.values, expected.keys.map { actual[it] })
+        }
+
+        // R2: ratings reinterpreted as half-units (1→2, 3→6, 5→10); NULL stays NULL.
+        db.query("SELECT id, user_rating FROM books ORDER BY id").use { cursor ->
+            val ratings = buildList {
+                while (cursor.moveToNext()) {
+                    add(cursor.getString(0) to cursor.getLong(1).let { if (cursor.isNull(1)) null else it })
+                }
+            }
+            assertEquals(listOf("r0" to null, "r1" to 2L, "r3" to 6L, "r5" to 10L), ratings)
+        }
+
+        // R3: no row loss across the migration.
+        db.query("SELECT COUNT(*) FROM books").use { cursor ->
+            check(cursor.moveToFirst())
+            assertEquals(4L, cursor.getLong(0))
+        }
+
+        db.close()
+    }
 }

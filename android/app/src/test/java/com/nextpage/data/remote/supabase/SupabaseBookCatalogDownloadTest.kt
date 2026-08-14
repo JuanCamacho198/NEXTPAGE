@@ -347,11 +347,11 @@ class SupabaseBookCatalogDownloadTest {
         override suspend fun updateReadingProgress(bookId: String, progress: Float, updatedAt: Long) {}
         override suspend fun completeReading(bookId: String, updatedAt: Long) {}
         override suspend fun updateMetadata(
-            bookId: String, title: String, author: String?, description: String?, coverPath: String?, updatedAt: Long
+            bookId: String, title: String, author: String?, description: String?, coverPath: String?, genre: String?, language: String?, publisher: String?, tags: String?, publishedDate: String?, updatedAt: Long
         ) {
             val existing = byId[bookId] ?: return
             byId[bookId] = existing.copy(
-                title = title, author = author, description = description, coverPath = coverPath, updatedAtEpochMillis = updatedAt
+                title = title, author = author, description = description, coverPath = coverPath, genre = genre, language = language, publisher = publisher, tags = tags, publishedDate = publishedDate, updatedAtEpochMillis = updatedAt
             )
         }
         override suspend fun count(): Int = byId.size

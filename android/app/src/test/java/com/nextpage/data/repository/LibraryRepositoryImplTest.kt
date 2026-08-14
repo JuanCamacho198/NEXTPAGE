@@ -517,6 +517,11 @@ class LibraryRepositoryImplTest {
             author: String?,
             description: String?,
             coverPath: String?,
+            genre: String?,
+            language: String?,
+            publisher: String?,
+            tags: String?,
+            publishedDate: String?,
             updatedAt: Long
         ) {
             booksState.value = booksState.value.map { book ->
@@ -525,6 +530,11 @@ class LibraryRepositoryImplTest {
                     author = author,
                     description = description,
                     coverPath = coverPath,
+                    genre = genre,
+                    language = language,
+                    publisher = publisher,
+                    tags = tags,
+                    publishedDate = publishedDate,
                     updatedAtEpochMillis = updatedAt
                 ) else book
             }

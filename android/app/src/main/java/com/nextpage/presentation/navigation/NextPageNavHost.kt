@@ -48,6 +48,7 @@ import com.nextpage.data.session.DriveConnectPromptPrefs
 import com.nextpage.di.AppContainer
 import com.nextpage.presentation.screen.AuthScreen
 import com.nextpage.presentation.screen.BookDetailScreen
+import com.nextpage.presentation.screen.EditBookMetadataScreen
 import com.nextpage.presentation.screen.ForgotScreen
 import com.nextpage.presentation.screen.HighlightsScreen
 import com.nextpage.presentation.screen.HomeScreen
@@ -695,6 +696,24 @@ fun NextPageNavHost(
                 }
 
                 composable(
+                    route = NextPageDestination.BookEdit.route,
+                    arguments = listOf(navArgument("bookId") { type = NavType.StringType }),
+                    enterTransition = { slideInHorizontally { it } + fadeIn() },
+                    exitTransition = { slideOutHorizontally { it } + fadeOut() },
+                    popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
+                    popExitTransition = { slideOutHorizontally { -it } + fadeOut() }
+                ) { backStackEntry ->
+                    val bookId = backStackEntry.arguments?.getString("bookId") ?: return@composable
+                    EditBookMetadataScreen(
+                        contentPadding = innerPadding,
+                        bookId = bookId,
+                        libraryRepository = appContainer.libraryRepository,
+                        coverStorage = appContainer.coverStorage,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(
                     route = NextPageDestination.Library.route,
                     enterTransition = { fadeIn() },
                     exitTransition = { fadeOut() },
@@ -717,6 +736,9 @@ fun NextPageNavHost(
                             selectedBookFilePath = filePath
                             selectedBookFormat = format
                             navController.navigate("book_detail/$bookId")
+                        },
+                        onEditBook = { bookId ->
+                            navController.navigate("book_edit/$bookId")
                         }
                     )
                 }

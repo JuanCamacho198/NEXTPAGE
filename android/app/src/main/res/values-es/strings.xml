@@ -582,6 +582,10 @@
     <string name="edit_metadata_add_tag">Agregar etiqueta</string>
     <string name="edit_metadata_save_changes">Guardar cambios</string>
     <string name="edit_metadata_counter">%1$d/%2$d</string>
+    <string name="edit_metadata_add">Agregar</string>
+    <string name="edit_metadata_remove_chip">Eliminar</string>
+    <string name="edit_metadata_save_failed">No se pudieron guardar los cambios</string>
+    <string name="action_ok">Aceptar</string>
 
     <!-- Library Snackbars -->
     <string name="library_snackbar_marked_completed">Marcado como leído</string>

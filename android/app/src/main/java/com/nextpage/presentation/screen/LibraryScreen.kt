@@ -89,7 +89,8 @@ fun LibraryScreen(
     driveAuthHelper: GoogleDriveAuthHelper,
     authSession: AuthSession?,
     onOpenAccount: () -> Unit,
-    onBookSelected: (String, String, String) -> Unit
+    onBookSelected: (String, String, String) -> Unit,
+    onEditBook: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchedBooks by viewModel.searchedBooks.collectAsStateWithLifecycle()
@@ -104,6 +105,7 @@ fun LibraryScreen(
         authSession = authSession,
         onOpenAccount = onOpenAccount,
         onBookSelected = onBookSelected,
+        onEditBook = onEditBook,
         onRefresh = viewModel::onPullToRefresh,
         onSearchToggle = viewModel::onToggleSearch,
         onSearchQueryChange = viewModel::onSearchQueryChanged,
@@ -138,6 +140,7 @@ private fun LibraryScreenContent(
     authSession: AuthSession?,
     onOpenAccount: () -> Unit,
     onBookSelected: (String, String, String) -> Unit,
+    onEditBook: (String) -> Unit,
     onRefresh: () -> Unit,
     onSearchToggle: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
@@ -320,7 +323,7 @@ private fun LibraryScreenContent(
                     onBookSelected = onBookSelected,
                     onBookLongPress = onRequestDeleteBook,
                     onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) },
-                    onEdit = onRequestEditBook,
+                    onEdit = { book -> onEditBook(book.id) },
                     onMarkCompleted = onMarkCompleted,
                     onMarkPlanToRead = onMarkPlanToRead,
                     onShare = onShare,
@@ -761,6 +764,7 @@ private fun LibraryScreenDarkPreview() {
             authSession = null,
             onOpenAccount = {},
             onBookSelected = { _, _, _ -> },
+            onEditBook = {},
             onRefresh = {},
             onSearchToggle = {},
             onSearchQueryChange = {},
@@ -825,6 +829,7 @@ private fun LibraryScreenLightPreview() {
             authSession = null,
             onOpenAccount = {},
             onBookSelected = { _, _, _ -> },
+            onEditBook = {},
             onRefresh = {},
             onSearchToggle = {},
             onSearchQueryChange = {},

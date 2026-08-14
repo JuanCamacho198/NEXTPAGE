@@ -87,6 +87,84 @@ fun TagChips(
     )
 }
 
+/**
+ * Read-only genre chips for the book detail screen (design b3LCZx,
+ * REQ-detail-screen-5): same Surface-based chip visuals as [GenreChips]
+ * (colored dot + label) without the close/add affordances.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun GenreChipsDisplay(
+    genres: List<String>,
+    modifier: Modifier = Modifier
+) {
+    ChipRowDisplay(
+        items = genres,
+        showColorDot = true,
+        modifier = modifier
+    )
+}
+
+/**
+ * Read-only tag chips for the book detail screen (design b3LCZx): same visuals
+ * as [TagChips] without the close/add affordances.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun TagChipsDisplay(
+    tags: List<String>,
+    modifier: Modifier = Modifier
+) {
+    ChipRowDisplay(
+        items = tags,
+        showColorDot = false,
+        modifier = modifier
+    )
+}
+
+/** Shared read-only chip row used by [GenreChipsDisplay] and [TagChipsDisplay]. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ChipRowDisplay(
+    items: List<String>,
+    showColorDot: Boolean,
+    modifier: Modifier = Modifier
+) {
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items.forEach { item ->
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = 12.dp, end = 12.dp)
+                ) {
+                    if (showColorDot) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+                    Text(
+                        text = item,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EditableChipRow(
@@ -209,6 +287,8 @@ private fun MetadataChipsDarkPreview() {
         ) {
             GenreChips(genres = listOf("Fiction", "Adventure", "Classics"), max = 5, onAdd = {}, onRemove = {})
             TagChips(tags = listOf("favorites", "read-later"), max = 10, onAdd = {}, onRemove = {})
+            GenreChipsDisplay(genres = listOf("Desarrollo personal", "Productividad"))
+            TagChipsDisplay(tags = listOf("favorites"))
         }
     }
 }

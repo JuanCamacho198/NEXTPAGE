@@ -683,6 +683,7 @@ fun NextPageNavHost(
                         bookId = bookId,
                         libraryRepository = appContainer.libraryRepository,
                         onNavigateBack = { navController.popBackStack() },
+                        onEditBook = { navController.navigate("book_edit/$bookId") },
                         onContinueReading = { id, filePath, format ->
                             selectedBookId = id
                             selectedBookFilePath = filePath

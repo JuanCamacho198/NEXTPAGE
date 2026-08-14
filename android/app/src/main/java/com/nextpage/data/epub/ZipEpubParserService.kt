@@ -43,7 +43,11 @@ class ZipEpubParserService : EpubParserService {
             description = parsed.description?.takeIf { it.isNotBlank() },
             chapterCount = parsed.spineItemCount,
             estimatedPageCount = estimatedPageCount,
-            coverImageBytes = coverBytes
+            coverImageBytes = coverBytes,
+            language = parsed.language?.takeIf { it.isNotBlank() },
+            publisher = parsed.publisher?.takeIf { it.isNotBlank() },
+            tags = parsed.subjects,
+            publishedDate = parsed.publishedDate?.takeIf { it.isNotBlank() }
         )
     }
 
@@ -65,6 +69,15 @@ class ZipEpubParserService : EpubParserService {
         val title = firstElementTextByLocalName(document, "title")
         val author = firstElementTextByLocalName(document, "creator")
         val description = firstElementTextByLocalName(document, "description")
+        val language = firstElementTextByLocalName(document, "language")
+        val publisher = firstElementTextByLocalName(document, "publisher")
+        val publishedDate = firstElementTextByLocalName(document, "date")
+        // All dc:subject matches become tags; commas inside a subject are
+        // stripped so the comma-separated encoding cannot be corrupted.
+        val subjects = allElementsTextByLocalName(document, "subject")
+            .map { it.replace(",", "").trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
         val manifestById = mutableMapOf<String, String>()
         val allElements = document.getElementsByTagName("*")
         var coverItemId: String? = null
@@ -98,6 +111,10 @@ class ZipEpubParserService : EpubParserService {
             title = title,
             author = author,
             description = description,
+            language = language,
+            publisher = publisher,
+            subjects = subjects,
+            publishedDate = publishedDate,
             coverHref = coverItemId?.let(manifestById::get),
             spineItemCount = spineItemRefs.size,
             spineItemRefs = spineItemRefs,
@@ -167,12 +184,31 @@ class ZipEpubParserService : EpubParserService {
         return null
     }
 
+    private fun allElementsTextByLocalName(document: Document, localName: String): List<String> {
+        val allElements = document.getElementsByTagName("*")
+        val values = mutableListOf<String>()
+        for (index in 0 until allElements.length) {
+            val node = allElements.item(index)
+            if (node is Element && node.localTagName() == localName) {
+                val value = node.textContent?.trim()
+                if (!value.isNullOrBlank()) {
+                    values.add(value)
+                }
+            }
+        }
+        return values
+    }
+
     private fun Node.localTagName(): String = localName ?: nodeName.substringAfter(':', nodeName)
 
     private data class ParsedPackageDocument(
         val title: String?,
         val author: String?,
         val description: String? = null,
+        val language: String? = null,
+        val publisher: String? = null,
+        val subjects: List<String> = emptyList(),
+        val publishedDate: String? = null,
         val coverHref: String?,
         val spineItemCount: Int = 0,
         val spineItemRefs: List<String> = emptyList(),

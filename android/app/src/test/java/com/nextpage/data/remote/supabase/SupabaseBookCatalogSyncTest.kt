@@ -287,6 +287,53 @@ class SupabaseBookCatalogSyncTest {
         coVerify(inverse = true) { mockDataSource.getUserBookByHash(any(), any()) }
     }
 
+    @Test
+    fun processOutbox_proceedsWithUpsertWhenHashMatchesOwnRow() = runBlocking {
+        // Bug 2 fix: an UPDATE of the book's own row must proceed even when the
+        // content hash is unchanged — dedup only skips OTHER rows, so the
+        // cross-device CREATE dedup stays intact.
+        val book = createSampleBook("book-own-update").copy(contentHash = "sha256:own123")
+        fakeBookDao.upsert(book)
+
+        fakeOutboxDao.insert(
+            SyncOutboxEntity(
+                id = "outbox-own-update",
+                entityType = SyncEntityType.BOOK.name,
+                entityId = "book-own-update",
+                operation = SyncOperation.UPDATE.name,
+                payloadJson = "{}",
+                createdAtEpochMillis = 800L
+            )
+        )
+
+        // Remote row for this hash IS the book's own row (same id).
+        coEvery { mockDataSource.getUserBookByHash("test-user", "sha256:own123") } returns
+            UserBookRow(
+                id = "book-own-update",
+                userId = "test-user",
+                title = "Book book-own-update",
+                author = "Author book-own-update",
+                format = "epub",
+                contentHash = "sha256:own123",
+                filePath = "books/user-1/book-own-update.epub",
+                coverUrl = null,
+                description = null,
+                totalPages = null,
+                sourceDevice = "android",
+                importedAt = "2026-07-12T12:00:00.000Z",
+                updatedAt = "2026-07-12T12:00:00.000Z"
+            )
+        coEvery { mockDataSource.upsertBook(any()) } returns mockk()
+
+        sync.startProcessing()
+        Thread.sleep(500)
+
+        val pendingItems = fakeOutboxDao.getPendingItems()
+        assertEquals(0, pendingItems.size)
+        coVerify { mockDataSource.upsertBook(match { it.id == "book-own-update" }) }
+        coVerify { mockDataSource.getUserBookByHash("test-user", "sha256:own123") }
+    }
+
     // ─── Reconciliation ──────────────────────────────────────────
 
     @Test

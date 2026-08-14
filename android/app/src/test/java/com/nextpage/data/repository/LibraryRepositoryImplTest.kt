@@ -7,6 +7,8 @@ import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.ReadingStatsDao
 import com.nextpage.data.local.entity.BookEntity
 import com.nextpage.data.local.entity.ReadingStatsEntity
+import com.nextpage.data.local.entity.SyncEntityType
+import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.pdf.PdfMetadata
 import com.nextpage.data.pdf.PdfParserService
 import com.nextpage.data.local.dao.SyncOutboxDao
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import io.mockk.coVerify
 import io.mockk.mockk
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -171,6 +174,71 @@ class LibraryRepositoryImplTest {
         )
 
         assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun updateBookMetadata_persistsAllFieldsAndQueuesOutboxUpdate() = runBlocking {
+        val fakeDao = FakeBookDao()
+        val outboxDao = mockk<SyncOutboxDao>(relaxed = true)
+        val repository = LibraryRepositoryImpl(
+            appContext = mockk(),
+            bookDao = fakeDao,
+            readingProgressDao = FakeReadingProgressDao(),
+            readingStatsDao = FakeReadingStatsDao(),
+            epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
+            pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
+            coverStorage = FakeCoverStorage(),
+            outboxDao = outboxDao
+        )
+
+        fakeDao.upsert(
+            BookEntity(
+                id = "meta-book",
+                title = "Original",
+                author = "Original Author",
+                coverPath = null,
+                filePath = "/meta.epub",
+                format = "epub",
+                updatedAtEpochMillis = 10L
+            )
+        )
+
+        val result = repository.updateBookMetadata(
+            bookId = "meta-book",
+            title = "Edited",
+            author = "New Author",
+            description = "New description",
+            coverPath = null,
+            genre = "Fiction",
+            language = "en",
+            publisher = "Acme Press",
+            tags = "tag1, tag2",
+            publishedDate = "2020-01-01"
+        )
+
+        assertTrue(result.isSuccess)
+
+        // All 10 fields land in the DAO row, including the 5 new metadata fields.
+        val updated = fakeDao.getBookById("meta-book")
+        assertEquals("Edited", updated?.title)
+        assertEquals("New Author", updated?.author)
+        assertEquals("New description", updated?.description)
+        assertEquals("Fiction", updated?.genre)
+        assertEquals("en", updated?.language)
+        assertEquals("Acme Press", updated?.publisher)
+        assertEquals("tag1, tag2", updated?.tags)
+        assertEquals("2020-01-01", updated?.publishedDate)
+
+        // Bug 1 fix: a metadata edit queues a BOOK UPDATE outbox entry.
+        coVerify {
+            outboxDao.insert(
+                match {
+                    it.entityType == SyncEntityType.BOOK.name &&
+                        it.entityId == "meta-book" &&
+                        it.operation == SyncOperation.UPDATE.name
+                }
+            )
+        }
     }
 
     @Test

@@ -194,7 +194,7 @@ class BookActionStateHolderTest {
         val mockCoverStorage = mockk<CoverStorage>()
         val mockContext = mockk<Context>()
 
-        coEvery { mockRepository.updateBookMetadata(any(), any(), any(), any(), any()) } returns Result.success(Unit)
+        coEvery { mockRepository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Result.success(Unit)
         every { mockContext.getString(R.string.library_snackbar_metadata_saved) } returns "Metadata saved"
 
         var emittedEvent: UiEvent? = null
@@ -225,7 +225,7 @@ class BookActionStateHolderTest {
         val mockContext = mockk<Context>()
 
         coEvery {
-            mockRepository.updateBookMetadata(any(), any(), any(), any(), any())
+            mockRepository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
         } returns Result.failure(IllegalStateException("update failed"))
 
         var emittedEvent: UiEvent? = null

@@ -105,6 +105,13 @@ class LibraryRepositoryImpl(
             format = EPUB_FORMAT,
             totalPages = metadata.estimatedPageCount,
             chapterCount = metadata.chapterCount.takeIf { it > 0 },
+            // EPUB metadata does not expose a genre — it stays null until the
+            // user assigns one in the editor.
+            genre = null,
+            language = metadata.language,
+            publisher = metadata.publisher,
+            tags = metadata.tags.joinToString(", ").takeIf { it.isNotBlank() },
+            publishedDate = metadata.publishedDate,
             updatedAtEpochMillis = now
         )
 

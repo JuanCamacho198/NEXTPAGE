@@ -104,7 +104,7 @@ class KtorAuthApi(
             val body: TokenResponse = json.decodeFromString(response.body())
             if (response.status.isSuccess() && !body.accessToken.isNullOrBlank()) {
                 DriveTokenPair(
-                    accessToken = body.accessToken!!,
+                    accessToken = requireNotNull(body.accessToken) { "Google Drive token response missing accessToken" },
                     refreshToken = body.refreshToken
                 )
             } else {

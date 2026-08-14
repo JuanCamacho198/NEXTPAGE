@@ -40,7 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -91,9 +91,9 @@ fun LibraryScreen(
     onOpenAccount: () -> Unit,
     onBookSelected: (String, String, String) -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val searchedBooks by viewModel.searchedBooks.collectAsState()
-    val firstDownloadError by viewModel.firstDownloadError.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val searchedBooks by viewModel.searchedBooks.collectAsStateWithLifecycle()
+    val firstDownloadError by viewModel.firstDownloadError.collectAsStateWithLifecycle()
 
     LibraryScreenContent(
         uiState = uiState,

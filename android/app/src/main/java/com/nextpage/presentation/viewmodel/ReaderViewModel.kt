@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -694,9 +695,9 @@ class ReaderViewModel(
         viewModelScope.launch(mainDispatcher) {
             lifecycleHolder.state
                 .map { it.selectedBookId }
-                .filter { it != null }
+                .mapNotNull { it }
                 .flatMapLatest { bookId ->
-                    readerRepository.observeHighlights(bookId!!)
+                    readerRepository.observeHighlights(bookId)
                 }
                 .collect { highlights ->
                     DebugLog.info("ReaderVM", "direct highlights collect: ${highlights.size}")

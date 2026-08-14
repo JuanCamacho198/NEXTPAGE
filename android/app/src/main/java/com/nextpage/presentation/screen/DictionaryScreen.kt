@@ -26,7 +26,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,7 +40,6 @@ import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageEmptyState
 import com.nextpage.ui.components.atoms.NextPageTextField
-import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.icons.NextPageIcons
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -51,7 +50,7 @@ fun DictionaryScreen(
     viewModel: DictionaryViewModel,
     onNavigateBack: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -59,16 +58,27 @@ fun DictionaryScreen(
                 .fillMaxSize()
                 .padding(horizontal = 24.dp)
         ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = NextPageIcons.ArrowBack,
+                        contentDescription = stringResource(R.string.nav_back)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.dictionary_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
-
-            NextPageHeader(
-                title = stringResource(R.string.dictionary_title),
-                avatarInitials = stringResource(R.string.app_logo_initials),
-                onSearchClick = {},
-                trailingActions = emptyList()
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = stringResource(R.string.dictionary_subtitle),

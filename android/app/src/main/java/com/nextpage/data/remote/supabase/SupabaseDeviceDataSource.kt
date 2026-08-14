@@ -41,12 +41,13 @@ class SupabaseDeviceDataSource {
      */
     suspend fun subscribeToChanges(userId: String): Flow<PostgresAction> {
         unsubscribe()
-        changesChannel = SupabaseClientProvider.client.channel("devices-changes")
-        val flow = changesChannel!!.postgresChangeFlow<PostgresAction>(schema = "public") {
+        val channel = SupabaseClientProvider.client.channel("devices-changes")
+        changesChannel = channel
+        val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
             table = "devices"
             filter("user_id", FilterOperator.EQ, userId)
         }
-        changesChannel!!.subscribe()
+        channel.subscribe()
         return flow
     }
 

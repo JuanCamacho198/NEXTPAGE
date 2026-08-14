@@ -45,6 +45,8 @@ import org.readium.adapter.pdfium.navigator.PdfiumEngineProvider
 /** Group identifier for all highlight decorations. */
 private const val DECORATION_GROUP = "com.nextpage.highlights"
 
+private const val TAG = "ReadiumPdfReaderContent"
+
 /**
  * [ActionMode.Callback] that suppresses the native text-selection toolbar.
  * Returning `false` from [onCreateActionMode] prevents the ActionMode from
@@ -142,7 +144,9 @@ fun ReadiumPdfReaderContent(
             locatorFlow.collect { locator ->
                 viewModel.onReadiumLocatorChanged(locator)
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to collect currentLocator from PdfNavigatorFragment", e)
+        }
     }
 
     // ── currentSelection (poll + diff) → ViewModel ────────────────
@@ -210,7 +214,9 @@ fun ReadiumPdfReaderContent(
         viewModel.navigateToLocator.collect { locator ->
             try {
                 frag.go(locator, animated = false)
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to navigate PDF navigator to locator", e)
+            }
         }
     }
 

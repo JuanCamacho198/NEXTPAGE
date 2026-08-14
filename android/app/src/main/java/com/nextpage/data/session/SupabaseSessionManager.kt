@@ -85,7 +85,7 @@ class SupabaseSessionManager : SessionManager {
                 } ?: return Result.failure(Exception("No user in session after refresh"))
                 Result.success(authSession)
             } else {
-                getCurrentSession().map { it!! }
+                getCurrentSession().mapCatching { requireNotNull(it) { "No session after refresh" } }
             }
         } catch (e: Exception) {
             Result.failure(e)

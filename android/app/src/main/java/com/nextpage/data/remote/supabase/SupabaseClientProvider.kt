@@ -27,10 +27,12 @@ object SupabaseClientProvider {
      */
     val client: SupabaseClient
         get() {
-            if (_client == null) {
-                _client = createClient()
+            var client = _client
+            if (client == null) {
+                client = createClient()
+                _client = client
             }
-            return _client!!
+            return client
         }
 
     private fun createClient(): SupabaseClient {

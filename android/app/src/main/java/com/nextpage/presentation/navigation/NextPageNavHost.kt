@@ -26,7 +26,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -173,7 +173,7 @@ fun NextPageNavHost(
         )
     )
 
-    val authState by authViewModel.uiState.collectAsState()
+    val authState by authViewModel.uiState.collectAsStateWithLifecycle()
     val isAuthenticated = authState.currentSession != null
     val isCheckingSession = authState.isCheckingSession
 
@@ -849,7 +849,7 @@ fun NextPageNavHost(
             }
 
             // ── Import Overlay (inside wrapper Box, below NavHost) ──
-            val importState by libraryViewModel.importState.collectAsState()
+            val importState by libraryViewModel.importState.collectAsStateWithLifecycle()
 
             // Watchdog (defense-in-depth): if the import state is stuck
             // non-Idle past the timeout, force it back to Idle so the overlay

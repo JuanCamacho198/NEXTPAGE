@@ -10,7 +10,9 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
@@ -89,6 +91,12 @@ fun NextPageTextField(
 ) {
     val isError = !errorMessage.isNullOrBlank()
 
+    // Theme-adaptive unfocused border: light slate in dark mode, dark slate in
+    // light mode — keeps the field affordance visible in both schemes.
+    val isDarkBackground = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val unfocusedBorderColor =
+        if (isDarkBackground) UnfocusedBorderDarkTheme else UnfocusedBorderLightTheme
+
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -138,7 +146,7 @@ fun NextPageTextField(
         shape = shape ?: OutlinedTextFieldDefaults.shape,
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            unfocusedBorderColor = unfocusedBorderColor,
             errorBorderColor = MaterialTheme.colorScheme.error
         )
     )
@@ -197,3 +205,9 @@ private fun NextPageTextFieldErrorLightPreview() {
         )
     }
 }
+
+/** Unfocused field border in dark theme: light slate, visible on the dark canvas. */
+private val UnfocusedBorderDarkTheme = Color(0xFF64748B)
+
+/** Unfocused field border in light theme: dark slate, visible on the light canvas. */
+private val UnfocusedBorderLightTheme = Color(0xFF475569)

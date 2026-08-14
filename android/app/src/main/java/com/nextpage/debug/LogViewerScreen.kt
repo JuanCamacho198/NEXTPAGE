@@ -39,7 +39,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -197,7 +197,7 @@ fun LogViewerScreen(
     var expandedCrashFiles by remember { mutableStateOf(setOf<String>()) }
 
     // ── Live log state ────────────────────────────────────────────
-    val liveLogs by DebugLog.events.collectAsState()
+    val liveLogs by DebugLog.events.collectAsStateWithLifecycle()
     var levelFilter by remember { mutableStateOf(setOf<DebugLog.Level>()) }
 
     // ── Snackbar ──────────────────────────────────────────────────

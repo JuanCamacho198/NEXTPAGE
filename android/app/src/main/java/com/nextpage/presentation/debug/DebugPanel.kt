@@ -29,7 +29,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,12 +63,12 @@ fun DebugPanel(
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val debugInfo by viewModel.debugInfo.collectAsState()
-    val authState by authViewModel.uiState.collectAsState()
+    val debugInfo by viewModel.debugInfo.collectAsStateWithLifecycle()
+    val authState by authViewModel.uiState.collectAsStateWithLifecycle()
 
     // readerStateValue is nullable — null when readerViewModel is null (no reader open)
     val readerStateFlow = readerViewModel?.uiState
-    val readerStateValue = readerStateFlow?.let { state -> state.collectAsState().value }
+    val readerStateValue = readerStateFlow?.let { state -> state.collectAsStateWithLifecycle().value }
 
     val context = LocalContext.current
 

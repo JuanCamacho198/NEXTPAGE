@@ -22,7 +22,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,10 +62,10 @@ fun DebugPanel(
 ) {
     if (!visible) return
 
-    val events by DebugLog.events.collectAsState()
-    val actionMode by DebugStateHolder.actionMode.collectAsState()
-    val highlight by DebugStateHolder.highlight.collectAsState()
-    val decoration by DebugStateHolder.decoration.collectAsState()
+    val events by DebugLog.events.collectAsStateWithLifecycle()
+    val actionMode by DebugStateHolder.actionMode.collectAsStateWithLifecycle()
+    val highlight by DebugStateHolder.highlight.collectAsStateWithLifecycle()
+    val decoration by DebugStateHolder.decoration.collectAsStateWithLifecycle()
 
     val debounceRemainingMs = run {
         val until = state.highlightTapDebounceUntil

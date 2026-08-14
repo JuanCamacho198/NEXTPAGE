@@ -165,7 +165,8 @@ fun HighlightPaletteSection(
     }
 
     // ── Color picker dialog per swatch ──────────────────────────
-    if (editingIndex != null) {
+    val selectedEditingIndex = editingIndex
+    if (selectedEditingIndex != null) {
         AlertDialog(
             onDismissRequest = { editingIndex = null },
             title = {
@@ -176,7 +177,7 @@ fun HighlightPaletteSection(
                     presets = colors,
                     state = rememberColorPickerState(editorHex),
                     onColorSelected = { hex ->
-                        onUpdateColor(editingIndex!!, hex)
+                        onUpdateColor(selectedEditingIndex, hex)
                         editingIndex = null
                     },
                     onDismiss = { editingIndex = null }

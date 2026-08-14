@@ -220,7 +220,10 @@ class SupabaseProgressSync(
                                 .filter { it.isNotBlank() }
                             for (tagName in tagNames) {
                                 val tag = dataSource.findOrCreateTag(userId, tagName)
-                                dataSource.linkTagToHighlight(localHighlight.id, tag.id!!)
+                                dataSource.linkTagToHighlight(
+                                    localHighlight.id,
+                                    requireNotNull(tag.id) { "Supabase tag missing id after findOrCreateTag" }
+                                )
                             }
                         }
                     }

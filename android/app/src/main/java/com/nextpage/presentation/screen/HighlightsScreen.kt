@@ -41,7 +41,7 @@ import com.nextpage.presentation.viewmodel.HighlightsUiState
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.ui.icons.NextPageIcons
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -80,7 +80,7 @@ fun HighlightsScreen(
     authSession: AuthSession? = null,
     onOpenAccount: () -> Unit = {}
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     HighlightsScreenContent(
         uiState = uiState,
         contentPadding = contentPadding,

@@ -31,7 +31,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -94,7 +94,7 @@ fun ReaderScreen(
     viewModel: ReaderViewModel,
     onNavigateBack: () -> Unit = {}
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val view = LocalView.current
 
@@ -339,14 +339,16 @@ fun ReaderScreen(
             )
         },
         content = {
+            val error = uiState.error
+            val readiumPublication = uiState.readiumPublication
             when {
                 uiState.isLoading -> {
                     LoadingContent(loadTimeMs = uiState.loadTimeMs)
                 }
 
-                uiState.error != null -> {
+                error != null -> {
                     ErrorContent(
-                        error = uiState.error!!,
+                        error = error,
                         onRetry = {
                             bookFilePath?.let {
                                 viewModel.loadBook(selectedBookId, it, bookFormat)
@@ -355,10 +357,10 @@ fun ReaderScreen(
                     )
                 }
 
-                uiState.bookFormat == "pdf" && uiState.readiumPublication != null -> {
+                uiState.bookFormat == "pdf" && readiumPublication != null -> {
                     Box(modifier = Modifier.fillMaxSize()) {
                         ReadiumPdfReaderContent(
-                            publication = uiState.readiumPublication!!,
+                            publication = readiumPublication,
                             highlights = uiState.highlights,
                             readerSettings = uiState.readerSettings,
                             viewModel = viewModel,
@@ -400,10 +402,10 @@ fun ReaderScreen(
                     }
                 }
 
-                uiState.chapters.isNotEmpty() && uiState.readiumPublication != null -> {
+                uiState.chapters.isNotEmpty() && readiumPublication != null -> {
                     Box(modifier = Modifier.fillMaxSize()) {
                         ReadiumReaderContent(
-                            publication = uiState.readiumPublication!!,
+                            publication = readiumPublication,
                             navigatorConfig = buildNavigatorConfig(uiState.readerSettings),
                             highlights = uiState.highlights,
                             readerSettings = uiState.readerSettings,

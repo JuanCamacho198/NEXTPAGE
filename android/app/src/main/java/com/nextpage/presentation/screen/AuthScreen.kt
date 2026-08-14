@@ -155,6 +155,7 @@ private fun LoginScreenContent(
             text = buildAnnotatedString {
                 append(stringResource(R.string.auth_welcome_back_prefix))
                 withStyle(SpanStyle(color = NextPageTheme.colors.welcomeBrandBlue)) {
+                    append(" ")
                     append(stringResource(R.string.auth_welcome_back_accent))
                 }
             },
@@ -184,7 +185,7 @@ private fun LoginScreenContent(
             )
             Spacer(modifier = Modifier.height(16.dp))
         }
-
+        // On Dark Mode the ledge of the field is a light color; on Light Theme is a dark color
         NextPageTextField(
             value = email,
             onValueChange = { email = it },
@@ -192,6 +193,7 @@ private fun LoginScreenContent(
             leadingIcon = NextPageIcons.Email,
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
+
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -539,6 +541,7 @@ private fun AuthScreenScaffold(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState()),
             contentAlignment = Alignment.Center
         ) {

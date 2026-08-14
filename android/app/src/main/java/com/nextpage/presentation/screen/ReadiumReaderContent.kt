@@ -63,6 +63,8 @@ import org.readium.r2.shared.publication.Publication
 /** Group identifier for all highlight decorations. */
 private const val DECORATION_GROUP = "com.nextpage.highlights"
 
+private const val TAG = "ReadiumReaderContent"
+
 /**
  * [ActionMode.Callback] that suppresses Readium's default selection toolbar
  * (the native Copy / Share / Translate / overflow floating bar).
@@ -197,7 +199,9 @@ fun ReadiumReaderContent(
             locatorFlow.collect { locator ->
                 viewModel.onReadiumLocatorChanged(locator)
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to collect currentLocator from EpubNavigatorFragment", e)
+        }
     }
 
     // ── currentSelection (poll + diff + debug) → ViewModel ──────
@@ -453,7 +457,9 @@ fun ReadiumReaderContent(
         try {
             val prefs = readerSettings.toEpubPreferences()
             frag.submitPreferences(prefs)
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to submit Readium reader preferences", e)
+        }
     }
 
     // ── Diagnostic: Inspect highlights HTML ──────────────────────
@@ -577,7 +583,9 @@ fun ReadiumReaderContent(
         viewModel.navigateToLocator.collect { locator ->
             try {
                 frag.go(locator, animated = false)
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to navigate Readium navigator to locator", e)
+            }
         }
     }
 

@@ -95,7 +95,7 @@ class SupabaseAuthRepository(
                     component = COMPONENT
                 )
             }
-            val authSession = mapToAuthSession(fresh!!.user)
+            val authSession = fresh?.user?.let { mapToAuthSession(it) }
                 ?: throw Exception("No user info returned after sign-up")
             sessionManager.setCurrentSession(authSession)
             authSession

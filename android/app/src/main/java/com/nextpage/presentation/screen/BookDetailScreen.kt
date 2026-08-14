@@ -29,7 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,7 +68,7 @@ fun BookDetailScreen(
     val viewModel: BookDetailViewModel = viewModel(
         factory = BookDetailViewModel.Factory(bookId, libraryRepository)
     )
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -99,13 +99,14 @@ fun BookDetailScreen(
                 .padding(innerPadding)
                 .padding(contentPadding)
         ) {
+            val book = state.book
             when {
                 state.isLoading -> {
                     CircularProgressIndicator(
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
-                state.book == null -> {
+                book == null -> {
                     Text(
                         text = stringResource(R.string.book_detail_error_not_found),
                         style = MaterialTheme.typography.bodyLarge,
@@ -115,7 +116,7 @@ fun BookDetailScreen(
                 }
                 else -> {
                     BookDetailContent(
-                        book = state.book!!,
+                        book = book,
                         progress = state.readingProgress,
                         onRatingChanged = { viewModel.updateRating(it) },
                         onContinueReading = onContinueReading

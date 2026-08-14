@@ -39,12 +39,13 @@ class SupabaseProgressDataSource {
      */
     suspend fun subscribeToUserChanges(userId: String): Flow<PostgresAction> {
         unsubscribe()
-        changesChannel = SupabaseClientProvider.client.channel("reading-progress-changes")
-        val flow = changesChannel!!.postgresChangeFlow<PostgresAction>(schema = "public") {
+        val channel = SupabaseClientProvider.client.channel("reading-progress-changes")
+        changesChannel = channel
+        val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
             table = "reading_progress"
             filter("user_id", FilterOperator.EQ, userId)
         }
-        changesChannel!!.subscribe()
+        channel.subscribe()
         return flow
     }
 
@@ -164,12 +165,13 @@ class SupabaseProgressDataSource {
      */
     suspend fun subscribeToBookmarkChanges(userId: String): Flow<PostgresAction> {
         bookmarksChannel?.unsubscribe()
-        bookmarksChannel = SupabaseClientProvider.client.channel("bookmark-changes")
-        val flow = bookmarksChannel!!.postgresChangeFlow<PostgresAction>(schema = "public") {
+        val channel = SupabaseClientProvider.client.channel("bookmark-changes")
+        bookmarksChannel = channel
+        val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
             table = "bookmarks"
             filter("user_id", FilterOperator.EQ, userId)
         }
-        bookmarksChannel!!.subscribe()
+        channel.subscribe()
         return flow
     }
 
@@ -228,12 +230,13 @@ class SupabaseProgressDataSource {
      */
     suspend fun subscribeToHighlightChanges(userId: String): Flow<PostgresAction> {
         highlightsChannel?.unsubscribe()
-        highlightsChannel = SupabaseClientProvider.client.channel("highlight-changes")
-        val flow = highlightsChannel!!.postgresChangeFlow<PostgresAction>(schema = "public") {
+        val channel = SupabaseClientProvider.client.channel("highlight-changes")
+        highlightsChannel = channel
+        val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
             table = "highlights"
             filter("user_id", FilterOperator.EQ, userId)
         }
-        highlightsChannel!!.subscribe()
+        channel.subscribe()
         return flow
     }
 
@@ -264,11 +267,12 @@ class SupabaseProgressDataSource {
         val existing = findTagByName(userId, name)
         if (existing != null) {
             if (color != null && color != existing.color) {
+                val tagId = requireNotNull(existing.id) { "Existing tag from database is missing an id" }
                 postgrest["tags"].update(
                     mapOf("color" to color)
                 ) {
                     filter {
-                        eq("id", existing.id!!)
+                        eq("id", tagId)
                         eq("user_id", userId)
                     }
                 }
@@ -352,12 +356,13 @@ class SupabaseProgressDataSource {
      */
     suspend fun subscribeToReadingSessionChanges(userId: String): Flow<PostgresAction> {
         sessionsChannel?.unsubscribe()
-        sessionsChannel = SupabaseClientProvider.client.channel("reading-session-changes")
-        val flow = sessionsChannel!!.postgresChangeFlow<PostgresAction>(schema = "public") {
+        val channel = SupabaseClientProvider.client.channel("reading-session-changes")
+        sessionsChannel = channel
+        val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
             table = "reading_sessions"
             filter("user_id", FilterOperator.EQ, userId)
         }
-        sessionsChannel!!.subscribe()
+        channel.subscribe()
         return flow
     }
 

@@ -116,12 +116,13 @@ class SupabaseBookCatalogDataSource(
      */
     suspend fun subscribeToCatalogChanges(userId: String): Flow<PostgresAction> {
         catalogChannel?.unsubscribe()
-        catalogChannel = client.channel("catalog-changes")
-        val flow = catalogChannel!!.postgresChangeFlow<PostgresAction>(schema = "public") {
+        val channel = client.channel("catalog-changes")
+        catalogChannel = channel
+        val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
             table = "user_books"
             filter("user_id", FilterOperator.EQ, userId)
         }
-        catalogChannel!!.subscribe()
+        channel.subscribe()
         return flow
     }
 

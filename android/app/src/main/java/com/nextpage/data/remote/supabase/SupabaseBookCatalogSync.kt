@@ -156,10 +156,11 @@ class SupabaseBookCatalogSync(
 
                     // Content-hash dedup: skip upsert if same SHA-256 hash
                     // already exists in the catalog for this user.
-                    if (row.contentHash != null) {
-                        val existing = dataSource.getUserBookByHash(userId, row.contentHash!!)
+                    val contentHash = row.contentHash
+                    if (contentHash != null) {
+                        val existing = dataSource.getUserBookByHash(userId, contentHash)
                         if (existing != null) {
-                            DebugLog.info(TAG, "processBookItem: duplicate hash ${row.contentHash!!.take(16)}… already in catalog — skipping")
+                            DebugLog.info(TAG, "processBookItem: duplicate hash ${contentHash.take(16)}… already in catalog — skipping")
                             outboxDao.deleteById(item.id)
                             return  // Already in catalog from other device
                         }

@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.icons.NextPageIcons
 
@@ -88,6 +89,7 @@ fun NextPageSettingsSubPage(
                 .fillMaxWidth()
                 .padding(innerPadding)
                 .padding(horizontal = 24.dp)
+                .padding(top = NextPageDimens.spacingMd)
         ) {
             content()
         }

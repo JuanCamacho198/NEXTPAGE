@@ -202,7 +202,7 @@ class GoogleDriveStorageRemoteDataSource(
                 File().apply {
                     name = DriveCatalogContract.BOOKS_PATH.substringAfter('/')
                     mimeType = "application/vnd.google-apps.folder"
-                    parents = listOf(nextPageId!!)
+                    parents = listOf(nextPageId)
                 }
             ).setFields("id").execute().id
         return booksId

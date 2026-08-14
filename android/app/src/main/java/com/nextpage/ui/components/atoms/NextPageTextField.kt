@@ -34,6 +34,10 @@ import com.nextpage.presentation.theme.NextPageTheme
  * @param errorMessage When non-blank, the field enters the error visual
  *   state (red border, red supporting text) and renders the message
  *   below the field.
+ * @param leadingIcon Optional icon at the start of the field (e.g. an
+ *   envelope for email inputs).
+ * @param leadingIconContentDescription Accessibility label for
+ *   [leadingIcon]. Pass `null` for a decorative icon.
  * @param trailingIcon Optional icon at the end of the field (e.g. a
  *   visibility toggle for passwords).
  * @param trailingIconContentDescription Accessibility label for
@@ -71,6 +75,8 @@ fun NextPageTextField(
     label: String? = null,
     placeholder: String? = null,
     errorMessage: String? = null,
+    leadingIcon: ImageVector? = null,
+    leadingIconContentDescription: String? = null,
     trailingIcon: ImageVector? = null,
     trailingIconContentDescription: String? = null,
     trailingIconOnClick: (() -> Unit)? = null,
@@ -113,6 +119,14 @@ fun NextPageTextField(
                         contentDescription = trailingIconContentDescription
                     )
                 }
+            }
+        },
+        leadingIcon = leadingIcon?.let { icon ->
+            {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = leadingIconContentDescription
+                )
             }
         },
         supportingText = if (isError) {

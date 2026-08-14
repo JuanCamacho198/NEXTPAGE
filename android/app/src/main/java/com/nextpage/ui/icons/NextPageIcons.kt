@@ -54,6 +54,7 @@ import androidx.compose.material.icons.rounded.Laptop
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Monitor
 import androidx.compose.material.icons.rounded.MoreVert
@@ -362,6 +363,9 @@ object NextPageIcons {
 
     /** Info circle with exclamation. Source: `Icons.Rounded.Info`. */
     val Info = Icons.Rounded.Info
+
+    /** Padlock — closed shackle. Source: `Icons.Rounded.Lock`. */
+    val Lock = Icons.Rounded.Lock
 
     /** Bug with legs and antennae. Source: `Icons.Rounded.BugReport`. */
     val BugReport = Icons.Rounded.BugReport

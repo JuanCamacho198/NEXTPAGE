@@ -1,7 +1,7 @@
 package com.nextpage.presentation.screen
 
 import android.util.Log
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,14 +16,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -142,10 +149,15 @@ private fun LoginScreenContent(
     AuthScreenScaffold(showBackArrow = false, onNavigateBack = {}) {
         AuthLogo()
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = stringResource(R.string.auth_welcome_back),
+            text = buildAnnotatedString {
+                append(stringResource(R.string.auth_welcome_back_prefix))
+                withStyle(SpanStyle(color = NextPageTheme.colors.welcomeBrandBlue)) {
+                    append(stringResource(R.string.auth_welcome_back_accent))
+                }
+            },
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
@@ -161,7 +173,7 @@ private fun LoginScreenContent(
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         if (!uiState.isConfigured) {
             Text(
@@ -177,6 +189,7 @@ private fun LoginScreenContent(
             value = email,
             onValueChange = { email = it },
             label = stringResource(R.string.auth_email_label),
+            leadingIcon = NextPageIcons.Email,
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -211,11 +224,19 @@ private fun LoginScreenContent(
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .height(56.dp)
         ) {
             Text(
                 text = stringResource(R.string.auth_login_action),
-                fontWeight = FontWeight.SemiBold
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                imageVector = NextPageIcons.ArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(20.dp)
             )
         }
 
@@ -233,35 +254,36 @@ private fun LoginScreenContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ─── Dev bypass ───────────────────────────────────────────
-        NextPageButton(
-            onClick = onContinueLocal,
-            variant = NextPageButtonVariant.TEXT
-        ) {
-            Icon(
-                imageVector = NextPageIcons.Person,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.auth_continue_local_dev),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Normal
-            )
+        // ─── Dev bypass (debug builds only) ──────────────────────
+        if (BuildConfig.DEBUG) {
+            NextPageButton(
+                onClick = onContinueLocal,
+                variant = NextPageButtonVariant.TEXT
+            ) {
+                Icon(
+                    imageVector = NextPageIcons.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.auth_continue_local_dev),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Normal
+                )
+            }
         }
 
         AuthErrorText(uiState)
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        TextButton(onClick = onNavigateToRegister) {
-            Text(
-                text = stringResource(R.string.auth_register_footer),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
+        AuthFooterLink(
+            prefix = stringResource(R.string.auth_register_footer_prefix),
+            link = stringResource(R.string.auth_register_footer_link),
+            onClick = onNavigateToRegister
+        )
     }
 }
 
@@ -330,6 +352,7 @@ private fun RegisterScreenContent(
             value = email,
             onValueChange = { email = it },
             label = stringResource(R.string.auth_email_label),
+            leadingIcon = NextPageIcons.Email,
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -383,12 +406,11 @@ private fun RegisterScreenContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        TextButton(onClick = onNavigateBack) {
-            Text(
-                text = stringResource(R.string.auth_login_footer),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
+        AuthFooterLink(
+            prefix = stringResource(R.string.auth_login_footer_prefix),
+            link = stringResource(R.string.auth_login_footer_link),
+            onClick = onNavigateBack
+        )
     }
 }
 
@@ -448,6 +470,7 @@ private fun ForgotScreenContent(
             value = email,
             onValueChange = { email = it },
             label = stringResource(R.string.auth_email_label),
+            leadingIcon = NextPageIcons.Email,
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -482,52 +505,105 @@ private fun AuthScreenScaffold(
     onNavigateBack: () -> Unit,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        contentAlignment = Alignment.Center
-    ) {
-        if (showBackArrow) {
-            IconButton(
-                onClick = onNavigateBack,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp)
-            ) {
-                Icon(
-                    imageVector = NextPageIcons.ArrowBack,
-                    contentDescription = stringResource(R.string.nav_back)
-                )
-            }
-        }
-
-        Column(
+    // Illustrated background (bookshelf art) + readability scrim. Dark
+    // theme keeps the art visible with a bottom gradient; light theme
+    // washes it out so light-scheme text stays readable.
+    val isDarkBackground = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    Box(modifier = Modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(
+                if (isDarkBackground) R.drawable.bg_auth_bookshelf_dark
+                else R.drawable.bg_auth_bookshelf_light
+            ),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 48.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = if (isDarkBackground) {
+                            listOf(
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.25f),
+                                Color.Black.copy(alpha = 0.65f)
+                            )
+                        } else {
+                            listOf(Color.White.copy(alpha = 0.10f), Color.White.copy(alpha = 0.35f))
+                        }
+                    )
+                )
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            contentAlignment = Alignment.Center
         ) {
-            content()
+            if (showBackArrow) {
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                ) {
+                    Icon(
+                        imageVector = NextPageIcons.ArrowBack,
+                        contentDescription = stringResource(R.string.nav_back)
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 48.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                content()
+            }
         }
     }
 }
 
 @Composable
 private fun AuthLogo() {
+    // Soft radial glow behind the brand circle (design parity: luminous
+    // halo that fades out into the dark background).
+    val glowColor = NextPageTheme.colors.welcomeBrandBlue
     Box(
         modifier = Modifier
-            .size(80.dp)
-            .clip(CircleShape)
-            .background(NextPageTheme.colors.welcomeBrandBlue),
+            .size(176.dp)
+            .drawBehind {
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            glowColor.copy(alpha = 0.30f),
+                            glowColor.copy(alpha = 0f)
+                        ),
+                        radius = size.minDimension / 2f
+                    ),
+                    radius = size.minDimension / 2f
+                )
+            },
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = stringResource(R.string.app_logo_initials),
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimary
-        )
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .clip(CircleShape)
+                .background(NextPageTheme.colors.welcomeBrandBlue),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = stringResource(R.string.app_logo_initials),
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        }
     }
 }
 
@@ -570,6 +646,33 @@ private fun AuthErrorText(uiState: AuthUiState) {
 }
 
 @Composable
+private fun AuthFooterLink(
+    prefix: String,
+    link: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = prefix,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        TextButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 4.dp)) {
+            Text(
+                text = link,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
 private fun PasswordTextField(
     value: String,
     onValueChange: (String) -> Unit,
@@ -584,6 +687,7 @@ private fun PasswordTextField(
         label = label,
         hint = hint,
         errorMessage = errorMessage,
+        leadingIcon = NextPageIcons.Lock,
         trailingIcon = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
         trailingIconContentDescription = stringResource(
             if (passwordVisible) R.string.auth_password_hide else R.string.auth_password_show
@@ -609,6 +713,14 @@ private fun GoogleSignInButton(
     val buttonEnabled = buttonDisabledReason == GoogleButtonDisabledReason.NONE
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // Google-brand button chrome: white fill in dark theme, brand blue in
+    // light theme (white would disappear against the light background).
+    val isDarkBackground = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val googleContainerColor =
+        if (isDarkBackground) Color.White else NextPageTheme.colors.welcomeBrandBlue
+    val googleContentColor =
+        if (isDarkBackground) Color(0xFF202124) else Color.White
 
     // Resolve format templates at composition time (stringResource is
     // @Composable; the credential callbacks run inside a coroutine).
@@ -665,18 +777,21 @@ private fun GoogleSignInButton(
             }
         },
         enabled = buttonEnabled,
-        variant = NextPageButtonVariant.OUTLINED,
+        variant = NextPageButtonVariant.FILLED,
         shape = RoundedCornerShape(28.dp),
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = NextPageTheme.colors.welcomeBrandBlue
+        colors = ButtonDefaults.buttonColors(
+            containerColor = googleContainerColor,
+            contentColor = googleContentColor
         ),
-        border = BorderStroke(1.dp, NextPageTheme.colors.welcomeBrandBlue),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
     ) {
         if (uiState.isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),
-                strokeWidth = 2.dp
+                strokeWidth = 2.dp,
+                color = googleContentColor
             )
         } else {
             Icon(

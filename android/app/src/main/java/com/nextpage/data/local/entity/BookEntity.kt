@@ -52,5 +52,10 @@ data class BookEntity(
     @ColumnInfo(name = "remote_catalog_version") val remoteCatalogVersion: Long = 0L,
     @ColumnInfo(name = "remote_cover_ref") val remoteCoverRef: String? = null,
     @ColumnInfo(name = "remote_provider") val remoteProvider: String? = null,
-    @ColumnInfo(name = "remote_protocol_version") val remoteProtocolVersion: Int? = null
+    @ColumnInfo(name = "remote_protocol_version") val remoteProtocolVersion: Int? = null,
+    @ColumnInfo(name = "genre") val genre: String? = null,
+    @ColumnInfo(name = "language") val language: String? = null,
+    @ColumnInfo(name = "publisher") val publisher: String? = null,
+    @ColumnInfo(name = "tags") val tags: String? = null,
+    @ColumnInfo(name = "published_date") val publishedDate: String? = null
 )

@@ -22,7 +22,17 @@ data class Book(
     val completedAtEpochMillis: Long? = null,
     val progressPercentage: Float = 0f,
     val progressUpdatedAtEpochMillis: Long? = null,
-    val stateVersion: Long = 0L
+    val stateVersion: Long = 0L,
+    /** Free-text genre; null when unknown (PDF does not expose it). */
+    val genre: String? = null,
+    /** Language code (e.g. ISO 639-1); null when unknown. */
+    val language: String? = null,
+    /** Publisher name; null when unknown. */
+    val publisher: String? = null,
+    /** Comma-separated tags; null when none. */
+    val tags: String? = null,
+    /** Publication date as ISO `yyyy-MM-dd`; null when unknown. */
+    val publishedDate: String? = null
 )
 
 /** Persisted book status values stored in [Book.status]. */

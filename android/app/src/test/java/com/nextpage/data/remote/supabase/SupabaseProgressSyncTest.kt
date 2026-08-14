@@ -325,7 +325,7 @@ class SupabaseProgressSyncTest {
         override suspend fun startReading(bookId: String, updatedAt: Long) = Unit
         override suspend fun updateReadingProgress(bookId: String, progress: Float, updatedAt: Long) = Unit
         override suspend fun completeReading(bookId: String, updatedAt: Long) = Unit
-        override suspend fun updateMetadata(bookId: String, title: String, author: String?, description: String?, coverPath: String?, updatedAt: Long) = Unit
+        override suspend fun updateMetadata(bookId: String, title: String, author: String?, description: String?, coverPath: String?, genre: String?, language: String?, publisher: String?, tags: String?, publishedDate: String?, updatedAt: Long) = Unit
         override suspend fun count(): Int = booksState.value.size
         override fun observeAllBooksPaged(): androidx.paging.PagingSource<Int, BookEntity> =
             com.nextpage.testutil.FakePagingSource(emptyList())

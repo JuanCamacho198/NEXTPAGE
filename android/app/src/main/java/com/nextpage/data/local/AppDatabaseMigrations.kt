@@ -235,6 +235,24 @@ object AppDatabaseMigrations {
         }
     }
 
+    /**
+     * Book metadata extension (REQ-data-model-1/3): add the 5 new metadata
+     * columns (genre/language/publisher/tags/published_date) and reinterpret
+     * `user_rating` as half-units 0..10 (D1: 10=5.0 … 1=0.5, null=unrated).
+     * The ×2 UPDATE runs exactly once because this is a single-step migration
+     * (23 → 24). Additive; no destructive fallback.
+     */
+    val MIGRATION_23_24 = object : Migration(23, 24) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE books ADD COLUMN genre TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE books ADD COLUMN language TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE books ADD COLUMN publisher TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE books ADD COLUMN tags TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE books ADD COLUMN published_date TEXT DEFAULT NULL")
+            db.execSQL("UPDATE books SET user_rating = user_rating * 2 WHERE user_rating IS NOT NULL")
+        }
+    }
+
     val MIGRATION_14_15 = object : Migration(14, 15) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE books ADD COLUMN status TEXT DEFAULT NULL")
@@ -335,6 +353,7 @@ object AppDatabaseMigrations {
         MIGRATION_19_20,
         MIGRATION_20_21,
         MIGRATION_21_22,
-        MIGRATION_22_23
+        MIGRATION_22_23,
+        MIGRATION_23_24
     )
 }

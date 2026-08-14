@@ -3,6 +3,7 @@ package com.nextpage.ui.components.molecules
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -10,6 +11,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.nextpage.R
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Dropdown menu of book-level actions (edit, mark completed, mark
@@ -31,7 +33,10 @@ import com.nextpage.presentation.theme.NextPageTheme
  *
  * **Visual**: standard Material 3 `DropdownMenu`. Items in order:
  * Edit metadata, Mark completed, Mark plan to read, Share,
- * `HorizontalDivider`, Remove. The "Remove" label is `colorScheme.error`.
+ * `HorizontalDivider`, Remove. Each item shows a leading icon
+ * (Pencil, Check, Star, Share) tinted `onSurfaceVariant`; the "Remove"
+ * icon and label are `colorScheme.error`. Icon `contentDescription` is
+ * `null` — the item text already carries the accessibility semantics.
  * **Behavior**: each item calls `onDismissRequest()` first, then its
  * specific callback. The menu is uncontrolled — visibility is fully
  * driven by [expanded].
@@ -52,6 +57,13 @@ fun BookContextMenu(
         onDismissRequest = onDismissRequest
     ) {
         DropdownMenuItem(
+            leadingIcon = {
+                Icon(
+                    imageVector = NextPageIcons.Pencil,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
             text = { Text(stringResource(R.string.library_menu_edit_metadata)) },
             onClick = {
                 onDismissRequest()
@@ -59,6 +71,13 @@ fun BookContextMenu(
             }
         )
         DropdownMenuItem(
+            leadingIcon = {
+                Icon(
+                    imageVector = NextPageIcons.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
             text = { Text(stringResource(R.string.library_menu_mark_completed)) },
             onClick = {
                 onDismissRequest()
@@ -66,6 +85,13 @@ fun BookContextMenu(
             }
         )
         DropdownMenuItem(
+            leadingIcon = {
+                Icon(
+                    imageVector = NextPageIcons.Star,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
             text = { Text(stringResource(R.string.library_menu_mark_plan_to_read)) },
             onClick = {
                 onDismissRequest()
@@ -73,6 +99,13 @@ fun BookContextMenu(
             }
         )
         DropdownMenuItem(
+            leadingIcon = {
+                Icon(
+                    imageVector = NextPageIcons.Share,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
             text = { Text(stringResource(R.string.library_menu_share)) },
             onClick = {
                 onDismissRequest()
@@ -81,6 +114,13 @@ fun BookContextMenu(
         )
         HorizontalDivider()
         DropdownMenuItem(
+            leadingIcon = {
+                Icon(
+                    imageVector = NextPageIcons.Trash,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
             text = {
                 Text(
                     stringResource(R.string.library_menu_remove),

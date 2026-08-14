@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.ShowChart
+import androidx.compose.material.icons.automirrored.rounded.StarHalf
 import androidx.compose.material.icons.automirrored.rounded.ViewList
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -432,6 +433,9 @@ object NextPageIcons {
     /** Outlined five-point star (unrated). Source: `Icons.Rounded.StarBorder`. */
     val StarBorder = Icons.Rounded.StarBorder
 
+    /** Half-filled five-point star (half-step rating). RTL mirrors. Source: `Icons.AutoMirrored.Rounded.StarHalf`. */
+    val StarHalf = Icons.AutoMirrored.Rounded.StarHalf
+
     /** Phone with rotation arrows. Source: `Icons.Rounded.ScreenRotation`. */
     val ScreenRotation = Icons.Rounded.ScreenRotation
 
@@ -519,6 +523,7 @@ private fun NextPageIconsGalleryDarkPreview() {
             "ListBullets" to NextPageIcons.ListBullets,
             "Star" to NextPageIcons.Star,
             "StarBorder" to NextPageIcons.StarBorder,
+            "StarHalf" to NextPageIcons.StarHalf,
             "ScreenRotation" to NextPageIcons.ScreenRotation,
             "Flame" to NextPageIcons.Flame,
             "ChevronUp" to NextPageIcons.ChevronUp,
@@ -632,6 +637,7 @@ private fun NextPageIconsGalleryLightPreview() {
             "ListBullets" to NextPageIcons.ListBullets,
             "Star" to NextPageIcons.Star,
             "StarBorder" to NextPageIcons.StarBorder,
+            "StarHalf" to NextPageIcons.StarHalf,
             "ScreenRotation" to NextPageIcons.ScreenRotation,
             "Flame" to NextPageIcons.Flame,
             "ChevronUp" to NextPageIcons.ChevronUp,

@@ -678,4 +678,11 @@
     <string name="action_dismiss">Dismiss</string>
     <string name="action_cancel">Cancel</string>
     <string name="library_count">%1$d available</string>
+
+    <!-- Download Overlay -->
+    <string name="download_overlay_stage_downloading">Downloading file…</string>
+    <string name="download_overlay_stage_processing">Processing…</string>
+    <string name="download_overlay_stage_saving">Saving to your library…</string>
+    <string name="download_overlay_done">Ready</string>
+    <string name="download_overlay_percent">%1$d%%</string>
 </resources>

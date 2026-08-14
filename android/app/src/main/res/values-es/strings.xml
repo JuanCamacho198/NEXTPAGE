@@ -623,4 +623,11 @@
     <string name="action_dismiss">Descartar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="library_count">%1$d disponibles</string>
+
+    <!-- Download Overlay -->
+    <string name="download_overlay_stage_downloading">Descargando archivo…</string>
+    <string name="download_overlay_stage_processing">Procesando…</string>
+    <string name="download_overlay_stage_saving">Guardando en tu biblioteca…</string>
+    <string name="download_overlay_done">Listo</string>
+    <string name="download_overlay_percent">%1$d%%</string>
 </resources>

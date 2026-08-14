@@ -79,6 +79,7 @@ import com.nextpage.ui.components.atoms.CoverThumbnail
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageDialog
+import com.nextpage.ui.components.atoms.NextPageDownloadOverlay
 import com.nextpage.ui.components.atoms.NextPageEmptyState
 import com.nextpage.ui.components.atoms.SyncStatusIndicator
 
@@ -339,6 +340,24 @@ private fun LibraryScreenContent(
             onDismissDelete = onDismissDelete,
             onConfirmDelete = onConfirmDelete
         )
+
+        // ── Cross-device download overlay ──────────────────────────────
+        val activeDownload = uiState.downloadState.entries.firstOrNull { (_, state) ->
+            state is DownloadState.Downloading || state is DownloadState.Success
+        }
+        val activeDownloadBook = activeDownload?.let { (id, _) ->
+            uiState.downloadableBooks.firstOrNull { it.id == id }
+        }
+        if (activeDownload != null) {
+            NextPageDownloadOverlay(
+                bookTitle = (activeDownload.value as? DownloadState.Success)?.title
+                    ?: activeDownloadBook?.title
+                    ?: "",
+                coverUrl = activeDownloadBook?.coverUrl,
+                isCompleted = activeDownload.value is DownloadState.Success,
+                visible = true
+            )
+        }
 
         // ── Sync status indicator (top-right) ──
         LibrarySyncStatus(syncError = uiState.syncError, isSyncing = uiState.isSyncing)

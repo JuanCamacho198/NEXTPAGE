@@ -154,12 +154,15 @@ class SupabaseBookCatalogSync(
                     val row = localBook.toUserBookRow(userId)
                     DebugLog.info(TAG, "processBookItem: pushing book '${row.title}' ($bookId) to Supabase — catalogVersion=${row.catalogVersion}, hash=${row.contentHash?.take(16)}…")
 
-                    // Content-hash dedup: skip upsert if same SHA-256 hash
-                    // already exists in the catalog for this user.
+                    // Content-hash dedup: skip upsert if the same SHA-256 hash
+                    // already exists in the catalog for this user. An UPDATE of
+                    // the book's OWN row must proceed even when the hash is
+                    // unchanged (metadata edits); the cross-device CREATE dedup
+                    // stays intact.
                     val contentHash = row.contentHash
                     if (contentHash != null) {
                         val existing = dataSource.getUserBookByHash(userId, contentHash)
-                        if (existing != null) {
+                        if (existing != null && existing.id != bookId) {
                             DebugLog.info(TAG, "processBookItem: duplicate hash ${contentHash.take(16)}… already in catalog — skipping")
                             outboxDao.deleteById(item.id)
                             return  // Already in catalog from other device

@@ -272,6 +272,13 @@ class SupabaseBookCatalogSync(
             // the local one is missing (D5: never clobber a working local cover
             // with a remote URL that may be dead).
             coverPath = if (existing.coverPath.isNullOrBlank()) row.coverUrl ?: existing.coverPath else existing.coverPath,
+            // Metadata merge is one-directional (remote fills only when the local
+            // value is missing); a full remote→local merge is out of scope.
+            genre = existing.genre ?: row.genre,
+            language = existing.language ?: row.language,
+            publisher = existing.publisher ?: row.publisher,
+            tags = existing.tags ?: row.tags,
+            publishedDate = existing.publishedDate ?: row.publishedDate,
             remoteFileId = row.remoteFileId ?: existing.remoteFileId,
             remotePath = row.remotePath ?: row.filePath ?: existing.remotePath,
             remoteLifecycle = row.lifecycle,
@@ -477,6 +484,11 @@ class SupabaseBookCatalogSync(
                     description = row.description,
                     totalPages = row.totalPages ?: 0,
                     coverPath = row.coverUrl, // D5: cover from public URL when present
+                    genre = row.genre,
+                    language = row.language,
+                    publisher = row.publisher,
+                    tags = row.tags,
+                    publishedDate = row.publishedDate,
                     updatedAtEpochMillis = System.currentTimeMillis(),
                     contentHash = row.contentHash,
                     remoteFileId = row.remoteFileId,
@@ -585,6 +597,11 @@ class SupabaseBookCatalogSync(
             filePath = filePath,
             coverUrl = coverUrl,
             description = description,
+            genre = genre,
+            language = language,
+            publisher = publisher,
+            tags = tags,
+            publishedDate = publishedDate,
             totalPages = totalPages,
             sourceDevice = "android",
             importedAt = dateFormat.format(Date(updatedAtEpochMillis)),

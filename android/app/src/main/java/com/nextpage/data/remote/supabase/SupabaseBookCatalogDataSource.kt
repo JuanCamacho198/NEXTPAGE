@@ -137,6 +137,20 @@ class SupabaseBookCatalogDataSource(
 
 /**
  * Represents a row in the `user_books` Supabase table.
+ *
+ * Metadata extension (REQ-data-model-4): genre/language/publisher/tags/
+ * published_date are additive columns. The `user_books` migration SQL below is
+ * applied to the remote database out-of-band (Supabase MCP in the SDD apply
+ * phase) — the columns do NOT include `user_rating` (rating sync is follow-up):
+ *
+ *     ALTER TABLE public.user_books ADD COLUMN genre TEXT;
+ *     ALTER TABLE public.user_books ADD COLUMN language TEXT;
+ *     ALTER TABLE public.user_books ADD COLUMN publisher TEXT;
+ *     ALTER TABLE public.user_books ADD COLUMN tags TEXT;
+ *     ALTER TABLE public.user_books ADD COLUMN published_date TEXT;
+ *
+ * The `tags` column lives on `user_books` and does not collide with the
+ * separate `public.tags` table (highlights) — different namespaces.
  */
 @Serializable
 data class UserBookRow(
@@ -153,6 +167,12 @@ data class UserBookRow(
     @SerialName("cover_url")
     val coverUrl: String? = null,
     val description: String? = null,
+    val genre: String? = null,
+    val language: String? = null,
+    val publisher: String? = null,
+    val tags: String? = null,
+    @SerialName("published_date")
+    val publishedDate: String? = null,
     @SerialName("total_pages")
     val totalPages: Int? = null,
     @SerialName("source_device")

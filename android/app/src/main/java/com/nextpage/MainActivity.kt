@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.nextpage.data.session.AppThemePreferences
+import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.debug.CrashNotificationHelper
 import com.nextpage.debug.DebugLog
 import com.nextpage.debug.DebugPrefs
@@ -28,6 +29,7 @@ import com.nextpage.domain.model.ThemeMode
 import com.nextpage.presentation.navigation.NextPageNavHost
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.AuthViewModel
+import io.github.jan.supabase.auth.handleDeeplinks
 
 class MainActivity : AppCompatActivity() {
 
@@ -41,6 +43,12 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         appContainer = AppContainer(context = this)
+
+        // Email-confirmation / OAuth deep links (nextpage://auth/...).
+        // supabase-kt parses the fragment and imports the signup session
+        // synchronously; must run BEFORE the AuthViewModel restores the
+        // session so the confirmed account is picked up on cold start.
+        runCatching { SupabaseClientProvider.client.handleDeeplinks(intent) }
 
         // Native splash (Android 12+ via core-splashscreen): the NextPage logo
         // renders instantly at launch. Keep it on screen until the auth session
@@ -104,6 +112,10 @@ class MainActivity : AppCompatActivity() {
      */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
+        // Warm-start email confirmation: import the session so the next launch
+        // restores it (cold-start restore is the documented auth flow).
+        runCatching { SupabaseClientProvider.client.handleDeeplinks(intent) }
         val uri = intent.data
         val driveRedirectScheme = "com.googleusercontent.apps.${
             BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID.removeSuffix(".apps.googleusercontent.com")

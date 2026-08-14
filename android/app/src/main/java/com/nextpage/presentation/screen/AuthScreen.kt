@@ -327,6 +327,15 @@ private fun RegisterScreenContent(
         }
     }
 
+    // Account created with email confirmation pending: the snackbar already
+    // carries the "check your inbox" message; send the user to sign-in so they
+    // can log in right after confirming.
+    LaunchedEffect(uiState.failureKind) {
+        if (uiState.failureKind == AuthFailureKind.CONFIRMATION_PENDING) {
+            onNavigateBack()
+        }
+    }
+
     AuthScreenScaffold(showBackArrow = true, onNavigateBack = onNavigateBack) {
         Text(
             text = stringResource(R.string.auth_register_title),
@@ -541,6 +550,7 @@ private fun AuthScreenScaffold(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState()),
             contentAlignment = Alignment.Center

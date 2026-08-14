@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.SyncService
+import com.nextpage.data.repository.SupabaseAuthRepository
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.model.AuthSession
@@ -34,6 +35,8 @@ enum class AuthFailureKind {
     CONFIG_ERROR,
     /** Failure caused by a wiring/dependency problem in the auth chain. */
     WIRING_ERROR,
+    /** Sign-up created the account but email confirmation is pending. */
+    CONFIRMATION_PENDING,
     /** Failure that does not match the known categories. */
     UNKNOWN
 }
@@ -244,14 +247,20 @@ class AuthViewModel(
                 failureKind = AuthFailureKind.NONE
             ) }
             val result = authRepository.signUp(email, password, fullName)
+            val exception = result.exceptionOrNull()
+            // Confirmation-pending is not an error: the account was created and
+            // the user just needs to confirm by email. Keep the red error text
+            // clear and surface only the snackbar, then navigate to sign-in.
+            val isConfirmationPending = exception is AppError &&
+                exception.code == SupabaseAuthRepository.SIGNUP_CONFIRMATION_PENDING_CODE
             _uiState.update { it.copy(
                 isLoading = false,
                 currentSession = result.getOrNull(),
-                errorMessage = result.exceptionOrNull()?.message,
-                failureKind = classifyFailure(result.exceptionOrNull())
+                errorMessage = if (isConfirmationPending) null else exception?.message,
+                failureKind = classifyFailure(exception)
             ) }
-            result.exceptionOrNull()?.let {
-                _uiEvent.emit(UiEvent.ShowSnackbar(it.message ?: "Sign up failed"))
+            if (exception != null) {
+                _uiEvent.emit(UiEvent.ShowSnackbar(exception.message ?: "Sign up failed"))
             }
         }
     }
@@ -420,10 +429,13 @@ class AuthViewModel(
     }
 
     private fun classifyFailure(error: Throwable?): AuthFailureKind {
-        return when ((error as? AppError)?.category) {
-            ErrorCategory.CONFIG_ERROR -> AuthFailureKind.CONFIG_ERROR
-            ErrorCategory.WIRING_ERROR -> AuthFailureKind.WIRING_ERROR
-            else -> if (error == null) AuthFailureKind.NONE else AuthFailureKind.UNKNOWN
+        return when {
+            error is AppError && error.code == SupabaseAuthRepository.SIGNUP_CONFIRMATION_PENDING_CODE ->
+                AuthFailureKind.CONFIRMATION_PENDING
+            (error as? AppError)?.category == ErrorCategory.CONFIG_ERROR -> AuthFailureKind.CONFIG_ERROR
+            (error as? AppError)?.category == ErrorCategory.WIRING_ERROR -> AuthFailureKind.WIRING_ERROR
+            error == null -> AuthFailureKind.NONE
+            else -> AuthFailureKind.UNKNOWN
         }
     }
 

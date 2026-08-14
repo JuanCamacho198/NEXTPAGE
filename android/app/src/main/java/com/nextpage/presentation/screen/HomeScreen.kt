@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import coil.compose.AsyncImage
 import androidx.compose.ui.text.style.TextAlign
@@ -539,7 +540,7 @@ private fun MyBookshelfSection(
             }
         } else {
             NextPageEmptyState(
-                icon = NextPageIcons.Bookmark,
+                icon = ImageVector.vectorResource(R.drawable.ic_empty_library),
                 title = stringResource(R.string.home_bookshelf_empty_title),
                 subtitle = stringResource(R.string.home_bookshelf_empty_subtitle),
                 modifier = Modifier

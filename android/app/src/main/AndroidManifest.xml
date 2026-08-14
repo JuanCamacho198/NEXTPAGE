@@ -42,6 +42,14 @@
                     android:scheme="nextpage"
                     android:host="auth"
                     android:pathPrefix="/reset-password" />
+
+                <!-- Email-confirmation deep link (Supabase Site URL
+                     nextpage://auth/confirm). supabase-kt's handleDeeplinks
+                     parses the fragment and imports the signup session. -->
+                <data
+                    android:scheme="nextpage"
+                    android:host="auth"
+                    android:pathPrefix="/confirm" />
             </intent-filter>
 
             <!-- Google Drive OAuth redirect (authorization-code + PKCE).

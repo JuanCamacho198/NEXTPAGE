@@ -65,9 +65,13 @@ class SupabaseAuthRepository(
 
     override suspend fun signIn(email: String, password: String): Result<AuthSession> {
         return runCatching {
-            supabase.auth.signInWith(Email) {
-                this.email = email
-                this.password = password
+            try {
+                supabase.auth.signInWith(Email) {
+                    this.email = email
+                    this.password = password
+                }
+            } catch (e: Exception) {
+                throw friendlyAuthError(e, "Sign in failed. Please try again.")
             }
             val authSession = supabase.auth.currentSessionOrNull()?.user?.let { mapToAuthSession(it) }
                 ?: throw Exception("No user info returned after sign-in")
@@ -79,23 +83,47 @@ class SupabaseAuthRepository(
     override suspend fun signUp(email: String, password: String, fullName: String): Result<AuthSession> {
         return runCatching {
             val prior = supabase.auth.currentSessionOrNull()
-            supabase.auth.signUpWith(Email) {
-                this.email = email
-                this.password = password
-                // Extra user metadata on signup; surfaced back via
-                // `userMetadata["full_name"]` (see mapToAuthSession).
-                data = buildJsonObject { put("full_name", fullName) }
+            try {
+                supabase.auth.signUpWith(Email) {
+                    this.email = email
+                    this.password = password
+                    // Extra user metadata on signup; surfaced back via
+                    // `userMetadata["full_name"]` (see mapToAuthSession).
+                    data = buildJsonObject { put("full_name", fullName) }
+                }
+            } catch (e: Exception) {
+                throw friendlyAuthError(e, "Sign up failed. Please try again.")
             }
             val fresh = supabase.auth.currentSessionOrNull()
-            if (!isSignUpNewSession(prior?.user?.id, fresh?.user?.id)) {
+            if (fresh == null) {
+                // No session after signUpWith: the project has "Confirm email"
+                // enabled, so the account was created but needs inbox
+                // confirmation. That is a normal first step for a NEW address,
+                // not a failure — surface it as an actionable message.
+                if (prior == null) {
+                    throw AppError(
+                        category = ErrorCategory.AUTH,
+                        code = SIGNUP_CONFIRMATION_PENDING_CODE,
+                        message = SIGNUP_CONFIRMATION_PENDING_MESSAGE,
+                        component = COMPONENT
+                    )
+                }
                 throw AppError(
                     category = ErrorCategory.AUTH,
-                    code = "SIGNUP_STALE_SESSION",
+                    code = SIGNUP_STALE_SESSION_CODE,
                     message = SIGNUP_UNIFIED_MESSAGE,
                     component = COMPONENT
                 )
             }
-            val authSession = fresh?.user?.let { mapToAuthSession(it) }
+            if (!isSignUpNewSession(prior?.user?.id, fresh.user?.id)) {
+                throw AppError(
+                    category = ErrorCategory.AUTH,
+                    code = SIGNUP_STALE_SESSION_CODE,
+                    message = SIGNUP_UNIFIED_MESSAGE,
+                    component = COMPONENT
+                )
+            }
+            val authSession = fresh.user?.let { mapToAuthSession(it) }
                 ?: throw Exception("No user info returned after sign-up")
             sessionManager.setCurrentSession(authSession)
             authSession
@@ -104,7 +132,11 @@ class SupabaseAuthRepository(
 
     override suspend fun resetPassword(email: String): Result<Unit> {
         return runCatching {
-            supabase.auth.resetPasswordForEmail(email, redirectUrl = RESET_PASSWORD_REDIRECT_URL)
+            try {
+                supabase.auth.resetPasswordForEmail(email, redirectUrl = RESET_PASSWORD_REDIRECT_URL)
+            } catch (e: Exception) {
+                throw friendlyAuthError(e, "Failed to send reset email. Please try again.")
+            }
         }
     }
 
@@ -150,6 +182,38 @@ class SupabaseAuthRepository(
 
     // ── Helpers ────────────────────────────────────────────────────
 
+    /**
+     * Maps a raw GoTrue/Rest exception to a short, user-safe [AppError].
+     *
+     * The SDK exception message embeds the full HTTP request (URL, headers,
+     * bearer token, API key) — it must NEVER be surfaced verbatim because the
+     * auth screens render `errorMessage` inline. Known error codes get a
+     * friendly phrase; anything else falls back to [fallback].
+     */
+    private fun friendlyAuthError(error: Throwable, fallback: String): AppError {
+        val raw = error.message.orEmpty().lowercase()
+        val code = when {
+            "over_email_send_rate_limit" in raw || "rate limit" in raw -> "AUTH_EMAIL_RATE_LIMIT"
+            "already registered" in raw || "user_already_exists" in raw -> "AUTH_EMAIL_ALREADY_REGISTERED"
+            "invalid login credentials" in raw || "invalid_credentials" in raw -> "AUTH_INVALID_CREDENTIALS"
+            "otp_expired" in raw || "link is invalid or has expired" in raw -> "AUTH_OTP_EXPIRED"
+            else -> "AUTH_FAILED"
+        }
+        val message = when (code) {
+            "AUTH_EMAIL_RATE_LIMIT" -> "Too many attempts — wait a moment and try again."
+            "AUTH_EMAIL_ALREADY_REGISTERED" -> "This email is already registered — sign in instead."
+            "AUTH_INVALID_CREDENTIALS" -> "Incorrect email or password."
+            "AUTH_OTP_EXPIRED" -> "That link has expired. Request a new one."
+            else -> fallback
+        }
+        return AppError(
+            category = ErrorCategory.AUTH,
+            code = code,
+            message = message,
+            component = COMPONENT
+        )
+    }
+
     private fun mapToAuthSession(user: UserInfo?): AuthSession? {
         return user?.let {
             AuthSession(
@@ -168,15 +232,25 @@ class SupabaseAuthRepository(
     companion object {
         const val COMPONENT = "SupabaseAuthRepository"
         const val RESET_PASSWORD_REDIRECT_URL = "nextpage://auth/reset-password"
+        const val SIGNUP_STALE_SESSION_CODE = "SIGNUP_STALE_SESSION"
+        const val SIGNUP_CONFIRMATION_PENDING_CODE = "SIGNUP_EMAIL_CONFIRMATION_PENDING"
 
         /**
-         * Unified failure message for sign-up when no fresh session is created.
-         * Indistinguishable on purpose: "email already registered" and
-         * "confirmation email pending" look the same without an extra call
-         * (REQ-auth-email-register-login-3).
+         * Unified failure message for sign-up when no fresh session is created
+         * and a previous session is still active. Indistinguishable on purpose:
+         * "email already registered" and "confirmation email pending" look the
+         * same without an extra call (REQ-auth-email-register-login-3).
          */
         const val SIGNUP_UNIFIED_MESSAGE =
-            "This email is already registered or verification is pending — check your inbox or sign in"
+            "This email is already registered or has a pending confirmation — check your inbox or sign in"
+
+        /**
+         * Message for a brand-new sign-up when the project requires email
+         * confirmation: the account was created, but the user must confirm the
+         * email before signing in.
+         */
+        const val SIGNUP_CONFIRMATION_PENDING_MESSAGE =
+            "Account created — check your inbox to confirm your email and activate it."
     }
 }
 

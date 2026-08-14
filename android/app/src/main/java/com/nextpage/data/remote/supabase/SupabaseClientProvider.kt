@@ -46,7 +46,13 @@ object SupabaseClientProvider {
             supabaseUrl = url,
             supabaseKey = anonKey
         ) {
-            install(Auth)
+            install(Auth) {
+                // Deep-link scheme/host for OAuth and email-confirmation links
+                // (nextpage://auth/...). handleDeeplinks() in MainActivity
+                // matches the incoming Intent against these before parsing.
+                scheme = "nextpage"
+                host = "auth"
+            }
             install(Postgrest)
             install(Realtime)
             install(Storage)

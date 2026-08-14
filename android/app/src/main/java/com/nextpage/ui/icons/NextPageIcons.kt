@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.automirrored.rounded.ViewList
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Book
 import androidx.compose.material.icons.rounded.BrightnessAuto
@@ -64,6 +65,7 @@ import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material.icons.rounded.ShowChart
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.Spa
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Storage
@@ -435,6 +437,12 @@ object NextPageIcons {
 
     /** Flame (statistics streak). Source: `Icons.Rounded.LocalFireDepartment`. */
     val Flame = Icons.Rounded.LocalFireDepartment
+
+    /** Lotus petals (relaxed goal option). Source: `Icons.Rounded.Spa`. */
+    val Spa = Icons.Rounded.Spa
+
+    /** Open book (regular goal option). Source: `Icons.Rounded.AutoStories`. */
+    val AutoStories = Icons.Rounded.AutoStories
 
     /** Chevron up. Source: `Icons.Rounded.ExpandLess`. */
     val ChevronUp = Icons.Rounded.ExpandLess

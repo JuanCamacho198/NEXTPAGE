@@ -552,7 +552,8 @@ fun NextPageNavHost(
                             navController.navigate(NextPageDestination.Home.route) {
                                 popUpTo(0) { inclusive = true }
                             }
-                        }
+                        },
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
 

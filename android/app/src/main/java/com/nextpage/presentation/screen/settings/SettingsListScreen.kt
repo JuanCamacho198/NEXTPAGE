@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.BuildConfig
 import com.nextpage.R
@@ -35,6 +36,7 @@ import com.nextpage.debug.DebugPrefs
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.ThemeMode
 import com.nextpage.presentation.theme.NextPageDimens
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.atoms.NextPageAvatar
 import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.components.molecules.NextPagePreferenceItem
@@ -332,5 +334,43 @@ private fun DebugModeSection(context: android.content.Context) {
                 )
             }
         }
+    }
+}
+
+// ─── Previews ─────────────────────────────────────────────────────────
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsListScreenDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        SettingsListScreen(
+            authSession = null,
+            appThemeMode = ThemeMode.SYSTEM,
+            onNavigateToAccount = {},
+            onNavigateToTheme = {},
+            onNavigateToLanguage = {},
+            onNavigateToPalette = {},
+            onNavigateToDataStorage = {},
+            onNavigateToNotifications = {},
+            onNavigateToAbout = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsListScreenLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        SettingsListScreen(
+            authSession = null,
+            appThemeMode = ThemeMode.SYSTEM,
+            onNavigateToAccount = {},
+            onNavigateToTheme = {},
+            onNavigateToLanguage = {},
+            onNavigateToPalette = {},
+            onNavigateToDataStorage = {},
+            onNavigateToNotifications = {},
+            onNavigateToAbout = {}
+        )
     }
 }

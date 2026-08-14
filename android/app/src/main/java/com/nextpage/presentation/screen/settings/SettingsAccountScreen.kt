@@ -24,9 +24,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.AuthSession
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.atoms.NextPageAvatar
 import com.nextpage.ui.components.atoms.NextPageLogoutDialog
 import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
@@ -157,5 +159,31 @@ private fun formatMemberSince(createdAt: String): String {
         zdt.format(formatter)
     } catch (_: Exception) {
         createdAt
+    }
+}
+
+// ─── Previews ─────────────────────────────────────────────────────────
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsAccountScreenDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        SettingsAccountScreen(
+            authSession = null,
+            onLogout = {},
+            onBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsAccountScreenLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        SettingsAccountScreen(
+            authSession = null,
+            onLogout = {},
+            onBack = {}
+        )
     }
 }

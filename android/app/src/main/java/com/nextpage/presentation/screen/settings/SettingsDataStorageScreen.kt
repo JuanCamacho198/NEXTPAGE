@@ -26,11 +26,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.BuildConfig
 import com.nextpage.R
 import com.nextpage.data.remote.drive.DriveAuthResult
+import com.nextpage.data.remote.drive.DriveOAuthSession
+import com.nextpage.data.remote.drive.DriveTokenApi
+import com.nextpage.data.remote.drive.DriveTokenPair
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
+import com.nextpage.data.remote.drive.InMemoryDriveTokenStore
+import com.nextpage.data.remote.drive.driveOAuthRedirectUri
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.molecules.NextPagePreferenceItem
 import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
 import com.nextpage.ui.icons.NextPageIcons
@@ -177,5 +184,56 @@ fun SettingsDataStorageScreen(
                 }
             }
         }
+    }
+}
+
+// ─── Previews ─────────────────────────────────────────────────────────
+
+@Composable
+private fun previewDriveAuthHelper(): GoogleDriveAuthHelper {
+    return GoogleDriveAuthHelper(
+        context = LocalContext.current,
+        session = DriveOAuthSession(
+            clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID,
+            redirectUri = driveOAuthRedirectUri(BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID),
+            tokenStore = InMemoryDriveTokenStore(),
+            tokenApi = object : DriveTokenApi {
+                override suspend fun exchange(
+                    clientId: String,
+                    authCode: String,
+                    redirectUri: String?,
+                    codeVerifier: String?
+                ): Result<DriveTokenPair> = Result.failure(IllegalStateException("Preview stub"))
+
+                override suspend fun refresh(
+                    clientId: String,
+                    refreshToken: String
+                ): Result<DriveTokenPair> = Result.failure(IllegalStateException("Preview stub"))
+            }
+        )
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsDataStorageScreenDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        SettingsDataStorageScreen(
+            driveAuthHelper = previewDriveAuthHelper(),
+            onNavigateToStatistics = {},
+            onBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsDataStorageScreenLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        SettingsDataStorageScreen(
+            driveAuthHelper = previewDriveAuthHelper(),
+            onNavigateToStatistics = {},
+            onBack = {}
+        )
     }
 }

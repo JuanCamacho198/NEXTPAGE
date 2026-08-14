@@ -10,8 +10,10 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.domain.model.Book
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.molecules.AddBookCard
 
 @Composable
@@ -120,5 +122,66 @@ fun BookGrid(
                 footerContent()
             }
         }
+    }
+}
+
+// ─── Previews ─────────────────────────────────────────────────────────
+
+private val PreviewBooks = listOf(
+    Book(
+        id = "preview-book-1",
+        title = "The Hobbit",
+        author = "J.R.R. Tolkien",
+        coverPath = null,
+        filePath = "/preview/the-hobbit.epub",
+        format = "epub",
+        updatedAtEpochMillis = 0L
+    ),
+    Book(
+        id = "preview-book-2",
+        title = "1984",
+        author = "George Orwell",
+        coverPath = null,
+        filePath = "/preview/1984.epub",
+        format = "epub",
+        updatedAtEpochMillis = 0L
+    )
+)
+
+@Preview(showBackground = true)
+@Composable
+private fun BookGridContentDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        BookGridSection(
+            books = PreviewBooks,
+            readingMinutesByBook = mapOf("preview-book-1" to 45L),
+            isGridView = true,
+            onBookSelected = { _, _, _ -> },
+            onBookLongPress = {},
+            onImportClick = {},
+            onEdit = {},
+            onMarkCompleted = {},
+            onMarkPlanToRead = {},
+            onShare = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun BookGridContentLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        BookGridSection(
+            books = PreviewBooks,
+            readingMinutesByBook = mapOf("preview-book-1" to 45L),
+            isGridView = true,
+            onBookSelected = { _, _, _ -> },
+            onBookLongPress = {},
+            onImportClick = {},
+            onEdit = {},
+            onMarkCompleted = {},
+            onMarkPlanToRead = {},
+            onShare = {}
+        )
     }
 }

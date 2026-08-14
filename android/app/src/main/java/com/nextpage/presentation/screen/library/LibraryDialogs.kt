@@ -3,8 +3,10 @@ package com.nextpage.presentation.screen.library
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import com.nextpage.R
 import com.nextpage.domain.model.Book
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.atoms.NextPageDialog
 import com.nextpage.ui.components.atoms.NextPageDialogVariant
 import com.nextpage.ui.components.molecules.EditBookMetadataDialog
@@ -41,6 +43,52 @@ fun LibraryDialogs(
                 onSaveEdit(book, title, author, description)
             },
             onChangeCover = onChangeCover
+        )
+    }
+}
+
+// ─── Previews ─────────────────────────────────────────────────────────
+
+private val PreviewBook = Book(
+    id = "preview-book-1",
+    title = "The Hobbit",
+    author = "J.R.R. Tolkien",
+    coverPath = null,
+    filePath = "/preview/the-hobbit.epub",
+    format = "epub",
+    updatedAtEpochMillis = 0L
+)
+
+@Preview(showBackground = true)
+@Composable
+private fun LibraryDialogsDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        LibraryDialogs(
+            bookToDelete = PreviewBook,
+            onDismissDelete = {},
+            onConfirmDelete = {},
+            bookToEdit = null,
+            editCoverUri = null,
+            onDismissEdit = {},
+            onSaveEdit = { _, _, _, _ -> },
+            onChangeCover = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LibraryDialogsLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        LibraryDialogs(
+            bookToDelete = PreviewBook,
+            onDismissDelete = {},
+            onConfirmDelete = {},
+            bookToEdit = null,
+            editCoverUri = null,
+            onDismissEdit = {},
+            onSaveEdit = { _, _, _, _ -> },
+            onChangeCover = {}
         )
     }
 }

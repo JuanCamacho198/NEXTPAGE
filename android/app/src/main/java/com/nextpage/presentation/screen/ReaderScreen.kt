@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.BuildConfig
@@ -53,6 +54,7 @@ import com.nextpage.R
 import com.nextpage.debug.DebugLog
 import com.nextpage.debug.DebugPanel
 import com.nextpage.debug.DebugPrefs
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.ui.components.molecules.ChaptersSheet
 import com.nextpage.ui.components.molecules.HighlightsSheet
@@ -771,5 +773,23 @@ private fun ErrorContent(
         Button(onClick = onRetry) {
             Text(text = stringResource(R.string.reader_retry))
         }
+    }
+}
+
+// ─── Previews ─────────────────────────────────────────────────────────
+
+@Preview(showBackground = true)
+@Composable
+private fun ReaderScreenDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        LoadingContent(loadTimeMs = 150L)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ReaderScreenLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        LoadingContent(loadTimeMs = 150L)
     }
 }

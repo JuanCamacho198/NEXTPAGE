@@ -30,10 +30,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
 import com.nextpage.domain.model.Book
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.atoms.CoverThumbnail
 import com.nextpage.ui.components.atoms.NextPageProgressBar
 import com.nextpage.ui.components.molecules.BookContextMenu
@@ -236,5 +238,51 @@ fun BookGridCard(
                 }
             }
         }
+    }
+}
+
+// ─── Previews ─────────────────────────────────────────────────────────
+
+private val PreviewBook = Book(
+    id = "preview-book-1",
+    title = "The Hobbit",
+    author = "J.R.R. Tolkien",
+    coverPath = null,
+    filePath = "/preview/the-hobbit.epub",
+    format = "epub",
+    updatedAtEpochMillis = 0L
+)
+
+@Preview(showBackground = true)
+@Composable
+private fun BookCardsDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        BookListCard(
+            book = PreviewBook,
+            minutesRead = 60L,
+            onClick = {},
+            onLongPress = {},
+            onEdit = {},
+            onMarkCompleted = {},
+            onMarkPlanToRead = {},
+            onShare = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun BookCardsLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        BookListCard(
+            book = PreviewBook,
+            minutesRead = 60L,
+            onClick = {},
+            onLongPress = {},
+            onEdit = {},
+            onMarkCompleted = {},
+            onMarkPlanToRead = {},
+            onShare = {}
+        )
     }
 }

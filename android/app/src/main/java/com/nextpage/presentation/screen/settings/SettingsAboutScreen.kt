@@ -13,9 +13,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.BuildConfig
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
 
 @Composable
@@ -54,5 +56,23 @@ fun SettingsAboutScreen(
                 )
             }
         }
+    }
+}
+
+// ─── Previews ─────────────────────────────────────────────────────────
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsAboutScreenDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        SettingsAboutScreen(onBack = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsAboutScreenLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        SettingsAboutScreen(onBack = {})
     }
 }

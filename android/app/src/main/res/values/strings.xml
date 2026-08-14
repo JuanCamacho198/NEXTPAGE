@@ -83,9 +83,24 @@
     <string name="home_no_current_book">No current book</string>
     <string name="home_today_summary_title">Today\'s summary</string>
     <string name="home_streak_days">days</string>
-    <string name="onboarding_goal_title">Set your daily reading goal</string>
-    <string name="onboarding_goal_minutes">minutes</string>
-    <string name="onboarding_goal_continue">Continue</string>
+    <!-- Onboarding goal -->
+    <string name="onboarding_goal_header">Your daily goal</string>
+    <string name="onboarding_goal_hero_title">Set your pace</string>
+    <string name="onboarding_goal_hero_subtitle">Choosing a daily goal helps you keep the reading habit.</string>
+    <string name="onboarding_goal_option_relaxed">Relaxed</string>
+    <string name="onboarding_goal_option_relaxed_desc">For casual readers</string>
+    <string name="onboarding_goal_option_relaxed_value">10 min/day</string>
+    <string name="onboarding_goal_option_regular">Regular</string>
+    <string name="onboarding_goal_option_regular_desc">A good daily habit</string>
+    <string name="onboarding_goal_option_regular_value">20 min/day</string>
+    <string name="onboarding_goal_option_serious">Serious</string>
+    <string name="onboarding_goal_option_serious_desc">For book devourers</string>
+    <string name="onboarding_goal_option_serious_value">30 min/day</string>
+    <string name="onboarding_goal_option_intense">Intense</string>
+    <string name="onboarding_goal_option_intense_desc">Deep immersion</string>
+    <string name="onboarding_goal_option_intense_value">More than 40 min/day</string>
+    <string name="onboarding_goal_action">Set goal</string>
+    <string name="onboarding_goal_footer_note">You can change this later in Settings.</string>
     <string name="home_nextpage_title">NextPage</string>
     <string name="home_avatar_content_description">Open account settings</string>
     <string name="home_search_results">Results</string>

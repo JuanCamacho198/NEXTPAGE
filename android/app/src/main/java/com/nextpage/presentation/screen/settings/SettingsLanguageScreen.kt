@@ -18,9 +18,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.os.LocaleListCompat
 import com.nextpage.R
 import com.nextpage.data.session.AppLanguagePreferences
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
 import com.nextpage.ui.icons.NextPageIcons
 
@@ -89,5 +91,23 @@ fun SettingsLanguageScreen(
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
+    }
+}
+
+// ─── Previews ─────────────────────────────────────────────────────────
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsLanguageScreenDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        SettingsLanguageScreen(onBack = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsLanguageScreenLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        SettingsLanguageScreen(onBack = {})
     }
 }

@@ -32,9 +32,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.Device
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.atoms.NextPageDialog
 import com.nextpage.ui.components.atoms.NextPageDialogVariant
 import com.nextpage.ui.icons.NextPageIcons
@@ -194,5 +196,58 @@ private fun formatRelativeTime(lastActive: String): String {
         }
     } catch (e: Exception) {
         lastActive
+    }
+}
+
+// ─── Previews ─────────────────────────────────────────────────────────
+
+private val PreviewDevices = listOf(
+    Device(
+        id = "device-1",
+        name = "Pixel 8",
+        os = "Android 15",
+        lastActive = "2024-01-01T00:00:00Z"
+    ),
+    Device(
+        id = "device-2",
+        name = "Work Laptop",
+        os = "Windows 11",
+        lastActive = "2024-01-01T00:00:00Z"
+    )
+)
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsDevicesScreenDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        SettingsDevicesScreen(
+            uiState = SettingsDevicesUiState(
+                devices = PreviewDevices,
+                currentDeviceId = "device-1",
+                isLoading = false,
+                errorMessage = null,
+                deviceCount = PreviewDevices.size
+            ),
+            onRemove = {},
+            onBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsDevicesScreenLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        SettingsDevicesScreen(
+            uiState = SettingsDevicesUiState(
+                devices = PreviewDevices,
+                currentDeviceId = "device-1",
+                isLoading = false,
+                errorMessage = null,
+                deviceCount = PreviewDevices.size
+            ),
+            onRemove = {},
+            onBack = {}
+        )
     }
 }

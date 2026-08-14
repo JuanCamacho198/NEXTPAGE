@@ -107,9 +107,24 @@
     <string name="home_bookshelf_empty_subtitle">Import\u00e1 un libro para empezar tu biblioteca.</string>
     <string name="home_today_summary_title">Resumen de hoy</string>
     <string name="home_streak_days">d\u00edas</string>
-    <string name="onboarding_goal_title">Establece tu meta de lectura diaria</string>
-    <string name="onboarding_goal_minutes">minutos</string>
-    <string name="onboarding_goal_continue">Continuar</string>
+    <!-- Onboarding goal -->
+    <string name="onboarding_goal_header">Tu meta diaria</string>
+    <string name="onboarding_goal_hero_title">Establece tu ritmo</string>
+    <string name="onboarding_goal_hero_subtitle">Elegir una meta diaria te ayuda a mantener el hábito de la lectura.</string>
+    <string name="onboarding_goal_option_relaxed">Relajado</string>
+    <string name="onboarding_goal_option_relaxed_desc">Para lectores casuales</string>
+    <string name="onboarding_goal_option_relaxed_value">10 min/día</string>
+    <string name="onboarding_goal_option_regular">Regular</string>
+    <string name="onboarding_goal_option_regular_desc">Un buen hábito diario</string>
+    <string name="onboarding_goal_option_regular_value">20 min/día</string>
+    <string name="onboarding_goal_option_serious">Serio</string>
+    <string name="onboarding_goal_option_serious_desc">Para devoradores de libros</string>
+    <string name="onboarding_goal_option_serious_value">30 min/día</string>
+    <string name="onboarding_goal_option_intense">Intenso</string>
+    <string name="onboarding_goal_option_intense_desc">Inmersión profunda</string>
+    <string name="onboarding_goal_option_intense_value">Más de 40 min/día</string>
+    <string name="onboarding_goal_action">Establecer meta</string>
+    <string name="onboarding_goal_footer_note">Puedes cambiar esta configuración más tarde en Ajustes.</string>
     <string name="home_nextpage_title">NextPage</string>
     <string name="home_avatar_content_description">Abrir cuenta</string>
     <string name="home_search_results">Resultados</string>

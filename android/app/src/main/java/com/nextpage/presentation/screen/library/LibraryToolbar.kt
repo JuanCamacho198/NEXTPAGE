@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.molecules.LibraryHeader
 import com.nextpage.ui.components.molecules.SortControlRow
 import com.nextpage.ui.components.molecules.StatusChipRow
@@ -56,5 +58,47 @@ fun LibraryToolbar(
         )
 
         Spacer(modifier = Modifier.height(12.dp))
+    }
+}
+
+// ─── Previews ─────────────────────────────────────────────────────────
+
+@Preview(showBackground = true)
+@Composable
+private fun LibraryToolbarDarkPreview() {
+    NextPageTheme(darkTheme = true) {
+        LibraryToolbar(
+            showSearch = false,
+            onSearchToggle = {},
+            searchQuery = "",
+            onSearchQueryChange = {},
+            onFilterToggle = {},
+            statusFilter = "all",
+            onStatusFilterChanged = {},
+            sortBy = "recent",
+            onSortByChanged = {},
+            isGridView = true,
+            onViewToggle = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LibraryToolbarLightPreview() {
+    NextPageTheme(darkTheme = false) {
+        LibraryToolbar(
+            showSearch = false,
+            onSearchToggle = {},
+            searchQuery = "",
+            onSearchQueryChange = {},
+            onFilterToggle = {},
+            statusFilter = "all",
+            onStatusFilterChanged = {},
+            sortBy = "recent",
+            onSortByChanged = {},
+            isGridView = true,
+            onViewToggle = {}
+        )
     }
 }

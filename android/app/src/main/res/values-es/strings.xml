@@ -147,6 +147,22 @@
     <string name="book_detail_progress_percent">%1$d%% completado</string>
     <string name="book_detail_no_pages">-- / --</string>
     <string name="book_detail_rating_content_description">Calificar %1$d estrella(s)</string>
+    <string name="book_detail_my_rating">Mi calificación</string>
+    <string name="book_detail_rating_value">%1$.1f/5</string>
+    <string name="book_detail_meta_format">Formato</string>
+    <string name="book_detail_meta_language">Idioma</string>
+    <string name="book_detail_meta_publisher">Editorial</string>
+    <string name="book_detail_meta_published">Publicado</string>
+    <string name="book_detail_meta_pages">Páginas</string>
+    <string name="book_detail_meta_size">Tamaño</string>
+    <string name="book_detail_show_more_chevron">Ver más</string>
+    <string name="book_detail_genres">Géneros</string>
+    <string name="book_detail_chapter_x_of_y">Capítulo %1$d de %2$d</string>
+    <string name="book_detail_pages_of">%1$d / %2$d páginas</string>
+    <string name="book_detail_share_content_description">Compartir libro</string>
+    <string name="book_detail_more_content_description">Más opciones</string>
+    <string name="book_detail_rating_star_full">%1$d estrellas</string>
+    <string name="book_detail_rating_star_half">%1$.1f estrellas</string>
     <!-- Library / Bookshelf - New Pencil design -->
     <string name="library_empty">Todavía no hay libros locales.</string>
     <string name="library_search_placeholder">Buscar libros...</string>
@@ -552,7 +568,20 @@
     <string name="edit_metadata_field_synopsis">Sinopsis</string>
     <string name="edit_metadata_field_cover">Portada</string>
     <string name="edit_metadata_change_cover">Cambiar portada</string>
+    <string name="library_cover_content_description">Portada del libro</string>
     <string name="edit_metadata_save">Guardar</string>
+    <string name="edit_metadata_section_details">Detalles</string>
+    <string name="edit_metadata_field_date">Fecha de publicación</string>
+    <string name="edit_metadata_field_language">Idioma</string>
+    <string name="edit_metadata_field_publisher">Editorial</string>
+    <string name="edit_metadata_field_size">Tamaño</string>
+    <string name="edit_metadata_field_format">Formato</string>
+    <string name="edit_metadata_genres">Géneros</string>
+    <string name="edit_metadata_tags">Etiquetas</string>
+    <string name="edit_metadata_add_genre">Agregar género</string>
+    <string name="edit_metadata_add_tag">Agregar etiqueta</string>
+    <string name="edit_metadata_save_changes">Guardar cambios</string>
+    <string name="edit_metadata_counter">%1$d/%2$d</string>
 
     <!-- Library Snackbars -->
     <string name="library_snackbar_marked_completed">Marcado como leído</string>

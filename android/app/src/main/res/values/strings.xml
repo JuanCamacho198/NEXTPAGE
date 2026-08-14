@@ -637,6 +637,10 @@
     <string name="edit_metadata_add_tag">Add tag</string>
     <string name="edit_metadata_save_changes">Save changes</string>
     <string name="edit_metadata_counter">%1$d/%2$d</string>
+    <string name="edit_metadata_add">Add</string>
+    <string name="edit_metadata_remove_chip">Remove</string>
+    <string name="edit_metadata_save_failed">Could not save changes</string>
+    <string name="action_ok">OK</string>
 
     <!-- Library Snackbars -->
     <string name="library_snackbar_marked_completed">Marked as read</string>

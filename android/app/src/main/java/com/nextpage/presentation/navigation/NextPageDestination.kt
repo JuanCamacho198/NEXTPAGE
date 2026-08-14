@@ -21,6 +21,7 @@ sealed class NextPageDestination(
     data object Settings : NextPageDestination("settings", R.string.nav_settings, NextPageIcons.Settings)
     data object Statistics : NextPageDestination("statistics", R.string.nav_statistics, NextPageIcons.Statistics)
     data object BookDetail : NextPageDestination("book_detail/{bookId}", R.string.nav_book_detail, NextPageIcons.Book)
+    data object BookEdit : NextPageDestination("book_edit/{bookId}")
 
     // Settings nested destinations
     data object SettingsList : NextPageDestination("settings/list")

@@ -89,7 +89,8 @@ fun LibraryScreen(
     driveAuthHelper: GoogleDriveAuthHelper,
     authSession: AuthSession?,
     onOpenAccount: () -> Unit,
-    onBookSelected: (String, String, String) -> Unit
+    onBookSelected: (String, String, String) -> Unit,
+    onEditBook: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchedBooks by viewModel.searchedBooks.collectAsStateWithLifecycle()
@@ -104,6 +105,7 @@ fun LibraryScreen(
         authSession = authSession,
         onOpenAccount = onOpenAccount,
         onBookSelected = onBookSelected,
+        onEditBook = onEditBook,
         onRefresh = viewModel::onPullToRefresh,
         onSearchToggle = viewModel::onToggleSearch,
         onSearchQueryChange = viewModel::onSearchQueryChanged,
@@ -112,7 +114,6 @@ fun LibraryScreen(
         onSortByChanged = viewModel::onSortByChanged,
         onViewToggle = viewModel::onToggleView,
         onRequestDeleteBook = viewModel::requestDeleteBook,
-        onRequestEditBook = viewModel::requestEditBook,
         onMarkCompleted = viewModel::onMenuMarkCompleted,
         onMarkPlanToRead = viewModel::onMenuMarkPlanToRead,
         onShare = viewModel::onMenuShare,
@@ -120,8 +121,6 @@ fun LibraryScreen(
         onDismissDownloadError = viewModel::dismissDownloadError,
         onDismissDelete = viewModel::dismissDeleteDialog,
         onConfirmDelete = viewModel::confirmDeleteBook,
-        onDismissEdit = viewModel::dismissEditDialog,
-        onConfirmEditBook = viewModel::confirmEditBook,
         onFormatSelected = viewModel::onFilterFormatChanged,
         onImportPdf = viewModel::importPdfBook,
         onImportEpub = viewModel::importBookFromEpub
@@ -138,6 +137,7 @@ private fun LibraryScreenContent(
     authSession: AuthSession?,
     onOpenAccount: () -> Unit,
     onBookSelected: (String, String, String) -> Unit,
+    onEditBook: (String) -> Unit,
     onRefresh: () -> Unit,
     onSearchToggle: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
@@ -146,7 +146,6 @@ private fun LibraryScreenContent(
     onSortByChanged: (String) -> Unit,
     onViewToggle: () -> Unit,
     onRequestDeleteBook: (Book) -> Unit,
-    onRequestEditBook: (Book) -> Unit,
     onMarkCompleted: (Book) -> Unit,
     onMarkPlanToRead: (Book) -> Unit,
     onShare: (Book) -> Unit,
@@ -154,14 +153,6 @@ private fun LibraryScreenContent(
     onDismissDownloadError: (String) -> Unit,
     onDismissDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
-    onDismissEdit: () -> Unit,
-    onConfirmEditBook: (
-        book: Book,
-        title: String,
-        author: String?,
-        description: String?,
-        coverBytes: ByteArray?
-    ) -> Unit,
     onFormatSelected: (String) -> Unit,
     onImportPdf: (sourcePath: String, fallbackTitle: String?, pdfFile: File) -> Unit,
     onImportEpub: (
@@ -172,8 +163,6 @@ private fun LibraryScreenContent(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    var editCoverUri by remember { mutableStateOf<Uri?>(null) }
 
     // ── Drive connect gate for cloud downloads ──────────────────────
     // When the user taps Download on a cloud book but Drive is not
@@ -220,12 +209,6 @@ private fun LibraryScreenContent(
                 helper.consumeResult()
             }
         }
-    }
-
-    val coverPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        editCoverUri = uri
     }
 
     val importLauncher = rememberLauncherForActivityResult(
@@ -320,7 +303,7 @@ private fun LibraryScreenContent(
                     onBookSelected = onBookSelected,
                     onBookLongPress = onRequestDeleteBook,
                     onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) },
-                    onEdit = onRequestEditBook,
+                    onEdit = { book -> onEditBook(book.id) },
                     onMarkCompleted = onMarkCompleted,
                     onMarkPlanToRead = onMarkPlanToRead,
                     onShare = onShare,
@@ -354,30 +337,7 @@ private fun LibraryScreenContent(
         LibraryDialogs(
             bookToDelete = uiState.bookToDelete,
             onDismissDelete = onDismissDelete,
-            onConfirmDelete = onConfirmDelete,
-            bookToEdit = uiState.bookToEdit,
-            editCoverUri = editCoverUri,
-            onDismissEdit = onDismissEdit,
-            onSaveEdit = { book, title, author, description ->
-                scope.launch {
-                    val coverBytes = editCoverUri?.let { uri ->
-                        withContext(Dispatchers.IO) {
-                            context.contentResolver.openInputStream(uri)?.use { input ->
-                                input.readBytes()
-                            }
-                        }
-                    }
-                    editCoverUri = null
-                    onConfirmEditBook(
-                        book,
-                        title,
-                        author,
-                        description,
-                        coverBytes
-                    )
-                }
-            },
-            onChangeCover = { coverPickerLauncher.launch("image/*") }
+            onConfirmDelete = onConfirmDelete
         )
 
         // ── Sync status indicator (top-right) ──
@@ -761,6 +721,7 @@ private fun LibraryScreenDarkPreview() {
             authSession = null,
             onOpenAccount = {},
             onBookSelected = { _, _, _ -> },
+            onEditBook = {},
             onRefresh = {},
             onSearchToggle = {},
             onSearchQueryChange = {},
@@ -769,7 +730,6 @@ private fun LibraryScreenDarkPreview() {
             onSortByChanged = {},
             onViewToggle = {},
             onRequestDeleteBook = {},
-            onRequestEditBook = {},
             onMarkCompleted = {},
             onMarkPlanToRead = {},
             onShare = {},
@@ -777,8 +737,6 @@ private fun LibraryScreenDarkPreview() {
             onDismissDownloadError = {},
             onDismissDelete = {},
             onConfirmDelete = {},
-            onDismissEdit = {},
-            onConfirmEditBook = { _, _, _, _, _ -> },
             onFormatSelected = {},
             onImportPdf = { _, _, _ -> },
             onImportEpub = { _, _, _ -> }
@@ -825,6 +783,7 @@ private fun LibraryScreenLightPreview() {
             authSession = null,
             onOpenAccount = {},
             onBookSelected = { _, _, _ -> },
+            onEditBook = {},
             onRefresh = {},
             onSearchToggle = {},
             onSearchQueryChange = {},
@@ -833,7 +792,6 @@ private fun LibraryScreenLightPreview() {
             onSortByChanged = {},
             onViewToggle = {},
             onRequestDeleteBook = {},
-            onRequestEditBook = {},
             onMarkCompleted = {},
             onMarkPlanToRead = {},
             onShare = {},
@@ -841,8 +799,6 @@ private fun LibraryScreenLightPreview() {
             onDismissDownloadError = {},
             onDismissDelete = {},
             onConfirmDelete = {},
-            onDismissEdit = {},
-            onConfirmEditBook = { _, _, _, _, _ -> },
             onFormatSelected = {},
             onImportPdf = { _, _, _ -> },
             onImportEpub = { _, _, _ -> }

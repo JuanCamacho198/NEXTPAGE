@@ -5,7 +5,6 @@ import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.UserBookRow
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.SyncState
-import com.nextpage.data.storage.CoverStorage
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.repository.LibraryRepository
@@ -46,7 +45,6 @@ class LibraryViewModelTest {
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
             syncService = FakeSyncService(),
-            coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
             catalogSync = catalogSync()
@@ -81,7 +79,6 @@ class LibraryViewModelTest {
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
             syncService = FakeSyncService(),
-            coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
             catalogSync = catalogSync()
@@ -115,7 +112,6 @@ class LibraryViewModelTest {
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
             syncService = FakeSyncService(),
-            coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
             catalogSync = catalogSync()
@@ -150,7 +146,6 @@ class LibraryViewModelTest {
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
             syncService = FakeSyncService(),
-            coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
             catalogSync = catalogSync()
@@ -189,7 +184,6 @@ class LibraryViewModelTest {
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
             syncService = FakeSyncService(),
-            coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
             catalogSync = catalogSync()
@@ -228,7 +222,6 @@ class LibraryViewModelTest {
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
             syncService = FakeSyncService(),
-            coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
             catalogSync = catalogSync()
@@ -249,7 +242,6 @@ class LibraryViewModelTest {
             libraryRepository = repository,
             importEpubBookUseCase = ImportEpubBookUseCase(repository),
             syncService = FakeSyncService(),
-            coverStorage = mockk<CoverStorage>(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
             catalogSync = catalogSync()

@@ -188,24 +188,30 @@ class LibraryRepositoryImpl(
         title: String,
         author: String?,
         description: String?,
-        coverPath: String?
+        coverPath: String?,
+        genre: String?,
+        language: String?,
+        publisher: String?,
+        tags: String?,
+        publishedDate: String?
     ): Result<Unit> = runCatching {
-        // The extended metadata fields (genre/language/publisher/tags/publishedDate)
-        // are not exposed through the repository API yet — the full-screen editor
-        // (T5) extends this signature. Pass null so existing edits never clobber them.
         bookDao.updateMetadata(
             bookId = bookId,
             title = title,
             author = author,
             description = description,
             coverPath = coverPath,
-            genre = null,
-            language = null,
-            publisher = null,
-            tags = null,
-            publishedDate = null,
+            genre = genre,
+            language = language,
+            publisher = publisher,
+            tags = tags,
+            publishedDate = publishedDate,
             updatedAt = System.currentTimeMillis()
         )
+        // Queue a BOOK UPDATE so the edited metadata reaches the cloud. The
+        // remotePath guard in SupabaseBookCatalogSync.processBookItem still
+        // defers books without a remote file to the Drive push.
+        queueBookOutboxEntry(bookId, SyncOperation.UPDATE)
     }
 
     /**

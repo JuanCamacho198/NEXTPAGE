@@ -41,7 +41,12 @@ interface LibraryRepository {
         title: String,
         author: String?,
         description: String?,
-        coverPath: String?
+        coverPath: String?,
+        genre: String?,
+        language: String?,
+        publisher: String?,
+        tags: String?,
+        publishedDate: String?
     ): Result<Unit>
 
     suspend fun getBookById(bookId: String): Book?

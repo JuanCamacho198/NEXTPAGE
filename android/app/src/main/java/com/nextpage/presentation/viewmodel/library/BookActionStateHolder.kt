@@ -161,7 +161,14 @@ class BookActionStateHolder(
                 title = title.trim().ifBlank { book.title },
                 author = author?.trim()?.ifBlank { null },
                 description = description?.trim()?.ifBlank { null },
-                coverPath = coverPath
+                coverPath = coverPath,
+                // The legacy dialog does not edit these fields yet — pass the
+                // book's current values so a metadata edit never clobbers them.
+                genre = book.genre,
+                language = book.language,
+                publisher = book.publisher,
+                tags = book.tags,
+                publishedDate = book.publishedDate
             )
 
             _state.update { it.copy(bookToEdit = null) }

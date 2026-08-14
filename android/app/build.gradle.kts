@@ -227,16 +227,21 @@ tasks.register("verifyAuthScreenNoHardcodedStrings") {
     group = "verification"
     description = "Fails if AuthScreen contains hardcoded user-facing strings"
 
+    // Resolve the file at configuration time; RegularFile is a supported
+    // configuration-cache type (Project.file() would capture the script).
+    val authScreenFile = layout.projectDirectory.file(
+        "src/main/java/com/nextpage/presentation/screen/AuthScreen.kt"
+    )
+
     doLast {
-        val authScreenFile = file("src/main/java/com/nextpage/presentation/screen/AuthScreen.kt")
-        if (!authScreenFile.exists()) {
-            throw GradleException("AuthScreen.kt not found: ${authScreenFile.path}")
+        if (!authScreenFile.asFile.exists()) {
+            throw GradleException("AuthScreen.kt not found: ${authScreenFile.asFile.path}")
         }
 
         val textCallLiteralPattern = Regex("\\bText\\(\\s*\"[^\"]+")
         val textArgLiteralPattern = Regex("\\btext\\s*=\\s*\"[^\"]+")
 
-        val violations = authScreenFile.readLines().mapIndexedNotNull { index, line ->
+        val violations = authScreenFile.asFile.readLines().mapIndexedNotNull { index, line ->
             val hasViolation =
                 textCallLiteralPattern.containsMatchIn(line) ||
                     textArgLiteralPattern.containsMatchIn(line)
@@ -255,13 +260,16 @@ tasks.register("verifyReleaseMapping") {
     group = "verification"
     description = "Verifies release mapping artifact when minify is enabled"
 
+    // Resolve the provider at configuration time (configuration-cache safe).
+    val mappingFileProvider = layout.buildDirectory.file("outputs/mapping/release/mapping.txt")
+
     doLast {
         if (!releaseMinifyEnabled) {
             logger.lifecycle("Skipping mapping verification because -PreleaseMinify=false")
             return@doLast
         }
 
-        val mappingFile = layout.buildDirectory.file("outputs/mapping/release/mapping.txt").get().asFile
+        val mappingFile = mappingFileProvider.get().asFile
         if (!mappingFile.exists()) {
             throw GradleException("Release mapping file not found: ${mappingFile.path}")
         }

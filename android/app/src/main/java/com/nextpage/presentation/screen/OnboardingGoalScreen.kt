@@ -359,7 +359,8 @@ private fun GoalBottomAction(
     }
 }
 
-private data class GoalOption(
+// `internal` (not `private`) so unit tests can assert the option model fields.
+internal data class GoalOption(
     val minutes: Int,
     val titleRes: Int,
     val descriptionRes: Int,
@@ -371,7 +372,8 @@ private data class GoalOption(
 /** Light-blue accent for the "Serious" goal option (design token #B6C4FF). */
 private val AccentLightBlue = Color(0xFFB6C4FF)
 
-private val GOAL_OPTIONS = listOf(
+// `internal` (not `private`) so unit tests can assert the fixed option set.
+internal val GOAL_OPTIONS = listOf(
     GoalOption(
         minutes = 10,
         titleRes = R.string.onboarding_goal_option_relaxed,

@@ -132,7 +132,6 @@ fun NextPageNavHost(
         factory = LibraryViewModelFactory(
             libraryRepository = appContainer.libraryRepository,
             syncService = appContainer.syncService,
-            coverStorage = appContainer.coverStorage,
             appContext = context.applicationContext,
             catalogSync = appContainer.supabaseBookCatalogSync
         )

@@ -8,7 +8,6 @@ import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.UserBookRow
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.SyncState
-import com.nextpage.data.storage.CoverStorage
 import com.nextpage.debug.DebugLog
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.BookStatus
@@ -51,7 +50,6 @@ import java.io.InputStream
  * @property isLoading `true` until the first emission from the library flow lands.
  * @property isImporting `true` while an EPUB/PDF import is in progress.
  * @property bookToDelete The book targeted for deletion (drives the confirm dialog).
- * @property bookToEdit The book targeted for edit (drives the edit-book sheet).
  * @property bookToShare The book targeted for share (drives the share intent).
  * @property totalMinutesRead Cumulative reading time across all books (minutes).
  * @property readingMinutesByBook Per-book reading time map (bookId → minutes) used for derived status.
@@ -72,7 +70,6 @@ data class LibraryUiState(
     val isLoading: Boolean = true,
     val isImporting: Boolean = false,
     val bookToDelete: Book? = null,
-    val bookToEdit: Book? = null,
     val bookToShare: Book? = null,
     val totalMinutesRead: Long = 0L,
     val readingMinutesByBook: Map<String, Long> = emptyMap(),
@@ -170,7 +167,6 @@ sealed interface DownloadState {
  * @param libraryRepository Source of books + reading-time flows.
  * @param importEpubBookUseCase Use case that copies and registers an EPUB file.
  * @param syncService Sync scheduler and state stream.
- * @param coverStorage Storage for cover images extracted from imported files.
  * @param appContext Application context (used by the action holder to read file metadata).
  * @param mainDispatcher Dispatcher for state updates; defaults to [Dispatchers.Main].
  */
@@ -178,7 +174,6 @@ class LibraryViewModel(
     private val libraryRepository: LibraryRepository,
     private val importEpubBookUseCase: ImportEpubBookUseCase,
     private val syncService: SyncService,
-    private val coverStorage: CoverStorage,
     private val appContext: Context,
     private val catalogSync: SupabaseBookCatalogSync,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
@@ -291,7 +286,6 @@ class LibraryViewModel(
 
     private val bookActionStateHolder = BookActionStateHolder(
         libraryRepository = libraryRepository,
-        coverStorage = coverStorage,
         appContext = appContext,
         scope = viewModelScope,
         onUiEvent = { _uiEvent.tryEmit(it) },
@@ -300,7 +294,6 @@ class LibraryViewModel(
             mutableUiState.update { current ->
                 current.copy(
                     bookToDelete = action.bookToDelete,
-                    bookToEdit = action.bookToEdit,
                     bookToShare = action.bookToShare
                 )
             }
@@ -502,28 +495,6 @@ class LibraryViewModel(
     /** Confirms deletion of the book staged in `bookToDelete`. */
     fun confirmDeleteBook() = bookActionStateHolder.confirmDeleteBook()
     /**
-     * Requests edit of [book] — sets `bookToEdit` so the UI shows the edit sheet.
-     */
-    fun requestEditBook(book: Book) = bookActionStateHolder.requestEditBook(book)
-    /** Dismisses the edit-book sheet. */
-    fun dismissEditDialog() = bookActionStateHolder.dismissEditDialog()
-    /**
-     * Commits the edits to [book] and dismisses the edit sheet.
-     *
-     * @param book The original book being edited.
-     * @param title New title.
-     * @param author New author (nullable).
-     * @param description New description (nullable).
-     * @param coverBytes New cover image bytes, or `null` to keep the existing cover.
-     */
-    fun confirmEditBook(
-        book: Book,
-        title: String,
-        author: String?,
-        description: String?,
-        coverBytes: ByteArray?
-    ) = bookActionStateHolder.confirmEditBook(book, title, author, description, coverBytes)
-    /**
      * Marks [book] as completed in the local library.
      */
     fun onMenuMarkCompleted(book: Book) = bookActionStateHolder.onMenuMarkCompleted(book)
@@ -641,7 +612,6 @@ class LibraryViewModel(
 class LibraryViewModelFactory(
     private val libraryRepository: LibraryRepository,
     private val syncService: SyncService,
-    private val coverStorage: CoverStorage,
     private val appContext: Context,
     private val catalogSync: SupabaseBookCatalogSync
 ) : ViewModelProvider.Factory {
@@ -652,7 +622,6 @@ class LibraryViewModelFactory(
                 libraryRepository = libraryRepository,
                 importEpubBookUseCase = ImportEpubBookUseCase(libraryRepository),
                 syncService = syncService,
-                coverStorage = coverStorage,
                 appContext = appContext,
                 catalogSync = catalogSync
             ) as T

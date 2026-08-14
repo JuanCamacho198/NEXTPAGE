@@ -2,7 +2,6 @@ package com.nextpage.presentation.viewmodel.library
 
 import android.content.Context
 import com.nextpage.R
-import com.nextpage.data.storage.CoverStorage
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.BookStatus
 import com.nextpage.domain.repository.LibraryRepository
@@ -58,10 +57,9 @@ class BookActionStateHolderTest {
     @Test
     fun `default state is all nulls`() {
         val scheduler = TestCoroutineScheduler()
-        val (holder, _, _, _) = createHolder(scheduler)
+        val (holder, _, _) = createHolder(scheduler)
 
         assertNull(holder.state.value.bookToDelete)
-        assertNull(holder.state.value.bookToEdit)
         assertNull(holder.state.value.bookToShare)
     }
 
@@ -70,7 +68,7 @@ class BookActionStateHolderTest {
     @Test
     fun `requestDeleteBook sets bookToDelete`() {
         val scheduler = TestCoroutineScheduler()
-        val (holder, _, _, _) = createHolder(scheduler)
+        val (holder, _, _) = createHolder(scheduler)
 
         holder.requestDeleteBook(sampleBook)
         assertNotNull(holder.state.value.bookToDelete)
@@ -80,7 +78,7 @@ class BookActionStateHolderTest {
     @Test
     fun `dismissDeleteDialog clears bookToDelete`() {
         val scheduler = TestCoroutineScheduler()
-        val (holder, _, _, _) = createHolder(scheduler)
+        val (holder, _, _) = createHolder(scheduler)
 
         holder.requestDeleteBook(sampleBook)
         assertNotNull(holder.state.value.bookToDelete)
@@ -159,91 +157,6 @@ class BookActionStateHolderTest {
         advanceUntilIdle()
 
         assertEquals("No event should be emitted", 0, emissionCount)
-    }
-
-    // ── Edit ───────────────────────────────────────────────────────────
-
-    @Test
-    fun `requestEditBook sets bookToEdit`() {
-        val scheduler = TestCoroutineScheduler()
-        val (holder, _, _, _) = createHolder(scheduler)
-
-        holder.requestEditBook(sampleBook)
-        assertNotNull(holder.state.value.bookToEdit)
-        assertEquals("book-1", holder.state.value.bookToEdit?.id)
-    }
-
-    @Test
-    fun `dismissEditDialog clears bookToEdit`() {
-        val scheduler = TestCoroutineScheduler()
-        val (holder, _, _, _) = createHolder(scheduler)
-
-        holder.requestEditBook(sampleBook)
-        assertNotNull(holder.state.value.bookToEdit)
-
-        holder.dismissEditDialog()
-        assertNull(holder.state.value.bookToEdit)
-    }
-
-    @Test
-    fun `confirmEditBook clears bookToEdit and emits snackbar on success`() = runTest {
-        val scheduler = TestCoroutineScheduler()
-        val dispatcher = UnconfinedTestDispatcher(scheduler)
-        val scope = CoroutineScope(dispatcher + SupervisorJob())
-        val mockRepository = mockk<LibraryRepository>()
-        val mockCoverStorage = mockk<CoverStorage>()
-        val mockContext = mockk<Context>()
-
-        coEvery { mockRepository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Result.success(Unit)
-        every { mockContext.getString(R.string.library_snackbar_metadata_saved) } returns "Metadata saved"
-
-        var emittedEvent: UiEvent? = null
-        val holder = BookActionStateHolder(
-            libraryRepository = mockRepository,
-            coverStorage = mockCoverStorage,
-            appContext = mockContext,
-            scope = scope,
-            onUiEvent = { emittedEvent = it },
-            mainDispatcher = dispatcher
-        )
-
-        holder.requestEditBook(sampleBook)
-        holder.confirmEditBook(sampleBook, "New Title", "New Author", "New Desc", null)
-        advanceUntilIdle()
-
-        assertNull("bookToEdit should be cleared", holder.state.value.bookToEdit)
-        assertTrue("Should emit snackbar", emittedEvent is UiEvent.ShowSnackbar)
-    }
-
-    @Test
-    fun `confirmEditBook emits error snackbar on failure`() = runTest {
-        val scheduler = TestCoroutineScheduler()
-        val dispatcher = UnconfinedTestDispatcher(scheduler)
-        val scope = CoroutineScope(dispatcher + SupervisorJob())
-        val mockRepository = mockk<LibraryRepository>()
-        val mockCoverStorage = mockk<CoverStorage>()
-        val mockContext = mockk<Context>()
-
-        coEvery {
-            mockRepository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
-        } returns Result.failure(IllegalStateException("update failed"))
-
-        var emittedEvent: UiEvent? = null
-        val holder = BookActionStateHolder(
-            libraryRepository = mockRepository,
-            coverStorage = mockCoverStorage,
-            appContext = mockContext,
-            scope = scope,
-            onUiEvent = { emittedEvent = it },
-            mainDispatcher = dispatcher
-        )
-
-        holder.requestEditBook(sampleBook)
-        holder.confirmEditBook(sampleBook, "New Title", null, null, null)
-        advanceUntilIdle()
-
-        assertNull("bookToEdit should be cleared", holder.state.value.bookToEdit)
-        assertTrue("Should emit error snackbar", emittedEvent is UiEvent.ShowSnackbar)
     }
 
     // ── Status changes ─────────────────────────────────────────────────
@@ -360,20 +273,17 @@ class BookActionStateHolderTest {
         val dispatcher = UnconfinedTestDispatcher(scheduler)
         val scope = CoroutineScope(dispatcher + SupervisorJob())
         val mockRepository = mockk<LibraryRepository>()
-        val mockCoverStorage = mockk<CoverStorage>()
         val mockContext = mockk<Context>()
 
         return TestComponents(
             holder = BookActionStateHolder(
                 libraryRepository = mockRepository,
-                coverStorage = mockCoverStorage,
                 appContext = mockContext,
                 scope = scope,
                 onUiEvent = {},
                 mainDispatcher = dispatcher
             ),
             mockRepository = mockRepository,
-            mockCoverStorage = mockCoverStorage,
             mockContext = mockContext
         )
     }
@@ -382,13 +292,11 @@ class BookActionStateHolderTest {
         scope: CoroutineScope,
         dispatcher: TestDispatcher,
         libraryRepository: LibraryRepository = mockk(),
-        coverStorage: CoverStorage = mockk(),
         context: Context = mockk(),
         onUiEvent: (UiEvent) -> Unit
     ): BookActionStateHolder {
         return BookActionStateHolder(
             libraryRepository = libraryRepository,
-            coverStorage = coverStorage,
             appContext = context,
             scope = scope,
             onUiEvent = onUiEvent,
@@ -399,7 +307,6 @@ class BookActionStateHolderTest {
     private data class TestComponents(
         val holder: BookActionStateHolder,
         val mockRepository: LibraryRepository,
-        val mockCoverStorage: CoverStorage,
         val mockContext: Context
     )
 }

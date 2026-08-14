@@ -1,6 +1,5 @@
 package com.nextpage.presentation.screen.library
 
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -9,18 +8,17 @@ import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.atoms.NextPageDialog
 import com.nextpage.ui.components.atoms.NextPageDialogVariant
-import com.nextpage.ui.components.molecules.EditBookMetadataDialog
 
+/**
+ * Modal dialogs owned by the library screen. The edit-metadata dialog was
+ * replaced by the full-screen editor (`book_edit/{bookId}` — REQ-edit-screen-1);
+ * only the delete confirmation remains here.
+ */
 @Composable
 fun LibraryDialogs(
     bookToDelete: Book?,
     onDismissDelete: () -> Unit,
-    onConfirmDelete: () -> Unit,
-    bookToEdit: Book?,
-    editCoverUri: Uri?,
-    onDismissEdit: () -> Unit,
-    onSaveEdit: (book: Book, title: String, author: String?, description: String?) -> Unit,
-    onChangeCover: () -> Unit
+    onConfirmDelete: () -> Unit
 ) {
     bookToDelete?.let { selectedBook ->
         NextPageDialog(
@@ -31,18 +29,6 @@ fun LibraryDialogs(
             onConfirm = onConfirmDelete,
             onDismiss = onDismissDelete,
             variant = NextPageDialogVariant.DESTRUCTIVE
-        )
-    }
-
-    bookToEdit?.let { book ->
-        EditBookMetadataDialog(
-            book = book,
-            selectedCoverUri = editCoverUri,
-            onDismiss = onDismissEdit,
-            onSave = { title, author, description ->
-                onSaveEdit(book, title, author, description)
-            },
-            onChangeCover = onChangeCover
         )
     }
 }
@@ -66,12 +52,7 @@ private fun LibraryDialogsDarkPreview() {
         LibraryDialogs(
             bookToDelete = PreviewBook,
             onDismissDelete = {},
-            onConfirmDelete = {},
-            bookToEdit = null,
-            editCoverUri = null,
-            onDismissEdit = {},
-            onSaveEdit = { _, _, _, _ -> },
-            onChangeCover = {}
+            onConfirmDelete = {}
         )
     }
 }
@@ -83,12 +64,7 @@ private fun LibraryDialogsLightPreview() {
         LibraryDialogs(
             bookToDelete = PreviewBook,
             onDismissDelete = {},
-            onConfirmDelete = {},
-            bookToEdit = null,
-            editCoverUri = null,
-            onDismissEdit = {},
-            onSaveEdit = { _, _, _, _ -> },
-            onChangeCover = {}
+            onConfirmDelete = {}
         )
     }
 }

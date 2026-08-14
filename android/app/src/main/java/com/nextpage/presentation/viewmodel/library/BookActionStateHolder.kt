@@ -2,7 +2,6 @@ package com.nextpage.presentation.viewmodel.library
 
 import android.content.Context
 import com.nextpage.R
-import com.nextpage.data.storage.CoverStorage
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.BookStatus
 import com.nextpage.domain.repository.LibraryRepository
@@ -17,14 +16,17 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Manages all book action state for the library: delete, edit, share,
- * and status changes (mark completed / plan to read).
+ * Manages book action state for the library: delete, share, and status changes
+ * (mark completed / plan to read).
  *
  * Each action follows the pattern: set state → perform async work →
  * clear state → emit snackbar/share event via [onUiEvent].
  *
+ * Edit-metadata state is NOT part of this holder anymore: the full-screen
+ * editor (`EditBookMetadataViewModel` + `book_edit/{bookId}`) replaced the
+ * dialog (REQ-edit-screen-1, design D3).
+ *
  * @param libraryRepository  Repository for book CRUD operations
- * @param coverStorage       Storage for saving/retrieving cover images
  * @param appContext         Application context for string resources
  * @param scope              CoroutineScope for async operations (e.g. viewModelScope)
  * @param onUiEvent          Callback to emit [UiEvent] (snackbar, share intent)
@@ -33,7 +35,6 @@ import kotlinx.coroutines.launch
  */
 class BookActionStateHolder(
     private val libraryRepository: LibraryRepository,
-    private val coverStorage: CoverStorage,
     private val appContext: Context,
     private val scope: CoroutineScope,
     private val onUiEvent: (UiEvent) -> Unit,
@@ -123,65 +124,6 @@ class BookActionStateHolder(
             onUiEvent(UiEvent.ShareFile(filePath = book.filePath, mimeType = mimeType))
             _state.update { it.copy(bookToShare = null) }
             onStateChanged(_state.value)
-        }
-    }
-
-    // ── Edit ────────────────────────────────────────────────────────────
-
-    /** Open the edit metadata dialog for the given book. */
-    fun requestEditBook(book: Book) {
-        _state.update { it.copy(bookToEdit = book) }
-        onStateChanged(_state.value)
-    }
-
-    /** Dismiss the edit metadata dialog without saving. */
-    fun dismissEditDialog() {
-        _state.update { it.copy(bookToEdit = null) }
-        onStateChanged(_state.value)
-    }
-
-    /**
-     * Confirm and save the edited metadata.
-     * Saves cover if provided, updates metadata, clears edit state, emits snackbar.
-     */
-    fun confirmEditBook(
-        book: Book,
-        title: String,
-        author: String?,
-        description: String?,
-        coverBytes: ByteArray?
-    ) {
-        scope.launch(mainDispatcher) {
-            val coverPath = coverBytes?.let { bytes ->
-                coverStorage.saveCover(bookId = book.id, coverBytes = bytes).getOrNull()
-            } ?: book.coverPath
-
-            val result = libraryRepository.updateBookMetadata(
-                bookId = book.id,
-                title = title.trim().ifBlank { book.title },
-                author = author?.trim()?.ifBlank { null },
-                description = description?.trim()?.ifBlank { null },
-                coverPath = coverPath,
-                // The legacy dialog does not edit these fields yet — pass the
-                // book's current values so a metadata edit never clobbers them.
-                genre = book.genre,
-                language = book.language,
-                publisher = book.publisher,
-                tags = book.tags,
-                publishedDate = book.publishedDate
-            )
-
-            _state.update { it.copy(bookToEdit = null) }
-            onStateChanged(_state.value)
-
-            result.fold(
-                onSuccess = {
-                    onUiEvent(UiEvent.ShowSnackbar(appContext.getString(R.string.library_snackbar_metadata_saved)))
-                },
-                onFailure = { error ->
-                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: "Failed to update metadata"))
-                }
-            )
         }
     }
 }

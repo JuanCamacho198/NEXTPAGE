@@ -46,6 +46,22 @@ describe('PdfViewer Text Selection Integration', () => {
     expect(pdfViewer).toBeTruthy();
   });
 
+  it('does not inject a custom --pdf-selection-color (native selection wins)', async () => {
+    const t = (key: string) => key;
+    const { container } = render(PdfViewer, {
+      filePath: 'test.pdf',
+      t,
+    });
+
+    // The transient selection overlay was removed: the browser's native
+    // ::selection (pdfjs default, AccentColor) is the single visual source
+    // while dragging. The viewer root must NOT carry a custom
+    // --pdf-selection-color that would have been consumed by a painted overlay.
+    const viewer = container.querySelector('.pdf-viewer');
+    expect(viewer).toBeTruthy();
+    expect(viewer?.getAttribute('style')).not.toContain('--pdf-selection-color');
+  });
+
   it('shows toolbar when text is selected', async () => {
     // This is hard to test in JSDOM because window.getSelection is limited
     // but we can at least check if the logic is triggered

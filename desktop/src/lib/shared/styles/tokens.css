@@ -416,25 +416,15 @@ body {
 
 /* ============================================
  * PDF.js TEXT LAYER
- * Custom selection color for the imported text layer
+ * The text layer must stay interactive; the native browser selection
+ * (pdfjs's own `::selection`, pdf_viewer.css) is the single visual source
+ * while the user drags. We intentionally do NOT suppress ::selection here —
+ * a custom overlay is no longer painted on top of the selection.
  * ============================================ */
 .textLayer {
   contain: layout style paint;
   pointer-events: auto;
   z-index: 2;
-}
-
-.textLayer span::selection {
-  background: transparent;
-  color: transparent;
-}
-
-/* Persisted highlights also leak the native ::selection background when the
- * user selects text that overlaps a saved highlight. Suppress it everywhere
- * inside the PDF viewer root so the custom overlay (PdfSelectionOverlay) is the
- * single source of truth for the visual selection. */
-.pdf-viewer ::selection {
-  background: transparent;
 }
 
 /* ============================================

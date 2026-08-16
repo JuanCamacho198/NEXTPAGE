@@ -72,7 +72,6 @@
       startPercentage?: number;
       endPercentage?: number;
     }) => void;
-    selectionColor?: string;
     readerSettings?: ReaderSettings;
     isFullscreen?: boolean;
     onToggleFullscreen?: () => void;
@@ -126,7 +125,6 @@
     onPageChange,
     searchTargetLocator = null,
     onSessionProgress,
-    selectionColor,
     readerSettings = DEFAULT_READER_SETTINGS,
     isFullscreen = false,
     onToggleFullscreen,
@@ -167,9 +165,6 @@
   let currentPageObj: pdfjsLib.PDFPageProxy | null = null;
 
   let selectionPlacement = $state<'above' | 'below'>('above');
-  let selectionOverlayRects = $state<
-    Array<{ left: number; top: number; width: number; height: number }>
-  >([]);
   let activeHighlightId = $state<string | null>(null);
 
   let activeLoadRequestId = 0;
@@ -201,11 +196,16 @@
   // Set padding to 0 so the PDF uses the full available space.
   const canvasContainerPaddingStyle = $derived('0');
 
-  // Reactively apply line-height and letter-spacing to the text layer
-  // so changes take effect immediately without requiring a page re-render
+  // Reactively apply letter-spacing to the text layer so changes take effect
+  // immediately without requiring a page re-render. Line-height is NOT applied:
+  // pdfjs positions every span absolutely (top = baseline - ascent, scaled), so
+  // an inflated line-height only grows each span's BOX below the glyphs (it does
+  // not move the text). That box inflation leaks into range.getClientRects() and
+  // makes multi-line selection rects overshoot ~1 line below the last selected
+  // line. Keeping the stylesheet's `line-height: 1` (pdf_viewer.css) fixes the
+  // rects at the source for both the transient overlay and persisted highlights.
   $effect(() => {
     if (textLayer) {
-      textLayer.style.lineHeight = String(readerSettings.lineHeight);
       textLayer.style.letterSpacing = `${readerSettings.letterSpacing}px`;
     }
   });
@@ -250,7 +250,6 @@
   };
 
   const clearSelectionUi = (): void => {
-    selectionOverlayRects = [];
     onselectionclear?.();
   };
 
@@ -298,20 +297,7 @@
       navigationError = t('pdf.fullscreenUnsupported');
     };
 
-    const handleSelectionChange = (): void => {
-      const selection = window.getSelection();
-      const text = selection?.toString().trim();
-      if (!text) {
-        // Only reset local UI state.
-        // Do NOT call clearSelectionUi() which triggers onselectionclear,
-        // because that calls removeAllRanges() and kills the nascent
-        // browser selection before click-drag can start.
-        selectionOverlayRects = [];
-      }
-    };
-
     document.addEventListener('fullscreenerror', handleFullscreenError);
-    document.addEventListener('selectionchange', handleSelectionChange);
 
     return () => {
       activeLoadRequestId += 1;
@@ -327,7 +313,6 @@
       void destroyCurrentDocument();
       clearDocumentCache();
       document.removeEventListener('fullscreenerror', handleFullscreenError);
-      document.removeEventListener('selectionchange', handleSelectionChange);
     };
   });
 
@@ -631,8 +616,9 @@
         if (task?.promise) await task.promise;
       }
 
-      // Apply layout settings from readerSettings
-      textLayer.style.lineHeight = String(readerSettings.lineHeight);
+      // Apply layout settings from readerSettings. Letter-spacing only (see the
+      // $effect above: line-height must stay at the pdfjs `line-height: 1` so
+      // span boxes don't inflate selection getClientRects()).
       textLayer.style.letterSpacing = `${readerSettings.letterSpacing}px`;
 
       // pdfjs-dist v5 TextLayer creates spans with pointer-events:none (from
@@ -700,8 +686,6 @@
       console.error('Selection state update failed:', e);
       overlayRects = [];
     }
-
-    selectionOverlayRects = overlayRects;
 
     if (!nextPosition && containerRect) {
       selectionPlacement = 'below';
@@ -1111,7 +1095,7 @@
   onmouseup={handleTextSelection}
   onpointerup={handleTextSelection}
   ontouchend={handleTextSelection}
-  style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor}; --pdf-selection-color: ${selectionColor ?? readerSettings.selectionColor};`}
+  style={`--pdf-reader-root-bg: ${readerThemePalette.rootBackground}; --pdf-reader-surface-bg: ${readerThemePalette.surfaceBackground}; --pdf-reader-text: ${readerThemePalette.textColor};`}
 >
   <PdfLoadingOverlay {isLoading} {error} {loadProgress} {loadProgressMax} {t} />
 
@@ -1167,7 +1151,6 @@
           <canvas bind:this={canvas} style="filter: {visualFilterStyle};"></canvas>
 
           <PdfSelectionOverlay
-            {selectionOverlayRects}
             {persistedHighlights}
             {currentPage}
             {scale}

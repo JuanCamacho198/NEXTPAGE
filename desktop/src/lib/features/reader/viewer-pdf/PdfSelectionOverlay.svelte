@@ -6,17 +6,9 @@
     rects: Array<{ left: number; top: number; width: number; height: number }>;
   };
 
-  type SelectionOverlayRect = {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  };
-
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
-    selectionOverlayRects: SelectionOverlayRect[];
     persistedHighlights: PersistedHighlight[];
     currentPage: number;
     scale: number;
@@ -26,7 +18,6 @@
   };
 
   let {
-    selectionOverlayRects,
     persistedHighlights,
     currentPage,
     scale,
@@ -35,15 +26,6 @@
     t: _t,
   }: Props = $props();
 </script>
-
-<div class="absolute inset-0 z-1 pointer-events-none" aria-hidden="true">
-  {#each selectionOverlayRects as rect, index (`${rect.left}-${rect.top}-${index}`)}
-    <div
-      class="absolute rounded pointer-events-none"
-      style="left: {rect.left}px; top: {rect.top}px; width: {rect.width}px; height: {rect.height}px; background: color-mix(in srgb, var(--pdf-selection-color, var(--color-accent-blue)) 42%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--pdf-selection-color, var(--color-accent-blue)) 22%, transparent), 0 2px 4px rgba(0,0,0,0.1);"
-    ></div>
-  {/each}
-</div>
 
 <div class="absolute inset-0 z-1 pointer-events-none" role="presentation">
   {#each persistedHighlights.filter((h) => h.pageNumber === currentPage) as hl (hl.id)}

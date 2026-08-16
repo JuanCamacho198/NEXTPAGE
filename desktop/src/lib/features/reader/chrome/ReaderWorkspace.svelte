@@ -134,7 +134,6 @@
     height: number;
   } | null>(null);
   let showToolbar = $state(false);
-  let selectedColor = $state('#FACC15');
 
   // Persisted highlights state. We carry the full HighlightDto for
   // EPUB (we need `cfi` to round-trip selections back to the
@@ -443,7 +442,6 @@
     color: string,
     data: NonNullable<typeof lastSelectionData>,
   ): Promise<void> {
-    selectedColor = color;
     debugState.epub.colorPickCount++;
     debugState.epub.lastPickedColor = color;
 
@@ -774,7 +772,6 @@
           bookId={activeReadingBook.id}
           initialPage={Math.max(1, activeReadingBook.currentPage || 1)}
           {searchTargetLocator}
-          selectionColor={selectedColor}
           readerSettings={localReaderSettings}
           preloadedBytes={preloadedBytes?.filePath === activeReadingBook.filePath
             ? preloadedBytes.data

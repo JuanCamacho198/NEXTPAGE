@@ -758,9 +758,11 @@
     {:else if !activeReadingBook}
       <p class="font-inter text-sm text-(--color-text-inverse)">{t('reader.no_book_loaded')}</p>
     {:else if isPdf}
-      <!-- White content card for PDF -->
+      <!-- White content card for PDF. Fixed height (h-full + items-stretch) so the
+           card NEVER grows with the PDF zoom: the PdfViewer's canvas container
+           scrolls internally instead of resizing the workspace. -->
       <div
-        class="relative bg-white flex flex-col min-h-0"
+        class="relative bg-white flex flex-col min-h-0 h-full"
         class:rounded-xl={!isFullscreen}
         class:shadow-lg={!isFullscreen}
         class:w-200={!isFullscreen}

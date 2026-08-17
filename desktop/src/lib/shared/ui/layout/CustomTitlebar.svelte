@@ -11,7 +11,7 @@
   });
 </script>
 
-<div class="flex h-9 items-center px-4 select-none" class:hidden={hidden}>
+<div class="flex h-9 items-center pl-4 select-none" class:hidden={hidden}>
   <!-- Left: branding -->
   <span class="font-bold text-sm text-(--color-accent-blue) leading-none">NP</span>
   <span class="ml-2 text-sm font-medium text-(--color-primary) leading-none tracking-tight">NextPage</span>

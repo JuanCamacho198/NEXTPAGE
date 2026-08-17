@@ -745,10 +745,7 @@
 
   <!-- Reading area (centered, fill remaining space) -->
   <div
-    class="flex flex-1 min-h-0"
-    class:items-center={isPdf && !isFullscreen}
-    class:justify-center={!isFullscreen}
-    class:items-stretch={isEpub || isFullscreen}
+    class="flex flex-1 min-h-0 items-stretch justify-center"
     class:px-10={!isFullscreen}
     class:py-6={!isFullscreen}
     class:p-0={isFullscreen}

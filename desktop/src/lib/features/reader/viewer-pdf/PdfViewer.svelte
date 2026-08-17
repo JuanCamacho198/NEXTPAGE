@@ -297,7 +297,19 @@
       navigationError = t('pdf.fullscreenUnsupported');
     };
 
+    // Close the selection toolbar when the browser selection is cleared by a
+    // click outside the viewer / on the canvas (header, footer, empty areas).
+    // clearSelectionUi only forwards onselectionclear -> dismissToolbar (no
+    // removeAllRanges), so this cannot kill a nascent click-drag selection.
+    const handleSelectionChange = (): void => {
+      const selection = window.getSelection();
+      if (!selection || !selection.toString().trim()) {
+        clearSelectionUi();
+      }
+    };
+
     document.addEventListener('fullscreenerror', handleFullscreenError);
+    document.addEventListener('selectionchange', handleSelectionChange);
 
     return () => {
       activeLoadRequestId += 1;
@@ -313,6 +325,7 @@
       void destroyCurrentDocument();
       clearDocumentCache();
       document.removeEventListener('fullscreenerror', handleFullscreenError);
+      document.removeEventListener('selectionchange', handleSelectionChange);
     };
   });
 
@@ -444,30 +457,10 @@
       pdfDoc = loadedDoc;
       totalPages = loadedDoc.numPages;
 
-      // Compute fit-to-page scale so the whole PDF page fits inside the viewport.
-      // We use the smaller of width/height ratios to keep the page fully visible
-      // without clipping, then clamp between 0.5 and 3.0 to keep text readable.
-      if (canvasContainer) {
-        try {
-          const firstPage = await loadedDoc.getPage(1);
-          const defaultViewport = firstPage.getViewport({ scale: 1 });
-          const containerWidth = canvasContainer.clientWidth;
-          const containerHeight = canvasContainer.clientHeight;
-          if (
-            containerWidth > 0 &&
-            containerHeight > 0 &&
-            defaultViewport.width > 0 &&
-            defaultViewport.height > 0
-          ) {
-            const scaleX = containerWidth / defaultViewport.width;
-            const scaleY = containerHeight / defaultViewport.height;
-            const fitScale = Math.min(scaleX, scaleY);
-            scale = Math.max(0.5, Math.min(3.0, fitScale));
-          }
-        } catch {
-          // Fall back to default scale if page dimensions aren't available
-        }
-      }
+      // Default zoom is 100% (DEFAULT_PDF_SCALE = 1.0). We intentionally do NOT
+      // fit-to-page here: the reader card keeps a fixed area and the canvas
+      // container scrolls internally, so the page opens at 100% and the user
+      // can zoom with the controls / Ctrl+wheel without the card resizing.
 
       const requestedPage = Math.max(1, initialPage || 1);
       const targetPage = Math.min(requestedPage, totalPages);
@@ -1064,7 +1057,7 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 <div
-  class="pdf-viewer h-full flex flex-col min-h-0"
+  class="pdf-viewer relative h-full flex flex-col min-h-0"
   bind:this={viewerRoot}
   tabindex="0"
   role="region"
@@ -1099,6 +1092,8 @@
 >
   <PdfLoadingOverlay {isLoading} {error} {loadProgress} {loadProgressMax} {t} />
 
+  <!-- The navigation controls (ReaderControls) auto-hide in fullscreen and
+       float over the content, revealing on hover at the top of the viewport. -->
   <PdfControls
     {currentPage}
     {totalPages}
@@ -1138,7 +1133,7 @@
       />
     {/if}
     <div
-      class="flex-1 overflow-auto bg-(--pdf-reader-root-bg,var(--color-background))"
+      class="flex-1 min-h-0 overflow-auto bg-(--pdf-reader-root-bg,var(--color-background))"
       bind:this={canvasContainer}
       style="padding: {canvasContainerPaddingStyle};"
     >

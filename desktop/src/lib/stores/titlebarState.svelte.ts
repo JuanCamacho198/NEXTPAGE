@@ -1,6 +1,17 @@
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 
-export function createTitlebarState() {
+export interface TitlebarState {
+  get isMaximized(): boolean;
+  get isCustomTitlebar(): boolean;
+  set isCustomTitlebar(value: boolean);
+  init(): Promise<void>;
+  destroy(): void;
+  handleMinimize(): Promise<void>;
+  handleMaximize(): Promise<void>;
+  handleClose(): Promise<void>;
+}
+
+export function createTitlebarState(): TitlebarState {
   let isMaximized = $state(false);
   /**
    * Whether the custom titlebar should render (Windows only). Set once by the
@@ -14,7 +25,7 @@ export function createTitlebarState() {
   let isCustomTitlebar = $state(false);
   let unlistenResize: (() => void) | null = null;
 
-  async function init() {
+  async function init(): Promise<void> {
     const appWindow = getCurrentWebviewWindow();
     isMaximized = await appWindow.isMaximized();
     unlistenResize = await appWindow.onResized(async () => {
@@ -22,20 +33,20 @@ export function createTitlebarState() {
     });
   }
 
-  function destroy() {
+  function destroy(): void {
     unlistenResize?.();
     unlistenResize = null;
   }
 
-  async function handleMinimize() {
+  async function handleMinimize(): Promise<void> {
     await getCurrentWebviewWindow().minimize();
   }
 
-  async function handleMaximize() {
+  async function handleMaximize(): Promise<void> {
     await getCurrentWebviewWindow().toggleMaximize();
   }
 
-  async function handleClose() {
+  async function handleClose(): Promise<void> {
     await getCurrentWebviewWindow().close();
   }
 

@@ -446,6 +446,42 @@ describe('SupabaseAuthService — refreshDriveToken layered refresh (DTL-1/DTL-2
     // Exactly one Google token endpoint call
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
+
+  it('coalesces concurrent refreshes into one Google exchange (single-use refresh token race)', async () => {
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', 'client-123');
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', 'secret-456');
+    mockRefreshSession.mockResolvedValue({
+      data: { session: makeMockSession({ provider_token: null }) },
+      error: null,
+    });
+    mockDriveRefreshToken.mockReturnValue('google-refresh-token');
+
+    // A deferred response so both callers overlap before the exchange resolves.
+    let resolveExchange!: (r: Response) => void;
+    const deferred = new Promise<Response>((r) => {
+      resolveExchange = r;
+    });
+    vi.mocked(globalThis.fetch).mockReturnValue(
+      deferred as unknown as ReturnType<typeof fetch>,
+    );
+
+    const first = sut.refreshDriveToken();
+    const second = sut.refreshDriveToken();
+
+    resolveExchange({
+      ok: true,
+      status: 200,
+      json: async () => ({ access_token: 'ya29.coalesced' }),
+    } as Response);
+
+    const [tokenA, tokenB] = await Promise.all([first, second]);
+
+    expect(tokenA).toBe('ya29.coalesced');
+    expect(tokenB).toBe('ya29.coalesced');
+    // Single-use refresh token must be exchanged exactly ONCE even under
+    // concurrent callers — the second caller reuses the in-flight result.
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('SupabaseAuthService — signOut', () => {

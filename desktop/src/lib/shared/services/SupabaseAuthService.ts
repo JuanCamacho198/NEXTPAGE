@@ -283,6 +283,17 @@ export async function getDriveToken(): Promise<string | null> {
 }
 
 /**
+ * Module-level mutex for Drive token refresh. Google refresh tokens are
+ * single-use: if two concurrent sync paths (`syncBooks` + `syncState` run
+ * under `Promise.all` in SyncService.syncMetadata) both hit a 401/403 and both
+ * call `refreshDriveToken()` at the same time, the second exchange invalidates
+ * the first → intermittent 403 `PERMISSION_DENIED` on every write (not a
+ * token-expiry issue). This lock coalesces concurrent refreshes into one and
+ * makes the waiters reuse the same freshly-issued token.
+ */
+let driveTokenRefreshInFlight: Promise<string> | null = null;
+
+/**
  * Layered Google Drive token refresh (DTL-1/DTL-2):
  * 1. `supabase.auth.refreshSession()` → use the re-issued `provider_token`
  *    when GoTrue provides one (project-dependent; see apply-progress 4.1).
@@ -294,8 +305,25 @@ export async function getDriveToken(): Promise<string | null> {
  * 3. Typed `AUTH_REQUIRED` (retryable=false) — single attempt, no hot loop.
  *
  * Never logs tokens; every message passes through `redactLogLine` (DTL-3).
+ *
+ * The public function is concurrency-safe: concurrent callers await the same
+ * in-flight refresh promise instead of each burning the single-use refresh
+ * token. Exposed as a named function (not an arrow) so it is hoisted and the
+ * lock variable above can live at module scope.
  */
-export async function refreshDriveToken(): Promise<string> {
+export function refreshDriveToken(): Promise<string> {
+  // Coalesce: if a refresh is already in flight, wait for it and reuse the
+  // same token. This is the fix for the intermittent Drive 403 caused by
+  // concurrent refreshes invalidating each other's single-use refresh token.
+  if (driveTokenRefreshInFlight) return driveTokenRefreshInFlight;
+
+  driveTokenRefreshInFlight = doRefreshDriveToken().finally(() => {
+    driveTokenRefreshInFlight = null;
+  });
+  return driveTokenRefreshInFlight;
+}
+
+async function doRefreshDriveToken(): Promise<string> {
   const supabase = getSessionClient();
 
   // Path 1: GoTrue session refresh may re-issue provider_token.

@@ -454,12 +454,14 @@ fun ReaderScreen(
         },
         overlays = {
             // ── Fullscreen side arrows (page nav) ───────────────
-            // Always visible (not tied to controlsVisible) so the user can
-            // navigate pages even when the chrome is hidden by the tap
-            // gesture. Hidden only during loading or while a selection is
-            // active (so arrow hit areas don't steal the drag gesture).
+            // Visible only for EPUB paginated/scroll readers. Hidden for
+            // PDF (the floating buttons cover the document) and while
+            // loading or during an active selection (so arrow hit areas
+            // don't steal the drag gesture). Page nav still works via the
+            // edge-tap zones.
             if (!uiState.isLoading && !isSelectionActive &&
-                !(uiState.readerSettings.verticalScroll && uiState.bookFormat == "epub")
+                !(uiState.readerSettings.verticalScroll && uiState.bookFormat == "epub") &&
+                uiState.bookFormat != "pdf"
             ) {
                 ReaderFullscreenArrows(
                     onPrevious = {

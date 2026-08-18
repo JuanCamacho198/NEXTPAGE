@@ -153,6 +153,12 @@ describe('GDriveProvider — idempotent upload (DRP-3)', () => {
     const uploadCall = vi.mocked(globalThis.fetch).mock.calls[3];
     expect(uploadCall[0]).toContain('files/file-existing?uploadType=multipart');
     expect(uploadCall[1]?.method).toBe('PATCH');
+    // DRIVE_PARENTS_PATCH: `parents` must NOT be sent on update (PATCH) —
+    // Google rejects it with 403 fieldNotWritable. Only `name` may be sent.
+    const patchFormData = uploadCall[1]?.body as FormData;
+    const patchMetadata = JSON.parse(await (patchFormData.get('metadata') as Blob).text());
+    expect(patchMetadata.name).toBe('book-1.epub');
+    expect(patchMetadata.parents).toBeUndefined();
   });
 
   it('RED: creates a new file when no file with the canonical name exists', async () => {
@@ -170,6 +176,12 @@ describe('GDriveProvider — idempotent upload (DRP-3)', () => {
     const uploadCall = vi.mocked(globalThis.fetch).mock.calls[3];
     expect(uploadCall[0]).toContain('upload/drive/v3/files?uploadType=multipart');
     expect(uploadCall[1]?.method).toBe('POST');
+    // On create (POST) `parents` IS valid and must be sent to place the file
+    // in the NextPage/Books folder.
+    const postFormData = uploadCall[1]?.body as FormData;
+    const postMetadata = JSON.parse(await (postFormData.get('metadata') as Blob).text());
+    expect(postMetadata.name).toBe('book-2.epub');
+    expect(postMetadata.parents).toEqual(['folder-2']);
   });
 
   it('RED: picks the first non-trashed match when duplicate names exist', async () => {

@@ -179,16 +179,17 @@ export class GDriveProvider implements StorageProvider {
     const existing =
       (searchData.files ?? []).find((f: { trashed?: boolean }) => !f.trashed) ?? null;
 
-    const metadata = {
-      name: fileName,
-      parents: [folderId],
-    };
+    // Google Drive rejects `parents` in update (PATCH) requests with
+    // 403 fieldNotWritable: "The parents field is not directly writable in
+    // update requests. Use the addParents and removeParents parameters instead."
+    // So `parents` is only sent on create (POST); updates send only `name`.
+    const method = existing ? 'PATCH' : 'POST';
+    const metadata = existing ? { name: fileName } : { name: fileName, parents: [folderId] };
 
     const formData = new FormData();
     formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
     formData.append('file', new Blob([file.buffer as ArrayBuffer]));
 
-    const method = existing ? 'PATCH' : 'POST';
     const url = existing
       ? `${GDriveProvider.GDRIVE_UPLOAD_BASE}/files/${existing.id}?uploadType=multipart`
       : `${GDriveProvider.GDRIVE_UPLOAD_BASE}/files?uploadType=multipart`;

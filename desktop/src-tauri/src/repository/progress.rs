@@ -97,23 +97,55 @@ pub fn save_progress(repo: &LibraryRepository, payload: SaveProgressInput) -> Ap
 }
 
 pub fn upsert_progress(repo: &LibraryRepository, progress: ReadingProgressDto) -> AppResult<()> {
-    repo.connection.execute(
-        "INSERT INTO reading_progress (id, book_id, cfi_location, percentage, updated_at, version)
-             VALUES (?1, ?2, ?3, ?4, ?5, 1)
-             ON CONFLICT(id) DO UPDATE SET
-               book_id = excluded.book_id,
-               cfi_location = excluded.cfi_location,
-               percentage = excluded.percentage,
-               updated_at = excluded.updated_at,
-               version = version + 1",
-        params![
-            progress.id,
-            &progress.book_id,
-            &progress.cfi_location,
-            progress.percentage,
-            &progress.updated_at
-        ],
-    )?;
+    if progress.book_id.trim().is_empty() {
+        return Err(AppError::MissingBookId);
+    }
+
+    // Consolidate by ACTIVE book row, never by id: the local id (from
+    // save_progress) and the remote id (from a Supabase pull) differ, so an
+    // ON CONFLICT(id) upsert would insert a second row for the same book and
+    // the shelf JOIN would then render the book twice. Update the existing
+    // active row in place; only insert when none exists.
+    let existing_id: Option<String> = repo
+        .connection
+        .query_row(
+            "SELECT id FROM reading_progress WHERE book_id = ?1 AND deleted_at IS NULL
+             ORDER BY updated_at DESC LIMIT 1",
+            params![&progress.book_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+
+    match existing_id {
+        Some(id) => {
+            repo.connection.execute(
+                "UPDATE reading_progress
+                 SET cfi_location = ?1, percentage = ?2, updated_at = ?3, version = version + 1
+                 WHERE id = ?4",
+                params![&progress.cfi_location, progress.percentage, &progress.updated_at, id],
+            )?;
+        }
+        None => {
+            // No active row yet: honor the caller-supplied id when present
+            // (remote pull), else mint a fresh UUID.
+            let id = if progress.id.trim().is_empty() {
+                Uuid::new_v4().to_string()
+            } else {
+                progress.id.clone()
+            };
+            repo.connection.execute(
+                "INSERT INTO reading_progress (id, book_id, cfi_location, percentage, updated_at, version)
+                 VALUES (?1, ?2, ?3, ?4, ?5, 1)",
+                params![
+                    id,
+                    &progress.book_id,
+                    &progress.cfi_location,
+                    progress.percentage,
+                    &progress.updated_at
+                ],
+            )?;
+        }
+    }
 
     Ok(())
 }
@@ -717,6 +749,81 @@ mod tests {
         assert!(id1.starts_with("sess_"));
         assert_eq!(id1.len(), 5 + 32);
         assert!(id1[5..].chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn upsert_progress_consolidates_by_active_book_row() {
+        let repo = new_repository();
+        insert_book(&repo, "book-1", "C:/book-1.epub");
+
+        // Simulate a local save that mints its own id...
+        repo.save_progress(SaveProgressInput {
+            book_id: "book-1".to_string(),
+            cfi_location: "cfi-local".to_string(),
+            percentage: 10.0,
+        })
+        .unwrap();
+
+        // ...then a remote pull with a DIFFERENT id must update the existing
+        // active row, not insert a second one (which would duplicate the book
+        // in the shelf via the list_library_books JOIN). The remote id is NOT
+        // adopted — the local id stays as the single local row's key.
+        repo.upsert_progress(ReadingProgressDto {
+            id: "remote-id".to_string(),
+            book_id: "book-1".to_string(),
+            cfi_location: "cfi-remote".to_string(),
+            percentage: 20.0,
+            updated_at: "2026-08-18T17:00:00+00:00".to_string(),
+        })
+        .unwrap();
+
+        let rows: Vec<(String, String, f64)> = repo
+            .connection
+            .prepare(
+                "SELECT id, cfi_location, percentage FROM reading_progress
+                 WHERE book_id = 'book-1' AND deleted_at IS NULL",
+            )
+            .unwrap()
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(rows.len(), 1, "remote pull with different id must not duplicate");
+        assert_eq!(rows[0].1, "cfi-remote");
+        assert_eq!(rows[0].2, 20.0);
+    }
+
+    #[test]
+    fn upsert_progress_inserts_when_no_active_row_exists() {
+        let repo = new_repository();
+        insert_book(&repo, "book-2", "C:/book-2.epub");
+
+        repo.upsert_progress(ReadingProgressDto {
+            id: "remote-id-2".to_string(),
+            book_id: "book-2".to_string(),
+            cfi_location: "cfi-2".to_string(),
+            percentage: 5.0,
+            updated_at: "2026-08-18T17:00:00+00:00".to_string(),
+        })
+        .unwrap();
+
+        let rows: Vec<(String, String, f64)> = repo
+            .connection
+            .prepare(
+                "SELECT id, cfi_location, percentage FROM reading_progress
+                 WHERE book_id = 'book-2' AND deleted_at IS NULL",
+            )
+            .unwrap()
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].0, "remote-id-2");
+        assert_eq!(rows[0].1, "cfi-2");
+        assert_eq!(rows[0].2, 5.0);
     }
 
     #[test]

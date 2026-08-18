@@ -254,11 +254,9 @@ mod tests {
         assert_eq!(first.id, "client-id-1");
         let count: i64 = repo
             .connection
-            .query_row(
-                "SELECT count(*) FROM highlights WHERE id = 'client-id-1'",
-                [],
-                |row| row.get(0),
-            )
+            .query_row("SELECT count(*) FROM highlights WHERE id = 'client-id-1'", [], |row| {
+                row.get(0)
+            })
             .unwrap();
         assert_eq!(count, 1);
 
@@ -267,11 +265,9 @@ mod tests {
         assert_eq!(second.id, "client-id-1");
         let count: i64 = repo
             .connection
-            .query_row(
-                "SELECT count(*) FROM highlights WHERE id = 'client-id-1'",
-                [],
-                |row| row.get(0),
-            )
+            .query_row("SELECT count(*) FROM highlights WHERE id = 'client-id-1'", [], |row| {
+                row.get(0)
+            })
             .unwrap();
         assert_eq!(count, 1);
     }

@@ -13,7 +13,13 @@
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
   import Skeleton from '$lib/shared/ui/feedback/Skeleton.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
-  import { PAGE_SIZE, HIGHLIGHT_COLORS, formatDate, type Props } from '../state.svelte';
+  import {
+    PAGE_SIZE,
+    HIGHLIGHT_COLORS,
+    formatDate,
+    resolveHighlightHex,
+    type Props,
+  } from '../state.svelte';
 
   let { books, t }: Props = $props();
 
@@ -112,16 +118,21 @@
       // HIGHLIGHT DELETE so Supabase receives the tombstone too.
       if (authState.userId) {
         const updatedAt = new Date().toISOString();
-        void outboxDao.add('HIGHLIGHT', highlight.id, 'DELETE', JSON.stringify({
-          userId: authState.userId,
-          bookId: highlight.bookId,
-          cfiRange: highlight.cfi ?? '',
-          textContent: highlight.text,
-          color: highlight.color,
-          page: highlight.pageNumber,
-          deletedAt: updatedAt,
-          updatedAt,
-        }));
+        void outboxDao.add(
+          'HIGHLIGHT',
+          highlight.id,
+          'DELETE',
+          JSON.stringify({
+            userId: authState.userId,
+            bookId: highlight.bookId,
+            cfiRange: highlight.cfi ?? '',
+            textContent: highlight.text,
+            color: highlight.color,
+            page: highlight.pageNumber,
+            deletedAt: updatedAt,
+            updatedAt,
+          }),
+        );
       }
     } catch {
       // silent
@@ -295,8 +306,7 @@
         {@const book = bookMap.get(highlight.bookId)}
         <li
           class="flex items-stretch gap-4 p-5 rounded-2xl border border-(--color-border) bg-(--color-surface) transition-all cursor-default hover:border-(--color-border-strong) hover:shadow-(--shadow-soft) hover:bg-(--color-surface-hover,rgba(25,41,62,0.96))"
-          style="--bar-color: {HIGHLIGHT_COLORS.find((c) => c.key === highlight.color.toLowerCase())
-            ?.hex ?? '#60a5fa'}"
+          style="--bar-color: {resolveHighlightHex(highlight.color)}"
         >
           <div class="w-1 min-h-full rounded bg-(--bar-color) shrink-0"></div>
 

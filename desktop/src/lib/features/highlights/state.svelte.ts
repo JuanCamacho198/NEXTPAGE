@@ -19,6 +19,20 @@ export const HIGHLIGHT_COLORS = [
 
 export type HighlightColorKey = (typeof HIGHLIGHT_COLORS)[number]['key'];
 
+/**
+ * Resolve a stored highlight color (hex like `#FACC15` or a legacy key like
+ * `yellow`) to its display hex. The reader persists hex values, while older
+ * rows may hold keys, so both forms are matched case-insensitively.
+ * Falls back to the canonical blue for unknown values.
+ */
+export function resolveHighlightHex(color: string): string {
+  const normalized = color.toLowerCase();
+  const match = HIGHLIGHT_COLORS.find(
+    (c) => c.key === normalized || c.hex.toLowerCase() === normalized,
+  );
+  return match?.hex ?? '#60a5fa';
+}
+
 export function formatDate(iso: string): string {
   const d = new Date(iso);
   return (
@@ -68,7 +82,14 @@ export function filterHighlights(
   }
 
   if (selectedColor) {
-    result = result.filter((h) => h.color.toLowerCase() === selectedColor);
+    // Stored colors are hex (reader/Android/Supabase), filter chips use keys —
+    // match both forms.
+    const selectedHex = HIGHLIGHT_COLORS.find((c) => c.key === selectedColor)?.hex.toLowerCase();
+    result = result.filter(
+      (h) =>
+        h.color.toLowerCase() === selectedColor ||
+        (selectedHex !== undefined && h.color.toLowerCase() === selectedHex),
+    );
   }
 
   if (selectedBookId) {

@@ -327,6 +327,46 @@ describe('epubHighlightOverlay — registry semantics (T12)', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────
+// cfi-unresolved failure (REQ-OBSERVABILITY reason + REQ-REMOVAL
+// no-repair-path at runtime). The wrap/A+B repair machinery is gone:
+// an unresolvable CFI must post epub-hl-failed cfi-unresolved, register
+// nothing, and NEVER post epub-hl-repair.
+// ────────────────────────────────────────────────────────────────────
+describe('epubHighlightOverlay — cfi-unresolved failure (REQ-OBSERVABILITY / REQ-REMOVAL)', () => {
+  it('posts epub-hl-failed cfi-unresolved, registers no range and never posts epub-hl-repair', () => {
+    const { win, doc, registry, messages } = setupOverlay();
+    const goodCfi = cfiFor(win, doc, 'Segundo');
+
+    // 'epubcfi(/6/1!/999/999,/1:0,/1:0)' points at spine index 1 while
+    // the registered spine is [CHAPTER_HREF] (index 0), so cfiToRange
+    // rejects it with a spine mismatch → null → cfi-unresolved.
+    win.__epubHighlightOverlay!.render(
+      [hl('bogus', '#FACC15', 'epubcfi(/6/1!/999/999,/1:0,/1:0)'), hl('good', '#4ADE80', goodCfi)],
+      CHAPTER_HREF,
+      0,
+    );
+
+    // The unresolvable highlight is skipped: no range under its color.
+    expect(registry.names().sort()).toEqual(['epub-hl-green']);
+    expect(registry.rangesFor('epub-hl-yellow').length).toBe(0);
+    expect(registry.rangesFor('epub-hl-green').length).toBe(1);
+    // REQ-OBSERVABILITY: exact failure payload with the cfi-unresolved
+    // reason (REQ-REMOVAL: the repair path is gone, so this is the only
+    // failure signal the parent can receive).
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        type: 'epub-hl-failed',
+        id: 'bogus',
+        reason: 'cfi-unresolved',
+        pageNumber: 0,
+      }),
+    );
+    // REQ-REMOVAL runtime pin: no epub-hl-repair message ever posts.
+    expect(messages.some((m) => m.type === 'epub-hl-repair')).toBe(false);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────
 // T14 — colorMap (REQ-OBSERVABILITY, D2)
 // ────────────────────────────────────────────────────────────────────
 describe('epubHighlightOverlay — colorMap (T14)', () => {

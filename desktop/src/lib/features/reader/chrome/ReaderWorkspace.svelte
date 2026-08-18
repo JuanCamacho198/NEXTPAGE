@@ -801,6 +801,7 @@
           filePath={activeReadingBook.filePath}
           bookId={activeReadingBook.id}
           initialPercentage={percentage}
+          {searchTargetLocator}
           readerSettings={localReaderSettings}
           onLocationContext={onReaderLocationContext}
           onLocationChange={handleEpubLocationChange}

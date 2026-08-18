@@ -162,18 +162,27 @@ class ReaderDomainState {
         if (highlight.deletedAt && highlight.id) {
           void deleteHighlight(highlight.id);
         } else {
+          // Supabase `page` is nullable and EPUB chapter indices are 0-based,
+          // so a null/zero page must never crash the pull (the positive-page
+          // validation in tauriClient would otherwise throw and abort every
+          // subsequent highlight). Fall back to a safe value per format.
+          const rawPage = highlight.page ?? 0;
+          const pageNumber =
+            Number.isInteger(rawPage) && rawPage > 0 ? rawPage : highlight.cfiRange ? 1 : 1;
           void saveHighlight({
             id: highlight.id ?? crypto.randomUUID(),
             bookId: highlight.bookId,
             text: highlight.textContent,
             color: highlight.color,
-            pageNumber: highlight.page ?? 0,
+            pageNumber,
             rectLeft: 0,
             rectRight: 0,
             rectTop: 0,
             rectBottom: 0,
             cfi: highlight.cfiRange || null,
             note: highlight.note,
+          }).catch((err) => {
+            console.warn('Failed to apply remote highlight locally:', err);
           });
         }
       }

@@ -49,6 +49,13 @@
     bookId: string;
     initialLocation?: string;
     initialPercentage?: number;
+    /**
+     * External navigation target (e.g. from "View in book" on a highlight
+     * or from full-text search). When set to an EPUB CFI, the viewer
+     * navigates to the owning chapter and scrolls the target into view.
+     * The caller re-sets this value to trigger a fresh jump.
+     */
+    searchTargetLocator?: string | null;
     onLocationChange?: (cfiLocation: string, percentage: number) => void;
     onLocationContext?: (ctx: { locator: string; percentage: number }) => void;
     readerSettings?: ReaderSettings;
@@ -101,6 +108,7 @@
     filePath,
     bookId,
     initialPercentage = 0,
+    searchTargetLocator = null,
     onLocationChange,
     onLocationContext,
     readerSettings = {
@@ -145,6 +153,8 @@
   let zoomLevel = $state(100);
   let zoomContainerEl = $state<HTMLDivElement | null>(null);
   let iframeContentHeight = $state(0);
+  /** CFI que se debe mostrar una vez que el capítulo objetivo cargue. */
+  let pendingCfiScroll = $state<string | null>(null);
 
   // ─── Reader settings cache (synced from prop for reactivity) ─
   let fontSize = $state(100);
@@ -419,6 +429,30 @@
       if (chapterIdx >= 0) {
         goToChapter(chapterIdx);
       }
+    }
+  });
+
+  // ─── Search / "View in book" target navigation ───────────
+  // When `searchTargetLocator` carries an EPUB CFI, parse the owning
+  // chapter from the CFI's spine index (`epubcfi(/6/N!...)`), navigate
+  // there, and once the chapter has rendered, scroll the CFI range into
+  // view (via the iframe bridge). Re-setting the prop re-triggers the jump.
+  $effect(() => {
+    const target = searchTargetLocator;
+    if (!target || !target.startsWith('epubcfi(') || !metadata) return;
+
+    const spineMatch = /epubcfi\(\/6\/(\d+)!/.exec(target);
+    if (!spineMatch) return;
+
+    const spineIndex = Number.parseInt(spineMatch[1], 10); // 1-based
+    const chapterIdx = spineIndex - 1;
+    if (chapterIdx < 0 || chapterIdx >= totalChapters) return;
+
+    if (chapterIdx !== currentChapterIndex) {
+      pendingCfiScroll = target;
+      goToChapter(chapterIdx);
+    } else {
+      scrollToCfi(target);
     }
   });
 
@@ -944,6 +978,36 @@
     syncIframeHeight();
   }
 
+  /**
+   * Scroll a resolved CFI range into view inside the chapter iframe.
+   * Uses the in-iframe CFI bridge (`cfiToRange`) to resolve the CFI to a
+   * DOM range, then scrolls the first element of the range into view.
+   */
+  function scrollToCfi(cfi: string): void {
+    if (!metadata || !iframeEl?.contentDocument || !iframeEl.contentWindow) return;
+    const doc = iframeEl.contentDocument;
+    const bridge = (iframeEl.contentWindow as Window & {
+      __cfiBridge?: { cfiToRange: (cfi: string, href: string, doc: Document) => Range | null };
+    }).__cfiBridge;
+    const chapterHref = metadata.chapters[currentChapterIndex]?.href ?? '';
+    if (!bridge || !chapterHref) return;
+
+    try {
+      const range = bridge.cfiToRange(cfi, chapterHref, doc);
+      if (!range || !range.startContainer) return;
+      const targetNode =
+        range.startContainer.nodeType === Node.TEXT_NODE
+          ? range.startContainer.parentElement
+          : (range.startContainer as Element);
+      if (targetNode) {
+        (targetNode as Element).scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+      pendingCfiScroll = null;
+    } catch (err) {
+      console.warn('epub-cfi: scrollToCfi failed', err);
+    }
+  }
+
   /** Emit the precise CFI at the top visible text node in the chapter iframe. */
   function emitPreciseLocation(): void {
     if (!metadata || !iframeEl?.contentDocument || !iframeEl.contentWindow) return;
@@ -1061,6 +1125,12 @@
            console.warn('epub-cfi: failed to re-init iframe on load', e);
          }
          requestAnimationFrame(emitPreciseLocation);
+         // After the new chapter renders, resolve any pending CFI scroll
+         // ("View in book" / search jump that landed on a different chapter).
+         if (pendingCfiScroll) {
+           const cfi = pendingCfiScroll;
+           requestAnimationFrame(() => scrollToCfi(cfi));
+         }
        };
       iframeEl.srcdoc = srcdoc;
       lastRenderedChapter = index;

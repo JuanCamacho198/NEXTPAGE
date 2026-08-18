@@ -2,6 +2,9 @@
   import { onMount } from 'svelte';
   import type { HighlightDto } from '$lib/types';
   import { listHighlights, deleteHighlight } from '$lib/shared/api/tauriClient';
+  import { appState } from '$lib/shared/stores/AppState.svelte';
+  import { authState } from '$lib/stores/authState.svelte';
+  import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
   import SafeCover from '$lib/features/library/components/SafeCover.svelte';
   import Pagination from '$lib/shared/ui/navigation/Pagination.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
@@ -13,6 +16,8 @@
   import { PAGE_SIZE, HIGHLIGHT_COLORS, formatDate, type Props } from '../state.svelte';
 
   let { books, t }: Props = $props();
+
+  const outboxDao = new SyncOutboxDao();
 
   // ── State ──
   let highlights = $state<HighlightDto[]>([]);
@@ -99,13 +104,41 @@
     }
   }
 
-  async function handleDelete(id: string): Promise<void> {
+  async function handleDelete(highlight: HighlightDto): Promise<void> {
     try {
-      await deleteHighlight(id);
-      highlights = highlights.filter((h) => h.id !== id);
+      await deleteHighlight(highlight.id);
+      highlights = highlights.filter((h) => h.id !== highlight.id);
+      // Mirror the same cross-device contract as ReaderWorkspace: enqueue a
+      // HIGHLIGHT DELETE so Supabase receives the tombstone too.
+      if (authState.userId) {
+        const updatedAt = new Date().toISOString();
+        void outboxDao.add('HIGHLIGHT', highlight.id, 'DELETE', JSON.stringify({
+          userId: authState.userId,
+          bookId: highlight.bookId,
+          cfiRange: highlight.cfi ?? '',
+          textContent: highlight.text,
+          color: highlight.color,
+          page: highlight.pageNumber,
+          deletedAt: updatedAt,
+          updatedAt,
+        }));
+      }
     } catch {
       // silent
     }
+  }
+
+  async function handleViewInBook(highlight: HighlightDto): Promise<void> {
+    const book = appState.getBookById(highlight.bookId);
+    if (!book) return;
+    await appState.startReading(book);
+    // Set a navigation target so the viewer jumps to the highlight position.
+    // EPUB highlights carry a CFI; PDF highlights fall back to the page.
+    appState.searchTargetLocator = highlight.cfi
+      ? highlight.cfi
+      : book.format.toLowerCase() === 'pdf'
+        ? `page:${highlight.pageNumber}`
+        : null;
   }
 
   function handleCopy(text: string): void {
@@ -333,6 +366,7 @@
                 </button>
                 <button
                   class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-panel-accent)"
+                  onclick={() => handleViewInBook(highlight)}
                 >
                   <Icon name="book" size="sm" />
                   {t('home.highlightsViewInBook')}
@@ -347,7 +381,7 @@
                 {/if}
                 <button
                   class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-error) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-error-bg,rgba(255,123,131,0.14))"
-                  onclick={() => handleDelete(highlight.id)}
+                  onclick={() => handleDelete(highlight)}
                 >
                   <Icon name="trash" size="sm" />
                   {t('home.highlightsDelete')}

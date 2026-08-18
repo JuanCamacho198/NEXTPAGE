@@ -10,7 +10,7 @@
 import { getSessionClient, hasLiveSession } from '$lib/services/supabase';
 import { authState } from '$lib/stores/authState.svelte';
 import type { SupabaseClient, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import type { ReadingStatus, RemoteReadingSessionRow } from '$lib/shared/types';
+import type { RemoteReadingSessionRow } from '$lib/shared/types';
 
 export interface SupabaseProgressRow {
   id?: string;
@@ -21,9 +21,13 @@ export interface SupabaseProgressRow {
   currentPage?: number | null;
   locatorJson?: string | null;
   version?: number;
-  readingState?: ReadingStatus;
+  /**
+   * Mirrors the real `reading_progress.version` column (int4, default 1).
+   * Kept as an alias for callers that pass a state version; persisted as `version`.
+   * The reading_progress table has NO reading_state / state_version / device_id
+   * columns — those ghost fields caused HTTP 400 on every progress push.
+   */
   stateVersion?: number;
-  deviceId?: string;
   updatedAt: string;
 }
 
@@ -129,9 +133,11 @@ export class SupabaseProgressSync {
         percentage: progress.percentage,
         current_page: progress.currentPage ?? null,
         locator_json: progress.locatorJson ?? null,
-        reading_state: progress.readingState ?? null,
-        state_version: progress.stateVersion ?? progress.version ?? 1,
-        device_id: progress.deviceId ?? null,
+        // NOTE: reading_progress has no reading_state / state_version / device_id
+        // columns — those ghost fields caused HTTP 400 on every progress push.
+        // Only `version` (int4, default 1) exists; map the client stateVersion
+        // onto it and drop the rest.
+        version: progress.stateVersion ?? progress.version ?? 1,
         updated_at: progress.updatedAt,
       },
       {
@@ -663,9 +669,9 @@ export class SupabaseProgressSync {
       currentPage: row.current_page != null ? Number(row.current_page) : null,
       locatorJson: row.locator_json != null ? String(row.locator_json) : null,
       version: Number(row.version ?? 1),
-      readingState: row.reading_state as ReadingStatus | undefined,
-      stateVersion: Number(row.state_version ?? row.version ?? 1),
-      deviceId: row.device_id != null ? String(row.device_id) : undefined,
+      // reading_progress has no reading_state / state_version / device_id columns;
+      // read the LWW version from the real `version` column only.
+      stateVersion: Number(row.version ?? 1),
       updatedAt: String(row.updated_at ?? new Date().toISOString()),
     };
   }

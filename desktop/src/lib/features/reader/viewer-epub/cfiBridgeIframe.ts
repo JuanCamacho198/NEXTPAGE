@@ -178,7 +178,30 @@ export const IFRAME_CFI_BRIDGE_SCRIPT = `
       }
       if (commonAncestor.nodeType !== 1) return null;
       var localPath = buildLocalPath(commonAncestor, doc);
-      if (!localPath) { console.warn('epub-cfi: failed to build local path', chapterHref); return null; }
+      if (!localPath) {
+        // Diagnose WHY buildLocalPath failed: is the common ancestor an
+        // element with no indexable path to <html>, or is it the html/body
+        // root itself? This surfaces the exact failing structure.
+        var diag = (function () {
+          var el = commonAncestor;
+          var depth = 0;
+          while (el && el.nodeType === 1 && el !== doc.documentElement && depth < 20) {
+            el = el.parentNode; depth++;
+          }
+          return {
+            ancestorTag: (commonAncestor && commonAncestor.tagName) ? commonAncestor.tagName.toLowerCase() : String(commonAncestor),
+            ancestorId: (commonAncestor && commonAncestor.id) ? commonAncestor.id : '',
+            ancestorIsRoot: commonAncestor === doc.documentElement,
+            ancestorIsBody: commonAncestor === doc.body,
+            depthToRoot: depth,
+            startTag: (range.startContainer && range.startContainer.nodeType === 1) ? range.startContainer.tagName.toLowerCase() : 'text',
+            startParentTag: (range.startContainer && range.startContainer.parentNode && range.startContainer.parentNode.nodeType === 1) ? range.startContainer.parentNode.tagName.toLowerCase() : 'none',
+            startOffset: range.startOffset
+          };
+        })();
+        console.warn('epub-cfi: failed to build local path', chapterHref, diag);
+        return null;
+      }
       var startTerminus = textTerminusStep(range.startContainer, range.startOffset, commonAncestor);
       if (startTerminus === null) { console.warn('epub-cfi: failed to compute start terminus'); return null; }
       var endTerminus = textTerminusStep(range.endContainer, range.endOffset, commonAncestor);

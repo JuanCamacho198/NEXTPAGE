@@ -285,7 +285,29 @@ export function rangeToCFI(
 
     const localPath = buildLocalPath(commonAncestor, doc);
     if (!localPath) {
-      console.warn('epub-cfi: failed to build local path for range', { chapterHref });
+      const el = commonAncestor as Element | null;
+      const startEl = startContainer.nodeType === 1 ? (startContainer as Element) : null;
+      const startParentEl =
+        startContainer.parentNode && startContainer.parentNode.nodeType === 1
+          ? (startContainer.parentNode as Element)
+          : null;
+      let depth = 0;
+      let cursor: Node | null = el;
+      while (cursor && cursor.nodeType === 1 && cursor !== doc.documentElement && depth < 20) {
+        cursor = cursor.parentNode;
+        depth += 1;
+      }
+      console.warn('epub-cfi: failed to build local path for range', {
+        chapterHref,
+        ancestorTag: el?.tagName.toLowerCase() ?? String(commonAncestor),
+        ancestorId: el?.id ?? '',
+        ancestorIsRoot: commonAncestor === doc.documentElement,
+        ancestorIsBody: commonAncestor === doc.body,
+        depthToRoot: depth,
+        startTag: startEl?.tagName.toLowerCase() ?? 'text',
+        startParentTag: startParentEl?.tagName.toLowerCase() ?? 'none',
+        startOffset,
+      });
       return null;
     }
 

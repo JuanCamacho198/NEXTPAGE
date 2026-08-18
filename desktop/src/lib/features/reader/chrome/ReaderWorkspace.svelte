@@ -486,16 +486,21 @@
           cfi,
         });
         if (authState.userId) {
-          void outboxDao.add('HIGHLIGHT', highlightId, 'UPSERT', JSON.stringify({
-            userId: authState.userId,
-            bookId: activeReadingBook.id,
-            cfiRange: cfi ?? '',
-            textContent: data.text,
-            color,
-            page: pageNumber,
-            locatorJson: readerState.locatorJson,
-            updatedAt: new Date().toISOString(),
-          }));
+          void outboxDao.add(
+            'HIGHLIGHT',
+            highlightId,
+            'UPSERT',
+            JSON.stringify({
+              userId: authState.userId,
+              bookId: activeReadingBook.id,
+              cfiRange: cfi ?? '',
+              textContent: data.text,
+              color,
+              page: pageNumber,
+              locatorJson: readerState.locatorJson,
+              updatedAt: new Date().toISOString(),
+            }),
+          );
         }
       } catch (err) {
         debugState.epub.saveHighlightLastError = String(err);
@@ -601,35 +606,48 @@
     deleteHighlight(id).catch((err) => console.error('Failed to delete highlight:', err));
     if (authState.userId && highlight) {
       const updatedAt = new Date().toISOString();
-      void outboxDao.add('HIGHLIGHT', id, 'DELETE', JSON.stringify({
+      void outboxDao.add(
+        'HIGHLIGHT',
+        id,
+        'DELETE',
+        JSON.stringify({
+          userId: authState.userId,
+          bookId: activeReadingBook?.id ?? id,
+          cfiRange: highlight.cfi ?? '',
+          textContent: highlight.text ?? '',
+          color: highlight.color,
+          page: highlight.pageNumber,
+          locatorJson: readerState.locatorJson,
+          deletedAt: updatedAt,
+          updatedAt,
+        }),
+      );
+    }
+  }
+
+  function enqueueHighlightUpdate(
+    id: string,
+    changes: { color?: string; note?: string | null },
+  ): void {
+    if (!authState.userId) return;
+    const highlight = persistedHighlights.find((item) => item.id === id);
+    if (!highlight) return;
+    void outboxDao.add(
+      'HIGHLIGHT',
+      id,
+      'UPSERT',
+      JSON.stringify({
         userId: authState.userId,
         bookId: activeReadingBook?.id ?? id,
         cfiRange: highlight.cfi ?? '',
         textContent: highlight.text ?? '',
-        color: highlight.color,
+        color: changes.color ?? highlight.color,
+        note: changes.note ?? highlight.note ?? null,
         page: highlight.pageNumber,
         locatorJson: readerState.locatorJson,
-        deletedAt: updatedAt,
-        updatedAt,
-      }));
-    }
-  }
-
-  function enqueueHighlightUpdate(id: string, changes: { color?: string; note?: string | null }): void {
-    if (!authState.userId) return;
-    const highlight = persistedHighlights.find((item) => item.id === id);
-    if (!highlight) return;
-    void outboxDao.add('HIGHLIGHT', id, 'UPSERT', JSON.stringify({
-      userId: authState.userId,
-      bookId: activeReadingBook?.id ?? id,
-      cfiRange: highlight.cfi ?? '',
-      textContent: highlight.text ?? '',
-      color: changes.color ?? highlight.color,
-      note: changes.note ?? highlight.note ?? null,
-      page: highlight.pageNumber,
-      locatorJson: readerState.locatorJson,
-      updatedAt: new Date().toISOString(),
-    }));
+        updatedAt: new Date().toISOString(),
+      }),
+    );
   }
 
   function handleMenuCustomColor(): void {

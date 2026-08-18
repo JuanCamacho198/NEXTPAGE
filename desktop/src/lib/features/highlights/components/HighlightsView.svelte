@@ -155,7 +155,7 @@
   <!-- Search Bar -->
   <div class="relative flex items-center mb-5">
     <svg
-      class="absolute left-4 w-5 h-5 text-(--color-text-muted) pointer-events-none"
+      class="pointer-events-none absolute left-4 z-0 w-5 h-5 text-(--color-text-muted)"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -170,7 +170,7 @@
     <input
       id="highlights-search"
       type="text"
-      class="w-full h-12 px-11 pr-20 rounded-2xl border border-(--color-border) bg-(--color-surface) text-(--color-primary) text-[0.875rem] font-sans transition-colors focus:outline-none focus:border-(--color-accent-blue,#49d4ff) focus:shadow-[0_0_0_3px_rgba(73,212,255,0.15)] placeholder:text-(--color-text-muted)"
+      class="w-full h-12 pl-14 pr-20 rounded-2xl border border-(--color-border) bg-(--color-surface) text-(--color-primary) text-[0.875rem] font-sans transition-colors focus:outline-none focus:border-(--color-accent-blue,#49d4ff) focus:shadow-[0_0_0_3px_rgba(73,212,255,0.15)] placeholder:text-(--color-text-muted)"
       placeholder={t('home.highlightsSearchPlaceholder')}
       bind:value={searchQuery}
     />
@@ -196,7 +196,7 @@
             color.key
               ? 'border-(--color-primary) shadow-[0_0_0_3px_rgba(73,212,255,0.25)] scale-110'
               : ''}"
-            style="background: var(--circle-color);"
+            style="background: {color.hex};"
             aria-label={t('highlight.selectColor', {
               color: t(`settings.color.${color.key}` as import('$lib/shared/i18n').MessageKey),
             })}
@@ -249,11 +249,13 @@
       {/each}
     </ul>
   {:else if filteredHighlights.length === 0}
-    <EmptyState
-      icon="search"
-      title={t('home.highlightsEmptyTitle')}
-      description={t('home.highlightsEmptyDescription')}
-    />
+    <div class="flex min-h-[55vh] items-center justify-center">
+      <EmptyState
+        icon="search"
+        title={t('home.highlightsEmptyTitle')}
+        description={t('home.highlightsEmptyDescription')}
+      />
+    </div>
   {:else}
     <ul class="list-none p-0 m-0 flex flex-col gap-2">
       {#each paginatedHighlights as highlight (highlight.id)}

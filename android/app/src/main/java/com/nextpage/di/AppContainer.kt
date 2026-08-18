@@ -283,7 +283,8 @@ class AppContainer(context: Context) {
             dataSource = supabaseBookCatalogDataSource,
             remoteDataSource = driveRemoteDataSource,
             driveTokenRefresher = { driveCoordinator.refreshAccessToken() },
-            localBooksDir = context.applicationContext.filesDir.resolve("books")
+            localBooksDir = context.applicationContext.filesDir.resolve("books"),
+            progressDataSource = supabaseProgressDataSource
         )
     }
 

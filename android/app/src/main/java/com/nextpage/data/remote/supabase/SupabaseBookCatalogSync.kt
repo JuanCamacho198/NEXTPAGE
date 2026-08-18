@@ -55,6 +55,14 @@ class SupabaseBookCatalogSync(
     private val remoteDataSource: StorageSyncRemoteDataSource? = null,
     private val localBooksDir: File? = null,
     private val driveTokenRefresher: suspend () -> Result<String> = { Result.failure(AppError(ErrorCategory.CONFIG_ERROR, "SYNC_NO_REFRESHER", "Drive token refresher not configured.", "SupabaseBookCatalogSync")) },
+    /**
+     * Optional progress source used to seed a freshly-downloaded book's reading
+     * state from the cloud. When a book downloaded from another device already
+     * has reading progress (>0%), we mark it as "reading" with that percentage so
+     * it appears under "Continue reading" immediately (instead of only after the
+     * user opens it). Nullable to keep existing callers/DI wiring unchanged.
+     */
+    private val progressDataSource: SupabaseProgressDataSource? = null,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var processJob: Job? = null
@@ -510,6 +518,28 @@ class SupabaseBookCatalogSync(
                 if (backupFile.exists()) backupFile.renameTo(targetFile)
                 if (previousBook != null) bookDao.upsert(previousBook) else bookDao.deleteById(bookId)
                 throw failure
+            }
+            // Seed the "Continue reading" state from the cloud: if this book
+            // already has reading progress (>0%) on another device, mark it as
+            // "reading" with that percentage right away so it appears under
+            // "Continue reading" instead of only after the user opens it. A
+            // progress row at >=100% is handled by updateReadingProgress as
+            // "completed". Best-effort — never fails the download.
+            runCatching {
+                val sessionId = sessionManager.getCurrentSession().getOrNull()?.userId
+                if (progressDataSource != null && sessionId != null) {
+                    progressDataSource.getProgress(sessionId, bookId)?.let { remote ->
+                        val pct = remote.percentage
+                        if (pct > 0f && pct < 100f) {
+                            val updatedAt = try {
+                                dateFormat.parse(remote.updatedAt)?.time ?: System.currentTimeMillis()
+                            } catch (_: Exception) {
+                                System.currentTimeMillis()
+                            }
+                            bookDao.updateReadingProgress(bookId, pct.toFloat(), updatedAt)
+                        }
+                    }
+                }
             }
             DebugLog.success(TAG, "downloadRemoteBook: '$bookId' downloaded and saved OK")
             Result.success(Unit)

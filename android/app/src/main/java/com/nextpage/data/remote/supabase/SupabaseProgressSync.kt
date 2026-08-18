@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,6 +53,16 @@ class SupabaseProgressSync(
     private var processJob: Job? = null
     private var realtimeJob: Job? = null
 
+    /**
+     * Remote progress rows whose book was not yet present locally when the pull
+     * arrived (e.g. a book was just downloaded from the cloud). reading_progress
+     * has a real FK to books.id, so we cannot upsert without the book; instead we
+     * retain the row here and apply it as soon as the book becomes available.
+     * This fixes the race where a freshly downloaded book opened before the pull
+     * applied would start at 0 and then overwrite the remote progress (LWW).
+     */
+    private val pendingRemoteProgress = java.util.concurrent.ConcurrentHashMap<String, ReadingProgressRow>()
+
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
 
@@ -77,6 +88,18 @@ class SupabaseProgressSync(
     /** Pulls one book without blocking the reader's local open path. */
     suspend fun resumeForBook(bookId: String, onProgressApplied: (ReadingProgressRow) -> Unit = {}) {
         val session = sessionManager.ensureFreshSession().getOrNull() ?: return
+        // A book downloaded from the cloud may not be registered in `books` yet
+        // when this pull runs. reading_progress has a real FK to books.id, so we
+        // must wait until the book exists before applying the remote progress —
+        // otherwise the remote value is dropped and the local 0% wins (LWW),
+        // wiping the "continue reading" position. Retry briefly with a small
+        // delay instead of giving up on the first attempt.
+        val bookReady = bookDao.getBookById(bookId) != null
+        var attempts = 0
+        while (!bookReady && attempts < PULL_BOOK_READY_MAX_ATTEMPTS) {
+            delay(PULL_BOOK_READY_RETRY_DELAY_MS)
+            attempts++
+        }
         runCatching {
             val state = dataSource.fetchBookState(session.userId, bookId)
             state.progress?.let { row ->
@@ -85,6 +108,23 @@ class SupabaseProgressSync(
             state.bookmarks.forEach { applyRemoteBookmark(it) }
             state.highlights.forEach { applyRemoteHighlight(it) }
         }
+        // Apply any progress retained while the book was not yet available.
+        applyPendingProgressForBook(bookId)?.let { onProgressApplied(it) }
+    }
+
+    /**
+     * Apply a previously-retained remote progress row for [bookId] now that the
+     * book exists locally (or has just been pulled). Returns the applied row, or
+     * null if there was none pending / the book is still missing.
+     */
+    internal suspend fun applyPendingProgressForBook(bookId: String): ReadingProgressRow? {
+        val row = pendingRemoteProgress.remove(bookId) ?: return null
+        if (bookDao.getBookById(bookId) == null) {
+            // Book still missing — keep it pending for a later flush.
+            pendingRemoteProgress[bookId] = row
+            return null
+        }
+        return if (applyRemoteProgress(row)) row else null
     }
 
     private val dateFormat: SimpleDateFormat = SimpleDateFormat(
@@ -321,7 +361,13 @@ class SupabaseProgressSync(
         // may arrive for a book that is not present locally (e.g. read on the
         // desktop, or the local copy was removed while cloud progress remains).
         // Upserting would throw SQLiteConstraintException and crash the app.
-        if (bookDao.getBookById(row.bookId) == null) return false
+        // Instead of silently dropping the remote value (which would let the local
+        // 0% win by LWW and wipe "continue reading"), retain it and apply it once
+        // the book becomes available (see applyPendingProgressForBook).
+        if (bookDao.getBookById(row.bookId) == null) {
+            pendingRemoteProgress[row.bookId] = row
+            return false
+        }
 
         // Only apply if remote is newer than local
         val localProgress = readingProgressDao.getProgressForBook(row.bookId)
@@ -546,5 +592,13 @@ class SupabaseProgressSync(
         realtimeJob = null
         dataSource.unsubscribeAll()
         _state.value = State.Idle
+    }
+
+    companion object {
+        /** How many times to re-check that a freshly-downloaded book exists locally. */
+        internal const val PULL_BOOK_READY_MAX_ATTEMPTS = 5
+
+        /** Delay between book-readiness checks (5 * 400ms = up to ~2s total). */
+        internal const val PULL_BOOK_READY_RETRY_DELAY_MS = 400L
     }
 }

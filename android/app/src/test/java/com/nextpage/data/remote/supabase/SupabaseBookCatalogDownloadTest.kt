@@ -39,6 +39,7 @@ class SupabaseBookCatalogDownloadTest {
     private lateinit var mockSession: SessionManager
     private lateinit var mockCatalog: SupabaseBookCatalogDataSource
     private lateinit var mockRemote: StorageSyncRemoteDataSource
+    private lateinit var mockProgress: SupabaseProgressDataSource
     private lateinit var localDir: java.io.File
     private var refreshCalls = 0
 
@@ -50,6 +51,7 @@ class SupabaseBookCatalogDownloadTest {
         mockSession = mockk(relaxed = true)
         mockCatalog = mockk(relaxed = true)
         mockRemote = mockk(relaxed = true)
+        mockProgress = mockk(relaxed = true)
         localDir = createTempDir()
         refreshCalls = 0
 
@@ -279,6 +281,63 @@ class SupabaseBookCatalogDownloadTest {
         assertEquals("drive-1", book.remoteFileId)
     }
 
+    @Test
+    fun download_seedsContinueReadingFromRemoteProgress() = runBlocking {
+        val bytes = "continue".toByteArray()
+        coEvery { mockCatalog.listUserBooks("test-user") } returns listOf(
+            catalogRow("seed-1", "/seed-1.epub").copy(contentHash = sha256(bytes))
+        )
+        coEvery { mockRemote.download(any()) } returns bytes
+        coEvery { mockProgress.getProgress("test-user", "seed-1") } returns ReadingProgressRow(
+            userId = "test-user",
+            bookId = "seed-1",
+            cfiLocation = "epubcfi(/6/5!/4/2)",
+            percentage = 42.0,
+            updatedAt = "2026-08-18T12:00:00.000Z",
+            locatorJson = null
+        )
+
+        val sync = SupabaseBookCatalogSync(
+            outboxDao = FakeSyncOutboxDao(),
+            bookDao = fakeBookDao,
+            sessionManager = mockSession,
+            dataSource = mockCatalog,
+            remoteDataSource = mockRemote,
+            localBooksDir = localDir,
+            progressDataSource = mockProgress
+        )
+
+        assertTrue(sync.downloadRemoteBook("seed-1").isSuccess)
+        val book = fakeBookDao.getBookById("seed-1")!!
+        assertEquals("reading", book.readingState)
+        assertEquals(42f, book.progressPercentage)
+    }
+
+    @Test
+    fun download_doesNotSeedContinue_whenNoRemoteProgress() = runBlocking {
+        val bytes = "nostart".toByteArray()
+        coEvery { mockCatalog.listUserBooks("test-user") } returns listOf(
+            catalogRow("noseed-1", "/noseed-1.epub").copy(contentHash = sha256(bytes))
+        )
+        coEvery { mockRemote.download(any()) } returns bytes
+        coEvery { mockProgress.getProgress("test-user", "noseed-1") } returns null
+
+        val sync = SupabaseBookCatalogSync(
+            outboxDao = FakeSyncOutboxDao(),
+            bookDao = fakeBookDao,
+            sessionManager = mockSession,
+            dataSource = mockCatalog,
+            remoteDataSource = mockRemote,
+            localBooksDir = localDir,
+            progressDataSource = mockProgress
+        )
+
+        assertTrue(sync.downloadRemoteBook("noseed-1").isSuccess)
+        val book = fakeBookDao.getBookById("noseed-1")!!
+        assertEquals("to_read", book.readingState)
+        assertEquals(0f, book.progressPercentage)
+    }
+
     private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes)
         .joinToString("") { "%02x".format(it) }
 
@@ -343,9 +402,25 @@ class SupabaseBookCatalogDownloadTest {
             val existing = byId[bookId] ?: return
             byId[bookId] = existing.copy(status = status, updatedAtEpochMillis = updatedAt)
         }
-        override suspend fun startReading(bookId: String, updatedAt: Long) {}
-        override suspend fun updateReadingProgress(bookId: String, progress: Float, updatedAt: Long) {}
-        override suspend fun completeReading(bookId: String, updatedAt: Long) {}
+        override suspend fun startReading(bookId: String, updatedAt: Long) {
+            val existing = byId[bookId] ?: return
+            byId[bookId] = existing.copy(readingState = "reading", startedAtEpochMillis = updatedAt, updatedAtEpochMillis = updatedAt)
+        }
+        override suspend fun updateReadingProgress(bookId: String, progress: Float, updatedAt: Long) {
+            val existing = byId[bookId] ?: return
+            val readingState = if (progress >= 100f) "completed" else "reading"
+            byId[bookId] = existing.copy(
+                readingState = readingState,
+                progressPercentage = progress.coerceIn(0f, 100f),
+                progressUpdatedAtEpochMillis = updatedAt,
+                completedAtEpochMillis = if (progress >= 100f) updatedAt else existing.completedAtEpochMillis,
+                updatedAtEpochMillis = updatedAt
+            )
+        }
+        override suspend fun completeReading(bookId: String, updatedAt: Long) {
+            val existing = byId[bookId] ?: return
+            byId[bookId] = existing.copy(readingState = "completed", progressPercentage = 100f, completedAtEpochMillis = updatedAt, updatedAtEpochMillis = updatedAt)
+        }
         override suspend fun updateMetadata(
             bookId: String, title: String, author: String?, description: String?, coverPath: String?, genre: String?, language: String?, publisher: String?, tags: String?, publishedDate: String?, updatedAt: Long
         ) {

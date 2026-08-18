@@ -272,6 +272,59 @@ class SupabaseProgressSyncTest {
         assertEquals("test-user", fakeSessionDao.getById("sess_new")?.userId)
     }
 
+    // ─── Pending remote progress retention (book-not-ready race) ──
+
+    @Test
+    fun resumeForBook_retainsRemoteProgress_whenBookNotYetLocal() = runBlocking {
+        // Book does NOT exist locally yet (e.g. just downloaded, not registered).
+        // The remote progress must be retained, NOT dropped, so it can be applied
+        // once the book becomes available (instead of local 0% winning by LWW).
+        val remoteProgress = ReadingProgressRow(
+            userId = "test-user",
+            bookId = "book-pending",
+            cfiLocation = "epubcfi(/6/6!/4/2)",
+            percentage = 42.0,
+            updatedAt = "2026-08-18T12:00:00.000Z",
+            locatorJson = null
+        )
+        coEvery { mockDataSource.fetchBookState(any(), "book-pending") } returns
+            SupabaseBookState(progress = remoteProgress, bookmarks = emptyList(), highlights = emptyList())
+
+        // Book is not present: resumeForBook must not crash and must retain progress.
+        sync.resumeForBook("book-pending")
+
+        // No local progress yet (book missing → upsert would violate FK).
+        assertEquals(0, fakeBookDao.count())
+
+        // Now the book becomes available locally (download completed).
+        fakeBookDao.upsert(createSampleBook("book-pending"))
+
+        // Flushing applies the retained remote progress now that the book exists.
+        val applied = sync.applyPendingProgressForBook("book-pending")
+        assertTrue(applied != null)
+    }
+
+    @Test
+    fun applyPendingProgressForBook_returnsNull_whenBookStillMissing() = runBlocking {
+        val remoteProgress = ReadingProgressRow(
+            userId = "test-user",
+            bookId = "book-missing",
+            cfiLocation = "epubcfi(/6/6!/4/2)",
+            percentage = 50.0,
+            updatedAt = "2026-08-18T12:00:00.000Z",
+            locatorJson = null
+        )
+        coEvery { mockDataSource.fetchBookState(any(), "book-missing") } returns
+            SupabaseBookState(progress = remoteProgress, bookmarks = emptyList(), highlights = emptyList())
+
+        sync.resumeForBook("book-missing")
+
+        // Book never appears; flushing keeps it pending and returns null.
+        val applied = sync.applyPendingProgressForBook("book-missing")
+        assertTrue(applied == null)
+        assertEquals(0, fakeBookDao.count())
+    }
+
     // ─── Fakes (same inline pattern as SupabaseBookCatalogSyncTest) ──
 
     private fun createSampleBook(id: String): BookEntity = BookEntity(

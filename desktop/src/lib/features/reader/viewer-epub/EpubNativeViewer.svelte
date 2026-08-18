@@ -14,6 +14,10 @@
   import { debugState } from '$lib/shared/debug/debugState.svelte';
   import { IFRAME_CFI_BRIDGE_SCRIPT } from '$lib/features/reader/viewer-epub/cfiBridgeIframe';
   import { IFRAME_HIGHLIGHT_OVERLAY_SCRIPT } from '$lib/features/reader/viewer-epub/epubHighlightOverlayIframe';
+  import {
+    HIGHLIGHT_COLORS,
+    highlightFillRgba,
+  } from '$lib/features/reader/highlight/highlightColors';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
   import { locatorFromCfi, locatorToJson } from '$lib/shared/sync/LocatorCodec';
 
@@ -71,15 +75,16 @@
     /**
      * All persisted highlights for the current book. The EPUB iframe
      * renders the highlights whose `pageNumber === currentChapterIndex`
-     * inside the chapter DOM as `<span class="epub-hl">` wraps. Typed
-     * as a slim shape (subset of `HighlightDto`) so callers don't
-     * have to build the full DTO to feed the iframe.
+     * via the CSS Custom Highlight API (zero DOM mutation). Typed as a
+     * slim shape (subset of `HighlightDto`) so callers don't have to
+     * build the full DTO to feed the iframe.
      */
     persistedHighlights?: Array<{
       id: string;
       color: string;
       pageNumber: number;
       cfi?: string | null;
+      text?: string | null;
     }>;
     /**
      * Called when the user clicks a persisted highlight inside the EPUB
@@ -400,6 +405,7 @@
     color: string;
     pageNumber: number;
     cfi?: string | null;
+    text?: string | null;
   };
   $effect(() => {
     if (!metadata || isLoading || !iframeEl) return;
@@ -742,6 +748,21 @@
     }
     readerStyle.textContent = buildReaderOverrideCss();
 
+    // ::highlight() rules for the CSS Custom Highlight API must live in
+    // their OWN style element — NEVER inside nextpage-reader-overrides,
+    // because refreshReaderStyles() rewrites that element's textContent
+    // on every settings change and would wipe the rules. One rule per
+    // canonical color (the overlay maps every highlight to a canonical
+    // color before registering, so static rules suffice). Injecting
+    // here means the rules survive settings changes and chapter reloads.
+    const highlightStyle = doc.createElement('style');
+    highlightStyle.id = 'nextpage-highlight-styles';
+    highlightStyle.textContent = HIGHLIGHT_COLORS.map(
+      (color) =>
+        `::highlight(epub-hl-${color.label}) { background-color: ${highlightFillRgba(color.hex, 0.4)}; }`,
+    ).join('\n');
+    doc.head.appendChild(highlightStyle);
+
     // Inlined CFI bridge (see cfiBridgeIframe.ts). Mounts as
     // `window.__cfiBridge` for the selection script to call. Must run
     // before the selection script and before the spine-init script.
@@ -778,9 +799,11 @@
       })();
     `;
 
-    // The highlight overlay renders persisted highlights as
-    // <span class="epub-hl"> wraps inside the chapter DOM. It must run
-    // after the bridge (which it calls via __cfiBridge.cfiToRange).
+    // The highlight overlay registers persisted highlights via the CSS
+    // Custom Highlight API (CSS.highlights + ::highlight(), zero DOM
+    // mutation). It must run after the bridge (which it calls via
+    // __cfiBridge.cfiToRange) and before the selection script (which
+    // calls its hitTest/rangeOverlapsHighlight helpers).
     const highlightOverlayScript = doc.createElement('script');
     highlightOverlayScript.textContent = IFRAME_HIGHLIGHT_OVERLAY_SCRIPT;
 
@@ -792,16 +815,24 @@
         var CHAPTER_HREF = ${JSON.stringify(currentChapterHref)};
         var CHAPTER_INDEX = ${currentChapterIndex};
 
-        // HM-3 / HM-4: click handler on .epub-hl spans via event
-        // delegation. The iframe script owns this because the parent
-        // can't access the iframe's DOM directly via postMessage alone
-        // (no Range object). We stopPropagation to prevent the
-        // document-level mouseup from triggering Menu 1.
+        // HM-3 / HM-4: click handler via overlay hit-testing (caretRangeFromPoint
+        // + inclusive boundary math against the overlay's per-id side-table).
+        // The DOM is never mutated, so there are no .epub-hl spans to walk.
+        // The iframe script owns this because the parent can't access the
+        // iframe's DOM directly via postMessage alone (no Range object). We
+        // stopPropagation to prevent the document-level mouseup from
+        // triggering Menu 1.
         document.addEventListener('click', function(ev) {
-          var target = ev.target;
-          if (!target || typeof target.closest !== 'function') return;
-          var span = target.closest('.epub-hl');
-          if (!span) return;
+          var hit = null;
+          try {
+            if (window.__epubHighlightOverlay &&
+                typeof window.__epubHighlightOverlay.hitTest === 'function') {
+              hit = window.__epubHighlightOverlay.hitTest(ev.clientX, ev.clientY);
+            }
+          } catch (e) {
+            hit = null;
+          }
+          if (!hit) return;
           ev.stopPropagation();
           if (ev.preventDefault) ev.preventDefault();
           if (mouseupDebounceTimer) {
@@ -814,17 +845,13 @@
           }
           var sel = window.getSelection();
           if (sel) sel.removeAllRanges();
-          var id = span.getAttribute('data-id');
-          var color = span.style.background || '#FACC15';
-          var text = (span.textContent || '').trim();
-          if (!id) return;
           window.parent.postMessage({
             type: 'epub-highlight-click',
-            id: id,
+            id: hit.id,
             x: ev.clientX,
             y: ev.clientY,
-            color: color,
-            text: text,
+            color: hit.color,
+            text: hit.text,
             pageNumber: CHAPTER_INDEX
           }, '*');
         }, true);
@@ -838,16 +865,19 @@
             if (!sel || sel.isCollapsed || !sel.toString().trim()) return;
             var text = sel.toString().trim();
             var range = sel.getRangeAt(0);
-            // If the selection is fully inside a .epub-hl span,
-            // skip Menu 1 -- Menu 2 owns that gesture.
-            var container = range.commonAncestorContainer;
-            var inHl = false;
-            var node = (container.nodeType === 3) ? container.parentNode : container;
-            while (node) {
-              if (node.classList && node.classList.contains('epub-hl')) { inHl = true; break; }
-              node = node.parentNode;
+            // If the selection overlaps a registered highlight, skip
+            // Menu 1 -- Menu 2 owns that gesture. The overlay tests the
+            // live selection Range against its per-id side-table.
+            var overlapsHl = false;
+            try {
+              if (window.__epubHighlightOverlay &&
+                  typeof window.__epubHighlightOverlay.rangeOverlapsHighlight === 'function') {
+                overlapsHl = window.__epubHighlightOverlay.rangeOverlapsHighlight(range);
+              }
+            } catch (e) {
+              overlapsHl = false;
             }
-            if (inHl) return;
+            if (overlapsHl) return;
             // SEL-1 / SEL-3: SelectionToolbar treats bounds as
             // CONTAINER-relative (the iframe is the container here) and
             // container as PARENT-viewport. So we must NOT add frameRect
@@ -882,10 +912,16 @@
             }
             // CFI-1: compute the CFI for the selection in this chapter.
             // Done in the iframe because the bridge needs the chapter's
-            // Document, which only exists here.
+            // Document, which only exists here. The DOM is never
+            // mutated by highlight rendering (CSS Highlights never
+            // touch the document), so the live DOM IS the pristine DOM
+            // -- capture and resolution always see identical structure.
+            // The direct bridge call is therefore sufficient; the
+            // pristine-copy computeCFI fallback is gone.
             var cfi = null;
             try {
-              if (window.__cfiBridge && typeof window.__cfiBridge.rangeToCFI === 'function') {
+              if (window.__cfiBridge &&
+                  typeof window.__cfiBridge.rangeToCFI === 'function') {
                 cfi = window.__cfiBridge.rangeToCFI(range, CHAPTER_HREF, document);
               }
             } catch (e) {
@@ -958,11 +994,16 @@
     if (!iframeEl?.contentDocument) return;
 
     const doc = iframeEl.contentDocument;
+    // `head` can be null while the iframe is still mid-load (e.g. about:srcdoc
+    // before the chapter DOM is parsed). Bail out instead of throwing — the
+    // next settings tick or chapter render will apply the styles.
+    const head = doc.head;
+    if (!head) return;
     let readerStyle = doc.getElementById('nextpage-reader-overrides');
     if (!readerStyle) {
       readerStyle = doc.createElement('style');
       readerStyle.id = 'nextpage-reader-overrides';
-      doc.head.appendChild(readerStyle);
+      head.appendChild(readerStyle);
     }
 
     let css = buildReaderOverrideCss();
@@ -986,9 +1027,11 @@
   function scrollToCfi(cfi: string): void {
     if (!metadata || !iframeEl?.contentDocument || !iframeEl.contentWindow) return;
     const doc = iframeEl.contentDocument;
-    const bridge = (iframeEl.contentWindow as Window & {
-      __cfiBridge?: { cfiToRange: (cfi: string, href: string, doc: Document) => Range | null };
-    }).__cfiBridge;
+    const bridge = (
+      iframeEl.contentWindow as Window & {
+        __cfiBridge?: { cfiToRange: (cfi: string, href: string, doc: Document) => Range | null };
+      }
+    ).__cfiBridge;
     const chapterHref = metadata.chapters[currentChapterIndex]?.href ?? '';
     if (!bridge || !chapterHref) return;
 
@@ -1013,9 +1056,13 @@
     if (!metadata || !iframeEl?.contentDocument || !iframeEl.contentWindow) return;
 
     const doc = iframeEl.contentDocument;
-    const bridge = (iframeEl.contentWindow as Window & {
-      __cfiBridge?: { rangeToCFI: (range: Range, href: string, document: Document) => string | null };
-    }).__cfiBridge;
+    const bridge = (
+      iframeEl.contentWindow as Window & {
+        __cfiBridge?: {
+          rangeToCFI: (range: Range, href: string, document: Document) => string | null;
+        };
+      }
+    ).__cfiBridge;
     const chapterHref = metadata.chapters[currentChapterIndex]?.href ?? '';
     if (!bridge || !chapterHref) return;
 
@@ -1046,10 +1093,14 @@
     const charOffset = nodes
       .slice(0, nodes.indexOf(visibleNode))
       .reduce((total, textNode) => total + textNode.data.length, 0);
-    const locator = locatorFromCfi(metadata.chapters.map((chapter) => chapter.href), preciseCfi, {
-      chapterChars,
-      charOffset,
-    });
+    const locator = locatorFromCfi(
+      metadata.chapters.map((chapter) => chapter.href),
+      preciseCfi,
+      {
+        chapterChars,
+        charOffset,
+      },
+    );
     if (!locator) return;
 
     const progression = locator.locations.progression ?? 0;
@@ -1091,8 +1142,8 @@
         missingFonts,
       );
 
-       iframeEl.onload = () => {
-         syncIframeHeight();
+      iframeEl.onload = () => {
+        syncIframeHeight();
         if (zoomContainerEl) {
           zoomContainerEl.scrollTop = 0;
         }
@@ -1104,6 +1155,7 @@
           color: string;
           pageNumber: number;
           cfi?: string | null;
+          text?: string | null;
         };
         try {
           const win = iframeEl?.contentWindow as
@@ -1120,22 +1172,21 @@
           // Render persisted highlights for the new chapter.
           if (win?.__epubHighlightOverlay) {
             win.__epubHighlightOverlay.render(persistedHighlights, chapterHref, index);
-           }
-         } catch (e) {
-           console.warn('epub-cfi: failed to re-init iframe on load', e);
-         }
-         requestAnimationFrame(emitPreciseLocation);
-         // After the new chapter renders, resolve any pending CFI scroll
-         // ("View in book" / search jump that landed on a different chapter).
-         if (pendingCfiScroll) {
-           const cfi = pendingCfiScroll;
-           requestAnimationFrame(() => scrollToCfi(cfi));
-         }
-       };
+          }
+        } catch (e) {
+          console.warn('epub-cfi: failed to re-init iframe on load', e);
+        }
+        requestAnimationFrame(emitPreciseLocation);
+        // After the new chapter renders, resolve any pending CFI scroll
+        // ("View in book" / search jump that landed on a different chapter).
+        if (pendingCfiScroll) {
+          const cfi = pendingCfiScroll;
+          requestAnimationFrame(() => scrollToCfi(cfi));
+        }
+      };
       iframeEl.srcdoc = srcdoc;
       lastRenderedChapter = index;
-
-     } catch (err) {
+    } catch (err) {
       error = err instanceof Error ? err.message : String(err);
       setReaderError(error);
     }
@@ -1282,9 +1333,9 @@
     <div
       class="flex-1 w-full min-h-0 overflow-y-auto pb-16"
       style="background: {getThemeBgColor()};"
-       bind:this={zoomContainerEl}
-       onwheel={handleWheel}
-       onscroll={emitPreciseLocation}
+      bind:this={zoomContainerEl}
+      onwheel={handleWheel}
+      onscroll={emitPreciseLocation}
     >
       <iframe
         bind:this={iframeEl}

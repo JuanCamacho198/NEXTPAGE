@@ -4,48 +4,40 @@
  * parent-side PDF reference) but lives inside the iframe so it has
  * direct access to the chapter DOM.
  *
- * Mounts `window.__epubHighlightOverlay` with a single
- * `render(highlights, chapterHref, currentChapterIndex)` function.
- * The parent calls it on every chapter change and whenever
- * `persistedHighlights` changes.
+ * Mounts `window.__epubHighlightOverlay` with:
+ * - `render(highlights, chapterHref, currentChapterIndex)` — the
+ *   parent calls it on every chapter change and whenever
+ *   `persistedHighlights` changes.
+ * - `hitTest(x, y)` — resolves a viewport point to the highlight whose
+ *   Range contains it (used by the selection script's click handler).
+ * - `rangeOverlapsHighlight(range)` — true when a selection Range
+ *   overlaps any registered highlight (used to suppress Menu 1 when
+ *   the user is interacting with an existing highlight).
  *
- * For each highlight whose `pageNumber === currentChapterIndex`, the
- * overlay resolves its CFI to a DOM Range and wraps the range in a
- * `<span class="epub-hl" data-id="..." style="background: ...">`.
- * Click handlers are wired via event delegation on `document.body`
- * (in the selection script) and post
- * `{ type: 'epub-highlight-click', id, x, y, color, pageNumber }` to
- * the parent. Legacy highlights (cfi === null) are skipped silently.
- *
- * The render is **incremental**: it tracks the set of currently
- * rendered highlight IDs in `renderedIds` and only adds / updates /
- * removes the delta on each call. This is critical for CFI validity:
- * a "clear everything then re-render everything" strategy would
- * unwrap every existing highlight, then call body.normalize() to
- * merge adjacent text nodes, which would invalidate the CFIs of
- * highlights that the user JUST created (their CFIs were captured
- * against the wrapped DOM). Symptom: new highlights became invisible
- * until the user left the book and came back. The incremental diff
- * avoids touching wraps that are still valid.
+ * Rendering is **registration-based** via the CSS Custom Highlight
+ * API (`CSS.highlights` + `::highlight()`): for each highlight whose
+ * `pageNumber === currentChapterIndex`, the overlay resolves its CFI
+ * to a DOM Range, maps its color to the nearest canonical color,
+ * groups ranges per color, and registers one `Highlight` per color
+ * named `epub-hl-<label>`. The chapter DOM is NEVER mutated, so CFI
+ * capture and resolution always see identical structure — this
+ * eliminates the wrap-mutation bug class (second-highlight race,
+ * restart drift) structurally. Legacy highlights (cfi === null) are
+ * skipped silently.
  */
 export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
 (function() {
   if (window.__epubHighlightOverlay) return; // idempotent
-  // hexToRgba: now returns null on invalid input instead of falling back
-  // to a default yellow. The caller (render) detects null and posts an
-  // 'epub-hl-failed' message with reason: 'invalid-color'. isFinite
-  // guards against hex strings that parse to NaN (e.g. '#XYZ123' would
-  // produce rgba(NaN, NaN, 35, ...) under the old behavior).
-  function hexToRgba(hex, alpha) {
-    if (typeof hex !== 'string') return null;
-    var h = hex.replace('#', '');
-    if (h.length !== 6) return null;
-    var r = parseInt(h.slice(0, 2), 16);
-    var g = parseInt(h.slice(2, 4), 16);
-    var b = parseInt(h.slice(4, 6), 16);
-    if (!isFinite(r) || !isFinite(g) || !isFinite(b)) return null;
-    return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + (alpha == null ? 0.4 : alpha) + ')';
+
+  // ─── Feature detection ─────────────────────────────────────────
+  // The CSS Custom Highlight API shipped in Chromium 105 (WebView2
+  // evergreen). When absent we render nothing (no wrap fallback) and
+  // warn once at mount.
+  var HAS_CSS_HIGHLIGHTS = typeof CSS !== 'undefined' && !!CSS.highlights;
+  if (!HAS_CSS_HIGHLIGHTS) {
+    console.warn('epub-hl: CSS Custom Highlight API (CSS.highlights) is not supported; highlights will not render');
   }
+
   function postFailure(id, reason, pageNumber) {
     try {
       window.parent.postMessage({
@@ -58,145 +50,195 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
       console.warn('epub-hl: failed to post failure message', e);
     }
   }
-  function unwrap(el) {
-    var parent = el.parentNode;
-    if (!parent) return;
-    while (el.firstChild) parent.insertBefore(el.firstChild, el);
-    parent.removeChild(el);
+
+  // ─── Canonical color mapping ───────────────────────────────────
+  // The 5 canonical highlight colors (single source of truth in
+  // highlightColors.ts). Order is meaningful: yellow is first, so the
+  // strict '<' tie-break below maps exact equidistance to yellow.
+  var CANONICAL_COLORS = [
+    { label: 'yellow', hex: '#FACC15', r: 250, g: 204, b: 21 },
+    { label: 'green', hex: '#4ADE80', r: 74, g: 222, b: 128 },
+    { label: 'blue', hex: '#60A5FA', r: 96, g: 165, b: 250 },
+    { label: 'purple', hex: '#C084FC', r: 192, g: 132, b: 252 },
+    { label: 'orange', hex: '#FB923C', r: 251, g: 146, b: 60 }
+  ];
+
+  function parseHex(hex) {
+    if (typeof hex !== 'string') return null;
+    var h = hex.charAt(0) === '#' ? hex.slice(1) : hex;
+    if (h.length !== 6) return null;
+    var r = parseInt(h.slice(0, 2), 16);
+    var g = parseInt(h.slice(2, 4), 16);
+    var b = parseInt(h.slice(4, 6), 16);
+    if (!isFinite(r) || !isFinite(g) || !isFinite(b)) return null;
+    return { r: r, g: g, b: b };
   }
-  function wrapRange(range, hl, rgba) {
-    // Fast path: the range is a subset of a single text node.
-    // surroundContents works directly and produces valid HTML.
-    if (range.startContainer === range.endContainer && range.startContainer.nodeType === 3) {
-      var singleSpan = document.createElement('span');
-      singleSpan.className = 'epub-hl';
-      singleSpan.setAttribute('data-id', hl.id);
-      singleSpan.style.background = rgba;
-      singleSpan.style.borderRadius = '2px';
-      try { range.surroundContents(singleSpan); }
-      catch (e) { console.warn('epub-hl: failed to wrap range', e); }
-      return;
+
+  // Map any hex to the nearest canonical color by Euclidean RGB
+  // distance. Returns { status: 'invalid' } for unparseable input,
+  // { status: 'canonical', label, hex } for exact canonical matches,
+  // or { status: 'unknown', label, hex } for a mapped legacy color.
+  function mapColor(hex) {
+    var rgb = parseHex(hex);
+    if (!rgb) return { status: 'invalid' };
+    var best = null;
+    var bestDist = Infinity;
+    for (var i = 0; i < CANONICAL_COLORS.length; i++) {
+      var c = CANONICAL_COLORS[i];
+      var dr = rgb.r - c.r;
+      var dg = rgb.g - c.g;
+      var db = rgb.b - c.b;
+      var dist = dr * dr + dg * dg + db * db;
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = c;
+      }
     }
-    // Slow path: the range crosses element boundaries or contains block
-    // elements (e.g. the user selected across multiple <p>s, or selected
-    // an entire <p>). surroundContents throws when the range contains
-    // non-text nodes, and the previous fallback (extractContents + wrap
-    // the extracted fragment in a <span>) produced invalid HTML of the
-    // form <span class="epub-hl"><p>...</p></span> -- an inline element
-    // containing a block element. The browser auto-corrects this on the
-    // next render, which (a) breaks the visual highlight and (b) shifts
-    // child indices of the parent, invalidating CFIs for OTHER
-    // highlights in the same chapter (causing
-    // 'epub-cfi: text terminus did not resolve' on subsequent renders).
-    //
-    // Fix: collect every text node within the range FIRST, then wrap
-    // each text node's in-range portion with its own <span>. Block
-    // elements (<p>, <br>, etc.) stay in place; the wrap goes INSIDE
-    // the <p> around the text nodes, which is valid HTML.
-    var walker = document.createTreeWalker(
-      range.commonAncestorContainer,
-      NodeFilter.SHOW_TEXT,
-      { acceptNode: function (node) {
-        return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-      } }
-    );
-    var textNodes = [];
-    var tn = walker.nextNode();
-    while (tn) { textNodes.push(tn); tn = walker.nextNode(); }
-    for (var i = 0; i < textNodes.length; i++) {
-      var node = textNodes[i];
-      var startOffset = (node === range.startContainer) ? range.startOffset : 0;
-      var endOffset = (node === range.endContainer) ? range.endOffset : node.nodeValue.length;
-      if (endOffset <= startOffset) continue;
-      var nodeRange = document.createRange();
-      nodeRange.setStart(node, startOffset);
-      nodeRange.setEnd(node, endOffset);
-      var span = document.createElement('span');
-      span.className = 'epub-hl';
-      span.setAttribute('data-id', hl.id);
-      span.style.background = rgba;
-      span.style.borderRadius = '2px';
-      try { nodeRange.surroundContents(span); }
-      catch (e) { console.warn('epub-hl: failed to wrap text node', e); }
-    }
+    var isCanonical = best && String(hex).toLowerCase() === best.hex.toLowerCase();
+    return {
+      status: isCanonical ? 'canonical' : 'unknown',
+      label: best.label,
+      hex: best.hex,
+      rgb: { r: best.r, g: best.g, b: best.b }
+    };
   }
-  // Incremental render: diff against previously-rendered IDs and apply
-  // only the delta. This is the fix for the CFI invalidation bug.
-  //
-  // Old behavior: clearHighlights() + re-render ALL highlights. The clear
-  // step removed every wrap, then body.normalize() merged adjacent text
-  // nodes. The re-render tried to re-resolve every CFI on the now-flat
-  // DOM, but each CFI was originally captured on the DOM with the
-  // existing wraps in place. As soon as the user added a SECOND
-  // highlight, the clear step destroyed the wrap for the first one, the
-  // re-render restored it on the merged DOM, and the CFI of the SECOND
-  // highlight (captured against the wrapped DOM) failed to resolve.
-  // Symptom: the new highlight was invisible until the user left the
-  // book and came back.
-  //
-  // New behavior: never touch wraps that are still valid. Remove only
-  // the wraps of highlights that were deleted (by ID), add only the
-  // wraps of highlights that are new, and update the background of
-  // existing wraps whose color changed. CFIs of untouched highlights
-  // remain valid because we never mutate the text nodes around them.
-  var renderedIds = Object.create(null);
+
+  // ─── Hit testing ───────────────────────────────────────────────
+  // Inclusive boundary test (D1): the caret point resolves to the
+  // highlight iff start <= point <= end. comparePoint returns 1 at the
+  // exact end boundary (strictly outside in Chromium), which would
+  // silently miss the last character of a highlight; compensating with
+  // a +1 offset tolerance is fragile (the offset may be a child index,
+  // not a char count). Instead we treat the EXACT (endContainer,
+  // endOffset) identity as inside, keeping the comparison exact and
+  // unambiguous.
+  function pointInRangeInclusive(range, container, offset) {
+    var cmp = range.comparePoint(container, offset);
+    if (cmp < 0) return false; // strictly before the start
+    if (cmp === 0) return true; // exactly at start (or end) boundary
+    // cmp === 1: at-or-after the end. Inclusive: only the exact end
+    // boundary point resolves (D1 last-char case).
+    return container === range.endContainer && offset === range.endOffset;
+  }
+
+  function hitTest(x, y) {
+    if (!HAS_CSS_HIGHLIGHTS) return null;
+    var caret = document.caretRangeFromPoint(x, y);
+    if (!caret) return null;
+    var container = caret.startContainer;
+    var offset = caret.startOffset;
+    for (var i = 0; i < registered.length; i++) {
+      var entry = registered[i];
+      if (pointInRangeInclusive(entry.range, container, offset)) {
+        return { id: entry.id, color: entry.color, text: entry.text };
+      }
+    }
+    return null;
+  }
+
+  // True when the selection range overlaps any registered highlight
+  // (used by the selection script to skip Menu 1 — Menu 2 owns the
+  // gesture). Two ranges overlap iff neither ends before the other
+  // starts.
+  function rangeOverlapsHighlight(range) {
+    if (!HAS_CSS_HIGHLIGHTS || !range || range.collapsed) return false;
+    for (var i = 0; i < registered.length; i++) {
+      var r = registered[i].range;
+      var rEndsBeforeSel = r.compareBoundaryPoints(Range.END_TO_START, range) < 0;
+      var selEndsBeforeR = range.compareBoundaryPoints(Range.END_TO_START, r) < 0;
+      if (!rEndsBeforeSel && !selEndsBeforeR) return true;
+    }
+    return false;
+  }
+
+  // ─── Registration-based render ─────────────────────────────────
+  // Per-id side table mirroring the per-color registry: rebuilt on
+  // every full re-register. Hit-testing, delete and recolor are per-id
+  // operations that the color-grouped CSS.highlights registry cannot
+  // express, hence the parallel Map<id, {id, range, color, text}>.
+  var registered = [];
+  // Chromium imposes an implementation-specific cap on registered
+  // ranges per document; normal chapters are far below it. Guard +
+  // log for observability (D3).
+  var RANGE_CAP = 5000;
+
   function render(highlights, chapterHref, currentChapterIndex) {
     if (!Array.isArray(highlights) || !chapterHref) return;
+    if (!HAS_CSS_HIGHLIGHTS) return; // feature-detect: render nothing
     var doc = document;
-    // 1. Index the desired set by ID for the current chapter.
-    var desired = Object.create(null);
-    var order = [];
+    var byColor = Object.create(null);
+    var sideTable = [];
+    var rangeCount = 0;
     for (var i = 0; i < highlights.length; i++) {
       var hl = highlights[i];
       if (!hl || hl.pageNumber !== currentChapterIndex) continue;
       if (!hl.cfi) continue; // legacy or PDF
-      desired[hl.id] = hl;
-      order.push(hl.id);
-    }
-    // 2. Remove wraps for IDs that are no longer in the desired set.
-    for (var renderedId in renderedIds) {
-      if (Object.prototype.hasOwnProperty.call(renderedIds, renderedId) && !desired[renderedId]) {
-        var el = doc.querySelector('.epub-hl[data-id="' + renderedId + '"]');
-        if (el) unwrap(el);
-        delete renderedIds[renderedId];
-      }
-    }
-    // 3. Add or update wraps for every desired highlight.
-    for (var k = 0; k < order.length; k++) {
-      var id = order[k];
-      var entry = desired[id];
-      var existing = doc.querySelector('.epub-hl[data-id="' + id + '"]');
-      var rgba = hexToRgba(entry.color, 0.4);
-      if (rgba == null) {
-        console.warn('epub-hl: invalid color for highlight', id, entry.color);
-        postFailure(id, 'invalid-color', currentChapterIndex);
-        continue;
-      }
-      if (existing) {
-        // Already rendered: just update the color (cheap and safe).
-        existing.style.background = rgba;
-        renderedIds[id] = true;
-        continue;
-      }
-      // New: resolve CFI and wrap. We only touch this one node path, so
-      // other highlights' CFIs stay valid.
       var range = null;
       try {
         if (window.__cfiBridge && typeof window.__cfiBridge.cfiToRange === 'function') {
-          range = window.__cfiBridge.cfiToRange(entry.cfi, chapterHref, doc);
+          range = window.__cfiBridge.cfiToRange(hl.cfi, chapterHref, doc);
         }
       } catch (e) {
         range = null;
       }
       if (!range) {
-        console.warn('epub-hl: cfi did not resolve for highlight', id);
-        postFailure(id, 'cfi-unresolved', currentChapterIndex);
+        console.warn('epub-hl: cfi did not resolve for highlight', hl.id);
+        postFailure(hl.id, 'cfi-unresolved', currentChapterIndex);
         continue;
       }
-      wrapRange(range, entry, rgba);
-      renderedIds[id] = true;
+      // Chromium throws NotSupportedError when a collapsed range is
+      // registered, so skip zero-length CFI ranges.
+      if (range.collapsed) {
+        console.warn('epub-hl: collapsed range skipped for highlight', hl.id);
+        continue;
+      }
+      var mapped = mapColor(hl.color);
+      if (mapped.status === 'invalid') {
+        console.warn('epub-hl: invalid color for highlight', hl.id, hl.color);
+        postFailure(hl.id, 'invalid-color', currentChapterIndex);
+        continue;
+      }
+      if (mapped.status === 'unknown') {
+        console.warn('epub-hl: unknown color mapped to ' + mapped.label + ' for highlight', hl.id, hl.color);
+        postFailure(hl.id, 'unknown-color', currentChapterIndex);
+      }
+      var list = byColor[mapped.label];
+      if (!list) list = byColor[mapped.label] = [];
+      list.push(range);
+      rangeCount++;
+      sideTable.push({
+        id: hl.id,
+        range: range,
+        color: mapped.hex,
+        text: (range.toString() || '').trim()
+      });
     }
+    if (rangeCount > RANGE_CAP) {
+      console.warn('epub-hl: ' + rangeCount + ' ranges registered this render (cap guard ' + RANGE_CAP + ')');
+    }
+    // Full idempotent re-register (D6): clear then set one Highlight
+    // per canonical color. Add/delete/recolor fall out naturally and
+    // the DOM is never touched.
+    try {
+      CSS.highlights.clear();
+      for (var label in byColor) {
+        if (Object.prototype.hasOwnProperty.call(byColor, label)) {
+          var ranges = byColor[label];
+          var hlObj = new Highlight();
+          for (var j = 0; j < ranges.length; j++) hlObj.add(ranges[j]);
+          CSS.highlights.set('epub-hl-' + label, hlObj);
+        }
+      }
+    } catch (e) {
+      console.warn('epub-hl: failed to register highlights', e);
+    }
+    registered = sideTable;
   }
-  window.__epubHighlightOverlay = { render: render };
+
+  window.__epubHighlightOverlay = {
+    render: render,
+    hitTest: hitTest,
+    rangeOverlapsHighlight: rangeOverlapsHighlight
+  };
 })();
 `;

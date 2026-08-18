@@ -29,6 +29,10 @@ pub struct HighlightDto {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveHighlightInput {
+    /// Client-generated id (UUID). The backend MUST honor it so that
+    /// re-applying a remote highlight (sync pull) upserts instead of
+    /// inserting a duplicate row.
+    pub id: Option<String>,
     pub book_id: String,
     pub color: String,
     pub text: String,
@@ -427,6 +431,7 @@ mod tests {
     #[test]
     fn test_resolve_page_number_with_page_number_only() {
         let input = SaveHighlightInput {
+            id: None,
             book_id: "b1".to_string(),
             color: "yellow".to_string(),
             text: "test".to_string(),
@@ -445,6 +450,7 @@ mod tests {
     #[test]
     fn test_resolve_page_number_with_legacy_page_only() {
         let input = SaveHighlightInput {
+            id: None,
             book_id: "b1".to_string(),
             color: "yellow".to_string(),
             text: "test".to_string(),
@@ -463,6 +469,7 @@ mod tests {
     #[test]
     fn test_resolve_page_number_with_both_matching() {
         let input = SaveHighlightInput {
+            id: None,
             book_id: "b1".to_string(),
             color: "yellow".to_string(),
             text: "test".to_string(),
@@ -481,6 +488,7 @@ mod tests {
     #[test]
     fn test_resolve_page_number_with_conflicting_fields() {
         let input = SaveHighlightInput {
+            id: None,
             book_id: "b1".to_string(),
             color: "yellow".to_string(),
             text: "test".to_string(),
@@ -506,6 +514,7 @@ mod tests {
     #[test]
     fn test_resolve_page_number_with_neither_field() {
         let input = SaveHighlightInput {
+            id: None,
             book_id: "b1".to_string(),
             color: "yellow".to_string(),
             text: "test".to_string(),

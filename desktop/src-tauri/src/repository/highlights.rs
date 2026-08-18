@@ -62,11 +62,33 @@ pub fn save_highlight(
     }
 
     let now = Utc::now().to_rfc3339();
-    let id = Uuid::new_v4().to_string();
+    // Honor the client-supplied id (sync pulls re-apply the same row and
+    // MUST NOT create a duplicate). Fall back to a fresh UUID for legacy
+    // callers that do not send one.
+    let id = payload
+        .id
+        .clone()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| Uuid::new_v4().to_string());
 
+    // UPSERT on the primary key: an existing row with the same id is
+    // updated in place (fields + version bump), preserving created_at.
     repo.connection.execute(
             "INSERT INTO highlights (id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, note, created_at, updated_at, version)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, 1)",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, 1)
+             ON CONFLICT(id) DO UPDATE SET
+               book_id = excluded.book_id,
+               color = excluded.color,
+               text = excluded.text,
+               page = excluded.page,
+               rect_left = excluded.rect_left,
+               rect_right = excluded.rect_right,
+               rect_top = excluded.rect_top,
+               rect_bottom = excluded.rect_bottom,
+               cfi = excluded.cfi,
+               note = excluded.note,
+               updated_at = excluded.updated_at,
+               version = highlights.version + 1",
             params![
                 id,
                 payload.book_id,
@@ -198,6 +220,93 @@ mod tests {
             },
         );
         assert!(matches!(result, Err(AppError::NotFound(_))));
+    }
+
+    #[test]
+    fn save_highlight_respects_client_id_and_upserts() {
+        let repo = new_repository();
+        let now = Utc::now().to_rfc3339();
+        repo.connection
+            .execute(
+                "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
+                 VALUES (?1, 'Book', 'Author', 'C:/book.epub', 'epub', 'local', 0, 100, ?2, ?2, 1)",
+                params!["book-1", now],
+            )
+            .unwrap();
+
+        let base = SaveHighlightInput {
+            id: Some("client-id-1".to_string()),
+            book_id: "book-1".to_string(),
+            color: "#FACC15".to_string(),
+            text: "sample".to_string(),
+            page_number: Some(1),
+            page: None,
+            rect_left: 0.0,
+            rect_right: 10.0,
+            rect_top: 0.0,
+            rect_bottom: 10.0,
+            cfi: Some("epubcfi(/6/1!)".to_string()),
+            note: None,
+        };
+
+        // First save inserts exactly one row.
+        let first = save_highlight(&repo, base.clone()).unwrap();
+        assert_eq!(first.id, "client-id-1");
+        let count: i64 = repo
+            .connection
+            .query_row(
+                "SELECT count(*) FROM highlights WHERE id = 'client-id-1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+
+        // Re-applying the same id (sync pull) MUST upsert, not duplicate.
+        let second = save_highlight(&repo, base).unwrap();
+        assert_eq!(second.id, "client-id-1");
+        let count: i64 = repo
+            .connection
+            .query_row(
+                "SELECT count(*) FROM highlights WHERE id = 'client-id-1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn save_highlight_generates_id_when_absent() {
+        let repo = new_repository();
+        let now = Utc::now().to_rfc3339();
+        repo.connection
+            .execute(
+                "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
+                 VALUES (?1, 'Book', 'Author', 'C:/book.epub', 'epub', 'local', 0, 100, ?2, ?2, 1)",
+                params!["book-1", now],
+            )
+            .unwrap();
+
+        let saved = save_highlight(
+            &repo,
+            SaveHighlightInput {
+                id: None,
+                book_id: "book-1".to_string(),
+                color: "#FACC15".to_string(),
+                text: "sample".to_string(),
+                page_number: Some(1),
+                page: None,
+                rect_left: 0.0,
+                rect_right: 10.0,
+                rect_top: 0.0,
+                rect_bottom: 10.0,
+                cfi: None,
+                note: None,
+            },
+        )
+        .unwrap();
+        assert!(!saved.id.is_empty());
     }
 }
 

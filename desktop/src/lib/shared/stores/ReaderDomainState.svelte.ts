@@ -148,7 +148,9 @@ class ReaderDomainState {
           void saveBookmark({
             id: bookmark.id ?? crypto.randomUUID(),
             bookId: bookmark.bookId,
-            pageNumber: 0,
+            // EPUB bookmarks are anchored by CFI (no real page); use 1 as the
+            // minimum-valid placeholder instead of 0 (page 0 is not a real page).
+            pageNumber: 1,
             title: bookmark.titleSnippet ?? undefined,
             createdAt: bookmark.updatedAt,
           });
@@ -409,7 +411,9 @@ class ReaderDomainState {
           saveBookmark({
             id: id ?? crypto.randomUUID(),
             bookId: bookId,
-            pageNumber: 0,
+            // EPUB bookmarks are anchored by CFI (no real page); use 1 as the
+            // minimum-valid placeholder instead of 0 (page 0 is not a real page).
+            pageNumber: 1,
             title: titleSnippet ?? undefined,
             createdAt: updatedAt,
           }).catch((e) => {
@@ -436,7 +440,7 @@ class ReaderDomainState {
       }
 
       this.unsubscribeRemoteHighlights = this.supabaseSync.subscribeToHighlights((payload) => {
-        const { id, bookId, cfiRange, textContent, note, color, deletedAt } = payload;
+        const { id, bookId, cfiRange, textContent, note, color, deletedAt, page } = payload;
         const key = `highlight:${id ?? cfiRange}`;
         const previous = this.appliedRemote.get(key);
         if (previous && Date.parse(payload.updatedAt) <= Date.parse(previous)) return;
@@ -447,12 +451,20 @@ class ReaderDomainState {
             console.error('Failed to apply remote highlight delete locally:', e);
           });
         } else {
+          // Page anchoring is format-aware (single pipeline, anchor per format):
+          // - PDF highlights carry a real, positive `page` from Supabase.
+          // - EPUB highlights are anchored by CFI (`cfiRange`), not a page, so
+          //   Supabase `page` is null. Match the local EPUB reader fallback
+          //   (`pageNumber ?? 1`, see ReaderWorkspace.handleColorSelect) instead
+          //   of passing 0, which normalizePageNumber rejects (must be > 0).
+          const pageNumber =
+            typeof page === 'number' && Number.isInteger(page) && page > 0 ? page : 1;
           saveHighlight({
             id: id ?? crypto.randomUUID(),
             bookId: bookId,
             text: textContent,
             color: color,
-            pageNumber: 0,
+            pageNumber,
             rectLeft: 0,
             rectRight: 0,
             rectTop: 0,

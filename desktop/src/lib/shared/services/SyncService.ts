@@ -777,7 +777,12 @@ export class SyncService {
                 bookId: h.book_id,
                 text: h.text_content,
                 color: h.color,
-                pageNumber: 0, // CFI-based highlights don't have page numbers
+                // Page anchoring is format-aware: PDF highlights carry a real
+                // positive page; EPUB highlights are anchored by CFI (no page),
+                // so use 1 as the minimum-valid placeholder (matching the local
+                // EPUB reader fallback `pageNumber ?? 1`). Passing 0 made
+                // normalizePageNumber reject the write (must be > 0).
+                pageNumber: 1,
                 rectLeft: 0,
                 rectRight: 0,
                 rectTop: 0,
@@ -803,7 +808,9 @@ export class SyncService {
               await tauri.saveBookmark({
                 id: b.id,
                 bookId: b.book_id,
-                pageNumber: 0, // CFI-based bookmarks
+                // EPUB bookmarks are anchored by CFI (no real page); use 1 as the
+                // minimum-valid placeholder instead of 0 (page 0 is not a real page).
+                pageNumber: 1,
                 title: b.title_or_snippet || undefined,
                 createdAt: new Date(b.updated_at).toISOString(),
               });

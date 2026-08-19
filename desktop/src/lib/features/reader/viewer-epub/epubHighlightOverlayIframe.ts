@@ -162,9 +162,52 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
   // log for observability (D3).
   var RANGE_CAP = 5000;
 
+  // ─── Timing robustness ─────────────────────────────────────────
+  // The parent's highlight $effect can call render() BEFORE the iframe's
+  // injected cfiBridge script has executed (the srcdoc scripts run when
+  // the document finishes parsing, which races the parent's reactive
+  // effect). At that moment window.__cfiBridge is undefined, so every
+  // CFI "fails to resolve" — a FALSE negative that produces spurious
+  // epub-hl-failed cfi-unresolved and no visible highlight until the
+  // iframe onload re-renders. "Sometimes works, sometimes not" depends
+  // on whether the effect happens to run before or after the bridge
+  // mounts. Fix: defer the render when the bridge is not ready, and
+  // auto re-run it the moment the bridge appears. The bridge mounts
+  // once per iframe load, so the deferred render fires at most once per
+  // load and the onload re-render becomes a harmless idempotent no-op.
+  var pendingRender = null;
+  var bridgeReady = false;
+  var pendingCheckTimer = null;
+  function checkBridgeAndFlush() {
+    if (bridgeReady) return;
+    if (window.__cfiBridge && typeof window.__cfiBridge.cfiToRange === 'function') {
+      bridgeReady = true;
+      if (pendingRender) {
+        var pr = pendingRender;
+        pendingRender = null;
+        try { render.apply(null, pr); } catch (e) { console.warn('epub-hl: deferred render failed', e); }
+      }
+      return;
+    }
+    if (pendingRender) {
+      if (pendingCheckTimer) clearTimeout(pendingCheckTimer);
+      pendingCheckTimer = setTimeout(checkBridgeAndFlush, 20);
+    }
+  }
+
   function render(highlights, chapterHref, currentChapterIndex) {
     if (!Array.isArray(highlights) || !chapterHref) return;
     if (!HAS_CSS_HIGHLIGHTS) return; // feature-detect: render nothing
+    // Defer until the cfiBridge is mounted: resolving CFIs against an
+    // unmounted bridge would flag every highlight as cfi-unresolved.
+    if (!bridgeReady) {
+      if (!(window.__cfiBridge && typeof window.__cfiBridge.cfiToRange === 'function')) {
+        pendingRender = [highlights, chapterHref, currentChapterIndex];
+        checkBridgeAndFlush();
+        return;
+      }
+      bridgeReady = true;
+    }
     var doc = document;
     var byColor = Object.create(null);
     var sideTable = [];

@@ -547,3 +547,117 @@ describe('epubHighlightOverlay — hit-test boundaries (T13)', () => {
     expect(win.__epubHighlightOverlay!.hitTest(10, 10)).toBeNull();
   });
 });
+
+// ────────────────────────────────────────────────────────────────────
+// Timing race: the parent's highlight $effect can call render() BEFORE
+// the iframe's injected cfiBridge script has executed (the srcdoc
+// scripts run when the document finishes parsing, which races the
+// parent's reactive effect). At that moment __cfiBridge is undefined and
+// every CFI would "fail to resolve" — a false-negative epub-hl-failed
+// cfi-unresolved that made highlights appear only after the iframe
+// onload re-render ("sometimes works, sometimes not"). The overlay must
+// defer the render until the bridge mounts and then auto re-run it.
+// ────────────────────────────────────────────────────────────────────
+describe('epubHighlightOverlay — deferred render when bridge not ready', () => {
+  it('does not post cfi-unresolved when the bridge is not mounted yet', async () => {
+    const dom = new JSDOM(FIXTURE_HTML, { runScripts: 'outside-only', url: 'http://localhost/' });
+    const doc = dom.window.document;
+    const win = dom.window as unknown as OverlayWindow;
+
+    // CSS.highlights mock (same as setupOverlay).
+    const registry = new HighlightRegistryMock();
+    class HighlightMock {
+      ranges: Range[] = [];
+      add(range: Range): void {
+        this.ranges.push(range);
+      }
+    }
+    win.Highlight = HighlightMock;
+    win.CSS = { highlights: registry };
+
+    // Capture postMessages via the stubbed parent.
+    const messages: Array<Record<string, unknown>> = [];
+    Object.defineProperty(win, 'parent', {
+      value: { postMessage: (msg: unknown) => messages.push(msg as Record<string, unknown>) },
+      configurable: true,
+    });
+
+    // Generate a genuine resolvable CFI by mounting the bridge briefly.
+    win.eval(IFRAME_CFI_BRIDGE_SCRIPT);
+    win.__cfiBridge!.setSpine([CHAPTER_HREF]);
+    const range = selectText(doc, 'Primer parrafo')!;
+    const validCfi = win.__cfiBridge!.rangeToCFI(range, CHAPTER_HREF, doc)!;
+    expect(validCfi).toBeTruthy();
+
+    // Now remove the bridge to simulate the race: the parent effect runs
+    // before the bridge script has executed.
+    delete win.__cfiBridge;
+
+    // Install ONLY the overlay (bridge is absent now).
+    win.eval(IFRAME_HIGHLIGHT_OVERLAY_SCRIPT);
+
+    // render() while the bridge is missing.
+    win.__epubHighlightOverlay!.render(
+      [{ id: 'race-hl', color: '#FACC15', pageNumber: 0, cfi: validCfi }],
+      CHAPTER_HREF,
+      0,
+    );
+
+    // MUST NOT post a false cfi-unresolved while the bridge is missing.
+    const failures = messages.filter((m) => m.type === 'epub-hl-failed');
+    expect(failures.length).toBe(0);
+
+    // Now the bridge mounts (as it would when the srcdoc finishes
+    // parsing): install it and let the deferred poll flush.
+    win.eval(IFRAME_CFI_BRIDGE_SCRIPT);
+    win.__cfiBridge!.setSpine([CHAPTER_HREF]);
+
+    // Wait for the 20ms deferred-render poll.
+    await new Promise((r) => setTimeout(r, 60));
+
+    // The highlight must now be registered (bridge mounted → deferred
+    // render flushed) and still no cfi-unresolved failure.
+    expect(registry.names()).toContain('epub-hl-yellow');
+    const after = messages.filter((m) => m.type === 'epub-hl-failed');
+    expect(after.length).toBe(0);
+  });
+
+  it('still posts cfi-unresolved for a genuinely unresolvable CFI once the bridge is ready', async () => {
+    const dom = new JSDOM(FIXTURE_HTML, { runScripts: 'outside-only', url: 'http://localhost/' });
+    const win = dom.window as unknown as OverlayWindow;
+
+    const registry = new HighlightRegistryMock();
+    class HighlightMock {
+      ranges: Range[] = [];
+      add(range: Range): void {
+        this.ranges.push(range);
+      }
+    }
+    win.Highlight = HighlightMock;
+    win.CSS = { highlights: registry };
+
+    const messages: Array<Record<string, unknown>> = [];
+    Object.defineProperty(win, 'parent', {
+      value: { postMessage: (msg: unknown) => messages.push(msg as Record<string, unknown>) },
+      configurable: true,
+    });
+
+    // Install the bridge FIRST (simulates the onload path where the
+    // bridge is already mounted) then the overlay.
+    win.eval(IFRAME_CFI_BRIDGE_SCRIPT);
+    win.__cfiBridge!.setSpine([CHAPTER_HREF]);
+    win.eval(IFRAME_HIGHLIGHT_OVERLAY_SCRIPT);
+
+    // A bogus CFI that the bridge cannot resolve.
+    win.__epubHighlightOverlay!.render(
+      [{ id: 'bad-hl', color: '#FACC15', pageNumber: 0, cfi: 'epubcfi(/6/1!/999/999,/1:0,/1:0)' }],
+      CHAPTER_HREF,
+      0,
+    );
+
+    const failures = messages.filter((m) => m.type === 'epub-hl-failed');
+    expect(failures.length).toBe(1);
+    expect(failures[0].reason).toBe('cfi-unresolved');
+    expect(registry.names()).not.toContain('epub-hl-yellow');
+  });
+});

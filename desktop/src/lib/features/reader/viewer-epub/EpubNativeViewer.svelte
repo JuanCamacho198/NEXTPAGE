@@ -720,15 +720,31 @@
       link.setAttribute('href', toAssetUrl(resourcesPath, resourcePath));
     }
 
-    // Process images, SVG images, and media elements — convert relative/absolute paths to asset URLs
+    // Process images, SVG images, and media elements — convert relative/absolute paths to asset URLs.
+    // SVG `<image>` elements may reference their source via `xlink:href` (namespaced) or `href`;
+    // both must be rewritten or the cover art 403s inside the iframe.
     for (const el of doc.querySelectorAll('img, image, video, audio, source, object')) {
-      const attrName = el.tagName.toLowerCase() === 'image' ? 'href' : 'src';
-      const src = el.getAttribute(attrName);
-      if (!src || src.startsWith('http') || src.startsWith('data:') || src.startsWith('asset:'))
-        continue;
+      const isSvgImage = el.tagName.toLowerCase() === 'image';
+      const attrs = isSvgImage
+        ? [el.getAttribute('href'), el.getAttribute('xlink:href')]
+        : [el.getAttribute('src')];
+      const src = attrs.find(
+        (s) => s && !s.startsWith('http') && !s.startsWith('data:') && !s.startsWith('asset:'),
+      );
+      if (!src) continue;
 
       const resourcePath = resolveResourcePath(chapterPath, src);
-      el.setAttribute(attrName, toAssetUrl(resourcesPath, resourcePath));
+      const assetUrl = toAssetUrl(resourcesPath, resourcePath);
+      if (isSvgImage) {
+        // Prefer writing `href`; fall back to `xlink:href` when only that exists.
+        if (el.getAttribute('href') === src) {
+          el.setAttribute('href', assetUrl);
+        } else {
+          el.setAttribute('xlink:href', assetUrl);
+        }
+      } else {
+        el.setAttribute('src', assetUrl);
+      }
     }
 
     for (const styleEl of doc.querySelectorAll('style')) {

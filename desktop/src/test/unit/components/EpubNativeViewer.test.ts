@@ -466,6 +466,50 @@ describe('EpubNativeViewer', () => {
       expect(srcdoc).toContain('Hello');
     });
 
+    it('rewrites SVG image xlink:href cover paths into asset URLs (fixes 403 cover)', async () => {
+      mockInvoke.mockImplementation((cmd: string) => {
+        if (cmd === 'parse_epub') {
+          return Promise.resolve({
+            title: 'Cover Book',
+            author: 'Author',
+            language: 'es',
+            publisher: null,
+            chapters: [{ index: 0, id: '0', label: 'Cubierta', href: 'OEBPS/Text/cubierta.xhtml' }],
+            totalChapters: 1,
+            resourcesPath: '/tmp/resources',
+          });
+        }
+        if (cmd === 'get_epub_chapter') {
+          return Promise.resolve({
+            index: 0,
+            html: `<!DOCTYPE html><html><head><title>Cubierta</title></head>
+              <body><div class="cubierta"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image height="900" width="600" xlink:href="../Images/cover.jpg"/></svg></div></body></html>`,
+            mime: 'application/xhtml+xml',
+            chapterBasePath: 'OEBPS/Text',
+            chapterPath: 'OEBPS/Text/cubierta.xhtml',
+          });
+        }
+        if (cmd === 'index_epub_text') return Promise.resolve();
+        return Promise.reject(new Error(`Unknown: ${cmd}`));
+      });
+
+      render(EpubNativeViewer, {
+        filePath: '/test/cover.epub',
+        bookId: 'cover-book',
+        t,
+      });
+
+      const iframe = (await screen.findByTitle('chapter')) as HTMLIFrameElement;
+      const srcdoc = iframe.getAttribute('srcdoc');
+      expect(srcdoc).toBeTruthy();
+      // chapterPath dir 'OEBPS/Text/' + '../Images/cover.jpg' resolves to
+      // 'OEBPS/Images/cover.jpg', then convertFileSrc maps it to a tauri URL.
+      expect(srcdoc).toContain('OEBPS/Images/cover.jpg');
+      // The xlink:href must have been rewritten to the asset URL (not left
+      // as the relative ../Images/cover.jpg which 403s).
+      expect(srcdoc).not.toContain('xlink:href="../Images/cover.jpg"');
+    });
+
     it.todo(
       'iframe.contentWindow.frameElement is the iframe element and getBoundingClientRect returns finite numbers (Tauri webview smoke)',
     );

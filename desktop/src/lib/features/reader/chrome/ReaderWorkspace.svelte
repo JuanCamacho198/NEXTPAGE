@@ -818,6 +818,7 @@
         <EpubNativeViewer
           filePath={activeReadingBook.filePath}
           bookId={activeReadingBook.id}
+          initialLocation={readerState.cfiLocation}
           initialPercentage={percentage}
           {searchTargetLocator}
           readerSettings={localReaderSettings}

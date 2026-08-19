@@ -112,6 +112,7 @@
   let {
     filePath,
     bookId,
+    initialLocation = '',
     initialPercentage = 0,
     searchTargetLocator = null,
     onLocationChange,
@@ -476,7 +477,25 @@
       metadata = meta;
       totalChapters = meta.totalChapters;
 
-      if (initialPercentage > 0 && initialPercentage < 100) {
+      // Resume by the exact saved CFI when available (the source of
+      // truth), falling back to a percentage-based chapter estimate only
+      // when no CFI exists. Estimating from `initialPercentage` with
+      // Math.floor is imprecise — it routinely lands on the chapter
+      // BEFORE the reader actually was (and at 0% on the first chapter),
+      // which is why "Continue Reading" sometimes jumped back or to the
+      // start.
+      const initialCfi = initialLocation;
+      if (initialCfi && initialCfi.startsWith('epubcfi(') && meta.chapters.length > 0) {
+        const spineMatch = /epubcfi\(\/6\/(\d+)!/.exec(initialCfi);
+        if (spineMatch) {
+          const spineIndex = Number.parseInt(spineMatch[1], 10); // 1-based
+          const chapterIdx = spineIndex - 1;
+          if (chapterIdx >= 0 && chapterIdx < totalChapters) {
+            currentChapterIndex = chapterIdx;
+            pendingCfiScroll = initialCfi;
+          }
+        }
+      } else if (initialPercentage > 0 && initialPercentage < 100) {
         const chapterGuess = Math.floor((initialPercentage / 100) * totalChapters);
         currentChapterIndex = Math.min(chapterGuess, totalChapters - 1);
       }

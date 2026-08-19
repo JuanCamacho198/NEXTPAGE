@@ -34,6 +34,11 @@
 
   const progress = $derived(Math.round(getSafeProgressPercentage(book)));
   const showProgress = $derived(variant === 'continue-reading' || book.readingStatus === 'completed');
+  // The read button reads "Continue" in the Continue Reading context
+  // (resuming an in-progress book) and "Read" elsewhere (starting fresh).
+  const readLabel = $derived(
+    variant === 'continue-reading' ? t('app.continue') : t('app.read'),
+  );
 
   const containerClass = $derived.by(() => {
     const selectedClass = selected
@@ -116,7 +121,7 @@
     <div class="flex items-start gap-2">
       {#if showReadButton}
         <Button size="sm" onclick={onRead}>
-          {t('app.read')}
+          {readLabel}
         </Button>
       {/if}
       {@render actions?.()}

@@ -32,6 +32,7 @@ export class SyncOutboxDao {
     operation: 'UPSERT' | 'DELETE',
     payloadJson: string,
   ): Promise<string> {
+    ensureValidJson(payloadJson);
     return invoke<string>('addSyncOutboxItem', {
       entityType,
       entityId,
@@ -54,12 +55,41 @@ export class SyncOutboxDao {
     operation: 'UPSERT',
     payloadJson: string,
   ): Promise<string> {
+    ensureValidJson(payloadJson);
     return invoke<string>('addCoalescedSyncOutboxItem', {
       entityType,
       entityId,
       operation,
       payloadJson,
     });
+  }
+
+  /** READING_PROGRESS coalesced by bookId — keep latest per (user, book). */
+  async enqueueProgress(bookId: string, payload: Record<string, unknown>): Promise<string> {
+    const json = JSON.stringify(payload);
+    ensureValidJson(json);
+    return this.addCoalesced('READING_PROGRESS', bookId, 'UPSERT', json);
+  }
+
+  /** HIGHLIGHT per id — atomic enqueue, never coalesced across ids. */
+  async enqueueHighlight(id: string, payload: Record<string, unknown>, operation: 'UPSERT' | 'DELETE' = 'UPSERT'): Promise<string> {
+    const json = JSON.stringify(payload);
+    ensureValidJson(json);
+    return this.add('HIGHLIGHT', id, operation, json);
+  }
+
+  /** BOOKMARK per id — atomic enqueue, never coalesced across ids. */
+  async enqueueBookmark(id: string, payload: Record<string, unknown>, operation: 'UPSERT' | 'DELETE' = 'UPSERT'): Promise<string> {
+    const json = JSON.stringify(payload);
+    ensureValidJson(json);
+    return this.add('BOOKMARK', id, operation, json);
+  }
+
+  /** READING_SESSION per id — never coalesced, one row per session. */
+  async enqueueSession(id: string, payload: Record<string, unknown>): Promise<string> {
+    const json = JSON.stringify(payload);
+    ensureValidJson(json);
+    return this.add('READING_SESSION', id, 'UPSERT', json);
   }
 
   /**
@@ -95,6 +125,16 @@ export class SyncOutboxDao {
    */
   async prune(): Promise<number> {
     return invoke<number>('pruneSyncOutbox');
+  }
+}
+
+function ensureValidJson(json: string): void {
+  if (typeof json !== 'string' || json.length === 0) throw new Error('payloadJson must be non-empty valid JSON');
+  try {
+    const v = JSON.parse(json);
+    if (v === null || typeof v !== 'object') throw new Error('payloadJson must be JSON object');
+  } catch (e) {
+    throw new Error(`payloadJson must be valid JSON: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 

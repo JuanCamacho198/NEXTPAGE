@@ -10,6 +10,14 @@ interface VersionedSyncRecord {
     val deletedAtEpochMillis: Long?
 }
 
+/**
+ * LWW resolver unified for all 5 tables:
+ * reading_progress, highlights, bookmarks, reading_sessions, user_books.
+ * Rule: remote.updatedAt > local → remote; < → local; == → recordId
+ * lexicographic (remote > local → remote else local). Tombstone:
+ * deletedAt comparison as above — any deleted beats non-deleted, both
+ * deleted → later deletedAt wins, tie → local.
+ */
 class LastWriteWinsConflictResolver<T : VersionedSyncRecord> : ConflictResolver<T> {
     override fun resolve(local: T?, remote: T): T {
         val localRecord = local ?: return remote

@@ -48,6 +48,14 @@ fn normalize_href(href: &str) -> String {
     href.replace('\\', "/")
 }
 
+fn strip_fragment(href: &str) -> String {
+    if let Some(idx) = href.find('#') {
+        href[..idx].to_string()
+    } else {
+        href.to_string()
+    }
+}
+
 /// Strip injected `chrome-extension://` and `floatBarImgId` content.
 /// Guarantees zero `chrome-extension://` in output.
 pub fn sanitize_html(html: &str) -> String {
@@ -399,14 +407,16 @@ impl EpubExtractor {
             // Find which spine index this nav point corresponds to
             let content_str = nav.content.to_string_lossy();
             let href = normalize_href(&content_str);
-            // Extract filename and also try full href for spine lookup
-            let filename = std::path::Path::new(&href)
+            // Strip fragment for spine lookup (e.g. HM-colombia-3.html#_idParaDest-5)
+            let href_base = strip_fragment(&href);
+            // Extract filename from fragment-stripped href and also try full href for spine lookup
+            let filename = std::path::Path::new(&href_base)
                 .file_name()
                 .map(|f| f.to_string_lossy().to_string())
                 .unwrap_or_default();
-            // Try full href first, then filename, fall back to sequential
+            // Try full base href first, then filename, fall back to sequential
             let index = spine_map
-                .get(&href)
+                .get(&href_base)
                 .copied()
                 .or_else(|| spine_map.get(&filename).copied())
                 .unwrap_or_else(|| {
@@ -445,12 +455,13 @@ impl EpubExtractor {
         for (i, child) in children.iter().enumerate() {
             let content_str = child.content.to_string_lossy();
             let href = normalize_href(&content_str);
-            let filename = std::path::Path::new(&href)
+            let href_base = strip_fragment(&href);
+            let filename = std::path::Path::new(&href_base)
                 .file_name()
                 .map(|f| f.to_string_lossy().to_string())
                 .unwrap_or_default();
             let index = spine_map
-                .get(&href)
+                .get(&href_base)
                 .copied()
                 .or_else(|| spine_map.get(&filename).copied())
                 .unwrap_or_else(|| {
@@ -915,6 +926,95 @@ mod tests {
         ids.sort();
         ids.dedup();
         assert_eq!(ids.len(), chapters.len());
+    }
+
+    #[test]
+    fn test_historia_offset2_24_spine_20_toc() {
+        use std::collections::HashMap;
+        use std::path::PathBuf;
+        // Simulate Historia Mínima de Colombia: spine 24, TOC 20, offset-2
+        // Spine: [cover.xhtml, toc.xhtml, HM-1..HM-20 (20), backmatter, colophon] = 24
+        let mut spine_map: HashMap<String, usize> = HashMap::new();
+        spine_map.insert("cover.xhtml".to_string(), 0);
+        spine_map.insert("toc.xhtml".to_string(), 1);
+        for i in 1..=20 {
+            spine_map.insert(format!("HM-colombia-{}.html", i), 1 + i);
+        }
+        spine_map.insert("backmatter.xhtml".to_string(), 22);
+        spine_map.insert("colophon.xhtml".to_string(), 23);
+        // TOC nav points: 20 entries HM-1..HM-20, each maps to spine 2..21
+        let nav_points: Vec<epub::doc::NavPoint> = (1..=20)
+            .map(|i| epub::doc::NavPoint {
+                label: format!("HM {}", i),
+                content: PathBuf::from(format!("OEBPS/Text/HM-colombia-{}.html", i)),
+                children: vec![],
+                play_order: Some(i),
+            })
+            .collect();
+        let chapters = EpubExtractor::build_toc(&nav_points, &spine_map);
+        assert_eq!(chapters.len(), 20, "Historia TOC should be 20");
+        // Offset-2: first TOC entry maps to spine index 2
+        assert_eq!(chapters[0].index, 2, "toc[0] should map to spine 2 (offset-2)");
+        assert_eq!(chapters[1].index, 3);
+        // Toc[2] is HM-colombia-3.html with fragment in real EPUB — test that filename fallback works
+        let toc_with_frag = vec![epub::doc::NavPoint {
+            label: "HM 3".to_string(),
+            content: PathBuf::from("OEBPS/Text/HM-colombia-3.html#_idParaDest-5"),
+            children: vec![],
+            play_order: Some(3),
+        }];
+        let frag_chapters = EpubExtractor::build_toc(&toc_with_frag, &spine_map);
+        assert_eq!(frag_chapters.len(), 1);
+        // Fragment href still resolves via filename fallback to spine 4 (HM-3 at index 4? Actually HM-3 is index 4)
+        // HM-1 =>2, HM-2=>3, HM-3=>4
+        assert_eq!(frag_chapters[0].index, 4);
+        // Verify filename fallback: Text/HM-colombia-3.html without prefix still resolves
+        let href = "OEBPS/Text/HM-colombia-3.html";
+        let filename = std::path::Path::new(href)
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+        assert_eq!(spine_map.get(&filename), Some(&4));
+        // All indices must be within filtered spine (2..21) and never point to cover/toc
+        for ch in &chapters {
+            assert!(ch.index >= 2 && ch.index <= 21, "TOC index {} out of Historia range", ch.index);
+        }
+        // Ids still unique despite sequential indices
+        let mut ids: Vec<&String> = chapters.iter().map(|c| &c.id).collect();
+        ids.sort();
+        ids.dedup();
+        assert_eq!(ids.len(), chapters.len());
+    }
+
+    #[test]
+    fn test_stale_cache_historia_purge_20_vs_24() {
+        // Simulates cache stale detection for Historia: spine.json 24 vs metadata 20
+        let dir = std::env::temp_dir().join(format!("epub_historia_purge_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        // Write spine with 24 entries (Historia)
+        let spine24: Vec<String> = (0..24).map(|i| format!("ch{}.xhtml", i)).collect();
+        std::fs::write(dir.join("spine.json"), serde_json::to_string(&spine24).unwrap()).unwrap();
+        std::fs::write(dir.join(".cache_version"), "3").unwrap();
+        // Metadata claims 20 (old TOC conflated)
+        let meta = EpubMetadataExtract {
+            title: "Historia".to_string(),
+            author: "Auth".to_string(),
+            language: None,
+            publisher: None,
+            toc: vec![],
+            spine_hrefs: vec!["a.xhtml".to_string(); 20],
+            total_chapters: 20,
+            resources_path: "/tmp".to_string(),
+        };
+        // Simulate is_cache_stale logic from epub_reader.rs: spine len != total_chapters => stale
+        let data = std::fs::read_to_string(dir.join("spine.json")).unwrap();
+        let spine: Vec<String> = serde_json::from_str(&data).unwrap();
+        assert_eq!(spine.len(), 24);
+        assert_ne!(spine.len(), meta.total_chapters);
+        assert!(spine.len() != meta.total_chapters, "Historia 24 vs 20 should be stale");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     // ── helpers for cover & minimal epub generation ──

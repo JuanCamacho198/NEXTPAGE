@@ -41,7 +41,39 @@
  * @module $lib/features/reader/viewer-epub/cfiBridge
  */
 
+import { IFRAME_CFI_BRIDGE_SCRIPT } from './cfiBridgeIframe';
+
 const BLACKLIST_TAGS = new Set(['audio', 'video', 'script', 'link', 'style', 'object', 'embed']);
+
+export function normalizeHref(href: string): string {
+  return href.replace(/\\/g, '/');
+}
+
+export const CFI_RE = /^epubcfi\(\/6\/(\d+)!(.+)\)$/;
+export const TERMINUS_RE = /^(\d+):(\d+)$/;
+
+/**
+ * Assert that the iframe bridge script regexes match the parent constants.
+ * Throws if drift is detected — used as a build-time lockstep check.
+ * The iframe script is a plain-JS string inlined into srcdoc; its regex literals
+ * must be byte-for-byte equivalent (modulo escaping) to CFI_RE / TERMINUS_RE.
+ */
+export function assertLockstep(): void {
+  const script = IFRAME_CFI_BRIDGE_SCRIPT as string;
+  const cfiSource = CFI_RE.source;
+  const terminusSource = TERMINUS_RE.source;
+  const hasCFI = script.includes(cfiSource);
+  const hasTerminus = script.includes(terminusSource);
+  if (!hasCFI || !hasTerminus) {
+    throw new Error(
+      `CFI lockstep failure: IFRAME_CFI_BRIDGE_SCRIPT regex drift. Expected CFI_RE ${CFI_RE} and TERMINUS_RE ${TERMINUS_RE} in iframe script. hasCFI=${hasCFI} hasTerminus=${hasTerminus}`,
+    );
+  }
+  // Also ensure double-escape bug is not present: runtime script must NOT contain \\( or \\d
+  if (script.includes('\\\\(') || script.includes('\\\\d')) {
+    throw new Error('CFI lockstep failure: iframe script contains double-escaped regex (\\\\( or \\\\d) — remove extra backslash');
+  }
+}
 
 /**
  * Spine registry: maps a chapter href (1:1 with the EPUB's spine order)
@@ -72,7 +104,7 @@ export function setSpine(hrefs: string[] | null | undefined): void {
     spineHrefs = [];
     return;
   }
-  spineHrefs = hrefs.slice();
+  spineHrefs = hrefs.map((h) => normalizeHref(h));
 }
 
 /**
@@ -83,7 +115,8 @@ export function setSpine(hrefs: string[] | null | undefined): void {
  */
 export function getSpineIndex(chapterHref: string): number | null {
   if (typeof chapterHref !== 'string' || chapterHref.length === 0) return null;
-  const idx = spineHrefs.indexOf(chapterHref);
+  const normalized = normalizeHref(chapterHref);
+  const idx = spineHrefs.indexOf(normalized);
   if (idx < 0) return null;
   return idx + 1; // 1-based per EPUB CFI spec
 }
@@ -557,7 +590,7 @@ interface ParsedCFI {
  */
 function parseCFI(cfi: string): ParsedCFI | null {
   // Match the high-level shape: `epubcfi(/6/N!PATH,S,E)`
-  const m = /^epubcfi\(\/6\/(\d+)!(.+)\)$/.exec(cfi);
+  const m = CFI_RE.exec(cfi);
   if (!m || !m[1] || !m[2]) return null;
 
   const spineIndex = Number.parseInt(m[1], 10);
@@ -605,7 +638,7 @@ function parseTerminusChain(s: string): { chain: number[]; offset: number } | nu
   // The LAST segment must be `N:OFFSET` (text terminus). All earlier
   // segments are element steps.
   const last = segments[segments.length - 1] ?? '';
-  const m = /^(\d+):(\d+)$/.exec(last);
+  const m = TERMINUS_RE.exec(last);
   if (!m || !m[1] || !m[2]) return null;
   const lastStep = Number.parseInt(m[1], 10);
   const offset = Number.parseInt(m[2], 10);

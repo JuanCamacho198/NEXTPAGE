@@ -81,6 +81,7 @@ class ReaderDomainState {
     await setReadingStatus(book.id, 'reading').catch(() => {});
 
     const format = book.format.toLowerCase();
+    console.warn('[continue] startReading book', book.id, 'epoch', epoch, 'format', format);
 
     // Start preloading file data
     if (format === 'epub' || format === 'pdf') {
@@ -103,11 +104,27 @@ class ReaderDomainState {
     if (format === 'epub') {
       try {
         const progress = await getProgress(book.id);
-        if (epoch !== this.openEpoch) return;
+        if (epoch !== this.openEpoch) {
+          console.warn('[continue] startReading local progress stale epoch', epoch, 'current', this.openEpoch);
+          return;
+        }
+        console.warn(
+          '[continue] startReading book',
+          book.id,
+          'local progress',
+          progress?.cfiLocation?.slice(0, 60) ?? '(empty)',
+          progress?.percentage ?? 0,
+          'epoch',
+          epoch,
+        );
         this.cfiLocation = progress?.cfiLocation ?? '';
         this.percentage = progress?.percentage ?? 0;
       } catch {
-        if (epoch !== this.openEpoch) return;
+        if (epoch !== this.openEpoch) {
+          console.warn('[continue] startReading local progress error stale epoch', epoch);
+          return;
+        }
+        console.warn('[continue] startReading book', book.id, 'local progress error, fallback to empty epoch', epoch);
         this.cfiLocation = '';
         this.percentage = 0;
       }
@@ -117,6 +134,14 @@ class ReaderDomainState {
         const localUpdatedAt = await getProgress(book.id)
           .then((value) => value?.updatedAt ?? null)
           .catch(() => null);
+        console.warn(
+          '[continue] fetchAndApplyBookState queued book',
+          book.id,
+          'epoch',
+          epoch,
+          'localUpdatedAt',
+          localUpdatedAt,
+        );
         void this.fetchAndApplyBookState(sync, book.id, epoch, localUpdatedAt);
       }
     }
@@ -130,12 +155,49 @@ class ReaderDomainState {
   ): Promise<void> {
     try {
       const remote = await sync.fetchBookState(bookId);
-      if (epoch !== this.openEpoch || this.activeReadingBookId !== bookId) return;
+      if (epoch !== this.openEpoch || this.activeReadingBookId !== bookId) {
+        console.warn(
+          '[continue] remote progress stale epoch',
+          epoch,
+          'current',
+          this.openEpoch,
+          'activeBook',
+          this.activeReadingBookId,
+          'bookId',
+          bookId,
+        );
+        return;
+      }
+      console.warn(
+        '[continue] remote progress fetched book',
+        bookId,
+        'remote',
+        remote.progress?.cfiLocation?.slice(0, 60) ?? '(null)',
+        remote.progress?.percentage ?? '(null)',
+        'updatedAt',
+        remote.progress?.updatedAt ?? '(null)',
+        'localUpdatedAt',
+        localUpdatedAt,
+        'epoch',
+        epoch,
+      );
       if (
         remote.progress &&
         (!localUpdatedAt || Date.parse(remote.progress.updatedAt) > Date.parse(localUpdatedAt))
       ) {
+        console.warn(
+          '[continue] remote progress applied book',
+          bookId,
+          'cfi',
+          remote.progress.cfiLocation.slice(0, 60),
+          'pct',
+          remote.progress.percentage,
+          'epoch',
+          epoch,
+        );
         this.applyRemoteProgress(remote.progress);
+      } else if (remote.progress) {
+        console.warn('[continue] remote progress ignored (older than local)', bookId, 'epoch', epoch);
       }
       for (const bookmark of remote.bookmarks) {
         this.appliedRemote.set(
@@ -194,6 +256,14 @@ class ReaderDomainState {
   }
 
   private applyRemoteProgress(progress: SupabaseProgressRow): void {
+    console.warn(
+      '[continue] applyRemoteProgress book',
+      progress.bookId,
+      'cfi',
+      progress.cfiLocation.slice(0, 60),
+      'pct',
+      progress.percentage,
+    );
     this.cfiLocation = progress.cfiLocation;
     this.percentage = progress.percentage;
     this.locatorJson = progress.locatorJson ?? null;

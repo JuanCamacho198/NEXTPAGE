@@ -202,6 +202,7 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
     // unmounted bridge would flag every highlight as cfi-unresolved.
     if (!bridgeReady) {
       if (!(window.__cfiBridge && typeof window.__cfiBridge.cfiToRange === 'function')) {
+        console.warn('epub-hl: render DEFERRED (bridge not mounted yet), highlights=' + highlights.length + ' chapter=' + currentChapterIndex);
         pendingRender = [highlights, chapterHref, currentChapterIndex];
         checkBridgeAndFlush();
         return;
@@ -212,20 +213,32 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
     var byColor = Object.create(null);
     var sideTable = [];
     var rangeCount = 0;
+    var skippedNoBridge = 0;
+    var skippedCollapsed = 0;
+    var skippedInvalidColor = 0;
+    var failedUnresolved = 0;
+    var matchedChapter = 0;
     for (var i = 0; i < highlights.length; i++) {
       var hl = highlights[i];
-      if (!hl || hl.pageNumber !== currentChapterIndex) continue;
+      if (!hl || hl.pageNumber !== currentChapterIndex) {
+        if (hl) console.warn('epub-hl: skip page mismatch hl '+hl.pageNumber+' vs current '+currentChapterIndex+' id='+String(hl.id).slice(0,4));
+        continue;
+      }
+      matchedChapter++;
       if (!hl.cfi) continue; // legacy or PDF
       var range = null;
       try {
         if (window.__cfiBridge && typeof window.__cfiBridge.cfiToRange === 'function') {
           range = window.__cfiBridge.cfiToRange(hl.cfi, chapterHref, doc);
+        } else {
+          skippedNoBridge++;
         }
       } catch (e) {
         range = null;
       }
       if (!range) {
-        console.warn('epub-hl: cfi did not resolve for highlight', hl.id);
+        console.warn('epub-hl: cfi did not resolve for highlight', hl.id, 'page=' + hl.pageNumber + ' cfi=' + hl.cfi);
+        failedUnresolved++;
         postFailure(hl.id, 'cfi-unresolved', currentChapterIndex);
         continue;
       }
@@ -233,11 +246,13 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
       // registered, so skip zero-length CFI ranges.
       if (range.collapsed) {
         console.warn('epub-hl: collapsed range skipped for highlight', hl.id);
+        skippedCollapsed++;
         continue;
       }
       var mapped = mapColor(hl.color);
       if (mapped.status === 'invalid') {
         console.warn('epub-hl: invalid color for highlight', hl.id, hl.color);
+        skippedInvalidColor++;
         postFailure(hl.id, 'invalid-color', currentChapterIndex);
         continue;
       }
@@ -276,12 +291,24 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
       console.warn('epub-hl: failed to register highlights', e);
     }
     registered = sideTable;
+    // DIAG: render summary — tells us whether the "highlight doesn't show"
+    // bug is a skipped render, a failed CFI resolution, or a color skip.
+    console.warn('epub-hl: render done chapter=' + currentChapterIndex +
+      ' received=' + highlights.length + ' matchedChapter=' + matchedChapter +
+      ' resolved=' + rangeCount + ' unresolved=' + failedUnresolved +
+      ' collapsed=' + skippedCollapsed + ' invalidColor=' + skippedInvalidColor +
+      ' noBridgeAtResolve=' + skippedNoBridge);
+  }
+
+  function isReady() {
+    return bridgeReady && HAS_CSS_HIGHLIGHTS && !!(window.__cfiBridge && typeof window.__cfiBridge.cfiToRange === 'function');
   }
 
   window.__epubHighlightOverlay = {
     render: render,
     hitTest: hitTest,
-    rangeOverlapsHighlight: rangeOverlapsHighlight
+    rangeOverlapsHighlight: rangeOverlapsHighlight,
+    isReady: isReady
   };
 })();
 `;

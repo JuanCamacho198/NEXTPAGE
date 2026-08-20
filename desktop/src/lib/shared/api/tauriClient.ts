@@ -165,8 +165,8 @@ const normalizePageNumber = (pageNumberValue: unknown, legacyPageValue: unknown)
   }
 
   const resolved = canonical ?? legacy;
-  if (resolved === null || !Number.isInteger(resolved) || resolved <= 0) {
-    throw new Error('Highlight payload page number must be a positive integer');
+  if (resolved === null || !Number.isInteger(resolved) || resolved < 0) {
+    throw new Error('Highlight payload page number must be a non-negative integer');
   }
 
   return resolved;

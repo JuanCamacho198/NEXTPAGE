@@ -69,8 +69,8 @@ describe('ContinueReadingSection (5.3)', () => {
     mockState.continueReadingBooks = [makeBook('b1')];
     render(ContinueReadingSection);
 
-    // BookCard renders a Read button
-    expect(screen.getByText('app.read')).toBeInTheDocument();
+    // BookCard renders a Continue button for continue-reading variant
+    expect(screen.getByText('app.continue')).toBeInTheDocument();
 
     // ShelfActionMenu renders a trigger with aria-haspopup="menu"
     const trigger = document.querySelector('[aria-haspopup="menu"]');

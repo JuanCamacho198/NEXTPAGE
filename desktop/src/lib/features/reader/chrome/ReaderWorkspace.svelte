@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import PdfViewer from '../viewer-pdf/PdfViewer.svelte';
   import EpubNativeViewer from '../viewer-epub/EpubNativeViewer.svelte';
   import SearchPanel from '../panels/SearchPanel.svelte';
@@ -227,11 +228,39 @@
   // slim PersistedHighlight shape (the EPUB viewer needs cfi; the PDF
   // viewer needs rects but ignores cfi). This is best-effort: on
   // failure we keep the in-memory list empty and log.
+  // BUG1 FIX: guard against overwriting optimistic push if listHighlights
+  // races after saveHighlight. Merge any highlight IDs already in
+  // persistedHighlights that aren't yet in DB rows.
+  // FIX CRÍTICO: highlightLoadEpoch es contador PLAIN (no $state) para no crear loop infinito.
+  // En Svelte 5, leer+escribir un $state dentro de su propio $effect lo retrigerea.
+  let highlightLoadEpoch = 0;
   $effect(() => {
     if (activeReadingBook) {
-      listHighlights(activeReadingBook.id)
+      const bookId = activeReadingBook.id;
+      // No reactivo: plain var, no dispara re-track
+      const myEpoch = ++highlightLoadEpoch;
+      listHighlights(bookId)
         .then((rows: HighlightDto[]) => {
-          persistedHighlights = rows.map((r) => ({
+          // Stale guard: epoch cambió (nuevo load) o bookId ya no coincide
+          if (myEpoch !== highlightLoadEpoch) {
+            console.debug('RW: listHighlights loaded stale epoch ignored', bookId.slice(0, 4));
+            return;
+          }
+          // También chequea bookId actual sin crear dependencia reactiva extra
+          if (untrack(() => activeReadingBook?.id) !== bookId) {
+            console.debug('RW: listHighlights stale bookId ignored', bookId.slice(0, 4));
+            return;
+          }
+          console.warn(
+            'RW: listHighlights loaded',
+            rows.length,
+            rows.map((r) => `${r.pageNumber}:${r.id.slice(0, 4)}`).join(','),
+            'bookId',
+            bookId.slice(0, 4),
+          );
+          const rowIds = new Set(rows.map((r) => r.id));
+          const optimistic = untrack(() => persistedHighlights).filter((h) => !rowIds.has(h.id));
+          let merged: PersistedHighlight[] = rows.map((r) => ({
             id: r.id,
             color: r.color,
             pageNumber: r.pageNumber,
@@ -240,6 +269,16 @@
             text: r.text,
             note: r.note ?? null,
           }));
+          if (optimistic.length > 0) {
+            console.warn(
+              'RW: preserving',
+              optimistic.length,
+              'optimistic highlights not yet in DB',
+              optimistic.map((o) => `${o.pageNumber}:${o.id.slice(0, 4)}`).join(','),
+            );
+            merged = [...merged, ...optimistic];
+          }
+          persistedHighlights = merged;
         })
         .catch((err) => {
           console.error('Failed to load highlights:', err);
@@ -247,6 +286,46 @@
     } else {
       persistedHighlights = [];
     }
+  });
+
+  // Bug2 diagnostics: log initialLocation prop passed to EpubNativeViewer (non-spam: only on book/chapter change)
+  let lastRWInitialLocationLog = $state<string | null>(null);
+  let lastRWInitialChapterIdx: number | null = $state(null);
+  let lastRWInitialBookId: string | null = $state(null);
+  $effect(() => {
+    const loc = readerState.cfiLocation;
+    const bookId = activeReadingBook?.id ?? null;
+    if (!loc || !loc.startsWith('epubcfi(')) {
+      // Even empty case: log once per book
+      if (bookId && loc !== untrack(() => lastRWInitialLocationLog)) {
+        lastRWInitialLocationLog = loc;
+        lastRWInitialBookId = bookId;
+        console.warn('RW: initialLocation prop=', '(empty)', 'bookId', bookId.slice(0, 4));
+      }
+      return;
+    }
+    if (loc === untrack(() => lastRWInitialLocationLog)) return;
+    const spineMatch = /epubcfi\(\/6\/(\d+)!/.exec(loc);
+    const chapterIdx = spineMatch ? Number.parseInt(spineMatch[1], 10) - 1 : null;
+    const prevChapter = untrack(() => lastRWInitialChapterIdx);
+    const prevBook = untrack(() => lastRWInitialBookId);
+    // Only log when chapter or book changes to avoid scroll spam (CFI intra-chapter)
+    if (chapterIdx !== null && chapterIdx === prevChapter && bookId === prevBook) {
+      // update still to avoid stale, but don't log
+      lastRWInitialLocationLog = loc;
+      return;
+    }
+    lastRWInitialLocationLog = loc;
+    lastRWInitialChapterIdx = chapterIdx;
+    lastRWInitialBookId = bookId;
+    console.warn(
+      'RW: initialLocation prop=',
+      loc.slice(0, 80),
+      'bookId',
+      bookId?.slice(0, 4) ?? '(none)',
+      'chapterIdx',
+      chapterIdx,
+    );
   });
 
   // Search panel state
@@ -453,8 +532,18 @@
     if (data && activeReadingBook) {
       const highlightId = crypto.randomUUID();
       const bounds = data.bounds;
-      const pageNumber = data.pageNumber ?? 1;
+      const pageNumber = data.pageNumber ?? (isEpub ? 0 : 1);
       const cfi = data.cfi ?? null;
+      console.warn(
+        'RW: push highlight pageNumber=',
+        pageNumber,
+        'cfi',
+        cfi?.slice(0, 60) ?? '(null)',
+        'id',
+        highlightId.slice(0, 4),
+        'text',
+        data.text.slice(0, 30),
+      );
 
       // Persist visually immediately
       persistedHighlights = [

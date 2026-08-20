@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy, untrack } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { convertFileSrc } from '@tauri-apps/api/core';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -336,6 +336,15 @@
   }
 
   onMount(() => {
+    console.warn('epub-hl: VIEWER BUILD v4 epoch-guard active');
+    console.warn(
+      'epub-hl: onMount bookId=',
+      bookId.slice(0, 8),
+      'initialLocation=',
+      (initialLocation ?? '').slice(0, 80),
+      'chapter',
+      currentChapterIndex,
+    );
     initReader();
     window.addEventListener('message', handleIframeMessage);
     return () => {
@@ -368,6 +377,27 @@
   });
 
   let lastRenderedChapter = $state(-1);
+  // Guard against duplicate highlight renders (same chapter + same highlight ids)
+  let lastHighlightRenderKey = $state('');
+  // Track last processed initialLocation to avoid loops for continue bug
+  let lastContinueLocation = $state<string | null>(null);
+
+  // ─── Render epoch guard (ping-pong fix) ────────────────────
+  // Plain vars (not $state) — reading/writing them does NOT retrigger effects.
+  let renderEpoch = 0;
+  let currentRenderIndex: number | null = null;
+
+  // ─── Lifecycle logging for remount detection (Bug 1) ──
+  onDestroy(() => {
+    console.warn(
+      'epub-hl: onDestroy bookId=',
+      bookId.slice(0, 8),
+      'chapter',
+      untrack(() => currentChapterIndex),
+      'lastRendered',
+      untrack(() => lastRenderedChapter),
+    );
+  });
 
   // ─── Render chapter or refresh styles when settings change ──
   $effect(() => {
@@ -389,6 +419,9 @@
     void zoomLevel;
 
     if (lastRenderedChapter !== currentChapterIndex) {
+      // Epoch guard: if we're already rendering this index, don't re-trigger.
+      // Prevents ping-pong when stale markReady flips lastRendered.
+      if (currentRenderIndex === currentChapterIndex && renderEpoch > 0) return;
       renderChapter(currentChapterIndex);
       return;
     }
@@ -401,6 +434,11 @@
   // fresh) and whenever the parent's `persistedHighlights` reference
   // changes (e.g. after a color update or delete). The overlay is
   // idempotent -- it clears existing wraps before re-applying.
+  // BUG1 FIX: `lastRenderedChapter` is read via `untrack()` so the
+  // effect does NOT re-trigger when markReady flips it. The polling
+  // inside attemptRender waits for lastRendered without creating a
+  // reactive loop (the previous version read lastRendered at top
+  // level, causing -1↔5 bounce).
   type EpubHighlightShape = {
     id: string;
     color: string;
@@ -410,23 +448,126 @@
   };
   $effect(() => {
     if (!metadata || isLoading || !iframeEl) return;
-    if (lastRenderedChapter !== currentChapterIndex) return; // wait for chapter to load
-    const win = iframeEl.contentWindow as
-      | (Window & {
-          __epubHighlightOverlay?: {
-            render: (h: EpubHighlightShape[], chapterHref: string, idx: number) => void;
-          };
-        })
-      | null;
-    if (!win || !win.__epubHighlightOverlay) return;
-    const chapterHref = metadata.chapters[currentChapterIndex]?.href ?? '';
-    // Touch persistedHighlights to track it reactively.
+    // Track persistedHighlights reactively (triggers on array reference changes)
     void persistedHighlights;
-    try {
-      win.__epubHighlightOverlay.render(persistedHighlights, chapterHref, currentChapterIndex);
-    } catch (err) {
-      console.warn('epub-hl: render failed', err);
+    // Capture currentChapterIndex reactively, but lastRendered via untrack to avoid bounce
+    const currentIdx = currentChapterIndex;
+    const chapterHref = metadata.chapters[currentIdx]?.href ?? '';
+    const metaHref = metadata.chapters[currentIdx]?.href ?? '';
+    const highlightsSnapshot = persistedHighlights;
+    const lastRenderedSnapshot = untrack(() => lastRenderedChapter);
+
+    console.warn(
+      'epub-hl: effect triggered with',
+      highlightsSnapshot.length,
+      'highlights, chapter',
+      currentIdx,
+      'lastRendered',
+      lastRenderedSnapshot,
+      'highlightsMap',
+      highlightsSnapshot.map((h) => `${h.pageNumber}:${h.id.slice(0, 4)}`).join(','),
+      'chapterHref',
+      chapterHref,
+      'metaHref',
+      metaHref,
+    );
+
+    // Deduplicate: skip if same highlights + chapter already rendered successfully
+    const renderKey = `${currentIdx}|${chapterHref}|${highlightsSnapshot.map((h) => h.id + ':' + h.pageNumber).join(',')}`;
+    if (renderKey === untrack(() => lastHighlightRenderKey)) {
+      console.warn('epub-hl: skip duplicate render', renderKey.slice(0, 120));
+      return;
     }
+
+    const MAX_RETRIES = 25; // ~500ms at 20ms interval
+    const RETRY_INTERVAL = 20;
+    let retries = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    function attemptRender(): void {
+      if (cancelled) return;
+      // Fresh window reference each attempt (avoid stale closure)
+      const win = iframeEl?.contentWindow as
+        | (Window & {
+            __epubHighlightOverlay?: {
+              render: (h: EpubHighlightShape[], chapterHref: string, idx: number) => void;
+              isReady?: () => boolean;
+            };
+            __cfiBridge?: { cfiToRange: (...args: unknown[]) => unknown };
+          })
+        | null;
+
+      // Wait for chapter DOM to be confirmed rendered (untracked to avoid loop)
+      const currentLastRendered = untrack(() => lastRenderedChapter);
+      if (currentLastRendered !== currentIdx) {
+        if (retries++ < MAX_RETRIES) {
+          timer = setTimeout(attemptRender, RETRY_INTERVAL);
+          if (retries === 1) {
+            console.warn(
+              'epub-hl: render deferred (lastRenderedChapter',
+              currentLastRendered,
+              '!== current',
+              currentIdx,
+              ') - retrying',
+            );
+          }
+        } else {
+          console.warn(
+            'epub-hl: render aborted (lastRenderedChapter',
+            currentLastRendered,
+            '!== current',
+            currentIdx,
+            ') after',
+            MAX_RETRIES,
+            'retries',
+          );
+        }
+        return;
+      }
+
+      // Ensure overlay is mounted; if not, poll
+      if (!win || !win.__epubHighlightOverlay) {
+        if (retries++ < MAX_RETRIES) {
+          timer = setTimeout(attemptRender, RETRY_INTERVAL);
+          if (retries === 1) {
+            console.warn('epub-hl: render deferred (overlay not mounted on iframe window) - retrying');
+          }
+        } else {
+          console.warn(
+            'epub-hl: render aborted (overlay not mounted on iframe window) after',
+            MAX_RETRIES,
+            'retries',
+          );
+        }
+        return;
+      }
+
+      // Overlay is mounted - always call render. The overlay's pendingRender
+      // queue will defer if the CFI bridge is not ready yet.
+      console.warn(
+        'epub-hl: render called with',
+        highlightsSnapshot.length,
+        'highlights, chapter',
+        currentIdx,
+        'chapterHref',
+        chapterHref,
+      );
+      try {
+        win.__epubHighlightOverlay.render(highlightsSnapshot, chapterHref, currentIdx);
+        // Mark as successfully rendered to deduplicate
+        lastHighlightRenderKey = renderKey;
+      } catch (err) {
+        console.warn('epub-hl: render failed', err);
+      }
+    }
+
+    attemptRender();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   });
 
   // ─── External TOC navigation ─────────────────────────────
@@ -463,6 +604,47 @@
     }
   });
 
+  // ─── ContinueReading: handle late initialLocation (Bug 2) ───
+  // Observes `initialLocation` AFTER metadata loaded. If it arrives late
+  // (mount with '' then CFI of chapter 5), navigates via goToChapter +
+  // pendingCfiScroll. Uses CFI comparison to avoid loops.
+  $effect(() => {
+    const loc = initialLocation;
+    if (!loc || !loc.startsWith('epubcfi(') || !metadata || isLoading) return;
+    if (loc === untrack(() => lastContinueLocation)) return;
+    const spineMatch = /epubcfi\(\/6\/(\d+)!/.exec(loc);
+    if (!spineMatch) return;
+    const spineIndex = Number.parseInt(spineMatch[1], 10);
+    const chapterIdx = spineIndex - 1;
+    if (chapterIdx < 0 || chapterIdx >= totalChapters) return;
+    const currentIdx = untrack(() => currentChapterIndex);
+    const pending = untrack(() => pendingCfiScroll);
+    console.warn(
+      'continue: initialLocation changed to',
+      loc.slice(0, 80),
+      'chapterIdx',
+      chapterIdx,
+      'current',
+      currentIdx,
+    );
+    lastContinueLocation = loc;
+    if (chapterIdx !== currentIdx) {
+      console.warn('continue: navigating to chapter', chapterIdx, 'from', currentIdx);
+      pendingCfiScroll = loc;
+      goToChapter(chapterIdx);
+    } else {
+      if (pending !== loc) {
+        console.warn('continue: already at chapter, scrolling to', loc.slice(0, 60));
+        pendingCfiScroll = loc;
+        if (untrack(() => lastRenderedChapter) === chapterIdx) {
+          scrollToCfi(loc);
+        }
+      } else {
+        console.warn('continue: already at chapter with same pendingCfi, ignoring');
+      }
+    }
+  });
+
   // ─── Init ────────────────────────────────────────────────
   async function initReader(): Promise<void> {
     isLoading = true;
@@ -484,7 +666,17 @@
       // BEFORE the reader actually was (and at 0% on the first chapter),
       // which is why "Continue Reading" sometimes jumped back or to the
       // start.
-      const initialCfi = initialLocation;
+      // Capture loc at init to avoid racing with late continue update.
+      // If empty and no percentage, leave currentChapterIndex=0 default and
+      // let the `continue` effect drive navigation once CFI arrives (epoch guard prevents ping-pong).
+      const locAtInit = initialLocation;
+      const initialCfi = locAtInit;
+      if (!locAtInit || locAtInit === '') {
+        console.warn(
+          'epub-hl: initReader with empty initialLocation, deferring to continue effect if any, chapter',
+          currentChapterIndex,
+        );
+      }
       if (initialCfi && initialCfi.startsWith('epubcfi(') && meta.chapters.length > 0) {
         const spineMatch = /epubcfi\(\/6\/(\d+)!/.exec(initialCfi);
         if (spineMatch) {
@@ -1145,14 +1337,43 @@
   }
 
   // ─── Render Chapter ──────────────────────────────────────
+  // lastRenderedChapter is ONLY written inside markReady after bridge+overlay
+  // confirmed. Never reset to -1 outside initReader (remount resets via $state).
   async function renderChapter(index: number): Promise<void> {
     if (!metadata || !iframeEl) return;
+    const myEpoch = ++renderEpoch;
+    currentRenderIndex = index;
+    console.warn(
+      'epub-hl: renderChapter called index=',
+      index,
+      'epoch=',
+      myEpoch,
+      'srcdoc CHAPTER_INDEX=',
+      index,
+      'spineHrefs',
+      metadata.chapters.length,
+      'chapterHref',
+      metadata.chapters[index]?.href ?? '',
+    );
 
     try {
       const chapterData = await invoke<EpubChapterContent>('get_epub_chapter', {
         bookId,
         chapterIndex: index,
       });
+
+      // Stale-epoch guard: abort before mutating DOM if a newer render started while awaiting.
+      if (myEpoch !== renderEpoch || currentRenderIndex !== index) {
+        console.warn(
+          'epub-hl: renderChapter stale abort before srcdoc index',
+          index,
+          'epoch',
+          myEpoch,
+          'current',
+          renderEpoch,
+        );
+        return;
+      }
 
       currentChapterIndex = index;
       iframeContentHeight = 0;
@@ -1182,45 +1403,82 @@
         if (zoomContainerEl) {
           zoomContainerEl.scrollTop = 0;
         }
-        // Defensive: re-set the spine in case the inline spine script
-        // didn't run (e.g. if the iframe document was replaced before
-        // the script executed). The bridge's setSpine is idempotent.
-        type EpubHighlightShape = {
-          id: string;
-          color: string;
-          pageNumber: number;
-          cfi?: string | null;
-          text?: string | null;
-        };
-        try {
+        // Wait for bridge + overlay to mount before marking chapter as rendered.
+        // This eliminates the race where lastRenderedChapter === index but
+        // win.__epubHighlightOverlay is still undefined, and also avoids
+        // capturing a stale/empty persistedHighlights snapshot inside onload.
+        // The reactive highlights effect owns the actual render.
+        const maxRetries = 25;
+        const interval = 20;
+        let attempt = 0;
+        function markReady(): void {
+          // Stale-epoch guard: if a newer renderChapter started, this onload is obsolete.
+          if (myEpoch !== renderEpoch || currentRenderIndex !== index) {
+            console.warn(
+              'epub-hl: markReady stale epoch',
+              myEpoch,
+              'current',
+              renderEpoch,
+              'index',
+              index,
+              'currentRenderIndex',
+              currentRenderIndex,
+            );
+            return;
+          }
           const win = iframeEl?.contentWindow as
             | (Window & {
                 __cfiBridge?: { setSpine: (h: string[]) => void };
                 __epubHighlightOverlay?: {
-                  render: (h: EpubHighlightShape[], chapterHref: string, idx: number) => void;
+                  render: (h: unknown[], chapterHref: string, idx: number) => void;
+                  isReady?: () => boolean;
                 };
               })
             | null;
-          if (win?.__cfiBridge && typeof win.__cfiBridge.setSpine === 'function') {
-            win.__cfiBridge.setSpine(spineHrefs);
+          const bridgeReady = !!win?.__cfiBridge && typeof win.__cfiBridge.setSpine === 'function';
+          const overlayReady = !!win?.__epubHighlightOverlay;
+          if (bridgeReady && overlayReady) {
+            try {
+              win!.__cfiBridge!.setSpine(spineHrefs);
+            } catch (e) {
+              console.warn('epub-cfi: failed to re-init iframe on load', e);
+            }
+            // Mark chapter as rendered ONLY after bridge+overlay confirmed.
+            // The reactive highlights effect (which tracks persistedHighlights)
+            // will then perform the actual render with the current value.
+            lastRenderedChapter = index;
+            requestAnimationFrame(emitPreciseLocation);
+            if (pendingCfiScroll) {
+              const cfi = pendingCfiScroll;
+              requestAnimationFrame(() => scrollToCfi(cfi));
+            }
+            return;
           }
-          // Render persisted highlights for the new chapter.
-          if (win?.__epubHighlightOverlay) {
-            win.__epubHighlightOverlay.render(persistedHighlights, chapterHref, index);
+          if (attempt++ < maxRetries) {
+            setTimeout(markReady, interval);
+          } else {
+            console.warn(
+              'epub-hl: onload markReady timed out bridgeReady=',
+              bridgeReady,
+              'overlayReady=',
+              overlayReady,
+            );
+            try {
+              if (bridgeReady) win!.__cfiBridge!.setSpine(spineHrefs);
+            } catch {}
+            // Avoid blocking forever: mark as rendered so highlights effect
+            // can retry overlay-not-ready case itself.
+            lastRenderedChapter = index;
+            requestAnimationFrame(emitPreciseLocation);
+            if (pendingCfiScroll) {
+              const cfi = pendingCfiScroll;
+              requestAnimationFrame(() => scrollToCfi(cfi));
+            }
           }
-        } catch (e) {
-          console.warn('epub-cfi: failed to re-init iframe on load', e);
         }
-        requestAnimationFrame(emitPreciseLocation);
-        // After the new chapter renders, resolve any pending CFI scroll
-        // ("View in book" / search jump that landed on a different chapter).
-        if (pendingCfiScroll) {
-          const cfi = pendingCfiScroll;
-          requestAnimationFrame(() => scrollToCfi(cfi));
-        }
+        markReady();
       };
       iframeEl.srcdoc = srcdoc;
-      lastRenderedChapter = index;
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
       setReaderError(error);

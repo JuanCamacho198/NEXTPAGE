@@ -535,8 +535,8 @@ describe('SyncService — syncBookCatalog reconciles books missing Drive refs (D
   });
 });
 
-describe('SyncService — state sync', () => {
-  it('pushes local state then pulls remote state for each book', async () => {
+describe('SyncService — state sync (PR2 Supabase SoT — Drive hot removed)', () => {
+  it('does not push/pull Drive state when Supabase is SoT (hot)', async () => {
     mockIsSignedIn.mockReturnValue(true);
 
     const localBook = makeLocalBook('book-3', 'State Book', '/tmp/book-3.epub');
@@ -562,17 +562,16 @@ describe('SyncService — state sync', () => {
       bookmarks: [],
     });
 
-    // Suppress book sync noise
     mockGDriveList.mockResolvedValue([]);
 
     await SyncService.syncMetadata();
 
-    expect(mockPushState).toHaveBeenCalled();
-    expect(mockPullState).toHaveBeenCalled();
-    expect(mockUpsertProgress).toHaveBeenCalled();
+    // PR2: Supabase is sole hot SoT — Drive hot push/pull must not run; outbox + Realtime own state.
+    expect(mockPushState).not.toHaveBeenCalled();
+    expect(mockPullState).not.toHaveBeenCalled();
   });
 
-  it('syncs highlights and bookmarks via state.json', async () => {
+  it('does not sync highlights via Drive state.json when Supabase SoT', async () => {
     mockIsSignedIn.mockReturnValue(true);
 
     const localBook = makeLocalBook('book-4', 'Rich Book', '/tmp/book-4.epub');
@@ -626,8 +625,9 @@ describe('SyncService — state sync', () => {
 
     await SyncService.syncMetadata();
 
-    expect(mockPushState).toHaveBeenCalled();
-    expect(mockSaveHighlight).toHaveBeenCalled();
+    // Drive hot path retired — highlights go via Supabase outbox/Realtime, not state.json
+    expect(mockPushState).not.toHaveBeenCalled();
+    expect(mockPullState).not.toHaveBeenCalled();
   });
 });
 

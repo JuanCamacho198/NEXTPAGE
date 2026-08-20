@@ -39,6 +39,7 @@ import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.SupabaseProgressDataSource
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.SyncService
+import com.nextpage.data.remote.sync.DriveColdBackupService
 import com.nextpage.data.remote.sync.GoogleDriveStorageRemoteDataSource
 import com.nextpage.data.remote.sync.GoogleDriveSyncService
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
@@ -285,6 +286,20 @@ class AppContainer(context: Context) {
             driveTokenRefresher = { driveCoordinator.refreshAccessToken() },
             localBooksDir = context.applicationContext.filesDir.resolve("books"),
             progressDataSource = supabaseProgressDataSource
+        )
+    }
+
+    val driveColdBackupService: DriveColdBackupService by lazy {
+        DriveColdBackupService(
+            remoteDataSource = driveRemoteDataSource,
+            bookDao = appDatabase.bookDao(),
+            readingProgressDao = appDatabase.readingProgressDao(),
+            highlightDao = appDatabase.highlightDao(),
+            bookmarkDao = appDatabase.bookmarkDao(),
+            readingSessionDao = appDatabase.readingSessionDao(),
+            bookCatalogDataSource = supabaseBookCatalogDataSource,
+            progressDataSource = supabaseProgressDataSource,
+            sessionManager = sessionManager
         )
     }
 

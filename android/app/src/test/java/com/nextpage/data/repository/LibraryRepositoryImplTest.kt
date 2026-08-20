@@ -514,6 +514,8 @@ class LibraryRepositoryImplTest {
 
         override suspend fun getProgressForBook(bookId: String): com.nextpage.data.local.entity.ReadingProgressEntity? = null
 
+        override suspend fun getAll(): List<com.nextpage.data.local.entity.ReadingProgressEntity> = emptyList()
+
         override suspend fun count(): Int = 0
     }
 

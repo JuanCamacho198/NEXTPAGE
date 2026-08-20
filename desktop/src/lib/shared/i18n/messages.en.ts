@@ -684,6 +684,12 @@ export const messagesEn = {
 
   // Settings Data Tab (PR3b)
   'settings.data.exportLibraryButton': 'Export library',
+  'settings.data.coldBackup': 'Cold Backup (Drive)',
+  'settings.data.coldBackupDescription':
+    'Export or import your library as a cold backup to Drive. Settings-only — saves never touch Drive.',
+  'settings.data.coldExport': 'Export to Drive',
+  'settings.data.coldImport': 'Import from Drive',
+  'settings.data.importing': 'Importing...',
 
   // Stats home grid labels
   'stats.booksStartedLabel': 'Started',

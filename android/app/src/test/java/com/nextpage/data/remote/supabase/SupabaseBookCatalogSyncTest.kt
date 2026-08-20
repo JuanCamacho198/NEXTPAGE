@@ -757,5 +757,18 @@ class SupabaseBookCatalogSyncTest {
 
         override fun observePendingCount(): Flow<Int> =
             MutableStateFlow(items.size)
+
+        override suspend fun getByTypeAndEntityId(type: String, entityId: String): SyncOutboxEntity? =
+            items.firstOrNull { it.entityType == type && it.entityId == entityId }
+
+        override suspend fun updatePayload(id: String, payloadJson: String) {
+            val idx = items.indexOfFirst { it.id == id }
+            if (idx >= 0) items[idx] = items[idx].copy(payloadJson = payloadJson)
+        }
+
+        override suspend fun upsertCoalesced(item: SyncOutboxEntity) {
+            val existing = item.entityId?.let { getByTypeAndEntityId(item.entityType, it) }
+            if (existing != null) updatePayload(existing.id, item.payloadJson) else items.add(item)
+        }
     }
 }

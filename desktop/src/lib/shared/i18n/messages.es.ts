@@ -646,6 +646,12 @@ export const messagesEs: Record<MessageKey, string> = {
 
   // Settings Data Tab (PR3b)
   'settings.data.exportLibraryButton': 'Exportar biblioteca',
+  'settings.data.coldBackup': 'Respaldo frío (Drive)',
+  'settings.data.coldBackupDescription':
+    'Exportá o importá tu biblioteca como respaldo frío a Drive. Solo desde Ajustes — guardar nunca toca Drive.',
+  'settings.data.coldExport': 'Exportar a Drive',
+  'settings.data.coldImport': 'Importar desde Drive',
+  'settings.data.importing': 'Importando…',
 
   // Stats home grid labels
   'stats.booksStartedLabel': 'Iniciados',

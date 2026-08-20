@@ -45,16 +45,43 @@ class ReaderRepositoryImpl(
         // crash the app (seen when opening a freshly downloaded book).
         if (bookDao.getBookById(progress.bookId) == null) return
         readingProgressDao.upsert(progress.toEntity())
-        outboxDao?.insert(
-            SyncOutboxEntity(
-                id = "outbox-${UUID.randomUUID()}",
-                entityType = SyncEntityType.READING_PROGRESS.name,
-                entityId = progress.bookId,
-                operation = SyncOperation.UPDATE.name,
-                payloadJson = "{}",
-                createdAtEpochMillis = System.currentTimeMillis()
-            )
+        val payload = buildProgressPayload(progress)
+        ensureValidJson(payload)
+        val dao = outboxDao ?: return
+        val entity = SyncOutboxEntity(
+            id = "outbox-${UUID.randomUUID()}",
+            entityType = SyncEntityType.READING_PROGRESS.name,
+            entityId = progress.bookId,
+            operation = SyncOperation.UPDATE.name,
+            payloadJson = payload,
+            createdAtEpochMillis = System.currentTimeMillis()
         )
+        // READING_PROGRESS coalesced by bookId — keep latest per (type, bookId)
+        // Mirrors desktop addCoalesced: flood of location events collapses to single row
+        val existing = dao.getByTypeAndEntityId(SyncEntityType.READING_PROGRESS.name, progress.bookId)
+        if (existing != null) {
+            dao.updatePayload(existing.id, payload)
+        } else {
+            dao.insert(entity)
+        }
+    }
+
+    private fun buildProgressPayload(progress: ReadingProgress): String {
+        val obj = org.json.JSONObject()
+        obj.put("id", progress.id)
+        obj.put("bookId", progress.bookId)
+        obj.put("cfiLocation", progress.cfiLocation)
+        obj.put("percentage", progress.percentage.toDouble())
+        if (progress.locatorJson != null) obj.put("locatorJson", progress.locatorJson) else obj.put("locatorJson", org.json.JSONObject.NULL)
+        obj.put("updatedAtEpochMillis", progress.updatedAtEpochMillis)
+        if (progress.currentPage != null) obj.put("currentPage", progress.currentPage) else obj.put("currentPage", org.json.JSONObject.NULL)
+        return obj.toString()
+    }
+
+    private fun ensureValidJson(json: String) {
+        require(json.isNotEmpty()) { "payloadJson must be non-empty valid JSON" }
+        val parsed = org.json.JSONObject(json)
+        @Suppress("UNUSED_VARIABLE") val check = parsed
     }
 
     override suspend fun updateBookReadingState(bookId: String, progressPercent: Float, updatedAt: Long) {
@@ -94,16 +121,35 @@ class ReaderRepositoryImpl(
         // Guard: highlights.book_id has a FK to books.id (see upsertProgress).
         if (bookDao.getBookById(highlight.bookId) == null) return
         highlightDao.upsert(highlight.toEntity())
+        val payload = buildHighlightPayload(highlight)
+        ensureValidJson(payload)
+        // HIGHLIGHT per id — atomic enqueue, never coalesced across ids (desktop parity)
         outboxDao?.insert(
             SyncOutboxEntity(
                 id = "outbox-${UUID.randomUUID()}",
                 entityType = SyncEntityType.HIGHLIGHT.name,
-                entityId = highlight.bookId,
+                entityId = highlight.id,
                 operation = SyncOperation.UPDATE.name,
-                payloadJson = "{}",
+                payloadJson = payload,
                 createdAtEpochMillis = System.currentTimeMillis()
             )
         )
+    }
+
+    private fun buildHighlightPayload(highlight: Highlight): String {
+        val obj = org.json.JSONObject()
+        obj.put("id", highlight.id)
+        obj.put("bookId", highlight.bookId)
+        obj.put("cfiRange", highlight.cfiRange)
+        obj.put("textContent", highlight.textContent)
+        if (highlight.note != null) obj.put("note", highlight.note) else obj.put("note", org.json.JSONObject.NULL)
+        obj.put("color", highlight.color)
+        obj.put("updatedAtEpochMillis", highlight.updatedAtEpochMillis)
+        if (highlight.deletedAtEpochMillis != null) obj.put("deletedAtEpochMillis", highlight.deletedAtEpochMillis) else obj.put("deletedAtEpochMillis", org.json.JSONObject.NULL)
+        if (highlight.locatorJson != null) obj.put("locatorJson", highlight.locatorJson) else obj.put("locatorJson", org.json.JSONObject.NULL)
+        if (highlight.type != null) obj.put("type", highlight.type) else obj.put("type", org.json.JSONObject.NULL)
+        if (highlight.tag != null) obj.put("tag", highlight.tag) else obj.put("tag", org.json.JSONObject.NULL)
+        return obj.toString()
     }
 
     override suspend fun getHighlightsForBook(bookId: String): List<Highlight> =
@@ -123,16 +169,31 @@ class ReaderRepositoryImpl(
         // Guard: bookmarks.book_id has a FK to books.id (see upsertProgress).
         if (bookDao.getBookById(bookmark.bookId) == null) return
         bookmarkDao.upsert(bookmark.toEntity())
+        val payload = buildBookmarkPayload(bookmark)
+        ensureValidJson(payload)
+        // BOOKMARK per id — atomic enqueue, never coalesced across ids
         outboxDao?.insert(
             SyncOutboxEntity(
                 id = "outbox-${UUID.randomUUID()}",
                 entityType = SyncEntityType.BOOKMARK.name,
-                entityId = bookmark.bookId,
+                entityId = bookmark.id,
                 operation = SyncOperation.UPDATE.name,
-                payloadJson = "{}",
+                payloadJson = payload,
                 createdAtEpochMillis = System.currentTimeMillis()
             )
         )
+    }
+
+    private fun buildBookmarkPayload(bookmark: Bookmark): String {
+        val obj = org.json.JSONObject()
+        obj.put("id", bookmark.id)
+        obj.put("bookId", bookmark.bookId)
+        obj.put("cfiLocation", bookmark.cfiLocation)
+        obj.put("titleOrSnippet", bookmark.titleOrSnippet)
+        obj.put("updatedAtEpochMillis", bookmark.updatedAtEpochMillis)
+        if (bookmark.deletedAtEpochMillis != null) obj.put("deletedAtEpochMillis", bookmark.deletedAtEpochMillis) else obj.put("deletedAtEpochMillis", org.json.JSONObject.NULL)
+        if (bookmark.locatorJson != null) obj.put("locatorJson", bookmark.locatorJson) else obj.put("locatorJson", org.json.JSONObject.NULL)
+        return obj.toString()
     }
 
     override suspend fun getBookmarksForBook(bookId: String): List<Bookmark> =

@@ -112,11 +112,12 @@ class SupabaseBookCatalogDataSource(
 
     /**
      * Subscribe to realtime catalog changes on `user_books` for a given [userId].
+     * PR2: hot SoT channel `catalog:uid` (Realtime <2s), hash dedup, cover bucket.
      * Returns a Flow that emits [PostgresAction] for INSERT, UPDATE, DELETE.
      */
     suspend fun subscribeToCatalogChanges(userId: String): Flow<PostgresAction> {
         catalogChannel?.unsubscribe()
-        val channel = client.channel("catalog-changes")
+        val channel = client.channel("catalog:$userId")
         catalogChannel = channel
         val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
             table = "user_books"

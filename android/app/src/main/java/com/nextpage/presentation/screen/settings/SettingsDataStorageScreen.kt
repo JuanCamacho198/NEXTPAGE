@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.rememberCoroutineScope
 import com.nextpage.BuildConfig
 import com.nextpage.R
 import com.nextpage.data.remote.drive.DriveAuthResult
@@ -37,10 +38,12 @@ import com.nextpage.data.remote.drive.DriveTokenPair
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
 import com.nextpage.data.remote.drive.InMemoryDriveTokenStore
 import com.nextpage.data.remote.drive.driveOAuthRedirectUri
+import com.nextpage.data.remote.sync.DriveColdBackupService
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.molecules.NextPagePreferenceItem
 import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
 import com.nextpage.ui.icons.NextPageIcons
+import kotlinx.coroutines.launch
 
 /**
  * Data & Storage settings: Google Drive authorization via the PKCE browser flow.
@@ -55,11 +58,17 @@ import com.nextpage.ui.icons.NextPageIcons
 fun SettingsDataStorageScreen(
     driveAuthHelper: GoogleDriveAuthHelper,
     onNavigateToStatistics: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    driveColdBackupService: DriveColdBackupService? = null,
+    userId: String? = null,
 ) {
     val context = LocalContext.current
     var isAuthorizing by remember { mutableStateOf(false) }
     var driveAuthorized by remember { mutableStateOf(driveAuthHelper.isAuthorized()) }
+    var isExporting by remember { mutableStateOf(false) }
+    var isImporting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val coldBackupAvailable = driveColdBackupService != null && userId != null
 
     val oauthErrorText = stringResource(R.string.settings_drive_error_oauth)
 
@@ -182,6 +191,72 @@ fun SettingsDataStorageScreen(
                         stringResource(R.string.settings_drive_authorize)
                     })
                 }
+            }
+        }
+
+        // ── Cold Backup Section (PR3) — Settings-only, no hot path ─────────
+        if (driveAuthorized) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.settings_drive_cold_backup_section),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.settings_drive_cold_backup_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            // Export button — writes JSON+bin via GDrive parents-fix, chunk 100 not needed for export
+            Button(
+                onClick = {
+                    if (!coldBackupAvailable || isExporting || isImporting) return@Button
+                    scope.launch {
+                        isExporting = true
+                        try {
+                            val result = driveColdBackupService!!.exportColdBackup(userId!!)
+                            val msg = if (result.isSuccess) context.getString(R.string.settings_drive_cold_export_success)
+                            else context.getString(R.string.settings_drive_cold_export_error)
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, e.message ?: context.getString(R.string.settings_drive_cold_export_error), Toast.LENGTH_SHORT).show()
+                        } finally { isExporting = false }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                enabled = coldBackupAvailable && !isExporting && !isImporting
+            ) {
+                if (isExporting) CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
+                Text(text = stringResource(if (isExporting) R.string.settings_drive_cold_exporting else R.string.settings_drive_cold_export))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = {
+                    if (!coldBackupAvailable || isExporting || isImporting) return@OutlinedButton
+                    scope.launch {
+                        isImporting = true
+                        try {
+                            val result = driveColdBackupService!!.importColdBackup(userId!!)
+                            val msg = if (result.isSuccess) context.getString(R.string.settings_drive_cold_import_success)
+                            else context.getString(R.string.settings_drive_cold_import_error)
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, e.message ?: context.getString(R.string.settings_drive_cold_import_error), Toast.LENGTH_SHORT).show()
+                        } finally { isImporting = false }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                enabled = coldBackupAvailable && !isExporting && !isImporting
+            ) {
+                if (isImporting) CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
+                Text(text = stringResource(if (isImporting) R.string.settings_drive_cold_importing else R.string.settings_drive_cold_import))
             }
         }
     }

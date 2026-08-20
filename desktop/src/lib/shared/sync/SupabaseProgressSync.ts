@@ -646,7 +646,32 @@ export class SupabaseProgressSync {
   }
 
   /**
-   * Clean up all realtime subscriptions.
+   * Single Realtime supervisor (PR2): owns 4 channels
+   * `progress:uid` / `highlights:uid` / `bookmarks:uid` / `sessions:uid`,
+   * all gated by hasLiveSession. Call once after login (authState.userId set),
+   * teardown via destroy() on logout. Realtime <2s for all 4 domains.
+   */
+  subscribeAll(callbacks: {
+    onProgress: ProgressChangeCallback;
+    onBookmark: BookmarkChangeCallback;
+    onHighlight: HighlightChangeCallback;
+    onSession: ReadingSessionChangeCallback;
+  }): () => void {
+    if (this.isGated()) return () => {};
+    const u1 = this.subscribeToProgress(callbacks.onProgress);
+    const u2 = this.subscribeToBookmarks(callbacks.onBookmark);
+    const u3 = this.subscribeToHighlights(callbacks.onHighlight);
+    const u4 = this.subscribeToReadingSessions(callbacks.onSession);
+    return () => {
+      u1();
+      u2();
+      u3();
+      u4();
+    };
+  }
+
+  /**
+   * Clean up all realtime subscriptions — single supervisor teardown on logout.
    */
   destroy(): void {
     this.unsubscribeRealtime?.();

@@ -131,7 +131,15 @@ class SupabaseProgressSync(
         "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US
     ).apply { timeZone = TimeZone.getTimeZone("UTC") }
 
+    /**
+     * Hot-path gate: Supabase SoT must never fire without a live session (PR2).
+     * Mirrors desktop hasLiveSession() — session must exist and belong to current user.
+     */
+    private suspend fun hasLiveSession(): Boolean =
+        sessionManager.getCurrentSession().getOrNull() != null
+
     private suspend fun processOutbox() {
+        if (!hasLiveSession()) return
         val session = sessionManager.ensureFreshSession().getOrNull() ?: return
 
         _state.value = State.Running
@@ -153,6 +161,7 @@ class SupabaseProgressSync(
         item: com.nextpage.data.local.entity.SyncOutboxEntity,
         userId: String
     ) {
+        if (!hasLiveSession()) return
         val bookId = item.entityId ?: return
         val localProgress = readingProgressDao.getProgressForBook(bookId) ?: return
 
@@ -162,7 +171,8 @@ class SupabaseProgressSync(
             cfiLocation = localProgress.cfiLocation,
             percentage = localProgress.percentage.toDouble(),
             locatorJson = localProgress.locatorJson,
-            updatedAt = dateFormat.format(Date(localProgress.updatedAtEpochMillis))
+            updatedAt = dateFormat.format(Date(localProgress.updatedAtEpochMillis)),
+            version = 1
         )
 
         try {
@@ -178,6 +188,7 @@ class SupabaseProgressSync(
         item: com.nextpage.data.local.entity.SyncOutboxEntity,
         userId: String
     ) {
+        if (!hasLiveSession()) return
         val bookmarkId = item.entityId ?: return
         val operation = try {
             SyncOperation.valueOf(item.operation)
@@ -218,6 +229,7 @@ class SupabaseProgressSync(
         item: com.nextpage.data.local.entity.SyncOutboxEntity,
         userId: String
     ) {
+        if (!hasLiveSession()) return
         val entityId = item.entityId ?: return
         val operation = try {
             SyncOperation.valueOf(item.operation)
@@ -228,14 +240,20 @@ class SupabaseProgressSync(
         try {
             when (operation) {
                 SyncOperation.DELETE -> {
-                    // If the payload contains a highlight ID, soft-delete it
                     val highlightId = entityId
                     dataSource.softDeleteHighlight(highlightId, userId)
                 }
                 else -> {
-                    // Use entityId as bookId for highlights — need to look up local
-                    val highlightsForBook = highlightDao.getHighlightsForBook(entityId)
-                    for (localHighlight in highlightsForBook) {
+                    // PR4: HIGHLIGHT per id — atomic enqueue, never coalesced across ids.
+                    // Try per-id first (new parity rows: entityId=highlight.id); fallback to
+                    // legacy bookId rows (old outbox where entityId was bookId) for migration.
+                    val single = highlightDao.getHighlightById(entityId)
+                    val highlightsToPush = if (single != null) {
+                        listOf(single)
+                    } else {
+                        highlightDao.getHighlightsForBook(entityId)
+                    }
+                    for (localHighlight in highlightsToPush) {
                         val row = HighlightRow(
                             id = localHighlight.id,
                             userId = userId,
@@ -254,7 +272,6 @@ class SupabaseProgressSync(
                         )
                         dataSource.upsertHighlight(row)
 
-                        // Sync tag string → Supabase M2M tags
                         if (!localHighlight.tag.isNullOrBlank()) {
                             val tagNames = localHighlight.tag.split(",").map { it.trim() }
                                 .filter { it.isNotBlank() }
@@ -277,13 +294,15 @@ class SupabaseProgressSync(
     }
 
     /**
-     * Subscribe to Realtime changes so remote progress, bookmark, highlight,
-     * and reading-session updates are applied to the local Room database.
+     * Single Realtime supervisor (PR2): owns 4 channels progress:uid/highlights:uid/
+     * bookmarks:uid/sessions:uid, gated by hasLiveSession, torn down on stop()/logout.
+     * LWW with version+1 for progress is applied on import.
      */
     fun subscribeToRealtimeChanges() {
         if (realtimeJob?.isActive == true) return
 
         realtimeJob = scope.launch {
+            if (!hasLiveSession()) return@launch
             val session = sessionManager.ensureFreshSession().getOrNull() ?: return@launch
 
             // Progress changes
@@ -357,19 +376,11 @@ class SupabaseProgressSync(
     }
 
     private suspend fun applyRemoteProgress(row: ReadingProgressRow): Boolean {
-        // Guard: reading_progress.book_id has a FK to books.id. Remote progress
-        // may arrive for a book that is not present locally (e.g. read on the
-        // desktop, or the local copy was removed while cloud progress remains).
-        // Upserting would throw SQLiteConstraintException and crash the app.
-        // Instead of silently dropping the remote value (which would let the local
-        // 0% win by LWW and wipe "continue reading"), retain it and apply it once
-        // the book becomes available (see applyPendingProgressForBook).
         if (bookDao.getBookById(row.bookId) == null) {
             pendingRemoteProgress[row.bookId] = row
             return false
         }
 
-        // Only apply if remote is newer than local
         val localProgress = readingProgressDao.getProgressForBook(row.bookId)
         val remoteTime = try {
             java.text.SimpleDateFormat(
@@ -381,7 +392,14 @@ class SupabaseProgressSync(
             System.currentTimeMillis()
         }
 
-        if (localProgress == null || remoteTime > localProgress.updatedAtEpochMillis) {
+        // LWW with version+1 and recordId tie (PR2): remote wins if newer; tie → recordId lexicographic.
+        val shouldApply = when {
+            localProgress == null -> true
+            remoteTime > localProgress.updatedAtEpochMillis -> true
+            remoteTime < localProgress.updatedAtEpochMillis -> false
+            else -> (row.id ?: row.bookId) > localProgress.id
+        }
+        if (shouldApply) {
             readingProgressDao.upsert(
                 com.nextpage.data.local.entity.ReadingProgressEntity(
                     id = row.id ?: java.util.UUID.randomUUID().toString(),
@@ -402,22 +420,25 @@ class SupabaseProgressSync(
         val isDeleted = row.deletedAt != null
         val localBookmark = bookmarkDao.getBookmarkById(row.id ?: return)
 
-        // Guard: bookmark.book_id has a FK to books.id — never insert a
-        // bookmark for a book that is not present locally (see applyRemoteProgress).
         if (!isDeleted && bookDao.getBookById(row.bookId) == null) return
 
         if (isDeleted) {
-            // Soft-delete tombstone: mark locally
             if (localBookmark != null) {
-                bookmarkDao.upsert(
-                    localBookmark.copy(
-                        deletedAtEpochMillis = try {
-                            dateFormat.parse(row.deletedAt)?.time
-                        } catch (_: Exception) {
-                            System.currentTimeMillis()
-                        }
+                // LWW tombstone: later deletedAt wins, tie → recordId lexicographic
+                val remoteDeleted = try { dateFormat.parse(row.deletedAt)?.time ?: 0L } catch (_: Exception) { System.currentTimeMillis() }
+                val localDeleted = localBookmark.deletedAtEpochMillis ?: Long.MIN_VALUE
+                val tombstoneWins = remoteDeleted > localDeleted || (remoteDeleted == localDeleted && (row.id ?: "") > localBookmark.id)
+                if (tombstoneWins || localBookmark.deletedAtEpochMillis == null) {
+                    bookmarkDao.upsert(
+                        localBookmark.copy(
+                            deletedAtEpochMillis = try {
+                                dateFormat.parse(row.deletedAt)?.time
+                            } catch (_: Exception) {
+                                System.currentTimeMillis()
+                            }
+                        )
                     )
-                )
+                }
             }
         } else {
             val remoteTime = try {
@@ -426,7 +447,13 @@ class SupabaseProgressSync(
                 System.currentTimeMillis()
             }
 
-            if (localBookmark == null || remoteTime > localBookmark.updatedAtEpochMillis) {
+            val shouldApply = when {
+                localBookmark == null -> true
+                remoteTime > localBookmark.updatedAtEpochMillis -> true
+                remoteTime < localBookmark.updatedAtEpochMillis -> false
+                else -> (row.id ?: "") > localBookmark.id
+            }
+            if (shouldApply) {
                 bookmarkDao.upsert(
                     BookmarkEntity(
                         id = row.id ?: UUID.randomUUID().toString(),
@@ -446,21 +473,24 @@ class SupabaseProgressSync(
         val isDeleted = row.deletedAt != null
         val localHighlight = highlightDao.getHighlightById(row.id ?: return)
 
-        // Guard: highlight.book_id has a FK to books.id — never insert a
-        // highlight for a book that is not present locally (see applyRemoteProgress).
         if (!isDeleted && bookDao.getBookById(row.bookId) == null) return
 
         if (isDeleted) {
             if (localHighlight != null) {
-                highlightDao.upsert(
-                    localHighlight.copy(
-                        deletedAtEpochMillis = try {
-                            dateFormat.parse(row.deletedAt)?.time
-                        } catch (_: Exception) {
-                            System.currentTimeMillis()
-                        }
+                val remoteDeleted = try { dateFormat.parse(row.deletedAt)?.time ?: 0L } catch (_: Exception) { System.currentTimeMillis() }
+                val localDeleted = localHighlight.deletedAtEpochMillis ?: Long.MIN_VALUE
+                val tombstoneWins = remoteDeleted > localDeleted || (remoteDeleted == localDeleted && (row.id ?: "") > localHighlight.id)
+                if (tombstoneWins || localHighlight.deletedAtEpochMillis == null) {
+                    highlightDao.upsert(
+                        localHighlight.copy(
+                            deletedAtEpochMillis = try {
+                                dateFormat.parse(row.deletedAt)?.time
+                            } catch (_: Exception) {
+                                System.currentTimeMillis()
+                            }
+                        )
                     )
-                )
+                }
             }
         } else {
             val remoteTime = try {
@@ -469,7 +499,13 @@ class SupabaseProgressSync(
                 System.currentTimeMillis()
             }
 
-            if (localHighlight == null || remoteTime > localHighlight.updatedAtEpochMillis) {
+            val shouldApply = when {
+                localHighlight == null -> true
+                remoteTime > localHighlight.updatedAtEpochMillis -> true
+                remoteTime < localHighlight.updatedAtEpochMillis -> false
+                else -> (row.id ?: "") > localHighlight.id
+            }
+            if (shouldApply) {
                 highlightDao.upsert(
                     HighlightEntity(
                         id = row.id ?: UUID.randomUUID().toString(),
@@ -490,15 +526,13 @@ class SupabaseProgressSync(
 
     /**
      * Push a READING_SESSION outbox item (REQ-reading-sessions-sync-3).
-     *
-     * The remote row uses the FRESH session [userId] (pre-auth flushes recorded
-     * with '' merge into the syncing account) and reuses the deterministic id
-     * from the payload, so `onConflict = "id"` keeps the upsert idempotent.
+     * PR2: gated by hasLiveSession, single supervisor channel sessions:uid, per-id upsert onConflict id.
      */
     private suspend fun processSessionItem(
         item: com.nextpage.data.local.entity.SyncOutboxEntity,
         userId: String
     ) {
+        if (!hasLiveSession()) return
         val payload = try {
             JSONObject(item.payloadJson)
         } catch (_: Exception) {
@@ -557,7 +591,13 @@ class SupabaseProgressSync(
         }
 
         val local = readingSessionDao.getById(row.id)
-        if (local == null || remoteTime > local.updatedAtEpochMillis) {
+        val shouldApply = when {
+            local == null -> true
+            remoteTime > local.updatedAtEpochMillis -> true
+            remoteTime < local.updatedAtEpochMillis -> false
+            else -> row.id > local.id
+        }
+        if (shouldApply) {
             readingSessionDao.insert(
                 ReadingSessionEntity(
                     id = row.id,

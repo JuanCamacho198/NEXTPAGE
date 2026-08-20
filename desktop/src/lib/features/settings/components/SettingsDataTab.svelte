@@ -11,9 +11,13 @@
     selectedExportBook: string;
     selectedExportFormat: 'json' | 'markdown';
     isExportingHighlights: boolean;
+    isExportingColdBackup?: boolean;
+    isImportingColdBackup?: boolean;
     onClearCache: () => void;
     onExportLibrary: () => void;
     onExportHighlights: () => void;
+    onExportColdBackup?: () => void;
+    onImportColdBackup?: () => void;
     onSelectedExportBookChange: (value: string) => void;
     onSelectedExportFormatChange: (value: 'json' | 'markdown') => void;
   };
@@ -26,9 +30,13 @@
     selectedExportBook,
     selectedExportFormat,
     isExportingHighlights,
+    isExportingColdBackup = false,
+    isImportingColdBackup = false,
     onClearCache,
     onExportLibrary,
     onExportHighlights,
+    onExportColdBackup = () => {},
+    onImportColdBackup = () => {},
     onSelectedExportBookChange,
     onSelectedExportFormatChange,
   }: Props = $props();
@@ -115,6 +123,30 @@
       </button>
     </div>
   </section>
+</Panel>
+
+<Panel
+  title={t('settings.data.coldBackup')}
+  subtitle={t('settings.data.coldBackupDescription')}
+>
+  <div class="flex gap-2">
+    <button
+      type="button"
+      class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-(--color-primary) bg-(--color-primary) text-(--color-background) cursor-pointer transition-all duration-200 text-xs font-medium hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+      onclick={onExportColdBackup}
+      disabled={isExportingColdBackup || isImportingColdBackup}
+    >
+      <span>{isExportingColdBackup ? t('settings.data.exporting') : t('settings.data.coldExport')}</span>
+    </button>
+    <button
+      type="button"
+      class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-(--color-border) bg-(--color-background) cursor-pointer transition-all duration-200 text-(--color-primary) text-xs hover:bg-(--color-surface) disabled:opacity-60 disabled:cursor-not-allowed"
+      onclick={onImportColdBackup}
+      disabled={isExportingColdBackup || isImportingColdBackup}
+    >
+      <span>{isImportingColdBackup ? t('settings.data.importing') : t('settings.data.coldImport')}</span>
+    </button>
+  </div>
 </Panel>
 
 <Panel title={t('settings.data.clearCache')} subtitle={t('settings.data.clearCacheDescription')}>

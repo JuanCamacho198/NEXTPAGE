@@ -1,14 +1,9 @@
 /**
- * SyncService — syncs local SQLite state with Google Drive.
- * Replaces Supabase table sync with Drive JSON state files (GoogleDriveStateSync)
- * and Drive file sync (GDriveProvider). LWW conflict resolution via ConflictResolver.
- *
- * Dual-write mode: after Drive sync, also upserts progress to Supabase.
- * Cutover: when `readingProgressSync` is 'supabase', Drive writes are skipped.
- *
- * Extended in PR 2 (cross-device-book-sync):
- * - syncBookCatalog(): reconciles local books with Supabase user_books catalog
- * - setupOutboxProcessor(): wires outbox handler for BOOK entity dispatch
+ * SyncService — Supabase SoT hot sync + Drive cold backup (PR2).
+ * PR2 cutover: Supabase is sole hot SoT via PostgREST onConflict gated by hasLiveSession
+ * + single Realtime supervisor (4 channels progress/highlights/bookmarks/sessions).
+ * Drive is cold Export/Import only (DriveColdBackupService, PR3) — no hot push/pull.
+ * LWW: remote.updatedAt > local → remote, tie → recordId lexicographic, version+1 for progress.
  */
 import { authState } from '$lib/stores/authState.svelte';
 import { hasLiveSession, recheckLiveSession } from '$lib/services/supabase';
@@ -27,7 +22,7 @@ import type {
 import type { TagDto } from '$lib/shared/types';
 import * as tauri from '$lib/shared/api/tauriClient';
 
-/** Sync mode for reading progress: 'drive' (legacy), 'dual' (both), 'supabase' (cutover). */
+/** Sync mode for reading progress: 'supabase' only (PR2 cutover — Drive hot is cold-only). */
 type ReadingProgressSyncMode = 'drive' | 'dual' | 'supabase';
 type BookmarkSyncMode = 'drive' | 'dual' | 'supabase';
 type HighlightSyncMode = 'drive' | 'dual' | 'supabase';
@@ -35,14 +30,14 @@ type HighlightSyncMode = 'drive' | 'dual' | 'supabase';
 export class SyncService {
   private static gdrive = new GDriveProvider();
 
-  /** Which mode to use for reading progress sync. Defaults to 'dual' during transition. */
-  private static readingProgressSync: ReadingProgressSyncMode = 'dual';
+  /** Hot SoT is Supabase only (PR2). Drive hot push/pull removed; cold backup is separate. */
+  private static readingProgressSync: ReadingProgressSyncMode = 'supabase';
 
-  /** Which mode to use for bookmark sync. Independent of readingProgressSync. */
-  private static bookmarkSync: BookmarkSyncMode = 'dual';
+  /** Bookmark hot sync — Supabase only. */
+  private static bookmarkSync: BookmarkSyncMode = 'supabase';
 
-  /** Which mode to use for highlight sync (includes tags). Independent of readingProgressSync. */
-  private static highlightSync: HighlightSyncMode = 'dual';
+  /** Highlight hot sync — Supabase only. */
+  private static highlightSync: HighlightSyncMode = 'supabase';
 
   /** Flag to track whether Drive → Supabase import was done this session. */
   private static supabaseImportDone = false;
@@ -638,188 +633,15 @@ export class SyncService {
   }
 
   /**
-   * Sync reading state (progress, highlights, bookmarks) via state.json in Drive.
-   * Uses GoogleDriveStateSync for push/pull with LWW conflict resolution.
+   * Sync reading state — PR2: Supabase SoT hot only.
+   * Drive hot push/pull removed; cold backup is DriveColdBackupService (PR3).
+   * Hot state is handled via outbox → Supabase (setupOutboxProcessor) + Realtime supervisor.
+   * This method now only runs the one-time Drive→Supabase import for migrated users.
    */
   private static async syncState(): Promise<void> {
-    // D1: async sync path re-verifies the live session once (DA-1.2).
     if (!(await recheckLiveSession())) return;
-    // Import existing progress to Supabase on first sync (if in dual/supabase mode)
     await this.ensureSupabaseImport();
-
-    const localBooks = await tauri.listBooks();
-
-    for (const book of localBooks) {
-      try {
-        // ---- Gather local state ----
-        const localProgressDto = await tauri.getProgress(book.id);
-        const localHighlightsDto = await tauri.listHighlights(book.id);
-        const localBookmarksDto = await tauri.listBookmarks(book.id);
-
-        // Map to state JSON types
-        const localProgress: ProgressStateJson | null = localProgressDto
-          ? {
-              id: localProgressDto.id,
-              book_id: localProgressDto.bookId,
-              cfi_location: localProgressDto.cfiLocation,
-              percentage: localProgressDto.percentage,
-              updated_at: new Date(localProgressDto.updatedAt).getTime(),
-            }
-          : null;
-
-        const localHighlights: HighlightStateJson[] = localHighlightsDto.map((h) => ({
-          id: h.id,
-          book_id: h.bookId,
-          cfi_range: '', // HighlightDto doesn't have CFI — filled from state sync
-          text_content: h.text,
-          note: h.note ?? null,
-          color: h.color,
-          updated_at: new Date(h.createdAt).getTime(),
-          deleted_at: null,
-          recordId: h.id,
-          updatedAtEpochMillis: new Date(h.createdAt).getTime(),
-          deletedAtEpochMillis: null,
-        }));
-
-        const localBookmarks: BookmarkStateJson[] = localBookmarksDto.map((b) => ({
-          id: b.id,
-          book_id: b.bookId,
-          cfi_location: '', // BookmarkDto doesn't have CFI
-          title_or_snippet: b.title ?? '',
-          updated_at: new Date(b.createdAt).getTime(),
-          deleted_at: null,
-          recordId: b.id,
-          updatedAtEpochMillis: new Date(b.createdAt).getTime(),
-          deletedAtEpochMillis: null,
-        }));
-
-        // ---- Push local state to Drive (skip if cutover) ----
-        if (this.readingProgressSync !== 'supabase') {
-          await GoogleDriveStateSync.pushState(
-            book.id,
-            localProgress,
-            localHighlights,
-            localBookmarks,
-          );
-        }
-
-        // ---- Pull remote state and merge ----
-        const remote = await GoogleDriveStateSync.pullState(
-          book.id,
-          localProgress,
-          localHighlights,
-          localBookmarks,
-        );
-
-        // ---- Apply resolved state to local SQLite ----
-        if (remote.progress) {
-          await tauri.upsertProgress({
-            id: remote.progress.id,
-            bookId: remote.progress.book_id,
-            cfiLocation: remote.progress.cfi_location,
-            percentage: remote.progress.percentage,
-            updatedAt: new Date(remote.progress.updated_at).toISOString(),
-          });
-        }
-
-        // ---- Dual-write: also upsert resolved progress to Supabase ----
-        if (this.readingProgressSync !== 'drive' && authState.userId && remote.progress) {
-          try {
-            const sync = new SupabaseProgressSync(authState.userId);
-            await sync.upsertProgress({
-              userId: authState.userId,
-              bookId: remote.progress.book_id,
-              cfiLocation: remote.progress.cfi_location,
-              percentage: remote.progress.percentage,
-              updatedAt: new Date(remote.progress.updated_at).toISOString(),
-            });
-          } catch (e) {
-            reportAuthError(e);
-            console.error(`Failed to sync progress to Supabase for book ${book.id}:`, e);
-          }
-        }
-        // Also upsert local-only progress that wasn't in Drive
-        else if (
-          this.readingProgressSync !== 'drive' &&
-          authState.userId &&
-          localProgress &&
-          !remote.progress
-        ) {
-          try {
-            const sync = new SupabaseProgressSync(authState.userId);
-            await sync.upsertProgress({
-              userId: authState.userId,
-              bookId: localProgress.book_id,
-              cfiLocation: localProgress.cfi_location,
-              percentage: localProgress.percentage,
-              updatedAt: new Date(localProgress.updated_at).toISOString(),
-            });
-          } catch (e) {
-            reportAuthError(e);
-            console.error(`Failed to sync local progress to Supabase for book ${book.id}:`, e);
-          }
-        }
-
-        // Apply highlights: only those that differ from local
-        for (const h of remote.highlights) {
-          const localMatch = localHighlights.find((lh) => lh.id === h.id);
-          if (!localMatch || h.updatedAtEpochMillis > localMatch.updatedAtEpochMillis) {
-            // Check if soft-deleted
-            if (h.deletedAtEpochMillis !== null) {
-              try {
-                await tauri.deleteHighlight(h.id);
-              } catch {
-                // Highlight may not exist locally — ignore
-              }
-            } else {
-              await tauri.saveHighlight({
-                id: h.id,
-                bookId: h.book_id,
-                text: h.text_content,
-                color: h.color,
-                // Page anchoring is format-aware: PDF highlights carry a real
-                // positive page; EPUB highlights are anchored by CFI (no page),
-                // so use 1 as the minimum-valid placeholder (matching the local
-                // EPUB reader fallback `pageNumber ?? 1`). Passing 0 made
-                // normalizePageNumber reject the write (must be > 0).
-                pageNumber: 1,
-                rectLeft: 0,
-                rectRight: 0,
-                rectTop: 0,
-                rectBottom: 0,
-                cfi: h.cfi_range || null,
-                note: h.note,
-              });
-            }
-          }
-        }
-
-        // Apply bookmarks: only those that differ from local
-        for (const b of remote.bookmarks) {
-          const localMatch = localBookmarks.find((lb) => lb.id === b.id);
-          if (!localMatch || b.updatedAtEpochMillis > localMatch.updatedAtEpochMillis) {
-            if (b.deletedAtEpochMillis !== null) {
-              try {
-                await tauri.deleteBookmark(b.id);
-              } catch {
-                // Bookmark may not exist locally — ignore
-              }
-            } else {
-              await tauri.saveBookmark({
-                id: b.id,
-                bookId: b.book_id,
-                // EPUB bookmarks are anchored by CFI (no real page); use 1 as the
-                // minimum-valid placeholder instead of 0 (page 0 is not a real page).
-                pageNumber: 1,
-                title: b.title_or_snippet || undefined,
-                createdAt: new Date(b.updated_at).toISOString(),
-              });
-            }
-          }
-        }
-      } catch (e) {
-        console.error(`Failed to sync state for book ${book.id}:`, e);
-      }
-    }
+    // PR2: no Drive hot sync — Supabase Realtime + outbox is sole hot path.
+    // Import above covers legacy Drive state.json migration; do not pull/push Drive.
   }
 }

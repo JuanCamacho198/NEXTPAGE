@@ -236,11 +236,13 @@ class SupabaseBookCatalogSync(
     /**
      * Subscribe to Realtime changes on the `user_books` table
      * so new books imported from other devices are detected live.
+     * PR2: hot SoT channel `catalog:uid` (<2s), gated by hasLiveSession.
      */
     fun subscribeToCatalogChanges() {
         if (realtimeJob?.isActive == true) return
 
         realtimeJob = scope.launch {
+            if (sessionManager.getCurrentSession().getOrNull() == null) return@launch
             val session = sessionManager.ensureFreshSession().getOrNull() ?: return@launch
 
             dataSource.subscribeToCatalogChanges(session.userId).collect { action ->

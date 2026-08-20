@@ -185,7 +185,13 @@ mod tests {
         let id = insert_book_and_highlight(&repo);
         let updated = update_highlight(
             &repo,
-            UpdateHighlightInput { id: id.clone(), color: Some("#4ADE80".to_string()), note: None, page: None, page_number: None },
+            UpdateHighlightInput {
+                id: id.clone(),
+                color: Some("#4ADE80".to_string()),
+                note: None,
+                page: None,
+                page_number: None,
+            },
         )
         .unwrap();
         assert_eq!(updated.color, "#4ADE80");
@@ -203,7 +209,13 @@ mod tests {
         let id = insert_book_and_highlight(&repo);
         let updated = update_highlight(
             &repo,
-            UpdateHighlightInput { id: id.clone(), color: None, note: Some("A note".to_string()), page: None, page_number: None },
+            UpdateHighlightInput {
+                id: id.clone(),
+                color: None,
+                note: Some("A note".to_string()),
+                page: None,
+                page_number: None,
+            },
         )
         .unwrap();
         assert_eq!(updated.note, Some("A note".to_string()));
@@ -215,12 +227,24 @@ mod tests {
         let id = insert_book_and_highlight(&repo);
         update_highlight(
             &repo,
-            UpdateHighlightInput { id: id.clone(), color: None, note: Some("A note".to_string()), page: None, page_number: None },
+            UpdateHighlightInput {
+                id: id.clone(),
+                color: None,
+                note: Some("A note".to_string()),
+                page: None,
+                page_number: None,
+            },
         )
         .unwrap();
         let updated = update_highlight(
             &repo,
-            UpdateHighlightInput { id: id.clone(), color: None, note: Some("".to_string()), page: None, page_number: None },
+            UpdateHighlightInput {
+                id: id.clone(),
+                color: None,
+                note: Some("".to_string()),
+                page: None,
+                page_number: None,
+            },
         )
         .unwrap();
         assert_eq!(updated.note, Some("".to_string()));

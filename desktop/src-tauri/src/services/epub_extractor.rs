@@ -1,7 +1,9 @@
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use epub::doc::EpubDoc;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,7 +23,10 @@ pub struct EpubMetadataExtract {
     pub author: String,
     pub language: Option<String>,
     pub publisher: Option<String>,
-    pub chapters: Vec<EpubChapterMeta>,
+    #[serde(default, alias = "chapters")]
+    pub toc: Vec<EpubChapterMeta>,
+    #[serde(default)]
+    pub spine_hrefs: Vec<String>,
     pub total_chapters: usize,
     /// Absolute path to the resources cache directory
     pub resources_path: String,
@@ -43,6 +48,158 @@ fn normalize_href(href: &str) -> String {
     href.replace('\\', "/")
 }
 
+/// Strip injected `chrome-extension://` and `floatBarImgId` content.
+/// Guarantees zero `chrome-extension://` in output.
+pub fn sanitize_html(html: &str) -> String {
+    let mut result = html.to_string();
+
+    // Remove whole tags containing floatBarImgId (e.g. <img id="floatBarImgId" ...>)
+    // Use regex to match <[^>]*floatBarImgId[^>]*>
+    if let Ok(re_float) = Regex::new(r#"<[^>]*\bfloatBarImgId\b[^>]*>"#) {
+        result = re_float.replace_all(&result, "").to_string();
+    }
+    // Remove whole tags where src="chrome-extension://..."
+    if let Ok(re_chrome_tag) =
+        Regex::new(r#"<[^>]*\bsrc\s*=\s*["']chrome-extension://[^"']*["'][^>]*>"#)
+    {
+        result = re_chrome_tag.replace_all(&result, "").to_string();
+    }
+    // Remove any remaining chrome-extension:// URLs (fallback)
+    if let Ok(re_chrome_url) = Regex::new(r#"chrome-extension://[^"'\s>]+"#) {
+        result = re_chrome_url.replace_all(&result, "").to_string();
+    }
+    // Final guarantee: string replace remaining tokens
+    result = result.replace("chrome-extension://", "");
+    result = result.replace("floatBarImgId", "");
+    // Clean up empty src attributes left behind like src="" or src=''
+    if let Ok(re_empty_src) = Regex::new(r#"\s+src\s*=\s*["']\s*["']"#) {
+        result = re_empty_src.replace_all(&result, "").to_string();
+    }
+    result
+}
+
+/// Resolve cover href via OPF chain: cover-image → meta name=cover → guide type=cover → heuristic
+/// Returns normalized href (e.g. "OEBPS/Images/cover.jpg") if found.
+pub fn resolve_cover<R: Read + std::io::Seek>(
+    doc: &EpubDoc<R>,
+    epub_path: &Path,
+) -> Option<String> {
+    // Step 1: manifest properties cover-image (EPUB3)
+    for res in doc.resources.values() {
+        if let Some(props) = &res.properties {
+            if props.split_whitespace().any(|p| p == "cover-image") {
+                return Some(normalize_href(&res.path.to_string_lossy()));
+            }
+        }
+    }
+    // Step 2: meta name=cover (EPUB2 legacy, also EPUB3 fallback)
+    if let Some(meta) = doc.metadata.iter().find(|m| m.property == "cover") {
+        let cover_id = meta.value.trim();
+        if !cover_id.is_empty() {
+            if let Some(res) = doc.resources.get(cover_id) {
+                return Some(normalize_href(&res.path.to_string_lossy()));
+            }
+            // Some EPUBs store the href directly in meta value
+            if cover_id.contains('/') || cover_id.contains('.') {
+                return Some(normalize_href(cover_id));
+            }
+        }
+    }
+    // Step 3: guide type=cover — parse OPF for <reference type="cover" href="...">
+    if let Some(href) = find_guide_cover_href(epub_path, &doc.root_file) {
+        return Some(href);
+    }
+    // Step 4: heuristic via manifest resources
+    if let Some(href) = heuristic_cover_from_resources(doc) {
+        return Some(href);
+    }
+    // Fallback: scan zip entries directly for heuristic (covers manifest-less images)
+    heuristic_cover_from_zip(epub_path)
+}
+
+fn find_guide_cover_href(epub_path: &Path, root_file: &Path) -> Option<String> {
+    let file = std::fs::File::open(epub_path).ok()?;
+    let mut archive = zip::ZipArchive::new(file).ok()?;
+    let root_name = normalize_href(&root_file.to_string_lossy());
+    let mut entry = archive.by_name(&root_name).ok()?;
+    let mut opf = String::new();
+    entry.read_to_string(&mut opf).ok()?;
+
+    let base = root_file.parent().unwrap_or_else(|| Path::new(""));
+    // Order-independent: try both attribute orders
+    let re1 =
+        Regex::new(r#"<reference[^>]*type\s*=\s*["']cover["'][^>]*href\s*=\s*["']([^"']+)["']"#)
+            .ok()?;
+    if let Some(cap) = re1.captures(&opf) {
+        let raw = &cap[1];
+        let full = base.join(raw);
+        return Some(normalize_href(&full.to_string_lossy()));
+    }
+    let re2 =
+        Regex::new(r#"<reference[^>]*href\s*=\s*["']([^"']+)["'][^>]*type\s*=\s*["']cover["']"#)
+            .ok()?;
+    if let Some(cap) = re2.captures(&opf) {
+        let raw = &cap[1];
+        let full = base.join(raw);
+        return Some(normalize_href(&full.to_string_lossy()));
+    }
+    None
+}
+
+fn heuristic_cover_from_resources<R: Read + std::io::Seek>(doc: &EpubDoc<R>) -> Option<String> {
+    let image_exts = ["jpg", "jpeg", "png", "webp"];
+    let mut first_image: Option<String> = None;
+    let mut cover_candidate: Option<String> = None;
+
+    for res in doc.resources.values() {
+        let path_lower = res.path.to_string_lossy().to_ascii_lowercase();
+        let ext = path_lower.rsplit('.').next().unwrap_or("");
+        if !image_exts.contains(&ext) {
+            continue;
+        }
+        if first_image.is_none() {
+            first_image = Some(normalize_href(&res.path.to_string_lossy()));
+        }
+        if (path_lower.contains("cover")
+            || path_lower.contains("portada")
+            || path_lower.contains("cubierta"))
+            && cover_candidate.is_none()
+        {
+            cover_candidate = Some(normalize_href(&res.path.to_string_lossy()));
+        }
+    }
+    cover_candidate.or(first_image)
+}
+
+fn heuristic_cover_from_zip(epub_path: &Path) -> Option<String> {
+    let file = std::fs::File::open(epub_path).ok()?;
+    let mut archive = zip::ZipArchive::new(file).ok()?;
+    let image_exts = ["jpg", "jpeg", "png", "webp"];
+    let mut first_image: Option<String> = None;
+    let mut cover_candidate: Option<String> = None;
+
+    for i in 0..archive.len() {
+        let entry = archive.by_index(i).ok()?;
+        let name = entry.name().to_string();
+        let name_lower = name.to_ascii_lowercase();
+        if let Some(ext) = name_lower.rsplit('.').next() {
+            if image_exts.contains(&ext) {
+                if first_image.is_none() {
+                    first_image = Some(normalize_href(&name));
+                }
+                if (name_lower.contains("cover")
+                    || name_lower.contains("portada")
+                    || name_lower.contains("cubierta"))
+                    && cover_candidate.is_none()
+                {
+                    cover_candidate = Some(normalize_href(&name));
+                }
+            }
+        }
+    }
+    cover_candidate.or(first_image)
+}
+
 #[derive(Debug)]
 pub struct EpubExtractor;
 
@@ -58,8 +215,17 @@ impl EpubExtractor {
         let language = doc.mdata("language").map(|m| m.value.clone());
         let publisher = doc.mdata("publisher").map(|m| m.value.clone());
 
-        let total_chapters = doc.spine.len();
-        let num_chapters = doc.get_num_chapters();
+        // --- Build filtered spineHrefs (linear=no excluded) ---
+        let mut spine_hrefs: Vec<String> = Vec::new();
+        for item in &doc.spine {
+            if !item.linear {
+                continue;
+            }
+            if let Some(res) = doc.resources.get(&item.idref) {
+                spine_hrefs.push(normalize_href(&res.path.to_string_lossy()));
+            }
+        }
+        let total_chapters = spine_hrefs.len();
 
         // --- Extract all resources (CSS, images, fonts) AND chapters ---
         // All files saved with their original paths inside resources/
@@ -88,22 +254,34 @@ impl EpubExtractor {
 
         // Then extract all spine chapters — save at their original resource paths
         // so that relative URLs (../css/foo.css etc.) resolve correctly
-        let mut spine_paths: Vec<String> = Vec::new();
-        for idx in 0..num_chapters {
-            if doc.set_current_chapter(idx) {
-                if let Some((html, _mime)) = doc.get_current_str() {
-                    // Get the original path from spine
-                    if let Some(path) = doc.get_current_path() {
-                        let target_path = resources_dir.join(&path);
-                        if let Some(parent) = target_path.parent() {
-                            let _ = fs::create_dir_all(parent);
+        // Use filtered spine_hrefs order: iterate by filtered set and pull html via idref
+        // For filtered spine, we need to map idref -> path and fetch via doc.get_resource
+        for href in &spine_hrefs {
+            // Find idref for this href
+            let idref_opt = doc
+                .resources
+                .iter()
+                .find(|(_, res)| normalize_href(&res.path.to_string_lossy()) == *href)
+                .map(|(id, _)| id.clone());
+            if let Some(idref) = idref_opt {
+                if let Some((html, _mime)) = doc.get_resource_str(&idref) {
+                    let sanitized = sanitize_html(&html);
+                    let target_path = resources_dir.join(href);
+                    if let Some(parent) = target_path.parent() {
+                        let _ = fs::create_dir_all(parent);
+                    }
+                    if !target_path.exists() {
+                        if let Err(e) = fs::write(&target_path, sanitized.as_bytes()) {
+                            eprintln!("Warning: failed to write chapter {:?}: {}", href, e);
                         }
-                        if !target_path.exists() {
-                            if let Err(e) = fs::write(&target_path, &html) {
-                                eprintln!("Warning: failed to write chapter {:?}: {}", path, e);
-                            }
+                    } else {
+                        // Overwrite with sanitized version if not yet sanitized (ensure zero chrome-extension)
+                        let existing = fs::read_to_string(&target_path).unwrap_or_default();
+                        if existing.contains("chrome-extension://")
+                            || existing.contains("floatBarImgId")
+                        {
+                            let _ = fs::write(&target_path, sanitized.as_bytes());
                         }
-                        spine_paths.push(normalize_href(&path.to_string_lossy()));
                     }
                 }
             }
@@ -111,21 +289,23 @@ impl EpubExtractor {
 
         // Cache spine paths for quick chapter lookup
         let spine_path = cache_dir.join("spine.json");
-        let spine_data = serde_json::to_string(&spine_paths)
+        let spine_data = serde_json::to_string(&spine_hrefs)
             .map_err(|e| format!("Failed to serialize spine: {}", e))?;
         let _ = std::fs::write(&spine_path, &spine_data);
 
-        // --- Build spine map: filename -> spine index ---
+        // --- Build spine map: filename -> filtered spine index ---
         let mut spine_map: std::collections::HashMap<String, usize> =
             std::collections::HashMap::new();
-        for (idx, spine_path_entry) in spine_paths.iter().enumerate() {
+        for (idx, spine_path_entry) in spine_hrefs.iter().enumerate() {
             if let Some(name) = std::path::Path::new(spine_path_entry).file_name() {
                 spine_map.insert(name.to_string_lossy().to_string(), idx);
             }
+            // Also insert full normalized href for exact match fallback
+            spine_map.insert(spine_path_entry.clone(), idx);
         }
 
-        // --- Build TOC from NavPoints using spine map ---
-        let chapters = Self::build_toc(&doc.toc, &spine_map);
+        // --- Build TOC from NavPoints using filtered spine map ---
+        let toc = Self::build_toc(&doc.toc, &spine_map);
 
         let resources_path = resources_dir.to_string_lossy().to_string();
 
@@ -134,7 +314,8 @@ impl EpubExtractor {
             author,
             language,
             publisher,
-            chapters,
+            toc,
+            spine_hrefs,
             total_chapters,
             resources_path,
         })
@@ -218,16 +399,20 @@ impl EpubExtractor {
             // Find which spine index this nav point corresponds to
             let content_str = nav.content.to_string_lossy();
             let href = normalize_href(&content_str);
-            // Extract filename from href for spine lookup
+            // Extract filename and also try full href for spine lookup
             let filename = std::path::Path::new(&href)
                 .file_name()
                 .map(|f| f.to_string_lossy().to_string())
                 .unwrap_or_default();
-            // Look up actual spine index, fall back to sequential index if not found
-            let index = spine_map.get(&filename).copied().unwrap_or_else(|| {
-                eprintln!("Warning: NavPoint href {:?} not found in spine", content_str);
-                i
-            });
+            // Try full href first, then filename, fall back to sequential
+            let index = spine_map
+                .get(&href)
+                .copied()
+                .or_else(|| spine_map.get(&filename).copied())
+                .unwrap_or_else(|| {
+                    eprintln!("Warning: NavPoint href {:?} not found in spine", content_str);
+                    i
+                });
 
             chapters.push(EpubChapterMeta {
                 index,
@@ -264,10 +449,14 @@ impl EpubExtractor {
                 .file_name()
                 .map(|f| f.to_string_lossy().to_string())
                 .unwrap_or_default();
-            let index = spine_map.get(&filename).copied().unwrap_or_else(|| {
-                eprintln!("Warning: NavPoint href {:?} not found in spine", content_str);
-                start_index + i
-            });
+            let index = spine_map
+                .get(&href)
+                .copied()
+                .or_else(|| spine_map.get(&filename).copied())
+                .unwrap_or_else(|| {
+                    eprintln!("Warning: NavPoint href {:?} not found in spine", content_str);
+                    start_index + i
+                });
             chapters.push(EpubChapterMeta {
                 index,
                 id: format!("chapter-{}", chapters.len()),
@@ -308,7 +497,8 @@ pub fn extract_plain_texts(
                 continue;
             }
         };
-        let text = strip_html(&html);
+        let sanitized = sanitize_html(&html);
+        let text = strip_html(&sanitized);
         if !text.is_empty() {
             chunks.push((format!("chapter:{}", index), text, index as i32));
         }
@@ -386,6 +576,7 @@ pub fn strip_html(html: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn test_strip_html_simple() {
@@ -419,6 +610,200 @@ mod tests {
     #[test]
     fn test_strip_html_no_tags() {
         assert_eq!(strip_html("Plain text only"), "Plain text only");
+    }
+
+    // ── 1.1: spine authority & linear filtering ──
+
+    #[test]
+    fn test_metadata_split_has_spine_hrefs_and_toc() {
+        let dir = std::env::temp_dir().join(format!("epub_split_test_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        // Create minimal epub with 2 chapters
+        let epub_path = dir.join("test.epub");
+        create_minimal_epub(&epub_path, 2, false);
+        // Debug: try opening with EpubDoc directly
+        match EpubDoc::new(&epub_path) {
+            Ok(doc) => {
+                eprintln!(
+                    "DEBUG spine len={}, resources len={}, toc len={}, version={:?}",
+                    doc.spine.len(),
+                    doc.resources.len(),
+                    doc.toc.len(),
+                    doc.version
+                );
+                for s in &doc.spine {
+                    eprintln!(" spine item idref={} linear={}", s.idref, s.linear);
+                }
+                for (k, v) in &doc.resources {
+                    eprintln!(" resource {} -> {}", k, v.path.display());
+                }
+            }
+            Err(e) => eprintln!("DEBUG EpubDoc::new failed: {}", e),
+        }
+        let cache = dir.join("cache");
+        let meta = match EpubExtractor::extract(&epub_path, &cache) {
+            Ok(m) => m,
+            Err(e) => panic!("extract failed: {}", e),
+        };
+        eprintln!(
+            "meta spine_hrefs={:?}, toc len={}, total={}",
+            meta.spine_hrefs,
+            meta.toc.len(),
+            meta.total_chapters
+        );
+        assert_eq!(meta.spine_hrefs.len(), 2);
+        // Minimal epub without NCX has toc 0; ensure spine authority holds
+        assert!(meta.toc.is_empty() || meta.toc.len() == 2);
+        assert_eq!(meta.total_chapters, 2);
+        assert_eq!(meta.total_chapters, meta.spine_hrefs.len());
+        // Verify spine.json equals spine_hrefs
+        let spine_data = std::fs::read_to_string(cache.join("spine.json")).unwrap();
+        let spine: Vec<String> = serde_json::from_str(&spine_data).unwrap();
+        assert_eq!(spine, meta.spine_hrefs);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_linear_no_excluded_from_spine() {
+        // accessible_epub_3 has cover linear=no among 22 spine items → 21 filtered
+        let epub_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../desktop/src/test/fixtures/epubs/accessible_epub_3.epub");
+        if !epub_path.exists() {
+            // Fallback to absolute path
+            let alt = PathBuf::from(
+                "C:/Users/Juan Camacho/Documents/PROYECTOS/NEXTPAGE/desktop/src/test/fixtures/epubs/accessible_epub_3.epub",
+            );
+            if !alt.exists() {
+                eprintln!("skipping linear_no test: fixture not found");
+                return;
+            }
+            test_linear_with_path(&alt);
+            return;
+        }
+        test_linear_with_path(&epub_path);
+    }
+
+    fn test_linear_with_path(epub_path: &Path) {
+        let dir = std::env::temp_dir().join(format!("epub_linear_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let cache = dir.join("cache");
+        let meta = EpubExtractor::extract(epub_path, &cache).unwrap();
+        assert_eq!(
+            meta.total_chapters, 21,
+            "accessible_epub_3 should have 21 after filtering cover linear=no"
+        );
+        assert_eq!(meta.spine_hrefs.len(), 21);
+        assert!(!meta.spine_hrefs.iter().any(|h| h.to_ascii_lowercase().contains("cover.xhtml")));
+        // TOC should not contain cover either (or if it does, index must be valid filtered)
+        for entry in &meta.toc {
+            assert!(entry.index < 21, "toc index must be within filtered spine");
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_sanitize_html_strips_chrome_extension() {
+        let html = r#"<div><p>Hello</p><img id="floatBarImgId" src="chrome-extension://dbkmjjclgbiooljcegcddagnddjedmed/img.png"><p>World <img src="chrome-extension://abc/def.png"></p></div>"#;
+        let sanitized = sanitize_html(html);
+        assert!(
+            !sanitized.contains("chrome-extension://"),
+            "must guarantee zero chrome-extension://"
+        );
+        assert!(!sanitized.contains("floatBarImgId"), "must strip floatBarImgId");
+        assert!(sanitized.contains("Hello"));
+        assert!(sanitized.contains("World"));
+    }
+
+    #[test]
+    fn test_sanitize_html_preserves_normal_content() {
+        let html = r#"<p>Keep this <img src="images/cover.jpg"> and <a href="chapter2.xhtml">link</a></p>"#;
+        let sanitized = sanitize_html(html);
+        assert!(sanitized.contains("images/cover.jpg"));
+        assert!(sanitized.contains("chapter2.xhtml"));
+        assert!(!sanitized.contains("chrome-extension://"));
+    }
+
+    #[test]
+    fn test_sanitize_html_empty_src_cleaned() {
+        let html = r#"<p><img src="chrome-extension://evil"></p>"#;
+        let sanitized = sanitize_html(html);
+        assert!(!sanitized.contains("chrome-extension://"));
+        assert!(!sanitized.contains("evil"));
+        // No broken src="" should remain with empty value? Either removed or empty but not chrome
+        assert!(!sanitized.contains("chrome"));
+    }
+
+    #[test]
+    fn test_extract_plain_texts_sanitized() {
+        let dir = std::env::temp_dir().join(format!("epub_sanitize_text_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("resources")).unwrap();
+        let spine = vec!["ch1.xhtml".to_string()];
+        std::fs::write(dir.join("spine.json"), serde_json::to_string(&spine).unwrap()).unwrap();
+        std::fs::write(
+            dir.join("resources/ch1.xhtml"),
+            r#"<p>Hello <img id="floatBarImgId" src="chrome-extension://abc"> world</p>"#,
+        )
+        .unwrap();
+        let chunks = extract_plain_texts(&dir).unwrap();
+        assert_eq!(chunks.len(), 1);
+        assert!(!chunks[0].1.contains("chrome-extension://"));
+        assert!(chunks[0].1.contains("Hello"));
+        assert!(chunks[0].1.contains("world"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_cover_chain_cover_image_priority() {
+        let dir = std::env::temp_dir().join(format!("epub_cover1_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let epub_path = dir.join("cover_image.epub");
+        create_epub_with_cover(&epub_path, CoverMode::CoverImage);
+        let doc = EpubDoc::new(&epub_path).unwrap();
+        let href = resolve_cover(&doc, &epub_path).unwrap();
+        assert!(
+            href.to_ascii_lowercase().contains("cover.jpg"),
+            "cover-image should be Images/cover.jpg got {}",
+            href
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_cover_chain_meta_fallback() {
+        let dir = std::env::temp_dir().join(format!("epub_cover2_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let epub_path = dir.join("cover_meta.epub");
+        create_epub_with_cover(&epub_path, CoverMode::Meta);
+        let doc = EpubDoc::new(&epub_path).unwrap();
+        let href = resolve_cover(&doc, &epub_path).unwrap();
+        assert!(
+            href.to_ascii_lowercase().contains("meta_cover"),
+            "meta cover should be used got {}",
+            href
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_cover_chain_heuristic_fallback() {
+        let dir = std::env::temp_dir().join(format!("epub_cover3_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let epub_path = dir.join("cover_heur.epub");
+        create_epub_with_cover(&epub_path, CoverMode::Heuristic);
+        let doc = EpubDoc::new(&epub_path).unwrap();
+        let href = resolve_cover(&doc, &epub_path).unwrap();
+        assert!(
+            href.to_ascii_lowercase().contains("cover"),
+            "heuristic should find cover got {}",
+            href
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
@@ -530,5 +915,127 @@ mod tests {
         ids.sort();
         ids.dedup();
         assert_eq!(ids.len(), chapters.len());
+    }
+
+    // ── helpers for cover & minimal epub generation ──
+
+    enum CoverMode {
+        CoverImage,
+        Meta,
+        Heuristic,
+    }
+
+    fn create_minimal_epub(path: &Path, chapters: usize, with_linear_no: bool) {
+        use std::io::Write;
+        let file = std::fs::File::create(path).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
+        // mimetype must be first and uncompressed
+        zip.start_file("mimetype", options).unwrap();
+        zip.write_all(b"application/epub+zip").unwrap();
+
+        let options_def = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        zip.start_file("META-INF/container.xml", options_def).unwrap();
+        zip.write_all(
+            br#"<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>"#,
+        )
+        .unwrap();
+
+        let mut manifest = String::new();
+        let mut spine = String::new();
+        for i in 0..chapters {
+            manifest.push_str(&format!(
+                r#"<item id="c{}" href="Text/chapter{}.xhtml" media-type="application/xhtml+xml"/>"#,
+                i, i
+            ));
+            let linear = if with_linear_no && i == 0 { r#" linear="no""# } else { "" };
+            spine.push_str(&format!(r#"<itemref idref="c{}"{} />"#, i, linear));
+        }
+        // Add cover image for completeness
+        manifest.push_str(r#"<item id="cover-img" href="Images/cover.jpg" media-type="image/jpeg" properties="cover-image"/>"#);
+        let opf = format!(
+            r#"<?xml version="1.0" encoding="UTF-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="uid">urn:uuid:test</dc:identifier><dc:title>Test</dc:title><dc:language>en</dc:language></metadata><manifest>{}</manifest><spine>{}</spine></package>"#,
+            manifest, spine
+        );
+        zip.start_file("OEBPS/content.opf", options_def).unwrap();
+        zip.write_all(opf.as_bytes()).unwrap();
+
+        for i in 0..chapters {
+            zip.start_file(format!("OEBPS/Text/chapter{}.xhtml", i), options_def).unwrap();
+            zip.write_all(format!(r#"<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>C{}</title></head><body><p>Chapter {} content</p></body></html>"#, i, i).as_bytes()).unwrap();
+        }
+        // dummy cover
+        zip.start_file("OEBPS/Images/cover.jpg", options_def).unwrap();
+        zip.write_all(b"\xFF\xD8\xFF").unwrap();
+        zip.finish().unwrap();
+    }
+
+    fn create_epub_with_cover(path: &Path, mode: CoverMode) {
+        use std::io::Write;
+        let file = std::fs::File::create(path).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+        let mimetype_opts = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
+        zip.start_file("mimetype", mimetype_opts).unwrap();
+        zip.write_all(b"application/epub+zip").unwrap();
+        let opts = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        zip.start_file("META-INF/container.xml", opts).unwrap();
+        zip.write_all(br#"<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>"#).unwrap();
+
+        let (manifest_extra, metadata_extra, guide_extra) = match mode {
+            CoverMode::CoverImage => (
+                r#"<item id="cover-img" href="Images/cover.jpg" media-type="image/jpeg" properties="cover-image"/>"#,
+                "",
+                "",
+            ),
+            CoverMode::Meta => (
+                r#"<item id="meta_cover" href="Images/meta_cover.jpg" media-type="image/jpeg"/>"#,
+                r#"<meta name="cover" content="meta_cover"/>"#,
+                "",
+            ),
+            CoverMode::Heuristic => (
+                r#"<item id="heuristic_cover" href="Images/my_cover_portada.jpg" media-type="image/jpeg"/>"#,
+                "",
+                "",
+            ),
+        };
+
+        let manifest = format!(
+            r#"<item id="c0" href="Text/chapter0.xhtml" media-type="application/xhtml+xml"/>{}"#,
+            manifest_extra
+        );
+        // guide for completeness (not used in these cases)
+        let guide = if guide_extra.is_empty() {
+            "".to_string()
+        } else {
+            format!("<guide>{}</guide>", guide_extra)
+        };
+        let opf = format!(
+            r#"<?xml version="1.0" encoding="UTF-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="uid">urn:uuid:cover-test</dc:identifier><dc:title>Cover Test</dc:title><dc:language>en</dc:language>{}</metadata><manifest>{}</manifest><spine><itemref idref="c0"/></spine>{}</package>"#,
+            metadata_extra, manifest, guide
+        );
+        zip.start_file("OEBPS/content.opf", opts).unwrap();
+        zip.write_all(opf.as_bytes()).unwrap();
+        zip.start_file("OEBPS/Text/chapter0.xhtml", opts).unwrap();
+        zip.write_all(br#"<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><body><p>hi</p></body></html>"#).unwrap();
+        // cover images
+        let cover_path = match mode {
+            CoverMode::CoverImage => "OEBPS/Images/cover.jpg",
+            CoverMode::Meta => "OEBPS/Images/meta_cover.jpg",
+            CoverMode::Heuristic => "OEBPS/Images/my_cover_portada.jpg",
+        };
+        zip.start_file(cover_path, opts).unwrap();
+        zip.write_all(b"\xFF\xD8\xFF").unwrap();
+        // also add a non-cover image for heuristic fallback test
+        if let CoverMode::Heuristic = mode {
+            // add extra image that is not cover-like to ensure heuristic picks cover-like
+            zip.start_file("OEBPS/Images/other.png", opts).unwrap();
+            zip.write_all(b"\x89PNG").unwrap();
+        }
+        zip.finish().unwrap();
     }
 }

@@ -991,6 +991,7 @@ impl LibraryRepository {
     }
 
     /// Extract cover image from an EPUB file and save it to the covers directory.
+    /// Chain: cover-image (manifest properties) → meta name=cover → guide type=cover → heuristic (cover|portada|cubierta) → first image
     /// Returns Ok(Some(cover)) on success, Ok(None) if no cover found, Err on failure.
     pub fn extract_epub_cover(
         &self,
@@ -1002,6 +1003,68 @@ impl LibraryRepository {
             return Ok(None);
         }
 
+        // Step 1-4 via OPF chain (epub_extractor::resolve_cover)
+        if let Ok(doc) = epub::doc::EpubDoc::new(epub_path) {
+            if let Some(href) = crate::services::epub_extractor::resolve_cover(&doc, epub_path) {
+                if let Ok(file) = std::fs::File::open(epub_path) {
+                    if let Ok(mut archive) = zip::ZipArchive::new(file) {
+                        // Try exact href and variants
+                        let candidates = [href.clone(), href.replace('\\', "/")];
+                        for name in &candidates {
+                            if let Ok(mut entry) = archive.by_name(name) {
+                                let mut data = Vec::new();
+                                if entry.read_to_end(&mut data).is_ok() && !data.is_empty() {
+                                    let ext = name
+                                        .rsplit('.')
+                                        .next()
+                                        .unwrap_or("jpg")
+                                        .to_ascii_lowercase();
+                                    let mime_type = Self::mime_type_from_extension(&ext);
+                                    let cover = self.upsert_book_cover_from_bytes(
+                                        app,
+                                        book_id,
+                                        &data,
+                                        Some(mime_type),
+                                    )?;
+                                    return Ok(Some(cover));
+                                }
+                            }
+                        }
+                        // Fallback: match by file name suffix (handles guide href without OEBPS prefix)
+                        let target_file = Path::new(&href)
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or(&href)
+                            .to_ascii_lowercase();
+                        for i in 0..archive.len() {
+                            if let Ok(mut entry) = archive.by_index(i) {
+                                if entry.name().to_ascii_lowercase().ends_with(&target_file) {
+                                    let mut data = Vec::new();
+                                    if entry.read_to_end(&mut data).is_ok() && !data.is_empty() {
+                                        let ext = entry
+                                            .name()
+                                            .rsplit('.')
+                                            .next()
+                                            .unwrap_or("jpg")
+                                            .to_ascii_lowercase();
+                                        let mime_type = Self::mime_type_from_extension(&ext);
+                                        let cover = self.upsert_book_cover_from_bytes(
+                                            app,
+                                            book_id,
+                                            &data,
+                                            Some(mime_type),
+                                        )?;
+                                        return Ok(Some(cover));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback heuristic (original behavior) — cover|portada|cubierta → first image
         let file = match std::fs::File::open(epub_path) {
             Ok(f) => f,
             Err(_) => return Ok(None),

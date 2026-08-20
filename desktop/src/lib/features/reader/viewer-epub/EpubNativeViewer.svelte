@@ -1,4 +1,11 @@
 <script lang="ts">
+  /**
+   * EpubNativeViewer — spine-authoritative EPUB viewer (cache v3).
+   * Cache version 3 (epub_reader.rs CACHE_VERSION=3): `spineHrefs.length === totalChapters`,
+   * `spine.json` is authority for CFI/LocatorCodec; stale caches where
+   * `spine.json.len() != metadata.totalChapters` are purged via `remove_dir_all`.
+   * TOC (`toc`) is nav-only (may be subset of spine, e.g. Historia 20 vs 24 offset-2).
+   */
   import { onMount, onDestroy, untrack } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { convertFileSrc } from '@tauri-apps/api/core';
@@ -46,7 +53,12 @@
     toc: EpubChapterMeta[];
     /** Spine hrefs in OPF order, linear=no filtered. Authority for CFI / LocatorCodec / render. */
     spineHrefs: string[];
-    /** Back-compat aliases from Rust serde (old caches): `chapters` → toc, `spine_hrefs` snake */
+    /**
+     * Back-compat aliases from Rust serde (old caches): `chapters` → toc, `spine_hrefs` snake.
+     * Kept for cache migration (version 2 → 3); stale caches are auto-purged so new code
+     * always sees `toc`/`spineHrefs`, but alias prevents crash on leftover 2.x caches.
+     * TODO: remove in next major after all users migrate (tracked in verifies).
+     */
     chapters?: EpubChapterMeta[];
     spine_hrefs?: string[];
     totalChapters: number;
@@ -89,10 +101,13 @@
     }) => void;
     /**
      * All persisted highlights for the current book. The EPUB iframe
-     * renders the highlights whose `pageNumber === currentChapterIndex`
-     * via the CSS Custom Highlight API (zero DOM mutation). Typed as a
-     * slim shape (subset of `HighlightDto`) so callers don't have to
-     * build the full DTO to feed the iframe.
+     * renders the highlights whose `pageNumber === currentSpineIndex`
+     * (spine authority, not TOC index — offset-2) via the CSS Custom
+     * Highlight API (zero DOM mutation). Typed as a slim shape (subset
+     * of `HighlightDto`) so callers don't have to build the full DTO.
+     * Cache version 3: `spineHrefs.length === totalChapters`; stale
+     * caches (spine.json len != totalChapters) are purged in Rust
+     * `epub_reader.rs` (`CACHE_VERSION = 3`, `is_cache_stale`).
      */
     persistedHighlights?: Array<{
       id: string;

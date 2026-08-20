@@ -16,7 +16,9 @@
  *
  * Rendering is **registration-based** via the CSS Custom Highlight
  * API (`CSS.highlights` + `::highlight()`): for each highlight whose
- * `pageNumber === currentChapterIndex`, the overlay resolves its CFI
+ * `pageNumber === currentChapterIndex` (where currentChapterIndex is the
+ * spine index passed as 3rd arg — spine authority, not TOC position),
+ * the overlay resolves its CFI
  * to a DOM Range, maps its color to the nearest canonical color,
  * groups ranges per color, and registers one `Highlight` per color
  * named `epub-hl-<label>`. The chapter DOM is NEVER mutated, so CFI

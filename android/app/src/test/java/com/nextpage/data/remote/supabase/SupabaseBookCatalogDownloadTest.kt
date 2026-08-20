@@ -439,5 +439,8 @@ class SupabaseBookCatalogDownloadTest {
         override suspend fun incrementRetryCount(id: String, error: String) {}
         override suspend fun pruneFailedItems(maxRetries: Int) {}
         override fun observePendingCount(): Flow<Int> = MutableStateFlow(0)
+        override suspend fun getByTypeAndEntityId(type: String, entityId: String): com.nextpage.data.local.entity.SyncOutboxEntity? = null
+        override suspend fun updatePayload(id: String, payloadJson: String) {}
+        override suspend fun upsertCoalesced(item: com.nextpage.data.local.entity.SyncOutboxEntity) {}
     }
 }

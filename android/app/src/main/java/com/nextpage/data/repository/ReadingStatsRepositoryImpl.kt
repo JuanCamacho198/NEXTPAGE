@@ -106,23 +106,29 @@ class ReadingStatsRepositoryImpl(
             )
         )
 
-        // entity_id = bookId per the existing outbox FK pattern (all outbox
-        // rows carry bookId; payload carries the full session for the sync side).
+        // READING_SESSION per id — never coalesced, one row per session (desktop parity).
+        // entityId MUST be the deterministic session id, not bookId, otherwise multiple
+        // sessions for the same book overwrite each other in the outbox and the
+        // READING_SESSION flush per-id semantics are violated. Payload is valid JSON.
+        val payloadJson = JSONObject()
+            .put("id", id)
+            .put("bookId", bookId)
+            .put("startTimeEpochMillis", startTimeEpochMillis)
+            .put("durationMinutes", durationMinutes)
+            .put("date", date)
+            .put("userId", userId)
+            .put("updatedAtEpochMillis", now)
+            .toString()
+        require(payloadJson.isNotEmpty()) { "payloadJson must be non-empty valid JSON" }
+        // Validate JSON object (throws if invalid) — ensures outbox never stores "{}" or malformed
+        JSONObject(payloadJson)
         outboxDao?.insert(
             SyncOutboxEntity(
                 id = "outbox-${UUID.randomUUID()}",
                 entityType = SyncEntityType.READING_SESSION.name,
-                entityId = bookId,
+                entityId = id,
                 operation = SyncOperation.UPDATE.name,
-                payloadJson = JSONObject()
-                    .put("id", id)
-                    .put("bookId", bookId)
-                    .put("startTimeEpochMillis", startTimeEpochMillis)
-                    .put("durationMinutes", durationMinutes)
-                    .put("date", date)
-                    .put("userId", userId)
-                    .put("updatedAtEpochMillis", now)
-                    .toString(),
+                payloadJson = payloadJson,
                 createdAtEpochMillis = now
             )
         )

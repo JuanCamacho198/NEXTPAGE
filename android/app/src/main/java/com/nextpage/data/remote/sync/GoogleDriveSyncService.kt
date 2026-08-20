@@ -115,27 +115,14 @@ class GoogleDriveSyncService(
                 }
                 SyncEntityType.READING_PROGRESS.name,
                 SyncEntityType.HIGHLIGHT.name,
-                SyncEntityType.BOOKMARK.name -> {
-                    // PR2: Supabase SoT hot — Drive hot is cold-only. When a live
-                    // session exists, Supabase owns progress/highlights/bookmarks;
-                    // Drive must not consume these outbox rows (leave for Supabase).
-                    if (hasLiveSession()) continue
-                    val pushResult = pushState(item, session.userId)
-                    if (pushResult.isFailure) {
-                        val mapped = mapError(pushResult.exceptionOrNull(), defaultCode = "SYNC_STATE_PUSH_FAILED")
-                        DebugLog.error(COMPONENT, "pushState failed for ${item.entityId}: ${mapped.code} — ${mapped.message}")
-                        outboxDao.incrementRetryCount(item.id, mapped.message)
-                        outboxDao.pruneFailedItems(maxRetries)
-                        state.value = SyncState.Error(mapped.message)
-                        return Result.failure(mapped)
-                    }
-                    outboxDao.deleteById(item.id)
-                }
+                SyncEntityType.BOOKMARK.name,
                 SyncEntityType.READING_SESSION.name -> {
-                    // Reading sessions are synced EXCLUSIVELY by
-                    // SupabaseProgressSync (reading_sessions table + RLS). Drive
-                    // must leave these items in the outbox — deleting them here
-                    // would silently drop every recorded session.
+                    // PR4: Drive is cold only — Supabase owns all hot state
+                    // (progress/highlights/bookmarks/sessions via PostgREST onConflict
+                    // + single Realtime supervisor). Leave these outbox rows for
+                    // SupabaseProgressSync; never consume them here (prevents empty
+                    // payload replay and silent session loss).
+                    continue
                 }
                 else -> {
                     // Unknown types are silently skipped and removed
@@ -209,25 +196,6 @@ class GoogleDriveSyncService(
                 updatedAtEpochMillis = System.currentTimeMillis()
             )
         )
-        return Result.success(Unit)
-    }
-
-    private suspend fun pushState(item: com.nextpage.data.local.entity.SyncOutboxEntity, userId: String): Result<Unit> {
-        // entityId is nullable: FK is ON DELETE SET NULL, so a deleted book leaves the outbox
-        // row with a null entity_id. State (progress/highlights/bookmarks) is keyed by bookId,
-        // so without a bookId there's nothing meaningful to push — ack the row.
-        val bookId = item.entityId ?: return Result.success(Unit)
-        val progress = readingProgressDao.getProgressForBook(bookId)?.toDomain()
-        val highlights = highlightDao.getHighlightsForBook(bookId).map { it.toDomain() }
-        val bookmarks = bookmarkDao.getBookmarksForBook(bookId).map { it.toDomain() }
-
-        val pushResult = retryable {
-            jsonStateSync.pushState(userId, bookId, progress, highlights, bookmarks)
-        }
-
-        if (pushResult.isFailure) {
-            return pushResult.map { }
-        }
         return Result.success(Unit)
     }
 
@@ -320,48 +288,8 @@ class GoogleDriveSyncService(
             )
         }
 
-        // PR2: Supabase SoT hot — skip Drive hot state pull when live session exists
-        if (!hasLiveSession()) {
-            val allMappings = mappingDao.getByUserId(session.userId)
-            val bookIds = allMappings.map { it.bookId }.distinct()
-            for (bookId in bookIds) {
-                if (isTombstoned(bookId)) continue
-                val localProgress = readingProgressDao.getProgressForBook(bookId)?.toDomain()
-                val localHighlights = highlightDao.getHighlightsForBook(bookId).map { it.toDomain() }
-                val localBookmarks = bookmarkDao.getBookmarksForBook(bookId).map { it.toDomain() }
-
-                val pullResult = retryable {
-                    jsonStateSync.pullState(session.userId, bookId, localProgress, localHighlights, localBookmarks)
-                }
-
-            if (pullResult.isSuccess) {
-                val innerResult = pullResult.getOrThrow()
-                if (innerResult.isSuccess) {
-                    val resolved = innerResult.getOrThrow()
-                    // Guard: reading_progress/highlight/bookmark book_id have FKs
-                    // to books.id. The state JSON carries its OWN bookId which may
-                    // differ from the mapping's bookId (stale/renamed mapping) —
-                    // verify the ID of each row we actually insert, not the loop id.
-                    if (resolved.progress != null &&
-                        bookDao.getBookById(resolved.progress.bookId) != null
-                    ) {
-                        readingProgressDao.upsert(resolved.progress.toEntity())
-                    }
-                    resolved.highlights.forEach { h ->
-                        if (bookDao.getBookById(h.bookId) != null) {
-                            highlightDao.upsert(h.toEntity())
-                        }
-                    }
-                    resolved.bookmarks.forEach { b ->
-                        if (bookDao.getBookById(b.bookId) != null) {
-                            bookmarkDao.upsert(b.toEntity())
-                        }
-                    }
-                }
-            }
-            }
-        }
-
+        // PR4: Drive hot state pull removed — Supabase is sole hot SoT.
+        // No jsonStateSync.pullState here; cold import is via DriveColdBackupService only.
         state.value = SyncState.Idle
         return Result.success(Unit)
     }

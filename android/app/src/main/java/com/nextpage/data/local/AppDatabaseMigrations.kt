@@ -331,6 +331,41 @@ object AppDatabaseMigrations {
         }
     }
 
+    /**
+     * PR4 — Drop FK on sync_outbox.entity_id (breaks coalescing & offline queue after book delete)
+     * and add composite index (entity_type, entity_id) for LWW coalescing lookup.
+     * Previous FK SET NULL caused outbox loss when book deleted; cold backup path is FK-ordered
+     * at Supabase level, local outbox must survive book deletion (payload carries bookId).
+     */
+    val MIGRATION_24_25 = object : Migration(24, 25) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("PRAGMA foreign_keys = OFF")
+            val count = db.compileStatement("SELECT COUNT(*) FROM sync_outbox").simpleQueryForLong()
+            db.execSQL(
+                """
+                CREATE TABLE sync_outbox_new (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    entity_type TEXT NOT NULL,
+                    entity_id TEXT,
+                    operation TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    retry_count INTEGER NOT NULL DEFAULT 0,
+                    last_error TEXT
+                )
+                """.trimIndent()
+            )
+            db.execSQL("INSERT INTO sync_outbox_new (id, entity_type, entity_id, operation, payload, created_at, retry_count, last_error) SELECT id, entity_type, entity_id, operation, payload, created_at, retry_count, last_error FROM sync_outbox")
+            db.execSQL("DROP TABLE sync_outbox")
+            db.execSQL("ALTER TABLE sync_outbox_new RENAME TO sync_outbox")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_id ON sync_outbox(entity_id)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_type_entity_id ON sync_outbox(entity_type, entity_id)")
+            val newCount = db.compileStatement("SELECT COUNT(*) FROM sync_outbox").simpleQueryForLong()
+            if (newCount != count) throw IllegalStateException("sync_outbox row count mismatch after FK removal: before=$count after=$newCount")
+            db.execSQL("PRAGMA foreign_keys = ON")
+        }
+    }
+
     val ALL = arrayOf(
         MIGRATION_1_2,
         MIGRATION_2_3,
@@ -354,6 +389,7 @@ object AppDatabaseMigrations {
         MIGRATION_20_21,
         MIGRATION_21_22,
         MIGRATION_22_23,
-        MIGRATION_23_24
+        MIGRATION_23_24,
+        MIGRATION_24_25
     )
 }

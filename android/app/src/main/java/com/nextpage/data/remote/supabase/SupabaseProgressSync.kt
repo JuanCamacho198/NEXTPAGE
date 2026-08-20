@@ -244,8 +244,16 @@ class SupabaseProgressSync(
                     dataSource.softDeleteHighlight(highlightId, userId)
                 }
                 else -> {
-                    val highlightsForBook = highlightDao.getHighlightsForBook(entityId)
-                    for (localHighlight in highlightsForBook) {
+                    // PR4: HIGHLIGHT per id — atomic enqueue, never coalesced across ids.
+                    // Try per-id first (new parity rows: entityId=highlight.id); fallback to
+                    // legacy bookId rows (old outbox where entityId was bookId) for migration.
+                    val single = highlightDao.getHighlightById(entityId)
+                    val highlightsToPush = if (single != null) {
+                        listOf(single)
+                    } else {
+                        highlightDao.getHighlightsForBook(entityId)
+                    }
+                    for (localHighlight in highlightsToPush) {
                         val row = HighlightRow(
                             id = localHighlight.id,
                             userId = userId,

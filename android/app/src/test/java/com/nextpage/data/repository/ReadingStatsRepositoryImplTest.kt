@@ -133,7 +133,7 @@ class ReadingStatsRepositoryImplTest {
 
         val outbox = fakeOutboxDao.items.single()
         assertEquals(SyncEntityType.READING_SESSION.name, outbox.entityType)
-        assertEquals("book-1", outbox.entityId)
+        assertEquals(inserted.id, outbox.entityId)
         assertTrue(outbox.payloadJson.contains("\"id\":\"${inserted.id}\""))
         assertTrue(outbox.payloadJson.contains("\"userId\":\"user-42\""))
         assertTrue(outbox.payloadJson.contains("\"updatedAtEpochMillis\""))
@@ -260,6 +260,20 @@ class ReadingStatsRepositoryImplTest {
 
         override suspend fun incrementRetryCount(id: String, error: String) = Unit
         override suspend fun pruneFailedItems(maxRetries: Int) = Unit
-        override fun observePendingCount(): Flow<Int> = MutableStateFlow(items.size)
+        override fun observePendingCount(): Flow<Int> =
+            MutableStateFlow(items.size)
+
+        override suspend fun getByTypeAndEntityId(type: String, entityId: String): SyncOutboxEntity? =
+            items.firstOrNull { it.entityType == type && it.entityId == entityId }
+
+        override suspend fun updatePayload(id: String, payloadJson: String) {
+            val idx = items.indexOfFirst { it.id == id }
+            if (idx >= 0) items[idx] = items[idx].copy(payloadJson = payloadJson)
+        }
+
+        override suspend fun upsertCoalesced(item: SyncOutboxEntity) {
+            val existing = item.entityId?.let { getByTypeAndEntityId(item.entityType, it) }
+            if (existing != null) updatePayload(existing.id, item.payloadJson) else items.add(item)
+        }
     }
 }

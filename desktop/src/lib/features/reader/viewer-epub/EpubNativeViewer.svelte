@@ -20,6 +20,13 @@
   } from '$lib/features/reader/highlight/highlightColors';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
   import { locatorFromCfi, locatorToJson, normalizeHref } from '$lib/shared/sync/LocatorCodec';
+  import {
+    sanitizeEpubHtml,
+    stripFragment,
+    extractFragment,
+    spineIndexForToc as pureSpineIndexForToc,
+    tocIndexForSpine as pureTocIndexForSpine,
+  } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 
   // ─── Types ───────────────────────────────────────────────
   interface EpubChapterMeta {
@@ -35,9 +42,17 @@
     author: string;
     language: string | null;
     publisher: string | null;
-    chapters: EpubChapterMeta[];
+    /** TOC (nav) — author order, may be subset of spine (e.g. Historia 20 vs 24). */
+    toc: EpubChapterMeta[];
+    /** Spine hrefs in OPF order, linear=no filtered. Authority for CFI / LocatorCodec / render. */
+    spineHrefs: string[];
+    /** Back-compat aliases from Rust serde (old caches): `chapters` → toc, `spine_hrefs` snake */
+    chapters?: EpubChapterMeta[];
+    spine_hrefs?: string[];
     totalChapters: number;
+    total_chapters?: number;
     resourcesPath: string;
+    resources_path?: string;
   }
 
   interface EpubChapterContent {
@@ -161,6 +176,8 @@
   let iframeContentHeight = $state(0);
   /** CFI que se debe mostrar una vez que el capítulo objetivo cargue. */
   let pendingCfiScroll = $state<string | null>(null);
+  /** Fragment (#id) que se debe scrollear una vez que el capítulo objetivo cargue. */
+  let pendingFragment = $state<string | null>(null);
 
   // ─── Reader settings cache (synced from prop for reactivity) ─
   let fontSize = $state(100);
@@ -187,41 +204,58 @@
     margins = readerSettings.margins;
   });
 
+  // ─── Spine / TOC helpers (authoritative: spineHrefs, nav: toc) ──────────
+  function getToc(): EpubChapterMeta[] {
+    if (!metadata) return [];
+    const t = (metadata as EpubMetadataExtract).toc;
+    if (Array.isArray(t) && t.length >= 0) return t;
+    const ch = (metadata as EpubMetadataExtract).chapters;
+    if (Array.isArray(ch)) return ch;
+    return [];
+  }
+
+  function getSpineHrefs(): string[] {
+    if (!metadata) return [];
+    const sh = (metadata as EpubMetadataExtract).spineHrefs;
+    if (Array.isArray(sh) && sh.length > 0) return sh.map((h) => normalizeHref(h));
+    const sh2 = (metadata as EpubMetadataExtract).spine_hrefs;
+    if (Array.isArray(sh2) && sh2.length > 0) return sh2.map((h) => normalizeHref(h));
+    // Fallback: derive from toc hrefs (strip fragment) when spine not yet wired (old cache)
+    const toc = getToc();
+    if (toc.length > 0) return toc.map((c) => normalizeHref(stripFragment(c.href)));
+    return [];
+  }
+
+  /** Derive spine index for the current TOC position — used for CFI / highlights. */
+  let currentSpineIndex = $derived(spineIndexForToc(currentChapterIndex));
+
   // ─── TOC ↔ Spine mapping helpers ─────────────────────────
   /** Resolve spine index (0..spineLen-1) for a TOC position (0..tocLen-1). */
   function spineIndexForToc(tocIndex: number): number {
     if (!metadata) return tocIndex;
-    const entry = metadata.chapters[tocIndex];
+    const toc = getToc();
+    const entry = toc[tocIndex];
     if (!entry || typeof entry.index !== 'number') {
       console.warn(
         'epub-toc: spineIndexForToc missing entry for tocIndex',
         tocIndex,
         'fallback to',
         tocIndex,
-        'chaptersLen',
-        metadata.chapters.length,
+        'tocLen',
+        toc.length,
       );
       return tocIndex;
     }
-    return entry.index;
+    // Delegate to pure helper for testability, but keep warning path
+    return pureSpineIndexForToc(toc, tocIndex);
   }
 
   /** Resolve TOC position for a 0-based spine index. Returns null when not in TOC. */
   function tocIndexForSpine(spineIndex: number, spineHref?: string): number | null {
     if (!metadata) return null;
-    const byIndex = metadata.chapters.findIndex((c) => c.index === spineIndex);
-    if (byIndex !== -1) return byIndex;
-    if (spineHref) {
-      const norm = normalizeHref(spineHref);
-      const byHref = metadata.chapters.findIndex((c) => normalizeHref(c.href) === norm);
-      if (byHref !== -1) return byHref;
-      // Fallback: filename comparison (handles OEBPS/Text/ prefix variance)
-      const fileName = norm.split('/').pop() ?? norm;
-      const byFile = metadata.chapters.findIndex(
-        (c) => (normalizeHref(c.href).split('/').pop() ?? '') === fileName,
-      );
-      if (byFile !== -1) return byFile;
-    }
+    const toc = getToc();
+    const res = pureTocIndexForSpine(toc, spineIndex, spineHref);
+    if (res !== null) return res;
     console.warn(
       'epub-toc: tocIndexForSpine no TOC entry for spineIndex',
       spineIndex,
@@ -230,6 +264,33 @@
       'fallback will use spineIndex',
     );
     return null;
+  }
+
+  /** Scroll iframe to fragment anchor (preserved #frag in toc.href). 3×rAF ensures layout. */
+  function scrollToFragment(fragment: string | null): void {
+    if (!fragment || !iframeEl?.contentDocument) return;
+    const doc = iframeEl.contentDocument;
+    const target = doc.getElementById(fragment);
+    if (!target) {
+      console.warn('epub-frag: fragment not found', fragment);
+      return;
+    }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          target.scrollIntoView({ block: 'start', behavior: 'smooth' });
+          // Also sync outer container scroll if needed
+          if (zoomContainerEl) {
+            const rect = target.getBoundingClientRect();
+            const containerRect = zoomContainerEl.getBoundingClientRect();
+            if (rect.top < containerRect.top || rect.bottom > containerRect.bottom) {
+              target.scrollIntoView({ block: 'center', behavior: 'auto' });
+            }
+          }
+        });
+      });
+    });
+    pendingFragment = null;
   }
 
   // ─── Lifecycle ───────────────────────────────────────────
@@ -286,15 +347,14 @@
 
     {
       const cfiPreview = typeof event.data.cfi === 'string' ? event.data.cfi.slice(0, 40) : '(null)';
-      console.warn('epub-sel: received page', event.data.pageNumber, 'current', currentChapterIndex, 'cfi', cfiPreview);
+      console.warn('epub-sel: received page', event.data.pageNumber, 'currentSpine', currentSpineIndex, 'toc', currentChapterIndex, 'cfi', cfiPreview);
     }
 
     if (
       typeof event.data.pageNumber === 'number' &&
-      event.data.pageNumber !== currentChapterIndex
+      event.data.pageNumber !== currentSpineIndex
     ) {
-      // Stale message from a chapter the user has already navigated
-      // away from. Drop silently.
+      // Stale message from a chapter that is no longer current (spine authority).
       if (debugState.enabled) debugState.epub.guardResult = 'drop-chapter-mismatch';
       return;
     }
@@ -319,7 +379,7 @@
     debugState.epub.rectCount = Array.isArray(event.data.rects) ? event.data.rects.length : 0;
 
     const resolvedPageNumber =
-      typeof event.data.pageNumber === 'number' ? event.data.pageNumber : currentChapterIndex;
+      typeof event.data.pageNumber === 'number' ? event.data.pageNumber : currentSpineIndex;
     const resolvedCfi = typeof event.data.cfi === 'string' ? event.data.cfi : null;
     onselection({
       text: event.data.text,
@@ -341,9 +401,7 @@
     text?: string;
     pageNumber: number;
   }): void {
-    // HM-4: pageNumber guard (already enforced by the switch above
-    // for messages with the field; this is a defensive duplicate).
-    if (msg.pageNumber !== currentChapterIndex) return;
+    if (msg.pageNumber !== currentSpineIndex) return;
     if (!iframeEl || !onHighlightAction) return;
     // Translate iframe-local click point to parent-viewport coords
     // using the iframe element's bounding rect.
@@ -432,6 +490,8 @@
 
   $effect(() => {
     debugState.epub.currentChapterIndex = currentChapterIndex;
+    // Expose spine index for debug panel as well
+    (debugState.epub as unknown as Record<string, unknown>).currentSpineIndex = currentSpineIndex;
   });
 
   let lastRenderedChapter = $state(-1);
@@ -508,18 +568,23 @@
     if (!metadata || isLoading || !iframeEl) return;
     // Track persistedHighlights reactively (triggers on array reference changes)
     void persistedHighlights;
-    // Capture currentChapterIndex reactively, but lastRendered via untrack to avoid bounce
+    // Capture both TOC index and spine index reactively; highlights are spine-authoritative
     const currentIdx = currentChapterIndex;
-    const chapterHref = normalizeHref(metadata.chapters[currentIdx]?.href ?? '');
-    const metaHref = normalizeHref(metadata.chapters[currentIdx]?.href ?? '');
+    void currentSpineIndex;
+    const spineHref = normalizeHref(getSpineHrefs()[currentSpineIndex] ?? '');
+    const tocHrefRaw = getToc()[currentIdx]?.href ?? '';
+    const chapterHref = spineHref || normalizeHref(stripFragment(tocHrefRaw));
+    const metaHref = normalizeHref(stripFragment(tocHrefRaw));
     const highlightsSnapshot = persistedHighlights;
     const lastRenderedSnapshot = untrack(() => lastRenderedChapter);
 
     console.warn(
       'epub-hl: effect triggered with',
       highlightsSnapshot.length,
-      'highlights, chapter',
+      'highlights, toc',
       currentIdx,
+      'spine',
+      currentSpineIndex,
       'lastRendered',
       lastRenderedSnapshot,
       'highlightsMap',
@@ -530,8 +595,8 @@
       metaHref,
     );
 
-    // Deduplicate: skip if same highlights + chapter already rendered successfully
-    const renderKey = `${currentIdx}|${chapterHref}|${highlightsSnapshot.map((h) => h.id + ':' + h.pageNumber).join(',')}`;
+    // Deduplicate: spine-authoritative; include both toc and spine in key
+    const renderKey = `${currentIdx}|${currentSpineIndex}|${chapterHref}|${highlightsSnapshot.map((h) => h.id + ':' + h.pageNumber).join(',')}`;
     if (renderKey === untrack(() => lastHighlightRenderKey)) {
       console.warn('epub-hl: skip duplicate render', renderKey.slice(0, 120));
       return;
@@ -606,13 +671,15 @@
       console.warn(
         'epub-hl: render called with',
         highlightsSnapshot.length,
-        'highlights, chapter',
+        'highlights, toc',
         currentIdx,
+        'spine',
+        currentSpineIndex,
         'chapterHref',
         chapterHref,
       );
       try {
-        win.__epubHighlightOverlay.render(highlightsSnapshot, chapterHref, currentIdx);
+        win.__epubHighlightOverlay.render(highlightsSnapshot, chapterHref, currentSpineIndex);
         // Mark as successfully rendered to deduplicate
         lastHighlightRenderKey = renderKey;
       } catch (err) {
@@ -631,8 +698,12 @@
   // ─── External TOC navigation ─────────────────────────────
   $effect(() => {
     if (externalTocNavigate && externalTocNavigate.id && metadata) {
-      const chapterIdx = metadata.chapters.findIndex((c) => c.id === externalTocNavigate!.id);
+      const toc = getToc();
+      const chapterIdx = toc.findIndex((c) => c.id === externalTocNavigate!.id);
       if (chapterIdx >= 0) {
+        const href = toc[chapterIdx]?.href ?? '';
+        const frag = extractFragment(href);
+        if (frag) pendingFragment = frag;
         goToChapter(chapterIdx);
       }
     }
@@ -665,11 +736,11 @@
         'totalChapters',
         totalChapters,
         'tocLen',
-        metadata.chapters.length,
+        getToc().length,
       );
     }
     if (mapped !== null) {
-      if (chapterIdx < 0 || chapterIdx >= metadata.chapters.length) return;
+      if (chapterIdx < 0 || chapterIdx >= getToc().length) return;
     } else {
       if (chapterIdx < 0 || chapterIdx >= totalChapters) return;
     }
@@ -704,11 +775,11 @@
         'not in TOC, fallback to',
         chapterIdx,
         'tocLen',
-        metadata.chapters.length,
+        getToc().length,
       );
     }
     if (mapped !== null) {
-      if (chapterIdx < 0 || chapterIdx >= metadata.chapters.length) return;
+      if (chapterIdx < 0 || chapterIdx >= getToc().length) return;
     } else {
       if (chapterIdx < 0 || chapterIdx >= totalChapters) return;
     }
@@ -774,15 +845,16 @@
           currentChapterIndex,
         );
       }
-      if (initialCfi && initialCfi.startsWith('epubcfi(') && meta.chapters.length > 0) {
+      const tocForInit = (meta as EpubMetadataExtract).toc ?? (meta as EpubMetadataExtract).chapters ?? [];
+      if (initialCfi && initialCfi.startsWith('epubcfi(') && tocForInit.length > 0) {
         const spineMatch = /epubcfi\(\/6\/(\d+)!/.exec(initialCfi);
         if (spineMatch) {
           const spineOneBased = Number.parseInt(spineMatch[1], 10); // 1-based
           const spineIdx = spineOneBased - 1;
           if (spineIdx >= 0) {
-            // Map spine -> TOC; currentChapterIndex is always TOC position 0..chapters.length-1
+            // Map spine -> TOC; currentChapterIndex is always TOC position 0..toc.length-1
             const mapped = (() => {
-              const byIndex = meta.chapters.findIndex((c) => c.index === spineIdx);
+              const byIndex = tocForInit.findIndex((c) => c.index === spineIdx);
               if (byIndex !== -1) return byIndex;
               console.warn(
                 'epub-toc: initReader spine',
@@ -790,12 +862,12 @@
                 'not in TOC, fallback to',
                 spineIdx,
                 'tocLen',
-                meta.chapters.length,
+                tocForInit.length,
               );
               return null;
             })();
             const tocIdx = mapped !== null ? mapped : spineIdx;
-            if (tocIdx >= 0 && tocIdx < meta.chapters.length) {
+            if (tocIdx >= 0 && tocIdx < tocForInit.length) {
               currentChapterIndex = tocIdx;
               pendingCfiScroll = initialCfi;
             } else if (mapped === null && tocIdx >= 0 && tocIdx < totalChapters) {
@@ -812,7 +884,7 @@
       }
 
       if (onTocReady) {
-        const entries = meta.chapters.map((ch) => ({
+        const entries = (tocForInit).map((ch) => ({
           id: ch.id,
           title: ch.label,
           depth: ch.depth ?? 0,
@@ -1010,8 +1082,13 @@
     missingFonts: Set<string> = new Set(),
   ): string {
     console.warn('build srcdoc CHAPTER_INDEX', chapterIndex, 'href', currentChapterHref);
+    // 3.4 sanitize before rewrite and srcdoc cache — guarantee zero chrome-extension://
+    const sanitizedHtml = sanitizeEpubHtml(chapterData.html);
     const parser = new DOMParser();
-    const doc = parser.parseFromString(chapterData.html, 'text/html');
+    const doc = parser.parseFromString(sanitizedHtml, 'text/html');
+    // Defense-in-depth: also strip any lingering DOM nodes that slipped through
+    for (const el of doc.querySelectorAll('[id="floatBarImgId"]')) el.remove();
+    for (const el of doc.querySelectorAll('[src^="chrome-extension://"]')) el.remove();
     const chapterPath = chapterData.chapterPath.replace(/\\/g, '/');
 
     const baseUrl = chapterData.chapterBasePath
@@ -1395,7 +1472,8 @@
         __cfiBridge?: { cfiToRange: (cfi: string, href: string, doc: Document) => Range | null };
       }
     ).__cfiBridge;
-    const rawChapterHref = metadata.chapters[currentChapterIndex]?.href ?? '';
+    const rawChapterHref =
+      getSpineHrefs()[currentSpineIndex] ?? stripFragment(getToc()[currentChapterIndex]?.href ?? '');
     const chapterHref = normalizeHref(rawChapterHref);
     if (!bridge || !chapterHref) return;
 
@@ -1427,7 +1505,8 @@
         };
       }
     ).__cfiBridge;
-    const rawChapterHref = metadata.chapters[currentChapterIndex]?.href ?? '';
+    const rawChapterHref =
+      getSpineHrefs()[currentSpineIndex] ?? stripFragment(getToc()[currentChapterIndex]?.href ?? '');
     const chapterHref = normalizeHref(rawChapterHref);
     if (!bridge || !chapterHref) return;
 
@@ -1459,7 +1538,7 @@
       .slice(0, nodes.indexOf(visibleNode))
       .reduce((total, textNode) => total + textNode.data.length, 0);
     const locator = locatorFromCfi(
-      metadata.chapters.map((chapter) => normalizeHref(chapter.href)),
+      getSpineHrefs(),
       preciseCfi,
       {
         chapterChars,
@@ -1469,7 +1548,7 @@
     if (!locator) return;
 
     const progression = locator.locations.progression ?? 0;
-    const percentage = ((currentChapterIndex + progression) / totalChapters) * 100;
+    const percentage = ((currentSpineIndex + progression) / totalChapters) * 100;
     onLocationChange?.(preciseCfi, percentage);
     onLocationContext?.({ locator: locatorToJson(locator), percentage });
   }
@@ -1481,11 +1560,15 @@
     if (!metadata || !iframeEl) return;
     const myEpoch = ++renderEpoch;
     currentRenderIndex = index;
-    // currentChapterIndex is always TOC position (0..chapters.length-1);
-    // resolve the real spine index for the Rust cache.
+    // currentChapterIndex is always TOC position (0..toc.length-1);
+    // resolve the real spine index for the Rust cache (authority: spineHrefs).
     const spineIndex = spineIndexForToc(index);
-    const tocHrefForLog = metadata.chapters[index]?.href ?? '';
-    const spineHrefForLog = metadata.chapters[index]?.href ?? `(spine ${spineIndex})`;
+    const tocEntry = getToc()[index];
+    const tocHrefForLog = tocEntry?.href ?? '';
+    const spineHrefForLog = getSpineHrefs()[spineIndex] ?? `(spine ${spineIndex})`;
+    // Preserve fragment for scrollToFragment
+    const frag = extractFragment(tocHrefForLog);
+    if (frag) pendingFragment = frag;
     console.warn(
       'epub-hl: renderChapter called tocIndex=',
       index,
@@ -1493,14 +1576,16 @@
       spineIndex,
       'epoch=',
       myEpoch,
-      'srcdoc CHAPTER_INDEX=',
-      index,
+      'srcdoc CHAPTER_INDEX(spine)=',
+      spineIndex,
       'spineHrefs',
-      metadata.chapters.length,
+      getSpineHrefs().length,
       'chapterHref(toc)',
       tocHrefForLog,
       'spineHref',
       spineHrefForLog,
+      'fragment',
+      frag ?? '(none)',
     );
     if (spineIndex !== index) {
       console.warn('epub-toc: renderChapter toc', index, '-> spine', spineIndex, 'href', tocHrefForLog);
@@ -1528,8 +1613,9 @@
       currentChapterIndex = index;
       iframeContentHeight = 0;
 
-      const spineHrefs = metadata.chapters.map((c) => normalizeHref(c.href));
-      const chapterHref = normalizeHref(metadata.chapters[index]?.href ?? '');
+      const spineHrefs = getSpineHrefs();
+      const tocHrefRaw = getToc()[index]?.href ?? '';
+      const chapterHref = normalizeHref(stripFragment(tocHrefRaw) || spineHrefs[spineIndex] || '');
       // Probe every @font-face URL the chapter declares. Those that 404/403
       // (typically because the EPUB references commercial fonts like
       // Neutraface or Felt Tip Roman without bundling the file) get their
@@ -1545,7 +1631,7 @@
         metadata.resourcesPath,
         spineHrefs,
         chapterHref,
-        index,
+        spineIndex,
         missingFonts,
       );
 
@@ -1603,6 +1689,10 @@
               const cfi = pendingCfiScroll;
               requestAnimationFrame(() => scrollToCfi(cfi));
             }
+            if (pendingFragment) {
+              const frag = pendingFragment;
+              requestAnimationFrame(() => scrollToFragment(frag));
+            }
             return;
           }
           if (attempt++ < maxRetries) {
@@ -1625,6 +1715,10 @@
               const cfi = pendingCfiScroll;
               requestAnimationFrame(() => scrollToCfi(cfi));
             }
+            if (pendingFragment) {
+              const frag = pendingFragment;
+              requestAnimationFrame(() => scrollToFragment(frag));
+            }
           }
         }
         markReady();
@@ -1639,26 +1733,60 @@
   // ─── Navigation ──────────────────────────────────────────
   function goToPrev(): void {
     if (currentChapterIndex > 0) {
-      currentChapterIndex -= 1;
+      const prevIdx = currentChapterIndex - 1;
+      const frag = extractFragment(getToc()[prevIdx]?.href ?? '');
+      if (frag) pendingFragment = frag;
+      currentChapterIndex = prevIdx;
     }
   }
 
   function goToNext(): void {
-    if (currentChapterIndex < totalChapters - 1) {
-      currentChapterIndex += 1;
+    const tocLen = getToc().length;
+    const nextIdx = currentChapterIndex + 1;
+    // Prefer TOC navigation; fallback to spine length for edge docs not in TOC
+    const limit = tocLen > 0 ? tocLen : totalChapters;
+    if (nextIdx < limit) {
+      const frag = extractFragment(getToc()[nextIdx]?.href ?? '');
+      if (frag) pendingFragment = frag;
+      currentChapterIndex = nextIdx;
+    } else if (nextIdx < totalChapters) {
+      currentChapterIndex = nextIdx;
     }
   }
 
   function goToChapter(index: number): void {
-    if (index >= 0 && index < totalChapters) {
+    const tocLen = getToc().length;
+    const limit = tocLen > 0 ? tocLen : totalChapters;
+    if (index >= 0 && index < limit) {
+      const frag = extractFragment(getToc()[index]?.href ?? '');
+      if (frag) pendingFragment = frag;
+      else pendingFragment = null;
+      currentChapterIndex = index;
+    } else if (index >= 0 && index < totalChapters) {
+      // Spine doc not in TOC (e.g., cover) — allow direct spine navigation via toc index fallback
+      const frag2 = extractFragment(getToc()[index]?.href ?? '');
+      if (frag2) pendingFragment = frag2;
       currentChapterIndex = index;
     }
   }
 
   async function handleGoToPage(page: number): Promise<boolean> {
-    const chapterIndex = page - 1;
-    if (chapterIndex >= 0 && chapterIndex < totalChapters) {
-      goToChapter(chapterIndex);
+    const spineIdx = page - 1;
+    if (spineIdx < 0 || spineIdx >= totalChapters) return false;
+    // Map spine page to TOC position when possible (Historia offset-2)
+    const tocIdx = tocIndexForSpine(spineIdx, getSpineHrefs()[spineIdx]);
+    if (tocIdx !== null && tocIdx >= 0 && tocIdx < getToc().length) {
+      goToChapter(tocIdx);
+      return true;
+    }
+    // Fallback: treat page as TOC index when spine not mapped (e.g., linear cover)
+    if (spineIdx >= 0 && spineIdx < getToc().length) {
+      goToChapter(spineIdx);
+      return true;
+    }
+    // Last resort: direct spine fallback (may render blank if toc length smaller)
+    if (spineIdx >= 0 && spineIdx < totalChapters) {
+      goToChapter(Math.min(spineIdx, getToc().length - 1));
       return true;
     }
     return false;
@@ -1750,11 +1878,11 @@
       {t('epub.error')}: {error}
     </div>
   {:else}
-    <!-- EpubControls top bar -->
+    <!-- EpubControls top bar — spine-authoritative pagination -->
     <EpubControls
-      currentPage={currentChapterIndex + 1}
+      currentPage={currentSpineIndex + 1}
       totalPages={totalChapters}
-      currentPercentage={((currentChapterIndex + 0.5) / totalChapters) * 100}
+      currentPercentage={((currentSpineIndex + 0.5) / totalChapters) * 100}
       {fontSize}
       {isFullscreen}
       {t}

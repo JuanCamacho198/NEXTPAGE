@@ -446,6 +446,16 @@
     <string name="settings_drive_authorizing">Authorizing…</string>
     <string name="settings_drive_error_oauth">Failed to authorize Google Drive</string>
     <string name="settings_drive_error_config">Google Drive is not configured</string>
+    <string name="settings_drive_cold_backup_section">Cold Backup (Drive)</string>
+    <string name="settings_drive_cold_backup_description">Export or import your library as a cold backup to Drive. Settings-only — saves never touch Drive.</string>
+    <string name="settings_drive_cold_export">Export to Drive</string>
+    <string name="settings_drive_cold_exporting">Exporting…</string>
+    <string name="settings_drive_cold_export_success">Cold backup exported to Drive</string>
+    <string name="settings_drive_cold_export_error">Cold backup export failed</string>
+    <string name="settings_drive_cold_import">Import from Drive</string>
+    <string name="settings_drive_cold_importing">Importing…</string>
+    <string name="settings_drive_cold_import_success">Cold backup imported</string>
+    <string name="settings_drive_cold_import_error">Cold backup import failed</string>
 
     <!-- Drive connect prompt (one-time, after successful import) -->
     <string name="drive_connect_prompt_title">Connect Google Drive?</string>

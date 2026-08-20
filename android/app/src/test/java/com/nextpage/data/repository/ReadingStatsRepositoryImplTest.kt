@@ -215,6 +215,7 @@ class ReadingStatsRepositoryImplTest {
             MutableStateFlow(emptyList())
         override suspend fun deleteSessionsForBook(bookId: String) = Unit
         override suspend fun count(): Int = 0
+        override suspend fun getAll(): List<ReadingSessionEntity> = insertedSessions.toList()
         override suspend fun getDailyMinutes(): List<DailyReadingMinutes> = getDailyMinutesResult
         override suspend fun getDailyMinutesFromDate(startDate: Long): List<DailyReadingMinutes> =
             getDailyMinutesFromDateResult

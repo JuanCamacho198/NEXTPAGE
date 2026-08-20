@@ -17,6 +17,9 @@ interface ReadingProgressDao {
     @Upsert
     suspend fun upsert(progress: ReadingProgressEntity)
 
+    @Query("SELECT * FROM reading_progress")
+    suspend fun getAll(): List<ReadingProgressEntity>
+
     @Query("SELECT COUNT(*) FROM reading_progress")
     suspend fun count(): Int
 }

@@ -21,6 +21,7 @@
   import { authState } from '$lib/stores/authState.svelte';
   import { pushToast } from '$lib/stores/toastQueue.svelte';
   import { appState } from '$lib/shared/stores/AppState.svelte';
+  import { DriveColdBackupService } from '$lib/shared/services/DriveColdBackupService';
   import type {
     AppSettingDto,
     CommandErrorDto,
@@ -77,6 +78,8 @@
   let selectedExportBook = $state('all');
   let selectedExportFormat = $state<'json' | 'markdown'>('json');
   let isExportingHighlights = $state(false);
+  let isExportingColdBackup = $state(false);
+  let isImportingColdBackup = $state(false);
 
   type ShortcutDescriptor = {
     id: string;
@@ -461,6 +464,40 @@
       await new Promise((resolve) => setTimeout(resolve, 500));
     } finally {
       isExportingHighlights = false;
+    }
+  }
+
+  async function handleExportColdBackup(): Promise<void> {
+    const userId = authState.userId;
+    if (!userId) {
+      pushToast('error', t('errors.commandFailure'));
+      return;
+    }
+    isExportingColdBackup = true;
+    try {
+      await DriveColdBackupService.exportColdBackup(userId);
+      pushToast('success', t('settings.data.exportSuccess'));
+    } catch (e) {
+      pushToast('error', e instanceof Error ? e.message : t('errors.commandFailure'));
+    } finally {
+      isExportingColdBackup = false;
+    }
+  }
+
+  async function handleImportColdBackup(): Promise<void> {
+    const userId = authState.userId;
+    if (!userId) {
+      pushToast('error', t('errors.commandFailure'));
+      return;
+    }
+    isImportingColdBackup = true;
+    try {
+      await DriveColdBackupService.importColdBackup(userId);
+      pushToast('success', t('settings.data.importSuccess'));
+    } catch (e) {
+      pushToast('error', e instanceof Error ? e.message : t('errors.importCommandFailed'));
+    } finally {
+      isImportingColdBackup = false;
     }
   }
 
@@ -1089,6 +1126,32 @@
                     </button>
                   </div>
                 </section>
+              </div>
+              <div class="p-4 border-b border-(--color-border) last:border-b-0">
+                <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
+                  {t('settings.data.coldBackup')}
+                </h3>
+                <p class="text-2xs text-(--color-text-muted) mb-3">
+                  {t('settings.data.coldBackupDescription')}
+                </p>
+                <div class="flex gap-2">
+                  <button
+                    type="button"
+                    class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-(--color-primary) bg-(--color-primary) text-(--color-background) cursor-pointer transition-all duration-200 text-xs font-medium hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+                    onclick={() => void handleExportColdBackup()}
+                    disabled={isExportingColdBackup || isImportingColdBackup}
+                  >
+                    <span>{isExportingColdBackup ? t('settings.data.exporting') : t('settings.data.coldExport')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-(--color-border) bg-(--color-background) cursor-pointer transition-all duration-200 text-(--color-primary) text-xs hover:bg-(--color-surface) disabled:opacity-60 disabled:cursor-not-allowed"
+                    onclick={() => void handleImportColdBackup()}
+                    disabled={isExportingColdBackup || isImportingColdBackup}
+                  >
+                    <span>{isImportingColdBackup ? t('settings.data.importing') : t('settings.data.coldImport')}</span>
+                  </button>
+                </div>
               </div>
               <div class="p-4">
                 <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">

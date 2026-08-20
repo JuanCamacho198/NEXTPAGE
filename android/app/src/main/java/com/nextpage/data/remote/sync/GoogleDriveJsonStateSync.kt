@@ -1,17 +1,15 @@
 package com.nextpage.data.remote.sync
 
-import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
-import com.nextpage.domain.error.AppError
-import com.nextpage.domain.error.ErrorCategory
-import com.nextpage.domain.model.Bookmark
-import com.nextpage.domain.model.Highlight
-import com.nextpage.domain.model.ReadingProgress
 
 /**
- * JSON state file format stored as a single file per book in Google Drive.
+ * Cold export schema only (PR3). Hot push/pull retired — Drive is cold
+ * Export/Import via DriveColdBackupService. This file keeps BookStateJson
+ * types for legacy backfill parsing (Drive _state.json) and cold export shape.
  *
- * One JSON file at `books/{userId}/{bookId}/state.json` containing all 3 sync types.
+ * Hot methods pushState/pullState/schedulePull were removed; Drive hot sync
+ * is gone (Supabase SoT hot + single Realtime supervisor). Use
+ * DriveColdBackupService for on-demand export/import (Settings only).
  */
 data class BookStateJson(
     val progress: ProgressStateJson? = null,
@@ -68,200 +66,40 @@ data class BookmarkStateJson(
 }
 
 /**
- * Handles serialization/deserialization of per-book state JSON to/from Google Drive.
- *
- * Uses a single JSON file per book (`books/{userId}/{bookId}/state.json`) containing
- * reading progress, highlights, and bookmarks. Conflict resolution uses
- * [LastWriteWinsConflictResolver] for highlights and bookmarks at the record level.
+ * Stub retained for compile compatibility — hot Drive sync removed.
+ * Use DriveColdBackupService for cold export/import.
  */
+@Deprecated("Drive hot sync removed — use DriveColdBackupService (cold export/import only)")
 class GoogleDriveJsonStateSync(
-    private val remoteDataSource: StorageSyncRemoteDataSource,
-    private val highlightResolver: ConflictResolver<HighlightStateJson> = LastWriteWinsConflictResolver(),
-    private val bookmarkResolver: ConflictResolver<BookmarkStateJson> = LastWriteWinsConflictResolver(),
-    private val gson: Gson = Gson()
+    @Suppress("UNUSED_PARAMETER") private val remoteDataSource: StorageSyncRemoteDataSource,
 ) {
-    /**
-     * Serializes local state for a book and uploads the JSON to Drive.
-     */
+    @Deprecated("Hot push retired — Drive is cold only")
     suspend fun pushState(
-        userId: String,
-        bookId: String,
-        progress: ReadingProgress?,
-        highlights: List<Highlight>,
-        bookmarks: List<Bookmark>
-    ): Result<ByteArray> {
-        return runCatching {
-            val json = BookStateJson(
-                progress = progress?.let {
-                    ProgressStateJson(
-                        id = it.id,
-                        bookId = it.bookId,
-                        cfiLocation = it.cfiLocation,
-                        percentage = it.percentage,
-                        currentPage = it.currentPage,
-                        updatedAtEpochMillis = it.updatedAtEpochMillis
-                    )
-                },
-                highlights = highlights.map { it.toStateJson() },
-                bookmarks = bookmarks.map { it.toStateJson() }
-            )
-            val jsonBytes = gson.toJson(json).toByteArray(Charsets.UTF_8)
-            val path = statePathFor(userId, bookId)
-            remoteDataSource.upload(path, jsonBytes)
-            jsonBytes
-        }
-    }
+        @Suppress("UNUSED_PARAMETER") userId: String,
+        @Suppress("UNUSED_PARAMETER") bookId: String,
+        @Suppress("UNUSED_PARAMETER") progress: com.nextpage.domain.model.ReadingProgress?,
+        @Suppress("UNUSED_PARAMETER") highlights: List<com.nextpage.domain.model.Highlight>,
+        @Suppress("UNUSED_PARAMETER") bookmarks: List<com.nextpage.domain.model.Bookmark>
+    ): Result<ByteArray> = Result.success(ByteArray(0))
 
-    /**
-     * Downloads remote state JSON, deserializes it, and resolves conflicts
-     * against the provided local state. Returns the resolved state.
-     */
+    @Deprecated("Hot pull retired — Drive is cold only")
     suspend fun pullState(
-        userId: String,
-        bookId: String,
-        localProgress: ReadingProgress?,
-        localHighlights: List<Highlight>,
-        localBookmarks: List<Bookmark>
-    ): Result<PullResult> {
-        return runCatching {
-            val path = statePathFor(userId, bookId)
-            val jsonBytes = try {
-                remoteDataSource.download(path)
-            } catch (e: AppError) {
-                if (e.code == "GOOGLE_DRIVE_FILE_NOT_FOUND") {
-                    // No remote state yet — return local as-is
-                    return Result.success(
-                        PullResult(
-                            progress = localProgress,
-                            highlights = localHighlights,
-                            bookmarks = localBookmarks
-                        )
-                    )
-                }
-                throw e
-            }
-            val jsonString = String(jsonBytes, Charsets.UTF_8)
-            val remoteState = gson.fromJson(jsonString, BookStateJson::class.java)
-
-            // Resolve progress: simple last-write-wins (newer updatedAtEpochMillis wins)
-            val resolvedProgress = resolveProgress(localProgress, remoteState.progress)
-
-            // Resolve highlights with LastWriteWinsConflictResolver
-            val resolvedHighlights = resolveRecords(
-                local = localHighlights.map { it.toStateJson() },
-                remote = remoteState.highlights,
-                resolver = highlightResolver
-            )
-
-            // Resolve bookmarks with LastWriteWinsConflictResolver
-            val resolvedBookmarks = resolveRecords(
-                local = localBookmarks.map { it.toStateJson() },
-                remote = remoteState.bookmarks,
-                resolver = bookmarkResolver
-            )
-
-            PullResult(
-                progress = resolvedProgress,
-                highlights = resolvedHighlights.map { it.toDomain(bookId) },
-                bookmarks = resolvedBookmarks.map { it.toDomain(bookId) }
-            )
-        }
-    }
-
-    private fun resolveProgress(
-        local: ReadingProgress?,
-        remote: ProgressStateJson?
-    ): ReadingProgress? {
-        if (remote == null) return local
-        if (local == null) return remote.toDomain()
-        if (remote.updatedAtEpochMillis > local.updatedAtEpochMillis) return remote.toDomain()
-        return local
-    }
-
-    private fun <T : VersionedSyncRecord> resolveRecords(
-        local: List<T>,
-        remote: List<T>,
-        resolver: ConflictResolver<T>
-    ): List<T> {
-        val allIds = (local.map { it.recordId } + remote.map { it.recordId }).distinct()
-        val localById = local.associateBy { it.recordId }
-        val remoteById = remote.associateBy { it.recordId }
-
-        return allIds.mapNotNull { id ->
-            val localRecord = localById[id]
-            val remoteRecord = remoteById[id]
-            when {
-                remoteRecord == null -> localRecord
-                localRecord == null -> remoteRecord
-                else -> resolver.resolve(localRecord, remoteRecord)
-            }
-        }
-    }
-
-    data class PullResult(
-        val progress: ReadingProgress?,
-        val highlights: List<Highlight>,
-        val bookmarks: List<Bookmark>
+        @Suppress("UNUSED_PARAMETER") userId: String,
+        @Suppress("UNUSED_PARAMETER") bookId: String,
+        @Suppress("UNUSED_PARAMETER") localProgress: com.nextpage.domain.model.ReadingProgress?,
+        @Suppress("UNUSED_PARAMETER") localHighlights: List<com.nextpage.domain.model.Highlight>,
+        @Suppress("UNUSED_PARAMETER") localBookmarks: List<com.nextpage.domain.model.Bookmark>
+    ): Result<PullResult> = Result.success(
+        PullResult(progress = localProgress, highlights = localHighlights, bookmarks = localBookmarks)
     )
 
-    private fun statePathFor(userId: String, bookId: String): String {
-        return "books/$userId/$bookId/state.json"
-    }
+    data class PullResult(
+        val progress: com.nextpage.domain.model.ReadingProgress?,
+        val highlights: List<com.nextpage.domain.model.Highlight>,
+        val bookmarks: List<com.nextpage.domain.model.Bookmark>
+    )
 
     companion object {
         const val COMPONENT = "GoogleDriveJsonStateSync"
     }
 }
-
-// Extension functions for domain ↔ state JSON conversion
-
-private fun Highlight.toStateJson(): HighlightStateJson = HighlightStateJson(
-    id = id,
-    bookId = bookId,
-    cfiRange = cfiRange,
-    textContent = textContent,
-    note = note,
-    color = color,
-    updatedAtEpochMillis = updatedAtEpochMillis,
-    deletedAtEpochMillis = deletedAtEpochMillis,
-    tag = tag
-)
-
-private fun HighlightStateJson.toDomain(bookId: String): Highlight = Highlight(
-    id = id,
-    bookId = bookId,
-    cfiRange = cfiRange,
-    textContent = textContent,
-    note = note,
-    color = color,
-    updatedAtEpochMillis = updatedAtEpochMillis,
-    deletedAtEpochMillis = deletedAtEpochMillis,
-    tag = tag
-)
-
-private fun Bookmark.toStateJson(): BookmarkStateJson = BookmarkStateJson(
-    id = id,
-    bookId = bookId,
-    cfiLocation = cfiLocation,
-    titleOrSnippet = titleOrSnippet,
-    updatedAtEpochMillis = updatedAtEpochMillis,
-    deletedAtEpochMillis = deletedAtEpochMillis
-)
-
-private fun BookmarkStateJson.toDomain(bookId: String): Bookmark = Bookmark(
-    id = id,
-    bookId = bookId,
-    cfiLocation = cfiLocation,
-    titleOrSnippet = titleOrSnippet,
-    updatedAtEpochMillis = updatedAtEpochMillis,
-    deletedAtEpochMillis = deletedAtEpochMillis
-)
-
-private fun ProgressStateJson.toDomain(): ReadingProgress = ReadingProgress(
-    id = id,
-    bookId = bookId,
-    cfiLocation = cfiLocation,
-    percentage = percentage,
-    currentPage = currentPage,
-    updatedAtEpochMillis = updatedAtEpochMillis
-)

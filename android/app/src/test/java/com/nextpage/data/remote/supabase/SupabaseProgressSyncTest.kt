@@ -404,6 +404,7 @@ class SupabaseProgressSyncTest {
         }
 
         override suspend fun count(): Int = sessions.size
+        override suspend fun getAll(): List<ReadingSessionEntity> = sessions.values.toList()
         override suspend fun getDailyMinutes(): List<com.nextpage.data.local.model.DailyReadingMinutes> = emptyList()
         override suspend fun getDailyMinutesFromDate(startDate: Long): List<com.nextpage.data.local.model.DailyReadingMinutes> = emptyList()
         override suspend fun getById(id: String): ReadingSessionEntity? = sessions[id]

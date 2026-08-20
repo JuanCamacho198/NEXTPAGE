@@ -472,6 +472,16 @@
     <string name="settings_drive_authorizing">Autorizando…</string>
     <string name="settings_drive_error_oauth">Error al autorizar Google Drive</string>
     <string name="settings_drive_error_config">Google Drive no está configurado</string>
+    <string name="settings_drive_cold_backup_section">Respaldo frío (Drive)</string>
+    <string name="settings_drive_cold_backup_description">Exportá o importá tu biblioteca como respaldo frío a Drive. Solo desde Ajustes — guardar nunca toca Drive.</string>
+    <string name="settings_drive_cold_export">Exportar a Drive</string>
+    <string name="settings_drive_cold_exporting">Exportando…</string>
+    <string name="settings_drive_cold_export_success">Respaldo frío exportado a Drive</string>
+    <string name="settings_drive_cold_export_error">Falló la exportación del respaldo frío</string>
+    <string name="settings_drive_cold_import">Importar desde Drive</string>
+    <string name="settings_drive_cold_importing">Importando…</string>
+    <string name="settings_drive_cold_import_success">Respaldo frío importado</string>
+    <string name="settings_drive_cold_import_error">Falló la importación del respaldo frío</string>
 
     <!-- Drive connect prompt (one-time, after successful import) -->
     <string name="drive_connect_prompt_title">¿Conectar Google Drive?</string>

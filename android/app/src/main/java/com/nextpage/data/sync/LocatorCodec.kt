@@ -3,15 +3,45 @@ package com.nextpage.data.sync
 /**
  * LocatorCodec — Android parity for desktop `LocatorCodec.ts`.
  *
- * CFI-first page derivation: page is NOT a persisted source of truth.
- * It is derived from the canonical CFI (cfiRange || cfiLocation) via
- * LocatorCodec(cfi) → 1 or null, fallback 1 for EPUB.
+ * Canonical Readium Locator JSON codec — cross-device continuity.
+ * Single canonical locator string stored in `locator_json` and consumed
+ * by both NEXTPAGE engines (desktop + android). Shape (Readium):
+ * {"href":"chapter/001.xhtml","type":"application/xhtml+xml",
+ *  "locations":{"progression":0.37,"fragment":"epubcfi(...)"}}
  *
- * Spine prefix grammar: `epubcfi(/6/{spineIndex}!)` where spineIndex ≥ 1.
- * See desktop/src/lib/shared/sync/LocatorCodec.ts for full Readium shape.
+ * Responsibilities:
+ * - Resolve a precise epubjs CFI to an href using the reading order (spine).
+ * - Compute within-chapter progression from char offset.
+ * - Round-trip a locator back to its precise CFI (cfiFromLocator).
+ * - Serialise/deserialise the canonical JSON (locatorToJson / locatorFromJson).
+ *
+ * CFI spine-prefix format is the same as cfiBridge:
+ * `epubcfi(/6/{spineIndex}!)...` — spineIndex is 1-based.
+ * readingOrder = spineHrefs (authoritative OPF spine order, linear=no filtered)
+ *
+ * Parity with desktop/src/lib/shared/sync/LocatorCodec.ts — keep in lockstep.
+ * Golden vectors: desktop/src/test/unit/sync/LocatorCodec.golden.test.ts
  */
+
+data class LocatorChapterMetric(
+    val chapterChars: Int,
+    val charOffset: Int
+)
+
+data class LocatorLocations(
+    var progression: Double? = null,
+    var fragment: String? = null
+)
+
+data class CanonicalLocator(
+    var href: String,
+    var type: String,
+    var locations: LocatorLocations
+)
+
 object LocatorCodec {
 
+    private const val FALLBACK_TYPE = "application/xhtml+xml"
     private val SPINE_INDEX_RE = Regex("""^epubcfi\(/6/(\d+)""")
 
     /** Normalize href to forward slash (Windows backslash fix). */
@@ -35,12 +65,9 @@ object LocatorCodec {
             }
             // If href not at top level but json still contains backslash, fallback
             if (json.contains("\\") && json.contains("\"href\"")) {
-                // Fallback: global replace for href value only via regex
-                // Simple: replace all backslashes (CFI has none, so safe)
                 json.replace("\\", "/")
             } else json
         } catch (_: Exception) {
-            // Fallback: replace all backslashes if JSON parse fails
             if (json.contains("\\")) json.replace("\\", "/") else json
         }
     }
@@ -55,6 +82,112 @@ object LocatorCodec {
         val parsed = raw.toIntOrNull() ?: return null
         if (parsed < 1) return null
         return parsed
+    }
+
+    /** Compute a clamped [0, 1] within-chapter progression. Returns null if total is non-positive. */
+    fun charOffsetToProgression(charOffset: Int, chapterChars: Int): Double? {
+        if (chapterChars <= 0) return null
+        return (charOffset.toDouble() / chapterChars.toDouble()).coerceIn(0.0, 1.0)
+    }
+
+    /** Overload for Double to match TS Number path */
+    fun charOffsetToProgression(charOffset: Double, chapterChars: Double): Double? {
+        if (!chapterChars.isFinite() || chapterChars <= 0) return null
+        if (!charOffset.isFinite()) return 0.0
+        return (charOffset / chapterChars).coerceIn(0.0, 1.0)
+    }
+
+    /**
+     * Resolve a precise CFI to a canonical locator for the given reading order (spineHrefs).
+     * The spine index (from `/6/{N}`) maps to `readingOrder[N-1]`.
+     * readingOrder = spineHrefs (authoritative OPF order, linear=no filtered)
+     */
+    fun locatorFromCfi(
+        readingOrder: List<String>,
+        cfi: String?,
+        chapter: LocatorChapterMetric?
+    ): CanonicalLocator? {
+        val spineIndex = parseSpineIndex(cfi) ?: return null
+        val rawHref = readingOrder.getOrNull(spineIndex - 1) ?: return null
+        val href = normalizeHref(rawHref)
+        val locations = LocatorLocations()
+        if (chapter != null) {
+            val progression = charOffsetToProgression(chapter.charOffset, chapter.chapterChars)
+            if (progression != null) locations.progression = progression
+        }
+        if (!cfi.isNullOrEmpty()) {
+            locations.fragment = cfi
+        }
+        return CanonicalLocator(href = href, type = FALLBACK_TYPE, locations = locations)
+    }
+
+    /**
+     * Derive a chapter-anchored locator (progression 0.0, no precise CFI) for an
+     * href present in the reading order. Used for legacy rows that only carry a
+     * chapter reference (no mid-chapter precision).
+     */
+    fun deriveLocatorForChapter(
+        readingOrder: List<String>,
+        chapterHref: String?
+    ): CanonicalLocator? {
+        if (chapterHref.isNullOrEmpty()) return null
+        val normalizedChapterHref = normalizeHref(chapterHref)
+        val normalizedOrder = readingOrder.map { normalizeHref(it) }
+        if (!normalizedOrder.contains(normalizedChapterHref)) return null
+        return CanonicalLocator(
+            href = normalizedChapterHref,
+            type = FALLBACK_TYPE,
+            locations = LocatorLocations(progression = 0.0)
+        )
+    }
+
+    /** Return the precise CFI stored on the locator (round-trip), or null. */
+    fun cfiFromLocator(loc: CanonicalLocator?): String? {
+        if (loc?.locations?.fragment != null && loc.locations.fragment!!.isNotEmpty()) {
+            return loc.locations.fragment
+        }
+        return null
+    }
+
+    /** Serialise a locator to the canonical Readium JSON string. */
+    fun locatorToJson(loc: CanonicalLocator): String {
+        val obj = org.json.JSONObject()
+        obj.put("href", normalizeHref(loc.href))
+        obj.put("type", loc.type)
+        val locations = org.json.JSONObject()
+        loc.locations.progression?.let { locations.put("progression", it) }
+        loc.locations.fragment?.let { locations.put("fragment", it) }
+        obj.put("locations", locations)
+        return obj.toString()
+    }
+
+    /** Deserialise a canonical locator JSON string. Returns null on invalid input. */
+    fun locatorFromJson(json: String?): CanonicalLocator? {
+        if (json.isNullOrEmpty()) return null
+        val normalizedJson = normalizeLocatorJson(json) ?: json
+        return try {
+            val raw = org.json.JSONObject(normalizedJson)
+            val hrefRaw = raw.optString("href", "")
+            if (hrefRaw.isEmpty()) return null
+            val href = normalizeHref(hrefRaw)
+            val locations = LocatorLocations()
+            val locObj = if (raw.has("locations") && !raw.isNull("locations")) raw.optJSONObject("locations") else null
+            if (locObj != null) {
+                if (locObj.has("progression") && !locObj.isNull("progression")) {
+                    val prog = locObj.optDouble("progression", Double.NaN)
+                    if (!prog.isNaN()) locations.progression = prog
+                }
+                if (locObj.has("fragment") && !locObj.isNull("fragment")) {
+                    val frag = locObj.optString("fragment", "")
+                    if (frag.isNotEmpty()) locations.fragment = frag
+                }
+            }
+            val typeRaw = raw.optString("type", "")
+            val type = if (typeRaw.isNotEmpty()) typeRaw else FALLBACK_TYPE
+            CanonicalLocator(href = href, type = type, locations = locations)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     /**

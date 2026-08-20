@@ -76,6 +76,9 @@ class GoogleDriveSyncService(
         return Result.success(Unit)
     }
 
+    private suspend fun hasLiveSession(): Boolean =
+        sessionManager.getCurrentSession().getOrNull() != null
+
     override suspend fun schedulePush(): Result<Unit> {
         if (!isEnabled()) {
             val disabledError = diagnosticError ?: AppError(
@@ -113,6 +116,10 @@ class GoogleDriveSyncService(
                 SyncEntityType.READING_PROGRESS.name,
                 SyncEntityType.HIGHLIGHT.name,
                 SyncEntityType.BOOKMARK.name -> {
+                    // PR2: Supabase SoT hot — Drive hot is cold-only. When a live
+                    // session exists, Supabase owns progress/highlights/bookmarks;
+                    // Drive must not consume these outbox rows (leave for Supabase).
+                    if (hasLiveSession()) continue
                     val pushResult = pushState(item, session.userId)
                     if (pushResult.isFailure) {
                         val mapped = mapError(pushResult.exceptionOrNull(), defaultCode = "SYNC_STATE_PUSH_FAILED")
@@ -313,18 +320,19 @@ class GoogleDriveSyncService(
             )
         }
 
-        // Pull state JSON for each known book
-        val allMappings = mappingDao.getByUserId(session.userId)
-        val bookIds = allMappings.map { it.bookId }.distinct()
-        for (bookId in bookIds) {
-            if (isTombstoned(bookId)) continue
-            val localProgress = readingProgressDao.getProgressForBook(bookId)?.toDomain()
-            val localHighlights = highlightDao.getHighlightsForBook(bookId).map { it.toDomain() }
-            val localBookmarks = bookmarkDao.getBookmarksForBook(bookId).map { it.toDomain() }
+        // PR2: Supabase SoT hot — skip Drive hot state pull when live session exists
+        if (!hasLiveSession()) {
+            val allMappings = mappingDao.getByUserId(session.userId)
+            val bookIds = allMappings.map { it.bookId }.distinct()
+            for (bookId in bookIds) {
+                if (isTombstoned(bookId)) continue
+                val localProgress = readingProgressDao.getProgressForBook(bookId)?.toDomain()
+                val localHighlights = highlightDao.getHighlightsForBook(bookId).map { it.toDomain() }
+                val localBookmarks = bookmarkDao.getBookmarksForBook(bookId).map { it.toDomain() }
 
-            val pullResult = retryable {
-                jsonStateSync.pullState(session.userId, bookId, localProgress, localHighlights, localBookmarks)
-            }
+                val pullResult = retryable {
+                    jsonStateSync.pullState(session.userId, bookId, localProgress, localHighlights, localBookmarks)
+                }
 
             if (pullResult.isSuccess) {
                 val innerResult = pullResult.getOrThrow()
@@ -350,6 +358,7 @@ class GoogleDriveSyncService(
                         }
                     }
                 }
+            }
             }
         }
 

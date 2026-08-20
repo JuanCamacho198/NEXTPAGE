@@ -35,11 +35,13 @@ class SupabaseProgressDataSource {
 
     /**
      * Subscribe to realtime reading_progress changes for a given [userId].
+     * Single Realtime supervisor channel `progress:uid` (PR2 — Supabase SoT hot).
+     * Gated by hasLiveSession before any subscription; caller must verify session.
      * Returns a Flow that emits [PostgresAction] for INSERT, UPDATE, DELETE.
      */
     suspend fun subscribeToUserChanges(userId: String): Flow<PostgresAction> {
         unsubscribe()
-        val channel = SupabaseClientProvider.client.channel("reading-progress-changes")
+        val channel = SupabaseClientProvider.client.channel("progress:$userId")
         changesChannel = channel
         val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
             table = "reading_progress"
@@ -162,10 +164,11 @@ class SupabaseProgressDataSource {
 
     /**
      * Subscribe to realtime bookmark changes for a given [userId].
+     * Single supervisor channel `bookmarks:uid` — teardown with unsubscribeAll on logout.
      */
     suspend fun subscribeToBookmarkChanges(userId: String): Flow<PostgresAction> {
         bookmarksChannel?.unsubscribe()
-        val channel = SupabaseClientProvider.client.channel("bookmark-changes")
+        val channel = SupabaseClientProvider.client.channel("bookmarks:$userId")
         bookmarksChannel = channel
         val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
             table = "bookmarks"
@@ -227,10 +230,11 @@ class SupabaseProgressDataSource {
 
     /**
      * Subscribe to realtime highlight changes for a given [userId].
+     * Single supervisor channel `highlights:uid`.
      */
     suspend fun subscribeToHighlightChanges(userId: String): Flow<PostgresAction> {
         highlightsChannel?.unsubscribe()
-        val channel = SupabaseClientProvider.client.channel("highlight-changes")
+        val channel = SupabaseClientProvider.client.channel("highlights:$userId")
         highlightsChannel = channel
         val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
             table = "highlights"
@@ -353,10 +357,11 @@ class SupabaseProgressDataSource {
 
     /**
      * Subscribe to realtime reading_session changes for a given [userId].
+     * Single supervisor channel `sessions:uid`.
      */
     suspend fun subscribeToReadingSessionChanges(userId: String): Flow<PostgresAction> {
         sessionsChannel?.unsubscribe()
-        val channel = SupabaseClientProvider.client.channel("reading-session-changes")
+        val channel = SupabaseClientProvider.client.channel("sessions:$userId")
         sessionsChannel = channel
         val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
             table = "reading_sessions"
@@ -381,6 +386,7 @@ class SupabaseProgressDataSource {
 
 /**
  * Represents a row in the `reading_progress` Supabase table.
+ * PR2: version is hot SoT LWW tie +1 (reading_progress.version, default 1).
  */
 @Serializable
 data class ReadingProgressRow(
@@ -396,6 +402,7 @@ data class ReadingProgressRow(
     val locatorJson: String? = null,
     @SerialName("updated_at")
     val updatedAt: String,
+    val version: Int = 1,
 )
 
 data class SupabaseBookState(

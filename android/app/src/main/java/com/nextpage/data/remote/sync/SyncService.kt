@@ -15,6 +15,13 @@ sealed class SyncState {
     data object AuthorizationNeeded : SyncState()
 }
 
+/**
+ * SyncService — Drive cold backup vs Supabase hot SoT (PR2).
+ * Hot sync for reading_progress/highlights/bookmarks/sessions is Supabase only
+ * via PostgREST onConflict gated by hasLiveSession + single Realtime supervisor
+ * (progress:uid/highlights:uid/bookmarks:uid/sessions:uid), LWW version+1.
+ * Drive is cold Export/Import only — no hot push/pull for state on save/open.
+ */
 interface SyncService {
     val syncState: Flow<SyncState>
     val pendingCount: Flow<Int>

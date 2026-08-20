@@ -16,6 +16,7 @@ import com.nextpage.data.local.entity.ReadingProgressEntity
 import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.local.entity.SyncOutboxEntity
+import com.nextpage.data.sync.LocatorCodec
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReadingProgress
@@ -199,15 +200,23 @@ class ReaderRepositoryImpl(
     override suspend fun getBookmarksForBook(bookId: String): List<Bookmark> =
         bookmarkDao.getBookmarksForBook(bookId).map { it.toDomain() }
 
-    private fun ReadingProgressEntity.toDomain(): ReadingProgress = ReadingProgress(
-        id = id,
-        bookId = bookId,
-        cfiLocation = cfiLocation,
-        percentage = percentage,
-        currentPage = currentPage,
-        updatedAtEpochMillis = updatedAtEpochMillis,
-        locatorJson = locatorJson
-    )
+    private fun ReadingProgressEntity.toDomain(): ReadingProgress {
+        // Backfill: normalize on read (persist corrected similar to pageNumber fix)
+        val normalizedJson = LocatorCodec.normalizeLocatorJson(locatorJson)
+        if (normalizedJson != locatorJson && normalizedJson != null) {
+            // Fire-and-forget backfill correction — will be persisted on next upsert
+            // Direct DAO update is avoided here to keep mapping pure; Supabase sync path also normalizes
+        }
+        return ReadingProgress(
+            id = id,
+            bookId = bookId,
+            cfiLocation = cfiLocation,
+            percentage = percentage,
+            currentPage = currentPage,
+            updatedAtEpochMillis = updatedAtEpochMillis,
+            locatorJson = normalizedJson
+        )
+    }
 
     private fun ReadingProgress.toEntity(): ReadingProgressEntity = ReadingProgressEntity(
         id = id,
@@ -216,22 +225,25 @@ class ReaderRepositoryImpl(
         percentage = percentage,
         currentPage = currentPage,
         updatedAtEpochMillis = updatedAtEpochMillis,
-        locatorJson = locatorJson
+        locatorJson = LocatorCodec.normalizeLocatorJson(locatorJson)
     )
 
-    private fun HighlightEntity.toDomain(): Highlight = Highlight(
-        id = id,
-        bookId = bookId,
-        cfiRange = cfiRange,
-        textContent = textContent,
-        note = note,
-        color = color,
-        updatedAtEpochMillis = updatedAtEpochMillis,
-        deletedAtEpochMillis = deletedAtEpochMillis,
-        locatorJson = locatorJson,
-        type = type,
-        tag = tag
-    )
+    private fun HighlightEntity.toDomain(): Highlight {
+        val normalizedJson = LocatorCodec.normalizeLocatorJson(locatorJson)
+        return Highlight(
+            id = id,
+            bookId = bookId,
+            cfiRange = cfiRange,
+            textContent = textContent,
+            note = note,
+            color = color,
+            updatedAtEpochMillis = updatedAtEpochMillis,
+            deletedAtEpochMillis = deletedAtEpochMillis,
+            locatorJson = normalizedJson,
+            type = type,
+            tag = tag
+        )
+    }
 
     private fun Highlight.toEntity(): HighlightEntity = HighlightEntity(
         id = id,
@@ -242,20 +254,23 @@ class ReaderRepositoryImpl(
         color = color,
         updatedAtEpochMillis = updatedAtEpochMillis,
         deletedAtEpochMillis = deletedAtEpochMillis,
-        locatorJson = locatorJson,
+        locatorJson = LocatorCodec.normalizeLocatorJson(locatorJson),
         type = type,
         tag = tag
     )
 
-    private fun BookmarkEntity.toDomain(): Bookmark = Bookmark(
-        id = id,
-        bookId = bookId,
-        cfiLocation = cfiLocation,
-        titleOrSnippet = titleOrSnippet,
-        updatedAtEpochMillis = updatedAtEpochMillis,
-        deletedAtEpochMillis = deletedAtEpochMillis,
-        locatorJson = locatorJson
-    )
+    private fun BookmarkEntity.toDomain(): Bookmark {
+        val normalizedJson = LocatorCodec.normalizeLocatorJson(locatorJson)
+        return Bookmark(
+            id = id,
+            bookId = bookId,
+            cfiLocation = cfiLocation,
+            titleOrSnippet = titleOrSnippet,
+            updatedAtEpochMillis = updatedAtEpochMillis,
+            deletedAtEpochMillis = deletedAtEpochMillis,
+            locatorJson = normalizedJson
+        )
+    }
 
     private fun Bookmark.toEntity(): BookmarkEntity = BookmarkEntity(
         id = id,
@@ -264,6 +279,6 @@ class ReaderRepositoryImpl(
         titleOrSnippet = titleOrSnippet,
         updatedAtEpochMillis = updatedAtEpochMillis,
         deletedAtEpochMillis = deletedAtEpochMillis,
-        locatorJson = locatorJson
+        locatorJson = LocatorCodec.normalizeLocatorJson(locatorJson)
     )
 }

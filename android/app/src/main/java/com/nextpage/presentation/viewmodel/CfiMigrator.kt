@@ -1,5 +1,6 @@
 package com.nextpage.presentation.viewmodel
 
+import com.nextpage.data.sync.LocatorCodec
 import org.json.JSONObject
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
@@ -97,10 +98,14 @@ object CfiMigrator {
     }
 
     /** Serializes a Locator to its JSON representation. */
-    fun locatorToJson(locator: Locator): String = locator.toJSON().toString()
+    fun locatorToJson(locator: Locator): String {
+        val raw = locator.toJSON().toString()
+        return LocatorCodec.normalizeLocatorJson(raw) ?: raw
+    }
 
     /** Deserializes a JSON string back to a Locator. Returns null on failure. */
     fun jsonToLocator(json: String): Locator? = runCatching {
-        Locator.fromJSON(JSONObject(json))
+        val normalized = LocatorCodec.normalizeLocatorJson(json) ?: json
+        Locator.fromJSON(JSONObject(normalized))
     }.getOrNull()
 }

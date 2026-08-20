@@ -19,7 +19,7 @@
     highlightFillRgba,
   } from '$lib/features/reader/highlight/highlightColors';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
-  import { locatorFromCfi, locatorToJson } from '$lib/shared/sync/LocatorCodec';
+  import { locatorFromCfi, locatorToJson, normalizeHref } from '$lib/shared/sync/LocatorCodec';
 
   // ─── Types ───────────────────────────────────────────────
   interface EpubChapterMeta {
@@ -187,6 +187,51 @@
     margins = readerSettings.margins;
   });
 
+  // ─── TOC ↔ Spine mapping helpers ─────────────────────────
+  /** Resolve spine index (0..spineLen-1) for a TOC position (0..tocLen-1). */
+  function spineIndexForToc(tocIndex: number): number {
+    if (!metadata) return tocIndex;
+    const entry = metadata.chapters[tocIndex];
+    if (!entry || typeof entry.index !== 'number') {
+      console.warn(
+        'epub-toc: spineIndexForToc missing entry for tocIndex',
+        tocIndex,
+        'fallback to',
+        tocIndex,
+        'chaptersLen',
+        metadata.chapters.length,
+      );
+      return tocIndex;
+    }
+    return entry.index;
+  }
+
+  /** Resolve TOC position for a 0-based spine index. Returns null when not in TOC. */
+  function tocIndexForSpine(spineIndex: number, spineHref?: string): number | null {
+    if (!metadata) return null;
+    const byIndex = metadata.chapters.findIndex((c) => c.index === spineIndex);
+    if (byIndex !== -1) return byIndex;
+    if (spineHref) {
+      const norm = normalizeHref(spineHref);
+      const byHref = metadata.chapters.findIndex((c) => normalizeHref(c.href) === norm);
+      if (byHref !== -1) return byHref;
+      // Fallback: filename comparison (handles OEBPS/Text/ prefix variance)
+      const fileName = norm.split('/').pop() ?? norm;
+      const byFile = metadata.chapters.findIndex(
+        (c) => (normalizeHref(c.href).split('/').pop() ?? '') === fileName,
+      );
+      if (byFile !== -1) return byFile;
+    }
+    console.warn(
+      'epub-toc: tocIndexForSpine no TOC entry for spineIndex',
+      spineIndex,
+      'spineHref',
+      spineHref ?? '(none)',
+      'fallback will use spineIndex',
+    );
+    return null;
+  }
+
   // ─── Lifecycle ───────────────────────────────────────────
   function handleIframeMessage(event: MessageEvent): void {
     if (!event.data || typeof event.data !== 'object') return;
@@ -205,6 +250,11 @@
         cfiPreview: typeof event.data.cfi === 'string' ? event.data.cfi.slice(0, 60) : '',
       };
       debugState.epub.guardResult = 'none';
+    }
+
+    if (event.data.type === 'epub-srcdoc-error') {
+      console.warn('SRC DOC ERROR', event.data.msg, 'line', event.data.line, 'col', event.data.col, 'url', event.data.url);
+      return;
     }
 
     // SEL-4: drop any in-flight postMessage from a chapter that is no
@@ -460,8 +510,8 @@
     void persistedHighlights;
     // Capture currentChapterIndex reactively, but lastRendered via untrack to avoid bounce
     const currentIdx = currentChapterIndex;
-    const chapterHref = metadata.chapters[currentIdx]?.href ?? '';
-    const metaHref = metadata.chapters[currentIdx]?.href ?? '';
+    const chapterHref = normalizeHref(metadata.chapters[currentIdx]?.href ?? '');
+    const metaHref = normalizeHref(metadata.chapters[currentIdx]?.href ?? '');
     const highlightsSnapshot = persistedHighlights;
     const lastRenderedSnapshot = untrack(() => lastRenderedChapter);
 
@@ -600,9 +650,29 @@
     const spineMatch = /epubcfi\(\/6\/(\d+)!/.exec(target);
     if (!spineMatch) return;
 
-    const spineIndex = Number.parseInt(spineMatch[1], 10); // 1-based
-    const chapterIdx = spineIndex - 1;
-    if (chapterIdx < 0 || chapterIdx >= totalChapters) return;
+    const spineOneBased = Number.parseInt(spineMatch[1], 10); // 1-based
+    const spineIdx = spineOneBased - 1;
+    if (spineIdx < 0) return;
+    // currentChapterIndex is TOC position (0..chapters.length-1); map spine -> TOC
+    const mapped = tocIndexForSpine(spineIdx);
+    const chapterIdx = mapped !== null ? mapped : spineIdx;
+    if (mapped === null) {
+      console.warn(
+        'epub-toc: searchTargetLocator spine',
+        spineIdx,
+        'not in TOC, fallback to',
+        chapterIdx,
+        'totalChapters',
+        totalChapters,
+        'tocLen',
+        metadata.chapters.length,
+      );
+    }
+    if (mapped !== null) {
+      if (chapterIdx < 0 || chapterIdx >= metadata.chapters.length) return;
+    } else {
+      if (chapterIdx < 0 || chapterIdx >= totalChapters) return;
+    }
 
     if (chapterIdx !== currentChapterIndex) {
       pendingCfiScroll = target;
@@ -622,15 +692,34 @@
     if (loc === untrack(() => lastContinueLocation)) return;
     const spineMatch = /epubcfi\(\/6\/(\d+)!/.exec(loc);
     if (!spineMatch) return;
-    const spineIndex = Number.parseInt(spineMatch[1], 10);
-    const chapterIdx = spineIndex - 1;
-    if (chapterIdx < 0 || chapterIdx >= totalChapters) return;
+    const spineOneBased = Number.parseInt(spineMatch[1], 10);
+    const spineIdx = spineOneBased - 1;
+    if (spineIdx < 0) return;
+    const mapped = tocIndexForSpine(spineIdx);
+    const chapterIdx = mapped !== null ? mapped : spineIdx;
+    if (mapped === null) {
+      console.warn(
+        'epub-toc: continue spine',
+        spineIdx,
+        'not in TOC, fallback to',
+        chapterIdx,
+        'tocLen',
+        metadata.chapters.length,
+      );
+    }
+    if (mapped !== null) {
+      if (chapterIdx < 0 || chapterIdx >= metadata.chapters.length) return;
+    } else {
+      if (chapterIdx < 0 || chapterIdx >= totalChapters) return;
+    }
     const currentIdx = untrack(() => currentChapterIndex);
     const pending = untrack(() => pendingCfiScroll);
     console.warn(
       'continue: initialLocation changed to',
       loc.slice(0, 80),
-      'chapterIdx',
+      'spineIdx',
+      spineIdx,
+      'chapterIdx(toc)',
       chapterIdx,
       'current',
       currentIdx,
@@ -688,11 +777,33 @@
       if (initialCfi && initialCfi.startsWith('epubcfi(') && meta.chapters.length > 0) {
         const spineMatch = /epubcfi\(\/6\/(\d+)!/.exec(initialCfi);
         if (spineMatch) {
-          const spineIndex = Number.parseInt(spineMatch[1], 10); // 1-based
-          const chapterIdx = spineIndex - 1;
-          if (chapterIdx >= 0 && chapterIdx < totalChapters) {
-            currentChapterIndex = chapterIdx;
-            pendingCfiScroll = initialCfi;
+          const spineOneBased = Number.parseInt(spineMatch[1], 10); // 1-based
+          const spineIdx = spineOneBased - 1;
+          if (spineIdx >= 0) {
+            // Map spine -> TOC; currentChapterIndex is always TOC position 0..chapters.length-1
+            const mapped = (() => {
+              const byIndex = meta.chapters.findIndex((c) => c.index === spineIdx);
+              if (byIndex !== -1) return byIndex;
+              console.warn(
+                'epub-toc: initReader spine',
+                spineIdx,
+                'not in TOC, fallback to',
+                spineIdx,
+                'tocLen',
+                meta.chapters.length,
+              );
+              return null;
+            })();
+            const tocIdx = mapped !== null ? mapped : spineIdx;
+            if (tocIdx >= 0 && tocIdx < meta.chapters.length) {
+              currentChapterIndex = tocIdx;
+              pendingCfiScroll = initialCfi;
+            } else if (mapped === null && tocIdx >= 0 && tocIdx < totalChapters) {
+              // Fallback case: spine doc not in TOC, keep spine index to avoid blank screen
+              console.warn('epub-toc: initReader fallback spineIdx', spineIdx, 'as tocIdx', tocIdx);
+              currentChapterIndex = tocIdx;
+              pendingCfiScroll = initialCfi;
+            }
           }
         }
       } else if (initialPercentage > 0 && initialPercentage < 100) {
@@ -931,7 +1042,14 @@
         ? [el.getAttribute('href'), el.getAttribute('xlink:href')]
         : [el.getAttribute('src')];
       const src = attrs.find(
-        (s) => s && !s.startsWith('http') && !s.startsWith('data:') && !s.startsWith('asset:'),
+        (s) =>
+          s &&
+          !s.startsWith('http') &&
+          !s.startsWith('data:') &&
+          !s.startsWith('asset:') &&
+          !s.startsWith('chrome-extension:') &&
+          !s.startsWith('blob:') &&
+          !s.startsWith('chrome:'),
       );
       if (!src) continue;
 
@@ -1003,6 +1121,9 @@
     // Inlined CFI bridge (see cfiBridgeIframe.ts). Mounts as
     // `window.__cfiBridge` for the selection script to call. Must run
     // before the selection script and before the spine-init script.
+    const errorScript = doc.createElement('script');
+    errorScript.textContent = `window.onerror = function(msg, url, line, col, err){ try{ window.parent.postMessage({type:'epub-srcdoc-error', msg: String(msg), line: line, col: col, url: String(url)}, '*'); }catch(e){} };`;
+    doc.head.prepend(errorScript);
     const bridgeScript = doc.createElement('script');
     bridgeScript.textContent = IFRAME_CFI_BRIDGE_SCRIPT;
 
@@ -1049,7 +1170,7 @@
       (function() {
         var timer = null;
         var mouseupDebounceTimer = null;
-        var CHAPTER_HREF = ${JSON.stringify(currentChapterHref)};
+        var CHAPTER_HREF = ${JSON.stringify(normalizeHref(currentChapterHref))};
         var CHAPTER_INDEX = ${chapterIndex};
 
         // HM-3 / HM-4: click handler via overlay hit-testing (caretRangeFromPoint
@@ -1224,6 +1345,11 @@
     // Use outerHTML instead of XMLSerializer for HTML5-compliant serialization
     // XMLSerializer produces XHTML self-closing tags that break HTML5 parsing
     const serialized = doc.documentElement.outerHTML;
+    if (currentChapterHref.includes('HM-colombia-5')) {
+      console.warn('SERIALIZED SNIPPET HM5 START', serialized.slice(0, 6000));
+      console.warn('SERIALIZED SNIPPET HM5 END', serialized.slice(-8000));
+      console.warn('BRIDGE SNIPPET', IFRAME_CFI_BRIDGE_SCRIPT.slice(1800, 2400));
+    }
     return `<!DOCTYPE html>\n${serialized}`;
   }
 
@@ -1269,7 +1395,8 @@
         __cfiBridge?: { cfiToRange: (cfi: string, href: string, doc: Document) => Range | null };
       }
     ).__cfiBridge;
-    const chapterHref = metadata.chapters[currentChapterIndex]?.href ?? '';
+    const rawChapterHref = metadata.chapters[currentChapterIndex]?.href ?? '';
+    const chapterHref = normalizeHref(rawChapterHref);
     if (!bridge || !chapterHref) return;
 
     try {
@@ -1300,7 +1427,8 @@
         };
       }
     ).__cfiBridge;
-    const chapterHref = metadata.chapters[currentChapterIndex]?.href ?? '';
+    const rawChapterHref = metadata.chapters[currentChapterIndex]?.href ?? '';
+    const chapterHref = normalizeHref(rawChapterHref);
     if (!bridge || !chapterHref) return;
 
     const nodes: Text[] = [];
@@ -1331,7 +1459,7 @@
       .slice(0, nodes.indexOf(visibleNode))
       .reduce((total, textNode) => total + textNode.data.length, 0);
     const locator = locatorFromCfi(
-      metadata.chapters.map((chapter) => chapter.href),
+      metadata.chapters.map((chapter) => normalizeHref(chapter.href)),
       preciseCfi,
       {
         chapterChars,
@@ -1353,23 +1481,35 @@
     if (!metadata || !iframeEl) return;
     const myEpoch = ++renderEpoch;
     currentRenderIndex = index;
+    // currentChapterIndex is always TOC position (0..chapters.length-1);
+    // resolve the real spine index for the Rust cache.
+    const spineIndex = spineIndexForToc(index);
+    const tocHrefForLog = metadata.chapters[index]?.href ?? '';
+    const spineHrefForLog = metadata.chapters[index]?.href ?? `(spine ${spineIndex})`;
     console.warn(
-      'epub-hl: renderChapter called index=',
+      'epub-hl: renderChapter called tocIndex=',
       index,
+      'spineIndex=',
+      spineIndex,
       'epoch=',
       myEpoch,
       'srcdoc CHAPTER_INDEX=',
       index,
       'spineHrefs',
       metadata.chapters.length,
-      'chapterHref',
-      metadata.chapters[index]?.href ?? '',
+      'chapterHref(toc)',
+      tocHrefForLog,
+      'spineHref',
+      spineHrefForLog,
     );
+    if (spineIndex !== index) {
+      console.warn('epub-toc: renderChapter toc', index, '-> spine', spineIndex, 'href', tocHrefForLog);
+    }
 
     try {
       const chapterData = await invoke<EpubChapterContent>('get_epub_chapter', {
         bookId,
-        chapterIndex: index,
+        chapterIndex: spineIndex,
       });
 
       // Stale-epoch guard: abort before mutating DOM if a newer render started while awaiting.
@@ -1388,8 +1528,8 @@
       currentChapterIndex = index;
       iframeContentHeight = 0;
 
-      const spineHrefs = metadata.chapters.map((c) => c.href);
-      const chapterHref = metadata.chapters[index]?.href ?? '';
+      const spineHrefs = metadata.chapters.map((c) => normalizeHref(c.href));
+      const chapterHref = normalizeHref(metadata.chapters[index]?.href ?? '');
       // Probe every @font-face URL the chapter declares. Those that 404/403
       // (typically because the EPUB references commercial fonts like
       // Neutraface or Felt Tip Roman without bundling the file) get their

@@ -14,6 +14,37 @@ object LocatorCodec {
 
     private val SPINE_INDEX_RE = Regex("""^epubcfi\(/6/(\d+)""")
 
+    /** Normalize href to forward slash (Windows backslash fix). */
+    fun normalizeHref(href: String): String = href.replace("\\", "/")
+
+    /**
+     * Normalize a locator JSON string: replace backslash in href field with forward slash.
+     * Returns original json if no backslash or parse fails (fallback global replace).
+     */
+    fun normalizeLocatorJson(json: String?): String? {
+        if (json.isNullOrEmpty()) return json
+        if (!json.contains("\\")) return json
+        return try {
+            val obj = org.json.JSONObject(json)
+            if (obj.has("href")) {
+                val href = obj.optString("href")
+                if (href.contains("\\")) {
+                    obj.put("href", normalizeHref(href))
+                    return obj.toString()
+                }
+            }
+            // If href not at top level but json still contains backslash, fallback
+            if (json.contains("\\") && json.contains("\"href\"")) {
+                // Fallback: global replace for href value only via regex
+                // Simple: replace all backslashes (CFI has none, so safe)
+                json.replace("\\", "/")
+            } else json
+        } catch (_: Exception) {
+            // Fallback: replace all backslashes if JSON parse fails
+            if (json.contains("\\")) json.replace("\\", "/") else json
+        }
+    }
+
     /**
      * Extract 1-based spine index from a CFI string. Returns null for malformed/cfi missing.
      */

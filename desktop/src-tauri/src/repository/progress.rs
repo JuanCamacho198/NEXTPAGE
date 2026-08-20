@@ -9,6 +9,41 @@ use rusqlite::{params, OptionalExtension};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
+fn normalize_href(href: &str) -> String {
+    href.replace('\\', "/")
+}
+
+fn normalize_locator_json(json: &str) -> String {
+    if !json.contains('\\') || !json.contains("\"href\"") {
+        return json.replace('\\', "/");
+    }
+    if let Ok(mut v) = serde_json::from_str::<serde_json::Value>(json) {
+        if let Some(href) = v.get("href").and_then(|h| h.as_str()).map(|s| s.to_string()) {
+            if href.contains('\\') {
+                v["href"] = serde_json::Value::String(normalize_href(&href));
+                if let Ok(s) = serde_json::to_string(&v) {
+                    return s;
+                }
+            }
+        }
+        // Even if href not found at top level, still replace backslashes globally for safety (CFI has none)
+        return json.replace('\\', "/");
+    }
+    json.replace('\\', "/")
+}
+
+fn normalize_cfi_or_json(value: &str) -> String {
+    // CFI strings never contain backslash; locator json does. Normalize either.
+    if value.contains('\\') {
+        // If looks like JSON, use json normalizer; else simple href slash fix
+        if value.trim_start().starts_with('{') {
+            return normalize_locator_json(value);
+        }
+        return normalize_href(value);
+    }
+    value.to_string()
+}
+
 /// Deterministic session id shared with Android:
 /// `"sess_" + sha256("$userId|$bookId|$startTimeEpochMillis").hex.take(32)`.
 /// The hash input is exactly `{userId}|{bookId}|{epochMillis}` — pipe separators,
@@ -37,7 +72,7 @@ pub fn get_progress(
              LIMIT 1",
     )?;
 
-    let progress = statement
+    let progress_opt = statement
         .query_row(params![book_id], |row| {
             Ok(ReadingProgressDto {
                 id: row.get(0)?,
@@ -49,13 +84,33 @@ pub fn get_progress(
         })
         .optional()?;
 
-    Ok(progress)
+    // Backfill: normalize on read and persist corrected (similar to pageNumber fix)
+    if let Some(progress) = progress_opt {
+        if progress.cfi_location.contains('\\') {
+            let normalized = normalize_cfi_or_json(&progress.cfi_location);
+            if normalized != progress.cfi_location {
+                let _ = repo.connection.execute(
+                    "UPDATE reading_progress SET cfi_location = ?1, updated_at = ?2, version = version + 1 WHERE id = ?3",
+                    params![normalized, Utc::now().to_rfc3339(), progress.id],
+                );
+                return Ok(Some(ReadingProgressDto {
+                    cfi_location: normalized,
+                    ..progress
+                }));
+            }
+        }
+        Ok(Some(progress))
+    } else {
+        Ok(None)
+    }
 }
 
 pub fn save_progress(repo: &LibraryRepository, payload: SaveProgressInput) -> AppResult<()> {
     if payload.book_id.trim().is_empty() {
         return Err(AppError::MissingBookId);
     }
+
+    let cfi_location = normalize_cfi_or_json(&payload.cfi_location);
 
     let now = Utc::now().to_rfc3339();
 
@@ -74,7 +129,7 @@ pub fn save_progress(repo: &LibraryRepository, payload: SaveProgressInput) -> Ap
                 "UPDATE reading_progress
                      SET cfi_location = ?1, percentage = ?2, updated_at = ?3, version = version + 1
                      WHERE id = ?4",
-                params![payload.cfi_location, payload.percentage, now, id],
+                params![cfi_location, payload.percentage, now, id],
             )?;
         }
         None => {
@@ -84,7 +139,7 @@ pub fn save_progress(repo: &LibraryRepository, payload: SaveProgressInput) -> Ap
                     params![
                         Uuid::new_v4().to_string(),
                         &payload.book_id,
-                        &payload.cfi_location,
+                        &cfi_location,
                         payload.percentage,
                         &now,
                         1
@@ -116,13 +171,14 @@ pub fn upsert_progress(repo: &LibraryRepository, progress: ReadingProgressDto) -
         )
         .optional()?;
 
+    let cfi_location = normalize_cfi_or_json(&progress.cfi_location);
     match existing_id {
         Some(id) => {
             repo.connection.execute(
                 "UPDATE reading_progress
                  SET cfi_location = ?1, percentage = ?2, updated_at = ?3, version = version + 1
                  WHERE id = ?4",
-                params![&progress.cfi_location, progress.percentage, &progress.updated_at, id],
+                params![cfi_location, progress.percentage, &progress.updated_at, id],
             )?;
         }
         None => {
@@ -139,7 +195,7 @@ pub fn upsert_progress(repo: &LibraryRepository, progress: ReadingProgressDto) -
                 params![
                     id,
                     &progress.book_id,
-                    &progress.cfi_location,
+                    cfi_location,
                     progress.percentage,
                     &progress.updated_at
                 ],

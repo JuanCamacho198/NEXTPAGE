@@ -39,6 +39,10 @@ pub struct EpubChapterContent {
     pub chapter_path: String,
 }
 
+fn normalize_href(href: &str) -> String {
+    href.replace('\\', "/")
+}
+
 #[derive(Debug)]
 pub struct EpubExtractor;
 
@@ -99,7 +103,7 @@ impl EpubExtractor {
                                 eprintln!("Warning: failed to write chapter {:?}: {}", path, e);
                             }
                         }
-                        spine_paths.push(path.to_string_lossy().to_string());
+                        spine_paths.push(normalize_href(&path.to_string_lossy()));
                     }
                 }
             }
@@ -157,7 +161,16 @@ impl EpubExtractor {
             .get(chapter_index)
             .ok_or_else(|| format!("Chapter index {} out of range", chapter_index))?;
 
-        let chapter_abs_path = cache_dir.join("resources").join(chapter_rel_path);
+        // Backfill: old Windows caches stored spine entries with backslashes
+        let normalized_rel = normalize_href(chapter_rel_path);
+        // Resolve file on disk handling both old (backslash) and new (slash) caches
+        let mut chapter_abs_path = cache_dir.join("resources").join(&normalized_rel);
+        if !chapter_abs_path.exists() && normalized_rel != *chapter_rel_path {
+            let legacy_path = cache_dir.join("resources").join(chapter_rel_path);
+            if legacy_path.exists() {
+                chapter_abs_path = legacy_path;
+            }
+        }
         if !chapter_abs_path.exists() {
             return Err(format!("Chapter {} not found at {:?}", chapter_index, chapter_rel_path));
         }
@@ -168,12 +181,14 @@ impl EpubExtractor {
         // Compute the chapter's base path: the directory of the chapter's relative path
         // within the resources cache. Used by the frontend to set `<base href>` so that
         // relative URLs (../images/foo.jpg) resolve correctly.
-        let chapter_base_path = std::path::Path::new(chapter_rel_path)
-            .parent()
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_default();
+        let chapter_base_path = normalize_href(
+            &std::path::Path::new(&normalized_rel)
+                .parent()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_default(),
+        );
 
-        let chapter_path = chapter_rel_path.replace('\\', "/");
+        let chapter_path = normalized_rel;
 
         Ok(EpubChapterContent {
             index: chapter_index,
@@ -202,8 +217,9 @@ impl EpubExtractor {
         for (i, nav) in nav_points.iter().enumerate() {
             // Find which spine index this nav point corresponds to
             let content_str = nav.content.to_string_lossy();
+            let href = normalize_href(&content_str);
             // Extract filename from href for spine lookup
-            let filename = std::path::Path::new(&content_str.as_ref())
+            let filename = std::path::Path::new(&href)
                 .file_name()
                 .map(|f| f.to_string_lossy().to_string())
                 .unwrap_or_default();
@@ -223,7 +239,7 @@ impl EpubExtractor {
                 // is a monotonic counter across the whole flattened TOC.
                 id: format!("chapter-{}", chapters.len()),
                 label: nav.label.clone(),
-                href: content_str.to_string(),
+                href,
                 depth: 0,
             });
 
@@ -243,7 +259,8 @@ impl EpubExtractor {
         let child_depth = current_depth + 1;
         for (i, child) in children.iter().enumerate() {
             let content_str = child.content.to_string_lossy();
-            let filename = std::path::Path::new(&content_str.as_ref())
+            let href = normalize_href(&content_str);
+            let filename = std::path::Path::new(&href)
                 .file_name()
                 .map(|f| f.to_string_lossy().to_string())
                 .unwrap_or_default();
@@ -255,7 +272,7 @@ impl EpubExtractor {
                 index,
                 id: format!("chapter-{}", chapters.len()),
                 label: child.label.clone(),
-                href: content_str.to_string(),
+                href,
                 depth: child_depth,
             });
             Self::add_child_toc(&child.children, chapters, spine_map, index + 1, child_depth);

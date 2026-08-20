@@ -12,6 +12,7 @@ import com.nextpage.data.local.entity.ReadingSessionEntity
 import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.session.SessionManager
+import com.nextpage.data.sync.LocatorCodec
 import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.decodeRecord
 import kotlinx.coroutines.CoroutineScope
@@ -170,7 +171,7 @@ class SupabaseProgressSync(
             bookId = localProgress.bookId,
             cfiLocation = localProgress.cfiLocation,
             percentage = localProgress.percentage.toDouble(),
-            locatorJson = localProgress.locatorJson,
+            locatorJson = LocatorCodec.normalizeLocatorJson(localProgress.locatorJson),
             updatedAt = dateFormat.format(Date(localProgress.updatedAtEpochMillis)),
             version = 1
         )
@@ -209,7 +210,7 @@ class SupabaseProgressSync(
                         bookId = localBookmark.bookId,
                         cfiLocation = localBookmark.cfiLocation,
                         titleSnippet = localBookmark.titleOrSnippet.ifEmpty { null },
-                        locatorJson = localBookmark.locatorJson,
+                        locatorJson = LocatorCodec.normalizeLocatorJson(localBookmark.locatorJson),
                         deletedAt = localBookmark.deletedAtEpochMillis?.let {
                             dateFormat.format(Date(it))
                         },
@@ -264,7 +265,7 @@ class SupabaseProgressSync(
                             color = localHighlight.color,
                             page = null,
                             type = localHighlight.type,
-                            locatorJson = localHighlight.locatorJson,
+                            locatorJson = LocatorCodec.normalizeLocatorJson(localHighlight.locatorJson),
                             deletedAt = localHighlight.deletedAtEpochMillis?.let {
                                 dateFormat.format(Date(it))
                             },
@@ -400,6 +401,8 @@ class SupabaseProgressSync(
             else -> (row.id ?: row.bookId) > localProgress.id
         }
         if (shouldApply) {
+            val normalizedLocator = LocatorCodec.normalizeLocatorJson(row.locatorJson)
+            // Backfill: persist corrected if needed (already normalized above)
             readingProgressDao.upsert(
                 com.nextpage.data.local.entity.ReadingProgressEntity(
                     id = row.id ?: java.util.UUID.randomUUID().toString(),
@@ -408,7 +411,7 @@ class SupabaseProgressSync(
                     percentage = row.percentage.toFloat(),
                     currentPage = localProgress?.currentPage,
                     updatedAtEpochMillis = remoteTime,
-                    locatorJson = row.locatorJson
+                    locatorJson = normalizedLocator
                 )
             )
             return true
@@ -462,7 +465,7 @@ class SupabaseProgressSync(
                         titleOrSnippet = row.titleSnippet ?: "",
                         updatedAtEpochMillis = remoteTime,
                         deletedAtEpochMillis = if (isDeleted) remoteTime else null,
-                        locatorJson = row.locatorJson
+                        locatorJson = LocatorCodec.normalizeLocatorJson(row.locatorJson)
                     )
                 )
             }

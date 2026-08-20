@@ -41,6 +41,29 @@ export interface CanonicalLocator {
 
 const FALLBACK_TYPE = 'application/xhtml+xml';
 
+export function normalizeHref(href: string): string {
+  return href.replace(/\\/g, '/');
+}
+
+export function normalizeLocatorJson(json: string | null | undefined): string | null {
+  if (typeof json !== 'string' || json.length === 0) return json as string | null;
+  try {
+    const raw = JSON.parse(json) as { href?: unknown };
+    if (typeof raw.href === 'string' && raw.href.includes('\\')) {
+      raw.href = normalizeHref(raw.href);
+      return JSON.stringify(raw);
+    }
+    return json;
+  } catch {
+    if (json.includes('\\')) {
+      return json.replace(/"href"\s*:\s*"([^"]*)"/g, (_m: string, href: string) =>
+        `"href":"${href.replace(/\\/g, '/')}"`,
+      );
+    }
+    return json;
+  }
+}
+
 /** Regex matching the 1-based spine index of a CFI (`epubcfi(/6/N) where N ≥ 1`). */
 const SPINE_INDEX_RE = /^epubcfi\(\/6\/(\d+)/;
 
@@ -76,8 +99,9 @@ export function locatorFromCfi(
 ): CanonicalLocator | null {
   const spineIndex = parseSpineIndex(cfi);
   if (spineIndex === null) return null;
-  const href = readingOrder[spineIndex - 1];
-  if (!href) return null;
+  const rawHref = readingOrder[spineIndex - 1];
+  if (!rawHref) return null;
+  const href = normalizeHref(rawHref);
 
   const locations: LocatorLocations = {};
   const metric = chapter ?? null;
@@ -104,9 +128,11 @@ export function deriveLocatorForChapter(
   chapterHref: string | null | undefined,
 ): CanonicalLocator | null {
   if (typeof chapterHref !== 'string' || chapterHref.length === 0) return null;
-  if (!readingOrder.includes(chapterHref)) return null;
+  const normalizedChapterHref = normalizeHref(chapterHref);
+  const normalizedOrder = readingOrder.map(normalizeHref);
+  if (!normalizedOrder.includes(normalizedChapterHref)) return null;
   return {
-    href: chapterHref,
+    href: normalizedChapterHref,
     type: FALLBACK_TYPE,
     locations: { progression: 0 },
   };
@@ -137,8 +163,9 @@ export function locatorToJson(loc: CanonicalLocator): string {
   if (typeof loc.locations.fragment === 'string') {
     locations.fragment = loc.locations.fragment;
   }
+  const href = normalizeHref(loc.href);
   return JSON.stringify({
-    href: loc.href,
+    href,
     type: loc.type,
     locations,
   });
@@ -169,13 +196,16 @@ export const currentPageDeprecated = true;
 /** Deserialise a canonical locator JSON string. Returns null on invalid input. */
 export function locatorFromJson(json: string | null | undefined): CanonicalLocator | null {
   if (typeof json !== 'string' || json.length === 0) return null;
+  const normalizedJson = normalizeLocatorJson(json);
+  const toParse = normalizedJson ?? json;
   try {
-    const raw = JSON.parse(json) as {
+    const raw = JSON.parse(toParse) as {
       href?: unknown;
       type?: unknown;
       locations?: { progression?: unknown; fragment?: unknown } | null;
     };
     if (typeof raw.href !== 'string' || raw.href.length === 0) return null;
+    const href = normalizeHref(raw.href);
     const locations: LocatorLocations = {};
     if (raw.locations && typeof raw.locations.progression === 'number') {
       locations.progression = raw.locations.progression;
@@ -184,7 +214,7 @@ export function locatorFromJson(json: string | null | undefined): CanonicalLocat
       locations.fragment = raw.locations.fragment;
     }
     return {
-      href: raw.href,
+      href,
       type: typeof raw.type === 'string' && raw.type.length > 0 ? raw.type : FALLBACK_TYPE,
       locations,
     };

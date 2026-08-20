@@ -59,13 +59,15 @@ export const IFRAME_CFI_BRIDGE_SCRIPT = `
     return found ? result : null;
   }
   var spineHrefs = [];
+  function normalizeHref(href) { return typeof href === 'string' ? href.replace(/\\\\/g, '/') : href; }
   function setSpine(hrefs) {
     if (!hrefs || !hrefs.length) { spineHrefs = []; return; }
-    spineHrefs = hrefs.slice();
+    spineHrefs = hrefs.map(function(h){ return normalizeHref(h); });
   }
   function getSpineIndex(chapterHref) {
     if (typeof chapterHref !== 'string' || chapterHref.length === 0) return null;
-    var idx = spineHrefs.indexOf(chapterHref);
+    var normalized = normalizeHref(chapterHref);
+    var idx = spineHrefs.indexOf(normalized);
     if (idx < 0) return null;
     return idx + 1;
   }

@@ -93,10 +93,7 @@ pub fn get_progress(
                     "UPDATE reading_progress SET cfi_location = ?1, updated_at = ?2, version = version + 1 WHERE id = ?3",
                     params![normalized, Utc::now().to_rfc3339(), progress.id],
                 );
-                return Ok(Some(ReadingProgressDto {
-                    cfi_location: normalized,
-                    ..progress
-                }));
+                return Ok(Some(ReadingProgressDto { cfi_location: normalized, ..progress }));
             }
         }
         Ok(Some(progress))

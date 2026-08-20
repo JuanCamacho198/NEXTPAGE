@@ -8,13 +8,53 @@ use crate::services::epub_extractor::{
 };
 use crate::state::AppState;
 
+const CACHE_VERSION: u32 = 3;
+
 fn get_cache_dir(app: &AppHandle, book_id: &str) -> PathBuf {
     let app_data = app.path().app_data_dir().expect("app data dir");
     app_data.join("epub_cache").join(book_id)
 }
 
+fn cache_version_path(cache_dir: &std::path::Path) -> PathBuf {
+    cache_dir.join(".cache_version")
+}
+
+fn is_cache_stale(cache_dir: &std::path::Path, meta: &EpubMetadataExtract) -> bool {
+    // Version check
+    let version_path = cache_version_path(cache_dir);
+    let version_ok = std::fs::read_to_string(&version_path)
+        .ok()
+        .and_then(|v| v.trim().parse::<u32>().ok())
+        .map(|v| v == CACHE_VERSION)
+        .unwrap_or(false);
+    if !version_ok {
+        return true;
+    }
+    // spine.json len check
+    let spine_path = cache_dir.join("spine.json");
+    if !spine_path.exists() {
+        return true;
+    }
+    let data = match std::fs::read_to_string(&spine_path) {
+        Ok(d) => d,
+        Err(_) => return true,
+    };
+    let spine: Vec<String> = match serde_json::from_str(&data) {
+        Ok(s) => s,
+        Err(_) => return true,
+    };
+    if spine.len() != meta.total_chapters {
+        return true;
+    }
+    if spine.len() != meta.spine_hrefs.len() {
+        return true;
+    }
+    false
+}
+
 /// Parse an EPUB file: extract metadata, chapters, and resources into a cache directory.
 /// Returns metadata + TOC. Subsequent calls use the cache.
+/// Cache version 3: purges when spine.json len != totalChapters.
 #[tauri::command(rename_all = "camelCase")]
 pub async fn parse_epub(
     app: AppHandle,
@@ -29,9 +69,32 @@ pub async fn parse_epub(
     if metadata_path.exists() {
         let data = std::fs::read_to_string(&metadata_path)
             .map_err(|e| format!("Failed to read cached metadata: {}", e))?;
-        let meta: EpubMetadataExtract = serde_json::from_str(&data)
-            .map_err(|e| format!("Failed to parse cached metadata: {}", e))?;
-        return Ok(meta);
+        match serde_json::from_str::<EpubMetadataExtract>(&data) {
+            Ok(meta) => {
+                if is_cache_stale(&cache_dir, &meta) {
+                    let _ = std::fs::remove_dir_all(&cache_dir);
+                } else {
+                    return Ok(meta);
+                }
+            }
+            Err(_) => {
+                // Old shape or corrupted -> purge
+                let _ = std::fs::remove_dir_all(&cache_dir);
+            }
+        }
+    } else {
+        // Even if metadata missing, check stale version file alone
+        let version_path = cache_version_path(&cache_dir);
+        if version_path.exists() {
+            let version_ok = std::fs::read_to_string(&version_path)
+                .ok()
+                .and_then(|v| v.trim().parse::<u32>().ok())
+                .map(|v| v == CACHE_VERSION)
+                .unwrap_or(false);
+            if !version_ok && cache_dir.exists() {
+                let _ = std::fs::remove_dir_all(&cache_dir);
+            }
+        }
     }
 
     // Extract and cache
@@ -44,6 +107,18 @@ pub async fn parse_epub(
         serde_json::to_string(&meta).map_err(|e| format!("Failed to serialize metadata: {}", e))?;
     std::fs::write(&metadata_path, &data)
         .map_err(|e| format!("Failed to write metadata cache: {}", e))?;
+
+    // Write cache version (bumped 2→3)
+    let version_path = cache_version_path(&cache_dir);
+    let _ = std::fs::write(&version_path, CACHE_VERSION.to_string());
+
+    // Ensure spine.json is written (extractor already does, but verify)
+    let spine_path = cache_dir.join("spine.json");
+    if !spine_path.exists() {
+        let spine_data = serde_json::to_string(&meta.spine_hrefs)
+            .map_err(|e| format!("Failed to serialize spine: {}", e))?;
+        let _ = std::fs::write(&spine_path, &spine_data);
+    }
 
     Ok(meta)
 }
@@ -120,4 +195,80 @@ pub async fn index_epub_text(
 
     let mut repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository.index_book_text(input).map_err(|e| format!("{}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::services::epub_extractor::{EpubChapterMeta, EpubMetadataExtract};
+    use std::fs;
+
+    fn make_meta(total: usize, spine_len: usize) -> EpubMetadataExtract {
+        EpubMetadataExtract {
+            title: "t".to_string(),
+            author: "a".to_string(),
+            language: None,
+            publisher: None,
+            toc: vec![EpubChapterMeta {
+                index: 0,
+                id: "chapter-0".to_string(),
+                label: "C".to_string(),
+                href: "x.xhtml".to_string(),
+                depth: 0,
+            }],
+            spine_hrefs: vec!["a.xhtml".to_string(); spine_len],
+            total_chapters: total,
+            resources_path: "/tmp".to_string(),
+        }
+    }
+
+    #[test]
+    fn cache_stale_when_version_mismatch() {
+        let dir = std::env::temp_dir().join(format!("epub_cache_ver_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        // Write old version
+        fs::write(dir.join(".cache_version"), "2").unwrap();
+        fs::write(
+            dir.join("spine.json"),
+            serde_json::to_string(&vec!["a.xhtml".to_string()]).unwrap(),
+        )
+        .unwrap();
+        let meta = make_meta(1, 1);
+        assert!(is_cache_stale(&dir, &meta), "version 2 should be stale for CACHE_VERSION 3");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn cache_stale_when_spine_len_mismatch() {
+        let dir = std::env::temp_dir().join(format!("epub_cache_spine_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join(".cache_version"), CACHE_VERSION.to_string()).unwrap();
+        // spine.json has 24 but meta says 20 -> stale (Historia 24/20)
+        fs::write(
+            dir.join("spine.json"),
+            serde_json::to_string(&vec!["a.xhtml".to_string(); 24]).unwrap(),
+        )
+        .unwrap();
+        let meta = make_meta(20, 20);
+        assert!(is_cache_stale(&dir, &meta));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn cache_fresh_when_version_and_len_match() {
+        let dir = std::env::temp_dir().join(format!("epub_cache_fresh_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join(".cache_version"), CACHE_VERSION.to_string()).unwrap();
+        fs::write(
+            dir.join("spine.json"),
+            serde_json::to_string(&vec!["a.xhtml".to_string(); 5]).unwrap(),
+        )
+        .unwrap();
+        let meta = make_meta(5, 5);
+        assert!(!is_cache_stale(&dir, &meta));
+        let _ = fs::remove_dir_all(&dir);
+    }
 }

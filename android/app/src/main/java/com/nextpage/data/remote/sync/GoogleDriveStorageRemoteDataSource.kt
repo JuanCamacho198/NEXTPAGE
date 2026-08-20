@@ -47,16 +47,24 @@ class GoogleDriveStorageRemoteDataSource(
 
                 val existing = findFileByName(folderId = folder, name = physicalName)
 
-                val fileMetadata = File().apply {
-                    name = physicalName
-                    parents = listOf(folder)
-                }
                 val mediaContent = ByteArrayContent("application/octet-stream", bytes)
 
                 if (existing != null) {
-                    driveService.files().update(existing.id, fileMetadata, mediaContent).execute()
+                    // Drive v3 rejects `parents` in update (PATCH) with 403
+                    // "The parents field is not directly writable in update requests.
+                    //  Use addParents/removeParents instead." File already lives in
+                    //  `folder` (found via `'$folder' in parents` query), so no move
+                    //  is needed — send only `name` (desktop GDriveProvider parity).
+                    val updateMetadata = File().apply {
+                        name = physicalName
+                    }
+                    driveService.files().update(existing.id, updateMetadata, mediaContent).execute()
                 } else {
-                    driveService.files().create(fileMetadata, mediaContent)
+                    val createMetadata = File().apply {
+                        name = physicalName
+                        parents = listOf(folder)
+                    }
+                    driveService.files().create(createMetadata, mediaContent)
                         .setFields("name")
                         .execute()
                 }

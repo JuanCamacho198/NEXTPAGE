@@ -761,8 +761,10 @@ private fun View.findWebView(): WebView? {
  *
  * Also registers attach/layout listeners to re-install the callback if
  * Readium swaps the WebView instance under us (it has been observed to do
- * so on configuration changes / chapter changes). And blocks the long-press
- * context menu so the system can't show a fallback menu either.
+ * so on configuration changes / chapter changes). The native menu is hidden
+ * solely via [SuppressSelectionActionMode]; long-press itself is NOT
+ * consumed so the WebView can still create a text selection for
+ * [SelectableNavigator.currentSelection()].
  */
 private fun installActionModeCallback(root: View) {
     val webView = root.findWebView() ?: run {
@@ -818,9 +820,14 @@ private fun installActionModeCallbackOnWebView(webView: WebView) {
         }
         method.isAccessible = true
         method.invoke(webView, SuppressSelectionActionMode)
-        // Also block the long-press context menu as a defensive layer.
-        runCatching { webView.isLongClickable = false }
-        runCatching { webView.setOnLongClickListener { true } }
+        // Do NOT consume long-press: isLongClickable must stay true and no
+        // OnLongClickListener should return true, otherwise the WebView never
+        // creates a text selection and SelectableNavigator.currentSelection()
+        // (polled every 300ms) stays null forever. SuppressSelectionActionMode
+        // alone is enough to hide the native Copy/Share bar without blocking
+        // the gesture.
+        runCatching { webView.isLongClickable = true }
+        runCatching { webView.setOnLongClickListener(null) }
         Log.d("ReadiumReaderContent", "Installed custom selection ActionMode callback on ${webView.javaClass.simpleName}")
         DebugLog.success("ActionMode", "Callback installed on ${webView.javaClass.simpleName}")
     } catch (e: Throwable) {

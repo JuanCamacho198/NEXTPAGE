@@ -144,6 +144,28 @@ export function locatorToJson(loc: CanonicalLocator): string {
   });
 }
 
+/**
+ * Derived page helper — CFI-first page resolution.
+ * For EPUB, the page is not a persisted source of truth; it is derived from
+ * the canonical CFI. This helper returns `1` for any valid `epubcfi(...)`
+ * (the minimal valid EPUB page) and `null` when the CFI is missing or
+ * malformed, so callers can fall back via `?? 1`.
+ *
+ * Usage: `const page = fromCfi(cfiRange ?? cfiLocation) ?? 1`
+ * `current_page` / `pageNumber` are deprecated as sync sources — they are
+ * display-only and must not be written as canonical state.
+ */
+export function fromCfi(cfi: string | null | undefined): number | null {
+  const idx = parseSpineIndex(cfi);
+  return idx !== null ? 1 : null;
+}
+
+/** Alias for callers that expect `derivePage`. */
+export const derivePage = fromCfi;
+
+/** @deprecated Use `fromCfi(cfi) ?? 1` — `current_page` is no longer canonical. */
+export const currentPageDeprecated = true;
+
 /** Deserialise a canonical locator JSON string. Returns null on invalid input. */
 export function locatorFromJson(json: string | null | undefined): CanonicalLocator | null {
   if (typeof json !== 'string' || json.length === 0) return null;

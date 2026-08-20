@@ -133,6 +133,11 @@ pub struct SaveBookmarkInput {
     pub page: i32,
     pub position: f64,
     pub title: Option<String>,
+    /// Canonical CFI location for EPUB (page is derived via LocatorCodec.fromCfi).
+    #[serde(default)]
+    pub cfi_location: Option<String>,
+    #[serde(default)]
+    pub locator_json: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

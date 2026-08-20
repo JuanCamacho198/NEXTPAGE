@@ -61,6 +61,24 @@ pub fn save_highlight(
         return Err(AppError::InvalidInput("Highlight text is required".to_string()));
     }
 
+    // CFI-first invariant (spec: highlights.rs cfi_range non-null EPUB)
+    if let Ok(Some(fmt)) = repo
+        .connection
+        .query_row("SELECT format FROM books WHERE id = ?1", params![&payload.book_id], |r| {
+            r.get::<_, String>(0)
+        })
+        .optional()
+    {
+        if fmt.eq_ignore_ascii_case("epub") {
+            let has_cfi = payload.cfi.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false);
+            if !has_cfi {
+                return Err(AppError::InvalidInput(
+                    "EPUB highlights require cfiRange (CFI-first)".to_string(),
+                ));
+            }
+        }
+    }
+
     let now = Utc::now().to_rfc3339();
     // Honor the client-supplied id (sync pulls re-apply the same row and
     // MUST NOT create a duplicate). Fall back to a fresh UUID for legacy
@@ -167,7 +185,7 @@ mod tests {
         let id = insert_book_and_highlight(&repo);
         let updated = update_highlight(
             &repo,
-            UpdateHighlightInput { id: id.clone(), color: Some("#4ADE80".to_string()), note: None },
+            UpdateHighlightInput { id: id.clone(), color: Some("#4ADE80".to_string()), note: None, page: None, page_number: None },
         )
         .unwrap();
         assert_eq!(updated.color, "#4ADE80");
@@ -185,7 +203,7 @@ mod tests {
         let id = insert_book_and_highlight(&repo);
         let updated = update_highlight(
             &repo,
-            UpdateHighlightInput { id: id.clone(), color: None, note: Some("A note".to_string()) },
+            UpdateHighlightInput { id: id.clone(), color: None, note: Some("A note".to_string()), page: None, page_number: None },
         )
         .unwrap();
         assert_eq!(updated.note, Some("A note".to_string()));
@@ -197,12 +215,12 @@ mod tests {
         let id = insert_book_and_highlight(&repo);
         update_highlight(
             &repo,
-            UpdateHighlightInput { id: id.clone(), color: None, note: Some("A note".to_string()) },
+            UpdateHighlightInput { id: id.clone(), color: None, note: Some("A note".to_string()), page: None, page_number: None },
         )
         .unwrap();
         let updated = update_highlight(
             &repo,
-            UpdateHighlightInput { id: id.clone(), color: None, note: Some("".to_string()) },
+            UpdateHighlightInput { id: id.clone(), color: None, note: Some("".to_string()), page: None, page_number: None },
         )
         .unwrap();
         assert_eq!(updated.note, Some("".to_string()));
@@ -217,6 +235,8 @@ mod tests {
                 id: "missing-id".to_string(),
                 color: Some("#4ADE80".to_string()),
                 note: None,
+                page: None,
+                page_number: None,
             },
         );
         assert!(matches!(result, Err(AppError::NotFound(_))));
@@ -297,12 +317,44 @@ mod tests {
                 rect_right: 10.0,
                 rect_top: 0.0,
                 rect_bottom: 10.0,
-                cfi: None,
+                cfi: Some("epubcfi(/6/2!)".to_string()),
                 note: None,
             },
         )
         .unwrap();
         assert!(!saved.id.is_empty());
+    }
+
+    #[test]
+    fn save_highlight_rejects_epub_without_cfi() {
+        let repo = new_repository();
+        let now = Utc::now().to_rfc3339();
+        repo.connection
+            .execute(
+                "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
+                 VALUES (?1, 'Book', 'Author', 'C:/book.epub', 'epub', 'local', 0, 100, ?2, ?2, 1)",
+                params!["book-cfi-req", now],
+            )
+            .unwrap();
+        let err = save_highlight(
+            &repo,
+            SaveHighlightInput {
+                id: None,
+                book_id: "book-cfi-req".to_string(),
+                color: "#FACC15".to_string(),
+                text: "sample".to_string(),
+                page_number: Some(1),
+                page: None,
+                rect_left: 0.0,
+                rect_right: 10.0,
+                rect_top: 0.0,
+                rect_bottom: 10.0,
+                cfi: None,
+                note: None,
+            },
+        )
+        .unwrap_err();
+        assert!(matches!(err, AppError::InvalidInput(_)));
     }
 }
 

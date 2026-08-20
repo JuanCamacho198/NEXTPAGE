@@ -887,8 +887,10 @@
     resourcesPath: string,
     spineHrefs: string[],
     currentChapterHref: string,
+    chapterIndex: number,
     missingFonts: Set<string> = new Set(),
   ): string {
+    console.warn('build srcdoc CHAPTER_INDEX', chapterIndex, 'href', currentChapterHref);
     const parser = new DOMParser();
     const doc = parser.parseFromString(chapterData.html, 'text/html');
     const chapterPath = chapterData.chapterPath.replace(/\\/g, '/');
@@ -1040,7 +1042,7 @@
         var timer = null;
         var mouseupDebounceTimer = null;
         var CHAPTER_HREF = ${JSON.stringify(currentChapterHref)};
-        var CHAPTER_INDEX = ${currentChapterIndex};
+        var CHAPTER_INDEX = ${chapterIndex};
 
         // HM-3 / HM-4: click handler via overlay hit-testing (caretRangeFromPoint
         // + inclusive boundary math against the overlay's per-id side-table).
@@ -1395,6 +1397,7 @@
         metadata.resourcesPath,
         spineHrefs,
         chapterHref,
+        index,
         missingFonts,
       );
 

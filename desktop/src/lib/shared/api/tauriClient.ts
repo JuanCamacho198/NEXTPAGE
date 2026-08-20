@@ -840,6 +840,8 @@ export const updateHighlight = async (payload: {
   id: string;
   color?: string;
   note?: string;
+  page?: number;
+  pageNumber?: number;
 }): Promise<HighlightDto> => {
   try {
     return await invoke<HighlightDto>('updateHighlight', { payload });

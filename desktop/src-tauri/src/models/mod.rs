@@ -50,8 +50,14 @@ pub struct SaveHighlightInput {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateHighlightInput {
     pub id: String,
+    #[serde(default)]
     pub color: Option<String>,
+    #[serde(default)]
     pub note: Option<String>,
+    #[serde(default)]
+    pub page: Option<i32>,
+    #[serde(default)]
+    pub page_number: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

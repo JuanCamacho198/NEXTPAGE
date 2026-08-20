@@ -47,9 +47,9 @@ pub fn save_highlight(
     }
 
     let page = payload.resolve_page_number()?;
-    if page <= 0 {
+    if page < 0 {
         return Err(AppError::InvalidInput(
-            "Highlight pageNumber must be greater than 0".to_string(),
+            "Highlight pageNumber must be non-negative".to_string(),
         ));
     }
 
@@ -353,6 +353,27 @@ pub fn update_highlight(
     if input.note.is_some() {
         highlight.note = input.note.clone();
         updates.push(("note = ?", &highlight.note as &dyn rusqlite::ToSql));
+    }
+
+    if input.page.is_some() || input.page_number.is_some() {
+        let page = match (input.page_number, input.page) {
+            (Some(pn), Some(p)) if pn != p => {
+                return Err(AppError::InvalidInput(format!(
+                    "Highlight payload has conflicting page fields: pageNumber={} page={}",
+                    pn, p
+                )))
+            }
+            (Some(pn), _) => pn,
+            (None, Some(p)) => p,
+            (None, None) => unreachable!(),
+        };
+        if page < 0 {
+            return Err(AppError::InvalidInput(
+                "Highlight pageNumber must be non-negative".to_string(),
+            ));
+        }
+        highlight.page = page;
+        updates.push(("page = ?", &highlight.page as &dyn rusqlite::ToSql));
     }
 
     if updates.is_empty() {

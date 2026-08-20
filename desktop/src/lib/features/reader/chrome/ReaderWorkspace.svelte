@@ -260,15 +260,33 @@
           );
           const rowIds = new Set(rows.map((r) => r.id));
           const optimistic = untrack(() => persistedHighlights).filter((h) => !rowIds.has(h.id));
-          let merged: PersistedHighlight[] = rows.map((r) => ({
-            id: r.id,
-            color: r.color,
-            pageNumber: r.pageNumber,
-            rects: [],
-            cfi: r.cfi ?? null,
-            text: r.text,
-            note: r.note ?? null,
-          }));
+          let merged: PersistedHighlight[] = rows.map((r) => {
+            let pageNumber = r.pageNumber;
+            if (r.cfi) {
+              const m = /epubcfi\(\/6\/(\d+)!/.exec(r.cfi);
+              if (m) {
+                const idx = parseInt(m[1], 10) - 1;
+                if (idx >= 0 && idx !== pageNumber) {
+                  console.warn(
+                    'RW: fixing page mismatch',
+                    r.id.slice(0, 4),
+                    `page ${r.pageNumber} -> ${idx}`,
+                  );
+                  pageNumber = idx;
+                  void updateHighlight({ id: r.id, pageNumber }).catch(() => {});
+                }
+              }
+            }
+            return {
+              id: r.id,
+              color: r.color,
+              pageNumber,
+              rects: [],
+              cfi: r.cfi ?? null,
+              text: r.text,
+              note: r.note ?? null,
+            };
+          });
           if (optimistic.length > 0) {
             console.warn(
               'RW: preserving',

@@ -234,6 +234,11 @@
       return;
     }
 
+    {
+      const cfiPreview = typeof event.data.cfi === 'string' ? event.data.cfi.slice(0, 40) : '(null)';
+      console.warn('epub-sel: received page', event.data.pageNumber, 'current', currentChapterIndex, 'cfi', cfiPreview);
+    }
+
     if (
       typeof event.data.pageNumber === 'number' &&
       event.data.pageNumber !== currentChapterIndex
@@ -263,14 +268,17 @@
     debugState.epub.onselectionCalled++;
     debugState.epub.rectCount = Array.isArray(event.data.rects) ? event.data.rects.length : 0;
 
+    const resolvedPageNumber =
+      typeof event.data.pageNumber === 'number' ? event.data.pageNumber : currentChapterIndex;
+    const resolvedCfi = typeof event.data.cfi === 'string' ? event.data.cfi : null;
     onselection({
       text: event.data.text,
       bounds: event.data.bounds,
       container: event.data.container,
       placement: 'epub-chapter',
       rects: event.data.rects ?? [],
-      pageNumber: currentChapterIndex,
-      cfi: typeof event.data.cfi === 'string' ? event.data.cfi : null,
+      pageNumber: resolvedPageNumber,
+      cfi: resolvedCfi,
     });
   }
 

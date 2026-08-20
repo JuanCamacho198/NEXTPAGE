@@ -523,6 +523,7 @@
   ): Promise<void> {
     debugState.epub.colorPickCount++;
     debugState.epub.lastPickedColor = color;
+    console.warn('RW: handleColorSelect data.pageNumber', data.pageNumber, 'cfi', data.cfi?.slice(0, 40) ?? '(null)', 'text', data.text.slice(0, 30));
 
     // Use the data passed by the toolbar (captured at mount time) rather than
     // the global `lastSelectionData`. This is the fix for the race condition:

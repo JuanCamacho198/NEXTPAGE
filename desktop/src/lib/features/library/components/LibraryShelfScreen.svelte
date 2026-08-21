@@ -386,7 +386,7 @@
               aria-valuemin="0"
               aria-valuemax="100"
             >
-              <div class="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
+              <div class="w-full h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                 <div
                   class="h-full rounded-full bg-[var(--gradient-accent-h)]"
                   style={`width: ${formatPercent(book)};`}
@@ -494,7 +494,7 @@
                   aria-valuemin="0"
                   aria-valuemax="100"
                 >
-                  <div class="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
+                  <div class="w-full h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                     <div
                       class="h-full rounded-full bg-[var(--gradient-accent-h)]"
                       style={`width: ${formatPercent(book)};`}

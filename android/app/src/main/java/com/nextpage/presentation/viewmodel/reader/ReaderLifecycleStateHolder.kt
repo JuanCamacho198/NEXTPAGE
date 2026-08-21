@@ -448,10 +448,19 @@ class ReaderLifecycleStateHolder(
      * Called by [ReadiumReaderContent] to report the viewport dimensions.
      * Both height and width are stored atomically for exact reflow calc.
      * Width is optional for backward compat (defaults to height aspect if missing).
+     * Also updates typographySnapshot viewport so charsPerPage fallback stays exact
+     * after rotation or window resize (viewport typography listener).
      */
     fun onReadiumViewportChanged(height: Int, width: Int = 0) {
         val hasChanged = _state.value.readiumViewportHeight != height || _state.value.readiumViewportWidth != width
         _state.update { it.copy(readiumViewportHeight = height, readiumViewportWidth = width) }
+        // Keep typographySnapshot in sync with viewport so fallback calc uses fresh dimensions
+        typographySnapshot?.let { snap ->
+            typographySnapshot = snap.copy(
+                viewportW = width.takeIf { it > 0 } ?: snap.viewportW,
+                viewportH = height.takeIf { it > 0 } ?: snap.viewportH
+            )
+        }
         if (hasChanged) updateProgressDisplay()
     }
 
@@ -745,10 +754,20 @@ class ReaderLifecycleStateHolder(
             val expectedTitle = chapters.getOrNull(resolvedChapterIndex)?.title
             val computedTitle = expectedTitle
             val hrefMismatch = publication != null && computedIndex == null && locatorHref.isNotBlank()
-            if (hrefMismatch) {
+            // Additional mismatch when resolved chapter href doesn't match locator href (title vs expected)
+            val chapterHref = chapters.getOrNull(resolvedChapterIndex)?.href
+            val hrefTitleMismatch = chapterHref != null && locatorHref.isNotBlank() &&
+                chapterHref.substringAfterLast('/').substringBefore('#').lowercase() !=
+                locatorHref.substringAfterLast('/').substringBefore('#').lowercase()
+            if (hrefMismatch || hrefTitleMismatch) {
+                DebugDual.logFooterMismatch(expectedTitle, locatorHref)
                 DebugDual.log(DebugEvent.FooterMismatch(locatorHref, computedTitle, expectedTitle))
             } else if (computedTitle != null) {
                 DebugDual.log(DebugEvent.ChapterResolved(locatorHref, computedTitle, resolvedChapterIndex))
+            }
+            // Ensure mismatch telemetry when chapterTitle != expected (explicit per spec)
+            if (expectedTitle != null && computedTitle != null && expectedTitle != computedTitle) {
+                DebugDual.logFooterMismatch(expectedTitle, computedTitle)
             }
 
             val totalProgression = locator.locations.totalProgression?.toFloat() ?: 0f

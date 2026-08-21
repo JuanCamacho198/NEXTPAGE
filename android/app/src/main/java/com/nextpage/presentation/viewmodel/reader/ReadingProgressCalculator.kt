@@ -35,6 +35,8 @@ object ReadingProgressCalculator {
 
     /**
      * Compute remaining pages from [locator] snapshot.
+     * Viewport typography listener: caller must re-invoke on viewport or font changes so
+     * charsPerPage fallback stays exact; positions path is viewport-independent.
      */
     fun compute(
         publication: Publication?,
@@ -50,16 +52,29 @@ object ReadingProgressCalculator {
                 @Suppress("UNCHECKED_CAST")
                 val positions: List<Locator>? = runCatching {
                     // Try direct property via reflection (positions may be extension or field)
-                    val method = pub::class.java.methods.firstOrNull { it.name == "getPositions" }
+                    // Readium 3.2.0 exposes positions as List<Locator> via getPositions() or field 'positions'
+                    // Also try Kotlin property 'positions' and declared methods with no args
+                    val method = pub::class.java.methods.firstOrNull { it.name == "getPositions" || it.name == "positions" }
                     if (method != null) {
                         method.invoke(pub) as? List<Locator>
                     } else {
-                        val field = pub::class.java.declaredFields.firstOrNull { it.name == "positions" }
-                        field?.let {
-                            it.isAccessible = true
-                            it.get(pub) as? List<Locator>
+                        // Try declared method (private/protected)
+                        val declared = pub::class.java.declaredMethods.firstOrNull { it.name == "getPositions" || it.name == "positions" }
+                        if (declared != null) {
+                            declared.isAccessible = true
+                            declared.invoke(pub) as? List<Locator>
+                        } else {
+                            val field = pub::class.java.declaredFields.firstOrNull { it.name == "positions" }
+                            field?.let {
+                                it.isAccessible = true
+                                it.get(pub) as? List<Locator>
+                            }
                         }
                     }
+                }.getOrNull() ?: runCatching {
+                    // Fallback: Kotlin reflection via members (covers extension property)
+                    @Suppress("UNCHECKED_CAST")
+                    (pub::class.members.firstOrNull { it.name == "positions" }?.call(pub) as? List<Locator>)
                 }.getOrNull()
                 if (positions == null || positions.isEmpty()) throw IllegalStateException("no positions")
                 val positionsNN = positions

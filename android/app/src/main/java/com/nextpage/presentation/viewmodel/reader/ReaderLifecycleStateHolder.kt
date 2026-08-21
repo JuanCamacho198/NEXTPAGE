@@ -402,17 +402,54 @@ class ReaderLifecycleStateHolder(
      * for the real overall document percentage, NOT chapter-based math.
      * Saves the progression to the database via [updateReadingProgressUseCase].
      */
+    /**
+     * Resolve list position (0 .. chapters.size-1) for a locator.
+     * Prefers href string match against chapters (most robust for TOC vs spine offset),
+     * falls back to readingOrder index mapping.
+     */
+    private fun resolveChapterListIndex(
+        locator: Locator,
+        publication: Publication?,
+        chapters: List<BookChapter>
+    ): Int? {
+        if (chapters.isEmpty()) return null
+        val locatorHref = locator.href.toString()
+        fun normalizeFile(href: String): String =
+            href.substringAfterLast('/').substringBefore('#').substringBefore('?').trim().lowercase()
+        val normLocatorFile = normalizeFile(locatorHref)
+        // 1. Exact href match
+        chapters.indexOfFirst { it.href == locatorHref }.takeIf { it >= 0 }?.let { return it }
+        // 2. Href without fragment/query exact
+        val locatorBase = locatorHref.substringBefore('#').substringBefore('?')
+        chapters.indexOfFirst { it.href.substringBefore('#').substringBefore('?') == locatorBase }
+            .takeIf { it >= 0 }?.let { return it }
+        // 3. Filename-only match (handles Text/chapter.xhtml vs chapter.xhtml)
+        chapters.indexOfFirst { normalizeFile(it.href) == normLocatorFile }
+            .takeIf { it >= 0 }?.let { return it }
+        // 4. Fallback via publication readingOrder index -> chapters index mapping
+        publication?.let { pub ->
+            try {
+                val link = pub.linkWithHref(locator.href) ?: return@let null
+                val roIndex = pub.readingOrder.indexOf(link)
+                if (roIndex >= 0) {
+                    chapters.indexOfFirst { it.index == roIndex }.takeIf { it >= 0 }?.let { return it }
+                    val firstIdx = chapters.minOfOrNull { it.index } ?: 0
+                    val adjusted = roIndex - firstIdx
+                    if (adjusted in chapters.indices) return adjusted
+                    if (roIndex in chapters.indices) return roIndex
+                }
+            } catch (_: Throwable) {}
+        }
+        return null
+    }
+
     fun onReadiumLocatorChanged(locator: Locator) {
-        // Atomic update: compute currentChapterIndex and progressLabel snapshot
-        // val newIndex = publication?.let { pub -> pub.linkWithHref(locator.href)?.let { link -> pub.readingOrder.indexOf(link) } } ?: currentState.currentChapterIndex
+        // Atomic update: compute currentChapterIndex via href-aware mapping (chaptersByHref), not raw readingOrder index
         val currentState = _state.value
         val publication = currentState.readiumPublication
-        val newIndex = publication?.let { pub ->
-            try {
-                pub.linkWithHref(locator.href)?.let { link -> pub.readingOrder.indexOf(link) }
-                    ?.takeIf { it >= 0 }
-            } catch (_: Throwable) { null }
-        } ?: currentState.currentChapterIndex
+        val chapters = currentState.chapters
+        val computedListIndex = resolveChapterListIndex(locator, publication, chapters)
+        val newIndex = computedListIndex ?: currentState.currentChapterIndex
         val previousHref = currentState.readiumLocator?.href
         if (previousHref != null && previousHref != locator.href) {
             onSelectionCleared()
@@ -540,12 +577,30 @@ class ReaderLifecycleStateHolder(
      * Emits a Readium [Locator] so the navigator actually moves to [chapterIndex].
      * Without this, only the state index changes and the reader stays on the
      * current page even though the TOC / next-prev controls report a new chapter.
+     *
+     * [chapterIndex] is the position in [chapters] (0 = first TOC entry), not the raw
+     * readingOrder index. The target [Link] is resolved via the chapter's href/index
+     * to handle spine offset (cover/toc) where readingOrder index != list position.
      */
     private fun navigateToChapter(chapterIndex: Int) {
-        val publication = _state.value.readiumPublication ?: return
-        val link = publication.readingOrder.getOrNull(chapterIndex) ?: return
+        val state = _state.value
+        val publication = state.readiumPublication ?: return
+        val chapters = state.chapters
+        val link: Link? = when {
+            chapterIndex in chapters.indices -> {
+                val chapter = chapters[chapterIndex]
+                // Prefer href-resolved link (handles Text/ prefix, fragment)
+                val hrefBase = chapter.href.substringBefore('#').substringBefore('?')
+                val normFile = hrefBase.substringAfterLast('/').lowercase()
+                publication.readingOrder.firstOrNull {
+                    it.href.toString().substringAfterLast('/').substringBefore('#').substringBefore('?').lowercase() == normFile
+                } ?: publication.readingOrder.getOrNull(chapter.index)
+            }
+            else -> publication.readingOrder.getOrNull(chapterIndex)
+        } ?: return
+        val roIndex = publication.readingOrder.indexOf(link).takeIf { it >= 0 } ?: chapterIndex
         val total = publication.readingOrder.size.coerceAtLeast(1)
-        val totalProgression = (chapterIndex.toFloat() / total).coerceIn(0f, 1f)
+        val totalProgression = (roIndex.toFloat() / total).coerceIn(0f, 1f)
         emitEpubNavigateLocator(chapterIndex, totalProgression, link)
     }
 
@@ -640,9 +695,22 @@ class ReaderLifecycleStateHolder(
                 emitPdfNavigateLocator(state.currentPdfPage, link)
             }
             else -> {
-                val link = publication.readingOrder.getOrNull(state.currentChapterIndex) ?: return
+                val chapters = state.chapters
+                val link: Link = when {
+                    state.currentChapterIndex in chapters.indices -> {
+                        val chapter = chapters[state.currentChapterIndex]
+                        val hrefBase = chapter.href.substringBefore('#').substringBefore('?')
+                        val normFile = hrefBase.substringAfterLast('/').lowercase()
+                        publication.readingOrder.firstOrNull {
+                            it.href.toString().substringAfterLast('/').substringBefore('#').substringBefore('?').lowercase() == normFile
+                        } ?: publication.readingOrder.getOrNull(chapter.index)
+                        ?: publication.readingOrder.getOrNull(state.currentChapterIndex)
+                    }
+                    else -> publication.readingOrder.getOrNull(state.currentChapterIndex)
+                } ?: return
+                val roIndex = publication.readingOrder.indexOf(link).takeIf { it >= 0 } ?: state.currentChapterIndex
                 val totalProgression = if (publication.readingOrder.isNotEmpty()) {
-                    state.currentChapterIndex.toFloat() / publication.readingOrder.size
+                    roIndex.toFloat() / publication.readingOrder.size
                 } else 0f
                 emitEpubNavigateLocator(state.currentChapterIndex, totalProgression, link)
             }
@@ -678,7 +746,10 @@ class ReaderLifecycleStateHolder(
             // until Readium's locator totalProgression confirms it.
             val percentage = (((chapterIndex + 1).toFloat() / totalChapters) * 100f)
                 .coerceIn(0f, MAX_PROGRESS_PERCENT)
-            val cfiLocation = "epubcfi(/6/${chapterIndex + 1})"
+            // Spine index for CFI is 1-based readingOrder position; use chapter's stored readingOrder index when available
+            val chapter = _state.value.chapters.getOrNull(chapterIndex)
+            val spineIndex = chapter?.let { it.index + 1 } ?: (chapterIndex + 1)
+            val cfiLocation = "epubcfi(/6/$spineIndex)"
 
             scope.launch(mainDispatcher) {
                 updateReadingProgressUseCase(
@@ -739,22 +810,19 @@ class ReaderLifecycleStateHolder(
             val chapters = snapshot.chapters
 
             // Atomic chapter resolution from same locator+publication+chapters snapshot
+            // Use href-aware mapping (chaptersByHref), not raw readingOrder index, to avoid offset bug (cap1 -> Canto IV)
             val locatorHref = locator.href.toString()
-            val computedIndex: Int? = publication?.let { pub ->
-                try {
-                    pub.linkWithHref(locator.href)?.let { link -> pub.readingOrder.indexOf(link) }
-                } catch (_: Throwable) { null }
-            }?.takeIf { it >= 0 }
+            val computedIndex: Int? = resolveChapterListIndex(locator, publication, chapters)
 
             if (computedIndex != null && computedIndex != snapshot.currentChapterIndex) {
                 resolvedChapterIndex = computedIndex
             }
 
-            // Validate chapter title vs locator href; emit mismatch if needed
+            // Validate chapter title vs locator href; emit mismatch only when href actually mismatches
             val expectedTitle = chapters.getOrNull(resolvedChapterIndex)?.title
             val computedTitle = expectedTitle
             val hrefMismatch = publication != null && computedIndex == null && locatorHref.isNotBlank()
-            // Additional mismatch when resolved chapter href doesn't match locator href (title vs expected)
+            // Additional mismatch when resolved chapter href doesn't match locator href (filename compare)
             val chapterHref = chapters.getOrNull(resolvedChapterIndex)?.href
             val hrefTitleMismatch = chapterHref != null && locatorHref.isNotBlank() &&
                 chapterHref.substringAfterLast('/').substringBefore('#').lowercase() !=
@@ -764,10 +832,6 @@ class ReaderLifecycleStateHolder(
                 DebugDual.log(DebugEvent.FooterMismatch(locatorHref, computedTitle, expectedTitle))
             } else if (computedTitle != null) {
                 DebugDual.log(DebugEvent.ChapterResolved(locatorHref, computedTitle, resolvedChapterIndex))
-            }
-            // Ensure mismatch telemetry when chapterTitle != expected (explicit per spec)
-            if (expectedTitle != null && computedTitle != null && expectedTitle != computedTitle) {
-                DebugDual.logFooterMismatch(expectedTitle, computedTitle)
             }
 
             val totalProgression = locator.locations.totalProgression?.toFloat() ?: 0f

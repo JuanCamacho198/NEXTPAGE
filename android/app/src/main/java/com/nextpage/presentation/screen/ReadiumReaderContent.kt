@@ -679,7 +679,7 @@ internal fun highlightsToDecorations(
         val fromJson = h.locatorJson?.let { CfiMigrator.jsonToLocator(it) }
         val viaJson = fromJson != null
         // Chain: canonical json -> precise CFI via publication metrics -> generic fallback
-        val locator = fromJson
+        val baseLocator = fromJson
             ?: epubCfiFallbackLocator(h.cfiRange, readingOrder, publication)
             ?: fallbackLocatorFromCfi(h.cfiRange, readingOrder)
             ?: run {
@@ -697,8 +697,32 @@ internal fun highlightsToDecorations(
                 DebugDual.logHighlightSkipped(h.id, h.cfiRange, reason)
                 return@mapNotNull null
             }
+        // Enrich locator with text highlight when missing: Readium decoration at progression 0 alone
+        // does not highlight exact phrase like "blame, Musa..."; adding Locator.Text.highlight makes
+        // the decoration anchor to the concrete phrase even if progression is approximate.
+        val locator = if (baseLocator.text?.highlight.isNullOrBlank() && h.textContent.isNotBlank()) {
+            try {
+                val json = baseLocator.toJSON()
+                val textObj = org.json.JSONObject().apply {
+                    put("highlight", h.textContent.take(300))
+                }
+                json.put("text", textObj)
+                org.readium.r2.shared.publication.Locator.fromJSON(json) ?: baseLocator
+            } catch (_: Throwable) { baseLocator }
+        } else baseLocator
         val viaFallback = !viaJson
         DebugDual.log(DebugEvent.HighlightsApplied(h.id, h.cfiRange, viaFallback))
+        // Detailed debug for visibility verification: href + progression + fragment (fragment via JSON, not direct property)
+        val fragmentForLog = runCatching { locator.toJSON().optJSONObject("locations")?.optString("fragment")?.take(80) }.getOrNull()?.takeIf { it.isNotBlank() } ?: h.cfiRange?.take(80) ?: "null"
+        val fragmentShort = runCatching { locator.toJSON().optJSONObject("locations")?.optString("fragment")?.take(60) }.getOrNull()?.takeIf { it.isNotBlank() } ?: h.cfiRange?.take(60) ?: "null"
+        DebugDual.d(
+            DebugDual.TAG_SYNC,
+            "highlights.applied id=${h.id} href=${locator.href} progression=${locator.locations.progression} fragment=$fragmentForLog viaFallback=$viaFallback color=${h.color}"
+        )
+        DebugLog.info(
+            "Highlights",
+            "applied id=${h.id} href=${locator.href} prog=${locator.locations.progression} frag=$fragmentShort viaFallback=$viaFallback"
+        )
         val tint = try {
             android.graphics.Color.parseColor(h.color)
         } catch (_: Exception) {
@@ -792,8 +816,11 @@ internal fun fallbackLocatorFromCfi(
  * Precise CFI fallback using publication chapter metrics.
  *
  * Tries CfiMigrator.parsePreciseCfi -> preciseCfiToLocator with readingOrder
- * and chapter metric via publication.get(link)?.read() char count (fallback to
- * migrateCfiToLocator for legacy epubcfi(/6/N)). If still null, return null.
+ * and chapter metric via publication.get(link)?.read() char count. The previous
+ * implementation used `bytes?.size` (byte length) and a runCatching that could
+ * return null metric -> fallback to progression 0.0, leaving the orange highlight
+ * invisibly at chapter start. This version decodes to string length and logs
+ * href/progression/fragment for verification.
  */
 private fun epubCfiFallbackLocator(
     cfiRange: String?,
@@ -813,22 +840,42 @@ private fun epubCfiFallbackLocator(
                     val chapterChars = runCatching {
                         if (publication != null) {
                             val resource = publication.get(l)
-                            // Publication.get returns Resource; read() is suspend – block for char count
                             val bytes = kotlinx.coroutines.runBlocking {
                                 resource?.read()?.getOrNull()
                             }
-                            bytes?.size ?: 10000
+                            // Decode bytes to string to get char count, not byte size; fallback to 10000 estimate
+                            val decodedLength = bytes?.let {
+                                try {
+                                    it.decodeToString().length
+                                } catch (_: Throwable) {
+                                    it.size
+                                }
+                            } ?: 10000
+                            decodedLength.takeIf { it > 0 } ?: 10000
                         } else 10000
-                    }.getOrDefault(10000)
+                    }.getOrDefault(10000).coerceAtLeast(1)
                     CfiMigrator.TextMetric(charOffset = p.textOffset, chapterChars = chapterChars)
                 }
             }.getOrNull()
-            if (precise != null) return precise
+            if (precise != null) {
+                val fragLog = runCatching { precise.toJSON().optJSONObject("locations")?.optString("fragment")?.take(80) }.getOrNull() ?: cfiRange.take(80)
+                DebugDual.d(
+                    DebugDual.TAG_SYNC,
+                    "epubCfiFallback precise href=${precise.href} progression=${precise.locations.progression} fragment=$fragLog spineIndex=${parsed.spineIndex} textOffset=${parsed.textOffset}"
+                )
+                return precise
+            } else {
+                DebugLog.warn("Highlights", "epubCfiFallback precise failed for cfi=${cfiRange.take(80)} spineIndex=${parsed.spineIndex}")
+            }
         }
     }
     // 2. Legacy epubcfi(/6/N) via migrateCfiToLocator
-    CfiMigrator.migrateCfiToLocator(cfiRange, readingOrder)?.let { return it }
-    // 3. Generic spine-index fallback preserving fragment for tapability
+    CfiMigrator.migrateCfiToLocator(cfiRange, readingOrder)?.let {
+        val fragLog = runCatching { it.toJSON().optJSONObject("locations")?.optString("fragment")?.take(80) }.getOrNull() ?: cfiRange.take(80)
+        DebugDual.d(DebugDual.TAG_SYNC, "epubCfiFallback legacy href=${it.href} progression=${it.locations.progression} fragment=$fragLog")
+        return it
+    }
+    // 3. Generic spine-index fallback preserving fragment for tapability (progression 0.0 + fragment)
     val spineIndex = Regex("""epubcfi\(/6/(\d+)""").find(cfiRange)?.groupValues?.getOrNull(1)?.toIntOrNull()
     if (spineIndex != null && spineIndex > 0) {
         val link = readingOrder.getOrNull(spineIndex - 1) ?: return null
@@ -840,7 +887,11 @@ private fun epubCfiFallbackLocator(
                 put("fragment", cfiRange)
             })
         }
-        return org.readium.r2.shared.publication.Locator.fromJSON(json)
+        val fallback = org.readium.r2.shared.publication.Locator.fromJSON(json)
+        if (fallback != null) {
+            DebugDual.d(DebugDual.TAG_SYNC, "epubCfiFallback generic href=${fallback.href} progression=0.0 fragment=${cfiRange.take(80)}")
+        }
+        return fallback
     }
     return null
 }

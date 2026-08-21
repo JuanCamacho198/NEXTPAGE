@@ -35,12 +35,15 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.commit
+import com.nextpage.debug.DebugDual
+import com.nextpage.debug.DebugEvent
 import com.nextpage.debug.DebugLog
 import com.nextpage.debug.DebugStateHolder
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.presentation.viewmodel.CfiMigrator
 import com.nextpage.presentation.viewmodel.ReaderViewModel
+import org.readium.r2.shared.publication.Link
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -404,18 +407,24 @@ fun ReadiumReaderContent(
     // emits the persisted list, so a single 100ms kick can push 0 decorations
     // and the decorations are never painted. Retrying until highlights arrive
     // (or a timeout) guarantees the last-known decorations are applied.
-    LaunchedEffect(navigatorFragment) {
+    // Publication readingOrder used for epubcfi fallback; recompose when publication changes
+    val readingOrder = remember(publication) { publication.readingOrder }
+
+    LaunchedEffect(navigatorFragment, publication) {
         val frag = navigatorFragment ?: return@LaunchedEffect
         val decorable = frag as? DecorableNavigator ?: return@LaunchedEffect
         delay(100)
         repeat(10) {
-            val currentDecorations = highlightsToDecorations(highlights)
+            val currentDecorations = highlightsToDecorations(highlights, readingOrder, publication)
             if (currentDecorations.isNotEmpty() || highlights.isNotEmpty()) {
                 decorable.applyDecorations(currentDecorations, DECORATION_GROUP)
                 DebugLog.info(
                     "Readium",
                     "Post-listener re-apply: pushed ${currentDecorations.size} decorations"
                 )
+                DebugDual.logHighlightApplied(currentDecorations.size)
+                DebugDual.d(DebugDual.TAG_SYNC, "Post-listener re-apply dual log count=${currentDecorations.size}")
+                DebugStateHolder.recordApplied(currentDecorations.size)
                 return@LaunchedEffect
             }
             delay(200)
@@ -431,7 +440,8 @@ fun ReadiumReaderContent(
     // persisted list, and clearing early would wipe the decorations. The
     // post-listener kick above retries until highlights arrive, so a fresh
     // navigator never clears before its data is available.
-    LaunchedEffect(highlights, navigatorFragment) {
+    // Defer until publication readingOrder is ready so epubcfi fallback can resolve href.
+    LaunchedEffect(highlights, navigatorFragment, publication) {
         val frag = navigatorFragment ?: return@LaunchedEffect
         val decorable = frag as? DecorableNavigator ?: return@LaunchedEffect
         if (highlights.isEmpty()) {
@@ -443,9 +453,11 @@ fun ReadiumReaderContent(
             DebugLog.info("Readium", "Decoration sync: skipping empty-clear (waiting for highlights)")
             return@LaunchedEffect
         }
-        val decorations = highlightsToDecorations(highlights)
+        val decorations = highlightsToDecorations(highlights, readingOrder, publication)
         DebugLog.info("Readium", "Decoration sync: pushing ${decorations.size} decorations")
+        DebugDual.d(DebugDual.TAG_SYNC, "Decoration sync: pushing ${decorations.size} decorations via ${if (readingOrder.isNotEmpty()) "readingOrder(${readingOrder.size})" else "no-order"}")
         decorable.applyDecorations(decorations, DECORATION_GROUP)
+        DebugDual.logHighlightApplied(decorations.size)
         DebugStateHolder.recordApplied(decorations.size)
     }
 
@@ -632,7 +644,7 @@ fun ReadiumReaderContent(
                 // (which only fires on attach/detach transitions and would
                 // never refire on subsequent book loads — the original bug).
                 if (!containerReady) containerReady = true
-                viewModel.onReadiumViewportChanged(coordinates.size.height)
+                viewModel.onReadiumViewportChanged(coordinates.size.height, coordinates.size.width)
             }
         )
         // Edge-tap zones (top + bottom 5%) for re-showing the chrome.
@@ -651,19 +663,42 @@ fun ReadiumReaderContent(
 /**
  * Maps a [Highlight] list to a [Decoration] list for Readium's
  * [DecorableNavigator.applyDecorations].
+ *
+ * Prefer [Highlight.locatorJson] (canonical Locator). When null/invalid, try
+ * epubcfi fallback via [epubCfiFallbackLocator] using the
+ * publication [readingOrder] and [publication] chapter metrics, then
+ * [fallbackLocatorFromCfi]. Emits dual debug events for both applied and
+ * skipped cases. Decorations are tappable Highlight style.
  */
-private fun highlightsToDecorations(highlights: List<Highlight>): List<Decoration> {
+internal fun highlightsToDecorations(
+    highlights: List<Highlight>,
+    readingOrder: List<Link> = emptyList(),
+    publication: Publication? = null
+): List<Decoration> {
     return highlights.mapNotNull { h ->
         val fromJson = h.locatorJson?.let { CfiMigrator.jsonToLocator(it) }
+        val viaJson = fromJson != null
+        // Chain: canonical json -> precise CFI via publication metrics -> generic fallback
         val locator = fromJson
-            ?: fallbackLocatorFromCfi(h.cfiRange)
+            ?: epubCfiFallbackLocator(h.cfiRange, readingOrder, publication)
+            ?: fallbackLocatorFromCfi(h.cfiRange, readingOrder)
             ?: run {
+                val reason = when {
+                    h.cfiRange == null && h.locatorJson == null -> "both cfi and locator null"
+                    h.cfiRange?.startsWith("epubcfi(") == true -> "epubcfi parse failed"
+                    h.cfiRange?.startsWith("readium:") == true -> "readium href not resolved"
+                    else -> "fallback returned null"
+                }
                 DebugLog.warn(
                     "Highlights",
                     "highlight ${h.id} skipped: locatorJson=${h.locatorJson?.take(80) ?: "null"} cfiRange=${h.cfiRange?.take(80) ?: "null"} jsonParsed=${fromJson != null}"
                 )
+                DebugDual.log(DebugEvent.HighlightsSkipped(h.id, h.cfiRange, reason))
+                DebugDual.logHighlightSkipped(h.id, h.cfiRange, reason)
                 return@mapNotNull null
             }
+        val viaFallback = !viaJson
+        DebugDual.log(DebugEvent.HighlightsApplied(h.id, h.cfiRange, viaFallback))
         val tint = try {
             android.graphics.Color.parseColor(h.color)
         } catch (_: Exception) {
@@ -677,24 +712,148 @@ private fun highlightsToDecorations(highlights: List<Highlight>): List<Decoratio
     }
 }
 
+
+
 /**
- * Builds a minimal Readium [Locator] from a `readium:{href}` cfiRange fallback.
- * Highlights saved without a locatorJson (or whose locator fails to re-parse)
- * still get a decoration at the start of their resource, so they are at least
- * visible in the book even though the exact text range is lost.
+ * Fallback Locator builder for highlights without a valid locatorJson.
+ *
+ * Handles:
+ * - `readium:{href}` -> Locator at href start
+ * - `epubcfi(...)` -> chain CfiMigrator.parsePreciseCfi / preciseCfiToLocator / migrateCfiToLocator
+ *   using publication [readingOrder] to resolve href. When precise char metrics
+ *   are unavailable, falls back to chapter-start with fragment=cfi so the
+ *   highlight is at least visible and tappable.
  */
-private fun fallbackLocatorFromCfi(cfiRange: String?): org.readium.r2.shared.publication.Locator? {
-    if (cfiRange == null || !cfiRange.startsWith("readium:")) return null
-    val href = cfiRange.removePrefix("readium:")
-    val json = org.json.JSONObject().apply {
-        put("href", href)
-        put("type", "application/xhtml+xml")
-        put("locations", org.json.JSONObject().apply {
-            put("progression", 0.0)
-        })
+internal fun fallbackLocatorFromCfi(
+    cfiRange: String?,
+    readingOrder: List<Link> = emptyList()
+): org.readium.r2.shared.publication.Locator? {
+    if (cfiRange == null) return null
+    if (cfiRange.startsWith("readium:")) {
+        val href = cfiRange.removePrefix("readium:")
+        if (href.isBlank()) return null
+        val json = org.json.JSONObject().apply {
+            put("href", href)
+            put("type", "application/xhtml+xml")
+            put("locations", org.json.JSONObject().apply {
+                put("progression", 0.0)
+                put("fragment", cfiRange)
+            })
+        }
+        return org.readium.r2.shared.publication.Locator.fromJSON(json)
     }
-    return org.readium.r2.shared.publication.Locator.fromJSON(json)
+    if (cfiRange.startsWith("epubcfi(")) {
+        // Try precise CFI parse first
+        val parsed = CfiMigrator.parsePreciseCfi(cfiRange)
+        if (parsed != null && readingOrder.isNotEmpty()) {
+            val link = readingOrder.getOrNull(parsed.spineIndex - 1)
+            if (link != null) {
+                // Use dummy metric when real chapterChars unavailable; still preserves fragment for re-anchoring
+                val textOffset = parsed.textOffset
+                val metric = CfiMigrator.TextMetric(charOffset = textOffset, chapterChars = 10000)
+                val progression = CfiMigrator.progressionFor(metric) ?: 0.0
+                val json = org.json.JSONObject().apply {
+                    put("href", link.href.toString())
+                    put("type", link.mediaType?.toString() ?: "application/xhtml+xml")
+                    put("locations", org.json.JSONObject().apply {
+                        put("progression", progression)
+                        put("fragment", cfiRange)
+                    })
+                }
+                return org.readium.r2.shared.publication.Locator.fromJSON(json)
+            }
+        }
+        // Try legacy CFI path
+        if (readingOrder.isNotEmpty()) {
+            CfiMigrator.migrateCfiToLocator(cfiRange, readingOrder)?.let { return it }
+            // Generic spine-index fallback
+            val spineIndex = Regex("""epubcfi\(/6/(\d+)""").find(cfiRange)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            if (spineIndex != null && spineIndex > 0) {
+                val link = readingOrder.getOrNull(spineIndex - 1)
+                if (link != null) {
+                    val json = org.json.JSONObject().apply {
+                        put("href", link.href.toString())
+                        put("type", link.mediaType?.toString() ?: "application/xhtml+xml")
+                        put("locations", org.json.JSONObject().apply {
+                            put("progression", 0.0)
+                            put("fragment", cfiRange)
+                        })
+                    }
+                    return org.readium.r2.shared.publication.Locator.fromJSON(json)
+                }
+            }
+        }
+        return null
+    }
+    return null
 }
+
+/**
+ * Precise CFI fallback using publication chapter metrics.
+ *
+ * Tries CfiMigrator.parsePreciseCfi -> preciseCfiToLocator with readingOrder
+ * and chapter metric via publication.get(link)?.read() char count (fallback to
+ * migrateCfiToLocator for legacy epubcfi(/6/N)). If still null, return null.
+ */
+private fun epubCfiFallbackLocator(
+    cfiRange: String?,
+    readingOrder: List<Link>,
+    publication: Publication?
+): Locator? {
+    if (cfiRange == null) return null
+    if (!cfiRange.startsWith("epubcfi(")) return null
+    if (readingOrder.isEmpty()) return null
+    // 1. Try precise CFI via CfiMigrator with publication metric
+    val parsed = CfiMigrator.parsePreciseCfi(cfiRange)
+    if (parsed != null) {
+        val link = readingOrder.getOrNull(parsed.spineIndex - 1)
+        if (link != null) {
+            val precise = runCatching {
+                CfiMigrator.preciseCfiToLocator(cfiRange, readingOrder) { l, p ->
+                    val chapterChars = runCatching {
+                        if (publication != null) {
+                            val resource = publication.get(l)
+                            // Publication.get returns Resource; read() is suspend – block for char count
+                            val bytes = kotlinx.coroutines.runBlocking {
+                                resource?.read()?.getOrNull()
+                            }
+                            bytes?.size ?: 10000
+                        } else 10000
+                    }.getOrDefault(10000)
+                    CfiMigrator.TextMetric(charOffset = p.textOffset, chapterChars = chapterChars)
+                }
+            }.getOrNull()
+            if (precise != null) return precise
+        }
+    }
+    // 2. Legacy epubcfi(/6/N) via migrateCfiToLocator
+    CfiMigrator.migrateCfiToLocator(cfiRange, readingOrder)?.let { return it }
+    // 3. Generic spine-index fallback preserving fragment for tapability
+    val spineIndex = Regex("""epubcfi\(/6/(\d+)""").find(cfiRange)?.groupValues?.getOrNull(1)?.toIntOrNull()
+    if (spineIndex != null && spineIndex > 0) {
+        val link = readingOrder.getOrNull(spineIndex - 1) ?: return null
+        val json = org.json.JSONObject().apply {
+            put("href", link.href.toString())
+            put("type", link.mediaType?.toString() ?: "application/xhtml+xml")
+            put("locations", org.json.JSONObject().apply {
+                put("progression", 0.0)
+                put("fragment", cfiRange)
+            })
+        }
+        return org.readium.r2.shared.publication.Locator.fromJSON(json)
+    }
+    return null
+}
+
+// 2-arg overload required by spec signature – delegates to 3-arg with null publication
+private fun epubCfiFallbackLocator(
+    cfiRange: String?,
+    readingOrder: List<Link>
+): Locator? = epubCfiFallbackLocator(cfiRange, readingOrder, null as Publication?)
+
+ // Public wrapper for unit tests (keeps original public name accessible)
+fun epubCfiFallbackLocatorForTest(cfiRange: String?, readingOrder: List<Link>): Locator? =
+    epubCfiFallbackLocator(cfiRange, readingOrder, null)
 
 /**
  * Maps [ReaderSettings] to Readium's [EpubPreferences] for

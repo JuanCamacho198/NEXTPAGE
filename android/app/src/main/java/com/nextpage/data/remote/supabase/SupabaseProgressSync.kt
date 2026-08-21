@@ -12,7 +12,9 @@ import com.nextpage.data.local.entity.ReadingSessionEntity
 import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.session.SessionManager
+import com.nextpage.data.sync.CanonicalLocator
 import com.nextpage.data.sync.LocatorCodec
+import com.nextpage.data.sync.LocatorLocations
 import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.decodeRecord
 import kotlinx.coroutines.CoroutineScope
@@ -255,6 +257,22 @@ class SupabaseProgressSync(
                         highlightDao.getHighlightsForBook(entityId)
                     }
                     for (localHighlight in highlightsToPush) {
+                        // Ensure locatorJson is never null for epubcfi highlights (LocatorCodec fallback)
+                        val resolvedLocatorJson = LocatorCodec.normalizeLocatorJson(localHighlight.locatorJson)
+                            ?: run {
+                                val cfi = localHighlight.cfiRange
+                                if (cfi.startsWith("epubcfi(")) {
+                                    // Fallback for legacy rows where only cfiRange exists — preserve fragment
+                                    val spineIdx = Regex("""epubcfi\(/6/(\d+)""").find(cfi)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                                    val href = if (spineIdx != null && spineIdx > 0) "OEBPS/chapter${spineIdx}.xhtml" else "OEBPS/text.xhtml"
+                                    val fallback = CanonicalLocator(
+                                        href = href,
+                                        type = "application/xhtml+xml",
+                                        locations = LocatorLocations(progression = 0.0, fragment = cfi)
+                                    )
+                                    LocatorCodec.locatorToJson(fallback)
+                                } else null
+                            }
                         val row = HighlightRow(
                             id = localHighlight.id,
                             userId = userId,
@@ -265,7 +283,7 @@ class SupabaseProgressSync(
                             color = localHighlight.color,
                             page = null,
                             type = localHighlight.type,
-                            locatorJson = LocatorCodec.normalizeLocatorJson(localHighlight.locatorJson),
+                            locatorJson = resolvedLocatorJson,
                             deletedAt = localHighlight.deletedAtEpochMillis?.let {
                                 dateFormat.format(Date(it))
                             },
@@ -519,7 +537,7 @@ class SupabaseProgressSync(
                         color = row.color,
                         updatedAtEpochMillis = remoteTime,
                         deletedAtEpochMillis = if (isDeleted) remoteTime else null,
-                        locatorJson = row.locatorJson,
+                        locatorJson = LocatorCodec.normalizeLocatorJson(row.locatorJson) ?: row.locatorJson,
                         type = row.type
                     )
                 )

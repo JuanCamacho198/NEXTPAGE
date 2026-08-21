@@ -20,6 +20,7 @@ object DebugDual {
     const val TAG_READER = "Readium"
     const val TAG_HIGHLIGHTS = TAG_SYNC
     const val TAG_FILTER = "NextPageDebug"
+    const val TAG_SUPABASE_SYNC = "SupabaseProgressSync"
 
     /** Unified severity that maps to both DebugLog.Level and android Log priority. */
     enum class Severity { D, W, E }
@@ -77,6 +78,8 @@ object DebugDual {
     fun logSyncFailed(entityType: String, entityId: String?, error: String) {
         val msg = "sync.outboxFailed entityType=$entityType entityId=${entityId ?: "null"} error=${error.take(200)}"
         e(TAG_SYNC, msg)
+        // Also emit under SupabaseProgressSync tag for RLS/empty-body diagnostics
+        e(TAG_SUPABASE_SYNC, msg)
     }
 
     fun logFooterMismatch(expected: String?, actual: String?) {

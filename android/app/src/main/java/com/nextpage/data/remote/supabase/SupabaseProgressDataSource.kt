@@ -63,18 +63,36 @@ class SupabaseProgressDataSource {
 
     suspend fun upsertProgress(progress: ReadingProgressRow): ReadingProgressRow {
         return try {
-            postgrest["reading_progress"]
+            // Prefer return=representation may return [] on RLS block — use maybeSingle (decodeSingleOrNull)
+            val result = postgrest["reading_progress"]
                 .upsert(progress) {
                     onConflict = "user_id, book_id"
                     headers.append("Prefer", "return=representation")
                 }
-                .decodeSingle<ReadingProgressRow>()
+                .decodeSingleOrNull<ReadingProgressRow>()
+            if (result != null) return result
+            DebugDual.logSyncFailed("READING_PROGRESS", progress.bookId, "upsertProgress empty-body: returned null/[] with Prefer")
+            DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertProgress empty-body fallback for ${progress.bookId}")
+            // Try maybeSingle fallback then fetch (RLS check: row exists but not returned)
+            try {
+                val fetched = postgrest["reading_progress"]
+                    .select {
+                        filter {
+                            eq("user_id", progress.userId)
+                            eq("book_id", progress.bookId)
+                        }
+                    }
+                    .decodeSingleOrNull<ReadingProgressRow>()
+                if (fetched != null) return fetched
+            } catch (_: Throwable) {}
+            // Return original as success to drain outbox (RLS may block representation but row exists)
+            return progress
         } catch (e: Exception) {
             val msg = e.message ?: ""
             // Handle empty-body EOF / RLS blocked select returning []
             if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
-                DebugDual.log(DebugEvent.SyncOutboxFailed("READING_PROGRESS", progress.bookId, "upsertProgress empty-body: ${e.message}"))
-                // Try maybeSingle fallback then fetch
+                DebugDual.logSyncFailed("READING_PROGRESS", progress.bookId, "upsertProgress empty-body: ${e.message}")
+                DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertProgress exception empty-body: ${e.message}")
                 try {
                     val fetched = postgrest["reading_progress"]
                         .select {
@@ -86,7 +104,6 @@ class SupabaseProgressDataSource {
                         .decodeSingleOrNull<ReadingProgressRow>()
                     if (fetched != null) return fetched
                 } catch (_: Throwable) {}
-                // Return original as success to drain outbox (RLS may block representation but row exists)
                 return progress
             }
             throw e
@@ -137,16 +154,27 @@ class SupabaseProgressDataSource {
 
     suspend fun upsertBookmark(bookmark: BookmarkRow): BookmarkRow {
         return try {
-            postgrest["bookmarks"]
+            val result = postgrest["bookmarks"]
                 .upsert(bookmark) {
                     onConflict = "user_id, book_id, cfi_location"
                     headers.append("Prefer", "return=representation")
                 }
-                .decodeSingle<BookmarkRow>()
+                .decodeSingleOrNull<BookmarkRow>()
+            if (result != null) return result
+            DebugDual.logSyncFailed("BOOKMARK", bookmark.id, "upsertBookmark empty-body: returned null/[] with Prefer")
+            DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertBookmark empty-body fallback for ${bookmark.id}")
+            try {
+                val fetched = postgrest["bookmarks"]
+                    .select { filter { eq("id", bookmark.id ?: "") } }
+                    .decodeSingleOrNull<BookmarkRow>()
+                if (fetched != null) return fetched
+            } catch (_: Throwable) {}
+            return bookmark
         } catch (e: Exception) {
             val msg = e.message ?: ""
             if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
-                DebugDual.log(DebugEvent.SyncOutboxFailed("BOOKMARK", bookmark.id, "upsertBookmark empty-body: ${e.message}"))
+                DebugDual.logSyncFailed("BOOKMARK", bookmark.id, "upsertBookmark empty-body: ${e.message}")
+                DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertBookmark exception empty-body: ${e.message}")
                 try {
                     val fetched = postgrest["bookmarks"]
                         .select { filter { eq("id", bookmark.id ?: "") } }
@@ -222,16 +250,27 @@ class SupabaseProgressDataSource {
 
     suspend fun upsertHighlight(highlight: HighlightRow): HighlightRow {
         return try {
-            postgrest["highlights"]
+            val result = postgrest["highlights"]
                 .upsert(highlight) {
                     onConflict = "id"
                     headers.append("Prefer", "return=representation")
                 }
-                .decodeSingle<HighlightRow>()
+                .decodeSingleOrNull<HighlightRow>()
+            if (result != null) return result
+            DebugDual.logSyncFailed("HIGHLIGHT", highlight.id, "upsertHighlight empty-body: returned null/[] with Prefer")
+            DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertHighlight empty-body fallback for ${highlight.id}")
+            try {
+                val fetched = postgrest["highlights"]
+                    .select { filter { eq("id", highlight.id ?: "") } }
+                    .decodeSingleOrNull<HighlightRow>()
+                if (fetched != null) return fetched
+            } catch (_: Throwable) {}
+            return highlight
         } catch (e: Exception) {
             val msg = e.message ?: ""
             if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
-                DebugDual.log(DebugEvent.SyncOutboxFailed("HIGHLIGHT", highlight.id, "upsertHighlight empty-body: ${e.message}"))
+                DebugDual.logSyncFailed("HIGHLIGHT", highlight.id, "upsertHighlight empty-body: ${e.message}")
+                DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertHighlight exception empty-body: ${e.message}")
                 try {
                     val fetched = postgrest["highlights"]
                         .select { filter { eq("id", highlight.id ?: "") } }
@@ -315,16 +354,25 @@ class SupabaseProgressDataSource {
 
     suspend fun createTag(tag: TagRow): TagRow {
         return try {
-            postgrest["tags"]
+            val result = postgrest["tags"]
                 .upsert(tag) {
                     onConflict = "user_id, name"
                     headers.append("Prefer", "return=representation")
                 }
-                .decodeSingle<TagRow>()
+                .decodeSingleOrNull<TagRow>()
+            if (result != null) return result
+            DebugDual.logSyncFailed("TAG", tag.id, "createTag empty-body: returned null/[] with Prefer")
+            DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "createTag empty-body fallback for ${tag.id}")
+            try {
+                val fetched = findTagByName(tag.userId, tag.name)
+                if (fetched != null) return fetched
+            } catch (_: Throwable) {}
+            return tag
         } catch (e: Exception) {
             val msg = e.message ?: ""
             if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
-                DebugDual.log(DebugEvent.SyncOutboxFailed("TAG", tag.id, "createTag empty-body: ${e.message}"))
+                DebugDual.logSyncFailed("TAG", tag.id, "createTag empty-body: ${e.message}")
+                DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "createTag exception empty-body: ${e.message}")
                 try {
                     val fetched = findTagByName(tag.userId, tag.name)
                     if (fetched != null) return fetched
@@ -416,16 +464,27 @@ class SupabaseProgressDataSource {
      */
     suspend fun upsertReadingSession(session: ReadingSessionRow): ReadingSessionRow {
         return try {
-            postgrest["reading_sessions"]
+            val result = postgrest["reading_sessions"]
                 .upsert(session) {
                     onConflict = "id"
                     headers.append("Prefer", "return=representation")
                 }
-                .decodeSingle<ReadingSessionRow>()
+                .decodeSingleOrNull<ReadingSessionRow>()
+            if (result != null) return result
+            DebugDual.logSyncFailed("READING_SESSION", session.id, "upsertReadingSession empty-body: returned null/[] with Prefer")
+            DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertReadingSession empty-body fallback for ${session.id}")
+            try {
+                val fetched = postgrest["reading_sessions"]
+                    .select { filter { eq("id", session.id) } }
+                    .decodeSingleOrNull<ReadingSessionRow>()
+                if (fetched != null) return fetched
+            } catch (_: Throwable) {}
+            return session
         } catch (e: Exception) {
             val msg = e.message ?: ""
             if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
-                DebugDual.log(DebugEvent.SyncOutboxFailed("READING_SESSION", session.id, "upsertReadingSession empty-body: ${e.message}"))
+                DebugDual.logSyncFailed("READING_SESSION", session.id, "upsertReadingSession empty-body: ${e.message}")
+                DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertReadingSession exception empty-body: ${e.message}")
                 try {
                     val fetched = postgrest["reading_sessions"]
                         .select { filter { eq("id", session.id) } }

@@ -95,11 +95,8 @@
           </p>
           {#if showProgress}
             <div class="mt-2">
-              <div
-                class="mb-1 flex items-center justify-between text-2xs text-(--color-text-muted)"
-              >
-                <span>{t('home.shelfSort.progress')}</span>
-                <span>{progress}%</span>
+              <div class="mb-1 flex items-center gap-1 text-2xs text-(--color-text-muted)">
+                <span>{t('home.shelfSort.progress')} {progress}%</span>
               </div>
               <div class="h-1.5 w-full overflow-hidden rounded bg-(--color-border)">
                 <div
@@ -118,9 +115,9 @@
       </div>
     </button>
 
-    <div class="flex items-start gap-2">
+    <div class="flex shrink-0 items-start gap-2">
       {#if showReadButton}
-        <Button size="sm" onclick={onRead}>
+        <Button size="sm" class="shrink-0 whitespace-nowrap" onclick={onRead}>
           {readLabel}
         </Button>
       {/if}

@@ -808,9 +808,8 @@
             </h4>
             {#if progressPct > 0}
               <div class="space-y-1">
-                <div class="flex items-center justify-between text-2xs text-(--color-text-muted)">
-                  <span>{appState.t('shelf.progress')}</span>
-                  <span>{progressPct}%</span>
+                <div class="flex items-center gap-1 text-2xs text-(--color-text-muted)">
+                  <span>{appState.t('shelf.progress')} {progressPct}%</span>
                 </div>
                 <div class="h-1.5 w-full rounded-full bg-(--color-border)">
                   <div

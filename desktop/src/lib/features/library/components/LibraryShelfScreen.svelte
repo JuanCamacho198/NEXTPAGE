@@ -402,14 +402,14 @@
               <Button
                 variant="secondary"
                 size="sm"
-                class="rounded-xl"
+                class="rounded-xl whitespace-nowrap"
                 onclick={() => onOpenBook?.(book)}
               >
                 {t('shelf.openBook')}
               </Button>
               <Button
                 size="sm"
-                class="rounded-xl bg-(--gradient-accent) !text-[#07111d]"
+                class="rounded-xl bg-(--gradient-accent) !text-[#07111d] whitespace-nowrap"
                 onclick={() => onContinueReading?.(book)}
               >
                 {getSafeProgressPercentage(book) > 0 ? t('app.continue') : t('shelf.start')}
@@ -515,12 +515,12 @@
               <Button
                 variant="secondary"
                 size="sm"
-                class="rounded-xl"
+                class="rounded-xl whitespace-nowrap"
                 onclick={() => onOpenBook?.(book)}>{t('shelf.read')}</Button
               >
               <Button
                 size="sm"
-                class="rounded-xl bg-(--gradient-accent) !text-[#07111d]"
+                class="rounded-xl bg-(--gradient-accent) !text-[#07111d] whitespace-nowrap"
                 onclick={() => onContinueReading?.(book)}
               >
                 {getSafeProgressPercentage(book) > 0 ? t('shelf.continueReading') : t('shelf.startReading')}

@@ -132,7 +132,7 @@ fun ReaderChrome(
             header()
         }
 
-        // Footer overlay bottom
+        // Footer overlay bottom — needs solid background to be visible over white WebView
         AnimatedVisibility(
             visible = controlsVisible,
             modifier = Modifier
@@ -147,7 +147,13 @@ fun ReaderChrome(
                 targetOffsetY = { it }
             ) + fadeOut(animationSpec = tween(CHROME_ANIM_MS))
         ) {
-            footer()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(READER_BG)
+            ) {
+                footer()
+            }
         }
 
         overlays()

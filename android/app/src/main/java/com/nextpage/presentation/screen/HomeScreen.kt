@@ -175,10 +175,11 @@ private fun HomeScreenContent(
                 )
             }
 
-            // 4. ContinueReading
+            // 4. ContinueReading — canonical progress via GetBookProgressUseCase.observeProgressPercent (distinctUntilChanged)
             item {
                 ContinueReadingSection(
                     books = uiState.currentBooks,
+                    progressPercentByBook = uiState.progressPercentByBook,
                     onBookSelected = onBookSelected,
                     onContinueReading = onContinueReading
                 )
@@ -384,6 +385,7 @@ private fun StatCard(
 @Composable
 private fun ContinueReadingSection(
     books: List<Book>,
+    progressPercentByBook: Map<String, Float> = emptyMap(),
     onBookSelected: (String, String, String) -> Unit,
     onContinueReading: (String, String?, String) -> Unit
 ) {
@@ -401,8 +403,10 @@ private fun ContinueReadingSection(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(books, key = { it.id }) { book ->
+                    val canonicalProgress = progressPercentByBook[book.id] ?: 0f
                     ContinueReadingCard(
                         book = book,
+                        progressFraction = (canonicalProgress / 100f).coerceIn(0f, 1f),
                         onBookSelected = onBookSelected,
                         onContinueReading = onContinueReading
                     )
@@ -427,6 +431,7 @@ private fun ContinueReadingSection(
 @Composable
 private fun ContinueReadingCard(
     book: Book,
+    progressFraction: Float = 0f,
     onBookSelected: (String, String, String) -> Unit,
     onContinueReading: (String, String?, String) -> Unit
 ) {
@@ -472,9 +477,9 @@ private fun ContinueReadingCard(
 
                 Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
 
-                // Progress bar
+                // Progress bar — canonical reading_progress.percentage via ViewModel Flow (distinctUntilChanged)
                 NextPageProgressBar(
-                    progress = book.progressPercentage / 100f,
+                    progress = progressFraction,
                     modifier = Modifier.fillMaxWidth()
                 )
 

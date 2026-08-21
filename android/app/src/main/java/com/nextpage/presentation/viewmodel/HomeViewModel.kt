@@ -25,7 +25,10 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -43,7 +46,9 @@ data class HomeUiState(
     val showSearch: Boolean = false,
     val searchQuery: String = "",
     val searchResults: List<Book> = emptyList(),
-    val allBooks: List<Book> = emptyList()
+    val allBooks: List<Book> = emptyList(),
+    // Canonical progress (reading_progress.percentage wins, fallback cache) via GetBookProgressUseCase
+    val progressPercentByBook: Map<String, Float> = emptyMap()
 ) 
 
 class HomeViewModel(
@@ -83,7 +88,7 @@ class HomeViewModel(
         // Demonstrates unified source: reading_progress.percentage via observeProgressPercent merging DAOs
         getBookProgressUseCase?.let { useCase ->
             viewModelScope.launch {
-                // Observe currentBooks and for each book collect canonical progress to validate parity
+                // Observe currentBooks and for each book collect canonical progress to validate parity (debug logging)
                 homeRepository.observeCurrentBooks().collect { books ->
                     books.forEach { book ->
                         launch {
@@ -107,9 +112,19 @@ class HomeViewModel(
                 }
             }
         }
-        // Single combine: all 5 flows merged into one state emission
+        // Canonical progress map — live Flow merging reading_progress.percentage (canonical) + book cache fallback
+        // Each book's observeProgressPercent already distinctUntilChanged; map-level distinctUntilChanged avoids thrash
+        val progressPercentByBookFlow: kotlinx.coroutines.flow.Flow<Map<String, Float>> = run {
+            val useCase = getBookProgressUseCase
+            if (useCase == null) flowOf(emptyMap())
+            else homeRepository.observeBooks().flatMapLatest { books ->
+                if (books.isEmpty()) flowOf(emptyMap())
+                else combine(books.map { book -> useCase.observeProgressPercent(book.id).map { pct -> book.id to pct } }) { pairs -> pairs.toMap() }
+            }.distinctUntilChanged()
+        }
+        // Single combine: all domain flows + canonical progress map (distinctUntilChanged)
         viewModelScope.launch {
-            combine(
+            val baseCombine = combine(
                 activeUserId.flatMapLatest { userId ->
                     homeRepository.observeDailyStats(userId, dailyGoalProvider())
                         .catch { e ->
@@ -129,10 +144,10 @@ class HomeViewModel(
                         emit(Statistics())
                     }
             ) { stats, books, recent, allBooks, statistics ->
+                // Preserve current user identity across combine emissions —
+                // updated reactively via setActiveSession, not via the (removed)
+                // constructor authSession seed.
                 HomeUiState(
-                    // Preserve current user identity across combine emissions —
-                    // updated reactively via setActiveSession, not via the (removed)
-                    // constructor authSession seed.
                     userName = _uiState.value.userName,
                     avatarUrl = _uiState.value.avatarUrl,
                     minutesReadToday = stats.minutesRead,
@@ -144,6 +159,9 @@ class HomeViewModel(
                     allBooks = allBooks,
                     isLoading = false
                 )
+            }
+            combine(baseCombine, progressPercentByBookFlow) { base, progressByBook ->
+                base.copy(progressPercentByBook = progressByBook)
             }.collect { newState ->
                 _uiState.update { newState }
             }

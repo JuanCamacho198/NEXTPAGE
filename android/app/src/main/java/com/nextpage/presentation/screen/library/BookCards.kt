@@ -49,6 +49,7 @@ private const val SURFACE_ALPHA = 0.3f
 fun BookListCard(
     book: Book,
     minutesRead: Long,
+    progressPercent: Float? = null,
     onClick: () -> Unit,
     onLongPress: () -> Unit,
     onEdit: () -> Unit,
@@ -57,7 +58,9 @@ fun BookListCard(
     onShare: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val progressFraction = if (minutesRead > 0L) {
+    // Canonical progress via GetBookProgressUseCase.observeProgressPercent (distinctUntilChanged) — wins over time-derived fallback
+    val canonicalFraction = progressPercent?.let { (it / 100f).coerceIn(0f, 1f) }
+    val progressFraction = canonicalFraction ?: if (minutesRead > 0L) {
         (minutesRead.toFloat() / READING_TARGET_MINUTES).coerceIn(0f, 1f)
     } else 0f
 
@@ -137,6 +140,7 @@ fun BookListCard(
 fun BookGridCard(
     book: Book,
     minutesRead: Long,
+    progressPercent: Float? = null,
     onClick: () -> Unit,
     onLongPress: () -> Unit,
     onEdit: () -> Unit,
@@ -145,12 +149,15 @@ fun BookGridCard(
     onShare: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val progressFraction = if (minutesRead > 0L) {
+    // Canonical progress via GetBookProgressUseCase.observeProgressPercent (distinctUntilChanged) — wins over time-derived fallback
+    val canonicalFraction = progressPercent?.let { (it / 100f).coerceIn(0f, 1f) }
+    val progressFraction = canonicalFraction ?: if (minutesRead > 0L) {
         (minutesRead.toFloat() / READING_TARGET_MINUTES).coerceIn(0f, 1f)
     } else 0f
 
     val statusText = when {
         progressFraction >= 1f -> stringResource(R.string.library_status_completed)
+        progressPercent != null && progressFraction > 0f -> stringResource(R.string.library_status_in_progress, minutesRead)
         minutesRead > 0L -> stringResource(R.string.library_status_in_progress, minutesRead)
         else -> null
     }

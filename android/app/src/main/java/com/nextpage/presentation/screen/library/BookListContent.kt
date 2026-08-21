@@ -23,6 +23,7 @@ import com.nextpage.ui.components.molecules.AddBookCard
 fun BookList(
     books: List<Book>,
     readingMinutesByBook: Map<String, Long>,
+    progressPercentByBook: Map<String, Float> = emptyMap(),
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
     onImportClick: () -> Unit,
@@ -49,6 +50,7 @@ fun BookList(
             BookListCard(
                 book = book,
                 minutesRead = readingMinutesByBook[book.id] ?: 0L,
+                progressPercent = progressPercentByBook[book.id],
                 onClick = { onBookSelected(book.id, book.filePath, book.format) },
                 onLongPress = { onBookLongPress(book) },
                 onEdit = { onEdit(book) },

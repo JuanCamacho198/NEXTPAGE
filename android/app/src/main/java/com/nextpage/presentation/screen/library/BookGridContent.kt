@@ -20,6 +20,7 @@ import com.nextpage.ui.components.molecules.AddBookCard
 fun BookGridSection(
     books: List<Book>,
     readingMinutesByBook: Map<String, Long>,
+    progressPercentByBook: Map<String, Float> = emptyMap(),
     isGridView: Boolean,
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
@@ -35,6 +36,7 @@ fun BookGridSection(
         BookGrid(
             books = books,
             readingMinutesByBook = readingMinutesByBook,
+            progressPercentByBook = progressPercentByBook,
             onBookSelected = onBookSelected,
             onBookLongPress = onBookLongPress,
             onImportClick = onImportClick,
@@ -49,6 +51,7 @@ fun BookGridSection(
         BookList(
             books = books,
             readingMinutesByBook = readingMinutesByBook,
+            progressPercentByBook = progressPercentByBook,
             onBookSelected = onBookSelected,
             onBookLongPress = onBookLongPress,
             onImportClick = onImportClick,
@@ -73,6 +76,7 @@ fun BookGridSection(
 fun BookGrid(
     books: List<Book>,
     readingMinutesByBook: Map<String, Long>,
+    progressPercentByBook: Map<String, Float> = emptyMap(),
     onBookSelected: (String, String, String) -> Unit,
     onBookLongPress: (Book) -> Unit,
     onImportClick: () -> Unit,
@@ -101,6 +105,7 @@ fun BookGrid(
             BookGridCard(
                 book = book,
                 minutesRead = readingMinutesByBook[book.id] ?: 0L,
+                progressPercent = progressPercentByBook[book.id],
                 onClick = { onBookSelected(book.id, book.filePath, book.format) },
                 onLongPress = { onBookLongPress(book) },
                 onEdit = { onEdit(book) },

@@ -300,6 +300,7 @@ private fun LibraryScreenContent(
                 BookGridSection(
                     books = searchedBooks,
                     readingMinutesByBook = uiState.readingMinutesByBook,
+                    progressPercentByBook = uiState.progressPercentByBook,
                     isGridView = uiState.isGridView,
                     onBookSelected = onBookSelected,
                     onBookLongPress = onRequestDeleteBook,

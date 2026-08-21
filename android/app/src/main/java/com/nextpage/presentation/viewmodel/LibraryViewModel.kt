@@ -36,6 +36,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -78,6 +81,8 @@ data class LibraryUiState(
     val bookToShare: Book? = null,
     val totalMinutesRead: Long = 0L,
     val readingMinutesByBook: Map<String, Long> = emptyMap(),
+    // Canonical progress (reading_progress.percentage wins, fallback cache) via GetBookProgressUseCase
+    val progressPercentByBook: Map<String, Float> = emptyMap(),
     // ── Sync state ──
     val isSyncing: Boolean = false,
     val isRefreshing: Boolean = false,
@@ -338,6 +343,20 @@ class LibraryViewModel(
                 viewModelScope.launch {
                     repo.observeProgress("dummy-book-id").collect {}
                 }
+            }
+        }
+        // Canonical progress map — live Flow via GetBookProgressUseCase.observeProgressPercent (distinctUntilChanged in use case)
+        getBookProgressUseCase?.let { useCase ->
+            viewModelScope.launch {
+                libraryRepository.observeLibrary()
+                    .flatMapLatest { books ->
+                        if (books.isEmpty()) flowOf(emptyMap())
+                        else combine(books.map { book -> useCase.observeProgressPercent(book.id).map { pct -> book.id to pct } }) { pairs -> pairs.toMap() }
+                    }
+                    .distinctUntilChanged()
+                    .collect { map ->
+                        mutableUiState.update { it.copy(progressPercentByBook = map) }
+                    }
             }
         }
         // ── Lifecycle observations (Room flows) ──

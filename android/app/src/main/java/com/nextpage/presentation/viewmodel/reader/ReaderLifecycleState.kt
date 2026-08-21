@@ -16,6 +16,7 @@ data class ReaderLifecycleState(
     val readiumPublication: Publication? = null,
     val readiumLocator: Locator? = null,
     val readiumViewportHeight: Int = 0,
+    val readiumViewportWidth: Int = 0,
     val readiumSelectionLocator: Locator? = null,
     val progressPercent: Float = 0f,
     val progressLabel: String = "",

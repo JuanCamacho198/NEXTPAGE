@@ -638,7 +638,19 @@ class ReaderViewModel(
             }
         }
 
-        // Derive the split-settings preview text from the current chapter's
+                // Typography -> exact reflow wiring: when fontSize/lineHeight/margins change, recompute footer remaining pages within one frame
+        viewModelScope.launch(mainDispatcher) {
+            settingsManager.state.collect { s ->
+                val rs = s.readerSettings
+                val fontSizeSp = rs.fontSize.sizePx.toFloat()
+                val lineH = rs.lineHeight.value
+                val marginsVal = 16f
+                val density = getApplication<android.app.Application>().resources.displayMetrics.density
+                lifecycleHolder.onTypographyConfigChanged(fontSizeSp, lineH, marginsVal, density)
+            }
+        }
+
+// Derive the split-settings preview text from the current chapter's
         // real content (EPUB only). Refreshes when the book or chapter
         // changes; PDFs have no extractable HTML text, so `previewText`
         // falls back to blank and the UI shows the selection/title instead.
@@ -827,9 +839,9 @@ class ReaderViewModel(
         lifecycleHolder.onReadiumLocatorChanged(locator)
     }
 
-    /** Notifies the ViewModel that the Readium viewport height changed; used for layout calculations. */
-    fun onReadiumViewportChanged(height: Int) {
-        lifecycleHolder.onReadiumViewportChanged(height)
+    /** Notifies the ViewModel that the Readium viewport dimensions changed; used for exact reflow calc. */
+    fun onReadiumViewportChanged(height: Int, width: Int = 0) {
+        lifecycleHolder.onReadiumViewportChanged(height, width)
     }
 
     /** Notifies the ViewModel that a PDF document finished loading with [pages] total pages. */

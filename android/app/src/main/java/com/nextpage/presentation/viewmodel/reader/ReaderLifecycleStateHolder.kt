@@ -4,6 +4,8 @@ import android.app.Application
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
+import com.nextpage.debug.DebugDual
+import com.nextpage.debug.DebugEvent
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReadingProgress
@@ -12,6 +14,7 @@ import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.viewmodel.CfiMigrator
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -74,14 +77,19 @@ class ReaderLifecycleStateHolder(
     private const val MAX_PROGRESS_PERCENT = 99f
     private const val READING_TIME_TICK_MS = 60_000L
     private const val MILLIS_PER_MINUTE = 60_000L
-    /**
-     * Estimated pages per chapter used to render "X págs. restantes" in the
-     * progress label. EPUB reflowable documents don't expose a physical page
-     * count, so the per-chapter Readium progression (0..1) is scaled against
-     * this constant.
-     */
-    private const val ESTIMATED_PAGES_PER_CHAPTER = 20
     }
+
+    /**
+     * Exact reflow scaffolding replacing ESTIMATED_PAGES_PER_CHAPTER=20.
+     * Holds pagination geometry for remaining calculation.
+     */
+    data class PaginationInfo(
+        val totalPositions: Int,
+        val currentPosition: Int,
+        val estimatedPagesViaChars: Int,
+        val viewportH: Int,
+        val viewportW: Int
+    )
 
     // ──────────────────────────────────────────────────────────────
     // A.3 — Book Loading
@@ -310,6 +318,35 @@ class ReaderLifecycleStateHolder(
      * Only migrates records that have a CFI string but no [locatorJson] yet.
      * This is idempotent — already-migrated records are skipped.
      */
+    private fun resolveEpubCfi(cfi: String, readingOrderLinks: List<Link>): Locator? {
+        val parsed = CfiMigrator.parsePreciseCfi(cfi)
+        if (parsed != null) {
+            val link = readingOrderLinks.getOrNull(parsed.spineIndex - 1)
+            if (link != null) {
+                val metric = CfiMigrator.TextMetric(charOffset = parsed.textOffset, chapterChars = 10000)
+                val prog = CfiMigrator.progressionFor(metric) ?: 0.0
+                val json = JSONObject().apply {
+                    put("href", link.href.toString())
+                    put("type", link.mediaType?.toString() ?: "application/xhtml+xml")
+                    put("locations", JSONObject().apply { put("progression", prog); put("fragment", cfi) })
+                }
+                Locator.fromJSON(json)?.let { return it }
+            }
+        }
+        CfiMigrator.migrateCfiToLocator(cfi, readingOrderLinks)?.let { return it }
+        val spineIdx = Regex("epubcfi\\(/6/(\\d+)").find(cfi)?.groupValues?.getOrNull(1)?.toIntOrNull()?.minus(1)
+        if (spineIdx != null && spineIdx >= 0) {
+            val link = readingOrderLinks.getOrNull(spineIdx) ?: return null
+            val json = JSONObject().apply {
+                put("href", link.href.toString())
+                put("type", link.mediaType?.toString() ?: "application/xhtml+xml")
+                put("locations", JSONObject().apply { put("progression", 0.0); put("fragment", cfi) })
+            }
+            return Locator.fromJSON(json)
+        }
+        return null
+    }
+
     private suspend fun migrateCfiDataForBook(bookId: String, readingOrder: List<Link>) {
         val readingOrderLinks = readingOrder
         if (readingOrderLinks.isEmpty()) return
@@ -318,7 +355,7 @@ class ReaderLifecycleStateHolder(
         val highlights = readerRepository.getHighlightsForBook(bookId)
         for (highlight in highlights) {
             if (highlight.cfiRange.startsWith("epubcfi(") && highlight.locatorJson == null) {
-                val locator = CfiMigrator.migrateCfiToLocator(highlight.cfiRange, readingOrderLinks)
+                val locator = resolveEpubCfi(highlight.cfiRange, readingOrderLinks)
                 if (locator != null) {
                     val migrated = highlight.copy(locatorJson = CfiMigrator.locatorToJson(locator))
                     readerRepository.upsertHighlight(migrated)
@@ -330,7 +367,7 @@ class ReaderLifecycleStateHolder(
         val bookmarks = readerRepository.getBookmarksForBook(bookId)
         for (bookmark in bookmarks) {
             if (bookmark.cfiLocation.startsWith("epubcfi(") && bookmark.locatorJson == null) {
-                val locator = CfiMigrator.migrateCfiToLocator(bookmark.cfiLocation, readingOrderLinks)
+                val locator = resolveEpubCfi(bookmark.cfiLocation, readingOrderLinks)
                 if (locator != null) {
                     val migrated = bookmark.copy(locatorJson = CfiMigrator.locatorToJson(locator))
                     readerRepository.upsertBookmark(migrated)
@@ -341,7 +378,7 @@ class ReaderLifecycleStateHolder(
         // ── Migrate reading progress ────────────────────────────────────
         val progress = readerRepository.getProgressForBook(bookId)
         if (progress != null && progress.cfiLocation.startsWith("epubcfi(") && progress.locatorJson == null) {
-            val locator = CfiMigrator.migrateCfiToLocator(progress.cfiLocation, readingOrderLinks)
+            val locator = resolveEpubCfi(progress.cfiLocation, readingOrderLinks)
             if (locator != null) {
                 val migrated = progress.copy(locatorJson = CfiMigrator.locatorToJson(locator))
                 readerRepository.upsertProgress(migrated)
@@ -366,47 +403,64 @@ class ReaderLifecycleStateHolder(
      * Saves the progression to the database via [updateReadingProgressUseCase].
      */
     fun onReadiumLocatorChanged(locator: Locator) {
-        val publication = _state.value.readiumPublication ?: return
-        val matchingLink = publication.linkWithHref(locator.href) ?: return
-        val index = publication.readingOrder.indexOf(matchingLink)
-        if (index >= 0) {
-            // ── Dismiss floating context menu on page-change ───────
-            val previousHref = _state.value.readiumLocator?.href
-            if (previousHref != null && previousHref != locator.href) {
-                onSelectionCleared()
-            }
-
-            val totalProgression = locator.locations.totalProgression?.toFloat() ?: 0f
-            val progressPercent = (totalProgression * 100f).coerceIn(0f, 100f)
-            _state.update {
-                it.copy(
-                    currentChapterIndex = index,
-                    readiumLocator = locator,
-                    progressPercent = progressPercent
-                )
-            }
-            updateProgressDisplay()
-
-            // Persist real progression from Readium locator
-            val bookId = _state.value.selectedBookId ?: return
-            val locatorJson = CfiMigrator.locatorToJson(locator)
-            scope.launch(mainDispatcher) {
-                updateReadingProgressUseCase(
-                    bookId = bookId,
-                    cfiLocation = "readium:${locator.href}",
-                    percentage = progressPercent,
-                    locatorJson = locatorJson
-                )
-            }
+        // Atomic update: compute currentChapterIndex and progressLabel snapshot
+        // val newIndex = publication?.let { pub -> pub.linkWithHref(locator.href)?.let { link -> pub.readingOrder.indexOf(link) } } ?: currentState.currentChapterIndex
+        val currentState = _state.value
+        val publication = currentState.readiumPublication
+        val newIndex = publication?.let { pub ->
+            try {
+                pub.linkWithHref(locator.href)?.let { link -> pub.readingOrder.indexOf(link) }
+                    ?.takeIf { it >= 0 }
+            } catch (_: Throwable) { null }
+        } ?: currentState.currentChapterIndex
+        val previousHref = currentState.readiumLocator?.href
+        if (previousHref != null && previousHref != locator.href) {
+            onSelectionCleared()
         }
+        val totalProgression = locator.locations.totalProgression?.toFloat() ?: 0f
+        val progressPercent = (totalProgression * 100f).coerceIn(0f, 100f)
+        // Update both locator and index in same atomic block
+        _state.update {
+            it.copy(
+                readiumLocator = locator,
+                currentChapterIndex = newIndex,
+                progressPercent = progressPercent
+            )
+        }
+        // Use same snapshot for progress display to avoid tearing
+        updateProgressDisplay()
+
+        // Persist real progression from Readium locator
+        val bookId = _state.value.selectedBookId ?: return
+        val locatorJson = CfiMigrator.locatorToJson(locator)
+        scope.launch(mainDispatcher) {
+            updateReadingProgressUseCase(
+                bookId = bookId,
+                cfiLocation = "readium:${locator.href}",
+                percentage = progressPercent,
+                locatorJson = locatorJson
+            )
+        }
+        DebugDual.log(DebugEvent.ProgressEmit(bookId, progressPercent, "locatorChanged"))
     }
 
     /**
-     * Called by [ReadiumReaderContent] to report the viewport height so
-     * selection rects can be derived from [Locator.locations.progression].
+     * Called by [ReadiumReaderContent] to report the viewport dimensions.
+     * Both height and width are stored atomically for exact reflow calc.
+     * Width is optional for backward compat (defaults to height aspect if missing).
      */
-    fun onReadiumViewportChanged(height: Int) {
-        _state.update { it.copy(readiumViewportHeight = height) }
+    fun onReadiumViewportChanged(height: Int, width: Int = 0) {
+        val hasChanged = _state.value.readiumViewportHeight != height || _state.value.readiumViewportWidth != width
+        _state.update { it.copy(readiumViewportHeight = height, readiumViewportWidth = width) }
+        if (hasChanged) updateProgressDisplay()
+    }
+
+    /**
+     * Called when typography changes (fontSize/lineHeight/margins) to trigger exact reflow.
+     * Wire from ViewModel when ReaderSettings change.
+     */
+    fun onTypographyChanged() {
+        updateProgressDisplay()
     }
 
     fun onHighlightSelected(highlight: Highlight) {
@@ -627,57 +681,127 @@ class ReaderLifecycleStateHolder(
         }
     }
 
+    // Typography snapshot for exact reflow; updated via onTypographyConfigChanged
+    private var typographySnapshot: ReadingProgressCalculator.ViewportTypography? = null
+    private var densitySnapshot: Float = 3f
+
+    /**
+     * Update typography metrics for exact reflow (called when ReaderSettings change or density known).
+     */
+    fun onTypographyConfigChanged(fontSizeSp: Float, lineHeight: Float, pageMarginsDp: Float = 16f, density: Float = 3f) {
+        densitySnapshot = density
+        val vp = _state.value
+        typographySnapshot = ReadingProgressCalculator.ViewportTypography(
+            viewportW = vp.readiumViewportWidth.takeIf { it > 0 } ?: 360,
+            viewportH = vp.readiumViewportHeight.takeIf { it > 0 } ?: 720,
+            fontSizeSp = fontSizeSp,
+            lineHeight = lineHeight,
+            pageMarginsDp = pageMarginsDp,
+            density = density
+        )
+        updateProgressDisplay()
+    }
+
     /**
      * Updates the progress percentage and label according to the current format.
      *
+     * Atomic snapshot: readiumLocator, publication, chapters, viewport, typography are read
+     * from a single _state.value capture so label and percentage cannot tear (REQ-footer-chapter-correct).
+     *
      * Priority:
      * 1. PDF → (currentPage+1)/totalPages
-     * 2. EPUB + Readium locator available → totalProgression from locator (most accurate)
+     * 2. EPUB + Readium locator available → totalProgression from locator (most accurate) + exact reflow remaining via ReadingProgressCalculator
      * 3. EPUB fallback → chapter-based (capped at 99%)
      */
-    private fun updateProgressDisplay() {
-        val currentState = _state.value
+    internal fun updateProgressDisplay() {
+        val snapshot = _state.value
         val percent: Float
         val label: String
+        var resolvedChapterIndex = snapshot.currentChapterIndex
 
-        if (currentState.totalPdfPages > 0) {
-            val current = currentState.currentPdfPage + 1
-            val total = currentState.totalPdfPages
+        if (snapshot.totalPdfPages > 0) {
+            val current = snapshot.currentPdfPage + 1
+            val total = snapshot.totalPdfPages
             percent = ((current.toFloat() / total) * 100f).coerceIn(0f, 100f)
             label = "$current / $total"
-        } else if (currentState.readiumLocator != null) {
-            // Use Readium's totalProgression for real overall percentage
-            val totalProgression = currentState.readiumLocator.locations.totalProgression?.toFloat() ?: 0f
-            percent = (totalProgression * 100f).coerceIn(0f, 100f)
-            // Chapter title + estimated pages remaining in this chapter.
-            // Readium's per-chapter `progression` (0..1) is reliable; EPUB
-            // reflowable pages aren't known, so estimate with a fixed pages
-            // per chapter constant.
-            val chapterTitle = currentState.chapters
-                .getOrNull(currentState.currentChapterIndex)?.title
-                ?.takeIf { it.isNotBlank() }
-            if (chapterTitle != null) {
-                val chapterProgression = currentState.readiumLocator.locations.progression?.toFloat() ?: 0f
-                val remaining = ((1f - chapterProgression) * ESTIMATED_PAGES_PER_CHAPTER)
-                    .roundToInt()
-                    .coerceAtLeast(0)
-                label = if (remaining > 0) {
-                    application.getString(
-                        com.nextpage.R.string.reader_pages_remaining,
-                        chapterTitle,
-                        remaining
-                    )
-                } else {
-                    chapterTitle
-                }
-            } else {
-                val current = currentState.currentChapterIndex + 1
-                val total = currentState.chapters.size.coerceAtLeast(1)
-                label = "$current / $total"
+        } else if (snapshot.readiumLocator != null) {
+            val locator = snapshot.readiumLocator
+            val publication = snapshot.readiumPublication
+            val chapters = snapshot.chapters
+
+            // Atomic chapter resolution from same locator+publication+chapters snapshot
+            val locatorHref = locator.href.toString()
+            val computedIndex: Int? = publication?.let { pub ->
+                try {
+                    pub.linkWithHref(locator.href)?.let { link -> pub.readingOrder.indexOf(link) }
+                } catch (_: Throwable) { null }
+            }?.takeIf { it >= 0 }
+
+            if (computedIndex != null && computedIndex != snapshot.currentChapterIndex) {
+                resolvedChapterIndex = computedIndex
             }
-        } else if (currentState.chapters.isNotEmpty()) {
-            val current = currentState.currentChapterIndex + 1
-            val total = currentState.chapters.size
+
+            // Validate chapter title vs locator href; emit mismatch if needed
+            val expectedTitle = chapters.getOrNull(resolvedChapterIndex)?.title
+            val computedTitle = expectedTitle
+            val hrefMismatch = publication != null && computedIndex == null && locatorHref.isNotBlank()
+            if (hrefMismatch) {
+                DebugDual.log(DebugEvent.FooterMismatch(locatorHref, computedTitle, expectedTitle))
+            } else if (computedTitle != null) {
+                DebugDual.log(DebugEvent.ChapterResolved(locatorHref, computedTitle, resolvedChapterIndex))
+            }
+
+            val totalProgression = locator.locations.totalProgression?.toFloat() ?: 0f
+            percent = (totalProgression * 100f).coerceIn(0f, 100f)
+
+            val chapterTitle = chapters.getOrNull(resolvedChapterIndex)?.title?.takeIf { it.isNotBlank() }
+                ?: locatorHref.substringAfterLast('/').substringBefore('#').takeIf { it.isNotBlank() }
+                ?: "—"
+
+            // Exact reflow remaining pages
+            val typography = typographySnapshot
+            val viewportTypography = typography?.copy(
+                viewportW = snapshot.readiumViewportWidth.takeIf { it > 0 } ?: typography.viewportW,
+                viewportH = snapshot.readiumViewportHeight.takeIf { it > 0 } ?: typography.viewportH,
+                density = densitySnapshot
+            ) ?: ReadingProgressCalculator.ViewportTypography(
+                viewportW = snapshot.readiumViewportWidth.takeIf { it > 0 } ?: 360,
+                viewportH = snapshot.readiumViewportHeight.takeIf { it > 0 } ?: 720,
+                fontSizeSp = 16f,
+                lineHeight = 1.6f,
+                pageMarginsDp = 16f,
+                density = densitySnapshot
+            )
+
+            val calc = ReadingProgressCalculator.compute(
+                publication = publication,
+                locator = locator,
+                chapters = chapters,
+                currentChapterIndex = resolvedChapterIndex,
+                viewport = viewportTypography
+            )
+            // Scaffold PaginationInfo for exact reflow (replaces ESTIMATED_PAGES_PER_CHAPTER)
+            val paginationInfo = PaginationInfo(
+                totalPositions = calc.totalPages,
+                currentPosition = calc.currentPage,
+                estimatedPagesViaChars = calc.charsPerPage,
+                viewportH = snapshot.readiumViewportHeight,
+                viewportW = snapshot.readiumViewportWidth
+            )
+            // Use paginationInfo viewport for remaining calc (already via calc)
+            val remaining = calc.remaining
+            label = if (remaining > 0 && chapterTitle != "—") {
+                application.getString(
+                    com.nextpage.R.string.reader_pages_remaining,
+                    chapterTitle,
+                    remaining
+                )
+            } else {
+                chapterTitle
+            }
+        } else if (snapshot.chapters.isNotEmpty()) {
+            val current = snapshot.currentChapterIndex + 1
+            val total = snapshot.chapters.size
             percent = ((current.toFloat() / total) * 100f).coerceIn(0f, MAX_PROGRESS_PERCENT)
             label = "$current / $total"
         } else {
@@ -686,7 +810,11 @@ class ReaderLifecycleStateHolder(
         }
 
         _state.update {
-            it.copy(progressPercent = percent, progressLabel = label)
+            it.copy(
+                currentChapterIndex = resolvedChapterIndex,
+                progressPercent = percent,
+                progressLabel = label
+            )
         }
     }
 

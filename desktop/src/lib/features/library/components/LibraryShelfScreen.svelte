@@ -388,7 +388,7 @@
             >
               <div class="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                 <div
-                  class="h-full rounded-full bg-(--gradient-accent-h)"
+                  class="h-full rounded-full bg-[var(--gradient-accent-h)]"
                   style={`width: ${formatPercent(book)};`}
                 ></div>
               </div>
@@ -496,7 +496,7 @@
                 >
                   <div class="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                     <div
-                      class="h-full rounded-full bg-(--gradient-accent-h)"
+                      class="h-full rounded-full bg-[var(--gradient-accent-h)]"
                       style={`width: ${formatPercent(book)};`}
                     ></div>
                   </div>

@@ -784,7 +784,7 @@
                 <p class="truncate text-sm font-medium text-(--color-primary)">{book.title}</p>
                 <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                   <div
-                    class="h-full rounded-full bg-(--gradient-accent-h)"
+                    class="h-full rounded-full bg-[var(--gradient-accent-h)]"
                     style={`width: ${Math.max(12, Math.round((book.minutesRead / Math.max(mostReadBooks[0]?.minutesRead || 1, 1)) * 100))}%;`}
                   ></div>
                 </div>

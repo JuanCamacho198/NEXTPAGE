@@ -18,18 +18,30 @@ class HomeRepositoryImpl(
 ) : HomeRepository {
 
     override fun observeBooks(): Flow<List<Book>> =
-        bookDao.observeAllBooks().map { entities ->
-            entities.map { it.toBook() }
+        combine(bookDao.observeAllBooks(), readingProgressDao.observeAll()) { entities, progresses ->
+            val progressById = progresses.associateBy { it.bookId }
+            entities.map { entity ->
+                val canonical = progressById[entity.id]
+                if (canonical != null) entity.toBookWithCanonical(canonical) else entity.toBook()
+            }
         }
 
     override fun observeRecentBooks(limit: Int): Flow<List<Book>> =
-        bookDao.observeAllBooks().map { entities ->
-            entities.take(limit).map { it.toBook() }
+        combine(bookDao.observeAllBooks(), readingProgressDao.observeAll()) { entities, progresses ->
+            val progressById = progresses.associateBy { it.bookId }
+            entities.take(limit).map { entity ->
+                val canonical = progressById[entity.id]
+                if (canonical != null) entity.toBookWithCanonical(canonical) else entity.toBook()
+            }
         }
 
     override fun observeCurrentBooks(): Flow<List<Book>> =
-        bookDao.observeReadingBooks().map { entities ->
-            entities.map { it.toBook() }
+        combine(bookDao.observeReadingBooks(), readingProgressDao.observeAll()) { entities, progresses ->
+            val progressById = progresses.associateBy { it.bookId }
+            entities.map { entity ->
+                val canonical = progressById[entity.id]
+                if (canonical != null) entity.toBookWithCanonical(canonical) else entity.toBook()
+            }
         }
 
 
@@ -98,6 +110,26 @@ class HomeRepositoryImpl(
         completedAtEpochMillis = completedAtEpochMillis,
         progressPercentage = progressPercentage,
         progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
+        stateVersion = stateVersion
+    )
+
+    private fun com.nextpage.data.local.entity.BookEntity.toBookWithCanonical(canonical: com.nextpage.data.local.entity.ReadingProgressEntity): Book = Book(
+        id = id,
+        title = title,
+        author = author,
+        description = description,
+        coverPath = coverPath,
+        filePath = filePath,
+        format = format,
+        totalPages = totalPages,
+        userRating = userRating,
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        status = status,
+        readingState = readingState,
+        startedAtEpochMillis = startedAtEpochMillis,
+        completedAtEpochMillis = completedAtEpochMillis,
+        progressPercentage = canonical.percentage,
+        progressUpdatedAtEpochMillis = canonical.updatedAtEpochMillis,
         stateVersion = stateVersion
     )
 }

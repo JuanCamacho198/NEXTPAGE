@@ -133,7 +133,10 @@ fun NextPageNavHost(
             libraryRepository = appContainer.libraryRepository,
             syncService = appContainer.syncService,
             appContext = context.applicationContext,
-            catalogSync = appContainer.supabaseBookCatalogSync
+            catalogSync = appContainer.supabaseBookCatalogSync,
+            readerRepository = appContainer.readerRepository,
+            getBookProgressUseCase = appContainer.getBookProgressUseCase,
+            progressReconciler = appContainer.progressReconciler
         )
     )
 
@@ -181,7 +184,10 @@ fun NextPageNavHost(
         factory = HomeViewModelFactory(
             homeRepository = appContainer.homeRepository,
             getStatisticsUseCase = appContainer.getStatisticsUseCase,
-            dailyGoalProvider = appContainer.dailyGoalProvider
+            dailyGoalProvider = appContainer.dailyGoalProvider,
+            readerRepository = appContainer.readerRepository,
+            getBookProgressUseCase = appContainer.getBookProgressUseCase,
+            progressReconciler = appContainer.progressReconciler
         )
     )
 

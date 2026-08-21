@@ -294,6 +294,7 @@ class ColdBackupE2ETest {
         override suspend fun getProgressForBook(bookId: String) = progress[bookId]
         override suspend fun upsert(p: ReadingProgressEntity) { progress[p.bookId] = p }
         override suspend fun getAll() = progress.values.toList()
+        override fun observeAll() = MutableStateFlow(progress.values.toList())
         override suspend fun count() = progress.size
     }
 

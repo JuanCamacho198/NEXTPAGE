@@ -26,6 +26,7 @@ import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.LibraryRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Publication
@@ -53,7 +54,13 @@ class LibraryRepositoryImpl(
     private val outboxDao: SyncOutboxDao
 ) : LibraryRepository {
     override fun observeLibrary(): Flow<List<Book>> =
-        bookDao.observeAllBooks().map { books -> books.map { it.toDomain() } }
+        combine(bookDao.observeAllBooks(), readingProgressDao.observeAll()) { books, progresses ->
+            val progressById = progresses.associateBy { it.bookId }
+            books.map { entity ->
+                val canonical = progressById[entity.id]
+                if (canonical != null) entity.toDomainWithCanonical(canonical) else entity.toDomain()
+            }
+        }
 
     @OptIn(ExperimentalPagingApi::class)
     override fun observeLibraryPaged(): Flow<PagingData<Book>> =
@@ -289,6 +296,31 @@ class LibraryRepositoryImpl(
         completedAtEpochMillis = completedAtEpochMillis,
         progressPercentage = progressPercentage,
         progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
+        stateVersion = stateVersion,
+        genre = genre,
+        language = language,
+        publisher = publisher,
+        tags = tags,
+        publishedDate = publishedDate
+    )
+
+    private fun BookEntity.toDomainWithCanonical(canonical: ReadingProgressEntity): Book = Book(
+        id = id,
+        title = title,
+        author = author,
+        description = description,
+        coverPath = coverPath,
+        filePath = filePath,
+        format = format,
+        totalPages = totalPages,
+        userRating = userRating,
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        status = status,
+        readingState = readingState,
+        startedAtEpochMillis = startedAtEpochMillis,
+        completedAtEpochMillis = completedAtEpochMillis,
+        progressPercentage = canonical.percentage,
+        progressUpdatedAtEpochMillis = canonical.updatedAtEpochMillis,
         stateVersion = stateVersion,
         genre = genre,
         language = language,

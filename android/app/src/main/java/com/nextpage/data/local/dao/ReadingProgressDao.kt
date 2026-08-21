@@ -20,6 +20,9 @@ interface ReadingProgressDao {
     @Query("SELECT * FROM reading_progress")
     suspend fun getAll(): List<ReadingProgressEntity>
 
+    @Query("SELECT * FROM reading_progress")
+    fun observeAll(): Flow<List<ReadingProgressEntity>>
+
     @Query("SELECT COUNT(*) FROM reading_progress")
     suspend fun count(): Int
 }

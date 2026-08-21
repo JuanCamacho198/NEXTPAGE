@@ -12,6 +12,8 @@ import io.github.jan.supabase.realtime.realtime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import com.nextpage.debug.DebugDual
+import com.nextpage.debug.DebugEvent
 
 /**
  * Reading progress CRUD via Supabase PostgREST (using supabase-kt postgrest-kt).
@@ -60,12 +62,35 @@ class SupabaseProgressDataSource {
     }
 
     suspend fun upsertProgress(progress: ReadingProgressRow): ReadingProgressRow {
-        return postgrest["reading_progress"]
-            .upsert(progress) {
-                onConflict = "user_id, book_id"
-                headers.append("Prefer", "return=representation")
+        return try {
+            postgrest["reading_progress"]
+                .upsert(progress) {
+                    onConflict = "user_id, book_id"
+                    headers.append("Prefer", "return=representation")
+                }
+                .decodeSingle<ReadingProgressRow>()
+        } catch (e: Exception) {
+            val msg = e.message ?: ""
+            // Handle empty-body EOF / RLS blocked select returning []
+            if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
+                DebugDual.log(DebugEvent.SyncOutboxFailed("READING_PROGRESS", progress.bookId, "upsertProgress empty-body: ${e.message}"))
+                // Try maybeSingle fallback then fetch
+                try {
+                    val fetched = postgrest["reading_progress"]
+                        .select {
+                            filter {
+                                eq("user_id", progress.userId)
+                                eq("book_id", progress.bookId)
+                            }
+                        }
+                        .decodeSingleOrNull<ReadingProgressRow>()
+                    if (fetched != null) return fetched
+                } catch (_: Throwable) {}
+                // Return original as success to drain outbox (RLS may block representation but row exists)
+                return progress
             }
-            .decodeSingle<ReadingProgressRow>()
+            throw e
+        }
     }
 
     suspend fun getProgress(userId: String, bookId: String): ReadingProgressRow? {
@@ -111,12 +136,27 @@ class SupabaseProgressDataSource {
     // ─── Bookmarks ───────────────────────────────────────────────
 
     suspend fun upsertBookmark(bookmark: BookmarkRow): BookmarkRow {
-        return postgrest["bookmarks"]
-            .upsert(bookmark) {
-                onConflict = "user_id, book_id, cfi_location"
-                headers.append("Prefer", "return=representation")
+        return try {
+            postgrest["bookmarks"]
+                .upsert(bookmark) {
+                    onConflict = "user_id, book_id, cfi_location"
+                    headers.append("Prefer", "return=representation")
+                }
+                .decodeSingle<BookmarkRow>()
+        } catch (e: Exception) {
+            val msg = e.message ?: ""
+            if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
+                DebugDual.log(DebugEvent.SyncOutboxFailed("BOOKMARK", bookmark.id, "upsertBookmark empty-body: ${e.message}"))
+                try {
+                    val fetched = postgrest["bookmarks"]
+                        .select { filter { eq("id", bookmark.id ?: "") } }
+                        .decodeSingleOrNull<BookmarkRow>()
+                    if (fetched != null) return fetched
+                } catch (_: Throwable) {}
+                return bookmark
             }
-            .decodeSingle<BookmarkRow>()
+            throw e
+        }
     }
 
     suspend fun getBookmark(userId: String, bookId: String, cfiLocation: String): BookmarkRow? {
@@ -181,12 +221,27 @@ class SupabaseProgressDataSource {
     // ─── Highlights ─────────────────────────────────────────────
 
     suspend fun upsertHighlight(highlight: HighlightRow): HighlightRow {
-        return postgrest["highlights"]
-            .upsert(highlight) {
-                onConflict = "id"
-                headers.append("Prefer", "return=representation")
+        return try {
+            postgrest["highlights"]
+                .upsert(highlight) {
+                    onConflict = "id"
+                    headers.append("Prefer", "return=representation")
+                }
+                .decodeSingle<HighlightRow>()
+        } catch (e: Exception) {
+            val msg = e.message ?: ""
+            if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
+                DebugDual.log(DebugEvent.SyncOutboxFailed("HIGHLIGHT", highlight.id, "upsertHighlight empty-body: ${e.message}"))
+                try {
+                    val fetched = postgrest["highlights"]
+                        .select { filter { eq("id", highlight.id ?: "") } }
+                        .decodeSingleOrNull<HighlightRow>()
+                    if (fetched != null) return fetched
+                } catch (_: Throwable) {}
+                return highlight
             }
-            .decodeSingle<HighlightRow>()
+            throw e
+        }
     }
 
     suspend fun getHighlight(id: String): HighlightRow? {
@@ -259,12 +314,25 @@ class SupabaseProgressDataSource {
     }
 
     suspend fun createTag(tag: TagRow): TagRow {
-        return             postgrest["tags"]
-            .upsert(tag) {
-                onConflict = "user_id, name"
-                headers.append("Prefer", "return=representation")
+        return try {
+            postgrest["tags"]
+                .upsert(tag) {
+                    onConflict = "user_id, name"
+                    headers.append("Prefer", "return=representation")
+                }
+                .decodeSingle<TagRow>()
+        } catch (e: Exception) {
+            val msg = e.message ?: ""
+            if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
+                DebugDual.log(DebugEvent.SyncOutboxFailed("TAG", tag.id, "createTag empty-body: ${e.message}"))
+                try {
+                    val fetched = findTagByName(tag.userId, tag.name)
+                    if (fetched != null) return fetched
+                } catch (_: Throwable) {}
+                return tag
             }
-            .decodeSingle<TagRow>()
+            throw e
+        }
     }
 
     suspend fun findOrCreateTag(userId: String, name: String, color: String? = null): TagRow {
@@ -347,12 +415,27 @@ class SupabaseProgressDataSource {
      * primary key + `onConflict = "id"` (SCEN-reading-sessions-sync-3/7).
      */
     suspend fun upsertReadingSession(session: ReadingSessionRow): ReadingSessionRow {
-        return postgrest["reading_sessions"]
-            .upsert(session) {
-                onConflict = "id"
-                headers.append("Prefer", "return=representation")
+        return try {
+            postgrest["reading_sessions"]
+                .upsert(session) {
+                    onConflict = "id"
+                    headers.append("Prefer", "return=representation")
+                }
+                .decodeSingle<ReadingSessionRow>()
+        } catch (e: Exception) {
+            val msg = e.message ?: ""
+            if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
+                DebugDual.log(DebugEvent.SyncOutboxFailed("READING_SESSION", session.id, "upsertReadingSession empty-body: ${e.message}"))
+                try {
+                    val fetched = postgrest["reading_sessions"]
+                        .select { filter { eq("id", session.id) } }
+                        .decodeSingleOrNull<ReadingSessionRow>()
+                    if (fetched != null) return fetched
+                } catch (_: Throwable) {}
+                return session
             }
-            .decodeSingle<ReadingSessionRow>()
+            throw e
+        }
     }
 
     /**

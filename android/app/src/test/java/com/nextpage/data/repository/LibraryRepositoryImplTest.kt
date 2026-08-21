@@ -516,6 +516,8 @@ class LibraryRepositoryImplTest {
 
         override suspend fun getAll(): List<com.nextpage.data.local.entity.ReadingProgressEntity> = emptyList()
 
+        override fun observeAll(): Flow<List<com.nextpage.data.local.entity.ReadingProgressEntity>> = MutableStateFlow(emptyList())
+
         override suspend fun count(): Int = 0
     }
 

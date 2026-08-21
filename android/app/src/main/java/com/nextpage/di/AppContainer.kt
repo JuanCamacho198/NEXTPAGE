@@ -150,6 +150,21 @@ class AppContainer(context: Context) {
         )
     }
 
+    val getBookProgressUseCase: com.nextpage.domain.usecase.GetBookProgressUseCase by lazy {
+        com.nextpage.domain.usecase.GetBookProgressUseCase(
+            readerRepository = readerRepository,
+            readingProgressDao = appDatabase.readingProgressDao(),
+            bookDao = appDatabase.bookDao()
+        )
+    }
+
+    val progressReconciler: com.nextpage.data.sync.ProgressReconciler by lazy {
+        com.nextpage.data.sync.ProgressReconciler(
+            bookDao = appDatabase.bookDao(),
+            readingProgressDao = appDatabase.readingProgressDao()
+        )
+    }
+
     val readerPreferences: ReaderPreferences = ReaderPreferences(context.applicationContext)
 
     val readingGoalPreferences: ReadingGoalPreferences =

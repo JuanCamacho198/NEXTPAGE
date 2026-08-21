@@ -94,53 +94,60 @@ fun ReaderChrome(
     controlsVisible: Boolean = true,
     contentModifier: Modifier = Modifier,
 ) {
+    // Dual log chrome visibility changes without causing recomposition churn
+    androidx.compose.runtime.LaunchedEffect(controlsVisible) {
+        com.nextpage.debug.DebugDual.log(com.nextpage.debug.DebugEvent.ChromeToggled(controlsVisible))
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(READER_BG)
             .padding(contentPadding)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            AnimatedVisibility(
-                visible = controlsVisible,
-                enter = slideInVertically(
-                    animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
-                    initialOffsetY = { -it }
-                ) + fadeIn(animationSpec = tween(CHROME_ANIM_MS)),
-                exit = slideOutVertically(
-                    animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
-                    targetOffsetY = { -it }
-                ) + fadeOut(animationSpec = tween(CHROME_ANIM_MS))
-            ) {
-                header()
-            }
+        // Content fills entire Box with stable constraints — never resized by chrome
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(0f)
+                .then(contentModifier)
+        ) {
+            content()
+        }
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    // zIndex lifts the content slot above the footer Box in
-                    // the Column, so the SelectionOverlay (and its color
-                    // picker popover) render on top of the progress bar.
-                    .zIndex(1f)
-                    .then(contentModifier)
-            ) {
-                content()
-            }
+        // Header overlay top
+        AnimatedVisibility(
+            visible = controlsVisible,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .zIndex(1f),
+            enter = slideInVertically(
+                animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
+                initialOffsetY = { -it }
+            ) + fadeIn(animationSpec = tween(CHROME_ANIM_MS)),
+            exit = slideOutVertically(
+                animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
+                targetOffsetY = { -it }
+            ) + fadeOut(animationSpec = tween(CHROME_ANIM_MS))
+        ) {
+            header()
+        }
 
-            AnimatedVisibility(
-                visible = controlsVisible,
-                enter = slideInVertically(
-                    animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
-                    initialOffsetY = { it }
-                ) + fadeIn(animationSpec = tween(CHROME_ANIM_MS)),
-                exit = slideOutVertically(
-                    animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
-                    targetOffsetY = { it }
-                ) + fadeOut(animationSpec = tween(CHROME_ANIM_MS))
-            ) {
-                footer()
-            }
+        // Footer overlay bottom
+        AnimatedVisibility(
+            visible = controlsVisible,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .zIndex(1f),
+            enter = slideInVertically(
+                animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
+                initialOffsetY = { it }
+            ) + fadeIn(animationSpec = tween(CHROME_ANIM_MS)),
+            exit = slideOutVertically(
+                animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
+                targetOffsetY = { it }
+            ) + fadeOut(animationSpec = tween(CHROME_ANIM_MS))
+        ) {
+            footer()
         }
 
         overlays()

@@ -1,4 +1,5 @@
 import type { LibraryBookDto } from '$lib/shared/types';
+import { getSafeProgressPercentage as getCanonicalProgress } from '$lib/shared/stores/homeState';
 
 // ─── View mode ───
 
@@ -98,12 +99,7 @@ export const SORT_OPTIONS: Array<{ key: ShelfSort; label: string }> = [
 ];
 
 export function getSafeProgressPercentage(book: LibraryBookDto): number {
-  const progress = book.progressPercentage;
-  const total = book.totalPages;
-
-  if (!total || total <= 0) return 0;
-  if (!progress || progress < 0) return 0;
-  return Math.min(100, progress);
+  return getCanonicalProgress(book);
 }
 
 export function getBookState(book: ShelfBook): ShelfFilter {

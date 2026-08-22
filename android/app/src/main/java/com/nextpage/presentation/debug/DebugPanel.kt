@@ -236,6 +236,20 @@ fun DebugPanel(
             DebugRow(label = "state", value = debugInfo.syncDebug.state)
             DebugRow(label = "pendingCount", value = debugInfo.syncDebug.pendingCount.toString())
 
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = DARK_SURFACE
+            )
+
+            // ── 4b. Supabase Sync Section ──────────────────────────────
+            SectionHeader(title = "Supabase Sync")
+            DebugRow(label = "state", value = debugInfo.supabaseSyncDebug.state)
+            val gatedReason = debugInfo.supabaseSyncDebug.gatedReason
+            if (gatedReason != null) {
+                DebugRow(label = "gatedReason", value = gatedReason)
+            }
+            DebugRow(label = "pendingCount", value = debugInfo.supabaseSyncDebug.pendingCount.toString())
+
             // ── 5. PDF Debug Section (conditional) ───────────────────
             val pdfDebug = debugInfo.pdfDebug
             if (pdfDebug != null) {

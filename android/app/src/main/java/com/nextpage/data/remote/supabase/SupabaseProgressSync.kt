@@ -92,6 +92,13 @@ class SupabaseProgressSync(
         }
     }
 
+    private fun gatedDelay(attempt: Int): Long =
+        if (attempt < GATED_FLUSH_MAX_ATTEMPTS) {
+            minOf(GATED_BACKOFF_BASE_MS * (1L shl attempt), GATED_BACKOFF_CAP_MS)
+        } else {
+            GATED_PLATEAU_MS
+        }
+
     /** Pulls one book without blocking the reader's local open path. */
     suspend fun resumeForBook(bookId: String, onProgressApplied: (ReadingProgressRow) -> Unit = {}) {
         val session = sessionManager.ensureFreshSession().getOrNull() ?: return
@@ -145,19 +152,56 @@ class SupabaseProgressSync(
     private suspend fun hasLiveSession(): Boolean =
         sessionManager.getCurrentSession().getOrNull() != null
 
+    /**
+     * Bounded gated-flush loop.
+     *
+     * Gated path (no live session OR ensureFreshSession failure) retries with
+     * in-memory exponential backoff: up to [GATED_FLUSH_MAX_ATTEMPTS] attempts
+     * with base [GATED_BACKOFF_BASE_MS] doubling each attempt, capped at
+     * [GATED_BACKOFF_CAP_MS] (160s), then plateaus polling [GATED_PLATEAU_MS]
+     * (60s) while [processJob] remains active (cancelled by [stop] on logout).
+     *
+     * The attempt counter is a LOCAL variable in this function and the gated
+     * path NEVER calls [SyncOutboxDao.incrementRetryCount] or
+     * [SyncOutboxDao.pruneFailedItems] — those are only invoked in per-item
+     * catch blocks on actual push exceptions. Therefore `retry_count` stays 0
+     * through any number of gated retries, and no item can be pruned before
+     * 3 recorded REAL failures (pruneFailedItems(3) threshold). Recovery
+     * drains remaining items in order without requiring app restart.
+     */
     private suspend fun processOutbox() {
-        if (!hasLiveSession()) return
-        val session = sessionManager.ensureFreshSession().getOrNull() ?: return
+        var gateAttempts = 0
+        var session: com.nextpage.domain.model.AuthSession? = null
+
+        while (true) {
+            if (!hasLiveSession()) {
+                _state.value = State.Gated("no_session")
+                delay(gatedDelay(gateAttempts))
+                gateAttempts++
+                continue
+            }
+            val fresh = sessionManager.ensureFreshSession().getOrNull()
+            if (fresh == null) {
+                _state.value = State.Gated("refresh_failed")
+                delay(gatedDelay(gateAttempts))
+                gateAttempts++
+                continue
+            }
+            session = fresh
+            break
+        }
+
+        val authSession = session ?: return
 
         _state.value = State.Running
         val pendingItems = outboxDao.getPendingItems()
 
         for (item in pendingItems) {
             when (item.entityType) {
-                SyncEntityType.READING_PROGRESS.name -> processProgressItem(item, session.userId)
-                SyncEntityType.BOOKMARK.name -> processBookmarkItem(item, session.userId)
-                SyncEntityType.HIGHLIGHT.name -> processHighlightItem(item, session.userId)
-                SyncEntityType.READING_SESSION.name -> processSessionItem(item, session.userId)
+                SyncEntityType.READING_PROGRESS.name -> processProgressItem(item, authSession.userId)
+                SyncEntityType.BOOKMARK.name -> processBookmarkItem(item, authSession.userId)
+                SyncEntityType.HIGHLIGHT.name -> processHighlightItem(item, authSession.userId)
+                SyncEntityType.READING_SESSION.name -> processSessionItem(item, authSession.userId)
             }
         }
 

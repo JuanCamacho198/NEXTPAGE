@@ -426,6 +426,10 @@
     <string name="sync_status_error">Error de sinc.</string>
     <string name="sync_status_authorization_needed">Autorizaci\u00f3n requerida</string>
     <string name="sync_pending_badge">%1$d elementos pendientes</string>
+    <string name="debug_supabase_sync_title">Sinc. Supabase</string>
+    <string name="debug_supabase_state">Estado</string>
+    <string name="debug_supabase_gated_reason">Motivo bloqueado</string>
+    <string name="debug_supabase_pending_count">Pendientes</string>
 
     <!-- Highlights filtros -->
     <string name="highlights_search">Buscar resaltados</string>

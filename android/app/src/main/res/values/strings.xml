@@ -205,6 +205,10 @@
     <string name="sync_status_error">Sync error</string>
     <string name="sync_status_authorization_needed">Auth needed</string>
     <string name="sync_pending_badge">%1$d pending items</string>
+    <string name="debug_supabase_sync_title">Supabase Sync</string>
+    <string name="debug_supabase_state">State</string>
+    <string name="debug_supabase_gated_reason">Gated reason</string>
+    <string name="debug_supabase_pending_count">Pending</string>
 
     <!-- Reader -->
     <string name="reader_placeholder">Reader rendering engine is coming soon.</string>

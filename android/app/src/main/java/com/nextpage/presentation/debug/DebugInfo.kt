@@ -5,6 +5,7 @@ data class DebugInfo(
     val initTimings: InitTimingsSection = InitTimingsSection(),
     val dbCounts: DbCountsSection = DbCountsSection(),
     val syncDebug: SyncDebugSection = SyncDebugSection(),
+    val supabaseSyncDebug: SupabaseSyncDebugSection = SupabaseSyncDebugSection(),
     val pdfDebug: PdfDebugSection? = null,
     val isLoadingDbCounts: Boolean = false
 )
@@ -35,6 +36,12 @@ data class DbCountsSection(
 
 data class SyncDebugSection(
     val state: String = "unknown",
+    val pendingCount: Int = 0
+)
+
+data class SupabaseSyncDebugSection(
+    val state: String = "unknown",
+    val gatedReason: String? = null,
     val pendingCount: Int = 0
 )
 

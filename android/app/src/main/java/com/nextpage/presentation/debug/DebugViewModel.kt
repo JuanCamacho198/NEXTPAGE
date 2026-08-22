@@ -86,11 +86,52 @@ class DebugViewModel(
         viewModelScope.launch {
             val state = syncService.syncState.first()
             val pending = syncService.pendingCount.first()
+            // Supabase sync state + pending count via appContainer (AFR-3)
+            val supabaseState = appContainer.supabaseProgressSync.state.first()
+            val supabasePending = appContainer.supabaseProgressSync.pendingCount.first()
+            val (supaStateStr, gatedReason) = when (supabaseState) {
+                is com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Gated -> "Gated" to supabaseState.reason
+                is com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Idle -> "Idle" to null
+                is com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Running -> "Running" to null
+                is com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Error -> "Error" to (supabaseState as com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Error).message
+            }
             _debugInfo.update {
                 it.copy(
                     syncDebug = SyncDebugSection(
                         state = state.toString().removePrefix("SyncState."),
                         pendingCount = pending
+                    ),
+                    supabaseSyncDebug = SupabaseSyncDebugSection(
+                        state = supaStateStr,
+                        gatedReason = gatedReason,
+                        pendingCount = supabasePending
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * Overload that collects only the Supabase sync state (used when Drive
+     * syncService is not available but Supabase state is needed via
+     * appContainer).
+     */
+    fun updateSupabaseSyncInfo() {
+        viewModelScope.launch {
+            val supabaseState = appContainer.supabaseProgressSync.state.first()
+            val supabasePending = appContainer.supabaseProgressSync.pendingCount.first()
+            val (supaStateStr, gatedReason) = when (supabaseState) {
+                is com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Gated -> "Gated" to supabaseState.reason
+                is com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Idle -> "Idle" to null
+                is com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Running -> "Running" to null
+                is com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Error -> "Error" to (supabaseState as com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Error).message
+            }
+            _debugInfo.update {
+                it.copy(
+                    supabaseSyncDebug = SupabaseSyncDebugSection(
+                        state = supaStateStr,
+                        gatedReason = gatedReason,
+                        pendingCount = supabasePending
                     )
                 )
             }

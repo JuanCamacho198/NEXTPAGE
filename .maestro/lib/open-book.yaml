@@ -1,0 +1,9 @@
+# Shared subflow: open a book from Estanteria (shelf).
+# Param: BOOK_TITLE (exact Spanish title shown on the shelf card).
+# Precondition: the flow is already on the Estanteria tab.
+appId: com.nextpage
+---
+- assertVisible: Estantería
+- tapOn: ${BOOK_TITLE}
+- waitForAnimationToEnd:
+    timeout: 15000

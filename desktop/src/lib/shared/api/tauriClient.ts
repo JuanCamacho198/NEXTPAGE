@@ -15,6 +15,8 @@ import type {
   ReadingSessionInput,
   ReadingSessionSavedDto,
   RemoteReadingSessionRow,
+  RemoteHighlightRow,
+  UpsertRemoteSummary,
   ReadingStatsSummaryDto,
   SaveHighlightInput,
   SaveProgressInput,
@@ -249,6 +251,18 @@ export const upsertRemoteReadingSessions = async (
   rows: RemoteReadingSessionRow[],
 ): Promise<number> => {
   return invoke<number>('upsertRemoteReadingSessions', { rows });
+};
+
+/**
+ * Merge remote `highlights` rows into local SQLite via the Rust
+ * `upsertRemoteHighlights` command (FK guard → validate → LWW with tombstones
+ * → INSERT..ON CONFLICT preserving remote clocks). Returns summary counts
+ * (DHR-1..5, per-row skip-and-count for invalid/unknown).
+ */
+export const upsertRemoteHighlights = async (
+  rows: RemoteHighlightRow[],
+): Promise<UpsertRemoteSummary> => {
+  return invoke<UpsertRemoteSummary>('upsertRemoteHighlights', { rows });
 };
 
 export const upsertProgress = async (progress: ReadingProgressDto): Promise<void> => {

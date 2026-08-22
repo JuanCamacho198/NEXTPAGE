@@ -146,6 +146,31 @@ class SupabaseProgressSync(
     ).apply { timeZone = TimeZone.getTimeZone("UTC") }
 
     /**
+     * Parses a remote PostgREST timestamp into epoch millis for LWW comparison.
+     *
+     * PostgREST serializes timestamptz as ISO-8601 with a numeric UTC offset
+     * (e.g. `2026-08-22T13:16:22.45073+00:00`), which the legacy
+     * [dateFormat] pattern (literal trailing `Z`) can NOT parse. Falling back
+     * to `System.currentTimeMillis()` on parse failure poisoned every LWW
+     * decision: any live remote row compared as "newest possible" and
+     * overwrote newer local edits/tombstones (observed as deleted highlights
+     * resurrecting on device). Unparsable input now maps to 0L — treated as
+     * the OLDEST possible instant — so it can never win LWW.
+     */
+    internal fun parseRemoteTimestamp(raw: String?): Long {
+        if (raw.isNullOrBlank()) return 0L
+        try {
+            return java.time.OffsetDateTime.parse(raw).toInstant().toEpochMilli()
+        } catch (_: Exception) {
+        }
+        try {
+            return dateFormat.parse(raw)?.time ?: 0L
+        } catch (_: Exception) {
+        }
+        return 0L
+    }
+
+    /**
      * Hot-path gate: Supabase SoT must never fire without a live session (PR2).
      * Mirrors desktop hasLiveSession() — session must exist and belong to current user.
      */
@@ -449,15 +474,7 @@ class SupabaseProgressSync(
         }
 
         val localProgress = readingProgressDao.getProgressForBook(row.bookId)
-        val remoteTime = try {
-            java.text.SimpleDateFormat(
-                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-                java.util.Locale.US
-            ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
-                .parse(row.updatedAt)?.time ?: 0L
-        } catch (_: Exception) {
-            System.currentTimeMillis()
-        }
+        val remoteTime = parseRemoteTimestamp(row.updatedAt)
 
         // LWW with version+1 and recordId tie (PR2): remote wins if newer; tie → recordId lexicographic.
         val shouldApply = when {
@@ -494,7 +511,7 @@ class SupabaseProgressSync(
         if (isDeleted) {
             if (localBookmark != null) {
                 // LWW tombstone: later deletedAt wins, tie → recordId lexicographic
-                val remoteDeleted = try { dateFormat.parse(row.deletedAt)?.time ?: 0L } catch (_: Exception) { System.currentTimeMillis() }
+                val remoteDeleted = parseRemoteTimestamp(row.deletedAt)
                 val localDeleted = localBookmark.deletedAtEpochMillis ?: Long.MIN_VALUE
                 val tombstoneWins = remoteDeleted > localDeleted || (remoteDeleted == localDeleted && (row.id ?: "") > localBookmark.id)
                 if (tombstoneWins || localBookmark.deletedAtEpochMillis == null) {
@@ -510,14 +527,13 @@ class SupabaseProgressSync(
                 }
             }
         } else {
-            val remoteTime = try {
-                dateFormat.parse(row.updatedAt)?.time ?: 0L
-            } catch (_: Exception) {
-                System.currentTimeMillis()
-            }
+            val remoteTime = parseRemoteTimestamp(row.updatedAt)
 
             val shouldApply = when {
                 localBookmark == null -> true
+                // A live remote row must never resurrect a NEWER local tombstone.
+                localBookmark.deletedAtEpochMillis != null ->
+                    remoteTime > localBookmark.deletedAtEpochMillis
                 remoteTime > localBookmark.updatedAtEpochMillis -> true
                 remoteTime < localBookmark.updatedAtEpochMillis -> false
                 else -> (row.id ?: "") > localBookmark.id
@@ -546,30 +562,27 @@ class SupabaseProgressSync(
 
         if (isDeleted) {
             if (localHighlight != null) {
-                val remoteDeleted = try { dateFormat.parse(row.deletedAt)?.time ?: 0L } catch (_: Exception) { System.currentTimeMillis() }
+                val remoteDeleted = parseRemoteTimestamp(row.deletedAt)
                 val localDeleted = localHighlight.deletedAtEpochMillis ?: Long.MIN_VALUE
                 val tombstoneWins = remoteDeleted > localDeleted || (remoteDeleted == localDeleted && (row.id ?: "") > localHighlight.id)
                 if (tombstoneWins || localHighlight.deletedAtEpochMillis == null) {
                     highlightDao.upsert(
                         localHighlight.copy(
-                            deletedAtEpochMillis = try {
-                                dateFormat.parse(row.deletedAt)?.time
-                            } catch (_: Exception) {
-                                System.currentTimeMillis()
-                            }
+                            deletedAtEpochMillis = parseRemoteTimestamp(row.deletedAt)
                         )
                     )
                 }
             }
         } else {
-            val remoteTime = try {
-                dateFormat.parse(row.updatedAt)?.time ?: 0L
-            } catch (_: Exception) {
-                System.currentTimeMillis()
-            }
+            val remoteTime = parseRemoteTimestamp(row.updatedAt)
 
             val shouldApply = when {
                 localHighlight == null -> true
+                // A live remote row must never resurrect a NEWER local tombstone:
+                // when the local row is deleted, compare against the deletion
+                // instant instead of updatedAtEpochMillis (which equals it).
+                localHighlight.deletedAtEpochMillis != null ->
+                    remoteTime > localHighlight.deletedAtEpochMillis
                 remoteTime > localHighlight.updatedAtEpochMillis -> true
                 remoteTime < localHighlight.updatedAtEpochMillis -> false
                 else -> (row.id ?: "") > localHighlight.id

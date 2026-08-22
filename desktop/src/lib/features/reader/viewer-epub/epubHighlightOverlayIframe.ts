@@ -60,9 +60,9 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
   var CANONICAL_COLORS = [
     { label: 'yellow', hex: '#FACC15', r: 250, g: 204, b: 21 },
     { label: 'green', hex: '#4ADE80', r: 74, g: 222, b: 128 },
-    { label: 'blue', hex: '#60A5FA', r: 96, g: 165, b: 250 },
-    { label: 'purple', hex: '#C084FC', r: 192, g: 132, b: 252 },
-    { label: 'orange', hex: '#FB923C', r: 251, g: 146, b: 60 }
+    { label: 'blue', hex: '#3B82F6', r: 59, g: 130, b: 246 },
+    { label: 'orange', hex: '#F97316', r: 249, g: 115, b: 22 },
+    { label: 'red', hex: '#EF4444', r: 239, g: 68, b: 68 }
   ];
 
   function parseHex(hex) {

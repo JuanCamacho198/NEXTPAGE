@@ -51,8 +51,9 @@ class SupabaseProgressSync(
     private val readingSessionDao: ReadingSessionDao,
     private val sessionManager: SessionManager,
     private val dataSource: SupabaseProgressDataSource = SupabaseProgressDataSource(),
+    private val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private var processJob: Job? = null
     private var realtimeJob: Job? = null
 
@@ -69,9 +70,12 @@ class SupabaseProgressSync(
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
 
+    val pendingCount: kotlinx.coroutines.flow.Flow<Int> = outboxDao.observePendingCount()
+
     sealed class State {
         data object Idle : State()
         data object Running : State()
+        data class Gated(val reason: String) : State()
         data class Error(val message: String) : State()
     }
 
@@ -661,5 +665,10 @@ class SupabaseProgressSync(
 
         /** Delay between book-readiness checks (5 * 400ms = up to ~2s total). */
         internal const val PULL_BOOK_READY_RETRY_DELAY_MS = 400L
+
+        internal const val GATED_FLUSH_MAX_ATTEMPTS = 6
+        internal const val GATED_BACKOFF_BASE_MS = 5_000L
+        internal const val GATED_BACKOFF_CAP_MS = 160_000L
+        internal const val GATED_PLATEAU_MS = 60_000L
     }
 }

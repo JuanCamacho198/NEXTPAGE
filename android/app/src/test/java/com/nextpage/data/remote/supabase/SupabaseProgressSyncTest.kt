@@ -14,10 +14,16 @@ import io.mockk.CapturingSlot
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -325,6 +331,250 @@ class SupabaseProgressSyncTest {
         assertEquals(0, fakeBookDao.count())
     }
 
+    // ─── AFR-1/2/3: gated flush resilience (WS1) ──────────────────────
+
+    @Test
+    fun processOutbox_gateWithNoSession_setsStateGatedNotIdle() = runTest(StandardTestDispatcher()) {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        fakeBookDao = FakeBookDao()
+        fakeSessionDao = FakeReadingSessionDao()
+        fakeOutboxDao = FakeSyncOutboxDao()
+        mockSessionManager = mockk(relaxed = true)
+        mockDataSource = mockk(relaxed = true)
+        coEvery { mockSessionManager.getCurrentSession() } returns Result.failure(IllegalStateException("no session"))
+        coEvery { mockSessionManager.ensureFreshSession() } returns Result.failure(IllegalStateException("no session"))
+        val gatedSync = SupabaseProgressSync(
+            outboxDao = fakeOutboxDao,
+            bookDao = fakeBookDao,
+            readingProgressDao = mockk(relaxed = true),
+            bookmarkDao = mockk(relaxed = true),
+            highlightDao = mockk(relaxed = true),
+            readingSessionDao = fakeSessionDao,
+            sessionManager = mockSessionManager,
+            dataSource = mockDataSource,
+            ioDispatcher = dispatcher
+        )
+        fakeOutboxDao.insert(sessionOutboxItem("outbox-gated", "sess_gated"))
+        gatedSync.startProcessing()
+        runCurrent()
+        val state = gatedSync.state.value
+        assertTrue("gate must expose Gated, not Idle", state is SupabaseProgressSync.State.Gated)
+        assertFalse("gate must not be silent Idle", state is SupabaseProgressSync.State.Idle)
+        gatedSync.stop()
+    }
+
+    @Test
+    fun processOutbox_gateNeverCallsIncrementOrPrune() = runTest(StandardTestDispatcher()) {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        fakeBookDao = FakeBookDao()
+        fakeSessionDao = FakeReadingSessionDao()
+        fakeOutboxDao = FakeSyncOutboxDao()
+        mockSessionManager = mockk(relaxed = true)
+        mockDataSource = mockk(relaxed = true)
+        coEvery { mockSessionManager.getCurrentSession() } returns Result.failure(IllegalStateException("no session"))
+        coEvery { mockSessionManager.ensureFreshSession() } returns Result.failure(IllegalStateException("refresh failed"))
+        val gatedSync = SupabaseProgressSync(
+            outboxDao = fakeOutboxDao,
+            bookDao = fakeBookDao,
+            readingProgressDao = mockk(relaxed = true),
+            bookmarkDao = mockk(relaxed = true),
+            highlightDao = mockk(relaxed = true),
+            readingSessionDao = fakeSessionDao,
+            sessionManager = mockSessionManager,
+            dataSource = mockDataSource,
+            ioDispatcher = dispatcher
+        )
+        fakeOutboxDao.insert(sessionOutboxItem("outbox-gated2", "sess_gated2"))
+        gatedSync.startProcessing()
+        runCurrent()
+        // virtual gates: advance past first two backoffs (5s + 10s)
+        advanceTimeBy(5_000L); runCurrent()
+        advanceTimeBy(10_000L); runCurrent()
+        assertEquals(0, fakeOutboxDao.incrementCalls)
+        assertEquals(0, fakeOutboxDao.pruneCalls)
+        assertTrue(fakeOutboxDao.getPendingItems().isNotEmpty())
+        gatedSync.stop()
+    }
+
+    @Test
+    fun processOutbox_gatedBackoff_bound6Attempts_exponentialCap160s_thenPlateau60s() = runTest(StandardTestDispatcher()) {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        fakeBookDao = FakeBookDao()
+        fakeSessionDao = FakeReadingSessionDao()
+        fakeOutboxDao = FakeSyncOutboxDao()
+        mockSessionManager = mockk(relaxed = true)
+        mockDataSource = mockk(relaxed = true)
+        var ensureCalls = 0
+        coEvery { mockSessionManager.getCurrentSession() } returns Result.failure(IllegalStateException("no session"))
+        coEvery { mockSessionManager.ensureFreshSession() } answers {
+            ensureCalls++
+            Result.failure(IllegalStateException("refresh failed"))
+        }
+        val gatedSync = SupabaseProgressSync(
+            outboxDao = fakeOutboxDao,
+            bookDao = fakeBookDao,
+            readingProgressDao = mockk(relaxed = true),
+            bookmarkDao = mockk(relaxed = true),
+            highlightDao = mockk(relaxed = true),
+            readingSessionDao = fakeSessionDao,
+            sessionManager = mockSessionManager,
+            dataSource = mockDataSource,
+            ioDispatcher = dispatcher
+        )
+        fakeOutboxDao.insert(sessionOutboxItem("outbox-bound", "sess_bound"))
+        gatedSync.startProcessing()
+        runCurrent()
+        // 6 bounded attempts: 5s,10s,20s,40s,80s,160s = 315s total before plateau
+        val boundedDelays = listOf(5_000L, 10_000L, 20_000L, 40_000L, 80_000L, 160_000L)
+        for (delayMs in boundedDelays) {
+            // state should remain Gated during bounded phase
+            assertTrue(gatedSync.state.value is SupabaseProgressSync.State.Gated)
+            advanceTimeBy(delayMs); runCurrent()
+        }
+        // after 6 attempts we enter plateau: next delay is 60s, not exponential
+        assertTrue(gatedSync.state.value is SupabaseProgressSync.State.Gated)
+        val beforePlateauCalls = ensureCalls
+        advanceTimeBy(60_000L); runCurrent()
+        assertTrue("plateau must keep polling", ensureCalls > beforePlateauCalls)
+        assertTrue(gatedSync.state.value is SupabaseProgressSync.State.Gated)
+        // second plateau tick
+        advanceTimeBy(60_000L); runCurrent()
+        assertTrue(gatedSync.state.value is SupabaseProgressSync.State.Gated)
+        // verify zero retry increments throughout
+        assertEquals(0, fakeOutboxDao.incrementCalls)
+        assertEquals(0, fakeOutboxDao.pruneCalls)
+        gatedSync.stop()
+    }
+
+    @Test
+    fun processOutbox_recoveryAfterGate_drainsInOrderWithoutRestart() = runTest(StandardTestDispatcher()) {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        fakeBookDao = FakeBookDao()
+        fakeBookDao.upsert(createSampleBook("book-1"))
+        fakeSessionDao = FakeReadingSessionDao()
+        fakeOutboxDao = FakeSyncOutboxDao()
+        mockSessionManager = mockk(relaxed = true)
+        mockDataSource = mockk(relaxed = true)
+        var gate = true
+        coEvery { mockSessionManager.getCurrentSession() } answers {
+            if (gate) Result.failure(IllegalStateException("no session")) else Result.success(AuthSession(userId = "test-user", email = "test@example.com"))
+        }
+        coEvery { mockSessionManager.ensureFreshSession() } answers {
+            if (gate) Result.failure(IllegalStateException("refresh failed")) else Result.success(AuthSession(userId = "test-user", email = "test@example.com"))
+        }
+        val gatedSync = SupabaseProgressSync(
+            outboxDao = fakeOutboxDao,
+            bookDao = fakeBookDao,
+            readingProgressDao = mockk(relaxed = true),
+            bookmarkDao = mockk(relaxed = true),
+            highlightDao = mockk(relaxed = true),
+            readingSessionDao = fakeSessionDao,
+            sessionManager = mockSessionManager,
+            dataSource = mockDataSource,
+            ioDispatcher = dispatcher
+        )
+        // two items in order
+        fakeOutboxDao.insert(sessionOutboxItem("outbox-a", "sess_a", bookId = "book-1").copy(createdAtEpochMillis = 100L))
+        fakeOutboxDao.insert(sessionOutboxItem("outbox-b", "sess_b", bookId = "book-1").copy(createdAtEpochMillis = 200L))
+        val order = mutableListOf<String>()
+        coEvery { mockDataSource.upsertReadingSession(capture(upsertedSessionSlot)) } answers {
+            order.add(upsertedSessionSlot.captured.id)
+            mockk()
+        }
+        gatedSync.startProcessing()
+        runCurrent()
+        assertTrue(gatedSync.state.value is SupabaseProgressSync.State.Gated)
+        // recover: session now available, advance to next backoff tick
+        gate = false
+        advanceTimeBy(5_000L); runCurrent()
+        // give the flush a chance to drain
+        runCurrent()
+        advanceTimeBy(500L); runCurrent()
+        assertEquals(listOf("sess_a", "sess_b"), order)
+        assertEquals(0, fakeOutboxDao.getPendingItems().size)
+        // should end Idle after draining, without requiring second startProcessing()
+        advanceTimeBy(500L); runCurrent()
+        assertTrue(gatedSync.state.value is SupabaseProgressSync.State.Idle)
+        gatedSync.stop()
+    }
+
+    @Test
+    fun processOutbox_twoStrikesPlusGate_itemNotPruned() = runTest(StandardTestDispatcher()) {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        fakeBookDao = FakeBookDao()
+        fakeBookDao.upsert(createSampleBook("book-1"))
+        fakeSessionDao = FakeReadingSessionDao()
+        fakeOutboxDao = FakeSyncOutboxDao()
+        mockSessionManager = mockk(relaxed = true)
+        mockDataSource = mockk(relaxed = true)
+        // fresh session is available for real push attempts
+        coEvery { mockSessionManager.getCurrentSession() } returns Result.success(AuthSession(userId = "test-user", email = "test@example.com"))
+        coEvery { mockSessionManager.ensureFreshSession() } returns Result.success(AuthSession(userId = "test-user", email = "test@example.com"))
+        val gatedSync = SupabaseProgressSync(
+            outboxDao = fakeOutboxDao,
+            bookDao = fakeBookDao,
+            readingProgressDao = mockk(relaxed = true),
+            bookmarkDao = mockk(relaxed = true),
+            highlightDao = mockk(relaxed = true),
+            readingSessionDao = fakeSessionDao,
+            sessionManager = mockSessionManager,
+            dataSource = mockDataSource,
+            ioDispatcher = dispatcher
+        )
+        fakeOutboxDao.insert(sessionOutboxItem("outbox-strikes", "sess_strikes"))
+        coEvery { mockDataSource.upsertReadingSession(any()) } throws RuntimeException("Network error")
+        // 2 real failures → retryCount 2 (not yet pruned at threshold 3)
+        gatedSync.startProcessing()
+        // wait for processing with real dispatcher? In test dispatcher, upsert fails quickly
+        runCurrent()
+        // need to pump real work: since failures happen synchronously without delay, retry increments immediately
+        // but our test sync uses test dispatcher, so runCurrent drains
+        // Allow a small virtual tick
+        advanceTimeBy(100L); runCurrent()
+        // second attempt: startProcessing again (idempotent check allows re-run only after previous job completed)
+        // First job already set Idle after attempts; start again for second strike
+        gatedSync.startProcessing()
+        runCurrent()
+        advanceTimeBy(100L); runCurrent()
+        assertEquals(2, fakeOutboxDao.getPendingItems().singleOrNull()?.retryCount ?: -1)
+        val incrementBeforeGate = fakeOutboxDao.incrementCalls
+        val pruneBeforeGate = fakeOutboxDao.pruneCalls
+        // Now gate the next flush: make session unavailable
+        coEvery { mockSessionManager.getCurrentSession() } returns Result.failure(IllegalStateException("no session"))
+        coEvery { mockSessionManager.ensureFreshSession() } returns Result.failure(IllegalStateException("refresh failed"))
+        // Reuse gatedSync: its next startProcessing will gate
+        gatedSync.startProcessing()
+        runCurrent()
+        advanceTimeBy(5_000L); runCurrent()
+        // Gate must NOT increment retry nor prune — item with 2 strikes survives
+        assertEquals(1, fakeOutboxDao.getPendingItems().size)
+        assertEquals(2, fakeOutboxDao.getPendingItems().single().retryCount)
+        assertEquals(incrementBeforeGate, fakeOutboxDao.incrementCalls)
+        assertEquals(pruneBeforeGate, fakeOutboxDao.pruneCalls)
+        gatedSync.stop()
+    }
+
+    @Test
+    fun pendingCount_emitsCorrectCount() = runTest {
+        val freshOutbox = FakeSyncOutboxDao()
+        val freshSync = SupabaseProgressSync(
+            outboxDao = freshOutbox,
+            bookDao = mockk(relaxed = true),
+            readingProgressDao = mockk(relaxed = true),
+            bookmarkDao = mockk(relaxed = true),
+            highlightDao = mockk(relaxed = true),
+            readingSessionDao = mockk(relaxed = true),
+            sessionManager = mockk(relaxed = true),
+            dataSource = mockk(relaxed = true)
+        )
+        assertEquals(0, freshSync.pendingCount.first())
+        freshOutbox.insert(sessionOutboxItem("outbox-pc1", "sess_pc1"))
+        freshOutbox.insert(sessionOutboxItem("outbox-pc2", "sess_pc2"))
+        assertEquals(2, freshSync.pendingCount.first())
+        freshOutbox.deleteById("outbox-pc1")
+        assertEquals(1, freshSync.pendingCount.first())
+    }
+
     // ─── Fakes (same inline pattern as SupabaseBookCatalogSyncTest) ──
 
     private fun createSampleBook(id: String): BookEntity = BookEntity(
@@ -417,19 +667,27 @@ class SupabaseProgressSyncTest {
 
     private class FakeSyncOutboxDao : SyncOutboxDao {
         private val items = mutableListOf<SyncOutboxEntity>()
+        var incrementCalls = 0
+        var pruneCalls = 0
+        private val pendingCountFlow = MutableStateFlow(0)
+
+        private fun refreshPending() { pendingCountFlow.value = items.size }
 
         override suspend fun getPendingItems(): List<SyncOutboxEntity> =
             items.toList().sortedBy { it.createdAtEpochMillis }
 
         override suspend fun insert(item: SyncOutboxEntity) {
             items.add(item)
+            refreshPending()
         }
 
         override suspend fun deleteById(id: String) {
             items.removeAll { it.id == id }
+            refreshPending()
         }
 
         override suspend fun incrementRetryCount(id: String, error: String) {
+            incrementCalls++
             val index = items.indexOfFirst { it.id == id }
             if (index >= 0) {
                 items[index] = items[index].copy(
@@ -440,11 +698,12 @@ class SupabaseProgressSyncTest {
         }
 
         override suspend fun pruneFailedItems(maxRetries: Int) {
+            pruneCalls++
             items.removeAll { it.retryCount >= maxRetries }
+            refreshPending()
         }
 
-        override fun observePendingCount(): Flow<Int> =
-            MutableStateFlow(items.size)
+        override fun observePendingCount(): Flow<Int> = pendingCountFlow
 
         override suspend fun getByTypeAndEntityId(type: String, entityId: String): SyncOutboxEntity? =
             items.firstOrNull { it.entityType == type && it.entityId == entityId }

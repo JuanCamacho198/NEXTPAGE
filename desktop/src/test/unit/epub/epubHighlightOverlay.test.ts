@@ -216,7 +216,7 @@ describe('epubHighlightOverlay — registry semantics (T12)', () => {
       [
         hl('a', '#FACC15', yellowCfi), // canonical yellow
         hl('b', '#FACC15', yellowCfi2), // canonical yellow
-        hl('c', '#60A5FA', blueCfi), // canonical blue
+        hl('c', '#3B82F6', blueCfi), // canonical blue
       ],
       CHAPTER_HREF,
       0,
@@ -289,7 +289,7 @@ describe('epubHighlightOverlay — registry semantics (T12)', () => {
     win.__epubHighlightOverlay!.render([hl('a', '#FACC15', cfi)], CHAPTER_HREF, 0);
     expect(registry.names().sort()).toEqual(['epub-hl-yellow']);
 
-    win.__epubHighlightOverlay!.render([hl('a', '#60A5FA', cfi)], CHAPTER_HREF, 0);
+    win.__epubHighlightOverlay!.render([hl('a', '#3B82F6', cfi)], CHAPTER_HREF, 0);
 
     expect(registry.names().sort()).toEqual(['epub-hl-blue']);
     expect(registry.rangesFor('epub-hl-blue').length).toBe(1);
@@ -374,11 +374,12 @@ describe('epubHighlightOverlay — colorMap (T14)', () => {
     const { win, doc, registry, messages } = setupOverlay();
     const cfi = cfiFor(win, doc, 'Primer parrafo');
 
-    // #F9A8D4 (a pink) is nearest to canonical purple (Euclidean).
+    // #F9A8D4 (a pink) is nearest to canonical red (Euclidean d² = 30836
+    // vs orange 38909 — purple no longer exists in the palette).
     win.__epubHighlightOverlay!.render([hl('pink', '#F9A8D4', cfi)], CHAPTER_HREF, 0);
 
-    expect(registry.names().sort()).toEqual(['epub-hl-purple']);
-    expect(registry.rangesFor('epub-hl-purple').length).toBe(1);
+    expect(registry.names().sort()).toEqual(['epub-hl-red']);
+    expect(registry.rangesFor('epub-hl-red').length).toBe(1);
     expect(messages).toContainEqual(
       expect.objectContaining({
         type: 'epub-hl-failed',
@@ -393,8 +394,8 @@ describe('epubHighlightOverlay — colorMap (T14)', () => {
     ['#FBDC6B', 'epub-hl-yellow'],
     ['#86EFAC', 'epub-hl-green'],
     ['#93C5FD', 'epub-hl-blue'],
-    ['#C4B5FD', 'epub-hl-purple'],
-    ['#FDBA74', 'epub-hl-orange'],
+    ['#C4B5FD', 'epub-hl-blue'],
+    ['#FDBA74', 'epub-hl-yellow'],
   ])('legacy hex %s maps to the nearest canonical %s', (hex, expectedName) => {
     const { win, doc, registry } = setupOverlay();
     const cfi = cfiFor(win, doc, 'Primer parrafo');
@@ -402,14 +403,15 @@ describe('epubHighlightOverlay — colorMap (T14)', () => {
     expect(registry.names().sort()).toEqual([expectedName]);
   });
 
-  it('tie-breaks exact Euclidean equidistance to yellow (first canonical)', () => {
-    // #7B9D11 is exactly equidistant (18354) between yellow and orange;
-    // the strict '<' tie-break resolves to yellow because yellow is first
-    // in the canonical list.
+  it('tie-breaks exact Euclidean equidistance to the first canonical entry (blue before red)', () => {
+    // #95639D is exactly equidistant (d² = 16982) between blue and red;
+    // the strict '<' tie-break resolves to blue because blue precedes red
+    // in the canonical list. Verified: yellow 39722, green 21595,
+    // orange 28481 are all farther.
     const { win, doc, registry } = setupOverlay();
     const cfi = cfiFor(win, doc, 'Primer parrafo');
-    win.__epubHighlightOverlay!.render([hl('tie', '#7B9D11', cfi)], CHAPTER_HREF, 0);
-    expect(registry.names().sort()).toEqual(['epub-hl-yellow']);
+    win.__epubHighlightOverlay!.render([hl('tie', '#95639D', cfi)], CHAPTER_HREF, 0);
+    expect(registry.names().sort()).toEqual(['epub-hl-blue']);
   });
 
   it('a canonical hex maps to itself without an unknown-color failure', () => {

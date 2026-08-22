@@ -12,6 +12,7 @@ const t = (key: string, params?: Record<string, string | number>) => {
     // to actually contain the color name (e.g. "Select Yellow highlight").
     'highlight.selectColor': 'Select {{color}} highlight',
     'highlight.color.yellow': 'Yellow',
+    'highlight.color.red': 'Red',
     'reader.copiar': 'Copy',
     'reader.copiedToClipboard': 'Copied to clipboard',
     'reader.addToDictionary': 'Add to Dictionary',

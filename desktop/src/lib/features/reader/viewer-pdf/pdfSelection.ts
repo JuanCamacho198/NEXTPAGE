@@ -8,10 +8,14 @@ import {
 
 // Re-export the canonical highlight palette so existing PDF imports keep
 // working unchanged. The single source of truth is
-// `$lib/features/reader/highlight/highlightColors`; see spec HC-1 / HC-2.
+// `$lib/features/reader/highlight/highlightColors`; see spec HC-1 / HC-2
+// and HPU-1 / HPU-2. `nearestHighlightHex` resolves stored (possibly
+// legacy) highlight colors to their pinned canonical target before any
+// render-path color math.
 export {
   HIGHLIGHT_COLORS,
   DEFAULT_HIGHLIGHT_COLOR,
+  nearestHighlightHex,
   highlightFillRgba,
   type HighlightColor,
   type HighlightColorId,

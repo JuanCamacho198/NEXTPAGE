@@ -29,9 +29,10 @@ use crate::models::{
     ActivityPoint, AddDictionaryWordInput, AppSettingDto, BookCoverDto, BookDeleteInput, BookDto,
     BookImportInput, BookmarkDto, CollectionDto, CreateTagInput, DictionaryWordDto, HighlightDto,
     IndexBookTextInput, LibraryBookDto, ReadingProgressDto, ReadingSessionInput,
-    ReadingSessionSavedDto, ReadingStatsSummaryDto, RemoteReadingSessionRow, SaveBookmarkInput,
-    SaveHighlightInput, SaveHighlightTagsInput, SaveProgressInput, ScanFolderResultDto,
-    SearchBookTextInput, SearchBookTextResponse, TagDto, UpdateHighlightInput,
+    ReadingSessionSavedDto, ReadingStatsSummaryDto, RemoteHighlightRow, RemoteReadingSessionRow,
+    SaveBookmarkInput, SaveHighlightInput, SaveHighlightTagsInput, SaveProgressInput,
+    ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse, TagDto, UpdateHighlightInput,
+    UpsertRemoteSummary,
 };
 
 const MAX_SETTING_BATCH: usize = 100;
@@ -568,6 +569,13 @@ impl LibraryRepository {
 
     pub fn delete_highlight(&self, id: &str) -> AppResult<()> {
         highlights::delete_highlight(self, id)
+    }
+
+    pub fn upsert_remote_highlights(
+        &self,
+        rows: &[RemoteHighlightRow],
+    ) -> AppResult<UpsertRemoteSummary> {
+        highlights::upsert_remote_highlights(self, rows)
     }
 
     pub fn list_tags(&self) -> AppResult<Vec<TagDto>> {

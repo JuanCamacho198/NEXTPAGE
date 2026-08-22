@@ -53,6 +53,7 @@ fn main() {
             commands::getReadingStatsForRange,
             commands::getReadingStreak,
             commands::upsertRemoteReadingSessions,
+            commands::upsertRemoteHighlights,
             commands::indexBookText,
             commands::searchBookText,
             commands::importBook,

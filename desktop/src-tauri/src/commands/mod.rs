@@ -44,10 +44,10 @@ use crate::models::{
     BookDto, BookImportInput, BookmarkDto, CollectionDto, CommandErrorDto, CreateCollectionInput,
     CreateTagInput, DictionaryWordDto, HideBookInput, HighlightDto, IndexBookTextInput,
     LibraryBookDto, ListLibraryBooksInput, ReadingProgressDto, ReadingSessionInput,
-    ReadingSessionSavedDto, ReadingStatsSummaryDto, RemoteReadingSessionRow, SaveBookmarkInput,
-    SaveHighlightInput, SaveHighlightTagsInput, SaveProgressInput, ScanFolderResultDto,
-    SearchBookTextInput, SearchBookTextResponse, SyncOutboxRowDto, TagDto, UpdateHighlightInput,
-    UpsertBookCoverInput,
+    ReadingSessionSavedDto, ReadingStatsSummaryDto, RemoteHighlightRow, RemoteReadingSessionRow,
+    SaveBookmarkInput, SaveHighlightInput, SaveHighlightTagsInput, SaveProgressInput,
+    ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse, SyncOutboxRowDto, TagDto,
+    UpdateHighlightInput, UpsertBookCoverInput, UpsertRemoteSummary,
 };
 use crate::state::AppState;
 
@@ -273,6 +273,16 @@ pub fn upsertRemoteReadingSessions(
 ) -> Result<i64, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository.upsert_remote_reading_sessions(&rows).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn upsertRemoteHighlights(
+    state: State<'_, AppState>,
+    rows: Vec<RemoteHighlightRow>,
+) -> Result<UpsertRemoteSummary, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.upsert_remote_highlights(&rows).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]

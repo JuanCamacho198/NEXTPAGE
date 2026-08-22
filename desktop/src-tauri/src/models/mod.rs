@@ -312,6 +312,29 @@ pub struct RemoteReadingSessionRow {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RemoteHighlightRow {
+    pub id: String,
+    pub user_id: String,
+    pub book_id: String,
+    pub cfi_range: Option<String>,
+    pub text_content: String,
+    pub note: Option<String>,
+    pub color: String,
+    pub page: Option<i64>,
+    pub updated_at_epoch_millis: i64,
+    pub deleted_at_epoch_millis: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpsertRemoteSummary {
+    pub applied: i64,
+    pub skipped_unknown_book: i64,
+    pub skipped_invalid: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SearchResultDto {
     pub chunk_id: String,
     pub book_id: String,

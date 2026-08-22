@@ -422,5 +422,24 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
     rangeOverlapsHighlight: rangeOverlapsHighlight,
     isReady: isReady
   };
+
+  // ─── Pointer cursor over rendered highlights ───────────────────
+  // CSS Custom Highlight API pseudo-elements are not hit-testable, so
+  // the browser keeps the default caret/text cursor when hovering a
+  // rendered highlight. Promote the body cursor to pointer while the
+  // caret (via hitTest) rests inside a registered range.
+  var cursorRaf = 0;
+  document.addEventListener('mousemove', function(ev) {
+    if (!HAS_CSS_HIGHLIGHTS) return;
+    if (cursorRaf) return;
+    cursorRaf = requestAnimationFrame(function() {
+      cursorRaf = 0;
+      try {
+        var over = typeof hitTest === 'function' ? hitTest(ev.clientX, ev.clientY) : null;
+        var want = over ? 'pointer' : '';
+        if (document.body && document.body.style.cursor !== want) document.body.style.cursor = want;
+      } catch (e) {}
+    });
+  }, true);
 })();
 `;

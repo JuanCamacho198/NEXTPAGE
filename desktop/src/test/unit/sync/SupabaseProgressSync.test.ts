@@ -394,3 +394,118 @@ describe('SupabaseProgressSync — reading sessions pull (D11/D14)', () => {
     expect(currentClient.channel.unsubscribe).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('SupabaseProgressSync — highlights pull (DHR-1..2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockHasLiveSession.mockReturnValue(false);
+    mockAuthUserId.mockReturnValue('u1');
+    currentClient = makeClient();
+  });
+
+  it('mapHighlightPullRow converts snake_case to camelCase with epoch updatedAt/deletedAt', () => {
+    const sync = makeSync();
+
+    const mapped = sync.mapHighlightPullRow({
+      id: 'hl_x',
+      user_id: 'u1',
+      book_id: 'b1',
+      cfi_range: 'epubcfi(/6/2)',
+      text_content: 'highlight text',
+      note: 'a note',
+      color: '#FACC15',
+      page: 5,
+      updated_at: '2026-08-13T10:30:00.000Z',
+      deleted_at: '2026-08-13T11:00:00.000Z',
+    });
+
+    expect(mapped).toEqual({
+      id: 'hl_x',
+      userId: 'u1',
+      bookId: 'b1',
+      cfiRange: 'epubcfi(/6/2)',
+      textContent: 'highlight text',
+      note: 'a note',
+      color: '#FACC15',
+      page: 5,
+      updatedAtEpochMillis: Date.parse('2026-08-13T10:30:00.000Z'),
+      deletedAtEpochMillis: Date.parse('2026-08-13T11:00:00.000Z'),
+    });
+  });
+
+  it('mapHighlightPullRow keeps nullable fields null and coerces page', () => {
+    const sync = makeSync();
+
+    const mapped = sync.mapHighlightPullRow({
+      id: 'hl_y',
+      user_id: 'u1',
+      book_id: 'b2',
+      cfi_range: null,
+      text_content: 'pdf highlight',
+      note: null,
+      color: '#4ADE80',
+      page: null,
+      updated_at: '2026-08-12T09:15:00.000Z',
+      deleted_at: null,
+    });
+
+    expect(mapped.cfiRange).toBeNull();
+    expect(mapped.note).toBeNull();
+    expect(mapped.page).toBeNull();
+    expect(mapped.deletedAtEpochMillis).toBeNull();
+  });
+
+  it('fetchAllHighlightsForPull returns [] when gated (no request)', async () => {
+    mockHasLiveSession.mockReturnValue(false);
+
+    await expect(makeSync().fetchAllHighlightsForPull()).resolves.toEqual([]);
+
+    expect(currentClient.client.from).not.toHaveBeenCalled();
+  });
+
+  it('fetchAllHighlightsForPull selects highlights filtered by user_id and maps rows', async () => {
+    mockHasLiveSession.mockReturnValue(true);
+    mockAuthUserId.mockReturnValue('u1');
+    currentClient.chain.eq.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'hl_x',
+          user_id: 'u1',
+          book_id: 'b1',
+          cfi_range: 'epubcfi(/6/2)',
+          text_content: 'text',
+          note: null,
+          color: '#FACC15',
+          page: 1,
+          updated_at: '2026-08-13T10:30:00.000Z',
+          deleted_at: null,
+        },
+      ],
+      error: null,
+    });
+
+    const rows = await makeSync().fetchAllHighlightsForPull();
+
+    expect(currentClient.client.from).toHaveBeenCalledWith('highlights');
+    expect(currentClient.chain.select).toHaveBeenCalledWith('*');
+    expect(currentClient.chain.eq).toHaveBeenCalledWith('user_id', 'u1');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      id: 'hl_x',
+      userId: 'u1',
+      bookId: 'b1',
+      textContent: 'text',
+      updatedAtEpochMillis: Date.parse('2026-08-13T10:30:00.000Z'),
+      deletedAtEpochMillis: null,
+    });
+  });
+
+  it('fetchAllHighlightsForPull throws on error', async () => {
+    mockHasLiveSession.mockReturnValue(true);
+    currentClient.chain.eq.mockResolvedValueOnce({ data: null, error: { message: 'db down' } });
+
+    await expect(makeSync().fetchAllHighlightsForPull()).rejects.toMatchObject({
+      message: 'db down',
+    });
+  });
+});

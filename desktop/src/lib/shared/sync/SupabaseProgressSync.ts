@@ -10,7 +10,7 @@
 import { getSessionClient, hasLiveSession } from '$lib/services/supabase';
 import { authState } from '$lib/stores/authState.svelte';
 import type { SupabaseClient, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import type { RemoteReadingSessionRow } from '$lib/shared/types';
+import type { RemoteHighlightRow, RemoteReadingSessionRow } from '$lib/shared/types';
 
 export interface SupabaseProgressRow {
   id?: string;
@@ -395,6 +395,47 @@ export class SupabaseProgressSync {
     if (error) throw error;
 
     return (data ?? []).map(this.mapHighlightRow);
+  }
+
+  // ─── Highlights (pull) ─────────────────────────────────────
+
+  /**
+   * Fetch all highlights rows for the current user (initial pull for WS2).
+   * Mirrors fetchReadingSessions: gated, full-table select filtered by user_id,
+   * rows mapped to RemoteHighlightRow for the Rust merge command. The caller
+   * chunks the result into 500-row invokes (bounded IPC, DHR-1..2).
+   */
+  async fetchAllHighlightsForPull(): Promise<RemoteHighlightRow[]> {
+    if (this.isGated()) return [];
+    const { data, error } = await this.supabase
+      .from('highlights')
+      .select('*')
+      .eq('user_id', this.userId);
+
+    if (error) throw error;
+
+    return (data ?? []).map((row) => this.mapHighlightPullRow(row as Record<string, unknown>));
+  }
+
+  /**
+   * Convert a raw Supabase `highlights` row (snake_case) to the typed
+   * RemoteHighlightRow the Rust upsertRemoteHighlights command expects
+   * (serde camelCase). `updated_at`/`deleted_at` ISO strings → epoch millis
+   * (mirrors mapReadingSessionRow); cfi nullable, PDF empty-CFI allowed.
+   */
+  mapHighlightPullRow(raw: Record<string, unknown>): RemoteHighlightRow {
+    return {
+      id: String(raw.id ?? ''),
+      userId: String(raw.user_id ?? ''),
+      bookId: String(raw.book_id ?? ''),
+      cfiRange: raw.cfi_range != null ? String(raw.cfi_range) : null,
+      textContent: String(raw.text_content ?? ''),
+      note: raw.note != null ? String(raw.note) : null,
+      color: String(raw.color ?? '#FACC15'),
+      page: raw.page != null ? Number(raw.page) : null,
+      updatedAtEpochMillis: Date.parse(String(raw.updated_at ?? '')),
+      deletedAtEpochMillis: raw.deleted_at != null ? Date.parse(String(raw.deleted_at)) : null,
+    };
   }
 
   // ─── Reading sessions (pull) ─────────────────────────────────────

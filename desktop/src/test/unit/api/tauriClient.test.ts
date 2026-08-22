@@ -24,6 +24,7 @@ import {
   updateHighlight,
   upsertReaderSettings,
   upsertRemoteReadingSessions,
+  upsertRemoteHighlights,
 } from '$lib/shared/api/tauriClient';
 
 describe('tauriClient reader settings', () => {
@@ -466,5 +467,28 @@ describe('tauriClient reading stats commands', () => {
 
     expect(invokeMock).toHaveBeenCalledWith('upsertRemoteReadingSessions', { rows });
     expect(result).toBe(2);
+  });
+
+  it('upsertRemoteHighlights invokes the command with the rows array and returns summary', async () => {
+    invokeMock.mockResolvedValueOnce({ applied: 1, skippedUnknownBook: 0, skippedInvalid: 0 });
+    const rows = [
+      {
+        id: 'hl_1',
+        userId: 'u1',
+        bookId: 'b1',
+        cfiRange: 'epubcfi(/6/2)',
+        textContent: 'highlight',
+        note: null,
+        color: '#FACC15',
+        page: 1,
+        updatedAtEpochMillis: 1786615200000,
+        deletedAtEpochMillis: null,
+      },
+    ];
+
+    const result = await upsertRemoteHighlights(rows);
+
+    expect(invokeMock).toHaveBeenCalledWith('upsertRemoteHighlights', { rows });
+    expect(result).toEqual({ applied: 1, skippedUnknownBook: 0, skippedInvalid: 0 });
   });
 });

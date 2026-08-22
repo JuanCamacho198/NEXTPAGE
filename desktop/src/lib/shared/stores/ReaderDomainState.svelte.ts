@@ -6,6 +6,7 @@ import {
   updateBookProgress,
   upsertProgress as upsertProgressCmd,
   upsertRemoteReadingSessions as upsertRemoteReadingSessionsCmd,
+  upsertRemoteHighlights as upsertRemoteHighlightsCmd,
   saveBookmark,
   deleteBookmark,
   saveHighlight,
@@ -406,6 +407,7 @@ class ReaderDomainState {
   private unsubscribeRemoteBookmarks: (() => void) | null = null;
   private unsubscribeRemoteHighlights: (() => void) | null = null;
   private unsubscribeRemoteSessions: (() => void) | null = null;
+  private highlightPullInFlight = false;
   private openEpoch = 0;
   private appliedRemote = new Map<string, string>();
 
@@ -498,7 +500,11 @@ class ReaderDomainState {
 
   /**
    * Subscribe to Realtime changes for highlights.
-   * When remote highlight changes arrive, upsert/delete into local SQLite.
+   * (1) Initial pull: fetch all remote highlights for the user and merge them
+   * into local SQLite in 500-row chunks via the Rust LWW command (DHR-1, DHR-5).
+   * Single-flight guard `highlightPullInFlight` ensures exactly one pull per
+   * sign-in cycle; reset only on unsubscribe (mirrors sessions pattern).
+   * (2) Realtime: on each remote change, upsert/delete into local SQLite.
    */
   subscribeToRemoteHighlights(): void {
     if (this.unsubscribeRemoteHighlights) return;
@@ -507,6 +513,33 @@ class ReaderDomainState {
     try {
       if (!this.supabaseSync) {
         this.supabaseSync = new SupabaseProgressSync(authState.userId);
+      }
+
+      // (1) Initial pull — bulk reconciliation (DHR-1..5, WS2)
+      if (!this.highlightPullInFlight) {
+        this.highlightPullInFlight = true;
+        void this.supabaseSync
+          .fetchAllHighlightsForPull()
+          .then((rows) => {
+            const chunkSize = 500;
+            for (let i = 0; i < rows.length; i += chunkSize) {
+              const chunk = rows.slice(i, i + chunkSize);
+              void upsertRemoteHighlightsCmd(chunk)
+                .then(() => {
+                  // Seed dedupe map post-chunk so late realtime duplicates are dropped (DHR-5)
+                  for (const h of chunk) {
+                    const iso = new Date(h.updatedAtEpochMillis).toISOString();
+                    this.appliedRemote.set(`highlight:${h.id}`, iso);
+                  }
+                })
+                .catch((e) => {
+                  console.error('Failed to apply remote highlights locally:', e);
+                });
+            }
+          })
+          .catch((e) => {
+            console.error('Failed to fetch remote highlights:', e);
+          });
       }
 
       this.unsubscribeRemoteHighlights = this.supabaseSync.subscribeToHighlights((payload) => {
@@ -621,6 +654,7 @@ class ReaderDomainState {
   unsubscribeFromRemoteHighlights(): void {
     this.unsubscribeRemoteHighlights?.();
     this.unsubscribeRemoteHighlights = null;
+    this.highlightPullInFlight = false;
   }
 
   /**

@@ -405,7 +405,7 @@ class SupabaseProgressSyncTest {
         mockSessionManager = mockk(relaxed = true)
         mockDataSource = mockk(relaxed = true)
         var ensureCalls = 0
-        coEvery { mockSessionManager.getCurrentSession() } returns Result.failure(IllegalStateException("no session"))
+        coEvery { mockSessionManager.getCurrentSession() } returns Result.success(AuthSession(userId = "test-user", email = "test@example.com"))
         coEvery { mockSessionManager.ensureFreshSession() } answers {
             ensureCalls++
             Result.failure(IllegalStateException("refresh failed"))

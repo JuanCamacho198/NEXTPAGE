@@ -6,7 +6,7 @@ use nextpage_desktop::commands::list_library_books_internal;
 use nextpage_desktop::db::open_and_migrate;
 use nextpage_desktop::models::{
     ActivityPoint, AppSettingDto, BookDto, ListLibraryBooksInput, ReadingSessionInput,
-    RemoteReadingSessionRow,
+    RemoteHighlightRow, RemoteReadingSessionRow,
 };
 use nextpage_desktop::repository::LibraryRepository;
 use uuid::Uuid;
@@ -522,4 +522,99 @@ fn upsert_remote_reading_sessions_merges_through_facade() {
     assert_eq!(applied, 0);
 
     let _ = fs::remove_file(db_path);
+}
+
+#[test]
+fn upsert_remote_highlights_merges_through_facade_and_summary_round_trips() {
+    let db_path = temp_db_path();
+    let connection = open_and_migrate(&db_path).unwrap();
+    let repository = LibraryRepository::new(connection);
+    insert_test_book(&repository, "book-highlight-merge");
+
+    // Valid EPUB highlight + FK-guarded unknown book (DHR-3)
+    let valid = RemoteHighlightRow {
+        id: "hl_remote_1".to_string(),
+        user_id: "u-remote".to_string(),
+        book_id: "book-highlight-merge".to_string(),
+        cfi_range: Some("epubcfi(/6/2)".to_string()),
+        text_content: "highlight text".to_string(),
+        note: Some("a note".to_string()),
+        color: "#FACC15".to_string(),
+        page: Some(1),
+        updated_at_epoch_millis: 1_700_000_000_000,
+        deleted_at_epoch_millis: None,
+    };
+    let unknown = RemoteHighlightRow {
+        id: "hl_remote_2".to_string(),
+        user_id: "u-remote".to_string(),
+        book_id: "book-not-installed".to_string(),
+        cfi_range: Some("epubcfi(/6/2)".to_string()),
+        text_content: "orphan".to_string(),
+        note: None,
+        color: "#FACC15".to_string(),
+        page: Some(1),
+        updated_at_epoch_millis: 1_700_000_000_001,
+        deleted_at_epoch_millis: None,
+    };
+
+    let summary = repository.upsert_remote_highlights(&[valid, unknown]).unwrap();
+    assert_eq!(summary.applied, 1);
+    assert_eq!(summary.skipped_unknown_book, 1);
+    assert_eq!(summary.skipped_invalid, 0);
+
+    // Serde camelCase contract
+    let json = serde_json::to_value(&summary).unwrap();
+    assert!(json.get("applied").is_some());
+    assert!(json.get("skippedUnknownBook").is_some());
+    assert!(json.get("skippedInvalid").is_some());
+
+    let (text, color, cfi, updated_at): (String, String, Option<String>, String) = repository
+        .connection()
+        .query_row(
+            "SELECT text, color, cfi, updated_at FROM highlights WHERE id = 'hl_remote_1'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )
+        .unwrap();
+    assert_eq!(text, "highlight text");
+    assert_eq!(color, "#FACC15");
+    assert_eq!(cfi.as_deref(), Some("epubcfi(/6/2)"));
+    let stored_epoch = chrono::DateTime::parse_from_rfc3339(&updated_at)
+        .unwrap()
+        .timestamp_millis();
+    assert_eq!(stored_epoch, 1_700_000_000_000);
+
+    let _ = fs::remove_file(db_path);
+}
+
+#[test]
+fn upsert_remote_highlights_summary_serde_contract() {
+    let summary = nextpage_desktop::models::UpsertRemoteSummary {
+        applied: 2,
+        skipped_unknown_book: 1,
+        skipped_invalid: 3,
+    };
+    let json = serde_json::to_value(&summary).unwrap();
+    assert_eq!(json.get("applied").unwrap().as_i64().unwrap(), 2);
+    assert_eq!(json.get("skippedUnknownBook").unwrap().as_i64().unwrap(), 1);
+    assert_eq!(json.get("skippedInvalid").unwrap().as_i64().unwrap(), 3);
+
+    // Remote row camelCase contract
+    let row = RemoteHighlightRow {
+        id: "hl-1".to_string(),
+        user_id: "u1".to_string(),
+        book_id: "b1".to_string(),
+        cfi_range: Some("epubcfi(/6/1)".to_string()),
+        text_content: "x".to_string(),
+        note: None,
+        color: "#FACC15".to_string(),
+        page: Some(1),
+        updated_at_epoch_millis: 1000,
+        deleted_at_epoch_millis: Some(2000),
+    };
+    let row_json = serde_json::to_value(&row).unwrap();
+    assert!(row_json.get("cfiRange").is_some());
+    assert!(row_json.get("textContent").is_some());
+    assert!(row_json.get("updatedAtEpochMillis").is_some());
+    assert!(row_json.get("deletedAtEpochMillis").is_some());
 }

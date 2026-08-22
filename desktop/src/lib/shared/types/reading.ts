@@ -73,6 +73,31 @@ export type RemoteReadingSessionRow = {
   endPercentage?: number | null;
 };
 
+/**
+ * Row sent to the Rust `upsertRemoteHighlights` command (serde camelCase).
+ * Produced on the pull path by mapping a Supabase `highlights` row via
+ * SupabaseProgressSync.mapHighlightPullRow: `updated_at`/`deleted_at` ISO
+ * strings → epoch millis, cfiRange nullable, PDF empty-CFI allowed.
+ */
+export type RemoteHighlightRow = {
+  id: string;
+  userId: string;
+  bookId: string;
+  cfiRange?: string | null;
+  textContent: string;
+  note?: string | null;
+  color: string;
+  page?: number | null;
+  updatedAtEpochMillis: number;
+  deletedAtEpochMillis?: number | null;
+};
+
+export type UpsertRemoteSummary = {
+  applied: number;
+  skippedUnknownBook: number;
+  skippedInvalid: number;
+};
+
 export type CommandErrorDto = {
   code: string;
   message: string;

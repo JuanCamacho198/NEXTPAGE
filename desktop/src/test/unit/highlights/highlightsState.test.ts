@@ -44,17 +44,37 @@ describe('resolveHighlightHex', () => {
   });
 
   it('resolves lowercase hex case-insensitively', () => {
-    expect(resolveHighlightHex('#c084fc')).toBe('#c084fc');
+    expect(resolveHighlightHex('#facc15')).toBe('#facc15');
+    expect(resolveHighlightHex('#ef4444')).toBe('#ef4444');
+  });
+
+  it('resolves legacy hexes to their pinned canonical targets', () => {
+    expect(resolveHighlightHex('#60A5FA')).toBe('#3b82f6');
+    expect(resolveHighlightHex('#c084fc')).toBe('#3b82f6');
+    expect(resolveHighlightHex('#FB923C')).toBe('#f97316');
+    expect(resolveHighlightHex('#f472b6')).toBe('#ef4444');
   });
 
   it('resolves legacy key values', () => {
     expect(resolveHighlightHex('yellow')).toBe('#facc15');
-    expect(resolveHighlightHex('purple')).toBe('#c084fc');
+    expect(resolveHighlightHex('red')).toBe('#ef4444');
   });
 
-  it('falls back to canonical blue for unknown values', () => {
-    expect(resolveHighlightHex('#123456')).toBe('#60a5fa');
-    expect(resolveHighlightHex('')).toBe('#60a5fa');
+  it('falls back to canonical yellow for removed legacy keys', () => {
+    // 'purple'/'pink' are no longer palette keys; they are unparseable as
+    // hex, so the resolver falls back to DEFAULT_HIGHLIGHT_COLOR.
+    expect(resolveHighlightHex('purple')).toBe('#facc15');
+    expect(resolveHighlightHex('pink')).toBe('#facc15');
+  });
+
+  it('falls back to canonical yellow for unknown values', () => {
+    expect(resolveHighlightHex('')).toBe('#facc15');
+    expect(resolveHighlightHex('not-a-color')).toBe('#facc15');
+  });
+
+  it('resolves unknown but parseable hexes inside the canonical palette', () => {
+    const resolved = resolveHighlightHex('#123456');
+    expect(HIGHLIGHT_COLORS.map((c) => c.hex)).toContain(resolved);
   });
 
   it('covers every palette entry by hex and key', () => {
@@ -77,12 +97,16 @@ describe('filterHighlights color filter', () => {
     expect(result.map((h) => h.id)).toEqual(['yellow-hl']);
   });
 
-  it('matches legacy key values directly', () => {
-    const highlights = [makeHighlight({ id: 'legacy', color: 'purple' })];
+  it('matches legacy stored hexes to their pinned canonical chip', () => {
+    const highlights = [
+      makeHighlight({ id: 'legacy-blue', color: '#60A5FA' }),
+      makeHighlight({ id: 'legacy-purple', color: '#c084fc' }),
+      makeHighlight({ id: 'canonical-red', color: '#EF4444' }),
+    ];
 
-    const result = filterHighlights(highlights, '', 'purple', '', '', books);
+    const result = filterHighlights(highlights, '', 'blue', '', '', books);
 
-    expect(result.map((h) => h.id)).toEqual(['legacy']);
+    expect(result.map((h) => h.id)).toEqual(['legacy-blue', 'legacy-purple']);
   });
 
   it('does not match a hex stored under a different palette key', () => {

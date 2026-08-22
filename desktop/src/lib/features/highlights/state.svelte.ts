@@ -1,5 +1,10 @@
 import type { HighlightDto, LibraryBookDto } from '$lib/types';
 import type { MessageKey } from '$lib/shared/i18n';
+import {
+  HIGHLIGHT_COLORS as CANONICAL_HIGHLIGHT_COLORS,
+  nearestHighlightHex,
+  type HighlightColorId,
+} from '$lib/features/reader/highlight/highlightColors';
 
 export type Props = {
   books: LibraryBookDto[];
@@ -8,29 +13,29 @@ export type Props = {
 
 export const PAGE_SIZE = 6;
 
-export const HIGHLIGHT_COLORS = [
-  { key: 'yellow', hex: '#facc15' },
-  { key: 'green', hex: '#4ade80' },
-  { key: 'blue', hex: '#60a5fa' },
-  { key: 'purple', hex: '#c084fc' },
-  { key: 'pink', hex: '#f472b6' },
-  { key: 'orange', hex: '#fb923c' },
-] as const;
+/**
+ * Filter-chip palette for the library screen, derived from the canonical
+ * reader palette so both menus always offer exactly the same five
+ * Android-canonical colors (spec HPU-1).
+ */
+export const HIGHLIGHT_COLORS: ReadonlyArray<{ key: HighlightColorId; hex: string }> =
+  CANONICAL_HIGHLIGHT_COLORS.map((color) => ({ key: color.label, hex: color.hex.toLowerCase() }));
 
-export type HighlightColorKey = (typeof HIGHLIGHT_COLORS)[number]['key'];
+export type HighlightColorKey = HighlightColorId;
 
 /**
- * Resolve a stored highlight color (hex like `#FACC15` or a legacy key like
- * `yellow`) to its display hex. The reader persists hex values, while older
- * rows may hold keys, so both forms are matched case-insensitively.
- * Falls back to the canonical blue for unknown values.
+ * Resolve a stored highlight color (hex like `#FACC15`, a legacy hex like
+ * `#60A5FA`, or a legacy key like `yellow`) to its display hex. The reader
+ * persists hex values, while older rows may hold keys, so both forms are
+ * matched case-insensitively first; anything else goes through the shared
+ * nearest-RGB resolver, which pins legacy hexes to their canonical targets
+ * and falls back to canonical yellow for unknown values (spec HPU-2).
  */
 export function resolveHighlightHex(color: string): string {
-  const normalized = color.toLowerCase();
-  const match = HIGHLIGHT_COLORS.find(
-    (c) => c.key === normalized || c.hex.toLowerCase() === normalized,
-  );
-  return match?.hex ?? '#60a5fa';
+  const normalized = color.trim().toLowerCase();
+  const keyMatch = HIGHLIGHT_COLORS.find((c) => c.key === normalized);
+  if (keyMatch) return keyMatch.hex;
+  return nearestHighlightHex(normalized).toLowerCase();
 }
 
 export function formatDate(iso: string): string {
@@ -82,13 +87,15 @@ export function filterHighlights(
   }
 
   if (selectedColor) {
-    // Stored colors are hex (reader/Android/Supabase), filter chips use keys —
-    // match both forms.
-    const selectedHex = HIGHLIGHT_COLORS.find((c) => c.key === selectedColor)?.hex.toLowerCase();
+    // Stored colors are canonical or legacy hexes (reader/Android/Supabase);
+    // filter chips use keys. Resolve each stored color through the shared
+    // nearest-RGB resolver so legacy rows keep matching their pinned
+    // canonical chip, and match legacy key rows directly.
+    const selectedHex = HIGHLIGHT_COLORS.find((c) => c.key === selectedColor)?.hex;
     result = result.filter(
       (h) =>
-        h.color.toLowerCase() === selectedColor ||
-        (selectedHex !== undefined && h.color.toLowerCase() === selectedHex),
+        h.color.trim().toLowerCase() === selectedColor ||
+        (selectedHex !== undefined && resolveHighlightHex(h.color) === selectedHex),
     );
   }
 

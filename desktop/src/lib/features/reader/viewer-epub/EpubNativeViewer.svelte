@@ -35,6 +35,7 @@
     spineIndexForToc as pureSpineIndexForToc,
     tocIndexForSpine as pureTocIndexForSpine,
   } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
+  import { updateHighlight } from '$lib/shared/api/tauriClient';
 
   // ─── Types ───────────────────────────────────────────────
   interface EpubChapterMeta {
@@ -356,6 +357,11 @@
       return;
     }
 
+    if (event.data.type === 'epub-hl-placed') {
+      handleEpubHighlightPlaced(event.data);
+      return;
+    }
+
     if (event.data.type !== 'epub-selection') {
       if (debugState.enabled) debugState.epub.guardResult = 'drop-unknown-type';
       return;
@@ -450,6 +456,22 @@
       reason: msg.reason,
       pageNumber: msg.pageNumber,
     });
+  }
+
+  // ─── epub-hl-placed: persist text-anchor derived page ─────────
+  // When the overlay places a highlight by its stored text (Android
+  // highlights whose locator is missing or not an epubcfi), it reports
+  // the spine index where the text was actually found. Persist that
+  // derived pageNumber (fire-and-forget) and patch the local
+  // persistedHighlights entry in place so subsequent renders match the
+  // spine gate directly instead of redoing the fallback.
+  function handleEpubHighlightPlaced(msg: { id: string; pageNumber: number }): void {
+    if (!msg?.id || typeof msg.pageNumber !== 'number') return;
+    const idx = persistedHighlights.findIndex((h) => h.id === msg.id);
+    if (idx >= 0 && persistedHighlights[idx].pageNumber !== msg.pageNumber) {
+      persistedHighlights[idx] = { ...persistedHighlights[idx], pageNumber: msg.pageNumber };
+    }
+    void updateHighlight({ id: msg.id, pageNumber: msg.pageNumber }).catch(() => {});
   }
 
   function syncIframeHeight(): void {

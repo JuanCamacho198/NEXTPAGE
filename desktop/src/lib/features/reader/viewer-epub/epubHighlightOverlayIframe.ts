@@ -153,6 +153,71 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
     return false;
   }
 
+  // ─── Text-anchor fallback ──────────────────────────────────────
+  // Android-authored highlights can store a non-epubcfi locator (e.g.
+  // "readium:OEBPS/Text/cap1.xhtml") with pageNumber normalized to 1,
+  // so neither the spine gate nor CFI resolution applies. When the
+  // highlight carries its source text, locate that text in the chapter
+  // DOM instead: whitespace-insensitive first match across concatenated
+  // text nodes, mapped back to a DOM Range. Returns null when nothing
+  // usable is found (short needle, no match, mapping failure).
+  function findTextRange(doc, needle) {
+    try {
+      var target = String(needle || '').replace(/\\s+/g, ' ').trim();
+      if (target.length < 3) return null;
+      var root = doc.body || doc.documentElement;
+      if (!root) return null;
+      var walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: function(n) {
+          var parent = n.parentNode;
+          if (parent && (parent.nodeName === 'SCRIPT' || parent.nodeName === 'STYLE')) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+      var full = '';
+      var nodes = [];
+      var node = walker.nextNode();
+      while (node) {
+        nodes.push({ node: node, start: full.length });
+        full += node.nodeValue;
+        node = walker.nextNode();
+      }
+      if (!nodes.length) return null;
+      var words = target.split(/\\s+/);
+      var parts = [];
+      for (var w = 0; w < words.length; w++) {
+        parts.push(words[w].replace(/[.*+?^$()\\[\\]{}\\\\]/g, '\\\\$&'));
+      }
+      var re = new RegExp(parts.join('\\\\s+'));
+      var m = re.exec(full);
+      if (!m) return null;
+
+      // Map a global offset in 'full' back to (text node, local offset).
+      // Backward walk is safe: 'full' is the exact concatenation of the
+      // accepted nodes' values, so every match offset lands inside one.
+      function locate(offset) {
+        for (var k = nodes.length - 1; k >= 0; k--) {
+          if (offset >= nodes[k].start) {
+            return { node: nodes[k].node, offset: offset - nodes[k].start };
+          }
+        }
+        return null;
+      }
+      var startPos = locate(m.index);
+      var endPos = locate(m.index + m[0].length);
+      if (!startPos || !endPos) return null;
+      var range = doc.createRange();
+      range.setStart(startPos.node, startPos.offset);
+      range.setEnd(endPos.node, endPos.offset);
+      return range.collapsed ? null : range;
+    } catch (eFind) {
+      return null;
+    }
+  }
+
   // ─── Registration-based render ─────────────────────────────────
   // Per-id side table mirroring the per-color registry: rebuilt on
   // every full re-register. Hit-testing, delete and recolor are per-id
@@ -220,29 +285,73 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
     var skippedInvalidColor = 0;
     var failedUnresolved = 0;
     var matchedChapter = 0;
+    var placedByText = 0;
+
+    // Report a text-anchor placement to the parent so it can persist
+    // the derived spine page for this highlight (mirrors postFailure).
+    function postPlaced(id, pageNumber) {
+      try {
+        window.parent.postMessage({
+          type: 'epub-hl-placed',
+          id: id,
+          pageNumber: pageNumber
+        }, '*');
+      } catch (ePost) {
+        console.warn('epub-hl: failed to post placement message', ePost);
+      }
+    }
+
+    // Text-anchor placement fallback: Android-authored highlights can
+    // carry a non-epubcfi locator with an unreliable pageNumber. When
+    // the stored text is found in this chapter's DOM, the highlight is
+    // placed here and the parent is told where it landed.
+    function tryPlaceByText(hlObj) {
+      if (typeof hlObj.text !== 'string' || !hlObj.text) return null;
+      var textRange = findTextRange(doc, hlObj.text);
+      if (textRange && !textRange.collapsed) {
+        placedByText++;
+        postPlaced(hlObj.id, currentChapterIndex);
+        return textRange;
+      }
+      return null;
+    }
+
     for (var i = 0; i < highlights.length; i++) {
       var hl = highlights[i];
-      if (!hl || hl.pageNumber !== currentChapterIndex) {
-        if (hl) console.warn('epub-hl: skip page mismatch hl '+hl.pageNumber+' vs current '+currentChapterIndex+' id='+String(hl.id).slice(0,4));
-        continue;
-      }
-      matchedChapter++;
-      if (!hl.cfi) continue; // legacy or PDF
       var range = null;
-      try {
-        if (window.__cfiBridge && typeof window.__cfiBridge.cfiToRange === 'function') {
-          range = window.__cfiBridge.cfiToRange(hl.cfi, chapterHref, doc);
-        } else {
-          skippedNoBridge++;
+      if (!hl || hl.pageNumber !== currentChapterIndex) {
+        // Page gate miss: before skipping, attempt text-anchor
+        // placement when the highlight carries usable text.
+        range = hl ? tryPlaceByText(hl) : null;
+        if (!range) {
+          if (hl) console.warn('epub-hl: skip page mismatch hl '+hl.pageNumber+' vs current '+currentChapterIndex+' id='+String(hl.id).slice(0,4));
+          continue;
         }
-      } catch (e) {
-        range = null;
-      }
-      if (!range) {
-        console.warn('epub-hl: cfi did not resolve for highlight', hl.id, 'page=' + hl.pageNumber + ' cfi=' + hl.cfi);
-        failedUnresolved++;
-        postFailure(hl.id, 'cfi-unresolved', currentChapterIndex);
-        continue;
+      } else {
+        matchedChapter++;
+        if (hl.cfi) {
+          try {
+            if (window.__cfiBridge && typeof window.__cfiBridge.cfiToRange === 'function') {
+              range = window.__cfiBridge.cfiToRange(hl.cfi, chapterHref, doc);
+            } else {
+              skippedNoBridge++;
+            }
+          } catch (e) {
+            range = null;
+          }
+        }
+        if (!range && (!hl.cfi || String(hl.cfi).indexOf('epubcfi(') !== 0)) {
+          // Page matches but the locator is absent or not an epubcfi:
+          // fall back to placing by the stored text before giving up.
+          range = tryPlaceByText(hl);
+        }
+        if (!range) {
+          if (!hl.cfi) continue; // legacy or PDF (unchanged silent skip)
+          console.warn('epub-hl: cfi did not resolve for highlight', hl.id, 'page=' + hl.pageNumber + ' cfi=' + hl.cfi);
+          failedUnresolved++;
+          postFailure(hl.id, 'cfi-unresolved', currentChapterIndex);
+          continue;
+        }
       }
       // Chromium throws NotSupportedError when a collapsed range is
       // registered, so skip zero-length CFI ranges.
@@ -299,7 +408,8 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
       ' received=' + highlights.length + ' matchedChapter=' + matchedChapter +
       ' resolved=' + rangeCount + ' unresolved=' + failedUnresolved +
       ' collapsed=' + skippedCollapsed + ' invalidColor=' + skippedInvalidColor +
-      ' noBridgeAtResolve=' + skippedNoBridge);
+      ' noBridgeAtResolve=' + skippedNoBridge +
+      ' placedByText=' + placedByText);
   }
 
   function isReady() {

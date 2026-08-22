@@ -93,6 +93,7 @@ class HomeRepositoryImpl(
         return (minutesRead.toFloat() / dailyGoal.coerceAtLeast(1)).coerceIn(0f, 1f)
     }
 
+    @Suppress("DEPRECATION")
     private fun com.nextpage.data.local.entity.BookEntity.toBook(): Book = Book(
         id = id,
         title = title,

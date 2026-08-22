@@ -27,6 +27,7 @@ import com.nextpage.presentation.viewmodel.library.BookImportStateHolder
 import com.nextpage.presentation.viewmodel.library.isImporting
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -180,6 +181,7 @@ sealed interface DownloadState {
  * @param appContext Application context (used by the action holder to read file metadata).
  * @param mainDispatcher Dispatcher for state updates; defaults to [Dispatchers.Main].
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class LibraryViewModel(
     private val libraryRepository: LibraryRepository,
     private val importEpubBookUseCase: ImportEpubBookUseCase,

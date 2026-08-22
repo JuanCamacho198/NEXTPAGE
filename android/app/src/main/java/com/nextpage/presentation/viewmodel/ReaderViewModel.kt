@@ -31,6 +31,7 @@ import com.nextpage.presentation.viewmodel.reader.SearchStateHolder
 import com.nextpage.presentation.viewmodel.reader.SleepTimerManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -450,6 +451,7 @@ class ReaderUiState(
  * @param dictionaryRepository Optional dictionary backing for the "add to dictionary" flow.
  * @param mainDispatcher Dispatcher for state-collection coroutines. Defaults to [Dispatchers.Main].
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ReaderViewModel(
     application: Application,
     private val readerRepository: ReaderRepository,

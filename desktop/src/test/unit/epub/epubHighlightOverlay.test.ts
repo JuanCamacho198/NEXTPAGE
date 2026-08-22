@@ -64,7 +64,13 @@ class HighlightRegistryMock {
 interface OverlayWindow extends Window {
   __epubHighlightOverlay?: {
     render: (
-      highlights: Array<{ id: string; color: string; pageNumber: number; cfi: string | null }>,
+      highlights: Array<{
+        id: string;
+        color: string;
+        pageNumber: number;
+        cfi: string | null;
+        text?: string | null;
+      }>,
       chapterHref: string,
       currentChapterIndex: number,
     ) => void;
@@ -661,5 +667,94 @@ describe('epubHighlightOverlay — deferred render when bridge not ready', () =>
     expect(failures.length).toBe(1);
     expect(failures[0].reason).toBe('cfi-unresolved');
     expect(registry.names()).not.toContain('epub-hl-yellow');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────
+// Text-anchor placement fallback: Android-created highlights can store
+// a non-epubcfi locator (e.g. "readium:OEBPS/Text/cap1.xhtml") with a
+// pageNumber normalized away from the spine index, so neither the
+// spine gate nor CFI resolution applies. When the highlight carries its
+// source text, the overlay must place it by that anchor, report
+// `epub-hl-placed` to the parent, and skip only when no usable text
+// anchor exists.
+// ────────────────────────────────────────────────────────────────────
+describe('epubHighlightOverlay — text-anchor placement fallback', () => {
+  it('places a page-mismatched highlight by its stored text and posts epub-hl-placed', () => {
+    const { win, registry, messages } = setupOverlay();
+
+    win.__epubHighlightOverlay!.render(
+      [
+        {
+          id: 'android-hl',
+          color: '#FACC15',
+          pageNumber: 1,
+          cfi: null,
+          text: 'Contiene algo de texto para resaltar.',
+        },
+      ],
+      CHAPTER_HREF,
+      0,
+    );
+
+    // Registered like a CFI-resolved highlight (yellow group, exact text).
+    expect(registry.names()).toEqual(['epub-hl-yellow']);
+    expect(registry.rangesFor('epub-hl-yellow').length).toBe(1);
+    expect(registry.rangesFor('epub-hl-yellow')[0].toString().trim()).toBe(
+      'Contiene algo de texto para resaltar.',
+    );
+    // The parent learns where the highlight actually landed so it can
+    // persist the derived spine page.
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        type: 'epub-hl-placed',
+        id: 'android-hl',
+        pageNumber: 0,
+      }),
+    );
+  });
+
+  it('still skips page-mismatched highlights whose text anchor is too short', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { win, registry, messages } = setupOverlay();
+      win.__epubHighlightOverlay!.render(
+        [{ id: 'tiny-hl', color: '#FACC15', pageNumber: 5, cfi: null, text: 'ab' }],
+        CHAPTER_HREF,
+        0,
+      );
+      expect(registry.names().length).toBe(0);
+      expect(messages.some((m) => m.type === 'epub-hl-placed')).toBe(false);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('falls back to the stored text when a page-matched locator is not an epubcfi and fails to resolve', () => {
+    const { win, registry, messages } = setupOverlay();
+    win.__epubHighlightOverlay!.render(
+      [
+        {
+          id: 'readium-hl',
+          color: '#4ADE80',
+          pageNumber: 0,
+          cfi: 'readium:OEBPS/Text/cap1.xhtml',
+          text: 'Tercer parrafo. Y este completa la seleccion.',
+        },
+      ],
+      CHAPTER_HREF,
+      0,
+    );
+
+    // Placed by text instead of posting epub-hl-failed.
+    expect(registry.names()).toEqual(['epub-hl-green']);
+    expect(messages.some((m) => m.type === 'epub-hl-failed')).toBe(false);
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        type: 'epub-hl-placed',
+        id: 'readium-hl',
+        pageNumber: 0,
+      }),
+    );
   });
 });

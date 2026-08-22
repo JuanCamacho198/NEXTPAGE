@@ -7,6 +7,10 @@
   };
 
   import type { MessageKey } from '$lib/shared/i18n';
+  // Stored highlight colors may hold legacy hexes; resolve each through the
+  // shared nearest-RGB resolver so they render as their pinned canonical
+  // target (spec HPU-2).
+  import { nearestHighlightHex } from './pdfSelection';
 
   type Props = {
     persistedHighlights: PersistedHighlight[];
@@ -30,12 +34,13 @@
 <div class="absolute inset-0 z-1 pointer-events-none" role="presentation">
   {#each persistedHighlights.filter((h) => h.pageNumber === currentPage) as hl (hl.id)}
     {#each hl.rects as rect, index (`${hl.id}-${index}`)}
+      {@const resolvedColor = nearestHighlightHex(hl.color)}
       <div
         class="absolute rounded pointer-events-auto cursor-pointer"
         class:z-3={activeHighlightId === hl.id}
         style="left: {rect.left * scale}px; top: {rect.top * scale}px; width: {rect.width *
           scale}px; height: {rect.height *
-          scale}px; --highlight-color: {hl.color}; background: color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--highlight-color, #FACC15) 25%, transparent);"
+          scale}px; --highlight-color: {resolvedColor}; background: color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--highlight-color, #FACC15) 25%, transparent);"
         onmouseenter={(e) => {
           (e.currentTarget as HTMLElement).style.background =
             `color-mix(in srgb, var(--highlight-color, #FACC15) 60%, transparent)`;

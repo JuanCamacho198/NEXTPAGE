@@ -24,6 +24,7 @@
   import {
     HIGHLIGHT_COLORS,
     highlightFillRgba,
+    nearestHighlightHex,
   } from '$lib/features/reader/highlight/highlightColors';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
   import { locatorFromCfi, locatorToJson, normalizeHref } from '$lib/shared/sync/LocatorCodec';
@@ -1200,13 +1201,16 @@
     // because refreshReaderStyles() rewrites that element's textContent
     // on every settings change and would wipe the rules. One rule per
     // canonical color (the overlay maps every highlight to a canonical
-    // color before registering, so static rules suffice). Injecting
-    // here means the rules survive settings changes and chapter reloads.
+    // color before registering, so static rules suffice). Each hex is
+    // resolved through nearestHighlightHex before the rgba conversion so
+    // the fill always derives from the canonical palette (HPU-2).
+    // Injecting here means the rules survive settings changes and chapter
+    // reloads.
     const highlightStyle = doc.createElement('style');
     highlightStyle.id = 'nextpage-highlight-styles';
     highlightStyle.textContent = HIGHLIGHT_COLORS.map(
       (color) =>
-        `::highlight(epub-hl-${color.label}) { background-color: ${highlightFillRgba(color.hex, 0.4)}; }`,
+        `::highlight(epub-hl-${color.label}) { background-color: ${highlightFillRgba(nearestHighlightHex(color.hex), 0.4)}; }`,
     ).join('\n');
     doc.head.appendChild(highlightStyle);
 

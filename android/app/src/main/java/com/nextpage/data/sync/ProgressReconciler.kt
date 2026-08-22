@@ -17,6 +17,7 @@ class ProgressReconciler(
     private val bookDao: BookDao,
     private val readingProgressDao: ReadingProgressDao
 ) {
+    @Suppress("DEPRECATION")
     suspend fun reconcile(bookId: String) = withContext(Dispatchers.IO) {
         val book = bookDao.getBookById(bookId) ?: return@withContext
         val progress = readingProgressDao.getProgressForBook(bookId)

@@ -684,9 +684,9 @@ internal fun highlightsToDecorations(
             ?: fallbackLocatorFromCfi(h.cfiRange, readingOrder)
             ?: run {
                 val reason = when {
-                    h.cfiRange == null && h.locatorJson == null -> "both cfi and locator null"
-                    h.cfiRange?.startsWith("epubcfi(") == true -> "epubcfi parse failed"
-                    h.cfiRange?.startsWith("readium:") == true -> "readium href not resolved"
+                    h.locatorJson == null && h.cfiRange.isBlank() -> "both cfi and locator null"
+                    h.cfiRange.startsWith("epubcfi(") -> "epubcfi parse failed"
+                    h.cfiRange.startsWith("readium:") -> "readium href not resolved"
                     else -> "fallback returned null"
                 }
                 DebugLog.warn(

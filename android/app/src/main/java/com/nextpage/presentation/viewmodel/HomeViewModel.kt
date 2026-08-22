@@ -15,6 +15,7 @@ import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.usecase.GetBookProgressUseCase
 import com.nextpage.domain.usecase.GetStatisticsUseCase
 import com.nextpage.presentation.UiEvent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -51,6 +52,7 @@ data class HomeUiState(
     val progressPercentByBook: Map<String, Float> = emptyMap()
 ) 
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     private val homeRepository: HomeRepository,
     private val getStatisticsUseCase: GetStatisticsUseCase,

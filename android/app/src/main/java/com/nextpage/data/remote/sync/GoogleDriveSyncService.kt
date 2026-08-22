@@ -39,8 +39,7 @@ class GoogleDriveSyncService(
     private val isEnabled: () -> Boolean = { false },
     private val tokenRefresher: suspend () -> Result<String> = { Result.failure(AppError(ErrorCategory.CONFIG_ERROR, "SYNC_NO_REFRESHER", "Drive token refresher not configured.", COMPONENT)) },
     private val diagnosticError: AppError? = null,
-    private val maxRetries: Int = DEFAULT_MAX_RETRIES,
-    private val jsonStateSync: GoogleDriveJsonStateSync = GoogleDriveJsonStateSync(remoteDataSource)
+    private val maxRetries: Int = DEFAULT_MAX_RETRIES
 ) : SyncService {
 
     private val state = MutableStateFlow<SyncState>(if (isEnabled()) SyncState.Idle else SyncState.Disabled)

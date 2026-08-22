@@ -279,6 +279,7 @@ class LibraryRepositoryImpl(
             null
         }
 
+    @Suppress("DEPRECATION")
     private fun BookEntity.toDomain(): Book = Book(
         id = id,
         title = title,
@@ -338,6 +339,7 @@ class LibraryRepositoryImpl(
         updatedAtEpochMillis = updatedAtEpochMillis
     )
 
+    @Suppress("DEPRECATION")
     private fun Book.toEntity(): BookEntity = BookEntity(
         id = id,
         title = title,

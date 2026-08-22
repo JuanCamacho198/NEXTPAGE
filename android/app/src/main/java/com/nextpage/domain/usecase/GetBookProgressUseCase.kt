@@ -43,6 +43,7 @@ class GetBookProgressUseCase(
      * Canonical progress percent merging readingProgressDao and bookDao.
      * reading_progress.percentage is canonical; bookDao progress is fallback cache.
      */
+    @Suppress("DEPRECATION")
     fun observeProgressPercent(bookId: String): Flow<Float> {
         val dao = readingProgressDao
         val bDao = bookDao

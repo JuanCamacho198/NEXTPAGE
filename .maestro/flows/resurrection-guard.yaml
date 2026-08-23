@@ -15,13 +15,17 @@ tags: [regression, sync]
 - waitForAnimationToEnd:
     timeout: 3000
 
-# ── Fixture gate: the seeded highlight row must exist before we delete it ──
+# ── Fixture gate: the seeded highlight row must exist before we delete it.
+#    extendedWaitUntil per design D5: cold-start list load may lag the
+#    default assert window; poll up to 20s. ──────────────────────────────────
 - runFlow:
     file: ../lib/nav-to-tab.yaml
     env:
       TAB: "Resaltados"
-- assertVisible:
-    text: ".*Orestes Atrida.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*Orestes Atrida.*"
+    timeout: 20000
 
 # ── Delete via card menu (full-string matching scopes each tap) ────────────
 - tapOn: "Más opciones"          # card overflow menu (content-desc)
@@ -54,6 +58,10 @@ tags: [regression, sync]
     env:
       TAB: "Resaltados"
 
-# ── Tombstone holds: no resurrection after reopen ──────────────────────────
-- assertNotVisible:
-    text: ".*Orestes Atrida.*"
+# ── Tombstone holds: no resurrection after reopen.
+#    Poll not-visible for 15s so a late async resurrection (sync apply)
+#    still flips this red instead of racing a premature green. ──────────────
+- extendedWaitUntil:
+    notVisible:
+      text: ".*Orestes Atrida.*"
+    timeout: 15000

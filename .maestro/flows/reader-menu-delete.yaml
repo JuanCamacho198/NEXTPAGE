@@ -26,13 +26,18 @@ tags: [regression]
     timeout: 3000
 
 # ── Fixture gate: seeded highlight row must exist (keeps the final
-#    assertNotVisible meaningful instead of trivially passing) ──────────────
+#    assertNotVisible meaningful instead of trivially passing).
+#    extendedWaitUntil per design D5: on cold starts the Resaltados list
+#    loads asynchronously and may render empty past the default assert
+#    window; poll up to 20s before declaring the fixture missing. ──────────
 - runFlow:
     file: ../lib/nav-to-tab.yaml
     env:
       TAB: "Resaltados"
-- assertVisible:
-    text: ".*Orestes Atrida.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*Orestes Atrida.*"
+    timeout: 20000
 
 # ── Open the book (reader entry via shared subflow) ────────────────────────
 - runFlow:
@@ -71,5 +76,9 @@ tags: [regression]
     file: ../lib/nav-to-tab.yaml
     env:
       TAB: "Resaltados"
-- assertNotVisible:
-    text: ".*Orestes Atrida.*"
+# Tombstone must PERSIST: poll not-visible for 15s so a late async
+# resurrection (sync apply) still flips this red instead of racing green.
+- extendedWaitUntil:
+    notVisible:
+      text: ".*Orestes Atrida.*"
+    timeout: 15000

@@ -26,6 +26,15 @@ tags: [chaos]
     env:
       TAB: "Resaltados"
 
+# ── Settle anchor (design D5): wait for the static screen header so the
+#    async highlight list has rendered before the one-shot when:visible
+#    guard below is evaluated. Without this, a cold-start empty list would
+#    silently skip the staged deletion. ─────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      text: "Tus notas y pasajes destacados"
+    timeout: 10000
+
 # ── Conditional staging: same scoped taps as resurrection-guard ────────────
 - runFlow:
     when:

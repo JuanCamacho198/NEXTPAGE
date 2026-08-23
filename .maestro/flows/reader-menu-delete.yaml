@@ -25,6 +25,13 @@ tags: [regression]
     file: ../lib/dismiss-dialogs-if-present.yaml
 - waitForAnimationToEnd:
     timeout: 3000
+# Nav-shell settle gate (cold-start race): a tap fired before the bottom bar
+# is interactive silently no-ops while retryTapIfNoChange sees the launch
+# animation as change. Poll until the nav labels exist, THEN navigate.
+- extendedWaitUntil:
+    visible:
+      text: "Ajustes"
+    timeout: 15000
 
 # ── Fixture gate: seeded highlight row must exist (keeps the final
 #    assertNotVisible meaningful instead of trivially passing).

@@ -14,6 +14,11 @@ tags: [chaos, sync]
     file: ../lib/dismiss-dialogs-if-present.yaml
 - waitForAnimationToEnd:
     timeout: 3000
+# Nav-shell settle gate (cold-start race): see reader-menu-delete.yaml.
+- extendedWaitUntil:
+    visible:
+      text: "Ajustes"
+    timeout: 15000
 
 # ── Sync drained: indicator back to "Sincronizado" within 60s ───────────────
 - runFlow:

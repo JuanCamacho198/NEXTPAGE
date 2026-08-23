@@ -18,6 +18,11 @@ tags: [regression, sync]
     file: ../lib/dismiss-dialogs-if-present.yaml
 - waitForAnimationToEnd:
     timeout: 3000
+# Nav-shell settle gate (cold-start race): see reader-menu-delete.yaml.
+- extendedWaitUntil:
+    visible:
+      text: "Ajustes"
+    timeout: 15000
 
 # ── Fixture gate: the seeded highlight row must exist before we delete it.
 #    extendedWaitUntil per design D5: cold-start list load may lag the

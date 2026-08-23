@@ -7,6 +7,23 @@ use chrono::{DateTime, TimeZone, Utc};
 use rusqlite::{params, OptionalExtension};
 use uuid::Uuid;
 
+/// Normalize CFI / href strings:
+/// - trim whitespace
+/// - collapse double slashes `//` → `/` (but preserve `://` if present, though not expected in CFI)
+/// - handles legacy `readium:` prefix as valid EPUB locator (do NOT drop)
+fn normalize_cfi_value(raw: &str) -> String {
+    let trimmed = raw.trim();
+    // Collapse `//` → `/` iteratively (e.g. "OEBPS//Text//cap1.xhtml" → "OEBPS/Text/cap1.xhtml")
+    // Protect `://` not expected in CFI/href, but handle generically: temporarily replace `://` placeholder
+    let placeholder = "\u{1F}PROTO\u{1F}";
+    let tmp = trimmed.replace("://", placeholder);
+    let mut normalized = tmp.replace("//", "/");
+    while normalized.contains("//") {
+        normalized = normalized.replace("//", "/");
+    }
+    normalized.replace(placeholder, "://")
+}
+
 pub fn list_highlights(
     repo: &LibraryRepository,
     book_id: Option<&str>,
@@ -63,7 +80,12 @@ pub fn save_highlight(
         return Err(AppError::InvalidInput("Highlight text is required".to_string()));
     }
 
+    // Normalize CFI: collapse // → / and trim. Legacy "readium:" prefix is valid for EPUB (do NOT reject).
+    let normalized_cfi: Option<String> =
+        payload.cfi.as_ref().map(|s| normalize_cfi_value(s)).filter(|s| !s.is_empty());
+
     // CFI-first invariant (spec: highlights.rs cfi_range non-null EPUB)
+    // Relaxed: "readium:" legacy is accepted as CFI-equivalent for EPUB; only truly empty is rejected.
     if let Ok(Some(fmt)) = repo
         .connection
         .query_row("SELECT format FROM books WHERE id = ?1", params![&payload.book_id], |r| {
@@ -72,13 +94,39 @@ pub fn save_highlight(
         .optional()
     {
         if fmt.eq_ignore_ascii_case("epub") {
-            let has_cfi = payload.cfi.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false);
+            let has_cfi = normalized_cfi.as_ref().map(|s| !s.is_empty()).unwrap_or(false);
             if !has_cfi {
                 return Err(AppError::InvalidInput(
                     "EPUB highlights require cfiRange (CFI-first)".to_string(),
                 ));
             }
         }
+    }
+
+    // FK guard: per-book pull (fetchAndApplyBookState) calls saveHighlight one-by-one before
+    // the catalog sync may have inserted the book. Previously this hit FK constraint → 0 highlights.
+    // Mirror upsert_remote_highlights stub logic so single saves also succeed.
+    let book_exists: bool = repo.connection.query_row(
+        "SELECT EXISTS(SELECT 1 FROM books WHERE id = ?1)",
+        params![&payload.book_id],
+        |r| r.get(0),
+    )?;
+    if !book_exists {
+        let now_stub = Utc::now().to_rfc3339();
+        let stub_format = if normalized_cfi.is_some() { "epub" } else { "pdf" };
+        let stub_title = format!(
+            "Unknown Title (sync stub) {}",
+            &payload.book_id[..4.min(payload.book_id.len())]
+        );
+        let _ = repo.connection.execute(
+            "INSERT OR IGNORE INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
+             VALUES (?1, ?2, ?3, ?4, ?5, 'synced', 0, 0, ?6, ?6, 1)",
+            params![payload.book_id, stub_title, "Unknown", "", stub_format, now_stub],
+        );
+        eprintln!(
+            "FK guard (save_highlight): created stub book {} format {} for highlight",
+            payload.book_id, stub_format
+        );
     }
 
     let now = Utc::now().to_rfc3339();
@@ -119,7 +167,7 @@ pub fn save_highlight(
                 payload.rect_right,
                 payload.rect_top,
                 payload.rect_bottom,
-                payload.cfi,
+                normalized_cfi.clone(),
                 payload.note,
                 now,
                 now
@@ -136,7 +184,7 @@ pub fn save_highlight(
         rect_right: payload.rect_right,
         rect_top: payload.rect_top,
         rect_bottom: payload.rect_bottom,
-        cfi: payload.cfi,
+        cfi: normalized_cfi,
         note: payload.note,
         created_at: now.clone(),
         updated_at: now,
@@ -175,26 +223,41 @@ pub fn upsert_remote_highlights(
     let mut skipped_invalid: i64 = 0;
 
     for row in rows {
+        // ── Normalize CFI early: collapse // → / and trim. Legacy "readium:" is valid EPUB locator.
+        let normalized_cfi: Option<String> =
+            row.cfi_range.as_ref().map(|s| normalize_cfi_value(s)).filter(|s| !s.is_empty());
+        let cfi_for_insert: Option<String> = normalized_cfi.clone();
+
         // ── 1) validation: blank fields / negative page / epub+empty-cfi ──
         let id_blank = row.id.trim().is_empty();
         let book_blank = row.book_id.trim().is_empty();
         let text_blank = row.text_content.trim().is_empty();
         let color_blank = row.color.trim().is_empty();
         if id_blank || book_blank || text_blank || color_blank {
+            eprintln!(
+                "upsert_remote_highlights: skipped_invalid id={} reason=blank_field id_blank={} book_blank={} text_blank={} color_blank={} cfi={:?}",
+                row.id, id_blank, book_blank, text_blank, color_blank, row.cfi_range
+            );
             skipped_invalid += 1;
             continue;
         }
         if let Some(page) = row.page {
             if page < 0 {
+                eprintln!(
+                    "upsert_remote_highlights: skipped_invalid id={} reason=negative_page page={}",
+                    row.id, page
+                );
                 skipped_invalid += 1;
                 continue;
             }
         }
-        // CFI-first invariant for EPUB (same as save_highlight:65-80), PDF exempt.
-        let cfi_empty = row.cfi_range.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true);
+        // CFI-first invariant for EPUB (same as save_highlight), PDF exempt.
+        // Normalized CFI: "readium:" prefix is explicitly valid (legacy), only truly empty is invalid.
+        // No prefix check — "readium:OEBPS/Text/cap1.xhtml" and "epubcfi(...)" both pass.
+        let cfi_empty = normalized_cfi.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true);
         if cfi_empty {
             // Only mark invalid if the local book is EPUB; if the book is absent
-            // locally we defer to the FK guard (skipped_unknown_book).
+            // locally we defer to the FK guard (skipped_unknown_book) which will infer format from CFI.
             if let Ok(Some(fmt)) = repo
                 .connection
                 .query_row("SELECT format FROM books WHERE id = ?1", params![&row.book_id], |r| {
@@ -203,6 +266,10 @@ pub fn upsert_remote_highlights(
                 .optional()
             {
                 if fmt.eq_ignore_ascii_case("epub") {
+                    eprintln!(
+                        "upsert_remote_highlights: skipped_invalid id={} reason=epub_empty_cfi book_id={} cfi={:?}",
+                        row.id, row.book_id, row.cfi_range
+                    );
                     skipped_invalid += 1;
                     continue;
                 }
@@ -221,12 +288,7 @@ pub fn upsert_remote_highlights(
                 row.id, row.book_id
             );
             let now = Utc::now().to_rfc3339();
-            let stub_format =
-                if row.cfi_range.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false) {
-                    "epub"
-                } else {
-                    "pdf"
-                };
+            let stub_format = if normalized_cfi.is_some() { "epub" } else { "pdf" };
             let stub_title =
                 format!("Unknown Title (sync stub) {}", &row.book_id[..4.min(row.book_id.len())]);
             let stub_res = repo.connection.execute(
@@ -334,7 +396,7 @@ pub fn upsert_remote_highlights(
         // created_at for new rows = remote clock (or now fallback already in epoch conversion)
         let created_at_rfc3339 = updated_at_rfc3339.clone();
         let page_value: i64 = row.page.unwrap_or(0);
-        let cfi_value: Option<String> = row.cfi_range.clone();
+        let cfi_value: Option<String> = cfi_for_insert.clone();
         // Rects zero-filled per design (no locator columns on desktop).
         repo.connection.execute(
             "INSERT INTO highlights (id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, note, created_at, updated_at, deleted_at, version)
@@ -855,6 +917,121 @@ mod tests {
             upsert_remote_highlights(&repo, &[blank_id, blank_text, negative_page]).unwrap();
         assert_eq!(summary.skipped_invalid, 3);
         assert_eq!(summary.applied, 0);
+    }
+
+    #[test]
+    fn upsert_remote_highlights_odisea_098c_legacy_cfi_and_double_slash() {
+        let repo = new_repository();
+        // Simulate Odisea book 098c: EPUB with 3 alive highlights
+        // - 2 with legacy "readium:" CFI and empty locator_json
+        // - 1 with epubcfi and locator_json href double slash (normalization)
+        // Previously these would be dropped if validation required "epubcfi" prefix or failed on //.
+        // After fix they must be accepted and normalized.
+        insert_book_with_format(&repo, "098c", "epub");
+        let h1 = crate::models::RemoteHighlightRow {
+            id: "254366de-0000-0000-0000-000000000001".to_string(),
+            user_id: "user-1".to_string(),
+            book_id: "098c".to_string(),
+            cfi_range: Some("readium:OEBPS/Text/cap1.xhtml".to_string()),
+            text_content: "sample 1".to_string(),
+            note: None,
+            color: "#EF4444".to_string(),
+            page: Some(1),
+            updated_at_epoch_millis: 1000,
+            deleted_at_epoch_millis: None,
+        };
+        let h2 = crate::models::RemoteHighlightRow {
+            id: "fe0f608e-0000-0000-0000-000000000002".to_string(),
+            user_id: "user-1".to_string(),
+            book_id: "098c".to_string(),
+            cfi_range: Some("readium:OEBPS/Text/cap1.xhtml".to_string()),
+            text_content: "sample 2".to_string(),
+            note: None,
+            color: "#3B82F6".to_string(),
+            page: Some(1),
+            updated_at_epoch_millis: 1001,
+            deleted_at_epoch_millis: None,
+        };
+        let h3 = crate::models::RemoteHighlightRow {
+            id: "4fd31606-0000-0000-0000-000000000003".to_string(),
+            user_id: "user-1".to_string(),
+            book_id: "098c".to_string(),
+            // Simulate double-slash cfi that should be normalized to single slash
+            cfi_range: Some("epubcfi(/6/7!/4/12,/1:1,/1:468)".to_string()),
+            text_content: "sample 3".to_string(),
+            note: None,
+            color: "#EF4444".to_string(),
+            page: Some(1),
+            updated_at_epoch_millis: 1002,
+            deleted_at_epoch_millis: None,
+        };
+        // Also test double-slash normalization directly
+        let h_double_slash = crate::models::RemoteHighlightRow {
+            id: "double-slash".to_string(),
+            user_id: "user-1".to_string(),
+            book_id: "098c".to_string(),
+            cfi_range: Some("readium:OEBPS//Text//cap1.xhtml".to_string()),
+            text_content: "sample double".to_string(),
+            note: None,
+            color: "#EF4444".to_string(),
+            page: Some(1),
+            updated_at_epoch_millis: 1003,
+            deleted_at_epoch_millis: None,
+        };
+        let summary = upsert_remote_highlights(&repo, &[h1, h2, h3, h_double_slash]).unwrap();
+        assert_eq!(
+            summary.applied, 4,
+            "all 4 including legacy readium and double-slash must apply"
+        );
+        assert_eq!(summary.skipped_invalid, 0);
+        assert_eq!(summary.skipped_unknown_book, 0);
+        // Verify DB: SELECT WHERE book_id AND deleted_at IS NULL must return 4
+        let count: i64 = repo
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM highlights WHERE book_id='098c' AND deleted_at IS NULL",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 4);
+        // Verify cfi stored normalized (// → /)
+        let cfi_double: String = repo
+            .connection
+            .query_row("SELECT cfi FROM highlights WHERE id='double-slash'", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(cfi_double, "readium:OEBPS/Text/cap1.xhtml");
+        // Verify list_highlights returns 3(+1) for book filter
+        let listed = list_highlights(&repo, Some("098c")).unwrap();
+        assert_eq!(listed.len(), 4);
+        // Test per-highlight saveHighlight path also creates stub and normalizes (FK guard)
+        // Simulate missing book via save_highlight
+        let save_ok = save_highlight(
+            &repo,
+            crate::models::SaveHighlightInput {
+                id: Some("save-legacy".to_string()),
+                book_id: "new-book-xyz".to_string(),
+                color: "#EF4444".to_string(),
+                text: "via save".to_string(),
+                page_number: Some(1),
+                page: None,
+                rect_left: 0.0,
+                rect_right: 0.0,
+                rect_top: 0.0,
+                rect_bottom: 0.0,
+                cfi: Some("readium:OEBPS//Text//cap1.xhtml".to_string()),
+                note: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(save_ok.cfi.as_deref(), Some("readium:OEBPS/Text/cap1.xhtml"));
+        let stub_exists: bool = repo
+            .connection
+            .query_row("SELECT EXISTS(SELECT 1 FROM books WHERE id='new-book-xyz')", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert!(stub_exists, "save_highlight must create stub book for unknown book_id");
     }
 
     #[test]

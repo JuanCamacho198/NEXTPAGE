@@ -59,8 +59,13 @@ tags: [regression]
 
 # ── Modo debug ON gate: the DEBUG chip only renders in debug builds when
 #    "Modo debug" is enabled ────────────────────────────────────────────────
+# D3 exception (documented): the reader also exposes an a11y-only node
+# labeled "DEBUG" near the top toolbar which steals first-match tapOn and
+# leaves the panel closed. The real chip is pinned BottomEnd (12dp end /
+# 16dp bottom padding), so target its geometric anchor instead of text.
 - assertVisible: "DEBUG"
-- tapOn: "DEBUG"
+- tapOn:
+    point: "90%, 96%"
 
 # ── Debug seam: simulate tapping an existing highlight decoration ─────────
 - tapOn: "Simular toque"

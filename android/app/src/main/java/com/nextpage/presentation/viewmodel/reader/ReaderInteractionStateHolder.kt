@@ -6,6 +6,7 @@ import androidx.annotation.VisibleForTesting
 import android.os.SystemClock
 import android.util.Log
 import com.nextpage.debug.DebugLog
+import kotlin.math.roundToInt
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
@@ -203,11 +204,12 @@ class ReaderInteractionStateHolder(
         }
 
         val selectionRect = try {
+            // Preserve float precision: roundToInt avoids truncation bias (e.g. 10.9 -> 11 not 10)
             Rect(
-                rect.left.toInt(),
-                rect.top.toInt(),
-                rect.right.toInt(),
-                rect.bottom.toInt()
+                rect.left.roundToInt(),
+                rect.top.roundToInt(),
+                rect.right.roundToInt(),
+                rect.bottom.roundToInt()
             )
         } catch (e: Throwable) {
             Log.e("SelectionDebug", "Rect creation THREW: ${e::class.simpleName}: ${e.message}", e)
@@ -295,7 +297,7 @@ class ReaderInteractionStateHolder(
      * Delegates to [onTextSelection] for state update.
      */
     fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) {
-        onTextSelection(text, Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt()))
+        onTextSelection(text, Rect(left.roundToInt(), top.roundToInt(), right.roundToInt(), bottom.roundToInt()))
     }
 
     fun onTextSelection(text: String, rect: Rect) {
@@ -318,10 +320,10 @@ class ReaderInteractionStateHolder(
     fun onHighlightTapped(highlight: Highlight, rect: RectF) {
         DebugLog.info(TAG, "onHighlightTapped id=${highlight.id} t=${SystemClock.elapsedRealtime()}")
         val selectionRect = Rect(
-            rect.left.toInt(),
-            rect.top.toInt(),
-            rect.right.toInt(),
-            rect.bottom.toInt()
+            rect.left.roundToInt(),
+            rect.top.roundToInt(),
+            rect.right.roundToInt(),
+            rect.bottom.roundToInt()
         )
         coordinator = SelectionCoordinator.ExistingHighlight(
             highlight = highlight,

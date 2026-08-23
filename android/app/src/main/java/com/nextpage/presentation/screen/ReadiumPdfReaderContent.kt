@@ -32,6 +32,8 @@ import com.nextpage.presentation.viewmodel.ReaderViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 import org.readium.r2.navigator.DecorableNavigator
 import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.SelectableNavigator
@@ -179,8 +181,20 @@ fun ReadiumPdfReaderContent(
                     lastSelection = false
                     continue
                 }
-                // Derive text from the locator's text context (no JS bridge for PDF)
-                val text = sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
+                // Always try JS selection first (even for PDF) — locator.text window is ~150 chars and truncates long selections.
+                // Pdfium has no fragment-level evaluateJavascript, so probe the underlying WebView if present.
+                val fallbackText = sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
+                val text: String = try {
+                    val webView = frag.view?.findWebView()
+                    if (webView != null) {
+                        val jsResult = webView.evalSelectionJs()
+                        if (jsResult.isNullOrBlank()) fallbackText else jsResult
+                    } else {
+                        fallbackText
+                    }
+                } catch (_: Throwable) {
+                    fallbackText
+                }
                 viewModel.onReadiumSelection(
                     locator = sel.locator,
                     rect = selRect,
@@ -292,6 +306,22 @@ private fun View.findWebView(): WebView? {
         }
     }
     return null
+}
+
+/**
+ * Evaluate `window.getSelection().toString()` on a WebView.
+ * Wraps the callback-based `evaluateJavascript` into a suspend function for polling loop.
+ */
+private suspend fun WebView.evalSelectionJs(): String? = suspendCancellableCoroutine { cont ->
+    try {
+        evaluateJavascript("(function(){var s=window.getSelection();return s?s.toString():'';})()") { result ->
+            // WebView wraps result in JSON quotes; strip them
+            val cleaned = result?.trim()?.removeSurrounding("\"")?.replace("\\n", "\n")?.replace("\\\"", "\"")
+            if (cont.isActive) cont.resume(cleaned)
+        }
+    } catch (t: Throwable) {
+        if (cont.isActive) cont.resume(null)
+    }
 }
 
 /**

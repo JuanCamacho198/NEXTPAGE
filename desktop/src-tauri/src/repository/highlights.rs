@@ -356,8 +356,24 @@ pub fn upsert_remote_highlights(
             Some((local_updated_at, local_deleted_at)) => {
                 let local_is_deleted = local_deleted_at.is_some();
                 if !remote_is_deleted && local_is_deleted {
-                    // Remote live vs local tombstoned → never resurrect (DQ2)
-                    continue;
+                    // DQ2 relaxed: only skip if local deleted is newer than remote updated.
+                    // If remote updated_at > local deleted_at, resurrect (apply live row).
+                    let remote_updated_epoch = row.updated_at_epoch_millis;
+                    let local_deleted_epoch =
+                        local_deleted_at.as_deref().map(rfc3339_to_epoch_millis).unwrap_or(0);
+                    if remote_updated_epoch > local_deleted_epoch {
+                        eprintln!(
+                            "DQ2 resurrect id={} remote_updated {} > local_deleted {}",
+                            row.id, remote_updated_epoch, local_deleted_epoch
+                        );
+                        target_deleted_at = None;
+                    } else {
+                        eprintln!(
+                            "DQ2 skip resurrect id={} local_deleted {} newer >= remote_updated {}",
+                            row.id, local_deleted_epoch, remote_updated_epoch
+                        );
+                        continue;
+                    }
                 } else if remote_is_deleted && !local_is_deleted {
                     // Remote tombstone vs local live → apply tombstone unconditionally
                     target_deleted_at =
@@ -822,22 +838,33 @@ mod tests {
         let repo = new_repository();
         insert_book_with_format(&repo, "book-tomb", "epub");
 
-        // 1) remote-live / local-tombstoned ⇒ skip (never resurrect)
+        // 1) remote-live / local-tombstoned ⇒ DQ2 relaxed: resurrect only if remote newer than local deleted
         let live = remote_highlight("hl-t1", "book-tomb", Some("epubcfi(/6/1)"), 1000, None);
         upsert_remote_highlights(&repo, &[live]).unwrap();
         // Tombstone it via newer remote tombstone
         let tomb = remote_highlight("hl-t1", "book-tomb", Some("epubcfi(/6/1)"), 2000, Some(2000));
         let s = upsert_remote_highlights(&repo, &[tomb]).unwrap();
         assert_eq!(s.applied, 1);
-        // Now try to resurrect with remote live older/newer → must skip
-        let resurrect = remote_highlight("hl-t1", "book-tomb", Some("epubcfi(/6/1)"), 3000, None);
-        let s = upsert_remote_highlights(&repo, &[resurrect]).unwrap();
+        // Remote older than local deleted (1500 < 2000) → must skip (keep tombstoned)
+        let resurrect_old =
+            remote_highlight("hl-t1", "book-tomb", Some("epubcfi(/6/1)"), 1500, None);
+        let s = upsert_remote_highlights(&repo, &[resurrect_old]).unwrap();
         assert_eq!(s.applied, 0);
         let deleted_at: Option<String> = repo
             .connection
             .query_row("SELECT deleted_at FROM highlights WHERE id='hl-t1'", [], |r| r.get(0))
             .unwrap();
         assert!(deleted_at.is_some());
+        // Remote newer than local deleted (3000 > 2000) → resurrect
+        let resurrect_new =
+            remote_highlight("hl-t1", "book-tomb", Some("epubcfi(/6/1)"), 3000, None);
+        let s = upsert_remote_highlights(&repo, &[resurrect_new]).unwrap();
+        assert_eq!(s.applied, 1);
+        let deleted_at2: Option<String> = repo
+            .connection
+            .query_row("SELECT deleted_at FROM highlights WHERE id='hl-t1'", [], |r| r.get(0))
+            .unwrap();
+        assert!(deleted_at2.is_none(), "DQ2 relaxed: remote newer should resurrect");
 
         // 2) remote-tombstone / local-live ⇒ apply tombstone
         let live2 = remote_highlight("hl-t2", "book-tomb", Some("epubcfi(/6/2)"), 1000, None);
@@ -868,6 +895,81 @@ mod tests {
             remote_highlight("hl-t2", "book-tomb", Some("epubcfi(/6/2)"), 3000, Some(2600));
         let s = upsert_remote_highlights(&repo, &[tie_del]).unwrap();
         assert_eq!(s.applied, 0);
+    }
+
+    #[test]
+    fn upsert_remote_highlights_dq2_relaxed_resurrect_vs_skip() {
+        let repo = new_repository();
+        insert_book_with_format(&repo, "book-dq2", "epub");
+        // Simulate La Odisea case: 3 highlights deleted locally at 2026-08-22T20:12:00Z
+        let local_deleted_at = "2026-08-22T20:12:00Z";
+        let local_deleted_epoch = rfc3339_to_epoch_millis(local_deleted_at);
+        let now = Utc::now().to_rfc3339();
+        // Insert 2 highlights with same deleted_at to test both branches
+        for hl_id in ["hl-dq2-newer", "hl-dq2-older"] {
+            repo.connection
+                .execute(
+                    "INSERT INTO highlights (id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, note, created_at, updated_at, deleted_at, version)
+                     VALUES (?1, 'book-dq2', '#FACC15', 'odisea', 1, 0, 0, 0, 0, 'epubcfi(/6/1)', NULL, ?2, ?2, ?3, 1)",
+                    params![hl_id, now, local_deleted_at],
+                )
+                .unwrap();
+        }
+        // Remote newer: updated after local deleted → should resurrect (deleted_at = NULL)
+        let remote_newer_epoch = local_deleted_epoch + 10_000; // 10s after
+        let remote_newer = remote_highlight(
+            "hl-dq2-newer",
+            "book-dq2",
+            Some("epubcfi(/6/1)"),
+            remote_newer_epoch,
+            None,
+        );
+        let s = upsert_remote_highlights(&repo, &[remote_newer]).unwrap();
+        assert_eq!(s.applied, 1, "remote newer than local deleted should resurrect");
+        let deleted: Option<String> = repo
+            .connection
+            .query_row("SELECT deleted_at FROM highlights WHERE id='hl-dq2-newer'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert!(deleted.is_none(), "resurrected highlight must have deleted_at NULL");
+
+        // Remote older: updated before local deleted → must stay deleted
+        let remote_older_epoch = local_deleted_epoch - 10_000; // 10s before
+        let remote_older = remote_highlight(
+            "hl-dq2-older",
+            "book-dq2",
+            Some("epubcfi(/6/1)"),
+            remote_older_epoch,
+            None,
+        );
+        let s = upsert_remote_highlights(&repo, &[remote_older]).unwrap();
+        assert_eq!(s.applied, 0, "remote older than local deleted must not resurrect");
+        let deleted2: Option<String> = repo
+            .connection
+            .query_row("SELECT deleted_at FROM highlights WHERE id='hl-dq2-older'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert!(deleted2.is_some(), "old remote must keep tombstone");
+
+        // Tie (remote == local deleted) → skip (keep tombstoned)
+        repo.connection
+            .execute(
+                "INSERT OR REPLACE INTO highlights (id, book_id, color, text, page, rect_left, rect_right, rect_top, rect_bottom, cfi, note, created_at, updated_at, deleted_at, version)
+                 VALUES ('hl-dq2-tie', 'book-dq2', '#FACC15', 'odisea', 1, 0, 0, 0, 0, 'epubcfi(/6/1)', NULL, ?1, ?1, ?2, 1)",
+                params![now, local_deleted_at],
+            )
+            .unwrap();
+        let remote_tie = remote_highlight(
+            "hl-dq2-tie",
+            "book-dq2",
+            Some("epubcfi(/6/1)"),
+            local_deleted_epoch,
+            None,
+        );
+        let s = upsert_remote_highlights(&repo, &[remote_tie]).unwrap();
+        assert_eq!(s.applied, 0, "remote tie with local deleted must not resurrect");
     }
 
     #[test]

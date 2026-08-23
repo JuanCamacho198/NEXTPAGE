@@ -153,16 +153,11 @@ pub fn delete_highlight(repo: &LibraryRepository, id: &str) -> AppResult<()> {
 }
 
 fn epoch_millis_to_rfc3339(epoch_millis: i64) -> String {
-    Utc.timestamp_millis_opt(epoch_millis)
-        .single()
-        .unwrap_or_else(Utc::now)
-        .to_rfc3339()
+    Utc.timestamp_millis_opt(epoch_millis).single().unwrap_or_else(Utc::now).to_rfc3339()
 }
 
 fn rfc3339_to_epoch_millis(value: &str) -> i64 {
-    DateTime::parse_from_rfc3339(value)
-        .map(|dt| dt.timestamp_millis())
-        .unwrap_or(0)
+    DateTime::parse_from_rfc3339(value).map(|dt| dt.timestamp_millis()).unwrap_or(0)
 }
 
 /// Bulk upsert for remote highlights (DHR-1..5, WS2).
@@ -196,21 +191,15 @@ pub fn upsert_remote_highlights(
             }
         }
         // CFI-first invariant for EPUB (same as save_highlight:65-80), PDF exempt.
-        let cfi_empty = row
-            .cfi_range
-            .as_ref()
-            .map(|s| s.trim().is_empty())
-            .unwrap_or(true);
+        let cfi_empty = row.cfi_range.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true);
         if cfi_empty {
             // Only mark invalid if the local book is EPUB; if the book is absent
             // locally we defer to the FK guard (skipped_unknown_book).
             if let Ok(Some(fmt)) = repo
                 .connection
-                .query_row(
-                    "SELECT format FROM books WHERE id = ?1",
-                    params![&row.book_id],
-                    |r| r.get::<_, String>(0),
-                )
+                .query_row("SELECT format FROM books WHERE id = ?1", params![&row.book_id], |r| {
+                    r.get::<_, String>(0)
+                })
                 .optional()
             {
                 if fmt.eq_ignore_ascii_case("epub") {
@@ -220,15 +209,61 @@ pub fn upsert_remote_highlights(
             }
         }
 
-        // ── 2) FK guard ──
+        // ── 2) FK guard ── (stub creation if missing so bulk pull before catalog sync doesn't lose data)
         let book_exists: bool = repo.connection.query_row(
             "SELECT EXISTS(SELECT 1 FROM books WHERE id = ?1)",
             params![&row.book_id],
             |r| r.get(0),
         )?;
         if !book_exists {
-            skipped_unknown_book += 1;
-            continue;
+            eprintln!(
+                "FK guard: skipping highlight {} for unknown book {} — attempting stub creation",
+                row.id, row.book_id
+            );
+            let now = Utc::now().to_rfc3339();
+            let stub_format =
+                if row.cfi_range.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false) {
+                    "epub"
+                } else {
+                    "pdf"
+                };
+            let stub_title =
+                format!("Unknown Title (sync stub) {}", &row.book_id[..4.min(row.book_id.len())]);
+            let stub_res = repo.connection.execute(
+                "INSERT OR IGNORE INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
+                 VALUES (?1, ?2, ?3, ?4, ?5, 'synced', 0, 0, ?6, ?6, 1)",
+                params![row.book_id, stub_title, "Unknown", "", stub_format, now],
+            );
+            match stub_res {
+                Ok(changed) if changed > 0 => {
+                    eprintln!(
+                        "FK guard: created stub book {} format {} for highlight {}",
+                        row.book_id, stub_format, row.id
+                    );
+                }
+                Ok(_) => {
+                    // 0 rows changed means another thread already inserted the stub (race) — proceed
+                }
+                Err(e) => {
+                    eprintln!("FK guard: failed to create stub book {}: {}", row.book_id, e);
+                    skipped_unknown_book += 1;
+                    continue;
+                }
+            }
+            // Verify stub now exists before proceeding to highlight insert
+            let still_missing: bool = !repo.connection.query_row(
+                "SELECT EXISTS(SELECT 1 FROM books WHERE id = ?1)",
+                params![&row.book_id],
+                |r| r.get(0),
+            )?;
+            if still_missing {
+                eprintln!(
+                    "FK guard: still missing book {} after stub attempt — skipping highlight {}",
+                    row.book_id, row.id
+                );
+                skipped_unknown_book += 1;
+                continue;
+            }
         }
 
         // ── 3) LWW + tombstone branches (DQ2) ──
@@ -263,16 +298,13 @@ pub fn upsert_remote_highlights(
                     continue;
                 } else if remote_is_deleted && !local_is_deleted {
                     // Remote tombstone vs local live → apply tombstone unconditionally
-                    target_deleted_at = Some(epoch_millis_to_rfc3339(
-                        row.deleted_at_epoch_millis.unwrap(),
-                    ));
+                    target_deleted_at =
+                        Some(epoch_millis_to_rfc3339(row.deleted_at_epoch_millis.unwrap()));
                 } else if remote_is_deleted && local_is_deleted {
                     // Both deleted → later deletedAt wins, tie → recordId lex (same PK ⇒ skip)
                     let remote_deleted_epoch = row.deleted_at_epoch_millis.unwrap();
-                    let local_deleted_epoch = local_deleted_at
-                        .as_deref()
-                        .map(rfc3339_to_epoch_millis)
-                        .unwrap_or(0);
+                    let local_deleted_epoch =
+                        local_deleted_at.as_deref().map(rfc3339_to_epoch_millis).unwrap_or(0);
                     if remote_deleted_epoch > local_deleted_epoch {
                         target_deleted_at = Some(epoch_millis_to_rfc3339(remote_deleted_epoch));
                     } else if remote_deleted_epoch < local_deleted_epoch {
@@ -337,11 +369,7 @@ pub fn upsert_remote_highlights(
         applied += 1;
     }
 
-    Ok(UpsertRemoteSummary {
-        applied,
-        skipped_unknown_book,
-        skipped_invalid,
-    })
+    Ok(UpsertRemoteSummary { applied, skipped_unknown_book, skipped_invalid })
 }
 
 #[cfg(test)]
@@ -648,7 +676,8 @@ mod tests {
         let repo = new_repository();
         insert_book_with_format(&repo, "book-clock", "epub");
         let remote_epoch: i64 = 1_700_000_000_000;
-        let row = remote_highlight("hl-clock", "book-clock", Some("epubcfi(/6/2)"), remote_epoch, None);
+        let row =
+            remote_highlight("hl-clock", "book-clock", Some("epubcfi(/6/2)"), remote_epoch, None);
         let before = Utc::now().timestamp_millis();
         let summary = upsert_remote_highlights(&repo, &[row]).unwrap();
         assert_eq!(summary.applied, 1);
@@ -671,16 +700,23 @@ mod tests {
         let repo = new_repository();
         insert_book_with_format(&repo, "book-known", "epub");
         let known = remote_highlight("hl-known", "book-known", Some("epubcfi(/6/1)"), 1000, None);
-        let unknown = remote_highlight("hl-unknown", "book-absent", Some("epubcfi(/6/1)"), 1000, None);
+        let unknown =
+            remote_highlight("hl-unknown", "book-absent", Some("epubcfi(/6/1)"), 1000, None);
         let summary = upsert_remote_highlights(&repo, &[known, unknown]).unwrap();
-        assert_eq!(summary.applied, 1);
-        assert_eq!(summary.skipped_unknown_book, 1);
+        // FK guard now creates a stub book instead of dropping the highlight (fixes PC Odisea 0 highlights)
+        assert_eq!(summary.applied, 2);
+        assert_eq!(summary.skipped_unknown_book, 0);
         assert_eq!(summary.skipped_invalid, 0);
-        let count: i64 = repo
+        let count: i64 =
+            repo.connection.query_row("SELECT COUNT(*) FROM highlights", [], |r| r.get(0)).unwrap();
+        assert_eq!(count, 2);
+        let stub_exists: bool = repo
             .connection
-            .query_row("SELECT COUNT(*) FROM highlights", [], |r| r.get(0))
+            .query_row("SELECT EXISTS(SELECT 1 FROM books WHERE id='book-absent')", [], |r| {
+                r.get(0)
+            })
             .unwrap();
-        assert_eq!(count, 1);
+        assert!(stub_exists);
     }
 
     #[test]
@@ -696,10 +732,8 @@ mod tests {
         assert_eq!(summary.applied, 1);
         assert_eq!(summary.skipped_invalid, 2);
         assert_eq!(summary.skipped_unknown_book, 0);
-        let count: i64 = repo
-            .connection
-            .query_row("SELECT COUNT(*) FROM highlights", [], |r| r.get(0))
-            .unwrap();
+        let count: i64 =
+            repo.connection.query_row("SELECT COUNT(*) FROM highlights", [], |r| r.get(0)).unwrap();
         assert_eq!(count, 1);
     }
 
@@ -757,16 +791,19 @@ mod tests {
 
         // 3) both-deleted ⇒ later deletedAt wins
         // hl-t2 is now deleted at 2500. Try remote deleted at 2400 (older) ⇒ skip
-        let older_del = remote_highlight("hl-t2", "book-tomb", Some("epubcfi(/6/2)"), 3000, Some(2400));
+        let older_del =
+            remote_highlight("hl-t2", "book-tomb", Some("epubcfi(/6/2)"), 3000, Some(2400));
         let s = upsert_remote_highlights(&repo, &[older_del]).unwrap();
         assert_eq!(s.applied, 0);
         // Remote deleted at 2600 (newer) ⇒ apply
-        let newer_del = remote_highlight("hl-t2", "book-tomb", Some("epubcfi(/6/2)"), 3000, Some(2600));
+        let newer_del =
+            remote_highlight("hl-t2", "book-tomb", Some("epubcfi(/6/2)"), 3000, Some(2600));
         let s = upsert_remote_highlights(&repo, &[newer_del]).unwrap();
         assert_eq!(s.applied, 1);
 
         // 4) tie on deletedAt ⇒ recordId lex → same id ⇒ skip
-        let tie_del = remote_highlight("hl-t2", "book-tomb", Some("epubcfi(/6/2)"), 3000, Some(2600));
+        let tie_del =
+            remote_highlight("hl-t2", "book-tomb", Some("epubcfi(/6/2)"), 3000, Some(2600));
         let s = upsert_remote_highlights(&repo, &[tie_del]).unwrap();
         assert_eq!(s.applied, 0);
     }
@@ -776,7 +813,8 @@ mod tests {
         let repo = new_repository();
         insert_book_with_format(&repo, "book-tomb2", "epub");
         // Remote tombstone with no local row → converged no-op but counted as applied per DQ2
-        let tomb = remote_highlight("hl-no-local", "book-tomb2", Some("epubcfi(/6/1)"), 1000, Some(1000));
+        let tomb =
+            remote_highlight("hl-no-local", "book-tomb2", Some("epubcfi(/6/1)"), 1000, Some(1000));
         let s = upsert_remote_highlights(&repo, &[tomb]).unwrap();
         assert_eq!(s.applied, 1);
         assert_eq!(s.skipped_invalid, 0);
@@ -807,11 +845,14 @@ mod tests {
         insert_book_with_format(&repo, "book-valid", "epub");
         let mut blank_id = remote_highlight("", "book-valid", Some("epubcfi(/6/1)"), 1000, None);
         blank_id.id = "   ".to_string();
-        let mut blank_text = remote_highlight("hl-blank-text", "book-valid", Some("epubcfi(/6/1)"), 1000, None);
+        let mut blank_text =
+            remote_highlight("hl-blank-text", "book-valid", Some("epubcfi(/6/1)"), 1000, None);
         blank_text.text_content = "   ".to_string();
-        let mut negative_page = remote_highlight("hl-neg", "book-valid", Some("epubcfi(/6/1)"), 1000, None);
+        let mut negative_page =
+            remote_highlight("hl-neg", "book-valid", Some("epubcfi(/6/1)"), 1000, None);
         negative_page.page = Some(-1);
-        let summary = upsert_remote_highlights(&repo, &[blank_id, blank_text, negative_page]).unwrap();
+        let summary =
+            upsert_remote_highlights(&repo, &[blank_id, blank_text, negative_page]).unwrap();
         assert_eq!(summary.skipped_invalid, 3);
         assert_eq!(summary.applied, 0);
     }
@@ -824,11 +865,9 @@ mod tests {
         upsert_remote_highlights(&repo, &[row]).unwrap();
         let (created_before, version_before): (String, i64) = repo
             .connection
-            .query_row(
-                "SELECT created_at, version FROM highlights WHERE id='hl-ver'",
-                [],
-                |r| Ok((r.get(0)?, r.get(1)?)),
-            )
+            .query_row("SELECT created_at, version FROM highlights WHERE id='hl-ver'", [], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
             .unwrap();
         // Apply newer
         let mut newer = remote_highlight("hl-ver", "book-ver", Some("epubcfi(/6/1)"), 2000, None);
@@ -836,11 +875,9 @@ mod tests {
         upsert_remote_highlights(&repo, &[newer]).unwrap();
         let (created_after, version_after): (String, i64) = repo
             .connection
-            .query_row(
-                "SELECT created_at, version FROM highlights WHERE id='hl-ver'",
-                [],
-                |r| Ok((r.get(0)?, r.get(1)?)),
-            )
+            .query_row("SELECT created_at, version FROM highlights WHERE id='hl-ver'", [], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
             .unwrap();
         assert_eq!(created_before, created_after);
         assert_eq!(version_after, version_before + 1);

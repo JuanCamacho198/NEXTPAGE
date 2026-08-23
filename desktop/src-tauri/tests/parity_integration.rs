@@ -531,7 +531,7 @@ fn upsert_remote_highlights_merges_through_facade_and_summary_round_trips() {
     let repository = LibraryRepository::new(connection);
     insert_test_book(&repository, "book-highlight-merge");
 
-    // Valid EPUB highlight + FK-guarded unknown book (DHR-3)
+    // Valid EPUB highlight + FK guard now creates stub (fix for Odisea DHR-3) — unknown book also applied
     let valid = RemoteHighlightRow {
         id: "hl_remote_1".to_string(),
         user_id: "u-remote".to_string(),
@@ -558,8 +558,8 @@ fn upsert_remote_highlights_merges_through_facade_and_summary_round_trips() {
     };
 
     let summary = repository.upsert_remote_highlights(&[valid, unknown]).unwrap();
-    assert_eq!(summary.applied, 1);
-    assert_eq!(summary.skipped_unknown_book, 1);
+    assert_eq!(summary.applied, 2);
+    assert_eq!(summary.skipped_unknown_book, 0);
     assert_eq!(summary.skipped_invalid, 0);
 
     // Serde camelCase contract
@@ -579,9 +579,8 @@ fn upsert_remote_highlights_merges_through_facade_and_summary_round_trips() {
     assert_eq!(text, "highlight text");
     assert_eq!(color, "#FACC15");
     assert_eq!(cfi.as_deref(), Some("epubcfi(/6/2)"));
-    let stored_epoch = chrono::DateTime::parse_from_rfc3339(&updated_at)
-        .unwrap()
-        .timestamp_millis();
+    let stored_epoch =
+        chrono::DateTime::parse_from_rfc3339(&updated_at).unwrap().timestamp_millis();
     assert_eq!(stored_epoch, 1_700_000_000_000);
 
     let _ = fs::remove_file(db_path);

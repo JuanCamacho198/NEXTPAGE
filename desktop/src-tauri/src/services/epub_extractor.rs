@@ -995,15 +995,16 @@ mod tests {
         assert_eq!(frag_chapters[0].index, 4);
         // Verify filename fallback: Text/HM-colombia-3.html without prefix still resolves
         let href = "OEBPS/Text/HM-colombia-3.html";
-        let filename = std::path::Path::new(href)
-            .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .to_string();
+        let filename =
+            std::path::Path::new(href).file_name().unwrap().to_string_lossy().to_string();
         assert_eq!(spine_map.get(&filename), Some(&4));
         // All indices must be within filtered spine (2..21) and never point to cover/toc
         for ch in &chapters {
-            assert!(ch.index >= 2 && ch.index <= 21, "TOC index {} out of Historia range", ch.index);
+            assert!(
+                ch.index >= 2 && ch.index <= 21,
+                "TOC index {} out of Historia range",
+                ch.index
+            );
         }
         // Ids still unique despite sequential indices
         let mut ids: Vec<&String> = chapters.iter().map(|c| &c.id).collect();

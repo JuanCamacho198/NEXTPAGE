@@ -11,6 +11,11 @@
 #   0   = all flows green
 #   2   = no adb device in state "device" was found
 #   else = maestro's own exit code, propagated unchanged
+#
+# --no-reinstall-driver is ALWAYS passed: the Maestro driver apps are
+# permanently installed on the target device, and HyperOS/MIUI auto-cancels
+# new-package adb installs within ~50ms (INSTALL_FAILED_USER_RESTRICTED),
+# which would fail every run before it starts.
 [CmdletBinding()]
 param(
     # Tags passed to maestro as --include-tags t1,t2,...
@@ -54,7 +59,7 @@ else {
     $targets = @(Join-Path $repoRoot '.maestro/flows')
 }
 
-$maestroArgs = @('test') + $targets
+$maestroArgs = @('test') + $targets + @('--no-reinstall-driver')
 if ($Tags -and $Tags.Count -gt 0) {
     $maestroArgs += @('--include-tags', ($Tags -join ','))
 }

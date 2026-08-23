@@ -16,6 +16,10 @@
 # timer is the authoritative cleanup and the host-side command is a fast-path
 # bonus (USB setups). A failed run must never leave the device offline.
 #
+# Every maestro call passes --no-reinstall-driver: the driver apps are
+# permanently installed on the device and HyperOS/MIUI auto-cancels
+# new-package adb installs (INSTALL_FAILED_USER_RESTRICTED).
+#
 # Exit codes:
 #   0    = stage and recovery both green
 #   else = first failing stage's exit code, propagated unchanged
@@ -112,7 +116,7 @@ try {
         Write-Host 'WiFi OFF - staging offline.'
     }
 
-    & maestro test $StageFlow --device $Serial
+    & maestro test $StageFlow --no-reinstall-driver --device $Serial
     $stageExit = $LASTEXITCODE
     if ($stageExit -ne 0) {
         Write-Error "Stage flow failed with exit ${stageExit}." -ErrorAction Continue
@@ -145,7 +149,7 @@ try {
         exit $waitExit
     }
 
-    & maestro test $RecoveryFlow --device $Serial
+    & maestro test $RecoveryFlow --no-reinstall-driver --device $Serial
     exit $LASTEXITCODE
 }
 finally {

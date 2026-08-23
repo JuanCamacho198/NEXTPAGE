@@ -1,0 +1,59 @@
+# Resurrection guard (PR#35): a highlight deleted from Resaltados must stay
+# deleted after its book is reopened. LWW tombstone must hold.
+# NEVER uses clearState - session and Room data persist across runs.
+#
+# Pinned seed fixture (device locale is Spanish):
+#   BOOK      La Odisea
+#   ROW       excerpt containing "Orestes Atrida"
+appId: com.nextpage
+tags: [regression, sync]
+---
+- launchApp:
+    clearState: false
+- runFlow:
+    file: ../lib/dismiss-dialogs-if-present.yaml
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# ── Fixture gate: the seeded highlight row must exist before we delete it ──
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Resaltados"
+- assertVisible:
+    text: ".*Orestes Atrida.*"
+
+# ── Delete via card menu (full-string matching scopes each tap) ────────────
+- tapOn: "Más opciones"          # card overflow menu (content-desc)
+- tapOn: "Eliminar resaltado"    # dropdown item (exact text, not the icon)
+- assertVisible: "Eliminar resaltado"  # AlertDialog title is up
+- tapOn: "Eliminar"              # AlertDialog confirm button (exact text)
+
+# ── Row removed immediately ────────────────────────────────────────────────
+- assertNotVisible:
+    text: ".*Orestes Atrida.*"
+
+# ── PR#35 guard: reopen the affected book, return, row must stay gone ──────
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Estantería"
+- runFlow:
+    file: ../lib/open-book.yaml
+    env:
+      BOOK_TITLE: "La Odisea"
+- pressKey: Back
+- runFlow:
+    when:
+      notVisible: "Resaltados"
+    commands:
+      # First Back may only dismiss reader chrome; press again to exit.
+      - pressKey: Back
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Resaltados"
+
+# ── Tombstone holds: no resurrection after reopen ──────────────────────────
+- assertNotVisible:
+    text: ".*Orestes Atrida.*"

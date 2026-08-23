@@ -165,7 +165,15 @@ export class SupabaseProgressSync {
   }
 
   async fetchBookState(bookId: string): Promise<SupabaseBookState> {
-    if (this.isGated()) return { progress: null, bookmarks: [], highlights: [] };
+    if (this.isGated()) {
+      console.warn('[SupabaseProgressSync] fetchBookState gated: no live session or user mismatch', {
+        userId: this.userId,
+        bookId: bookId.slice(0, 4),
+        hasLiveSession: hasLiveSession(),
+        authUserId: authState.userId?.slice(0, 4) ?? null,
+      });
+      return { progress: null, bookmarks: [], highlights: [] };
+    }
     const [progress, bookmarks, highlights] = await Promise.all([
       this.fetchProgressForBook(bookId),
       this.fetchBookmarks(bookId),
@@ -384,7 +392,15 @@ export class SupabaseProgressSync {
    * Fetch all highlights for the current user, optionally filtered by book.
    */
   async fetchHighlights(bookId?: string): Promise<SupabaseHighlightRow[]> {
-    if (this.isGated()) return [];
+    if (this.isGated()) {
+      console.warn('[SupabaseProgressSync] fetchHighlights gated: no live session or user mismatch', {
+        userId: this.userId,
+        bookId: bookId?.slice(0, 4) ?? 'all',
+        hasLiveSession: hasLiveSession(),
+        authUserId: authState.userId?.slice(0, 4) ?? null,
+      });
+      return [];
+    }
     let query = this.supabase.from('highlights').select('*').eq('user_id', this.userId);
 
     if (bookId) {
@@ -406,7 +422,14 @@ export class SupabaseProgressSync {
    * chunks the result into 500-row invokes (bounded IPC, DHR-1..2).
    */
   async fetchAllHighlightsForPull(): Promise<RemoteHighlightRow[]> {
-    if (this.isGated()) return [];
+    if (this.isGated()) {
+      console.warn('[SupabaseProgressSync] fetchAllHighlightsForPull gated: no live session or user mismatch', {
+        userId: this.userId,
+        hasLiveSession: hasLiveSession(),
+        authUserId: authState.userId?.slice(0, 4) ?? null,
+      });
+      return [];
+    }
     const { data, error } = await this.supabase
       .from('highlights')
       .select('*')

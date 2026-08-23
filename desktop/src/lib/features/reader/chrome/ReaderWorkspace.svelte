@@ -234,76 +234,115 @@
   // FIX CRÍTICO: highlightLoadEpoch es contador PLAIN (no $state) para no crear loop infinito.
   // En Svelte 5, leer+escribir un $state dentro de su propio $effect lo retrigerea.
   let highlightLoadEpoch = 0;
+
+  async function reloadHighlights(): Promise<void> {
+    const book = untrack(() => activeReadingBook);
+    if (!book) {
+      persistedHighlights = [];
+      return;
+    }
+    const bookId = book.id;
+    const myEpoch = ++highlightLoadEpoch;
+    try {
+      const rows: HighlightDto[] = await listHighlights(bookId);
+      if (myEpoch !== highlightLoadEpoch) {
+        console.debug('RW: listHighlights loaded stale epoch ignored', bookId.slice(0, 4));
+        return;
+      }
+      if (untrack(() => activeReadingBook?.id) !== bookId) {
+        console.debug('RW: listHighlights stale bookId ignored', bookId.slice(0, 4));
+        return;
+      }
+      console.warn(
+        'RW: listHighlights loaded',
+        rows.length,
+        rows.map((r) => `${r.pageNumber}:${r.id.slice(0, 4)}`).join(','),
+        'bookId',
+        bookId.slice(0, 4),
+      );
+      const rowIds = new Set(rows.map((r) => r.id));
+      const optimistic = untrack(() => persistedHighlights).filter((h) => !rowIds.has(h.id));
+      let merged: PersistedHighlight[] = rows.map((r) => {
+        let pageNumber = r.pageNumber;
+        if (r.cfi) {
+          const m = /epubcfi\(\/6\/(\d+)!/.exec(r.cfi);
+          if (m) {
+            const idx = parseInt(m[1], 10) - 1;
+            if (idx >= 0 && idx !== pageNumber) {
+              console.warn(
+                'RW: fixing page mismatch',
+                r.id.slice(0, 4),
+                `page ${r.pageNumber} -> ${idx}`,
+              );
+              pageNumber = idx;
+              void updateHighlight({ id: r.id, pageNumber }).catch(() => {});
+            }
+          }
+        }
+        return {
+          id: r.id,
+          color: r.color,
+          pageNumber,
+          rects: [],
+          cfi: r.cfi ?? null,
+          text: r.text,
+          note: r.note ?? null,
+        };
+      });
+      if (optimistic.length > 0) {
+        console.warn(
+          'RW: preserving',
+          optimistic.length,
+          'optimistic highlights not yet in DB',
+          optimistic.map((o) => `${o.pageNumber}:${o.id.slice(0, 4)}`).join(','),
+        );
+        merged = [...merged, ...optimistic];
+      }
+      persistedHighlights = merged;
+    } catch (err) {
+      console.error('Failed to load highlights:', err);
+    }
+  }
+
+  // Initial load on book change
   $effect(() => {
     if (activeReadingBook) {
-      const bookId = activeReadingBook.id;
-      // No reactivo: plain var, no dispara re-track
-      const myEpoch = ++highlightLoadEpoch;
-      listHighlights(bookId)
-        .then((rows: HighlightDto[]) => {
-          // Stale guard: epoch cambió (nuevo load) o bookId ya no coincide
-          if (myEpoch !== highlightLoadEpoch) {
-            console.debug('RW: listHighlights loaded stale epoch ignored', bookId.slice(0, 4));
-            return;
-          }
-          // También chequea bookId actual sin crear dependencia reactiva extra
-          if (untrack(() => activeReadingBook?.id) !== bookId) {
-            console.debug('RW: listHighlights stale bookId ignored', bookId.slice(0, 4));
-            return;
-          }
-          console.warn(
-            'RW: listHighlights loaded',
-            rows.length,
-            rows.map((r) => `${r.pageNumber}:${r.id.slice(0, 4)}`).join(','),
-            'bookId',
-            bookId.slice(0, 4),
-          );
-          const rowIds = new Set(rows.map((r) => r.id));
-          const optimistic = untrack(() => persistedHighlights).filter((h) => !rowIds.has(h.id));
-          let merged: PersistedHighlight[] = rows.map((r) => {
-            let pageNumber = r.pageNumber;
-            if (r.cfi) {
-              const m = /epubcfi\(\/6\/(\d+)!/.exec(r.cfi);
-              if (m) {
-                const idx = parseInt(m[1], 10) - 1;
-                if (idx >= 0 && idx !== pageNumber) {
-                  console.warn(
-                    'RW: fixing page mismatch',
-                    r.id.slice(0, 4),
-                    `page ${r.pageNumber} -> ${idx}`,
-                  );
-                  pageNumber = idx;
-                  void updateHighlight({ id: r.id, pageNumber }).catch(() => {});
-                }
-              }
-            }
-            return {
-              id: r.id,
-              color: r.color,
-              pageNumber,
-              rects: [],
-              cfi: r.cfi ?? null,
-              text: r.text,
-              note: r.note ?? null,
-            };
-          });
-          if (optimistic.length > 0) {
-            console.warn(
-              'RW: preserving',
-              optimistic.length,
-              'optimistic highlights not yet in DB',
-              optimistic.map((o) => `${o.pageNumber}:${o.id.slice(0, 4)}`).join(','),
-            );
-            merged = [...merged, ...optimistic];
-          }
-          persistedHighlights = merged;
-        })
-        .catch((err) => {
-          console.error('Failed to load highlights:', err);
-        });
+      void reloadHighlights();
     } else {
       persistedHighlights = [];
     }
+  });
+
+  // Reload when remote sync finishes (fetchAndApplyBookState bump)
+  $effect(() => {
+    const v = readerState.highlightsVersion;
+    if (v > 0 && activeReadingBook) {
+      console.warn(
+        'RW: highlightsVersion changed',
+        v,
+        'reloading highlights for',
+        activeReadingBook.id.slice(0, 4),
+      );
+      void reloadHighlights();
+    }
+  });
+
+  // Fallback: window event emitted by ReaderDomainState after sync
+  $effect(() => {
+    const handler = (e: Event): void => {
+      const detail = (e as CustomEvent).detail as { bookId?: string } | undefined;
+      const evBookId = detail?.bookId;
+      if (!activeReadingBook) return;
+      if (evBookId && evBookId !== activeReadingBook.id) return;
+      console.warn(
+        'RW: highlights:changed event',
+        evBookId?.slice(0, 4) ?? 'all',
+        'reloading highlights',
+      );
+      void reloadHighlights();
+    };
+    window.addEventListener('highlights:changed', handler as EventListener);
+    return () => window.removeEventListener('highlights:changed', handler as EventListener);
   });
 
   // Bug2 diagnostics: log initialLocation prop passed to EpubNativeViewer (non-spam: only on book/chapter change)

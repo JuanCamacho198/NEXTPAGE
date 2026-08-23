@@ -41,6 +41,7 @@ class ReaderDomainState {
   preloadedBytes = $state<{ filePath: string; data: Uint8Array } | null>(null);
   readerError = $state<string | null>(null);
   isFullscreen = $state(false);
+  highlightsVersion = $state(0);
 
   // ─── Callbacks ───
   onStatsRefreshNeeded: ((bookId: string) => Promise<void>) | null = null;
@@ -224,31 +225,46 @@ class ReaderDomainState {
           `highlight:${highlight.id ?? highlight.cfiRange}`,
           highlight.updatedAt,
         );
-        if (highlight.deletedAt && highlight.id) {
-          void deleteHighlight(highlight.id);
-        } else {
-          // Supabase `page` is nullable and EPUB chapter indices are 0-based,
-          // so a null/zero page must never crash the pull (the positive-page
-          // validation in tauriClient would otherwise throw and abort every
-          // subsequent highlight). Fall back to a safe value per format.
-          const rawPage = highlight.page ?? 0;
-          const pageNumber =
-            Number.isInteger(rawPage) && rawPage > 0 ? rawPage : highlight.cfiRange ? 1 : 1;
-          void saveHighlight({
-            id: highlight.id ?? crypto.randomUUID(),
-            bookId: highlight.bookId,
-            text: highlight.textContent,
-            color: highlight.color,
-            pageNumber,
-            rectLeft: 0,
-            rectRight: 0,
-            rectTop: 0,
-            rectBottom: 0,
-            cfi: highlight.cfiRange || null,
-            note: highlight.note,
-          }).catch((err) => {
-            console.warn('Failed to apply remote highlight locally:', err);
-          });
+        try {
+          if (highlight.deletedAt && highlight.id) {
+            await deleteHighlight(highlight.id);
+          } else {
+            // Supabase `page` is nullable and EPUB chapter indices are 0-based,
+            // so a null/zero page must never crash the pull (the positive-page
+            // validation in tauriClient would otherwise throw and abort every
+            // subsequent highlight). Fall back to a safe value per format.
+            const rawPage = highlight.page ?? 0;
+            const pageNumber =
+              Number.isInteger(rawPage) && rawPage > 0 ? rawPage : highlight.cfiRange ? 1 : 1;
+            await saveHighlight({
+              id: highlight.id ?? crypto.randomUUID(),
+              bookId: highlight.bookId,
+              text: highlight.textContent,
+              color: highlight.color,
+              pageNumber,
+              rectLeft: 0,
+              rectRight: 0,
+              rectTop: 0,
+              rectBottom: 0,
+              cfi: highlight.cfiRange || null,
+              note: highlight.note,
+            });
+          }
+        } catch (err) {
+          console.warn('Failed to apply remote highlight locally:', err);
+        }
+      }
+      if (remote.highlights.length > 0) {
+        console.warn(
+          '[highlights] fetchAndApplyBookState applied',
+          remote.highlights.length,
+          'highlights for book',
+          bookId.slice(0, 4),
+          'bumping highlightsVersion',
+        );
+        this.highlightsVersion++;
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('highlights:changed', { detail: { bookId } }));
         }
       }
     } catch {
@@ -521,6 +537,9 @@ class ReaderDomainState {
         void this.supabaseSync
           .fetchAllHighlightsForPull()
           .then((rows) => {
+            if (rows.length > 0) {
+              console.warn('[highlights] initial pull fetched', rows.length, 'rows');
+            }
             const chunkSize = 500;
             for (let i = 0; i < rows.length; i += chunkSize) {
               const chunk = rows.slice(i, i + chunkSize);
@@ -530,6 +549,12 @@ class ReaderDomainState {
                   for (const h of chunk) {
                     const iso = new Date(h.updatedAtEpochMillis).toISOString();
                     this.appliedRemote.set(`highlight:${h.id}`, iso);
+                  }
+                  if (chunk.length > 0) {
+                    this.highlightsVersion++;
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('highlights:changed', { detail: { source: 'pull' } }));
+                    }
                   }
                 })
                 .catch((e) => {
@@ -549,10 +574,19 @@ class ReaderDomainState {
         if (previous && Date.parse(payload.updatedAt) <= Date.parse(previous)) return;
         this.appliedRemote.set(key, payload.updatedAt);
 
+        const bump = (): void => {
+          this.highlightsVersion++;
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('highlights:changed', { detail: { bookId } }));
+          }
+        };
+
         if (deletedAt) {
-          deleteHighlight(id ?? '').catch((e) => {
-            console.error('Failed to apply remote highlight delete locally:', e);
-          });
+          deleteHighlight(id ?? '')
+            .then(bump)
+            .catch((e) => {
+              console.error('Failed to apply remote highlight delete locally:', e);
+            });
         } else {
           // Page anchoring is format-aware (single pipeline, anchor per format):
           // - PDF highlights carry a real, positive `page` from Supabase.
@@ -574,9 +608,11 @@ class ReaderDomainState {
             rectBottom: 0,
             cfi: cfiRange || null,
             note: note,
-          }).catch((e) => {
-            console.error('Failed to apply remote highlight locally:', e);
-          });
+          })
+            .then(bump)
+            .catch((e) => {
+              console.error('Failed to apply remote highlight locally:', e);
+            });
         }
       });
     } catch (e) {

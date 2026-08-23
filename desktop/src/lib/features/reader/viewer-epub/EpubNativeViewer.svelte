@@ -237,9 +237,14 @@
     if (Array.isArray(sh) && sh.length > 0) return sh.map((h) => normalizeHref(h));
     const sh2 = (metadata as EpubMetadataExtract).spine_hrefs;
     if (Array.isArray(sh2) && sh2.length > 0) return sh2.map((h) => normalizeHref(h));
-    // Fallback: derive from toc hrefs (strip fragment) when spine not yet wired (old cache)
+    // Fallback: derive from toc hrefs — spine authority preferred. TOC-derived hrefs
+    // may be misaligned (Odisea offset) if cache is stale; log warning so stale
+    // caches are purged via CACHE_VERSION bump (epub_reader.rs v4).
     const toc = getToc();
-    if (toc.length > 0) return toc.map((c) => normalizeHref(stripFragment(c.href)));
+    if (toc.length > 0) {
+      console.warn('epub-spine: falling back to TOC-derived hrefs (spine empty, tocLen', toc.length, ') — may be misaligned if offset-2');
+      return toc.map((c) => normalizeHref(stripFragment(c.href)));
+    }
     return [];
   }
 
@@ -263,8 +268,12 @@
       );
       return tocIndex;
     }
-    // Delegate to pure helper for testability, but keep warning path
-    return pureSpineIndexForToc(toc, tocIndex);
+    const spineLen = getSpineHrefs().length;
+    const resolved = pureSpineIndexForToc(toc, tocIndex);
+    if (spineLen > 0 && (resolved < 0 || resolved >= spineLen)) {
+      console.warn('epub-toc: spineIndexForToc resolved index out-of-bounds', resolved, 'spineLen', spineLen, 'tocIndex', tocIndex);
+    }
+    return resolved;
   }
 
   /** Resolve TOC position for a 0-based spine index. Returns null when not in TOC. */

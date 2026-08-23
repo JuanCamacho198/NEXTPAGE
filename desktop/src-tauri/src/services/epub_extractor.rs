@@ -414,13 +414,27 @@ impl EpubExtractor {
                 .file_name()
                 .map(|f| f.to_string_lossy().to_string())
                 .unwrap_or_default();
-            // Try full base href first, then filename, fall back to sequential
+            // Try full base href first, then filename, then case-insensitive fallback.
+            // Never silently shift subsequent indices — missing entries keep their
+            // sequential position but are logged as missing_toc_entry for cache invalidation.
             let index = spine_map
                 .get(&href_base)
                 .copied()
                 .or_else(|| spine_map.get(&filename).copied())
+                .or_else(|| {
+                    // Case-insensitive / stripped-prefix fallback (OEBPS/ variance for Odisea et al.)
+                    let lower_base = href_base.to_ascii_lowercase();
+                    let lower_file = filename.to_ascii_lowercase();
+                    spine_map
+                        .iter()
+                        .find(|(k, _)| k.to_ascii_lowercase() == lower_base || k.to_ascii_lowercase() == lower_file)
+                        .map(|(_, v)| *v)
+                })
                 .unwrap_or_else(|| {
-                    eprintln!("Warning: NavPoint href {:?} not found in spine", content_str);
+                    eprintln!(
+                        "missing_toc_entry: NavPoint href {:?} (base {:?}, filename {:?}) not found in spine (spine_len={}) — fallback to sequential index {} (unmapped)",
+                        content_str, href_base, filename, spine_map.len(), i
+                    );
                     i
                 });
 
@@ -464,8 +478,19 @@ impl EpubExtractor {
                 .get(&href_base)
                 .copied()
                 .or_else(|| spine_map.get(&filename).copied())
+                .or_else(|| {
+                    let lower_base = href_base.to_ascii_lowercase();
+                    let lower_file = filename.to_ascii_lowercase();
+                    spine_map
+                        .iter()
+                        .find(|(k, _)| k.to_ascii_lowercase() == lower_base || k.to_ascii_lowercase() == lower_file)
+                        .map(|(_, v)| *v)
+                })
                 .unwrap_or_else(|| {
-                    eprintln!("Warning: NavPoint href {:?} not found in spine", content_str);
+                    eprintln!(
+                        "missing_toc_entry: NavPoint child href {:?} (base {:?}, filename {:?}) not found in spine (spine_len={}) — fallback to start_index {} + {} = {} (unmapped, never shift siblings)",
+                        content_str, href_base, filename, spine_map.len(), start_index, i, start_index + i
+                    );
                     start_index + i
                 });
             chapters.push(EpubChapterMeta {

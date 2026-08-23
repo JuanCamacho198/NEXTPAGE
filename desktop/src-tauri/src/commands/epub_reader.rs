@@ -8,7 +8,7 @@ use crate::services::epub_extractor::{
 };
 use crate::state::AppState;
 
-const CACHE_VERSION: u32 = 3;
+const CACHE_VERSION: u32 = 4;
 
 fn get_cache_dir(app: &AppHandle, book_id: &str) -> PathBuf {
     let app_data = app.path().app_data_dir().expect("app data dir");

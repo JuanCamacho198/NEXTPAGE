@@ -30,8 +30,19 @@ export function extractFragment(href: string): string | null {
  * Mirrors Rust EpubExtractor's TOC index contract: toc[tocIdx].index is the filtered spine position.
  */
 export function spineIndexForToc(toc: EpubChapterMeta[], tocIndex: number): number {
+  if (tocIndex < 0 || tocIndex >= toc.length) {
+    console.warn('epub-toc: spineIndexForToc tocIndex out-of-bounds', tocIndex, 'tocLen', toc.length);
+    return tocIndex;
+  }
   const entry = toc[tocIndex];
-  if (!entry || typeof entry.index !== 'number') return tocIndex;
+  if (!entry || typeof entry.index !== 'number') {
+    console.warn('epub-toc: spineIndexForToc missing entry for tocIndex', tocIndex, 'fallback to', tocIndex);
+    return tocIndex;
+  }
+  if (entry.index < 0 || !Number.isFinite(entry.index)) {
+    console.warn('epub-toc: spineIndexForToc invalid index', entry.index, 'for tocIndex', tocIndex);
+    return tocIndex;
+  }
   return entry.index;
 }
 
@@ -45,6 +56,10 @@ export function tocIndexForSpine(
   spineIndex: number,
   spineHref?: string,
 ): number | null {
+  if (spineIndex < 0 || !Number.isFinite(spineIndex)) {
+    console.warn('epub-toc: tocIndexForSpine invalid spineIndex', spineIndex);
+    return null;
+  }
   const byIndex = toc.findIndex((c) => c.index === spineIndex);
   if (byIndex !== -1) return byIndex;
   if (spineHref) {
@@ -56,6 +71,9 @@ export function tocIndexForSpine(
       (c) => (normalizeHref(stripFragment(c.href)).split('/').pop() ?? '') === fileName,
     );
     if (byFile !== -1) return byFile;
+  }
+  if (spineHref) {
+    console.warn('epub-toc: tocIndexForSpine no TOC entry for spineIndex', spineIndex, 'spineHref', spineHref, 'tocLen', toc.length);
   }
   return null;
 }

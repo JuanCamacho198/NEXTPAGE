@@ -1,0 +1,44 @@
+# Offline-window staged mutation (design D1 / spec delta): deletes the seeded
+# highlight while the device has no connectivity. Start-ChaosSequence.ps1 runs
+# this flow either BEFORE the WiFi cut (offline-first staging, D1) or online
+# immediately before the cut (-StageOnline fallback, design open question 2).
+#
+# Fixture guard: the delete block only fires when the seeded row is visible.
+# Inside a combined full-suite invocation an earlier consumer flow
+# (resurrection-guard / reader-menu-delete) may have already deleted the seed;
+# in that case this flow degrades to navigation + absence sanity instead of
+# failing the suite. Dedicated chaos windows always re-seed first.
+#
+# Pinned seed fixture (device locale is Spanish):
+#   ROW  excerpt containing "Orestes Atrida"
+appId: com.nextpage
+tags: [chaos]
+---
+- launchApp:
+    clearState: false
+- runFlow:
+    file: ../lib/dismiss-dialogs-if-present.yaml
+- waitForAnimationToEnd:
+    timeout: 3000
+
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Resaltados"
+
+# ── Conditional staging: same scoped taps as resurrection-guard ────────────
+- runFlow:
+    when:
+      visible:
+        text: ".*Orestes Atrida.*"
+    commands:
+      - tapOn: "Más opciones"          # card overflow menu (content-desc)
+      - tapOn: "Eliminar resaltado"    # dropdown item (exact text)
+      - assertVisible: "Eliminar resaltado"  # AlertDialog title is up
+      - tapOn: "Eliminar"              # AlertDialog confirm button
+      - assertNotVisible:
+          text: ".*Orestes Atrida.*"
+
+# ── Row absent regardless of whether this flow performed the deletion ──────
+- assertNotVisible:
+    text: ".*Orestes Atrida.*"

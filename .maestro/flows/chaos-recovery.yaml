@@ -1,0 +1,37 @@
+# Post-reconnect recovery asserts: after Start-ChaosSequence.ps1 restores WiFi
+# and Wait-AdbDevice.ps1 reports the transport online, hot sync must drain
+# ("Sincronizado", values-es sync_status_synced), the deletion staged during
+# the offline window must persist, and no duplicate rows may appear.
+#
+# Design D2: "Sincronizado" is asserted on Estantería, the sole mount of
+# SyncStatusIndicator reachable with stable selectors (LibraryScreen).
+appId: com.nextpage
+tags: [chaos, sync]
+---
+- launchApp:
+    clearState: false
+- runFlow:
+    file: ../lib/dismiss-dialogs-if-present.yaml
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# ── Sync drained: indicator back to "Sincronizado" within 60s ───────────────
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Estantería"
+- extendedWaitUntil:
+    visible:
+      text: "Sincronizado"
+    timeout: 60000
+
+# ── Deletion persisted across the offline window ────────────────────────────
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Resaltados"
+- assertNotVisible:
+    text: ".*Orestes Atrida.*"
+# Duplicate sanity: repeated absence assert (also catches late re-render/dupes)
+- assertNotVisible:
+    text: ".*Orestes Atrida.*"

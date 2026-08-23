@@ -321,15 +321,15 @@ class SupabaseProgressSync(
                 }
                 else -> {
                     // PR4: HIGHLIGHT per id — atomic enqueue, never coalesced across ids.
-                    // Try per-id first (new parity rows: entityId=highlight.id); fallback to
-                    // legacy bookId rows (old outbox where entityId was bookId) for migration.
+                    // Use only getHighlightById to avoid re-pushing deleted highlights via bookId fallback.
                     val single = highlightDao.getHighlightById(entityId)
-                    val highlightsToPush = if (single != null) {
-                        listOf(single)
-                    } else {
-                        highlightDao.getHighlightsForBook(entityId)
+                    if (single == null) {
+                        // Legacy bookId rows (old outbox where entityId was bookId) are ignored;
+                        // they would re-send deleted rows and cause resurrection. Clean up outbox.
+                        outboxDao.deleteById(item.id)
+                        return
                     }
-                    for (localHighlight in highlightsToPush) {
+                    val localHighlight = single
                         // Ensure locatorJson is never null for epubcfi highlights (LocatorCodec fallback)
                         val resolvedLocatorJson = LocatorCodec.normalizeLocatorJson(localHighlight.locatorJson)
                             ?: run {
@@ -375,7 +375,6 @@ class SupabaseProgressSync(
                                 )
                             }
                         }
-                    }
                 }
             }
             outboxDao.deleteById(item.id)
@@ -669,7 +668,7 @@ class SupabaseProgressSync(
         val remoteTime = try {
             dateFormat.parse(row.updatedAt)?.time ?: 0L
         } catch (_: Exception) {
-            System.currentTimeMillis()
+            0L
         }
 
         val local = readingSessionDao.getById(row.id)
@@ -685,15 +684,15 @@ class SupabaseProgressSync(
                     id = row.id,
                     bookId = row.bookId,
                     startTimeEpochMillis = try {
-                        dateFormat.parse(row.startedAt)?.time ?: System.currentTimeMillis()
+                        dateFormat.parse(row.startedAt)?.time ?: 0L
                     } catch (_: Exception) {
-                        System.currentTimeMillis()
+                        0L
                     },
                     durationMinutes = row.durationMinutes,
                     date = try {
-                        dateFormat.parse(row.date)?.time ?: System.currentTimeMillis()
+                        dateFormat.parse(row.date)?.time ?: 0L
                     } catch (_: Exception) {
-                        System.currentTimeMillis()
+                        0L
                     },
                     userId = row.userId,
                     updatedAtEpochMillis = remoteTime

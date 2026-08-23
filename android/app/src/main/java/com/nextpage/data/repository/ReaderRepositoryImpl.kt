@@ -125,12 +125,14 @@ class ReaderRepositoryImpl(
         val payload = buildHighlightPayload(highlight)
         ensureValidJson(payload)
         // HIGHLIGHT per id — atomic enqueue, never coalesced across ids (desktop parity)
+        // Distinguish DELETE: when deletedAt != null, outbox must be DELETE so Supabase softDelete path runs
+        val operation = if (highlight.deletedAtEpochMillis != null) SyncOperation.DELETE else SyncOperation.UPDATE
         outboxDao?.insert(
             SyncOutboxEntity(
                 id = "outbox-${UUID.randomUUID()}",
                 entityType = SyncEntityType.HIGHLIGHT.name,
                 entityId = highlight.id,
-                operation = SyncOperation.UPDATE.name,
+                operation = operation.name,
                 payloadJson = payload,
                 createdAtEpochMillis = System.currentTimeMillis()
             )

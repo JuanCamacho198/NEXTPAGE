@@ -433,27 +433,21 @@ fun ReadiumReaderContent(
     }
 
     // ── Decoration sync (highlights → decorations) ────────────────
-    // Reapplies ALL decorations whenever the highlights list changes (HL-5).
-    // When the list is EMPTY we still clear (a genuine "no highlights" book),
-    // but only once the navigator has had a chance to load them: the reader
-    // is reopened with highlights=0 for a few frames while Room emits the
-    // persisted list, and clearing early would wipe the decorations. The
-    // post-listener kick above retries until highlights arrive, so a fresh
-    // navigator never clears before its data is available.
-    // Defer until publication readingOrder is ready so epubcfi fallback can resolve href.
+    // Always re-apply (even when empty) — ensures deleted highlights are cleared.
+    // Previous early-return on empty left stale decorations when a highlight was deleted
+    // (local Flow emitted empty after soft-delete but we skipped clear). Now we always
+    // call applyDecorations so tombstoned highlights disappear immediately.
     LaunchedEffect(highlights, navigatorFragment, publication) {
         val frag = navigatorFragment ?: return@LaunchedEffect
         val decorable = frag as? DecorableNavigator ?: return@LaunchedEffect
+        val decorations = highlightsToDecorations(highlights, readingOrder, publication)
         if (highlights.isEmpty()) {
-            // Defer the empty-clear to the retry loop in the post-listener
-            // kick, which waits for Room to emit. If highlights stay empty
-            // for good (genuinely no highlights), the retry gives up without
-            // clearing — decorations for a previous session may linger, but
-            // the next non-empty emission reconciles them.
-            DebugLog.info("Readium", "Decoration sync: skipping empty-clear (waiting for highlights)")
+            DebugLog.info("Readium", "Decoration sync: clearing decorations (highlights empty)")
+            decorable.applyDecorations(emptyList(), DECORATION_GROUP)
+            DebugDual.logHighlightApplied(0)
+            DebugStateHolder.recordApplied(0)
             return@LaunchedEffect
         }
-        val decorations = highlightsToDecorations(highlights, readingOrder, publication)
         DebugLog.info("Readium", "Decoration sync: pushing ${decorations.size} decorations")
         DebugDual.d(DebugDual.TAG_SYNC, "Decoration sync: pushing ${decorations.size} decorations via ${if (readingOrder.isNotEmpty()) "readingOrder(${readingOrder.size})" else "no-order"}")
         decorable.applyDecorations(decorations, DECORATION_GROUP)

@@ -710,8 +710,9 @@ class ReaderViewModel(
             lifecycleHolder.state
                 .map { it.selectedBookId }
                 .mapNotNull { it }
+                .distinctUntilChanged()
                 .flatMapLatest { bookId ->
-                    readerRepository.observeHighlights(bookId)
+                    readerRepository.observeHighlights(bookId).distinctUntilChanged()
                 }
                 .collect { highlights ->
                     DebugLog.info("ReaderVM", "direct highlights collect: ${highlights.size}")

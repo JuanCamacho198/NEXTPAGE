@@ -4,7 +4,11 @@
 #
 # Pinned seed fixture (device locale is Spanish):
 #   BOOK      La Odisea
-#   ROW       excerpt containing "Orestes Atrida"
+#   ROW       excerpt containing "divinal Odiseo" (rebuilt device seed).
+#             The marked row MUST be the newest highlight (updated_at DESC):
+#             every delete path (card menu, reader simulate-tap) targets the
+#             topmost card, and the marker must match exactly that row and
+#             no other alive row.
 appId: com.nextpage
 tags: [regression, sync]
 ---
@@ -24,7 +28,7 @@ tags: [regression, sync]
       TAB: "Resaltados"
 - extendedWaitUntil:
     visible:
-      text: ".*Orestes Atrida.*"
+      text: ".*divinal Odiseo.*"
     timeout: 20000
 
 # ── Delete via card menu (full-string matching scopes each tap) ────────────
@@ -35,7 +39,7 @@ tags: [regression, sync]
 
 # ── Row removed immediately ────────────────────────────────────────────────
 - assertNotVisible:
-    text: ".*Orestes Atrida.*"
+    text: ".*divinal Odiseo.*"
 
 # ── PR#35 guard: reopen the affected book, return, row must stay gone ──────
 - runFlow:
@@ -63,5 +67,5 @@ tags: [regression, sync]
 #    still flips this red instead of racing a premature green. ──────────────
 - extendedWaitUntil:
     notVisible:
-      text: ".*Orestes Atrida.*"
+      text: ".*divinal Odiseo.*"
     timeout: 15000

@@ -215,7 +215,7 @@ Suite E2E en `.maestro/` con runners en `scripts/e2e/`. Precondiciones del dispo
 
 1. Emparejar por *Depuración inalámbrica* (`adb connect ip:puerto`); el puerto **rota** en HyperOS — usar el serial mDNS como `-AdbTarget` (los scripts lo aceptan) o refrescar `E2E_ADB_TARGET`.
 2. Locale del sistema: **español** (strings fijados verbatim en los flows). Sesión iniciada preservada; NUNCA pasar `clearState: true`.
-3. Ajustes → **Modo debug** ON (chip DEBUG en lector). Libro de prueba "La Odisea" con highlight sembrado (excerpt "Orestes Atrida").
+3. Ajustes → **Modo debug** ON (chip DEBUG en lector). Libro de prueba "La Odisea" con highlight sembrado (excerpt "divinal Odiseo", la fila más reciente por `updated_at DESC`).
 4. Prompts one-time de MIUI aceptados manualmente; Developer options → **Instalar vía USB** ON (si no, MIUI rechaza el driver de Maestro: `INSTALL_FAILED_USER_RESTRICTED`). Extender `screen_off_timeout` para ventanas largas.
 5. Solo ADB-WiFi (sin USB): usar `Start-ChaosSequence.ps1 -StageOnline`; el script arma un temporizador EN EL dispositivo que re-habilita WiFi tras el corte.
 

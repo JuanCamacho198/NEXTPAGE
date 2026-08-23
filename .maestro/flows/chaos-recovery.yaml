@@ -31,7 +31,7 @@ tags: [chaos, sync]
     env:
       TAB: "Resaltados"
 - assertNotVisible:
-    text: ".*Orestes Atrida.*"
+    text: ".*divinal Odiseo.*"
 # Duplicate sanity: repeated absence assert (also catches late re-render/dupes)
 - assertNotVisible:
-    text: ".*Orestes Atrida.*"
+    text: ".*divinal Odiseo.*"

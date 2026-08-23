@@ -251,6 +251,22 @@
   /** Derive spine index for the current TOC position — used for CFI / highlights. */
   let currentSpineIndex = $derived(spineIndexForToc(currentChapterIndex));
 
+  // Display pagination: TOC length when available (Odisea 28), else spine length (31)
+  // totalChapters stays spine-authoritative for navigation/CFI; display is toc-based
+  let displayTotal = $derived.by(() => {
+    const tocLen = getToc().length;
+    return tocLen > 0 ? tocLen : totalChapters;
+  });
+  let displayCurrentPage = $derived.by(() => {
+    const tocLen = getToc().length;
+    if (tocLen > 0) return currentChapterIndex + 1;
+    return currentSpineIndex + 1;
+  });
+  let displayPercentage = $derived.by(() => {
+    if (displayTotal <= 0) return 0;
+    return ((displayCurrentPage - 0.5) / displayTotal) * 100;
+  });
+
   // ─── TOC ↔ Spine mapping helpers ─────────────────────────
   /** Resolve spine index (0..spineLen-1) for a TOC position (0..tocLen-1). */
   function spineIndexForToc(tocIndex: number): number {
@@ -1821,22 +1837,25 @@
   }
 
   async function handleGoToPage(page: number): Promise<boolean> {
-    const spineIdx = page - 1;
-    if (spineIdx < 0 || spineIdx >= totalChapters) return false;
-    // Map spine page to TOC position when possible (Historia offset-2)
-    const tocIdx = tocIndexForSpine(spineIdx, getSpineHrefs()[spineIdx]);
-    if (tocIdx !== null && tocIdx >= 0 && tocIdx < getToc().length) {
+    const tocLen = getToc().length;
+    if (tocLen > 0) {
+      // Display is TOC-based (Odisea 28 vs spine 31): page 1..tocLen maps directly to TOC index
+      // spine navigation stays via goToChapter -> spineIndexForToc
+      if (page < 1 || page > tocLen) return false;
+      const tocIdx = page - 1;
       goToChapter(tocIdx);
       return true;
     }
-    // Fallback: treat page as TOC index when spine not mapped (e.g., linear cover)
-    if (spineIdx >= 0 && spineIdx < getToc().length) {
-      goToChapter(spineIdx);
+    // Fallback: spine-based when no TOC (cover/nav included in count)
+    const spineIdx = page - 1;
+    if (spineIdx < 0 || spineIdx >= totalChapters) return false;
+    const mapped = tocIndexForSpine(spineIdx, getSpineHrefs()[spineIdx]);
+    if (mapped !== null && mapped >= 0 && mapped < tocLen) {
+      goToChapter(mapped);
       return true;
     }
-    // Last resort: direct spine fallback (may render blank if toc length smaller)
     if (spineIdx >= 0 && spineIdx < totalChapters) {
-      goToChapter(Math.min(spineIdx, getToc().length - 1));
+      goToChapter(spineIdx);
       return true;
     }
     return false;
@@ -1928,11 +1947,11 @@
       {t('epub.error')}: {error}
     </div>
   {:else}
-    <!-- EpubControls top bar — spine-authoritative pagination -->
+    <!-- EpubControls top bar — TOC-based display (28) when TOC exists, else spine (31) -->
     <EpubControls
-      currentPage={currentSpineIndex + 1}
-      totalPages={totalChapters}
-      currentPercentage={((currentSpineIndex + 0.5) / totalChapters) * 100}
+      currentPage={displayCurrentPage}
+      totalPages={displayTotal}
+      currentPercentage={displayPercentage}
       {fontSize}
       {isFullscreen}
       {t}

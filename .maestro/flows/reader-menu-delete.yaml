@@ -3,7 +3,7 @@
 #
 # Manual preconditions (documented in android/AGENTS.md once Phase 5 lands):
 #   - "Modo debug" ON in Ajustes (gates the DEBUG chip + debug panel).
-#   - Seeded highlight present (excerpt containing "divinal Odiseo", the
+#   - Seeded highlight present (excerpt containing "postreros", the
 #     newest row — simulate-tap picks highlights[0] with a locator).
 #
 # Implementation notes (verified against current app code):
@@ -44,7 +44,7 @@ tags: [regression]
       TAB: "Resaltados"
 - extendedWaitUntil:
     visible:
-      text: ".*divinal Odiseo.*"
+      text: ".*postreros.*"
     timeout: 20000
 
 # ── Open the book (reader entry via shared subflow) ────────────────────────
@@ -93,5 +93,5 @@ tags: [regression]
 # resurrection (sync apply) still flips this red instead of racing green.
 - extendedWaitUntil:
     notVisible:
-      text: ".*divinal Odiseo.*"
+      text: ".*postreros.*"
     timeout: 15000

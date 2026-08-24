@@ -10,7 +10,7 @@
 # failing the suite. Dedicated chaos windows always re-seed first.
 #
 # Pinned seed fixture (device locale is Spanish):
-#   ROW  excerpt containing "divinal Odiseo" (rebuilt device seed, newest row)
+#   ROW  excerpt containing "postreros" (rebuilt device seed, newest row)
 appId: com.nextpage
 tags: [chaos]
 ---
@@ -44,15 +44,19 @@ tags: [chaos]
 - runFlow:
     when:
       visible:
-        text: ".*divinal Odiseo.*"
+        text: ".*postreros.*"
     commands:
-      - tapOn: "Más opciones"          # card overflow menu (content-desc)
+      - tapOn: "Más opciones"
+      - extendedWaitUntil:
+          visible:
+            text: "Eliminar resaltado"
+          timeout: 10000
       - tapOn: "Eliminar resaltado"    # dropdown item (exact text)
       - assertVisible: "Eliminar resaltado"  # AlertDialog title is up
       - tapOn: "Eliminar"              # AlertDialog confirm button
       - assertNotVisible:
-          text: ".*divinal Odiseo.*"
+          text: ".*postreros.*"
 
 # ── Row absent regardless of whether this flow performed the deletion ──────
 - assertNotVisible:
-    text: ".*divinal Odiseo.*"
+    text: ".*postreros.*"

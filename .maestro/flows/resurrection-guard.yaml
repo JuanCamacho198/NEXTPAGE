@@ -4,7 +4,7 @@
 #
 # Pinned seed fixture (device locale is Spanish):
 #   BOOK      La Odisea
-#   ROW       excerpt containing "divinal Odiseo" (rebuilt device seed).
+#   ROW       excerpt containing "postreros" (rebuilt device seed).
 #             The marked row MUST be the newest highlight (updated_at DESC):
 #             every delete path (card menu, reader simulate-tap) targets the
 #             topmost card, and the marker must match exactly that row and
@@ -33,18 +33,22 @@ tags: [regression, sync]
       TAB: "Resaltados"
 - extendedWaitUntil:
     visible:
-      text: ".*divinal Odiseo.*"
+      text: ".*postreros.*"
     timeout: 20000
 
 # ── Delete via card menu (full-string matching scopes each tap) ────────────
 - tapOn: "Más opciones"          # card overflow menu (content-desc)
+- extendedWaitUntil:
+    visible:
+      text: "Eliminar resaltado"
+    timeout: 10000
 - tapOn: "Eliminar resaltado"    # dropdown item (exact text, not the icon)
 - assertVisible: "Eliminar resaltado"  # AlertDialog title is up
 - tapOn: "Eliminar"              # AlertDialog confirm button (exact text)
 
 # ── Row removed immediately ────────────────────────────────────────────────
 - assertNotVisible:
-    text: ".*divinal Odiseo.*"
+    text: ".*postreros.*"
 
 # ── PR#35 guard: reopen the affected book, return, row must stay gone ──────
 - runFlow:
@@ -72,5 +76,5 @@ tags: [regression, sync]
 #    still flips this red instead of racing a premature green. ──────────────
 - extendedWaitUntil:
     notVisible:
-      text: ".*divinal Odiseo.*"
+      text: ".*postreros.*"
     timeout: 15000

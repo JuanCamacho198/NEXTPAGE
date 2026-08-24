@@ -155,7 +155,8 @@ fun NextPageNavHost(
     val highlightsViewModel: HighlightsViewModel = viewModel(
         factory = HighlightsViewModelFactory(
             readerRepository = appContainer.readerRepository,
-            homeRepository = appContainer.homeRepository
+            homeRepository = appContainer.homeRepository,
+            supabaseSync = appContainer.supabaseProgressSync
         )
     )
 

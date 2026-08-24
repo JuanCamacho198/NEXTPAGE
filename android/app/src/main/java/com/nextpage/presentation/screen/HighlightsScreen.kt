@@ -41,12 +41,21 @@ import com.nextpage.presentation.viewmodel.HighlightsUiState
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.ui.icons.NextPageIcons
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,11 +90,18 @@ fun HighlightsScreen(
     onOpenAccount: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+    // Option 1: silent pull in background when entering screen — local Flow shows instantly
+    LaunchedEffect(Unit) {
+        viewModel.syncHighlights()
+    }
     HighlightsScreenContent(
         uiState = uiState,
         contentPadding = contentPadding,
         authSession = authSession,
         onOpenAccount = onOpenAccount,
+        syncState = syncState,
+        onSyncRefresh = { viewModel.syncHighlights(force = true) },
         onBookFilterChanged = viewModel::onBookFilterChanged,
         onTagFilterChanged = viewModel::onTagFilterChanged,
         onSearchQueryChange = viewModel::onSearchQueryChanged,
@@ -110,12 +126,15 @@ fun HighlightsScreen(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HighlightsScreenContent(
     uiState: HighlightsUiState,
     contentPadding: PaddingValues,
     authSession: AuthSession? = null,
     onOpenAccount: () -> Unit = {},
+    syncState: com.nextpage.presentation.viewmodel.HighlightsSyncState = com.nextpage.presentation.viewmodel.HighlightsSyncState.Idle,
+    onSyncRefresh: () -> Unit = {},
     onBookFilterChanged: (String?) -> Unit,
     onTagFilterChanged: (String?) -> Unit,
     onSearchQueryChange: (String) -> Unit,
@@ -197,39 +216,123 @@ private fun HighlightsScreenContent(
         uiState.books.associate { it.id to it.title }
     }
 
-    LazyColumn(
+    val isSyncing = syncState is com.nextpage.presentation.viewmodel.HighlightsSyncState.Syncing
+    val isSynced = syncState is com.nextpage.presentation.viewmodel.HighlightsSyncState.Synced
+    val pullState = rememberPullToRefreshState()
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(contentPadding),
-        contentPadding = PaddingValues(horizontal = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
+            .padding(contentPadding)
     ) {
-        item {
-            NextPageHeader(
-                title = stringResource(R.string.home_nextpage_title),
-                avatarImageUrl = authSession?.photoUrl,
-                avatarInitials = authSession?.displayName?.take(2)?.uppercase() ?: "NP",
-                onAvatarClick = onOpenAccount,
-                avatarContentDescription = stringResource(R.string.home_avatar_content_description),
-                onSearchClick = { showSearch = !showSearch }
-            )
-        }
+        PullToRefreshBox(
+            isRefreshing = isSyncing,
+            onRefresh = onSyncRefresh,
+            state = pullState,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
+            ) {
+                item {
+                    NextPageHeader(
+                        title = stringResource(R.string.home_nextpage_title),
+                        avatarImageUrl = authSession?.photoUrl,
+                        avatarInitials = authSession?.displayName?.take(2)?.uppercase() ?: "NP",
+                        onAvatarClick = onOpenAccount,
+                        avatarContentDescription = stringResource(R.string.home_avatar_content_description),
+                        onSearchClick = { showSearch = !showSearch }
+                    )
+                }
 
-        item {
-            Column {
-                Text(
-                    text = stringResource(R.string.highlights_title),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.highlights_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.highlights_title),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = stringResource(R.string.highlights_subtitle),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        // Circular ↻ refresh button only on Highlights screen
+                        IconButton(
+                            onClick = onSyncRefresh,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            if (isSyncing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Filled.Refresh,
+                                    contentDescription = stringResource(R.string.highlights_refresh_content_description),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Subtle sync indicator chip (Sincronizando... / Sincronizado)
+                if (isSyncing || isSynced) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                tonalElevation = 2.dp
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    if (isSyncing) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(14.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.highlights_syncing),
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = NextPageIcons.Check,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.highlights_synced),
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
         if (showSearch) {
             item {
@@ -318,6 +421,8 @@ private fun HighlightsScreenContent(
         }
 
         item { Spacer(modifier = Modifier.height(16.dp)) }
+            }
+        }
     }
 
     // ── Note Edit Modal ────────────────────────────────────────

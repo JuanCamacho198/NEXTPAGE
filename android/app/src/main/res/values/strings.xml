@@ -595,6 +595,9 @@
     <string name="highlights_snackbar_tag_saved">Tag saved</string>
     <string name="highlights_tag_dialog_hint">Enter tag name</string>
     <string name="highlights_color_filter_todos">All</string>
+    <string name="highlights_syncing">Synchronizing…</string>
+    <string name="highlights_synced">Synchronized</string>
+    <string name="highlights_refresh_content_description">Refresh highlights</string>
 
     <!-- Library -->
     <string name="library_menu_edit_metadata">Edit Metadata</string>

@@ -539,6 +539,9 @@
     <string name="highlights_snackbar_tag_saved">Etiqueta guardada</string>
     <string name="highlights_tag_dialog_hint">Ingresá nombre de etiqueta</string>
     <string name="highlights_color_filter_todos">Todas</string>
+    <string name="highlights_syncing">Sincronizando…</string>
+    <string name="highlights_synced">Sincronizado</string>
+    <string name="highlights_refresh_content_description">Actualizar resaltados</string>
 
     <!-- Library -->
     <string name="library_menu_edit_metadata">Editar metadatos</string>

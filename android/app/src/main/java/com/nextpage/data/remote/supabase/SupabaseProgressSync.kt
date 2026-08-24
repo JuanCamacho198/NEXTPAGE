@@ -99,6 +99,27 @@ class SupabaseProgressSync(
             GATED_PLATEAU_MS
         }
 
+    /**
+     * Option 1 — Highlights screen silent pull (global).
+     * Fetches ALL highlights for the current user and merges them
+     * incrementally via [applyRemoteHighlight] (LWW, tombstone-aware).
+     * No UI blocking: caller launches in its own scope and observes
+     * Room Flow for incremental updates.
+     * Returns number of remote rows fetched (0 when gated/offline).
+     */
+    suspend fun pullAllHighlights(): Int {
+        val session = sessionManager.ensureFreshSession().getOrNull() ?: return 0
+        return try {
+            val rows = dataSource.listHighlights(session.userId, null, includeDeleted = true)
+            for (row in rows) {
+                applyRemoteHighlight(row)
+            }
+            rows.size
+        } catch (_: Exception) {
+            0
+        }
+    }
+
     /** Pulls one book without blocking the reader's local open path. */
     suspend fun resumeForBook(bookId: String, onProgressApplied: (ReadingProgressRow) -> Unit = {}) {
         val session = sessionManager.ensureFreshSession().getOrNull() ?: return

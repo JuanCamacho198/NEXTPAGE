@@ -9,17 +9,26 @@ import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.presentation.UiEvent
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
+
+sealed interface HighlightsSyncState {
+    data object Idle : HighlightsSyncState
+    data object Syncing : HighlightsSyncState
+    data object Synced : HighlightsSyncState
+}
 
 data class HighlightsUiState(
     val highlights: List<Highlight> = emptyList(),
@@ -45,7 +54,8 @@ data class HighlightsUiState(
 
 class HighlightsViewModel(
     private val readerRepository: ReaderRepository,
-    private val homeRepository: HomeRepository
+    private val homeRepository: HomeRepository,
+    private val supabaseSync: com.nextpage.data.remote.supabase.SupabaseProgressSync? = null
 ) : ViewModel() {
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
@@ -62,6 +72,12 @@ class HighlightsViewModel(
     private val _highlightToChangeColor = MutableStateFlow<Highlight?>(null)
     private val _highlightToEditTag = MutableStateFlow<Highlight?>(null)
     private val _editTagText = MutableStateFlow("")
+
+    // ── Option 1 sync indicator (silent pull, non-blocking) ──
+    private val _syncState = MutableStateFlow<HighlightsSyncState>(HighlightsSyncState.Idle)
+    val syncState: StateFlow<HighlightsSyncState> = _syncState.asStateFlow()
+    private var syncJob: Job? = null
+    private var syncedResetJob: Job? = null
 
     val uiState: StateFlow<HighlightsUiState> = combine(
         readerRepository.observeAllHighlights(),
@@ -267,6 +283,33 @@ class HighlightsViewModel(
         }
     }
 
+    /**
+     * Option 1 — silent background pull when entering Highlights screen.
+     * Shows local Room Flow immediately (uiState is already a Flow), merges
+     * remotely fetched highlights incrementally via Room upsert → Flow diff
+     * (no blink/full reload). Indicator: Syncing → Synced (3s) → Idle.
+     * Force param is used by the circular ↻ button and SwipeRefresh.
+     */
+    fun syncHighlights(force: Boolean = false) {
+        val sync = supabaseSync ?: return
+        if (syncJob?.isActive == true && !force) return
+        syncJob?.cancel()
+        syncedResetJob?.cancel()
+        syncJob = viewModelScope.launch {
+            _syncState.value = HighlightsSyncState.Syncing
+            try {
+                sync.pullAllHighlights()
+                _syncState.value = HighlightsSyncState.Synced
+                syncedResetJob = viewModelScope.launch {
+                    delay(3000)
+                    _syncState.value = HighlightsSyncState.Idle
+                }
+            } catch (_: Exception) {
+                _syncState.value = HighlightsSyncState.Idle
+            }
+        }
+    }
+
     private fun applyFilters(
         highlights: List<Highlight>,
         type: String,
@@ -295,12 +338,13 @@ class HighlightsViewModel(
 
 class HighlightsViewModelFactory(
     private val readerRepository: ReaderRepository,
-    private val homeRepository: HomeRepository
+    private val homeRepository: HomeRepository,
+    private val supabaseSync: com.nextpage.data.remote.supabase.SupabaseProgressSync? = null
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HighlightsViewModel::class.java)) {
-            return HighlightsViewModel(readerRepository, homeRepository) as T
+            return HighlightsViewModel(readerRepository, homeRepository, supabaseSync) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

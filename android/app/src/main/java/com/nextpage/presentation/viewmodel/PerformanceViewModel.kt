@@ -20,6 +20,26 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private const val MEASURE_DELAY_MS = 650L
+private const val SPARKLINE_SAMPLE_COUNT = 16
+private const val SPARKLINE_BASE_FACTOR = 0.7f
+private const val SPARKLINE_VARIATION_RANGE = 0.7f
+private const val P95_FACTOR = 0.95
+private const val COLD_START_BASE_MS = 820L
+private const val OPEN_READER_BASE_MS = 420L
+private const val SYNC_PULL_BASE_MS = 610L
+private const val SAVE_HIGHLIGHT_BASE_MS = 95L
+private const val FAKE_DB_BYTES = 4_820_000L
+private const val FAKE_CACHE_BYTES = 2_340_000L
+private const val FAKE_HIGHLIGHTS_COUNT = 37
+private const val BYTES_PER_KB = 1024L
+private const val BYTES_PER_MB = 1024L * 1024L
+private const val BYTES_PER_KB_FLOAT = 1024f
+private const val BYTES_PER_MB_FLOAT = 1024f * 1024f
+private const val FPS_BASE = 56f
+private const val FPS_VARIATION = 4f
+private const val FPS_MAX = 120f
+
 /**
  * Single metric sample for the "Tiempos clave" card.
  * Holds computed aggregates and raw samples for sparkline rendering.
@@ -112,7 +132,7 @@ class PerformanceViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isMeasuring = true) }
             // Simulate measurement delay so the button shows loading state
-            kotlinx.coroutines.delay(650)
+            kotlinx.coroutines.delay(MEASURE_DELAY_MS)
             val timings = generateTimings()
             val resources = loadResources()
             _uiState.update {
@@ -151,10 +171,10 @@ class PerformanceViewModel(
 
     private fun generateTimings(): List<PerformanceTiming> {
         fun timing(key: String, label: String, baseMs: Long): PerformanceTiming {
-            val samples = List(16) { baseMs * (0.7f + Random.nextFloat() * 0.7f) }
+            val samples = List(SPARKLINE_SAMPLE_COUNT) { baseMs * (SPARKLINE_BASE_FACTOR + Random.nextFloat() * SPARKLINE_VARIATION_RANGE) }
             val sorted = samples.sorted()
             val avg = samples.average().toLong()
-            val p95 = sorted[(sorted.size * 0.95).toInt().coerceAtMost(sorted.size - 1)].toLong()
+            val p95 = sorted[(sorted.size * P95_FACTOR).toInt().coerceAtMost(sorted.size - 1)].toLong()
             val max = sorted.maxOrNull()?.toLong() ?: baseMs
             return PerformanceTiming(
                 key = key,
@@ -166,10 +186,10 @@ class PerformanceViewModel(
             )
         }
         return listOf(
-            timing("cold_start", "Cold start", 820),
-            timing("open_reader", "Abrir lector", 420),
-            timing("sync_pull", "Sync pull", 610),
-            timing("save_highlight", "Guardar resaltado", 95)
+            timing("cold_start", "Cold start", COLD_START_BASE_MS),
+            timing("open_reader", "Abrir lector", OPEN_READER_BASE_MS),
+            timing("sync_pull", "Sync pull", SYNC_PULL_BASE_MS),
+            timing("save_highlight", "Guardar resaltado", SAVE_HIGHLIGHT_BASE_MS)
         )
     }
 
@@ -189,18 +209,18 @@ class PerformanceViewModel(
             .let { if (it.exists()) it else File(appContext.cacheDir, "epub_cache") }
         val cacheBytes = runCatching { folderSize(cacheDir) }.getOrDefault(0L)
         // Fallback fake if empty (so UI always shows something)
-        val displayDbBytes = if (dbBytes == 0L) 4_820_000L else dbBytes
-        val displayCacheBytes = if (cacheBytes == 0L) 2_340_000L else cacheBytes
+        val displayDbBytes = if (dbBytes == 0L) FAKE_DB_BYTES else dbBytes
+        val displayCacheBytes = if (cacheBytes == 0L) FAKE_CACHE_BYTES else cacheBytes
         val highlightsCount = runCatching {
             // Best-effort: count via DB if accessible, else fake
             0
-        }.getOrDefault(0).let { if (it == 0) 37 else it }
+        }.getOrDefault(0).let { if (it == 0) FAKE_HIGHLIGHTS_COUNT else it }
 
         val memInfo = ActivityManager.MemoryInfo()
         val am = appContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         am.getMemoryInfo(memInfo)
-        val totalMb = memInfo.totalMem / (1024f * 1024f)
-        val availMb = memInfo.availMem / (1024f * 1024f)
+        val totalMb = memInfo.totalMem / BYTES_PER_MB_FLOAT
+        val availMb = memInfo.availMem / BYTES_PER_MB_FLOAT
         val usedMb = (totalMb - availMb).coerceAtLeast(0f)
 
         PerformanceResources(
@@ -228,7 +248,7 @@ class PerformanceViewModel(
 
     private fun loadDiagnostics(): PerformanceDiagnostics {
         // TODO: wire to FrameMetrics (FPS), ACRA/Crashlytics, ANR watchdog
-        val fps = 56f + Random.nextFloat() * 4f
+        val fps = FPS_BASE + Random.nextFloat() * FPS_VARIATION
         val anrs = Random.nextInt(0, 2)
         val crashes = listOf(
             PerformanceCrashEntry(
@@ -243,8 +263,8 @@ class PerformanceViewModel(
             )
         ).take(if (anrs == 0) 2 else 1)
         return PerformanceDiagnostics(
-            fpsScroll = fps.coerceIn(0f, 120f),
-            fpsLabel = String.format(Locale.US, "%.1f fps", fps.coerceIn(0f, 120f)),
+            fpsScroll = fps.coerceIn(0f, FPS_MAX),
+            fpsLabel = String.format(Locale.US, "%.1f fps", fps.coerceIn(0f, FPS_MAX)),
             anrCount = anrs,
             crashes = crashes
         )
@@ -308,8 +328,8 @@ class PerformanceViewModel(
         SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 
     private fun formatBytes(bytes: Long): String = when {
-        bytes >= 1024 * 1024 -> String.format(Locale.US, "%.1f MB", bytes / (1024f * 1024f))
-        bytes >= 1024 -> String.format(Locale.US, "%.0f KB", bytes / 1024f)
+        bytes >= BYTES_PER_MB -> String.format(Locale.US, "%.1f MB", bytes / BYTES_PER_MB_FLOAT)
+        bytes >= BYTES_PER_KB -> String.format(Locale.US, "%.0f KB", bytes / BYTES_PER_KB_FLOAT)
         else -> "$bytes B"
     }
 

@@ -16,6 +16,11 @@ import kotlin.math.floor
  */
 object ReadingProgressCalculator {
 
+    private const val PROGRESSION_EPSILON = 0.02
+    private const val NO_VIEWPORT_REMAINING_FACTOR = 10
+    private const val AVG_CHAR_WIDTH_FACTOR = 0.6f
+    private const val ESTIMATED_CHARS_PER_CHAPTER = 5000
+
     data class ViewportTypography(
         val viewportW: Int,
         val viewportH: Int,
@@ -85,7 +90,7 @@ object ReadingProgressCalculator {
                         // positions are Locators; find index where href matches and progression close
                         positionsNN.indexOfFirst { pos ->
                             pos.href.toString() == loc.href.toString() &&
-                                kotlin.math.abs((pos.locations.progression ?: 0.0) - (loc.locations.progression ?: 0.0)) < 0.02
+                                kotlin.math.abs((pos.locations.progression ?: 0.0) - (loc.locations.progression ?: 0.0)) < PROGRESSION_EPSILON
                         }.takeIf { it >= 0 }
                             ?: positionsNN.indexOfFirst { it.href.toString() == loc.href.toString() }.takeIf { it >= 0 }
                             ?: run {
@@ -120,7 +125,7 @@ object ReadingProgressCalculator {
         if (viewport == null || viewport.viewportW <= 0 || viewport.viewportH <= 0) {
             // No viewport -> fallback to simple (1 - progression) * estimate but with new logic: use 0 remaining
             val remaining = locator?.locations?.progression?.let { prog ->
-                ceil((1.0 - prog) * 10).toInt().coerceAtLeast(0)
+                ceil((1.0 - prog) * NO_VIEWPORT_REMAINING_FACTOR).toInt().coerceAtLeast(0)
             } ?: 0
             return Result(remaining, remaining, 0, 0, "fallback-no-viewport")
         }
@@ -131,7 +136,7 @@ object ReadingProgressCalculator {
         val marginsPxW = viewport.pageMarginsDp * 2 * density
         val contentW = (viewport.viewportW * density - marginsPxW).coerceAtLeast(1f)
         val contentH = (viewport.viewportH * density - marginsPxH).coerceAtLeast(1f)
-        val avgCharWidth = fontSizePx * 0.6f
+        val avgCharWidth = fontSizePx * AVG_CHAR_WIDTH_FACTOR
         val lineHeightPx = fontSizePx * viewport.lineHeight
         val charsPerLine = floor(contentW / avgCharWidth).toInt().coerceAtLeast(1)
         val linesPerPage = floor(contentH / lineHeightPx).toInt().coerceAtLeast(1)
@@ -142,7 +147,7 @@ object ReadingProgressCalculator {
         val totalChars = totalCharsFallback
             ?: run {
                 // estimate: 18000 chars per chapter average * chapter count, or 5000 if unknown
-                val perChapter = 5000
+                val perChapter = ESTIMATED_CHARS_PER_CHAPTER
                 val count = chapters.size.takeIf { it > 0 } ?: 1
                 perChapter * count
             }

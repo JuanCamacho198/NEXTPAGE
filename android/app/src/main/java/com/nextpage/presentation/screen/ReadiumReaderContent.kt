@@ -67,6 +67,10 @@ import org.readium.r2.shared.publication.Publication
 private const val DECORATION_GROUP = "com.nextpage.highlights"
 
 private const val TAG = "ReadiumReaderContent"
+private const val HIGHLIGHT_OPAQUE_MASK = 0x00FFFFFF
+private const val HIGHLIGHT_ALPHA_HEX = 0x66
+private const val HIGHLIGHT_ALPHA_SHIFT = 24
+private const val ESTIMATED_CHAPTER_CHARS_FALLBACK = 10000
 
 /**
  * [ActionMode.Callback] that suppresses Readium's default selection toolbar
@@ -730,7 +734,7 @@ internal fun highlightsToDecorations(
         } catch (_: Exception) {
             android.graphics.Color.YELLOW
         }
-        val tint = (opaque and 0x00FFFFFF) or (0x66 shl 24)
+        val tint = (opaque and HIGHLIGHT_OPAQUE_MASK) or (HIGHLIGHT_ALPHA_HEX shl HIGHLIGHT_ALPHA_SHIFT)
         Decoration(
             id = h.id,
             locator = locator,
@@ -738,7 +742,6 @@ internal fun highlightsToDecorations(
         )
     }
 }
-
 
 
 /**
@@ -777,7 +780,7 @@ internal fun fallbackLocatorFromCfi(
             if (link != null) {
                 // Use dummy metric when real chapterChars unavailable; still preserves fragment for re-anchoring
                 val textOffset = parsed.textOffset
-                val metric = CfiMigrator.TextMetric(charOffset = textOffset, chapterChars = 10000)
+                val metric = CfiMigrator.TextMetric(charOffset = textOffset, chapterChars = ESTIMATED_CHAPTER_CHARS_FALLBACK)
                 val progression = CfiMigrator.progressionFor(metric) ?: 0.0
                 val json = org.json.JSONObject().apply {
                     put("href", link.href.toString())
@@ -853,10 +856,10 @@ private fun epubCfiFallbackLocator(
                                 } catch (_: Throwable) {
                                     it.size
                                 }
-                            } ?: 10000
-                            decodedLength.takeIf { it > 0 } ?: 10000
-                        } else 10000
-                    }.getOrDefault(10000).coerceAtLeast(1)
+                            } ?: ESTIMATED_CHAPTER_CHARS_FALLBACK
+                            decodedLength.takeIf { it > 0 } ?: ESTIMATED_CHAPTER_CHARS_FALLBACK
+                        } else ESTIMATED_CHAPTER_CHARS_FALLBACK
+                    }.getOrDefault(ESTIMATED_CHAPTER_CHARS_FALLBACK).coerceAtLeast(1)
                     CfiMigrator.TextMetric(charOffset = p.textOffset, chapterChars = chapterChars)
                 }
             }.getOrNull()

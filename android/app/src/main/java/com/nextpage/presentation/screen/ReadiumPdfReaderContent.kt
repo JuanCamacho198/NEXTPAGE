@@ -272,6 +272,10 @@ fun ReadiumPdfReaderContent(
     }
 }
 
+private const val HIGHLIGHT_OPAQUE_MASK = 0x00FFFFFF
+private const val HIGHLIGHT_ALPHA_HEX = 0x66
+private const val HIGHLIGHT_ALPHA_SHIFT = 24
+
 // ── Utilities ────────────────────────────────────────────────────────
 
 /**
@@ -289,7 +293,7 @@ private fun highlightsToPdfDecorations(highlights: List<Highlight>): List<Decora
         } catch (_: Exception) {
             android.graphics.Color.YELLOW
         }
-        val tint = (opaque and 0x00FFFFFF) or (0x66 shl 24)
+        val tint = (opaque and HIGHLIGHT_OPAQUE_MASK) or (HIGHLIGHT_ALPHA_HEX shl HIGHLIGHT_ALPHA_SHIFT)
         Decoration(
             id = h.id,
             locator = locator,

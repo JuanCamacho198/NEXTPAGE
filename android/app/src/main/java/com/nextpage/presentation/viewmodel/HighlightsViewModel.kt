@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
+private const val SYNCED_DISPLAY_DURATION_MS = 3000L
+
 sealed interface HighlightsSyncState {
     data object Idle : HighlightsSyncState
     data object Syncing : HighlightsSyncState
@@ -301,7 +303,7 @@ class HighlightsViewModel(
                 sync.pullAllHighlights()
                 _syncState.value = HighlightsSyncState.Synced
                 syncedResetJob = viewModelScope.launch {
-                    delay(3000)
+                    delay(SYNCED_DISPLAY_DURATION_MS)
                     _syncState.value = HighlightsSyncState.Idle
                 }
             } catch (_: Exception) {

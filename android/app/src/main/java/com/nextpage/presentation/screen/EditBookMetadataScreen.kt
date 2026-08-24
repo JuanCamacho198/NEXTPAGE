@@ -557,12 +557,14 @@ private fun displayLanguageName(code: String): String =
 private fun formatPublishedDate(iso: String?): String =
     if (iso.isNullOrBlank()) "—" else iso
 
+private const val BYTES_PER_MEGABYTE = 1024.0 * 1024.0
+
 /** File size in MB computed from the book file; "—" when the file is missing. */
 private fun formatSizeMb(filePath: String): String {
     val bytes = runCatching { File(filePath).length() }.getOrNull()
         ?: return "—"
     if (bytes <= 0L) return "—"
-    val mb = bytes / (1024.0 * 1024.0)
+    val mb = bytes / BYTES_PER_MEGABYTE
     return if (mb >= 100) {
         "${mb.toInt()} MB"
     } else {

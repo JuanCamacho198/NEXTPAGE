@@ -26,7 +26,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -99,7 +99,7 @@ fun PerformanceScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         uiState.timings.forEach { timing ->
                             TimingRow(timing = timing)
-                            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         }
                         if (uiState.lastMeasuredAt != null) {
                             Text(
@@ -315,7 +315,7 @@ fun PerformanceScreen(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-                                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                                 }
                             }
                         }
@@ -411,7 +411,7 @@ private fun PerformanceCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
             content()
         }
     }

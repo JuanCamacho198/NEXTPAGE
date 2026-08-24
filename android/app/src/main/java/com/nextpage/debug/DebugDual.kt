@@ -13,6 +13,8 @@ import android.util.Log
  */
 object DebugDual {
 
+    private const val MAX_ERROR_SNIPPET_LENGTH = 200
+
     const val TAG_SYNC = "ReaderSync"
     const val TAG_FOOTER = "ReaderFooter"
     const val TAG_CHROME = "ReaderChrome"
@@ -76,7 +78,7 @@ object DebugDual {
     }
 
     fun logSyncFailed(entityType: String, entityId: String?, error: String) {
-        val msg = "sync.outboxFailed entityType=$entityType entityId=${entityId ?: "null"} error=${error.take(200)}"
+        val msg = "sync.outboxFailed entityType=$entityType entityId=${entityId ?: "null"} error=${error.take(MAX_ERROR_SNIPPET_LENGTH)}"
         e(TAG_SYNC, msg)
         // Also emit under SupabaseProgressSync tag for RLS/empty-body diagnostics
         e(TAG_SUPABASE_SYNC, msg)
@@ -107,7 +109,7 @@ object DebugDual {
                 // Batch count is handled separately via logHighlightApplied(count)
             }
             is DebugEvent.SyncOutboxFailed -> {
-                val msg = "sync.outboxFailed entityType=${event.entityType} entityId=${event.entityId} error=${event.error.take(200)}"
+                val msg = "sync.outboxFailed entityType=${event.entityType} entityId=${event.entityId} error=${event.error.take(MAX_ERROR_SNIPPET_LENGTH)}"
                 e(TAG_SYNC, msg)
             }
             is DebugEvent.FooterMismatch -> {

@@ -494,12 +494,14 @@ private fun languageDisplayName(code: String?, fallback: String): String {
 private fun publishedYear(iso: String?, fallback: String): String =
     iso?.take(4)?.takeIf { it.all(Char::isDigit) } ?: fallback
 
+private const val BYTES_PER_MEGABYTE = 1024.0 * 1024.0
+
 /** File size in MB computed from the book file; fallback when the file is missing. */
 private fun formatSizeMb(filePath: String, fallback: String): String {
     val bytes = runCatching { File(filePath).length() }.getOrNull()
         ?: return fallback
     if (bytes <= 0L) return fallback
-    val mb = bytes / (1024.0 * 1024.0)
+    val mb = bytes / BYTES_PER_MEGABYTE
     return if (mb >= 100) {
         "${mb.toInt()} MB"
     } else {

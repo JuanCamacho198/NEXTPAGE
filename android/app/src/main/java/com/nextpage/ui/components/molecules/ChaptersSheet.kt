@@ -64,11 +64,11 @@ import com.nextpage.presentation.theme.NextPageTheme
  *   are indented by their [BookChapter.depth] (20dp per level, capped
  *   at 80dp) and rendered in `bodySmall`. Current row: blue text
  *   (`#ADC6FF`), semibold, `#2F3445` background.
- * **Behavior**: tap a row → [onChapterSelected(chapter.index)] + sheet
- *   dismissal. The index passed is the chapter's reading-order index
- *   (which several nested entries may share when they live in the same
- *   spine resource). No internal state. The list height is hard-capped
- *   at 420dp — if the book has more chapters, the list scrolls.
+ * **Behavior**: tap a row → [onChapterSelected(listPosition)] + sheet
+ *   dismissal. The index passed is the list position (0..chapters.size-1),
+ *   NOT the spine index — this avoids the +3 offset when TOC size (28)
+ *   differs from spine size (31). No internal state. The list height is
+ *   hard-capped at 420dp — if the book has more chapters, the list scrolls.
  * **Recomposition**: recomposes when `chapters`, `currentChapterIndex`,
  *   or callbacks change. New `LazyColumn` items are keyed implicitly
  *   by their position in the list.
@@ -143,13 +143,13 @@ fun ChaptersSheet(
                         .height(420.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    itemsIndexed(chapters) { _, chapter ->
+                    itemsIndexed(chapters) { listPosition, chapter ->
                         ChapterRow(
                             title = chapter.title,
                             depth = chapter.depth,
-                            isCurrent = chapter.index == currentChapterIndex,
+                            isCurrent = listPosition == currentChapterIndex,
                             onClick = {
-                                onChapterSelected(chapter.index)
+                                onChapterSelected(listPosition)
                                 onDismiss()
                             }
                         )

@@ -794,9 +794,11 @@ class ReaderViewModel(
             if (page != null) goToPdfPage(page)
         } else {
             val chapterMatch = Regex("/6/(\\d+)").find(cfiRange)
-            val chapterIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
-            if (chapterIndex != null) {
-                goToChapter(chapterIndex - 1)
+            val spineIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()?.minus(1)
+            if (spineIndex != null) {
+                val chapters = lifecycleHolder.state.value.chapters
+                val listPos = chapters.indexOfFirst { it.index == spineIndex }.takeIf { it >= 0 }
+                if (listPos != null) goToChapter(listPos) else goToChapter(spineIndex.coerceIn(chapters.indices))
             }
         }
     }
@@ -818,7 +820,18 @@ class ReaderViewModel(
         if (publication == null || bookFormat != "epub") return null
         return withContext(Dispatchers.IO) {
             try {
-                val link = publication.readingOrder.getOrNull(chapterIndex) ?: return@withContext null
+                // chapterIndex is TOC list position, NOT spine index — resolve via chapters mapping
+                val chapters = lifecycleHolder.state.value.chapters
+                val link = if (chapterIndex in chapters.indices) {
+                    val ch = chapters[chapterIndex]
+                    val normFile = ch.href.substringBefore('#').substringBefore('?').substringAfterLast('/').lowercase()
+                    publication.readingOrder.firstOrNull {
+                        it.href.toString().substringAfterLast('/').substringBefore('#').substringBefore('?').lowercase() == normFile
+                    } ?: publication.readingOrder.getOrNull(ch.index)
+                    ?: publication.readingOrder.getOrNull(chapterIndex)
+                } else {
+                    publication.readingOrder.getOrNull(chapterIndex)
+                } ?: return@withContext null
                 val resource = publication.get(link) ?: return@withContext null
                 val readResult = resource.read()
                 val bytes = readResult.getOrNull() ?: return@withContext null
@@ -1144,12 +1157,14 @@ class ReaderViewModel(
                     _navigateToLocator.emit(locator)
                 }
             } else {
-                // Legacy CFI without a stored locator: extract chapter index and
-                // navigate to the chapter start.
+                // Legacy CFI without a stored locator: extract spine index and
+                // map to TOC list position (spine offset fix).
                 val chapterMatch = Regex("/6/(\\d+)").find(cfi)
-                val chapterIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
-                if (chapterIndex != null) {
-                    goToChapter(chapterIndex - 1)
+                val spineIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()?.minus(1)
+                if (spineIndex != null) {
+                    val chapters = lifecycleHolder.state.value.chapters
+                    val listPos = chapters.indexOfFirst { it.index == spineIndex }.takeIf { it >= 0 }
+                    if (listPos != null) goToChapter(listPos) else goToChapter(spineIndex.coerceIn(chapters.indices))
                 }
             }
         }
@@ -1255,8 +1270,9 @@ class ReaderViewModel(
     fun goToPreviousChapter() = lifecycleHolder.goToPreviousChapter()
 
     /**
-     * Navigates to the chapter at [index] in the EPUB TOC.
-     * @param index Zero-based chapter index.
+     * Navigates to the chapter at [index] in the EPUB TOC (list position, 0..chapters.size-1).
+     * The index is the TOC list position, NOT the spine index, to avoid the +3 offset.
+     * @param index Zero-based TOC list position.
      */
     fun goToChapter(index: Int) = lifecycleHolder.goToChapter(index)
 

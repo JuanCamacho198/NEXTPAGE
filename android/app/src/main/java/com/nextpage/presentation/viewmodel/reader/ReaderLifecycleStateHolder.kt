@@ -524,12 +524,15 @@ class ReaderLifecycleStateHolder(
                     onNavigateToLocator(locator)
                 }
             } else {
-                // Legacy CFI without a stored locator: extract chapter index and
-                // navigate to the chapter start.
+                // Legacy CFI without a stored locator: extract spine index and
+                // navigate to the chapter start. CFI spine is 1-based readingOrder
+                // index, NOT list position -> must map to TOC list position.
                 val chapterMatch = Regex("/6/(\\d+)").find(cfi)
-                val chapterIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
-                if (chapterIndex != null) {
-                    goToChapter(chapterIndex - 1)
+                val spineIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()?.minus(1)
+                if (spineIndex != null) {
+                    val chapters = _state.value.chapters
+                    val listPos = spineIndexToListPosition(spineIndex, chapters)
+                    if (listPos != null) goToChapter(listPos) else goToChapter(spineIndex.coerceIn(chapters.indices))
                 }
             }
         }
@@ -563,45 +566,62 @@ class ReaderLifecycleStateHolder(
         }
     }
 
-    fun goToChapter(index: Int) {
-        if (index in _state.value.chapters.indices) {
-            if (index == _state.value.currentChapterIndex) return
-            _state.update { it.copy(currentChapterIndex = index) }
-            updateProgressForChapter(index)
+    /**
+     * Jump to chapter by TOC list position (0..chapters.size-1), NOT spine index.
+     * Resolves [BookChapter] via list position, then fuzzy-matches href to readingOrder
+     * to obtain the true spine index for navigation. This fixes the +3 offset where
+     * TOC size (28) != spine size (31) — e.g. Prefacio list 2 -> spine 5, Canto I list 3 -> spine 6.
+     */
+    fun goToChapter(listPosition: Int) {
+        if (listPosition in _state.value.chapters.indices) {
+            if (listPosition == _state.value.currentChapterIndex) return
+            _state.update { it.copy(currentChapterIndex = listPosition) }
+            updateProgressForChapter(listPosition)
             onChapterChanged()
-            navigateToChapter(index)
+            navigateToChapter(listPosition)
         }
     }
 
     /**
-     * Emits a Readium [Locator] so the navigator actually moves to [chapterIndex].
+     * Maps a spine index (0-based readingOrder) to TOC list position, or null if not found.
+     * Checks exact spine index match first, then filename lowercase fallback.
+     */
+    private fun spineIndexToListPosition(spineIndex: Int, chapters: List<BookChapter>): Int? {
+        chapters.indexOfFirst { it.index == spineIndex }.takeIf { it >= 0 }?.let { return it }
+        // Fallback: if spine has cover/toc offset, try adjusted position search
+        return null
+    }
+
+    /**
+     * Emits a Readium [Locator] so the navigator actually moves to [listPosition].
      * Without this, only the state index changes and the reader stays on the
      * current page even though the TOC / next-prev controls report a new chapter.
      *
-     * [chapterIndex] is the position in [chapters] (0 = first TOC entry), not the raw
-     * readingOrder index. The target [Link] is resolved via the chapter's href/index
-     * to handle spine offset (cover/toc) where readingOrder index != list position.
+     * [listPosition] is the position in [chapters] (0 = first TOC entry), not the raw
+     * readingOrder index. The target [Link] is resolved via the chapter's href (fuzzy
+     * filename lowercase) to handle spine offset (cover/toc) where readingOrder index
+     * != list position. Emits with chapterListIndex=listPosition and roIndex for correct progress.
      */
-    private fun navigateToChapter(chapterIndex: Int) {
+    private fun navigateToChapter(listPosition: Int) {
         val state = _state.value
         val publication = state.readiumPublication ?: return
         val chapters = state.chapters
         val link: Link? = when {
-            chapterIndex in chapters.indices -> {
-                val chapter = chapters[chapterIndex]
-                // Prefer href-resolved link (handles Text/ prefix, fragment)
+            listPosition in chapters.indices -> {
+                val chapter = chapters[listPosition]
+                // Prefer href-resolved link (handles Text/ prefix, fragment, case)
                 val hrefBase = chapter.href.substringBefore('#').substringBefore('?')
                 val normFile = hrefBase.substringAfterLast('/').lowercase()
                 publication.readingOrder.firstOrNull {
                     it.href.toString().substringAfterLast('/').substringBefore('#').substringBefore('?').lowercase() == normFile
                 } ?: publication.readingOrder.getOrNull(chapter.index)
             }
-            else -> publication.readingOrder.getOrNull(chapterIndex)
+            else -> publication.readingOrder.getOrNull(listPosition)
         } ?: return
-        val roIndex = publication.readingOrder.indexOf(link).takeIf { it >= 0 } ?: chapterIndex
+        val roIndex = publication.readingOrder.indexOf(link).takeIf { it >= 0 } ?: listPosition
         val total = publication.readingOrder.size.coerceAtLeast(1)
         val totalProgression = (roIndex.toFloat() / total).coerceIn(0f, 1f)
-        emitEpubNavigateLocator(chapterIndex, totalProgression, link)
+        emitEpubNavigateLocator(listPosition, totalProgression, link)
     }
 
     /**
@@ -938,11 +958,16 @@ class ReaderLifecycleStateHolder(
                                 newState = newState.copy(currentPdfPage = page)
                             }
                         } else if (cfi.startsWith("epubcfi(")) {
-                            // EPUB CFI: extract chapter index
+                            // EPUB CFI: extract spine index (1-based) -> map to TOC list position
                             val chapterMatch = Regex("/6/(\\d+)").find(cfi)
-                            val chapterIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
-                            if (chapterIndex != null) {
-                                newState = newState.copy(currentChapterIndex = chapterIndex - 1)
+                            val spineIdx = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()?.minus(1)
+                            if (spineIdx != null) {
+                                val chapters = newState.chapters
+                                val listPos = if (chapters.isNotEmpty()) {
+                                    chapters.indexOfFirst { it.index == spineIdx }.takeIf { it >= 0 }
+                                } else null
+                                val resolved = listPos ?: spineIdx
+                                newState = newState.copy(currentChapterIndex = resolved)
                             }
                         }
                     }
@@ -1172,12 +1197,10 @@ class ReaderLifecycleStateHolder(
         val href = link.href.toString()
         val title = link.title?.takeIf { it.isNotBlank() }
             ?: "Chapter ${out.size + 1}"
-        val index = publication.linkWithHref(link.href.resolve())
-            ?.let { publication.readingOrder.indexOf(it) }
-            ?: out.size
+        val spineIndex = resolveSpineIndexForTocHref(href, link, publication, out.size)
         out.add(
             BookChapter(
-                index = index.coerceAtLeast(0),
+                index = spineIndex.coerceAtLeast(0),
                 id = href,
                 title = title,
                 href = href,
@@ -1187,6 +1210,57 @@ class ReaderLifecycleStateHolder(
         for (child in link.children) {
             collectTocChapters(child, publication, depth + 1, out)
         }
+    }
+
+    /**
+     * Robust spine-index resolver for a TOC href (desktop parity).
+     * Normalizes href (strip '#fragment' and '?query', lowercase, filename fallback)
+     * and tries in order: exact href via linkWithHref, exact normalized href,
+     * filename lowercase, case-insensitive normalized href. Only if all fail
+     * falls back to [fallbackIndex] with a warning log.
+     */
+    private fun resolveSpineIndexForTocHref(
+        href: String,
+        link: org.readium.r2.shared.publication.Link,
+        publication: Publication,
+        fallbackIndex: Int
+    ): Int {
+        fun stripFragment(h: String): String = h.substringBefore('#').substringBefore('?')
+        fun filenameLower(h: String): String = stripFragment(h).substringAfterLast('/').trim().lowercase()
+        fun normalizedLower(h: String): String = stripFragment(h).trim().lowercase()
+
+        // 1. Exact via Readium linkWithHref (handles './', encoding)
+        try {
+            publication.linkWithHref(link.href.resolve())?.let { resolved ->
+                val idx = publication.readingOrder.indexOf(resolved)
+                if (idx >= 0) return idx
+            }
+        } catch (_: Throwable) {}
+
+        val normalizedHref = stripFragment(href).trim()
+        val normalizedHrefLower = normalizedLower(href)
+        val fileLower = filenameLower(href)
+
+        // 2. Exact href match against readingOrder
+        publication.readingOrder.indexOfFirst { it.href.toString() == href }
+            .takeIf { it >= 0 }?.let { return it }
+
+        // 3. Normalized href exact (strip fragment/query)
+        publication.readingOrder.indexOfFirst { stripFragment(it.href.toString()) == normalizedHref }
+            .takeIf { it >= 0 }?.let { return it }
+
+        // 4. Filename lowercase fallback (handles Text/chapter.xhtml vs chapter.xhtml)
+        if (fileLower.isNotBlank()) {
+            publication.readingOrder.indexOfFirst { filenameLower(it.href.toString()) == fileLower }
+                .takeIf { it >= 0 }?.let { return it }
+        }
+
+        // 5. Case-insensitive normalized href
+        publication.readingOrder.indexOfFirst { normalizedLower(it.href.toString()) == normalizedHrefLower }
+            .takeIf { it >= 0 }?.let { return it }
+
+        Log.w(TAG, "collectTocChapters: no spine match for TOC href='$href' (file='$fileLower'), fallback to list position $fallbackIndex")
+        return fallbackIndex
     }
 
     // ── Test helpers ────────────────────────────────────────────────

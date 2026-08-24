@@ -1,0 +1,7 @@
+# Shared subflow: navigate to the bottom-bar tab whose label equals ${TAB}.
+# Param: TAB (exact Spanish tab label, e.g. "Estanteria").
+# Note: Maestro's text matcher is full-string regex (ignore-case), so the label
+# must match the whole tab text, not just part of it.
+appId: com.nextpage
+---
+- tapOn: ${TAB}

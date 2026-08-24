@@ -1,0 +1,31 @@
+# Nav smoke: preserved session launches with all four tabs visible and navigable.
+# NEVER uses clearState — the logged-in session and Room data must persist.
+appId: com.nextpage
+tags: [smoke]
+---
+- launchApp:
+    clearState: false
+- runFlow:
+    file: ../lib/dismiss-dialogs-if-present.yaml
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible: Inicio
+- assertVisible: Estantería
+- assertVisible: Resaltados
+- assertVisible: Ajustes
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Estantería"
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Resaltados"
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Ajustes"
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Inicio"

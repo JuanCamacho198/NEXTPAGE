@@ -1,0 +1,62 @@
+# Offline-window staged mutation (design D1 / spec delta): deletes the seeded
+# highlight while the device has no connectivity. Start-ChaosSequence.ps1 runs
+# this flow either BEFORE the WiFi cut (offline-first staging, D1) or online
+# immediately before the cut (-StageOnline fallback, design open question 2).
+#
+# Fixture guard: the delete block only fires when the seeded row is visible.
+# Inside a combined full-suite invocation an earlier consumer flow
+# (resurrection-guard / reader-menu-delete) may have already deleted the seed;
+# in that case this flow degrades to navigation + absence sanity instead of
+# failing the suite. Dedicated chaos windows always re-seed first.
+#
+# Pinned seed fixture (device locale is Spanish):
+#   ROW  excerpt containing "postreros" (rebuilt device seed, newest row)
+appId: com.nextpage
+tags: [chaos]
+---
+- launchApp:
+    clearState: false
+- runFlow:
+    file: ../lib/dismiss-dialogs-if-present.yaml
+- waitForAnimationToEnd:
+    timeout: 3000
+# Nav-shell settle gate (cold-start race): see reader-menu-delete.yaml.
+- extendedWaitUntil:
+    visible:
+      text: "Ajustes"
+    timeout: 15000
+
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Resaltados"
+
+# ── Settle anchor (design D5): wait for the static screen header so the
+#    async highlight list has rendered before the one-shot when:visible
+#    guard below is evaluated. Without this, a cold-start empty list would
+#    silently skip the staged deletion. ─────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      text: "Tus notas y pasajes destacados"
+    timeout: 10000
+
+# ── Conditional staging: same scoped taps as resurrection-guard ────────────
+- runFlow:
+    when:
+      visible:
+        text: ".*postreros.*"
+    commands:
+      - tapOn: "Más opciones"
+      - extendedWaitUntil:
+          visible:
+            text: "Eliminar resaltado"
+          timeout: 10000
+      - tapOn: "Eliminar resaltado"    # dropdown item (exact text)
+      - assertVisible: "Eliminar resaltado"  # AlertDialog title is up
+      - tapOn: "Eliminar"              # AlertDialog confirm button
+      - assertNotVisible:
+          text: ".*postreros.*"
+
+# ── Row absent regardless of whether this flow performed the deletion ──────
+- assertNotVisible:
+    text: ".*postreros.*"

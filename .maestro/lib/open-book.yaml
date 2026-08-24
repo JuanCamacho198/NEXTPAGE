@@ -1,0 +1,28 @@
+# Shared subflow: open a book from Estanteria (shelf) and land in the reader.
+# Param: BOOK_TITLE (exact Spanish title shown on the shelf card).
+# Precondition: the flow is already on the Estanteria tab.
+# Note: tapping the shelf card opens the book DETAIL screen first, and its
+# content renders asynchronously — one-shot when:visible checks race that
+# render and silently skip. Gate on a stable detail marker first, then enter
+# the reader via whichever CTA applies: "Continuar leyendo" (book has
+# progress) or "Empezar a leer" (fresh import, 0%).
+appId: com.nextpage
+---
+- assertVisible: Estantería
+- tapOn: ${BOOK_TITLE}
+- extendedWaitUntil:
+    visible:
+      text: "Sinopsis"
+    timeout: 15000
+- runFlow:
+    when:
+      visible: "Continuar leyendo"
+    commands:
+      - tapOn: "Continuar leyendo"
+- runFlow:
+    when:
+      visible: "Empezar a leer"
+    commands:
+      - tapOn: "Empezar a leer"
+- waitForAnimationToEnd:
+    timeout: 15000

@@ -1,0 +1,97 @@
+# Reader context-menu delete (debug seam): deleting via the floating context
+# menu must remove the highlight app-wide, including from Resaltados.
+#
+# Manual preconditions (documented in android/AGENTS.md once Phase 5 lands):
+#   - "Modo debug" ON in Ajustes (gates the DEBUG chip + debug panel).
+#   - Seeded highlight present (excerpt containing "postreros", the
+#     newest row — simulate-tap picks highlights[0] with a locator).
+#
+# Implementation notes (verified against current app code):
+#   - The delete path uses the debug panel's "Simular toque" action, which
+#     calls onHighlightTapped() on the FIRST real highlight that has a
+#     locator - the spec's "existing highlight decoration is tapped".
+#     ("Forzar FaPN3" only paints a synthetic menu over a fake id that the
+#     repository cannot resolve, so its delete is a no-op.)
+#   - The reader delete path applies the soft-delete IMMEDIATELY: there is
+#     NO confirmation AlertDialog between the context-menu tap and removal.
+#   - "Eliminar" resolves by content-description of the trash icon
+#     (context_menu_delete); no other visible node has that exact text.
+appId: com.nextpage
+tags: [regression]
+---
+- launchApp:
+    clearState: false
+- runFlow:
+    file: ../lib/dismiss-dialogs-if-present.yaml
+- waitForAnimationToEnd:
+    timeout: 3000
+# Nav-shell settle gate (cold-start race): a tap fired before the bottom bar
+# is interactive silently no-ops while retryTapIfNoChange sees the launch
+# animation as change. Poll until the nav labels exist, THEN navigate.
+- extendedWaitUntil:
+    visible:
+      text: "Ajustes"
+    timeout: 15000
+
+# ── Fixture gate: seeded highlight row must exist (keeps the final
+#    assertNotVisible meaningful instead of trivially passing).
+#    extendedWaitUntil per design D5: on cold starts the Resaltados list
+#    loads asynchronously and may render empty past the default assert
+#    window; poll up to 20s before declaring the fixture missing. ──────────
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Resaltados"
+- extendedWaitUntil:
+    visible:
+      text: ".*postreros.*"
+    timeout: 20000
+
+# ── Open the book (reader entry via shared subflow) ────────────────────────
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Estantería"
+- runFlow:
+    file: ../lib/open-book.yaml
+    env:
+      BOOK_TITLE: "La Odisea"
+
+# ── Modo debug ON gate: the DEBUG chip only renders in debug builds when
+#    "Modo debug" is enabled ────────────────────────────────────────────────
+# D3 exception (documented): the reader also exposes an a11y-only node
+# labeled "DEBUG" near the top toolbar which steals first-match tapOn and
+# leaves the panel closed. The real chip is pinned BottomEnd (12dp end /
+# 16dp bottom padding), so target its geometric anchor instead of text.
+- assertVisible: "DEBUG"
+- tapOn:
+    point: "90%, 96%"
+
+# ── Debug seam: simulate tapping an existing highlight decoration ─────────
+- tapOn: "Simular toque"
+- tapOn: "Cerrar"                 # leave the debug panel; context menu shows
+
+# ── Scoped delete: trash icon (content-desc "Eliminar"); soft-deletes at once,
+#    so the menu disappearing proves the action fired ───────────────────────
+- assertVisible: "Eliminar"
+- tapOn: "Eliminar"
+- assertNotVisible: "Eliminar"
+
+# ── Leave the reader and prove app-wide removal ────────────────────────────
+- pressKey: Back
+- runFlow:
+    when:
+      notVisible: "Resaltados"
+    commands:
+      # First Back may only dismiss reader chrome; press again to exit.
+      - pressKey: Back
+- runFlow:
+    file: ../lib/nav-to-tab.yaml
+    env:
+      TAB: "Resaltados"
+# Tombstone must PERSIST: poll not-visible for 15s so a late async
+# resurrection (sync apply) still flips this red instead of racing green.
+- extendedWaitUntil:
+    notVisible:
+      text: ".*postreros.*"
+    timeout: 15000

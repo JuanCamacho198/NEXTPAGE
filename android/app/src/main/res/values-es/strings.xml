@@ -163,6 +163,16 @@
     <string name="book_detail_more_content_description">Más opciones</string>
     <string name="book_detail_rating_star_full">%1$d estrellas</string>
     <string name="book_detail_rating_star_half">%1$.1f estrellas</string>
+    <!-- Remove book (2-step) — mirrors desktop RemoveBookModal -->
+    <string name="library_remove_title">¿Quitar de la estantería?</string>
+    <string name="library_remove_message">Se quitará &quot;%1$s&quot; de tu estantería.</string>
+    <string name="library_remove_continue">Continuar</string>
+    <string name="library_remove_cancel">Cancelar</string>
+    <string name="library_remove_local_only">Solo local</string>
+    <string name="library_remove_local_only_subtitle">Quita de esta biblioteca. El archivo en Drive se conserva.</string>
+    <string name="library_remove_local_and_drive">Local y Drive</string>
+    <string name="library_remove_local_and_drive_subtitle">Mueve a la papelera de Drive y registra el borrado.</string>
+
     <!-- Library / Bookshelf - New Pencil design -->
     <string name="library_empty">Todavía no hay libros locales.</string>
     <string name="library_search_placeholder">Buscar libros...</string>

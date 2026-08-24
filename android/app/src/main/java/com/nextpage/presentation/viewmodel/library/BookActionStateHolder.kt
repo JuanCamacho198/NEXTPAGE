@@ -64,6 +64,32 @@ class BookActionStateHolder(
 
     /** Confirm and execute the delete. Emits snackbar on success/failure. */
     fun confirmDeleteBook() {
+        // Backwards compat — defaults to local+Drive (full delete)
+        confirmDeleteLocalAndDrive()
+    }
+
+    /** Local-only delete: mirrors desktop handleHideBook — Drive file is kept. */
+    fun confirmDeleteLocalOnly() {
+        val book = _state.value.bookToDelete ?: return
+
+        scope.launch(mainDispatcher) {
+            val result = libraryRepository.deleteBookLocalOnly(book.id)
+            _state.update { it.copy(bookToDelete = null) }
+            onStateChanged(_state.value)
+
+            result.fold(
+                onSuccess = {
+                    onUiEvent(UiEvent.ShowSnackbar("Deleted \"${book.title}\""))
+                },
+                onFailure = { error ->
+                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: "Failed to delete book"))
+                }
+            )
+        }
+    }
+
+    /** Local + Drive delete: trashes Drive file and tombstones catalog (desktop handleRemoveBookFromDrive). */
+    fun confirmDeleteLocalAndDrive() {
         val book = _state.value.bookToDelete ?: return
 
         scope.launch(mainDispatcher) {

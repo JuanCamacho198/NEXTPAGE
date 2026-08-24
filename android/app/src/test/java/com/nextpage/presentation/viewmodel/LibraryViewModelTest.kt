@@ -362,6 +362,11 @@ class LibraryViewModelTest {
             return Result.success(Unit)
         }
 
+        override suspend fun deleteBookLocalOnly(bookId: String): Result<Unit> {
+            deleteFailure?.let { return Result.failure(it) }
+            return Result.success(Unit)
+        }
+
         fun emitBooks(books: List<Book>) {
             booksFlow.value = books
         }

@@ -169,6 +169,15 @@
     <string name="library_delete_title">Delete book</string>
     <string name="library_delete_message">Are you sure you want to delete &quot;%1$s&quot;?</string>
     <string name="library_delete_confirm">Delete</string>
+    <!-- Remove book (2-step) — mirrors desktop RemoveBookModal -->
+    <string name="library_remove_title">Remove from shelf?</string>
+    <string name="library_remove_message">%1$s will be removed from your shelf.</string>
+    <string name="library_remove_continue">Continue</string>
+    <string name="library_remove_cancel">Cancel</string>
+    <string name="library_remove_local_only">Local only</string>
+    <string name="library_remove_local_only_subtitle">Removes the book from this library. The Drive file is kept.</string>
+    <string name="library_remove_local_and_drive">Local + Drive</string>
+    <string name="library_remove_local_and_drive_subtitle">Moves the file to the Drive trash and notes the deletion.</string>
     <string name="library_search_placeholder">Search books...</string>
     <string name="library_filter_label">Filter</string>
     <string name="library_tab_all">All</string>

@@ -67,7 +67,7 @@ import com.nextpage.domain.model.Book
 import com.nextpage.presentation.screen.library.BookGridSection
 import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.screen.library.FilterSheetContent
-import com.nextpage.presentation.screen.library.LibraryDialogs
+import com.nextpage.presentation.screen.library.RemoveBookDialog
 import com.nextpage.presentation.screen.library.LibraryToolbar
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.theme.NextPageTheme
@@ -122,6 +122,8 @@ fun LibraryScreen(
         onDismissDownloadError = viewModel::dismissDownloadError,
         onDismissDelete = viewModel::dismissDeleteDialog,
         onConfirmDelete = viewModel::confirmDeleteBook,
+        onConfirmLocalOnly = viewModel::confirmDeleteLocalOnly,
+        onConfirmLocalAndDrive = viewModel::confirmDeleteLocalAndDrive,
         onFormatSelected = viewModel::onFilterFormatChanged,
         onImportPdf = viewModel::importPdfBook,
         onImportEpub = viewModel::importBookFromEpub
@@ -154,6 +156,8 @@ private fun LibraryScreenContent(
     onDismissDownloadError: (String) -> Unit,
     onDismissDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
+    onConfirmLocalOnly: () -> Unit,
+    onConfirmLocalAndDrive: () -> Unit,
     onFormatSelected: (String) -> Unit,
     onImportPdf: (sourcePath: String, fallbackTitle: String?, pdfFile: File) -> Unit,
     onImportEpub: (
@@ -336,10 +340,12 @@ private fun LibraryScreenContent(
             }
         }
 
-        LibraryDialogs(
+        // 2-step remove dialog — mirrors desktop RemoveBookModal (confirm → choose)
+        RemoveBookDialog(
             bookToDelete = uiState.bookToDelete,
-            onDismissDelete = onDismissDelete,
-            onConfirmDelete = onConfirmDelete
+            onDismiss = onDismissDelete,
+            onConfirmLocalOnly = onConfirmLocalOnly,
+            onConfirmLocalAndDrive = onConfirmLocalAndDrive
         )
 
         // ── Cross-device download overlay ──────────────────────────────
@@ -757,6 +763,8 @@ private fun LibraryScreenDarkPreview() {
             onDismissDownloadError = {},
             onDismissDelete = {},
             onConfirmDelete = {},
+            onConfirmLocalOnly = {},
+            onConfirmLocalAndDrive = {},
             onFormatSelected = {},
             onImportPdf = { _, _, _ -> },
             onImportEpub = { _, _, _ -> }
@@ -819,6 +827,8 @@ private fun LibraryScreenLightPreview() {
             onDismissDownloadError = {},
             onDismissDelete = {},
             onConfirmDelete = {},
+            onConfirmLocalOnly = {},
+            onConfirmLocalAndDrive = {},
             onFormatSelected = {},
             onImportPdf = { _, _, _ -> },
             onImportEpub = { _, _, _ -> }

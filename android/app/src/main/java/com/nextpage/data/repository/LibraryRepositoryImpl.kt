@@ -182,6 +182,23 @@ class LibraryRepositoryImpl(
         queueBookOutboxEntry(bookId, SyncOperation.DELETE)
     }
 
+    override suspend fun deleteBookLocalOnly(bookId: String): Result<Unit> = runCatching {
+        coverStorage.deleteCover(bookId).getOrNull()
+        val now = System.currentTimeMillis()
+        bookDao.deleteBook(bookId, now)
+        readingStatsDao.deleteForBook(bookId)
+        // Local only — do NOT queue a DELETE tombstone so the Drive file is kept
+        // (mirrors desktop handleHideBook). Also drop any pending DELETE for this
+        // book so a previously-queued cloud delete does not resurrect.
+        try {
+            val pending = outboxDao.getPendingItems().filter {
+                it.entityType == SyncEntityType.BOOK.name && it.entityId == bookId && it.operation == SyncOperation.DELETE.name
+            }
+            pending.forEach { outboxDao.deleteById(it.id) }
+        } catch (_: Exception) {
+        }
+    }
+
     override suspend fun updateBookRating(bookId: String, rating: Int?) {
         bookDao.updateRating(bookId, rating)
     }

@@ -32,6 +32,9 @@ interface LibraryRepository {
 
     suspend fun deleteBook(bookId: String): Result<Unit>
 
+    /** Local-only delete: soft-delete locally without queuing a cloud tombstone. */
+    suspend fun deleteBookLocalOnly(bookId: String): Result<Unit>
+
     suspend fun updateBookRating(bookId: String, rating: Int?)
 
     suspend fun updateBookStatus(bookId: String, status: String?): Result<Unit>

@@ -554,6 +554,10 @@ class LibraryViewModel(
     fun dismissDeleteDialog() = bookActionStateHolder.dismissDeleteDialog()
     /** Confirms deletion of the book staged in `bookToDelete`. */
     fun confirmDeleteBook() = bookActionStateHolder.confirmDeleteBook()
+    /** Local-only delete (keeps Drive file) — mirrors desktop handleHideBook. */
+    fun confirmDeleteLocalOnly() = bookActionStateHolder.confirmDeleteLocalOnly()
+    /** Local + Drive delete — mirrors desktop handleRemoveBookFromDrive. */
+    fun confirmDeleteLocalAndDrive() = bookActionStateHolder.confirmDeleteLocalAndDrive()
     /**
      * Marks [book] as completed in the local library.
      */

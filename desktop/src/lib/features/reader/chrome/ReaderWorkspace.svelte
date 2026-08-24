@@ -42,6 +42,9 @@
   import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
   import { authState } from '$lib/stores/authState.svelte';
   import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
+  import { invoke } from '@tauri-apps/api/core';
+  import { normalizeHref } from '$lib/shared/sync/LocatorCodec';
+  import { stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 
   const outboxDao = new SyncOutboxDao();
 
@@ -242,6 +245,64 @@
   let highlightReloadInFlight = false;
   let highlightReloadQueued = false;
 
+  // Spine cache for readium: href -> spine index mapping
+  let epubSpineHrefs = $state<string[]>([]);
+  let epubSpineLoadedFor = $state<string | null>(null);
+
+  function getSpineIndexForHref(href: string, spine: string[]): number | null {
+    const raw = href.trim();
+    const withoutPrefix = raw.startsWith('readium:') ? raw.slice('readium:'.length) : raw;
+    const fragStripped = stripFragment(withoutPrefix);
+    // normalize: backslash -> /, collapse //
+    let norm = normalizeHref(fragStripped);
+    // collapse // iteratively (preserve :// not needed here)
+    while (norm.includes('//')) norm = norm.replace('//', '/');
+    norm = norm.trim();
+    if (!norm) return null;
+    let idx = spine.findIndex((h) => normalizeHref(h) === norm);
+    if (idx !== -1) return idx;
+    // suffix / filename fallback (handles OEBPS/Text/cap1.xhtml vs Text/cap1.xhtml)
+    const fileName = norm.split('/').pop() ?? '';
+    if (fileName) {
+      idx = spine.findIndex(
+        (h) => normalizeHref(h).endsWith('/' + fileName) || normalizeHref(h).split('/').pop() === fileName,
+      );
+      if (idx !== -1) return idx;
+    }
+    idx = spine.findIndex((h) => {
+      const nh = normalizeHref(h);
+      return nh.endsWith(norm) || norm.endsWith(nh);
+    });
+    return idx !== -1 ? idx : null;
+  }
+
+  async function ensureSpineHrefs(bookId: string, filePath: string): Promise<void> {
+    if (epubSpineLoadedFor === bookId && epubSpineHrefs.length > 0) return;
+    try {
+      const meta = await invoke<{
+        spineHrefs?: string[];
+        spine_hrefs?: string[];
+        toc?: Array<{ href: string }>;
+        chapters?: Array<{ href: string }>;
+        totalChapters: number;
+      }>('parse_epub', { filePath, bookId });
+      const raw = meta.spineHrefs ?? meta.spine_hrefs ?? [];
+      if (Array.isArray(raw) && raw.length > 0) {
+        epubSpineHrefs = raw.map((h) => normalizeHref(h));
+        epubSpineLoadedFor = bookId;
+        console.warn(
+          'RW: spine loaded',
+          epubSpineHrefs.length,
+          'for',
+          bookId.slice(0, 4),
+          epubSpineHrefs.slice(0, 3).join(','),
+        );
+      }
+    } catch (e) {
+      console.warn('RW: failed to load spine for readium fix', e);
+    }
+  }
+
   function reloadHighlights(): void {
     if (highlightReloadTimer) clearTimeout(highlightReloadTimer);
     highlightReloadTimer = setTimeout(() => {
@@ -280,10 +341,15 @@
           );
           const rowIds = new Set(rows.map((r) => r.id));
           const optimistic = untrack(() => persistedHighlights).filter((h) => !rowIds.has(h.id));
+          // Ensure spine is available for readium: href -> spine mapping (fixes cap1.xhtml -> 6)
+          if (book.format?.toLowerCase() === 'epub' && book.filePath) {
+            await ensureSpineHrefs(bookId, book.filePath);
+          }
           let merged: PersistedHighlight[] = rows.map((r) => {
             let pageNumber = r.pageNumber;
             if (r.cfi) {
-              const m = /epubcfi\(\/6\/(\d+)!/.exec(r.cfi);
+              const cfiTrim = r.cfi.trim();
+              const m = /epubcfi\(\/6\/(\d+)!/.exec(cfiTrim);
               if (m) {
                 const idx = parseInt(m[1], 10) - 1;
                 if (idx >= 0 && idx !== pageNumber) {
@@ -294,6 +360,26 @@
                   );
                   pageNumber = idx;
                   void updateHighlight({ id: r.id, pageNumber }).catch(() => {});
+                }
+              } else if (cfiTrim.startsWith('readium:')) {
+                const spineIdx = getSpineIndexForHref(cfiTrim, epubSpineHrefs);
+                if (spineIdx !== null && spineIdx >= 0 && spineIdx !== pageNumber) {
+                  console.warn(
+                    'RW: fixing page mismatch (readium)',
+                    r.id.slice(0, 4),
+                    `page ${r.pageNumber} -> ${spineIdx}`,
+                    `href ${cfiTrim.slice(0, 40)}`,
+                  );
+                  pageNumber = spineIdx;
+                  void updateHighlight({ id: r.id, pageNumber }).catch(() => {});
+                } else if (spineIdx === null) {
+                  console.warn(
+                    'RW: readium href not in spine',
+                    r.id.slice(0, 4),
+                    cfiTrim.slice(0, 60),
+                    'spineLen',
+                    epubSpineHrefs.length,
+                  );
                 }
               }
             }

@@ -24,6 +24,34 @@ fn normalize_cfi_value(raw: &str) -> String {
     normalized.replace(placeholder, "://")
 }
 
+/// Extract 0-based spine index from epubcfi(/6/N!...) where N is 1-based. Returns None if not epubcfi.
+fn spine_index_from_epubcfi(cfi: &str) -> Option<i32> {
+    // Cheap parse without regex: find "epubcfi(/6/" then digits until '!' or ')'
+    if !cfi.starts_with("epubcfi(") {
+        return None;
+    }
+    let marker = "/6/";
+    let pos = cfi.find(marker)?;
+    let start = pos + marker.len();
+    let rest = &cfi[start..];
+    let mut end = 0usize;
+    for ch in rest.chars() {
+        if ch.is_ascii_digit() {
+            end += ch.len_utf8();
+        } else {
+            break;
+        }
+    }
+    if end == 0 {
+        return None;
+    }
+    let n: i32 = rest[..end].parse().ok()?;
+    if n < 1 {
+        return None;
+    }
+    Some(n - 1)
+}
+
 pub fn list_highlights(
     repo: &LibraryRepository,
     book_id: Option<&str>,
@@ -65,11 +93,27 @@ pub fn save_highlight(
         return Err(AppError::MissingBookId);
     }
 
-    let page = payload.resolve_page_number()?;
+    let mut page = payload.resolve_page_number()?;
     if page < 0 {
         return Err(AppError::InvalidInput(
             "Highlight pageNumber must be non-negative".to_string(),
         ));
+    }
+    // CFI-first correction: if cfi is epubcfi, derive spine index and prefer it over stale pageNumber.
+    // Fixes Android highlights that store page 0/1 while cfi is epubcfi(/6/7...) -> spine 6.
+    if let Some(ref cfi) = payload.cfi.as_ref().map(|s| normalize_cfi_value(s)) {
+        if let Some(spine_idx) = spine_index_from_epubcfi(cfi) {
+            if spine_idx >= 0 && spine_idx != page {
+                eprintln!(
+                    "save_highlight: fixing page from cfi {} page {} -> {} book {}",
+                    &cfi[..cfi.len().min(50)],
+                    page,
+                    spine_idx,
+                    &payload.book_id[..payload.book_id.len().min(4)]
+                );
+                page = spine_idx;
+            }
+        }
     }
 
     if payload.color.trim().is_empty() {
@@ -411,7 +455,22 @@ pub fn upsert_remote_highlights(
         let updated_at_rfc3339 = epoch_millis_to_rfc3339(row.updated_at_epoch_millis);
         // created_at for new rows = remote clock (or now fallback already in epoch conversion)
         let created_at_rfc3339 = updated_at_rfc3339.clone();
-        let page_value: i64 = row.page.unwrap_or(0);
+        let mut page_value: i64 = row.page.unwrap_or(0);
+        // CFI-first correction for remote sync: if cfi is epubcfi, derive spine index and prefer it
+        if let Some(ref cfi) = cfi_for_insert {
+            if let Some(spine_idx) = spine_index_from_epubcfi(cfi) {
+                if spine_idx as i64 != page_value {
+                    eprintln!(
+                        "upsert_remote_highlights: fixing page from cfi {} page {} -> {} id {}",
+                        &cfi[..cfi.len().min(50)],
+                        page_value,
+                        spine_idx,
+                        row.id
+                    );
+                    page_value = spine_idx as i64;
+                }
+            }
+        }
         let cfi_value: Option<String> = cfi_for_insert.clone();
         // Rects zero-filled per design (no locator columns on desktop).
         repo.connection.execute(

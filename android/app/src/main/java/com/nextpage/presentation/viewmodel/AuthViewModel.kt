@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nextpage.BuildConfig
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.SyncService
@@ -177,6 +178,26 @@ class AuthViewModel(
                 failureKind = AuthFailureKind.NONE
             ) }
             logDiagnostics("handleGoogleIdToken:loading")
+            // DEBUG E2E bypass: mock Google login without Supabase network call.
+            // Only active in DEBUG builds with the exact test token, safe for prod.
+            if (BuildConfig.DEBUG && idToken == "test-token-jcamachomolina503") {
+                val fakeSession = AuthSession(
+                    userId = "test-jcamachomolina503",
+                    email = "jcamachomolina503@gmail.com",
+                    displayName = "Mock Google jcamachomolina503",
+                    provider = "google",
+                    providerToken = idToken
+                )
+                triggerSyncForSession(fakeSession)
+                _uiState.update { it.copy(
+                    isLoading = false,
+                    currentSession = fakeSession,
+                    errorMessage = null,
+                    failureKind = AuthFailureKind.NONE
+                ) }
+                logDiagnostics("handleGoogleIdToken:mock-success")
+                return@launch
+            }
             val result = authRepository.signInWithGoogleIdToken(idToken)
             result.fold(
                 onSuccess = { session ->

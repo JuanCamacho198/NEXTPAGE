@@ -34,6 +34,7 @@ export type HighlightDto = {
   pageNumber: number;
   note?: string | null;
   createdAt: string;
+  updatedAt: string;
   /**
    * EPUB only. The Canonical Fragment Identifier that pins the
    * highlight to a specific range inside a chapter. Null for PDF

@@ -70,6 +70,7 @@ type RawHighlightDto = {
   page?: number;
   note?: string | null;
   createdAt: string;
+  updatedAt: string;
   /**
    * EPUB CFI from the backend. The Rust `highlights.cfi TEXT` column
    * is already round-tripped by the `saveHighlight` command -- the
@@ -184,6 +185,7 @@ const normalizeHighlightDto = (payload: RawHighlightDto): HighlightDto => {
     pageNumber,
     note: payload.note ?? null,
     createdAt: payload.createdAt,
+    updatedAt: payload.updatedAt,
     cfi: payload.cfi ?? null,
   };
 };

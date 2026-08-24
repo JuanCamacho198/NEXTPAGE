@@ -1,9 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { HighlightDto } from '$lib/types';
-  import { listHighlights, deleteHighlight } from '$lib/shared/api/tauriClient';
+  import {
+    listHighlights,
+    deleteHighlight,
+    upsertRemoteHighlights,
+  } from '$lib/shared/api/tauriClient';
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import { authState } from '$lib/stores/authState.svelte';
+  import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
   import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
   import SafeCover from '$lib/features/library/components/SafeCover.svelte';
   import Pagination from '$lib/shared/ui/navigation/Pagination.svelte';
@@ -25,6 +30,12 @@
 
   const outboxDao = new SyncOutboxDao();
 
+  function sortByUpdatedAtDesc(list: HighlightDto[]): HighlightDto[] {
+    return [...list].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+  }
+
   // ── State ──
   let highlights = $state<HighlightDto[]>([]);
   let isLoading = $state(true);
@@ -33,6 +44,10 @@
   let selectedBookId = $state<string | null>('');
   let selectedDateRange = $state<string | null>('');
   let currentPage = $state(1);
+
+  // Option 1 sync indicator (silent pull, incremental merge, no blink)
+  let syncState = $state<'idle' | 'syncing' | 'synced'>('idle');
+  let syncTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // ── Derived ──
   const bookMap = $derived(new Map(books.map((b) => [b.id, b])));
@@ -102,11 +117,54 @@
   async function loadHighlights(): Promise<void> {
     isLoading = true;
     try {
-      highlights = await listHighlights();
+      const raw = await listHighlights();
+      highlights = sortByUpdatedAtDesc(raw);
     } catch {
       highlights = [];
     } finally {
       isLoading = false;
+    }
+  }
+
+  /**
+   * Option 1 — silent background pull on entering Highlights screen.
+   * Instant local list is already shown; this merges remote highlights
+   * incrementally (500-row chunks via upsertRemoteHighlights LWW) without
+   * blocking UI. Chip shows Sincronizando... → Sincronizado (3s).
+   */
+  async function syncHighlightsInBackground(force = false): Promise<void> {
+    if (syncState === 'syncing' && !force) return;
+    if (!authState.userId) return;
+    syncState = 'syncing';
+    try {
+      const sync = new SupabaseProgressSync(authState.userId);
+      const rows = await sync.fetchAllHighlightsForPull();
+      if (rows.length > 0) {
+        const chunkSize = 500;
+        for (let i = 0; i < rows.length; i += chunkSize) {
+          const chunk = rows.slice(i, i + chunkSize);
+          try {
+            await upsertRemoteHighlights(chunk);
+          } catch {
+            // chunk failure is non-fatal — continue with next chunk
+          }
+        }
+        // Incremental merge: re-read local DB sorted DESC; Svelte keyed each prevents blink
+        const fresh = await listHighlights();
+        const sorted = sortByUpdatedAtDesc(fresh);
+        // Avoid full-blink by only updating if something changed (length or ids/order)
+        const same =
+          sorted.length === highlights.length &&
+          sorted.every((h, idx) => h.id === highlights[idx]?.id);
+        if (!same) highlights = sorted;
+      }
+      syncState = 'synced';
+      if (syncTimeout) clearTimeout(syncTimeout);
+      syncTimeout = setTimeout(() => {
+        syncState = 'idle';
+      }, 3000);
+    } catch {
+      syncState = 'idle';
     }
   }
 
@@ -182,18 +240,84 @@
 
   onMount(() => {
     loadHighlights();
+    // Silent pull after local render — no await, no blocking
+    void syncHighlightsInBackground();
     window.addEventListener('keydown', handleKeydown);
-    return () => window.removeEventListener('keydown', handleKeydown);
+    const onHighlightsChanged = (): void => {
+      void (async () => {
+        try {
+          const fresh = await listHighlights();
+          highlights = sortByUpdatedAtDesc(fresh);
+        } catch {
+          // keep current
+        }
+      })();
+    };
+    window.addEventListener('highlights:changed', onHighlightsChanged as EventListener);
+    return () => {
+      window.removeEventListener('keydown', handleKeydown);
+      window.removeEventListener('highlights:changed', onHighlightsChanged as EventListener);
+      if (syncTimeout) clearTimeout(syncTimeout);
+    };
   });
 </script>
 
 <section class="max-w-full">
   <!-- Header -->
   <header class="mb-6">
-    <h1 class="text-[1.875rem] font-bold text-(--color-primary) m-0 mb-1">
-      {t('home.highlightsTitle')}
-    </h1>
-    <p class="text-[0.875rem] text-(--color-text-muted) m-0">{t('home.highlightsSubtitle')}</p>
+    <div class="flex items-start justify-between gap-4">
+      <div class="flex-1 min-w-0">
+        <h1 class="text-[1.875rem] font-bold text-(--color-primary) m-0 mb-1">
+          {t('home.highlightsTitle')}
+        </h1>
+        <p class="text-[0.875rem] text-(--color-text-muted) m-0">{t('home.highlightsSubtitle')}</p>
+      </div>
+      <!-- Circular ↻ refresh button — only on Highlights screen -->
+      <button
+        type="button"
+        class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center border border-(--color-border) bg-(--color-surface) text-(--color-text-muted) transition-all hover:border-(--color-border-strong) hover:text-(--color-primary) hover:bg-(--color-surface-hover,rgba(25,41,62,0.96)) disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        aria-label={t('home.highlightsRefresh')}
+        title={t('home.highlightsRefresh')}
+        disabled={syncState === 'syncing'}
+        onclick={() => void syncHighlightsInBackground(true)}
+      >
+        {#if syncState === 'syncing'}
+          <svg
+            class="w-5 h-5 animate-spin"
+            fill="none"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+        {:else}
+          <!-- RefreshCw (lucide) -->
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8V3h-5l2.26 2.26A7 7 0 1 0 21 12"></path>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16v5h5l-2.26-2.26A7 7 0 0 0 21 12"></path>
+          </svg>
+        {/if}
+      </button>
+    </div>
+    {#if syncState === 'syncing' || syncState === 'synced'}
+      <div class="mt-3 flex justify-center">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-(--color-border) bg-(--color-surface) text-[0.7rem] font-medium text-(--color-text-muted) shadow-sm">
+          {#if syncState === 'syncing'}
+            <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            {t('home.highlightsSyncing')}
+          {:else}
+            <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+            </svg>
+            {t('home.highlightsSynced')}
+          {/if}
+        </span>
+      </div>
+    {/if}
   </header>
 
   <!-- Search Bar -->

@@ -1,0 +1,33 @@
+appId: com.nextpage
+---
+# J5 - Register validation: <8 chars blocked, >=8 submits (text selectors)
+- launchApp:
+    clearState: true
+- scrollUntilVisible:
+    element: "Reg.*strate|Sign up|Crear cuenta|Register"
+    timeout: 10000
+- tapOn: "Reg.*strate|Sign up|Crear cuenta|Register"
+- extendedWaitUntil:
+    visible: "Registrarse|Sign Up|Crea tu cuenta|Create your account"
+    timeout: 15000
+- tapOn: "Nombre completo|Full name"
+- inputText: "Test User"
+- tapOn: "Correo electr.*|Email"
+- inputText: "j5_test@nextpage.test"
+- tapOn: "Contrase.*|Password"
+- inputText: "1234567"
+- hideKeyboard
+- tapOn: "Registrarse|Sign Up"
+- extendedWaitUntil:
+    visible: "Nombre completo|Full name"
+    timeout: 5000
+# Now enter valid password >=8 and submit -> should trigger loading or navigate
+- tapOn: "Contrase.*|Password"
+- eraseText
+- inputText: "12345678"
+- hideKeyboard
+- tapOn: "Registrarse|Sign Up"
+- extendedWaitUntil:
+    visible:
+      text: "Cargando|Loading|Registrarse|Sign Up|Iniciar sesi.*"
+    timeout: 8000

@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
@@ -192,7 +193,7 @@ private fun LoginScreenContent(
             label = stringResource(R.string.auth_email_label),
             leadingIcon = NextPageIcons.Email,
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().testTag(AuthTags.EMAIL)
 
         )
 
@@ -210,7 +211,7 @@ private fun LoginScreenContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End
         ) {
-            TextButton(onClick = onNavigateToForgot) {
+            TextButton(onClick = onNavigateToForgot, modifier = Modifier.testTag(AuthTags.FORGOT_LINK)) {
                 Text(
                     text = stringResource(R.string.auth_forgot_password),
                     style = MaterialTheme.typography.bodyMedium
@@ -227,6 +228,7 @@ private fun LoginScreenContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
+                .testTag(AuthTags.SIGNIN)
         ) {
             Text(
                 text = stringResource(R.string.auth_login_action),
@@ -260,7 +262,8 @@ private fun LoginScreenContent(
         if (BuildConfig.DEBUG) {
             NextPageButton(
                 onClick = onContinueLocal,
-                variant = NextPageButtonVariant.TEXT
+                variant = NextPageButtonVariant.TEXT,
+                modifier = Modifier.testTag(AuthTags.DEV_BYPASS)
             ) {
                 Icon(
                     imageVector = NextPageIcons.Person,
@@ -284,7 +287,8 @@ private fun LoginScreenContent(
         AuthFooterLink(
             prefix = stringResource(R.string.auth_register_footer_prefix),
             link = stringResource(R.string.auth_register_footer_link),
-            onClick = onNavigateToRegister
+            onClick = onNavigateToRegister,
+            modifier = Modifier.testTag(AuthTags.REGISTER_LINK)
         )
     }
 }
@@ -354,7 +358,7 @@ private fun RegisterScreenContent(
             label = stringResource(R.string.auth_full_name_label),
             placeholder = stringResource(R.string.auth_full_name_placeholder),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().testTag(AuthTags.FULLNAME)
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -365,7 +369,7 @@ private fun RegisterScreenContent(
             label = stringResource(R.string.auth_email_label),
             leadingIcon = NextPageIcons.Email,
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().testTag(AuthTags.EMAIL)
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -394,6 +398,7 @@ private fun RegisterScreenContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
+                .testTag(AuthTags.SIGNUP)
         ) {
             Text(
                 text = stringResource(R.string.auth_register_action),
@@ -420,7 +425,8 @@ private fun RegisterScreenContent(
         AuthFooterLink(
             prefix = stringResource(R.string.auth_login_footer_prefix),
             link = stringResource(R.string.auth_login_footer_link),
-            onClick = onNavigateBack
+            onClick = onNavigateBack,
+            modifier = Modifier.testTag(AuthTags.LOGIN_LINK)
         )
     }
 }
@@ -483,7 +489,7 @@ private fun ForgotScreenContent(
             label = stringResource(R.string.auth_email_label),
             leadingIcon = NextPageIcons.Email,
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().testTag(AuthTags.EMAIL)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -497,6 +503,7 @@ private fun ForgotScreenContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
+                .testTag(AuthTags.SEND_RESET)
         ) {
             Text(
                 text = stringResource(R.string.auth_send_reset_email),
@@ -561,6 +568,7 @@ private fun AuthScreenScaffold(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(8.dp)
+                        .testTag(AuthTags.BACK)
                 ) {
                     Icon(
                         imageVector = NextPageIcons.ArrowBack,
@@ -653,7 +661,8 @@ private fun AuthErrorText(uiState: AuthUiState) {
                 ?: error,
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.testTag(AuthTags.ERROR)
         )
     }
 }
@@ -662,10 +671,11 @@ private fun AuthErrorText(uiState: AuthUiState) {
 private fun AuthFooterLink(
     prefix: String,
     link: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -712,7 +722,7 @@ private fun PasswordTextField(
             PasswordVisualTransformation()
         },
         singleLine = true,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().testTag(AuthTags.PASSWORD)
     )
 }
 
@@ -799,10 +809,11 @@ private fun GoogleSignInButton(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
+            .testTag(AuthTags.GOOGLE)
     ) {
         if (uiState.isLoading) {
             CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(20.dp).testTag(AuthTags.LOADING),
                 strokeWidth = 2.dp,
                 color = googleContentColor
             )
@@ -830,7 +841,8 @@ private fun GoogleSignInButton(
                 text = disabledReasonText,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.testTag(AuthTags.GOOGLE_DISABLED_REASON)
             )
         }
     }

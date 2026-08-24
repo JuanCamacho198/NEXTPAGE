@@ -1,0 +1,28 @@
+appId: com.nextpage
+---
+# J4 - Navigation Login <-> Register <-> Forgot via text
+# Footer link = Regístrate (es) / Sign up (en) = auth_register_footer_link. Use ASCII regex to avoid diacritic encoding.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Iniciar sesi.*|Sign In"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Reg.*strate|Sign up|Crear cuenta|Register"
+    timeout: 10000
+- tapOn: "Reg.*strate|Sign up|Crear cuenta|Register"
+- extendedWaitUntil:
+    visible: "Registrarse|Sign Up|Crea tu cuenta|Create your account"
+    timeout: 15000
+- back
+- extendedWaitUntil:
+    visible: "Iniciar sesi.*|Sign In"
+    timeout: 15000
+- tapOn: "Olvid.*contrase.*|Forgot.*password"
+- extendedWaitUntil:
+    visible: "Enviar.*|Send reset"
+    timeout: 15000
+- back
+- extendedWaitUntil:
+    visible: "Iniciar sesi.*|Sign In"
+    timeout: 15000

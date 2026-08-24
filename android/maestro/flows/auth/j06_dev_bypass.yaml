@@ -1,0 +1,33 @@
+appId: com.nextpage
+---
+# J6 - Dev Bypass (DEBUG only) -> Home without credentials (text) + onboarding
+# After "Continuar en local (Dev)" app lands on onboarding "Establece tu ritmo" before Home.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Continuar en local.*|Continue in local"
+    timeout: 15000
+- tapOn: "Continuar en local.*|Continue in local"
+- extendedWaitUntil:
+    visible:
+      text: "Tu meta diaria|Establece tu ritmo|Home|Inicio|Biblioteca"
+    timeout: 15000
+- runFlow:
+    when:
+      visible: "Tu meta diaria"
+    commands:
+      - tapOn: "Relajado|Relaxed"
+      - tapOn: "10 min.*"
+      - extendedWaitUntil:
+          visible:
+            text: "Establecer meta|Set goal|Continuar|Empezar|Listo"
+          timeout: 5000
+      - tapOn:
+          text: "Establecer meta|Set goal|Continuar|Empezar|Listo"
+- extendedWaitUntil:
+    visible:
+      text: "Home|Inicio|Biblioteca"
+    timeout: 15000
+- extendedWaitUntil:
+    notVisible: "Continuar con Google|Continue with Google"
+    timeout: 5000

@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -109,7 +110,8 @@ private fun HomeScreenContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = 24.dp)
+            .testTag(HomeTags.SCREEN_ROOT),
         verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
     ) {
         // Search Bar (always at top when visible)
@@ -242,7 +244,7 @@ private fun HomeScreenContent(
 
 @Composable
 private fun GreetingSection(userName: String) {
-    Column {
+    Column(modifier = Modifier.testTag(HomeTags.GREETING)) {
         Text(
             text = stringResource(R.string.home_greeting, userName),
             style = MaterialTheme.typography.headlineMedium,

@@ -1,0 +1,41 @@
+appId: com.nextpage
+---
+# J7 - Session routing: disabled Google does not crash, shows reason + cold-start session restore (text)
+# After dev bypass, onboarding "Establece tu ritmo" appears before Home → handle it.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Continuar con Google|Continue with Google"
+    timeout: 15000
+# First create a session via dev bypass (DEBUG)
+- tapOn: "Continuar en local.*|Continue in local"
+- extendedWaitUntil:
+    visible:
+      text: "Tu meta diaria|Establece tu ritmo|Home|Inicio|Biblioteca"
+    timeout: 15000
+- runFlow:
+    when:
+      visible: "Tu meta diaria"
+    commands:
+      - tapOn: "Relajado|Relaxed"
+      - tapOn: "10 min.*"
+      - extendedWaitUntil:
+          visible:
+            text: "Establecer meta|Set goal|Continuar|Empezar|Listo"
+          timeout: 5000
+      - tapOn:
+          text: "Establecer meta|Set goal|Continuar|Empezar|Listo"
+- extendedWaitUntil:
+    visible:
+      text: "Home|Inicio|Biblioteca"
+    timeout: 15000
+# Relaunch without clearState to verify session restore
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      text: "Home|Inicio|Biblioteca"
+    timeout: 15000
+- extendedWaitUntil:
+    notVisible: "Continuar con Google|Continue with Google"
+    timeout: 5000

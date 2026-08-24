@@ -29,6 +29,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
+import com.nextpage.presentation.screen.NavTags
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -103,10 +105,17 @@ fun NextPageBottomNavBar(
         ) {
                 destinations.forEach { dest ->
                     val isSelected = currentRoute == dest.route
+                    val navTag = when (dest.route) {
+                        NextPageDestination.Home.route -> NavTags.HOME
+                        NextPageDestination.Library.route -> NavTags.LIBRARY
+                        NextPageDestination.Highlights.route -> NavTags.HIGHLIGHTS
+                        NextPageDestination.Settings.route -> NavTags.SETTINGS
+                        else -> dest.route
+                    }
                     NextPageBottomNavTab(
                         item = dest,
                         isSelected = isSelected,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).testTag(navTag),
                         onClick = { onTabSelected(dest.route) }
                     )
                 }

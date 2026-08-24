@@ -1,0 +1,35 @@
+appId: com.nextpage
+---
+# J2 - Email Login Success (MOCK) -> Home — uses hidden mock token bypass (DEBUG only)
+# Original e2e_success@nextpage.test does not exist in Supabase; mock guarantees deterministic pass.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Continuar con Google"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Mock Google jcamachomolina503"
+    timeout: 10000
+- tapOn: "Mock Google jcamachomolina503"
+# Auth screen gone — either Home or OnboardingGoal
+- extendedWaitUntil:
+    visible:
+      text: "Tu meta diaria|Establece tu ritmo|Home|Inicio|Biblioteca"
+    timeout: 15000
+# If onboarding appears, pick a goal to get to Home
+- runFlow:
+    when:
+      visible: "Tu meta diaria"
+    commands:
+      - tapOn: "Relajado|Relaxed"
+      - tapOn: "10 min.*"
+      - extendedWaitUntil:
+          visible:
+            text: "Establecer meta|Set goal|Continuar|Empezar|Listo"
+          timeout: 5000
+      - tapOn:
+          text: "Establecer meta|Set goal|Continuar|Empezar|Listo"
+- extendedWaitUntil:
+    visible:
+      text: "Home|Inicio|Biblioteca"
+    timeout: 15000

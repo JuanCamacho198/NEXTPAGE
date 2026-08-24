@@ -1,0 +1,21 @@
+appId: com.nextpage
+---
+# J3 - Email Login Error stays on Login, shows error (text selectors)
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Continuar con Google|Continue with Google"
+    timeout: 15000
+- tapOn: "Correo electr.*|Email"
+- inputText: "invalid@nextpage.test"
+- tapOn: "Contrase.*|Password"
+- inputText: "WrongPass1!"
+- hideKeyboard
+- tapOn: "Iniciar sesi.*|Sign In"
+- extendedWaitUntil:
+    visible:
+      text: "Error|Credencial|contrase.*|password|inv.lid"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Continuar con Google|Continue with Google"
+    timeout: 15000

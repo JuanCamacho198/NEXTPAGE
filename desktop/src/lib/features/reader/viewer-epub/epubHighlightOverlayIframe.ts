@@ -197,97 +197,157 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
         }
         return null;
       }
+      function normalizeForMatch(str) {
+        if (!str) return '';
+        var s = String(str);
+        s = s.replace(/\uFFFD/g, '').replace(/�/g, '');
+        try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+        s = s.toLowerCase();
+        s = s.replace(/[\u00A1!\u00BF?"\u201C\u201D\u2018\u2019'.,;:()\[\]{}<>\u00AB\u00BB\u2014\u2013\-]/g, ' ');
+        s = s.replace(/[^a-z0-9\\s]/g, ' ');
+        s = s.replace(/\\s+/g, ' ').trim();
+        return s;
+      }
+      function buildNormalizedWithMap(text) {
+        var norm = '';
+        var map = [];
+        for (var i = 0; i < text.length; i++) {
+          var ch = text.charAt(i);
+          if (ch === '\uFFFD' || ch === '�') { norm += '?'; map.push(i); continue; }
+          var chunk;
+          try { chunk = ch.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e2) { chunk = ch; }
+          chunk = chunk.toLowerCase();
+          for (var ci = 0; ci < chunk.length; ci++) {
+            var c = chunk.charAt(ci);
+            if (/[\u00A1!\u00BF?"\u201C\u201D\u2018\u2019'.,;:()\[\]{}<>\u00AB\u00BB\u2014\u2013\-]/.test(c) || /[^a-z0-9\\s]/.test(c)) {
+              c = ' ';
+            }
+            var isSpace = /\\s/.test(c);
+            if (isSpace) {
+              if (norm.length === 0 || norm.charAt(norm.length - 1) !== ' ') {
+                norm += ' ';
+                map.push(i);
+              }
+            } else {
+              if (/[a-z0-9]/.test(c)) {
+                norm += c;
+                map.push(i);
+              } else if (c.trim()) {
+                norm += c;
+                map.push(i);
+              }
+            }
+          }
+        }
+        norm = norm.replace(/\\s+/g, ' ').trim();
+        while (map.length > norm.length) map.pop();
+        return { normalized: norm, map: map };
+      }
+      var built = buildNormalizedWithMap(full);
+      var normalizedFull = built.normalized;
+      var normMap = built.map;
+      var normTarget = normalizeForMatch(target);
+      if (!normTarget || normTarget.length < 3) return null;
+      function rangeFromNorm(idx, len) {
+        if (idx < 0 || idx >= normMap.length) return null;
+        var origStart = normMap[idx];
+        var lastIdx = idx + len - 1;
+        var origEnd;
+        if (lastIdx < normMap.length) origEnd = normMap[lastIdx] + 1;
+        else origEnd = full.length;
+        // Extend to include trailing punctuation that was stripped during normalization
+        // e.g. "resaltar." where '.' was mapped to space and trimmed. Keep visual fidelity.
+        try {
+          var rawTrim = target.trim();
+          var ext = 0;
+          while (origEnd + ext < full.length && ext < 3) {
+            var ch = full.charAt(origEnd + ext);
+            if (/[.,;:!?\)\"'\u00BB\u00AB]/.test(ch) && rawTrim.indexOf(ch) !== -1) {
+              ext++;
+            } else break;
+          }
+          if (ext > 0) origEnd += ext;
+        } catch (eExt) {}
+        var s = locate(origStart);
+        var e = locate(origEnd);
+        if (s && e) {
+          var r = doc.createRange();
+          r.setStart(s.node, s.offset);
+          r.setEnd(e.node, e.offset);
+          if (!r.collapsed) return r;
+        }
+        return null;
+      }
+      function indexOfWithWildcard(haystack, needle) {
+        if (!haystack || !needle || needle.length > haystack.length) return -1;
+        var hLen = haystack.length;
+        var nLen = needle.length;
+        for (var hi = 0; hi <= hLen - nLen; hi++) {
+          var ok = true;
+          for (var nj = 0; nj < nLen; nj++) {
+            var hc = haystack.charAt(hi + nj);
+            var nc = needle.charAt(nj);
+            if (hc !== nc && hc !== '?') { ok = false; break; }
+          }
+          if (ok) return hi;
+        }
+        return -1;
+      }
+      var idx = normalizedFull.indexOf(normTarget);
+      if (idx === -1) idx = indexOfWithWildcard(normalizedFull, normTarget);
+      if (idx !== -1) {
+        var r0 = rangeFromNorm(idx, normTarget.length);
+        if (r0) return r0;
+      }
       try {
         var words = target.split(/\\s+/);
         var parts = [];
         for (var w = 0; w < words.length; w++) {
-          parts.push(words[w].replace(/[.*+?^$()\\[\\]{\\\\]/g, '\\\\$&'));
+          parts.push(words[w].replace(/[.*+?^$()\[\]{\\]/g, '\\\$&'));
         }
-        var re = new RegExp(parts.join('\\\\s+'));
+        var re = new RegExp(parts.join('\\s+'));
         var m = re.exec(full);
         if (m) {
-          var s = locate(m.index);
-          var e = locate(m.index + m[0].length);
-          if (s && e) {
-            var r = doc.createRange();
-            r.setStart(s.node, s.offset);
-            r.setEnd(e.node, e.offset);
-            if (!r.collapsed) return r;
+          var sR = locate(m.index);
+          var eR = locate(m.index + m[0].length);
+          if (sR && eR) {
+            var rR = doc.createRange();
+            rR.setStart(sR.node, sR.offset);
+            rR.setEnd(eR.node, eR.offset);
+            if (!rR.collapsed) return rR;
           }
         }
       } catch (eRe) {}
-      var normalizedFull = '';
-      var normMap = [];
-      for (var i = 0; i < full.length; i++) {
-        var ch = full.charAt(i);
-        var isSpace = /\\s/.test(ch);
-        if (isSpace) {
-          if (normalizedFull.length === 0 || normalizedFull.charAt(normalizedFull.length - 1) !== ' ') {
-            normMap.push(i);
-            normalizedFull += ' ';
-          }
-        } else {
-          normMap.push(i);
-          normalizedFull += ch;
-        }
-      }
-      var normTarget = target;
-      var idx = normalizedFull.indexOf(normTarget);
-      if (idx === -1) idx = normalizedFull.toLowerCase().indexOf(normTarget.toLowerCase());
-      if (idx !== -1) {
-        var origStart = normMap[idx];
-        var lastNorm = idx + normTarget.length - 1;
-        var origEnd = (lastNorm < normMap.length ? normMap[lastNorm] + 1 : full.length);
-        var s2 = locate(origStart);
-        var e2 = locate(origEnd);
-        if (s2 && e2) {
-          var r2 = doc.createRange();
-          r2.setStart(s2.node, s2.offset);
-          r2.setEnd(e2.node, e2.offset);
-          if (!r2.collapsed) return r2;
-        }
-      }
-      if (target.length > 40) {
+      if (normTarget.length > 30) {
         var candidates = [];
-        var cuts = [80, 50, 30];
+        var cuts = [80, 60, 40, 30];
         for (var ci = 0; ci < cuts.length; ci++) {
           var cutLen = cuts[ci];
-          if (target.length > cutLen) {
-            var sub = target.slice(0, cutLen);
+          if (normTarget.length > cutLen) {
+            var sub = normTarget.slice(0, cutLen);
             var lastSpace = sub.lastIndexOf(' ');
             if (lastSpace > 20) sub = sub.slice(0, lastSpace);
             sub = sub.trim();
             if (sub.length >= 10) candidates.push(sub);
           }
         }
-        var wds = target.split(/\\s+/);
+        var wds = normTarget.split(/\\s+/);
         if (wds.length > 6) candidates.push(wds.slice(0, 6).join(' '));
+        var seen = {};
         for (var cIdx = 0; cIdx < candidates.length; cIdx++) {
           var cand = candidates[cIdx];
+          if (seen[cand]) continue;
+          seen[cand] = 1;
           var candIdx = normalizedFull.indexOf(cand);
-          if (candIdx === -1) candIdx = normalizedFull.toLowerCase().indexOf(cand.toLowerCase());
+          if (candIdx === -1) candIdx = indexOfWithWildcard(normalizedFull, cand);
           if (candIdx !== -1) {
-            var cs = normMap[candIdx];
-            var ce = normMap[candIdx + cand.length - 1] + 1;
-            var s3 = locate(cs);
-            var e3 = locate(ce);
-            if (s3 && e3) {
-              var wantEndNorm = candIdx + target.length;
-              if (wantEndNorm < normMap.length) {
-                var wantOrig = normMap[wantEndNorm];
-                var eWant = locate(wantOrig);
-                if (eWant) {
-                  var rWant = doc.createRange();
-                  rWant.setStart(s3.node, s3.offset);
-                  rWant.setEnd(eWant.node, eWant.offset);
-                  if (!rWant.collapsed) return rWant;
-                }
-              }
-              var r3 = doc.createRange();
-              r3.setStart(s3.node, s3.offset);
-              r3.setEnd(e3.node, e3.offset);
-              if (!r3.collapsed) return r3;
+            var wantEnd = candIdx + normTarget.length;
+            if (wantEnd <= normalizedFull.length) {
+              var ext = rangeFromNorm(candIdx, normTarget.length);
+              if (ext) return ext;
             }
+            var shortR = rangeFromNorm(candIdx, cand.length);
+            if (shortR) return shortR;
           }
         }
       }

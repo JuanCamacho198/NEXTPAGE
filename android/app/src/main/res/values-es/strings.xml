@@ -662,6 +662,50 @@
     <string name="download_overlay_done">Listo</string>
     <string name="download_overlay_percent">%1$d%%</string>
 
+    <!-- Cuenta (Ajustes → Cuenta) -->
+    <string name="settings_account_export_data">Exportar mis datos</string>
+    <string name="settings_account_connected_drive">Conectado Drive</string>
+    <string name="settings_account_export_success">Datos exportados</string>
+
+    <!-- Almacenamiento (Ajustes → Almacenamiento) -->
+    <string name="settings_storage_title">Almacenamiento</string>
+    <string name="storage_header_used">312 MB usados</string>
+    <string name="storage_header_subtitle">Almacenamiento local de libros</string>
+    <string name="storage_book_odyssey">La Odisea</string>
+    <string name="storage_book_odyssey_size">45.2 MB</string>
+    <string name="storage_book_pride">Orgullo y Prejuicio</string>
+    <string name="storage_book_pride_size">32.8 MB</string>
+    <string name="storage_book_moby">Moby Dick</string>
+    <string name="storage_book_moby_size">38.5 MB</string>
+    <string name="storage_action_delete">Borrar</string>
+    <string name="storage_action_clear_all">Limpiar todo</string>
+    <string name="storage_cleared">Almacenamiento limpiado</string>
+
+    <!-- Sincronización (Ajustes → Sincronización) -->
+    <string name="settings_sync_title">Sincronización</string>
+    <string name="sync_card_realtime_title">Realtime</string>
+    <string name="sync_realtime_connected">Conectado</string>
+    <string name="sync_last_sync_label">Última sync</string>
+    <string name="sync_last_sync_value">Hoy 14:32</string>
+    <string name="sync_outbox_label">Outbox</string>
+    <string name="sync_outbox_value">0 pendientes</string>
+    <string name="sync_recent_title">Recientes (últimos 5)</string>
+    <string name="sync_entry_highlights">Resaltados sincronizados</string>
+    <string name="sync_entry_progress">Progreso sincronizado</string>
+    <string name="sync_entry_book">Libro importado</string>
+    <string name="sync_action_sync_now">Sincronizar ahora</string>
+    <string name="sync_action_view_logs">Ver logs</string>
+    <string name="sync_now_success">Sincronización iniciada</string>
+
+    <!-- Acerca de (Ajustes → Acerca de) -->
+    <string name="about_lincoln_quote">“Una persona será tan feliz como decida serlo.”</string>
+    <string name="about_lincoln_author">— Abraham Lincoln</string>
+    <string name="about_terms">Términos</string>
+    <string name="about_licenses">Licencias</string>
+    <string name="about_contact">Contactar</string>
+    <string name="about_rate">Calificar</string>
+    <string name="about_footer">© 2026 NextPage</string>
+
     <!-- Rendimiento (Ajustes → Rendimiento) -->
     <string name="settings_performance_title">Rendimiento</string>
     <string name="performance_card_timings_title">Tiempos clave</string>

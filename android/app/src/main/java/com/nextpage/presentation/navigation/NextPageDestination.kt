@@ -27,6 +27,8 @@ sealed class NextPageDestination(
     data object SettingsList : NextPageDestination("settings/list")
     data object SettingsAccount : NextPageDestination("settings/account")
     data object SettingsDataStorage : NextPageDestination("settings/data")
+    data object SettingsStorage : NextPageDestination("settings/storage")
+    data object SettingsSync : NextPageDestination("settings/sync")
     data object SettingsNotifications : NextPageDestination("settings/notifications")
     data object SettingsTheme : NextPageDestination("settings/theme")
     data object SettingsLanguage : NextPageDestination("settings/language")

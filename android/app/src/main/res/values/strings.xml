@@ -717,6 +717,50 @@
     <string name="download_overlay_done">Ready</string>
     <string name="download_overlay_percent">%1$d%%</string>
 
+    <!-- Account (Settings → Account) -->
+    <string name="settings_account_export_data">Export my data</string>
+    <string name="settings_account_connected_drive">Connected Drive</string>
+    <string name="settings_account_export_success">Data exported</string>
+
+    <!-- Storage (Settings → Storage) -->
+    <string name="settings_storage_title">Storage</string>
+    <string name="storage_header_used">312 MB used</string>
+    <string name="storage_header_subtitle">Local book storage</string>
+    <string name="storage_book_odyssey">La Odisea</string>
+    <string name="storage_book_odyssey_size">45.2 MB</string>
+    <string name="storage_book_pride">Orgullo y Prejuicio</string>
+    <string name="storage_book_pride_size">32.8 MB</string>
+    <string name="storage_book_moby">Moby Dick</string>
+    <string name="storage_book_moby_size">38.5 MB</string>
+    <string name="storage_action_delete">Delete</string>
+    <string name="storage_action_clear_all">Clear all</string>
+    <string name="storage_cleared">Storage cleared</string>
+
+    <!-- Sync (Settings → Sync) -->
+    <string name="settings_sync_title">Sync</string>
+    <string name="sync_card_realtime_title">Realtime</string>
+    <string name="sync_realtime_connected">Connected</string>
+    <string name="sync_last_sync_label">Last sync</string>
+    <string name="sync_last_sync_value">Today 14:32</string>
+    <string name="sync_outbox_label">Outbox</string>
+    <string name="sync_outbox_value">0 pending</string>
+    <string name="sync_recent_title">Recent (last 5)</string>
+    <string name="sync_entry_highlights">Highlights synced</string>
+    <string name="sync_entry_progress">Progress synced</string>
+    <string name="sync_entry_book">Book imported</string>
+    <string name="sync_action_sync_now">Sync now</string>
+    <string name="sync_action_view_logs">View logs</string>
+    <string name="sync_now_success">Sync started</string>
+
+    <!-- About (Settings → About) -->
+    <string name="about_lincoln_quote">“A person will be just about as happy as they make up their minds to be.”</string>
+    <string name="about_lincoln_author">— Abraham Lincoln</string>
+    <string name="about_terms">Terms</string>
+    <string name="about_licenses">Licenses</string>
+    <string name="about_contact">Contact</string>
+    <string name="about_rate">Rate app</string>
+    <string name="about_footer">© 2026 NextPage</string>
+
     <!-- Performance (Settings → Performance) -->
     <string name="settings_performance_title">Performance</string>
     <string name="performance_card_timings_title">Key timings</string>

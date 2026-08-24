@@ -70,7 +70,9 @@ fun SettingsListScreen(
     onNavigateToDevices: () -> Unit = {},
     onNavigateToDailyGoal: () -> Unit = {},
     onNavigateToPerformance: () -> Unit = {},
-    onNavigateToLogViewer: () -> Unit = {}
+    onNavigateToLogViewer: () -> Unit = {},
+    onNavigateToStorage: () -> Unit = onNavigateToDataStorage,
+    onNavigateToSync: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val langPrefs = androidx.compose.runtime.remember { AppLanguagePreferences(context = context) }
@@ -150,8 +152,18 @@ fun SettingsListScreen(
             titleRes = R.string.settings_datos_section,
             rows = listOf(
                 SettingsRow(
-                    labelRes = R.string.settings_data_storage_title,
+                    labelRes = R.string.settings_storage_title,
                     icon = NextPageIcons.Storage,
+                    onClick = onNavigateToStorage
+                ),
+                SettingsRow(
+                    labelRes = R.string.settings_sync_title,
+                    icon = NextPageIcons.Sync,
+                    onClick = onNavigateToSync
+                ),
+                SettingsRow(
+                    labelRes = R.string.settings_data_storage_title,
+                    icon = NextPageIcons.CloudSync,
                     onClick = onNavigateToDataStorage
                 ),
                 SettingsRow(

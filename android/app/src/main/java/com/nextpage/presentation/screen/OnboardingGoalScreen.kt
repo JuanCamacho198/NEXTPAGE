@@ -93,7 +93,7 @@ fun OnboardingGoalScreen(
 
             Text(
                 text = stringResource(R.string.onboarding_goal_hero_title),
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 20.sp),
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
@@ -104,7 +104,7 @@ fun OnboardingGoalScreen(
 
             Text(
                 text = stringResource(R.string.onboarding_goal_hero_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -114,7 +114,7 @@ fun OnboardingGoalScreen(
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 options.forEach { option ->
                     GoalOptionCard(
@@ -153,7 +153,7 @@ private fun GoalHeader(onNavigateBack: (() -> Unit)?) {
         }
         Text(
             text = stringResource(R.string.onboarding_goal_header),
-            style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
+            style = MaterialTheme.typography.headlineSmall.copy(fontSize = 20.sp),
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -218,15 +218,16 @@ private fun GoalOptionCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .height(72.dp)
             .clickable(onClick = onSelect),
-        shape = RoundedCornerShape(NextPageDimens.spacingMd),
+        shape = RoundedCornerShape(16.dp),
         color = if (selected) {
             MaterialTheme.colorScheme.surfaceVariant
         } else {
             MaterialTheme.colorScheme.surface
         },
         border = BorderStroke(
-            width = 1.dp,
+            width = if (selected) 2.dp else 1.dp,
             color = if (selected) {
                 MaterialTheme.colorScheme.primary
             } else {
@@ -235,10 +236,7 @@ private fun GoalOptionCard(
         )
     ) {
         Row(
-            modifier = Modifier.padding(
-                horizontal = NextPageDimens.spacingMd,
-                vertical = NextPageDimens.spacingMd
-            ),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -263,13 +261,13 @@ private fun GoalOptionCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(option.titleRes),
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
+                    style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = stringResource(option.descriptionRes),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

@@ -28,6 +28,7 @@ import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.ThemeMode
 import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.presentation.navigation.NextPageDestination
+import com.nextpage.presentation.screen.settings.AboutScreen
 import com.nextpage.presentation.screen.settings.SettingsAboutScreen
 import com.nextpage.presentation.screen.settings.SettingsAccountScreen
 import com.nextpage.presentation.screen.settings.SettingsDataStorageScreen
@@ -39,6 +40,8 @@ import com.nextpage.presentation.screen.settings.PerformanceScreen
 import com.nextpage.presentation.screen.settings.SettingsPaletteScreen
 import com.nextpage.presentation.screen.settings.SettingsStatisticsScreen
 import com.nextpage.presentation.screen.settings.SettingsThemeScreen
+import com.nextpage.presentation.screen.settings.StorageScreen
+import com.nextpage.presentation.screen.settings.SyncScreen
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.DictionaryViewModel
 import com.nextpage.presentation.viewmodel.SettingsDevicesViewModel
@@ -166,7 +169,13 @@ private fun SettingsScreenContent(
                     onNavigateToPerformance = {
                         nestedNavController.navigate(NextPageDestination.SettingsPerformance.route)
                     },
-                    onNavigateToLogViewer = onNavigateToLogViewer
+                    onNavigateToLogViewer = onNavigateToLogViewer,
+                    onNavigateToStorage = {
+                        nestedNavController.navigate(NextPageDestination.SettingsStorage.route)
+                    },
+                    onNavigateToSync = {
+                        nestedNavController.navigate(NextPageDestination.SettingsSync.route)
+                    }
                 )
             }
 
@@ -226,8 +235,23 @@ private fun SettingsScreenContent(
                 )
             }
 
+            composable(route = NextPageDestination.SettingsStorage.route) {
+                StorageScreen(
+                    onBack = { nestedNavController.popBackStack() }
+                )
+            }
+
+            composable(route = NextPageDestination.SettingsSync.route) {
+                SyncScreen(
+                    onBack = { nestedNavController.popBackStack() },
+                    onViewLogs = {
+                        onNavigateToLogViewer()
+                    }
+                )
+            }
+
             composable(route = NextPageDestination.SettingsAbout.route) {
-                SettingsAboutScreen(
+                AboutScreen(
                     onBack = { nestedNavController.popBackStack() }
                 )
             }

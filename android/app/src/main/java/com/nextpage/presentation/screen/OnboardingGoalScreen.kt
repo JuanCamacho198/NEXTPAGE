@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -325,8 +326,11 @@ private fun GoalBottomAction(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .navigationBarsPadding(),
-        color = MaterialTheme.colorScheme.surface
+            .navigationBarsPadding()
+            .imePadding(),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 3.dp,
+        shadowElevation = 8.dp
     ) {
         Column {
             NextPageDivider(modifier = Modifier.fillMaxWidth())
@@ -339,9 +343,7 @@ private fun GoalBottomAction(
             ) {
                 NextPageButton(
                     onClick = onConfirm,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
                     shape = RoundedCornerShape(28.dp)
                 ) {
                     Text(
@@ -411,8 +413,8 @@ internal val GOAL_OPTIONS = listOf(
     )
 )
 
-/** Extra bottom padding so scroll content clears the pinned action bar. */
-private val BOTTOM_ACTION_CLEARANCE = 128.dp
+/** Extra bottom padding so scroll content clears the pinned action bar + system nav bar. */
+private val BOTTOM_ACTION_CLEARANCE = 180.dp
 private const val DEFAULT_GOAL_MINUTES = 30
 
 @Preview(showBackground = true)

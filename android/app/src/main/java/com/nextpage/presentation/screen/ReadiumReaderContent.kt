@@ -669,7 +669,9 @@ internal fun highlightsToDecorations(
     readingOrder: List<Link> = emptyList(),
     publication: Publication? = null
 ): List<Decoration> {
-    return highlights.mapNotNull { h ->
+    return highlights.sortedBy { h ->
+        h.locatorJson?.let { CfiMigrator.jsonToLocator(it)?.locations?.progression } ?: 0.0
+    }.mapNotNull { h ->
         val fromJson = h.locatorJson?.let { CfiMigrator.jsonToLocator(it) }
         val viaJson = fromJson != null
         // Chain: canonical json -> precise CFI via publication metrics -> generic fallback
@@ -717,11 +719,12 @@ internal fun highlightsToDecorations(
             "Highlights",
             "applied id=${h.id} href=${locator.href} prog=${locator.locations.progression} frag=$fragmentShort viaFallback=$viaFallback"
         )
-        val tint = try {
+        val opaque = try {
             android.graphics.Color.parseColor(h.color)
         } catch (_: Exception) {
             android.graphics.Color.YELLOW
         }
+        val tint = (opaque and 0x00FFFFFF) or (0x66 shl 24)
         Decoration(
             id = h.id,
             locator = locator,

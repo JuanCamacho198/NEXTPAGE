@@ -279,14 +279,17 @@ fun ReadiumPdfReaderContent(
  * [DecorableNavigator.applyDecorations].
  */
 private fun highlightsToPdfDecorations(highlights: List<Highlight>): List<Decoration> {
-    return highlights.mapNotNull { h ->
+    return highlights.sortedBy { h ->
+        h.locatorJson?.let { CfiMigrator.jsonToLocator(it)?.locations?.progression } ?: 0.0
+    }.mapNotNull { h ->
         val json = h.locatorJson ?: return@mapNotNull null
         val locator = CfiMigrator.jsonToLocator(json) ?: return@mapNotNull null
-        val tint = try {
+        val opaque = try {
             android.graphics.Color.parseColor(h.color)
         } catch (_: Exception) {
             android.graphics.Color.YELLOW
         }
+        val tint = (opaque and 0x00FFFFFF) or (0x66 shl 24)
         Decoration(
             id = h.id,
             locator = locator,

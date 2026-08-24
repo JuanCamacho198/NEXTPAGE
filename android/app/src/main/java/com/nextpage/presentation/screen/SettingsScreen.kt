@@ -35,6 +35,7 @@ import com.nextpage.presentation.screen.settings.SettingsDevicesScreen
 import com.nextpage.presentation.screen.settings.SettingsLanguageScreen
 import com.nextpage.presentation.screen.settings.SettingsListScreen
 import com.nextpage.presentation.screen.settings.SettingsNotificationsScreen
+import com.nextpage.presentation.screen.settings.PerformanceScreen
 import com.nextpage.presentation.screen.settings.SettingsPaletteScreen
 import com.nextpage.presentation.screen.settings.SettingsStatisticsScreen
 import com.nextpage.presentation.screen.settings.SettingsThemeScreen
@@ -161,6 +162,9 @@ private fun SettingsScreenContent(
                     },
                     onNavigateToDailyGoal = {
                         nestedNavController.navigate(NextPageDestination.SettingsDailyGoal.route)
+                    },
+                    onNavigateToPerformance = {
+                        nestedNavController.navigate(NextPageDestination.SettingsPerformance.route)
                     },
                     onNavigateToLogViewer = onNavigateToLogViewer
                 )
@@ -299,6 +303,12 @@ private fun SettingsScreenContent(
                         onNavigateBack = { nestedNavController.popBackStack() }
                     )
                 }
+            }
+
+            composable(route = NextPageDestination.SettingsPerformance.route) {
+                PerformanceScreen(
+                    onBack = { nestedNavController.popBackStack() }
+                )
             }
         }
     }

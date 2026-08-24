@@ -661,4 +661,40 @@
     <string name="download_overlay_stage_saving">Guardando en tu biblioteca…</string>
     <string name="download_overlay_done">Listo</string>
     <string name="download_overlay_percent">%1$d%%</string>
+
+    <!-- Rendimiento (Ajustes → Rendimiento) -->
+    <string name="settings_performance_title">Rendimiento</string>
+    <string name="performance_card_timings_title">Tiempos clave</string>
+    <string name="performance_card_timings_subtitle">Cold start, abrir lector, sync pull, guardar resaltado — avg / p95 / max</string>
+    <string name="performance_card_resources_title">Recursos</string>
+    <string name="performance_card_resources_subtitle">DB, resaltados, cache y memoria</string>
+    <string name="performance_card_sync_title">Estado sync</string>
+    <string name="performance_card_sync_subtitle">Realtime, última sync y outbox</string>
+    <string name="performance_card_diagnostics_title">Diagnóstico</string>
+    <string name="performance_card_diagnostics_subtitle">FPS, ANRs y últimos crashes</string>
+    <string name="performance_loading">Cargando métricas…</string>
+    <string name="performance_last_measured">Última medición a las %1$s</string>
+    <string name="performance_measure_now">Medir ahora</string>
+    <string name="performance_db_size">Tamaño DB</string>
+    <string name="performance_highlights_count">Resaltados</string>
+    <string name="performance_cache_size">Cache (epub_cache)</string>
+    <string name="performance_clear_cache">Limpiar cache</string>
+    <string name="performance_cache_cleared">Cache limpiada</string>
+    <string name="performance_cache_clear_error">No se pudo limpiar la cache</string>
+    <string name="performance_memory">Memoria</string>
+    <string name="performance_realtime_connected">Realtime Conectado</string>
+    <string name="performance_realtime_disconnected">Realtime Desconectado</string>
+    <string name="performance_status_connected">Conectado</string>
+    <string name="performance_status_disconnected">Desconectado</string>
+    <string name="performance_last_sync">Última sync</string>
+    <string name="performance_outbox_pending">Outbox pendientes</string>
+    <string name="performance_fps_scroll">FPS scroll</string>
+    <string name="performance_anrs">ANRs</string>
+    <string name="performance_crashes_title">Crashes (últimos 3)</string>
+    <string name="performance_no_crashes">Sin crashes recientes</string>
+    <string name="performance_generate_report">Generar reporte (.zip)</string>
+    <string name="performance_report_generated">Reporte generado: %1$s</string>
+    <string name="performance_report_error">No se pudo generar el reporte</string>
+    <string name="performance_report_path">Archivo: %1$s — toca para compartir</string>
+    <string name="performance_share_report">Compartir reporte de rendimiento</string>
 </resources>

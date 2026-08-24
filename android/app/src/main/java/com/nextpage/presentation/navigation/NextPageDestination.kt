@@ -36,5 +36,6 @@ sealed class NextPageDestination(
     data object SettingsDictionary : NextPageDestination("settings/dictionary")
     data object SettingsDevices : NextPageDestination("settings/devices")
     data object SettingsDailyGoal : NextPageDestination("settings/daily-goal")
+    data object SettingsPerformance : NextPageDestination("settings/performance")
     data object LogViewer : NextPageDestination("settings/log-viewer")
 }

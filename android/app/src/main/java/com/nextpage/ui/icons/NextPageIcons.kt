@@ -453,6 +453,12 @@ object NextPageIcons {
 
     /** Chevron down. Source: `Icons.Rounded.ExpandMore`. */
     val ChevronDown = Icons.Rounded.ExpandMore
+
+    /** Performance / speed gauge. Fallback to BarChart (Speed is not in this material-icons-extended version). */
+    val Speed = Icons.Rounded.BarChart
+
+    /** Alias for performance row. */
+    val Performance = Icons.Rounded.BarChart
 }
 
 @Preview(showBackground = true, heightDp = 1200)

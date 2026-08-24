@@ -69,6 +69,7 @@ fun SettingsListScreen(
     onNavigateToDictionary: () -> Unit = {},
     onNavigateToDevices: () -> Unit = {},
     onNavigateToDailyGoal: () -> Unit = {},
+    onNavigateToPerformance: () -> Unit = {},
     onNavigateToLogViewer: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -162,6 +163,11 @@ fun SettingsListScreen(
                     labelRes = R.string.settings_dictionary_label,
                     icon = NextPageIcons.LibraryBooks,
                     onClick = onNavigateToDictionary
+                ),
+                SettingsRow(
+                    labelRes = R.string.settings_performance_title,
+                    icon = NextPageIcons.Performance,
+                    onClick = onNavigateToPerformance
                 )
             )
         ),

@@ -699,8 +699,14 @@ internal fun highlightsToDecorations(
         val locator = if (baseLocator.text?.highlight.isNullOrBlank() && h.textContent.isNotBlank()) {
             try {
                 val json = baseLocator.toJSON()
+                // FIX: no truncar a 300 — el highlight rojo 4fd (468 chars) se cortaba en "procuraba "
+                // y Readium no anclaba el texto completo. Usar texto completo (trim) para que
+                // el anchoring por text.highlight cubra todo el rango; Readium soporta highlights
+                // largos sin problema. Si en el futuro hay highlights >3000 chars (página entera),
+                // el CFI/progression ya posiciona y el text es solo ancla secundaria.
+                val fullText = h.textContent.trim()
                 val textObj = org.json.JSONObject().apply {
-                    put("highlight", h.textContent.take(300))
+                    put("highlight", fullText)
                 }
                 json.put("text", textObj)
                 org.readium.r2.shared.publication.Locator.fromJSON(json) ?: baseLocator

@@ -163,7 +163,8 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
   // usable is found (short needle, no match, mapping failure).
   function findTextRange(doc, needle) {
     try {
-      var target = String(needle || '').replace(/\\s+/g, ' ').trim();
+      var raw = String(needle || '');
+      var target = raw.replace(/\\s+/g, ' ').trim();
       if (target.length < 3) return null;
       var root = doc.body || doc.documentElement;
       if (!root) return null;
@@ -181,38 +182,116 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
       var nodes = [];
       var node = walker.nextNode();
       while (node) {
-        nodes.push({ node: node, start: full.length });
+        nodes.push({ node: node, start: full.length, len: node.nodeValue.length });
         full += node.nodeValue;
         node = walker.nextNode();
       }
       if (!nodes.length) return null;
-      var words = target.split(/\\s+/);
-      var parts = [];
-      for (var w = 0; w < words.length; w++) {
-        parts.push(words[w].replace(/[.*+?^$()\\[\\]{}\\\\]/g, '\\\\$&'));
-      }
-      var re = new RegExp(parts.join('\\\\s+'));
-      var m = re.exec(full);
-      if (!m) return null;
-
-      // Map a global offset in 'full' back to (text node, local offset).
-      // Backward walk is safe: 'full' is the exact concatenation of the
-      // accepted nodes' values, so every match offset lands inside one.
       function locate(offset) {
         for (var k = nodes.length - 1; k >= 0; k--) {
           if (offset >= nodes[k].start) {
-            return { node: nodes[k].node, offset: offset - nodes[k].start };
+            var local = offset - nodes[k].start;
+            if (local > nodes[k].len) local = nodes[k].len;
+            return { node: nodes[k].node, offset: local };
           }
         }
         return null;
       }
-      var startPos = locate(m.index);
-      var endPos = locate(m.index + m[0].length);
-      if (!startPos || !endPos) return null;
-      var range = doc.createRange();
-      range.setStart(startPos.node, startPos.offset);
-      range.setEnd(endPos.node, endPos.offset);
-      return range.collapsed ? null : range;
+      try {
+        var words = target.split(/\\s+/);
+        var parts = [];
+        for (var w = 0; w < words.length; w++) {
+          parts.push(words[w].replace(/[.*+?^$()\\[\\]{\\\\]/g, '\\\\$&'));
+        }
+        var re = new RegExp(parts.join('\\\\s+'));
+        var m = re.exec(full);
+        if (m) {
+          var s = locate(m.index);
+          var e = locate(m.index + m[0].length);
+          if (s && e) {
+            var r = doc.createRange();
+            r.setStart(s.node, s.offset);
+            r.setEnd(e.node, e.offset);
+            if (!r.collapsed) return r;
+          }
+        }
+      } catch (eRe) {}
+      var normalizedFull = '';
+      var normMap = [];
+      for (var i = 0; i < full.length; i++) {
+        var ch = full.charAt(i);
+        var isSpace = /\\s/.test(ch);
+        if (isSpace) {
+          if (normalizedFull.length === 0 || normalizedFull.charAt(normalizedFull.length - 1) !== ' ') {
+            normMap.push(i);
+            normalizedFull += ' ';
+          }
+        } else {
+          normMap.push(i);
+          normalizedFull += ch;
+        }
+      }
+      var normTarget = target;
+      var idx = normalizedFull.indexOf(normTarget);
+      if (idx === -1) idx = normalizedFull.toLowerCase().indexOf(normTarget.toLowerCase());
+      if (idx !== -1) {
+        var origStart = normMap[idx];
+        var lastNorm = idx + normTarget.length - 1;
+        var origEnd = (lastNorm < normMap.length ? normMap[lastNorm] + 1 : full.length);
+        var s2 = locate(origStart);
+        var e2 = locate(origEnd);
+        if (s2 && e2) {
+          var r2 = doc.createRange();
+          r2.setStart(s2.node, s2.offset);
+          r2.setEnd(e2.node, e2.offset);
+          if (!r2.collapsed) return r2;
+        }
+      }
+      if (target.length > 40) {
+        var candidates = [];
+        var cuts = [80, 50, 30];
+        for (var ci = 0; ci < cuts.length; ci++) {
+          var cutLen = cuts[ci];
+          if (target.length > cutLen) {
+            var sub = target.slice(0, cutLen);
+            var lastSpace = sub.lastIndexOf(' ');
+            if (lastSpace > 20) sub = sub.slice(0, lastSpace);
+            sub = sub.trim();
+            if (sub.length >= 10) candidates.push(sub);
+          }
+        }
+        var wds = target.split(/\\s+/);
+        if (wds.length > 6) candidates.push(wds.slice(0, 6).join(' '));
+        for (var cIdx = 0; cIdx < candidates.length; cIdx++) {
+          var cand = candidates[cIdx];
+          var candIdx = normalizedFull.indexOf(cand);
+          if (candIdx === -1) candIdx = normalizedFull.toLowerCase().indexOf(cand.toLowerCase());
+          if (candIdx !== -1) {
+            var cs = normMap[candIdx];
+            var ce = normMap[candIdx + cand.length - 1] + 1;
+            var s3 = locate(cs);
+            var e3 = locate(ce);
+            if (s3 && e3) {
+              var wantEndNorm = candIdx + target.length;
+              if (wantEndNorm < normMap.length) {
+                var wantOrig = normMap[wantEndNorm];
+                var eWant = locate(wantOrig);
+                if (eWant) {
+                  var rWant = doc.createRange();
+                  rWant.setStart(s3.node, s3.offset);
+                  rWant.setEnd(eWant.node, eWant.offset);
+                  if (!rWant.collapsed) return rWant;
+                }
+              }
+              var r3 = doc.createRange();
+              r3.setStart(s3.node, s3.offset);
+              r3.setEnd(e3.node, e3.offset);
+              if (!r3.collapsed) return r3;
+            }
+          }
+        }
+      }
+      return null;
     } catch (eFind) {
       return null;
     }
@@ -340,9 +419,9 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
             range = null;
           }
         }
-        if (!range && (!hl.cfi || String(hl.cfi).indexOf('epubcfi(') !== 0)) {
-          // Page matches but the locator is absent or not an epubcfi:
-          // fall back to placing by the stored text before giving up.
+        if (!range) {
+          // Fallback for legacy readium: or any unresolved CFI — try text anchor.
+          // Valid epubcfi that already resolved has range, so not affected.
           range = tryPlaceByText(hl);
         }
         if (!range) {

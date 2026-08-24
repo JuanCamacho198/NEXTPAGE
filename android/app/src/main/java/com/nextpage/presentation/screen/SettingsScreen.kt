@@ -22,6 +22,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
+import com.nextpage.data.session.ReadingGoalPreferences
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.ThemeMode
@@ -59,7 +60,8 @@ fun SettingsScreen(
     onNavigateToLogViewer: () -> Unit = {},
     statisticsViewModel: StatisticsViewModel,
     dictionaryRepository: DictionaryRepository? = null,
-    driveAuthHelper: GoogleDriveAuthHelper? = null
+    driveAuthHelper: GoogleDriveAuthHelper? = null,
+    readingGoalPreferences: ReadingGoalPreferences? = null
 ) {
     SettingsScreenContent(
         contentPadding = contentPadding,
@@ -77,7 +79,8 @@ fun SettingsScreen(
         onNavigateToLogViewer = onNavigateToLogViewer,
         statisticsViewModel = statisticsViewModel,
         dictionaryRepository = dictionaryRepository,
-        driveAuthHelper = driveAuthHelper
+        driveAuthHelper = driveAuthHelper,
+        readingGoalPreferences = readingGoalPreferences
     )
 }
 
@@ -98,7 +101,8 @@ private fun SettingsScreenContent(
     onNavigateToLogViewer: () -> Unit = {},
     statisticsViewModel: StatisticsViewModel? = null,
     dictionaryRepository: DictionaryRepository? = null,
-    driveAuthHelper: GoogleDriveAuthHelper? = null
+    driveAuthHelper: GoogleDriveAuthHelper? = null,
+    readingGoalPreferences: ReadingGoalPreferences? = null
 ) {
     val nestedNavController = rememberNavController()
     val dictionaryViewModel = remember(dictionaryRepository) {
@@ -127,6 +131,7 @@ private fun SettingsScreenContent(
                 SettingsListScreen(
                     authSession = authSession,
                     appThemeMode = appThemeMode,
+                    readingGoalPreferences = readingGoalPreferences,
                     onNavigateToAccount = {
                         nestedNavController.navigate(NextPageDestination.SettingsAccount.route)
                     },
@@ -153,6 +158,9 @@ private fun SettingsScreenContent(
                     },
                     onNavigateToDevices = {
                         nestedNavController.navigate(NextPageDestination.SettingsDevices.route)
+                    },
+                    onNavigateToDailyGoal = {
+                        nestedNavController.navigate(NextPageDestination.SettingsDailyGoal.route)
                     },
                     onNavigateToLogViewer = onNavigateToLogViewer
                 )
@@ -273,6 +281,22 @@ private fun SettingsScreenContent(
                         uiState = uiState,
                         onRemove = { id -> viewModel.removeDevice(id) },
                         onBack = { nestedNavController.popBackStack() }
+                    )
+                }
+            }
+
+            composable(route = NextPageDestination.SettingsDailyGoal.route) {
+                val prefs = readingGoalPreferences
+                if (prefs != null) {
+                    val current = prefs.load() ?: 30
+                    // Reuse onboarding screen for editing; back button pops to Settings list.
+                    OnboardingGoalScreen(
+                        initialMinutes = current,
+                        onSave = { minutes ->
+                            prefs.save(minutes)
+                            nestedNavController.popBackStack()
+                        },
+                        onNavigateBack = { nestedNavController.popBackStack() }
                     )
                 }
             }

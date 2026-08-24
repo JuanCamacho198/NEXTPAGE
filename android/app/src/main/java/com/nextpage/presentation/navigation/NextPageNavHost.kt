@@ -394,7 +394,9 @@ fun NextPageNavHost(
 
     // Onboarding goal gating (REQ-daily-reading-goal-2, SCEN-daily-reading-goal-1/2):
     // authenticated users with no stored goal land on onboarding/goal first.
-    val hasDailyGoal = appContainer.readingGoalPreferences.load() != null
+    // Reactive: bump dailyGoalVersion after save so hasDailyGoal recomputes without needing process restart.
+    var dailyGoalVersion by remember { mutableStateOf(0) }
+    val hasDailyGoal = remember(dailyGoalVersion) { appContainer.readingGoalPreferences.load() != null }
 
     val startDestination = when {
         !isAuthenticated -> NextPageDestination.Auth.route
@@ -483,7 +485,12 @@ fun NextPageNavHost(
                         },
                         onContinueLocal = {
                             authViewModel.continueLocally()
-                            navController.navigate(NextPageDestination.Home.route) {
+                            val destination = if (appContainer.readingGoalPreferences.load() == null) {
+                                NextPageDestination.OnboardingGoal.route
+                            } else {
+                                NextPageDestination.Home.route
+                            }
+                            navController.navigate(destination) {
                                 popUpTo(NextPageDestination.Auth.route) { inclusive = true }
                             }
                         },
@@ -556,6 +563,7 @@ fun NextPageNavHost(
                     OnboardingGoalScreen(
                         onSave = { minutes ->
                             appContainer.readingGoalPreferences.save(minutes)
+                            dailyGoalVersion++
                             navController.navigate(NextPageDestination.Home.route) {
                                 popUpTo(0) { inclusive = true }
                             }
@@ -866,7 +874,8 @@ fun NextPageNavHost(
                         },
                         statisticsViewModel = statisticsViewModel,
                         dictionaryRepository = appContainer.dictionaryRepository,
-                        driveAuthHelper = appContainer.googleDriveAuthHelper
+                        driveAuthHelper = appContainer.googleDriveAuthHelper,
+                        readingGoalPreferences = appContainer.readingGoalPreferences
                     )
                 }
 

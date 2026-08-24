@@ -58,6 +58,7 @@ private data class SettingsGroup(
 fun SettingsListScreen(
     authSession: AuthSession?,
     appThemeMode: ThemeMode,
+    readingGoalPreferences: com.nextpage.data.session.ReadingGoalPreferences? = null,
     onNavigateToAccount: () -> Unit,
     onNavigateToTheme: () -> Unit,
     onNavigateToLanguage: () -> Unit,
@@ -67,6 +68,7 @@ fun SettingsListScreen(
     onNavigateToAbout: () -> Unit,
     onNavigateToDictionary: () -> Unit = {},
     onNavigateToDevices: () -> Unit = {},
+    onNavigateToDailyGoal: () -> Unit = {},
     onNavigateToLogViewer: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -82,6 +84,16 @@ fun SettingsListScreen(
         ThemeMode.LIGHT -> R.string.settings_theme_light
         ThemeMode.DARK -> R.string.settings_theme_dark
         ThemeMode.SYSTEM -> R.string.settings_theme_system
+    }
+
+    val currentGoalValue = readingGoalPreferences?.load()?.let { minutes ->
+        when (minutes) {
+            10 -> stringResource(R.string.onboarding_goal_option_relaxed_value)
+            20 -> stringResource(R.string.onboarding_goal_option_regular_value)
+            30 -> stringResource(R.string.onboarding_goal_option_serious_value)
+            45 -> stringResource(R.string.onboarding_goal_option_intense_value)
+            else -> "$minutes min/día"
+        }
     }
 
     val groups = listOf(
@@ -119,6 +131,17 @@ fun SettingsListScreen(
                     labelRes = R.string.palette_section_title,
                     icon = NextPageIcons.Palette,
                     onClick = onNavigateToPalette
+                )
+            )
+        ),
+        SettingsGroup(
+            titleRes = R.string.settings_lectura_section,
+            rows = listOf(
+                SettingsRow(
+                    labelRes = R.string.settings_daily_goal_title,
+                    icon = NextPageIcons.Clock,
+                    value = currentGoalValue,
+                    onClick = onNavigateToDailyGoal
                 )
             )
         ),

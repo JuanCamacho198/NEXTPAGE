@@ -443,6 +443,10 @@
     <string name="highlights_filter_all_tags">Todas las etiquetas</string>
     <string name="highlights_clear_filters">Borrar filtros</string>
 
+    <!-- Daily goal (onboarding + settings) -->
+    <string name="settings_daily_goal_title">Meta diaria</string>
+    <string name="settings_daily_goal_subtitle">Tiempo de lectura por día</string>
+
     <!-- Settings -->
     <string name="settings_theme_light">Claro</string>
     <string name="settings_theme_dark">Oscuro</string>

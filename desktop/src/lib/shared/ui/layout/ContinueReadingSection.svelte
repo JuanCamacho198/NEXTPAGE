@@ -71,9 +71,10 @@
     <ul
       bind:this={scrollEl}
       onscroll={updateScrollState}
-      class="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden {showArrows
+      class="flex gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden {showArrows
         ? 'px-8'
         : ''}"
+      style="scrollbar-width: none; -ms-overflow-style: none;"
     >
       {#each appState.continueReadingBooks as book (book.id)}
         <li class="snap-start shrink-0 w-[320px] max-w-[85%]">

@@ -19,9 +19,6 @@
   import { HIGHLIGHT_COLORS } from '$lib/features/reader/highlight/highlightColors';
   import { debugState } from '$lib/shared/debug/debugState.svelte';
   import {
-    saveHighlight,
-    deleteHighlight,
-    updateHighlight,
     saveHighlightTags,
     createTag,
     listTags,
@@ -29,7 +26,6 @@
     addDictionaryWord,
     upsertReaderSettings,
     getDefaultReaderSettings,
-    listHighlights,
   } from '$lib/shared/api/tauriClient';
   import HighlightContextMenu from '../highlight/HighlightContextMenu.svelte';
   import ColorPickerPopover from '../highlight/ColorPickerPopover.svelte';
@@ -40,15 +36,19 @@
   import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
   import { getReaderError } from '$lib/stores/readerErrorState.svelte';
   import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
-  import { authState } from '$lib/stores/authState.svelte';
   import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
-  import { invoke } from '@tauri-apps/api/core';
-  import { normalizeHref } from '$lib/shared/sync/LocatorCodec';
-  import { stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
   import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav';
   import { clampZoomPercent } from '$lib/features/reader/viewer-pdf/pdfNavigation';
+  import { createSpineResolver } from './useSpineResolver.svelte';
+  import { createHighlights } from './useHighlights.svelte';
 
   const outboxDao = new SyncOutboxDao();
+  const spineResolver = createSpineResolver();
+  const highlightsState = createHighlights({
+    getBook: () => activeReadingBook,
+    spine: spineResolver,
+    outbox: outboxDao,
+  });
 
   const appWindow = getCurrentWebviewWindow();
 
@@ -141,21 +141,8 @@
   } | null>(null);
   let showToolbar = $state(false);
 
-  // Persisted highlights state. We carry the full HighlightDto for
-  // EPUB (we need `cfi` to round-trip selections back to the
-  // iframe's cfiToRange), and a slim shape for the in-memory PDF
-  // overlay rendering. Both share the same key set we use to look
-  // up "this highlight" inside the EPUB iframe.
-  type PersistedHighlight = {
-    id: string;
-    color: string;
-    pageNumber: number;
-    rects: Array<{ left: number; top: number; width: number; height: number }>;
-    cfi?: string | null;
-    text?: string;
-    note?: string | null;
-  };
-  let persistedHighlights = $state<PersistedHighlight[]>([]);
+  // Persisted highlights are owned by useHighlights (32ms single-flight,
+  // optimistic merge, ensureSpine, single outbox). Selection stays here.
   let lastSelectionData = $state<{
     text: string;
     bounds: { left: number; top: number; right: number; bottom: number };
@@ -229,212 +216,24 @@
     onEpubLocationChange?.(cfi, pct);
   }
 
-  // Load persisted highlights when the active book changes. We use the
-  // slim PersistedHighlight shape (the EPUB viewer needs cfi; the PDF
-  // viewer needs rects but ignores cfi). This is best-effort: on
-  // failure we keep the in-memory list empty and log.
-  // BUG1 FIX: guard against overwriting optimistic push if listHighlights
-  // races after saveHighlight. Merge any highlight IDs already in
-  // persistedHighlights that aren't yet in DB rows.
-  // FIX highlights stale epoch — 2026-08-23: removed aggressive epoch guard
-  // that discarded valid reloads when highlightsVersion bump + highlights:changed
-  // fired two concurrent reloadHighlights in the same microtask (myEpoch 1 vs
-  // 2: first was marked stale even though second still returned stale 0 from
-  // a DB read that started before the 17-row upsert committed). Replaced with
-  // debounced single-flight coalescing: duplicate triggers within 32 ms collapse
-  // to ONE DB read, and a load already in flight queues exactly one follow-up.
-  let highlightReloadTimer: ReturnType<typeof setTimeout> | null = null;
-  let highlightReloadInFlight = false;
-  let highlightReloadQueued = false;
-
-  // Spine cache for readium: href -> spine index mapping
-  let epubSpineHrefs = $state<string[]>([]);
-  let epubSpineLoadedFor = $state<string | null>(null);
-
-  function getSpineIndexForHref(href: string, spine: string[]): number | null {
-    const raw = href.trim();
-    const withoutPrefix = raw.startsWith('readium:') ? raw.slice('readium:'.length) : raw;
-    const fragStripped = stripFragment(withoutPrefix);
-    // normalize: backslash -> /, collapse //
-    let norm = normalizeHref(fragStripped);
-    // collapse // iteratively (preserve :// not needed here)
-    while (norm.includes('//')) norm = norm.replace('//', '/');
-    norm = norm.trim();
-    if (!norm) return null;
-    let idx = spine.findIndex((h) => normalizeHref(h) === norm);
-    if (idx !== -1) return idx;
-    // suffix / filename fallback (handles OEBPS/Text/cap1.xhtml vs Text/cap1.xhtml)
-    const fileName = norm.split('/').pop() ?? '';
-    if (fileName) {
-      idx = spine.findIndex(
-        (h) => normalizeHref(h).endsWith('/' + fileName) || normalizeHref(h).split('/').pop() === fileName,
-      );
-      if (idx !== -1) return idx;
-    }
-    idx = spine.findIndex((h) => {
-      const nh = normalizeHref(h);
-      return nh.endsWith(norm) || norm.endsWith(nh);
-    });
-    return idx !== -1 ? idx : null;
-  }
-
-  async function ensureSpineHrefs(bookId: string, filePath: string): Promise<void> {
-    if (epubSpineLoadedFor === bookId && epubSpineHrefs.length > 0) return;
-    try {
-      const meta = await invoke<{
-        spineHrefs?: string[];
-        spine_hrefs?: string[];
-        toc?: Array<{ href: string }>;
-        chapters?: Array<{ href: string }>;
-        totalChapters: number;
-      }>('parse_epub', { filePath, bookId });
-      const raw = meta.spineHrefs ?? meta.spine_hrefs ?? [];
-      if (Array.isArray(raw) && raw.length > 0) {
-        epubSpineHrefs = raw.map((h) => normalizeHref(h));
-        epubSpineLoadedFor = bookId;
-        console.warn(
-          'RW: spine loaded',
-          epubSpineHrefs.length,
-          'for',
-          bookId.slice(0, 4),
-          epubSpineHrefs.slice(0, 3).join(','),
-        );
-      }
-    } catch (e) {
-      console.warn('RW: failed to load spine for readium fix', e);
-    }
-  }
-
-  function reloadHighlights(): void {
-    if (highlightReloadTimer) clearTimeout(highlightReloadTimer);
-    highlightReloadTimer = setTimeout(() => {
-      highlightReloadTimer = null;
-      void runReloadHighlights();
-    }, 32);
-  }
-
-  async function runReloadHighlights(): Promise<void> {
-    if (highlightReloadInFlight) {
-      highlightReloadQueued = true;
-      return;
-    }
-    highlightReloadInFlight = true;
-    try {
-      do {
-        highlightReloadQueued = false;
-        const book = untrack(() => activeReadingBook);
-        if (!book) {
-          persistedHighlights = [];
-          break;
-        }
-        const bookId = book.id;
-        try {
-          const rows: HighlightDto[] = await listHighlights(bookId);
-          if (untrack(() => activeReadingBook?.id) !== bookId) {
-            console.debug('RW: listHighlights stale bookId ignored', bookId.slice(0, 4));
-            continue;
-          }
-          console.warn(
-            'RW: listHighlights loaded',
-            rows.length,
-            rows.map((r) => `${r.pageNumber}:${r.id.slice(0, 4)}`).join(','),
-            'bookId',
-            bookId.slice(0, 4),
-          );
-          const rowIds = new Set(rows.map((r) => r.id));
-          const optimistic = untrack(() => persistedHighlights).filter((h) => !rowIds.has(h.id));
-          // Ensure spine is available for readium: href -> spine mapping (fixes cap1.xhtml -> 6)
-          if (book.format?.toLowerCase() === 'epub' && book.filePath) {
-            await ensureSpineHrefs(bookId, book.filePath);
-          }
-          let merged: PersistedHighlight[] = rows.map((r) => {
-            let pageNumber = r.pageNumber;
-            if (r.cfi) {
-              const cfiTrim = r.cfi.trim();
-              const m = /epubcfi\(\/6\/(\d+)!/.exec(cfiTrim);
-              if (m) {
-                const idx = parseInt(m[1], 10) - 1;
-                if (idx >= 0 && idx !== pageNumber) {
-                  console.warn(
-                    'RW: fixing page mismatch',
-                    r.id.slice(0, 4),
-                    `page ${r.pageNumber} -> ${idx}`,
-                  );
-                  pageNumber = idx;
-                  void updateHighlight({ id: r.id, pageNumber }).catch(() => {});
-                }
-              } else if (cfiTrim.startsWith('readium:')) {
-                const spineIdx = getSpineIndexForHref(cfiTrim, epubSpineHrefs);
-                if (spineIdx !== null && spineIdx >= 0 && spineIdx !== pageNumber) {
-                  console.warn(
-                    'RW: fixing page mismatch (readium)',
-                    r.id.slice(0, 4),
-                    `page ${r.pageNumber} -> ${spineIdx}`,
-                    `href ${cfiTrim.slice(0, 40)}`,
-                  );
-                  pageNumber = spineIdx;
-                  void updateHighlight({ id: r.id, pageNumber }).catch(() => {});
-                } else if (spineIdx === null) {
-                  console.warn(
-                    'RW: readium href not in spine',
-                    r.id.slice(0, 4),
-                    cfiTrim.slice(0, 60),
-                    'spineLen',
-                    epubSpineHrefs.length,
-                  );
-                }
-              }
-            }
-            return {
-              id: r.id,
-              color: r.color,
-              pageNumber,
-              rects: [],
-              cfi: r.cfi ?? null,
-              text: r.text,
-              note: r.note ?? null,
-            };
-          });
-          if (optimistic.length > 0) {
-            console.warn(
-              'RW: preserving',
-              optimistic.length,
-              'optimistic highlights not yet in DB',
-              optimistic.map((o) => `${o.pageNumber}:${o.id.slice(0, 4)}`).join(','),
-            );
-            merged = [...merged, ...optimistic];
-          }
-          persistedHighlights = merged;
-        } catch (err) {
-          console.error('Failed to load highlights:', err);
-        }
-      } while (highlightReloadQueued);
-    } finally {
-      highlightReloadInFlight = false;
-    }
-  }
-
-  // Cleanup debounced timer on unmount
+  // Highlights delegated to useHighlights (32ms single-flight, ensureSpine,
+  // optimistic merge, single outbox). Three triggers: book change,
+  // highlightsVersion, highlights:changed window event.
   $effect(() => {
     return () => {
-      if (highlightReloadTimer) clearTimeout(highlightReloadTimer);
+      highlightsState.cleanup();
     };
   });
 
-  // Initial load on book change
   $effect(() => {
     if (activeReadingBook) {
-      void reloadHighlights();
+      highlightsState.reloadHighlights();
     } else {
-      if (highlightReloadTimer) {
-        clearTimeout(highlightReloadTimer);
-        highlightReloadTimer = null;
-      }
-      persistedHighlights = [];
+      highlightsState.cleanup();
+      highlightsState.persistedHighlights = [];
     }
   });
 
-  // Reload when remote sync finishes (fetchAndApplyBookState bump)
   $effect(() => {
     const v = readerState.highlightsVersion;
     if (v > 0 && activeReadingBook) {
@@ -444,11 +243,10 @@
         'reloading highlights for',
         activeReadingBook.id.slice(0, 4),
       );
-      void reloadHighlights();
+      highlightsState.reloadHighlights();
     }
   });
 
-  // Fallback: window event emitted by ReaderDomainState after sync
   $effect(() => {
     const handler = (e: Event): void => {
       const detail = (e as CustomEvent).detail as { bookId?: string } | undefined;
@@ -460,7 +258,7 @@
         evBookId?.slice(0, 4) ?? 'all',
         'reloading highlights',
       );
-      void reloadHighlights();
+      highlightsState.reloadHighlights();
     };
     window.addEventListener('highlights:changed', handler as EventListener);
     return () => window.removeEventListener('highlights:changed', handler as EventListener);
@@ -673,8 +471,8 @@
   let tocEntries = $state<TocEntry[]>([]);
   let tocNavigate = $state<TocEntry | null>(null);
 
-  // Bookmarks state
-  let bookmarksState = createBookmarksState();
+  // Bookmarks state — single outboxDao injected (PR1)
+  let bookmarksState = createBookmarksState({ outboxDao });
   let bookmarksPanelEl: HTMLDivElement | undefined = $state();
 
   // Bookmark ribbon overlay (2200ms)
@@ -943,7 +741,7 @@
     };
     debugState.epub.computedToolbarX = computedToolbarX;
     debugState.epub.computedToolbarY = computedToolbarY;
-    debugState.epub.persistedHighlightsCount = persistedHighlights.length;
+    debugState.epub.persistedHighlightsCount = highlightsState.persistedHighlights.length;
   });
 
   function handleCopy(): void {
@@ -973,101 +771,19 @@
     color: string,
     data: NonNullable<typeof lastSelectionData>,
   ): Promise<void> {
-    debugState.epub.colorPickCount++;
-    debugState.epub.lastPickedColor = color;
-    console.warn('RW: handleColorSelect data.pageNumber', data.pageNumber, 'cfi', data.cfi?.slice(0, 40) ?? '(null)', 'text', data.text.slice(0, 30));
-
-    // Use the data passed by the toolbar (captured at mount time) rather than
-    // the global `lastSelectionData`. This is the fix for the race condition:
-    // the browser's selectionchange can fire before our click handler runs
-    // and clear the global state, but the data we need to persist the
-    // highlight is already in this argument.
-    if (data && activeReadingBook) {
-      const highlightId = crypto.randomUUID();
-      const bounds = data.bounds;
-      const pageNumber = data.pageNumber ?? (isEpub ? 0 : 1);
-      const cfi = data.cfi ?? null;
-      console.warn(
-        'RW: push highlight pageNumber=',
-        pageNumber,
-        'cfi',
-        cfi?.slice(0, 60) ?? '(null)',
-        'id',
-        highlightId.slice(0, 4),
-        'text',
-        data.text.slice(0, 30),
-      );
-
-      // Persist visually immediately
-      persistedHighlights = [
-        ...persistedHighlights,
-        {
-          id: highlightId,
-          color,
-          pageNumber,
-          rects: data.rects,
-          cfi,
-          text: data.text,
-          note: null,
-        },
-      ];
-
-      // Save to backend (async, don't block UI)
-      try {
-        debugState.epub.saveHighlightCallCount++;
-        await saveHighlight({
-          id: highlightId,
-          bookId: activeReadingBook.id,
-          text: data.text,
-          color,
-          pageNumber,
-          rectLeft: bounds.left,
-          rectRight: bounds.right,
-          rectTop: bounds.top,
-          rectBottom: bounds.bottom,
-          cfi,
-        });
-        if (authState.userId) {
-          void outboxDao.add(
-            'HIGHLIGHT',
-            highlightId,
-            'UPSERT',
-            JSON.stringify({
-              userId: authState.userId,
-              bookId: activeReadingBook.id,
-              cfiRange: cfi ?? '',
-              textContent: data.text,
-              color,
-              page: pageNumber,
-              locatorJson: readerState.locatorJson,
-              updatedAt: new Date().toISOString(),
-            }),
-          );
-        }
-      } catch (err) {
-        debugState.epub.saveHighlightLastError = String(err);
-        // Mirror the failed highlight id into the debug state for the
-        // epub-highlight-bugfix observability layer. Set-like dedup;
-        // the same id won't be added twice.
-        if (!debugState.epub.failedHighlightIds.includes(highlightId)) {
-          debugState.epub.failedHighlightIds.push(highlightId);
-        }
-        console.warn('Failed to save highlight:', err);
-      }
-    }
-
-    // Close the toolbar AND clear the browser's text selection on a small
-    // delay so the Svelte out:scale transition plays out cleanly. We delay
-    // the removeAllRanges call to avoid it firing a fresh selectionchange
-    // while we're still rendering.
+    // Delegate to highlightsState — preserves 220ms race: captured data is
+    // passed explicitly, not global lastSelectionData which may be nulled by
+    // selectionchange before click handler runs.
+    await highlightsState.handleColorSelect(color, data as Parameters<typeof highlightsState.handleColorSelect>[1]);
+    // Dismiss toolbar 220ms after color pick (matches highlightsState's
+    // removeAllRanges delay) to preserve out:scale transition.
     setTimeout(() => {
       dismissToolbar();
-      window.getSelection()?.removeAllRanges();
     }, 220);
   }
 
   function openHighlightMenu(id: string, opts?: HighlightActionOpts): void {
-    const hl = persistedHighlights.find((h) => h.id === id);
+    const hl = highlightsState.persistedHighlights.find((h) => h.id === id);
     highlightMenu = {
       open: true,
       highlightId: id,
@@ -1123,73 +839,23 @@
   }
 
   function updateHighlightColor(id: string, color: string): void {
-    persistedHighlights = persistedHighlights.map((h) => (h.id === id ? { ...h, color } : h));
+    highlightsState.updateHighlightColor(id, color);
     if (highlightMenu.highlightId === id) {
       highlightMenu.color = color;
     }
-    updateHighlight({ id, color }).catch((err) => {
-      console.error('Failed to update highlight color:', err);
-    });
-    enqueueHighlightUpdate(id, { color });
   }
 
   function updateHighlightNote(id: string, note: string | null): void {
-    persistedHighlights = persistedHighlights.map((h) => (h.id === id ? { ...h, note } : h));
-    updateHighlight({ id, note: note ?? undefined }).catch((err) => {
-      console.error('Failed to update highlight note:', err);
-    });
-    enqueueHighlightUpdate(id, { note });
+    highlightsState.updateHighlightNote(id, note);
   }
 
   function deleteHighlightById(id: string): void {
-    const highlight = persistedHighlights.find((item) => item.id === id);
-    persistedHighlights = persistedHighlights.filter((h) => h.id !== id);
+    highlightsState.deleteHighlightById(id);
     closeHighlightMenu();
-    deleteHighlight(id).catch((err) => console.error('Failed to delete highlight:', err));
-    if (authState.userId && highlight) {
-      const updatedAt = new Date().toISOString();
-      void outboxDao.add(
-        'HIGHLIGHT',
-        id,
-        'DELETE',
-        JSON.stringify({
-          userId: authState.userId,
-          bookId: activeReadingBook?.id ?? id,
-          cfiRange: highlight.cfi ?? '',
-          textContent: highlight.text ?? '',
-          color: highlight.color,
-          page: highlight.pageNumber,
-          locatorJson: readerState.locatorJson,
-          deletedAt: updatedAt,
-          updatedAt,
-        }),
-      );
-    }
   }
 
-  function enqueueHighlightUpdate(
-    id: string,
-    changes: { color?: string; note?: string | null },
-  ): void {
-    if (!authState.userId) return;
-    const highlight = persistedHighlights.find((item) => item.id === id);
-    if (!highlight) return;
-    void outboxDao.add(
-      'HIGHLIGHT',
-      id,
-      'UPSERT',
-      JSON.stringify({
-        userId: authState.userId,
-        bookId: activeReadingBook?.id ?? id,
-        cfiRange: highlight.cfi ?? '',
-        textContent: highlight.text ?? '',
-        color: changes.color ?? highlight.color,
-        note: changes.note ?? highlight.note ?? null,
-        page: highlight.pageNumber,
-        locatorJson: readerState.locatorJson,
-        updatedAt: new Date().toISOString(),
-      }),
-    );
+  function enqueueHighlightUpdate(id: string, changes: { color?: string; note?: string | null }): void {
+    highlightsState.enqueueHighlightUpdate(id, changes);
   }
 
   function handleMenuCustomColor(): void {
@@ -1365,7 +1031,7 @@
           externalTocNavigate={tocNavigate}
           {isFullscreen}
           onToggleFullscreen={toggleFullscreen}
-          {persistedHighlights}
+          persistedHighlights={highlightsState.persistedHighlights}
           {t}
         />
       </div>
@@ -1397,7 +1063,7 @@
           showToc={showTocPanel}
           onToggleToc={toggleTocPanel}
           onSettingsChange={handleTextSettingsChange}
-          {persistedHighlights}
+          persistedHighlights={highlightsState.persistedHighlights}
           onHighlightAction={handleHighlightAction}
           {t}
         />
@@ -1513,7 +1179,7 @@
     <NoteEditorModal
       open={showNoteModal}
       note={highlightMenu.highlightId
-        ? (persistedHighlights.find((h) => h.id === highlightMenu.highlightId)?.note ?? null)
+        ? (highlightsState.persistedHighlights.find((h) => h.id === highlightMenu.highlightId)?.note ?? null)
         : null}
       highlightText={highlightMenu.text}
       onSave={handleNoteSave}

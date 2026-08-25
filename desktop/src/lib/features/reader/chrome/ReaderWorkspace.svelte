@@ -45,6 +45,8 @@
   import { invoke } from '@tauri-apps/api/core';
   import { normalizeHref } from '$lib/shared/sync/LocatorCodec';
   import { stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
+  import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav';
+  import { clampZoomPercent } from '$lib/features/reader/viewer-pdf/pdfNavigation';
 
   const outboxDao = new SyncOutboxDao();
 
@@ -515,6 +517,21 @@
   let isRotated = $state(false);
   let workspaceRoot: HTMLElement | null = $state(null);
 
+  // ── Immersive chrome state (R1, R2) ───────────────────────
+  let headerVisible = $state(true);
+  let idleTimer: ReturnType<typeof setTimeout> | null = null;
+  let mouseX = $state(0);
+  let mouseY = $state(0);
+  let pendingFrame: number | null = null;
+  let hoverTop = $derived(mouseY < 72);
+  let panelOpen = $derived(showTextSettings || showTocPanel || showBookmarks || searchPanelOpen);
+  let edgeNavVisible = $derived(isFullscreen && (mouseX < 80 || mouseX > (typeof window !== 'undefined' ? window.innerWidth - 80 : 9999)));
+  // Viewer refs for direct navigation (R2)
+  let epubRef: EpubNativeViewer | null = $state(null);
+  let pdfRef: PdfViewer | null = $state(null);
+  let pendingWheelDelta = 0;
+  let pendingWheelFrame: number | null = null;
+
   function handleRotate(): void {
     isRotated = !isRotated;
   }
@@ -522,6 +539,103 @@
   $effect(() => {
     return () => {
       isRotated = false;
+    };
+  });
+
+  // ── Immersive helpers ─────────────────────────────────────
+  function resetIdleTimer(): void {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = null;
+    if (!isFullscreen || hoverTop || panelOpen) {
+      headerVisible = true;
+      return;
+    }
+    idleTimer = setTimeout(() => {
+      if (isFullscreen && !hoverTop && !panelOpen) headerVisible = false;
+    }, 2500);
+  }
+
+  function handleWorkspaceMouseMove(e: MouseEvent): void {
+    if (pendingFrame !== null) return;
+    const x = e.clientX;
+    const y = e.clientY;
+    pendingFrame = requestAnimationFrame(() => {
+      pendingFrame = null;
+      mouseX = x;
+      mouseY = y;
+      if (hoverTop) headerVisible = true;
+      resetIdleTimer();
+    });
+  }
+
+  function adjustZoom(delta: number): void {
+    const current = clampZoomPercent(localReaderSettings.epub.fontSize ?? 100);
+    const next = clampZoomPercent(current + delta);
+    if (next === current) return;
+    const updated: ReaderSettings = {
+      ...localReaderSettings,
+      epub: { ...localReaderSettings.epub, fontSize: next },
+    };
+    handleTextSettingsChange(updated);
+    const fmt = activeReadingBook?.format?.toLowerCase();
+    if (pdfRef && fmt === 'pdf') {
+      void pdfRef.setScale(next / 100);
+    }
+    if (epubRef && fmt === 'epub') {
+      void epubRef.setZoom(next);
+    }
+  }
+
+  function handleGlobalWheel(e: WheelEvent): void {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    pendingWheelDelta += e.deltaY;
+    if (pendingWheelFrame !== null) return;
+    pendingWheelFrame = requestAnimationFrame(() => {
+      pendingWheelFrame = null;
+      const delta = pendingWheelDelta > 0 ? -10 : 10;
+      pendingWheelDelta = 0;
+      adjustZoom(delta);
+    });
+  }
+
+  function handleGlobalKeydown(e: KeyboardEvent): void {
+    // F toggle fullscreen outside editable context
+    if (e.key.toLowerCase() === 'f' && !hasEditableContext(e.target as Element | null)) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      e.preventDefault();
+      void toggleFullscreen();
+      return;
+    }
+    // Ctrl/Cmd + +/- zoom
+    if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '_' )) {
+      e.preventDefault();
+      const step = e.key === '-' || e.key === '_' ? -10 : 10;
+      adjustZoom(step);
+    }
+  }
+
+  $effect(() => {
+    resetIdleTimer();
+    // react to isFullscreen / panelOpen changes
+    void isFullscreen;
+    void panelOpen;
+    void hoverTop;
+  });
+
+  $effect(() => {
+    const root = workspaceRoot;
+    if (!root) return;
+    root.addEventListener('mousemove', handleWorkspaceMouseMove);
+    window.addEventListener('wheel', handleGlobalWheel as EventListener, { capture: true, passive: false });
+    window.addEventListener('keydown', handleGlobalKeydown as EventListener);
+    return () => {
+      root.removeEventListener('mousemove', handleWorkspaceMouseMove);
+      window.removeEventListener('wheel', handleGlobalWheel as EventListener, { capture: true } as AddEventListenerOptions);
+      window.removeEventListener('keydown', handleGlobalKeydown as EventListener);
+      if (idleTimer) clearTimeout(idleTimer);
+      if (pendingFrame !== null) cancelAnimationFrame(pendingFrame);
+      if (pendingWheelFrame !== null) cancelAnimationFrame(pendingWheelFrame);
     };
   });
 
@@ -545,26 +659,33 @@
     }, 2200);
   }
 
-  // Fullscreen arrows + share helpers
+  // Fullscreen arrows + share helpers — fixed via viewer refs (R2)
   function goPrevPage(): void {
-    // For PDF: decrement, for EPUB: previous chapter via keyboard intent handled in viewers
-    if (isPdf && currentPdfPage > 1) {
-      const next = currentPdfPage - 1;
-      handlePdfPageChange(next, totalPdfPages);
-    } else if (isEpub && currentEpubChapter > 0) {
-      const prev = currentEpubChapter - 1;
-      // EPUB navigation via TOC-like jump handled externally; emit via window event for viewer
-      window.dispatchEvent(new CustomEvent('reader:navigate', { detail: { direction: 'prev', chapter: prev } }));
+    const fmt = activeReadingBook?.format?.toLowerCase();
+    if (fmt === 'pdf') {
+      if (!pdfRef) return;
+      if (currentPdfPage <= 1) return;
+      void pdfRef.navigateToPage(currentPdfPage - 1);
+      return;
+    }
+    if (fmt === 'epub') {
+      if (!epubRef) return;
+      if (currentEpubChapter <= 0) return;
+      epubRef.goToPrev();
     }
   }
 
   function goNextPage(): void {
-    if (isPdf && currentPdfPage < totalPdfPages) {
-      const next = currentPdfPage + 1;
-      handlePdfPageChange(next, totalPdfPages);
-    } else if (isEpub) {
-      const next = currentEpubChapter + 1;
-      window.dispatchEvent(new CustomEvent('reader:navigate', { detail: { direction: 'next', chapter: next } }));
+    const fmt = activeReadingBook?.format?.toLowerCase();
+    if (fmt === 'pdf') {
+      if (!pdfRef) return;
+      if (currentPdfPage >= totalPdfPages) return;
+      void pdfRef.navigateToPage(currentPdfPage + 1);
+      return;
+    }
+    if (fmt === 'epub') {
+      if (!epubRef) return;
+      epubRef.goToNext();
     }
   }
 
@@ -1083,6 +1204,7 @@
     {showTextSettings}
     {showBookmarks}
     {isFullscreen}
+    headerVisible={isFullscreen ? headerVisible : true}
     {isRotated}
     {t}
     {onBackToHome}
@@ -1093,6 +1215,8 @@
     onToggleFullscreen={toggleFullscreen}
     onToggleRotate={handleRotate}
   />
+  <!-- Spacer for fixed header (h-16 = 64px) — collapses when header hidden in fullscreen -->
+  <div class="shrink-0 h-16" class:hidden={isFullscreen && !headerVisible} aria-hidden="true"></div>
 
   <!-- Reading area (centered, fill remaining space) -->
   <div
@@ -1118,6 +1242,7 @@
         class:h-full={isFullscreen}
       >
         <PdfViewer
+          bind:this={pdfRef}
           filePath={activeReadingBook.filePath}
           bookId={activeReadingBook.id}
           initialPage={Math.max(1, activeReadingBook.currentPage || 1)}
@@ -1149,6 +1274,7 @@
         class:w-full={isFullscreen}
       >
         <EpubNativeViewer
+          bind:this={epubRef}
           filePath={activeReadingBook.filePath}
           bookId={activeReadingBook.id}
           initialLocation={readerState.cfiLocation}
@@ -1309,21 +1435,28 @@
     </div>
   {/if}
 
-  <!-- Fullscreen side arrows (visible only in fullscreen) -->
+  <!-- Fullscreen side arrows — edge 80px rAF, opacity transition, disabled at boundaries (R2) -->
   {#if isFullscreen && activeReadingBook}
+    {@const fmt = activeReadingBook.format?.toLowerCase()}
+    {@const prevDisabled = fmt === 'pdf' ? currentPdfPage <= 1 : fmt === 'epub' ? currentEpubChapter <= 0 : false}
+    {@const nextDisabled = fmt === 'pdf' ? currentPdfPage >= totalPdfPages : false}
     <button
       type="button"
-      class="fixed left-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60 transition-colors cursor-pointer"
+      class="fixed left-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60 transition-all duration-200 cursor-pointer {edgeNavVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'} {prevDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
       aria-label={t('reader.prev_page')}
       onclick={goPrevPage}
+      disabled={prevDisabled}
+      aria-disabled={prevDisabled}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6" /></svg>
     </button>
     <button
       type="button"
-      class="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60 transition-colors cursor-pointer"
+      class="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60 transition-all duration-200 cursor-pointer {edgeNavVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'} {nextDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
       aria-label={t('reader.next_page')}
       onclick={goNextPage}
+      disabled={nextDisabled}
+      aria-disabled={nextDisabled}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6" /></svg>
     </button>

@@ -20,6 +20,10 @@
     onToggleRotate?: () => void;
   };
 
+  type HeaderVisibleProps = {
+    headerVisible?: boolean;
+  };
+
   let {
     title,
     showTocPanel,
@@ -36,12 +40,15 @@
     onToggleBookmarks,
     onToggleFullscreen,
     onToggleRotate,
-  }: Props = $props();
+    headerVisible = true,
+  }: Props & HeaderVisibleProps = $props();
+
+  const headerTransform = $derived(headerVisible ? 'translate-y-0' : '-translate-y-full');
 </script>
 
 <header
-  class="flex h-16 shrink-0 items-center justify-between border-b border-(--color-surface-strong) px-8"
-  class:hidden={isFullscreen}
+  class="flex h-16 items-center justify-between border-b border-(--color-surface-strong) px-8 bg-(--color-bg-deep) fixed inset-x-0 top-0 z-30 transition-transform duration-300 {headerTransform}"
+  class:shadow-md={isFullscreen}
 >
   <!-- Left: back + biblioteca -->
   <div class="flex items-center gap-2">

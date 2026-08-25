@@ -24,7 +24,7 @@ interface DictionaryWordDao {
     @Query("DELETE FROM dictionary_words WHERE id = :wordId")
     suspend fun delete(wordId: String)
 
-    @Query("SELECT COUNT(*) FROM dictionary_words WHERE word = :word")
+    @Query("SELECT COUNT(*) FROM dictionary_words WHERE LOWER(word) = LOWER(:word)")
     suspend fun countByWord(word: String): Int
 
     @Query("SELECT * FROM dictionary_words WHERE id = :wordId LIMIT 1")

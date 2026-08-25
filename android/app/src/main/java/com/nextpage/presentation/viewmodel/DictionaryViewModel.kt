@@ -81,20 +81,20 @@ class DictionaryViewModel(
     }
 
     fun onAddWordConfirm() {
-        val text = _uiState.value.addWordText.trim()
-        if (text.isBlank()) return
+        val trimmed = _uiState.value.addWordText.trim()
+        if (trimmed.isBlank()) return
         val definition = _uiState.value.addDefinitionText.trim().takeIf { it.isNotBlank() }
 
         viewModelScope.launch {
-            if (dictionaryRepository.exists(text)) {
+            if (dictionaryRepository.exists(trimmed)) {
                 _uiEvent.emit(UiEvent.ShowSnackbar(
-                    "Already in dictionary"
+                    "\"$trimmed\" is already in your dictionary."
                 ))
             } else {
-                dictionaryRepository.save(text, definition).fold(
+                dictionaryRepository.save(trimmed, definition).fold(
                     onSuccess = {
                         _uiEvent.emit(UiEvent.ShowSnackbar(
-                            "\"$text\" added to your dictionary."
+                            "\"$trimmed\" added to your dictionary."
                         ))
                     },
                     onFailure = { e ->

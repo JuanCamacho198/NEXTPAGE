@@ -29,11 +29,13 @@
     ReaderSettings,
     ReaderThemeMode,
   } from '$lib/shared/types';
+  import { onDestroy } from 'svelte';
   import ProfileCard from './ProfileCard.svelte';
   import { createDevicesState } from '$lib/stores/devicesState.svelte';
   import ConnectedDevices from './ConnectedDevices.svelte';
   import StorageView from '$lib/features/storage/components/StorageView.svelte';
   import SyncView from '$lib/features/sync/components/SyncView.svelte';
+  import { storageState } from '$lib/shared/stores/storageState.svelte';
 
   let {
     isOpen = $bindable(false),
@@ -452,13 +454,20 @@
     await saveAppSettings();
   }
 
-  // Data tab handlers
+  // Data tab handlers - delegate to storageState singleton (unifies StorageView vs SettingsPanel duplication)
   async function handleClearCache(): Promise<void> {
     isClearingCache = true;
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await storageState.clearCache('temp', false);
       cacheCleared = true;
       pushToast('success', t('settings.data.cacheClearedToast'));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes('storage.permission_denied')) {
+        pushToast('error', 'storage.permission_denied');
+      } else {
+        pushToast('error', msg);
+      }
     } finally {
       isClearingCache = false;
     }
@@ -537,6 +546,10 @@
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
   });
+
+  onDestroy(() => {
+    devicesState.destroy();
+  });
 </script>
 
 {#if mode === 'page' || isOpen}
@@ -547,7 +560,7 @@
   <aside
     class={mode === 'overlay'
       ? 'fixed top-0 right-0 w-[350px] h-screen bg-(--color-surface) border-l border-(--color-border) shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]'
-      : 'w-full rounded-xl border border-(--color-border) bg-(--color-background) shadow-sm flex flex-col overflow-hidden'}
+      : 'w-full h-full flex-1 flex flex-col bg-(--color-background) overflow-hidden min-h-0'}
   >
     <div class="flex items-center p-3 border-b border-(--color-border)">
       <button

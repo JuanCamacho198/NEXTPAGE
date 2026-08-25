@@ -1028,3 +1028,58 @@ export const diagnose = async (): Promise<DiagnoseResult> => {
 export const getLogs = async (): Promise<string[]> => {
   return invoke<string[]>('getLogs');
 };
+
+export type StorageStats = {
+  totalBytes: number;
+  dbBytes: number;
+  coversBytes: number;
+  tempBytes: number;
+  cacheBytes: number;
+  coverBytes: number;
+  driveBytesEstimate: number | null;
+};
+
+export type PerBookSize = { id: string; title: string; bytes: number };
+
+export const getStorageStats = async (): Promise<StorageStats> => {
+  try {
+    return await invoke<StorageStats>('getStorageStats');
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const clearCache = async (
+  kind: 'covers' | 'temp' | 'all',
+  deep = false,
+): Promise<{ freedBytes: number }> => {
+  try {
+    return await invoke<{ freedBytes: number }>('clearCache', { kind, deep });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const getPerBookSizes = async (): Promise<PerBookSize[]> => {
+  try {
+    return await invoke<PerBookSize[]>('getPerBookSizes');
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const deleteBookData = async (bookId: string): Promise<void> => {
+  try {
+    await invoke('deleteBookData', { bookId });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const cleanupOrphans = async (): Promise<{ removed: number }> => {
+  try {
+    return await invoke<{ removed: number }>('cleanupOrphans');
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};

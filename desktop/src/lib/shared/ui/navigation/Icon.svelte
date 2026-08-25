@@ -38,7 +38,9 @@
     | 'hand'
     | 'minimize'
     | 'maximize'
-    | 'restore';
+    | 'restore'
+    | 'flame'
+    | 'cloud-sync';
 
   type Props = {
     name: IconName;
@@ -109,6 +111,8 @@
     minimize: 'M5 12h14',
     maximize: 'M5 5h14v14H5z',
     restore: 'M5 5h11v11H5zM8 8h11v11H8z',
+    flame: 'M8.5 14.5A2.5 2.5 0 0012 17a2.5 2.5 0 003.5-3.5c0-1.5-1.5-2.5-2.5-4 0 0-1 1.2-1 2.5a1 1 0 01-2 0c0-1.3-1-2.5-1-2.5-.8 1.2-2 2.5-2 4z M12 2C8.5 4.5 7 7 7 9.5c0 1.5.5 3 2 4.5',
+    'cloud-sync': 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M8 12l2.5 2.5L14 11',
   };
 </script>
 

@@ -79,9 +79,9 @@
     <main
       id="main-content"
       tabindex="-1"
-      class="flex-1 overflow-y-auto relative"
-      class:p-4={appState.route !== 'reader'}
-      class:md:p-6={appState.route !== 'reader'}
+      class="flex-1 overflow-y-auto relative flex flex-col min-h-0"
+      class:p-4={appState.route !== 'reader' && appState.route !== 'settings' && appState.route !== 'storage' && appState.route !== 'sync'}
+      class:md:p-6={appState.route !== 'reader' && appState.route !== 'settings' && appState.route !== 'storage' && appState.route !== 'sync'}
     >
       <!-- aria-live region for screen reader announcements of dynamic content -->
       <div aria-live="polite" aria-atomic="true" class="sr-only">
@@ -92,7 +92,7 @@
           {appState.readerError}
         {/if}
       </div>
-      <div class="mx-auto max-w-7xl">
+      <div class={appState.route === 'settings' || appState.route === 'storage' || appState.route === 'sync' ? 'w-full h-full flex-1 flex flex-col min-h-0 max-w-none' : 'mx-auto max-w-7xl'}>
         {#if appState.readerError}
           <p class="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
             {appState.readerError}
@@ -188,8 +188,8 @@
               <DictionaryView t={appState.t} />
             </div>
           {:else if appState.route === 'storage' || appState.route === 'sync'}
-            <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
-              <section class="space-y-3">
+            <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }} class="w-full h-full flex-1 flex flex-col min-h-0">
+              <section class="w-full h-full flex-1 flex flex-col min-h-0">
                 <SettingsPanel
                   isOpen={true}
                   mode="page"
@@ -204,8 +204,8 @@
               </section>
             </div>
           {:else if appState.route === 'settings'}
-            <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
-              <section class="space-y-3">
+            <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }} class="w-full h-full flex-1 flex flex-col min-h-0">
+              <section class="w-full h-full flex-1 flex flex-col min-h-0">
                 <SettingsPanel
                   isOpen={true}
                   mode="page"

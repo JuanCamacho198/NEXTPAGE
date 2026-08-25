@@ -52,12 +52,12 @@ class NavigationDomainState {
   }
 
   navigateToStorage(): void {
-    this.route = 'settings';
+    this.route = 'storage';
     this.shelfDetailsBookId = null;
   }
 
   navigateToSync(): void {
-    this.route = 'settings';
+    this.route = 'sync';
     this.shelfDetailsBookId = null;
   }
 

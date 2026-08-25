@@ -25,6 +25,9 @@ export type AppRoute =
   | 'reader'
   | 'highlights'
   | 'settings'
+  | 'dictionary'
+  | 'storage'
+  | 'sync'
   | 'welcome';
 
 export const SHELF_TAB_CODES = ['all', 'favorites', 'to_read', 'completed'] as const;

@@ -693,6 +693,49 @@ pub fn get_reading_streak(
     Ok(count)
 }
 
+pub fn ensure_today_minutes_index(repo: &LibraryRepository) -> AppResult<()> {
+    repo.connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_reading_sessions_user_date ON reading_sessions(user_id, started_at)",
+        [],
+    )?;
+    Ok(())
+}
+
+pub fn get_today_minutes(
+    repo: &LibraryRepository,
+    user_id: &str,
+    book_id: Option<&str>,
+) -> AppResult<i64> {
+    if user_id.trim().is_empty() {
+        return Ok(0);
+    }
+    if let Some(bid) = book_id {
+        if bid.trim().is_empty() {
+            return Err(AppError::MissingBookId);
+        }
+    }
+    // Ensure index exists (idempotent)
+    let _ = repo.connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_reading_sessions_user_date ON reading_sessions(user_id, started_at)",
+        [],
+    );
+
+    let total_seconds: i64 = if let Some(bid) = book_id {
+        repo.connection.query_row(
+            "SELECT COALESCE(SUM(duration_seconds), 0) FROM reading_sessions WHERE user_id = ?1 AND book_id = ?2 AND date(started_at, 'localtime') = date('now', 'localtime')",
+            params![user_id, bid],
+            |row| row.get(0),
+        )?
+    } else {
+        repo.connection.query_row(
+            "SELECT COALESCE(SUM(duration_seconds), 0) FROM reading_sessions WHERE user_id = ?1 AND date(started_at, 'localtime') = date('now', 'localtime')",
+            params![user_id],
+            |row| row.get(0),
+        )?
+    };
+    Ok(total_seconds / 60)
+}
+
 /// Merge remote (Supabase) reading sessions into the local table (D11).
 /// Per row: FK guard (book absent locally -> skip, documented) -> LWW
 /// (local `updated_at_epoch_millis >= remote` -> skip; tie = no-op so pull-back

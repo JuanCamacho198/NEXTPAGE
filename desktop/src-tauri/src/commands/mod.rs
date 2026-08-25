@@ -270,6 +270,53 @@ pub fn getReadingStreak(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
+pub fn getDailyGoalMinutes(
+    state: State<'_, AppState>,
+    user_id: Option<String>,
+) -> Result<i64, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    if !repository.has_desktop_parity_schema().unwrap_or(true) {
+        return Ok(20);
+    }
+    repository
+        .get_daily_goal_minutes(user_id.as_deref())
+        .map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn saveDailyGoalMinutes(
+    state: State<'_, AppState>,
+    minutes: i64,
+    user_id: Option<String>,
+) -> Result<(), String> {
+    let mut repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    if !repository.has_desktop_parity_schema().unwrap_or(true) {
+        return Ok(());
+    }
+    repository
+        .save_daily_goal_minutes(minutes, user_id.as_deref())
+        .map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn getTodayMinutes(
+    state: State<'_, AppState>,
+    user_id: String,
+    book_id: Option<String>,
+) -> Result<i64, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    if !repository.has_desktop_parity_schema().unwrap_or(true) {
+        return Ok(0);
+    }
+    repository
+        .get_today_minutes(&user_id, book_id.as_deref())
+        .map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
 pub fn upsertRemoteReadingSessions(
     state: State<'_, AppState>,
     rows: Vec<RemoteReadingSessionRow>,

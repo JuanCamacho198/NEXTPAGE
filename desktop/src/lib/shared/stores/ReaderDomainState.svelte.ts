@@ -24,6 +24,17 @@ import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
 import type { SupabaseProgressRow } from '$lib/shared/sync/SupabaseProgressSync';
 
+function isScopeEnabled(scope: string): boolean {
+  try {
+    const raw = localStorage.getItem('sync.scopes');
+    if (!raw) return true;
+    const map = JSON.parse(raw) as Record<string, boolean>;
+    return map[scope] !== false;
+  } catch {
+    return true;
+  }
+}
+
 const outboxDao = new SyncOutboxDao();
 
 /**
@@ -667,38 +678,75 @@ class ReaderDomainState {
     }
   }
 
+  private maybeClearSupabaseSync(): void {
+    if (
+      !this.unsubscribeRemote &&
+      !this.unsubscribeRemoteBookmarks &&
+      !this.unsubscribeRemoteHighlights &&
+      !this.unsubscribeRemoteSessions
+    ) {
+      if (this.supabaseSync) {
+        try {
+          this.supabaseSync.destroy();
+        } catch {
+          /* ignore */
+        }
+        this.supabaseSync = null;
+      }
+    }
+  }
+
   /**
-   * Stop the Realtime subscription for progress. Call on logout or dispose.
-   */
+    * Stop the Realtime subscription for progress. Call on logout or dispose.
+    */
   unsubscribeFromRemoteProgress(): void {
-    this.unsubscribeRemote?.();
+    try {
+      this.unsubscribeRemote?.();
+    } catch {
+      /* ignore */
+    }
     this.unsubscribeRemote = null;
-    this.supabaseSync = null;
+    this.maybeClearSupabaseSync();
   }
 
   /**
-   * Stop the Realtime subscription for bookmarks.
-   */
+    * Stop the Realtime subscription for bookmarks.
+    */
   unsubscribeFromRemoteBookmarks(): void {
-    this.unsubscribeRemoteBookmarks?.();
+    try {
+      this.unsubscribeRemoteBookmarks?.();
+    } catch {
+      /* ignore */
+    }
     this.unsubscribeRemoteBookmarks = null;
+    this.maybeClearSupabaseSync();
   }
 
   /**
-   * Stop the Realtime subscription for highlights.
-   */
+    * Stop the Realtime subscription for highlights.
+    */
   unsubscribeFromRemoteHighlights(): void {
-    this.unsubscribeRemoteHighlights?.();
+    try {
+      this.unsubscribeRemoteHighlights?.();
+    } catch {
+      /* ignore */
+    }
     this.unsubscribeRemoteHighlights = null;
     this.highlightPullInFlight = false;
+    this.maybeClearSupabaseSync();
   }
 
   /**
-   * Stop the Realtime subscription for reading sessions.
-   */
+    * Stop the Realtime subscription for reading sessions.
+    */
   unsubscribeFromRemoteSessions(): void {
-    this.unsubscribeRemoteSessions?.();
+    try {
+      this.unsubscribeRemoteSessions?.();
+    } catch {
+      /* ignore */
+    }
     this.unsubscribeRemoteSessions = null;
+    this.maybeClearSupabaseSync();
   }
 
   /**
@@ -711,22 +759,54 @@ class ReaderDomainState {
 
   /**
    * Re-subscribe all Realtime channels — call on login.
+   * Respects per-scope toggles from localStorage sync.scopes.
    */
   subscribeToAllRemoteChanges(): void {
-    this.subscribeToRemoteProgress();
-    this.subscribeToRemoteBookmarks();
-    this.subscribeToRemoteHighlights();
-    this.subscribeToRemoteSessions();
+    if (isScopeEnabled('progress')) this.subscribeToRemoteProgress();
+    if (isScopeEnabled('bookmarks')) this.subscribeToRemoteBookmarks();
+    if (isScopeEnabled('highlights')) this.subscribeToRemoteHighlights();
+    if (isScopeEnabled('sessions')) this.subscribeToRemoteSessions();
   }
 
   /**
-   * Unsubscribe from all Realtime channels — call on logout.
-   */
+    * Unsubscribe from all Realtime channels — call on logout.
+    * Ensures every channel is removed from the Supabase client via
+    * `removeChannel`, not just `unsubscribe`.
+    */
   unsubscribeFromAllRemoteChanges(): void {
-    this.unsubscribeFromRemoteProgress();
-    this.unsubscribeFromRemoteBookmarks();
-    this.unsubscribeFromRemoteHighlights();
-    this.unsubscribeFromRemoteSessions();
+    try {
+      this.unsubscribeRemote?.();
+    } catch {
+      /* ignore */
+    }
+    this.unsubscribeRemote = null;
+    try {
+      this.unsubscribeRemoteBookmarks?.();
+    } catch {
+      /* ignore */
+    }
+    this.unsubscribeRemoteBookmarks = null;
+    try {
+      this.unsubscribeRemoteHighlights?.();
+    } catch {
+      /* ignore */
+    }
+    this.unsubscribeRemoteHighlights = null;
+    this.highlightPullInFlight = false;
+    try {
+      this.unsubscribeRemoteSessions?.();
+    } catch {
+      /* ignore */
+    }
+    this.unsubscribeRemoteSessions = null;
+    if (this.supabaseSync) {
+      try {
+        this.supabaseSync.destroy();
+      } catch {
+        /* ignore */
+      }
+      this.supabaseSync = null;
+    }
   }
 
   // ─── Reset ───

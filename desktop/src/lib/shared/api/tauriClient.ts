@@ -1083,3 +1083,79 @@ export const cleanupOrphans = async (): Promise<{ removed: number }> => {
     return attachCommandError(error);
   }
 };
+
+// ─── Sync Observability (PR3) ─────────────────────────────────────
+import type { SyncScope } from '$lib/shared/types/book';
+export type SyncHealthDto = {
+  lastSyncAt: string | null;
+  pendingCount: number;
+  lastError: string | null;
+  realtimeStatus: 'connected' | 'connecting' | 'closed' | 'error';
+  outboxDepth?: number;
+  nextRetryAt?: string | null;
+  realtime?: Record<string, string>;
+};
+
+export const getSyncHealth = async (): Promise<SyncHealthDto> => {
+  // PR3 health is client-derived via SyncService; no Rust command yet
+  // Keep wrapper for future Rust verify_queue_health migration
+  try {
+    const { SyncService } = await import('$lib/shared/services/SyncService');
+    return await SyncService.getSyncHealth();
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const setSyncScopeEnabled = async (scope: SyncScope, enabled: boolean): Promise<void> => {
+  try {
+    const raw = localStorage.getItem('sync.scopes');
+    const map: Record<string, boolean> = raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+    map[scope] = enabled;
+    localStorage.setItem('sync.scopes', JSON.stringify(map));
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const resolveConflict = async (wordId: string, keep: 'local' | 'remote'): Promise<void> => {
+  try {
+    if (keep === 'local') {
+      const now = new Date(Date.now() + 1).toISOString();
+      await invoke('updateDictionaryWord', { payload: { id: wordId, updatedAt: now } });
+      await invoke('addCoalescedSyncOutboxItem', {
+        entityType: 'DICTIONARY_WORD',
+        entityId: wordId,
+        operation: 'UPSERT',
+        payloadJson: JSON.stringify({ updatedAt: now }),
+      });
+    }
+    // keep_remote: no-op, remote already won via LWW
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const renameDevice = async (deviceId: string, name: string): Promise<void> => {
+  try {
+    const { getSessionClient } = await import('$lib/services/supabase');
+    const { renameDevice: rename } = await import('$lib/services/devices');
+    await rename(getSessionClient(), deviceId, name);
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const removeStaleDevice = async (deviceId: string, userId: string): Promise<void> => {
+  try {
+    const { getSessionClient } = await import('$lib/services/supabase');
+    const { listDevices, isDeviceStale } = await import('$lib/services/devices');
+    const rows = await listDevices(getSessionClient(), userId);
+    const raw = rows.find((r) => r.id === deviceId);
+    if (raw && !isDeviceStale(raw.last_active, 30)) throw new Error('device.not_stale');
+    const { removeDevice } = await import('$lib/services/devices');
+    await removeDevice(getSessionClient(), deviceId, userId);
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};

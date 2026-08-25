@@ -30,6 +30,7 @@ import {
 } from '$lib/shared/services/SupabaseAuthService';
 import { SyncService } from '$lib/shared/services/SyncService';
 import { dictionaryState } from '$lib/shared/stores/dictionaryState.svelte';
+import { syncHealthState } from '$lib/shared/stores/syncHealthState.svelte';
 
 import type {
   BulkImportSummary,
@@ -789,6 +790,12 @@ export class AppState {
         setLiveSession(session);
         SyncService.resetOutboxBreaker();
         this.startAuthenticatedSync();
+        // PR3: auto-sync wiring
+        try {
+          SyncService.setupAutoSync();
+          void syncHealthState.refresh();
+          syncHealthState.startPoll();
+        } catch {}
         // PR1: opt-in dictionary realtime (default on when hasLiveSession)
         try {
           dictionaryState.subscribeToRemoteChanges();
@@ -804,6 +811,10 @@ export class AppState {
       if (event === 'SIGNED_OUT') {
         clearLiveSession();
         authState.clearSupabaseSession();
+        try {
+          SyncService.teardownAutoSync();
+          syncHealthState.stopPoll();
+        } catch {}
         this.reader.unsubscribeFromAllRemoteChanges();
         try {
           dictionaryState.unsubscribe();
@@ -875,6 +886,10 @@ export class AppState {
     authState.clearSupabaseSession();
     await clearPersistedAuth();
     await signOut();
+    try {
+      SyncService.teardownAutoSync();
+      syncHealthState.stopPoll();
+    } catch {}
     this.reader.unsubscribeFromAllRemoteChanges();
     try {
       dictionaryState.unsubscribe();
@@ -886,6 +901,12 @@ export class AppState {
   };
   private startAuthenticatedSync(): void {
     SyncService.setupOutboxProcessor();
+    // PR3 auto-sync wiring: setup interval + health poll
+    try {
+      SyncService.setupAutoSync();
+      void syncHealthState.refresh();
+      syncHealthState.startPoll();
+    } catch {}
     this.reader.subscribeToAllRemoteChanges();
     try {
       dictionaryState.subscribeToRemoteChanges();

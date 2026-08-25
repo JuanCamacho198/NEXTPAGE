@@ -514,7 +514,6 @@
   let showTocPanel = $state(false);
   let showBookmarks = $state(false);
   let isFullscreen = $state(false);
-  let isRotated = $state(false);
   let workspaceRoot: HTMLElement | null = $state(null);
 
   // ── Immersive chrome state (R1, R2) ───────────────────────
@@ -525,22 +524,14 @@
   let pendingFrame: number | null = null;
   let hoverTop = $derived(mouseY < 72);
   let panelOpen = $derived(showTextSettings || showTocPanel || showBookmarks || searchPanelOpen);
-  let edgeNavVisible = $derived(isFullscreen && (mouseX < 80 || mouseX > (typeof window !== 'undefined' ? window.innerWidth - 80 : 9999)));
+  let edgeNavVisible = $state(false);
   // Viewer refs for direct navigation (R2)
   let epubRef: EpubNativeViewer | null = $state(null);
   let pdfRef: PdfViewer | null = $state(null);
   let pendingWheelDelta = 0;
   let pendingWheelFrame: number | null = null;
 
-  function handleRotate(): void {
-    isRotated = !isRotated;
-  }
 
-  $effect(() => {
-    return () => {
-      isRotated = false;
-    };
-  });
 
   // ── Immersive helpers ─────────────────────────────────────
   function resetIdleTimer(): void {
@@ -555,6 +546,17 @@
     }, 2500);
   }
 
+  function updateEdgeNav(x: number): void {
+    if (!isFullscreen) {
+      edgeNavVisible = false;
+      return;
+    }
+    const w = typeof window !== 'undefined' ? window.innerWidth : 9999;
+    const nearEdge = x < 80 || x > w - 80;
+    // Hide when mouse is in center zone (80..w-80) — ensures arrows disappear promptly
+    edgeNavVisible = nearEdge;
+  }
+
   function handleWorkspaceMouseMove(e: MouseEvent): void {
     if (pendingFrame !== null) return;
     const x = e.clientX;
@@ -563,9 +565,20 @@
       pendingFrame = null;
       mouseX = x;
       mouseY = y;
-      if (isFullscreen && hoverTop) headerVisible = true;
+      updateEdgeNav(x);
+      // Hover top 72px shows unified header in immersive only
+      if (isFullscreen && y < 72) headerVisible = true;
       resetIdleTimer();
     });
+  }
+
+  function handleWorkspaceMouseLeave(): void {
+    if (pendingFrame !== null) {
+      cancelAnimationFrame(pendingFrame);
+      pendingFrame = null;
+    }
+    edgeNavVisible = false;
+    // Do not force headerVisible false here — idle timer owns hiding
   }
 
   function adjustZoom(delta: number): void {
@@ -636,6 +649,8 @@
     void isFullscreen;
     void panelOpen;
     void hoverTop;
+    if (!isFullscreen) edgeNavVisible = false;
+    else updateEdgeNav(mouseX);
   });
 
   $effect(() => {
@@ -761,9 +776,11 @@
     if (next) {
       // entering immersive: hide header unless mouse is at top
       headerVisible = hoverTop;
+      updateEdgeNav(mouseX);
       resetIdleTimer();
     } else {
       headerVisible = true;
+      edgeNavVisible = false;
       if (idleTimer) {
         clearTimeout(idleTimer);
         idleTimer = null;
@@ -1269,10 +1286,11 @@
 </script>
 
 <!-- Full viewport reader layout — immersive: fixed inset-0 z-40 fills viewport -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <section
-  class="flex flex-col bg-(--color-bg-deep) {isRotated ? 'rotate-1' : ''} {isFullscreen ? 'fixed inset-0 z-40 h-screen w-screen overflow-hidden bg-[#f8f5ec]' : 'h-screen'}"
-  style={isRotated ? 'transform: rotate(0.5deg);' : ''}
+  class="flex flex-col bg-(--color-bg-deep) {isFullscreen ? 'fixed inset-0 z-40 h-screen w-screen overflow-hidden bg-[#f8f5ec]' : 'h-screen'}"
   bind:this={workspaceRoot}
+  onmouseleave={handleWorkspaceMouseLeave}
 >
   <ReaderHeader
     title={activeReadingBook?.title ?? ''}
@@ -1282,7 +1300,6 @@
     {showBookmarks}
     {isFullscreen}
     headerVisible={isFullscreen ? headerVisible : true}
-    {isRotated}
     {t}
     {onBackToHome}
     onToggleToc={toggleTocPanel}
@@ -1290,7 +1307,6 @@
     onToggleTextSettings={toggleTextSettings}
     onToggleBookmarks={toggleBookmarks}
     onToggleFullscreen={toggleFullscreen}
-    onToggleRotate={handleRotate}
     currentPage={headerCurrentPage}
     totalPages={headerTotalPages}
     currentPercentage={bookProgress}
@@ -1531,7 +1547,7 @@
     {@const nextDisabled = fmt === 'pdf' ? currentPdfPage >= totalPdfPages : false}
     <button
       type="button"
-      class="fixed left-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60 transition-all duration-200 cursor-pointer {edgeNavVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'} {prevDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
+      class="fixed left-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'} {prevDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
       aria-label={t('reader.prev_page')}
       onclick={goPrevPage}
       disabled={prevDisabled}
@@ -1541,7 +1557,7 @@
     </button>
     <button
       type="button"
-      class="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60 transition-all duration-200 cursor-pointer {edgeNavVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'} {nextDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
+      class="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'} {nextDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
       aria-label={t('reader.next_page')}
       onclick={goNextPage}
       disabled={nextDisabled}

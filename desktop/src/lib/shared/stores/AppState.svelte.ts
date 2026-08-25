@@ -29,6 +29,7 @@ import {
   signOut,
 } from '$lib/shared/services/SupabaseAuthService';
 import { SyncService } from '$lib/shared/services/SyncService';
+import { dictionaryState } from '$lib/shared/stores/dictionaryState.svelte';
 
 import type {
   BulkImportSummary,
@@ -399,6 +400,15 @@ export class AppState {
   };
   navigateToSettings = (): void => {
     this.navigation.navigateToSettings();
+  };
+  navigateToDictionary = (): void => {
+    this.navigation.navigateToDictionary();
+  };
+  navigateToStorage = (): void => {
+    this.navigation.navigateToStorage();
+  };
+  navigateToSync = (): void => {
+    this.navigation.navigateToSync();
   };
   /**
    * Route to the welcome screen. Used after sign-out so the user lands
@@ -777,12 +787,12 @@ export class AppState {
     getSessionClient().auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         setLiveSession(session);
-        // D4: fresh tokens clear any auth-class breaker pause from a stale/absent
-        // session so the outbox flush resumes immediately.
         SyncService.resetOutboxBreaker();
         this.startAuthenticatedSync();
-
-        // Only navigate away from welcome — if already elsewhere, stay put
+        // PR1: opt-in dictionary realtime (default on when hasLiveSession)
+        try {
+          dictionaryState.subscribeToRemoteChanges();
+        } catch {}
         if (this.navigation.route === 'welcome') {
           this.navigation.route = 'home';
           this.loadLibrary();
@@ -792,13 +802,12 @@ export class AppState {
       }
 
       if (event === 'SIGNED_OUT') {
-        // Session lost (refresh rejection, restore failure, sign-out): clear
-        // the live mirror + authState and halt authenticated sync within this
-        // event cycle (DA-1.1/DA-2.1). No silent anonymous fallback here — the
-        // app stays local-only until the user re-auths (DA-3).
         clearLiveSession();
         authState.clearSupabaseSession();
         this.reader.unsubscribeFromAllRemoteChanges();
+        try {
+          dictionaryState.unsubscribe();
+        } catch {}
         this.navigateToWelcome();
         return;
       }
@@ -867,6 +876,9 @@ export class AppState {
     await clearPersistedAuth();
     await signOut();
     this.reader.unsubscribeFromAllRemoteChanges();
+    try {
+      dictionaryState.unsubscribe();
+    } catch {}
     this.navigateToWelcome();
     // Toast survives the panel unmount because ToastHost lives outside AppRouter
     // in AppModals (REQ-05).
@@ -875,6 +887,9 @@ export class AppState {
   private startAuthenticatedSync(): void {
     SyncService.setupOutboxProcessor();
     this.reader.subscribeToAllRemoteChanges();
+    try {
+      dictionaryState.subscribeToRemoteChanges();
+    } catch {}
     void SyncService.syncMetadata().catch((error: unknown) => {
       console.error('Startup sync failed; continuing offline:', error);
     });

@@ -171,3 +171,20 @@ export async function removeDevice(
 
   if (error) throw error
 }
+
+export async function renameDevice(
+  client: SupabaseClient,
+  deviceId: string,
+  name: string,
+): Promise<void> {
+  const trimmed = name.trim()
+  if (!trimmed) throw new Error('device.name_required')
+  if (trimmed.length > 64) throw new Error('device.name_too_long')
+  const { error } = await client.from('devices').update({ name: trimmed }).eq('id', deviceId)
+  if (error) throw error
+}
+
+export function isDeviceStale(lastActiveIso: string, staleDays = 30): boolean {
+  const diff = Date.now() - new Date(lastActiveIso).getTime()
+  return diff > staleDays * 24 * 60 * 60 * 1000
+}

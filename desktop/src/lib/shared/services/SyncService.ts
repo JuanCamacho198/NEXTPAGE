@@ -6,7 +6,7 @@
  * LWW: remote.updatedAt > local → remote, tie → recordId lexicographic, version+1 for progress.
  */
 import { authState } from '$lib/stores/authState.svelte';
-import { hasLiveSession, recheckLiveSession } from '$lib/services/supabase';
+import { getSessionClient, hasLiveSession, recheckLiveSession } from '$lib/services/supabase';
 import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
 import { GDriveProvider } from './storage/GDriveProvider';
 import { GoogleDriveStateSync } from './GoogleDriveStateSync';
@@ -15,6 +15,8 @@ import { SupabaseDictionarySync } from '../sync/SupabaseDictionarySync';
 import { SupabaseBookCatalogSync, buildRemoteRefs } from '../sync/SupabaseBookCatalogSync';
 import { canonicalBookName } from '$lib/shared/protocol/DriveCatalogContract';
 import { SyncOutboxService } from '../outbox/SyncOutboxService';
+import { SyncOutboxDao } from '../outbox/SyncOutboxDao';
+import type { SyncHealth, RealtimeStatus } from '$lib/shared/types/book';
 import type {
   ProgressStateJson,
   HighlightStateJson,
@@ -288,6 +290,183 @@ export class SyncService {
    */
   static resetOutboxBreaker(): void {
     this.outboxService?.resetAuthBreaker();
+  }
+
+  // ─── Auto-sync observability (PR3) ──────────────────────────────────
+  private static autoSyncInterval: ReturnType<typeof setInterval> | null = null;
+  private static focusHandler: (() => void) | null = null;
+  private static onlineHandler: (() => void) | null = null;
+  private static lastSyncAt: string | null = null;
+  private static lastError: string | null = null;
+  private static retryAttempt = 0;
+  private static retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private static lastFocusAt = 0;
+  private static isAutoSyncSetup = false;
+  private static healthDao = new SyncOutboxDao();
+
+  private static isScopeEnabled(scope: string): boolean {
+    try {
+      const raw = localStorage.getItem('sync.scopes');
+      if (!raw) return true;
+      const map = JSON.parse(raw) as Record<string, boolean>;
+      if (scope in map) return map[scope] !== false;
+      return true;
+    } catch {
+      return true;
+    }
+  }
+
+  static setupAutoSync(intervalMs = 30000): void {
+    if (this.isAutoSyncSetup) return;
+    this.isAutoSyncSetup = true;
+
+    // Ensure outbox processor exists
+    this.setupOutboxProcessor();
+
+    // Interval flush every 30s gated by hasLiveSession
+    this.autoSyncInterval = setInterval(() => {
+      void this.flushWithGate();
+    }, intervalMs);
+
+    // Window focus with 5s debounce
+    this.focusHandler = () => {
+      const now = Date.now();
+      if (now - this.lastFocusAt < 5000) return;
+      this.lastFocusAt = now;
+      if (!hasLiveSession()) return;
+      void this.flushWithGate();
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', this.focusHandler);
+    }
+
+    // Online event
+    this.onlineHandler = () => {
+      if (!hasLiveSession()) return;
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      void this.flushWithGate();
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', this.onlineHandler);
+    }
+  }
+
+  static teardownAutoSync(): void {
+    if (this.autoSyncInterval) {
+      clearInterval(this.autoSyncInterval);
+      this.autoSyncInterval = null;
+    }
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+    if (this.focusHandler && typeof window !== 'undefined') {
+      window.removeEventListener('focus', this.focusHandler);
+    }
+    if (this.onlineHandler && typeof window !== 'undefined') {
+      window.removeEventListener('online', this.onlineHandler);
+    }
+    this.focusHandler = null;
+    this.onlineHandler = null;
+    this.isAutoSyncSetup = false;
+    this.retryAttempt = 0;
+  }
+
+  private static async flushWithGate(): Promise<void> {
+    if (!hasLiveSession()) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+    if (this.outboxService?.isBreakerPaused()) return;
+    try {
+      // Prefer outboxService flush (handles per-row handler + breaker)
+      // but gated flush already checks hasLiveSession; on success update health
+      await this.outboxService?.flush();
+      this.lastSyncAt = new Date().toISOString();
+      this.lastError = null;
+      this.retryAttempt = 0;
+      if (this.retryTimer) {
+        clearTimeout(this.retryTimer);
+        this.retryTimer = null;
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.lastError = msg;
+      this.scheduleRetry();
+    }
+  }
+
+  private static scheduleRetry(): void {
+    if (this.retryTimer) return;
+    // Exponential backoff 1s -> 2s -> 4s -> 8s -> 16s -> 30s max + jitter
+    const base = 1000 * Math.pow(2, this.retryAttempt);
+    const capped = Math.min(base, 30_000);
+    const jitter = Math.random() * 200;
+    const delay = capped + jitter;
+    this.retryAttempt = Math.min(this.retryAttempt + 1, 5);
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      void this.flushWithGate();
+    }, delay);
+  }
+
+  static async getSyncHealth(): Promise<SyncHealth> {
+    let pendingCount = 0;
+    try {
+      const rows = await this.healthDao.listReady();
+      pendingCount = rows.length;
+    } catch {
+      pendingCount = 0;
+    }
+
+    // Realtime status derived from supabase getChannels
+    let realtimeStatus: RealtimeStatus = 'closed';
+    let realtimeMap: Record<string, RealtimeStatus> = {};
+    try {
+      const client = getSessionClient() as unknown as {
+        getChannels?: () => Array<{ topic?: string; state?: string }>;
+        getChannel?: (name: string) => { state?: string } | undefined;
+      };
+      const uid = authState.userId;
+      if (uid && typeof client.getChannels === 'function') {
+        const channels = client.getChannels();
+        const relevant = channels.filter((c) => (c.topic ?? '').includes(uid));
+        const mapState = (s: string): RealtimeStatus => {
+          if (s === 'subscribed' || s === 'joined') return 'connected';
+          if (s === 'joining' || s === 'connecting') return 'connecting';
+          if (s === 'closed' || s === 'leaving' || s === 'unsubscribed') return 'closed';
+          if (s === 'errored' || s === 'error') return 'error';
+          return 'closed';
+        };
+        if (relevant.length > 0) {
+          // Overall = worst status: error > closed > connecting > connected
+          const rank: Record<RealtimeStatus, number> = { error: 3, closed: 2, connecting: 1, connected: 0 };
+          let worst: RealtimeStatus = 'connected';
+          for (const ch of relevant) {
+            const st = mapState(ch.state ?? '');
+            realtimeMap[ch.topic ?? 'unknown'] = st;
+            if (rank[st] > rank[worst]) worst = st;
+          }
+          realtimeStatus = worst;
+        } else {
+          realtimeStatus = hasLiveSession() ? 'connecting' : 'closed';
+        }
+      } else if (uid) {
+        realtimeStatus = hasLiveSession() ? 'connecting' : 'closed';
+      }
+    } catch {
+      realtimeStatus = 'closed';
+    }
+
+    const nextRetryAt = this.retryTimer ? new Date(Date.now() + 1000 * Math.pow(2, this.retryAttempt)).toISOString() : null;
+
+    return {
+      lastSyncAt: this.lastSyncAt,
+      pendingCount,
+      lastError: this.lastError,
+      realtimeStatus,
+      outboxDepth: pendingCount,
+      nextRetryAt,
+      realtime: realtimeMap,
+    };
   }
 
   /**

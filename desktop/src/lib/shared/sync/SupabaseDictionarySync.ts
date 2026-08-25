@@ -181,6 +181,16 @@ export class SupabaseDictionarySync {
     return this.unsubscribeFn;
   }
 
+  getRealtimeStatus(): 'connected' | 'connecting' | 'closed' | 'error' {
+    if (!this.channel) return 'closed';
+    const state = (this.channel as unknown as { state?: string }).state ?? '';
+    if (state === 'subscribed' || state === 'joined') return 'connected';
+    if (state === 'joining' || state === 'connecting') return 'connecting';
+    if (state === 'closed' || state === 'leaving' || state === 'unsubscribed') return 'closed';
+    if (state === 'errored' || state === 'error') return 'error';
+    return 'closed';
+  }
+
   destroy(): void {
     this.teardown();
   }

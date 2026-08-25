@@ -132,3 +132,36 @@ export interface HighlightActionOpts {
   x?: number;
   y?: number;
 }
+
+// ─── Sync Observability (PR3) ─────────────────────────────────────
+export type SyncScope =
+  | 'progress'
+  | 'bookmarks'
+  | 'highlights'
+  | 'sessions'
+  | 'catalog'
+  | 'dictionary'
+  | 'library';
+
+export type RealtimeStatus = 'connected' | 'connecting' | 'closed' | 'error';
+
+export interface SyncHealth {
+  lastSyncAt: string | null;
+  pendingCount: number;
+  lastError: string | null;
+  realtimeStatus: RealtimeStatus;
+  outboxDepth?: number;
+  nextRetryAt?: string | null;
+  realtime?: Record<string, RealtimeStatus>;
+}
+
+export interface SyncConflict {
+  id: string;
+  scope: SyncScope;
+  localUpdatedAt: string;
+  remoteUpdatedAt: string;
+  word?: string;
+  localWord?: string;
+  remoteWord?: string;
+  resolution?: 'keep_local' | 'keep_remote';
+}

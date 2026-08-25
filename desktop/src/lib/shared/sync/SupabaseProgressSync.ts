@@ -102,6 +102,10 @@ export class SupabaseProgressSync {
   private unsubscribeBookmarksRealtime: (() => void) | null = null;
   private unsubscribeHighlightsRealtime: (() => void) | null = null;
   private unsubscribeReadingSessionsRealtime: (() => void) | null = null;
+  private progressChannel: import('@supabase/supabase-js').RealtimeChannel | null = null;
+  private bookmarksChannel: import('@supabase/supabase-js').RealtimeChannel | null = null;
+  private highlightsChannel: import('@supabase/supabase-js').RealtimeChannel | null = null;
+  private readingSessionsChannel: import('@supabase/supabase-js').RealtimeChannel | null = null;
 
   constructor(userId: string) {
     this.supabase = getSessionClient();
@@ -195,11 +199,21 @@ export class SupabaseProgressSync {
   }
 
   /**
-   * Subscribe to realtime changes on reading_progress for this user.
-   * Returns an unsubscribe function.
-   */
+    * Subscribe to realtime changes on reading_progress for this user.
+    * Returns an unsubscribe function. Includes defensive removeChannel()
+    * so re-subscribe after subscribe() never throws
+    * "cannot add postgres_changes callbacks after subscribe()".
+    */
   subscribeToProgress(callback: ProgressChangeCallback): () => void {
+    if (
+      this.progressChannel &&
+      (this.progressChannel as unknown as { state?: string }).state === 'subscribed' &&
+      this.unsubscribeRealtime
+    ) {
+      return this.unsubscribeRealtime;
+    }
     const channel = this.supabase.channel(`progress:${this.userId}`);
+    this.progressChannel = channel;
 
     channel.on(
       'postgres_changes',
@@ -217,7 +231,20 @@ export class SupabaseProgressSync {
     );
 
     channel.subscribe();
-    this.unsubscribeRealtime = () => channel.unsubscribe();
+    this.unsubscribeRealtime = () => {
+      try {
+        channel.unsubscribe();
+      } catch {
+        /* ignore */
+      }
+      try {
+        this.supabase.removeChannel(channel);
+      } catch {
+        /* ignore */
+      }
+      if (this.progressChannel === channel) this.progressChannel = null;
+      this.unsubscribeRealtime = null;
+    };
 
     return this.unsubscribeRealtime;
   }
@@ -299,11 +326,19 @@ export class SupabaseProgressSync {
   }
 
   /**
-   * Subscribe to realtime changes on bookmarks for this user.
-   * Returns an unsubscribe function.
-   */
+    * Subscribe to realtime changes on bookmarks for this user.
+    * Returns an unsubscribe function.
+    */
   subscribeToBookmarks(callback: BookmarkChangeCallback): () => void {
+    if (
+      this.bookmarksChannel &&
+      (this.bookmarksChannel as unknown as { state?: string }).state === 'subscribed' &&
+      this.unsubscribeBookmarksRealtime
+    ) {
+      return this.unsubscribeBookmarksRealtime;
+    }
     const channel = this.supabase.channel(`bookmarks:${this.userId}`);
+    this.bookmarksChannel = channel;
 
     channel.on(
       'postgres_changes',
@@ -321,7 +356,20 @@ export class SupabaseProgressSync {
     );
 
     channel.subscribe();
-    this.unsubscribeBookmarksRealtime = () => channel.unsubscribe();
+    this.unsubscribeBookmarksRealtime = () => {
+      try {
+        channel.unsubscribe();
+      } catch {
+        /* ignore */
+      }
+      try {
+        this.supabase.removeChannel(channel);
+      } catch {
+        /* ignore */
+      }
+      if (this.bookmarksChannel === channel) this.bookmarksChannel = null;
+      this.unsubscribeBookmarksRealtime = null;
+    };
 
     return this.unsubscribeBookmarksRealtime;
   }
@@ -482,14 +530,22 @@ export class SupabaseProgressSync {
   }
 
   /**
-   * Subscribe to realtime changes on reading_sessions for this user.
-   * Handles Insert/Update only — Delete and Select are no-ops (Android
-   * parity: the local table is the merged source of truth; remote deletes
-   * never un-merge local rows).
-   * Returns an unsubscribe function.
-   */
+    * Subscribe to realtime changes on reading_sessions for this user.
+    * Handles Insert/Update only — Delete and Select are no-ops (Android
+    * parity: the local table is the merged source of truth; remote deletes
+    * never un-merge local rows).
+    * Returns an unsubscribe function.
+    */
   subscribeToReadingSessions(callback: ReadingSessionChangeCallback): () => void {
+    if (
+      this.readingSessionsChannel &&
+      (this.readingSessionsChannel as unknown as { state?: string }).state === 'subscribed' &&
+      this.unsubscribeReadingSessionsRealtime
+    ) {
+      return this.unsubscribeReadingSessionsRealtime;
+    }
     const channel = this.supabase.channel(`sessions:${this.userId}`);
+    this.readingSessionsChannel = channel;
 
     const handleChange = (
       payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
@@ -521,7 +577,20 @@ export class SupabaseProgressSync {
     );
 
     channel.subscribe();
-    this.unsubscribeReadingSessionsRealtime = () => channel.unsubscribe();
+    this.unsubscribeReadingSessionsRealtime = () => {
+      try {
+        channel.unsubscribe();
+      } catch {
+        /* ignore */
+      }
+      try {
+        this.supabase.removeChannel(channel);
+      } catch {
+        /* ignore */
+      }
+      if (this.readingSessionsChannel === channel) this.readingSessionsChannel = null;
+      this.unsubscribeReadingSessionsRealtime = null;
+    };
 
     return this.unsubscribeReadingSessionsRealtime;
   }
@@ -547,11 +616,19 @@ export class SupabaseProgressSync {
   }
 
   /**
-   * Subscribe to realtime changes on highlights for this user.
-   * Returns an unsubscribe function.
-   */
+    * Subscribe to realtime changes on highlights for this user.
+    * Returns an unsubscribe function.
+    */
   subscribeToHighlights(callback: HighlightChangeCallback): () => void {
+    if (
+      this.highlightsChannel &&
+      (this.highlightsChannel as unknown as { state?: string }).state === 'subscribed' &&
+      this.unsubscribeHighlightsRealtime
+    ) {
+      return this.unsubscribeHighlightsRealtime;
+    }
     const channel = this.supabase.channel(`highlights:${this.userId}`);
+    this.highlightsChannel = channel;
 
     channel.on(
       'postgres_changes',
@@ -569,7 +646,20 @@ export class SupabaseProgressSync {
     );
 
     channel.subscribe();
-    this.unsubscribeHighlightsRealtime = () => channel.unsubscribe();
+    this.unsubscribeHighlightsRealtime = () => {
+      try {
+        channel.unsubscribe();
+      } catch {
+        /* ignore */
+      }
+      try {
+        this.supabase.removeChannel(channel);
+      } catch {
+        /* ignore */
+      }
+      if (this.highlightsChannel === channel) this.highlightsChannel = null;
+      this.unsubscribeHighlightsRealtime = null;
+    };
 
     return this.unsubscribeHighlightsRealtime;
   }
@@ -734,18 +824,85 @@ export class SupabaseProgressSync {
     };
   }
 
+  getRealtimeStatus(): Record<string, 'connected' | 'connecting' | 'closed' | 'error'> {
+    const mapState = (ch: unknown): 'connected' | 'connecting' | 'closed' | 'error' => {
+      const state = (ch as { state?: string } | null)?.state ?? '';
+      if (state === 'subscribed' || state === 'joined') return 'connected';
+      if (state === 'joining' || state === 'connecting') return 'connecting';
+      if (state === 'closed' || state === 'leaving' || state === 'unsubscribed') return 'closed';
+      if (state === 'errored' || state === 'error') return 'error';
+      return 'closed';
+    };
+    return {
+      progress: this.progressChannel ? mapState(this.progressChannel) : 'closed',
+      bookmarks: this.bookmarksChannel ? mapState(this.bookmarksChannel) : 'closed',
+      highlights: this.highlightsChannel ? mapState(this.highlightsChannel) : 'closed',
+      sessions: this.readingSessionsChannel ? mapState(this.readingSessionsChannel) : 'closed',
+    };
+  }
+
   /**
-   * Clean up all realtime subscriptions — single supervisor teardown on logout.
-   */
+    * Clean up all realtime subscriptions — single supervisor teardown on logout.
+    * Each unsubscribe now also calls `removeChannel` to drop the channel from
+    * `client.channels` and avoid orphaned subscriptions.
+    */
   destroy(): void {
-    this.unsubscribeRealtime?.();
+    try {
+      this.unsubscribeRealtime?.();
+    } catch {
+      /* ignore */
+    }
     this.unsubscribeRealtime = null;
-    this.unsubscribeBookmarksRealtime?.();
+    if (this.progressChannel) {
+      try {
+        this.supabase.removeChannel(this.progressChannel);
+      } catch {
+        /* ignore */
+      }
+      this.progressChannel = null;
+    }
+    try {
+      this.unsubscribeBookmarksRealtime?.();
+    } catch {
+      /* ignore */
+    }
     this.unsubscribeBookmarksRealtime = null;
-    this.unsubscribeHighlightsRealtime?.();
+    if (this.bookmarksChannel) {
+      try {
+        this.supabase.removeChannel(this.bookmarksChannel);
+      } catch {
+        /* ignore */
+      }
+      this.bookmarksChannel = null;
+    }
+    try {
+      this.unsubscribeHighlightsRealtime?.();
+    } catch {
+      /* ignore */
+    }
     this.unsubscribeHighlightsRealtime = null;
-    this.unsubscribeReadingSessionsRealtime?.();
+    if (this.highlightsChannel) {
+      try {
+        this.supabase.removeChannel(this.highlightsChannel);
+      } catch {
+        /* ignore */
+      }
+      this.highlightsChannel = null;
+    }
+    try {
+      this.unsubscribeReadingSessionsRealtime?.();
+    } catch {
+      /* ignore */
+    }
     this.unsubscribeReadingSessionsRealtime = null;
+    if (this.readingSessionsChannel) {
+      try {
+        this.supabase.removeChannel(this.readingSessionsChannel);
+      } catch {
+        /* ignore */
+      }
+      this.readingSessionsChannel = null;
+    }
   }
 
   private mapRow(row: Record<string, unknown>): SupabaseProgressRow {

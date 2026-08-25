@@ -114,6 +114,7 @@ export class SupabaseBookCatalogSync {
   private supabase: SupabaseClient;
   private userId: string;
   private unsubscribeRealtime: (() => void) | null = null;
+  private catalogChannel: import('@supabase/supabase-js').RealtimeChannel | null = null;
 
   constructor(userId: string) {
     this.supabase = getSessionClient();
@@ -309,11 +310,19 @@ export class SupabaseBookCatalogSync {
   }
 
   /**
-   * Subscribe to realtime changes on user_books for this user.
-   * Returns an unsubscribe function.
-   */
+    * Subscribe to realtime changes on user_books for this user.
+    * Returns an unsubscribe function.
+    */
   subscribeToCatalog(callback: CatalogChangeCallback): () => void {
+    if (
+      this.catalogChannel &&
+      (this.catalogChannel as unknown as { state?: string }).state === 'subscribed' &&
+      this.unsubscribeRealtime
+    ) {
+      return this.unsubscribeRealtime;
+    }
     const channel = this.supabase.channel(`catalog:${this.userId}`);
+    this.catalogChannel = channel;
 
     channel.on(
       'postgres_changes',
@@ -331,17 +340,52 @@ export class SupabaseBookCatalogSync {
     );
 
     channel.subscribe();
-    this.unsubscribeRealtime = () => channel.unsubscribe();
+    this.unsubscribeRealtime = () => {
+      try {
+        channel.unsubscribe();
+      } catch {
+        /* ignore */
+      }
+      try {
+        this.supabase.removeChannel(channel);
+      } catch {
+        /* ignore */
+      }
+      if (this.catalogChannel === channel) this.catalogChannel = null;
+      this.unsubscribeRealtime = null;
+    };
 
     return this.unsubscribeRealtime;
   }
 
+  getRealtimeStatus(): 'connected' | 'connecting' | 'closed' | 'error' {
+    if (!this.catalogChannel) return 'closed';
+    const state = (this.catalogChannel as unknown as { state?: string }).state ?? '';
+    if (state === 'subscribed' || state === 'joined') return 'connected';
+    if (state === 'joining' || state === 'connecting') return 'connecting';
+    if (state === 'closed' || state === 'leaving' || state === 'unsubscribed') return 'closed';
+    if (state === 'errored' || state === 'error') return 'error';
+    return 'closed';
+  }
+
   /**
-   * Clean up realtime subscription.
-   */
+    * Clean up realtime subscription. Removes the channel from the client as well.
+    */
   destroy(): void {
-    this.unsubscribeRealtime?.();
+    try {
+      this.unsubscribeRealtime?.();
+    } catch {
+      /* ignore */
+    }
     this.unsubscribeRealtime = null;
+    if (this.catalogChannel) {
+      try {
+        this.supabase.removeChannel(this.catalogChannel);
+      } catch {
+        /* ignore */
+      }
+      this.catalogChannel = null;
+    }
   }
 
   private mapRow(row: Record<string, unknown>): SupabaseUserBookRow {

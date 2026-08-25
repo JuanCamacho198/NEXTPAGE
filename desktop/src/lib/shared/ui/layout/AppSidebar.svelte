@@ -14,11 +14,12 @@
   type Props = {
     activeRoute: AppRoute;
     navItems: NavItem[];
+    dataNavItems?: NavItem[];
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     onNavigateSettings?: () => void;
   };
 
-  let { activeRoute, navItems, t, onNavigateSettings }: Props = $props();
+  let { activeRoute, navItems, dataNavItems = [], t, onNavigateSettings }: Props = $props();
 
   let collapsed = $state(false);
 
@@ -85,6 +86,28 @@
         {/if}
       </button>
     {/each}
+
+    {#if dataNavItems.length > 0}
+      <div class="mt-4 pt-3 border-t border-(--color-border)/50">
+        {#each dataNavItems as item}
+          <button
+            class={`w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+              collapsed ? 'flex items-center justify-center' : 'flex items-center gap-3'
+            } ${
+              activeRoute === item.id
+                ? 'bg-(--color-accent-blue) text-(--color-background) shadow-(--shadow-glow)'
+                : 'text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary)'
+            }`}
+            onclick={item.action}
+          >
+            <Icon name={item.icon} size="md" title={t(item.messageKey)} />
+            {#if !collapsed}
+              {t(item.messageKey)}
+            {/if}
+          </button>
+        {/each}
+      </div>
+    {/if}
   </nav>
 
   <div class="p-4 border-t border-(--color-border) flex flex-col gap-2">

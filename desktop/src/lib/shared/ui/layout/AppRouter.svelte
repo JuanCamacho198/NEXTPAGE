@@ -1,6 +1,6 @@
 <script lang="ts">
   import { appState } from '$lib/shared/stores/AppState.svelte';
-  import { getNavItems } from '$lib/shared/stores/navigationState.svelte';
+  import { getNavItems, getDataNavItems } from '$lib/shared/stores/navigationState.svelte';
   import { fly } from 'svelte/transition';
 
   import { Button } from '$lib/shared/ui';
@@ -12,6 +12,7 @@
   import HighlightsView from '$lib/features/highlights/components/HighlightsView.svelte';
   import { ReadingStatisticsView } from '$lib/features/stats';
   import WelcomeScreen from '$lib/features/welcome/WelcomeScreen.svelte';
+  import DictionaryView from '$lib/features/dictionary/components/DictionaryView.svelte';
 
   const showSidebar = $derived(appState.route !== 'reader' && appState.route !== 'welcome');
 
@@ -22,6 +23,17 @@
       onNavigateStats: appState.navigateToStats,
       onNavigateHighlights: appState.navigateToHighlights,
       onNavigateSettings: appState.navigateToSettings,
+    }),
+  );
+
+  const dataNavItems = $derived(
+    getDataNavItems({
+      onNavigateHome: appState.navigateToHome,
+      onNavigateLibrary: appState.navigateToLibrary,
+      onNavigateStats: appState.navigateToStats,
+      onNavigateHighlights: appState.navigateToHighlights,
+      onNavigateSettings: appState.navigateToSettings,
+      onNavigateDictionary: appState.navigateToDictionary,
     }),
   );
 </script>
@@ -60,6 +72,7 @@
     <AppSidebar
       activeRoute={appState.route}
       {navItems}
+      {dataNavItems}
       t={appState.t}
       onNavigateSettings={appState.navigateToSettings}
     />
@@ -94,6 +107,8 @@
                 stats={appState.stats}
                 isLoadingStats={appState.isLoadingStats}
                 statsUnavailableReason={appState.statsUnavailableReason}
+                streakDays={appState.statsDomain.streakDays}
+                isLoadingStreak={appState.statsDomain.isLoadingStreak}
                 selectedBookTitle={previewBook?.title ?? null}
                 continueCount={appState.continueReadingBooks.length}
                 shelfCount={appState.myShelfBooks.length}
@@ -104,6 +119,7 @@
                 onNavigateSettings={appState.navigateToSettings}
                 onRefreshStats={() => {
                   void appState.loadStats(appState.previewBookId ?? undefined);
+                  void appState.loadStatsStreak();
                 }}
                 t={appState.t}
               >
@@ -166,6 +182,26 @@
           {:else if appState.route === 'highlights'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
               <HighlightsView books={appState.books} t={appState.t} />
+            </div>
+          {:else if appState.route === 'dictionary'}
+            <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
+              <DictionaryView t={appState.t} />
+            </div>
+          {:else if appState.route === 'storage' || appState.route === 'sync'}
+            <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
+              <section class="space-y-3">
+                <SettingsPanel
+                  isOpen={true}
+                  mode="page"
+                  initialTab={appState.route === 'storage' ? 'almacenamiento' : 'sincronizacion'}
+                  onRequestClose={appState.navigateToHome}
+                  t={appState.t}
+                  locale={appState.locale}
+                  onLocaleChange={appState.handleLocaleChange}
+                  onReaderSettingsChange={appState.handleReaderSettingsChange}
+                  books={appState.books.map((b) => ({ id: b.id, title: b.title }))}
+                />
+              </section>
             </div>
           {:else if appState.route === 'settings'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>

@@ -32,6 +32,8 @@
   import ProfileCard from './ProfileCard.svelte';
   import { createDevicesState } from '$lib/stores/devicesState.svelte';
   import ConnectedDevices from './ConnectedDevices.svelte';
+  import StorageView from '$lib/features/storage/components/StorageView.svelte';
+  import SyncView from '$lib/features/sync/components/SyncView.svelte';
 
   let {
     isOpen = $bindable(false),
@@ -42,6 +44,7 @@
     onReaderSettingsChange,
     t,
     books = [],
+    initialTab,
   } = $props<{
     isOpen: boolean;
     mode?: 'overlay' | 'page';
@@ -51,9 +54,16 @@
     onReaderSettingsChange?: (settings: ReaderSettings) => void;
     books?: { id: string; title: string }[];
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
+    initialTab?: 'cuenta' | 'apariencia' | 'reader' | 'datos' | 'almacenamiento' | 'sincronizacion' | 'atajos' | 'acerca';
   }>();
 
-  let activeTab = $state<'cuenta' | 'apariencia' | 'reader' | 'datos' | 'atajos' | 'acerca'>('cuenta');
+  type SettingsTab = 'cuenta' | 'apariencia' | 'reader' | 'datos' | 'almacenamiento' | 'sincronizacion' | 'atajos' | 'acerca';
+  let activeTab = $state<SettingsTab>('cuenta');
+  $effect(() => {
+    if (initialTab !== undefined) {
+      activeTab = initialTab;
+    }
+  });
 
   let preferredTheme = $state('light');
   let preferredFontScale = $state(100);
@@ -371,7 +381,7 @@
   }
 
   async function handleTabChange(
-    tab: 'cuenta' | 'apariencia' | 'reader' | 'datos' | 'atajos' | 'acerca',
+    tab: SettingsTab,
   ): Promise<void> {
     activeTab = tab;
     if (tab === 'cuenta') {
@@ -390,7 +400,7 @@
   }
 
   function handleTabKeydown(e: KeyboardEvent): void {
-    const tabs = ['cuenta', 'apariencia', 'reader', 'datos', 'atajos', 'acerca'] as const;
+    const tabs: SettingsTab[] = ['cuenta', 'apariencia', 'reader', 'datos', 'almacenamiento', 'sincronizacion', 'atajos', 'acerca'];
     const idx = tabs.indexOf(activeTab);
     let next: number | null = null;
 
@@ -625,6 +635,40 @@
       >
         <Icon name="database" size="sm" />
         <span>{t('settings.tab.data')}</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === 'almacenamiento'}
+        aria-controls="tabpanel-almacenamiento"
+        id="tab-almacenamiento"
+        tabindex={activeTab === 'almacenamiento' ? 0 : -1}
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-2sm text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class:bg-(--color-accent-soft)={activeTab === 'almacenamiento'}
+        class:text-(--color-accent-start)={activeTab === 'almacenamiento'}
+        class:border-(--color-accent-start)={activeTab === 'almacenamiento'}
+        class:font-semibold={activeTab === 'almacenamiento'}
+        onclick={() => void handleTabChange('almacenamiento')}
+      >
+        <Icon name="database" size="sm" />
+        <span>{t('sidebar.storage')}</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === 'sincronizacion'}
+        aria-controls="tabpanel-sincronizacion"
+        id="tab-sincronizacion"
+        tabindex={activeTab === 'sincronizacion' ? 0 : -1}
+        class="flex-1 px-2 py-3 border-none cursor-pointer text-2sm text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
+        class:bg-(--color-accent-soft)={activeTab === 'sincronizacion'}
+        class:text-(--color-accent-start)={activeTab === 'sincronizacion'}
+        class:border-(--color-accent-start)={activeTab === 'sincronizacion'}
+        class:font-semibold={activeTab === 'sincronizacion'}
+        onclick={() => void handleTabChange('sincronizacion')}
+      >
+        <Icon name="cloud-sync" size="sm" />
+        <span>{t('sidebar.sync')}</span>
       </button>
       <button
         type="button"
@@ -1188,6 +1232,24 @@
                 </button>
               </div>
             </section>
+          </div>
+        {:else if activeTab === 'almacenamiento'}
+          <div
+            role="tabpanel"
+            id="tabpanel-almacenamiento"
+            aria-labelledby="tab-almacenamiento"
+            class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+          >
+            <StorageView {t} books={appState.books} />
+          </div>
+        {:else if activeTab === 'sincronizacion'}
+          <div
+            role="tabpanel"
+            id="tabpanel-sincronizacion"
+            aria-labelledby="tab-sincronizacion"
+            class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+          >
+            <SyncView {t} />
           </div>
         {:else if activeTab === 'atajos'}
           <div

@@ -77,41 +77,42 @@ export function createDevicesState(): {
     if (isSubscribed) return;
 
     const client = getSessionClient();
-    const channel = client
-      .channel('devices-realtime')
-      .on<DeviceRow>(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'devices',
-          filter: `user_id=eq.${userId}`,
-        },
-        async (payload: RealtimePostgresChangesPayload<DeviceRow>) => {
-          if (payload.eventType === 'INSERT') {
-            const row = payload.new;
-            if (row) {
-              devices = [
-                rowToViewModel(row, currentHardwareId),
-                ...devices.filter((d) => d.id !== row.id),
-              ];
-            }
-          } else if (payload.eventType === 'UPDATE') {
-            const row = payload.new;
-            if (row) {
-              devices = devices.map((d) =>
-                d.id === row.id ? rowToViewModel(row, currentHardwareId) : d,
-              );
-            }
-          } else if (payload.eventType === 'DELETE') {
-            const row = payload.old;
-            if (row) {
-              devices = devices.filter((d) => d.id !== row.id);
-            }
+    const channel = client.channel('devices-realtime');
+
+    channel.on<DeviceRow>(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'devices',
+        filter: `user_id=eq.${userId}`,
+      },
+      async (payload: RealtimePostgresChangesPayload<DeviceRow>) => {
+        if (payload.eventType === 'INSERT') {
+          const row = payload.new;
+          if (row) {
+            devices = [
+              rowToViewModel(row, currentHardwareId),
+              ...devices.filter((d) => d.id !== row.id),
+            ];
           }
-        },
-      )
-      .subscribe();
+        } else if (payload.eventType === 'UPDATE') {
+          const row = payload.new;
+          if (row) {
+            devices = devices.map((d) =>
+              d.id === row.id ? rowToViewModel(row, currentHardwareId) : d,
+            );
+          }
+        } else if (payload.eventType === 'DELETE') {
+          const row = payload.old;
+          if (row) {
+            devices = devices.filter((d) => d.id !== row.id);
+          }
+        }
+      },
+    );
+
+    channel.subscribe();
 
     isSubscribed = true;
     realtimeUnsubscribe = () => {

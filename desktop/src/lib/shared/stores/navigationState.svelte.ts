@@ -15,6 +15,9 @@ export type NavCallbacks = {
   onNavigateStats: () => void;
   onNavigateHighlights: () => void;
   onNavigateSettings: () => void;
+  onNavigateDictionary?: () => void;
+  onNavigateStorage?: () => void;
+  onNavigateSync?: () => void;
 };
 
 export function getNavItems(callbacks: NavCallbacks): NavItem[] {
@@ -25,4 +28,12 @@ export function getNavItems(callbacks: NavCallbacks): NavItem[] {
     { id: 'highlights', messageKey: 'sidebar.highlights', icon: 'highlights', action: callbacks.onNavigateHighlights },
     { id: 'settings', messageKey: 'sidebar.settings', icon: 'settings', action: callbacks.onNavigateSettings },
   ];
+}
+
+export function getDataNavItems(callbacks: NavCallbacks): NavItem[] {
+  const items: NavItem[] = [];
+  if (callbacks.onNavigateDictionary) {
+    items.push({ id: 'dictionary', messageKey: 'sidebar.dictionary', icon: 'book', action: callbacks.onNavigateDictionary });
+  }
+  return items;
 }

@@ -46,6 +46,21 @@ class NavigationDomainState {
     this.shelfDetailsBookId = null;
   }
 
+  navigateToDictionary(): void {
+    this.route = 'dictionary';
+    this.shelfDetailsBookId = null;
+  }
+
+  navigateToStorage(): void {
+    this.route = 'settings';
+    this.shelfDetailsBookId = null;
+  }
+
+  navigateToSync(): void {
+    this.route = 'settings';
+    this.shelfDetailsBookId = null;
+  }
+
   backToHome(): void {
     this.route = 'home';
   }

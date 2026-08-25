@@ -39,10 +39,7 @@
   const goalProgress = $derived(
     goalProgressProp !== null ? goalProgressProp : statsState.goalProgress,
   );
-  const goalPercent = $derived(Math.round(goalProgress * 100));
-  const goalLabel = $derived(
-    _t ? _t('stats.goalProgress', { current: todayMinutes, goal: dailyGoalMinutes, percent: goalPercent }) : `Meta diaria ${todayMinutes}/${dailyGoalMinutes} min ${goalPercent}%`,
-  );
+  const goalValue = $derived(`${todayMinutes}/${dailyGoalMinutes} min`);
 
   type StatItem = {
     label: string;
@@ -69,11 +66,12 @@
       bg: 'color-mix(in srgb, var(--color-success) 10%, transparent)',
     },
     {
-      label: _t ? _t('stats.minutesReadLabel') : 'Minutos leídos',
-      value: stats?.totalMinutesRead?.toString() ?? '0',
+      label: 'Meta diaria',
+      value: goalValue,
       icon: 'clock',
-      color: '#a78bfa',
-      bg: 'rgba(167, 139, 250, 0.1)',
+      color: '#d8e2ff',
+      bg: 'rgba(216,226,255,0.1)',
+      progress: goalProgress,
     },
     {
       label: _t ? _t('stats.sessionsLabel') : 'Sesiones',
@@ -84,18 +82,14 @@
     },
     {
       label: _t ? _t('stats.streakLabel') : 'Racha',
-      value: isLoadingStreak ? '—' : `${streakDays} ${_t ? _t('stats.days', { count: streakDays }) : streakDays === 1 ? 'día' : 'días'}`,
+      value: isLoadingStreak
+        ? '—'
+        : _t
+          ? _t('stats.days', { count: streakDays })
+          : `${streakDays} ${streakDays === 1 ? 'día' : 'días'}`,
       icon: 'flame',
       color: streakDays === 0 ? 'var(--color-text-muted)' : '#ff6b35',
       bg: streakDays === 0 ? 'rgba(148,173,206,0.08)' : 'rgba(255,107,53,0.12)',
-    },
-    {
-      label: 'Meta diaria',
-      value: goalLabel,
-      icon: 'clock',
-      color: '#d8e2ff',
-      bg: 'rgba(216,226,255,0.1)',
-      progress: goalProgress,
     },
   ]);
 </script>
@@ -105,7 +99,7 @@
     <p class="text-sm text-(--color-text-muted)">{disabledReason}</p>
   </div>
 {:else}
-  <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+  <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
     {#each statItems as item}
       <div
         class="group relative overflow-hidden rounded-[20px] border border-(--color-border) bg-(--color-surface) p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-(--color-border-strong) hover:shadow-(--shadow-soft)"

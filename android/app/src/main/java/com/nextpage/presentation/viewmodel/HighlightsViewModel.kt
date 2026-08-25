@@ -43,6 +43,7 @@ data class HighlightsUiState(
     val searchQuery: String = "",
     val filteredHighlights: List<Highlight> = emptyList(),
     val availableTags: List<String> = emptyList(),
+    val availableHighlightColors: List<String> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     val highlightToEdit: Highlight? = null,
@@ -52,7 +53,9 @@ data class HighlightsUiState(
     val selectedHighlightForColorChange: Highlight? = null,
     val selectedHighlightForTagEdit: Highlight? = null,
     val editTagText: String = ""
-)
+) {
+    val distinctTags: List<String> get() = availableTags
+}
 
 class HighlightsViewModel(
     private val readerRepository: ReaderRepository,
@@ -132,6 +135,8 @@ class HighlightsViewModel(
             .filter { it.deletedAtEpochMillis == null }
             .groupBy { it.color }
             .mapValues { it.value.size }
+        val availableHighlightColors = (com.nextpage.domain.model.HighlightColor.entries.map { it.hex } + highlights.map { it.color }.distinct())
+            .distinct()
         return HighlightsUiState(
             highlights = highlights,
             bookmarks = bookmarks,
@@ -143,6 +148,7 @@ class HighlightsViewModel(
             searchQuery = query,
             filteredHighlights = applyFilters(highlights, type, book, color, tag, query),
             availableTags = availableTags,
+            availableHighlightColors = availableHighlightColors,
             highlightToEdit = highlightToEdit,
             highlightToDelete = highlightToDelete,
             editNoteText = editNoteText,
@@ -312,9 +318,9 @@ class HighlightsViewModel(
         }
     }
 
-    private fun applyFilters(
+    internal fun applyFilters(
         highlights: List<Highlight>,
-        type: String,
+        type: String?,
         book: String?,
         color: Set<String>,
         tag: String?,
@@ -322,6 +328,7 @@ class HighlightsViewModel(
     ): List<Highlight> {
         return highlights.filter { highlight ->
             val matchesType = when (type) {
+                null, "all" -> true
                 "quotes" -> highlight.type == "quote"
                 "ideas" -> highlight.type == "idea"
                 "passages" -> highlight.type == "passage"

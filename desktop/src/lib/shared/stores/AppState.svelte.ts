@@ -805,6 +805,8 @@ export class AppState {
           this.loadLibrary();
           this.statsDomain.loadStats(undefined);
         }
+        // reading-daily-goal: load per-user goal + today minutes
+        void this.loadDailyGoalForCurrentUser();
         return;
       }
 
@@ -819,6 +821,9 @@ export class AppState {
         try {
           dictionaryState.unsubscribe();
         } catch {}
+        this.settings.clearDailyGoal();
+        this.statsDomain.clearTodayMinutes();
+        this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
         this.navigateToWelcome();
         return;
       }
@@ -872,6 +877,15 @@ export class AppState {
       this.loadLibrary();
       this.statsDomain.loadStats(undefined);
     } finally {
+      // reading-daily-goal: load goal for restored/local user after init
+      void this.loadDailyGoalForCurrentUser();
+      this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
+      try {
+        const uid = authState.userId;
+        if (uid) void this.statsDomain.loadTodayMinutes(uid);
+      } catch {
+        // ignore
+      }
       this.isInitialized = true;
     }
   }
@@ -894,6 +908,9 @@ export class AppState {
     try {
       dictionaryState.unsubscribe();
     } catch {}
+    this.settings.clearDailyGoal();
+    this.statsDomain.clearTodayMinutes();
+    this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
     this.navigateToWelcome();
     // Toast survives the panel unmount because ToastHost lives outside AppRouter
     // in AppModals (REQ-05).
@@ -915,6 +932,48 @@ export class AppState {
       console.error('Startup sync failed; continuing offline:', error);
     });
   }
+  // ─── reading-daily-goal helpers ───
+  private async loadDailyGoalForCurrentUser(): Promise<void> {
+    const uid = authState.userId;
+    if (!uid || uid.trim().length === 0) {
+      this.settings.clearDailyGoal();
+      this.statsDomain.clearTodayMinutes();
+      this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
+      return;
+    }
+    try {
+      await this.settings.loadDailyGoalMinutes(uid);
+    } catch {
+      // keep default
+    }
+    this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
+    try {
+      await this.statsDomain.loadTodayMinutes(uid);
+    } catch {
+      // ignore
+    }
+  }
+
+  async saveDailyGoalMinutes(minutes: number): Promise<void> {
+    const uid = authState.userId;
+    if (!uid || uid.trim().length === 0) return;
+    await this.settings.saveDailyGoalMinutes(minutes, uid);
+    this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
+    // refresh today minutes after save to ensure progress recalculates with new denominator
+    try {
+      await this.statsDomain.loadTodayMinutes(uid);
+    } catch {}
+  }
+
+  async refreshTodayMinutes(): Promise<void> {
+    const uid = authState.userId;
+    if (!uid) {
+      this.statsDomain.clearTodayMinutes();
+      return;
+    }
+    await this.statsDomain.loadTodayMinutes(uid);
+  }
+
   /**
    * Map a live supabase-js session into the public `authState` shape.
    * Shared by the init restore path and the auth lifecycle handler so every

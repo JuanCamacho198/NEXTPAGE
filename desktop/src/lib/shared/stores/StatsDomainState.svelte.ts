@@ -3,8 +3,10 @@ import {
   getReadingStats,
   getReadingStatsForRange,
   getReadingStreak,
+  getTodayMinutes,
 } from '$lib/shared/api/tauriClient';
 import type { ActivityPoint, ReadingStatsSummaryDto } from '$lib/shared/types';
+import { DEFAULT_DAILY_GOAL } from '$lib/shared/types/settings';
 
 type MaybeCommandError = Error & {
   commandError?: { code: string; message: string; recoverable: boolean };
@@ -31,6 +33,17 @@ class StatsDomainState {
   streakDays = $state<number>(0);
   isLoadingStreak = $state(false);
   streakUnavailableReason = $state<string | null>(null);
+
+  // ─── Daily goal progress ───
+  todayMinutes = $state<number>(0);
+  isLoadingTodayMinutes = $state(false);
+  // injected daily goal for derived — updated via AppState wiring
+  dailyGoalMinutes = $state<number>(DEFAULT_DAILY_GOAL as number);
+  goalProgress = $derived(
+    this.dailyGoalMinutes <= 0
+      ? 0
+      : Math.min(1, Math.max(0, this.todayMinutes / this.dailyGoalMinutes)),
+  );
 
   // ─── Methods ───
 
@@ -120,6 +133,29 @@ class StatsDomainState {
     } finally {
       this.isLoadingStreak = false;
     }
+  }
+
+  async loadTodayMinutes(userId: string, bookId?: string): Promise<void> {
+    if (!userId || userId.trim().length === 0) {
+      this.todayMinutes = 0;
+      return;
+    }
+    this.isLoadingTodayMinutes = true;
+    try {
+      this.todayMinutes = await getTodayMinutes(userId, bookId);
+    } catch {
+      this.todayMinutes = 0;
+    } finally {
+      this.isLoadingTodayMinutes = false;
+    }
+  }
+
+  syncDailyGoal(minutes: number): void {
+    this.dailyGoalMinutes = minutes;
+  }
+
+  clearTodayMinutes(): void {
+    this.todayMinutes = 0;
   }
 }
 

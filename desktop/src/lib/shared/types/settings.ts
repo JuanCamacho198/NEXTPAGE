@@ -135,6 +135,32 @@ export interface DiagnoseResult {
   details: Record<string, unknown>;
 }
 
+// Daily reading goal (reading-daily-goal)
+export type DailyGoalOption = 10 | 20 | 30 | 45;
+export const DAILY_GOAL_OPTIONS: readonly DailyGoalOption[] = [10, 20, 30, 45] as const;
+export const DEFAULT_DAILY_GOAL: DailyGoalOption = 20;
+export const READING_DAILY_GOAL_KEY = 'reading.dailyGoalMinutes' as const;
+export const ALLOWED_GOALS: readonly number[] = DAILY_GOAL_OPTIONS;
+export const getPerUserDailyGoalKey = (userId: string): string =>
+  `${READING_DAILY_GOAL_KEY}_${userId}`;
+export const isDailyGoalOption = (value: unknown): value is DailyGoalOption =>
+  typeof value === 'number' && (DAILY_GOAL_OPTIONS as readonly number[]).includes(value);
+export const normalizeDailyGoalOption = (value: number): DailyGoalOption => {
+  if (value === 60) return 45;
+  if (isDailyGoalOption(value)) return value;
+  // nearest allowed (clamp semantics match sanitizeDailyGoal)
+  let best = DAILY_GOAL_OPTIONS[0];
+  let bestDist = Math.abs(value - best);
+  for (const opt of DAILY_GOAL_OPTIONS) {
+    const dist = Math.abs(value - opt);
+    if (dist < bestDist) {
+      best = opt;
+      bestDist = dist;
+    }
+  }
+  return best;
+};
+
 // Export/Import Config
 export interface AppConfigExport {
   version: string;

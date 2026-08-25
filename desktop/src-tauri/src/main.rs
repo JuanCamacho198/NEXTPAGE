@@ -113,7 +113,10 @@ fn main() {
             commands::clearCache,
             commands::getPerBookSizes,
             commands::deleteBookData,
-            commands::cleanupOrphans
+            commands::cleanupOrphans,
+            commands::getDailyGoalMinutes,
+            commands::saveDailyGoalMinutes,
+            commands::getTodayMinutes
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

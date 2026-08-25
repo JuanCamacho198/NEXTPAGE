@@ -21,6 +21,8 @@
   import { authState } from '$lib/stores/authState.svelte';
   import { pushToast } from '$lib/stores/toastQueue.svelte';
   import { appState } from '$lib/shared/stores/AppState.svelte';
+  import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
+  import { DEFAULT_DAILY_GOAL, type DailyGoalOption } from '$lib/shared/types/settings';
   import { DriveColdBackupService } from '$lib/shared/services/DriveColdBackupService';
   import type {
     AppSettingDto,
@@ -83,6 +85,69 @@
   let profileError = $state<string | null>(null);
   let profile = $state<ProfileSessionViewModel>(profileSessionFromAuthState());
   let devicesState = $state(createDevicesState());
+  let selectedDailyGoal = $state<number>(DEFAULT_DAILY_GOAL as number);
+  let isSavingDailyGoal = $state(false);
+
+  // keep selected card in sync with persisted goal
+  $effect(() => {
+    const persisted = settingsState.dailyGoalMinutes;
+    if (typeof persisted === 'number' && persisted > 0) {
+      selectedDailyGoal = persisted as DailyGoalOption;
+    }
+  });
+
+  type DailyGoalCardMeta = {
+    value: DailyGoalOption;
+    labelKey: MessageKey;
+    shortLabel: string;
+    icon: 'hand' | 'book' | 'chart' | 'flame';
+    minutesLabel: string;
+  };
+
+  const dailyGoalCards = $derived<DailyGoalCardMeta[]>([
+    {
+      value: 10,
+      labelKey: 'settings.daily_goal_relaxed',
+      shortLabel: 'Relajado',
+      icon: 'hand',
+      minutesLabel: '10 min',
+    },
+    {
+      value: 20,
+      labelKey: 'settings.daily_goal_regular',
+      shortLabel: 'Regular',
+      icon: 'book',
+      minutesLabel: '20 min',
+    },
+    {
+      value: 30,
+      labelKey: 'settings.daily_goal_serious',
+      shortLabel: 'Serio',
+      icon: 'chart',
+      minutesLabel: '30 min',
+    },
+    {
+      value: 45,
+      labelKey: 'settings.daily_goal_intense',
+      shortLabel: 'Intenso',
+      icon: 'flame',
+      minutesLabel: '45 min',
+    },
+  ]);
+
+  async function handleSaveDailyGoal(): Promise<void> {
+    if (isSavingDailyGoal) return;
+    isSavingDailyGoal = true;
+    try {
+      await appState.saveDailyGoalMinutes(selectedDailyGoal);
+      pushToast('success', t('settings.daily_goal_set'));
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      pushToast('error', msg);
+    } finally {
+      isSavingDailyGoal = false;
+    }
+  }
 
   // Data tab state
   let isClearingCache = $state(false);
@@ -772,6 +837,69 @@
                   class="w-full"
                   onchange={({ value }) => void handleLocaleSelect(value)}
                 />
+              </div>
+            </section>
+
+            <!-- Daily Goal Selection Container — mG4E0 parity: 896w #161f335c r24 blur10.5 gap40 p48 -->
+            <section
+              class="mx-auto flex w-full max-w-[896px] flex-col gap-10 rounded-[24px] border border-[#1c2744] bg-[#161f335c] p-12 backdrop-blur-[10.5px]"
+              aria-label={t('settings.daily_goal_title')}
+            >
+              <div class="flex flex-col items-center gap-2 text-center">
+                <h3 class="text-[32px] font-bold leading-none text-[#d8e2ff]">
+                  {t('settings.daily_goal_title')}
+                </h3>
+                <p class="text-sm text-[#d8e2ff]/70">
+                  {t('settings.daily_goal_description')}
+                </p>
+                <p class="text-xs text-[#d8e2ff]/60">
+                  {t('stats.goalProgress', {
+                    current: String(settingsState.dailyGoalMinutes),
+                    goal: String(settingsState.dailyGoalMinutes),
+                    percent: '100',
+                  })} · {settingsState.dailyGoalMinutes} min
+                </p>
+              </div>
+
+              <div class="grid grid-cols-2 gap-6">
+                {#each dailyGoalCards as card}
+                  <button
+                    type="button"
+                    class="relative flex flex-col gap-3 rounded-xl border-2 p-8 text-left transition-all duration-200 {selectedDailyGoal === card.value ? 'border-[#d8e2ff] bg-[#d8e2ff]/12' : 'border-[#2a3655] bg-[#161f33]'}"
+                    onclick={() => (selectedDailyGoal = card.value)}
+                    aria-pressed={selectedDailyGoal === card.value}
+                    aria-label={`${card.shortLabel} ${card.minutesLabel}`}
+                  >
+                    {#if selectedDailyGoal === card.value}
+                      <span
+                        class="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#d8e2ff] text-[#161f33]"
+                      >
+                        <Icon name="check" size="sm" />
+                      </span>
+                    {/if}
+                    <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#d8e2ff]/10 text-[#d8e2ff]">
+                      <Icon name={card.icon} size="lg" />
+                    </span>
+                    <span class="flex flex-col gap-1">
+                      <span class="text-sm font-semibold text-[#d8e2ff]">{t(card.labelKey)}</span>
+                      <span class="text-xs text-[#d8e2ff]/60">{card.minutesLabel}</span>
+                    </span>
+                  </button>
+                {/each}
+              </div>
+
+              <div class="flex flex-col items-center gap-3">
+                <button
+                  type="button"
+                  class="rounded-full bg-[#d8e2ff] px-10 py-4 text-sm font-semibold text-[#161f33] transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+                  onclick={() => void handleSaveDailyGoal()}
+                  disabled={isSavingDailyGoal}
+                >
+                  {isSavingDailyGoal ? t('settings.saving') : t('settings.daily_goal_set')}
+                </button>
+                <p class="text-xs text-[#d8e2ff]/50">
+                  {settingsState.dailyGoalMinutes} min · {t('settings.daily_goal_description')}
+                </p>
               </div>
             </section>
           </div>

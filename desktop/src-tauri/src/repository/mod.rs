@@ -68,6 +68,18 @@ impl LibraryRepository {
         self::settings::upsert_settings(self, settings)
     }
 
+    pub fn get_daily_goal_minutes(&self, user_id: Option<&str>) -> AppResult<i64> {
+        settings::get_daily_goal_minutes_for_user(self, user_id)
+    }
+
+    pub fn save_daily_goal_minutes(&mut self, minutes: i64, user_id: Option<&str>) -> AppResult<()> {
+        settings::save_daily_goal_minutes(self, minutes, user_id)
+    }
+
+    pub fn get_today_minutes(&self, user_id: &str, book_id: Option<&str>) -> AppResult<i64> {
+        progress::get_today_minutes(self, user_id, book_id)
+    }
+
     pub fn is_feature_enabled(&self, feature_name: &str) -> AppResult<bool> {
         let mut statement =
             self.connection.prepare("SELECT value_json FROM app_settings WHERE key = ?1")?;

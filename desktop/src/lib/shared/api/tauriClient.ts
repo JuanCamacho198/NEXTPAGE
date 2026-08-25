@@ -1029,6 +1029,88 @@ export const getLogs = async (): Promise<string[]> => {
   return invoke<string[]>('getLogs');
 };
 
+// --- Daily goal (reading-daily-goal PR1) ---
+import type { DailyGoalOption } from '$lib/shared/types/settings';
+import {
+  DAILY_GOAL_OPTIONS as DAILY_GOAL_ALLOWED,
+  DEFAULT_DAILY_GOAL as DEFAULT_GOAL,
+} from '$lib/shared/types/settings';
+
+export const sanitizeDailyGoal = (value: unknown): DailyGoalOption => {
+  const n = sanitizeRangedNumber(value, 10, 60, DEFAULT_GOAL as number);
+  if (n === 60) return 45 as DailyGoalOption;
+  const allowed = DAILY_GOAL_ALLOWED as readonly number[];
+  if ((allowed as number[]).includes(n)) return n as DailyGoalOption;
+  let best = allowed[0];
+  let bestDist = Math.abs(n - best);
+  for (const opt of allowed) {
+    const dist = Math.abs(n - opt);
+    if (dist < bestDist) {
+      best = opt;
+      bestDist = dist;
+    }
+  }
+  return best as DailyGoalOption;
+};
+
+export const getDailyGoal = async (userId?: string): Promise<number> => {
+  try {
+    const raw = await invoke<number>('getDailyGoalMinutes', {
+      userId: userId ?? null,
+    });
+    return sanitizeDailyGoal(raw);
+  } catch {
+    // fallback: try scalar settings path then default
+    try {
+      const settings = await getSettings();
+      const perKey = userId ? `reading.dailyGoalMinutes_${userId}` : null;
+      const candidateKeys = perKey
+        ? [perKey, 'reading.dailyGoalMinutes']
+        : ['reading.dailyGoalMinutes'];
+      for (const k of candidateKeys) {
+        const item = settings.find((s) => s.key === k);
+        if (item) {
+          try {
+            const parsed = JSON.parse(item.valueJson) as unknown;
+            return sanitizeDailyGoal(parsed);
+          } catch {
+            continue;
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_GOAL as number;
+  }
+};
+
+export const saveDailyGoal = async (minutes: number, userId?: string): Promise<void> => {
+  const sanitized = sanitizeDailyGoal(minutes);
+  if (!userId || userId.trim().length === 0) return;
+  try {
+    await invoke('saveDailyGoalMinutes', { minutes: sanitized, userId });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const getTodayMinutes = async (userId: string, bookId?: string): Promise<number> => {
+  if (!userId || userId.trim().length === 0) return 0;
+  try {
+    const minutes = await invoke<number>('getTodayMinutes', {
+      userId,
+      bookId: bookId ?? null,
+    });
+    if (typeof minutes === 'number' && Number.isFinite(minutes) && minutes >= 0) {
+      return Math.floor(minutes);
+    }
+    return 0;
+  } catch {
+    return 0;
+  }
+};
+
 export type StorageStats = {
   totalBytes: number;
   dbBytes: number;

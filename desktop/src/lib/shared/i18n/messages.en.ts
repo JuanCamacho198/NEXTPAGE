@@ -200,6 +200,18 @@ export const messagesEn = {
   'settings.shortcuts.showHelp': 'Show keyboard shortcuts',
   'settings.shortcuts.commandPalette': 'Command palette',
   'settings.shortcuts.toggleDarkMode': 'Toggle dark mode',
+  'settings.daily_goal_title': 'Set your daily goal',
+  'settings.daily_goal_description': 'Choose how many minutes you want to read each day',
+  'settings.daily_goal_relaxed': 'Relaxed',
+  'settings.daily_goal_regular': 'Regular',
+  'settings.daily_goal_serious': 'Serious',
+  'settings.daily_goal_intense': 'Intense',
+  'settings.daily_goal_set': 'Set goal →',
+  'stats.goalProgress': 'Daily goal {{current}}/{{goal}} min {{percent}}%',
+  'stats.goalProgressHint': '{{percent}}% of your daily goal',
+  'onboarding_goal_title': 'Set your daily goal',
+  'onboarding_goal_description': 'Pick a daily reading time to stay on track',
+  'onboarding_goal_continue': 'Continue',
   'settings.unknownBook': 'Unknown',
 
   // New Settings Tabs

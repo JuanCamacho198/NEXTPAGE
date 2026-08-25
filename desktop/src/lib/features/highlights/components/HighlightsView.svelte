@@ -5,7 +5,10 @@
     listHighlights,
     deleteHighlight,
     upsertRemoteHighlights,
+    listTags,
+    listTagsForHighlight,
   } from '$lib/shared/api/tauriClient';
+  import type { TagDto } from '$lib/types';
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import { authState } from '$lib/stores/authState.svelte';
   import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
@@ -40,14 +43,41 @@
   let highlights = $state<HighlightDto[]>([]);
   let isLoading = $state(true);
   let searchQuery = $state('');
-  let selectedColor = $state<string | null>(null);
+  let selectedColors = $state<Set<string>>(new Set());
   let selectedBookId = $state<string | null>('');
   let selectedDateRange = $state<string | null>('');
+  let selectedType = $state<'all' | 'quotes' | 'ideas' | 'passages'>('all');
+  let selectedTagId = $state<string>('');
   let currentPage = $state(1);
+  let allTags = $state<TagDto[]>([]);
+  let highlightTagMap = $state<Map<string, string[]>>(new Map());
+
+  function toggleColor(key: string): void {
+    const next = new Set(selectedColors);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    selectedColors = next;
+  }
 
   // Option 1 sync indicator (silent pull, incremental merge, no blink)
   let syncState = $state<'idle' | 'syncing' | 'synced'>('idle');
   let syncTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // ── Helpers: type heuristic (quote/idea/passage) ──
+  function getHighlightType(h: HighlightDto): 'quote' | 'idea' | 'passage' {
+    if (h.note && h.note.trim().length > 0) return 'idea';
+    if (h.text.length > 180) return 'passage';
+    return 'quote';
+  }
+
+  function matchesType(h: HighlightDto, type: typeof selectedType): boolean {
+    if (type === 'all') return true;
+    const t = getHighlightType(h);
+    if (type === 'quotes') return t === 'quote';
+    if (type === 'ideas') return t === 'idea';
+    if (type === 'passages') return t === 'passage';
+    return true;
+  }
 
   // ── Derived ──
   const bookMap = $derived(new Map(books.map((b) => [b.id, b])));
@@ -68,8 +98,16 @@
       });
     }
 
-    if (selectedColor) {
-      result = result.filter((h) => h.color.toLowerCase() === selectedColor);
+    if (selectedColors.size > 0) {
+      result = result.filter((h) => {
+        const normalized = h.color.trim().toLowerCase();
+        // direct key match (legacy) or hex→key via resolveHighlightHex
+        if (selectedColors.has(normalized)) return true;
+        // map hex to canonical key via HIGHLIGHT_COLORS lookup
+        const keyForHighlight = HIGHLIGHT_COLORS.find((c) => c.hex.toLowerCase() === resolveHighlightHex(h.color).toLowerCase())?.key
+          ?? HIGHLIGHT_COLORS.find((c) => c.hex.toLowerCase() === normalized)?.key;
+        return keyForHighlight ? selectedColors.has(keyForHighlight) : false;
+      });
     }
 
     if (selectedBookId) {
@@ -84,6 +122,16 @@
       else if (selectedDateRange === '90d') cutoff = new Date(now.getTime() - 90 * 86400000);
       else cutoff = new Date(0);
       result = result.filter((h) => new Date(h.createdAt) >= cutoff);
+    }
+
+    // Type tabs (all/quotes/ideas/passages) — heuristic based on note + length
+    if (selectedType !== 'all') {
+      result = result.filter((h) => matchesType(h, selectedType));
+    }
+
+    // Tag filter — via highlightTagMap
+    if (selectedTagId) {
+      result = result.filter((h) => (highlightTagMap.get(h.id) ?? []).includes(selectedTagId!));
     }
 
     return result;
@@ -111,6 +159,18 @@
     { value: '7d', label: t('home.highlightsLastWeek') },
     { value: '30d', label: t('home.highlightsLastMonth') },
     { value: '90d', label: t('home.highlightsLast3Months') },
+  ]);
+
+  const typeTabs: Array<{ value: typeof selectedType; labelKey: import('$lib/shared/i18n').MessageKey }> = [
+    { value: 'all', labelKey: 'home.highlightsTypeAll' },
+    { value: 'quotes', labelKey: 'home.highlightsTypeQuotes' },
+    { value: 'ideas', labelKey: 'home.highlightsTypeIdeas' },
+    { value: 'passages', labelKey: 'home.highlightsTypePassages' },
+  ];
+
+  const tagFilterOptions = $derived([
+    { value: '', label: t('home.highlightsAllTags') },
+    ...allTags.map((tag) => ({ value: tag.id, label: tag.name })),
   ]);
 
   // ── Actions ──
@@ -216,16 +276,18 @@
 
   function clearFilters(): void {
     searchQuery = '';
-    selectedColor = null;
+    selectedColors = new Set();
     selectedBookId = '';
     selectedDateRange = '';
+    selectedType = 'all';
+    selectedTagId = '';
     currentPage = 1;
   }
 
   // Reset page when filters change
   $effect(() => {
     // Tracking dependencies to reset page
-    void [searchQuery, selectedColor, selectedBookId, selectedDateRange];
+    void [searchQuery, selectedColors, selectedBookId, selectedDateRange, selectedType, selectedTagId];
     currentPage = 1;
   });
 
@@ -238,8 +300,39 @@
     }
   };
 
+  async function loadTagsAndMap(): Promise<void> {
+    try {
+      allTags = await listTags();
+    } catch {
+      allTags = [];
+    }
+    // Build highlightTagMap for current highlights (best-effort, limited to first 50 to avoid burst)
+    if (highlights.length > 0) {
+      const map = new Map<string, string[]>();
+      const slice = highlights.slice(0, 50);
+      await Promise.all(
+        slice.map(async (h) => {
+          try {
+            const tags = await listTagsForHighlight(h.id);
+            map.set(h.id, tags.map((t) => t.id));
+          } catch {
+            map.set(h.id, []);
+          }
+        }),
+      );
+      // keep existing entries for remaining highlights as empty
+      for (const h of highlights) {
+        if (!map.has(h.id)) map.set(h.id, []);
+      }
+      highlightTagMap = map;
+    }
+  }
+
   onMount(() => {
-    loadHighlights();
+    void (async () => {
+      await loadHighlights();
+      await loadTagsAndMap();
+    })();
     // Silent pull after local render — no await, no blocking
     void syncHighlightsInBackground();
     window.addEventListener('keydown', handleKeydown);
@@ -248,6 +341,7 @@
         try {
           const fresh = await listHighlights();
           highlights = sortByUpdatedAtDesc(fresh);
+          await loadTagsAndMap();
         } catch {
           // keep current
         }
@@ -320,6 +414,19 @@
     {/if}
   </header>
 
+  <!-- Type Tabs -->
+  <div class="flex items-center gap-2 mb-4">
+    {#each typeTabs as tab}
+      <button
+        type="button"
+        class={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${selectedType === tab.value ? 'bg-(--color-accent-blue) text-white border-(--color-accent-blue)' : 'bg-(--color-surface) text-(--color-text-muted) border-(--color-border) hover:border-(--color-border-strong) hover:text-(--color-primary)'}`}
+        onclick={() => (selectedType = tab.value)}
+      >
+        {t(tab.labelKey)}
+      </button>
+    {/each}
+  </div>
+
   <!-- Search Bar -->
   <div class="relative flex items-center mb-5">
     <svg
@@ -360,26 +467,23 @@
         {#each HIGHLIGHT_COLORS as color}
           <button
             type="button"
-            class="w-6 h-6 rounded-full border-2 border-transparent cursor-pointer transition-all hover:scale-[1.15] {selectedColor ===
-            color.key
+            class="w-6 h-6 rounded-full border-2 border-transparent cursor-pointer transition-all hover:scale-[1.15] {selectedColors.has(color.key)
               ? 'border-(--color-primary) shadow-[0_0_0_3px_rgba(73,212,255,0.25)] scale-110'
               : ''}"
             style="background: {color.hex};"
             aria-label={t('highlight.selectColor', {
               color: t(`settings.color.${color.key}` as import('$lib/shared/i18n').MessageKey),
             })}
-            onclick={() => {
-              selectedColor = selectedColor === color.key ? null : color.key;
-            }}
+            onclick={() => toggleColor(color.key)}
           ></button>
         {/each}
         <button
           type="button"
-          class="px-2 py-1 rounded-md border border-(--color-border) bg-transparent text-(--color-text-muted) text-[0.75rem] cursor-pointer transition-all font-sans hover:bg-(--color-surface-hover,rgba(25,41,62,0.96)) {!selectedColor
+          class="px-2 py-1 rounded-md border border-(--color-border) bg-transparent text-(--color-text-muted) text-[0.75rem] cursor-pointer transition-all font-sans hover:bg-(--color-surface-hover,rgba(25,41,62,0.96)) {selectedColors.size === 0
             ? 'border-(--color-accent-blue,#49d4ff) text-(--color-primary) bg-(--color-panel-accent)'
             : ''}"
           onclick={() => {
-            selectedColor = null;
+            selectedColors = new Set();
           }}>{t('home.shelfTab.all')}</button
         >
       </div>
@@ -390,6 +494,13 @@
         >{t('home.highlightsFilterBook')}</span
       >
       <Dropdown options={bookFilterOptions} bind:value={selectedBookId} class="min-w-[150px]" />
+    </div>
+
+    <div class="flex items-center gap-2">
+      <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
+        >{t('home.highlightsFilterTag')}</span
+      >
+      <Dropdown options={tagFilterOptions} bind:value={selectedTagId} class="min-w-[130px]" />
     </div>
 
     <div class="flex items-center gap-2">

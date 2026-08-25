@@ -8,10 +8,12 @@
     stats: ReadingStatsSummaryDto | null;
     isLoading?: boolean;
     disabledReason?: string | null;
+    streakDays?: number;
+    isLoadingStreak?: boolean;
     t?: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
-  let { stats, isLoading = false, disabledReason = null, t: _t }: Props = $props();
+  let { stats, isLoading = false, disabledReason = null, streakDays = 0, isLoadingStreak = false, t: _t }: Props = $props();
 
   type StatItem = {
     label: string;
@@ -51,11 +53,11 @@
       bg: 'color-mix(in srgb, var(--color-warning) 10%, transparent)',
     },
     {
-      label: _t ? _t('stats.avgProgressLabel') : 'Progreso promedio',
-      value: `${stats ? Math.round(stats.avgProgressPercentage) : 0}%`,
-      icon: 'chart',
-      color: '#60a5fa',
-      bg: 'rgba(96, 165, 250, 0.1)',
+      label: _t ? _t('stats.streakLabel') : 'Racha',
+      value: isLoadingStreak ? '—' : `${streakDays} ${_t ? _t('stats.days', { count: streakDays }) : streakDays === 1 ? 'día' : 'días'}`,
+      icon: 'flame',
+      color: streakDays === 0 ? 'var(--color-text-muted)' : '#ff6b35',
+      bg: streakDays === 0 ? 'rgba(148,173,206,0.08)' : 'rgba(255,107,53,0.12)',
     },
   ]);
 </script>

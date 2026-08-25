@@ -38,10 +38,14 @@ export type HighlightsDeps = {
   spine: SpineResolver;
   outbox: SyncOutboxDao;
   getHighlightsVersion?: () => number;
+  getUserId?: () => string | null;
+  getDebugState?: () => typeof debugState | null;
 };
 
 export function createHighlights(deps: HighlightsDeps) {
   const { getBook, spine, outbox } = deps;
+  const getUserId = deps.getUserId ?? (() => authState.userId);
+  const getDbg = deps.getDebugState ?? (() => debugState);
 
   let persistedHighlights = $state<PersistedHighlight[]>([]);
   let highlightReloadTimer: ReturnType<typeof setTimeout> | null = null;
@@ -160,8 +164,11 @@ export function createHighlights(deps: HighlightsDeps) {
   }
 
   async function handleColorSelect(color: string, data: SelectionData): Promise<void> {
-    debugState.epub.colorPickCount++;
-    debugState.epub.lastPickedColor = color;
+    const dbg = getDbg();
+    if (dbg) {
+      dbg.epub.colorPickCount++;
+      dbg.epub.lastPickedColor = color;
+    }
     console.warn('RW: handleColorSelect data.pageNumber', data.pageNumber, 'cfi', data.cfi?.slice(0, 40) ?? '(null)', 'text', data.text.slice(0, 30));
 
     const book = untrack(getBook);
@@ -195,7 +202,8 @@ export function createHighlights(deps: HighlightsDeps) {
       ];
 
       try {
-        debugState.epub.saveHighlightCallCount++;
+        const dbg2 = getDbg();
+        if (dbg2) dbg2.epub.saveHighlightCallCount++;
         await saveHighlight({
           id: highlightId,
           bookId: book.id,
@@ -208,13 +216,14 @@ export function createHighlights(deps: HighlightsDeps) {
           rectBottom: bounds.bottom,
           cfi,
         });
-        if (authState.userId) {
+        const uid = getUserId();
+        if (uid) {
           void outbox.add(
             'HIGHLIGHT',
             highlightId,
             'UPSERT',
             JSON.stringify({
-              userId: authState.userId,
+              userId: uid,
               bookId: book.id,
               cfiRange: cfi ?? '',
               textContent: data.text,
@@ -226,9 +235,12 @@ export function createHighlights(deps: HighlightsDeps) {
           );
         }
       } catch (err) {
-        debugState.epub.saveHighlightLastError = String(err);
-        if (!debugState.epub.failedHighlightIds.includes(highlightId)) {
-          debugState.epub.failedHighlightIds.push(highlightId);
+        const dbg3 = getDbg();
+        if (dbg3) {
+          dbg3.epub.saveHighlightLastError = String(err);
+          if (!dbg3.epub.failedHighlightIds.includes(highlightId)) {
+            dbg3.epub.failedHighlightIds.push(highlightId);
+          }
         }
         console.warn('Failed to save highlight:', err);
       }
@@ -261,7 +273,8 @@ export function createHighlights(deps: HighlightsDeps) {
     const highlight = persistedHighlights.find((item) => item.id === id);
     persistedHighlights = persistedHighlights.filter((h) => h.id !== id);
     deleteHighlight(id).catch((err) => console.error('Failed to delete highlight:', err));
-    if (authState.userId && highlight) {
+    const uidDel = getUserId();
+    if (uidDel && highlight) {
       const book = untrack(getBook);
       const updatedAt = new Date().toISOString();
       void outbox.add(
@@ -269,7 +282,7 @@ export function createHighlights(deps: HighlightsDeps) {
         id,
         'DELETE',
         JSON.stringify({
-          userId: authState.userId,
+          userId: uidDel,
           bookId: book?.id ?? id,
           cfiRange: highlight.cfi ?? '',
           textContent: highlight.text ?? '',
@@ -284,7 +297,8 @@ export function createHighlights(deps: HighlightsDeps) {
   }
 
   function enqueueHighlightUpdate(id: string, changes: { color?: string; note?: string | null }): void {
-    if (!authState.userId) return;
+    const uid = getUserId();
+    if (!uid) return;
     const highlight = persistedHighlights.find((item) => item.id === id);
     if (!highlight) return;
     const book = untrack(getBook);
@@ -293,7 +307,7 @@ export function createHighlights(deps: HighlightsDeps) {
       id,
       'UPSERT',
       JSON.stringify({
-        userId: authState.userId,
+        userId: uid,
         bookId: book?.id ?? id,
         cfiRange: highlight.cfi ?? '',
         textContent: highlight.text ?? '',

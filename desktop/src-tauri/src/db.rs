@@ -227,6 +227,23 @@ pub enum HealthStatus {
     Missing,
 }
 
+pub fn get_db_size(db_path: &Path) -> AppResult<u64> {
+    match fs::metadata(db_path) {
+        Ok(m) => Ok(m.len()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(0),
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::PermissionDenied {
+                return Err(AppError::InvalidInput(format!("storage.permission_denied: {}", e)));
+            }
+            Err(AppError::Io(e))
+        }
+    }
+}
+
+pub fn vacuum(connection: &Connection) -> AppResult<()> {
+    connection.execute("VACUUM", []).map_err(AppError::Database)?;
+    Ok(())
+}
 fn has_column(connection: &Connection, table_name: &str, column_name: &str) -> AppResult<bool> {
     let mut statement = connection.prepare(&format!("PRAGMA table_info({})", table_name))?;
     let rows = statement.query_map([], |row| row.get::<_, String>(1))?;
@@ -278,3 +295,4 @@ mod tests {
         assert_eq!(health.status, HealthStatus::Missing);
     }
 }
+

@@ -108,7 +108,12 @@ fn main() {
             commands::get_epub_resource,
             commands::is_epub_cached,
             commands::clear_epub_cache,
-            commands::index_epub_text
+            commands::index_epub_text,
+            commands::getStorageStats,
+            commands::clearCache,
+            commands::getPerBookSizes,
+            commands::deleteBookData,
+            commands::cleanupOrphans
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

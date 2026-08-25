@@ -2556,6 +2556,7 @@ dependencies = [
  "tauri-plugin-oauth",
  "tauri-plugin-opener",
  "tauri-plugin-os",
+ "tempfile",
  "thiserror 1.0.69",
  "uuid",
  "zip 8.6.0",

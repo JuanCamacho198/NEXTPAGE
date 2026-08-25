@@ -12,6 +12,7 @@ pub mod outbox;
 pub mod progress;
 pub mod search;
 pub mod settings;
+pub mod storage;
 
 #[allow(unused_imports)]
 pub use bookmarks::*;
@@ -31,6 +32,8 @@ pub use progress::*;
 pub use search::*;
 #[allow(unused_imports)]
 pub use settings::*;
+#[allow(unused_imports)]
+pub use storage::*;
 
 use std::fs;
 use std::path::PathBuf;
@@ -1204,3 +1207,4 @@ mod outbox_tests {
         .is_err());
     }
 }
+

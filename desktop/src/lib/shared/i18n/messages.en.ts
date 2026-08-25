@@ -518,6 +518,9 @@ export const messagesEn = {
   'reader.next_page': 'Next page',
   'reader.page_input': 'Go to page',
   'reader.saved_settings': 'Saved settings',
+  'reader.zoom': 'Zoom',
+  'reader.zoomLevel': 'Zoom: {{level}}%',
+  'reader.fullscreenHint': 'Press F to toggle fullscreen',
 
   'settings.localPreferences': 'Local preferences',
   'settings.localPreferencesDescription': 'Configure the language and theme of the application',

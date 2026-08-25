@@ -853,4 +853,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.next_page': 'Página siguiente',
   'reader.page_input': 'Ir a la página',
   'reader.saved_settings': 'Ajustes guardados',
+  'reader.zoom': 'Zoom',
+  'reader.zoomLevel': 'Zoom: {{level}}%',
+  'reader.fullscreenHint': 'Pulsa F para pantalla completa',
 };

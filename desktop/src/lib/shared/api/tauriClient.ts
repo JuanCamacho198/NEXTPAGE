@@ -479,7 +479,7 @@ export const sanitizeReaderSettings = (input?: Partial<ReaderSettings> | null): 
     epub: {
       fontSize: sanitizeRangedNumber(
         next.epub?.fontSize,
-        80,
+        75,
         200,
         DEFAULT_READER_SETTINGS.epub.fontSize,
       ),

@@ -39,7 +39,7 @@ const isEditableElement = (element: HTMLElement): boolean => {
   return hasEditableRole(element);
 };
 
-const hasEditableContext = (target: HTMLElement): boolean => {
+const hasEditableContextInternal = (target: HTMLElement): boolean => {
   if (isEditableElement(target)) {
     return true;
   }
@@ -54,6 +54,24 @@ const hasEditableContext = (target: HTMLElement): boolean => {
 
   return false;
 };
+
+export const hasEditableContext = (element: Element | null): boolean => {
+  if (!element) return false;
+  if (!(element instanceof HTMLElement)) return false;
+  return hasEditableContextInternal(element);
+};
+
+export const resolveFullscreenIntent = (event: KeyboardEvent): boolean => {
+  if (event.defaultPrevented) return false;
+  if (event.ctrlKey || event.metaKey || event.altKey) return false;
+  if (event.key.toLowerCase() !== 'f') return false;
+  const target = event.target;
+  if (target instanceof HTMLElement && hasEditableContextInternal(target)) return false;
+  if (target instanceof Element && hasEditableContext(target)) return false;
+  return true;
+};
+
+export const isFullscreenToggle = resolveFullscreenIntent;
 
 export const canHandleReaderArrowNav = (event: KeyboardEvent): boolean => {
   if (event.defaultPrevented) {

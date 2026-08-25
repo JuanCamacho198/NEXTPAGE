@@ -89,12 +89,76 @@ pub struct DictionaryWordDto {
     pub id: String,
     pub word: String,
     pub created_at: String,
+    #[serde(default)]
+    pub normalized_word: Option<String>,
+    #[serde(default)]
+    pub user_id: Option<String>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
+    #[serde(default)]
+    pub is_favorite: Option<bool>,
+    #[serde(default)]
+    pub srs_stage: Option<i32>,
+    #[serde(default)]
+    pub updated_at: Option<String>,
+    #[serde(default)]
+    pub deleted_at: Option<String>,
+    #[serde(default)]
+    pub synced_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AddDictionaryWordInput {
     pub word: String,
+    #[serde(default)]
+    pub user_id: Option<String>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
+    #[serde(default)]
+    pub is_favorite: Option<bool>,
+    #[serde(default)]
+    pub srs_stage: Option<i32>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateDictionaryWordInput {
+    pub id: String,
+    #[serde(default)]
+    pub word: Option<String>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
+    #[serde(default)]
+    pub is_favorite: Option<bool>,
+    #[serde(default)]
+    pub srs_stage: Option<i32>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchDictionaryWordsInput {
+    pub query: String,
+    #[serde(default)]
+    pub limit: Option<i64>,
+    #[serde(default)]
+    pub fuzzy: Option<bool>,
+    #[serde(default)]
+    pub user_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportDictionaryResult {
+    pub imported: i64,
+    pub errors: Vec<ImportDictionaryError>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportDictionaryError {
+    pub row: i64,
+    pub reason: String,
 }
 
 impl SaveHighlightInput {

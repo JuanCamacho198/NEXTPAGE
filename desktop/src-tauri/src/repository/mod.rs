@@ -609,6 +609,36 @@ impl LibraryRepository {
         dictionary::remove_dictionary_word(self, id)
     }
 
+    pub fn update_dictionary_word(
+        &self,
+        input: crate::models::UpdateDictionaryWordInput,
+    ) -> AppResult<DictionaryWordDto> {
+        dictionary::update_dictionary_word(self, input)
+    }
+
+    pub fn search_dictionary_words(
+        &self,
+        query: &str,
+        limit: i64,
+        fuzzy: bool,
+        user_id: Option<&str>,
+    ) -> AppResult<Vec<DictionaryWordDto>> {
+        dictionary::search_dictionary_words(self, query, limit, fuzzy, user_id)
+    }
+
+    pub fn export_dictionary(&self, format: &str) -> AppResult<String> {
+        dictionary::export_dictionary(self, format)
+    }
+
+    pub fn import_dictionary(
+        &self,
+        payload: &str,
+        format: &str,
+        user_id: Option<&str>,
+    ) -> AppResult<crate::models::ImportDictionaryResult> {
+        dictionary::import_dictionary(self, payload, format, user_id)
+    }
+
     pub fn list_bookmarks(&self, book_id: Option<&str>) -> AppResult<Vec<BookmarkDto>> {
         bookmarks::list_bookmarks(self, book_id)
     }

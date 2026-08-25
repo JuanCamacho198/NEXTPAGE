@@ -546,6 +546,47 @@ pub fn removeDictionaryWord(state: State<'_, AppState>, id: String) -> Result<()
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
+pub fn updateDictionaryWord(
+    state: State<'_, AppState>,
+    payload: crate::models::UpdateDictionaryWordInput,
+) -> Result<DictionaryWordDto, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.update_dictionary_word(payload).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn searchDictionaryWords(
+    state: State<'_, AppState>,
+    payload: crate::models::SearchDictionaryWordsInput,
+) -> Result<Vec<DictionaryWordDto>, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository
+        .search_dictionary_words(&payload.query, payload.limit.unwrap_or(20), payload.fuzzy.unwrap_or(false), payload.user_id.as_deref())
+        .map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn exportDictionary(state: State<'_, AppState>, format: String) -> Result<String, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.export_dictionary(&format).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn importDictionary(
+    state: State<'_, AppState>,
+    payload: String,
+    format: String,
+    user_id: Option<String>,
+) -> Result<crate::models::ImportDictionaryResult, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.import_dictionary(&payload, &format, user_id.as_deref()).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
 pub fn listBookmarks(
     state: State<'_, AppState>,
     book_id: Option<String>,
@@ -726,9 +767,10 @@ pub fn add_coalesced_sync_outbox_item_internal(
     if entity_id.trim().is_empty() {
         return Err(AppError::InvalidInput("entityId must be non-empty".to_string()));
     }
-    if operation != "UPSERT" {
+    let is_dictionary = entity_type == "DICTIONARY_WORD";
+    if operation != "UPSERT" && !(is_dictionary && operation == "DELETE") {
         return Err(AppError::InvalidInput(
-            "addCoalescedSyncOutboxItem only supports UPSERT operations".to_string(),
+            "addCoalescedSyncOutboxItem only supports UPSERT operations (DELETE allowed for DICTIONARY_WORD)".to_string(),
         ));
     }
     if payload_json.len() > MAX_COALESCE_PAYLOAD_BYTES {
@@ -759,17 +801,17 @@ pub fn add_coalesced_sync_outbox_item_internal(
     let tx = conn.unchecked_transaction()?;
 
     // Latest-wins UPDATE: only overwrite when the stored row is not newer.
+    // For DICTIONARY_WORD DELETE, we coalesce to latest operation (DELETE wins over UPSERT if newer).
     let updated = tx.execute(
         "UPDATE sync_outbox
-         SET payload_json = ?1, operation = 'UPSERT', retry_count = 0, last_error = NULL, next_retry_at = ?2
-         WHERE entity_type = ?3 AND entity_id = ?4
-           AND json_extract(payload_json, '$.userId') = ?5
-           AND json_extract(payload_json, '$.updatedAt') <= ?6",
-        rusqlite::params![payload_json, now, entity_type, entity_id, user_id, updated_at],
+         SET payload_json = ?1, operation = ?2, retry_count = 0, last_error = NULL, next_retry_at = ?3
+         WHERE entity_type = ?4 AND entity_id = ?5
+           AND json_extract(payload_json, '$.userId') = ?6
+           AND json_extract(payload_json, '$.updatedAt') <= ?7",
+        rusqlite::params![payload_json, operation, now, entity_type, entity_id, user_id, updated_at],
     )?;
 
     let id = if updated > 0 {
-        // Updated in place — return the existing row's id.
         tx.query_row(
             "SELECT id FROM sync_outbox
              WHERE entity_type = ?1 AND entity_id = ?2 AND json_extract(payload_json, '$.userId') = ?3
@@ -778,18 +820,15 @@ pub fn add_coalesced_sync_outbox_item_internal(
             |row| row.get::<_, String>(0),
         )?
     } else {
-        // No match: either the key is new, or the stored row is newer (stale
-        // event). Insert only when no row exists for the key so a stale event
-        // can never create a duplicate row (SR-4.1 at-most-one-row invariant).
         let id = uuid::Uuid::new_v4().to_string();
         tx.execute(
             "INSERT INTO sync_outbox (id, entity_type, entity_id, operation, payload_json, created_at, next_retry_at)
-             SELECT ?1, ?2, ?3, 'UPSERT', ?4, ?5, ?5
+             SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?6
              WHERE NOT EXISTS (
                SELECT 1 FROM sync_outbox
-               WHERE entity_type = ?2 AND entity_id = ?3 AND json_extract(payload_json, '$.userId') = ?6
+               WHERE entity_type = ?2 AND entity_id = ?3 AND json_extract(payload_json, '$.userId') = ?7
              )",
-            rusqlite::params![id, entity_type, entity_id, payload_json, now, user_id],
+            rusqlite::params![id, entity_type, entity_id, operation, payload_json, now, user_id],
         )?;
         id
     };

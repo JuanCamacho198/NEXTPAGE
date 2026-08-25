@@ -779,8 +779,8 @@
     });
   }
 
-  // ── Navigation ───────────────────────────────────────────
-  const navigateToPage = async (
+  // ── Navigation (exposed via bind:this for Workspace refs) ──
+  export const navigateToPage = async (
     targetPage: number,
     options?: { flash?: boolean },
   ): Promise<boolean> => {

@@ -299,8 +299,7 @@ describe('EpubNativeViewer', () => {
 
       expect(screen.getByTestId('epub-prev')).toBeInTheDocument();
       expect(screen.getByTestId('epub-next')).toBeInTheDocument();
-      expect(screen.getByTestId('epub-font-decrease')).toBeInTheDocument();
-      expect(screen.getByTestId('epub-font-increase')).toBeInTheDocument();
+      expect(screen.getByTestId('zoom-dropdown-trigger')).toBeInTheDocument();
     });
 
     it('renders EpubControls with fullscreen toggle', async () => {

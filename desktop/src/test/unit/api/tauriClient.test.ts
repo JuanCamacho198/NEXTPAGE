@@ -38,7 +38,7 @@ describe('tauriClient reader settings', () => {
       brightness: 999,
       contrast: 5,
       epub: {
-        fontSize: 79,
+        fontSize: 74,
         fontFamily: '   ',
       },
     });
@@ -49,7 +49,7 @@ describe('tauriClient reader settings', () => {
       contrast: 50,
       selectionColor: '#3388ff',
       epub: {
-        fontSize: 80,
+        fontSize: 75,
         fontFamily: 'serif',
       },
       lineHeight: 1.8,

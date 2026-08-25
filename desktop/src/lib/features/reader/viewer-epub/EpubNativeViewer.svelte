@@ -1796,8 +1796,8 @@
     }
   }
 
-  // ─── Navigation ──────────────────────────────────────────
-  function goToPrev(): void {
+  // ─── Navigation (exposed via bind:this for Workspace refs) ──────
+  export function goToPrev(): void {
     if (currentChapterIndex > 0) {
       const prevIdx = currentChapterIndex - 1;
       const frag = extractFragment(getToc()[prevIdx]?.href ?? '');
@@ -1806,7 +1806,7 @@
     }
   }
 
-  function goToNext(): void {
+  export function goToNext(): void {
     const tocLen = getToc().length;
     const nextIdx = currentChapterIndex + 1;
     // Prefer TOC navigation; fallback to spine length for edge docs not in TOC
@@ -1820,7 +1820,7 @@
     }
   }
 
-  function goToChapter(index: number): void {
+  export function goToChapter(index: number): void {
     const tocLen = getToc().length;
     const limit = tocLen > 0 ? tocLen : totalChapters;
     if (index >= 0 && index < limit) {
@@ -1836,7 +1836,7 @@
     }
   }
 
-  async function handleGoToPage(page: number): Promise<boolean> {
+  export async function handleGoToPage(page: number): Promise<boolean> {
     const tocLen = getToc().length;
     if (tocLen > 0) {
       // Display is TOC-based (Odisea 28 vs spine 31): page 1..tocLen maps directly to TOC index
@@ -1861,7 +1861,17 @@
     return false;
   }
 
-  // ─── Zoom ─────────────────────────────────────────────────
+  export function setZoom(percent: number): void {
+    const clamped = Math.min(200, Math.max(75, Math.round(percent)));
+    fontSize = clamped;
+    const updated: ReaderSettings = {
+      ...readerSettings,
+      epub: { ...readerSettings.epub, fontSize: clamped },
+    };
+    onSettingsChange?.(updated);
+  }
+
+  // ─── Zoom (unified 75-200 via fontSize) ────────────────────
   function changeZoom(delta: number): void {
     const newZoom = Math.max(50, Math.min(200, zoomLevel + delta));
     if (newZoom !== zoomLevel) {
@@ -1872,9 +1882,18 @@
   function handleWheel(e: WheelEvent): void {
     if (!e.ctrlKey && !e.metaKey) return;
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -5 : 5;
-    changeZoom(delta);
+    const current = Math.min(200, Math.max(75, Math.round(fontSize)));
+    const delta = e.deltaY > 0 ? -10 : 10;
+    setZoom(current + delta);
   }
+
+  $effect(() => {
+    const el = zoomContainerEl;
+    if (!el) return;
+    const handler = (ev: Event) => handleWheel(ev as WheelEvent);
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  });
 
   // ─── Theme ────────────────────────────────────────────────
   function getThemeStyles(): string {
@@ -1975,7 +1994,6 @@
       class="flex-1 w-full min-h-0 overflow-y-auto pb-16"
       style="background: {getThemeBgColor()};"
       bind:this={zoomContainerEl}
-      onwheel={handleWheel}
       onscroll={emitPreciseLocation}
     >
       <iframe

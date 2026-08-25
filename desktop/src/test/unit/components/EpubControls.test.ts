@@ -50,15 +50,14 @@ describe('EpubControls (5.1) — Button structure matching PdfControls', () => {
     expect(screen.getByTestId('epub-fullscreen')).toBeInTheDocument();
   });
 
-  it('renders EPUB-specific font-size decrease/increase buttons', () => {
+  it('renders ZoomDropdown with current fontSize (pill)', () => {
     render(EpubControls, makeProps());
-    expect(screen.getByTestId('epub-font-decrease')).toBeInTheDocument();
-    expect(screen.getByTestId('epub-font-increase')).toBeInTheDocument();
+    expect(screen.getByTestId('zoom-dropdown-trigger')).toBeInTheDocument();
   });
 
-  it('shows font-size percentage display', () => {
+  it('shows ZoomDropdown with correct percentage', () => {
     render(EpubControls, makeProps({ fontSize: 120 }));
-    expect(screen.getByTestId('epub-font-percent')).toHaveTextContent('120%');
+    expect(screen.getByTestId('zoom-dropdown-trigger')).toHaveTextContent('120%');
   });
 
   it('disables prev button at first chapter (page 1)', () => {
@@ -107,18 +106,22 @@ describe('EpubControls (5.1) — Callback behavior', () => {
     expect(onToggleFullscreen).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onFontSizeChange with decreased size when A- clicked', async () => {
+  it('calls onFontSizeChange when ZoomDropdown option selected', async () => {
     const onFontSizeChange = vi.fn();
     render(EpubControls, makeProps({ fontSize: 100, onFontSizeChange }));
-    await fireEvent.click(screen.getByTestId('epub-font-decrease'));
-    expect(onFontSizeChange).toHaveBeenCalledWith(90);
+    await fireEvent.click(screen.getByTestId('zoom-dropdown-trigger'));
+    const opt = screen.getByTestId('zoom-option-125');
+    await fireEvent.click(opt);
+    expect(onFontSizeChange).toHaveBeenCalledWith(125);
   });
 
-  it('calls onFontSizeChange with increased size when A+ clicked', async () => {
+  it('ZoomDropdown clamps selection to 75-200 via onFontSizeChange', async () => {
     const onFontSizeChange = vi.fn();
     render(EpubControls, makeProps({ fontSize: 100, onFontSizeChange }));
-    await fireEvent.click(screen.getByTestId('epub-font-increase'));
-    expect(onFontSizeChange).toHaveBeenCalledWith(110);
+    await fireEvent.click(screen.getByTestId('zoom-dropdown-trigger'));
+    const opt75 = screen.getByTestId('zoom-option-75');
+    await fireEvent.click(opt75);
+    expect(onFontSizeChange).toHaveBeenCalledWith(75);
   });
 
   it('calls onGoToPage when valid page entered in input', async () => {

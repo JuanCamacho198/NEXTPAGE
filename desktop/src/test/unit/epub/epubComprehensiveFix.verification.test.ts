@@ -144,12 +144,12 @@ describe('4.1 linear=no excluded — 21 spine parity', () => {
 // 4.2 stale cache purged
 // ---------------------------------------------------------------------------
 describe('4.2 stale cache purged — spine.json len vs metadata.totalChapters', () => {
-  it('scenario 4: source guarantees CACHE_VERSION 3 and stale check (Rust parity via source)', () => {
+  it('scenario 4: source guarantees CACHE_VERSION 4 and stale check (Rust parity via source)', () => {
     const epubReaderSrc = readFileSync(
       join(process.cwd(), 'src-tauri/src/commands/epub_reader.rs'),
       'utf8',
     );
-    expect(epubReaderSrc).toContain('const CACHE_VERSION: u32 = 3');
+    expect(epubReaderSrc).toContain('const CACHE_VERSION: u32 = 4');
     expect(epubReaderSrc).toContain('spine.len() != meta.total_chapters');
     expect(epubReaderSrc).toContain('spine.len() != meta.spine_hrefs.len()');
     expect(epubReaderSrc).toContain('remove_dir_all');

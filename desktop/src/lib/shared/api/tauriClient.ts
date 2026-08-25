@@ -901,7 +901,7 @@ export const listTagsForHighlight = async (highlightId: string): Promise<TagDto[
   }
 };
 
-export const addDictionaryWord = async (payload: { word: string }): Promise<DictionaryWordDto> => {
+export const addDictionaryWord = async (payload: { word: string; tags?: string[]; isFavorite?: boolean; srsStage?: number; userId?: string }): Promise<DictionaryWordDto> => {
   try {
     return await invoke<DictionaryWordDto>('addDictionaryWord', { payload });
   } catch (error) {
@@ -922,6 +922,38 @@ export const removeDictionaryWord = async (id: string): Promise<void> => {
     await invoke('removeDictionaryWord', { id });
   } catch (error) {
     attachCommandError(error);
+  }
+};
+
+export const updateDictionaryWord = async (payload: { id: string; word?: string; tags?: string[]; isFavorite?: boolean; srsStage?: number }): Promise<DictionaryWordDto> => {
+  try {
+    return await invoke<DictionaryWordDto>('updateDictionaryWord', { payload });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const searchDictionaryWords = async (payload: { query: string; limit?: number; fuzzy?: boolean; userId?: string }): Promise<DictionaryWordDto[]> => {
+  try {
+    return await invoke<DictionaryWordDto[]>('searchDictionaryWords', { payload });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const exportDictionary = async (format: 'json' | 'csv'): Promise<string> => {
+  try {
+    return await invoke<string>('exportDictionary', { format });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const importDictionary = async (payload: string, format: 'json' | 'csv', userId?: string | null): Promise<{ imported: number; errors: { row: number; reason: string }[] }> => {
+  try {
+    return await invoke<{ imported: number; errors: { row: number; reason: string }[] }>('importDictionary', { payload, format, userId });
+  } catch (error) {
+    return attachCommandError(error);
   }
 };
 

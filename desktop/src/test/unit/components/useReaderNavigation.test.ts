@@ -1,0 +1,153 @@
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { createReaderNavigation } from '$lib/features/reader/chrome/useReaderNavigation.svelte';
+
+const makePdfBook = (over: Record<string, unknown> = {}): any => ({
+  id: 'book-1',
+  title: 'Book',
+  filePath: 'C:/book.pdf',
+  format: 'pdf',
+  currentPage: 1,
+  totalPages: 10,
+  ...over,
+});
+
+const makeEpubBook = (over: Record<string, unknown> = {}): any => ({
+  id: 'book-2',
+  title: 'EPUB',
+  filePath: 'C:/book.epub',
+  format: 'epub',
+  currentPage: 1,
+  totalPages: 10,
+  ...over,
+});
+
+describe('useReaderNavigation', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); });
+
+  it('headerCurrentPage/TotalPages for pdf', () => {
+    const book: any = makePdfBook();
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub: null }),
+      getActiveBook: () => book,
+    });
+    nav.handlePdfPageChange(3, 10);
+    expect(nav.headerCurrentPage).toBe(3);
+    expect(nav.headerTotalPages).toBe(10);
+    expect(nav.currentPdfPage).toBe(3);
+    expect(nav.totalPdfPages).toBe(10);
+  });
+
+  it('headerCurrentPage for epub is chapter+1 and total is toc length', () => {
+    const book: any = makeEpubBook();
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub: null }),
+      getActiveBook: () => book,
+    });
+    nav.handleTocReady([{ id: 'a', title: 'A', depth: 0 }, { id: 'b', title: 'B', depth: 0 }]);
+    expect(nav.headerTotalPages).toBe(2);
+    nav.currentEpubChapter = 1;
+    expect(nav.headerCurrentPage).toBe(2);
+    const nav2 = createReaderNavigation({ getRefs: () => ({ pdf: null, epub: null }), getActiveBook: () => book });
+    expect(nav2.headerTotalPages).toBe(0);
+  });
+
+  it('goPrev/Next pdf bounds disabled and delegates to pdfRef', async () => {
+    const book: any = makePdfBook();
+    const pdf: any = { navigateToPage: vi.fn().mockResolvedValue(true) };
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf, epub: null }),
+      getActiveBook: () => book,
+    });
+    nav.handlePdfPageChange(1, 5);
+    expect(nav.prevDisabled).toBe(true);
+    expect(nav.nextDisabled).toBe(false);
+    expect(nav.goPrev()).toBe(false);
+    expect(pdf.navigateToPage).not.toHaveBeenCalled();
+    expect(nav.goNext()).toBe(true);
+    expect(pdf.navigateToPage).toHaveBeenCalledWith(2);
+    nav.handlePdfPageChange(5, 5);
+    expect(nav.nextDisabled).toBe(true);
+    expect(nav.goNext()).toBe(false);
+    const navNoRef = createReaderNavigation({ getRefs: () => ({ pdf: null, epub: null }), getActiveBook: () => book });
+    navNoRef.handlePdfPageChange(3, 5);
+    expect(navNoRef.goPrev()).toBe(false);
+    expect(navNoRef.goNext()).toBe(false);
+  });
+
+  it('goPrev/Next epub bounds disabled and delegates to epubRef', () => {
+    const book: any = makeEpubBook();
+    const epub: any = { goToPrev: vi.fn(), goToNext: vi.fn(), handleGoToPage: vi.fn().mockResolvedValue(true) };
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub }),
+      getActiveBook: () => book,
+    });
+    nav.currentEpubChapter = 0;
+    expect(nav.prevDisabled).toBe(true);
+    expect(nav.goPrev()).toBe(false);
+    expect(epub.goToPrev).not.toHaveBeenCalled();
+    nav.currentEpubChapter = 1;
+    expect(nav.prevDisabled).toBe(false);
+    expect(nav.goPrev()).toBe(true);
+    expect(epub.goToPrev).toHaveBeenCalled();
+    expect(nav.goNext()).toBe(true);
+    expect(epub.goToNext).toHaveBeenCalled();
+    const navNoRef = createReaderNavigation({ getRefs: () => ({ pdf: null, epub: null }), getActiveBook: () => book });
+    navNoRef.currentEpubChapter = 1;
+    expect(navNoRef.goPrev()).toBe(false);
+  });
+
+  it('handleHeaderGoToPage delegates to pdf/epub refs injected', async () => {
+    let book: any = makePdfBook();
+    const pdf: any = { navigateToPage: vi.fn().mockResolvedValue(true) };
+    const epub: any = { handleGoToPage: vi.fn().mockResolvedValue(true) };
+    const navPdf = createReaderNavigation({ getRefs: () => ({ pdf, epub: null }), getActiveBook: () => book });
+    expect(await navPdf.handleHeaderGoToPage(2)).toBe(true);
+    expect(pdf.navigateToPage).toHaveBeenCalledWith(2);
+    book = makeEpubBook();
+    const navEpub = createReaderNavigation({ getRefs: () => ({ pdf: null, epub }), getActiveBook: () => book });
+    expect(await navEpub.handleHeaderGoToPage(3)).toBe(true);
+    expect(epub.handleGoToPage).toHaveBeenCalledWith(3);
+    const navNone = createReaderNavigation({ getRefs: () => ({ pdf: null, epub: null }), getActiveBook: () => book });
+    expect(await navNone.handleHeaderGoToPage(1)).toBe(false);
+  });
+
+  it('handleTocReady/ handleTocNavigate updates state and closes panel', () => {
+    const nav = createReaderNavigation({ getRefs: () => ({ pdf: null, epub: null }), getActiveBook: () => null });
+    nav.showTocPanel = true;
+    nav.handleTocReady([{ id: '1', title: 'Ch1', depth: 0 }]);
+    expect(nav.tocEntries).toHaveLength(1);
+    const entry = { id: '1', title: 'Ch1', depth: 0 };
+    nav.handleTocNavigate(entry);
+    expect(nav.tocNavigate).toEqual(entry);
+    expect(nav.showTocPanel).toBe(false);
+    nav.toggleTocPanel();
+    expect(nav.showTocPanel).toBe(true);
+    nav.toggleTocPanel();
+    expect(nav.showTocPanel).toBe(false);
+  });
+
+  it('handlePdfPageChange / handleEpubLocationChange callbacks', () => {
+    const onPdfPageChange = vi.fn();
+    const onEpubLocationChange = vi.fn();
+    const book: any = makePdfBook();
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub: null }),
+      getActiveBook: () => book,
+      onPdfPageChange,
+      onEpubLocationChange,
+    });
+    nav.handlePdfPageChange(2, 10);
+    expect(onPdfPageChange).toHaveBeenCalledWith(2, 10);
+    nav.handleEpubLocationChange('chapter:3', 50);
+    expect(nav.currentEpubChapter).toBe(3);
+    expect(onEpubLocationChange).toHaveBeenCalledWith('chapter:3', 50);
+    nav.handleEpubLocationChange('epubcfi(/6/2!)', 25);
+    expect(onEpubLocationChange).toHaveBeenCalledWith('epubcfi(/6/2!)', 25);
+  });
+
+  it('cleanup is no-op but callable', () => {
+    const nav = createReaderNavigation({ getRefs: () => ({ pdf: null, epub: null }), getActiveBook: () => null });
+    expect(() => nav.cleanup()).not.toThrow();
+  });
+});

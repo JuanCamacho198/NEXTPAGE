@@ -2,7 +2,7 @@ import { listBookmarks, saveBookmark, deleteBookmark } from '$lib/shared/api/tau
 import { authState } from '$lib/stores/authState.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 
-const outboxDao = new SyncOutboxDao();
+const defaultOutboxDao = new SyncOutboxDao();
 
 export type BookmarkItem = {
   id: string;
@@ -12,13 +12,14 @@ export type BookmarkItem = {
   createdAt: string;
 };
 
-export function createBookmarksState(): {
+export function createBookmarksState(deps: { outboxDao?: SyncOutboxDao } = {}): {
   readonly bookmarksList: BookmarkItem[];
   readonly bookmarksLoading: boolean;
   loadBookmarks(bookId: string): Promise<void>;
   addBookmark(bookId: string, pageNumber: number, location?: { cfiLocation?: string | null; locatorJson?: string | null }): Promise<void>;
   removeBookmark(id: string, bookId: string): Promise<void>;
 } {
+  const outboxDao = deps.outboxDao ?? defaultOutboxDao;
   let bookmarksList = $state<BookmarkItem[]>([]);
   let bookmarksLoading = $state(false);
 

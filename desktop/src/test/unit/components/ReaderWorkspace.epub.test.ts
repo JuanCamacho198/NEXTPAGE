@@ -28,6 +28,7 @@ vi.mock('$lib/features/reader/viewer-epub/EpubNativeViewer.svelte', async () => 
 vi.mock('$lib/shared/api/tauriClient', () => ({
   saveHighlight: vi.fn(),
   deleteHighlight: vi.fn(),
+  updateHighlight: vi.fn(),
   getDefaultReaderSettings: vi.fn(() => ({
     themeMode: 'paper',
     brightness: 100,
@@ -52,6 +53,10 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
   listHighlights: vi.fn().mockResolvedValue([]),
   saveBookmark: vi.fn(),
   deleteBookmark: vi.fn(),
+  listTags: vi.fn().mockResolvedValue([]),
+  listTagsForHighlight: vi.fn().mockResolvedValue([]),
+  createTag: vi.fn().mockResolvedValue({ id: 't1', name: 't1' }),
+  saveHighlightTags: vi.fn().mockResolvedValue([]),
 }));
 
 const makeEpubBook = () => ({

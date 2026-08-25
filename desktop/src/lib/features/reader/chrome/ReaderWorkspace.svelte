@@ -11,36 +11,24 @@
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, SearchBookTextResponse } from '$lib/shared/types';
   import type { LibraryBookDto } from '$lib/shared/types/library';
-  import type {
-    HighlightActionKind,
-    HighlightActionOpts,
-    HighlightDto,
-  } from '$lib/shared/types/book';
-  import { HIGHLIGHT_COLORS } from '$lib/features/reader/highlight/highlightColors';
+  import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
   import { debugState } from '$lib/shared/debug/debugState.svelte';
-  import {
-    saveHighlightTags,
-    createTag,
-    listTags,
-    listTagsForHighlight,
-    addDictionaryWord,
-    upsertReaderSettings,
-    getDefaultReaderSettings,
-  } from '$lib/shared/api/tauriClient';
+  import { addDictionaryWord } from '$lib/shared/api/tauriClient';
   import HighlightContextMenu from '../highlight/HighlightContextMenu.svelte';
   import ColorPickerPopover from '../highlight/ColorPickerPopover.svelte';
   import TagPopover from '../highlight/TagPopover.svelte';
   import NoteEditorModal from '../highlight/NoteEditorModal.svelte';
-  import { createFocusTrap } from '$lib/shared/utils/focusTrap';
-  import { createBookmarksState } from './bookmarksState.svelte';
-  import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
   import { getReaderError } from '$lib/stores/readerErrorState.svelte';
   import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
   import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
-  import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav';
   import { clampZoomPercent } from '$lib/features/reader/viewer-pdf/pdfNavigation';
   import { createSpineResolver } from './useSpineResolver.svelte';
   import { createHighlights } from './useHighlights.svelte';
+  import { createImmersiveChrome } from './useImmersiveChrome.svelte';
+  import { createReaderZoom } from './useReaderZoom.svelte';
+  import { createHighlightMenu } from '../highlight/useHighlightMenu.svelte';
+  import { createBookmarksPanel } from './useBookmarksPanel.svelte';
+  import BookmarkSidebar from './BookmarkSidebar.svelte';
 
   const outboxDao = new SyncOutboxDao();
   const spineResolver = createSpineResolver();
@@ -49,8 +37,8 @@
     spine: spineResolver,
     outbox: outboxDao,
   });
-
-  const appWindow = getCurrentWebviewWindow();
+  const highlightMenuState = createHighlightMenu({ highlights: highlightsState });
+  const bookmarksPanel = createBookmarksPanel({ outboxDao });
 
   type ActiveBook = LibraryBookDto & { filePath: string };
 
@@ -98,35 +86,37 @@
     onSearchJump,
   }: Props = $props();
 
-  // ── Local reader settings state (mutable, debounce-persisted) ───
-  let localReaderSettings = $state<ReaderSettings>(getDefaultReaderSettings());
+  // Viewer refs for zoom delegation (hoisted before chrome/zoom so getters capture)
+  let pdfRef: PdfViewer | null = $state(null);
+  let epubRef: EpubNativeViewer | null = $state(null);
 
-  // Debounced persistence
-  let persistTimer: ReturnType<typeof setTimeout> | null = null;
+  // ── Reader zoom (owns localReaderSettings, 500ms persist debounce, rAF wheel) ──
+  const zoom = createReaderZoom({
+    getActiveBook: () => activeReadingBook,
+    getRefs: () => ({ pdf: pdfRef, epub: epubRef }),
+  });
 
-  function handleTextSettingsChange(updated: ReaderSettings): void {
-    localReaderSettings = updated;
-    if (persistTimer) clearTimeout(persistTimer);
-    persistTimer = setTimeout(() => {
-      upsertReaderSettings(updated);
-    }, 500);
-  }
+  // Keep local alias for template compat (zoom owns state)
+  // Derived alias so existing references keep working; mutations via zoom.handleTextSettingsChange
+  let localReaderSettings = $derived(zoom.localReaderSettings);
 
-  // Clean up timer on unmount
+  // Clean up zoom timers on unmount
   $effect(() => {
     return () => {
-      if (persistTimer) clearTimeout(persistTimer);
+      zoom.cleanup();
     };
   });
 
   // Sync from prop on initial load / external change
-  // NOTE: JSON parse/stringify instead of structuredClone because Svelte 5 $state
-  // proxies have internal slots that structuredClone cannot serialize.
   $effect(() => {
     if (readerSettings) {
-      localReaderSettings = JSON.parse(JSON.stringify(readerSettings));
+      zoom.syncFromProps(readerSettings);
     }
   });
+
+  function handleTextSettingsChange(updated: ReaderSettings): void {
+    zoom.handleTextSettingsChange(updated);
+  }
 
   // Selection state
   let selectedText = $state('');
@@ -151,47 +141,7 @@
     cfi: string | null;
   } | null>(null);
 
-  // Menu 2 (existing-highlight context menu) state
-  type HighlightMenuState = {
-    open: boolean;
-    highlightId: string | null;
-    color: string;
-    text: string;
-    position: { x: number; y: number } | null;
-    assignedTags: import('$lib/shared/types/book').TagDto[];
-  };
-  let highlightMenu = $state<HighlightMenuState>({
-    open: false,
-    highlightId: null,
-    color: HIGHLIGHT_COLORS[0].hex,
-    text: '',
-    position: null,
-    assignedTags: [],
-  });
-
-  let allTags = $state<import('$lib/shared/types/book').TagDto[]>([]);
-  let showColorPicker = $state(false);
-  let showTagPopover = $state(false);
-  let showNoteModal = $state(false);
-  let colorPickerAnchor = $state<HTMLElement | null>(null);
-  let tagPopoverAnchor = $state<HTMLElement | null>(null);
-
-  async function refreshTags(): Promise<void> {
-    try {
-      allTags = await listTags();
-    } catch (err) {
-      console.error('Failed to load tags:', err);
-    }
-  }
-
-  async function refreshHighlightTags(highlightId: string): Promise<void> {
-    try {
-      const tags = await listTagsForHighlight(highlightId);
-      highlightMenu.assignedTags = tags;
-    } catch (err) {
-      console.error('Failed to load highlight tags:', err);
-    }
-  }
+  // Highlight menu delegated to useHighlightMenu (220ms dismiss owned there)
 
   // PDF page tracking for footer
   let currentPdfPage = $state(0);
@@ -222,6 +172,8 @@
   $effect(() => {
     return () => {
       highlightsState.cleanup();
+      highlightMenuState.cleanup();
+      bookmarksPanel.cleanup();
     };
   });
 
@@ -310,160 +262,55 @@
   // Right sidebar panels
   let showTextSettings = $state(false);
   let showTocPanel = $state(false);
-  let showBookmarks = $state(false);
-  let isFullscreen = $state(false);
   let workspaceRoot: HTMLElement | null = $state(null);
+  let panelOpen = $derived(showTextSettings || showTocPanel || bookmarksPanel.showBookmarks || searchPanelOpen);
 
-  // ── Immersive chrome state (R1, R2) ───────────────────────
-  let headerVisible = $state(true);
-  let idleTimer: ReturnType<typeof setTimeout> | null = null;
-  let mouseX = $state(0);
-  let mouseY = $state(0);
-  let pendingFrame: number | null = null;
-  let hoverTop = $derived(mouseY < 72);
-  let panelOpen = $derived(showTextSettings || showTocPanel || showBookmarks || searchPanelOpen);
-  let edgeNavVisible = $state(false);
-  // Viewer refs for direct navigation (R2)
-  let epubRef: EpubNativeViewer | null = $state(null);
-  let pdfRef: PdfViewer | null = $state(null);
-  let pendingWheelDelta = 0;
-  let pendingWheelFrame: number | null = null;
-
-
-
-  // ── Immersive helpers ─────────────────────────────────────
-  function resetIdleTimer(): void {
-    if (idleTimer) clearTimeout(idleTimer);
-    idleTimer = null;
-    if (!isFullscreen || hoverTop || panelOpen) {
-      headerVisible = true;
-      return;
-    }
-    idleTimer = setTimeout(() => {
-      if (isFullscreen && !hoverTop && !panelOpen) headerVisible = false;
-    }, 2500);
-  }
-
-  function updateEdgeNav(x: number): void {
-    if (!isFullscreen) {
-      edgeNavVisible = false;
-      return;
-    }
-    const w = typeof window !== 'undefined' ? window.innerWidth : 9999;
-    const nearEdge = x < 80 || x > w - 80;
-    // Hide when mouse is in center zone (80..w-80) — ensures arrows disappear promptly
-    edgeNavVisible = nearEdge;
-  }
-
-  function handleWorkspaceMouseMove(e: MouseEvent): void {
-    if (pendingFrame !== null) return;
-    const x = e.clientX;
-    const y = e.clientY;
-    pendingFrame = requestAnimationFrame(() => {
-      pendingFrame = null;
-      mouseX = x;
-      mouseY = y;
-      updateEdgeNav(x);
-      // Hover top 72px shows unified header in immersive only
-      if (isFullscreen && y < 72) headerVisible = true;
-      resetIdleTimer();
-    });
-  }
+  // ── Immersive chrome (owns headerVisible 2500ms, hoverTop 72px, edge 80px rAF, fullscreen dual) ──
+  const chrome = createImmersiveChrome({ getPanelOpen: () => panelOpen });
+  let isFullscreen = $derived(chrome.isFullscreen);
+  let headerVisible = $derived(chrome.headerVisible);
+  let edgeNavVisible = $derived(chrome.edgeNavVisible);
 
   function handleWorkspaceMouseLeave(): void {
-    if (pendingFrame !== null) {
-      cancelAnimationFrame(pendingFrame);
-      pendingFrame = null;
-    }
-    edgeNavVisible = false;
-    // Do not force headerVisible false here — idle timer owns hiding
+    chrome.handleWorkspaceMouseLeave();
   }
-
-  function adjustZoom(delta: number): void {
-    const current = clampZoomPercent(localReaderSettings.epub.fontSize ?? 100);
-    const next = clampZoomPercent(current + delta);
-    if (next === current) return;
-    const updated: ReaderSettings = {
-      ...localReaderSettings,
-      epub: { ...localReaderSettings.epub, fontSize: next },
-    };
-    handleTextSettingsChange(updated);
-    const fmt = activeReadingBook?.format?.toLowerCase();
-    if (pdfRef && fmt === 'pdf') {
-      void pdfRef.setScale(next / 100);
-    }
-    if (epubRef && fmt === 'epub') {
-      void epubRef.setZoom(next);
-    }
+  function toggleFullscreen(): void {
+    chrome.toggleFullscreen();
+    syncDebugReaderInfo();
   }
-
-  function handleGlobalWheel(e: WheelEvent): void {
-    if (!e.ctrlKey && !e.metaKey) return;
-    e.preventDefault();
-    pendingWheelDelta += e.deltaY;
-    if (pendingWheelFrame !== null) return;
-    pendingWheelFrame = requestAnimationFrame(() => {
-      pendingWheelFrame = null;
-      const delta = pendingWheelDelta > 0 ? -10 : 10;
-      pendingWheelDelta = 0;
-      adjustZoom(delta);
-    });
-  }
-
-  function handleGlobalKeydown(e: KeyboardEvent): void {
-    // Escape exits immersive
-    if (e.key === 'Escape' && isFullscreen) {
-      // Don't swallow if a panel/modal is open — they handle Escape themselves
-      if (!panelOpen) {
-        e.preventDefault();
-        toggleFullscreen();
-        return;
-      }
-    }
-    // Ctrl+Shift+F = Tauri window fullscreen (optional, immersive + window)
-    if (e.key.toLowerCase() === 'f' && (e.ctrlKey || e.metaKey) && e.shiftKey && !hasEditableContext(e.target as Element | null)) {
-      e.preventDefault();
-      void toggleWindowFullscreen();
-      return;
-    }
-    // F toggle immersive CSS fullscreen outside editable context
-    if (e.key.toLowerCase() === 'f' && !hasEditableContext(e.target as Element | null)) {
-      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-      e.preventDefault();
-      toggleFullscreen();
-      return;
-    }
-    // Ctrl/Cmd + +/- zoom
-    if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '_' )) {
-      e.preventDefault();
-      const step = e.key === '-' || e.key === '_' ? -10 : 10;
-      adjustZoom(step);
-    }
+  function handleHeaderFontSizeChange(size: number): void {
+    zoom.handleHeaderFontSizeChange(size);
   }
 
   $effect(() => {
-    resetIdleTimer();
-    // react to isFullscreen / panelOpen changes
-    void isFullscreen;
+    // react to isFullscreen / panelOpen / hoverTop changes via chrome
+    void chrome.isFullscreen;
     void panelOpen;
-    void hoverTop;
-    if (!isFullscreen) edgeNavVisible = false;
-    else updateEdgeNav(mouseX);
+    void chrome.hoverTop;
+    chrome.resetIdleTimer();
+    if (!chrome.isFullscreen) chrome.updateEdgeNav(chrome.mouseX);
+    else chrome.updateEdgeNav(chrome.mouseX);
   });
 
   $effect(() => {
     const root = workspaceRoot;
     if (!root) return;
-    root.addEventListener('mousemove', handleWorkspaceMouseMove);
-    window.addEventListener('wheel', handleGlobalWheel as EventListener, { capture: true, passive: false });
-    window.addEventListener('keydown', handleGlobalKeydown as EventListener);
+    root.addEventListener('mousemove', chrome.handleWorkspaceMouseMove);
+    window.addEventListener('wheel', zoom.handleGlobalWheel as EventListener, {
+      capture: true,
+      passive: false,
+    });
+    window.addEventListener('keydown', chrome.handleGlobalKeydown as EventListener);
+    window.addEventListener('keydown', zoom.handleGlobalKeydown as EventListener);
     return () => {
-      root.removeEventListener('mousemove', handleWorkspaceMouseMove);
-      window.removeEventListener('wheel', handleGlobalWheel as EventListener, { capture: true } as AddEventListenerOptions);
-      window.removeEventListener('keydown', handleGlobalKeydown as EventListener);
-      if (idleTimer) clearTimeout(idleTimer);
-      if (pendingFrame !== null) cancelAnimationFrame(pendingFrame);
-      if (pendingWheelFrame !== null) cancelAnimationFrame(pendingWheelFrame);
+      root.removeEventListener('mousemove', chrome.handleWorkspaceMouseMove);
+      window.removeEventListener('wheel', zoom.handleGlobalWheel as EventListener, {
+        capture: true,
+      } as AddEventListenerOptions);
+      window.removeEventListener('keydown', chrome.handleGlobalKeydown as EventListener);
+      window.removeEventListener('keydown', zoom.handleGlobalKeydown as EventListener);
+      chrome.cleanup();
+      zoom.cleanup();
     };
   });
 
@@ -471,21 +318,7 @@
   let tocEntries = $state<TocEntry[]>([]);
   let tocNavigate = $state<TocEntry | null>(null);
 
-  // Bookmarks state — single outboxDao injected (PR1)
-  let bookmarksState = createBookmarksState({ outboxDao });
-  let bookmarksPanelEl: HTMLDivElement | undefined = $state();
-
-  // Bookmark ribbon overlay (2200ms)
-  let showBookmarkRibbon = $state(false);
-  let ribbonTimer: ReturnType<typeof setTimeout> | null = null;
-
-  function triggerBookmarkRibbon(): void {
-    showBookmarkRibbon = true;
-    if (ribbonTimer) clearTimeout(ribbonTimer);
-    ribbonTimer = setTimeout(() => {
-      showBookmarkRibbon = false;
-    }, 2200);
-  }
+  // Bookmarks delegated to useBookmarksPanel (ribbon 2200ms owns state)
 
   // Fullscreen arrows + share helpers — fixed via viewer refs (R2)
   function goPrevPage(): void {
@@ -536,21 +369,7 @@
     }
   }
 
-  // Focus trap for bookmarks panel when open
-  $effect(() => {
-    if (showBookmarks && bookmarksPanelEl) {
-      const trap = createFocusTrap(bookmarksPanelEl);
-      trap.activate();
-      return () => trap.deactivate();
-    }
-  });
-
-  // Load bookmarks when panel opens
-  $effect(() => {
-    if (showBookmarks && activeReadingBook) {
-      bookmarksState.loadBookmarks(activeReadingBook.id);
-    }
-  });
+  // Bookmarks effects (load + focus trap) now owned by BookmarkSidebar component
 
   // Sync debug readerInfo when relevant state changes (gated)
   function syncDebugReaderInfo(): void {
@@ -563,37 +382,6 @@
         pageInfo: `${bookProgress}%`,
         scale: 0,
       };
-    }
-  }
-
-  // Immersive CSS fullscreen (F) — no Tauri window decorations change
-  function toggleFullscreen(): void {
-    const next = !isFullscreen;
-    isFullscreen = next;
-    readerState.isFullscreen = next;
-    if (next) {
-      // entering immersive: hide header unless mouse is at top
-      headerVisible = hoverTop;
-      updateEdgeNav(mouseX);
-      resetIdleTimer();
-    } else {
-      headerVisible = true;
-      edgeNavVisible = false;
-      if (idleTimer) {
-        clearTimeout(idleTimer);
-        idleTimer = null;
-      }
-    }
-    syncDebugReaderInfo();
-  }
-
-  // Tauri window fullscreen (Ctrl+Shift+F) — optional, independent of CSS immersive
-  async function toggleWindowFullscreen(): Promise<void> {
-    try {
-      const cur = await appWindow.isFullscreen();
-      await appWindow.setFullscreen(!cur);
-    } catch {
-      console.warn('Tauri window fullscreen API not available');
     }
   }
 
@@ -619,7 +407,7 @@
   }
 
   function toggleBookmarks(): void {
-    showBookmarks = !showBookmarks;
+    bookmarksPanel.toggleBookmarks();
     syncDebugReaderInfo();
   }
 
@@ -654,22 +442,6 @@
       return epubRef.handleGoToPage(page);
     }
     return false;
-  }
-
-  function handleHeaderFontSizeChange(size: number): void {
-    const clamped = clampZoomPercent(size);
-    const updated: ReaderSettings = {
-      ...localReaderSettings,
-      epub: { ...localReaderSettings.epub, fontSize: clamped },
-    };
-    handleTextSettingsChange(updated);
-    const fmt = activeReadingBook?.format?.toLowerCase();
-    if (pdfRef && fmt === 'pdf') {
-      void pdfRef.setScale(clamped / 100);
-    }
-    if (epubRef && fmt === 'epub') {
-      void epubRef.setZoom(clamped);
-    }
   }
 
   function handlePdfSelection(event: {
@@ -771,163 +543,44 @@
     color: string,
     data: NonNullable<typeof lastSelectionData>,
   ): Promise<void> {
-    // Delegate to highlightsState — preserves 220ms race: captured data is
-    // passed explicitly, not global lastSelectionData which may be nulled by
-    // selectionchange before click handler runs.
     await highlightsState.handleColorSelect(color, data as Parameters<typeof highlightsState.handleColorSelect>[1]);
-    // Dismiss toolbar 220ms after color pick (matches highlightsState's
-    // removeAllRanges delay) to preserve out:scale transition.
-    setTimeout(() => {
-      dismissToolbar();
-    }, 220);
+    // 220ms dismiss delegated to useHighlightMenu (preserves out:scale transition)
+    highlightMenuState.scheduleToolbarDismiss(dismissToolbar);
   }
 
-  function openHighlightMenu(id: string, opts?: HighlightActionOpts): void {
-    const hl = highlightsState.persistedHighlights.find((h) => h.id === id);
-    highlightMenu = {
-      open: true,
-      highlightId: id,
-      color: opts?.color ?? hl?.color ?? HIGHLIGHT_COLORS[0].hex,
-      text: opts?.text ?? hl?.text ?? '',
-      position:
-        opts?.x !== undefined && opts?.y !== undefined
-          ? { x: opts.x, y: opts.y }
-          : { x: window.innerWidth / 2, y: window.innerHeight / 2 },
-      assignedTags: [],
-    };
-    void refreshTags();
-    if (hl) {
-      refreshHighlightTags(id);
-    }
-  }
-
+  // Delegated highlight menu helpers (thin wrappers to preserve template call sites)
   function closeHighlightMenu(): void {
-    highlightMenu = {
-      open: false,
-      highlightId: null,
-      color: HIGHLIGHT_COLORS[0].hex,
-      text: '',
-      position: null,
-      assignedTags: [],
-    };
-    showColorPicker = false;
-    showTagPopover = false;
-    showNoteModal = false;
+    highlightMenuState.closeHighlightMenu();
   }
-
-  function handleHighlightAction(
-    action: HighlightActionKind,
-    id: string,
-    opts?: HighlightActionOpts,
-  ): void {
-    if (action === 'open') {
-      openHighlightMenu(id, opts);
-      return;
-    }
-    if (action === 'close') {
-      closeHighlightMenu();
-      return;
-    }
-    if (action === 'updateColor' && opts?.color) {
-      updateHighlightColor(id, opts.color);
-      return;
-    }
-    if (action === 'delete') {
-      deleteHighlightById(id);
-      return;
-    }
+  function handleHighlightAction(action: HighlightActionKind, id: string, opts?: HighlightActionOpts): void {
+    highlightMenuState.handleHighlightAction(action, id, opts);
   }
-
-  function updateHighlightColor(id: string, color: string): void {
-    highlightsState.updateHighlightColor(id, color);
-    if (highlightMenu.highlightId === id) {
-      highlightMenu.color = color;
-    }
-  }
-
-  function updateHighlightNote(id: string, note: string | null): void {
-    highlightsState.updateHighlightNote(id, note);
-  }
-
-  function deleteHighlightById(id: string): void {
-    highlightsState.deleteHighlightById(id);
-    closeHighlightMenu();
-  }
-
-  function enqueueHighlightUpdate(id: string, changes: { color?: string; note?: string | null }): void {
-    highlightsState.enqueueHighlightUpdate(id, changes);
-  }
-
   function handleMenuCustomColor(): void {
-    showColorPicker = !showColorPicker;
+    highlightMenuState.handleMenuCustomColor();
   }
-
   function handleMenuCopy(): void {
-    if (highlightMenu.text) {
-      navigator.clipboard.writeText(highlightMenu.text);
-    }
-    closeHighlightMenu();
+    highlightMenuState.handleMenuCopy();
   }
-
   function handleMenuTag(): void {
-    showTagPopover = !showTagPopover;
+    highlightMenuState.handleMenuTag();
   }
-
   function handleMenuNote(): void {
-    showNoteModal = true;
+    highlightMenuState.handleMenuNote();
   }
-
   function handleMenuDelete(): void {
-    if (!highlightMenu.highlightId) return;
-    deleteHighlightById(highlightMenu.highlightId);
+    highlightMenuState.handleMenuDelete();
   }
-
   function handleNoteSave(note: string | null): void {
-    if (!highlightMenu.highlightId) return;
-    updateHighlightNote(highlightMenu.highlightId, note);
-    showNoteModal = false;
+    highlightMenuState.handleNoteSave(note);
   }
-
   async function handleTagCreate(name: string, color?: string): Promise<void> {
-    try {
-      const tag = await createTag({ name, color });
-      allTags = [...allTags, tag];
-      if (highlightMenu.highlightId) {
-        const currentIds = highlightMenu.assignedTags.map((t) => t.id);
-        const updated = await saveHighlightTags({
-          highlightId: highlightMenu.highlightId,
-          tagIds: [...currentIds, tag.id],
-        });
-        highlightMenu.assignedTags = updated;
-      }
-    } catch (err) {
-      console.error('Failed to create tag:', err);
-    }
+    await highlightMenuState.handleTagCreate(name, color);
   }
-
   async function handleTagToggle(tagId: string): Promise<void> {
-    if (!highlightMenu.highlightId) return;
-    const currentIds = new Set(highlightMenu.assignedTags.map((t) => t.id));
-    if (currentIds.has(tagId)) {
-      currentIds.delete(tagId);
-    } else {
-      currentIds.add(tagId);
-    }
-    try {
-      const updated = await saveHighlightTags({
-        highlightId: highlightMenu.highlightId,
-        tagIds: Array.from(currentIds),
-      });
-      highlightMenu.assignedTags = updated;
-    } catch (err) {
-      console.error('Failed to save highlight tags:', err);
-    }
+    await highlightMenuState.handleTagToggle(tagId);
   }
-
   function handleColorPickerSelect(color: string): void {
-    if (!highlightMenu.highlightId) return;
-    updateHighlightColor(highlightMenu.highlightId, color);
-    showColorPicker = false;
+    highlightMenuState.handleColorPickerSelect(color);
   }
 
   function dismissToolbar(): void {
@@ -963,7 +616,7 @@
     {showTocPanel}
     {searchPanelOpen}
     {showTextSettings}
-    {showBookmarks}
+    showBookmarks={bookmarksPanel.showBookmarks}
     {isFullscreen}
     headerVisible={isFullscreen ? headerVisible : true}
     {t}
@@ -1131,7 +784,7 @@
     {/if}
 
     <!-- Menu 2: existing-highlight context menu (EPUB + PDF) -->
-    {#if highlightMenu.open && highlightMenu.highlightId && highlightMenu.position}
+    {#if highlightMenuState.highlightMenu.open && highlightMenuState.highlightMenu.highlightId && highlightMenuState.highlightMenu.position}
       <div
         class="fixed inset-0 z-[99]"
         role="presentation"
@@ -1141,49 +794,49 @@
         }}
       >
         <HighlightContextMenu
-          highlightId={highlightMenu.highlightId}
-          position={highlightMenu.position}
-          assignedTags={highlightMenu.assignedTags}
+          highlightId={highlightMenuState.highlightMenu.highlightId}
+          position={highlightMenuState.highlightMenu.position}
+          assignedTags={highlightMenuState.highlightMenu.assignedTags}
           onCustomColor={handleMenuCustomColor}
           onCopy={handleMenuCopy}
           onTag={handleMenuTag}
           onNote={handleMenuNote}
           onDelete={handleMenuDelete}
           onClose={closeHighlightMenu}
-          setColorPickerAnchor={(el) => (colorPickerAnchor = el)}
-          setTagPopoverAnchor={(el) => (tagPopoverAnchor = el)}
+          setColorPickerAnchor={(el) => (highlightMenuState.colorPickerAnchor = el)}
+          setTagPopoverAnchor={(el) => (highlightMenuState.tagPopoverAnchor = el)}
           {t}
         />
       </div>
     {/if}
 
     <ColorPickerPopover
-      open={showColorPicker}
-      anchor={colorPickerAnchor}
-      currentColor={highlightMenu.color}
+      open={highlightMenuState.showColorPicker}
+      anchor={highlightMenuState.colorPickerAnchor}
+      currentColor={highlightMenuState.highlightMenu.color}
       onSelect={handleColorPickerSelect}
-      onClose={() => (showColorPicker = false)}
+      onClose={() => (highlightMenuState.showColorPicker = false)}
     />
 
     <TagPopover
-      open={showTagPopover}
-      anchor={tagPopoverAnchor}
-      assignedTagIds={highlightMenu.assignedTags.map((tag) => tag.id)}
-      {allTags}
+      open={highlightMenuState.showTagPopover}
+      anchor={highlightMenuState.tagPopoverAnchor}
+      assignedTagIds={highlightMenuState.highlightMenu.assignedTags.map((tag) => tag.id)}
+      allTags={highlightMenuState.allTags}
       onCreate={handleTagCreate}
       onToggle={handleTagToggle}
-      onClose={() => (showTagPopover = false)}
+      onClose={() => (highlightMenuState.showTagPopover = false)}
       {t}
     />
 
     <NoteEditorModal
-      open={showNoteModal}
-      note={highlightMenu.highlightId
-        ? (highlightsState.persistedHighlights.find((h) => h.id === highlightMenu.highlightId)?.note ?? null)
+      open={highlightMenuState.showNoteModal}
+      note={highlightMenuState.highlightMenu.highlightId
+        ? (highlightsState.persistedHighlights.find((h) => h.id === highlightMenuState.highlightMenu.highlightId)?.note ?? null)
         : null}
-      highlightText={highlightMenu.text}
+      highlightText={highlightMenuState.highlightMenu.text}
       onSave={handleNoteSave}
-      onClose={() => (showNoteModal = false)}
+      onClose={() => (highlightMenuState.showNoteModal = false)}
       {t}
     />
   </div>
@@ -1198,13 +851,7 @@
     {t}
   />
 
-  <!-- Bookmark ribbon overlay (2200ms) -->
-  {#if showBookmarkRibbon}
-    <div class="pointer-events-none fixed top-20 right-8 z-50 animate-[bookmarkRibbon_2200ms_ease-out] flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 shadow-lg">
-      <span class="text-amber-600">🔖</span>
-      {t('reader.bookmarkAdded')}
-    </div>
-  {/if}
+  <!-- Bookmark ribbon now owned by BookmarkSidebar (2200ms) -->
 
   <!-- Fullscreen side arrows — edge 80px rAF, opacity transition, disabled at boundaries (R2) -->
   {#if isFullscreen && activeReadingBook}
@@ -1245,15 +892,6 @@
   {/if}
 </section>
 
-<style>
-  @keyframes bookmarkRibbon {
-    0% { opacity: 0; transform: translateY(-12px) scale(0.9); }
-    15% { opacity: 1; transform: translateY(0) scale(1); }
-    85% { opacity: 1; transform: translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateY(-12px) scale(0.9); }
-  }
-</style>
-
 <!-- Search Panel overlay -->
 {#if searchPanelOpen && activeReadingBook}
   <SearchPanel
@@ -1287,126 +925,11 @@
   {t}
 />
 
-<!-- Bookmarks Sidebar Panel -->
-{#if showBookmarks && activeReadingBook}
-  <div
-    class="fixed inset-0 z-40"
-    onclick={(e) => {
-      if (e.target === e.currentTarget) showBookmarks = false;
-    }}
-    onkeydown={(e) => e.key === 'Escape' && (showBookmarks = false)}
-    role="presentation"
-  >
-    <div class="absolute inset-0 bg-(--color-surface)/70"></div>
-    <div
-      bind:this={bookmarksPanelEl}
-      class="absolute right-0 top-0 flex h-full w-65 flex-col border-l border-(--color-border-deep) bg-(--color-surface)/70 pt-15 text-(--color-text-muted) backdrop-blur-sm"
-      onkeydown={(e) => e.key === 'Escape' && (showBookmarks = false)}
-      role="dialog"
-      aria-label={t('reader.bookmark')}
-      tabindex="0"
-    >
-      <!-- Header -->
-      <div class="flex items-center justify-between border-b border-(--color-border)/5 px-5 py-4">
-        <h2 class="text-base font-bold text-(--color-primary)">{t('reader.bookmark')}</h2>
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            onclick={() => {
-              void bookmarksState.addBookmark(
-                activeReadingBook.id,
-                isEpub ? currentEpubChapter + 1 : currentPdfPage || 1,
-                { cfiLocation: readerState.cfiLocation, locatorJson: readerState.locatorJson },
-              );
-              triggerBookmarkRibbon();
-            }}
-            class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-(--color-accent-blue) text-xs font-bold text-(--color-bg-deep) transition-colors hover:bg-(--color-accent-sky)"
-            title={t('reader.bookmark')}
-          >
-            +
-          </button>
-          <button
-            type="button"
-            onclick={() => (showBookmarks = false)}
-            class="cursor-pointer text-(--color-text-muted) hover:text-(--color-text-inverse)"
-            aria-label={t('settings.close')}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Content -->
-      <div class="flex-1 overflow-y-auto p-4">
-        {#if bookmarksState.bookmarksLoading}
-          <p class="text-center text-sm italic text-(--color-text-muted)/60">
-            {t('settings.loadingBookmarks')}
-          </p>
-        {:else if bookmarksState.bookmarksList.length === 0}
-          <p class="text-center text-sm italic text-(--color-text-muted)/60">
-            {t('settings.noBookmarks')}
-          </p>
-        {:else}
-          <ul class="flex flex-col gap-2">
-            {#each bookmarksState.bookmarksList as bookmark (bookmark.id)}
-              <li
-                class="flex items-center gap-2 rounded-lg border border-(--color-border-deep) bg-(--color-text-inverse)/2 px-3 py-2 transition-colors hover:bg-(--color-text-inverse)/5"
-              >
-                <button
-                  type="button"
-                  class="flex flex-1 flex-col items-start gap-0.5 text-left"
-                  onclick={() => {
-                    showBookmarks = false;
-                  }}
-                >
-                  <span class="text-sm font-medium text-(--color-primary)"
-                    >Page {bookmark.pageNumber}</span
-                  >
-                  {#if bookmark.title}
-                    <span class="text-xs text-(--color-text-muted)/60">{bookmark.title}</span>
-                  {/if}
-                </button>
-                <button
-                  type="button"
-                  onclick={() => bookmarksState.removeBookmark(bookmark.id, activeReadingBook.id)}
-                  class="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sm text-(--color-text-muted) transition-colors hover:bg-red-500/20 hover:text-red-400"
-                  title={t('settings.deleteBookmark')}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path
-                      d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
-                    ></path>
-                  </svg>
-                </button>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-      </div>
-    </div>
-  </div>
-{/if}
+<!-- Bookmarks Sidebar (extracted, 2200ms ribbon owned by panel) -->
+<BookmarkSidebar
+  bookmarksPanel={bookmarksPanel}
+  activeReadingBook={activeReadingBook}
+  currentPage={currentPdfPage}
+  currentChapter={currentEpubChapter}
+  {t}
+/>

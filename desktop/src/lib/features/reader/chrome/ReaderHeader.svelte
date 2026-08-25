@@ -9,6 +9,7 @@
     showTextSettings: boolean;
     showBookmarks: boolean;
     isFullscreen: boolean;
+    isRotated?: boolean;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     onBackToHome: () => void;
     onToggleToc: () => void;
@@ -16,6 +17,7 @@
     onToggleTextSettings: () => void;
     onToggleBookmarks: () => void;
     onToggleFullscreen: () => void;
+    onToggleRotate?: () => void;
   };
 
   let {
@@ -25,6 +27,7 @@
     showTextSettings,
     showBookmarks,
     isFullscreen,
+    isRotated = false,
     t,
     onBackToHome,
     onToggleToc,
@@ -32,6 +35,7 @@
     onToggleTextSettings,
     onToggleBookmarks,
     onToggleFullscreen,
+    onToggleRotate,
   }: Props = $props();
 </script>
 
@@ -115,6 +119,15 @@
       aria-label={isFullscreen ? t('pdf.fullscreenExit') : t('pdf.fullscreenEnter')}
     >
       <Icon name={isFullscreen ? 'fullscreen-exit' : 'fullscreen-enter'} size="sm" />
+    </button>
+    <button
+      type="button"
+      onclick={onToggleRotate}
+      class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors {isRotated ? 'text-(--color-accent-blue)' : 'text-(--color-text-auxiliary) hover:text-(--color-text-inverse)'}"
+      aria-label={t('reader.rotateHint')}
+      title={t('reader.rotateHint')}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.7 1 6.3 2.7L21 8V3h-5l2.3 2.3A7 7 0 1 0 21 12z"/><path d="M12 8v4l3 3"/></svg>
     </button>
   </div>
 </header>

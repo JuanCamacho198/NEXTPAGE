@@ -287,20 +287,59 @@
 {/if}
 
 <section class="space-y-5">
-  <!-- Hero header (not sticky, normal flow) -->
+  <!-- Hero header with streak + 7d preview -->
   <div
     bind:this={heroEl}
     class="rounded-(--radius-2xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-(--shadow-hero)"
   >
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-      <div>
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex-1">
         <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">{_t('stats.title')}</h1>
         <p class="mt-1 text-sm text-(--color-text-muted)">{_t('stats.subtitle')}</p>
       </div>
 
-      <span class="sr-only">Periodo</span>
+      <!-- Hero streak card -->
+      <div class="flex items-center gap-4 rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-orange-500/10 px-5 py-3">
+        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white text-xl" aria-hidden="true">🔥</div>
+        <div>
+          <p class="text-3xl font-bold tracking-tight {streakDays === 0 ? 'text-(--color-text-muted)' : 'text-amber-500'}">
+            {_t('stats.days', { count: streakDays })}
+          </p>
+          <p class="text-xs text-(--color-text-muted)">{_t('stats.currentStreak')}</p>
+        </div>
+      </div>
+
       <Dropdown options={periodDropdownOptions} bind:value={activePeriod} class="min-w-[120px]" />
     </div>
+
+    <!-- 7d mini bars preview -->
+    {#if activitySeries.length > 0}
+      {@const last7 = activitySeries.slice(-7)}
+      {@const max7 = Math.max(...last7.map((p) => p.value), 1)}
+      <div class="mt-4 flex items-end gap-1.5">
+        <span class="mr-2 text-xs font-medium text-(--color-text-muted)">7d:</span>
+        {#each last7 as point}
+          {@const h = Math.max(8, Math.round((point.value / max7) * 32))}
+          <div class="flex flex-col items-center gap-1">
+            <div class="w-6 rounded-t bg-(--color-accent-blue) transition-all" style="height: {h}px; opacity: {point.value > 0 ? 1 : 0.25}"></div>
+            <span class="text-[9px] text-(--color-text-muted)">{point.value}m</span>
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    <!-- Genre chips preview -->
+    {#if genreDistribution.length > 0}
+      <div class="mt-3 flex flex-wrap gap-2">
+        {#each genreDistribution.slice(0, 5) as g}
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-(--color-border) bg-(--color-surface) px-2.5 py-1 text-xs" style="border-left: 3px solid {g.color}">
+            {g.genre} {g.percent}%
+          </span>
+        {/each}
+      </div>
+    {:else}
+      <p class="mt-3 text-xs text-(--color-text-muted)">{_t('stats.noGenres')} — {_t('stats.noGenresHint')}</p>
+    {/if}
   </div>
 
   {#if disabledReason}

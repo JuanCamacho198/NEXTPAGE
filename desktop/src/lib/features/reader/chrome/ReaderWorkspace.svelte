@@ -512,7 +512,18 @@
   let showTocPanel = $state(false);
   let showBookmarks = $state(false);
   let isFullscreen = $state(false);
+  let isRotated = $state(false);
   let workspaceRoot: HTMLElement | null = $state(null);
+
+  function handleRotate(): void {
+    isRotated = !isRotated;
+  }
+
+  $effect(() => {
+    return () => {
+      isRotated = false;
+    };
+  });
 
   // TOC data from active viewer
   let tocEntries = $state<TocEntry[]>([]);
@@ -521,6 +532,60 @@
   // Bookmarks state
   let bookmarksState = createBookmarksState();
   let bookmarksPanelEl: HTMLDivElement | undefined = $state();
+
+  // Bookmark ribbon overlay (2200ms)
+  let showBookmarkRibbon = $state(false);
+  let ribbonTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function triggerBookmarkRibbon(): void {
+    showBookmarkRibbon = true;
+    if (ribbonTimer) clearTimeout(ribbonTimer);
+    ribbonTimer = setTimeout(() => {
+      showBookmarkRibbon = false;
+    }, 2200);
+  }
+
+  // Fullscreen arrows + share helpers
+  function goPrevPage(): void {
+    // For PDF: decrement, for EPUB: previous chapter via keyboard intent handled in viewers
+    if (isPdf && currentPdfPage > 1) {
+      const next = currentPdfPage - 1;
+      handlePdfPageChange(next, totalPdfPages);
+    } else if (isEpub && currentEpubChapter > 0) {
+      const prev = currentEpubChapter - 1;
+      // EPUB navigation via TOC-like jump handled externally; emit via window event for viewer
+      window.dispatchEvent(new CustomEvent('reader:navigate', { detail: { direction: 'prev', chapter: prev } }));
+    }
+  }
+
+  function goNextPage(): void {
+    if (isPdf && currentPdfPage < totalPdfPages) {
+      const next = currentPdfPage + 1;
+      handlePdfPageChange(next, totalPdfPages);
+    } else if (isEpub) {
+      const next = currentEpubChapter + 1;
+      window.dispatchEvent(new CustomEvent('reader:navigate', { detail: { direction: 'next', chapter: next } }));
+    }
+  }
+
+  async function handleShareText(): Promise<void> {
+    if (!selectedText) return;
+    const text = selectedText;
+    // Try Web Share API, fallback to clipboard with toast
+    if (navigator.share) {
+      try {
+        await navigator.share({ text });
+        return;
+      } catch {
+        // fallthrough to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // silent
+    }
+  }
 
   // Focus trap for bookmarks panel when open
   $effect(() => {
@@ -1010,7 +1075,7 @@
 </script>
 
 <!-- Full viewport reader layout -->
-<section class="flex h-screen flex-col bg-(--color-bg-deep)" bind:this={workspaceRoot}>
+<section class="flex h-screen flex-col bg-(--color-bg-deep) {isRotated ? 'rotate-1' : ''}" style={isRotated ? 'transform: rotate(0.5deg);' : ''} bind:this={workspaceRoot}>
   <ReaderHeader
     title={activeReadingBook?.title ?? ''}
     {showTocPanel}
@@ -1018,6 +1083,7 @@
     {showTextSettings}
     {showBookmarks}
     {isFullscreen}
+    {isRotated}
     {t}
     {onBackToHome}
     onToggleToc={toggleTocPanel}
@@ -1025,6 +1091,7 @@
     onToggleTextSettings={toggleTextSettings}
     onToggleBookmarks={toggleBookmarks}
     onToggleFullscreen={toggleFullscreen}
+    onToggleRotate={handleRotate}
   />
 
   <!-- Reading area (centered, fill remaining space) -->
@@ -1233,7 +1300,55 @@
     {isFullscreen}
     {t}
   />
+
+  <!-- Bookmark ribbon overlay (2200ms) -->
+  {#if showBookmarkRibbon}
+    <div class="pointer-events-none fixed top-20 right-8 z-50 animate-[bookmarkRibbon_2200ms_ease-out] flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 shadow-lg">
+      <span class="text-amber-600">🔖</span>
+      {t('reader.bookmarkAdded')}
+    </div>
+  {/if}
+
+  <!-- Fullscreen side arrows (visible only in fullscreen) -->
+  {#if isFullscreen && activeReadingBook}
+    <button
+      type="button"
+      class="fixed left-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60 transition-colors cursor-pointer"
+      aria-label={t('reader.prev_page')}
+      onclick={goPrevPage}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6" /></svg>
+    </button>
+    <button
+      type="button"
+      class="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60 transition-colors cursor-pointer"
+      aria-label={t('reader.next_page')}
+      onclick={goNextPage}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6" /></svg>
+    </button>
+    <!-- Share overlay button when text selected -->
+    {#if selectedText}
+      <button
+        type="button"
+        class="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full bg-(--color-accent-blue) px-4 py-2 text-sm font-medium text-white shadow-lg hover:opacity-90 cursor-pointer"
+        onclick={() => void handleShareText()}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+        {t('reader.share')}
+      </button>
+    {/if}
+  {/if}
 </section>
+
+<style>
+  @keyframes bookmarkRibbon {
+    0% { opacity: 0; transform: translateY(-12px) scale(0.9); }
+    15% { opacity: 1; transform: translateY(0) scale(1); }
+    85% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-12px) scale(0.9); }
+  }
+</style>
 
 <!-- Search Panel overlay -->
 {#if searchPanelOpen && activeReadingBook}
@@ -1293,12 +1408,14 @@
         <div class="flex items-center gap-2">
           <button
             type="button"
-            onclick={() =>
-              bookmarksState.addBookmark(
+            onclick={() => {
+              void bookmarksState.addBookmark(
                 activeReadingBook.id,
                 isEpub ? currentEpubChapter + 1 : currentPdfPage || 1,
                 { cfiLocation: readerState.cfiLocation, locatorJson: readerState.locatorJson },
-              )}
+              );
+              triggerBookmarkRibbon();
+            }}
             class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-(--color-accent-blue) text-xs font-bold text-(--color-bg-deep) transition-colors hover:bg-(--color-accent-sky)"
             title={t('reader.bookmark')}
           >

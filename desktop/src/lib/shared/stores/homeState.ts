@@ -571,6 +571,8 @@ export const getSafeProgressPercentage = (
 export const isBookInProgress = (
   book: Pick<ProgressLike, 'progressPercentage' | 'readingStatus'>,
 ): boolean => {
+  const pct = getSafeProgressPercentage(book);
+  if (pct <= 0 || pct >= 100) return false;
   return resolveReadingState(book.readingStatus, book.progressPercentage) === 'reading';
 };
 

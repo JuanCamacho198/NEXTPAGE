@@ -1,95 +1,126 @@
 <script lang="ts">
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import { BookCard, ShelfActionMenu } from '$lib/features/library';
+  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+
+  let scrollEl = $state<HTMLUListElement | null>(null);
+  let canScrollLeft = $state(false);
+  let canScrollRight = $state(false);
+
+  const showArrows = $derived(appState.continueReadingBooks.length > 2);
+
+  function updateScrollState(): void {
+    if (!scrollEl) {
+      canScrollLeft = false;
+      canScrollRight = false;
+      return;
+    }
+    canScrollLeft = scrollEl.scrollLeft > 2;
+    canScrollRight = scrollEl.scrollLeft + scrollEl.clientWidth < scrollEl.scrollWidth - 2;
+  }
+
+  function scrollByOffset(offset: number): void {
+    scrollEl?.scrollBy({ left: offset, behavior: 'smooth' });
+  }
+
+  $effect(() => {
+    // re-evaluate when books change (after DOM updates)
+    void appState.continueReadingBooks.length;
+    queueMicrotask(updateScrollState);
+  });
+
+  $effect(() => {
+    if (!scrollEl) return;
+    const el = scrollEl;
+    const ro = new ResizeObserver(() => updateScrollState());
+    ro.observe(el);
+    // observe each child for size changes as well
+    for (const child of Array.from(el.children)) {
+      ro.observe(child);
+    }
+    updateScrollState();
+    return () => ro.disconnect();
+  });
 </script>
 
 {#if appState.continueReadingBooks.length === 0}
   <p class="text-sm text-(--color-text-muted)">{appState.t('home.continueReadingPlaceholder')}</p>
-{:else if appState.continueReadingBooks.length === 1}
-  {@const book = appState.continueReadingBooks[0]}
-  <BookCard
-    {book}
-    variant="continue-reading"
-    selected={appState.previewBookId === book.id}
-    onSelect={() => {
-      appState.openShelfDetails(book);
-    }}
-    onRead={() => {
-      void appState.startReading(book);
-    }}
-    t={appState.t}
-  >
-    {#snippet actions()}
-      <ShelfActionMenu
-        bookId={book.id}
-        isFavorite={Boolean(book.collectionIds?.includes(1))}
-        readLabel={appState.t('app.read')}
-        editLabel={appState.t('library.editMetadata.title')}
-        removeLabel={appState.t('library.removeFromShelf')}
-        favoriteAddLabel={appState.t('library.favoriteAdd')}
-        favoriteRemoveLabel={appState.t('library.favoriteRemove')}
-        triggerLabel={appState.t('library.optionsFor', { title: book.title })}
-        onViewDetails={() => appState.openShelfDetails(book)}
-        viewDetailsLabel={appState.t('shelf.viewDetails')}
-        onRead={() => {
-          void appState.startReading(book);
-        }}
-        onEdit={() => {
-          appState.handleEditBook(book);
-        }}
-        onRemove={() => {
-          appState.requestRemoveBook(book);
-        }}
-        onToggleFavorite={() => {
-          void appState.handleToggleFavorite(book);
-        }}
-      />
-    {/snippet}
-  </BookCard>
 {:else}
-  <ul class="space-y-2">
-    {#each appState.continueReadingBooks as book}
-      <li>
-        <BookCard
-          {book}
-          variant="continue-reading"
-          compact={appState.continueReadingBooks.length > 1}
-          selected={appState.previewBookId === book.id}
-          onSelect={() => {
-            appState.openShelfDetails(book);
-          }}
-          onRead={() => {
-            void appState.startReading(book);
-          }}
-          t={appState.t}
-        >
-          {#snippet actions()}
-            <ShelfActionMenu
-              bookId={book.id}
-              isFavorite={Boolean(book.collectionIds?.includes(1))}
-              readLabel={appState.t('app.read')}
-              editLabel={appState.t('library.editMetadata.title')}
-              removeLabel={appState.t('library.removeFromShelf')}
-              favoriteAddLabel={appState.t('library.favoriteAdd')}
-              favoriteRemoveLabel={appState.t('library.favoriteRemove')}
-              triggerLabel={appState.t('library.optionsFor', { title: book.title })}
-              onViewDetails={() => appState.openShelfDetails(book)}
-              viewDetailsLabel={appState.t('shelf.viewDetails')}
-              onEdit={() => {
-                appState.handleEditBook(book);
-              }}
-              onRemove={() => {
-                appState.requestRemoveBook(book);
-              }}
-              onToggleFavorite={() => {
-                void appState.handleToggleFavorite(book);
-              }}
-            />
-          {/snippet}
-        </BookCard>
-      </li>
-    {/each}
-  </ul>
+  <div class="relative">
+    {#if showArrows}
+      <button
+        type="button"
+        class="absolute left-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-(--color-border) bg-(--color-surface) p-1.5 shadow-md transition-opacity hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-35"
+        aria-label="Scroll left"
+        disabled={!canScrollLeft}
+        onclick={() => scrollByOffset(-320)}
+      >
+        <Icon name="chevron-left" size="sm" />
+      </button>
+      <button
+        type="button"
+        class="absolute right-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-(--color-border) bg-(--color-surface) p-1.5 shadow-md transition-opacity hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-35"
+        aria-label="Scroll right"
+        disabled={!canScrollRight}
+        onclick={() => scrollByOffset(320)}
+      >
+        <Icon name="chevron-right" size="sm" />
+      </button>
+    {/if}
+
+    <ul
+      bind:this={scrollEl}
+      onscroll={updateScrollState}
+      class="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden {showArrows
+        ? 'px-8'
+        : ''}"
+    >
+      {#each appState.continueReadingBooks as book (book.id)}
+        <li class="snap-start shrink-0 w-[320px] max-w-[85%]">
+          <BookCard
+            {book}
+            variant="continue-reading"
+            compact={appState.continueReadingBooks.length > 1}
+            selected={appState.previewBookId === book.id}
+            onSelect={() => {
+              appState.openShelfDetails(book);
+            }}
+            onRead={() => {
+              void appState.startReading(book);
+            }}
+            t={appState.t}
+          >
+            {#snippet actions()}
+              <ShelfActionMenu
+                bookId={book.id}
+                isFavorite={Boolean(book.collectionIds?.includes(1))}
+                readLabel={appState.t('app.read')}
+                editLabel={appState.t('library.editMetadata.title')}
+                removeLabel={appState.t('library.removeFromShelf')}
+                favoriteAddLabel={appState.t('library.favoriteAdd')}
+                favoriteRemoveLabel={appState.t('library.favoriteRemove')}
+                triggerLabel={appState.t('library.optionsFor', { title: book.title })}
+                onViewDetails={() => appState.openShelfDetails(book)}
+                viewDetailsLabel={appState.t('shelf.viewDetails')}
+                onRead={() => {
+                  void appState.startReading(book);
+                }}
+                onEdit={() => {
+                  appState.handleEditBook(book);
+                }}
+                onRemove={() => {
+                  appState.requestRemoveBook(book);
+                }}
+                onToggleFavorite={() => {
+                  void appState.handleToggleFavorite(book);
+                }}
+              />
+            {/snippet}
+          </BookCard>
+        </li>
+      {/each}
+    </ul>
+  </div>
   {#if appState.previewBookId}
     {@const pb = appState.getBookById(appState.previewBookId)}
     {#if pb}

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Desktop UI**: Settings panel and Google Login mock using atomic design components.
 - **Desktop System**: Tailwind 4 setup with atomic tokens (`tokens.css`).
 - **Desktop App**: Embedded version display via Vite build injection.
+- **Reading daily goal (per-user)**: `reading.dailyGoalMinutes_${userId}` scalar (10|20|30|45, default 20, normalize 60→45) with `sanitizeDailyGoal` + anon no-op, `getDailyGoal/saveDailyGoal/getTodayMinutes` via `invoke`, stores `SettingsDomainState.dailyGoalMinutes` + `StatsDomainState.goalProgress/todayMinutes`, `AppState` SIGNED_IN/init wiring, Settings cuenta 896w Goal Selection Container (`#161f335c` r24 blur10.5) + Home 6th progress card X/Y min Z% bar `#d8e2ff` clamp.
 
 ### Changed
 - (improvements go here)

@@ -11,6 +11,7 @@ import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
 import { GDriveProvider } from './storage/GDriveProvider';
 import { GoogleDriveStateSync } from './GoogleDriveStateSync';
 import { SupabaseProgressSync } from '../sync/SupabaseProgressSync';
+import { SupabaseDictionarySync } from '../sync/SupabaseDictionarySync';
 import { SupabaseBookCatalogSync, buildRemoteRefs } from '../sync/SupabaseBookCatalogSync';
 import { canonicalBookName } from '$lib/shared/protocol/DriveCatalogContract';
 import { SyncOutboxService } from '../outbox/SyncOutboxService';
@@ -251,9 +252,27 @@ export class SyncService {
           ...(remoteRefs ?? {}),
         });
       } else if (entityType === 'BOOK' && operation === 'DELETE') {
-        // Explicit deletion is versioned: tombstone the remote row, never hard-delete.
         const bookSync = new SupabaseBookCatalogSync(userId);
         await bookSync.tombstoneBook(entityId);
+      } else if (entityType === 'DICTIONARY_WORD') {
+        const dictSync = new SupabaseDictionarySync(userId);
+        if (operation === 'DELETE') {
+          await dictSync.delete(entityId);
+        } else {
+          const normalized = String(payload.normalizedWord ?? payload.normalized_word ?? '').toLowerCase().trim();
+          await dictSync.upsert({
+            id: entityId,
+            userId,
+            word: String(payload.word ?? ''),
+            normalizedWord: normalized,
+            tags: Array.isArray(payload.tags) ? (payload.tags as string[]) : [],
+            isFavorite: Boolean(payload.isFavorite ?? payload.is_favorite ?? false),
+            srsStage: Number(payload.srsStage ?? payload.srs_stage ?? 0),
+            updatedAt: String(payload.updatedAt ?? payload.updated_at ?? new Date().toISOString()),
+            deletedAt: (payload.deletedAt as string | null) ?? (payload.deleted_at as string | null) ?? null,
+            createdAt: String(payload.createdAt ?? payload.created_at ?? new Date().toISOString()),
+          });
+        }
       } else {
         throw new Error(`Unsupported outbox entity: ${entityType}/${operation}`);
       }

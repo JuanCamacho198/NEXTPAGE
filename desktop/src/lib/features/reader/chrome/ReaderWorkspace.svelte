@@ -563,7 +563,7 @@
       pendingFrame = null;
       mouseX = x;
       mouseY = y;
-      if (hoverTop) headerVisible = true;
+      if (isFullscreen && hoverTop) headerVisible = true;
       resetIdleTimer();
     });
   }
@@ -600,11 +600,26 @@
   }
 
   function handleGlobalKeydown(e: KeyboardEvent): void {
-    // F toggle fullscreen outside editable context
-    if (e.key.toLowerCase() === 'f' && !hasEditableContext(e.target as Element | null)) {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // Escape exits immersive
+    if (e.key === 'Escape' && isFullscreen) {
+      // Don't swallow if a panel/modal is open — they handle Escape themselves
+      if (!panelOpen) {
+        e.preventDefault();
+        toggleFullscreen();
+        return;
+      }
+    }
+    // Ctrl+Shift+F = Tauri window fullscreen (optional, immersive + window)
+    if (e.key.toLowerCase() === 'f' && (e.ctrlKey || e.metaKey) && e.shiftKey && !hasEditableContext(e.target as Element | null)) {
       e.preventDefault();
-      void toggleFullscreen();
+      void toggleWindowFullscreen();
+      return;
+    }
+    // F toggle immersive CSS fullscreen outside editable context
+    if (e.key.toLowerCase() === 'f' && !hasEditableContext(e.target as Element | null)) {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      e.preventDefault();
+      toggleFullscreen();
       return;
     }
     // Ctrl/Cmd + +/- zoom
@@ -738,15 +753,32 @@
     }
   }
 
-  // Fullscreen toggle using Tauri Window API (reliable in Tauri webview)
-  async function toggleFullscreen(): Promise<void> {
+  // Immersive CSS fullscreen (F) — no Tauri window decorations change
+  function toggleFullscreen(): void {
+    const next = !isFullscreen;
+    isFullscreen = next;
+    readerState.isFullscreen = next;
+    if (next) {
+      // entering immersive: hide header unless mouse is at top
+      headerVisible = hoverTop;
+      resetIdleTimer();
+    } else {
+      headerVisible = true;
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+      }
+    }
+    syncDebugReaderInfo();
+  }
+
+  // Tauri window fullscreen (Ctrl+Shift+F) — optional, independent of CSS immersive
+  async function toggleWindowFullscreen(): Promise<void> {
     try {
-      await appWindow.setFullscreen(!isFullscreen);
-      isFullscreen = !isFullscreen;
-      readerState.isFullscreen = isFullscreen;
-      syncDebugReaderInfo();
+      const cur = await appWindow.isFullscreen();
+      await appWindow.setFullscreen(!cur);
     } catch {
-      console.warn('Tauri fullscreen API not available');
+      console.warn('Tauri window fullscreen API not available');
     }
   }
 
@@ -783,6 +815,47 @@
       ? Math.round((activeReadingBook.currentPage / activeReadingBook.totalPages) * 100)
       : Math.round(percentage),
   );
+
+  // ── Header unified controls (immersive second row) ─────────
+  const headerCurrentPage = $derived(
+    isPdf ? currentPdfPage : isEpub ? currentEpubChapter + 1 : 1,
+  );
+  const headerTotalPages = $derived(
+    isPdf ? totalPdfPages : isEpub ? (tocEntries.length > 0 ? tocEntries.length : 0) : 0,
+  );
+  const headerFontSize = $derived(clampZoomPercent(localReaderSettings.epub.fontSize ?? 100));
+  const showHeaderReadingControls = $derived(
+    isFullscreen && headerTotalPages > 0 && activeReadingBook !== null,
+  );
+
+  async function handleHeaderGoToPage(page: number): Promise<boolean> {
+    const fmt = activeReadingBook?.format?.toLowerCase();
+    if (fmt === 'pdf') {
+      if (!pdfRef) return false;
+      return pdfRef.navigateToPage(page);
+    }
+    if (fmt === 'epub') {
+      if (!epubRef) return false;
+      return epubRef.handleGoToPage(page);
+    }
+    return false;
+  }
+
+  function handleHeaderFontSizeChange(size: number): void {
+    const clamped = clampZoomPercent(size);
+    const updated: ReaderSettings = {
+      ...localReaderSettings,
+      epub: { ...localReaderSettings.epub, fontSize: clamped },
+    };
+    handleTextSettingsChange(updated);
+    const fmt = activeReadingBook?.format?.toLowerCase();
+    if (pdfRef && fmt === 'pdf') {
+      void pdfRef.setScale(clamped / 100);
+    }
+    if (epubRef && fmt === 'epub') {
+      void epubRef.setZoom(clamped);
+    }
+  }
 
   function handlePdfSelection(event: {
     text: string;
@@ -1195,8 +1268,12 @@
   }
 </script>
 
-<!-- Full viewport reader layout -->
-<section class="flex h-screen flex-col bg-(--color-bg-deep) {isRotated ? 'rotate-1' : ''}" style={isRotated ? 'transform: rotate(0.5deg);' : ''} bind:this={workspaceRoot}>
+<!-- Full viewport reader layout — immersive: fixed inset-0 z-40 fills viewport -->
+<section
+  class="flex flex-col bg-(--color-bg-deep) {isRotated ? 'rotate-1' : ''} {isFullscreen ? 'fixed inset-0 z-40 h-screen w-screen overflow-hidden bg-[#f8f5ec]' : 'h-screen'}"
+  style={isRotated ? 'transform: rotate(0.5deg);' : ''}
+  bind:this={workspaceRoot}
+>
   <ReaderHeader
     title={activeReadingBook?.title ?? ''}
     {showTocPanel}
@@ -1214,16 +1291,28 @@
     onToggleBookmarks={toggleBookmarks}
     onToggleFullscreen={toggleFullscreen}
     onToggleRotate={handleRotate}
+    currentPage={headerCurrentPage}
+    totalPages={headerTotalPages}
+    currentPercentage={bookProgress}
+    fontSizePercent={headerFontSize}
+    onPrev={goPrevPage}
+    onNext={goNextPage}
+    onGoToPage={handleHeaderGoToPage}
+    onFontSizeChange={handleHeaderFontSizeChange}
   />
-  <!-- Spacer for fixed header (h-16 = 64px) — collapses when header hidden in fullscreen -->
-  <div class="shrink-0 h-16" class:hidden={isFullscreen && !headerVisible} aria-hidden="true"></div>
+  <!-- Spacer for fixed header — in immersive header floats over content, so hide spacer for true 100vh -->
+  {#if !isFullscreen}
+    <div class="shrink-0 h-16" aria-hidden="true"></div>
+  {/if}
 
-  <!-- Reading area (centered, fill remaining space) -->
+  <!-- Reading area (centered, fill remaining space) — immersive pt accounts for unified header (h-16 + h-12) -->
   <div
     class="flex flex-1 min-h-0 items-stretch justify-center"
     class:px-10={!isFullscreen}
     class:py-6={!isFullscreen}
     class:p-0={isFullscreen}
+    class:pt-16={isFullscreen && headerVisible && !showHeaderReadingControls}
+    class:pt-28={isFullscreen && headerVisible && showHeaderReadingControls}
   >
     {#if getReaderError()}
       <p class="font-inter text-sm text-(--color-text-inverse)">{getReaderError()}</p>

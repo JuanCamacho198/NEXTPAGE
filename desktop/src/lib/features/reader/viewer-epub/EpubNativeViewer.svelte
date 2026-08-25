@@ -1966,28 +1966,30 @@
       {t('epub.error')}: {error}
     </div>
   {:else}
-    <!-- EpubControls top bar — TOC-based display (28) when TOC exists, else spine (31) -->
-    <EpubControls
-      currentPage={displayCurrentPage}
-      totalPages={displayTotal}
-      currentPercentage={displayPercentage}
-      {fontSize}
-      {isFullscreen}
-      {t}
-      onPrev={goToPrev}
-      onNext={goToNext}
-      onGoToPage={handleGoToPage}
-      onFontSizeChange={(size: number) => {
-        fontSize = size;
-        const updated: ReaderSettings = {
-          ...readerSettings,
-          epub: { ...readerSettings.epub, fontSize: size },
-        };
-        onSettingsChange?.(updated);
-      }}
-      onToggleFullscreen={() => onToggleFullscreen?.()}
-      onToggleToc={() => onToggleToc?.()}
-    />
+    {#if !isFullscreen}
+      <!-- EpubControls top bar — hidden in immersive (header owns the controls) -->
+      <EpubControls
+        currentPage={displayCurrentPage}
+        totalPages={displayTotal}
+        currentPercentage={displayPercentage}
+        {fontSize}
+        {isFullscreen}
+        {t}
+        onPrev={goToPrev}
+        onNext={goToNext}
+        onGoToPage={handleGoToPage}
+        onFontSizeChange={(size: number) => {
+          fontSize = size;
+          const updated: ReaderSettings = {
+            ...readerSettings,
+            epub: { ...readerSettings.epub, fontSize: size },
+          };
+          onSettingsChange?.(updated);
+        }}
+        onToggleFullscreen={() => onToggleFullscreen?.()}
+        onToggleToc={() => onToggleToc?.()}
+      />
+    {/if}
 
     <!-- Chapter iframe — parent scrolls, iframe grows to content height -->
     <div

@@ -1092,26 +1092,27 @@
 >
   <PdfLoadingOverlay {isLoading} {error} {loadProgress} {loadProgressMax} {t} />
 
-  <!-- The navigation controls (ReaderControls) auto-hide in fullscreen and
-       float over the content, revealing on hover at the top of the viewport. -->
-  <PdfControls
-    {currentPage}
-    {totalPages}
-    {scale}
-    {isFullscreen}
-    {showToc}
-    {isLoading}
-    {error}
-    {t}
-    onPrevPage={goToPrevPage}
-    onNextPage={goToNextPage}
-    onGoToPage={navigateToPage}
-    onSetScale={(s) => setScale(s)}
-    onToggleFullscreen={toggleFullscreen}
-    onToggleToc={() => {
-      showToc = !showToc;
-    }}
-  />
+  {#if !isFullscreen}
+    <!-- Navigation controls — hidden in immersive (header owns the controls) -->
+    <PdfControls
+      {currentPage}
+      {totalPages}
+      {scale}
+      {isFullscreen}
+      {showToc}
+      {isLoading}
+      {error}
+      {t}
+      onPrevPage={goToPrevPage}
+      onNextPage={goToNextPage}
+      onGoToPage={navigateToPage}
+      onSetScale={(s) => setScale(s)}
+      onToggleFullscreen={toggleFullscreen}
+      onToggleToc={() => {
+        showToc = !showToc;
+      }}
+    />
+  {/if}
 
   {#if navigationError}
     <p class="m-0 px-3 pt-2 text-red-600 text-xs" role="status" aria-live="polite">

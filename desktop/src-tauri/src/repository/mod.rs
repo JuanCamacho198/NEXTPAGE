@@ -1265,6 +1265,9 @@ mod tests {
         connection
             .execute_batch(include_str!("../../migrations/0014_reading_sessions_sync.sql"))
             .unwrap();
+        connection
+            .execute_batch(include_str!("../../migrations/0015_dictionary_sync.sql"))
+            .unwrap();
     }
 
     pub(crate) fn new_repository() -> LibraryRepository {

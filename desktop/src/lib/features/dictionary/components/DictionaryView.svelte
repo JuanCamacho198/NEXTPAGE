@@ -224,8 +224,8 @@
     <div class="flex min-h-[30vh] items-center justify-center">
       <EmptyState
         icon="search"
-        title={dictionaryState.words.length === 0 ? t('dictionary.emptyTitle') : t('dictionary.searchEmptyTitle') ?? t('home.highlightsEmptyTitle')}
-        description={dictionaryState.words.length === 0 ? t('dictionary.emptyDescription') : t('dictionary.searchEmptyDescription') ?? t('home.highlightsEmptyDescription')}
+        title={dictionaryState.words.length === 0 ? t('dictionary.emptyTitle') : t('home.highlightsEmptyTitle')}
+        description={dictionaryState.words.length === 0 ? t('dictionary.emptyDescription') : t('home.highlightsEmptyDescription')}
       />
     </div>
   {:else}

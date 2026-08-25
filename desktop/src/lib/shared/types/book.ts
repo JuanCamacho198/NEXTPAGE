@@ -86,6 +86,14 @@ export type DictionaryWordDto = {
   id: string;
   word: string;
   createdAt: string;
+  normalizedWord?: string | null;
+  userId?: string | null;
+  tags?: string[] | null;
+  isFavorite?: boolean | null;
+  srsStage?: number | null;
+  updatedAt?: string | null;
+  deletedAt?: string | null;
+  syncedAt?: string | null;
 };
 
 export type BookCoverDto = {

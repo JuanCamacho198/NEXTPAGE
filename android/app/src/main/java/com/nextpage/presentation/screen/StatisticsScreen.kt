@@ -47,6 +47,10 @@ import com.nextpage.presentation.viewmodel.StatisticsViewModel
 import com.nextpage.ui.components.atoms.NextPageEmptyState
 import com.nextpage.ui.components.atoms.NextPageErrorState
 import com.nextpage.ui.components.atoms.NextPageLoadingIndicator
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.components.molecules.NextPageSectionHeader
 import com.nextpage.ui.icons.NextPageIcons
@@ -120,7 +124,7 @@ fun StatisticsScreen(
 
             else -> {
                 item {
-                    SummarySection(uiState)
+                    StreakHeroSection(currentStreak = uiState.currentStreak)
                 }
 
                 item {
@@ -138,6 +142,46 @@ fun StatisticsScreen(
         }
 
         item { Spacer(modifier = Modifier.height(NextPageDimens.spacingMd)) }
+    }
+}
+
+@Composable
+private fun StreakHeroSection(currentStreak: Int) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(NextPageDimens.spacingMd),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 1.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 24.dp, horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.fire_streak))
+            LottieAnimation(
+                composition = composition,
+                modifier = Modifier.size(48.dp),
+                iterations = LottieConstants.IterateForever
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "$currentStreak",
+                style = MaterialTheme.typography.displayMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = stringResource(R.string.statistics_current_streak),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(R.string.statistics_days),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -426,7 +470,7 @@ private fun StatisticsScreenPreviewContent() {
                 )
             }
         }
-        item { SummarySection(uiState) }
+        item { StreakHeroSection(uiState.currentStreak) }
         item { ReadingActivitySection(uiState.weeklyActivity) }
         item { GoalsSection(uiState.goalProgress) }
         item { FavoriteGenresSection(uiState.favoriteGenres) }

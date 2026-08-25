@@ -236,6 +236,15 @@ fun ReaderScreen(
         }
     }
 
+    // ── Orientation restore on dispose ──
+    DisposableEffect(Unit) {
+        val activity = context as? Activity
+        val originalOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        onDispose {
+            activity?.let { it.requestedOrientation = originalOrientation }
+        }
+    }
+
     // ── Fullscreen: apply WindowInsetsController when state changes ──
     DisposableEffect(uiState.isFullscreen) {
         if (uiState.isFullscreen) {

@@ -307,6 +307,7 @@ private fun StreakStatCard(
     streakDays: Int,
     modifier: Modifier = Modifier
 ) {
+    val isZero = streakDays == 0
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(NextPageDimens.spacingSm),
@@ -324,14 +325,17 @@ private fun StreakStatCard(
             )
             LottieAnimation(
                 composition = composition,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier
+                    .size(24.dp)
+                    .then(if (isZero) Modifier else Modifier),
                 iterations = LottieConstants.IterateForever
             )
             Spacer(modifier = Modifier.height(NextPageDimens.spacingXs))
             Text(
                 text = "$streakDays",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = if (isZero) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = stringResource(R.string.home_streak_days),

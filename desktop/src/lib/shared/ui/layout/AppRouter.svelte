@@ -76,7 +76,7 @@
   -->
   <WelcomeScreen t={appState.t} />
 {:else if showSidebar}
-  <div class="flex h-full">
+  <div class="flex h-full flex-1 min-w-0">
     <AppSidebar
       activeRoute={navigationState.route}
       {navItems}

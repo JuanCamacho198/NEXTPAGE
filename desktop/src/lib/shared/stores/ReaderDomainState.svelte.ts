@@ -5,46 +5,20 @@ import {
   saveReadingSession,
   updateBookProgress,
   upsertProgress as upsertProgressCmd,
-  upsertRemoteReadingSessions as upsertRemoteReadingSessionsCmd,
-  upsertRemoteHighlights as upsertRemoteHighlightsCmd,
-  saveBookmark,
-  deleteBookmark,
-  saveHighlight,
-  deleteHighlight,
   setReadingStatus,
 } from '$lib/shared/api/tauriClient';
-import type {
-  ReaderBook,
-  ReadingSessionInput,
-  ReadingProgressDto,
-  SaveProgressInput,
-} from '$lib/shared/types';
+import type { ReaderBook, ReadingSessionInput, SaveProgressInput } from '$lib/shared/types';
 import { authState } from '$lib/stores/authState.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
 import type { SupabaseProgressRow } from '$lib/shared/sync/SupabaseProgressSync';
-
-function isScopeEnabled(scope: string): boolean {
-  try {
-    const raw = localStorage.getItem('sync.scopes');
-    if (!raw) return true;
-    const map = JSON.parse(raw) as Record<string, boolean>;
-    return map[scope] !== false;
-  } catch {
-    return true;
-  }
-}
+import { readerSyncState } from './ReaderSyncState.svelte';
+import { isValidSessionProgressEvent, MIN_SESSION_DURATION_SECONDS } from './readingSessionValidator';
 
 const outboxDao = new SyncOutboxDao();
 
-/**
- * D6 (SCEN-duration-1): sessions shorter than this are dropped entirely —
- * not stored locally, not enqueued. Single tunable constant.
- */
-const MIN_SESSION_DURATION_SECONDS = 30;
-
 class ReaderDomainState {
-  // ─── State ───
+  // ─── State (lifecycle only) ───
   activeReadingBookId = $state<string | null>(null);
   cfiLocation = $state('');
   percentage = $state(0);
@@ -52,14 +26,27 @@ class ReaderDomainState {
   preloadedBytes = $state<{ filePath: string; data: Uint8Array } | null>(null);
   readerError = $state<string | null>(null);
   isFullscreen = $state(false);
-  highlightsVersion = $state(0);
 
-  // ─── Callbacks ───
+  // Delegated version — sync owns the reactive bump
+  get highlightsVersion(): number {
+    return readerSyncState.highlightsVersion;
+  }
+  set highlightsVersion(v: number) {
+    readerSyncState.highlightsVersion = v;
+  }
+
   onStatsRefreshNeeded: ((bookId: string) => Promise<void>) | null = null;
   onPageChangeCallback: ((bookId: string, page: number, total: number) => void) | null = null;
 
-  // ─── Validation ───
+  // Expose sync appliedRemote for dedupe checks (read-only proxy)
+  get appliedRemote(): Map<string, string> {
+    return readerSyncState.appliedRemote;
+  }
 
+  // openEpoch stays in domain (lifecycle)
+  private openEpoch = 0;
+
+  // ─── Validation — delegated to validator ───
   isValidSessionProgressEvent(event: {
     startedAt: string;
     endedAt?: string;
@@ -67,53 +54,38 @@ class ReaderDomainState {
     startPercentage?: number;
     endPercentage?: number;
   }): boolean {
-    if (!event.endedAt || event.durationSeconds <= 0) return false;
+    return isValidSessionProgressEvent(event as never);
+  }
 
-    const startedAt = Date.parse(event.startedAt);
-    const endedAt = Date.parse(event.endedAt);
-    if (!Number.isFinite(startedAt) || !Number.isFinite(endedAt) || endedAt <= startedAt) {
-      return false;
-    }
-
-    const percentages = [event.startPercentage, event.endPercentage].filter(
-      (value): value is number => typeof value === 'number',
-    );
-
-    return percentages.every((value) => value >= 0 && value <= 100);
+  // ─── Sync hooks wiring ───
+  constructor() {
+    readerSyncState.injectDomainHooks({
+      applyRemoteProgress: (p) => this.applyRemoteProgress(p),
+      getActiveReadingBookId: () => this.activeReadingBookId,
+      onStatsRefreshNeeded: () => this.onStatsRefreshNeeded,
+    });
   }
 
   // ─── Reading lifecycle ───
-
   async startReading(book: ReaderBook): Promise<void> {
     const epoch = ++this.openEpoch;
     this.activeReadingBookId = book.id;
     this.preloadedBytes = null;
-
-    // Persist the lifecycle transition before reader data becomes available.
-    // This keeps a zero-progress start visible in Continue Reading.
     await setReadingStatus(book.id, 'reading').catch(() => {});
-
     const format = book.format.toLowerCase();
     console.warn('[continue] startReading book', book.id, 'epoch', epoch, 'format', format);
-
-    // Start preloading file data
     if (format === 'epub' || format === 'pdf') {
       readFile(book.filePath)
         .then((bytes) => {
           this.preloadedBytes = { filePath: book.filePath, data: bytes };
         })
-        .catch(() => {
-          // Preload failed silently
-        });
+        .catch(() => {});
     }
-
     if (format === 'pdf') {
-      // Kick off PDF streaming cache
       import('$lib/features/reader/viewer-pdf/pdfStreaming').then(({ createPdfDocument }) => {
         void createPdfDocument(book.filePath).catch(() => {});
       });
     }
-
     if (format === 'epub') {
       try {
         const progress = await getProgress(book.id);
@@ -142,8 +114,8 @@ class ReaderDomainState {
         this.percentage = 0;
       }
       if (authState.userId) {
-        const sync = this.supabaseSync ?? new SupabaseProgressSync(authState.userId);
-        this.supabaseSync = sync;
+        const sync = readerSyncState.getSupabaseSync() ?? new SupabaseProgressSync(authState.userId);
+        if (!readerSyncState.getSupabaseSync()) readerSyncState.setSupabaseSync(sync);
         const localUpdatedAt = await getProgress(book.id)
           .then((value) => value?.updatedAt ?? null)
           .catch(() => null);
@@ -155,147 +127,17 @@ class ReaderDomainState {
           'localUpdatedAt',
           localUpdatedAt,
         );
-        void this.fetchAndApplyBookState(sync, book.id, epoch, localUpdatedAt);
+        void readerSyncState.fetchAndApplyBookState(sync, book.id, epoch, localUpdatedAt, () => epoch !== this.openEpoch || this.activeReadingBookId !== book.id);
       }
-    }
-  }
-
-  private async fetchAndApplyBookState(
-    sync: SupabaseProgressSync,
-    bookId: string,
-    epoch: number,
-    localUpdatedAt: string | null,
-  ): Promise<void> {
-    try {
-      const remote = await sync.fetchBookState(bookId);
-      if (epoch !== this.openEpoch || this.activeReadingBookId !== bookId) {
-        console.warn(
-          '[continue] remote progress stale epoch',
-          epoch,
-          'current',
-          this.openEpoch,
-          'activeBook',
-          this.activeReadingBookId,
-          'bookId',
-          bookId,
-        );
-        return;
-      }
-      console.warn(
-        '[continue] remote progress fetched book',
-        bookId,
-        'remote',
-        remote.progress?.cfiLocation?.slice(0, 60) ?? '(null)',
-        remote.progress?.percentage ?? '(null)',
-        'updatedAt',
-        remote.progress?.updatedAt ?? '(null)',
-        'localUpdatedAt',
-        localUpdatedAt,
-        'epoch',
-        epoch,
-      );
-      if (
-        remote.progress &&
-        (!localUpdatedAt || Date.parse(remote.progress.updatedAt) > Date.parse(localUpdatedAt))
-      ) {
-        console.warn(
-          '[continue] remote progress applied book',
-          bookId,
-          'cfi',
-          remote.progress.cfiLocation.slice(0, 60),
-          'pct',
-          remote.progress.percentage,
-          'epoch',
-          epoch,
-        );
-        this.applyRemoteProgress(remote.progress);
-      } else if (remote.progress) {
-        console.warn('[continue] remote progress ignored (older than local)', bookId, 'epoch', epoch);
-      }
-      for (const bookmark of remote.bookmarks) {
-        this.appliedRemote.set(
-          `bookmark:${bookmark.id ?? bookmark.cfiLocation}`,
-          bookmark.updatedAt,
-        );
-        if (bookmark.deletedAt && bookmark.id) {
-          void deleteBookmark(bookmark.id);
-        } else {
-          void saveBookmark({
-            id: bookmark.id ?? crypto.randomUUID(),
-            bookId: bookmark.bookId,
-            // EPUB bookmarks are anchored by CFI (no real page); use 1 as the
-            // minimum-valid placeholder instead of 0 (page 0 is not a real page).
-            pageNumber: 1,
-            title: bookmark.titleSnippet ?? undefined,
-            createdAt: bookmark.updatedAt,
-          });
-        }
-      }
-      for (const highlight of remote.highlights) {
-        this.appliedRemote.set(
-          `highlight:${highlight.id ?? highlight.cfiRange}`,
-          highlight.updatedAt,
-        );
-        try {
-          if (highlight.deletedAt && highlight.id) {
-            await deleteHighlight(highlight.id);
-          } else {
-            // Supabase `page` is nullable and EPUB chapter indices are 0-based,
-            // so a null/zero page must never crash the pull (the positive-page
-            // validation in tauriClient would otherwise throw and abort every
-            // subsequent highlight). Fall back to a safe value per format.
-            const rawPage = highlight.page ?? 0;
-            const pageNumber =
-              Number.isInteger(rawPage) && rawPage > 0 ? rawPage : highlight.cfiRange ? 1 : 1;
-            await saveHighlight({
-              id: highlight.id ?? crypto.randomUUID(),
-              bookId: highlight.bookId,
-              text: highlight.textContent,
-              color: highlight.color,
-              pageNumber,
-              rectLeft: 0,
-              rectRight: 0,
-              rectTop: 0,
-              rectBottom: 0,
-              cfi: highlight.cfiRange || null,
-              note: highlight.note,
-            });
-          }
-        } catch (err) {
-          console.warn('Failed to apply remote highlight locally:', err);
-        }
-      }
-      if (remote.highlights.length > 0) {
-        console.warn(
-          '[highlights] fetchAndApplyBookState applied',
-          remote.highlights.length,
-          'highlights for book',
-          bookId.slice(0, 4),
-          'bumping highlightsVersion',
-        );
-        this.highlightsVersion++;
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('highlights:changed', { detail: { bookId } }));
-        }
-      }
-    } catch {
-      // Offline-first: local state and the existing outbox remain usable.
     }
   }
 
   private applyRemoteProgress(progress: SupabaseProgressRow): void {
-    console.warn(
-      '[continue] applyRemoteProgress book',
-      progress.bookId,
-      'cfi',
-      progress.cfiLocation.slice(0, 60),
-      'pct',
-      progress.percentage,
-    );
+    console.warn('[continue] applyRemoteProgress book', progress.bookId, 'cfi', progress.cfiLocation.slice(0, 60), 'pct', progress.percentage);
     this.cfiLocation = progress.cfiLocation;
     this.percentage = progress.percentage;
     this.locatorJson = progress.locatorJson ?? null;
-    this.appliedRemote.set(`progress:${progress.bookId}`, progress.updatedAt);
+    readerSyncState.appliedRemote.set(`progress:${progress.bookId}`, progress.updatedAt);
     void upsertProgressCmd({
       id: progress.id ?? crypto.randomUUID(),
       bookId: progress.bookId,
@@ -306,29 +148,13 @@ class ReaderDomainState {
   }
 
   // ─── Progress ───
-
-  async handleEpubLocationChange(
-    bookId: string,
-    nextLocation: string,
-    nextPercentage: number,
-  ): Promise<void> {
+  async handleEpubLocationChange(bookId: string, nextLocation: string, nextPercentage: number): Promise<void> {
     this.cfiLocation = nextLocation;
     this.percentage = Math.max(0, Math.min(100, nextPercentage));
-
-    const payload: SaveProgressInput = {
-      bookId,
-      cfiLocation: nextLocation,
-      percentage: this.percentage,
-    };
-
+    const payload: SaveProgressInput = { bookId, cfiLocation: nextLocation, percentage: this.percentage };
     try {
       await saveProgress(payload);
       await setReadingStatus(bookId, this.percentage >= 100 ? 'completed' : 'reading');
-
-      // If signed in, queue Supabase sync via outbox. Coalesced enqueue (D5,
-      // SR-4.1): one IPC per location change, transactional UPDATE-else-INSERT
-      // per (user_id, book_id) with the latest client updatedAt winning (D6) —
-      // the per-location-change flood collapses to a single outbox row.
       if (authState.userId) {
         const outboxPayload = {
           userId: authState.userId,
@@ -338,48 +164,26 @@ class ReaderDomainState {
           locatorJson: this.locatorJson,
           updatedAt: new Date().toISOString(),
         };
-        void outboxDao.addCoalesced(
-          'READING_PROGRESS',
-          bookId,
-          'UPSERT',
-          JSON.stringify(outboxPayload),
-        );
+        void outboxDao.addCoalesced('READING_PROGRESS', bookId, 'UPSERT', JSON.stringify(outboxPayload));
       }
-    } catch {
-      // Keep UI usable even when save fails
-    }
-
+    } catch {}
     void this.onStatsRefreshNeeded?.(bookId);
   }
 
   async handlePdfPageChange(bookId: string, page: number, total: number): Promise<void> {
     this.onPageChangeCallback?.(bookId, page, total);
-
     try {
       await updateBookProgress(bookId, page);
-    } catch {
-      // Keep reader responsive
-    }
-
+    } catch {}
     void this.onStatsRefreshNeeded?.(bookId);
   }
 
   async handlePdfSessionProgress(
     bookId: string,
-    event: {
-      startedAt: string;
-      endedAt?: string;
-      durationSeconds: number;
-      startPercentage?: number;
-      endPercentage?: number;
-    },
+    event: { startedAt: string; endedAt?: string; durationSeconds: number; startPercentage?: number; endPercentage?: number },
   ): Promise<void> {
-    // D6 (SCEN-duration-1): drop sub-30s sessions BEFORE validation — they are
-    // neither stored nor enqueued (the flush-side gate would no-op anyway).
     if (event.durationSeconds < MIN_SESSION_DURATION_SECONDS) return;
-
     if (!this.isValidSessionProgressEvent(event)) return;
-
     const payload: ReadingSessionInput = {
       bookId,
       startedAt: event.startedAt,
@@ -389,16 +193,9 @@ class ReaderDomainState {
       endPercentage: event.endPercentage,
       userId: authState.userId ?? '',
     };
-
     try {
       const saved = await saveReadingSession(payload);
       void this.onStatsRefreshNeeded?.(bookId);
-
-      // D9 (SCEN-push-1/5): enqueue AFTER the local save succeeded. Plain
-      // add() — NEVER addCoalescedSyncOutboxItem (bookId-keyed coalesce would
-      // collapse distinct sessions into one remote row). The local row is
-      // already safe, so an enqueue failure is logged and swallowed — never
-      // a throw that could mask the successful save.
       const outboxPayload = {
         id: saved.id,
         bookId,
@@ -416,9 +213,7 @@ class ReaderDomainState {
       } catch (enqueueError) {
         console.error('Failed to enqueue reading session for sync:', enqueueError);
       }
-    } catch {
-      // Non-blocking
-    }
+    } catch {}
   }
 
   handleReaderLocationContext(ctx?: unknown): void {
@@ -427,389 +222,25 @@ class ReaderDomainState {
     this.locatorJson = typeof locator === 'string' ? locator : null;
   }
 
-  // ─── Realtime subscription (cross-device sync) ───
+  // ─── Sync delegation (thin) ───
+  subscribeToRemoteProgress(): void { readerSyncState.subscribeToRemoteProgress(); }
+  subscribeToRemoteBookmarks(): void { readerSyncState.subscribeToRemoteBookmarks(); }
+  subscribeToRemoteHighlights(): void { readerSyncState.subscribeToRemoteHighlights(); }
+  subscribeToRemoteSessions(): void { readerSyncState.subscribeToRemoteSessions(); }
+  unsubscribeFromRemoteProgress(): void { readerSyncState.unsubscribeFromRemoteProgress(); }
+  unsubscribeFromRemoteBookmarks(): void { readerSyncState.unsubscribeFromRemoteBookmarks(); }
+  unsubscribeFromRemoteHighlights(): void { readerSyncState.unsubscribeFromRemoteHighlights(); }
+  unsubscribeFromRemoteSessions(): void { readerSyncState.unsubscribeFromRemoteSessions(); }
+  refreshRemoteProgressSubscription(): void { readerSyncState.refreshRemoteProgressSubscription(); }
+  subscribeToAllRemoteChanges(): void { readerSyncState.subscribeToAllRemoteChanges(); }
+  unsubscribeFromAllRemoteChanges(): void { readerSyncState.unsubscribeFromAllRemoteChanges(); }
 
-  private supabaseSync: SupabaseProgressSync | null = null;
-  private unsubscribeRemote: (() => void) | null = null;
-  private unsubscribeRemoteBookmarks: (() => void) | null = null;
-  private unsubscribeRemoteHighlights: (() => void) | null = null;
-  private unsubscribeRemoteSessions: (() => void) | null = null;
-  private highlightPullInFlight = false;
-  private openEpoch = 0;
-  private appliedRemote = new Map<string, string>();
+  // For tests / compat: expose sync internals
+  get _sync(): typeof readerSyncState { return readerSyncState; }
 
-  /**
-   * Start listening for reading_progress changes from Supabase Realtime.
-   * When remote progress arrives, upsert into local SQLite.
-   * If the user is currently reading the same book, update in-memory state.
-   */
-  subscribeToRemoteProgress(): void {
-    // Already subscribed
-    if (this.unsubscribeRemote) return;
-    // Need authenticated user
-    if (!authState.userId) return;
-
-    try {
-      this.supabaseSync = new SupabaseProgressSync(authState.userId);
-
-      this.unsubscribeRemote = this.supabaseSync.subscribeToProgress((payload) => {
-        const { bookId, cfiLocation, percentage, updatedAt } = payload;
-        const key = `progress:${bookId}`;
-        const previous = this.appliedRemote.get(key);
-        if (previous && Date.parse(updatedAt) <= Date.parse(previous)) return;
-        this.appliedRemote.set(key, updatedAt);
-
-        // Upsert the remote progress into local SQLite
-        const progressInput: ReadingProgressDto = {
-          id: payload.id ?? crypto.randomUUID(),
-          bookId: bookId,
-          cfiLocation: cfiLocation,
-          percentage,
-          updatedAt: updatedAt,
-        };
-        upsertProgressCmd(progressInput).catch((e) => {
-          console.error('Failed to apply remote progress locally:', e);
-        });
-
-        // If the user is currently reading this book, update in-memory state
-        if (this.activeReadingBookId === bookId) {
-          this.applyRemoteProgress(payload);
-        }
-      });
-    } catch (e) {
-      console.error('Failed to subscribe to remote progress:', e);
-    }
-  }
-
-  /**
-   * Subscribe to Realtime changes for bookmarks.
-   * When remote bookmark changes arrive, upsert/delete into local SQLite.
-   */
-  subscribeToRemoteBookmarks(): void {
-    if (this.unsubscribeRemoteBookmarks) return;
-    if (!authState.userId) return;
-
-    try {
-      if (!this.supabaseSync) {
-        this.supabaseSync = new SupabaseProgressSync(authState.userId);
-      }
-
-      this.unsubscribeRemoteBookmarks = this.supabaseSync.subscribeToBookmarks((payload) => {
-        const { id, bookId, titleSnippet, deletedAt, updatedAt } = payload;
-        const key = `bookmark:${id ?? payload.cfiLocation}`;
-        const previous = this.appliedRemote.get(key);
-        if (previous && Date.parse(updatedAt) <= Date.parse(previous)) return;
-        this.appliedRemote.set(key, updatedAt);
-
-        if (deletedAt) {
-          // Soft-delete: propagate tombstone
-          deleteBookmark(id ?? '').catch((e) => {
-            console.error('Failed to apply remote bookmark delete locally:', e);
-          });
-        } else {
-          saveBookmark({
-            id: id ?? crypto.randomUUID(),
-            bookId: bookId,
-            // EPUB bookmarks are anchored by CFI (no real page); use 1 as the
-            // minimum-valid placeholder instead of 0 (page 0 is not a real page).
-            pageNumber: 1,
-            title: titleSnippet ?? undefined,
-            createdAt: updatedAt,
-          }).catch((e) => {
-            console.error('Failed to apply remote bookmark locally:', e);
-          });
-        }
-      });
-    } catch (e) {
-      console.error('Failed to subscribe to remote bookmarks:', e);
-    }
-  }
-
-  /**
-   * Subscribe to Realtime changes for highlights.
-   * (1) Initial pull: fetch all remote highlights for the user and merge them
-   * into local SQLite in 500-row chunks via the Rust LWW command (DHR-1, DHR-5).
-   * Single-flight guard `highlightPullInFlight` ensures exactly one pull per
-   * sign-in cycle; reset only on unsubscribe (mirrors sessions pattern).
-   * (2) Realtime: on each remote change, upsert/delete into local SQLite.
-   */
-  subscribeToRemoteHighlights(): void {
-    if (this.unsubscribeRemoteHighlights) return;
-    if (!authState.userId) return;
-
-    try {
-      if (!this.supabaseSync) {
-        this.supabaseSync = new SupabaseProgressSync(authState.userId);
-      }
-
-      // (1) Initial pull — bulk reconciliation (DHR-1..5, WS2)
-      if (!this.highlightPullInFlight) {
-        this.highlightPullInFlight = true;
-        void this.supabaseSync
-          .fetchAllHighlightsForPull()
-          .then((rows) => {
-            if (rows.length > 0) {
-              console.warn('[highlights] initial pull fetched', rows.length, 'rows');
-            }
-            const chunkSize = 500;
-            for (let i = 0; i < rows.length; i += chunkSize) {
-              const chunk = rows.slice(i, i + chunkSize);
-              void upsertRemoteHighlightsCmd(chunk)
-                .then(() => {
-                  // Seed dedupe map post-chunk so late realtime duplicates are dropped (DHR-5)
-                  for (const h of chunk) {
-                    const iso = new Date(h.updatedAtEpochMillis).toISOString();
-                    this.appliedRemote.set(`highlight:${h.id}`, iso);
-                  }
-                  if (chunk.length > 0) {
-                    this.highlightsVersion++;
-                    if (typeof window !== 'undefined') {
-                      window.dispatchEvent(new CustomEvent('highlights:changed', { detail: { source: 'pull' } }));
-                    }
-                  }
-                })
-                .catch((e) => {
-                  console.error('Failed to apply remote highlights locally:', e);
-                });
-            }
-          })
-          .catch((e) => {
-            console.error('Failed to fetch remote highlights:', e);
-          });
-      }
-
-      this.unsubscribeRemoteHighlights = this.supabaseSync.subscribeToHighlights((payload) => {
-        const { id, bookId, cfiRange, textContent, note, color, deletedAt, page } = payload;
-        const key = `highlight:${id ?? cfiRange}`;
-        const previous = this.appliedRemote.get(key);
-        if (previous && Date.parse(payload.updatedAt) <= Date.parse(previous)) return;
-        this.appliedRemote.set(key, payload.updatedAt);
-
-        const bump = (): void => {
-          this.highlightsVersion++;
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('highlights:changed', { detail: { bookId } }));
-          }
-        };
-
-        if (deletedAt) {
-          deleteHighlight(id ?? '')
-            .then(bump)
-            .catch((e) => {
-              console.error('Failed to apply remote highlight delete locally:', e);
-            });
-        } else {
-          // Page anchoring is format-aware (single pipeline, anchor per format):
-          // - PDF highlights carry a real, positive `page` from Supabase.
-          // - EPUB highlights are anchored by CFI (`cfiRange`), not a page, so
-          //   Supabase `page` is null. Match the local EPUB reader fallback
-          //   (`pageNumber ?? 1`, see ReaderWorkspace.handleColorSelect) instead
-          //   of passing 0, which normalizePageNumber rejects (must be > 0).
-          const pageNumber =
-            typeof page === 'number' && Number.isInteger(page) && page > 0 ? page : 1;
-          saveHighlight({
-            id: id ?? crypto.randomUUID(),
-            bookId: bookId,
-            text: textContent,
-            color: color,
-            pageNumber,
-            rectLeft: 0,
-            rectRight: 0,
-            rectTop: 0,
-            rectBottom: 0,
-            cfi: cfiRange || null,
-            note: note,
-          })
-            .then(bump)
-            .catch((e) => {
-              console.error('Failed to apply remote highlight locally:', e);
-            });
-        }
-      });
-    } catch (e) {
-      console.error('Failed to subscribe to remote highlights:', e);
-    }
-  }
-
-  /**
-   * Subscribe to Realtime changes for reading sessions (4th channel, D14).
-   * (1) Initial pull: fetch all remote sessions for the user and merge them
-   * into local SQLite in 500-row chunks via the Rust LWW command (D11).
-   * (2) Realtime: on each remote INSERT/UPDATE, merge the single row and
-   * refresh stats/streak for the affected book (REQ-refresh).
-   */
-  subscribeToRemoteSessions(): void {
-    if (this.unsubscribeRemoteSessions) return;
-    if (!authState.userId) return;
-
-    try {
-      if (!this.supabaseSync) {
-        this.supabaseSync = new SupabaseProgressSync(authState.userId);
-      }
-
-      // (1) Initial pull — merge the full remote set in chunks of 500.
-      void this.supabaseSync
-        .fetchReadingSessions()
-        .then((rows) => {
-          const chunkSize = 500;
-          for (let i = 0; i < rows.length; i += chunkSize) {
-            const chunk = rows.slice(i, i + chunkSize);
-            void upsertRemoteReadingSessionsCmd(chunk).catch((e) => {
-              console.error('Failed to apply remote reading sessions locally:', e);
-            });
-          }
-        })
-        .catch((e) => {
-          console.error('Failed to fetch remote reading sessions:', e);
-        });
-
-      // (2) Realtime — merge each remote row as it arrives.
-      this.unsubscribeRemoteSessions = this.supabaseSync.subscribeToReadingSessions((row) => {
-        void upsertRemoteReadingSessionsCmd([row])
-          .then(() => {
-            void this.onStatsRefreshNeeded?.(row.bookId);
-          })
-          .catch((e) => {
-            console.error('Failed to apply remote reading session locally:', e);
-          });
-      });
-    } catch (e) {
-      console.error('Failed to subscribe to remote reading sessions:', e);
-    }
-  }
-
-  private maybeClearSupabaseSync(): void {
-    if (
-      !this.unsubscribeRemote &&
-      !this.unsubscribeRemoteBookmarks &&
-      !this.unsubscribeRemoteHighlights &&
-      !this.unsubscribeRemoteSessions
-    ) {
-      if (this.supabaseSync) {
-        try {
-          this.supabaseSync.destroy();
-        } catch {
-          /* ignore */
-        }
-        this.supabaseSync = null;
-      }
-    }
-  }
-
-  /**
-    * Stop the Realtime subscription for progress. Call on logout or dispose.
-    */
-  unsubscribeFromRemoteProgress(): void {
-    try {
-      this.unsubscribeRemote?.();
-    } catch {
-      /* ignore */
-    }
-    this.unsubscribeRemote = null;
-    this.maybeClearSupabaseSync();
-  }
-
-  /**
-    * Stop the Realtime subscription for bookmarks.
-    */
-  unsubscribeFromRemoteBookmarks(): void {
-    try {
-      this.unsubscribeRemoteBookmarks?.();
-    } catch {
-      /* ignore */
-    }
-    this.unsubscribeRemoteBookmarks = null;
-    this.maybeClearSupabaseSync();
-  }
-
-  /**
-    * Stop the Realtime subscription for highlights.
-    */
-  unsubscribeFromRemoteHighlights(): void {
-    try {
-      this.unsubscribeRemoteHighlights?.();
-    } catch {
-      /* ignore */
-    }
-    this.unsubscribeRemoteHighlights = null;
-    this.highlightPullInFlight = false;
-    this.maybeClearSupabaseSync();
-  }
-
-  /**
-    * Stop the Realtime subscription for reading sessions.
-    */
-  unsubscribeFromRemoteSessions(): void {
-    try {
-      this.unsubscribeRemoteSessions?.();
-    } catch {
-      /* ignore */
-    }
-    this.unsubscribeRemoteSessions = null;
-    this.maybeClearSupabaseSync();
-  }
-
-  /**
-   * Re-subscribe all — useful when userId changes (login/logout cycle).
-   */
-  refreshRemoteProgressSubscription(): void {
-    this.unsubscribeFromRemoteProgress();
-    this.subscribeToRemoteProgress();
-  }
-
-  /**
-   * Re-subscribe all Realtime channels — call on login.
-   * Respects per-scope toggles from localStorage sync.scopes.
-   */
-  subscribeToAllRemoteChanges(): void {
-    if (isScopeEnabled('progress')) this.subscribeToRemoteProgress();
-    if (isScopeEnabled('bookmarks')) this.subscribeToRemoteBookmarks();
-    if (isScopeEnabled('highlights')) this.subscribeToRemoteHighlights();
-    if (isScopeEnabled('sessions')) this.subscribeToRemoteSessions();
-  }
-
-  /**
-    * Unsubscribe from all Realtime channels — call on logout.
-    * Ensures every channel is removed from the Supabase client via
-    * `removeChannel`, not just `unsubscribe`.
-    */
-  unsubscribeFromAllRemoteChanges(): void {
-    try {
-      this.unsubscribeRemote?.();
-    } catch {
-      /* ignore */
-    }
-    this.unsubscribeRemote = null;
-    try {
-      this.unsubscribeRemoteBookmarks?.();
-    } catch {
-      /* ignore */
-    }
-    this.unsubscribeRemoteBookmarks = null;
-    try {
-      this.unsubscribeRemoteHighlights?.();
-    } catch {
-      /* ignore */
-    }
-    this.unsubscribeRemoteHighlights = null;
-    this.highlightPullInFlight = false;
-    try {
-      this.unsubscribeRemoteSessions?.();
-    } catch {
-      /* ignore */
-    }
-    this.unsubscribeRemoteSessions = null;
-    if (this.supabaseSync) {
-      try {
-        this.supabaseSync.destroy();
-      } catch {
-        /* ignore */
-      }
-      this.supabaseSync = null;
-    }
-  }
-
-  // ─── Reset ───
+  // highlightPullInFlight proxy
+  get highlightPullInFlight(): boolean { return readerSyncState.highlightPullInFlight; }
+  set highlightPullInFlight(v: boolean) { readerSyncState.highlightPullInFlight = v; }
 
   resetReader(): void {
     this.openEpoch += 1;

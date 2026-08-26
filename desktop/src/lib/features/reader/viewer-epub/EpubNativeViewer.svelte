@@ -64,16 +64,16 @@
     tocIndexForSpine: (i: number, href?: string) => spine.tocIndexForSpine(i, href),
   });
 
-  let fontSize = $state(100); let fontFamily = $state('serif'); let themeMode = $state<ReaderThemeMode>('paper');
-  let lineHeight = $state(1.8); let letterSpacing = $state(0); let paragraphSpacing = $state(1);
-  let textAlign = $state<ReaderTextAlign>('left'); let direction = $state<ReaderDirection>('ltr');
-  let hyphenation = $state(false); let margins = $state<ReaderSettings['margins']>({ top: 1.5, bottom: 1.5, left: 2, right: 2 });
-  $effect(() => {
-    fontSize = readerSettings.epub.fontSize ?? 100; fontFamily = readerSettings.epub.fontFamily?.trim() || 'serif';
-    themeMode = readerSettings.themeMode; lineHeight = readerSettings.lineHeight; letterSpacing = readerSettings.letterSpacing;
-    paragraphSpacing = readerSettings.paragraphSpacing; textAlign = readerSettings.textAlign;
-    direction = readerSettings.direction; hyphenation = readerSettings.hyphenation; margins = readerSettings.margins;
-  });
+  let fontSize = $derived(readerSettings.epub.fontSize ?? 100);
+  let fontFamily = $derived(readerSettings.epub.fontFamily?.trim() || 'serif');
+  let themeMode: ReaderThemeMode = $derived(readerSettings.themeMode);
+  let lineHeight = $derived(readerSettings.lineHeight);
+  let letterSpacing = $derived(readerSettings.letterSpacing);
+  let paragraphSpacing = $derived(readerSettings.paragraphSpacing);
+  let textAlign: ReaderTextAlign = $derived(readerSettings.textAlign);
+  let direction: ReaderDirection = $derived(readerSettings.direction);
+  let hyphenation = $derived(readerSettings.hyphenation);
+  let margins = $derived(readerSettings.margins);
 
   let currentSpineIndex = $derived(navigation.currentSpineIndex);
   let displayTotal = $derived.by(() => { const t = spine.getToc().length; return t > 0 ? t : totalChapters; });
@@ -94,7 +94,10 @@
 
   const zoomTheme = createEpubZoomTheme({
     getZoomContainerEl: () => zoomContainerEl, getReaderSettings: () => readerSettings,
-    onSettingsChange, getFontSize: () => fontSize, setFontSize: (v) => (fontSize = v), getThemeMode: () => themeMode,
+    onSettingsChange, getFontSize: () => fontSize, setFontSize: (v) => {
+      const updated: ReaderSettings = { ...readerSettings, epub: { ...readerSettings.epub, fontSize: v } };
+      onSettingsChange?.(updated);
+    }, getThemeMode: () => themeMode,
   });
 
   const render = createEpubRender({
@@ -155,6 +158,9 @@
   export function goToChapter(index: number): void { navigation.goToChapter(index); }
   export async function handleGoToPage(page: number): Promise<boolean> { return navigation.handleGoToPage(page); }
   export function setZoom(percent: number): void { zoomTheme.setZoom(percent); }
+  export function getCurrentPage(): number { return displayCurrentPage; }
+  export function getTotalForHeader(): number { return displayTotal; }
+  export function getTotalPages(): number { return displayTotal; }
   function changeZoom(delta: number): void { zoomTheme.changeZoom(delta); }
   function getThemeBgColor(): string { return zoomTheme.getThemeBgColor(); }
 
@@ -190,7 +196,7 @@
     <div class="flex items-center justify-center h-full text-sm text-red-600 px-4 text-center">{t('epub.error')}: {error}</div>
   {:else}
     {#if !isFullscreen}
-      <EpubControls currentPage={displayCurrentPage} totalPages={displayTotal} currentPercentage={displayPercentage} {fontSize} {isFullscreen} {t} onPrev={goToPrev} onNext={goToNext} onGoToPage={handleGoToPage} onFontSizeChange={(size: number) => { fontSize = size; const updated: ReaderSettings = { ...readerSettings, epub: { ...readerSettings.epub, fontSize: size } }; onSettingsChange?.(updated); }} onToggleFullscreen={() => onToggleFullscreen?.()} onToggleToc={() => onToggleToc?.()} />
+      <EpubControls currentPage={displayCurrentPage} totalPages={displayTotal} currentPercentage={displayPercentage} {fontSize} {isFullscreen} {t} onPrev={goToPrev} onNext={goToNext} onGoToPage={handleGoToPage} onFontSizeChange={(size: number) => { const updated: ReaderSettings = { ...readerSettings, epub: { ...readerSettings.epub, fontSize: size } }; onSettingsChange?.(updated); }} onToggleFullscreen={() => onToggleFullscreen?.()} onToggleToc={() => onToggleToc?.()} />
     {/if}
     <div class="flex-1 w-full min-h-0 overflow-y-auto pb-16" style="background: {getThemeBgColor()};" bind:this={zoomContainerEl} onscroll={emitPreciseLocation}>
       <iframe bind:this={iframeEl} class="w-full border-none block" class:outline-2={debugState.enabled} class:outline-dashed={debugState.enabled} class:outline-red-500={debugState.enabled} style:height={iframeContentHeight > 0 ? `${iframeContentHeight}px` : 'auto'} title="chapter"></iframe>

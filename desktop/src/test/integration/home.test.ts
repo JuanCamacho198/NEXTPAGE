@@ -9,7 +9,7 @@ import type {
   ReadingStatsSummaryDto,
   ReaderSettings,
   SearchBookTextResponse,
-} from '$lib/types';
+} from '$lib/shared/types';
 
 const { tauriClientMock, pickFileMock, pickFolderMock, importBookMock } = vi.hoisted(() => {
   return {

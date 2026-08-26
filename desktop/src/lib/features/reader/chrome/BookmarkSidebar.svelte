@@ -17,7 +17,7 @@
 
   let { bookmarksPanel, activeReadingBook, currentPage, currentChapter, t }: Props = $props();
 
-  const isEpub = $derived(activeReadingBook?.format?.toLowerCase() === 'epub');
+  const epubActive = $derived(activeReadingBook?.format ? String(activeReadingBook.format).toLowerCase() === 'epub' : false);
 
   // Load bookmarks when panel opens
   $effect(() => {
@@ -63,7 +63,7 @@
             onclick={() => {
               void bookmarksPanel.bookmarksState.addBookmark(
                 activeReadingBook.id,
-                isEpub ? currentChapter + 1 : currentPage || 1,
+                epubActive ? currentChapter + 1 : currentPage || 1,
                 { cfiLocation: readerState.cfiLocation, locatorJson: readerState.locatorJson },
               );
               bookmarksPanel.triggerBookmarkRibbon();

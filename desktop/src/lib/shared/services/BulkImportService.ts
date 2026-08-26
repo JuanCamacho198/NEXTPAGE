@@ -6,7 +6,7 @@ import {
   type BulkImportItemResult,
   type BulkImportSummary,
   type ScannedFile,
-} from '$lib/types';
+} from '$lib/shared/types';
 
 export type BulkImportProgress = {
   summary: BulkImportSummary;

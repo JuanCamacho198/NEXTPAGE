@@ -30,7 +30,7 @@ import type {
   ReaderSettings,
   ReaderThemeMode,
   DiagnoseResult,
-} from '$lib/types';
+} from '$lib/shared/types';
 import {
   UI_LOCALE_SETTING_KEY,
   READER_THEME_MODE_SETTING_KEY,
@@ -55,9 +55,9 @@ import {
   READER_SHOW_FOOTER_SETTING_KEY,
   READER_SHOW_PAGE_NUMBERS_SETTING_KEY,
   READER_PROGRESS_INDICATOR_SETTING_KEY,
-} from '$lib/types';
+} from '$lib/shared/types';
 
-import type { ReaderTextAlign, ReaderDirection, ReaderProgressIndicator } from '$lib/types';
+import type { ReaderTextAlign, ReaderDirection, ReaderProgressIndicator } from '$lib/shared/types';
 
 type MaybeCommandError = Error & { commandError?: CommandErrorDto };
 

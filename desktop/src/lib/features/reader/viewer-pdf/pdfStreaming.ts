@@ -1,7 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import type { PDFDocumentProxy, PDFDocumentLoadingTask } from 'pdfjs-dist';
 import { getFileBytes } from '$lib/shared/api/tauriClient';
-import type { PdfOutlineItem } from '$lib/types';
+import type { PdfOutlineItem } from '$lib/shared/types';
 
 // ──────────────────────────────────────────
 // 1. Document Cache

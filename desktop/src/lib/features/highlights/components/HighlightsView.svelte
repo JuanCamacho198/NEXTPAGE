@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { HighlightDto } from '$lib/types';
+  import type { HighlightDto } from '$lib/shared/types';
   import {
     listHighlights,
     deleteHighlight,
@@ -8,7 +8,7 @@
     listTags,
     listTagsForHighlight,
   } from '$lib/shared/api/tauriClient';
-  import type { TagDto } from '$lib/types';
+  import type { TagDto } from '$lib/shared/types';
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import { authState } from '$lib/stores/authState.svelte';
   import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';

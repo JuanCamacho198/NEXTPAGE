@@ -19,7 +19,6 @@ export { default as Modal } from './layout/Modal.svelte';
 export { default as Panel } from './layout/Panel.svelte';
 export { default as Card } from './layout/Card.svelte';
 export { default as SectionHeader } from './layout/SectionHeader.svelte';
-export { default as ShelfSection } from './layout/ShelfSection.svelte';
 export { default as ContinueReadingSection } from './layout/ContinueReadingSection.svelte';
 export { default as AppSidebar } from './layout/AppSidebar.svelte';
 

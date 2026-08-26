@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { SearchPanel } from '$lib/features/reader';
-import type { SearchBookTextResponse } from '$lib/types';
+import type { SearchBookTextResponse } from '$lib/shared/types';
 import { searchBookText } from '$lib/shared/api/tauriClient';
 
 const t = (key: string) => {

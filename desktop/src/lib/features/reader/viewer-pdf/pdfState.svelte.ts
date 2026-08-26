@@ -86,20 +86,6 @@ export function formatPageNumber(page: number, total: number): string {
   return `${page} / ${total}`;
 }
 
-// NOTE on state extraction:
-// Svelte 5 $state runes CANNOT be used in regular .svelte.ts files - they are
-// compiler macros that only work in .svelte component files.
-//
-// The following CAN be extracted to .svelte.ts:
-// - Pure functions (done above)
-// - Types/interfaces
-// - Constants
-//
-// The following MUST remain in .svelte files:
-// - $state variables
-// - $derived values
-// - $effect blocks
-// - Event handlers
-// - UI markup
-//
-// This is a Svelte 5 architectural limitation, not a bug in the implementation.
+// NOTE: Svelte 5 runes ($state/$derived/$effect) ARE supported in `.svelte.ts` files
+// (compiler macros, not component-only). Pure helpers stay here; stateful logic
+// lives in `usePdf*.svelte.ts` composables (same pattern as `useEpub*.svelte.ts`).

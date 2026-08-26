@@ -3,7 +3,7 @@
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
-  import type { ReaderThemeMode } from '$lib/types';
+  import type { ReaderThemeMode } from '$lib/shared/types';
 
   type Props = {
     t: (key: MessageKey, params?: Record<string, string | number>) => string;

@@ -25,9 +25,9 @@
 ## Project Structure
 
 - **Frontend (Svelte 5)**: `src/`
+  - **Canonical**: `src/lib/features/*` + `src/lib/shared/*` ( +legacy `src/lib/stores` Auth-only: `authState`, `devicesState`, `toastQueue`)
   - Features: `src/lib/features/reader/viewer-epub/`, `src/lib/features/settings/components/`, `src/lib/features/storage/components/`, `src/lib/features/sync/components/`, `src/lib/features/library/`, `src/lib/features/highlights/`
-  - Shared: `src/lib/shared/stores/` (`AppState`, `SettingsDomainState`, `storageState`), `src/lib/shared/types/`, `src/lib/shared/services/`, `src/lib/shared/i18n/`, `src/lib/shared/ui/`
-  - Legacy stores: `src/lib/stores/` (`authState`, `devicesState`, `toastQueue`)
+  - Shared: `src/lib/shared/stores/` (`AppState`, `SettingsDomainState`, `storageState`), `src/lib/shared/types/`, `src/lib/shared/services/`, `src/lib/shared/i18n/`, `src/lib/shared/ui/` (`shared/ui/layout` chrome-only)
   - Tests: `src/test/` (unit/, integration/)
 - **Backend (Rust/Tauri)**: `src-tauri/src/`
   - Commands: `src-tauri/src/commands/`

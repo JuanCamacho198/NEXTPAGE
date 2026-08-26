@@ -1,4 +1,4 @@
-import type { HighlightDto, LibraryBookDto } from '$lib/types';
+import type { HighlightDto, LibraryBookDto } from '$lib/shared/types';
 import type { MessageKey } from '$lib/shared/i18n';
 import {
   HIGHLIGHT_COLORS as CANONICAL_HIGHLIGHT_COLORS,

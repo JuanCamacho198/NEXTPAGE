@@ -4,7 +4,8 @@
   import { fly } from 'svelte/transition';
 
   import { Button } from '$lib/shared/ui';
-  import { ShelfSection, ContinueReadingSection, AppSidebar } from '$lib/shared/ui';
+  import { ContinueReadingSection, AppSidebar } from '$lib/shared/ui';
+  import ShelfSection from '$lib/features/library/ShelfSection.svelte';
   import { SettingsPanel } from '$lib/features/settings';
   import HomeDesktopView from '$lib/features/home/components/HomeDesktopView.svelte';
   import LibraryShelfScreen from '$lib/features/library/components/LibraryShelfScreen.svelte';
@@ -140,7 +141,35 @@
                 {/snippet}
 
                 {#snippet shelfSection()}
-                  <ShelfSection />
+                  <ShelfSection
+                    shelfQueryState={appState.shelfQueryState}
+                    shelfBooks={appState.shelfBooks}
+                    myShelfBooks={appState.myShelfBooks}
+                    collections={appState.collections}
+                    previewBookId={appState.previewBookId}
+                    selectedShelfBook={appState.selectedShelfBook}
+                    shelfTabOptions={appState.SHELF_TAB_OPTIONS}
+                    shelfSortOptions={appState.SHELF_SORT_OPTIONS}
+                    t={appState.t}
+                    onSetTab={(key) => appState.setShelfTab(key as never)}
+                    onSetSort={(key) => appState.setShelfSort(key as never)}
+                    onSetViewMode={(mode) => appState.setShelfViewMode(mode)}
+                    onShelfQueryInput={appState.handleShelfQueryInput}
+                    onClearShelfQuery={appState.clearShelfQuery}
+                    onOpenDetails={(book) => appState.openShelfDetails(book)}
+                    onStartReading={(book) => void appState.startReading(book)}
+                    onEditBook={(book) => appState.handleEditBook(book)}
+                    onRemoveBook={(book) => appState.requestRemoveBook(book)}
+                    onToggleFavorite={(book) => appState.handleToggleFavorite(book)}
+                    onStatusChange={(book, status) => appState.handleStatusChange(book, status)}
+                    onDeleteCover={(book) => appState.handleDeleteCover(book)}
+                    onSaveEdit={(dto) => appState.handleSaveEditedBook(dto as never)}
+                    onCloseDetails={appState.closeShelfDetails}
+                    onCoverUpdated={(bookId, path) => {
+                      const found = appState.books.find((b) => b.id === bookId);
+                      if (found) found.coverPath = path;
+                    }}
+                  />
                 {/snippet}
               </HomeDesktopView>
             </div>

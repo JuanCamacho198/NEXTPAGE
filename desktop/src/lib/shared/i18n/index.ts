@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import { getLocaleSetting, upsertLocaleSetting } from '$lib/shared/api/tauriClient';
-import { SUPPORTED_UI_LOCALES, type UiLocale } from '$lib/types';
+import { SUPPORTED_UI_LOCALES, type UiLocale } from '$lib/shared/types';
 import { messagesEn, type MessageKey } from './messages.en';
 import { messagesEs } from './messages.es';
 import { logger } from '$lib/shared/logger/Logger';

@@ -2,23 +2,16 @@ import type { TocEntry } from './ReaderTocPanel.svelte';
 import type PdfViewer from '../viewer-pdf/PdfViewer.svelte';
 import type EpubNativeViewer from '../viewer-epub/EpubNativeViewer.svelte';
 import type { LibraryBookDto } from '$lib/shared/types/library';
+import type { ViewerHandle } from '../viewer-shared/Viewer';
 
 type ActiveBook = LibraryBookDto & { filePath: string };
 
 export type ReaderNavigationDeps = {
-  getRefs: () => { pdf: PdfViewer | null; epub: EpubNativeViewer | null };
-  getActiveBook: () => ActiveBook | null;
-  getTocPanelOpen?: () => boolean;
+  getViewer?: () => ViewerHandle;
+  getRefs?: () => { pdf: PdfViewer | null; epub: EpubNativeViewer | null };
+  getActiveBook?: () => ActiveBook | null;
   onPdfPageChange?: (page: number, total: number) => void;
-  onPdfSessionProgress?: (event: {
-    startedAt: string;
-    endedAt?: string;
-    durationSeconds: number;
-    startPercentage?: number;
-    endPercentage?: number;
-  }) => void;
   onEpubLocationChange?: (cfi: string, pct: number) => void;
-  onReaderLocationContext?: (ctx: unknown) => void;
   getDebugState?: () => { readerInfo: unknown; enabled: boolean } | null;
 };
 
@@ -30,35 +23,89 @@ export function createReaderNavigation(deps: ReaderNavigationDeps) {
   let tocNavigate = $state<TocEntry | null>(null);
   let showTocPanel = $state(false);
 
-  const isPdf = $derived(deps.getActiveBook()?.format?.toLowerCase() === 'pdf');
-  const isEpub = $derived(deps.getActiveBook()?.format?.toLowerCase() === 'epub');
+  const resolveViewer = (): ViewerHandle => {
+    if (deps.getViewer) return deps.getViewer();
+    // fallback for legacy tests: build minimal viewer from getRefs/getActiveBook without polluting chrome with format branches
+    const refs = deps.getRefs?.() ?? { pdf: null, epub: null };
+    const book = deps.getActiveBook?.() ?? null;
+    const fmtRaw = (book as unknown as { format?: unknown })?.format;
+    const fmt = typeof fmtRaw === 'string' ? String(fmtRaw).toLowerCase() : '';
+    const kind = fmt === 'epub' ? 'epub' : 'pdf';
+    const pdf = refs.pdf as unknown as { navigateToPage?: (n: number) => Promise<boolean>; getCurrentPage?: () => number; getTotalPages?: () => number } | null;
+    const epub = refs.epub as unknown as { goToPrev?: () => void; goToNext?: () => void; handleGoToPage?: (n: number) => Promise<boolean>; getCurrentPage?: () => number; getTotalForHeader?: () => number } | null;
+    return {
+      get kind() { return kind as ViewerHandle['kind']; },
+      navigatePrev() {
+        if (kind === 'pdf') {
+          if (!pdf?.navigateToPage) return false;
+          if (currentPdfPage <= 1) return false;
+          return (pdf.navigateToPage(currentPdfPage - 1) ?? false) as unknown as boolean;
+        }
+        if (!epub?.goToPrev) return false;
+        if (currentEpubChapter <= 0) return false;
+        epub.goToPrev();
+        return true;
+      },
+      navigateNext() {
+        if (kind === 'pdf') {
+          if (!pdf?.navigateToPage) return false;
+          if (totalPdfPages > 0 && currentPdfPage >= totalPdfPages) return false;
+          return (pdf.navigateToPage(currentPdfPage + 1) ?? false) as unknown as boolean;
+        }
+        if (!epub?.goToNext) return false;
+        epub.goToNext();
+        return true;
+      },
+      goToPage(n: number) {
+        if (kind === 'pdf') return pdf?.navigateToPage?.(n) ?? Promise.resolve(false);
+        return epub?.handleGoToPage?.(n) ?? Promise.resolve(false);
+      },
+      setScaleOrZoom(_pct: number) {},
+      getCurrentPage() {
+        if (kind === 'pdf') return (pdf?.getCurrentPage?.() ?? (currentPdfPage || 1));
+        return (epub?.getCurrentPage?.() ?? (currentEpubChapter + 1 || 1));
+      },
+      getTotalForHeader() {
+        if (kind === 'pdf') return (pdf?.getTotalPages?.() ?? (totalPdfPages || 0));
+        return ((epub?.getTotalForHeader?.() ?? tocEntries.length) || 0) as number;
+      },
+    } as ViewerHandle;
+  };
 
-  const bookProgress = $derived(
-    isPdf && deps.getActiveBook()?.currentPage && deps.getActiveBook()?.totalPages
-      ? Math.round((deps.getActiveBook()!.currentPage! / deps.getActiveBook()!.totalPages!) * 100)
-      : 0,
-  );
+  const bookProgress = $derived.by(() => {
+    const v = resolveViewer();
+    const cur = v.getCurrentPage();
+    const total = v.getTotalForHeader();
+    if (v.kind === 'pdf' && cur > 0 && total > 0) {
+      return Math.round((cur / total) * 100);
+    }
+    return 0;
+  });
 
-  const headerCurrentPage = $derived(
-    isPdf ? currentPdfPage : isEpub ? currentEpubChapter + 1 : 1,
-  );
-  const headerTotalPages = $derived(
-    isPdf ? totalPdfPages : isEpub ? (tocEntries.length > 0 ? tocEntries.length : 0) : 0,
-  );
-  const showHeaderReadingControls = $derived(
-    headerTotalPages > 0 && deps.getActiveBook() !== null,
-  );
+  const headerCurrentPage = $derived.by(() => {
+    const v = resolveViewer();
+    if (v.kind === 'pdf') return currentPdfPage || v.getCurrentPage();
+    if (v.kind === 'epub') return currentEpubChapter + 1 || v.getCurrentPage();
+    return 1;
+  });
+  const headerTotalPages = $derived.by(() => {
+    const v = resolveViewer();
+    if (v.kind === 'pdf') return totalPdfPages || v.getTotalForHeader();
+    if (v.kind === 'epub') return tocEntries.length > 0 ? tocEntries.length : v.getTotalForHeader();
+    return 0;
+  });
+  const showHeaderReadingControls = $derived(headerTotalPages > 0);
 
   const prevDisabled = $derived.by(() => {
-    const fmt = deps.getActiveBook()?.format?.toLowerCase();
-    if (fmt === 'pdf') return currentPdfPage <= 1;
-    if (fmt === 'epub') return currentEpubChapter <= 0;
+    const v = resolveViewer();
+    if (v.kind === 'pdf') return currentPdfPage <= 1;
+    if (v.kind === 'epub') return currentEpubChapter <= 0;
     return false;
   });
 
   const nextDisabled = $derived.by(() => {
-    const fmt = deps.getActiveBook()?.format?.toLowerCase();
-    if (fmt === 'pdf') return totalPdfPages > 0 && currentPdfPage >= totalPdfPages;
+    const v = resolveViewer();
+    if (v.kind === 'pdf') return totalPdfPages > 0 && currentPdfPage >= totalPdfPages;
     return false;
   });
 
@@ -88,57 +135,30 @@ export function createReaderNavigation(deps: ReaderNavigationDeps) {
   }
 
   function goPrev(): boolean {
-    const fmt = deps.getActiveBook()?.format?.toLowerCase();
-    const refs = deps.getRefs();
-    if (fmt === 'pdf') {
-      if (!refs.pdf) return false;
-      if (currentPdfPage <= 1) return false;
-      void refs.pdf.navigateToPage(currentPdfPage - 1);
+    const viewer = resolveViewer();
+    const result = viewer.navigatePrev();
+    if (result instanceof Promise) {
+      void result;
       return true;
     }
-    if (fmt === 'epub') {
-      if (!refs.epub) return false;
-      if (currentEpubChapter <= 0) return false;
-      refs.epub.goToPrev();
-      return true;
-    }
-    return false;
+    return result;
   }
 
   function goNext(): boolean {
-    const fmt = deps.getActiveBook()?.format?.toLowerCase();
-    const refs = deps.getRefs();
-    if (fmt === 'pdf') {
-      if (!refs.pdf) return false;
-      if (totalPdfPages > 0 && currentPdfPage >= totalPdfPages) return false;
-      void refs.pdf.navigateToPage(currentPdfPage + 1);
+    const viewer = resolveViewer();
+    const result = viewer.navigateNext();
+    if (result instanceof Promise) {
+      void result;
       return true;
     }
-    if (fmt === 'epub') {
-      if (!refs.epub) return false;
-      refs.epub.goToNext();
-      return true;
-    }
-    return false;
+    return result;
   }
 
   async function handleHeaderGoToPage(page: number): Promise<boolean> {
-    const fmt = deps.getActiveBook()?.format?.toLowerCase();
-    const refs = deps.getRefs();
-    if (fmt === 'pdf') {
-      if (!refs.pdf) return false;
-      return refs.pdf.navigateToPage(page);
-    }
-    if (fmt === 'epub') {
-      if (!refs.epub) return false;
-      return refs.epub.handleGoToPage(page);
-    }
-    return false;
+    return resolveViewer().goToPage(page);
   }
 
-  function cleanup(): void {
-    // no timers — placeholder for uniform interface
-  }
+  function cleanup(): void {}
 
   return {
     get currentPdfPage() {
@@ -176,12 +196,6 @@ export function createReaderNavigation(deps: ReaderNavigationDeps) {
     },
     set showTocPanel(v: boolean) {
       showTocPanel = v;
-    },
-    get isPdf() {
-      return isPdf;
-    },
-    get isEpub() {
-      return isEpub;
     },
     get bookProgress() {
       return bookProgress;

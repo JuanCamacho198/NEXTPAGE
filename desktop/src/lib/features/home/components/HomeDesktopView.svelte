@@ -4,7 +4,7 @@
   import HomeHero from './HomeHero.svelte';
   import HomeStatsGrid from './HomeStatsGrid.svelte';
   import HomeMainContent from './HomeMainContent.svelte';
-  import type { ReadingStatsSummaryDto } from '$lib/types';
+  import type { ReadingStatsSummaryDto } from '$lib/shared/types';
   import type { MessageKey } from '$lib/i18n';
   import { appState } from '$lib/shared/stores/AppState.svelte';
 

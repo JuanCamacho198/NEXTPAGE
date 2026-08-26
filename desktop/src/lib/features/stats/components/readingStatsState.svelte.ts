@@ -1,4 +1,4 @@
-import type { LibraryBookDto } from '$lib/types';
+import type { LibraryBookDto } from '$lib/shared/types';
 import { UNCLASSIFIED_GENRE, type CanonicalGenre } from '$lib/shared/services/genreHeuristic';
 import type { AppState } from '$lib/shared/stores/AppState.svelte';
 

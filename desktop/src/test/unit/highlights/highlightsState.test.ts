@@ -5,7 +5,7 @@ import {
   resolveHighlightHex,
   type HighlightColorKey,
 } from '$lib/features/highlights/state.svelte';
-import type { HighlightDto, LibraryBookDto } from '$lib/types';
+import type { HighlightDto, LibraryBookDto } from '$lib/shared/types';
 
 const makeHighlight = (overrides: Partial<HighlightDto> = {}): HighlightDto => ({
   id: 'h1',

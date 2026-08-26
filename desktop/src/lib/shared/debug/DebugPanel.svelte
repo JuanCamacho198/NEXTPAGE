@@ -4,7 +4,7 @@
   import { epubCache } from '$lib/features/reader/viewer-epub/epubCache';
   import { documentCache } from '$lib/features/reader/viewer-pdf/pdfStreaming';
   import { metricsStore } from '$lib/shared/logger/MetricsStore';
-  import type { DiagnoseResult } from '$lib/types';
+  import type { DiagnoseResult } from '$lib/shared/types';
 
   let logsLoading = $state(false);
   let diagnoseResult = $state<DiagnoseResult | null>(null);

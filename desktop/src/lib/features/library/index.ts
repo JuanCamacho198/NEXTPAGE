@@ -11,4 +11,6 @@ export { default as RemoveBookModal } from './components/RemoveBookModal.svelte'
 export { default as ShelfActionMenu } from './components/ShelfActionMenu.svelte';
 
 export { default as GoogleLoginButton } from './components/GoogleLoginButton.svelte';
+export { default as ShelfSection } from './ShelfSection.svelte';
+export { default as ShelfDetailModal } from './ShelfDetailModal.svelte';
 export * from '$lib/shared/services/FilePicker';

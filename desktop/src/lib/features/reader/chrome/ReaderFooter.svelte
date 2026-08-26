@@ -6,12 +6,12 @@
     bookProgress: number;
     currentPdfPage: number;
     totalPdfPages: number;
-    isPdf: boolean;
+    viewerKind: 'pdf' | 'epub' | null;
     isFullscreen: boolean;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
-  let { title, bookProgress, currentPdfPage, totalPdfPages, isPdf, isFullscreen, t }: Props =
+  let { title, bookProgress, currentPdfPage, totalPdfPages, viewerKind, isFullscreen, t }: Props =
     $props();
 </script>
 
@@ -22,7 +22,7 @@
   <span class="font-inter text-xs font-normal text-(--color-text-auxiliary)">
     {title}
   </span>
-  {#if isPdf && totalPdfPages > 0}
+  {#if viewerKind === 'pdf' && totalPdfPages > 0}
     <div class="flex items-center gap-3">
       <span class="font-inter text-xs font-normal text-(--color-text-auxiliary)"
         >{totalPdfPages - currentPdfPage} {t('pdf.pagesLeft')}</span

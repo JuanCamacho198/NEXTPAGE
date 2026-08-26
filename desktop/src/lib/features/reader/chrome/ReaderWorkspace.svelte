@@ -31,6 +31,8 @@
   import { createBookmarksPanel } from './useBookmarksPanel.svelte';
   import { createReaderNavigation } from './useReaderNavigation.svelte';
   import BookmarkSidebar from './BookmarkSidebar.svelte';
+  import { createViewerSelection, type ViewerSelection } from '../viewer-shared/Viewer';
+  import type { SelectionData } from '../highlight/SelectionToolbar.svelte';
 
   type ActiveBook = LibraryBookDto & { filePath: string };
   type Props = {
@@ -91,6 +93,8 @@
   let pdfRef: PdfViewer | null = $state(null);
   let epubRef: EpubNativeViewer | null = $state(null);
 
+  const viewer = $derived(createViewerSelection(() => ({ pdf: pdfRef, epub: epubRef }), () => activeReadingBook));
+
   const spineResolver = createSpineResolver();
   const highlightsState = createHighlights({
     getBook: () => activeReadingBook,
@@ -103,18 +107,18 @@
   const bookmarksPanel = createBookmarksPanel({ outboxDao });
 
   const zoom = createReaderZoom({
-    getActiveBook: () => activeReadingBook,
-    getRefs: () => ({ pdf: pdfRef, epub: epubRef }),
+    getViewer: () => viewer,
   });
   let localReaderSettings = $derived(zoom.localReaderSettings);
   $effect(() => { return () => { zoom.cleanup(); }; });
-  $effect(() => { if (readerSettings) zoom.syncFromProps(readerSettings); });
+  $effect(() => {
+    if (readerSettings) zoom.syncFromProps(readerSettings);
+  });
   function handleTextSettingsChange(updated: ReaderSettings): void { zoom.handleTextSettingsChange(updated); }
 
   // svelte-ignore state_referenced_locally
   const nav = createReaderNavigation({
-    getRefs: () => ({ pdf: pdfRef, epub: epubRef }),
-    getActiveBook: () => activeReadingBook,
+    getViewer: () => viewer,
     // svelte-ignore state_referenced_locally
     onPdfPageChange: onPdfPageChange as unknown as never,
     // svelte-ignore state_referenced_locally
@@ -125,7 +129,7 @@
   let selectionBounds = $state<{ left: number; top: number; right: number; bottom: number } | null>(null);
   let selectionContainer = $state<{ left: number; top: number; width: number; height: number } | null>(null);
   let showToolbar = $state(false);
-  let lastSelectionData = $state<{ text: string; bounds: { left: number; top: number; right: number; bottom: number }; rects: Array<{ left: number; top: number; width: number; height: number }>; pageNumber: number; cfi: string | null } | null>(null);
+  let lastSelectionData = $state<SelectionData | null>(null);
 
   // highlights triggers
   $effect(() => { return () => { highlightsState.cleanup(); highlightMenuState.cleanup(); bookmarksPanel.cleanup(); nav.cleanup(); }; });
@@ -208,7 +212,7 @@
 
   function syncDebugReaderInfo(): void {
     if (dbg.enabled) {
-      dbg.readerInfo = { format: nav.isPdf ? 'pdf' : nav.isEpub ? 'epub' : null, isTocOpen: nav.showTocPanel, isSearchOpen: searchPanelOpen, isFullscreen, pageInfo: `${nav.bookProgress}%`, scale: 0 };
+      dbg.readerInfo = { format: viewer.kind ?? null, isTocOpen: nav.showTocPanel, isSearchOpen: searchPanelOpen, isFullscreen, pageInfo: `${nav.bookProgress}%`, scale: 0 };
     }
   }
   function toggleTocPanel(): void { nav.toggleTocPanel(); syncDebugReaderInfo(); }
@@ -232,11 +236,17 @@
     try { await navigator.clipboard.writeText(text); } catch { }
   }
 
-  function handlePdfSelection(event: { text: string; bounds: { left: number; top: number; right: number; bottom: number }; container: { left: number; top: number; width: number; height: number }; placement: string; rects: Array<{ left: number; top: number; width: number; height: number }>; pageNumber: number; cfi?: string | null }): void {
+  function handleViewerSelection(event: ViewerSelection): void {
     selectedText = event.text;
     selectionBounds = { left: event.bounds.left, top: event.bounds.top, right: event.bounds.right, bottom: event.bounds.bottom };
     selectionContainer = { left: event.container.left, top: event.container.top, width: event.container.width, height: event.container.height };
-    lastSelectionData = { text: event.text, bounds: event.bounds, rects: event.rects, pageNumber: event.pageNumber, cfi: event.cfi ?? null };
+    lastSelectionData = {
+      text: event.text,
+      bounds: event.bounds,
+      rects: event.rects,
+      pageNumber: event.pageNumber,
+      cfi: event.cfi ?? null,
+    };
     showToolbar = true;
   }
 
@@ -264,8 +274,8 @@
   });
   function handleCopy(): void { if (selectedText) navigator.clipboard.writeText(selectedText).catch(() => {}); }
   async function handleAddToDictionary(word: string): Promise<void> { try { await addDictionaryWord({ word }); } catch { } }
-  async function handleColorSelect(color: string, data: NonNullable<typeof lastSelectionData>): Promise<void> {
-    await highlightsState.handleColorSelect(color, data as Parameters<typeof highlightsState.handleColorSelect>[1]);
+  async function handleColorSelect(color: string, data: SelectionData): Promise<void> {
+    await highlightsState.handleColorSelect(color, data);
     highlightMenuState.scheduleToolbarDismiss(dismissToolbar);
   }
   function closeHighlightMenu(): void { highlightMenuState.closeHighlightMenu(); }
@@ -332,7 +342,7 @@
       <p class="font-inter text-sm text-(--color-text-inverse)">{getReaderErrorFn()}</p>
     {:else if !activeReadingBook}
       <p class="font-inter text-sm text-(--color-text-inverse)">{t('reader.no_book_loaded')}</p>
-    {:else if nav.isPdf}
+    {:else if viewer.kind === 'pdf'}
       <div class="relative bg-white flex flex-col min-h-0 h-full" class:rounded-xl={!isFullscreen} class:shadow-lg={!isFullscreen} class:w-200={!isFullscreen} class:w-full={isFullscreen} class:h-full={isFullscreen}>
         <PdfViewer
           bind:this={pdfRef}
@@ -344,7 +354,7 @@
           preloadedBytes={preloadedBytes?.filePath === activeReadingBook.filePath ? preloadedBytes.data : null}
           onPageChange={nav.handlePdfPageChange}
           onSessionProgress={onPdfSessionProgress}
-          onselection={handlePdfSelection}
+          onselection={handleViewerSelection}
           onselectionclear={dismissToolbar}
           onHighlightAction={handleHighlightAction}
           onTocReady={nav.handleTocReady}
@@ -355,7 +365,7 @@
           {t}
         />
       </div>
-    {:else if nav.isEpub}
+    {:else if viewer.kind === 'epub'}
       <div class="relative overflow-hidden bg-white flex flex-col h-full min-h-0" class:rounded-xl={!isFullscreen} class:shadow-lg={!isFullscreen} class:w-200={!isFullscreen} class:w-full={isFullscreen}>
         <EpubNativeViewer
           bind:this={epubRef}
@@ -369,7 +379,7 @@
           onLocationChange={nav.handleEpubLocationChange}
           onTocReady={nav.handleTocReady}
           externalTocNavigate={nav.tocNavigate}
-          onselection={handlePdfSelection}
+          onselection={handleViewerSelection}
           onselectionclear={dismissToolbar}
           {isFullscreen}
           onToggleFullscreen={toggleFullscreen}
@@ -410,7 +420,7 @@
     <TagPopover open={highlightMenuState.showTagPopover} anchor={highlightMenuState.tagPopoverAnchor} assignedTagIds={highlightMenuState.highlightMenu.assignedTags.map((tag) => tag.id)} allTags={highlightMenuState.allTags} onCreate={handleTagCreate} onToggle={handleTagToggle} onClose={() => (highlightMenuState.showTagPopover = false)} {t} />
     <NoteEditorModal open={highlightMenuState.showNoteModal} note={highlightMenuState.highlightMenu.highlightId ? (highlightsState.persistedHighlights.find((h) => h.id === highlightMenuState.highlightMenu.highlightId)?.note ?? null) : null} highlightText={highlightMenuState.highlightMenu.text} onSave={handleNoteSave} onClose={() => (highlightMenuState.showNoteModal = false)} {t} />
   </div>
-  <ReaderFooter title={activeReadingBook?.title ?? ''} {bookProgress} currentPdfPage={nav.currentPdfPage} totalPdfPages={nav.totalPdfPages} isPdf={nav.isPdf} {isFullscreen} {t} />
+  <ReaderFooter title={activeReadingBook?.title ?? ''} {bookProgress} currentPdfPage={nav.currentPdfPage} totalPdfPages={nav.totalPdfPages} viewerKind={viewer.kind} {isFullscreen} {t} />
   {#if isFullscreen && activeReadingBook}
     {@const prevDisabled = nav.prevDisabled}
     {@const nextDisabled = nav.nextDisabled}
@@ -424,6 +434,6 @@
 {#if searchPanelOpen && activeReadingBook}
   <SearchPanel bookId={activeReadingBook.id} disabledReason={searchUnavailableReason} {isSearching} response={searchResponse} onSearch={(query, page) => onSearch?.(query, page)} onJump={(target) => onSearchJump?.(target)} {t} />
 {/if}
-<ReaderTextSettings open={showTextSettings} format={nav.isPdf ? 'pdf' : nav.isEpub ? 'epub' : 'pdf'} readerSettings={localReaderSettings} onSettingsChange={handleTextSettingsChange} onClose={() => (showTextSettings = false)} {t} />
+<ReaderTextSettings open={showTextSettings} format={viewer.kind} readerSettings={localReaderSettings} onSettingsChange={handleTextSettingsChange} onClose={() => (showTextSettings = false)} {t} />
 <ReaderTocPanel open={nav.showTocPanel} entries={nav.tocEntries} activeId={nav.tocNavigate?.id} onNavigate={nav.handleTocNavigate} onClose={() => (nav.showTocPanel = false)} {t} />
 <BookmarkSidebar bookmarksPanel={bookmarksPanel} activeReadingBook={activeReadingBook} currentPage={nav.currentPdfPage} currentChapter={nav.currentEpubChapter} {t} />

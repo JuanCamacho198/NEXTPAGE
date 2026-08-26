@@ -50,5 +50,6 @@ fixtures/
 /eslint-local-rules/
 
 
-# Docs
-.docs
+# Docs (ENGINEERING-STANDARDS.md is tracked — see AGENTS.md)
+.docs/*
+!.docs/ENGINEERING-STANDARDS.md

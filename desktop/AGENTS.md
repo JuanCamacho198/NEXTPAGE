@@ -40,6 +40,10 @@
   - cargo-deny: `src-tauri/deny.toml`
   - rustfmt: `src-tauri/.rustfmt.toml`
 
+## Engineering Standards
+
+- **Engineering Standards**: see .docs/ENGINEERING-STANDARDS.md — 4 Svelte 5 commandments ($derived/$effect, .svelte.ts, snippets, props>singleton), architecture (features/shared, ports), quality gates (wc <300, rg, check). RDD REVIEW IS DISABLED — manual review only.
+
 ## Code Style
 
 - **Svelte 5**: Use runes (`$state`, `$derived`, `$effect`) for reactive state

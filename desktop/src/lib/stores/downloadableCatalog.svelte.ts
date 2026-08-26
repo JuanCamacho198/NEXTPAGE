@@ -19,7 +19,8 @@ import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { importRecoveredBook } from '$lib/shared/recovery/desktopRecoveryImport';
 import { extractEpubMetadataFromBytes } from '$lib/shared/services/epubImportMetadata';
-import * as tauri from '$lib/shared/api/tauriClient';
+import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
 
 // ─── Types ─────────────────────────────────────────────────────────────
 
@@ -33,6 +34,14 @@ export interface AvailableDriveBook {
   author?: string | null;
   /** Remote cover URL from the Supabase catalog metadata, when available. */
   coverUrl?: string | null;
+}
+
+// ─── Port ───────────────────────────────────────────────────────────────
+
+let libraryPort: LibraryPort = new TauriLibraryAdapter();
+
+export function setDownloadableCatalogPort(port: LibraryPort): void {
+  libraryPort = port;
 }
 
 // ─── Reactive State ───────────────────────────────────────────────────
@@ -94,7 +103,7 @@ export async function loadAvailableFromDrive(): Promise<void> {
 
       const [remoteNames, localBooks] = await Promise.all([
         gdrive.list(''),
-        tauri.listLibraryBooks(),
+        libraryPort.listLibraryBooks(),
       ]);
       const localIds = new Set(localBooks.map((b) => b.id));
       const available: AvailableDriveBook[] = [];
@@ -198,7 +207,7 @@ export async function downloadBook(bookId: string): Promise<void> {
             // keep catalog title
           }
         }
-        await tauri.saveBookFile(id, Array.from(bytes), { title, author, format: meta.format });
+        await libraryPort.saveBookFile(id, Array.from(bytes), { title, author, format: meta.format });
       },
       // Catalog upsert only when a live user session exists (no auth → no-op).
       markImported: row.userId

@@ -1,8 +1,10 @@
-import { getSettings, upsertSettings, getLocaleSetting } from '$lib/shared/api/tauriClient';
 import { i18n } from '$lib/shared/i18n';
 import type { AppSettingDto, CommandErrorDto, UiLocale } from '$lib/shared/types';
+import type { SettingsPort } from '$lib/shared/ports/SettingsPort';
+import { TauriSettingsAdapter } from '$lib/shared/ports/adapters/tauri/TauriSettingsAdapter';
 
 export type AppearanceDeps = {
+  settingsPort?: SettingsPort;
   getSettings?: () => Promise<AppSettingDto[]>;
   upsertSettings?: (settings: AppSettingDto[]) => Promise<void>;
   getLocaleSetting?: () => Promise<string | null>;
@@ -54,9 +56,10 @@ export function createSettingsAppearance(deps: AppearanceDeps = {}): {
   saveAppearance: () => Promise<void>;
   resetToDefaults: () => void;
 } {
-  const getSettingsFn = deps.getSettings ?? getSettings;
-  const upsertSettingsFn = deps.upsertSettings ?? upsertSettings;
-  const getLocaleSettingFn = deps.getLocaleSetting ?? getLocaleSetting;
+  const settingsPort: SettingsPort = deps.settingsPort ?? new TauriSettingsAdapter();
+  const getSettingsFn = deps.getSettings ?? (() => settingsPort.getAppSettings());
+  const upsertSettingsFn = deps.upsertSettings ?? ((s: AppSettingDto[]) => settingsPort.upsertAppSettings(s));
+  const getLocaleSettingFn = deps.getLocaleSetting ?? (() => settingsPort.getLocale());
   const setLocaleFn = deps.setLocale ?? ((locale: UiLocale): Promise<void> => i18n.setLocale(locale));
   const toSupportedLocaleFn = deps.toSupportedLocale ?? ((v: string | null): UiLocale | null => i18n.toSupportedLocale(v));
 

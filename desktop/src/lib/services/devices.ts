@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { hostname, type as osTypeFn, version } from '@tauri-apps/plugin-os'
 
 // --- Types ---
 export interface DeviceRow {
@@ -46,9 +47,7 @@ export async function getDeviceInfo(): Promise<DeviceInfo> {
   let deviceOs = 'Unknown'
 
   try {
-    // Tauri v2 plugin-os — available inside Tauri runtime
-    const { hostname, type, version } = await import('@tauri-apps/plugin-os')
-    const [host, osType, osVer] = await Promise.all([hostname(), type(), version()])
+    const [host, osType, osVer] = await Promise.all([hostname(), osTypeFn(), version()])
     deviceName = host ? `${host} PC` : 'Desktop'
     deviceOs = `${osType} ${osVer}`
       .replace('Windows_NT', 'Windows')

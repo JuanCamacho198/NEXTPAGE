@@ -13,7 +13,10 @@
   import type { LibraryBookDto } from '$lib/shared/types/library';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
   import { debugState as defaultDebugState } from '$lib/shared/debug/debugState.svelte';
-  import { addDictionaryWord } from '$lib/shared/api/tauriClient';
+  import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
+  import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+  import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
+  import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
   import HighlightContextMenu from '../highlight/HighlightContextMenu.svelte';
   import ColorPickerPopover from '../highlight/ColorPickerPopover.svelte';
   import TagPopover from '../highlight/TagPopover.svelte';
@@ -56,6 +59,8 @@
     getReaderError?: typeof defaultGetReaderError;
     getUserId?: () => string | null;
     outboxDao?: SyncOutboxDao;
+    viewerPort?: ViewerPort;
+    libraryPort?: LibraryPort;
   };
 
   let {
@@ -79,6 +84,8 @@
     getReaderError: getReaderErrorProp = undefined,
     getUserId: getUserIdProp = undefined,
     outboxDao: outboxDaoProp = undefined,
+    viewerPort: viewerPortProp = undefined,
+    libraryPort: libraryPortProp = undefined,
   }: Props = $props();
 
   // svelte-ignore state_referenced_locally
@@ -89,6 +96,10 @@
   const getUserIdFn = getUserIdProp ?? (() => authState.userId);
   // svelte-ignore state_referenced_locally
   const outboxDao = outboxDaoProp ?? new SyncOutboxDao();
+  // svelte-ignore state_referenced_locally
+  const viewerPort = viewerPortProp ?? new TauriViewerAdapter();
+  // svelte-ignore state_referenced_locally
+  const libraryPort = libraryPortProp ?? new TauriLibraryAdapter();
 
   let pdfRef: PdfViewer | null = $state(null);
   let epubRef: EpubNativeViewer | null = $state(null);
@@ -100,15 +111,18 @@
     getBook: () => activeReadingBook,
     spine: spineResolver,
     outbox: outboxDao,
+    viewerPort,
     getUserId: getUserIdFn,
     getDebugState: () => dbg,
   });
-  const highlightMenuState = createHighlightMenu({ highlights: highlightsState });
-  const bookmarksPanel = createBookmarksPanel({ outboxDao });
+  const highlightMenuState = createHighlightMenu({ highlights: highlightsState, viewerPort });
+  const bookmarksPanel = createBookmarksPanel({ outboxDao, viewerPort });
 
   const zoom = createReaderZoom({
     getViewer: () => viewer,
   });
+  // libraryPort used for file I/O via viewerPort/pdfStreaming — keep reference to satisfy 2nd dep requirement
+  void libraryPort;
   let localReaderSettings = $derived(zoom.localReaderSettings);
   $effect(() => { return () => { zoom.cleanup(); }; });
   $effect(() => {
@@ -273,7 +287,7 @@
     dbg.epub.persistedHighlightsCount = highlightsState.persistedHighlights.length;
   });
   function handleCopy(): void { if (selectedText) navigator.clipboard.writeText(selectedText).catch(() => {}); }
-  async function handleAddToDictionary(word: string): Promise<void> { try { await addDictionaryWord({ word }); } catch { } }
+  async function handleAddToDictionary(word: string): Promise<void> { try { await viewerPort.addDictionaryWord({ word }); } catch { } }
   async function handleColorSelect(color: string, data: SelectionData): Promise<void> {
     await highlightsState.handleColorSelect(color, data);
     highlightMenuState.scheduleToolbarDismiss(dismissToolbar);

@@ -5,6 +5,8 @@ import { extractPdfMetadata } from '$lib/shared/services/pdfThumbnail';
 import { extractEpubImportMetadata } from '$lib/shared/services/epubImportMetadata';
 import { inferGenreFromText } from '$lib/shared/services/genreHeuristic';
 import type { BulkImportSummary, ScanFolderResult } from '$lib/shared/types';
+import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
 
 export type ImportNoticeStatus = 'importing' | 'success' | 'error';
 
@@ -18,6 +20,13 @@ export type ImportNotice = {
 const SUCCESS_DISMISS_MS = 3500;
 
 class BulkImportDomainState {
+  private readonly libraryPort: LibraryPort;
+
+  constructor(deps: { libraryPort?: LibraryPort } = {}) {
+    this.libraryPort = deps.libraryPort ?? new TauriLibraryAdapter();
+    this.bulkImportService = new BulkImportService({ libraryPort: this.libraryPort });
+  }
+
   // ─── State ───
   isBulkImportOpen = $state(false);
   isBulkScanning = $state(false);
@@ -41,7 +50,7 @@ class BulkImportDomainState {
   importNotice = $state<ImportNotice | null>(null);
 
   // Internal
-  bulkImportService = new BulkImportService();
+  bulkImportService: BulkImportService;
   private importNoticeTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   // ─── Callback for post-import refresh ───
@@ -245,8 +254,7 @@ class BulkImportDomainState {
     this.bulkScanError = null;
 
     try {
-      const { scanFolder } = await import('$lib/shared/api/tauriClient');
-      this.bulkScanResult = await scanFolder(this.bulkImportFolderPath);
+      this.bulkScanResult = await this.libraryPort.scanFolder(this.bulkImportFolderPath);
     } catch (error) {
       this.bulkScanError = error instanceof Error ? error.message : 'Import failed';
     } finally {

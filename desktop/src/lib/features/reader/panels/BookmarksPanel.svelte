@@ -1,12 +1,17 @@
 <script lang="ts">
-  import { listBookmarks, saveBookmark, deleteBookmark } from '$lib/shared/api/tauriClient';
+  import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
+  import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
 
-  type Props = {
+  type BookmarksPanelProps = {
     bookId: string;
     onNavigate?: (pageNumber: number) => void;
+    viewerPort?: ViewerPort;
   };
 
-  let { bookId, onNavigate }: Props = $props();
+  type Props = BookmarksPanelProps;
+
+  let { bookId, onNavigate, viewerPort: viewerPortProp }: Props = $props();
+  const viewerPort = viewerPortProp ?? new TauriViewerAdapter();
 
   let bookmarks: Array<{
     id: string;
@@ -26,7 +31,7 @@
   async function loadBookmarks(): Promise<void> {
     isLoading = true;
     try {
-      bookmarks = await listBookmarks(bookId);
+      bookmarks = await viewerPort.listBookmarks(bookId);
     } catch (err) {
       console.error('Failed to load bookmarks:', err);
       bookmarks = [];
@@ -40,7 +45,7 @@
 
     const pageNumber = 1;
     try {
-      await saveBookmark({
+      await viewerPort.saveBookmark({
         id: crypto.randomUUID(),
         bookId,
         pageNumber,
@@ -55,7 +60,7 @@
 
   async function handleDeleteBookmark(id: string): Promise<void> {
     try {
-      await deleteBookmark(id);
+      await viewerPort.deleteBookmark(id);
       await loadBookmarks();
     } catch (err) {
       console.error('Failed to delete bookmark:', err);

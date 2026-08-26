@@ -1,5 +1,6 @@
-import { getDefaultReaderSettings, upsertReaderSettings } from '$lib/shared/api/tauriClient';
 import { clampZoomPercent } from '$lib/features/reader/viewer-pdf/pdfNavigation';
+import type { SettingsPort } from '$lib/shared/ports/SettingsPort';
+import { TauriSettingsAdapter } from '$lib/shared/ports/adapters/tauri/TauriSettingsAdapter';
 import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav';
 import type { ReaderSettings } from '$lib/shared/types';
 import type { ViewerHandle } from '../viewer-shared/Viewer';
@@ -9,10 +10,12 @@ export type ReaderZoomDeps = {
   getActiveBook?: () => unknown;
   getRefs?: () => unknown;
   persist?: (s: ReaderSettings) => Promise<unknown>;
+  settingsPort?: SettingsPort;
 };
 
 export function createReaderZoom(deps: ReaderZoomDeps) {
-  const persist = deps.persist ?? ((s: ReaderSettings) => upsertReaderSettings(s));
+  const settingsPort = deps.settingsPort ?? new TauriSettingsAdapter();
+  const persist = deps.persist ?? ((s: ReaderSettings) => settingsPort.upsertReaderSettings(s));
   const resolveViewer = (): ViewerHandle => {
     if (deps.getViewer) return deps.getViewer();
     const refs = (deps.getRefs?.() ?? { pdf: null, epub: null }) as { pdf: { setScale?: (v: number) => void } | null; epub: { setZoom?: (v: number) => void } | null };
@@ -34,6 +37,25 @@ export function createReaderZoom(deps: ReaderZoomDeps) {
     } as ViewerHandle;
   };
 
+  const getDefaultReaderSettings = (): ReaderSettings => ({
+    themeMode: 'paper',
+    brightness: 100,
+    contrast: 100,
+    selectionColor: '#3388ff',
+    epub: { fontSize: 100, fontFamily: 'serif' },
+    lineHeight: 1.8,
+    letterSpacing: 0,
+    paragraphSpacing: 1,
+    textAlign: 'left',
+    direction: 'ltr',
+    hyphenation: false,
+    verticalScrolling: false,
+    margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+    showHeader: true,
+    showFooter: true,
+    showPageNumbers: true,
+    progressIndicator: 'percentage',
+  });
   let localReaderSettings = $state<ReaderSettings>(getDefaultReaderSettings());
   let persistTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingWheelDelta = 0;

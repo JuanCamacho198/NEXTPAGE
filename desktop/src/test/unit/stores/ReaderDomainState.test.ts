@@ -28,6 +28,8 @@ const mockFetchReadingSessions = vi.hoisted(() => vi.fn().mockResolvedValue([]))
 const mockSubscribeToReadingSessions = vi.hoisted(() =>
   vi.fn((_cb?: (row: unknown) => void) => () => undefined),
 );
+const mockGetFileBytes = vi.hoisted(() => vi.fn().mockResolvedValue([1, 2, 3]));
+const mockUpsertProgress = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockAuthState = vi.hoisted(() => ({ userId: null as string | null }));
 const mockOutboxAddCoalesced = vi.hoisted(() => vi.fn().mockResolvedValue('row-id'));
 const mockOutboxAdd = vi.hoisted(() => vi.fn().mockResolvedValue('row-id'));
@@ -46,6 +48,8 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
   updateBookProgress: mockUpdateBookProgress,
   setReadingStatus: mockSetReadingStatus,
   upsertRemoteReadingSessions: mockUpsertRemoteReadingSessions,
+  getFileBytes: mockGetFileBytes,
+  upsertProgress: mockUpsertProgress,
 }));
 
 vi.mock('$lib/shared/stores/AuthState.svelte', () => ({ authState: mockAuthState }));
@@ -210,11 +214,11 @@ describe('ReaderDomainState', () => {
   it('startReading fires readFile for EPUB preload', async () => {
     const book = makeBook({ id: 'b1', format: 'epub', filePath: '/test.epub' });
     await readerState.startReading(book);
-    expect(mockReadFile).toHaveBeenCalledWith('/test.epub');
+    expect(mockGetFileBytes).toHaveBeenCalledWith('/test.epub');
   });
 
   it('startReading preloadedBytes populated asynchronously for EPUB', async () => {
-    mockReadFile.mockResolvedValueOnce(new Uint8Array([10, 20, 30]));
+    mockGetFileBytes.mockResolvedValueOnce([10, 20, 30]);
     const book = makeBook({ id: 'b1', format: 'epub', filePath: '/test.epub' });
     await readerState.startReading(book);
     await vi.waitFor(() => {
@@ -225,7 +229,7 @@ describe('ReaderDomainState', () => {
   });
 
   it('startReading preload failure does not throw for EPUB', async () => {
-    mockReadFile.mockRejectedValueOnce(new Error('EPUB load failed'));
+    mockGetFileBytes.mockRejectedValueOnce(new Error('EPUB load failed'));
     const book = makeBook({ id: 'b1', format: 'epub', filePath: '/test.epub' });
     await expect(readerState.startReading(book)).resolves.toBeUndefined();
     expect(readerState.preloadedBytes).toBeNull();
@@ -327,11 +331,11 @@ describe('ReaderDomainState', () => {
   it('startReading fires readFile for PDF preload', async () => {
     const book = makeBook({ id: 'b1', format: 'pdf', filePath: '/test.pdf' });
     await readerState.startReading(book);
-    expect(mockReadFile).toHaveBeenCalledWith('/test.pdf');
+    expect(mockGetFileBytes).toHaveBeenCalledWith('/test.pdf');
   });
 
   it('startReading preloadedBytes populated asynchronously for PDF', async () => {
-    mockReadFile.mockResolvedValueOnce(new Uint8Array([99, 98, 97]));
+    mockGetFileBytes.mockResolvedValueOnce([99, 98, 97]);
     const book = makeBook({ id: 'b1', format: 'pdf', filePath: '/test.pdf' });
     await readerState.startReading(book);
     await vi.waitFor(() => {
@@ -342,7 +346,7 @@ describe('ReaderDomainState', () => {
   });
 
   it('startReading preload failure does not throw for PDF', async () => {
-    mockReadFile.mockRejectedValueOnce(new Error('PDF load failed'));
+    mockGetFileBytes.mockRejectedValueOnce(new Error('PDF load failed'));
     const book = makeBook({ id: 'b1', format: 'pdf', filePath: '/test.pdf' });
     await expect(readerState.startReading(book)).resolves.toBeUndefined();
     expect(readerState.preloadedBytes).toBeNull();

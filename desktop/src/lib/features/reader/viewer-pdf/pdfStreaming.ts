@@ -1,7 +1,14 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import type { PDFDocumentProxy, PDFDocumentLoadingTask } from 'pdfjs-dist';
-import { getFileBytes } from '$lib/shared/api/tauriClient';
 import type { PdfOutlineItem } from '$lib/shared/types';
+import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+
+let libraryPort: LibraryPort = new TauriLibraryAdapter();
+
+export function setPdfStreamingLibraryPort(port: LibraryPort): void {
+  libraryPort = port;
+}
 
 // ──────────────────────────────────────────
 // 1. Document Cache
@@ -59,7 +66,7 @@ async function loadPdfFromFile(
   filePath: string,
   onProgress?: (loaded: number, total: number) => void,
 ): Promise<{ loadingTask: PDFDocumentLoadingTask; document: PDFDocumentProxy }> {
-  const fileData = await getFileBytes(filePath);
+  const fileData = await libraryPort.getFileBytes(filePath);
 
   const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(fileData) });
 

@@ -1,11 +1,12 @@
 <script lang="ts">
   import { debugState } from './debugState.svelte';
-  import { getLogs, diagnose } from '$lib/shared/api/tauriClient';
+  import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
   import { epubCache } from '$lib/features/reader/viewer-epub/epubCache';
   import { documentCache } from '$lib/features/reader/viewer-pdf/pdfStreaming';
   import { metricsStore } from '$lib/shared/logger/MetricsStore';
   import type { DiagnoseResult } from '$lib/shared/types';
 
+  const viewerPort = new TauriViewerAdapter();
   let logsLoading = $state(false);
   let diagnoseResult = $state<DiagnoseResult | null>(null);
   let diagnoseLoading = $state(false);
@@ -105,7 +106,7 @@
   const handleExportLogs = async (): Promise<void> => {
     logsLoading = true;
     try {
-      const lines = await getLogs();
+      const lines = await viewerPort.getLogs();
       const blob = new Blob([lines.join('\n')], { type: 'application/jsonl' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -123,7 +124,7 @@
   const handleDiagnose = async (): Promise<void> => {
     diagnoseLoading = true;
     try {
-      diagnoseResult = await diagnose();
+      diagnoseResult = await viewerPort.diagnose();
     } catch (e) {
       console.error('Diagnose failed:', e);
     } finally {

@@ -23,7 +23,10 @@ import type {
   BookmarkStateJson,
 } from './GoogleDriveStateSync';
 import type { TagDto } from '$lib/shared/types';
-import * as tauri from '$lib/shared/api/tauriClient';
+import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
+import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
 
 /** Sync mode for reading progress: 'supabase' only (PR2 cutover — Drive hot is cold-only). */
 type ReadingProgressSyncMode = 'drive' | 'dual' | 'supabase';
@@ -32,6 +35,11 @@ type HighlightSyncMode = 'drive' | 'dual' | 'supabase';
 
 export class SyncService {
   private static gdrive = new GDriveProvider();
+  private static libraryPort: LibraryPort = new TauriLibraryAdapter();
+  private static viewerPort: ViewerPort = new TauriViewerAdapter();
+
+  static setLibraryPort(port: LibraryPort): void { this.libraryPort = port; }
+  static setViewerPort(port: ViewerPort): void { this.viewerPort = port; }
 
   /** Hot SoT is Supabase only (PR2). Drive hot push/pull removed; cold backup is separate. */
   private static readingProgressSync: ReadingProgressSyncMode = 'supabase';
@@ -196,10 +204,10 @@ export class SyncService {
         // Cover upload: try to read the cover file and upload to Storage
         let coverUrl: string | null = null;
         try {
-          const allBooks = await tauri.listLibraryBooks();
+          const allBooks = await this.libraryPort.listLibraryBooks();
           const localBook = allBooks.find((b) => b.id === entityId);
           if (localBook?.coverPath) {
-            const coverBytes = await tauri.getFileBytes(localBook.coverPath);
+            const coverBytes = await this.libraryPort.getFileBytes(localBook.coverPath);
             coverUrl = await bookSync.uploadCover(
               userId,
               entityId,
@@ -218,12 +226,12 @@ export class SyncService {
         // Drive file — no duplicates.
         let remoteRefs: ReturnType<typeof buildRemoteRefs> | null = null;
         try {
-          const sourceBooks = await tauri.listBooks();
+          const sourceBooks = await this.libraryPort.listBooks();
           const localSource = sourceBooks.find((b) => b.id === entityId);
           const format = String(metadata.format ?? localSource?.format ?? 'epub');
           const expectedName = canonicalBookName(entityId, format);
           if (localSource?.filePath) {
-            const fileBytes = await tauri.getFileBytes(localSource.filePath);
+            const fileBytes = await this.libraryPort.getFileBytes(localSource.filePath);
             const fileId = await this.gdrive.upload(
               entityId,
               new Uint8Array(fileBytes),
@@ -494,8 +502,8 @@ export class SyncService {
 
       // 2. Get local books — library listing for coverPath, book listing for filePath
       const [booksWithCover, sourceBooks] = await Promise.all([
-        tauri.listLibraryBooks(),
-        tauri.listBooks(),
+        this.libraryPort.listLibraryBooks(),
+        this.libraryPort.listBooks(),
       ]);
       const filePathByBookId = new Map(sourceBooks.map((b) => [b.id, b.filePath]));
       const localBooks = booksWithCover.map((lb) => ({
@@ -518,7 +526,7 @@ export class SyncService {
           let coverUrl: string | null = null;
           try {
             if (book.coverPath) {
-              const coverBytes = await tauri.getFileBytes(book.coverPath);
+              const coverBytes = await this.libraryPort.getFileBytes(book.coverPath);
               coverUrl = await catalogSync.uploadCover(
                 authState.userId,
                 book.id,
@@ -536,7 +544,7 @@ export class SyncService {
           let remoteRefs: ReturnType<typeof buildRemoteRefs> | null = null;
           if (book.filePath && missingRemoteRef) {
             try {
-              const fileBytes = await tauri.getFileBytes(book.filePath);
+              const fileBytes = await this.libraryPort.getFileBytes(book.filePath);
               const expectedName = canonicalBookName(book.id, book.format);
               const fileId = await this.gdrive.upload(
                 book.id,
@@ -616,7 +624,7 @@ export class SyncService {
 
     try {
       const sync = new SupabaseProgressSync(authState.userId);
-      const localBooks = await tauri.listBooks();
+      const localBooks = await this.libraryPort.listBooks();
 
       // ── Import progress ──
       if (this.readingProgressSync !== 'drive') {
@@ -629,7 +637,7 @@ export class SyncService {
         }> = [];
 
         for (const book of localBooks) {
-          const progress = await tauri.getProgress(book.id);
+          const progress = await this.viewerPort.getProgress(book.id);
           if (progress) {
             progressRows.push({
               userId: authState.userId,
@@ -657,7 +665,7 @@ export class SyncService {
         }> = [];
 
         for (const book of localBooks) {
-          const bookmarks = await tauri.listBookmarks(book.id);
+          const bookmarks = await this.viewerPort.listBookmarks(book.id);
           for (const b of bookmarks) {
             bookmarkRows.push({
               userId: authState.userId,
@@ -696,7 +704,7 @@ export class SyncService {
         }> = [];
 
         for (const book of localBooks) {
-          const highlights = await tauri.listHighlights(book.id);
+          const highlights = await this.viewerPort.listHighlights(book.id);
           for (const h of highlights) {
             highlightRows.push({
               id: h.id,
@@ -713,7 +721,7 @@ export class SyncService {
 
           // Import tags for each highlight
           for (const h of highlights) {
-            const tags: TagDto[] = await tauri.listTagsForHighlight(h.id).catch(() => []);
+            const tags: TagDto[] = await this.viewerPort.listTagsForHighlight(h.id).catch(() => []);
             for (const tag of tags) {
               const tagRow = await sync.upsertTag({
                 userId: authState.userId,
@@ -759,7 +767,7 @@ export class SyncService {
     const remoteBookFiles = remoteFiles.filter((f) => !f.endsWith('_state.json'));
 
     // 2. Get local books from SQLite
-    const localBooks = await tauri.listBooks();
+    const localBooks = await this.libraryPort.listBooks();
 
     // 3. Download book files that are on Drive but missing locally
     for (const remoteFile of remoteBookFiles) {
@@ -769,12 +777,12 @@ export class SyncService {
       });
 
       if (localBook) {
-        const existsLocally = await tauri.fileExists(localBook.filePath);
+        const existsLocally = await this.libraryPort.fileExists(localBook.filePath);
         if (!existsLocally) {
           try {
             console.log(`Syncing missing file for book: ${localBook.id}`);
             const fileData = await this.gdrive.download(remoteFile);
-            await tauri.saveBookFile(localBook.id, Array.from(fileData));
+            await this.libraryPort.saveBookFile(localBook.id, Array.from(fileData));
           } catch (e) {
             reportAuthError(e);
             console.error(`Failed to sync book file for ${localBook.id}:`, e);
@@ -790,9 +798,9 @@ export class SyncService {
       const expectedName = `${localBook.id}.${ext}`;
       if (!remoteFileIds.has(expectedName)) {
         try {
-          const existsLocally = await tauri.fileExists(localBook.filePath);
+          const existsLocally = await this.libraryPort.fileExists(localBook.filePath);
           if (existsLocally) {
-            const fileBytes = await tauri.getFileBytes(localBook.filePath);
+            const fileBytes = await this.libraryPort.getFileBytes(localBook.filePath);
             const fileId = await this.gdrive.upload(
               expectedName,
               new Uint8Array(fileBytes),

@@ -1,11 +1,7 @@
 import { HIGHLIGHT_COLORS } from '$lib/features/reader/highlight/highlightColors';
-import {
-  saveHighlightTags,
-  createTag,
-  listTags,
-  listTagsForHighlight,
-} from '$lib/shared/api/tauriClient';
 import type { TagDto } from '$lib/shared/types/book';
+import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
+import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
 import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
 import type { HighlightsState } from '../chrome/useHighlights.svelte';
 
@@ -20,6 +16,7 @@ export type HighlightMenuState = {
 
 export type HighlightMenuDeps = {
   highlights: HighlightsState;
+  viewerPort?: ViewerPort;
   listTagsFn?: () => Promise<TagDto[]>;
   listTagsForHighlightFn?: (id: string) => Promise<TagDto[]>;
   createTagFn?: (args: { name: string; color?: string }) => Promise<TagDto>;
@@ -28,13 +25,14 @@ export type HighlightMenuDeps = {
 
 export function createHighlightMenu(deps: HighlightMenuDeps) {
   const highlights = deps.highlights;
-  const listTagsFn = deps.listTagsFn ?? (listTags as unknown as (() => Promise<TagDto[]>) | undefined) ?? (async () => [] as TagDto[]);
+  const viewerPort = deps.viewerPort ?? new TauriViewerAdapter();
+  const listTagsFn = deps.listTagsFn ?? (() => viewerPort.listTags());
   const listTagsForHighlightFn =
-    deps.listTagsForHighlightFn ?? (listTagsForHighlight as unknown as ((id: string) => Promise<TagDto[]>) | undefined) ?? (async () => [] as TagDto[]);
+    deps.listTagsForHighlightFn ?? ((id: string) => viewerPort.listTagsForHighlight(id));
   const createTagFn =
-    deps.createTagFn ?? (createTag as unknown as ((args: { name: string; color?: string }) => Promise<TagDto>) | undefined) ?? (async () => ({ id: 'mock', name: 'mock' }) as TagDto);
+    deps.createTagFn ?? ((args: { name: string; color?: string }) => viewerPort.createTag(args));
   const saveHighlightTagsFn =
-    deps.saveHighlightTagsFn ?? (saveHighlightTags as unknown as ((args: { highlightId: string; tagIds: string[] }) => Promise<TagDto[]>) | undefined) ?? (async () => [] as TagDto[]);
+    deps.saveHighlightTagsFn ?? ((args: { highlightId: string; tagIds: string[] }) => viewerPort.saveHighlightTags(args));
 
   let highlightMenu = $state<HighlightMenuState>({
     open: false,

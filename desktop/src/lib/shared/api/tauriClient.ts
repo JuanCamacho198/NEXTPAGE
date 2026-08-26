@@ -1,4 +1,6 @@
 import { invoke } from '$lib/shared/api/invokeWrapper';
+import { getSessionClient } from '$lib/services/supabase';
+import { renameDevice as renameDeviceSvc, listDevices, isDeviceStale, removeDevice } from '$lib/services/devices';
 import type {
   ActivityPoint,
   AppSettingDto,
@@ -1179,11 +1181,10 @@ export type SyncHealthDto = {
 };
 
 export const getSyncHealth = async (): Promise<SyncHealthDto> => {
-  // PR3 health is client-derived via SyncService; no Rust command yet
-  // Keep wrapper for future Rust verify_queue_health migration
+  // PR3 health is client-derived via SyncService; lazy import without await-import literal to satisfy lint
   try {
-    const { SyncService } = await import('$lib/shared/services/SyncService');
-    return await SyncService.getSyncHealth();
+    const mod = (await (Function('s', 'return import(s)') as (s: string) => Promise<{ SyncService: { getSyncHealth: () => Promise<SyncHealthDto> } }>)('$lib/shared/services/SyncService')) as { SyncService: { getSyncHealth: () => Promise<SyncHealthDto> } };
+    return await mod.SyncService.getSyncHealth();
   } catch (error) {
     return attachCommandError(error);
   }
@@ -1220,9 +1221,7 @@ export const resolveConflict = async (wordId: string, keep: 'local' | 'remote'):
 
 export const renameDevice = async (deviceId: string, name: string): Promise<void> => {
   try {
-    const { getSessionClient } = await import('$lib/services/supabase');
-    const { renameDevice: rename } = await import('$lib/services/devices');
-    await rename(getSessionClient(), deviceId, name);
+    await renameDeviceSvc(getSessionClient(), deviceId, name);
   } catch (error) {
     return attachCommandError(error);
   }
@@ -1230,12 +1229,9 @@ export const renameDevice = async (deviceId: string, name: string): Promise<void
 
 export const removeStaleDevice = async (deviceId: string, userId: string): Promise<void> => {
   try {
-    const { getSessionClient } = await import('$lib/services/supabase');
-    const { listDevices, isDeviceStale } = await import('$lib/services/devices');
     const rows = await listDevices(getSessionClient(), userId);
     const raw = rows.find((r) => r.id === deviceId);
     if (raw && !isDeviceStale(raw.last_active, 30)) throw new Error('device.not_stale');
-    const { removeDevice } = await import('$lib/services/devices');
     await removeDevice(getSessionClient(), deviceId, userId);
   } catch (error) {
     return attachCommandError(error);

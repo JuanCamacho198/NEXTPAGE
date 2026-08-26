@@ -6,7 +6,8 @@
  * deduplicate renders and poll for bridge+overlay readiness.
  */
 import { untrack } from 'svelte';
-import { updateHighlight } from '$lib/shared/api/tauriClient';
+import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
+import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
 import { debugState } from '$lib/shared/debug/debugState.svelte';
 import { normalizeHref } from '$lib/shared/sync/LocatorCodec';
 import { stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
@@ -48,9 +49,11 @@ export type EpubHighlightsDeps = {
   getIsLoading: () => boolean;
   getLastRenderedChapter: () => number;
   onHighlightAction?: (action: HighlightActionKind, id: string, opts?: HighlightActionOpts) => void;
+  viewerPort?: ViewerPort;
 };
 
 export function createEpubHighlights(deps: EpubHighlightsDeps) {
+  const viewerPort = deps.viewerPort ?? new TauriViewerAdapter();
   let lastHighlightRenderKey = $state('');
 
   function handleEpubHighlightClick(msg: {
@@ -98,7 +101,7 @@ export function createEpubHighlights(deps: EpubHighlightsDeps) {
       arr[idx] = { ...arr[idx], pageNumber: msg.pageNumber };
       deps.setPersistedHighlights?.(arr);
     }
-    void updateHighlight({ id: msg.id, pageNumber: msg.pageNumber }).catch(() => {});
+    void viewerPort.updateHighlight({ id: msg.id, pageNumber: msg.pageNumber }).catch(() => {});
   }
 
   // Highlight overlay effect — mirrors viewer $effect verbatim, deps injected

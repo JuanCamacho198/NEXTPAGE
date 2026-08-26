@@ -1,5 +1,11 @@
 import * as pdfjsLib from 'pdfjs-dist';
-import { getFileBytes } from '$lib/shared/api/tauriClient';
+import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+
+let libraryPort: LibraryPort = new TauriLibraryAdapter();
+export function setPdfThumbnailLibraryPort(port: LibraryPort): void {
+  libraryPort = port;
+}
 
 let workerConfigured = false;
 
@@ -52,7 +58,7 @@ export const extractPdfMetadata = async (
   configureWorker();
 
   console.log(`[PdfMetadata] Analyzing file: ${filePath}`);
-  const fileData = await getFileBytes(filePath);
+  const fileData = await libraryPort.getFileBytes(filePath);
   const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(fileData),
   });

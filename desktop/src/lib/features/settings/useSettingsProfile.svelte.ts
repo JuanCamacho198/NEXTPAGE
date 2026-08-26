@@ -5,6 +5,7 @@ import { settingsState as defaultSettingsState } from '$lib/shared/stores/Settin
 import { normalizeProfileSession, profileSessionFromAuthState, type ProfileSessionViewModel } from './profileSession';
 import { DEFAULT_DAILY_GOAL, type DailyGoalOption } from '$lib/shared/types/settings';
 import type { MessageKey } from '$lib/shared/i18n';
+import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
 
 export type ProfileDeps = {
   authState?: typeof defaultAuthState;
@@ -68,7 +69,6 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
       // optimistic toast handled by caller; compose here if needed
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      const { pushToast } = await import('$lib/shared/stores/ToastQueue.svelte');
       pushToast('error', msg);
       throw error;
     } finally {

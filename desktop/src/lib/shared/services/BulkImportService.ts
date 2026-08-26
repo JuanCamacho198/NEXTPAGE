@@ -1,5 +1,6 @@
 import { importBook as importSingleBook } from './BookImportService';
-import { scanFolder } from '$lib/shared/api/tauriClient';
+import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
 import { inferGenreFromText } from '$lib/shared/services/genreHeuristic';
 import {
   BULK_IMPORT_ITEM_STATUS,
@@ -94,6 +95,11 @@ const markRemainingAsCancelled = (results: BulkImportItemResult[]): void => {
 export class BulkImportService {
   private cancelled = false;
   private static readonly CONCURRENCY = 3;
+  private readonly libraryPort: LibraryPort;
+
+  constructor(deps: { libraryPort?: LibraryPort } = {}) {
+    this.libraryPort = deps.libraryPort ?? new TauriLibraryAdapter();
+  }
 
   cancel(): void {
     this.cancelled = true;
@@ -135,7 +141,7 @@ export class BulkImportService {
 
   async importFolder(path: string, onProgress?: ProgressCallback): Promise<BulkImportSummary> {
     this.cancelled = false;
-    const scanned = await scanFolder(path);
+    const scanned = await this.libraryPort.scanFolder(path);
 
     const results: BulkImportItemResult[] = scanned.files.map((file) => {
       if (file.isDuplicate) {

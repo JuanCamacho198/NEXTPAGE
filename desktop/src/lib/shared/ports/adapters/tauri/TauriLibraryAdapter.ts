@@ -74,4 +74,24 @@ export class TauriLibraryAdapter implements LibraryPort {
   getPerBookSizes(): Promise<PerBookSize[]> {
     return tauriClient.getPerBookSizes();
   }
+
+  getFileBytes(filePath: string): Promise<number[]> {
+    return tauriClient.getFileBytes(filePath);
+  }
+
+  saveBookFile(id: string, data: number[], meta?: { title?: string; author?: string; format?: string }): Promise<void> {
+    return tauriClient.saveBookFile(id, data, meta);
+  }
+
+  fileExists(path: string): Promise<boolean> {
+    return tauriClient.fileExists(path);
+  }
+
+  getFileSize(filePath: string): Promise<number> {
+    return tauriClient.getFileSize(filePath);
+  }
+
+  updateBookProgress(bookId: string, currentPage: number): Promise<void> {
+    return tauriClient.updateBookProgress(bookId, currentPage);
+  }
 }

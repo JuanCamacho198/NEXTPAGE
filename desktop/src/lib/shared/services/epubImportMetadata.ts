@@ -29,7 +29,8 @@
  * no `<dc:title>` / `<dc:creator>`).
  */
 import ePub from 'epubjs';
-import { getFileBytes } from '$lib/shared/api/tauriClient';
+import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
 
 export type ImportEpubMetadata = {
   title: string | null;
@@ -48,6 +49,11 @@ type EpubJsBook = {
   destroy(): Promise<void> | void;
   package?: { metadata?: Record<string, unknown> };
 };
+
+let libraryPort: LibraryPort = new TauriLibraryAdapter();
+export function setEpubMetadataLibraryPort(port: LibraryPort): void {
+  libraryPort = port;
+}
 
 const EMPTY_METADATA: ImportEpubMetadata = { title: null, author: null, subject: null, subjects: [] };
 
@@ -164,7 +170,7 @@ const combineMetadata = (
  */
 export const parseOpfDirectly = async (filePath: string): Promise<ImportEpubMetadata> => {
   try {
-    const bytes = await getFileBytes(filePath);
+    const bytes = await libraryPort.getFileBytes(filePath);
     return parseOpfFromBytes(new Uint8Array(bytes));
   } catch {
     return EMPTY_METADATA;
@@ -202,6 +208,6 @@ export const extractEpubMetadataFromBytes = async (bytes: Uint8Array): Promise<I
 };
 
 export const extractEpubImportMetadata = async (filePath: string): Promise<ImportEpubMetadata> => {
-  const fileData = await getFileBytes(filePath);
+  const fileData = await libraryPort.getFileBytes(filePath);
   return extractEpubMetadataFromBytes(new Uint8Array(fileData));
 };

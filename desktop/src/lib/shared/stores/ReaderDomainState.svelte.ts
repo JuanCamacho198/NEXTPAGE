@@ -1,12 +1,3 @@
-import { readFile } from '@tauri-apps/plugin-fs';
-import {
-  getProgress,
-  saveProgress,
-  saveReadingSession,
-  updateBookProgress,
-  upsertProgress as upsertProgressCmd,
-  setReadingStatus,
-} from '$lib/shared/api/tauriClient';
 import type { ReaderBook, ReadingSessionInput, SaveProgressInput } from '$lib/shared/types';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
@@ -14,10 +5,18 @@ import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
 import type { SupabaseProgressRow } from '$lib/shared/sync/SupabaseProgressSync';
 import { readerSyncState } from './ReaderSyncState.svelte';
 import { isValidSessionProgressEvent, MIN_SESSION_DURATION_SECONDS } from './readingSessionValidator';
+import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
+import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
+import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+import { createPdfDocument } from '$lib/features/reader/viewer-pdf/pdfStreaming';
 
 const outboxDao = new SyncOutboxDao();
 
 class ReaderDomainState {
+  private readonly viewerPort: ViewerPort;
+  private readonly libraryPort: LibraryPort;
+
   // ─── State (lifecycle only) ───
   activeReadingBookId = $state<string | null>(null);
   cfiLocation = $state('');
@@ -58,7 +57,9 @@ class ReaderDomainState {
   }
 
   // ─── Sync hooks wiring ───
-  constructor() {
+  constructor(deps: { viewerPort?: ViewerPort; libraryPort?: LibraryPort } = {}) {
+    this.viewerPort = deps.viewerPort ?? new TauriViewerAdapter();
+    this.libraryPort = deps.libraryPort ?? new TauriLibraryAdapter();
     readerSyncState.injectDomainHooks({
       applyRemoteProgress: (p) => this.applyRemoteProgress(p),
       getActiveReadingBookId: () => this.activeReadingBookId,
@@ -71,24 +72,23 @@ class ReaderDomainState {
     const epoch = ++this.openEpoch;
     this.activeReadingBookId = book.id;
     this.preloadedBytes = null;
-    await setReadingStatus(book.id, 'reading').catch(() => {});
+    await this.libraryPort.setReadingStatus(book.id, 'reading').catch(() => {});
     const format = book.format.toLowerCase();
     console.warn('[continue] startReading book', book.id, 'epoch', epoch, 'format', format);
     if (format === 'epub' || format === 'pdf') {
-      readFile(book.filePath)
+      this.libraryPort
+        .getFileBytes(book.filePath)
         .then((bytes) => {
-          this.preloadedBytes = { filePath: book.filePath, data: bytes };
+          this.preloadedBytes = { filePath: book.filePath, data: new Uint8Array(bytes) };
         })
         .catch(() => {});
     }
     if (format === 'pdf') {
-      import('$lib/features/reader/viewer-pdf/pdfStreaming').then(({ createPdfDocument }) => {
-        void createPdfDocument(book.filePath).catch(() => {});
-      });
+      void createPdfDocument(book.filePath).catch(() => {});
     }
     if (format === 'epub') {
       try {
-        const progress = await getProgress(book.id);
+        const progress = await this.viewerPort.getProgress(book.id);
         if (epoch !== this.openEpoch) {
           console.warn('[continue] startReading local progress stale epoch', epoch, 'current', this.openEpoch);
           return;
@@ -116,7 +116,8 @@ class ReaderDomainState {
       if (authState.userId) {
         const sync = readerSyncState.getSupabaseSync() ?? new SupabaseProgressSync(authState.userId);
         if (!readerSyncState.getSupabaseSync()) readerSyncState.setSupabaseSync(sync);
-        const localUpdatedAt = await getProgress(book.id)
+        const localUpdatedAt = await this.viewerPort
+          .getProgress(book.id)
           .then((value) => value?.updatedAt ?? null)
           .catch(() => null);
         console.warn(
@@ -138,7 +139,7 @@ class ReaderDomainState {
     this.percentage = progress.percentage;
     this.locatorJson = progress.locatorJson ?? null;
     readerSyncState.appliedRemote.set(`progress:${progress.bookId}`, progress.updatedAt);
-    void upsertProgressCmd({
+    void this.viewerPort.upsertProgress({
       id: progress.id ?? crypto.randomUUID(),
       bookId: progress.bookId,
       cfiLocation: progress.cfiLocation,
@@ -153,8 +154,8 @@ class ReaderDomainState {
     this.percentage = Math.max(0, Math.min(100, nextPercentage));
     const payload: SaveProgressInput = { bookId, cfiLocation: nextLocation, percentage: this.percentage };
     try {
-      await saveProgress(payload);
-      await setReadingStatus(bookId, this.percentage >= 100 ? 'completed' : 'reading');
+      await this.viewerPort.saveProgress(payload);
+      await this.libraryPort.setReadingStatus(bookId, this.percentage >= 100 ? 'completed' : 'reading');
       if (authState.userId) {
         const outboxPayload = {
           userId: authState.userId,
@@ -173,7 +174,7 @@ class ReaderDomainState {
   async handlePdfPageChange(bookId: string, page: number, total: number): Promise<void> {
     this.onPageChangeCallback?.(bookId, page, total);
     try {
-      await updateBookProgress(bookId, page);
+      await this.libraryPort.updateBookProgress(bookId, page);
     } catch {}
     void this.onStatsRefreshNeeded?.(bookId);
   }
@@ -194,7 +195,7 @@ class ReaderDomainState {
       userId: authState.userId ?? '',
     };
     try {
-      const saved = await saveReadingSession(payload);
+      const saved = await this.viewerPort.saveReadingSession(payload);
       void this.onStatsRefreshNeeded?.(bookId);
       const outboxPayload = {
         id: saved.id,

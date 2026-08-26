@@ -1,15 +1,20 @@
 <script lang="ts">
   import type { CollectionDto } from '$lib/shared/types';
-  import { addBookToCollection, removeBookFromCollection } from '$lib/shared/api/tauriClient';
+  import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+  import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
 
   type Props = {
     bookId: string;
     collectionIds: number[];
     collections: CollectionDto[];
     onUpdate: (newIds: number[]) => void;
+    libraryPort?: LibraryPort;
   };
 
-  let { bookId, collectionIds, collections, onUpdate }: Props = $props();
+  let { bookId, collectionIds, collections, onUpdate, libraryPort: libraryPortProp }: Props = $props();
+
+  // svelte-ignore state_referenced_locally
+  const libraryPort: LibraryPort = libraryPortProp ?? new TauriLibraryAdapter();
 
   let loading = $state(false);
 
@@ -18,9 +23,9 @@
     loading = true;
     try {
       if (checked) {
-        await addBookToCollection({ bookId, collectionId });
+        await libraryPort.addBookToCollection({ bookId, collectionId });
       } else {
-        await removeBookFromCollection({ bookId, collectionId });
+        await libraryPort.removeBookFromCollection({ bookId, collectionId });
       }
       const newIds = checked
         ? [...collectionIds, collectionId]

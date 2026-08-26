@@ -28,5 +28,10 @@ export class MockLibraryAdapter implements LibraryPort {
   async deleteBookCover(id: string): Promise<void> { this.#covers.delete(id); }
   async extractEpubCover(): Promise<boolean> { return true; }
   async getPerBookSizes(): Promise<PerBookSize[]> { return [...this.#books.values()].map((b) => ({ id: b.id, title: b.title, bytes: 0 })); }
+  async getFileBytes(): Promise<number[]> { return []; }
+  async saveBookFile(): Promise<void> { }
+  async fileExists(): Promise<boolean> { return false; }
+  async getFileSize(): Promise<number> { return 0; }
+  async updateBookProgress(): Promise<void> { }
   seedBooks(b: LibraryBookDto[]): void { for (const x of b) this.#books.set(x.id, x); }
 }

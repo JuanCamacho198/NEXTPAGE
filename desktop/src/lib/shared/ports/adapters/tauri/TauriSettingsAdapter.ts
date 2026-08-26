@@ -1,5 +1,5 @@
 import type { SettingsPort } from '$lib/shared/ports/SettingsPort';
-import type { ReaderSettings, UiLocale } from '$lib/shared/types';
+import type { AppSettingDto, ReaderSettings, UiLocale } from '$lib/shared/types';
 import * as tauriClient from '$lib/shared/api/tauriClient';
 
 export class TauriSettingsAdapter implements SettingsPort {
@@ -33,5 +33,13 @@ export class TauriSettingsAdapter implements SettingsPort {
 
   getTodayMinutes(userId: string, bookId?: string): Promise<number> {
     return tauriClient.getTodayMinutes(userId, bookId);
+  }
+
+  getAppSettings(): Promise<AppSettingDto[]> {
+    return tauriClient.getSettings();
+  }
+
+  upsertAppSettings(settings: AppSettingDto[]): Promise<void> {
+    return tauriClient.upsertSettings(settings);
   }
 }

@@ -15,8 +15,11 @@ import { GDriveProvider } from './storage/GDriveProvider';
 import { hasLiveSession } from '$lib/services/supabase';
 import { SupabaseProgressSync } from '../sync/SupabaseProgressSync';
 import { SupabaseBookCatalogSync } from '../sync/SupabaseBookCatalogSync';
-import * as tauri from '$lib/shared/api/tauriClient';
 import type { RemoteReadingSessionRow } from '$lib/shared/types';
+import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
+import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
 
 export interface ColdBackupJson {
   version: number;
@@ -76,10 +79,6 @@ export interface ImportResult {
 const CHUNK_SIZE = 100;
 const COLD_BACKUP_FILE = 'nextpage_cold_backup.json';
 
-function coldBackupPath(userId: string): string {
-  return `books/${userId}/${COLD_BACKUP_FILE}`;
-}
-
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
@@ -87,6 +86,10 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 export class DriveColdBackupService {
+  private static libraryPort: LibraryPort = new TauriLibraryAdapter();
+  private static viewerPort: ViewerPort = new TauriViewerAdapter();
+  static setLibraryPort(port: LibraryPort): void { this.libraryPort = port; }
+  static setViewerPort(port: ViewerPort): void { this.viewerPort = port; }
   private static gdrive = new GDriveProvider();
 
   /**
@@ -96,12 +99,12 @@ export class DriveColdBackupService {
    */
   static async exportColdBackup(userId: string): Promise<void> {
     const [libraryBooks, sourceBooks] = await Promise.all([
-      tauri.listLibraryBooks().catch(() => []),
-      tauri.listBooks().catch(() => []),
+      this.libraryPort.listLibraryBooks().catch(() => []),
+      this.libraryPort.listBooks().catch(() => []),
     ]);
 
     // Books: map library DTOs to catalog rows
-    const books: ColdBackupJson['books'] = libraryBooks.map((b) => ({
+    const books: ColdBackupJson['books'] = libraryBooks.map((b: import('$lib/shared/types').LibraryBookDto) => ({
       id: b.id,
       userId,
       title: b.title,
@@ -116,7 +119,7 @@ export class DriveColdBackupService {
     const progress: ColdBackupJson['progress'] = [];
     for (const b of sourceBooks) {
       try {
-        const p = await tauri.getProgress(b.id);
+        const p = await this.viewerPort.getProgress(b.id);
         if (p) {
           progress.push({
             userId,
@@ -136,7 +139,7 @@ export class DriveColdBackupService {
     const bookmarks: ColdBackupJson['bookmarks'] = [];
     for (const b of sourceBooks) {
       try {
-        const hs = await tauri.listHighlights(b.id);
+        const hs = await this.viewerPort.listHighlights(b.id);
         for (const h of hs) {
           highlights.push({
             id: h.id,
@@ -152,7 +155,7 @@ export class DriveColdBackupService {
         }
       } catch {}
       try {
-        const bms = await tauri.listBookmarks(b.id);
+        const bms = await this.viewerPort.listBookmarks(b.id);
         for (const bm of bms) {
           bookmarks.push({
             id: bm.id,

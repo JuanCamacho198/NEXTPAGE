@@ -3,15 +3,11 @@ import { debugState } from '$lib/shared/debug/debugState.svelte';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
-import {
-  saveHighlight,
-  deleteHighlight,
-  updateHighlight,
-  listHighlights,
-} from '$lib/shared/api/tauriClient';
 import type { HighlightDto } from '$lib/shared/types/book';
 import type { LibraryBookDto } from '$lib/shared/types/library';
 import type { SpineResolver } from './useSpineResolver.svelte';
+import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
+import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
 
 type ActiveBook = LibraryBookDto & { filePath: string };
 
@@ -37,6 +33,7 @@ export type HighlightsDeps = {
   getBook: () => ActiveBook | null;
   spine: SpineResolver;
   outbox: SyncOutboxDao;
+  viewerPort?: ViewerPort;
   getHighlightsVersion?: () => number;
   getUserId?: () => string | null;
   getDebugState?: () => typeof debugState | null;
@@ -44,6 +41,7 @@ export type HighlightsDeps = {
 
 export function createHighlights(deps: HighlightsDeps) {
   const { getBook, spine, outbox } = deps;
+  const viewerPort = deps.viewerPort ?? new TauriViewerAdapter();
   const getUserId = deps.getUserId ?? (() => authState.userId);
   const getDbg = deps.getDebugState ?? (() => debugState);
 
@@ -76,7 +74,7 @@ export function createHighlights(deps: HighlightsDeps) {
         }
         const bookId = book.id;
         try {
-          const rows: HighlightDto[] = await listHighlights(bookId);
+          const rows: HighlightDto[] = await viewerPort.listHighlights(bookId);
           if (untrack(() => getBook()?.id) !== bookId) {
             console.debug('RW: listHighlights stale bookId ignored', bookId.slice(0, 4));
             continue;
@@ -103,7 +101,7 @@ export function createHighlights(deps: HighlightsDeps) {
                 if (idx >= 0 && idx !== pageNumber) {
                   console.warn('RW: fixing page mismatch', r.id.slice(0, 4), `page ${r.pageNumber} -> ${idx}`);
                   pageNumber = idx;
-                  void updateHighlight({ id: r.id, pageNumber }).catch(() => {});
+                  void viewerPort.updateHighlight({ id: r.id, pageNumber }).catch(() => {});
                 }
               } else if (cfiTrim.startsWith('readium:')) {
                 const spineIdx = spine.getSpineIndexForHref(cfiTrim, spine.epubSpineHrefs);
@@ -115,7 +113,7 @@ export function createHighlights(deps: HighlightsDeps) {
                     `href ${cfiTrim.slice(0, 40)}`,
                   );
                   pageNumber = spineIdx;
-                  void updateHighlight({ id: r.id, pageNumber }).catch(() => {});
+                  void viewerPort.updateHighlight({ id: r.id, pageNumber }).catch(() => {});
                 } else if (spineIdx === null) {
                   console.warn(
                     'RW: readium href not in spine',
@@ -204,7 +202,7 @@ export function createHighlights(deps: HighlightsDeps) {
       try {
         const dbg2 = getDbg();
         if (dbg2) dbg2.epub.saveHighlightCallCount++;
-        await saveHighlight({
+        await viewerPort.saveHighlight({
           id: highlightId,
           bookId: book.id,
           text: data.text,
@@ -255,7 +253,7 @@ export function createHighlights(deps: HighlightsDeps) {
 
   function updateHighlightColor(id: string, color: string): void {
     persistedHighlights = persistedHighlights.map((h) => (h.id === id ? { ...h, color } : h));
-    updateHighlight({ id, color }).catch((err) => {
+    viewerPort.updateHighlight({ id, color }).catch((err) => {
       console.error('Failed to update highlight color:', err);
     });
     enqueueHighlightUpdate(id, { color });
@@ -263,7 +261,7 @@ export function createHighlights(deps: HighlightsDeps) {
 
   function updateHighlightNote(id: string, note: string | null): void {
     persistedHighlights = persistedHighlights.map((h) => (h.id === id ? { ...h, note } : h));
-    updateHighlight({ id, note: note ?? undefined }).catch((err) => {
+    viewerPort.updateHighlight({ id, note: note ?? undefined }).catch((err) => {
       console.error('Failed to update highlight note:', err);
     });
     enqueueHighlightUpdate(id, { note });
@@ -272,7 +270,7 @@ export function createHighlights(deps: HighlightsDeps) {
   function deleteHighlightById(id: string): void {
     const highlight = persistedHighlights.find((item) => item.id === id);
     persistedHighlights = persistedHighlights.filter((h) => h.id !== id);
-    deleteHighlight(id).catch((err) => console.error('Failed to delete highlight:', err));
+    viewerPort.deleteHighlight(id).catch((err) => console.error('Failed to delete highlight:', err));
     const uidDel = getUserId();
     if (uidDel && highlight) {
       const book = untrack(getBook);

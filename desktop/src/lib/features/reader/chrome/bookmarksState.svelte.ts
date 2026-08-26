@@ -1,8 +1,10 @@
-import { listBookmarks, saveBookmark, deleteBookmark } from '$lib/shared/api/tauriClient';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
+import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
+import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
 
 const defaultOutboxDao = new SyncOutboxDao();
+const defaultViewerPort: ViewerPort = new TauriViewerAdapter();
 
 export type BookmarkItem = {
   id: string;
@@ -12,7 +14,7 @@ export type BookmarkItem = {
   createdAt: string;
 };
 
-export function createBookmarksState(deps: { outboxDao?: SyncOutboxDao } = {}): {
+export function createBookmarksState(deps: { outboxDao?: SyncOutboxDao; viewerPort?: ViewerPort } = {}): {
   readonly bookmarksList: BookmarkItem[];
   readonly bookmarksLoading: boolean;
   loadBookmarks(bookId: string): Promise<void>;
@@ -20,13 +22,14 @@ export function createBookmarksState(deps: { outboxDao?: SyncOutboxDao } = {}): 
   removeBookmark(id: string, bookId: string): Promise<void>;
 } {
   const outboxDao = deps.outboxDao ?? defaultOutboxDao;
+  const viewerPort = deps.viewerPort ?? defaultViewerPort;
   let bookmarksList = $state<BookmarkItem[]>([]);
   let bookmarksLoading = $state(false);
 
   async function loadBookmarks(bookId: string): Promise<void> {
     bookmarksLoading = true;
     try {
-      bookmarksList = await listBookmarks(bookId);
+      bookmarksList = await viewerPort.listBookmarks(bookId);
     } catch (err) {
       console.error('Failed to load bookmarks:', err);
       bookmarksList = [];
@@ -43,7 +46,7 @@ export function createBookmarksState(deps: { outboxDao?: SyncOutboxDao } = {}): 
     const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();
     try {
-      await saveBookmark({
+      await viewerPort.saveBookmark({
         id,
         bookId,
         pageNumber,
@@ -69,7 +72,7 @@ export function createBookmarksState(deps: { outboxDao?: SyncOutboxDao } = {}): 
   async function removeBookmark(id: string, bookId: string): Promise<void> {
     const bookmark = bookmarksList.find((item) => item.id === id);
     try {
-      await deleteBookmark(id);
+      await viewerPort.deleteBookmark(id);
       if (authState.userId && bookmark) {
         const updatedAt = new Date().toISOString();
         void outboxDao.add('BOOKMARK', id, 'DELETE', JSON.stringify({

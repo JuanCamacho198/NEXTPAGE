@@ -1,5 +1,7 @@
 import { SyncService } from '$lib/shared/services/SyncService';
 import type { SyncHealth, SyncScope, SyncConflict } from '$lib/shared/types/book';
+import { invoke } from '$lib/shared/api/invokeWrapper';
+import { dictionaryState } from '$lib/shared/stores/DictionaryState.svelte';
 
 const SCOPES_KEY = 'sync.scopes';
 const DEFAULT_SCOPES: Record<SyncScope, boolean> = {
@@ -63,7 +65,6 @@ export function createSyncHealthState() {
     if (resolution === 'keep_local') {
       // LWW bump: set updated_at = now() + enqueue UPSERT
       const now = new Date(Date.now() + 1).toISOString();
-      const { invoke } = await import('$lib/shared/api/invokeWrapper');
       try {
         await invoke('updateDictionaryWord', {
           payload: { id: conflict.id, word: conflict.localWord ?? conflict.word ?? '', updatedAt: now },
@@ -78,7 +79,6 @@ export function createSyncHealthState() {
       } catch (e) {
         // Fallback: update local state directly and queue via SyncService path
         // Use dictionaryState update if invoke fails
-        const { dictionaryState } = await import('$lib/shared/stores/DictionaryState.svelte');
         const found = dictionaryState.words.find((w) => w.id === conflictId);
         if (found) await dictionaryState.update(conflictId, { word: found.word ?? conflict.localWord ?? '' });
       }

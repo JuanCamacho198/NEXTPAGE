@@ -1,10 +1,24 @@
 <script lang="ts">
   import type { CollectionDto } from '$lib/shared/types';
-  import { createCollection, deleteCollection, listCollections } from '$lib/shared/api/tauriClient';
+  import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+  import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
   import { COLLECTION_COLOR_OPTIONS } from '../utils';
   import type { MessageKey } from '$lib/shared/i18n';
 
-  let { open, onClose, t }: { open: boolean; onClose: () => void; t: (key: MessageKey, params?: Record<string, string | number>) => string } = $props();
+  let {
+    open,
+    onClose,
+    t,
+    libraryPort: libraryPortProp,
+  }: {
+    open: boolean;
+    onClose: () => void;
+    t: (key: MessageKey, params?: Record<string, string | number>) => string;
+    libraryPort?: LibraryPort;
+  } = $props();
+
+  // svelte-ignore state_referenced_locally
+  const libraryPort: LibraryPort = libraryPortProp ?? new TauriLibraryAdapter();
 
   let collections = $state<CollectionDto[]>([]);
   let loading = $state(false);
@@ -16,7 +30,7 @@
   async function loadCollections(): Promise<void> {
     loading = true;
     try {
-      collections = await listCollections();
+      collections = await libraryPort.listCollections();
     } catch (e) {
       console.error('Failed to load collections:', e);
     } finally {
@@ -27,7 +41,7 @@
   async function handleCreate(): Promise<void> {
     if (!newName.trim()) return;
     try {
-      const created = await createCollection({ name: newName.trim(), color: newColor });
+      const created = await libraryPort.createCollection({ name: newName.trim(), color: newColor });
       collections = [...collections, created];
       newName = '';
       newColor = '#6366f1';
@@ -38,7 +52,7 @@
 
   async function handleDelete(id: number): Promise<void> {
     try {
-      await deleteCollection(id);
+      await libraryPort.deleteCollection(id);
       collections = collections.filter((c) => c.id !== id);
     } catch (e) {
       console.error('Failed to delete collection:', e);

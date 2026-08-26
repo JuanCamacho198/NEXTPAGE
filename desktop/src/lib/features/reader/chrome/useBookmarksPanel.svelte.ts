@@ -1,13 +1,15 @@
 import { createBookmarksState } from './bookmarksState.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
+import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
 
 export type BookmarksPanelDeps = {
   outboxDao?: SyncOutboxDao;
+  viewerPort?: ViewerPort;
 };
 
 export function createBookmarksPanel(deps: BookmarksPanelDeps = {}) {
   const outboxDao = deps.outboxDao ?? new SyncOutboxDao();
-  const bookmarksState = createBookmarksState({ outboxDao });
+  const bookmarksState = createBookmarksState({ outboxDao, viewerPort: deps.viewerPort });
 
   let showBookmarks = $state(false);
   let showBookmarkRibbon = $state(false);

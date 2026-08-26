@@ -45,4 +45,9 @@ export interface LibraryPort {
   deleteBookCover(bookId: string): Promise<void>;
   extractEpubCover(bookId: string, filePath: string): Promise<boolean>;
   getPerBookSizes(): Promise<PerBookSize[]>;
+  getFileBytes(filePath: string): Promise<number[]>;
+  saveBookFile(id: string, data: number[], meta?: { title?: string; author?: string; format?: string }): Promise<void>;
+  fileExists(path: string): Promise<boolean>;
+  getFileSize(filePath: string): Promise<number>;
+  updateBookProgress(bookId: string, currentPage: number): Promise<void>;
 }

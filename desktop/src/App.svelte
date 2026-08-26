@@ -15,11 +15,11 @@
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import { titlebarState } from '$lib/stores/titlebarState.svelte';
   import { isCustomTitlebarPlatform } from '$lib/shared/utils/platform';
+  import { type as osType } from '@tauri-apps/plugin-os';
 
-  onMount(async () => {
+  onMount(() => {
     try {
-      const { type } = await import('@tauri-apps/plugin-os');
-      titlebarState.isCustomTitlebar = isCustomTitlebarPlatform(type());
+      titlebarState.isCustomTitlebar = isCustomTitlebarPlatform(osType());
     } catch {
       titlebarState.isCustomTitlebar = false;
     }

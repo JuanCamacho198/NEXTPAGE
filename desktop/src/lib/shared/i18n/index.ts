@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
-import { getLocaleSetting, upsertLocaleSetting } from '$lib/shared/api/tauriClient';
 import { SUPPORTED_UI_LOCALES, type UiLocale } from '$lib/shared/types';
+import type { SettingsPort } from '$lib/shared/ports/SettingsPort';
+import { TauriSettingsAdapter } from '$lib/shared/ports/adapters/tauri/TauriSettingsAdapter';
 import { messagesEn, type MessageKey } from './messages.en';
 import { messagesEs } from './messages.es';
 import { logger } from '$lib/shared/logger/Logger';
@@ -91,7 +92,7 @@ const resolveMessage = (locale: UiLocale, key: MessageKey): string => {
   return key;
 };
 
-const createI18nStore = (): {
+const createI18nStore = (deps: { settingsPort?: SettingsPort } = {}): {
   locale: import('svelte/store').Writable<UiLocale>;
   setLocale: (nextLocale: string | UiLocale) => Promise<void>;
   initializeLocale: () => Promise<UiLocale>;
@@ -100,13 +101,14 @@ const createI18nStore = (): {
   readonly FALLBACK_LOCALE: UiLocale;
   toSupportedLocale: (value: string | null | undefined) => UiLocale | null;
 } => {
+  const settingsPort: SettingsPort = deps.settingsPort ?? new TauriSettingsAdapter();
   const localeStore = writable<UiLocale>(DEFAULT_LOCALE);
 
   const setLocale = async (nextLocale: string | UiLocale): Promise<void> => {
     const safeLocale = toSupportedLocale(nextLocale) ?? FALLBACK_LOCALE;
     localeStore.set(safeLocale);
     globalThis.localStorage?.setItem(LOCALE_STORAGE_KEY, safeLocale);
-    await upsertLocaleSetting(safeLocale);
+    await settingsPort.upsertLocale(safeLocale);
   };
 
   const initializeLocale = async (): Promise<UiLocale> => {
@@ -120,11 +122,11 @@ const createI18nStore = (): {
 
       localeStore.set(FALLBACK_LOCALE);
       globalThis.localStorage?.setItem(LOCALE_STORAGE_KEY, FALLBACK_LOCALE);
-      await upsertLocaleSetting(FALLBACK_LOCALE);
+      await settingsPort.upsertLocale(FALLBACK_LOCALE);
       return FALLBACK_LOCALE;
     }
 
-    const persistedRaw = await getLocaleSetting();
+    const persistedRaw = await settingsPort.getLocale();
     const persisted = toSupportedLocale(persistedRaw);
     if (persisted) {
       localeStore.set(persisted);
@@ -135,13 +137,13 @@ const createI18nStore = (): {
     if (typeof persistedRaw === 'string' && persistedRaw.length > 0) {
       localeStore.set(FALLBACK_LOCALE);
       globalThis.localStorage?.setItem(LOCALE_STORAGE_KEY, FALLBACK_LOCALE);
-      await upsertLocaleSetting(FALLBACK_LOCALE);
+      await settingsPort.upsertLocale(FALLBACK_LOCALE);
       return FALLBACK_LOCALE;
     }
 
     localeStore.set(DEFAULT_LOCALE);
     globalThis.localStorage?.setItem(LOCALE_STORAGE_KEY, DEFAULT_LOCALE);
-    await upsertLocaleSetting(DEFAULT_LOCALE);
+    await settingsPort.upsertLocale(DEFAULT_LOCALE);
     return DEFAULT_LOCALE;
   };
 
@@ -161,4 +163,5 @@ const createI18nStore = (): {
 };
 
 export const i18n = createI18nStore();
+export { createI18nStore };
 export type { MessageKey };

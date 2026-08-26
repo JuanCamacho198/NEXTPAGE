@@ -1,8 +1,9 @@
 import { readFile } from '@tauri-apps/plugin-fs';
 import { pickImage } from '$lib/shared/services/FilePicker';
-import { upsertBookCover } from '$lib/shared/api/tauriClient';
 import type { LibraryBookDto } from '$lib/shared/types';
 import type { MessageKey } from '$lib/shared/i18n';
+import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
 
 export const MAX_GENRE_LENGTH = 80;
 export const CONTROL_CHAR_REGEX = /[\u0000-\u001f\u007f]/;
@@ -79,9 +80,11 @@ export type UseShelfEditOptions = {
   onSaveEdit: (dto: Partial<LibraryBookDto>) => Promise<void>;
   t: (key: MessageKey, params?: Record<string, string | number>) => string;
   onCoverUpdated?: (bookId: string, path: string) => void;
+  libraryPort?: LibraryPort;
 };
 
 export function useShelfEdit(options: UseShelfEditOptions) {
+  const libraryPort: LibraryPort = options.libraryPort ?? new TauriLibraryAdapter();
   let isEditing = $state(false);
   let editTitle = $state('');
   let editAuthor = $state('');
@@ -157,7 +160,7 @@ export function useShelfEdit(options: UseShelfEditOptions) {
     try {
       const bytes = await readFile(result.path);
       const mimeType = getMimeTypeFromExtension(result.name);
-      await upsertBookCover({
+      await libraryPort.upsertBookCover({
         bookId: book.id,
         data: Array.from(bytes),
         mimeType,

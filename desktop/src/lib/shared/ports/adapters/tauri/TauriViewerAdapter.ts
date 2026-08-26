@@ -40,6 +40,14 @@ export class TauriViewerAdapter implements ViewerPort {
     return tauriClient.listTagsForHighlight(highlightId);
   }
 
+  createTag(payload: { name: string; color?: string }): Promise<TagDto> {
+    return tauriClient.createTag(payload);
+  }
+
+  saveHighlightTags(payload: { highlightId: string; tagIds: string[] }): Promise<TagDto[]> {
+    return tauriClient.saveHighlightTags(payload);
+  }
+
   listBookmarks(bookId?: string): Promise<BookmarkDto[]> {
     return tauriClient.listBookmarks(bookId);
   }
@@ -60,6 +68,14 @@ export class TauriViewerAdapter implements ViewerPort {
     return tauriClient.saveProgress(payload);
   }
 
+  upsertProgress(progress: ReadingProgressDto): Promise<void> {
+    return tauriClient.upsertProgress(progress);
+  }
+
+  saveReadingSession(payload: import('$lib/shared/types').ReadingSessionInput): Promise<import('$lib/shared/types').ReadingSessionSavedDto> {
+    return tauriClient.saveReadingSession(payload);
+  }
+
   searchBookText(payload: SearchBookTextInput): Promise<SearchBookTextResponse> {
     return tauriClient.searchBookText(payload);
   }
@@ -70,5 +86,33 @@ export class TauriViewerAdapter implements ViewerPort {
 
   upsertRemoteReadingSessions(rows: RemoteReadingSessionRow[]): Promise<number> {
     return tauriClient.upsertRemoteReadingSessions(rows);
+  }
+
+  getReadingStats(bookId?: string): Promise<import('$lib/shared/types').ReadingStatsSummaryDto> {
+    return tauriClient.getReadingStats(bookId);
+  }
+
+  getReadingStatsForRange(from: string, to: string, bookId?: string): Promise<import('$lib/shared/types').ReadingStatsSummaryDto> {
+    return tauriClient.getReadingStatsForRange(from, to, bookId);
+  }
+
+  getReadingActivity(period: string, granularity: string, bookId?: string): Promise<import('$lib/shared/types').ActivityPoint[]> {
+    return tauriClient.getReadingActivity(period, granularity, bookId);
+  }
+
+  getReadingStreak(bookId?: string, userId = ''): Promise<number> {
+    return tauriClient.getReadingStreak(bookId, userId);
+  }
+
+  addDictionaryWord(payload: { word: string; tags?: string[]; isFavorite?: boolean; srsStage?: number; userId?: string }): Promise<import('$lib/shared/types').DictionaryWordDto> {
+    return tauriClient.addDictionaryWord(payload);
+  }
+
+  getLogs(): Promise<string[]> {
+    return tauriClient.getLogs();
+  }
+
+  diagnose(): Promise<import('$lib/shared/types').DiagnoseResult> {
+    return tauriClient.diagnose();
   }
 }

@@ -1,11 +1,18 @@
-import { searchBookText } from '$lib/shared/api/tauriClient';
 import type { SearchBookTextResponse, SearchNavigationTarget } from '$lib/shared/types';
+import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
+import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
 
 type MaybeCommandError = Error & {
   commandError?: { code: string; message: string; recoverable: boolean };
 };
 
 class SearchDomainState {
+  private readonly viewerPort: ViewerPort;
+
+  constructor(deps: { viewerPort?: ViewerPort } = {}) {
+    this.viewerPort = deps.viewerPort ?? new TauriViewerAdapter();
+  }
+
   // ─── State ───
   searchResponse = $state<SearchBookTextResponse | null>(null);
   searchTargetLocator = $state<string | null>(null);
@@ -18,7 +25,7 @@ class SearchDomainState {
     this.isSearching = true;
 
     try {
-      this.searchResponse = await searchBookText({
+      this.searchResponse = await this.viewerPort.searchBookText({
         bookId: activeBookId,
         query,
         page,

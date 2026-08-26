@@ -1,18 +1,23 @@
-import {
-  getReadingActivity,
-  getReadingStats,
-  getReadingStatsForRange,
-  getReadingStreak,
-  getTodayMinutes,
-} from '$lib/shared/api/tauriClient';
 import type { ActivityPoint, ReadingStatsSummaryDto } from '$lib/shared/types';
 import { DEFAULT_DAILY_GOAL } from '$lib/shared/types/settings';
+import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
+import type { SettingsPort } from '$lib/shared/ports/SettingsPort';
+import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
+import { TauriSettingsAdapter } from '$lib/shared/ports/adapters/tauri/TauriSettingsAdapter';
 
 type MaybeCommandError = Error & {
   commandError?: { code: string; message: string; recoverable: boolean };
 };
 
 class StatsDomainState {
+  private readonly viewerPort: ViewerPort;
+  private readonly settingsPort: SettingsPort;
+
+  constructor(deps: { viewerPort?: ViewerPort; settingsPort?: SettingsPort } = {}) {
+    this.viewerPort = deps.viewerPort ?? new TauriViewerAdapter();
+    this.settingsPort = deps.settingsPort ?? new TauriSettingsAdapter();
+  }
+
   // ─── State ───
   stats = $state<ReadingStatsSummaryDto | null>(null);
   isLoadingStats = $state(false);
@@ -51,7 +56,7 @@ class StatsDomainState {
     this.isLoadingStats = true;
 
     try {
-      this.stats = await getReadingStats(bookId);
+      this.stats = await this.viewerPort.getReadingStats(bookId);
       this.statsUnavailableReason = null;
     } catch (error) {
       const typed = error as MaybeCommandError;
@@ -69,7 +74,7 @@ class StatsDomainState {
     this.activityUnavailableReason = null;
 
     try {
-      this.activitySeries = await getReadingActivity(period, granularity, bookId);
+      this.activitySeries = await this.viewerPort.getReadingActivity(period, granularity, bookId);
     } catch (error) {
       const typed = error as MaybeCommandError;
       if (typed.commandError?.recoverable) {
@@ -93,7 +98,7 @@ class StatsDomainState {
     }
 
     try {
-      const stats = await getReadingStatsForRange(from, to, bookId);
+      const stats = await this.viewerPort.getReadingStatsForRange(from, to, bookId);
       if (target === 'current') {
         this.currentStats = stats;
       } else {
@@ -123,7 +128,7 @@ class StatsDomainState {
     this.streakUnavailableReason = null;
 
     try {
-      this.streakDays = await getReadingStreak(bookId, userId);
+      this.streakDays = await this.viewerPort.getReadingStreak(bookId, userId);
     } catch (error) {
       const typed = error as MaybeCommandError;
       if (typed.commandError?.recoverable) {
@@ -142,7 +147,7 @@ class StatsDomainState {
     }
     this.isLoadingTodayMinutes = true;
     try {
-      this.todayMinutes = await getTodayMinutes(userId, bookId);
+      this.todayMinutes = await this.settingsPort.getTodayMinutes(userId, bookId);
     } catch {
       this.todayMinutes = 0;
     } finally {

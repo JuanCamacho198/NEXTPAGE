@@ -1,4 +1,4 @@
-import type { ReaderSettings, UiLocale } from '$lib/shared/types';
+import type { AppSettingDto, ReaderSettings, UiLocale } from '$lib/shared/types';
 
 export interface SettingsPort {
   getReaderSettings(): Promise<ReaderSettings>;
@@ -9,4 +9,6 @@ export interface SettingsPort {
   getDailyGoal(userId?: string): Promise<number>;
   saveDailyGoal(minutes: number, userId?: string): Promise<void>;
   getTodayMinutes(userId: string, bookId?: string): Promise<number>;
+  getAppSettings(): Promise<AppSettingDto[]>;
+  upsertAppSettings(settings: AppSettingDto[]): Promise<void>;
 }

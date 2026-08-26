@@ -1,10 +1,9 @@
-import {
-  getReaderSettings,
-  upsertReaderSettings,
-} from '$lib/shared/api/tauriClient';
 import type { ReaderSettings, ReaderThemeMode } from '$lib/shared/types';
+import type { SettingsPort } from '$lib/shared/ports/SettingsPort';
+import { TauriSettingsAdapter } from '$lib/shared/ports/adapters/tauri/TauriSettingsAdapter';
 
 export type ReaderDeps = {
+  settingsPort?: SettingsPort;
   getReaderSettings?: () => Promise<ReaderSettings>;
   upsertReaderSettings?: (settings: Partial<ReaderSettings>) => Promise<ReaderSettings>;
   onReaderSettingsChange?: (settings: ReaderSettings) => void;
@@ -39,8 +38,9 @@ export function createSettingsReader(deps: ReaderDeps = {}): {
   saveReader: () => Promise<void>;
   resetToDefaults: () => void;
 } {
-  const getReaderSettingsFn = deps.getReaderSettings ?? getReaderSettings;
-  const upsertReaderSettingsFn = deps.upsertReaderSettings ?? upsertReaderSettings;
+  const settingsPort: SettingsPort = deps.settingsPort ?? new TauriSettingsAdapter();
+  const getReaderSettingsFn = deps.getReaderSettings ?? (() => settingsPort.getReaderSettings());
+  const upsertReaderSettingsFn = deps.upsertReaderSettings ?? ((s: Partial<ReaderSettings>) => settingsPort.upsertReaderSettings(s));
 
   let readerThemeMode = $state<ReaderThemeMode>('paper');
   let readerBrightness = $state(100);

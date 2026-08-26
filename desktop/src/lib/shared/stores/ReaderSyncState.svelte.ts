@@ -8,15 +8,8 @@
  * to this state. Byte-identical to the pre-extraction ReaderDomainState sync
  * block — no behaviour change.
  */
-import {
-  deleteBookmark,
-  deleteHighlight,
-  saveBookmark,
-  saveHighlight,
-  upsertRemoteHighlights as upsertRemoteHighlightsCmd,
-  upsertRemoteReadingSessions as upsertRemoteReadingSessionsCmd,
-  upsertProgress as upsertProgressCmd,
-} from '$lib/shared/api/tauriClient';
+import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
+import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
 import type { ReadingProgressDto } from '$lib/shared/types';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
@@ -34,6 +27,12 @@ function isScopeEnabled(scope: string): boolean {
 }
 
 export class ReaderSyncState {
+  private readonly viewerPort: ViewerPort;
+
+  constructor(deps: { viewerPort?: ViewerPort } = {}) {
+    this.viewerPort = deps.viewerPort ?? new TauriViewerAdapter();
+  }
+
   // ─── Dedupe + version ───
   appliedRemote = new Map<string, string>();
   highlightsVersion = $state(0);
@@ -64,7 +63,7 @@ export class ReaderSyncState {
       // keep getter lazy — domain may reassign
       Object.defineProperty(this, 'onStatsRefreshNeeded', {
         get: () => hooks.onStatsRefreshNeeded!(),
-        set: (v) => {
+        set: (_v) => {
           // no-op: domain owns the value, sync just reads it
         },
         configurable: true,
@@ -130,9 +129,9 @@ export class ReaderSyncState {
           bookmark.updatedAt,
         );
         if (bookmark.deletedAt && bookmark.id) {
-          void deleteBookmark(bookmark.id);
+          void this.viewerPort.deleteBookmark(bookmark.id);
         } else {
-          void saveBookmark({
+          void this.viewerPort.saveBookmark({
             id: bookmark.id ?? crypto.randomUUID(),
             bookId: bookmark.bookId,
             pageNumber: 1,
@@ -148,12 +147,12 @@ export class ReaderSyncState {
         );
         try {
           if (highlight.deletedAt && highlight.id) {
-            await deleteHighlight(highlight.id);
+            await this.viewerPort.deleteHighlight(highlight.id);
           } else {
             const rawPage = highlight.page ?? 0;
             const pageNumber =
               Number.isInteger(rawPage) && rawPage > 0 ? rawPage : highlight.cfiRange ? 1 : 1;
-            await saveHighlight({
+            await this.viewerPort.saveHighlight({
               id: highlight.id ?? crypto.randomUUID(),
               bookId: highlight.bookId,
               text: highlight.textContent,
@@ -202,7 +201,7 @@ export class ReaderSyncState {
       this.applyRemoteProgressHook(progress);
     }
     this.appliedRemote.set(`progress:${progress.bookId}`, progress.updatedAt);
-    void upsertProgressCmd({
+    void this.viewerPort.upsertProgress({
       id: progress.id ?? crypto.randomUUID(),
       bookId: progress.bookId,
       cfiLocation: progress.cfiLocation,
@@ -236,7 +235,7 @@ export class ReaderSyncState {
           percentage,
           updatedAt: updatedAt,
         };
-        upsertProgressCmd(progressInput).catch((e) => {
+        this.viewerPort.upsertProgress(progressInput).catch((e) => {
           console.error('Failed to apply remote progress locally:', e);
         });
         if (this.getActiveReadingBookId?.() === bookId) {
@@ -262,11 +261,11 @@ export class ReaderSyncState {
         if (previous && Date.parse(updatedAt) <= Date.parse(previous)) return;
         this.appliedRemote.set(key, updatedAt);
         if (deletedAt) {
-          deleteBookmark(id ?? '').catch((e) => {
+          this.viewerPort.deleteBookmark(id ?? '').catch((e) => {
             console.error('Failed to apply remote bookmark delete locally:', e);
           });
         } else {
-          saveBookmark({
+          this.viewerPort.saveBookmark({
             id: id ?? crypto.randomUUID(),
             bookId: bookId,
             pageNumber: 1,
@@ -300,7 +299,7 @@ export class ReaderSyncState {
             const chunkSize = 500;
             for (let i = 0; i < rows.length; i += chunkSize) {
               const chunk = rows.slice(i, i + chunkSize);
-              void upsertRemoteHighlightsCmd(chunk)
+              void this.viewerPort.upsertRemoteHighlights(chunk)
                 .then(() => {
                   for (const h of chunk) {
                     const iso = new Date(h.updatedAtEpochMillis).toISOString();
@@ -335,7 +334,7 @@ export class ReaderSyncState {
           }
         };
         if (deletedAt) {
-          deleteHighlight(id ?? '')
+          this.viewerPort.deleteHighlight(id ?? '')
             .then(bump)
             .catch((e) => {
               console.error('Failed to apply remote highlight delete locally:', e);
@@ -343,7 +342,7 @@ export class ReaderSyncState {
         } else {
           const pageNumber =
             typeof page === 'number' && Number.isInteger(page) && page > 0 ? page : 1;
-          saveHighlight({
+          this.viewerPort.saveHighlight({
             id: id ?? crypto.randomUUID(),
             bookId: bookId,
             text: textContent,
@@ -380,7 +379,7 @@ export class ReaderSyncState {
           const chunkSize = 500;
           for (let i = 0; i < rows.length; i += chunkSize) {
             const chunk = rows.slice(i, i + chunkSize);
-            void upsertRemoteReadingSessionsCmd(chunk).catch((e) => {
+            void this.viewerPort.upsertRemoteReadingSessions(chunk).catch((e) => {
               console.error('Failed to apply remote reading sessions locally:', e);
             });
           }
@@ -389,7 +388,7 @@ export class ReaderSyncState {
           console.error('Failed to fetch remote reading sessions:', e);
         });
       this.unsubscribeRemoteSessions = this.supabaseSync.subscribeToReadingSessions((row) => {
-        void upsertRemoteReadingSessionsCmd([row])
+        void this.viewerPort.upsertRemoteReadingSessions([row])
           .then(() => {
             const cb = this.onStatsRefreshNeeded as unknown as ((bookId: string) => Promise<void>) | null;
             void cb?.(row.bookId);

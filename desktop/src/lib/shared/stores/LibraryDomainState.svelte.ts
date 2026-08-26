@@ -1,16 +1,5 @@
-import {
-  listLibraryBooks,
-  listBooks,
-  listCollections,
-  addBookToCollection,
-  removeBookFromCollection,
-  setReadingStatus,
-  upsertBook,
-  upsertBookCover,
-  hideBookFromLibrary,
-  extractEpubCover,
-  deleteBookCover,
-} from '$lib/shared/api/tauriClient';
+import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
 import { extractPdfMetadata } from '$lib/shared/services/pdfThumbnail';
 import { GDriveProvider } from '$lib/shared/services/storage/GDriveProvider';
 import { SupabaseBookCatalogSync } from '$lib/shared/sync/SupabaseBookCatalogSync';
@@ -33,6 +22,12 @@ type MaybeCommandError = Error & {
 };
 
 class LibraryDomainState {
+  private readonly libraryPort: LibraryPort;
+
+  constructor(deps: { libraryPort?: LibraryPort } = {}) {
+    this.libraryPort = deps.libraryPort ?? new TauriLibraryAdapter();
+  }
+
   // ─── State ───
   books = $state<ReaderBook[]>([]);
   shelfQueryState = $state(createShelfQueryState(''));
@@ -110,7 +105,7 @@ class LibraryDomainState {
     if (this.thumbnailGenerationInFlight.has(book.id)) return;
     this.thumbnailGenerationInFlight.add(book.id);
     try {
-      const found = await extractEpubCover(book.id, book.filePath);
+      const found = await this.libraryPort.extractEpubCover(book.id, book.filePath);
       if (found) {
         await this.loadLibrary();
       }
@@ -127,7 +122,7 @@ class LibraryDomainState {
     try {
       const metadata = await extractPdfMetadata(book.filePath);
       if (metadata.thumbnailBytes) {
-        await upsertBookCover({
+        await this.libraryPort.upsertBookCover({
           bookId: book.id,
           data: Array.from(metadata.thumbnailBytes),
           mimeType: 'image/png',
@@ -138,7 +133,7 @@ class LibraryDomainState {
       const needsPagesUpdate = metadata.totalPages && (!book.totalPages || book.totalPages === 0);
 
       if (needsAuthorUpdate || needsPagesUpdate) {
-        await upsertBook({
+        await this.libraryPort.upsertBook({
           id: book.id,
           title: book.title,
           author: metadata.author || book.author || '',
@@ -168,9 +163,9 @@ class LibraryDomainState {
 
     try {
       const [libraryRows, sourceRows, loadedCollections] = await Promise.all([
-        listLibraryBooks(1),
-        listBooks(),
-        listCollections(),
+        this.libraryPort.listLibraryBooks(1),
+        this.libraryPort.listBooks(),
+        this.libraryPort.listCollections(),
       ]);
       this.collections = loadedCollections;
 
@@ -250,7 +245,7 @@ class LibraryDomainState {
 
   async handleHideBook(book: ReaderBook): Promise<void> {
     try {
-      await hideBookFromLibrary(book.id);
+      await this.libraryPort.hideBook(book.id);
       await this.loadLibrary();
     } catch (error) {
       const typed = error as MaybeCommandError;
@@ -305,7 +300,7 @@ class LibraryDomainState {
     // Step 3 — hide locally (core of handleHideBook).
     let hideError: unknown = null;
     try {
-      await hideBookFromLibrary(book.id);
+      await this.libraryPort.hideBook(book.id);
       await this.loadLibrary();
     } catch (error) {
       hideError = error;
@@ -346,9 +341,9 @@ class LibraryDomainState {
 
     try {
       if (isFav) {
-        await removeBookFromCollection({ bookId: book.id, collectionId: 1 });
+        await this.libraryPort.removeBookFromCollection({ bookId: book.id, collectionId: 1 });
       } else {
-        await addBookToCollection({ bookId: book.id, collectionId: 1 });
+        await this.libraryPort.addBookToCollection({ bookId: book.id, collectionId: 1 });
       }
       await this.loadLibrary();
     } catch (error) {
@@ -360,7 +355,7 @@ class LibraryDomainState {
 
   async handleStatusChange(book: ReaderBook, status: 'to_read' | 'reading' | 'completed'): Promise<void> {
     try {
-      await setReadingStatus(book.id, status);
+      await this.libraryPort.setReadingStatus(book.id, status);
       await this.loadLibrary();
     } catch (error) {
       const typed = error as MaybeCommandError;
@@ -374,7 +369,7 @@ class LibraryDomainState {
   }
 
   async handleDeleteCover(book: ReaderBook): Promise<void> {
-    await deleteBookCover(book.id);
+    await this.libraryPort.deleteBookCover(book.id);
     // Update local state: set coverPath to null
     const found = this.books.find((b) => b.id === book.id);
     if (found) {
@@ -392,7 +387,7 @@ class LibraryDomainState {
           ? updatedBook.genre.trim()
           : null;
 
-      await upsertBook({
+      await this.libraryPort.upsertBook({
         id: updatedBook.id,
         title: updatedBook.title,
         author: updatedBook.author || '',

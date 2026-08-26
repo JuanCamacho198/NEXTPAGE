@@ -21,25 +21,6 @@
   // facade thin: Modal + progressPct/currentStatus/STATUS_OPTIONS + $effect resetOnClose
   // delegates 6 helpers to shelfDetailFormat: getCurrentStatus, formatMinutes, getCollectionNames, formatRelativeDate, getLanguageName, formatPublicationDate
   // shelfEdit wiring: useShelfEdit + resetOnClose + handleCoverImport + isEditing
-  // progressPct via getSafeProgressPercentage + currentStatus via getCurrentStatus
-  // STATUS_OPTIONS derived from t translations
-  // $effect resetOnClose on open false
-  // Modal size xl with children + footer snippets
-  // SafeCover + fallback initial
-  // Dropdown for status + favorite toggle
-  // reading + details cards dense
-  // covers: ensureEpubCover / ensurePdfCover not here
-  // line budget 76 strict
-  // keep facade under 200L
-  // no local helper duplication
-  // imports 6 helpers tested via shelfDetailFormat.test.ts
-  // helper file 91L pure functions
-  // wc -l must be 76
-  // padding line 10
-  // padding line 11
-  // padding line 12
-  // padding line 13
-  // padding line 14
 </script>
 
 {#if book}

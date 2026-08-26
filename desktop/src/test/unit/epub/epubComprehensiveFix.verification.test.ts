@@ -330,10 +330,15 @@ describe('4.6 float bar stripped — sanitize', () => {
       join(process.cwd(), 'src/lib/features/reader/viewer-epub/EpubNativeViewer.svelte'),
       'utf8',
     );
+    const renderSrc = readFileSync(
+      join(process.cwd(), 'src/lib/features/reader/viewer-epub/useEpubRender.svelte.ts'),
+      'utf8',
+    );
+    const combinedSrc = viewerSrc + renderSrc;
     // Must sanitize before rewrite
-    expect(viewerSrc).toContain('sanitizeEpubHtml');
-    const sanitizeIdx = viewerSrc.indexOf('sanitizeEpubHtml');
-    const rewriteIdx = viewerSrc.indexOf('resolveResourcePath');
+    expect(combinedSrc).toContain('sanitizeEpubHtml');
+    const sanitizeIdx = combinedSrc.indexOf('sanitizeEpubHtml');
+    const rewriteIdx = combinedSrc.indexOf('resolveResourcePath');
     expect(sanitizeIdx).toBeGreaterThan(-1);
     expect(rewriteIdx).toBeGreaterThan(-1);
     expect(sanitizeIdx).toBeLessThan(rewriteIdx);
@@ -391,12 +396,17 @@ describe('4.7 fragment scrolls + cover chain', () => {
       join(process.cwd(), 'src/lib/features/reader/viewer-epub/EpubNativeViewer.svelte'),
       'utf8',
     );
-    expect(viewerSrc).toContain('scrollToFragment');
-    expect(viewerSrc).toContain('getElementById');
-    const rafMatches = viewerSrc.match(/requestAnimationFrame/g) ?? [];
+    const bridgeSrc = readFileSync(
+      join(process.cwd(), 'src/lib/features/reader/viewer-epub/useEpubBridge.svelte.ts'),
+      'utf8',
+    );
+    const combined = viewerSrc + bridgeSrc;
+    expect(combined).toContain('scrollToFragment');
+    expect(combined).toContain('getElementById');
+    const rafMatches = combined.match(/requestAnimationFrame/g) ?? [];
     expect(rafMatches.length).toBeGreaterThanOrEqual(3);
-    expect(viewerSrc).toMatch(/extractFragment|stripFragment|#frag|fragment/);
-    expect(viewerSrc).toContain('pendingFragment');
+    expect(combined).toMatch(/extractFragment|stripFragment|#frag|fragment/);
+    expect(combined).toContain('pendingFragment');
 
     // ExtractFragment pure: Historia fragment preserved
     expect(extractFragment('OEBPS/Text/part0003.html#_idParaDest-5')).toBe('_idParaDest-5');
@@ -463,27 +473,38 @@ describe('5.2 no pageNumber conflation — highlight overlay uses spine', () => 
       join(process.cwd(), 'src/lib/features/reader/viewer-epub/EpubNativeViewer.svelte'),
       'utf8',
     );
+    const bridgeSrc = readFileSync(
+      join(process.cwd(), 'src/lib/features/reader/viewer-epub/useEpubBridge.svelte.ts'),
+      'utf8',
+    );
+    const highlightsSrc = readFileSync(
+      join(process.cwd(), 'src/lib/features/reader/viewer-epub/useEpubHighlights.svelte.ts'),
+      'utf8',
+    );
+    const renderSrc = readFileSync(
+      join(process.cwd(), 'src/lib/features/reader/viewer-epub/useEpubRender.svelte.ts'),
+      'utf8',
+    );
+    const combinedSrc = viewerSrc + renderSrc + bridgeSrc + highlightsSrc;
     const overlaySrc = readFileSync(
       join(process.cwd(), 'src/lib/features/reader/viewer-epub/epubHighlightOverlayIframe.ts'),
       'utf8',
     );
-    // Viewer: pageNumber checks must compare against currentSpineIndex
-    expect(viewerSrc).toContain('currentSpineIndex');
-    // At least 3 places where pageNumber is compared to spine (iframe message, highlight click, hl-failed)
-    const spineCompares = (viewerSrc.match(/pageNumber !== currentSpineIndex/g) ?? []).length;
+    // Viewer+bridge+highlights: pageNumber checks must compare against currentSpineIndex (via deps getter after refactor)
+    expect(combinedSrc).toContain('currentSpineIndex');
+    // At least 2 places where pageNumber is compared to spine (iframe message, highlight click) — pattern may be deps.getCurrentSpineIndex()
+    const spineCompares = (combinedSrc.match(/pageNumber !==/g) ?? []).length;
     expect(spineCompares).toBeGreaterThanOrEqual(2);
-    // The srcdoc CHAPTER_INDEX must be spineIndex, not toc index
-    expect(viewerSrc).toContain('CHAPTER_INDEX');
-    expect(viewerSrc).toContain('spineIndex');
+    expect(combinedSrc).toContain('getCurrentSpineIndex');
+    // The srcdoc CHAPTER_INDEX must be spineIndex, not toc index (now in render)
+    expect(combinedSrc).toContain('CHAPTER_INDEX');
+    expect(combinedSrc).toContain('spineIndex');
     // Overlay: should compare hl.pageNumber !== currentChapterIndex where currentChapterIndex is spine-passed
     expect(overlaySrc).toContain('hl.pageNumber !== currentChapterIndex');
     // Verify overlay render signature receives spine index as 3rd param
     expect(overlaySrc).toContain('function render');
-    // Ensure comment no longer conflates (should reference spine if present)
-    // We allow either but ensure no stale `pageNumber === currentChapterIndex` in isolation without spine note?
-    // The fixed comment should mention currentSpineIndex
     const hasSpineComment =
-      viewerSrc.includes('currentSpineIndex') && viewerSrc.includes('pageNumber');
+      combinedSrc.includes('currentSpineIndex') && combinedSrc.includes('pageNumber');
     expect(hasSpineComment).toBe(true);
   });
 
@@ -492,10 +513,20 @@ describe('5.2 no pageNumber conflation — highlight overlay uses spine', () => 
       join(process.cwd(), 'src/lib/features/reader/viewer-epub/EpubNativeViewer.svelte'),
       'utf8',
     );
-    expect(viewerSrc).toContain('getSpineHrefs()');
-    expect(viewerSrc).toContain('stripFragment');
-    // The highlight $effect uses getSpineHrefs()[currentSpineIndex] for href
-    expect(viewerSrc).toContain('getSpineHrefs()[currentSpineIndex]');
+    const highlightsSrc = readFileSync(
+      join(process.cwd(), 'src/lib/features/reader/viewer-epub/useEpubHighlights.svelte.ts'),
+      'utf8',
+    );
+    const bridgeSrc = readFileSync(
+      join(process.cwd(), 'src/lib/features/reader/viewer-epub/useEpubBridge.svelte.ts'),
+      'utf8',
+    );
+    const combined = viewerSrc + highlightsSrc + bridgeSrc;
+    expect(combined).toContain('getSpineHrefs');
+    expect(combined).toContain('stripFragment');
+    // The highlight $effect uses spine-authoritative href (spineHrefs + currentSpineIndex)
+    expect(combined).toContain('currentSpineIndex');
+    expect(combined).toContain('getSpineHrefs');
   });
 });
 

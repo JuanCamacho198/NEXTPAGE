@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button, Modal } from '$lib/shared/ui';
-  import { appState } from '$lib/shared/stores/AppState.svelte';
+  import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -21,20 +21,20 @@
   });
 
   function handleLocalOnly(): void {
-    const book = appState.pendingRemoveBook;
+    const book = libraryState.pendingRemoveBook;
     onClose();
-    if (book) void appState.handleHideBook(book);
+    if (book) void libraryState.handleHideBook(book);
   }
 
   function handleLocalAndDrive(): void {
-    const book = appState.pendingRemoveBook;
+    const book = libraryState.pendingRemoveBook;
     onClose();
-    if (book) void appState.handleRemoveBookFromDrive(book);
+    if (book) void libraryState.handleRemoveBookFromDrive(book);
   }
 </script>
 
-{#if open && appState.pendingRemoveBook}
-  {@const pendingBook = appState.pendingRemoveBook}
+{#if open && libraryState.pendingRemoveBook}
+  {@const pendingBook = libraryState.pendingRemoveBook}
   <Modal bind:open title={t('shelf.removeConfirmTitle')} size="sm">
     {#snippet children()}
       {#if step === 'confirm'}

@@ -8,7 +8,7 @@
  * - importFromDrive: one-time import of existing Drive progress to Supabase
  */
 import { getSessionClient, hasLiveSession } from '$lib/services/supabase';
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import type { SupabaseClient, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { RemoteHighlightRow, RemoteReadingSessionRow } from '$lib/shared/types';
 

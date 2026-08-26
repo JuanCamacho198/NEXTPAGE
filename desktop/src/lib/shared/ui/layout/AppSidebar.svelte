@@ -1,11 +1,11 @@
 <script lang="ts">
-  import type { AppRoute } from '$lib/shared/stores/homeState';
-  import type { NavItem } from '$lib/shared/stores/navigationState.svelte';
+  import type { AppRoute } from '$lib/shared/stores/HomeState';
+  import type { NavItem } from '$lib/shared/stores/NavigationState.svelte';
   import type { MessageKey } from '../../i18n';
   import ThemeToggle from '$lib/shared/ui/navigation/ThemeToggle.svelte';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
   import { theme, toggleTheme } from '$lib/shared/stores/theme';
-  import { authState } from '$lib/stores/authState.svelte';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
   import {
     profileSessionFromAuthState,
     getProfileInitials,

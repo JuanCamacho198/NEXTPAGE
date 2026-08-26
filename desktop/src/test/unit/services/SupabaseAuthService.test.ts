@@ -47,7 +47,7 @@ vi.mock('@tauri-apps/plugin-opener', () => ({
   openUrl: (...args: unknown[]) => mockOpenUrl(...args),
 }));
 
-vi.mock('$lib/stores/authState.svelte', () => ({
+vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
   authState: {
     setSupabaseSession: (...args: unknown[]) => mockSetSupabaseSession(...args),
     clearSupabaseSession: (...args: unknown[]) => mockClearSupabaseSession(...args),
@@ -57,7 +57,7 @@ vi.mock('$lib/stores/authState.svelte', () => ({
   },
 }));
 
-vi.mock('$lib/stores/authPersistence', () => ({
+vi.mock('$lib/shared/stores/authPersistence', () => ({
   savePersistedAuth: (...args: unknown[]) => mockSavePersistedAuth(...args),
   loadDriveRefreshToken: () => mockLoadDriveRefreshToken(),
   saveDriveRefreshToken: (token: string) => mockSaveDriveRefreshToken(token),

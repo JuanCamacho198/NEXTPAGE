@@ -16,12 +16,12 @@ vi.mock('$lib/shared/stores/AppState.svelte', () => ({
   appState: mockAppState,
 }));
 
-vi.mock('$lib/stores/authState.svelte', () => ({
+vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
   authState: { isSignedIn: false, accessToken: null, email: null },
   setLocalUser: vi.fn(),
 }));
 
-vi.mock('$lib/stores/authPersistence', () => ({
+vi.mock('$lib/shared/stores/authPersistence', () => ({
   savePersistedAuth: vi.fn().mockResolvedValue(undefined),
 }));
 

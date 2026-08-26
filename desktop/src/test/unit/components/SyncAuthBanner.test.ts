@@ -9,7 +9,7 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import SyncAuthBanner from '$lib/shared/ui/feedback/SyncAuthBanner.svelte';
 import { syncAlertStore, reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 
 const mockSignInWithGoogle = vi.fn<() => Promise<void>>();
 

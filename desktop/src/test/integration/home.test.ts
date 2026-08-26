@@ -135,7 +135,7 @@ vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
 // Without a cached session it lands on `'welcome'`, which would render the
 // welcome screen instead of the home shell these tests assert against. Mock
 // a local profile so the app boots straight into the home route.
-vi.mock('$lib/stores/authPersistence', () => ({
+vi.mock('$lib/shared/stores/authPersistence', () => ({
   loadPersistedAuth: vi.fn(async () => ({
     kind: 'local',
     profile: {

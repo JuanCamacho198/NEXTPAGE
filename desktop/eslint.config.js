@@ -79,5 +79,36 @@ export default [
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },
+  {
+    // P3-2: ban legacy auth stores — canonical is $lib/shared/stores/*
+    files: ['src/**/*.{ts,svelte}'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        paths: [
+          { name: '$lib/stores/authState.svelte', message: "Use '$lib/shared/stores/AuthState.svelte' instead (P3-2)." },
+          { name: '$lib/stores/authState.svelte.ts', message: "Use '$lib/shared/stores/AuthState.svelte' instead (P3-2)." },
+          { name: '$lib/stores/authState', message: "Use '$lib/shared/stores/AuthState.svelte' instead (P3-2)." },
+          { name: '$lib/stores/authPersistence', message: "Use '$lib/shared/stores/authPersistence' instead (P3-2)." },
+          { name: '$lib/stores/devicesState.svelte', message: "Use '$lib/shared/stores/DevicesState.svelte' instead (P3-2)." },
+          { name: '$lib/stores/devicesState.svelte.ts', message: "Use '$lib/shared/stores/DevicesState.svelte' instead (P3-2)." },
+          { name: '$lib/stores/devicesState', message: "Use '$lib/shared/stores/DevicesState.svelte' instead (P3-2)." },
+          { name: '$lib/stores/toastQueue.svelte', message: "Use '$lib/shared/stores/ToastQueue.svelte' instead (P3-2)." },
+          { name: '$lib/stores/toastQueue.svelte.ts', message: "Use '$lib/shared/stores/ToastQueue.svelte' instead (P3-2)." },
+          { name: '$lib/stores/toastQueue', message: "Use '$lib/shared/stores/ToastQueue.svelte' instead (P3-2)." },
+        ],
+        patterns: [{
+          group: ['$lib/stores/authState*', '$lib/stores/authPersistence*', '$lib/stores/devicesState*', '$lib/stores/toastQueue*'],
+          message: "Legacy '$lib/stores/*' is banned — use '$lib/shared/stores/*' (P3-2). Shims at src/lib/stores/* are the only allowed legacy re-exports.",
+        }],
+      }],
+    },
+  },
+  {
+    // Shim re-exports are the only allowed legacy files — suppress the ban inside them
+    files: ['src/lib/stores/authState.svelte.ts', 'src/lib/stores/devicesState.svelte.ts', 'src/lib/stores/toastQueue.svelte.ts', 'src/lib/stores/authPersistence.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
   prettier,
 ];

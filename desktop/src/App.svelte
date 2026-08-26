@@ -10,6 +10,9 @@
   import SyncAuthBanner from '$lib/shared/ui/feedback/SyncAuthBanner.svelte';
   import CustomTitlebar from '$lib/shared/ui/layout/CustomTitlebar.svelte';
   import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
+  import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
+  import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
+  import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import { titlebarState } from '$lib/stores/titlebarState.svelte';
   import { isCustomTitlebarPlatform } from '$lib/shared/utils/platform';
 
@@ -32,7 +35,7 @@
           ? (event.reason?.message ?? event.reason?.toString() ?? 'Unhandled Promise rejection')
           : event.message;
       console.error('[App] Uncaught error:', event);
-      appState.library.readerError = message;
+      libraryState.readerError = message;
     };
 
     window.addEventListener('error', handleError);
@@ -45,7 +48,7 @@
   });
 
   $effect(() => {
-    debugState.currentRoute = appState.route;
+    debugState.currentRoute = navigationState.route;
   });
 
   // Track viewport for debug panel
@@ -59,7 +62,7 @@
 
   // Dynamically update HTML lang attribute when locale changes
   $effect(() => {
-    document.documentElement.lang = appState.locale;
+    document.documentElement.lang = settingsState.locale;
   });
 </script>
 

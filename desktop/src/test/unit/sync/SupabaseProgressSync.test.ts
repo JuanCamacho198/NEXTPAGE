@@ -21,7 +21,7 @@ vi.mock('$lib/services/supabase', () => ({
   hasLiveSession: () => mockHasLiveSession(),
 }));
 
-vi.mock('$lib/stores/authState.svelte', () => ({
+vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
   authState: {
     get userId(): string | null {
       return mockAuthUserId();

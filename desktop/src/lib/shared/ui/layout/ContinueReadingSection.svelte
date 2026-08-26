@@ -1,5 +1,7 @@
 <script lang="ts">
   import { appState } from '$lib/shared/stores/AppState.svelte';
+  import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
+  import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { BookCard, ShelfActionMenu } from '$lib/features/library';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
 
@@ -7,7 +9,7 @@
   let canScrollLeft = $state(false);
   let canScrollRight = $state(false);
 
-  const showArrows = $derived(appState.continueReadingBooks.length > 2);
+  const showArrows = $derived(libraryState.continueReadingBooks.length > 2);
 
   function updateScrollState(): void {
     if (!scrollEl) {
@@ -24,8 +26,7 @@
   }
 
   $effect(() => {
-    // re-evaluate when books change (after DOM updates)
-    void appState.continueReadingBooks.length;
+    void libraryState.continueReadingBooks.length;
     queueMicrotask(updateScrollState);
   });
 
@@ -34,7 +35,6 @@
     const el = scrollEl;
     const ro = new ResizeObserver(() => updateScrollState());
     ro.observe(el);
-    // observe each child for size changes as well
     for (const child of Array.from(el.children)) {
       ro.observe(child);
     }
@@ -43,7 +43,7 @@
   });
 </script>
 
-{#if appState.continueReadingBooks.length === 0}
+{#if libraryState.continueReadingBooks.length === 0}
   <p class="text-sm text-(--color-text-muted)">{appState.t('home.continueReadingPlaceholder')}</p>
 {:else}
   <div class="relative">
@@ -76,15 +76,15 @@
         : ''}"
       style="scrollbar-width: none; -ms-overflow-style: none;"
     >
-      {#each appState.continueReadingBooks as book (book.id)}
+      {#each libraryState.continueReadingBooks as book (book.id)}
         <li class="snap-start shrink-0 w-[320px] max-w-[85%]">
           <BookCard
             {book}
             variant="continue-reading"
-            compact={appState.continueReadingBooks.length > 1}
-            selected={appState.previewBookId === book.id}
+            compact={libraryState.continueReadingBooks.length > 1}
+            selected={navigationState.previewBookId === book.id}
             onSelect={() => {
-              appState.openShelfDetails(book);
+              navigationState.openShelfDetails(book.id);
             }}
             onRead={() => {
               void appState.startReading(book);
@@ -101,19 +101,19 @@
                 favoriteAddLabel={appState.t('library.favoriteAdd')}
                 favoriteRemoveLabel={appState.t('library.favoriteRemove')}
                 triggerLabel={appState.t('library.optionsFor', { title: book.title })}
-                onViewDetails={() => appState.openShelfDetails(book)}
+                onViewDetails={() => navigationState.openShelfDetails(book.id)}
                 viewDetailsLabel={appState.t('shelf.viewDetails')}
                 onRead={() => {
                   void appState.startReading(book);
                 }}
                 onEdit={() => {
-                  appState.handleEditBook(book);
+                  libraryState.handleEditBook(book);
                 }}
                 onRemove={() => {
-                  appState.requestRemoveBook(book);
+                  libraryState.pendingRemoveBook = book;
                 }}
                 onToggleFavorite={() => {
-                  void appState.handleToggleFavorite(book);
+                  void libraryState.handleToggleFavorite(book);
                 }}
               />
             {/snippet}
@@ -122,8 +122,8 @@
       {/each}
     </ul>
   </div>
-  {#if appState.previewBookId}
-    {@const pb = appState.getBookById(appState.previewBookId)}
+  {#if navigationState.previewBookId}
+    {@const pb = libraryState.getBookById(navigationState.previewBookId)}
     {#if pb}
       <p class="mt-2 text-sm text-(--color-text-muted)">{appState.t('app.homeReadHint')}</p>
     {/if}

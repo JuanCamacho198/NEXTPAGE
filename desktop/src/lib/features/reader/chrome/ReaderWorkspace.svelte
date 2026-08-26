@@ -20,7 +20,7 @@
   import NoteEditorModal from '../highlight/NoteEditorModal.svelte';
   import { getReaderError as defaultGetReaderError } from '$lib/stores/readerErrorState.svelte';
   import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
-  import { authState } from '$lib/stores/authState.svelte';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
   import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
   import { clampZoomPercent } from '$lib/features/reader/viewer-pdf/pdfNavigation';
   import { createSpineResolver } from './useSpineResolver.svelte';

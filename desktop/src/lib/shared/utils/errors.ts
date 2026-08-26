@@ -5,7 +5,7 @@ import {
   type ErrorSource,
 } from '../events/ErrorEvent';
 import { classifyError } from '../events/classifyError';
-import { errorState } from '../stores/errorState';
+import { errorState } from '../stores/ErrorState';
 import { logger } from '../logger';
 
 export class AppError extends Error {

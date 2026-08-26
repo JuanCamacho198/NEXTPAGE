@@ -1,5 +1,7 @@
 <script lang="ts">
   import { appState } from '$lib/shared/stores/AppState.svelte';
+  import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
+  import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
   import {
     EditMetadataModal,
     CollectionManager,
@@ -12,52 +14,50 @@
 </script>
 
 <EditMetadataModal
-  book={appState.editingBook as import('$lib/shared/types').LibraryBookDto | null}
-  open={appState.editingBook !== null}
+  book={libraryState.editingBook as import('$lib/shared/types').LibraryBookDto | null}
+  open={libraryState.editingBook !== null}
   onClose={() => {
-    appState.editingBook = null;
+    libraryState.editingBook = null;
   }}
-  onSave={appState.handleSaveEditedBook}
+  onSave={libraryState.handleSaveEditedBook}
   t={appState.t}
 />
 
 <CollectionManager
-  open={appState.isCollectionManagerOpen}
+  open={libraryState.isCollectionManagerOpen}
   onClose={() => {
-    appState.isCollectionManagerOpen = false;
+    libraryState.isCollectionManagerOpen = false;
   }}
   t={appState.t}
 />
 
 <BulkImportModal
-  open={appState.isBulkImportOpen}
-  folderName={appState.bulkImportFolderName}
-  folderPath={appState.bulkImportFolderPath}
-  scanResult={appState.bulkScanResult}
-  isScanning={appState.isBulkScanning}
-  scanError={appState.bulkScanError}
-  isImporting={appState.isBulkImporting}
-  importProgress={appState.bulkImportProgress}
-  importSummary={appState.bulkImportSummary}
-  onClose={appState.closeBulkImportModal}
-  onPickFolder={appState.handlePickBulkImportFolder}
-  onScan={appState.handleScanBulkImportFolder}
-  onStartImport={appState.handleStartBulkImport}
-  onCancelImport={appState.handleCancelBulkImport}
+  open={bulkImportState.isBulkImportOpen}
+  folderName={bulkImportState.bulkImportFolderName}
+  folderPath={bulkImportState.bulkImportFolderPath}
+  scanResult={bulkImportState.bulkScanResult}
+  isScanning={bulkImportState.isBulkScanning}
+  scanError={bulkImportState.bulkScanError}
+  isImporting={bulkImportState.isBulkImporting}
+  importProgress={bulkImportState.bulkImportProgress}
+  importSummary={bulkImportState.bulkImportSummary}
+  onClose={bulkImportState.closeBulkImportModal}
+  onPickFolder={() => bulkImportState.handlePickBulkImportFolder(appState.t('library.bulkImport.selectFolderTitle'))}
+  onScan={bulkImportState.handleScanBulkImportFolder}
+  onStartImport={bulkImportState.handleStartBulkImport}
+  onCancelImport={bulkImportState.handleCancelBulkImport}
   t={appState.t}
 />
 
 <ErrorToast />
 <ErrorFallback />
 
-<!-- 2-step removal modal: "Local only" vs "Local + Drive" (REQ-09/10/11) -->
 <RemoveBookModal
-  open={appState.pendingRemoveBook !== null}
+  open={libraryState.pendingRemoveBook !== null}
   onClose={() => {
-    appState.pendingRemoveBook = null;
+    libraryState.pendingRemoveBook = null;
   }}
   t={appState.t}
 />
 
-<!-- Mounted outside AppRouter: toasts survive route changes (REQ-05) -->
 <ToastHost />

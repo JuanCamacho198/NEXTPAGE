@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import type { MessageKey } from '$lib/shared/i18n';
-  import { dictionaryState } from '$lib/shared/stores/dictionaryState.svelte';
+  import { dictionaryState } from '$lib/shared/stores/DictionaryState.svelte';
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';

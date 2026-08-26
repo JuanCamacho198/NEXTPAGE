@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Session } from '@supabase/supabase-js';
 
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import {
   setLiveSession,
   clearLiveSession,

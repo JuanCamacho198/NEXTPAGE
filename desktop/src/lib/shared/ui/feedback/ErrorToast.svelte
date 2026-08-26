@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { errorState } from '$lib/shared/stores/errorState';
+  import { errorState } from '$lib/shared/stores/ErrorState';
   import Button from '../forms/Button.svelte';
   import { i18n, type MessageKey } from '$lib/shared/i18n';
 

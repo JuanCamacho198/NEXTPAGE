@@ -14,7 +14,7 @@ import {
   rename,
   remove,
 } from '@tauri-apps/plugin-fs';
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { logger } from '$lib/shared/logger/Logger';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 

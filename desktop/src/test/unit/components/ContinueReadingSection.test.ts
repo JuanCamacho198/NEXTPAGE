@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // vi.mock is hoisted, so we need vi.hoisted to define data before hoisting
-const { mockState, mockAppState } = vi.hoisted(() => {
+const { mockState, mockAppState, mockLibraryState, mockNavigationState } = vi.hoisted(() => {
   const ms: {
     continueReadingBooks: Array<Record<string, unknown>>;
     previewBookId: string | null;
@@ -27,11 +27,33 @@ const { mockState, mockAppState } = vi.hoisted(() => {
     getBookById: vi.fn(() => null),
   };
 
-  return { mockState: ms, mockAppState: mas };
+  const lib = {
+    get continueReadingBooks() {
+      return ms.continueReadingBooks;
+    },
+    getBookById: vi.fn(() => null),
+    handleEditBook: vi.fn(),
+    handleToggleFavorite: vi.fn().mockResolvedValue(undefined),
+  };
+
+  const nav = {
+    get previewBookId() {
+      return ms.previewBookId;
+    },
+    openShelfDetails: vi.fn(),
+  };
+
+  return { mockState: ms, mockAppState: mas, mockLibraryState: lib, mockNavigationState: nav };
 });
 
 vi.mock('$lib/shared/stores/AppState.svelte', () => ({
   appState: mockAppState,
+}));
+vi.mock('$lib/shared/stores/LibraryDomainState.svelte', () => ({
+  libraryState: mockLibraryState,
+}));
+vi.mock('$lib/shared/stores/NavigationDomainState.svelte', () => ({
+  navigationState: mockNavigationState,
 }));
 
 import ContinueReadingSection from '$lib/shared/ui/layout/ContinueReadingSection.svelte';

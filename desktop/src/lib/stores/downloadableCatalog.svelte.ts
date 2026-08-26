@@ -16,7 +16,7 @@ import { SupabaseBookCatalogSync } from '$lib/shared/sync/SupabaseBookCatalogSyn
 import { GDriveProvider } from '$lib/shared/services/storage/GDriveProvider';
 import { parseCanonicalBookName } from '$lib/shared/protocol/DriveCatalogContract';
 import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { importRecoveredBook } from '$lib/shared/recovery/desktopRecoveryImport';
 import { extractEpubMetadataFromBytes } from '$lib/shared/services/epubImportMetadata';
 import * as tauri from '$lib/shared/api/tauriClient';

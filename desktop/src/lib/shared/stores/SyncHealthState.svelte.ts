@@ -78,7 +78,7 @@ export function createSyncHealthState() {
       } catch (e) {
         // Fallback: update local state directly and queue via SyncService path
         // Use dictionaryState update if invoke fails
-        const { dictionaryState } = await import('$lib/shared/stores/dictionaryState.svelte');
+        const { dictionaryState } = await import('$lib/shared/stores/DictionaryState.svelte');
         const found = dictionaryState.words.find((w) => w.id === conflictId);
         if (found) await dictionaryState.update(conflictId, { word: found.word ?? conflict.localWord ?? '' });
       }

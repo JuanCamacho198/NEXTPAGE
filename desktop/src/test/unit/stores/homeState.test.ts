@@ -11,7 +11,7 @@ import {
   resolveReadingState,
   selectShelfBooks,
   type HomeStateSnapshot,
-} from '$lib/shared/stores/homeState';
+} from '$lib/shared/stores/HomeState';
 
 type TestBook = {
   id: string;

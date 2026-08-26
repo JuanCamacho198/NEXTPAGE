@@ -17,7 +17,7 @@
   import type { UiLocale, ReaderSettings } from '$lib/shared/types';
   import type { MessageKey } from '$lib/shared/i18n';
   import { onDestroy } from 'svelte';
-  import { authState } from '$lib/stores/authState.svelte';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
 
   let {

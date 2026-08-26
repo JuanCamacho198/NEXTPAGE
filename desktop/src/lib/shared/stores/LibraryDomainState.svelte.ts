@@ -15,7 +15,7 @@ import { extractPdfMetadata } from '$lib/shared/services/pdfThumbnail';
 import { GDriveProvider } from '$lib/shared/services/storage/GDriveProvider';
 import { SupabaseBookCatalogSync } from '$lib/shared/sync/SupabaseBookCatalogSync';
 import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { recordMetric } from '$lib/shared/logger/MetricsStore';
 import { METRIC_NAMES } from '$lib/shared/logger/metricTypes';
 import {
@@ -25,7 +25,7 @@ import {
   selectShelfBooks,
   getShelfQueryWarnings,
   promoteBookForReading,
-} from '$lib/shared/stores/homeState';
+} from '$lib/shared/stores/HomeState';
 import type { BookDto, CollectionDto, LibraryBookDto, ReaderBook } from '$lib/shared/types';
 
 type MaybeCommandError = Error & {

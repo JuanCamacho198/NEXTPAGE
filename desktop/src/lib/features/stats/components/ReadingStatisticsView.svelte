@@ -3,7 +3,12 @@
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import { Icon, Modal } from '$lib/shared/ui/';
   import { UNCLASSIFIED_GENRE } from '$lib/shared/services/genreHeuristic';
-  import { getSafeProgressPercentage } from '$lib/shared/stores/homeState';
+  import { getSafeProgressPercentage } from '$lib/shared/stores/HomeState';
+  import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
+  import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
+  import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
+  import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
   import {
     periodLabels,
     calculateGenreDistribution,
@@ -51,7 +56,7 @@
   // ─── Month names via Intl.DateTimeFormat (zero-maintenance for any locale) ───
   function getShortMonthName(monthIndex: number): string {
     const date = new Date(2026, monthIndex, 1);
-    const name = new Intl.DateTimeFormat(appState.locale, { month: 'short' }).format(date);
+    const name = new Intl.DateTimeFormat(settingsState.locale, { month: 'short' }).format(date);
     return name.charAt(0).toUpperCase() + name.slice(1);
   }
 
@@ -61,7 +66,7 @@
   // ─── Books grouped by genre for tooltip ───
   const booksByGenre = $derived.by(() => {
     const map = new Map<string, string[]>();
-    for (const book of appState.books) {
+    for (const book of libraryState.books) {
       const genre = (book.genre?.trim()) || UNCLASSIFIED_GENRE;
       if (!map.has(genre)) map.set(genre, []);
       map.get(genre)!.push(book.title);
@@ -84,47 +89,47 @@
   // ─── Data fetching effects ───
 
   $effect(() => {
-    void appState.loadStatsActivity(activePeriod, activeGranularity);
+    void statsState.loadActivity(activePeriod, activeGranularity);
   });
 
   $effect(() => {
     const { from, to } = periodWindow(activePeriod);
     const { from: prevFrom, to: prevTo } = previousWindow(activePeriod);
-    void appState.loadStatsRange(from, to, undefined, 'current');
-    void appState.loadStatsRange(prevFrom, prevTo, undefined, 'previous');
+    void statsState.loadRangeStats(from, to, undefined, 'current');
+    void statsState.loadRangeStats(prevFrom, prevTo, undefined, 'previous');
   });
 
   $effect(() => {
-    void appState.loadStatsStreak();
+    void statsState.loadStreak(undefined, authState.userId ?? '');
   });
 
   // ─── Derived from domain state with fallbacks from books ───
 
-  const sd = $derived(appState.statsDomain);
+  const sd = $derived(statsState);
 
-  const genreDistribution = $derived(calculateGenreDistribution(appState.books));
+  const genreDistribution = $derived(calculateGenreDistribution(libraryState.books));
 
   const totalMinutes = $derived(
     sd.currentStats?.totalMinutesRead ??
-      appState.books.reduce((sum, book) => sum + book.minutesRead, 0),
+      libraryState.books.reduce((sum, book) => sum + book.minutesRead, 0),
   );
   const totalSessions = $derived(
-    sd.currentStats?.totalSessions ?? Math.max(appState.books.length * 2, 0),
+    sd.currentStats?.totalSessions ?? Math.max(libraryState.books.length * 2, 0),
   );
   const booksStarted = $derived(
     sd.currentStats?.booksStarted ??
-      appState.books.filter((book) => getSafeProgressPercentage(book) > 0).length,
+      libraryState.books.filter((book) => getSafeProgressPercentage(book) > 0).length,
   );
   const booksCompleted = $derived(
     sd.currentStats?.booksCompleted ??
-      appState.books.filter((book) => book.readingStatus === 'completed' || getSafeProgressPercentage(book) >= 100)
+      libraryState.books.filter((book) => book.readingStatus === 'completed' || getSafeProgressPercentage(book) >= 100)
         .length,
   );
   const averageProgress = $derived(
     sd.currentStats?.avgProgressPercentage ??
-      (appState.books.length
-        ? appState.books.reduce((sum, book) => sum + getSafeProgressPercentage(book), 0) /
-          appState.books.length
+      (libraryState.books.length
+        ? libraryState.books.reduce((sum, book) => sum + getSafeProgressPercentage(book), 0) /
+          libraryState.books.length
         : 0),
   );
 
@@ -243,7 +248,7 @@
   }
 
   const mostReadBooks = $derived.by(() =>
-    [...appState.books].sort((left, right) => right.minutesRead - left.minutesRead).slice(0, 3),
+    [...libraryState.books].sort((left, right) => right.minutesRead - left.minutesRead).slice(0, 3),
   );
 
   const streakDays = $derived(sd.streakDays);
@@ -264,7 +269,7 @@
     activitySeries.length > 0 ? Math.round(totalMinutes / activitySeries.length) : 0,
   );
   const totalPagesRead = $derived(
-    appState.books.reduce((sum, book) => sum + Math.max(book.currentPage, 0), 0),
+    libraryState.books.reduce((sum, book) => sum + Math.max(book.currentPage, 0), 0),
   );
 
   // ─── Loading / unavailable derived from domain state ───
@@ -799,7 +804,7 @@
             <button
               type="button"
               class="flex w-full items-center gap-3 rounded-[22px] border border-(--color-border) bg-(--color-surface-subtle) p-3 cursor-pointer hover:border-(--color-primary) text-left"
-              onclick={() => appState.openShelfDetails(book)}
+              onclick={() => navigationState.openShelfDetails(book.id)}
             >
               <div
                 class="h-14 w-10 shrink-0 overflow-hidden rounded-xl bg-(--color-surface-subtle)"

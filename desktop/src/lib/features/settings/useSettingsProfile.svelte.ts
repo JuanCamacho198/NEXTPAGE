@@ -1,5 +1,5 @@
-import { authState as defaultAuthState } from '$lib/stores/authState.svelte';
-import { createDevicesState as defaultCreateDevicesState } from '$lib/stores/devicesState.svelte';
+import { authState as defaultAuthState } from '$lib/shared/stores/AuthState.svelte';
+import { createDevicesState as defaultCreateDevicesState } from '$lib/shared/stores/DevicesState.svelte';
 import { appState as defaultAppState } from '$lib/shared/stores/AppState.svelte';
 import { settingsState as defaultSettingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
 import { normalizeProfileSession, profileSessionFromAuthState, type ProfileSessionViewModel } from './profileSession';
@@ -68,7 +68,7 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
       // optimistic toast handled by caller; compose here if needed
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      const { pushToast } = await import('$lib/stores/toastQueue.svelte');
+      const { pushToast } = await import('$lib/shared/stores/ToastQueue.svelte');
       pushToast('error', msg);
       throw error;
     } finally {

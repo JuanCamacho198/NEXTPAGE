@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { authState, setLocalUser } from '$lib/stores/authState.svelte';
-  import { savePersistedAuth } from '$lib/stores/authPersistence';
-  import { appState } from '$lib/shared/stores/AppState.svelte';
+  import { authState, setLocalUser } from '$lib/shared/stores/AuthState.svelte';
+  import { savePersistedAuth } from '$lib/shared/stores/authPersistence';
+  import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { GoogleLoginButton } from '$lib/features/library';
   import type { MessageKey } from '$lib/shared/i18n';
   import { Button, Icon } from '$lib/shared/ui';
   import LocalUserForm from './components/LocalUserForm.svelte';
-  import type { LocalUserProfile } from '$lib/stores/authPersistence';
+  import type { LocalUserProfile } from '$lib/shared/stores/authPersistence';
 
   type Props = {
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -40,7 +40,7 @@
       };
       setLocalUser(profile);
       await savePersistedAuth({ kind: 'local', profile });
-      appState.navigateToHome();
+      navigationState.navigateToHome();
     } finally {
       isCreatingLocal = false;
     }
@@ -64,7 +64,7 @@
       };
       setLocalUser(profile);
       await savePersistedAuth({ kind: 'local', profile });
-      appState.navigateToHome();
+      navigationState.navigateToHome();
     } finally {
       isCreatingLocal = false;
     }
@@ -81,7 +81,7 @@
   // authState.isSignedIn becomes true, navigate to home.
   $effect(() => {
     if (authState.isSignedIn && authState.accessToken) {
-      appState.navigateToHome();
+      navigationState.navigateToHome();
     }
   });
 </script>

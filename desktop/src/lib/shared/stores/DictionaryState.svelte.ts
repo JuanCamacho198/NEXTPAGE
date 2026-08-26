@@ -1,6 +1,6 @@
 import { invoke } from '$lib/shared/api/invokeWrapper';
 import type { DictionaryWordDto } from '$lib/shared/types';
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { hasLiveSession } from '$lib/services/supabase';
 import { SupabaseDictionarySync } from '$lib/shared/sync/SupabaseDictionarySync';
 

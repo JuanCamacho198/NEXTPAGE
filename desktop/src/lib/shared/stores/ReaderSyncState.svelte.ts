@@ -18,7 +18,7 @@ import {
   upsertProgress as upsertProgressCmd,
 } from '$lib/shared/api/tauriClient';
 import type { ReadingProgressDto } from '$lib/shared/types';
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
 import type { SupabaseProgressRow } from '$lib/shared/sync/SupabaseProgressSync';
 

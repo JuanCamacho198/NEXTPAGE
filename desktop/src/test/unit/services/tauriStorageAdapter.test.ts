@@ -15,7 +15,7 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { logger } from '$lib/shared/logger/Logger';
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import {
   tauriStorageAdapter,
   setLiveSession,

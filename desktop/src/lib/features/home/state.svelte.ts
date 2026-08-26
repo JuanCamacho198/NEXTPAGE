@@ -9,7 +9,7 @@ import {
   type ShelfSortKey,
   type ShelfTabCode,
   type ShelfViewMode,
-} from '$lib/shared/stores/homeState';
+} from '$lib/shared/stores/HomeState';
 
 export type AppRoute =
   | 'home'

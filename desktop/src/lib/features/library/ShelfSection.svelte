@@ -5,7 +5,7 @@
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
   import type { LibraryBookDto, CollectionDto } from '$lib/shared/types';
   import type { ReaderBook } from '$lib/shared/types';
-  import type { ShelfQueryState } from '$lib/shared/stores/homeState';
+  import type { ShelfQueryState } from '$lib/shared/stores/HomeState';
   import type { MessageKey } from '$lib/shared/i18n';
 
   export type ShelfSectionProps = {

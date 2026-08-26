@@ -6,7 +6,8 @@
   import HomeMainContent from './HomeMainContent.svelte';
   import type { ReadingStatsSummaryDto } from '$lib/shared/types';
   import type { MessageKey } from '$lib/i18n';
-  import { appState } from '$lib/shared/stores/AppState.svelte';
+  import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
 
   type Props = {
     stats: ReadingStatsSummaryDto | null;
@@ -42,7 +43,7 @@
   }: Props = $props();
 
   onMount(() => {
-    void appState.loadStatsStreak();
+    void statsState.loadStreak(undefined, authState.userId ?? '');
   });
 </script>
 

@@ -34,6 +34,10 @@ coverage/
 # CodeGraph 
 .codegraph
 
+# Graphify
+graphify-out/
+/.graphify/
+
 # Images (generated/book covers)
 */images
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import Toast from './Toast.svelte';
-  import { toastQueue, dismiss } from '$lib/stores/toastQueue.svelte';
+  import { toastQueue, dismiss } from '$lib/shared/stores/ToastQueue.svelte';
 </script>
 
 {#each toastQueue.items as toast (toast.id)}

@@ -1,4 +1,4 @@
-import type { AppRoute } from '$lib/shared/stores/homeState';
+import type { AppRoute } from '$lib/shared/stores/HomeState';
 import type { MessageKey } from '$lib/shared/i18n';
 import type { IconName } from '$lib/shared/ui/navigation/Icon.svelte';
 

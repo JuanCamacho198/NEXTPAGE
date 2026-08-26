@@ -1,5 +1,5 @@
 import { getSessionClient, hasLiveSession } from '$lib/services/supabase';
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import type { SupabaseClient, RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export interface SupabaseDictionaryRow {

@@ -31,7 +31,7 @@ vi.mock('$lib/shared/stores/ReaderDomainState.svelte', () => ({
 vi.mock('$lib/shared/debug/debugState.svelte', () => ({
   debugState: { epub: { colorPickCount: 0, lastPickedColor: '', saveHighlightCallCount: 0, saveHighlightLastError: '', failedHighlightIds: [] as string[] } },
 }));
-vi.mock('$lib/stores/authState.svelte', () => ({ authState: { userId: null } }));
+vi.mock('$lib/shared/stores/AuthState.svelte', () => ({ authState: { userId: null } }));
 vi.mock('$lib/shared/api/tauriClient', async () => {
   const actual = await vi.importActual<typeof import('$lib/shared/api/tauriClient')>('$lib/shared/api/tauriClient');
   return {

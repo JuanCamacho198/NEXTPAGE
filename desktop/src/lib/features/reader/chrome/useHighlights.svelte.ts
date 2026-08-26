@@ -1,6 +1,6 @@
 import { untrack } from 'svelte';
 import { debugState } from '$lib/shared/debug/debugState.svelte';
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 import {

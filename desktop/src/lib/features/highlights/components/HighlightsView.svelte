@@ -10,7 +10,9 @@
   } from '$lib/shared/api/tauriClient';
   import type { TagDto } from '$lib/shared/types';
   import { appState } from '$lib/shared/stores/AppState.svelte';
-  import { authState } from '$lib/stores/authState.svelte';
+  import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
+  import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
   import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
   import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
   import SafeCover from '$lib/features/library/components/SafeCover.svelte';
@@ -258,12 +260,10 @@
   }
 
   async function handleViewInBook(highlight: HighlightDto): Promise<void> {
-    const book = appState.getBookById(highlight.bookId);
+    const book = libraryState.getBookById(highlight.bookId);
     if (!book) return;
     await appState.startReading(book);
-    // Set a navigation target so the viewer jumps to the highlight position.
-    // EPUB highlights carry a CFI; PDF highlights fall back to the page.
-    appState.searchTargetLocator = highlight.cfi
+    searchState.searchTargetLocator = highlight.cfi
       ? highlight.cfi
       : book.format.toLowerCase() === 'pdf'
         ? `page:${highlight.pageNumber}`

@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { TokenSet } from '$lib/stores/authState.svelte';
+import type { TokenSet } from '$lib/shared/stores/AuthState.svelte';
 import {
   clearPersistedAuth,
   loadDriveRefreshToken,
@@ -23,7 +23,7 @@ import {
   savePersistedAuth,
   type LocalUserProfile,
   type PersistedAuth,
-} from '$lib/stores/authPersistence';
+} from '$lib/shared/stores/authPersistence';
 
 const mockReadTextFile = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<string>>());
 const mockWriteTextFile = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<void>>());

@@ -8,7 +8,7 @@ import {
   setReadingStatus,
 } from '$lib/shared/api/tauriClient';
 import type { ReaderBook, ReadingSessionInput, SaveProgressInput } from '$lib/shared/types';
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
 import type { SupabaseProgressRow } from '$lib/shared/sync/SupabaseProgressSync';

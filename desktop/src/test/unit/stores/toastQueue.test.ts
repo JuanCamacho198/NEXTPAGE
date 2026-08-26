@@ -5,7 +5,7 @@
  * no-op for unknown ids).
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { toastQueue, pushToast, dismiss } from '$lib/stores/toastQueue.svelte';
+import { toastQueue, pushToast, dismiss } from '$lib/shared/stores/ToastQueue.svelte';
 
 describe('toastQueue', () => {
   beforeEach(() => {

@@ -12,8 +12,8 @@
 import { start, cancel, onUrl } from '@fabianlars/tauri-plugin-oauth';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
-import { authState, type TokenSet } from '$lib/stores/authState.svelte';
-import { savePersistedAuth } from '$lib/stores/authPersistence';
+import { authState, type TokenSet } from '$lib/shared/stores/AuthState.svelte';
+import { savePersistedAuth } from '$lib/shared/stores/authPersistence';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 import { logger } from '$lib/shared/logger/Logger';
 

@@ -2,7 +2,7 @@ import './styles.css';
 import App from './App.svelte';
 import { mount } from 'svelte';
 import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
-import { registerSupabaseCallbackHandler } from './lib/shared/services/SupabaseAuthService';
+import { registerSupabaseCallbackHandler } from './lib/shared/services';
 import { logger } from './lib/shared/logger/Logger';
 import { consoleSink } from './lib/shared/logger/ConsoleSink';
 import { tauriSink } from './lib/shared/logger/TauriSink';

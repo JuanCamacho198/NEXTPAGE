@@ -1,4 +1,4 @@
-import { authState, type LocalUserProfile } from '$lib/stores/authState.svelte';
+import { authState, type LocalUserProfile } from '$lib/shared/stores/AuthState.svelte';
 
 const DEFAULT_PROFILE_NAME = 'Reader';
 const DEFAULT_PROFILE_EMAIL = 'No email available';

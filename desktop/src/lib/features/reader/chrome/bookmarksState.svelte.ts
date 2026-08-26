@@ -1,5 +1,5 @@
 import { listBookmarks, saveBookmark, deleteBookmark } from '$lib/shared/api/tauriClient';
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 
 const defaultOutboxDao = new SyncOutboxDao();

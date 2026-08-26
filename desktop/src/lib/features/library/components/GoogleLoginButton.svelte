@@ -2,8 +2,8 @@
   import { onMount } from 'svelte';
   import { Button } from '$lib/shared/ui';
   import Toast from '$lib/shared/ui/feedback/Toast.svelte';
-  import { signInWithGoogle } from '$lib/shared/services/SupabaseAuthService';
-  import { authState } from '$lib/stores/authState.svelte';
+  import { signInWithGoogle } from '$lib/shared/services';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Translator = (key: MessageKey, params?: Record<string, string | number>) => string;

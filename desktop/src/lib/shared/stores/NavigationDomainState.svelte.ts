@@ -1,4 +1,4 @@
-import type { AppRoute } from '$lib/shared/stores/homeState';
+import type { AppRoute } from '$lib/shared/stores/HomeState';
 
 const DOMAIN = {
   LIBRARY: 'library',

@@ -4,7 +4,7 @@
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import SafeCover from '$lib/features/library/components/SafeCover.svelte';
-  import { getSafeProgressPercentage } from '$lib/shared/stores/homeState';
+  import { getSafeProgressPercentage } from '$lib/shared/stores/HomeState';
   import { useShelfEdit } from './useShelfEdit.svelte.js';
   import type { LibraryBookDto, CollectionDto } from '$lib/shared/types';
   import type { MessageKey } from '$lib/shared/i18n';

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import AppSidebar from '$lib/shared/ui/layout/AppSidebar.svelte';
-import { getNavItems } from '$lib/shared/stores/navigationState.svelte';
+import { getNavItems } from '$lib/shared/stores/NavigationState.svelte';
 
 function fakeT(key: string): string {
   const labels: Record<string, string> = {

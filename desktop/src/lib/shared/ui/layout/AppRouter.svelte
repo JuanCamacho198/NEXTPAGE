@@ -1,6 +1,13 @@
 <script lang="ts">
   import { appState } from '$lib/shared/stores/AppState.svelte';
-  import { getNavItems, getDataNavItems } from '$lib/shared/stores/navigationState.svelte';
+  import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
+  import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
+  import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
+  import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
+  import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
+  import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
+  import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
+  import { getNavItems, getDataNavItems } from '$lib/shared/stores/NavigationState.svelte';
   import { fly } from 'svelte/transition';
 
   import { Button } from '$lib/shared/ui';
@@ -15,26 +22,26 @@
   import WelcomeScreen from '$lib/features/welcome/WelcomeScreen.svelte';
   import DictionaryView from '$lib/features/dictionary/components/DictionaryView.svelte';
 
-  const showSidebar = $derived(appState.route !== 'reader' && appState.route !== 'welcome');
+  const showSidebar = $derived(navigationState.route !== 'reader' && navigationState.route !== 'welcome');
 
   const navItems = $derived(
     getNavItems({
-      onNavigateHome: appState.navigateToHome,
-      onNavigateLibrary: appState.navigateToLibrary,
-      onNavigateStats: appState.navigateToStats,
-      onNavigateHighlights: appState.navigateToHighlights,
-      onNavigateSettings: appState.navigateToSettings,
+      onNavigateHome: navigationState.navigateToHome,
+      onNavigateLibrary: navigationState.navigateToLibrary,
+      onNavigateStats: navigationState.navigateToStats,
+      onNavigateHighlights: navigationState.navigateToHighlights,
+      onNavigateSettings: navigationState.navigateToSettings,
     }),
   );
 
   const dataNavItems = $derived(
     getDataNavItems({
-      onNavigateHome: appState.navigateToHome,
-      onNavigateLibrary: appState.navigateToLibrary,
-      onNavigateStats: appState.navigateToStats,
-      onNavigateHighlights: appState.navigateToHighlights,
-      onNavigateSettings: appState.navigateToSettings,
-      onNavigateDictionary: appState.navigateToDictionary,
+      onNavigateHome: navigationState.navigateToHome,
+      onNavigateLibrary: navigationState.navigateToLibrary,
+      onNavigateStats: navigationState.navigateToStats,
+      onNavigateHighlights: navigationState.navigateToHighlights,
+      onNavigateSettings: navigationState.navigateToSettings,
+      onNavigateDictionary: navigationState.navigateToDictionary,
     }),
   );
 </script>
@@ -62,7 +69,7 @@
       <p class="m-0 text-sm">{appState.t('app.start')}...</p>
     </div>
   </main>
-{:else if appState.route === 'welcome'}
+{:else if navigationState.route === 'welcome'}
   <!--
     Standalone welcome screen — no sidebar, no main wrapper, no fly
     transition. The screen is itself the entire viewport.
@@ -71,66 +78,66 @@
 {:else if showSidebar}
   <div class="flex h-full">
     <AppSidebar
-      activeRoute={appState.route}
+      activeRoute={navigationState.route}
       {navItems}
       {dataNavItems}
       t={appState.t}
-      onNavigateSettings={appState.navigateToSettings}
+      onNavigateSettings={navigationState.navigateToSettings}
     />
     <main
       id="main-content"
       tabindex="-1"
       class="flex-1 overflow-y-auto relative flex flex-col min-h-0"
-      class:p-4={appState.route !== 'reader' && appState.route !== 'settings' && appState.route !== 'storage' && appState.route !== 'sync'}
-      class:md:p-6={appState.route !== 'reader' && appState.route !== 'settings' && appState.route !== 'storage' && appState.route !== 'sync'}
+      class:p-4={navigationState.route !== 'reader' && navigationState.route !== 'settings' && navigationState.route !== 'storage' && navigationState.route !== 'sync'}
+      class:md:p-6={navigationState.route !== 'reader' && navigationState.route !== 'settings' && navigationState.route !== 'storage' && navigationState.route !== 'sync'}
     >
       <!-- aria-live region for screen reader announcements of dynamic content -->
       <div aria-live="polite" aria-atomic="true" class="sr-only">
-        {#if appState.importProgress}
-          {appState.importProgress.message}
+        {#if bulkImportState.importProgress}
+          {bulkImportState.importProgress.message}
         {/if}
-        {#if appState.readerError}
-          {appState.readerError}
+        {#if libraryState.readerError}
+          {libraryState.readerError}
         {/if}
       </div>
-      <div class={appState.route === 'settings' || appState.route === 'storage' || appState.route === 'sync' ? 'w-full h-full flex-1 flex flex-col min-h-0 max-w-none' : 'mx-auto max-w-7xl'}>
-        {#if appState.readerError}
+      <div class={navigationState.route === 'settings' || navigationState.route === 'storage' || navigationState.route === 'sync' ? 'w-full h-full flex-1 flex flex-col min-h-0 max-w-none' : 'mx-auto max-w-7xl'}>
+        {#if libraryState.readerError}
           <p class="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
-            {appState.readerError}
+            {libraryState.readerError}
           </p>
         {/if}
 
-        {#key appState.route}
-          {#if appState.route === 'home'}
-            {@const previewBook = appState.getBookById(appState.previewBookId)}
+        {#key navigationState.route}
+          {#if navigationState.route === 'home'}
+            {@const previewBook = libraryState.getBookById(navigationState.previewBookId)}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
               <HomeDesktopView
-                stats={appState.stats}
-                isLoadingStats={appState.isLoadingStats}
-                statsUnavailableReason={appState.statsUnavailableReason}
-                streakDays={appState.statsDomain.streakDays}
-                isLoadingStreak={appState.statsDomain.isLoadingStreak}
+                stats={statsState.stats}
+                isLoadingStats={statsState.isLoadingStats}
+                statsUnavailableReason={navigationState.statsUnavailableReason}
+                streakDays={statsState.streakDays}
+                isLoadingStreak={statsState.isLoadingStreak}
                 selectedBookTitle={previewBook?.title ?? null}
-                continueCount={appState.continueReadingBooks.length}
-                shelfCount={appState.myShelfBooks.length}
-                statsMinutes={appState.stats?.totalMinutesRead ?? 0}
+                continueCount={libraryState.continueReadingBooks.length}
+                shelfCount={libraryState.myShelfBooks.length}
+                statsMinutes={statsState.stats?.totalMinutesRead ?? 0}
                 activeRoute="home"
-                onNavigateHome={appState.navigateToHome}
-                onNavigateHighlights={appState.navigateToHighlights}
-                onNavigateSettings={appState.navigateToSettings}
+                onNavigateHome={navigationState.navigateToHome}
+                onNavigateHighlights={navigationState.navigateToHighlights}
+                onNavigateSettings={navigationState.navigateToSettings}
                 onRefreshStats={() => {
-                  void appState.loadStats(appState.previewBookId ?? undefined);
-                  void appState.loadStatsStreak();
+                  void statsState.loadStats(navigationState.previewBookId ?? undefined);
+                  void statsState.loadStreak();
                 }}
                 t={appState.t}
               >
                 {#snippet navbarActions()}
                   <Button
-                    onclick={appState.handleImportFile}
-                    disabled={appState.isImporting}
+                    onclick={bulkImportState.handleImportFile}
+                    disabled={bulkImportState.isImporting}
                     size="sm"
                   >
-                    {appState.isImporting
+                    {bulkImportState.isImporting
                       ? appState.t('app.importing')
                       : appState.t('app.importBook')}
                   </Button>
@@ -142,132 +149,130 @@
 
                 {#snippet shelfSection()}
                   <ShelfSection
-                    shelfQueryState={appState.shelfQueryState}
-                    shelfBooks={appState.shelfBooks}
-                    myShelfBooks={appState.myShelfBooks}
-                    collections={appState.collections}
-                    previewBookId={appState.previewBookId}
-                    selectedShelfBook={appState.selectedShelfBook}
-                    shelfTabOptions={appState.SHELF_TAB_OPTIONS}
-                    shelfSortOptions={appState.SHELF_SORT_OPTIONS}
+                    shelfQueryState={libraryState.shelfQueryState}
+                    shelfBooks={libraryState.shelfBooks}
+                    myShelfBooks={libraryState.myShelfBooks}
+                    collections={libraryState.collections}
+                    previewBookId={navigationState.previewBookId}
+                    selectedShelfBook={libraryState.books.find((b) => b.id === navigationState.shelfDetailsBookId) ?? null}
+                    shelfTabOptions={libraryState.SHELF_TAB_OPTIONS}
+                    shelfSortOptions={libraryState.SHELF_SORT_OPTIONS}
                     t={appState.t}
-                    onSetTab={(key) => appState.setShelfTab(key as never)}
-                    onSetSort={(key) => appState.setShelfSort(key as never)}
-                    onSetViewMode={(mode) => appState.setShelfViewMode(mode)}
-                    onShelfQueryInput={appState.handleShelfQueryInput}
-                    onClearShelfQuery={appState.clearShelfQuery}
-                    onOpenDetails={(book) => appState.openShelfDetails(book)}
+                    onSetTab={(key) => libraryState.setShelfTab(key as never)}
+                    onSetSort={(key) => libraryState.setShelfSort(key as never)}
+                    onSetViewMode={(mode) => libraryState.setShelfViewMode(mode)}
+                    onShelfQueryInput={libraryState.handleShelfQueryInput}
+                    onClearShelfQuery={libraryState.clearShelfQuery}
+                    onOpenDetails={(book) => navigationState.openShelfDetails(book.id)}
                     onStartReading={(book) => void appState.startReading(book)}
-                    onEditBook={(book) => appState.handleEditBook(book)}
-                    onRemoveBook={(book) => appState.requestRemoveBook(book)}
-                    onToggleFavorite={(book) => appState.handleToggleFavorite(book)}
-                    onStatusChange={(book, status) => appState.handleStatusChange(book, status)}
-                    onDeleteCover={(book) => appState.handleDeleteCover(book)}
-                    onSaveEdit={(dto) => appState.handleSaveEditedBook(dto as never)}
-                    onCloseDetails={appState.closeShelfDetails}
+                    onEditBook={(book) => libraryState.handleEditBook(book)}
+                    onRemoveBook={(book) => { libraryState.pendingRemoveBook = book; }}
+                    onToggleFavorite={(book) => libraryState.handleToggleFavorite(book)}
+                    onStatusChange={(book, status) => libraryState.handleStatusChange(book, status as "to_read" | "reading" | "completed")}
+                    onDeleteCover={(book) => libraryState.handleDeleteCover(book)}
+                    onSaveEdit={(dto) => libraryState.handleSaveEditedBook(dto as never)}
+                    onCloseDetails={navigationState.closeShelfDetails}
                     onCoverUpdated={(bookId, path) => {
-                      const found = appState.books.find((b) => b.id === bookId);
+                      const found = libraryState.books.find((b) => b.id === bookId);
                       if (found) found.coverPath = path;
                     }}
                   />
                 {/snippet}
               </HomeDesktopView>
             </div>
-          {:else if appState.route === 'library'}
+          {:else if navigationState.route === 'library'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
               <LibraryShelfScreen
-                books={appState.books}
-                isImporting={appState.isImporting}
+                books={libraryState.books}
+                isImporting={bulkImportState.isImporting}
                 t={appState.t}
-                onImportBook={appState.handleImportFile}
+                onImportBook={bulkImportState.handleImportFile}
                 onOpenBook={(book: Parameters<typeof appState.startReading>[0]) => {
                   void appState.startReading(book);
                 }}
                 onContinueReading={(book: Parameters<typeof appState.startReading>[0]) => {
                   void appState.startReading(book);
                 }}
-                onToggleFavorite={(book: Parameters<typeof appState.handleToggleFavorite>[0]) => {
-                  void appState.handleToggleFavorite(book);
+                onToggleFavorite={(book: Parameters<typeof libraryState.handleToggleFavorite>[0]) => {
+                  void libraryState.handleToggleFavorite(book);
                 }}
                 onStatusChange={(
-                  book: Parameters<typeof appState.handleStatusChange>[0],
+                  book: Parameters<typeof libraryState.handleStatusChange>[0],
                   status: string,
                 ) => {
-                  void appState.handleStatusChange(book, status);
+                  void libraryState.handleStatusChange(book, status as "to_read" | "reading" | "completed");
                 }}
-                onViewDetails={appState.openShelfDetails}
-                onRemoveBook={(book: Parameters<typeof appState.handleHideBook>[0]) => {
-                  appState.requestRemoveBook(book);
-                }}
+                onViewDetails={(book) => navigationState.openShelfDetails(book.id)}
+                onRemoveBook={(book) => { libraryState.pendingRemoveBook = book; }}
                 onDownloaded={() => {
                   void appState.loadLibrary();
                 }}
               />
             </div>
-          {:else if appState.route === 'stats'}
+          {:else if navigationState.route === 'stats'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
               <ReadingStatisticsView {appState} t={appState.t} />
             </div>
-          {:else if appState.route === 'highlights'}
+          {:else if navigationState.route === 'highlights'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
-              <HighlightsView books={appState.books} t={appState.t} />
+              <HighlightsView books={libraryState.books} t={appState.t} />
             </div>
-          {:else if appState.route === 'dictionary'}
+          {:else if navigationState.route === 'dictionary'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
               <DictionaryView t={appState.t} />
             </div>
-          {:else if appState.route === 'storage' || appState.route === 'sync'}
+          {:else if navigationState.route === 'storage' || navigationState.route === 'sync'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }} class="w-full h-full flex-1 flex flex-col min-h-0">
               <section class="w-full h-full flex-1 flex flex-col min-h-0">
                 <SettingsPanel
                   isOpen={true}
                   mode="page"
-                  initialTab={appState.route === 'storage' ? 'almacenamiento' : 'sincronizacion'}
-                  onRequestClose={appState.navigateToHome}
+                  initialTab={navigationState.route === 'storage' ? 'almacenamiento' : 'sincronizacion'}
+                  onRequestClose={navigationState.navigateToHome}
                   t={appState.t}
-                  locale={appState.locale}
-                  onLocaleChange={appState.handleLocaleChange}
-                  onReaderSettingsChange={appState.handleReaderSettingsChange}
-                  books={appState.books.map((b) => ({ id: b.id, title: b.title }))}
+                  locale={settingsState.locale}
+                  onLocaleChange={settingsState.handleLocaleChange}
+                  onReaderSettingsChange={settingsState.handleReaderSettingsChange}
+                  books={libraryState.books.map((b) => ({ id: b.id, title: b.title }))}
                 />
               </section>
             </div>
-          {:else if appState.route === 'settings'}
+          {:else if navigationState.route === 'settings'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }} class="w-full h-full flex-1 flex flex-col min-h-0">
               <section class="w-full h-full flex-1 flex flex-col min-h-0">
                 <SettingsPanel
                   isOpen={true}
                   mode="page"
-                  onRequestClose={appState.navigateToHome}
+                  onRequestClose={navigationState.navigateToHome}
                   t={appState.t}
-                  locale={appState.locale}
-                  onLocaleChange={appState.handleLocaleChange}
-                  onReaderSettingsChange={appState.handleReaderSettingsChange}
-                  books={appState.books.map((b) => ({ id: b.id, title: b.title }))}
+                  locale={settingsState.locale}
+                  onLocaleChange={settingsState.handleLocaleChange}
+                  onReaderSettingsChange={settingsState.handleReaderSettingsChange}
+                  books={libraryState.books.map((b) => ({ id: b.id, title: b.title }))}
                 />
               </section>
             </div>
           {:else}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
               <ReaderWorkspace
-                activeReadingBook={appState.getBookById(appState.activeReadingBookId)}
-                readerSettings={appState.readerSettings}
-                percentage={appState.percentage}
-                searchResponse={appState.searchResponse}
-                searchTargetLocator={appState.searchTargetLocator}
-                isSearching={appState.isSearching}
-                searchUnavailableReason={appState.searchUnavailableReason}
-                preloadedBytes={appState.preloadedBytes}
+                activeReadingBook={libraryState.getBookById(readerState.activeReadingBookId)}
+                readerSettings={settingsState.readerSettings}
+                percentage={readerState.percentage}
+                searchResponse={searchState.searchResponse}
+                searchTargetLocator={searchState.searchTargetLocator}
+                isSearching={searchState.isSearching}
+                searchUnavailableReason={searchState.searchUnavailableReason}
+                preloadedBytes={readerState.preloadedBytes}
                 t={appState.t}
-                onBackToHome={appState.backToHome}
+                onBackToHome={navigationState.backToHome}
                 onPdfPageChange={appState.handlePdfPageChange}
                 onPdfSessionProgress={appState.handlePdfSessionProgress}
                 onEpubLocationChange={appState.handleEpubLocationChange}
                 onReaderLocationContext={appState.handleReaderLocationContext}
                 onSearch={(query: string, page: number) => void appState.handleSearch(query, page)}
                 onSearchJump={(target: unknown) =>
-                  void appState.handleSearchJump(
-                    target as Parameters<typeof appState.handleSearchJump>[0],
+                  void searchState.handleSearchJump(
+                    target as Parameters<typeof searchState.handleSearchJump>[0],
                   )}
               />
             </div>
@@ -279,23 +284,23 @@
 {:else}
   <main id="main-content" tabindex="-1" class="flex-1 overflow-y-auto relative">
     <ReaderWorkspace
-      activeReadingBook={appState.getBookById(appState.activeReadingBookId)}
-      readerSettings={appState.readerSettings}
-      percentage={appState.percentage}
-      searchResponse={appState.searchResponse}
-      searchTargetLocator={appState.searchTargetLocator}
-      isSearching={appState.isSearching}
-      searchUnavailableReason={appState.searchUnavailableReason}
-      preloadedBytes={appState.preloadedBytes}
+      activeReadingBook={libraryState.getBookById(readerState.activeReadingBookId)}
+      readerSettings={settingsState.readerSettings}
+      percentage={readerState.percentage}
+      searchResponse={searchState.searchResponse}
+      searchTargetLocator={searchState.searchTargetLocator}
+      isSearching={searchState.isSearching}
+      searchUnavailableReason={searchState.searchUnavailableReason}
+      preloadedBytes={readerState.preloadedBytes}
       t={appState.t}
-      onBackToHome={appState.backToHome}
+      onBackToHome={navigationState.backToHome}
       onPdfPageChange={appState.handlePdfPageChange}
       onPdfSessionProgress={appState.handlePdfSessionProgress}
       onEpubLocationChange={appState.handleEpubLocationChange}
       onReaderLocationContext={appState.handleReaderLocationContext}
       onSearch={(query: string, page: number) => void appState.handleSearch(query, page)}
       onSearchJump={(target: unknown) =>
-        void appState.handleSearchJump(target as Parameters<typeof appState.handleSearchJump>[0])}
+        void searchState.handleSearchJump(target as Parameters<typeof searchState.handleSearchJump>[0])}
     />
   </main>
 {/if}

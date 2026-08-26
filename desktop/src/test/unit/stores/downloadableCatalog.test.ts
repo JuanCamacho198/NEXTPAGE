@@ -50,7 +50,7 @@ vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
 }));
 
 // No live user session → downloadBook's catalog upsert must be a no-op.
-vi.mock('$lib/stores/authState.svelte.ts', () => ({
+vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
   authState: {
     get userId(): string | null {
       return mockAuthUserId.value;

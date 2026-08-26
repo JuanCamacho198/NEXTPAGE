@@ -2,10 +2,10 @@
   import type { MessageKey } from '$lib/shared/i18n';
   import type { LibraryBookDto } from '$lib/shared/types/library';
   import Button from '$lib/shared/ui/forms/Button.svelte';
-  import { pushToast } from '$lib/stores/toastQueue.svelte';
-  import { DriveColdBackupService } from '$lib/shared/services/DriveColdBackupService';
-  import { authState } from '$lib/stores/authState.svelte';
-  import { storageState } from '$lib/shared/stores/storageState.svelte';
+  import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
+  import { DriveColdBackupService } from '$lib/shared/services';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
+  import { storageState } from '$lib/shared/stores/StorageState.svelte';
   import { onMount } from 'svelte';
 
   type Props = {

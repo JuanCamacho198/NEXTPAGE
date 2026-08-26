@@ -1,7 +1,7 @@
-import { storageState as defaultStorageState } from '$lib/shared/stores/storageState.svelte';
-import { DriveColdBackupService as DefaultDriveColdBackupService } from '$lib/shared/services/DriveColdBackupService';
-import { authState as defaultAuthState } from '$lib/stores/authState.svelte';
-import { pushToast as defaultPushToast } from '$lib/stores/toastQueue.svelte';
+import { storageState as defaultStorageState } from '$lib/shared/stores/StorageState.svelte';
+import { DriveColdBackupService as DefaultDriveColdBackupService } from '$lib/shared/services';
+import { authState as defaultAuthState } from '$lib/shared/stores/AuthState.svelte';
+import { pushToast as defaultPushToast } from '$lib/shared/stores/ToastQueue.svelte';
 
 export type DataDeps = {
   storageState?: typeof defaultStorageState;

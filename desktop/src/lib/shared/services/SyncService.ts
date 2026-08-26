@@ -5,7 +5,7 @@
  * Drive is cold Export/Import only (DriveColdBackupService, PR3) — no hot push/pull.
  * LWW: remote.updatedAt > local → remote, tie → recordId lexicographic, version+1 for progress.
  */
-import { authState } from '$lib/stores/authState.svelte';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { getSessionClient, hasLiveSession, recheckLiveSession } from '$lib/services/supabase';
 import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
 import { GDriveProvider } from './storage/GDriveProvider';

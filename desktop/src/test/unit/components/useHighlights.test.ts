@@ -7,7 +7,7 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
   listHighlights: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('$lib/stores/authState.svelte', () => ({
+vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
   authState: { userId: 'user-1' },
 }));
 

@@ -5,7 +5,7 @@
   import { Button } from '$lib/shared/ui';
   import ProfileCard from './ProfileCard.svelte';
   import ConnectedDevices from './ConnectedDevices.svelte';
-  import { authState } from '$lib/stores/authState.svelte';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ProfileSessionViewModel } from '../profileSession';

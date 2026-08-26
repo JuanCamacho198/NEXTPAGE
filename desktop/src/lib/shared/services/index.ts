@@ -15,3 +15,39 @@ export {
 } from './BookImportService';
 export type { StorageProvider } from './storage/StorageProvider';
 export { GDriveProvider } from './storage/GDriveProvider';
+export { DriveColdBackupService } from './DriveColdBackupService';
+export { GoogleDriveStateSync } from './GoogleDriveStateSync';
+export {
+  extractEpubImportMetadata,
+  extractEpubMetadataFromBytes,
+  parseOpfDirectly,
+  type ImportEpubMetadata,
+} from './epubImportMetadata';
+export {
+  inferGenreFromText,
+  KEYWORD_TABLE,
+  UNCLASSIFIED_GENRE,
+  type CanonicalGenre,
+  type ConcreteCanonicalGenre,
+} from './genreHeuristic';
+export { fromCfi, derivePage, parseSpineIndex } from './LocatorCodec';
+export type { CanonicalLocator, LocatorLocations } from './LocatorCodec';
+export {
+  getDriveToken,
+  refreshDriveToken,
+  registerSupabaseCallbackHandler,
+  restoreSession,
+  signInAnonymously,
+  signInWithGoogle,
+  signOut,
+} from './SupabaseAuthService';
+export {
+  generateCodeChallenge,
+  generateCodeVerifier,
+  getValidAccessToken,
+  handleCallback,
+  OAuthError,
+  refreshAccessToken,
+  registerOAuthCallbackHandler,
+  startAuth,
+} from './GoogleOAuthService';

@@ -8,8 +8,8 @@
    * user re-authenticates (the store watches authState — D7).
    */
   import { syncAlertStore } from '$lib/shared/stores/syncAlert.svelte';
-  import { signInWithGoogle } from '$lib/shared/services/SupabaseAuthService';
-  import { authState } from '$lib/stores/authState.svelte';
+  import { signInWithGoogle } from '$lib/shared/services';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
 
   const alert = $derived(syncAlertStore.current);
 

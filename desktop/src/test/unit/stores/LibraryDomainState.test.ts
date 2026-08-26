@@ -58,7 +58,7 @@ vi.mock('$lib/shared/sync/SupabaseBookCatalogSync', () => ({
   }),
 }));
 
-vi.mock('$lib/stores/authState.svelte', () => ({
+vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
   authState: {
     get userId(): string | null {
       return mockAuthUserId.current;

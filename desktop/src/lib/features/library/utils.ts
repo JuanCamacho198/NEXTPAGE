@@ -1,5 +1,5 @@
 import type { LibraryBookDto } from '$lib/shared/types';
-import { getSafeProgressPercentage as getCanonicalProgress } from '$lib/shared/stores/homeState';
+import { getSafeProgressPercentage as getCanonicalProgress } from '$lib/shared/stores/HomeState';
 
 // ─── View mode ───
 

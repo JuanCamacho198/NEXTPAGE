@@ -48,7 +48,7 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
   upsertRemoteReadingSessions: mockUpsertRemoteReadingSessions,
 }));
 
-vi.mock('$lib/stores/authState.svelte', () => ({ authState: mockAuthState }));
+vi.mock('$lib/shared/stores/AuthState.svelte', () => ({ authState: mockAuthState }));
 vi.mock('$lib/shared/sync/SupabaseProgressSync', () => ({
   SupabaseProgressSync: class {
     fetchBookState = mockFetchBookState;

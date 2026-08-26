@@ -22,8 +22,8 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import type { Session } from '@supabase/supabase-js';
 
 import { getSessionClient, getLiveSession } from '$lib/services/supabase';
-import { savePersistedAuth, loadDriveRefreshToken, saveDriveRefreshToken } from '$lib/stores/authPersistence';
-import { authState } from '$lib/stores/authState.svelte';
+import { savePersistedAuth, loadDriveRefreshToken, saveDriveRefreshToken } from '$lib/shared/stores/authPersistence';
+import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 import { logger } from '$lib/shared/logger/Logger';
 import { DRIVE_SCOPE, redactLogLine, syncError } from '$lib/shared/protocol/DriveCatalogContract';

@@ -1,3 +1,3 @@
-export * from './homeState';
+export * from './HomeState';
 export * from './theme';
-export * from './errorState';
+export * from './ErrorState';

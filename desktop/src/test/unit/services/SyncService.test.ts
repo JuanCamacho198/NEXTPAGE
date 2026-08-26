@@ -59,7 +59,7 @@ vi.mock('$lib/shared/stores/syncAlert.svelte', () => ({
   reportAuthError: (error: unknown) => mockReportAuthError(error),
 }));
 
-vi.mock('$lib/stores/authState.svelte.ts', () => ({
+vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
   authState: {
     get isSignedIn(): boolean {
       return mockIsSignedIn();

@@ -1,12 +1,12 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import type { MessageKey } from '$lib/shared/i18n';
-  import { authState } from '$lib/stores/authState.svelte';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
   import { SyncService } from '$lib/shared/services/SyncService';
-  import { syncHealthState } from '$lib/shared/stores/syncHealthState.svelte';
-  import { storageState } from '$lib/shared/stores/storageState.svelte';
-  import { dictionaryState } from '$lib/shared/stores/dictionaryState.svelte';
-  import { createDevicesState } from '$lib/stores/devicesState.svelte';
+  import { syncHealthState } from '$lib/shared/stores/SyncHealthState.svelte';
+  import { storageState } from '$lib/shared/stores/StorageState.svelte';
+  import { dictionaryState } from '$lib/shared/stores/DictionaryState.svelte';
+  import { createDevicesState } from '$lib/shared/stores/DevicesState.svelte';
   import type { SyncScope } from '$lib/shared/types/book';
 
   type Props = { t: (key: MessageKey, params?: Record<string, string | number>) => string };

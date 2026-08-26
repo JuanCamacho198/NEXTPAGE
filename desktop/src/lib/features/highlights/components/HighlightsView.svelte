@@ -1,14 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { HighlightDto } from '$lib/shared/types';
-  import {
-    listHighlights,
-    deleteHighlight,
-    upsertRemoteHighlights,
-    listTags,
-    listTagsForHighlight,
-  } from '$lib/shared/api/tauriClient';
-  import type { TagDto } from '$lib/shared/types';
+  import type { HighlightDto, TagDto } from '$lib/shared/types';
+  import type { ViewerPort } from '$lib/shared/ports';
+  import { TauriViewerAdapter } from '$lib/shared/ports';
+  import { createHighlightsViewDeps, type HighlightsViewDeps } from '../highlightsViewDeps';
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
   import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
@@ -31,9 +26,15 @@
     type Props,
   } from '../state.svelte';
 
-  let { books, t }: Props = $props();
+  let { books, t, viewerPort: viewerPortProp, deps: depsProp }: Props = $props();
 
   const outboxDao = new SyncOutboxDao();
+
+  // ViewerPort DI — factory with default Tauri adapter; chunking stays in caller
+  // svelte-ignore state_referenced_locally
+  const viewerPort: ViewerPort = viewerPortProp ?? new TauriViewerAdapter();
+  // svelte-ignore state_referenced_locally
+  const deps: HighlightsViewDeps = depsProp ?? createHighlightsViewDeps(viewerPort);
 
   function sortByUpdatedAtDesc(list: HighlightDto[]): HighlightDto[] {
     return [...list].sort(
@@ -179,7 +180,7 @@
   async function loadHighlights(): Promise<void> {
     isLoading = true;
     try {
-      const raw = await listHighlights();
+      const raw = await deps.listHighlights();
       highlights = sortByUpdatedAtDesc(raw);
     } catch {
       highlights = [];
@@ -206,13 +207,13 @@
         for (let i = 0; i < rows.length; i += chunkSize) {
           const chunk = rows.slice(i, i + chunkSize);
           try {
-            await upsertRemoteHighlights(chunk);
+            await deps.upsertRemoteHighlights(chunk);
           } catch {
             // chunk failure is non-fatal — continue with next chunk
           }
         }
         // Incremental merge: re-read local DB sorted DESC; Svelte keyed each prevents blink
-        const fresh = await listHighlights();
+        const fresh = await deps.listHighlights();
         const sorted = sortByUpdatedAtDesc(fresh);
         // Avoid full-blink by only updating if something changed (length or ids/order)
         const same =
@@ -232,7 +233,7 @@
 
   async function handleDelete(highlight: HighlightDto): Promise<void> {
     try {
-      await deleteHighlight(highlight.id);
+      await deps.deleteHighlight(highlight.id);
       highlights = highlights.filter((h) => h.id !== highlight.id);
       // Mirror the same cross-device contract as ReaderWorkspace: enqueue a
       // HIGHLIGHT DELETE so Supabase receives the tombstone too.
@@ -302,7 +303,7 @@
 
   async function loadTagsAndMap(): Promise<void> {
     try {
-      allTags = await listTags();
+      allTags = await deps.listTags();
     } catch {
       allTags = [];
     }
@@ -313,7 +314,7 @@
       await Promise.all(
         slice.map(async (h) => {
           try {
-            const tags = await listTagsForHighlight(h.id);
+            const tags = await deps.listTagsForHighlight(h.id);
             map.set(h.id, tags.map((t) => t.id));
           } catch {
             map.set(h.id, []);
@@ -339,7 +340,7 @@
     const onHighlightsChanged = (): void => {
       void (async () => {
         try {
-          const fresh = await listHighlights();
+          const fresh = await deps.listHighlights();
           highlights = sortByUpdatedAtDesc(fresh);
           await loadTagsAndMap();
         } catch {

@@ -1,5 +1,7 @@
 import type { HighlightDto, LibraryBookDto } from '$lib/shared/types';
 import type { MessageKey } from '$lib/shared/i18n';
+import type { ViewerPort } from '$lib/shared/ports';
+import type { HighlightsViewDeps } from './highlightsViewDeps';
 import {
   HIGHLIGHT_COLORS as CANONICAL_HIGHLIGHT_COLORS,
   nearestHighlightHex,
@@ -9,6 +11,8 @@ import {
 export type Props = {
   books: LibraryBookDto[];
   t: (key: MessageKey, params?: Record<string, string | number>) => string;
+  viewerPort?: ViewerPort;
+  deps?: HighlightsViewDeps;
 };
 
 export const PAGE_SIZE = 6;

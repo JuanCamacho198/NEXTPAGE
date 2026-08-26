@@ -80,7 +80,7 @@ export default [
     },
   },
   {
-    // P3-2: ban legacy auth stores — canonical is $lib/shared/stores/*
+    // P3-2 + P5: ban legacy auth stores and direct tauriClient outside adapters (P5 debt ~15 sites accepted, P6 will enforce full ban)
     files: ['src/**/*.{ts,svelte}'],
     rules: {
       'no-restricted-imports': ['error', {
@@ -95,6 +95,7 @@ export default [
           { name: '$lib/stores/toastQueue.svelte', message: "Use '$lib/shared/stores/ToastQueue.svelte' instead (P3-2)." },
           { name: '$lib/stores/toastQueue.svelte.ts', message: "Use '$lib/shared/stores/ToastQueue.svelte' instead (P3-2)." },
           { name: '$lib/stores/toastQueue', message: "Use '$lib/shared/stores/ToastQueue.svelte' instead (P3-2)." },
+          { name: '$lib/shared/api/tauriClient', message: "Direct tauriClient import is forbidden outside shared/ports/adapters/tauri/** — use LibraryPort/SettingsPort/ViewerPort via adapter (P5 seam). Allowed only in shared/ports/adapters/tauri/** and shared/api." },
         ],
         patterns: [{
           group: ['$lib/stores/authState*', '$lib/stores/authPersistence*', '$lib/stores/devicesState*', '$lib/stores/toastQueue*'],
@@ -106,6 +107,20 @@ export default [
   {
     // Shim re-exports are the only allowed legacy files — suppress the ban inside them
     files: ['src/lib/stores/authState.svelte.ts', 'src/lib/stores/devicesState.svelte.ts', 'src/lib/stores/toastQueue.svelte.ts', 'src/lib/stores/authPersistence.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
+  {
+    // P5 seam: adapters and api are the only allowed direct tauriClient consumers
+    files: ['src/lib/shared/ports/adapters/tauri/**', 'src/lib/shared/api/**'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
+  {
+    // P5 debt: tests are allowed to import tauriClient via vi.mock (P5 seam not enforced in tests)
+    files: ['src/test/**'],
     rules: {
       'no-restricted-imports': 'off',
     },

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { BookCard, ShelfActionMenu } from '$lib/features/library';
+  import { FAVORITES_COLLECTION_ID } from '$lib/features/library/utils';
   import ShelfDetailModal from './ShelfDetailModal.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
@@ -108,7 +109,7 @@
     {#snippet actions()}
       <ShelfActionMenu
         bookId={book.id}
-        isFavorite={Boolean(book.collectionIds?.includes(1))}
+        isFavorite={Boolean(book.collectionIds?.includes(FAVORITES_COLLECTION_ID))}
         readLabel={t('app.read' as MessageKey)}
         editLabel={t('library.editMetadata.title' as MessageKey)}
         removeLabel={t('library.removeFromShelf' as MessageKey)}

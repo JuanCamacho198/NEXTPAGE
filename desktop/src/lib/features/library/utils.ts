@@ -102,11 +102,13 @@ export function getSafeProgressPercentage(book: LibraryBookDto): number {
   return getCanonicalProgress(book);
 }
 
+export const FAVORITES_COLLECTION_ID = 1;
+
 export function getBookState(book: ShelfBook): ShelfFilter {
   const progress = getSafeProgressPercentage(book);
   if (book.readingStatus === 'completed' || progress >= 100) return 'completed';
   if (progress > 0) return 'reading';
-  if (book.collectionIds?.includes(1)) return 'favorites';
+  if (book.collectionIds?.includes(FAVORITES_COLLECTION_ID)) return 'favorites';
   return 'pending';
 }
 
@@ -114,7 +116,7 @@ export function getStateLabel(book: ShelfBook): string {
   const progress = getSafeProgressPercentage(book);
   if (book.readingStatus === 'completed' || progress >= 100) return 'Completado';
   if (progress > 0) return 'En lectura';
-  if (book.collectionIds?.includes(1)) return 'Favorito';
+  if (book.collectionIds?.includes(FAVORITES_COLLECTION_ID)) return 'Favorito';
   return 'Pendiente';
 }
 

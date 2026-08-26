@@ -5,6 +5,7 @@
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import SafeCover from '$lib/features/library/components/SafeCover.svelte';
   import { getSafeProgressPercentage } from '$lib/shared/stores/HomeState';
+  import { FAVORITES_COLLECTION_ID } from '$lib/features/library/utils';
   import { useShelfEdit } from './useShelfEdit.svelte.js';
   import type { LibraryBookDto, CollectionDto } from '$lib/shared/types';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -358,7 +359,7 @@
 
                 <!-- Favorite toggle -->
                 {#if shelfDetail.collectionIds}
-                  {@const fav = shelfDetail.collectionIds.includes(1)}
+                  {@const fav = shelfDetail.collectionIds.includes(FAVORITES_COLLECTION_ID)}
                   <button
                     type="button"
                     class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors {fav

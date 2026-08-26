@@ -1,0 +1,81 @@
+import { describe, expect, it } from 'vitest';
+import {
+  ALIGN_CYCLE,
+  FONT_FAMILY_PRESETS,
+  LINE_HEIGHT_PRESETS,
+  MARGIN_PRESETS,
+  PARAGRAPH_SPACING_PRESETS,
+  THEME_PRESETS,
+  cyclePreset,
+  cyclePresetBy,
+} from '$lib/features/reader/chrome/readerTextPresets';
+
+describe('readerTextPresets', () => {
+  it('exports 5 preset groups with expected lengths', () => {
+    expect(LINE_HEIGHT_PRESETS).toHaveLength(6);
+    expect(PARAGRAPH_SPACING_PRESETS).toHaveLength(6);
+    expect(MARGIN_PRESETS).toHaveLength(5);
+    expect(ALIGN_CYCLE).toHaveLength(4);
+    expect(THEME_PRESETS).toHaveLength(5);
+  });
+
+  it('FONT_FAMILY_PRESETS has 5 entries', () => {
+    expect(FONT_FAMILY_PRESETS).toHaveLength(5);
+  });
+
+  it('LINE_HEIGHT_PRESETS values are sorted ascending 1.4..2.4', () => {
+    expect([...LINE_HEIGHT_PRESETS]).toEqual([1.4, 1.6, 1.8, 2.0, 2.2, 2.4]);
+  });
+
+  it('MARGIN_PRESETS top/left progression', () => {
+    expect(MARGIN_PRESETS[0]).toEqual({ top: 0.5, bottom: 0.5, left: 0.75, right: 0.75 });
+    expect(MARGIN_PRESETS[4]).toEqual({ top: 2.5, bottom: 2.5, left: 3, right: 3 });
+  });
+});
+
+describe('cyclePreset generic', () => {
+  it('cycles to next element', () => {
+    expect(cyclePreset(1.4, LINE_HEIGHT_PRESETS)).toBe(1.6);
+    expect(cyclePreset('left', ALIGN_CYCLE)).toBe('center');
+    expect(cyclePreset('center', ALIGN_CYCLE)).toBe('right');
+  });
+
+  it('wraps from last to first', () => {
+    expect(cyclePreset(2.4, LINE_HEIGHT_PRESETS)).toBe(1.4);
+    expect(cyclePreset(3, PARAGRAPH_SPACING_PRESETS)).toBe(0);
+    expect(cyclePreset('justify', ALIGN_CYCLE)).toBe('left');
+    expect(cyclePreset('Palatino', FONT_FAMILY_PRESETS)).toBe('serif');
+  });
+
+  it('returns first when current not in array', () => {
+    expect(cyclePreset(99 as never, LINE_HEIGHT_PRESETS)).toBe(1.4);
+    expect(cyclePreset('unknown' as never, ALIGN_CYCLE)).toBe('left');
+  });
+
+  it('works for theme names', () => {
+    const themeNames = THEME_PRESETS.map((t) => t.name);
+    expect(cyclePreset('paper', themeNames)).toBe('sepia');
+    expect(cyclePreset('blue', themeNames)).toBe('paper');
+  });
+
+  it('cyclePresetBy handles object presets with deep equality', () => {
+    const first = MARGIN_PRESETS[0];
+    const last = MARGIN_PRESETS[4];
+    const equal = (
+      a: (typeof MARGIN_PRESETS)[number],
+      b: (typeof MARGIN_PRESETS)[number],
+    ): boolean =>
+      a.top === b.top && a.bottom === b.bottom && a.left === b.left && a.right === b.right;
+
+    // copy with same values but different reference should cycle
+    const copyFirst = { ...first };
+    expect(cyclePresetBy(copyFirst, MARGIN_PRESETS, equal)).toEqual(MARGIN_PRESETS[1]);
+
+    const copyLast = { ...last };
+    expect(cyclePresetBy(copyLast, MARGIN_PRESETS, equal)).toEqual(MARGIN_PRESETS[0]);
+
+    // not found → first
+    const unknown = { top: 9, bottom: 9, left: 9, right: 9 } as never;
+    expect(cyclePresetBy(unknown, MARGIN_PRESETS, equal)).toEqual(MARGIN_PRESETS[0]);
+  });
+});

@@ -20,9 +20,18 @@ export const periodLabels: Record<PeriodKey, string> = {
 };
 
 export const GENRE_COLORS = [
-  '#4e8cff', '#43d3c4', '#f4b942', '#ff6b6b',
-  '#9d59ff', '#ff9f43', '#2ed573', '#a29bfe',
-  '#fd79a8', '#00cec9', '#e17055', '#6c5ce7',
+  '#4e8cff',
+  '#43d3c4',
+  '#f4b942',
+  '#ff6b6b',
+  '#9d59ff',
+  '#ff9f43',
+  '#2ed573',
+  '#a29bfe',
+  '#fd79a8',
+  '#00cec9',
+  '#e17055',
+  '#6c5ce7',
 ] as const;
 
 export function hashNumber(value: string): number {
@@ -119,4 +128,84 @@ export function calculateGenreDistribution(
       percent: total > 0 ? Math.round((minutes / total) * 100) : 0,
       color: GENRE_COLORS[index % GENRE_COLORS.length],
     }));
+}
+
+// ─── Chart helpers (PR-P4-1) ─────────────────────────────────────────
+export const CHART_WIDTH = 800;
+export const CHART_HEIGHT = 240;
+export const MIN_LABEL_SPACING = 46;
+
+export type ChartPoint = { label: string; value: number; x: number; y: number };
+
+export type ChartMeta = {
+  max: number;
+  min: number;
+  width: number;
+  height: number;
+  points: ChartPoint[];
+  line: string;
+  area: string;
+  labelInterval: number;
+  step: number;
+};
+
+export function getShortMonthName(monthIndex: number, locale: string): string {
+  const date = new Date(2026, monthIndex, 1);
+  try {
+    const name = new Intl.DateTimeFormat(locale, { month: 'short' }).format(date);
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  } catch {
+    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][
+      monthIndex
+    ]!;
+  }
+}
+
+export function formatChartLabel(label: string, granularity: Granularity, locale: string): string {
+  if (granularity === 'day') {
+    const m = label.match(/(?:^|\D)(\d{1,2})[\-/](\d{1,2})(?:$|\D)/);
+    if (m) return `${parseInt(m[1])}/${parseInt(m[2])}`;
+    if (/^\d{1,2}$/.test(label)) return label;
+  }
+  if (granularity === 'week') {
+    const w = label.match(/[WSws]\s*0*(\d+)/);
+    if (w) return `${label.match(/[WSws]/)?.[0]?.toUpperCase() ?? 'W'}${w[1]}`;
+  }
+  if (granularity === 'month') {
+    const monthNum = parseInt(
+      label
+        .replace(/^\D+/, '')
+        .split(/[\s-]+/)
+        .pop() || '',
+      10,
+    );
+    if (monthNum >= 1 && monthNum <= 12) {
+      return getShortMonthName(monthNum - 1, locale);
+    }
+    const parts = label.split(/[\s-]+/);
+    const last = parts[parts.length - 1];
+    return last.length <= 4 ? last : last.slice(0, 3);
+  }
+  return label;
+}
+
+export function buildChartMeta(
+  series: Array<{ label: string; value: number }>,
+  width: number = CHART_WIDTH,
+  height: number = CHART_HEIGHT,
+): ChartMeta {
+  const max = Math.max(...series.map((p) => p.value), 1);
+  const min = Math.min(...series.map((p) => p.value), 0);
+  const step = series.length > 1 ? width / (series.length - 1) : width;
+  const points: ChartPoint[] = series.map((point, index) => {
+    const x = index * step;
+    const normalized = max === min ? 0.5 : (point.value - min) / (max - min);
+    const y = height - normalized * (height - 18) - 10;
+    return { ...point, x, y };
+  });
+  const maxVisibleLabels = Math.max(1, Math.floor(width / MIN_LABEL_SPACING));
+  const labelInterval = Math.max(1, Math.ceil(points.length / maxVisibleLabels));
+  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x},${p.y}`).join(' ');
+  const area = `${line} L ${width},${height} L 0,${height} Z`;
+  return { max, min, width, height, points, line, area, labelInterval, step };
 }

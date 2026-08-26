@@ -26,22 +26,22 @@
 
   const navItems = $derived(
     getNavItems({
-      onNavigateHome: navigationState.navigateToHome,
-      onNavigateLibrary: navigationState.navigateToLibrary,
-      onNavigateStats: navigationState.navigateToStats,
-      onNavigateHighlights: navigationState.navigateToHighlights,
-      onNavigateSettings: navigationState.navigateToSettings,
+      onNavigateHome: () => navigationState.navigateToHome(),
+      onNavigateLibrary: () => navigationState.navigateToLibrary(),
+      onNavigateStats: () => navigationState.navigateToStats(),
+      onNavigateHighlights: () => navigationState.navigateToHighlights(),
+      onNavigateSettings: () => navigationState.navigateToSettings(),
     }),
   );
 
   const dataNavItems = $derived(
     getDataNavItems({
-      onNavigateHome: navigationState.navigateToHome,
-      onNavigateLibrary: navigationState.navigateToLibrary,
-      onNavigateStats: navigationState.navigateToStats,
-      onNavigateHighlights: navigationState.navigateToHighlights,
-      onNavigateSettings: navigationState.navigateToSettings,
-      onNavigateDictionary: navigationState.navigateToDictionary,
+      onNavigateHome: () => navigationState.navigateToHome(),
+      onNavigateLibrary: () => navigationState.navigateToLibrary(),
+      onNavigateStats: () => navigationState.navigateToStats(),
+      onNavigateHighlights: () => navigationState.navigateToHighlights(),
+      onNavigateSettings: () => navigationState.navigateToSettings(),
+      onNavigateDictionary: () => navigationState.navigateToDictionary(),
     }),
   );
 </script>
@@ -82,7 +82,7 @@
       {navItems}
       {dataNavItems}
       t={appState.t}
-      onNavigateSettings={navigationState.navigateToSettings}
+      onNavigateSettings={() => navigationState.navigateToSettings()}
     />
     <main
       id="main-content"
@@ -122,9 +122,9 @@
                 shelfCount={libraryState.myShelfBooks.length}
                 statsMinutes={statsState.stats?.totalMinutesRead ?? 0}
                 activeRoute="home"
-                onNavigateHome={navigationState.navigateToHome}
-                onNavigateHighlights={navigationState.navigateToHighlights}
-                onNavigateSettings={navigationState.navigateToSettings}
+                onNavigateHome={() => navigationState.navigateToHome()}
+                onNavigateHighlights={() => navigationState.navigateToHighlights()}
+                onNavigateSettings={() => navigationState.navigateToSettings()}
                 onRefreshStats={() => {
                   void statsState.loadStats(navigationState.previewBookId ?? undefined);
                   void statsState.loadStreak();
@@ -171,7 +171,7 @@
                     onStatusChange={(book, status) => libraryState.handleStatusChange(book, status as "to_read" | "reading" | "completed")}
                     onDeleteCover={(book) => libraryState.handleDeleteCover(book)}
                     onSaveEdit={(dto) => libraryState.handleSaveEditedBook(dto as never)}
-                    onCloseDetails={navigationState.closeShelfDetails}
+                    onCloseDetails={() => navigationState.closeShelfDetails()}
                     onCoverUpdated={(bookId, path) => {
                       const found = libraryState.books.find((b) => b.id === bookId);
                       if (found) found.coverPath = path;
@@ -228,7 +228,7 @@
                   isOpen={true}
                   mode="page"
                   initialTab={navigationState.route === 'storage' ? 'almacenamiento' : 'sincronizacion'}
-                  onRequestClose={navigationState.navigateToHome}
+                  onRequestClose={() => navigationState.navigateToHome()}
                   t={appState.t}
                   locale={settingsState.locale}
                   onLocaleChange={settingsState.handleLocaleChange}
@@ -243,7 +243,7 @@
                 <SettingsPanel
                   isOpen={true}
                   mode="page"
-                  onRequestClose={navigationState.navigateToHome}
+                  onRequestClose={() => navigationState.navigateToHome()}
                   t={appState.t}
                   locale={settingsState.locale}
                   onLocaleChange={settingsState.handleLocaleChange}
@@ -264,7 +264,7 @@
                 searchUnavailableReason={searchState.searchUnavailableReason}
                 preloadedBytes={readerState.preloadedBytes}
                 t={appState.t}
-                onBackToHome={navigationState.backToHome}
+                onBackToHome={() => navigationState.backToHome()}
                 onPdfPageChange={appState.handlePdfPageChange}
                 onPdfSessionProgress={appState.handlePdfSessionProgress}
                 onEpubLocationChange={appState.handleEpubLocationChange}
@@ -293,7 +293,7 @@
       searchUnavailableReason={searchState.searchUnavailableReason}
       preloadedBytes={readerState.preloadedBytes}
       t={appState.t}
-      onBackToHome={navigationState.backToHome}
+      onBackToHome={() => navigationState.backToHome()}
       onPdfPageChange={appState.handlePdfPageChange}
       onPdfSessionProgress={appState.handlePdfSessionProgress}
       onEpubLocationChange={appState.handleEpubLocationChange}

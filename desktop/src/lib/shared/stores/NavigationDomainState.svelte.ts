@@ -21,53 +21,53 @@ class NavigationDomainState {
 
   // ─── Navigation ───
 
-  navigateToHome(): void {
+  navigateToHome = (): void => {
     this.route = 'home';
     this.shelfDetailsBookId = null;
-  }
+  };
 
-  navigateToLibrary(): void {
+  navigateToLibrary = (): void => {
     this.route = 'library';
     this.shelfDetailsBookId = null;
-  }
+  };
 
-  navigateToStats(): void {
+  navigateToStats = (): void => {
     this.route = 'stats';
     this.shelfDetailsBookId = null;
-  }
+  };
 
-  navigateToHighlights(): void {
+  navigateToHighlights = (): void => {
     this.route = 'highlights';
     this.shelfDetailsBookId = null;
-  }
+  };
 
-  navigateToSettings(): void {
+  navigateToSettings = (): void => {
     this.route = 'settings';
     this.shelfDetailsBookId = null;
-  }
+  };
 
-  navigateToDictionary(): void {
+  navigateToDictionary = (): void => {
     this.route = 'dictionary';
     this.shelfDetailsBookId = null;
-  }
+  };
 
-  navigateToStorage(): void {
+  navigateToStorage = (): void => {
     this.route = 'storage';
     this.shelfDetailsBookId = null;
-  }
+  };
 
-  navigateToSync(): void {
+  navigateToSync = (): void => {
     this.route = 'sync';
     this.shelfDetailsBookId = null;
-  }
+  };
 
-  backToHome(): void {
+  backToHome = (): void => {
     this.route = 'home';
-  }
+  };
 
   // ─── Domain unavailability ───
 
-  setDomainUnavailable(domain: Domain, reason: string | null): void {
+  setDomainUnavailable = (domain: Domain, reason: string | null): void => {
     if (domain === DOMAIN.LIBRARY) {
       this.libraryUnavailableReason = reason;
       return;
@@ -79,22 +79,22 @@ class NavigationDomainState {
     }
 
     this.searchUnavailableReason = reason;
-  }
+  };
 
   // ─── Details ───
 
-  openDetails(bookId: string): void {
+  openDetails = (bookId: string): void => {
     this.previewBookId = bookId;
-  }
+  };
 
-  openShelfDetails(bookId: string): void {
+  openShelfDetails = (bookId: string): void => {
     this.previewBookId = bookId;
     this.shelfDetailsBookId = bookId;
-  }
+  };
 
-  closeShelfDetails(): void {
+  closeShelfDetails = (): void => {
     this.shelfDetailsBookId = null;
-  }
+  };
 }
 
 export const navigationState = new NavigationDomainState();

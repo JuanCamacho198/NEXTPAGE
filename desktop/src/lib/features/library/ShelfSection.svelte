@@ -97,7 +97,7 @@
     {book}
     variant="shelf"
     compact={true}
-    selected={previewBookId === book.id}
+    selected={false}
     onSelect={() => {
       onOpenDetails(book);
     }}

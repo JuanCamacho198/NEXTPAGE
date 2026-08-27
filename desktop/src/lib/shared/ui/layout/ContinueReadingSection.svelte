@@ -9,7 +9,7 @@
   let canScrollLeft = $state(false);
   let canScrollRight = $state(false);
 
-  const showArrows = $derived(libraryState.continueReadingBooks.length > 2);
+  const showArrows = $derived(libraryState.continueReadingBooks.length > 1);
 
   function updateScrollState(): void {
     if (!scrollEl) {
@@ -23,6 +23,15 @@
 
   function scrollByOffset(offset: number): void {
     scrollEl?.scrollBy({ left: offset, behavior: 'smooth' });
+  }
+
+  function handleNext(): void {
+    if (!scrollEl) return;
+    if (!canScrollRight) {
+      scrollEl.scrollTo({ left: 0, behavior: 'smooth' });
+    } else {
+      scrollByOffset(scrollEl.clientWidth);
+    }
   }
 
   $effect(() => {
@@ -50,19 +59,9 @@
     {#if showArrows}
       <button
         type="button"
-        class="absolute left-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-(--color-border) bg-(--color-surface) p-1.5 shadow-md transition-opacity hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-35"
-        aria-label="Scroll left"
-        disabled={!canScrollLeft}
-        onclick={() => scrollByOffset(-320)}
-      >
-        <Icon name="chevron-left" size="sm" />
-      </button>
-      <button
-        type="button"
-        class="absolute right-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-(--color-border) bg-(--color-surface) p-1.5 shadow-md transition-opacity hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-35"
+        class="absolute right-2 top-[40%] z-10 -translate-y-1/2 rounded-full border border-(--color-border) bg-(--color-surface) p-1.5 shadow-md transition hover:bg-(--color-surface-hover)"
         aria-label="Scroll right"
-        disabled={!canScrollRight}
-        onclick={() => scrollByOffset(320)}
+        onclick={handleNext}
       >
         <Icon name="chevron-right" size="sm" />
       </button>
@@ -71,17 +70,15 @@
     <ul
       bind:this={scrollEl}
       onscroll={updateScrollState}
-      class="flex gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden {showArrows
-        ? 'px-8'
-        : ''}"
+      class="flex gap-0 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       style="scrollbar-width: none; -ms-overflow-style: none;"
     >
       {#each libraryState.continueReadingBooks as book (book.id)}
-        <li class="snap-start shrink-0 w-[320px] max-w-[85%]">
+        <li class="snap-start shrink-0 w-full">
           <BookCard
             {book}
             variant="continue-reading"
-            compact={libraryState.continueReadingBooks.length > 1}
+            compact={false}
             selected={navigationState.previewBookId === book.id}
             onSelect={() => {
               navigationState.openShelfDetails(book.id);
@@ -103,9 +100,6 @@
                 triggerLabel={appState.t('library.optionsFor', { title: book.title })}
                 onViewDetails={() => navigationState.openShelfDetails(book.id)}
                 viewDetailsLabel={appState.t('shelf.viewDetails')}
-                onRead={() => {
-                  void appState.startReading(book);
-                }}
                 onEdit={() => {
                   libraryState.handleEditBook(book);
                 }}

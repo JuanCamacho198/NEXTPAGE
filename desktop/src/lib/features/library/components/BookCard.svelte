@@ -68,8 +68,8 @@
           alt={`Cover for ${book.title}`}
           className={variant === 'continue-reading'
             ? compact
-              ? 'h-28 w-[96px] rounded-lg object-cover shadow-md'
-              : 'h-32 w-[108px] rounded-lg object-cover shadow-md'
+              ? 'h-32 w-[108px] rounded-lg object-cover shadow-md'
+              : 'h-36 w-[120px] rounded-lg object-cover shadow-md'
             : compact
               ? 'h-14 w-10 rounded object-cover shadow-sm'
               : 'h-16 w-12 rounded object-cover shadow-sm'}
@@ -79,8 +79,8 @@
               class={`${
                 variant === 'continue-reading'
                   ? compact
-                    ? 'h-28 w-[96px]'
-                    : 'h-32 w-[108px]'
+                    ? 'h-32 w-[108px]'
+                    : 'h-36 w-[120px]'
                   : compact
                     ? 'h-14 w-10'
                     : 'h-16 w-12'

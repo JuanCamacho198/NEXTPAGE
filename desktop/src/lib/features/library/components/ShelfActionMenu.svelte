@@ -38,6 +38,18 @@
   let containerEl = $state<HTMLDivElement | null>(null);
   let triggerEl = $state<HTMLButtonElement | null>(null);
   let menuEl = $state<HTMLDivElement | null>(null);
+  let menuPos = $state<{ top: number; left: number } | null>(null);
+
+  function updateMenuPosition(): void {
+    if (!triggerEl) return;
+    const rect = triggerEl.getBoundingClientRect();
+    const menuWidth = 224; // w-56
+    const gap = 8;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
+    const top = rect.bottom + gap;
+    const left = Math.min(rect.right - menuWidth, vw - menuWidth - 8);
+    menuPos = { top, left: Math.max(8, left) };
+  }
 
   const getMenuButtons = (): HTMLButtonElement[] => {
     if (!menuEl) {
@@ -74,8 +86,10 @@
     }
 
     isOpen = true;
+    updateMenuPosition();
     if (focusFirstItem) {
       queueMicrotask(() => {
+        updateMenuPosition();
         focusItemAt(0);
       });
     }
@@ -188,6 +202,18 @@
       document.removeEventListener('keydown', handleDocumentKeyDown, true);
     };
   });
+
+  $effect(() => {
+    if (!isOpen) return;
+    const handleScroll = (): void => closeMenu(false);
+    const handleResize = (): void => updateMenuPosition();
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleResize);
+    };
+  });
 </script>
 
 <div bind:this={containerEl} role="group" aria-label={triggerLabel} class="relative inline-block">
@@ -213,7 +239,8 @@
       role="menu"
       tabindex="-1"
       aria-label={triggerLabel}
-      class="absolute right-0 z-10 mt-2 w-56 rounded-md bg-(--color-elevated) shadow-lg ring-1 ring-(--color-border)"
+      class="fixed z-[999] w-56 rounded-md bg-(--color-elevated) shadow-xl ring-1 ring-(--color-border)"
+      style={menuPos ? `top:${menuPos.top}px; left:${menuPos.left}px` : ''}
       onkeydown={handleMenuKeyDown}
     >
       <div class="py-1">

@@ -18,7 +18,7 @@ export const messagesEn = {
   'app.unknownAuthor': 'Unknown author',
   'app.locationLabel': 'Location',
   'app.start': 'start',
-  'app.continue': 'Continue',
+  'app.continue': 'Continue reading',
   'library.title': 'Library',
   'library.list': 'List',
   'library.grid': 'Grid',

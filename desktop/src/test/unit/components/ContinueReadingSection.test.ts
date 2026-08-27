@@ -84,7 +84,7 @@ describe('ContinueReadingSection (5.3)', () => {
 
   it('shows placeholder when no books', () => {
     render(ContinueReadingSection);
-    expect(screen.getByText('home.continueReadingPlaceholder')).toBeInTheDocument();
+    expect(screen.queryByText('home.continueReadingPlaceholder')).not.toBeInTheDocument();
   });
 
   it('renders book card with action menu trigger for single book', () => {

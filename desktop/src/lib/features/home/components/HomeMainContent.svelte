@@ -14,22 +14,17 @@
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
   <!-- Columna Izquierda: Continuar Lectura -->
   <div class="xl:col-span-1 space-y-4">
-    <div
-      class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) shadow-(--shadow-soft) p-5"
-    >
-      <div class="mb-4 flex items-center justify-between">
-        <h3 class="text-base font-semibold tracking-tight text-(--color-primary)">
+    <div class="rounded-[24px] border border-(--color-border) bg-(--color-surface) shadow-(--shadow-soft) p-6">
+      <div class="mb-5 flex items-center">
+        <h3 class="text-[16px] font-bold tracking-tight text-(--color-primary)">
           {t('home.continueReading')}
         </h3>
-        <button class="text-xs font-medium text-(--color-accent-blue) hover:underline"
-          >{t('home.viewAll')}</button
-        >
       </div>
-      <div class="space-y-4">
+      <div>
         {#if continueSection}
           {@render continueSection()}
         {:else}
-          <p class="text-sm text-(--color-text-muted)">{t('home.continueReadingPlaceholder')}</p>
+          <div class="min-h-[80px]"></div>
         {/if}
       </div>
     </div>

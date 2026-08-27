@@ -41,15 +41,18 @@
   );
 
   const containerClass = $derived.by(() => {
+    if (variant === 'continue-reading') {
+      // Borderless inside the outer Home card — single-box look, no double border
+      const selectedClass = selected
+        ? 'bg-[color:color-mix(in_srgb,var(--color-primary)_6%,transparent)] rounded-xl'
+        : 'bg-transparent';
+      return `border-0 bg-transparent p-0 shadow-none ${selectedClass}`;
+    }
     const selectedClass = selected
       ? 'border-(--color-primary) bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]'
       : 'border-(--color-border) bg-(--color-background)';
     const base = compact ? 'rounded-lg border p-3' : 'rounded-xl border p-4';
-    const continueClass =
-      variant === 'continue-reading' && !compact
-        ? 'bg-[color:color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))]'
-        : '';
-    return `${base} ${selectedClass} ${continueClass}`;
+    return `${base} ${selectedClass}`;
   });
 </script>
 
@@ -57,19 +60,31 @@
   class={`${containerClass} transition-all duration-200`}
   aria-label={`${book.title}, ${book.author || t('app.unknownAuthor')}, ${progress}%`}
 >
-  <div class="flex items-start justify-between gap-3">
+  <div class={variant === 'continue-reading' ? 'flex flex-col gap-3' : 'flex items-start justify-between gap-3'}>
     <button type="button" class="min-w-0 flex-1 text-left" onclick={onSelect}>
-      <div class="flex items-start gap-3">
+      <div class="flex items-start gap-4">
         <SafeCover
           path={book.coverPath ?? ''}
           alt={`Cover for ${book.title}`}
-          className={compact
-            ? 'h-14 w-10 rounded object-cover shadow-sm'
-            : 'h-16 w-12 rounded object-cover shadow-sm'}
+          className={variant === 'continue-reading'
+            ? compact
+              ? 'h-28 w-[96px] rounded-lg object-cover shadow-md'
+              : 'h-32 w-[108px] rounded-lg object-cover shadow-md'
+            : compact
+              ? 'h-14 w-10 rounded object-cover shadow-sm'
+              : 'h-16 w-12 rounded object-cover shadow-sm'}
         >
           {#snippet fallback()}
             <div
-              class={`${compact ? 'h-14 w-10' : 'h-16 w-12'} flex items-center justify-center rounded bg-(--color-surface) text-micro uppercase tracking-widest text-(--color-text-muted)`}
+              class={`${
+                variant === 'continue-reading'
+                  ? compact
+                    ? 'h-28 w-[96px]'
+                    : 'h-32 w-[108px]'
+                  : compact
+                    ? 'h-14 w-10'
+                    : 'h-16 w-12'
+              } flex items-center justify-center rounded-lg bg-(--color-surface) text-micro uppercase tracking-widest text-(--color-text-muted)`}
             >
               {t('library.cover')}
             </div>
@@ -78,20 +93,23 @@
 
         <div class="min-w-0 flex-1 space-y-1">
           <p
-            class={`${compact ? 'text-sm' : 'text-base'} font-semibold leading-tight text-(--color-primary) line-clamp-2`}
+            class={`${
+              variant === 'continue-reading'
+                ? compact
+                  ? 'text-[15px]'
+                  : 'text-[18px]'
+                : compact
+                  ? 'text-sm'
+                  : 'text-base'
+            } font-semibold leading-tight text-(--color-primary) line-clamp-2`}
           >
             {book.title}
           </p>
-          <p class="text-xs text-(--color-text-muted)">
-            {book.author || t('app.unknownAuthor')} <span class="text-(--color-border)">·</span>
-            {book.format.toUpperCase()}
+          <p class="text-xs leading-snug text-(--color-text-muted)">
+            {book.author || t('app.unknownAuthor')}
           </p>
-          <p class="text-xs tabular-nums text-(--color-text-muted)">
-            {#if book.totalPages > 0}
-              {book.currentPage}/{book.totalPages}
-            {:else}
-              —
-            {/if}
+          <p class="text-[10px] font-medium uppercase tracking-widest text-(--color-text-muted)">
+            {book.format.toUpperCase()}
           </p>
           {#if showProgress}
             <div class="mt-2">
@@ -115,7 +133,7 @@
       </div>
     </button>
 
-    <div class="flex shrink-0 items-start gap-2">
+    <div class={variant === 'continue-reading' ? 'flex items-center gap-2 pt-1' : 'flex shrink-0 items-start gap-2'}>
       {#if showReadButton}
         <Button size="sm" class="shrink-0 whitespace-nowrap" onclick={onRead}>
           {readLabel}

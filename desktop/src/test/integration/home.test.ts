@@ -451,7 +451,7 @@ describe('App desktop home redesign QA scenarios', () => {
     const continueSection = await screen.findByTestId('continue-section');
     const shelfSection = await screen.findByTestId('shelf-section');
 
-    expect(continueSection).toHaveTextContent('No in-progress books yet');
+    expect(continueSection).not.toHaveTextContent('No in-progress books yet');
     expect(shelfSection).toHaveTextContent('Import a book to populate your shelf');
   });
 

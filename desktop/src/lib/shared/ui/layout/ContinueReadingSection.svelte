@@ -44,7 +44,7 @@
 </script>
 
 {#if libraryState.continueReadingBooks.length === 0}
-  <p class="text-sm text-(--color-text-muted)">{appState.t('home.continueReadingPlaceholder')}</p>
+  <!-- empty -->
 {:else}
   <div class="relative">
     {#if showArrows}
@@ -122,10 +122,4 @@
       {/each}
     </ul>
   </div>
-  {#if navigationState.previewBookId}
-    {@const pb = libraryState.getBookById(navigationState.previewBookId)}
-    {#if pb}
-      <p class="mt-2 text-sm text-(--color-text-muted)">{appState.t('app.homeReadHint')}</p>
-    {/if}
-  {/if}
 {/if}

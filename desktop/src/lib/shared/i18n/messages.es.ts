@@ -21,7 +21,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'app.unknownAuthor': 'Autor desconocido',
   'app.locationLabel': 'Ubicacion',
   'app.start': 'inicio',
-  'app.continue': 'Continuar',
+  'app.continue': 'Seguir leyendo',
   'library.title': 'Biblioteca',
   'library.list': 'Lista',
   'library.grid': 'Cuadricula',

@@ -80,32 +80,32 @@ export class AppState {
     void this.statsDomain.loadStats(book.id);
   }
 
-  async handleEpubLocationChange(nextLocation: string, nextPercentage: number): Promise<void> {
+  handleEpubLocationChange = async (nextLocation: string, nextPercentage: number): Promise<void> => {
     if (!this.reader.activeReadingBookId) return;
     await this.reader.handleEpubLocationChange(this.reader.activeReadingBookId, nextLocation, nextPercentage);
-  }
+  };
 
-  async handlePdfPageChange(page: number, total: number): Promise<void> {
+  handlePdfPageChange = async (page: number, total: number): Promise<void> => {
     if (!this.reader.activeReadingBookId) return;
     const activeId = this.reader.activeReadingBookId;
     this.library.updateBookPage(activeId, page, total);
     await this.reader.handlePdfPageChange(activeId, page, total);
-  }
+  };
 
-  async handlePdfSessionProgress(event: { startedAt: string; endedAt?: string; durationSeconds: number; startPercentage?: number; endPercentage?: number }): Promise<void> {
+  handlePdfSessionProgress = async (event: { startedAt: string; endedAt?: string; durationSeconds: number; startPercentage?: number; endPercentage?: number }): Promise<void> => {
     if (!this.reader.activeReadingBookId) return;
     await this.reader.handlePdfSessionProgress(this.reader.activeReadingBookId, event);
-  }
+  };
 
   handleReaderLocationContext = (ctx?: unknown): void => {
     this.reader.handleReaderLocationContext(ctx);
   };
 
-  async handleSearch(query: string, page: number): Promise<void> {
+  handleSearch = async (query: string, page: number): Promise<void> => {
     if (!this.reader.activeReadingBookId) return;
     await this.search.handleSearch(this.reader.activeReadingBookId, query, page);
     if (this.search.searchUnavailableReason) this.navigation.setDomainUnavailable('search', this.search.searchUnavailableReason);
-  }
+  };
 
   handleSearchJump = (target: import('$lib/shared/types').SearchNavigationTarget): void => {
     this.search.handleSearchJump(target);

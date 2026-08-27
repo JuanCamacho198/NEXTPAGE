@@ -10,12 +10,12 @@
   import SyncAuthBanner from '$lib/shared/ui/feedback/SyncAuthBanner.svelte';
   import CustomTitlebar from '$lib/shared/ui/layout/CustomTitlebar.svelte';
   import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
-  import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import { titlebarState } from '$lib/stores/titlebarState.svelte';
   import { isCustomTitlebarPlatform } from '$lib/shared/utils/platform';
   import { type as osType } from '@tauri-apps/plugin-os';
+  import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
 
   onMount(() => {
     try {
@@ -35,7 +35,14 @@
           ? (event.reason?.message ?? event.reason?.toString() ?? 'Unhandled Promise rejection')
           : event.message;
       console.error('[App] Uncaught error:', event);
-      libraryState.readerError = message;
+      try {
+        pushToast('error', message);
+      } catch {}
+      if (event instanceof PromiseRejectionEvent && typeof event.preventDefault === 'function') {
+        try {
+          event.preventDefault();
+        } catch {}
+      }
     };
 
     window.addEventListener('error', handleError);

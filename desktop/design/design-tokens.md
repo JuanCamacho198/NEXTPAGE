@@ -255,4 +255,41 @@ input[type="text"] {
 
 ---
 
-*Última actualización: Mayo 2026*
+---
+
+## 11. Pen Sync Drift Note — `pen-desktop-home-sync` (2026-08-26)
+
+> Sync `design/nextpage-desktop.pen` v2.15 (1240 nodes → 17 frames, `GImmK` 1200w preserved) to code truth via `scripts/sync-pen-home.mjs`.
+
+### Variables 7 → 10 (hex-only `type:color`)
+
+| Pen `$var` | HEX | App source |
+|---|---|---|
+| `$surfaceHover` | `#1E293B` | `tokens.css --color-surface` / `--color-panel-accent` dark |
+| `$textMuted` | `#64748B` | `tokens.css --color-tertiary` / `--color-text-muted` |
+| `$error` | `#EF4444` | `tokens.css --color-error` (pen keeps hex-only; app has `rgba` variants) |
+
+All `variables` entries are `{type:"color", value:"#hex"}` validated by `/^#[0-9A-Fa-f]{6}$/` — `rgba()`/gradients rejected.
+
+### `GImmK.layoutSec` — reusable placement
+
+New child `layoutSec` (child of `GImmK`, `width:fill_container`, `gap:16`, vertical) hosts 3 `reusable:true` nodes:
+
+| Reusable | Geometry | Mapping |
+|---|---|---|
+| `Sidebar` | `w:260` `fill:$bgBase` `stroke:$border` `r:1` `pad:16` `gap:12` | `AppSidebar.svelte` `w-64 (260px) ↔ w-18 (72px)` — pen static 260, collapsed 72 documented in `layoutSec.description` |
+| `CustomTitleBar` | `h:36` `fill:$bgPanel` `layout:horizontal` `justify:space_between` | `CustomTitlebar.svelte` `h-9 (36px)` — `left NP32 NextPage | center flex1 data-tauri-drag-region | right 3×32w` |
+| `LibraryGrid` | `clone:DN5F1` `layout:grid` `gap:16` `pad:16` `cards 200×280 r:12 ref→vVEie` | `LibraryShelfScreen.svelte` `ShelfGrid` — `grid 4 cols` wrapper |
+
+`layoutSec` description field: `w-64↔w-18 (260→72) mapping — Sidebar 260 static, collapsed 72 documented for impl`.
+
+### Out-of-scope (intentional drift)
+
+- Full 31-token mirror, gradients/shadows/light theme, `Inter→Manrope` swap — deferred.
+- Runtime `src/` / `src-tauri/` unchanged — pen-only sync.
+
+### Verification
+
+`bun run scripts/sync-pen-home.mjs` → `inserts:0` on re-run, `GImmK.width:1200`, `Home / Desktop 1280×800 @ x1400 y800` non-overlapping, `ZnFqZ` repaired, `.bak` + `JSON.parse` guard.
+
+*Última actualización: 2026-08-26 — pen-desktop-home-sync*

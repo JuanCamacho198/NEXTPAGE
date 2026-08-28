@@ -57,3 +57,7 @@ fixtures/
 # Docs (ENGINEERING-STANDARDS.md is tracked — see AGENTS.md)
 .docs/*
 !.docs/ENGINEERING-STANDARDS.md
+
+# Pen sync backup
+design/nextpage-desktop.pen.bak
+design/*.tmp

@@ -13793,7 +13793,7 @@
                       "id": "tYtDv",
                       "name": "Continuar Lectura Card",
                       "width": 380,
-                      "height": "fill_container",
+                      "height": 472,
                       "fill": "$--np-panel",
                       "cornerRadius": 16,
                       "stroke": "$--np-border",
@@ -13861,7 +13861,7 @@
                           "id": "i38jkw",
                           "name": "Hero",
                           "width": "fill_container",
-                          "height": 170,
+                          "height": 140,
                           "gap": 16,
                           "alignItems": "center",
                           "children": [
@@ -13870,8 +13870,8 @@
                               "id": "HE7hI",
                               "name": "Cover Wrap",
                               "clip": true,
-                              "width": 110,
-                              "height": 160,
+                              "width": 96,
+                              "height": 132,
                               "cornerRadius": 10,
                               "layout": "none",
                               "children": [
@@ -13904,17 +13904,17 @@
                                       }
                                     ]
                                   },
-                                  "width": 110,
-                                  "height": 160
+                                  "width": 96,
+                                  "height": 132
                                 },
                                 {
                                   "type": "frame",
                                   "id": "KrK1a",
                                   "x": 0,
-                                  "y": 16,
+                                  "y": 12,
                                   "name": "Cover Title",
-                                  "width": 110,
-                                  "height": 80,
+                                  "width": 96,
+                                  "height": 70,
                                   "layout": "vertical",
                                   "gap": 4,
                                   "padding": [
@@ -13951,8 +13951,8 @@
                                 {
                                   "type": "frame",
                                   "id": "G1Elb",
-                                  "x": 8,
-                                  "y": 130,
+                                  "x": 6,
+                                  "y": 108,
                                   "name": "Badge",
                                   "fill": "#08111FE6",
                                   "cornerRadius": 4,
@@ -13981,9 +13981,8 @@
                               "id": "Q5XeWY",
                               "name": "Info",
                               "width": "fill_container",
-                              "height": 160,
                               "layout": "vertical",
-                              "gap": 8,
+                              "gap": 6,
                               "children": [
                                 {
                                   "type": "text",
@@ -14004,7 +14003,7 @@
                                   "width": "fill_container",
                                   "content": "La Odisea",
                                   "fontFamily": "Manrope",
-                                  "fontSize": 22,
+                                  "fontSize": 18,
                                   "fontWeight": "800"
                                 },
                                 {
@@ -14031,115 +14030,6 @@
                                       "fontWeight": "600"
                                     }
                                   ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "TybYx",
-                                  "name": "Stats",
-                                  "width": "fill_container",
-                                  "gap": 12,
-                                  "padding": [
-                                    4,
-                                    0,
-                                    0,
-                                    0
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "pKQMc",
-                                      "name": "Stat PÁGINA",
-                                      "width": "fill_container",
-                                      "layout": "vertical",
-                                      "gap": 2,
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "CTdh4",
-                                          "name": "Label",
-                                          "fill": "$--np-text-tertiary",
-                                          "content": "PÁGINA",
-                                          "fontFamily": "Manrope",
-                                          "fontSize": 10,
-                                          "fontWeight": "700",
-                                          "letterSpacing": 0.6
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "JMEqk",
-                                          "name": "Value",
-                                          "fill": "$--np-text-primary",
-                                          "content": "127 / 668",
-                                          "fontFamily": "Manrope",
-                                          "fontSize": 13,
-                                          "fontWeight": "700"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "PipOa",
-                                      "name": "Stat TIEMPO",
-                                      "width": "fill_container",
-                                      "layout": "vertical",
-                                      "gap": 2,
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "loBkw",
-                                          "name": "Label",
-                                          "fill": "$--np-text-tertiary",
-                                          "content": "TIEMPO",
-                                          "fontFamily": "Manrope",
-                                          "fontSize": 10,
-                                          "fontWeight": "700",
-                                          "letterSpacing": 0.6
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "JiZhh",
-                                          "name": "Value",
-                                          "fill": "$--np-text-primary",
-                                          "content": "~ 4 h 12 m",
-                                          "fontFamily": "Manrope",
-                                          "fontSize": 13,
-                                          "fontWeight": "700"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "A9Ne0",
-                                      "name": "Stat RACHA",
-                                      "width": "fill_container",
-                                      "layout": "vertical",
-                                      "gap": 2,
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "snosP",
-                                          "name": "Label",
-                                          "fill": "$--np-text-tertiary",
-                                          "content": "RACHA",
-                                          "fontFamily": "Manrope",
-                                          "fontSize": 10,
-                                          "fontWeight": "700",
-                                          "letterSpacing": 0.6
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "Mzs84",
-                                          "name": "Value",
-                                          "fill": "$--np-text-primary",
-                                          "content": "5 días",
-                                          "fontFamily": "Manrope",
-                                          "fontSize": 13,
-                                          "fontWeight": "700"
-                                        }
-                                      ]
-                                    }
-                                  ]
                                 }
                               ]
                             }
@@ -14153,8 +14043,8 @@
                           "fill": "$--np-panel-accent",
                           "cornerRadius": 12,
                           "layout": "vertical",
-                          "gap": 8,
-                          "padding": 14,
+                          "gap": 6,
+                          "padding": 12,
                           "children": [
                             {
                               "type": "frame",
@@ -14338,6 +14228,165 @@
                                   "fontWeight": "700"
                                 }
                               ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "TuTXW",
+                          "name": "Divider",
+                          "width": "fill_container",
+                          "height": 1,
+                          "fill": "$--np-border",
+                          "layout": "none"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "xvXT9",
+                          "name": "Carousel Header",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "cojik",
+                              "name": "Title Group",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "injBj",
+                                  "name": "Title",
+                                  "fill": "$--np-text-primary",
+                                  "content": "Otros en curso",
+                                  "fontFamily": "Manrope",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "fdaDb",
+                                  "name": "Count Pill",
+                                  "fill": "$--np-panel-accent",
+                                  "cornerRadius": 999,
+                                  "padding": [
+                                    2,
+                                    8
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "ai0Vr",
+                                      "name": "Label",
+                                      "fill": "$--np-text-secondary",
+                                      "content": "3",
+                                      "fontFamily": "Manrope",
+                                      "fontSize": 10,
+                                      "fontWeight": "700"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "wUt8D",
+                              "name": "Arrows",
+                              "gap": 4,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "Pc1Ut",
+                                  "name": "Prev",
+                                  "width": 26,
+                                  "height": 26,
+                                  "fill": "$--np-panel-accent",
+                                  "cornerRadius": 8,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "qh1lr",
+                                      "name": "Icon",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "chevron-left",
+                                      "library": "lucide",
+                                      "fill": "$--np-text-secondary"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "f3WErl",
+                                  "name": "Next",
+                                  "width": 26,
+                                  "height": 26,
+                                  "fill": "$--np-panel-accent",
+                                  "cornerRadius": 8,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "XuZMf",
+                                      "name": "Icon",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "chevron-right",
+                                      "library": "lucide",
+                                      "fill": "$--np-text-secondary"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "w05Jxi",
+                          "name": "Dots",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "padding": [
+                            4,
+                            0,
+                            0,
+                            0
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "ellipse",
+                              "id": "VwHei",
+                              "name": "Dot 1",
+                              "fill": "$--np-accent",
+                              "width": 6,
+                              "height": 6
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "GwERO",
+                              "name": "Dot 2",
+                              "fill": "$--np-border",
+                              "width": 6,
+                              "height": 6
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "lp7UY",
+                              "name": "Dot 3",
+                              "fill": "$--np-border",
+                              "width": 6,
+                              "height": 6
                             }
                           ]
                         }

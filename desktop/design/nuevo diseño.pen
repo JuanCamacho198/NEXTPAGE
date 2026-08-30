@@ -75304,6 +75304,166 @@
           "fontWeight": "700"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "ebVjc",
+      "x": 3771,
+      "y": -143,
+      "name": "NP CustomTitleBar/Light",
+      "theme": {
+        "Mode": "Light"
+      },
+      "reusable": true,
+      "width": 1280,
+      "height": 36,
+      "fill": "$--np-panel",
+      "stroke": "$--np-border",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "vLBV9",
+          "name": "Left",
+          "height": "fill_container",
+          "gap": 10,
+          "padding": [
+            0,
+            16,
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "Q7SqN",
+              "name": "Logo",
+              "width": 22,
+              "height": 22,
+              "fill": "$--np-accent",
+              "cornerRadius": 6,
+              "layout": "none"
+            },
+            {
+              "type": "frame",
+              "id": "dygnr",
+              "name": "LogoText",
+              "height": 22,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "X2TWY",
+                  "name": "NP",
+                  "fill": "$--np-accent",
+                  "content": "NP",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "text",
+                  "id": "e1nFDS",
+                  "name": "Name",
+                  "fill": "$--np-text-primary",
+                  "content": "NextPage",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "MS5kV",
+          "name": "Drag Region",
+          "width": "fill_container",
+          "height": "fill_container",
+          "justifyContent": "center",
+          "alignItems": "center"
+        },
+        {
+          "type": "frame",
+          "id": "XCUMd",
+          "name": "Right",
+          "height": "fill_container",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "OlmRC",
+              "name": "minimize",
+              "width": 46,
+              "height": "fill_container",
+              "fill": "$--np-panel",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "fGRKq",
+                  "name": "Icon",
+                  "fill": "$--np-text-secondary",
+                  "content": "—",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "u002n",
+              "name": "maximize",
+              "width": 46,
+              "height": "fill_container",
+              "fill": "$--np-panel",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "HZ0pB",
+                  "name": "Icon",
+                  "fill": "$--np-text-secondary",
+                  "content": "□",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "bjCiP",
+              "name": "close",
+              "width": 46,
+              "height": "fill_container",
+              "fill": "$--np-error-soft",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "equg8",
+                  "name": "Icon",
+                  "fill": "$--np-error",
+                  "content": "✕",
+                  "fontFamily": "Manrope",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

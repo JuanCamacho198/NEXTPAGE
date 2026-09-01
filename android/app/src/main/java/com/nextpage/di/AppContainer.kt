@@ -123,7 +123,19 @@ class AppContainer(context: Context) {
         readingSessionDao = appDatabase.readingSessionDao(),
         outboxDao = appDatabase.syncOutboxDao()
     )
-    
+
+    // ── Reader Lifecycle Dependencies (PR #1: Facade decomposition) ─────────
+    // Groups UpdateReadingProgressUseCase + ReadingStatsRepository + SupabaseProgressSync
+    // construction without changing external API or lazy timing (totalInitTime guard).
+    internal object ReaderDependencies {
+        fun updateReadingProgressUseCase(readerRepository: ReaderRepository) =
+            com.nextpage.domain.usecase.UpdateReadingProgressUseCase(readerRepository)
+    }
+
+    val updateReadingProgressUseCase: com.nextpage.domain.usecase.UpdateReadingProgressUseCase by lazy {
+        ReaderDependencies.updateReadingProgressUseCase(readerRepository)
+    }
+
     val homeRepository: HomeRepository = HomeRepositoryImpl(
         bookDao = appDatabase.bookDao(),
         readingProgressDao = appDatabase.readingProgressDao(),

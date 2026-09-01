@@ -20,7 +20,7 @@ import java.util.UUID
  * Highlights CRUD and observation. Owns cancellable observeHighlights Job.
  * Locator fallback: (_state.selectionState as? New)?.locator ?: param preserved verbatim.
  */
-class HighlightManager(
+internal class HighlightManager(
     private val store: InteractionStateStore,
     private val selectionManager: SelectionManager,
     private val readerRepository: ReaderRepository,

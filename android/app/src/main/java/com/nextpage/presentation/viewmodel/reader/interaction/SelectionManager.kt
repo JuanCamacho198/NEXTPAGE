@@ -25,7 +25,7 @@ import org.readium.r2.shared.publication.Locator
  * Single source of truth for HIGHLIGHT_TAP 2000ms and MENU_CLOSE 1500ms debounce.
  * Delegates atomic dismiss to [InteractionStateStore.clearSelection].
  */
-class SelectionManager(
+internal class SelectionManager(
     private val store: InteractionStateStore,
     private val scope: CoroutineScope,
     private val mainDispatcher: CoroutineDispatcher

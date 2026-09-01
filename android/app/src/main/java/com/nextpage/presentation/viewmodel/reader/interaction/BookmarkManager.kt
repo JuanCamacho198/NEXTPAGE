@@ -18,7 +18,7 @@ import java.util.UUID
 /**
  * Bookmark observation and creation (format-sensitive cfi vs pdfpage:).
  */
-class BookmarkManager(
+internal class BookmarkManager(
     private val store: InteractionStateStore,
     private val readerRepository: ReaderRepository,
     private val scope: CoroutineScope,

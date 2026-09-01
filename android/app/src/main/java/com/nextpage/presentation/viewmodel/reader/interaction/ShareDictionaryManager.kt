@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 /**
  * Share/copy intents and dictionary guard. Keeps isSuccess relaxed-MockK pattern.
  */
-class ShareDictionaryManager(
+internal class ShareDictionaryManager(
     private val store: InteractionStateStore,
     private val selectionManager: SelectionManager,
     private val dictionaryRepository: DictionaryRepository?,

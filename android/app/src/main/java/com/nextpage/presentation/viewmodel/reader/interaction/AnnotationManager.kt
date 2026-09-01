@@ -21,7 +21,7 @@ import java.util.UUID
  * Note/Tag/Definition modals and onAnnotate orchestration (create Highlight -> promote ExistingHighlight -> open modal).
  * Tag suggestions order preserved: (DEFAULT_TAG_SUGGESTIONS + existingTags).distinct().filter{it != existingTag}
  */
-class AnnotationManager(
+internal class AnnotationManager(
     private val store: InteractionStateStore,
     private val selectionManager: SelectionManager,
     private val readerRepository: ReaderRepository,

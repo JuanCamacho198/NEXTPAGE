@@ -749,6 +749,10 @@ export const messagesEn = {
   'stats.avgProgressLabel': 'Avg progress',
   'stats.streakLabel': 'Streak',
 
+  // Home metrics labels (PR1)
+  'home.metrics.dailyGoalLabel': 'Daily goal',
+  'home.metrics.minutesFormat': '{{current}}/{{total}} min',
+
   // Shelf language names (PR2)
   'shelf.langSpanish': 'Spanish',
   'shelf.langEnglish': 'English',

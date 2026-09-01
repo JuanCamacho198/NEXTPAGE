@@ -708,6 +708,10 @@ export const messagesEs: Record<MessageKey, string> = {
   'stats.avgProgressLabel': 'Progreso promedio',
   'stats.streakLabel': 'Racha',
 
+  // Home metrics labels (PR1)
+  'home.metrics.dailyGoalLabel': 'Meta diaria',
+  'home.metrics.minutesFormat': '{{current}}/{{total}} min',
+
   // Shelf language names (PR2)
   'shelf.langSpanish': 'Español',
   'shelf.langEnglish': 'Inglés',

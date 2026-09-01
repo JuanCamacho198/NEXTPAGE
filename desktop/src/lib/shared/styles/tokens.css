@@ -5,6 +5,25 @@
  * Usage: var(--color-primary), var(--space-md), etc.
  * ============================================ */
 
+/* ============================================
+ * HOME CONTENT — PEN → TOKEN MAPPING (EjVkt)
+ * Pen `$--np-*` variables resolve to these design
+ * tokens. Home components MUST NOT hardcode hex
+ * or rgba() values — always reference a token.
+ *
+ *   $--np-panel         → --color-surface
+ *   $--np-accent-soft   → --color-accent-soft
+ *   $--np-panel-accent  → --color-panel-accent
+ *   $--np-accent        → --color-accent
+ *   $--np-text-primary  → --color-primary
+ *   $--np-text-muted    → --color-text-muted
+ *   $--np-border        → --color-border
+ *   $--np-border-strong → --color-border-strong
+ *   card shadow         → --shadow-soft
+ *   card radius 24px    → --radius-xl
+ *   Import gradient     → --gradient-import (PR #2)
+ * ============================================ */
+
 @import 'tailwindcss';
 
 /* ============================================

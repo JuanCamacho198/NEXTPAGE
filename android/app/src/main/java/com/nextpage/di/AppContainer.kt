@@ -132,6 +132,54 @@ class AppContainer(context: Context) {
             com.nextpage.domain.usecase.UpdateReadingProgressUseCase(readerRepository)
     }
 
+    // ── Reader Interaction Dependencies (PR #2: Facade decomposition) ──────
+    // Groups InteractionStateStore + 5 managers behind ReaderInteractionStateHolder facade.
+    // No lazy timing change, mirrors lifecycle pattern; totalInitTime guard preserved.
+    internal object ReaderInteractionDependencies {
+        fun interactionStore(
+            state: kotlinx.coroutines.flow.MutableStateFlow<com.nextpage.presentation.viewmodel.reader.ReaderInteractionState>,
+            clearEvent: kotlinx.coroutines.flow.MutableSharedFlow<Unit>
+        ) = com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore(state, clearEvent)
+
+        fun selectionManager(
+            store: com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore,
+            scope: kotlinx.coroutines.CoroutineScope,
+            dispatcher: kotlinx.coroutines.CoroutineDispatcher
+        ) = com.nextpage.presentation.viewmodel.reader.interaction.SelectionManager(store, scope, dispatcher)
+
+        fun highlightManager(
+            store: com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore,
+            selectionManager: com.nextpage.presentation.viewmodel.reader.interaction.SelectionManager,
+            readerRepository: ReaderRepository,
+            scope: kotlinx.coroutines.CoroutineScope,
+            dispatcher: kotlinx.coroutines.CoroutineDispatcher
+        ) = com.nextpage.presentation.viewmodel.reader.interaction.HighlightManager(store, selectionManager, readerRepository, scope, dispatcher)
+
+        fun annotationManager(
+            store: com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore,
+            selectionManager: com.nextpage.presentation.viewmodel.reader.interaction.SelectionManager,
+            readerRepository: ReaderRepository,
+            scope: kotlinx.coroutines.CoroutineScope,
+            dispatcher: kotlinx.coroutines.CoroutineDispatcher
+        ) = com.nextpage.presentation.viewmodel.reader.interaction.AnnotationManager(store, selectionManager, readerRepository, scope, dispatcher)
+
+        fun bookmarkManager(
+            store: com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore,
+            readerRepository: ReaderRepository,
+            scope: kotlinx.coroutines.CoroutineScope,
+            dispatcher: kotlinx.coroutines.CoroutineDispatcher
+        ) = com.nextpage.presentation.viewmodel.reader.interaction.BookmarkManager(store, readerRepository, scope, dispatcher)
+
+        fun shareDictionaryManager(
+            store: com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore,
+            selectionManager: com.nextpage.presentation.viewmodel.reader.interaction.SelectionManager,
+            dictionaryRepository: com.nextpage.domain.repository.DictionaryRepository?,
+            scope: kotlinx.coroutines.CoroutineScope,
+            onEvent: (com.nextpage.presentation.UiEvent) -> Unit,
+            dispatcher: kotlinx.coroutines.CoroutineDispatcher
+        ) = com.nextpage.presentation.viewmodel.reader.interaction.ShareDictionaryManager(store, selectionManager, dictionaryRepository, scope, onEvent, dispatcher)
+    }
+
     val updateReadingProgressUseCase: com.nextpage.domain.usecase.UpdateReadingProgressUseCase by lazy {
         ReaderDependencies.updateReadingProgressUseCase(readerRepository)
     }

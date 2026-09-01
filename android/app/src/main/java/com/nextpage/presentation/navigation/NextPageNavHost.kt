@@ -192,16 +192,12 @@ fun NextPageNavHost(
         )
     )
 
-    // Reactively push the restored/later auth session into the cached Home VM
-    // so the avatar photo updates after async session restore (the VM keyed by
-    // factory is never rebuilt, so the constructor seed alone would stay null).
-    // Also re-scopes daily stats/streak and recorded reading sessions to the user
-    // (REQ-reading-sessions-sync-6, REQ-streak-widget-1).
-    LaunchedEffect(authState.currentSession?.userId, authState.currentSession?.photoUrl) {
-        homeViewModel.setActiveSession(authState.currentSession)
-        appContainer.getStatisticsUseCase.setUserId(authState.currentSession?.userId)
-        readerViewModel.setActiveUserId(authState.currentSession?.userId.orEmpty())
-    }
+    SessionSyncEffect(
+        session = authState.currentSession,
+        homeViewModel = homeViewModel,
+        getStatisticsUseCase = appContainer.getStatisticsUseCase,
+        readerViewModel = readerViewModel
+    )
 
     val debugViewModel: DebugViewModel = viewModel(
         factory = DebugViewModel.Factory(appContainer)
@@ -209,76 +205,31 @@ fun NextPageNavHost(
 
     var showDebugSheet by remember { mutableStateOf(false) }
 
-    // ── Global Error/UI Event Collection ───────────────────────────
-    listOf(
-        libraryViewModel.uiEvent,
-        readerViewModel.uiEvent,
-        highlightsViewModel.uiEvent,
-        statisticsViewModel.uiEvent,
-        homeViewModel.uiEvent,
-        authViewModel.uiEvent
-    ).forEach { flow ->
-        LaunchedEffect(flow) {
-            flow.collect { event ->
-                when (event) {
-                    is UiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                    is UiEvent.ShowToast -> android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_SHORT).show()
-                    is UiEvent.ShareText -> {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, event.text)
-                        }
-                        context.startActivity(
-                            Intent.createChooser(
-                                shareIntent,
-                                context.getString(com.nextpage.R.string.context_menu_share)
-                            )
-                        )
-                    }
-                    is UiEvent.ShareFile -> {
-                        val file = java.io.File(event.filePath)
-                        val uri = androidx.core.content.FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.fileprovider",
-                            file
-                        )
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = event.mimeType
-                            putExtra(Intent.EXTRA_STREAM, uri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        context.startActivity(
-                            Intent.createChooser(
-                                shareIntent,
-                                context.getString(com.nextpage.R.string.library_share_chooser_title)
-                            )
-                        )
-                    }
-                    is UiEvent.CopyToClipboard -> {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("highlight", event.text))
-                        snackbarHostState.showSnackbar(context.getString(com.nextpage.R.string.highlights_snackbar_copied))
-                    }
-                    is UiEvent.OpenBookAtLocation -> {
-                        scope.launch {
-                            val book = appContainer.libraryRepository.getBookById(event.bookId)
-                            if (book != null) {
-                                selectedBookId = book.id
-                                selectedBookFilePath = book.filePath
-                                selectedBookFormat = book.format
-                                readerViewModel.navigateToCfiAfterLoad(event.cfiRange)
-                                navController.navigate(NextPageDestination.Reader.route) {
-                                    launchSingleTop = true
-                                }
-                            } else {
-                                snackbarHostState.showSnackbar(context.getString(com.nextpage.R.string.book_not_found))
-                            }
-                        }
-                    }
+    GlobalEventCollector(
+        libraryUiEvent = libraryViewModel.uiEvent,
+        readerUiEvent = readerViewModel.uiEvent,
+        highlightsUiEvent = highlightsViewModel.uiEvent,
+        statisticsUiEvent = statisticsViewModel.uiEvent,
+        homeUiEvent = homeViewModel.uiEvent,
+        authUiEvent = authViewModel.uiEvent,
+        navController = navController,
+        snackbarHostState = snackbarHostState,
+        context = context,
+        onOpenBookAtLocation = { event ->
+            val book = appContainer.libraryRepository.getBookById(event.bookId)
+            if (book != null) {
+                selectedBookId = book.id
+                selectedBookFilePath = book.filePath
+                selectedBookFormat = book.format
+                readerViewModel.navigateToCfiAfterLoad(event.cfiRange)
+                navController.navigate(NextPageDestination.Reader.route) {
+                    launchSingleTop = true
                 }
+            } else {
+                snackbarHostState.showSnackbar(context.getString(com.nextpage.R.string.book_not_found))
             }
         }
-    }
+    )
 
     LaunchedEffect(libraryViewModel.importEvents) {
         libraryViewModel.importEvents.collect { event ->
@@ -406,19 +357,11 @@ fun NextPageNavHost(
 
     // ── Password-reset deep link (nextpage://auth/reset-password) ──────
     // Cold-start resolution: if the app was opened from a reset-password
-    // email link while signed out, land on the forgot-password screen.
-    // (Warm-start / onNewIntent is intentionally not handled — cold start
-    // is the documented scope; see design §deep-link.)
-    val launchIntent = remember { (context as? com.nextpage.MainActivity)?.intent?.data }
-    LaunchedEffect(launchIntent, isCheckingSession) {
-        val isResetPasswordLink = launchIntent?.scheme == "nextpage" &&
-            launchIntent.path?.contains("reset-password") == true
-        if (isResetPasswordLink && !isCheckingSession && !isAuthenticated) {
-            navController.navigate(NextPageDestination.AuthForgot.route) {
-                launchSingleTop = true
-            }
-        }
-    }
+    DeepLinkHandler(
+        navController = navController,
+        isCheckingSession = isCheckingSession,
+        isAuthenticated = isAuthenticated
+    )
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (isCheckingSession) {

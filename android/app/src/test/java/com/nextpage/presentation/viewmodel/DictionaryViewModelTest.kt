@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -34,7 +35,7 @@ class DictionaryViewModelTest {
         vm.onAddDefinitionTextChanged("definition")
         vm.onAddWordConfirm()
         // Allow coroutine to run
-        kotlinx.coroutines.test.advanceUntilIdle()
+        advanceUntilIdle()
 
         assertEquals(0, repo.savedWords.size)
         assertTrue(repo.existsCalledWords.isEmpty() || repo.existsCalledWords.all { it.isBlank() } || true) // blank rejected before exists check
@@ -57,7 +58,7 @@ class DictionaryViewModelTest {
         }
 
         vm.onAddWordConfirm()
-        kotlinx.coroutines.test.advanceUntilIdle()
+        advanceUntilIdle()
 
         // Should not insert second time (still 1 saved)
         assertEquals(1, repo.savedWords.size)
@@ -77,7 +78,7 @@ class DictionaryViewModelTest {
         vm.onRequestEditWord(saved)
         vm.onEditDefinitionTextChanged("newDef")
         vm.onEditDefinitionConfirm()
-        kotlinx.coroutines.test.advanceUntilIdle()
+        advanceUntilIdle()
 
         assertEquals("newDef", repo.updatedDefinitions[saved.id])
     }
@@ -91,7 +92,7 @@ class DictionaryViewModelTest {
 
         vm.onAddWordTextChanged("TestWord ")
         vm.onAddWordConfirm()
-        kotlinx.coroutines.test.advanceUntilIdle()
+        advanceUntilIdle()
 
         assertEquals(1, repo.savedWords.size)
     }

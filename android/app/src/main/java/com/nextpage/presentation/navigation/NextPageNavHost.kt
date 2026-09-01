@@ -441,36 +441,6 @@ fun NextPageNavHost(
         }
 
         // DrivePromptHost handles its own dialog; no host-level dialog needed
-        if (false) {
-            NextPageDialog(
-                title = context.getString(com.nextpage.R.string.drive_connect_prompt_title),
-                body = context.getString(com.nextpage.R.string.drive_connect_prompt_body),
-                confirmText = context.getString(com.nextpage.R.string.drive_connect_prompt_accept),
-                dismissText = context.getString(com.nextpage.R.string.drive_connect_prompt_decline),
-                icon = NextPageIcons.CloudDownload,
-                onConfirm = {
-                    showDriveConnectPrompt = false
-                    val clientId = com.nextpage.BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID
-                    if (clientId.isBlank()) {
-                        android.widget.Toast.makeText(
-                            context,
-                            context.getString(com.nextpage.R.string.settings_drive_error_config),
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                        return@NextPageDialog
-                    }
-                    drivePromptAuthInFlight = true
-                    driveConnectAuthLauncher.launch(driveAuthHelper.beginAuth())
-                },
-                onDismiss = {
-                    showDriveConnectPrompt = false
-                    val userId = authState.currentSession?.userId
-                    DriveConnectPromptGate.markDeclined(userId)?.let {
-                        driveConnectPromptPrefs.persistDeclined(it)
-                    }
-                }
-            )
-        }
 
         // ── Debug FAB ──────────────────────────────────────────────────
         val showDebugFab =

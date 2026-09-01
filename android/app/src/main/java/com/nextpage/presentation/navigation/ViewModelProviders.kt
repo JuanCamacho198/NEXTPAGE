@@ -6,7 +6,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.di.AppContainer
 import com.nextpage.presentation.viewmodel.AuthViewModel
-import com.nextpage.presentation.viewmodel.DebugViewModel
+import com.nextpage.presentation.debug.DebugViewModel
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
 import com.nextpage.presentation.viewmodel.HomeViewModel

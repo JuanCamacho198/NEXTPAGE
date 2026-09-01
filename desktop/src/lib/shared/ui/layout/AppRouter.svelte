@@ -10,9 +10,9 @@
   import { getNavItems, getDataNavItems } from '$lib/shared/stores/NavigationState.svelte';
   import { fly } from 'svelte/transition';
 
-  import { Button } from '$lib/shared/ui';
   import { ContinueReadingSection, AppSidebar } from '$lib/shared/ui';
   import ShelfSection from '$lib/features/library/ShelfSection.svelte';
+  import GradientImportButton from '$lib/features/home/components/GradientImportButton.svelte';
   import { SettingsPanel } from '$lib/features/settings';
   import HomeDesktopView from '$lib/features/home/components/HomeDesktopView.svelte';
   import LibraryShelfScreen from '$lib/features/library/components/LibraryShelfScreen.svelte';
@@ -132,15 +132,10 @@
                 t={appState.t}
               >
                 {#snippet navbarActions()}
-                  <Button
-                    onclick={bulkImportState.handleImportFile}
-                    disabled={bulkImportState.isImporting}
-                    size="sm"
-                  >
-                    {bulkImportState.isImporting
-                      ? appState.t('app.importing')
-                      : appState.t('app.importBook')}
-                  </Button>
+                  <GradientImportButton
+                    label={appState.t('home.greetingImport')}
+                    onclick={() => bulkImportState.openBulkImportModal()}
+                  />
                 {/snippet}
 
                 {#snippet continueSection()}

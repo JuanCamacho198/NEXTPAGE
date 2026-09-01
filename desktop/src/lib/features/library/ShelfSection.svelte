@@ -63,6 +63,10 @@
     onCoverUpdated,
   }: ShelfSectionProps = $props();
 
+  // previewBookId is part of the public contract (PR3) but unused in presentation-only restyle
+  // svelte-ignore state_referenced_locally
+  void previewBookId;
+
   let showShelfModal = $state(false);
 
   const shelfSortDropdownOptions = $derived(
@@ -104,7 +108,7 @@
     onRead={() => {
       void onStartReading(book);
     }}
-    t={t}
+    {t}
   >
     {#snippet actions()}
       <ShelfActionMenu
@@ -139,7 +143,7 @@
         <button
           type="button"
           data-testid={`shelf-tab-${tabOption.key}`}
-          class={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${shelfQueryState.tab === tabOption.key ? 'border-(--color-primary) bg-[color:color-mix(in_srgb,var(--color-primary)_12%,var(--color-surface))] text-(--color-primary)' : 'border-(--color-border) bg-(--color-background) text-(--color-text-muted) hover:bg-(--color-surface-hover)'}`}
+          class={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${shelfQueryState.tab === tabOption.key ? 'border-transparent bg-(--color-accent-soft) text-(--color-accent)' : 'border-(--color-border) bg-(--color-background) text-(--color-text-muted) hover:bg-(--color-surface-hover)'}`}
           onclick={() => {
             onSetTab(tabOption.key);
           }}
@@ -162,13 +166,13 @@
       </div>
 
       <fieldset
-        class="inline-flex rounded-md border-(--color-border) bg-(--color-background) p-1 border-0"
+        class="inline-flex rounded-full border border-(--color-border) bg-(--color-background) p-0.5"
         data-testid="shelf-view-toggle"
       >
         <legend class="sr-only">{t('shelf.viewToggleAria' as MessageKey)}</legend>
         <button
           type="button"
-          class={`flex h-7 w-8 items-center justify-center rounded px-0 py-1 text-xs font-medium ${shelfQueryState.viewMode === 'grid' ? 'bg-(--color-surface) text-(--color-primary)' : 'text-(--color-text-muted)'}`}
+          class={`flex h-7 w-8 items-center justify-center rounded-full px-0 py-1 text-xs font-medium transition-colors ${shelfQueryState.viewMode === 'grid' ? 'bg-(--color-accent-soft) text-(--color-accent)' : 'text-(--color-text-muted) hover:text-(--color-primary)'}`}
           onclick={() => {
             onSetViewMode('grid');
           }}
@@ -178,7 +182,7 @@
         </button>
         <button
           type="button"
-          class={`flex h-7 w-8 items-center justify-center rounded px-0 py-1 text-xs font-medium ${shelfQueryState.viewMode === 'list' ? 'bg-(--color-surface) text-(--color-primary)' : 'text-(--color-text-muted)'}`}
+          class={`flex h-7 w-8 items-center justify-center rounded-full px-0 py-1 text-xs font-medium transition-colors ${shelfQueryState.viewMode === 'list' ? 'bg-(--color-accent-soft) text-(--color-accent)' : 'text-(--color-text-muted) hover:text-(--color-primary)'}`}
           onclick={() => {
             onSetViewMode('list');
           }}
@@ -192,7 +196,7 @@
         <input
           type="text"
           data-testid="shelf-search"
-          class="w-full rounded-md border border-(--color-border) bg-(--color-background) px-3 py-1.5 pr-8 text-sm text-(--color-primary) placeholder-(--color-text-muted)"
+          class="w-full rounded-full border border-(--color-border) bg-(--color-background) px-3.5 py-1.5 pr-8 text-sm text-(--color-primary) placeholder-(--color-text-muted) focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent-soft)"
           placeholder={t('home.shelfSearchPlaceholder' as MessageKey)}
           value={shelfQueryState.rawQuery}
           oninput={onShelfQueryInput}
@@ -219,11 +223,11 @@
 
   {#if shelfWarnings.length > 0}
     <div
-      class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+      class="rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-2 text-xs text-(--color-primary) shadow-(--shadow-soft)"
       data-testid="shelf-warnings"
     >
       <p class="font-medium">{t('home.shelfWarningsLabel' as MessageKey)}</p>
-      <p class="mt-1">
+      <p class="mt-1 text-(--color-text-muted)">
         {t('home.shelfSearchInvalid' as MessageKey, { value: shelfWarnings.join(', ') })}
       </p>
     </div>
@@ -276,6 +280,6 @@
   onDeleteCover={(b) => onDeleteCover(b as unknown as ReaderBook)}
   onStatusChange={(b, s) => onStatusChange(b as unknown as ReaderBook, s)}
   onToggleFavorite={(b) => onToggleFavorite(b as unknown as ReaderBook)}
-  onSaveEdit={onSaveEdit}
-  onCoverUpdated={onCoverUpdated}
+  {onSaveEdit}
+  {onCoverUpdated}
 />

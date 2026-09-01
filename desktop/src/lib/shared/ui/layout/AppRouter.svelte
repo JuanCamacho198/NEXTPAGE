@@ -22,7 +22,9 @@
   import WelcomeScreen from '$lib/features/welcome/WelcomeScreen.svelte';
   import DictionaryView from '$lib/features/dictionary/components/DictionaryView.svelte';
 
-  const showSidebar = $derived(navigationState.route !== 'reader' && navigationState.route !== 'welcome');
+  const showSidebar = $derived(
+    navigationState.route !== 'reader' && navigationState.route !== 'welcome',
+  );
 
   const navItems = $derived(
     getNavItems({
@@ -88,8 +90,14 @@
       id="main-content"
       tabindex="-1"
       class="flex-1 overflow-y-auto relative flex flex-col min-h-0"
-      class:p-4={navigationState.route !== 'reader' && navigationState.route !== 'settings' && navigationState.route !== 'storage' && navigationState.route !== 'sync'}
-      class:md:p-6={navigationState.route !== 'reader' && navigationState.route !== 'settings' && navigationState.route !== 'storage' && navigationState.route !== 'sync'}
+      class:p-4={navigationState.route !== 'reader' &&
+        navigationState.route !== 'settings' &&
+        navigationState.route !== 'storage' &&
+        navigationState.route !== 'sync'}
+      class:md:p-6={navigationState.route !== 'reader' &&
+        navigationState.route !== 'settings' &&
+        navigationState.route !== 'storage' &&
+        navigationState.route !== 'sync'}
     >
       <!-- aria-live region for screen reader announcements of dynamic content -->
       <div aria-live="polite" aria-atomic="true" class="sr-only">
@@ -100,7 +108,13 @@
           {libraryState.readerError}
         {/if}
       </div>
-      <div class={navigationState.route === 'settings' || navigationState.route === 'storage' || navigationState.route === 'sync' ? 'w-full h-full flex-1 flex flex-col min-h-0 max-w-none' : 'mx-auto max-w-7xl'}>
+      <div
+        class={navigationState.route === 'settings' ||
+        navigationState.route === 'storage' ||
+        navigationState.route === 'sync'
+          ? 'w-full h-full flex-1 flex flex-col min-h-0 max-w-none'
+          : 'mx-auto max-w-7xl'}
+      >
         {#if libraryState.readerError}
           <p class="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
             {libraryState.readerError}
@@ -149,21 +163,29 @@
                     myShelfBooks={libraryState.myShelfBooks}
                     collections={libraryState.collections}
                     previewBookId={navigationState.previewBookId}
-                    selectedShelfBook={libraryState.books.find((b) => b.id === navigationState.shelfDetailsBookId) ?? null}
+                    selectedShelfBook={libraryState.books.find(
+                      (b) => b.id === navigationState.shelfDetailsBookId,
+                    ) ?? null}
                     shelfTabOptions={libraryState.SHELF_TAB_OPTIONS}
                     shelfSortOptions={libraryState.SHELF_SORT_OPTIONS}
                     t={appState.t}
                     onSetTab={(key) => libraryState.setShelfTab(key as never)}
                     onSetSort={(key) => libraryState.setShelfSort(key as never)}
                     onSetViewMode={(mode) => libraryState.setShelfViewMode(mode)}
-                    onShelfQueryInput={libraryState.handleShelfQueryInput}
-                    onClearShelfQuery={libraryState.clearShelfQuery}
+                    onShelfQueryInput={(event) => libraryState.handleShelfQueryInput(event)}
+                    onClearShelfQuery={() => libraryState.clearShelfQuery()}
                     onOpenDetails={(book) => navigationState.openShelfDetails(book.id)}
                     onStartReading={(book) => void appState.startReading(book)}
                     onEditBook={(book) => libraryState.handleEditBook(book)}
-                    onRemoveBook={(book) => { libraryState.pendingRemoveBook = book; }}
+                    onRemoveBook={(book) => {
+                      libraryState.pendingRemoveBook = book;
+                    }}
                     onToggleFavorite={(book) => libraryState.handleToggleFavorite(book)}
-                    onStatusChange={(book, status) => libraryState.handleStatusChange(book, status as "to_read" | "reading" | "completed")}
+                    onStatusChange={(book, status) =>
+                      libraryState.handleStatusChange(
+                        book,
+                        status as 'to_read' | 'reading' | 'completed',
+                      )}
                     onDeleteCover={(book) => libraryState.handleDeleteCover(book)}
                     onSaveEdit={(dto) => libraryState.handleSaveEditedBook(dto as never)}
                     onCloseDetails={() => navigationState.closeShelfDetails()}
@@ -188,17 +210,24 @@
                 onContinueReading={(book: Parameters<typeof appState.startReading>[0]) => {
                   void appState.startReading(book);
                 }}
-                onToggleFavorite={(book: Parameters<typeof libraryState.handleToggleFavorite>[0]) => {
+                onToggleFavorite={(
+                  book: Parameters<typeof libraryState.handleToggleFavorite>[0],
+                ) => {
                   void libraryState.handleToggleFavorite(book);
                 }}
                 onStatusChange={(
                   book: Parameters<typeof libraryState.handleStatusChange>[0],
                   status: string,
                 ) => {
-                  void libraryState.handleStatusChange(book, status as "to_read" | "reading" | "completed");
+                  void libraryState.handleStatusChange(
+                    book,
+                    status as 'to_read' | 'reading' | 'completed',
+                  );
                 }}
                 onViewDetails={(book) => navigationState.openShelfDetails(book.id)}
-                onRemoveBook={(book) => { libraryState.pendingRemoveBook = book; }}
+                onRemoveBook={(book) => {
+                  libraryState.pendingRemoveBook = book;
+                }}
                 onDownloaded={() => {
                   void appState.loadLibrary();
                 }}
@@ -217,12 +246,17 @@
               <DictionaryView t={appState.t} />
             </div>
           {:else if navigationState.route === 'storage' || navigationState.route === 'sync'}
-            <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }} class="w-full h-full flex-1 flex flex-col min-h-0">
+            <div
+              transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}
+              class="w-full h-full flex-1 flex flex-col min-h-0"
+            >
               <section class="w-full h-full flex-1 flex flex-col min-h-0">
                 <SettingsPanel
                   isOpen={true}
                   mode="page"
-                  initialTab={navigationState.route === 'storage' ? 'almacenamiento' : 'sincronizacion'}
+                  initialTab={navigationState.route === 'storage'
+                    ? 'almacenamiento'
+                    : 'sincronizacion'}
                   onRequestClose={() => navigationState.navigateToHome()}
                   t={appState.t}
                   locale={settingsState.locale}
@@ -233,7 +267,10 @@
               </section>
             </div>
           {:else if navigationState.route === 'settings'}
-            <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }} class="w-full h-full flex-1 flex flex-col min-h-0">
+            <div
+              transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}
+              class="w-full h-full flex-1 flex flex-col min-h-0"
+            >
               <section class="w-full h-full flex-1 flex flex-col min-h-0">
                 <SettingsPanel
                   isOpen={true}
@@ -295,7 +332,9 @@
       onReaderLocationContext={appState.handleReaderLocationContext}
       onSearch={(query: string, page: number) => void appState.handleSearch(query, page)}
       onSearchJump={(target: unknown) =>
-        void searchState.handleSearchJump(target as Parameters<typeof searchState.handleSearchJump>[0])}
+        void searchState.handleSearchJump(
+          target as Parameters<typeof searchState.handleSearchJump>[0],
+        )}
     />
   </main>
 {/if}

@@ -11,10 +11,12 @@
   let { t, continueSection, shelfSection }: Props = $props();
 </script>
 
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
   <!-- Columna Izquierda: Continuar Lectura -->
   <div class="xl:col-span-1 space-y-4">
-    <div class="rounded-[24px] border border-(--color-border) bg-(--color-surface) shadow-(--shadow-soft) p-6">
+    <div
+      class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) shadow-(--shadow-soft) p-5"
+    >
       <div>
         {#if continueSection}
           {@render continueSection()}
@@ -28,10 +30,12 @@
   <!-- Columna Derecha: Mi Estantería -->
   <div class="xl:col-span-2 space-y-4">
     <div
-      class="rounded-[24px] border border-(--color-border) bg-(--color-surface) shadow-(--shadow-soft) p-5 h-full"
+      class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) shadow-(--shadow-soft) p-5 h-full"
     >
       <div class="mb-4 flex items-center justify-between">
-        <h3 class="text-base font-semibold tracking-tight text-(--color-primary)">{t('home.myShelf')}</h3>
+        <h3 class="text-base font-semibold tracking-tight text-(--color-primary)">
+          {t('home.myShelf')}
+        </h3>
       </div>
       <div>
         {#if shelfSection}

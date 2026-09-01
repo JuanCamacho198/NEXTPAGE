@@ -9,7 +9,12 @@ expect.extend({ toHaveNoViolations });
 const { mockAuthState } = vi.hoisted(() => {
   const state: {
     isLocalUser: boolean;
-    localUser: { name: string; email: string | null; avatarUrl: string | null; localOnly: true } | null;
+    localUser: {
+      name: string;
+      email: string | null;
+      avatarUrl: string | null;
+      localOnly: true;
+    } | null;
     email: string | null;
     displayName: string | null;
     photoUrl: string | null;

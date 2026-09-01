@@ -193,9 +193,7 @@ describe('ContinueReadingSection (5.3)', () => {
   });
 
   it('renders the real cover image when coverPath is a remote URL', () => {
-    setContinueReadingBooks([
-      makeBook('b1', { coverPath: 'https://example.com/covers/b1.jpg' }),
-    ]);
+    setContinueReadingBooks([makeBook('b1', { coverPath: 'https://example.com/covers/b1.jpg' })]);
     const { container } = render(ContinueReadingSection);
 
     const img = container.querySelector('img');
@@ -221,10 +219,7 @@ describe('ContinueReadingSection (5.3)', () => {
   });
 
   it('has no axe violations with two books', async () => {
-    setContinueReadingBooks([
-      makeBook('b1', { readingStatus: 'reading' }),
-      makeBook('b2'),
-    ]);
+    setContinueReadingBooks([makeBook('b1', { readingStatus: 'reading' }), makeBook('b2')]);
     const { container } = render(ContinueReadingSection);
 
     const results = await axe(container);

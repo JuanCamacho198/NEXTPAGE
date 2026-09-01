@@ -20,7 +20,7 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
       'home.continue.countAria',
       'home.continue.nextBook',
       'home.continue.prevBook',
-    ];
+    ] as const;
 
     for (const key of homeKeys) {
       expect(messagesEn[key]).toBeDefined();

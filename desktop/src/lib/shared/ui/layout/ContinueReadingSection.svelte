@@ -21,7 +21,7 @@
   //    with `reduce`, the rotation timer never starts.
   $effect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const apply = () => {
+    const apply = (): void => {
       reducedMotion = mq.matches;
     };
     apply();

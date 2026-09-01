@@ -34,6 +34,11 @@
 
   const progress = $derived(Math.round(getSafeProgressPercentage(book)));
   const showProgress = $derived(variant === 'continue-reading' || book.readingStatus === 'completed');
+  // The Continue Reading variant consumes the dedicated carousel key
+  // (identical copy, AD-5); the shelf keeps its own label.
+  const progressLabel = $derived(
+    variant === 'continue-reading' ? t('home.continue.progress') : t('home.shelfSort.progress'),
+  );
   // The read button reads "Continue" in the Continue Reading context
   // (resuming an in-progress book) and "Read" elsewhere (starting fresh).
   const readLabel = $derived(
@@ -114,7 +119,7 @@
           {#if showProgress}
             <div class="mt-2">
               <div class="mb-1 flex items-center gap-1 text-2xs text-(--color-text-muted)">
-                <span>{t('home.shelfSort.progress')} {progress}%</span>
+                <span>{progressLabel} {progress}%</span>
               </div>
               <div class="h-1.5 w-full overflow-hidden rounded bg-(--color-border)">
                 <div
@@ -124,7 +129,7 @@
                   aria-valuemin="0"
                   aria-valuemax="100"
                   aria-valuenow={progress}
-                  aria-label={t('home.shelfSort.progress')}
+                  aria-label={progressLabel}
                 ></div>
               </div>
             </div>

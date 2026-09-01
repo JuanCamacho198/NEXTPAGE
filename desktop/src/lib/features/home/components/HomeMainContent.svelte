@@ -15,11 +15,6 @@
   <!-- Columna Izquierda: Continuar Lectura -->
   <div class="xl:col-span-1 space-y-4">
     <div class="rounded-[24px] border border-(--color-border) bg-(--color-surface) shadow-(--shadow-soft) p-6">
-      <div class="mb-5 flex items-center">
-        <h3 class="text-[16px] font-bold tracking-tight text-(--color-primary)">
-          {t('home.continueReading')}
-        </h3>
-      </div>
       <div>
         {#if continueSection}
           {@render continueSection()}

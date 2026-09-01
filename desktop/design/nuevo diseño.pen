@@ -16412,7 +16412,7 @@
                           "flipY": false,
                           "width": "fill_container",
                           "height": 100,
-                          "x": 629.3333333333335,
+                          "x": 629.3333333333334,
                           "y": 0,
                           "descendants": {
                             "jFtNF": {
@@ -62210,7 +62210,7 @@
       },
       "clip": true,
       "width": 1280,
-      "height": 1200,
+      "height": 1346,
       "fill": "$--np-bg",
       "layout": "vertical",
       "children": [

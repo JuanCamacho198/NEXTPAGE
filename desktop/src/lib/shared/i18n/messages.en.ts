@@ -669,6 +669,12 @@ export const messagesEn = {
   'home.continueReading': 'Continue Reading',
   'home.myShelf': 'My Shelf',
   'home.viewAll': 'View all',
+  'home.greetingImport': 'Import',
+  'home.continue.progress': 'Progress',
+  'home.continue.liveBadge': 'IN PROGRESS',
+  'home.continue.countAria': '{{count}} in progress',
+  'home.continue.nextBook': 'Next',
+  'home.continue.prevBook': 'Previous',
 
   // Collection Manager (PR3b)
   'collection.managerTitle': 'Manage Collections',

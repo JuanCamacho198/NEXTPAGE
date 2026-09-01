@@ -628,6 +628,12 @@ export const messagesEs: Record<MessageKey, string> = {
   'home.continueReading': 'Continuar lectura',
   'home.myShelf': 'Mi estantería',
   'home.viewAll': 'Ver todo',
+  'home.greetingImport': 'Importar',
+  'home.continue.progress': 'Progreso',
+  'home.continue.liveBadge': 'EN CURSO',
+  'home.continue.countAria': '{{count}} en curso',
+  'home.continue.nextBook': 'Siguiente',
+  'home.continue.prevBook': 'Anterior',
 
   // Collection Manager (PR3b)
   'collection.managerTitle': 'Administrar Colecciones',

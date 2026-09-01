@@ -1,8 +1,11 @@
 package com.nextpage.presentation.viewmodel.reader
 
+import android.os.SystemClock
 import com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore
 import com.nextpage.presentation.viewmodel.reader.interaction.SelectionManager
 import com.nextpage.testutil.MainDispatcherRule
+import io.mockk.every
+import io.mockk.mockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,6 +13,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
@@ -18,6 +22,12 @@ class InteractionStateStoreTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    @Before
+    fun setUp() {
+        mockkStatic(SystemClock::class)
+        every { SystemClock.elapsedRealtime() } returns 1000L
+    }
 
     @Test
     fun `clearSelection atomically resets 8 fields and emits event`() = runTest {
@@ -29,7 +39,7 @@ class InteractionStateStoreTest {
         val manager = SelectionManager(store, this, mainDispatcherRule.dispatcher)
         // Simulate Existing highlight so dismiss path is exercised via store
         state.value = state.value.copy(selectedText = "foo", showNoteModal = true, showTagInput = true, showDefinitionInput = true, activeNoteText = "note", activeTagText = "tag", activeDefinitionText = "def", tagSuggestions = listOf("a"))
-        manager.coordinator = SelectionCoordinator.NewSelection("foo", android.graphics.Rect(0,0,10,10), null)
+        manager.coordinator = SelectionCoordinator.NewSelection("foo", android.graphics.Rect(0,0,10,10), null, createdAt = 1000L)
 
         store.clearSelection()
         advanceUntilIdle()

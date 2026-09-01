@@ -46,6 +46,9 @@ import com.nextpage.data.remote.drive.DriveAuthResult
 import com.nextpage.data.remote.drive.DriveConnectPromptGate
 import com.nextpage.data.session.DriveConnectPromptPrefs
 import com.nextpage.di.AppContainer
+import com.nextpage.presentation.navigation.feature.authGraph
+import com.nextpage.presentation.navigation.feature.bookDetailGraph
+import com.nextpage.presentation.navigation.feature.onboardingGraph
 import com.nextpage.presentation.screen.AuthScreen
 import com.nextpage.presentation.screen.BookDetailScreen
 import com.nextpage.presentation.screen.EditBookMetadataScreen
@@ -407,113 +410,17 @@ fun NextPageNavHost(
                     navController = navController,
                     startDestination = startDestination
                 ) {
-                    composable(
-                        route = NextPageDestination.Auth.route,
-                    enterTransition = { fadeIn() },
-                    exitTransition = { fadeOut() },
-                    popEnterTransition = { fadeIn() },
-                    popExitTransition = { fadeOut() }
-                ) {
-                    AuthScreen(
-                        viewModel = authViewModel,
-                        onAuthenticated = {
-                            val destination = if (appContainer.readingGoalPreferences.load() == null) {
-                                NextPageDestination.OnboardingGoal.route
-                            } else {
-                                NextPageDestination.Home.route
-                            }
-                            navController.navigate(destination) {
-                                popUpTo(NextPageDestination.Auth.route) { inclusive = true }
-                            }
-                        },
-                        onContinueLocal = {
-                            authViewModel.continueLocally()
-                            val destination = if (appContainer.readingGoalPreferences.load() == null) {
-                                NextPageDestination.OnboardingGoal.route
-                            } else {
-                                NextPageDestination.Home.route
-                            }
-                            navController.navigate(destination) {
-                                popUpTo(NextPageDestination.Auth.route) { inclusive = true }
-                            }
-                        },
-                        onNavigateToRegister = {
-                            navController.navigate(NextPageDestination.AuthRegister.route) {
-                                launchSingleTop = true
-                            }
-                        },
-                        onNavigateToForgot = {
-                            navController.navigate(NextPageDestination.AuthForgot.route) {
-                                launchSingleTop = true
-                            }
-                        }
+                    authGraph(
+                        navController = navController,
+                        authViewModel = authViewModel,
+                        appContainer = appContainer
                     )
-                }
 
-                composable(
-                    route = NextPageDestination.AuthRegister.route,
-                    enterTransition = { fadeIn() },
-                    exitTransition = { fadeOut() },
-                    popEnterTransition = { fadeIn() },
-                    popExitTransition = { fadeOut() }
-                ) {
-                    RegisterScreen(
-                        viewModel = authViewModel,
-                        onAuthenticated = {
-                            val destination = if (appContainer.readingGoalPreferences.load() == null) {
-                                NextPageDestination.OnboardingGoal.route
-                            } else {
-                                NextPageDestination.Home.route
-                            }
-                            navController.navigate(destination) {
-                                popUpTo(NextPageDestination.Auth.route) { inclusive = true }
-                            }
-                        },
-                        onNavigateBack = { navController.popBackStack() }
+                    onboardingGraph(
+                        navController = navController,
+                        appContainer = appContainer,
+                        onGoalSaved = { dailyGoalVersion++ }
                     )
-                }
-
-                composable(
-                    route = NextPageDestination.AuthForgot.route,
-                    enterTransition = { fadeIn() },
-                    exitTransition = { fadeOut() },
-                    popEnterTransition = { fadeIn() },
-                    popExitTransition = { fadeOut() }
-                ) {
-                    ForgotScreen(
-                        viewModel = authViewModel,
-                        onAuthenticated = {
-                            val destination = if (appContainer.readingGoalPreferences.load() == null) {
-                                NextPageDestination.OnboardingGoal.route
-                            } else {
-                                NextPageDestination.Home.route
-                            }
-                            navController.navigate(destination) {
-                                popUpTo(NextPageDestination.Auth.route) { inclusive = true }
-                            }
-                        },
-                        onNavigateBack = { navController.popBackStack() }
-                    )
-                }
-
-                composable(
-                    route = NextPageDestination.OnboardingGoal.route,
-                    enterTransition = { fadeIn() },
-                    exitTransition = { fadeOut() },
-                    popEnterTransition = { fadeIn() },
-                    popExitTransition = { fadeOut() }
-                ) {
-                    OnboardingGoalScreen(
-                        onSave = { minutes ->
-                            appContainer.readingGoalPreferences.save(minutes)
-                            dailyGoalVersion++
-                            navController.navigate(NextPageDestination.Home.route) {
-                                popUpTo(0) { inclusive = true }
-                            }
-                        },
-                        onNavigateBack = { navController.popBackStack() }
-                    )
-                }
 
                 composable(
                     route = NextPageDestination.Home.route,
@@ -627,49 +534,17 @@ fun NextPageNavHost(
                     )
                 }
 
-                composable(
-                    route = NextPageDestination.BookDetail.route,
-                    arguments = listOf(navArgument("bookId") { type = NavType.StringType }),
-                    enterTransition = { slideInHorizontally { it } + fadeIn() },
-                    exitTransition = { slideOutHorizontally { it } + fadeOut() },
-                    popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
-                    popExitTransition = { slideOutHorizontally { -it } + fadeOut() }
-                ) { backStackEntry ->
-                    val bookId = backStackEntry.arguments?.getString("bookId") ?: return@composable
-                    BookDetailScreen(
-                        contentPadding = innerPadding,
-                        bookId = bookId,
-                        libraryRepository = appContainer.libraryRepository,
-                        onNavigateBack = { navController.popBackStack() },
-                        onEditBook = { navController.navigate("book_edit/$bookId") },
-                        onContinueReading = { id, filePath, format ->
-                            selectedBookId = id
-                            selectedBookFilePath = filePath
-                            selectedBookFormat = format
-                            navController.navigate(NextPageDestination.Reader.route) {
-                                popUpTo(NextPageDestination.Reader.route) { inclusive = true }
-                            }
-                        }
-                    )
-                }
-
-                composable(
-                    route = NextPageDestination.BookEdit.route,
-                    arguments = listOf(navArgument("bookId") { type = NavType.StringType }),
-                    enterTransition = { slideInHorizontally { it } + fadeIn() },
-                    exitTransition = { slideOutHorizontally { it } + fadeOut() },
-                    popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
-                    popExitTransition = { slideOutHorizontally { -it } + fadeOut() }
-                ) { backStackEntry ->
-                    val bookId = backStackEntry.arguments?.getString("bookId") ?: return@composable
-                    EditBookMetadataScreen(
-                        contentPadding = innerPadding,
-                        bookId = bookId,
-                        libraryRepository = appContainer.libraryRepository,
-                        coverStorage = appContainer.coverStorage,
-                        onNavigateBack = { navController.popBackStack() }
-                    )
-                }
+                bookDetailGraph(
+                    navController = navController,
+                    appContainer = appContainer,
+                    readerViewModel = readerViewModel,
+                    contentPadding = innerPadding,
+                    onSelectBook = { id, path, format ->
+                        selectedBookId = id
+                        selectedBookFilePath = path
+                        selectedBookFormat = format
+                    }
+                )
 
                 composable(
                     route = NextPageDestination.Library.route,

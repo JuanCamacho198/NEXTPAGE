@@ -26,6 +26,33 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 }
 
+// Polyfill window.matchMedia for jsdom (jsdom does not implement it).
+// ContinueReadingSection's reduced-motion effect reads it on mount; the
+// carousel unit tests override the global per test to simulate `reduce`.
+if (typeof globalThis.matchMedia === 'undefined') {
+  globalThis.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+}
+
+// Polyfill Element.scrollTo/scrollBy for jsdom (not implemented; used by
+// ContinueReadingSection's scroll-to-active-card effect on mount)
+if (typeof globalThis.Element !== 'undefined') {
+  if (typeof Element.prototype.scrollTo !== 'function') {
+    Element.prototype.scrollTo = (() => undefined) as never;
+  }
+  if (typeof Element.prototype.scrollBy !== 'function') {
+    Element.prototype.scrollBy = (() => undefined) as never;
+  }
+}
+
 // Polyfill Element.animate for jsdom (used by Svelte transitions in Modal.svelte)
 if (typeof globalThis.Element !== 'undefined' && !globalThis.Element.prototype.animate) {
   globalThis.Element.prototype.animate = function () {

@@ -5,115 +5,199 @@
   import { BookCard, ShelfActionMenu } from '$lib/features/library';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
 
+  const AUTO_ROTATE_MS = 8000;
+
   let scrollEl = $state<HTMLUListElement | null>(null);
-  let canScrollLeft = $state(false);
-  let canScrollRight = $state(false);
+  let activeIndex = $state(0);
+  let paused = $state(false);
+  let reducedMotion = $state(false);
+  let rotationTicks = $state(0);
 
-  const showArrows = $derived(libraryState.continueReadingBooks.length > 1);
+  const books = $derived(libraryState.continueReadingBooks);
+  const activeBook = $derived(books[activeIndex] ?? null);
+  const showArrows = $derived(books.length > 1);
 
-  function updateScrollState(): void {
-    if (!scrollEl) {
-      canScrollLeft = false;
-      canScrollRight = false;
+  // 1) React to the user's reduced-motion preference (WCAG 2.2.2 kill-switch):
+  //    with `reduce`, the rotation timer never starts.
+  $effect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const apply = () => {
+      reducedMotion = mq.matches;
+    };
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  });
+
+  // 2) Index-based auto-rotation timer (AD-4). Cleanup is automatic on
+  //    unmount or when any dependency changes. Manual arrows bump
+  //    rotationTicks to restart the 8s window without touching the index.
+  $effect(() => {
+    const n = books.length;
+    void rotationTicks;
+    if (n <= 1 || reducedMotion || paused) return;
+    const id = setInterval(() => {
+      activeIndex = (activeIndex + 1) % n;
+    }, AUTO_ROTATE_MS);
+    return () => clearInterval(id);
+  });
+
+  // 3) Scroll to the active card and clamp an out-of-range index when the
+  //    list shrinks (e.g. a book leaves the continue-reading partition).
+  $effect(() => {
+    const n = books.length;
+    if (n === 0) return;
+    if (activeIndex >= n) {
+      activeIndex = n - 1;
       return;
     }
-    canScrollLeft = scrollEl.scrollLeft > 2;
-    canScrollRight = scrollEl.scrollLeft + scrollEl.clientWidth < scrollEl.scrollWidth - 2;
+    const li = scrollEl?.children[activeIndex] as HTMLElement | undefined;
+    if (!li) return;
+    scrollEl?.scrollTo({ left: li.offsetLeft, behavior: reducedMotion ? 'auto' : 'smooth' });
+  });
+
+  // 4) Re-sync the active index after a manual scroll snaps to a card.
+  function onScrollEnd(): void {
+    if (!scrollEl) return;
+    const page = Math.round(scrollEl.scrollLeft / scrollEl.clientWidth);
+    if (page >= 0 && page < books.length) activeIndex = page;
   }
 
-  function scrollByOffset(offset: number): void {
-    scrollEl?.scrollBy({ left: offset, behavior: 'smooth' });
+  function handlePrev(): void {
+    const n = books.length;
+    if (!n) return;
+    activeIndex = (activeIndex - 1 + n) % n;
+    rotationTicks += 1;
   }
 
   function handleNext(): void {
-    if (!scrollEl) return;
-    if (!canScrollRight) {
-      scrollEl.scrollTo({ left: 0, behavior: 'smooth' });
-    } else {
-      scrollByOffset(scrollEl.clientWidth);
-    }
+    const n = books.length;
+    if (!n) return;
+    activeIndex = (activeIndex + 1) % n;
+    rotationTicks += 1;
   }
-
-  $effect(() => {
-    void libraryState.continueReadingBooks.length;
-    queueMicrotask(updateScrollState);
-  });
-
-  $effect(() => {
-    if (!scrollEl) return;
-    const el = scrollEl;
-    const ro = new ResizeObserver(() => updateScrollState());
-    ro.observe(el);
-    for (const child of Array.from(el.children)) {
-      ro.observe(child);
-    }
-    updateScrollState();
-    return () => ro.disconnect();
-  });
 </script>
 
-{#if libraryState.continueReadingBooks.length === 0}
-  <!-- empty -->
+{#if books.length === 0}
+  <p class="text-sm text-(--color-text-muted)">{appState.t('home.continueReadingPlaceholder')}</p>
 {:else}
-  <div class="relative">
-    {#if showArrows}
-      <button
-        type="button"
-        class="absolute right-2 top-[40%] z-10 -translate-y-1/2 rounded-full border border-(--color-border) bg-(--color-surface) p-1.5 shadow-md transition hover:bg-(--color-surface-hover)"
-        aria-label="Scroll right"
-        onclick={handleNext}
-      >
-        <Icon name="chevron-right" size="sm" />
-      </button>
-    {/if}
-
-    <ul
-      bind:this={scrollEl}
-      onscroll={updateScrollState}
-      class="flex gap-0 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-      style="scrollbar-width: none; -ms-overflow-style: none;"
-    >
-      {#each libraryState.continueReadingBooks as book (book.id)}
-        <li class="snap-start shrink-0 w-full">
-          <BookCard
-            {book}
-            variant="continue-reading"
-            compact={false}
-            selected={navigationState.previewBookId === book.id}
-            onSelect={() => {
-              navigationState.openShelfDetails(book.id);
-            }}
-            onRead={() => {
-              void appState.startReading(book);
-            }}
-            t={appState.t}
+  <!--
+    Pause on hover/focus and resume on leave (WCAG 2.2.2). Focus pause
+    covers keyboard users tabbing into the arrows or the card actions.
+  -->
+  <div
+    data-testid="continue-carousel"
+    role="group"
+    class="space-y-3"
+    onmouseenter={() => {
+      paused = true;
+    }}
+    onmouseleave={() => {
+      paused = false;
+    }}
+    onfocusin={() => {
+      paused = true;
+    }}
+    onfocusout={() => {
+      paused = false;
+    }}
+  >
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex min-w-0 items-center gap-2">
+        <h3 class="text-base font-semibold tracking-tight text-(--color-primary)">
+          {appState.t('home.continueReading')}
+        </h3>
+        <span
+          class="rounded-full bg-(--color-accent-soft) px-2 py-0.5 text-xs font-medium text-(--color-accent)"
+          aria-label={appState.t('home.continue.countAria', { count: books.length })}
+        >
+          {books.length}
+        </span>
+      </div>
+      {#if showArrows}
+        <div class="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            class="rounded-full border border-(--color-border) bg-(--color-surface) p-1.5 shadow-md hover:bg-(--color-surface-hover)"
+            aria-label={appState.t('home.continue.prevBook')}
+            onclick={handlePrev}
           >
-            {#snippet actions()}
-              <ShelfActionMenu
-                bookId={book.id}
-                isFavorite={Boolean(book.collectionIds?.includes(1))}
-                readLabel={appState.t('app.read')}
-                editLabel={appState.t('library.editMetadata.title')}
-                removeLabel={appState.t('library.removeFromShelf')}
-                favoriteAddLabel={appState.t('library.favoriteAdd')}
-                favoriteRemoveLabel={appState.t('library.favoriteRemove')}
-                triggerLabel={appState.t('library.optionsFor', { title: book.title })}
-                onViewDetails={() => navigationState.openShelfDetails(book.id)}
-                viewDetailsLabel={appState.t('shelf.viewDetails')}
-                onEdit={() => {
-                  libraryState.handleEditBook(book);
-                }}
-                onRemove={() => {
-                  libraryState.pendingRemoveBook = book;
-                }}
-                onToggleFavorite={() => {
-                  void libraryState.handleToggleFavorite(book);
-                }}
-              />
-            {/snippet}
-          </BookCard>
-        </li>
-      {/each}
-    </ul>
+            <Icon name="chevron-left" size="sm" />
+          </button>
+          <button
+            type="button"
+            class="rounded-full border border-(--color-border) bg-(--color-surface) p-1.5 shadow-md hover:bg-(--color-surface-hover)"
+            aria-label={appState.t('home.continue.nextBook')}
+            onclick={handleNext}
+          >
+            <Icon name="chevron-right" size="sm" />
+          </button>
+        </div>
+      {/if}
+    </div>
+
+    <div class="relative">
+      <ul
+        bind:this={scrollEl}
+        onscrollend={onScrollEnd}
+        data-active-index={activeIndex}
+        class="flex gap-0 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        style="scrollbar-width: none; -ms-overflow-style: none;"
+      >
+        {#each books as book (book.id)}
+          <li class="relative snap-start shrink-0 w-full">
+            {#if book.readingStatus === 'reading'}
+              <span
+                class="pointer-events-none absolute left-2 top-2 z-10 rounded-full bg-(--color-accent-soft) px-2 py-0.5 text-2xs font-semibold uppercase tracking-wider text-(--color-accent)"
+              >
+                {appState.t('home.continue.liveBadge')}
+              </span>
+            {/if}
+            <BookCard
+              {book}
+              variant="continue-reading"
+              compact={false}
+              selected={navigationState.previewBookId === book.id}
+              onSelect={() => {
+                navigationState.openShelfDetails(book.id);
+              }}
+              onRead={() => {
+                void appState.startReading(book);
+              }}
+              t={appState.t}
+            >
+              {#snippet actions()}
+                <ShelfActionMenu
+                  bookId={book.id}
+                  isFavorite={Boolean(book.collectionIds?.includes(1))}
+                  readLabel={appState.t('app.read')}
+                  editLabel={appState.t('library.editMetadata.title')}
+                  removeLabel={appState.t('library.removeFromShelf')}
+                  favoriteAddLabel={appState.t('library.favoriteAdd')}
+                  favoriteRemoveLabel={appState.t('library.favoriteRemove')}
+                  triggerLabel={appState.t('library.optionsFor', { title: book.title })}
+                  onViewDetails={() => navigationState.openShelfDetails(book.id)}
+                  viewDetailsLabel={appState.t('shelf.viewDetails')}
+                  onEdit={() => {
+                    libraryState.handleEditBook(book);
+                  }}
+                  onRemove={() => {
+                    libraryState.pendingRemoveBook = book;
+                  }}
+                  onToggleFavorite={() => {
+                    void libraryState.handleToggleFavorite(book);
+                  }}
+                />
+              {/snippet}
+            </BookCard>
+          </li>
+        {/each}
+      </ul>
+    </div>
+
+    <!-- Screen-reader announcement of the active book (manual and auto) -->
+    <p class="sr-only" aria-live="polite" aria-atomic="true">
+      {activeBook?.title ?? ''}
+    </p>
   </div>
 {/if}

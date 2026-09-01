@@ -1342,6 +1342,7 @@ class ReaderViewModel(
 
     override fun onCleared() {
         lifecycleHolder.onCleared()
+        interactionHolder.onCleared()
         super.onCleared()
     }
 }

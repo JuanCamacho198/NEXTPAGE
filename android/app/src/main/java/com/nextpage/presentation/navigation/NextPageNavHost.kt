@@ -53,9 +53,9 @@ import com.nextpage.presentation.navigation.feature.libraryGraph
 import com.nextpage.presentation.navigation.feature.onboardingGraph
 import com.nextpage.presentation.navigation.feature.readerGraph
 import com.nextpage.presentation.navigation.feature.settingsGraph
+import com.nextpage.presentation.feature.highlights.HighlightsScreen
 import com.nextpage.presentation.screen.BookDetailScreen
 import com.nextpage.presentation.screen.EditBookMetadataScreen
-import com.nextpage.presentation.screen.HighlightsScreen
 import com.nextpage.presentation.screen.OnboardingGoalScreen
 import com.nextpage.presentation.screen.ReaderScreen
 import com.nextpage.presentation.screen.SettingsScreen

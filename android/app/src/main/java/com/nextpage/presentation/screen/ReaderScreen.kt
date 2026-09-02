@@ -56,8 +56,8 @@ import com.nextpage.debug.DebugPanel
 import com.nextpage.debug.DebugPrefs
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.ReaderViewModel
+import com.nextpage.presentation.feature.highlights.HighlightsSheet
 import com.nextpage.ui.components.molecules.ChaptersSheet
-import com.nextpage.ui.components.molecules.HighlightsSheet
 import com.nextpage.ui.components.molecules.HighlightAnnotationModal
 import com.nextpage.ui.components.molecules.ReadingProgressBar
 import com.nextpage.ui.components.molecules.SearchBottomSheet

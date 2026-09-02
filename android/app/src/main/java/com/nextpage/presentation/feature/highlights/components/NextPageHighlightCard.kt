@@ -1,4 +1,4 @@
-package com.nextpage.ui.components.molecules
+package com.nextpage.presentation.feature.highlights.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

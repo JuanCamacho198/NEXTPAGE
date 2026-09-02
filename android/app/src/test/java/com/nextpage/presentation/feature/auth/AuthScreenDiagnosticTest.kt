@@ -1,4 +1,4 @@
-package com.nextpage.presentation.screen
+package com.nextpage.presentation.feature.auth
 
 import com.nextpage.R
 import com.nextpage.presentation.viewmodel.AuthFailureKind

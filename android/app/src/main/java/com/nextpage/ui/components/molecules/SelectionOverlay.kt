@@ -5,25 +5,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.nextpage.domain.model.Highlight
@@ -31,104 +22,7 @@ import com.nextpage.domain.model.HighlightColor
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 
-/**
- * Shared floating-selection overlay used by both the EPUB reader
- * (Readium) and the PDF rendering path inside the reader screen.
- * Renders exactly one of the following near the selection, based
- * on the input flags and the current [ReaderSelectionState]:
- *
- * | State                           | Surface                       |
- * |---------------------------------|-------------------------------|
- * | [ReaderSelectionState.New]      | [TextSelectionMenu]           |
- * | [ReaderSelectionState.Existing] | [FloatingContextMenu]         |
- * | `showColorPickerPopover=true`   | [HighlightColorPickerPopover] |
- * | `showTagInput=true`             | [AnchoredTagInput]            |
- * | `showDefinitionInput=true`      | [AnchoredDefinitionInput]     |
- *
- * When any surface is visible, a transparent tap-away backdrop is
- * rendered behind it; tapping the backdrop invokes
- * [onDismissContextMenu].
- *
- * Coordinate handling: [selectionRect] arrives in **pixels (px)** —
- * it is Readium's viewport-space [android.graphics.RectF] cast to
- * [Rect]. The composable uses it directly for [IntOffset]
- * positioning and only converts dp→px for the anchor gap and
- * header/footer reserves (see [HEADER_RESERVE_DP] and
- * [FOOTER_RESERVE_DP]).
- *
- * Anchoring rules: the menu is placed above the selection if there
- * is enough room (≥ 80dp from the top of the viewport), otherwise
- * it flips below. Horizontally it is centered on the selection
- * and clamped to the viewport edges. The math is in the private
- * `computeAnchor` helper.
- *
- * @param selectionState Current selection state from the reader
- *   ViewModel. `None` means no surface is shown.
- * @param showColorPickerPopover Show the [HighlightColorPickerPopover]
- *   instead of (or on top of) the text-selection menu. Default
- *   `false`.
- * @param showTagInput Show [AnchoredTagInput]. Default `false`.
- * @param tagSuggestions Suggestions to show in the tag input.
- *   Default empty.
- * @param activeTagText Current tag input value. Default `""`.
- * @param showDefinitionInput Show [AnchoredDefinitionInput]. Default
- *   `false`.
- * @param activeDefinitionText Current definition input value.
- *   Default `""`.
- * @param selectionRect Selection bounding box in **pixels**. When
- *   `null`, the composable returns immediately (renders nothing).
- * @param selectedText The currently selected text. Used as the
- *   "word" header in the definition input and to drive default
- *   highlight color resolution. May be `null`.
- * @param highlights All highlights in the current book. Used to
- *   resolve the default highlight color (last highlight's color, or
- *   YELLOW as fallback) when [activeHighlightColor] is null.
- * @param activeHighlightColor Currently active highlight color
- *   (hex). Drives the Palette icon tint. When `null`, falls back to
- *   YELLOW or the last highlight's color.
- * @param customHighlightColors User-customized 5-color palette for
- *   the [HighlightColorPickerPopover]. Default `null` (uses
- *   [DEFAULT_HIGHLIGHT_PRESETS]).
- * @param onColorSelected Invoked with the chosen hex when a color
- *   is picked from the popover.
- * @param onCopy Copy-selection callback (from the text-selection
- *   menu).
- * @param onDismissContextMenu Tap-away backdrop callback.
- * @param onDelete Delete-highlight callback (from the existing-
- *   highlight menu).
- * @param onAddTag Open-tag-input callback.
- * @param onAnnotate Open-annotation-modal callback.
- * @param onShare Share-selection callback.
- * @param onDictionary Open-dictionary-input callback.
- * @param onShowColorPickerPopover Open-color-picker callback
- *   (from the Palette action). Default no-op.
- * @param onDismissColorPickerPopover Close-color-picker callback.
- *   Default no-op.
- * @param onTagTextChanged Tag-input change callback. Default no-op.
- * @param onSaveTag Save-tag callback. Default no-op.
- * @param onDismissTagInput Close-tag-input callback. Default no-op.
- * @param onDefinitionTextChanged Definition-input change callback.
- *   Default no-op.
- * @param onSaveDefinition Save-definition callback. Default no-op.
- * @param onDismissDefinitionInput Close-definition-input callback.
- *   Default no-op.
- * @param modifier Modifier applied to the positioned `Box` of the
- *   menus (not the popover, which uses its own offset).
- *
- * **Visual**: backdrop = transparent tap-away layer (`fillMaxSize`).
- *   Each menu is wrapped in a `Box` with an 8dp padding and
- *   positioned via `Modifier.offset { anchor }` where `anchor` is
- *   computed from the selection rect. The color-picker popover is
- *   offset to (anchorCenterX - 110dp, selectionRect.bottom + 12dp).
- * **Behavior**: branches are mutually exclusive at the top level
- *   (only one menu is shown at a time). Tapping outside any menu
- *   dismisses via the tap-away backdrop. Tapping a menu action
- *   fires the respective callback (caller decides whether to also
- *   close the surface).
- * **Recomposition**: recomposes when any parameter changes. Each
- *   branch tracks its own `menuWidthPx`/`menuHeightPx` via
- *   `onGloballyPositioned` to compute the anchor.
- */
+/** Thin orchestrator — delegates anchoring to AnchoredOverlayBox + computeAnchor. */
 @Composable
 fun SelectionOverlay(
     selectionState: ReaderSelectionState,
@@ -161,338 +55,55 @@ fun SelectionOverlay(
     onDismissDefinitionInput: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val anyMenuVisible = selectionState != ReaderSelectionState.None ||
-        showColorPickerPopover ||
-        showTagInput ||
-        showDefinitionInput
-
+    val anyMenuVisible = selectionState != ReaderSelectionState.None || showColorPickerPopover || showTagInput || showDefinitionInput
     if (selectionRect == null) return
-
-    val density = LocalDensity.current
-    val selectionRectPx = selectionRect
     val viewportWidth = LocalView.current.width
     val viewportHeight = LocalView.current.height
-
-    // ── Tap-away dismiss overlay (behind menus) ──────────────────
     if (anyMenuVisible) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) {
-                    onDismissContextMenu()
-                }
-        )
+        Box(modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onDismissContextMenu() })
     }
-
-    // ── Text selection menu (new selection) ──────────────────────
     if (selectionState is ReaderSelectionState.New && !showTagInput && !showDefinitionInput && !showColorPickerPopover) {
-        var menuWidthPx by remember { mutableIntStateOf(0) }
-        var menuHeightPx by remember { mutableIntStateOf(0) }
-
-        val anchor = computeAnchor(
-            selectionRectPx = selectionRectPx,
-            menuWidthPx = menuWidthPx,
-            menuHeightPx = menuHeightPx,
-            viewportWidth = viewportWidth,
-            viewportHeight = viewportHeight,
-            gapDp = 8,
-            density = density
-        )
-
-        Box(
-            modifier = modifier
-                .offset { anchor }
-                .onGloballyPositioned { coords ->
-                    menuWidthPx = coords.size.width
-                    menuHeightPx = coords.size.height
-                }
-                .padding(8.dp)
-        ) {
-            val defaultColor = HighlightColor.YELLOW.hex
-            val paletteColors = customHighlightColors
-                ?: HighlightColor.defaultHexList()
-
-            TextSelectionMenu(
-                paletteColors = paletteColors,
-                selectedColor = activeHighlightColor ?: defaultColor,
-                onColorSelected = onColorSelected,
-                onCopy = onCopy,
-                onDictionary = onDictionary,
-                onShare = onShare
-            )
+        AnchoredOverlayBox(selectionRect = selectionRect, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
+            val palette = customHighlightColors ?: HighlightColor.defaultHexList()
+            TextSelectionMenu(paletteColors = palette, selectedColor = activeHighlightColor ?: HighlightColor.YELLOW.hex, onColorSelected = onColorSelected, onCopy = onCopy, onDictionary = onDictionary, onShare = onShare)
         }
     }
-
-    // ── Existing-highlight context menu ──────────────────────────
     if (selectionState is ReaderSelectionState.Existing && !showTagInput && !showDefinitionInput && !showColorPickerPopover) {
-        var menuWidthPx by remember { mutableIntStateOf(0) }
-        var menuHeightPx by remember { mutableIntStateOf(0) }
-
-        val anchor = computeAnchor(
-            selectionRectPx = selectionRectPx,
-            menuWidthPx = menuWidthPx,
-            menuHeightPx = menuHeightPx,
-            viewportWidth = viewportWidth,
-            viewportHeight = viewportHeight,
-            gapDp = 8,
-            density = density
-        )
-
-        Box(
-            modifier = modifier
-                .offset { anchor }
-                .onGloballyPositioned { coords ->
-                    menuWidthPx = coords.size.width
-                    menuHeightPx = coords.size.height
-                }
-                .padding(8.dp)
-        ) {
-            FloatingContextMenu(
-                selectedColor = activeHighlightColor ?: HighlightColor.YELLOW.hex,
-                onColorSelected = onShowColorPickerPopover,
-                onCopy = onCopy,
-                onAddTag = onAddTag,
-                onAnnotate = onAnnotate,
-                onShare = onShare,
-                onDelete = onDelete
-            )
+        AnchoredOverlayBox(selectionRect = selectionRect, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
+            FloatingContextMenu(selectedColor = activeHighlightColor ?: HighlightColor.YELLOW.hex, onColorSelected = onShowColorPickerPopover, onCopy = onCopy, onAddTag = onAddTag, onAnnotate = onAnnotate, onShare = onShare, onDelete = onDelete)
         }
     }
-
-    // ── Anchored tag input ───────────────────────────────────────
     if (showTagInput) {
-        var menuWidthPx by remember { mutableIntStateOf(0) }
-        var menuHeightPx by remember { mutableIntStateOf(0) }
-
-        val anchor = computeAnchor(
-            selectionRectPx = selectionRectPx,
-            menuWidthPx = menuWidthPx,
-            menuHeightPx = menuHeightPx,
-            viewportWidth = viewportWidth,
-            viewportHeight = viewportHeight,
-            gapDp = 8,
-            density = density
-        )
-
-        Box(
-            modifier = modifier
-                .offset { anchor }
-                .onGloballyPositioned { coords ->
-                    menuWidthPx = coords.size.width
-                    menuHeightPx = coords.size.height
-                }
-                .padding(8.dp)
-        ) {
-            AnchoredTagInput(
-                tag = activeTagText,
-                suggestions = tagSuggestions,
-                onTagChange = onTagTextChanged,
-                onSuggestionClick = { tag ->
-                    onTagTextChanged(tag)
-                    onSaveTag()
-                },
-                onSave = onSaveTag,
-                onDismiss = onDismissTagInput
-            )
+        AnchoredOverlayBox(selectionRect = selectionRect, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
+            AnchoredTagInput(tag = activeTagText, suggestions = tagSuggestions, onTagChange = onTagTextChanged, onSuggestionClick = { tag -> onTagTextChanged(tag); onSaveTag() }, onSave = onSaveTag, onDismiss = onDismissTagInput)
         }
     }
-
-    // ── Anchored definition input ────────────────────────────────
     if (showDefinitionInput) {
-        var menuWidthPx by remember { mutableIntStateOf(0) }
-        var menuHeightPx by remember { mutableIntStateOf(0) }
-
-        val anchor = computeAnchor(
-            selectionRectPx = selectionRectPx,
-            menuWidthPx = menuWidthPx,
-            menuHeightPx = menuHeightPx,
-            viewportWidth = viewportWidth,
-            viewportHeight = viewportHeight,
-            gapDp = 8,
-            density = density
-        )
-
-        Box(
-            modifier = modifier
-                .offset { anchor }
-                .onGloballyPositioned { coords ->
-                    menuWidthPx = coords.size.width
-                    menuHeightPx = coords.size.height
-                }
-                .padding(8.dp)
-        ) {
-            AnchoredDefinitionInput(
-                word = selectedText ?: "",
-                definition = activeDefinitionText,
-                onDefinitionChange = onDefinitionTextChanged,
-                onSave = onSaveDefinition,
-                onDismiss = onDismissDefinitionInput
-            )
+        AnchoredOverlayBox(selectionRect = selectionRect, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
+            AnchoredDefinitionInput(word = selectedText ?: "", definition = activeDefinitionText, onDefinitionChange = onDefinitionTextChanged, onSave = onSaveDefinition, onDismiss = onDismissDefinitionInput)
         }
     }
-
-    // ── Colour picker popover ────────────────────────────────────
     if (showColorPickerPopover) {
-        val anchorCenterX = selectionRectPx.left + selectionRectPx.width() / 2
-        val anchorBelowY = selectionRectPx.bottom + with(density) { 12.dp.toPx() }.toInt()
-
-        HighlightColorPickerPopover(
-            customColors = customHighlightColors,
-            onColorSelected = { color ->
-                onColorSelected(color)
-                onDismissColorPickerPopover()
-            },
-            onDismiss = onDismissColorPickerPopover,
-            anchorX = anchorCenterX,
-            anchorY = anchorBelowY,
-            modifier = Modifier.offset {
-                val x = (anchorCenterX - 110.dp.toPx().toInt()).coerceAtLeast(0)
-                IntOffset(x, anchorBelowY)
-            }
-        )
+        val density = LocalDensity.current
+        val anchorCenterX = selectionRect.left + selectionRect.width() / 2
+        val anchorBelowY = selectionRect.bottom + with(density) { 12.dp.toPx() }.toInt()
+        HighlightColorPickerPopover(customColors = customHighlightColors, onColorSelected = { c -> onColorSelected(c); onDismissColorPickerPopover() }, onDismiss = onDismissColorPickerPopover, anchorX = anchorCenterX, anchorY = anchorBelowY, modifier = Modifier.offset { val x = (anchorCenterX - 110.dp.toPx().toInt()).coerceAtLeast(0); IntOffset(x, anchorBelowY) })
     }
 }
-
-/**
- * Computes the [IntOffset] (px) to anchor the floating menu near the
- * selection. Default is above the selection; if there isn't enough room,
- * it flips below. Horizontally clamped so the menu never overflows the
- * right edge and never starts before the left edge.
- */
-private fun computeAnchor(
-    selectionRectPx: Rect,
-    menuWidthPx: Int,
-    menuHeightPx: Int,
-    viewportWidth: Int,
-    viewportHeight: Int,
-    gapDp: Int,
-    density: Density
-): IntOffset {
-    val gapPx = with(density) { gapDp.dp.toPx() }.toInt()
-    val headerReservePx = with(density) { HEADER_RESERVE_DP.dp.toPx() }.toInt()
-    val footerReservePx = with(density) { FOOTER_RESERVE_DP.dp.toPx() }.toInt()
-
-    // ── Vertical: prefer above, flip below if it would tuck under the header,
-    // but also guard the bottom so it never overflows the footer/IME. ──
-    val aboveTop = (selectionRectPx.top - menuHeightPx - gapPx).coerceAtLeast(0)
-    val belowTop = selectionRectPx.bottom + gapPx
-    val placeAbove = selectionRectPx.top - menuHeightPx - gapPx >= headerReservePx
-    val fitsBelow = belowTop + menuHeightPx <= viewportHeight - footerReservePx
-    val y = when {
-        placeAbove -> aboveTop
-        fitsBelow -> belowTop
-        else -> aboveTop // not enough room below either — stay above (clamped)
-    }
-
-    // ── Horizontal: center on selection, clamp to viewport ──
-    val selectionCenterX = selectionRectPx.left + (selectionRectPx.width() / 2)
-    val rawX = selectionCenterX - (menuWidthPx / 2)
-    val maxLeft = (viewportWidth - menuWidthPx).coerceAtLeast(0)
-    val x = rawX.coerceIn(0, maxLeft)
-
-    return IntOffset(x, y)
-}
-
-/** Reserve at the top of the viewport (header + status bar) — don't let
- *  the menu hide behind the chrome. */
-private const val HEADER_RESERVE_DP = 80
-
-/** Reserve at the bottom (progress bar + nav) so the menu never tucks
- *  behind the footer when flipped below. */
-private const val FOOTER_RESERVE_DP = 72
-
-// ── Preview host ──────────────────────────────────────────────────────────
-// Caveat: anchors are px-space against the preview ROOT view
-// (`LocalView.current`), so per-index rect bands keep the five surfaces
-// roughly separated. Cosmetic-only, must never throw.
 
 private enum class SelectionSurface { TEXT_MENU, CONTEXT_MENU, TAG_INPUT, DEFINITION_INPUT, COLOR_PICKER }
 
 @Composable
-private fun SelectionOverlayHost(surface: SelectionSurface, index: Int) {
-    val rect = remember { android.graphics.Rect(50, 100 + index * 600, 250, 150 + index * 600) }
-    val highlight = remember {
-        Highlight(
-            id = "h1",
-            bookId = "b1",
-            cfiRange = "/4/2[ch2]!/4/14",
-            textContent = "Selected sample text",
-            note = null,
-            color = HighlightColor.YELLOW.hex,
-            updatedAtEpochMillis = 0L,
-            deletedAtEpochMillis = null
-        )
-    }
-    Box(
-        modifier = Modifier
-            .size(340.dp, 380.dp)
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        SelectionOverlay(
-            selectionState = when (surface) {
-                SelectionSurface.TEXT_MENU -> ReaderSelectionState.New(rect, "Selected sample text", null)
-                SelectionSurface.CONTEXT_MENU -> ReaderSelectionState.Existing(highlight, rect)
-                else -> ReaderSelectionState.None
-            },
-            showColorPickerPopover = surface == SelectionSurface.COLOR_PICKER,
-            showTagInput = surface == SelectionSurface.TAG_INPUT,
-            showDefinitionInput = surface == SelectionSurface.DEFINITION_INPUT,
-            selectionRect = rect,
-            selectedText = "Selected sample text",
-            highlights = listOf(highlight),
-            activeHighlightColor = HighlightColor.YELLOW.hex,
-            customHighlightColors = HighlightColor.defaultHexList(),
-            onColorSelected = {},
-            onCopy = {},
-            onDismissContextMenu = {},
-            onDelete = {},
-            onAddTag = {},
-            onAnnotate = {},
-            onShare = {},
-            onDictionary = {},
-            onShowColorPickerPopover = {},
-            onDismissColorPickerPopover = {},
-            onTagTextChanged = {},
-            onSaveTag = {},
-            onDismissTagInput = {},
-            onDefinitionTextChanged = {},
-            onSaveDefinition = {},
-            onDismissDefinitionInput = {}
-        )
+private fun SelectionOverlayHost(surface: SelectionSurface) {
+    val rect = remember { Rect(50, 100, 250, 150) }
+    val hl = remember { Highlight(id = "h1", bookId = "b1", cfiRange = "/4/2", textContent = "Selected sample", note = null, color = HighlightColor.YELLOW.hex, updatedAtEpochMillis = 0L, deletedAtEpochMillis = null) }
+    Box(modifier = Modifier.size(340.dp, 380.dp).background(MaterialTheme.colorScheme.background)) {
+        SelectionOverlay(selectionState = when (surface) { SelectionSurface.TEXT_MENU -> ReaderSelectionState.New(rect, "Selected", null); SelectionSurface.CONTEXT_MENU -> ReaderSelectionState.Existing(hl, rect); else -> ReaderSelectionState.None }, showColorPickerPopover = surface == SelectionSurface.COLOR_PICKER, showTagInput = surface == SelectionSurface.TAG_INPUT, showDefinitionInput = surface == SelectionSurface.DEFINITION_INPUT, selectionRect = rect, selectedText = "Selected", highlights = listOf(hl), activeHighlightColor = HighlightColor.YELLOW.hex, customHighlightColors = HighlightColor.defaultHexList(), onColorSelected = {}, onCopy = {}, onDismissContextMenu = {}, onDelete = {}, onAddTag = {}, onAnnotate = {}, onShare = {}, onDictionary = {})
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-private fun SelectionOverlayDarkPreview() {
-    NextPageTheme(darkTheme = true) {
-        Column(
-            modifier = Modifier.verticalScroll(rememberScrollState())
-        ) {
-            SelectionOverlayHost(SelectionSurface.TEXT_MENU, 0)
-            SelectionOverlayHost(SelectionSurface.CONTEXT_MENU, 1)
-            SelectionOverlayHost(SelectionSurface.TAG_INPUT, 2)
-            SelectionOverlayHost(SelectionSurface.DEFINITION_INPUT, 3)
-            SelectionOverlayHost(SelectionSurface.COLOR_PICKER, 4)
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun SelectionOverlayLightPreview() {
-    NextPageTheme(darkTheme = false) {
-        Column(
-            modifier = Modifier.verticalScroll(rememberScrollState())
-        ) {
-            SelectionOverlayHost(SelectionSurface.TEXT_MENU, 0)
-            SelectionOverlayHost(SelectionSurface.CONTEXT_MENU, 1)
-            SelectionOverlayHost(SelectionSurface.TAG_INPUT, 2)
-            SelectionOverlayHost(SelectionSurface.DEFINITION_INPUT, 3)
-            SelectionOverlayHost(SelectionSurface.COLOR_PICKER, 4)
-        }
-    }
+private fun SelectionOverlayPreview() {
+    NextPageTheme(darkTheme = true) { SelectionOverlayHost(SelectionSurface.TEXT_MENU) }
 }

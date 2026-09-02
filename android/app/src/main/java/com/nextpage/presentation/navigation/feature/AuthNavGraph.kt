@@ -7,9 +7,9 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.nextpage.di.AppContainer
 import com.nextpage.presentation.navigation.NextPageDestination
-import com.nextpage.presentation.screen.AuthScreen
-import com.nextpage.presentation.screen.ForgotScreen
-import com.nextpage.presentation.screen.RegisterScreen
+import com.nextpage.presentation.feature.auth.AuthScreen
+import com.nextpage.presentation.feature.auth.ForgotScreen
+import com.nextpage.presentation.feature.auth.RegisterScreen
 import com.nextpage.presentation.viewmodel.AuthViewModel
 
 /**

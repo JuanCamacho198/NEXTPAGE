@@ -9,7 +9,7 @@ import androidx.navigation.compose.composable
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.presentation.navigation.NextPageDestination
-import com.nextpage.presentation.screen.LibraryScreen
+import com.nextpage.presentation.feature.library.LibraryScreen
 import com.nextpage.presentation.viewmodel.LibraryViewModel
 
 /**

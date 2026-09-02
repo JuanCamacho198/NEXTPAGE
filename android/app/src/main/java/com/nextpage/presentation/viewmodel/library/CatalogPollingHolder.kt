@@ -38,35 +38,42 @@ class CatalogPollingHolder(
 
     private suspend fun pollLoop() {
         while (currentCoroutineContext().isActive) {
-            ensureActive()
-            catalogSync.getDownloadableBooks()
-                .onSuccess { books ->
-                    ensureActive()
-                    onFastList(books)
-                    onLoadingDone()
-                    if (books.any { it.fileSize == null }) {
-                        val userId = catalogSync.currentUserId()
-                        if (userId != null) {
-                            coroutineScope {
-                                val deferred = async(ioDispatcher) {
-                                    ensureActive()
-                                    catalogSync.enrichFileSizes(books, userId)
-                                }
-                                val enriched = deferred.await()
-                                ensureActive()
-                                if (enriched != books) {
-                                    onEnriched(enriched)
+            currentCoroutineContext().ensureActive()
+            try {
+                catalogSync.getDownloadableBooks()
+                    .onSuccess { books ->
+                        currentCoroutineContext().ensureActive()
+                        onFastList(books)
+                        onLoadingDone()
+                        if (books.any { it.fileSize == null }) {
+                            val userId = catalogSync.currentUserId()
+                            if (userId != null) {
+                                coroutineScope {
+                                    val deferred = async(ioDispatcher) {
+                                        currentCoroutineContext().ensureActive()
+                                        catalogSync.enrichFileSizes(books, userId)
+                                    }
+                                    val enriched = deferred.await()
+                                    currentCoroutineContext().ensureActive()
+                                    if (enriched != books) {
+                                        onEnriched(enriched)
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                .onFailure {
-                    ensureActive()
-                    onLoadingDone()
-                }
+                    .onFailure {
+                        currentCoroutineContext().ensureActive()
+                        onLoadingDone()
+                    }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                currentCoroutineContext().ensureActive()
+                onLoadingDone()
+            }
             delay(CATALOG_POLL_INTERVAL_MS)
-            ensureActive()
+            currentCoroutineContext().ensureActive()
         }
     }
 

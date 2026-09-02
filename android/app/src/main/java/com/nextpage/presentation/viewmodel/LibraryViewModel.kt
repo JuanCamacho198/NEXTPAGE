@@ -316,6 +316,14 @@ class LibraryViewModel(
         }
     )
 
+    private val mutableDownloadableBooks = MutableStateFlow<List<UserBookRow>>(emptyList())
+    /** Books from other devices available for download. */
+    val downloadableBooks: StateFlow<List<UserBookRow>> = mutableDownloadableBooks.asStateFlow()
+
+    private val mutableDownloadState = MutableStateFlow<Map<String, DownloadState>>(emptyMap())
+    /** Per-book download progress state. */
+    val downloadState: StateFlow<Map<String, DownloadState>> = mutableDownloadState.asStateFlow()
+
     private val catalogPollingHolder = CatalogPollingHolder(
         catalogSync = catalogSync,
         ioDispatcher = Dispatchers.IO,
@@ -555,14 +563,6 @@ class LibraryViewModel(
     fun onMenuShare(book: Book) = bookActionStateHolder.onMenuShare(book)
 
     // ── Cross-device download ────────────────────────────────────────
-
-    private val mutableDownloadableBooks = MutableStateFlow<List<UserBookRow>>(emptyList())
-    /** Books from other devices available for download. */
-    val downloadableBooks: StateFlow<List<UserBookRow>> = mutableDownloadableBooks.asStateFlow()
-
-    private val mutableDownloadState = MutableStateFlow<Map<String, DownloadState>>(emptyMap())
-    /** Per-book download progress state. */
-    val downloadState: StateFlow<Map<String, DownloadState>> = mutableDownloadState.asStateFlow()
 
     /**
      * Downloads a book from another device.

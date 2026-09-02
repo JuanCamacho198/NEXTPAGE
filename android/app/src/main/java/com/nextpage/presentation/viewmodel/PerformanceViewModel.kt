@@ -97,7 +97,11 @@ data class PerformanceUiState(
 )
 
 class PerformanceViewModel(
-    application: Application
+    application: Application,
+    private val fakeDataSource: PerformanceFakeDataSource = FakePerformanceDataSource(
+        random = Random.Default,
+        appContext = application.applicationContext
+    )
 ) : AndroidViewModel(application) {
 
     private val appContext: Context = application.applicationContext
@@ -167,108 +171,15 @@ class PerformanceViewModel(
         }
     }
 
-    // ── Internal generators — fake but with realistic shape ──────────
+    // ── Delegated to fake stub — isolates Random, no real wiring ──────
 
-    private fun generateTimings(): List<PerformanceTiming> {
-        fun timing(key: String, label: String, baseMs: Long): PerformanceTiming {
-            val samples = List(SPARKLINE_SAMPLE_COUNT) { baseMs * (SPARKLINE_BASE_FACTOR + Random.nextFloat() * SPARKLINE_VARIATION_RANGE) }
-            val sorted = samples.sorted()
-            val avg = samples.average().toLong()
-            val p95 = sorted[(sorted.size * P95_FACTOR).toInt().coerceAtMost(sorted.size - 1)].toLong()
-            val max = sorted.maxOrNull()?.toLong() ?: baseMs
-            return PerformanceTiming(
-                key = key,
-                labelFallback = label,
-                avgMs = avg,
-                p95Ms = p95,
-                maxMs = max,
-                samples = samples
-            )
-        }
-        return listOf(
-            timing("cold_start", "Cold start", COLD_START_BASE_MS),
-            timing("open_reader", "Abrir lector", OPEN_READER_BASE_MS),
-            timing("sync_pull", "Sync pull", SYNC_PULL_BASE_MS),
-            timing("save_highlight", "Guardar resaltado", SAVE_HIGHLIGHT_BASE_MS)
-        )
-    }
+    private fun generateTimings(): List<PerformanceTiming> = fakeDataSource.generateTimings()
 
-    private suspend fun loadResources(): PerformanceResources = withContext(Dispatchers.IO) {
-        val dbFile = appContext.getDatabasePath("nextpage.db")
-        val dbBytes = runCatching {
-            var total = 0L
-            if (dbFile.exists()) total += dbFile.length()
-            val wal = File(dbFile.path + "-wal")
-            val shm = File(dbFile.path + "-shm")
-            if (wal.exists()) total += wal.length()
-            if (shm.exists()) total += shm.length()
-            total
-        }.getOrDefault(0L)
+    private suspend fun loadResources(): PerformanceResources = fakeDataSource.loadResources()
 
-        val cacheDir = File(appContext.filesDir, "epub_cache")
-            .let { if (it.exists()) it else File(appContext.cacheDir, "epub_cache") }
-        val cacheBytes = runCatching { folderSize(cacheDir) }.getOrDefault(0L)
-        // Fallback fake if empty (so UI always shows something)
-        val displayDbBytes = if (dbBytes == 0L) FAKE_DB_BYTES else dbBytes
-        val displayCacheBytes = if (cacheBytes == 0L) FAKE_CACHE_BYTES else cacheBytes
-        val highlightsCount = runCatching {
-            // Best-effort: count via DB if accessible, else fake
-            0
-        }.getOrDefault(0).let { if (it == 0) FAKE_HIGHLIGHTS_COUNT else it }
+    private fun loadSyncStatus(): PerformanceSyncStatus = fakeDataSource.loadSyncStatus()
 
-        val memInfo = ActivityManager.MemoryInfo()
-        val am = appContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        am.getMemoryInfo(memInfo)
-        val totalMb = memInfo.totalMem / BYTES_PER_MB_FLOAT
-        val availMb = memInfo.availMem / BYTES_PER_MB_FLOAT
-        val usedMb = (totalMb - availMb).coerceAtLeast(0f)
-
-        PerformanceResources(
-            dbSizeBytes = displayDbBytes,
-            dbSizeLabel = formatBytes(displayDbBytes),
-            highlightsCount = highlightsCount,
-            cacheSizeBytes = displayCacheBytes,
-            cacheSizeLabel = formatBytes(displayCacheBytes),
-            memoryUsageMb = usedMb,
-            memoryTotalMb = totalMb
-        )
-    }
-
-    private fun loadSyncStatus(): PerformanceSyncStatus {
-        // TODO: wire to Supabase Realtime channel state + SyncService.lastSync + outboxDao.count()
-        val outboxFake = Random.nextInt(0, 4)
-        val lastSync = "hace 12 min"
-        val connected = Random.nextBoolean()
-        return PerformanceSyncStatus(
-            realtimeConnected = connected,
-            lastSyncLabel = lastSync,
-            outboxPending = outboxFake
-        )
-    }
-
-    private fun loadDiagnostics(): PerformanceDiagnostics {
-        // TODO: wire to FrameMetrics (FPS), ACRA/Crashlytics, ANR watchdog
-        val fps = FPS_BASE + Random.nextFloat() * FPS_VARIATION
-        val anrs = Random.nextInt(0, 2)
-        val crashes = listOf(
-            PerformanceCrashEntry(
-                timestamp = "2026-08-23 18:42",
-                name = "NullPointerException · ReaderViewModel",
-                stackSnippet = "at ReaderViewModel.loadBook(ReaderViewModel.kt:142)"
-            ),
-            PerformanceCrashEntry(
-                timestamp = "2026-08-22 09:11",
-                name = "SQLiteConstraintException · HighlightDao",
-                stackSnippet = "at HighlightDao.insert(HighlightDao.kt:31)"
-            )
-        ).take(if (anrs == 0) 2 else 1)
-        return PerformanceDiagnostics(
-            fpsScroll = fps.coerceIn(0f, FPS_MAX),
-            fpsLabel = String.format(Locale.US, "%.1f fps", fps.coerceIn(0f, FPS_MAX)),
-            anrCount = anrs,
-            crashes = crashes
-        )
-    }
+    private fun loadDiagnostics(): PerformanceDiagnostics = fakeDataSource.loadDiagnostics()
 
     private fun clearEpubCacheInternal(): Boolean = runCatching {
         val dirs = listOf(

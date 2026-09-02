@@ -8,7 +8,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.navigation.rememberImportLauncher
-import com.nextpage.presentation.screen.HomeScreen
+import com.nextpage.presentation.feature.home.HomeScreen
 import com.nextpage.presentation.viewmodel.HomeViewModel
 import com.nextpage.presentation.viewmodel.LibraryViewModel
 

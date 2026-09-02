@@ -2,7 +2,9 @@ package com.nextpage.di
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.nextpage.BuildConfig
 import io.ktor.client.HttpClient
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -54,9 +56,10 @@ class AppContainerInitTimingTest {
         val container = AppContainer(appContext())
         // Must not throw even when Supabase keys are blank; must not trigger SupabaseClientProvider.client.
         val result = container.isAuthConfigError
-        // In test builds Supabase keys are blank, so should be true.
-        // The assertion is that the call succeeded without requiring a client.
-        assertTrue(result)
+        // Pure BuildConfig blank check delegated via facade — must not init Supabase client.
+        // Expected value mirrors AppContainer.isAuthConfigError logic; test passes regardless of local.properties.
+        val expected = BuildConfig.SUPABASE_URL.isBlank() || BuildConfig.SUPABASE_ANON_KEY.isBlank()
+        assertEquals(expected, result)
     }
 
     @Test

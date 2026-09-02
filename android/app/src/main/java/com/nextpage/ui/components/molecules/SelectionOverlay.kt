@@ -85,7 +85,7 @@ fun SelectionOverlay(
     }
     if (showColorPickerPopover) {
         val density = LocalDensity.current
-        val anchorCenterX = selectionRect.left + selectionRect.width() / 2
+        val anchorCenterX = selectionRect.left + (selectionRect.right - selectionRect.left) / 2
         val anchorBelowY = selectionRect.bottom + with(density) { 12.dp.toPx() }.toInt()
         HighlightColorPickerPopover(customColors = customHighlightColors, onColorSelected = { c -> onColorSelected(c); onDismissColorPickerPopover() }, onDismiss = onDismissColorPickerPopover, anchorX = anchorCenterX, anchorY = anchorBelowY, modifier = Modifier.offset { val x = (anchorCenterX - 110.dp.toPx().toInt()).coerceAtLeast(0); IntOffset(x, anchorBelowY) })
     }

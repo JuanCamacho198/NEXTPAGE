@@ -52,7 +52,7 @@ fun computeAnchor(
         else -> aboveTop
     }
 
-    val selectionCenterX = selectionRectPx.left + (selectionRectPx.width() / 2)
+    val selectionCenterX = selectionRectPx.left + ((selectionRectPx.right - selectionRectPx.left) / 2)
     val rawX = selectionCenterX - (menuWidthPx / 2)
     val maxLeft = (viewportWidth - menuWidthPx).coerceAtLeast(0)
     val x = rawX.coerceIn(0, maxLeft)

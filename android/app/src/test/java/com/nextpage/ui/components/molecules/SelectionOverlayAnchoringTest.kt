@@ -13,7 +13,7 @@ class SelectionOverlayAnchoringTest {
 
     @Test
     fun `computeAnchor prefers above when enough header reserve`() {
-        val rect = Rect(100, 300, 300, 350) // top 300px, height 50
+        val rect = Rect().apply { left = 100; top = 300; right = 300; bottom = 350 }
         val anchor = computeAnchor(rect, menuWidthPx = 200, menuHeightPx = 100, viewportWidth = 1080, viewportHeight = 1920, gapDp = 8, density = density)
         // gap 16px, header 160px, aboveTop = 300-100-16=184, placeAbove true (184>=160)
         assertEquals(IntOffset(0, 184).y, anchor.y)
@@ -23,7 +23,7 @@ class SelectionOverlayAnchoringTest {
 
     @Test
     fun `computeAnchor flips below when near header`() {
-        val rect = Rect(100, 100, 300, 150) // top 100px
+        val rect = Rect().apply { left = 100; top = 100; right = 300; bottom = 150 }
         val anchor = computeAnchor(rect, 200, 100, 1080, 1920, 8, density)
         // placeAbove: 100-100-16=-16 <160 => false, belowTop=150+16=166, fitsBelow 166+100=266 <=1920-144=1776 true
         assertEquals(166, anchor.y)
@@ -31,7 +31,7 @@ class SelectionOverlayAnchoringTest {
 
     @Test
     fun `computeAnchor clamps to right edge`() {
-        val rect = Rect(900, 300, 1000, 350) // near right edge
+        val rect = Rect().apply { left = 900; top = 300; right = 1000; bottom = 350 }
         val anchor = computeAnchor(rect, 300, 100, 1080, 1920, 8, density)
         // center 950, raw 800, maxLeft 780 => clamp 780
         assertEquals(780, anchor.x)
@@ -39,7 +39,7 @@ class SelectionOverlayAnchoringTest {
 
     @Test
     fun `computeAnchor clamps to left edge`() {
-        val rect = Rect(0, 300, 100, 350)
+        val rect = Rect().apply { left = 0; top = 300; right = 100; bottom = 350 }
         val anchor = computeAnchor(rect, 300, 100, 1080, 1920, 8, density)
         // center 50, raw -100 => clamp 0
         assertEquals(0, anchor.x)
@@ -47,7 +47,7 @@ class SelectionOverlayAnchoringTest {
 
     @Test
     fun `computeAnchor stays above when no room below either`() {
-        val rect = Rect(100, 300, 300, 350)
+        val rect = Rect().apply { left = 100; top = 300; right = 300; bottom = 350 }
         // tiny viewport, footer reserve 144px, no fit below
         val anchor = computeAnchor(rect, 200, 1800, 1080, 500, 8, density)
         // placeAbove false? 300-1800-16=-1516 <160 false, fitsBelow 350+16+1800=2166 >500-144 false => fallback above clamp 0

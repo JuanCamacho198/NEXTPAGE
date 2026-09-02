@@ -1,4 +1,11 @@
-package com.nextpage.ui.components.molecules
+package com.nextpage.presentation.feature.highlights
+
+/**
+ * Local color filter (String? via HighlightColor.name) is intentionally kept as
+ * local `String?` state rather than the ViewModel's `Set<String>` (hex). This
+ * dualism is documented: sheet filters by HighlightColor.name (enum name) while
+ * the Highlights screen filters by hex Set. Do not lift sheet state into VM in PR #8.
+ */
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background

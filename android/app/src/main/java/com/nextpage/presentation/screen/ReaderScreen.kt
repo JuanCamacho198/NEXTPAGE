@@ -65,6 +65,7 @@ import com.nextpage.ui.components.molecules.SelectionOverlay
 import com.nextpage.ui.components.molecules.SleepTimerOverlay
 import com.nextpage.ui.components.molecules.SleepTimerPreset
 import com.nextpage.ui.components.molecules.SleepTimerSheet
+import com.nextpage.presentation.screen.readium.buildNavigatorConfig
 import com.nextpage.ui.components.molecules.SplitSettingsSheet
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow

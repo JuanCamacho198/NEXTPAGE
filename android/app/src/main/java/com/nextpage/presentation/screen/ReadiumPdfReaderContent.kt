@@ -25,6 +25,9 @@ import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.commit
 import com.nextpage.debug.DebugLog
+import com.nextpage.presentation.screen.readium.findWebView
+import com.nextpage.presentation.screen.readium.highlightsToPdfDecorations
+import com.nextpage.presentation.screen.readium.installPdfActionModeCallback
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.presentation.viewmodel.CfiMigrator
@@ -54,12 +57,7 @@ private const val TAG = "ReadiumPdfReaderContent"
  * Returning `false` from [onCreateActionMode] prevents the ActionMode from
  * being created at all, so only our custom [SelectionOverlay] is shown.
  */
-private object SuppressPdfSelectionActionMode : ActionMode.Callback {
-    override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean = false
-    override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
-    override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean = false
-    override fun onDestroyActionMode(mode: ActionMode) = Unit
-}
+// SuppressPdfSelectionActionMode moved to readium/ReadiumViewUtils.kt
 
 /**
  * Readium-powered PDF reader content.
@@ -272,53 +270,6 @@ fun ReadiumPdfReaderContent(
     }
 }
 
-private const val HIGHLIGHT_OPAQUE_MASK = 0x00FFFFFF
-private const val HIGHLIGHT_ALPHA_HEX = 0x66
-private const val HIGHLIGHT_ALPHA_SHIFT = 24
-
-// ── Utilities ────────────────────────────────────────────────────────
-
-/**
- * Maps a [Highlight] list to a [Decoration] list for Readium's
- * [DecorableNavigator.applyDecorations].
- */
-private fun highlightsToPdfDecorations(highlights: List<Highlight>): List<Decoration> {
-    return highlights.sortedBy { h ->
-        h.locatorJson?.let { CfiMigrator.jsonToLocator(it)?.locations?.progression } ?: 0.0
-    }.mapNotNull { h ->
-        val json = h.locatorJson ?: return@mapNotNull null
-        val locator = CfiMigrator.jsonToLocator(json) ?: return@mapNotNull null
-        val opaque = try {
-            android.graphics.Color.parseColor(h.color)
-        } catch (_: Exception) {
-            android.graphics.Color.YELLOW
-        }
-        val tint = (opaque and HIGHLIGHT_OPAQUE_MASK) or (HIGHLIGHT_ALPHA_HEX shl HIGHLIGHT_ALPHA_SHIFT)
-        Decoration(
-            id = h.id,
-            locator = locator,
-            style = Decoration.Style.Highlight(tint = tint, isActive = false)
-        )
-    }
-}
-
-/**
- * Recursively searches [root] for a [WebView].
- */
-private fun View.findWebView(): WebView? {
-    if (this is WebView) return this
-    if (this is ViewGroup) {
-        for (i in 0 until childCount) {
-            getChildAt(i)?.findWebView()?.let { return it }
-        }
-    }
-    return null
-}
-
-/**
- * Evaluate `window.getSelection().toString()` on a WebView.
- * Wraps the callback-based `evaluateJavascript` into a suspend function for polling loop.
- */
 private suspend fun WebView.evalSelectionJs(): String? = suspendCancellableCoroutine { cont ->
     try {
         evaluateJavascript("(function(){var s=window.getSelection();return s?s.toString():'';})()") { result ->
@@ -331,43 +282,3 @@ private suspend fun WebView.evalSelectionJs(): String? = suspendCancellableCorou
     }
 }
 
-/**
- * Installs [SuppressPdfSelectionActionMode] on the first [WebView] found under
- * [root]. For the current Pdfium-based PDF navigator this is normally a no-op
- * because no WebView exists in the hierarchy, but it protects against future
- * engine changes.
- */
-private fun installPdfActionModeCallback(root: View) {
-    val webView = root.findWebView() ?: run {
-        Log.d("ReadiumPdfReaderContent", "No WebView in PDF navigator — ActionMode not applicable")
-        DebugLog.info("ActionMode", "WebView not found in ${root.javaClass.simpleName}")
-        return
-    }
-    installActionModeCallbackOnWebView(webView)
-}
-
-private fun installActionModeCallbackOnWebView(webView: WebView) {
-    try {
-        val method = try {
-            // First try the actual runtime class (handles R2WebView overrides)
-            webView.javaClass.getMethod(
-                "setCustomSelectionActionModeCallback",
-                ActionMode.Callback::class.java
-            )
-        } catch (e: NoSuchMethodException) {
-            // Fallback to the public WebView class
-            WebView::class.java.getMethod(
-                "setCustomSelectionActionModeCallback",
-                ActionMode.Callback::class.java
-            )
-        }
-        method.invoke(webView, SuppressPdfSelectionActionMode)
-        runCatching { webView.isLongClickable = false }
-        runCatching { webView.setOnLongClickListener { true } }
-        Log.d("ReadiumReaderContent", "Installed custom selection ActionMode callback on ${webView.javaClass.simpleName}")
-        DebugLog.success("ActionMode", "Callback installed on ${webView.javaClass.simpleName}")
-    } catch (e: Throwable) {
-        Log.e("ReadiumReaderContent", "Failed to install ActionMode callback", e)
-        DebugLog.error("ActionMode", "Failed to install callback: ${e::class.java.simpleName}: ${e.message}")
-    }
-}

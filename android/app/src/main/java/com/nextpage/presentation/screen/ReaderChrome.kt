@@ -12,9 +12,11 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -38,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -311,6 +314,49 @@ fun HeaderActionButton(
                 modifier = Modifier.size(18.dp)
             )
         }
+    }
+}
+
+/**
+ * Edge-tap zones (top + bottom 5% of the parent) that re-show the reader
+ * chrome (header + footer). Tapping either edge calls [onShowChrome],
+ * which the screen wires to set `controlsVisible = true` and reset the
+ * auto-hide timer.
+ *
+ * The middle 90% of the parent has NO overlay, so the WebView or PDF
+ * fragment receives touches natively — long-press triggers text
+ * selection, drag scrolls the page, and link taps work without
+ * interference from the chrome toggle. This replaces the previous
+ * full-screen tap-to-toggle, which conflicted with text selection.
+ *
+ * Shared by ReadiumReaderContent (EPUB) and ReadiumPdfReaderContent
+ * (PDF) so both readers behave consistently.
+ */
+@Composable
+internal fun ChromeEdgeTapZones(
+    onShowChrome: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val edgeHeight = maxHeight * 0.05f
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(edgeHeight)
+                .align(Alignment.TopCenter)
+                .pointerInput(onShowChrome) {
+                    detectTapGestures(onTap = { onShowChrome() })
+                }
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(edgeHeight)
+                .align(Alignment.BottomCenter)
+                .pointerInput(onShowChrome) {
+                    detectTapGestures(onTap = { onShowChrome() })
+                }
+        )
     }
 }
 

@@ -1,0 +1,164 @@
+package com.nextpage.presentation.screen.reader
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import com.nextpage.R
+import com.nextpage.presentation.screen.ReadiumPdfReaderContent
+import com.nextpage.presentation.screen.ReadiumReaderContent
+import com.nextpage.presentation.screen.readium.buildNavigatorConfig
+import com.nextpage.ui.components.molecules.SelectionOverlay
+import com.nextpage.presentation.viewmodel.ReaderUiState
+import com.nextpage.presentation.viewmodel.ReaderViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+
+
+@Composable
+fun ReaderScreenContentHost(
+    uiState: ReaderUiState,
+    viewModel: ReaderViewModel,
+    selectionCallbacks: ReaderSelectionCallbacks,
+    onShowChrome: () -> Unit,
+    inspectHighlightsHtmlTrigger: MutableSharedFlow<Unit>,
+    logWebViewTreeTrigger: MutableSharedFlow<Unit>,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val currentOnShowChrome by rememberUpdatedState(onShowChrome)
+
+    val error = uiState.error
+    val readiumPublication = uiState.readiumPublication
+
+    @Composable
+    fun SharedSelectionOverlay() {
+        SelectionOverlay(
+            selectionState = uiState.selectionState,
+            showColorPickerPopover = uiState.showColorPickerPopover,
+            showTagInput = uiState.showTagInput,
+            tagSuggestions = uiState.tagSuggestions,
+            activeTagText = uiState.activeTagText,
+            showDefinitionInput = uiState.showDefinitionInput,
+            activeDefinitionText = uiState.activeDefinitionText,
+            selectionRect = uiState.selectionRect,
+            selectedText = uiState.selectedText,
+            highlights = uiState.highlights,
+            activeHighlightColor = selectionCallbacks.activeOverlayHighlightColor.value,
+            customHighlightColors = uiState.readerSettings.customHighlightColors,
+            onColorSelected = selectionCallbacks.onColorSelected,
+            onCopy = selectionCallbacks.onCopy,
+            onDismissContextMenu = selectionCallbacks.onDismiss,
+            onDelete = selectionCallbacks.onDelete,
+            onAddTag = selectionCallbacks.onAddTag,
+            onAnnotate = selectionCallbacks.onAnnotate,
+            onShare = selectionCallbacks.onShare,
+            onDictionary = selectionCallbacks.onDictionary,
+            onShowColorPickerPopover = selectionCallbacks.onShowColorPicker,
+            onDismissColorPickerPopover = selectionCallbacks.onDismissColorPicker,
+            onTagTextChanged = selectionCallbacks.onTagTextChanged,
+            onSaveTag = selectionCallbacks.onSaveTag,
+            onDismissTagInput = selectionCallbacks.onDismissTag,
+            onDefinitionTextChanged = selectionCallbacks.onDefinitionTextChanged,
+            onSaveDefinition = selectionCallbacks.onSaveDefinition,
+            onDismissDefinitionInput = selectionCallbacks.onDismissDefinition
+        )
+    }
+
+    when {
+        uiState.isLoading -> {
+            LoadingContent(loadTimeMs = uiState.loadTimeMs, modifier = modifier)
+        }
+        error != null -> {
+            ErrorContent(error = error, onRetry = onRetry, modifier = modifier)
+        }
+        uiState.bookFormat == "pdf" && readiumPublication != null -> {
+            Box(modifier = modifier.fillMaxSize()) {
+                ReadiumPdfReaderContent(
+                    publication = readiumPublication,
+                    highlights = uiState.highlights,
+                    readerSettings = uiState.readerSettings,
+                    viewModel = viewModel,
+                    onShowChrome = { currentOnShowChrome() },
+                    modifier = Modifier.fillMaxSize()
+                )
+                SharedSelectionOverlay()
+            }
+        }
+        uiState.chapters.isNotEmpty() && readiumPublication != null -> {
+            Box(modifier = modifier.fillMaxSize()) {
+                ReadiumReaderContent(
+                    publication = readiumPublication,
+                    navigatorConfig = buildNavigatorConfig(uiState.readerSettings),
+                    highlights = uiState.highlights,
+                    readerSettings = uiState.readerSettings,
+                    viewModel = viewModel,
+                    initialLocator = uiState.readiumLocator,
+                    inspectHighlightsHtmlTrigger = inspectHighlightsHtmlTrigger,
+                    logWebViewTreeTrigger = logWebViewTreeTrigger,
+                    onShowChrome = { currentOnShowChrome() },
+                    modifier = Modifier.fillMaxSize()
+                )
+                SharedSelectionOverlay()
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadingContent(
+    loadTimeMs: Long?,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        CircularProgressIndicator(color = Color(0xFFADC6FF))
+        if (loadTimeMs != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.reader_loaded_in, loadTimeMs),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF718096)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ErrorContent(
+    error: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = error,
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color(0xFFEF4444)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text(text = stringResource(R.string.reader_retry))
+        }
+    }
+}

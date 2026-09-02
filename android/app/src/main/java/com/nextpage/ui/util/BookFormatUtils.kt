@@ -37,8 +37,10 @@ fun languageDisplayName(code: String?, fallback: String = "—"): String {
 /**
  * Extracts the year from an ISO `yyyy-MM-dd` date; [fallback] when unset or non-numeric.
  */
-fun publishedYear(iso: String?, fallback: String = "—"): String =
-    iso?.take(4)?.takeIf { it.all(Char::isDigit) } ?: fallback
+fun publishedYear(iso: String?, fallback: String = "—"): String {
+    if (iso.isNullOrBlank()) return fallback
+    return iso.take(4).takeIf { it.length == 4 && it.all(Char::isDigit) } ?: fallback
+}
 
 /**
  * Pages display text: PDF uses real count, EPUB uses estimated prefix `≈`, otherwise [fallback].

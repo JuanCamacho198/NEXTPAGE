@@ -29,7 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.AuthSession
-import com.nextpage.presentation.viewmodel.HighlightsSyncState
+import com.nextpage.presentation.viewmodel.highlights.HighlightsSyncState
 import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.icons.NextPageIcons
 

@@ -75,11 +75,11 @@ fun HighlightsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun HighlightsScreenContent(
-    uiState: com.nextpage.presentation.viewmodel.HighlightsUiState,
+    uiState: HighlightsUiState,
     contentPadding: PaddingValues,
     authSession: AuthSession? = null,
     onOpenAccount: () -> Unit = {},
-    syncState: com.nextpage.presentation.viewmodel.HighlightsSyncState = com.nextpage.presentation.viewmodel.HighlightsSyncState.Idle,
+    syncState: com.nextpage.presentation.viewmodel.highlights.HighlightsSyncState = com.nextpage.presentation.viewmodel.highlights.HighlightsSyncState.Idle,
     onSyncRefresh: () -> Unit = {},
     onBookFilterChanged: (String?) -> Unit,
     onTagFilterChanged: (String?) -> Unit,
@@ -145,7 +145,7 @@ internal fun HighlightsScreenContent(
         )
     }
 
-    val isSyncing = syncState is com.nextpage.presentation.viewmodel.HighlightsSyncState.Syncing
+    val isSyncing = syncState is com.nextpage.presentation.viewmodel.highlights.HighlightsSyncState.Syncing
     val pullState = rememberPullToRefreshState()
 
     Box(

@@ -12,8 +12,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.nextpage.di.AppContainer
 import com.nextpage.presentation.navigation.NextPageDestination
-import com.nextpage.presentation.screen.BookDetailScreen
-import com.nextpage.presentation.screen.EditBookMetadataScreen
+import com.nextpage.presentation.feature.bookdetail.BookDetailScreen
+import com.nextpage.presentation.feature.editmetadata.EditBookMetadataScreen
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 
 /**

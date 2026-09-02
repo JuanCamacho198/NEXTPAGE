@@ -24,6 +24,7 @@ import com.nextpage.presentation.viewmodel.library.BookActionStateHolder
 import com.nextpage.presentation.viewmodel.library.BookFilterStateHolder
 import com.nextpage.presentation.viewmodel.library.BookImportState
 import com.nextpage.presentation.viewmodel.library.BookImportStateHolder
+import com.nextpage.presentation.viewmodel.library.CatalogPollingHolder
 import com.nextpage.presentation.viewmodel.library.isImporting
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -315,6 +316,22 @@ class LibraryViewModel(
         }
     )
 
+    private val catalogPollingHolder = CatalogPollingHolder(
+        catalogSync = catalogSync,
+        ioDispatcher = Dispatchers.IO,
+        onFastList = { books ->
+            mutableDownloadableBooks.value = books
+            mutableUiState.update { it.copy(downloadableBooks = books, isDownloadableLoading = false) }
+        },
+        onEnriched = { enriched ->
+            mutableDownloadableBooks.value = enriched
+            mutableUiState.update { it.copy(downloadableBooks = enriched) }
+        },
+        onLoadingDone = {
+            mutableUiState.update { it.copy(isDownloadableLoading = false) }
+        }
+    )
+
     init {
         // Reconciliation on start (max updatedAt wins) so Home Continuar and Library show same %
         progressReconciler?.let { reconciler ->
@@ -393,47 +410,13 @@ class LibraryViewModel(
             }
         }
 
-        // ── Cross-device downloadable books observation ──
-        viewModelScope.launch(mainDispatcher) {
-            // Re-fetch downloadable books periodically (on each session poll cycle).
-            // A more reactive approach would listen to Supabase Realtime changes.
-            // `isDownloadableLoading` starts `true` so the UI can render a loading
-            // placeholder while the first fetch is in flight; it is cleared once the
-            // first poll completes (success or failure).
-            while (true) {
-                catalogSync.getDownloadableBooks()
-                    .onSuccess { books ->
-                        // 1. Emit the fast catalog (no Drive calls) so books render
-                        //    immediately and the loading state clears right away.
-                        mutableDownloadableBooks.value = books
-                        mutableUiState.update {
-                            it.copy(downloadableBooks = books, isDownloadableLoading = false)
-                        }
-                        // 2. Resolve Drive file sizes in a parallel, non-blocking pass
-                        //    and re-emit when it completes — sizes pop in ~1s instead
-                        //    of waiting for the next poll. Best-effort: on failure the
-                        //    fast list from step 1 stays visible.
-                        if (books.any { it.fileSize == null }) {
-                            val userId = catalogSync.currentUserId()
-                            if (userId != null) {
-                                viewModelScope.launch(Dispatchers.IO) {
-                                    val enriched = catalogSync.enrichFileSizes(books, userId)
-                                    if (enriched != books) {
-                                        mutableDownloadableBooks.value = enriched
-                                        mutableUiState.update {
-                                            it.copy(downloadableBooks = enriched)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .onFailure {
-                        mutableUiState.update { it.copy(isDownloadableLoading = false) }
-                    }
-                kotlinx.coroutines.delay(CATALOG_POLL_INTERVAL_MS) // poll every 30s
-            }
-        }
+        // ── Cross-device downloadable books — delegated to holder (structured concurrency) ──
+        catalogPollingHolder.start(viewModelScope)
+    }
+
+    override fun onCleared() {
+        catalogPollingHolder.stop()
+        super.onCleared()
     }
 
     // ── Delegation: Filter / Sort / Search ─────────────────────────────

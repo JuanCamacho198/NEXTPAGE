@@ -18,6 +18,7 @@ import com.nextpage.testutil.MainDispatcherRule
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,9 +74,7 @@ class ReaderViewModelSelectionTest {
     }
 
     @After
-    fun unmockAndroidApi() {
-        // Not strictly needed but keeps test isolation clean
-    }
+    fun unmockAndroidApi() = unmockkAll()
 
     // ── Selection state transitions ──────────────────────────────────
 

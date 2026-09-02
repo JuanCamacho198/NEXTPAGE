@@ -3,10 +3,12 @@ package com.nextpage.debug
 import android.util.Log
 import io.mockk.every
 import io.mockk.mockkStatic
+import io.mockk.unmockkAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -26,6 +28,10 @@ class DebugLogWiringTest {
             mockkStatic(Log::class)
             every { Log.println(any(), any(), any()) } returns 0
         }
+
+        @AfterClass
+        @JvmStatic
+        fun unmockAndroidLog() = unmockkAll()
     }
 
     @Before
@@ -39,6 +45,11 @@ class DebugLogWiringTest {
     @After
     fun tearDown() {
         DebugLog.resetForTest()
+        unmockkAll()
+        // Re-mock Log for next test — @BeforeClass runs only once per class,
+        // but unmockkAll clears it after each test.
+        mockkStatic(Log::class)
+        every { Log.println(any(), any(), any()) } returns 0
     }
 
     @Test

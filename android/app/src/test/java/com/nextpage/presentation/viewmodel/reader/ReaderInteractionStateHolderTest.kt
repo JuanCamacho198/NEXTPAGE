@@ -16,6 +16,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.slot
+import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -76,9 +77,7 @@ class ReaderInteractionStateHolderTest {
     }
 
     @After
-    fun tearDown() {
-        // MockK unmocks automatically
-    }
+    fun tearDown() = unmockkAll()
 
     // ── Selection ─────────────────────────────────────────────────
 

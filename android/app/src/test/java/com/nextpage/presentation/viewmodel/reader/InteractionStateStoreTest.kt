@@ -6,11 +6,13 @@ import com.nextpage.presentation.viewmodel.reader.interaction.SelectionManager
 import com.nextpage.testutil.MainDispatcherRule
 import io.mockk.every
 import io.mockk.mockkStatic
+import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -28,6 +30,9 @@ class InteractionStateStoreTest {
         mockkStatic(SystemClock::class)
         every { SystemClock.elapsedRealtime() } returns 1000L
     }
+
+    @After
+    fun tearDown() = unmockkAll()
 
     @Test
     fun `clearSelection atomically resets 8 fields and emits event`() = runTest {

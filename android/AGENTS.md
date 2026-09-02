@@ -209,6 +209,36 @@ Para inspeccionar nodos del diseño desde el MCP de Pencil:
 - **KSP** for Room annotation processing
 - **Compose compiler** version matched to Kotlin version
 - Custom tasks in `app/build.gradle.kts` for verification
+
+## Gradle Daemon & Verify Hang
+
+Root cause: metaspace `512m` + `kotlin.compiler.execution.strategy=in-process` + `org.gradle.vfs.watch=true` (default) + `pwsh` output buffering + MockK `mockkStatic` leaks. The Kotlin compiler running in-process exhausts metaspace when combined with VFS watching and MockK static mocks that are never cleared, causing hangs observed during `testDebugUnitTest` and verify tasks (e.g. `verifyAuthScreenNoHardcodedStrings`).
+
+Properties (in `android/gradle.properties`):
+
+```properties
+org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=768m -XX:+HeapDumpOnOutOfMemoryError
+org.gradle.vfs.watch=false
+kotlin.compiler.execution.strategy=daemon
+```
+
+Test teardown rule: every `mockkStatic` must have a matching `@After fun tearDown() = unmockkAll()` (or `@AfterClass` for `@BeforeClass` mocks). Import `io.mockk.unmockkAll` where needed. `MainDispatcherRule` must expose `val dispatcher` and cancel it in `finished()` via `dispatcher.cancel()` + `Dispatchers.resetMain()`.
+
+Verify invocation (avoid pwsh deadlock — use `cmd` + `--no-daemon` + explicit VFS flag):
+
+```powershell
+cmd /c gradlew.bat --no-daemon -Dorg.gradle.vfs.watch=false testDebugUnitTest
+```
+
+Add timeout `10m` for verify tasks. Do not run gradle via `pwsh` without `cmd /c` wrapper for long-running verify.
+
+How to recover:
+
+```powershell
+.\gradlew.bat --stop
+# if still hung: kill java.exe via Task Manager or `taskkill /F /IM java.exe`
+```
+
 ## E2E (Maestro)
 
 Suite E2E en `.maestro/` con runners en `scripts/e2e/`. Precondiciones del dispositivo:

@@ -12,6 +12,7 @@ import com.nextpage.testutil.MainDispatcherRule
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.unmockkAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -63,9 +64,7 @@ class SelectionCoordinatorTest {
     }
 
     @After
-    fun tearDown() {
-        // MockK unmocks automatically at the end of the test
-    }
+    fun tearDown() = unmockkAll()
 
     @Test
     fun `Idle transitions to NewSelection on new text selection`() = runTest {

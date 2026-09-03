@@ -25,12 +25,14 @@ import com.nextpage.presentation.screen.readium.buildNavigatorConfig
 import com.nextpage.ui.components.molecules.SelectionOverlay
 import com.nextpage.presentation.viewmodel.ReaderUiState
 import com.nextpage.presentation.viewmodel.ReaderViewModel
+import com.nextpage.presentation.viewmodel.reader.SettingsUiState
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 
 @Composable
 fun ReaderScreenContentHost(
     uiState: ReaderUiState,
+    settingsUiState: SettingsUiState,
     viewModel: ReaderViewModel,
     selectionCallbacks: ReaderSelectionCallbacks,
     onShowChrome: () -> Unit,
@@ -58,7 +60,7 @@ fun ReaderScreenContentHost(
             selectedText = uiState.selectedText,
             highlights = uiState.highlights,
             activeHighlightColor = selectionCallbacks.activeOverlayHighlightColor.value,
-            customHighlightColors = uiState.readerSettings.customHighlightColors,
+            customHighlightColors = settingsUiState.readerSettings.customHighlightColors,
             onColorSelected = selectionCallbacks.onColorSelected,
             onCopy = selectionCallbacks.onCopy,
             onDismissContextMenu = selectionCallbacks.onDismiss,
@@ -90,7 +92,7 @@ fun ReaderScreenContentHost(
                 ReadiumPdfReaderContent(
                     publication = readiumPublication,
                     highlights = uiState.highlights,
-                    readerSettings = uiState.readerSettings,
+                    readerSettings = settingsUiState.readerSettings,
                     viewModel = viewModel,
                     onShowChrome = { currentOnShowChrome() },
                     modifier = Modifier.fillMaxSize()
@@ -102,9 +104,9 @@ fun ReaderScreenContentHost(
             Box(modifier = modifier.fillMaxSize()) {
                 ReadiumReaderContent(
                     publication = readiumPublication,
-                    navigatorConfig = buildNavigatorConfig(uiState.readerSettings),
+                    navigatorConfig = buildNavigatorConfig(settingsUiState.readerSettings),
                     highlights = uiState.highlights,
-                    readerSettings = uiState.readerSettings,
+                    readerSettings = settingsUiState.readerSettings,
                     viewModel = viewModel,
                     initialLocator = uiState.readiumLocator,
                     inspectHighlightsHtmlTrigger = inspectHighlightsHtmlTrigger,

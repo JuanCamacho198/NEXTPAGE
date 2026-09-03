@@ -13,6 +13,13 @@ data class ReaderSettingsState(
     val showSplitSettings: Boolean = false
 )
 
+/**
+ * Settings slice of the reader facade split (SDD reader-facade-split, slice 2).
+ * Single owner: only [ReaderSettingsManager] holds the MutableStateFlow and
+ * mutating funs; the VM re-exports it as `settingsUiState`.
+ */
+typealias SettingsUiState = ReaderSettingsState
+
 class ReaderSettingsManager(
     private val readerPreferences: ReaderPreferences?
 ) {

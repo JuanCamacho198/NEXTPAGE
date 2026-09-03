@@ -9,6 +9,13 @@ data class FullscreenState(
     val isFullscreen: Boolean = false
 )
 
+/**
+ * Chrome slice of the reader facade split (SDD reader-facade-split, slice 2).
+ * Single owner: only [FullscreenManager] holds the MutableStateFlow and
+ * mutating funs; the VM re-exports it as `chromeUiState`.
+ */
+typealias ChromeUiState = FullscreenState
+
 class FullscreenManager {
     private val _state = MutableStateFlow(FullscreenState())
     val state: StateFlow<FullscreenState> = _state.asStateFlow()

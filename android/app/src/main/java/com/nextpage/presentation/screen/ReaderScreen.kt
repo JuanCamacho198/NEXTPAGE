@@ -60,6 +60,8 @@ fun ReaderScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchUiState by viewModel.searchUiState.collectAsStateWithLifecycle()
+    val chromeUiState by viewModel.chromeUiState.collectAsStateWithLifecycle()
+    val settingsUiState by viewModel.settingsUiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val view = LocalView.current
 
@@ -71,7 +73,7 @@ fun ReaderScreen(
     var lastBookmarkTrigger by remember { mutableLongStateOf(0L) }
     var bookmarkRibbonVisible by remember { mutableStateOf(false) }
 
-    var controlsVisible by remember(uiState.isFullscreen) { mutableStateOf(true) }
+    var controlsVisible by remember(chromeUiState.isFullscreen) { mutableStateOf(true) }
     var lastInteractionAt by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
 
     val isSelectionActive = uiState.selectionState != com.nextpage.presentation.viewmodel.reader.ReaderSelectionState.None ||
@@ -116,7 +118,7 @@ fun ReaderScreen(
     }
 
     ReaderScreenEffects(
-        isFullscreen = uiState.isFullscreen,
+        isFullscreen = chromeUiState.isFullscreen,
         selectedBookId = selectedBookId,
         bookFilePath = bookFilePath,
         bookFormat = bookFormat,
@@ -147,7 +149,7 @@ fun ReaderScreen(
                         viewModel.createBookmarkFromCurrentPosition()
                         lastBookmarkTrigger = SystemClock.elapsedRealtime()
                     },
-                    onToggleSplitSettings = { viewModel.onToggleSplitSettings() },
+                    onToggleSplitSettings = { viewModel.settingsManager.onToggleSplitSettings() },
                     onToggleToc = { viewModel.onToggleTocSheet() },
                     onToggleDebugPanel = { debugPanelVisible = !debugPanelVisible }
                 )
@@ -168,6 +170,7 @@ fun ReaderScreen(
             content = {
                 ReaderScreenContentHost(
                     uiState = uiState,
+                    settingsUiState = settingsUiState,
                     viewModel = viewModel,
                     selectionCallbacks = selectionCallbacks,
                     onShowChrome = onShowChrome,
@@ -182,6 +185,7 @@ fun ReaderScreen(
                 ReaderScreenOverlaysHost(
                     uiState = uiState,
                     searchUiState = searchUiState,
+                    settingsUiState = settingsUiState,
                     viewModel = viewModel,
                     showSleepTimerSheet = showSleepTimerSheet,
                     onDismissSleepTimerSheet = { showSleepTimerSheet = false },

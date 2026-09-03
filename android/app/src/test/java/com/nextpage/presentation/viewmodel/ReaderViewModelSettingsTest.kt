@@ -44,14 +44,14 @@ class ReaderViewModelSettingsTest {
             readerPreferences = null
         )
 
-        val settings = viewModel.uiState.value.readerSettings
+        val settings = viewModel.settingsUiState.value.readerSettings
         assertEquals(FontSizePreset.M, settings.fontSize)
         assertEquals(ReaderTheme.DARK, settings.theme)
         assertEquals(LineHeightPreset.NORMAL, settings.lineHeight)
     }
 
     @Test
-    fun `updateReaderSettings updates UIState`() = runTest {
+    fun `settings update lands on the slice flow and mirrors into back-compat uiState`() = runTest {
         val mockPrefs = mockk<ReaderPreferences>(relaxed = true)
         val viewModel = ReaderViewModel(
             application = mockk<Application>(relaxed = true),
@@ -68,12 +68,43 @@ class ReaderViewModelSettingsTest {
             lineHeight = LineHeightPreset.COMFORTABLE
         )
 
-        viewModel.updateReaderSettings(newSettings)
+        viewModel.settingsManager.updateReaderSettings(newSettings)
+
+        val slice = viewModel.settingsUiState.value
+        assertEquals(FontSizePreset.XL, slice.readerSettings.fontSize)
+        assertEquals(ReaderTheme.SEPIA, slice.readerSettings.theme)
+        assertEquals(LineHeightPreset.COMFORTABLE, slice.readerSettings.lineHeight)
 
         val state = viewModel.uiState.value
         assertEquals(FontSizePreset.XL, state.readerSettings.fontSize)
         assertEquals(ReaderTheme.SEPIA, state.readerSettings.theme)
         assertEquals(LineHeightPreset.COMFORTABLE, state.readerSettings.lineHeight)
+    }
+
+    @Test
+    fun `split-settings toggle flips the slice flag and mirrors into back-compat uiState`() = runTest {
+        val viewModel = ReaderViewModel(
+            application = mockk<Application>(relaxed = true),
+            readerRepository = FakeReaderRepository(),
+            readingStatsRepository = FakeReadingStatsRepository(),
+            updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),
+            defaultBookId = null,
+            readerPreferences = null
+        )
+
+        viewModel.settingsManager.onToggleSplitSettings()
+
+        assertEquals(true, viewModel.settingsUiState.value.showSplitSettings)
+        assertEquals(true, viewModel.uiState.value.showSplitSettings)
+    }
+
+    @Test
+    fun `settings pass-through delegates are deleted`() {
+        val names = ReaderViewModel::class.java.methods.map { it.name }
+        assertEquals(false, names.contains("onToggleSplitSettings"))
+        assertEquals(false, names.contains("updateReaderSettings"))
+        assertEquals(false, names.contains("onUpdateCustomHighlightColor"))
+        assertEquals(false, names.contains("onResetCustomHighlightColors"))
     }
 
     @Test
@@ -94,7 +125,7 @@ class ReaderViewModelSettingsTest {
             lineHeight = LineHeightPreset.WIDE
         )
 
-        viewModel.updateReaderSettings(newSettings)
+        viewModel.settingsManager.updateReaderSettings(newSettings)
 
         // Verify persistence was called with correct settings
         verify { mockPrefs.save(newSettings) }
@@ -119,7 +150,7 @@ class ReaderViewModelSettingsTest {
             readerPreferences = mockPrefs
         )
 
-        val settings = viewModel.uiState.value.readerSettings
+        val settings = viewModel.settingsUiState.value.readerSettings
         assertEquals(FontSizePreset.SM, settings.fontSize)
         assertEquals(ReaderTheme.LIGHT, settings.theme)
         assertEquals(LineHeightPreset.TIGHT, settings.lineHeight)
@@ -138,7 +169,7 @@ class ReaderViewModelSettingsTest {
         )
 
         // Change only font size — copy with defaults for the rest
-        viewModel.updateReaderSettings(
+        viewModel.settingsManager.updateReaderSettings(
             ReaderSettings(
                 fontSize = FontSizePreset.XXL,
                 theme = ReaderTheme.DARK,

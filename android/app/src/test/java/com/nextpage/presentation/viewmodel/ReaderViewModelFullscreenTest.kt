@@ -13,6 +13,7 @@ import android.util.Log
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,17 +32,35 @@ class ReaderViewModelFullscreenTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    @org.junit.After
+    fun tearDown() = unmockkAll()
+
     @Test
-    fun `onToggleFullscreen flips isFullscreen`() = runTest {
+    fun `chrome toggle flips isFullscreen on the slice flow`() = runTest {
         val viewModel = createViewModel(testScheduler)
 
-        assertFalse(viewModel.uiState.value.isFullscreen)
+        assertFalse(viewModel.chromeUiState.value.isFullscreen)
 
-        viewModel.onToggleFullscreen()
+        viewModel.fullscreenManager.onToggleFullscreen()
+        assertTrue(viewModel.chromeUiState.value.isFullscreen)
+
+        viewModel.fullscreenManager.onToggleFullscreen()
+        assertFalse(viewModel.chromeUiState.value.isFullscreen)
+    }
+
+    @Test
+    fun `back-compat uiState mirrors the chrome slice`() = runTest {
+        val viewModel = createViewModel(testScheduler)
+
+        viewModel.fullscreenManager.onToggleFullscreen()
+
         assertTrue(viewModel.uiState.value.isFullscreen)
+    }
 
-        viewModel.onToggleFullscreen()
-        assertFalse(viewModel.uiState.value.isFullscreen)
+    @Test
+    fun `chrome pass-through delegate is deleted`() {
+        val names = ReaderViewModel::class.java.methods.map { it.name }
+        assertFalse(names.contains("onToggleFullscreen"))
     }
 
     @Test
@@ -49,20 +68,20 @@ class ReaderViewModelFullscreenTest {
         val viewModel = createViewModel(testScheduler)
 
         // Toggle on
-        viewModel.onToggleFullscreen()
-        assertTrue(viewModel.uiState.value.isFullscreen)
+        viewModel.fullscreenManager.onToggleFullscreen()
+        assertTrue(viewModel.chromeUiState.value.isFullscreen)
 
         // Toggle off
-        viewModel.onToggleFullscreen()
-        assertFalse(viewModel.uiState.value.isFullscreen)
+        viewModel.fullscreenManager.onToggleFullscreen()
+        assertFalse(viewModel.chromeUiState.value.isFullscreen)
 
         // Toggle on again
-        viewModel.onToggleFullscreen()
-        assertTrue(viewModel.uiState.value.isFullscreen)
+        viewModel.fullscreenManager.onToggleFullscreen()
+        assertTrue(viewModel.chromeUiState.value.isFullscreen)
 
         // Toggle off again
-        viewModel.onToggleFullscreen()
-        assertFalse(viewModel.uiState.value.isFullscreen)
+        viewModel.fullscreenManager.onToggleFullscreen()
+        assertFalse(viewModel.chromeUiState.value.isFullscreen)
     }
 
     @Test
@@ -87,12 +106,14 @@ class ReaderViewModelFullscreenTest {
         viewModel.loadBook("new-book", "/path/book.epub", "epub")
 
         // Reader should auto-enter immersive (fullscreen) reading mode.
+        assertTrue(viewModel.chromeUiState.value.isFullscreen)
         assertTrue(viewModel.uiState.value.isFullscreen)
     }
 
     @Test
     fun `default state is not fullscreen`() = runTest {
         val viewModel = createViewModel(testScheduler)
+        assertFalse(viewModel.chromeUiState.value.isFullscreen)
         assertFalse(viewModel.uiState.value.isFullscreen)
     }
 

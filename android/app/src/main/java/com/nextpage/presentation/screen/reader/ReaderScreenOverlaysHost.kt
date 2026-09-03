@@ -15,6 +15,7 @@ import com.nextpage.presentation.screen.ReaderFullscreenArrows
 import com.nextpage.presentation.viewmodel.ReaderUiState
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.reader.SearchUiState
+import com.nextpage.presentation.viewmodel.reader.SettingsUiState
 import com.nextpage.ui.components.molecules.ChaptersSheet
 import com.nextpage.ui.components.molecules.HighlightAnnotationModal
 import com.nextpage.ui.components.molecules.SearchBottomSheet
@@ -27,6 +28,7 @@ import com.nextpage.ui.components.molecules.SplitSettingsSheet
 fun ReaderScreenOverlaysHost(
     uiState: ReaderUiState,
     searchUiState: SearchUiState,
+    settingsUiState: SettingsUiState,
     viewModel: ReaderViewModel,
     showSleepTimerSheet: Boolean,
     onDismissSleepTimerSheet: () -> Unit,
@@ -42,7 +44,7 @@ fun ReaderScreenOverlaysHost(
     onUserInteraction: () -> Unit
 ) {
     if (!uiState.isLoading && !isSelectionActive &&
-        !(uiState.readerSettings.verticalScroll && uiState.bookFormat == "epub") &&
+        !(settingsUiState.readerSettings.verticalScroll && uiState.bookFormat == "epub") &&
         uiState.bookFormat != "pdf"
     ) {
         ReaderFullscreenArrows(
@@ -97,7 +99,7 @@ fun ReaderScreenOverlaysHost(
         )
     }
 
-    if (uiState.showSplitSettings && uiState.chapters.isNotEmpty()) {
+    if (settingsUiState.showSplitSettings && uiState.chapters.isNotEmpty()) {
         val previewText = remember(uiState.previewText, uiState.selectedText, uiState.currentChapterIndex, uiState.chapters) {
             uiState.previewText.ifBlank {
                 uiState.selectedText?.takeIf { it.isNotBlank() }
@@ -106,10 +108,10 @@ fun ReaderScreenOverlaysHost(
             }
         }
         SplitSettingsSheet(
-            settings = uiState.readerSettings,
+            settings = settingsUiState.readerSettings,
             previewText = previewText,
-            onSettingsChanged = { viewModel.updateReaderSettings(it) },
-            onDismiss = { viewModel.onToggleSplitSettings() }
+            onSettingsChanged = { viewModel.settingsManager.updateReaderSettings(it) },
+            onDismiss = { viewModel.settingsManager.onToggleSplitSettings() }
         )
     }
 

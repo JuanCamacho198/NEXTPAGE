@@ -22,8 +22,8 @@ import org.junit.Test
  *
  * Each slice test asserts the VM re-export mirrors the holder-owned state.
  * T2 points the Search assertions at `searchUiState` (slice 1 shipped);
- * T3-T6 fill in the remaining slices (chrome, settings, sleepTimer,
- * session, annotation).
+ * T3 points Chrome/Settings at `chromeUiState`/`settingsUiState`;
+ * T4-T6 fill in the remaining slices (sleepTimer, session, annotation).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderSliceCompositionTest {
@@ -58,6 +58,40 @@ class ReaderSliceCompositionTest {
         assertTrue(viewModel.searchUiState.value.searchResults.isEmpty())
     }
 
+    @Test
+    fun `chrome slice mirrors holder state through VM re-export`() = runTest {
+        val viewModel = createViewModel(testScheduler)
+
+        assertFalse(viewModel.chromeUiState.value.isFullscreen)
+
+        viewModel.fullscreenManager.onToggleFullscreen()
+
+        assertTrue(viewModel.chromeUiState.value.isFullscreen)
+        assertTrue(
+            "back-compat uiState must mirror the chrome slice",
+            viewModel.uiState.value.isFullscreen
+        )
+        // No cross-slice emission: annotation-adjacent state untouched.
+        assertFalse(viewModel.uiState.value.showHighlightsSheet)
+    }
+
+    @Test
+    fun `settings slice mirrors holder state through VM re-export`() = runTest {
+        val viewModel = createViewModel(testScheduler)
+
+        assertFalse(viewModel.settingsUiState.value.showSplitSettings)
+
+        viewModel.settingsManager.onToggleSplitSettings()
+
+        assertTrue(viewModel.settingsUiState.value.showSplitSettings)
+        assertTrue(
+            "back-compat uiState must mirror the settings slice",
+            viewModel.uiState.value.showSplitSettings
+        )
+        // No cross-slice emission: chrome state untouched.
+        assertFalse(viewModel.uiState.value.isFullscreen)
+    }
+
     // ── Harness (per-slice mirror assertions; T3-T6 extend here) ────
 
     private fun assertSearchMirror(
@@ -71,7 +105,6 @@ class ReaderSliceCompositionTest {
         assertEquals(message, expectedQuery, reExport.searchQuery)
     }
 
-    // TODO T3: assertChromeMirror / assertSettingsMirror (slice re-exports)
     // TODO T4: assertSleepTimerMirror (chapter forwarding wiring)
     // TODO T5: assertSessionMirror (pending-CFI + progress via sessionUiState)
     // TODO T6: assertAnnotationMirror (highlights latest-wins via annotationUiState)

@@ -22,14 +22,17 @@ import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.presentation.UiEvent
+import com.nextpage.presentation.viewmodel.reader.ChromeUiState
 import com.nextpage.presentation.viewmodel.reader.FullscreenManager
 import com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder
 import com.nextpage.presentation.viewmodel.reader.ReaderLifecycleStateHolder
 import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 import com.nextpage.presentation.viewmodel.reader.ReaderSettingsManager
+import com.nextpage.presentation.viewmodel.reader.SettingsUiState
 import com.nextpage.presentation.viewmodel.reader.SearchStateHolder
 import com.nextpage.presentation.viewmodel.reader.SearchUiState
 import com.nextpage.presentation.viewmodel.reader.SleepTimerManager
+import com.nextpage.presentation.viewmodel.reader.SleepTimerUiState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -67,8 +70,9 @@ typealias BookChapter = com.nextpage.presentation.viewmodel.reader.BookChapter
  *
  * **Used by**: ReaderScreen
  * **Mutated by**: [ReaderViewModel] init block (merges state from
- *                 `lifecycleHolder`, `interactionHolder`, `searchStateHolder`,
- *                 `fullscreenManager`, `settingsManager`, and `sleepTimerManager`).
+ *                 `lifecycleHolder`, `interactionHolder`, plus a combine
+ *                 overlay for the migrated slices — see [searchUiState],
+ *                 [chromeUiState], [settingsUiState], [sleepTimerUiState]).
  *
  * Field groups (see constructor below for the full list):
  * - **Book identity & format**: [selectedBookId], [bookFilePath], [bookFormat]
@@ -438,7 +442,8 @@ class ReaderUiState(
  * state holders (`lifecycleHolder`, `interactionHolder`, `searchStateHolder`,
  * `fullscreenManager`, `settingsManager`, `sleepTimerManager`) and merges
  * their state streams into [ReaderUiState] (`init` collectors plus a
- * combine overlay for the migrated search slice — see [searchUiState]).
+ * combine overlay for the migrated slices — see [searchUiState],
+ * [chromeUiState], [settingsUiState], [sleepTimerUiState]).
  *
  * Public actions are grouped by responsibility — see the section comments
  * throughout this file. The largest public surface is the text-selection
@@ -523,8 +528,22 @@ class ReaderViewModel(
         onGoToChapter = { this.goToChapter(it) },
         onGoToPdfPage = { this.goToPdfPage(it) }
     )
-    private val fullscreenManager = FullscreenManager()
-    private val settingsManager = ReaderSettingsManager(readerPreferences)
+    /**
+     * Chrome slice owner (SDD reader-facade-split, slice 2).
+     *
+     * Screens stay VM-scoped: they reach the owner through the VM
+     * (`viewModel.fullscreenManager`), never via a direct holder import.
+     * Only this manager holds the chrome MutableStateFlow and mutating funs.
+     */
+    val fullscreenManager = FullscreenManager()
+    /**
+     * Settings slice owner (SDD reader-facade-split, slice 2).
+     *
+     * Screens stay VM-scoped: they reach the owner through the VM
+     * (`viewModel.settingsManager`), never via a direct holder import.
+     * Only this manager holds the settings MutableStateFlow and mutating funs.
+     */
+    val settingsManager = ReaderSettingsManager(readerPreferences)
 
     // ── Cluster A state holder ────────────────────────────────────────
 
@@ -575,13 +594,42 @@ class ReaderViewModel(
     val searchUiState: StateFlow<SearchUiState> = searchStateHolder.state
 
     /**
+     * Chrome slice re-export (SDD reader-facade-split, slice 2).
+     *
+     * Read-only view of the chrome owner state — the single source of truth
+     * for fullscreen. Collect this directly; the fullscreen field on [uiState]
+     * is a back-compat mirror kept until T7 deletes the combined flow.
+     */
+    val chromeUiState: StateFlow<ChromeUiState> = fullscreenManager.state
+
+    /**
+     * Settings slice re-export (SDD reader-facade-split, slice 2).
+     *
+     * Read-only view of the settings owner state — the single source of truth
+     * for reader settings and the split-settings sheet flag. Collect this
+     * directly; the settings fields on [uiState] are a back-compat mirror
+     * kept until T7 deletes the combined flow.
+     */
+    val settingsUiState: StateFlow<SettingsUiState> = settingsManager.state
+
+    /**
+     * Sleep-timer slice re-export (SDD reader-facade-split, slice 3).
+     *
+     * Read-only view of the timer owner state — the single source of truth
+     * for active/remaining/finished/EOC state. Collect this directly; the
+     * timer fields on [uiState] are a back-compat mirror kept until T7
+     * deletes the combined flow.
+     */
+    val sleepTimerUiState: StateFlow<SleepTimerUiState> = sleepTimerManager.state
+
+    /**
      * Aggregate reader UI state consumed by the ReaderScreen.
      *
      * **Emits when**: any underlying state holder (`lifecycleHolder`,
-     *                `interactionHolder`, `fullscreenManager`,
-     *                `settingsManager`, or `sleepTimerManager`) emits a new
-     *                value, any public action mutates state directly, or the
-     *                search slice emits (overlaid via the combine below).
+     *                `interactionHolder`) emits a new value, any public action
+     *                mutates state directly, or one of the migrated slices
+     *                (search, chrome, settings, sleep timer) emits (overlaid
+     *                via the combine below).
      * **Initial value**: [ReaderUiState] with `selectedBookId = defaultBookId`
      *                    and `isLoading = true` (or `false` if no
      *                    `defaultBookId` was supplied).
@@ -592,50 +640,28 @@ class ReaderViewModel(
      */
     val uiState: StateFlow<ReaderUiState> = combine(
         searchStateHolder.state,
+        fullscreenManager.state,
+        settingsManager.state,
+        sleepTimerManager.state,
         mutableUiState
-    ) { search, rest ->
+    ) { search, fs, s, timer, rest ->
         rest.copy(
             isSearchActive = search.isSearchActive,
             searchQuery = search.searchQuery,
             searchResults = search.searchResults,
-            isSearching = search.isSearching
+            isSearching = search.isSearching,
+            isFullscreen = fs.isFullscreen,
+            readerSettings = s.readerSettings,
+            showSplitSettings = s.showSplitSettings,
+            sleepTimerActive = timer.isActive,
+            sleepTimerRemainingSecs = timer.remainingSecs,
+            sleepTimerFinished = timer.isFinished,
+            sleepTimerPresetMinutes = timer.presetMinutes,
+            sleepTimerEndOfChapterMode = timer.isEndOfChapter
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, ReaderUiState(selectedBookId = defaultBookId))
 
     init {
-        // Merge Cluster C state holders into ReaderUiState (search slice
-        // ships its own re-export now — see searchUiState/uiState combine)
-        viewModelScope.launch(mainDispatcher) {
-            combine(
-                fullscreenManager.state,
-                settingsManager.state
-            ) { fs, s -> Pair(fs, s) }
-                .collect { (fs, s) ->
-                    mutableUiState.update { current ->
-                        current.copy(
-                            isFullscreen = fs.isFullscreen,
-                            readerSettings = s.readerSettings,
-                            showSplitSettings = s.showSplitSettings
-                        )
-                    }
-                }
-        }
-
-        // Merge sleep timer state into ReaderUiState
-        viewModelScope.launch(mainDispatcher) {
-            sleepTimerManager.state.collect { timerState ->
-                mutableUiState.update { current ->
-                    current.copy(
-                        sleepTimerActive = timerState.isActive,
-                        sleepTimerRemainingSecs = timerState.remainingSecs,
-                        sleepTimerFinished = timerState.isFinished,
-                        sleepTimerPresetMinutes = timerState.presetMinutes,
-                        sleepTimerEndOfChapterMode = timerState.isEndOfChapter
-                    )
-                }
-            }
-        }
-
         if (!defaultBookId.isNullOrBlank()) {
             lifecycleHolder.restoreProgressForBook(defaultBookId)
         } else {
@@ -1219,28 +1245,16 @@ class ReaderViewModel(
     }
 
     // ── aA Settings ──────────────────────────────────────────────────
-
-    /** Toggles the "aA" font/spacing settings sheet. */
-    fun onToggleSplitSettings() = settingsManager.onToggleSplitSettings()
+    // Slice 2 (SDD reader-facade-split, T3): settings state lives in
+    // [settingsManager] and is re-exported as [settingsUiState]. The
+    // split-settings/palette pass-through delegates were deleted — callers
+    // reach the owner through the VM (`viewModel.settingsManager`).
 
     // ── Fullscreen ───────────────────────────────────────────────────
-
-    /** Toggles immersive fullscreen mode (hides system bars + reader chrome). */
-    fun onToggleFullscreen() = fullscreenManager.onToggleFullscreen()
-
-    // ── Custom Highlight Palette (Phase 4) ───────────────────────
-
-    /**
-     * Updates one of the user's custom highlight palette slots.
-     *
-     * @param index Palette slot index (0-based).
-     * @param hex Hex color string (e.g. `"#FFAA00"`).
-     */
-    fun onUpdateCustomHighlightColor(index: Int, hex: String) =
-        settingsManager.onUpdateCustomHighlightColor(index, hex)
-
-    /** Resets the custom highlight palette to its default values. */
-    fun onResetCustomHighlightColors() = settingsManager.onResetCustomHighlightColors()
+    // Slice 2 (SDD reader-facade-split, T3): chrome state lives in
+    // [fullscreenManager] and is re-exported as [chromeUiState]. The
+    // toggle pass-through delegate was deleted — callers reach the owner
+    // through the VM (`viewModel.fullscreenManager`).
 
     // ── Sleep Timer (delegated to SleepTimerManager) ─────────────────
 
@@ -1266,12 +1280,9 @@ class ReaderViewModel(
     fun formatSleepTimerRemaining(secs: Int): String = sleepTimerManager.formatRemaining(secs)
 
     // ── Reader Settings ──────────────────────────────────────────────
-
-    /**
-     * Replaces the entire [ReaderSettings] (font, size, theme, line height, etc.).
-     * Use this from a settings sheet "apply" action.
-     */
-    fun updateReaderSettings(settings: ReaderSettings) = settingsManager.updateReaderSettings(settings)
+    // Slice 2 (SDD reader-facade-split, T3): replaced by [settingsManager].
+    // Callers reach the owner through the VM
+    // (`viewModel.settingsManager.updateReaderSettings(...)`).
 
     // ── Cluster A — Delegated to ReaderLifecycleStateHolder ─────────
 

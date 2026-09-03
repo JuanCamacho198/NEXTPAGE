@@ -18,3 +18,10 @@ data class SleepTimerState(
     val isEndOfChapter: Boolean = false,
     val presetMinutes: Int? = null
 )
+
+/**
+ * Sleep-timer slice of the reader facade split (SDD reader-facade-split, slice 3).
+ * Single owner: only [SleepTimerManager] holds the MutableStateFlow and
+ * mutating funs; the VM re-exports it as `sleepTimerUiState`.
+ */
+typealias SleepTimerUiState = SleepTimerState

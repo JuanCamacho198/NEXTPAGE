@@ -42,9 +42,9 @@ class GoogleDriveSyncService(
     private val maxRetries: Int = DEFAULT_MAX_RETRIES
 ) : SyncService {
 
-    private val state = MutableStateFlow<SyncState>(if (isEnabled()) SyncState.Idle else SyncState.Disabled)
+    private val state = MutableStateFlow<DriveSyncState>(if (isEnabled()) DriveSyncState.Idle else DriveSyncState.Disabled)
 
-    override val syncState: Flow<SyncState> = state.asStateFlow()
+    override val syncState: Flow<DriveSyncState> = state.asStateFlow()
     override val pendingCount: Flow<Int> = outboxDao.observePendingCount()
 
     override suspend fun bootstrap(userId: String): Result<Unit> {
@@ -55,7 +55,7 @@ class GoogleDriveSyncService(
                 message = "Sync service is disabled due to Google Drive configuration.",
                 component = COMPONENT
             )
-            state.value = SyncState.Disabled
+            state.value = DriveSyncState.Disabled
             return Result.failure(disabledError)
         }
         if (userId.isBlank()) {
@@ -71,7 +71,7 @@ class GoogleDriveSyncService(
         if (!localBooksDir.exists()) {
             localBooksDir.mkdirs()
         }
-        state.value = SyncState.Idle
+        state.value = DriveSyncState.Idle
         return Result.success(Unit)
     }
 
@@ -86,16 +86,16 @@ class GoogleDriveSyncService(
                 message = "Sync service is disabled due to Google Drive configuration.",
                 component = COMPONENT
             )
-            state.value = SyncState.Disabled
+            state.value = DriveSyncState.Disabled
             return Result.failure(disabledError)
         }
         val session = sessionManager.ensureFreshSession().getOrElse { error ->
             val mapped = mapError(error, defaultCode = "SYNC_SESSION_REQUIRED")
-            state.value = SyncState.Error(mapped.message)
+            state.value = DriveSyncState.Error(mapped.message)
             return Result.failure(mapped)
         }
 
-        state.value = SyncState.Running
+        state.value = DriveSyncState.Running
         val pendingItems = outboxDao.getPendingItems()
 
         for (item in pendingItems) {
@@ -107,7 +107,7 @@ class GoogleDriveSyncService(
                         DebugLog.error(COMPONENT, "pushBook failed for ${item.entityId}: ${mapped.code} — ${mapped.message}")
                         outboxDao.incrementRetryCount(item.id, mapped.message)
                         outboxDao.pruneFailedItems(maxRetries)
-                        state.value = SyncState.Error(mapped.message)
+                        state.value = DriveSyncState.Error(mapped.message)
                         return Result.failure(mapped)
                     }
                     outboxDao.deleteById(item.id)
@@ -130,7 +130,7 @@ class GoogleDriveSyncService(
             }
         }
 
-        state.value = SyncState.Idle
+        state.value = DriveSyncState.Idle
         return Result.success(Unit)
     }
 
@@ -206,21 +206,21 @@ class GoogleDriveSyncService(
                 message = "Sync service is disabled due to Google Drive configuration.",
                 component = COMPONENT
             )
-            state.value = SyncState.Disabled
+            state.value = DriveSyncState.Disabled
             return Result.failure(disabledError)
         }
         val session = sessionManager.ensureFreshSession().getOrElse { error ->
             val mapped = mapError(error, defaultCode = "SYNC_SESSION_REQUIRED")
-            state.value = SyncState.Error(mapped.message)
+            state.value = DriveSyncState.Error(mapped.message)
             return Result.failure(mapped)
         }
 
-        state.value = SyncState.Running
+        state.value = DriveSyncState.Running
         val userPrefix = "books/${session.userId}/"
         val remotePaths = retryable { remoteDataSource.list(prefix = userPrefix) }
             .getOrElse { error ->
                 val mapped = mapError(error, defaultCode = "SYNC_LIST_FAILED")
-                state.value = SyncState.Error(mapped.message)
+                state.value = DriveSyncState.Error(mapped.message)
                 return Result.failure(mapped)
             }
 
@@ -262,7 +262,7 @@ class GoogleDriveSyncService(
                 val bytes = retryable { remoteDataSource.download(remotePath) }
                     .getOrElse { error ->
                         val mapped = mapError(error, defaultCode = "SYNC_DOWNLOAD_FAILED")
-                        state.value = SyncState.Error(mapped.message)
+                        state.value = DriveSyncState.Error(mapped.message)
                         return Result.failure(mapped)
                     }
                 localFile.parentFile?.mkdirs()
@@ -289,7 +289,7 @@ class GoogleDriveSyncService(
 
         // PR4: Drive hot state pull removed — Supabase is sole hot SoT.
         // No jsonStateSync.pullState here; cold import is via DriveColdBackupService only.
-        state.value = SyncState.Idle
+        state.value = DriveSyncState.Idle
         return Result.success(Unit)
     }
 
@@ -349,7 +349,7 @@ class GoogleDriveSyncService(
             .fold(
                 onSuccess = { refreshResult ->
                     if (refreshResult.isFailure) {
-                        state.value = SyncState.AuthorizationNeeded
+                        state.value = DriveSyncState.AuthorizationNeeded
                         return Result.failure(
                             refreshResult.exceptionOrNull()
                                 ?: lastError ?: IllegalStateException("Drive authorization needed")
@@ -361,7 +361,7 @@ class GoogleDriveSyncService(
                     }
                 },
                 onFailure = { refreshThrown ->
-                    state.value = SyncState.AuthorizationNeeded
+                    state.value = DriveSyncState.AuthorizationNeeded
                     Result.failure(refreshThrown)
                 }
             )
@@ -438,6 +438,19 @@ class GoogleDriveSyncService(
         val bookId: String,
         val extension: String
     )
+
+    /**
+     * Idempotent stop for [SyncOrchestrator] fan-out (PR-2 of sync-layer-split).
+     *
+     * Drive push/pull are call-site driven (no persistent background job), so
+     * `stop()` only flips the visible state to [DriveSyncState.Disabled] and
+     * logs. Any in-flight `schedulePush()` / `schedulePull()` completes on its
+     * own coroutine and self-marks the appropriate state on completion.
+     */
+    override suspend fun stop() {
+        DebugLog.info(COMPONENT, "stop: disabling Drive sync facade")
+        state.value = DriveSyncState.Disabled
+    }
 
     companion object {
         const val COMPONENT = "GoogleDriveSyncService"

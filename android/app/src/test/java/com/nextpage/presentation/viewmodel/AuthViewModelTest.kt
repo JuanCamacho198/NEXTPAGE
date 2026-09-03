@@ -1,7 +1,7 @@
 package com.nextpage.presentation.viewmodel
 
+import com.nextpage.data.remote.sync.DriveSyncState
 import com.nextpage.data.remote.sync.SyncService
-import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.model.AuthSession
@@ -318,7 +318,7 @@ class AuthViewModelTest {
     }
 
     private class FakeSyncService : SyncService {
-        override val syncState: Flow<SyncState> = MutableStateFlow(SyncState.Idle)
+        override val syncState: Flow<DriveSyncState> = MutableStateFlow(DriveSyncState.Idle)
         override val pendingCount: Flow<Int> = emptyFlow()
         val events = mutableListOf<String>()
 
@@ -335,6 +335,10 @@ class AuthViewModelTest {
         override suspend fun schedulePull(): Result<Unit> {
             events += "pull"
             return Result.success(Unit)
+        }
+
+        override suspend fun stop() {
+            events += "stop"
         }
     }
 }

@@ -19,6 +19,8 @@ import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.DriveColdBackupService
 import com.nextpage.data.remote.sync.OutboxCommit
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
+import com.nextpage.data.remote.sync.SyncOrchestrator
+import com.nextpage.data.remote.sync.SyncOrchestratorImpl
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.data.session.ReadingGoalPreferences
@@ -94,6 +96,24 @@ class AppContainer(context: Context) {
     // until the orchestrator exists.
     val sessionGate: SessionGate by lazy { SessionGateImpl(sessionManager) }
     val outboxCommit: OutboxCommit by lazy { OutboxCommit(databaseModule.syncOutboxDao) }
+
+    // ── sync-layer-split PR-2: SyncOrchestrator ──────────────────────────
+    // Wires Drive (SyncService) + Catalog + Progress + SessionGate + the
+    // shared outbox DAO into a single per-domain lifecycle handle. Not yet
+    // consumed by `AuthViewModel` (PR-3); the orchestrator exists as an
+    // additive singleton so the wiring can be smoke-tested independently.
+    val syncOrchestrator: SyncOrchestrator by lazy {
+        SyncOrchestratorImpl(
+            drive = syncService,
+            catalog = supabaseBookCatalogSync,
+            progress = supabaseProgressSync,
+            gate = sessionGate,
+            outboxDao = databaseModule.syncOutboxDao,
+            externalScope = kotlinx.coroutines.CoroutineScope(
+                kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default
+            ),
+        )
+    }
 
     internal object ReaderDependencies {
         fun updateReadingProgressUseCase(readerRepository: ReaderRepository) =

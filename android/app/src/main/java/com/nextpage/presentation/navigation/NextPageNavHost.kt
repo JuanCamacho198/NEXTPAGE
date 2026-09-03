@@ -76,7 +76,6 @@ import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModelFactory
-import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.debug.LogViewerScreen
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.debug.DebugPanel

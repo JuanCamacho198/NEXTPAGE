@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.UserBookRow
 import com.nextpage.data.remote.sync.SyncService
-import com.nextpage.data.remote.sync.SyncState
+import com.nextpage.data.remote.sync.DriveSyncState
 import com.nextpage.data.sync.ProgressReconciler
 import com.nextpage.debug.DebugDual
 import com.nextpage.debug.DebugEvent
@@ -410,9 +410,9 @@ class LibraryViewModel(
             syncService.syncState.collect { state ->
                 mutableUiState.update {
                     it.copy(
-                        isSyncing = state is SyncState.Running,
-                        syncError = (state as? SyncState.Error)?.message,
-                        isRefreshing = if (state !is SyncState.Running) false else it.isRefreshing
+                        isSyncing = state is DriveSyncState.Running,
+                        syncError = (state as? DriveSyncState.Error)?.message,
+                        isRefreshing = if (state !is DriveSyncState.Running) false else it.isRefreshing
                     )
                 }
             }
@@ -628,7 +628,7 @@ class LibraryViewModel(
      * Side effects:
      * 1. Sets `isRefreshing = true` immediately for the swipe indicator.
      * 2. Calls [SyncService.schedulePull] — `isRefreshing` clears when sync state
-     *    transitions out of [SyncState.Running] (see init-block sync observation).
+     *    transitions out of [DriveSyncState.Running] (see init-block sync observation).
      */
     fun onPullToRefresh() {
         mutableUiState.update { it.copy(isRefreshing = true) }

@@ -62,6 +62,7 @@ fun ReaderScreen(
     val searchUiState by viewModel.searchUiState.collectAsStateWithLifecycle()
     val chromeUiState by viewModel.chromeUiState.collectAsStateWithLifecycle()
     val settingsUiState by viewModel.settingsUiState.collectAsStateWithLifecycle()
+    val sleepTimerUiState by viewModel.sleepTimerUiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val view = LocalView.current
 
@@ -186,6 +187,7 @@ fun ReaderScreen(
                     uiState = uiState,
                     searchUiState = searchUiState,
                     settingsUiState = settingsUiState,
+                    sleepTimerUiState = sleepTimerUiState,
                     viewModel = viewModel,
                     showSleepTimerSheet = showSleepTimerSheet,
                     onDismissSleepTimerSheet = { showSleepTimerSheet = false },

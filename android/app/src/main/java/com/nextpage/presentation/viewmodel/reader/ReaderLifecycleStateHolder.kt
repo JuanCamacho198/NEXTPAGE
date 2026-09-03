@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.readium.r2.shared.publication.Locator
@@ -292,6 +293,39 @@ class ReaderLifecycleStateHolder(
         epubLoader.onCleared()
         pdfLoader.onCleared()
         navigator.onCleared()
+    }
+
+    // ── Pending CFI after load (SDD reader-facade-split, T5) ─────────
+    // Owned by ReadingNavigator; the facade preserves the surface verbatim.
+
+    internal val pendingCfiAfterLoad: String?
+        get() = navigator.pendingCfiAfterLoad
+
+    fun navigateToCfiAfterLoad(cfiRange: String) = navigator.navigateToCfiAfterLoad(cfiRange)
+
+    @VisibleForTesting
+    internal fun applyPendingCfi() = navigator.applyPendingCfi()
+
+    // ── Typography → reflow wiring (SDD reader-facade-split, T5) ─────
+    // Moved from ReaderViewModel init so the reflow subscription lives in
+    // the lifecycle owner. The VM only supplies the settings flow + density.
+
+    /**
+     * Observes reader-settings changes and recomputes footer remaining pages
+     * within one frame (exact reflow). Margins are fixed at 16dp (VM parity).
+     */
+    fun observeTypographyConfig(settings: StateFlow<ReaderSettingsState>, density: Float) {
+        scope.launch(mainDispatcher) {
+            settings.collect { s ->
+                val rs = s.readerSettings
+                progressTracker.onTypographyConfigChanged(
+                    rs.fontSize.sizePx.toFloat(),
+                    rs.lineHeight.value,
+                    16f,
+                    density
+                )
+            }
+        }
     }
 
     // ── Test helpers ────────────────────────────────────────────

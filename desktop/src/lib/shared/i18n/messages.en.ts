@@ -118,6 +118,7 @@ export const messagesEn = {
   'home.highlightsCopy': 'Copy highlight',
   'home.highlightsViewInBook': 'View in book',
   'home.highlightsEditNote': 'Edit note',
+  'home.highlightsOptions': 'Options',
   'home.highlightsDelete': 'Delete',
   'home.highlightsEmptyTitle': 'No highlights',
   'home.highlightsEmptyDescription': 'No highlights found with current filters.',

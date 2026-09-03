@@ -121,6 +121,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'home.highlightsCopy': 'Copiar resaltado',
   'home.highlightsViewInBook': 'Ver en el libro',
   'home.highlightsEditNote': 'Editar nota',
+  'home.highlightsOptions': 'Opciones',
   'home.highlightsDelete': 'Eliminar',
   'home.highlightsEmptyTitle': 'Sin resaltados',
   'home.highlightsEmptyDescription': 'No se encontraron resaltados con los filtros actuales.',

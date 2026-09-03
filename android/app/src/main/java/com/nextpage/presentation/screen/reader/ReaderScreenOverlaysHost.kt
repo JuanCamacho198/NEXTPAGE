@@ -16,6 +16,7 @@ import com.nextpage.presentation.viewmodel.ReaderUiState
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.reader.SearchUiState
 import com.nextpage.presentation.viewmodel.reader.SettingsUiState
+import com.nextpage.presentation.viewmodel.reader.SleepTimerUiState
 import com.nextpage.ui.components.molecules.ChaptersSheet
 import com.nextpage.ui.components.molecules.HighlightAnnotationModal
 import com.nextpage.ui.components.molecules.SearchBottomSheet
@@ -29,6 +30,7 @@ fun ReaderScreenOverlaysHost(
     uiState: ReaderUiState,
     searchUiState: SearchUiState,
     settingsUiState: SettingsUiState,
+    sleepTimerUiState: SleepTimerUiState,
     viewModel: ReaderViewModel,
     showSleepTimerSheet: Boolean,
     onDismissSleepTimerSheet: () -> Unit,
@@ -117,8 +119,8 @@ fun ReaderScreenOverlaysHost(
 
     if (showSleepTimerSheet) {
         SleepTimerSheet(
-            isActive = uiState.sleepTimerActive,
-            remainingFormatted = viewModel.formatSleepTimerRemaining(uiState.sleepTimerRemainingSecs),
+            isActive = sleepTimerUiState.isActive,
+            remainingFormatted = viewModel.sleepTimerManager.formatRemaining(sleepTimerUiState.remainingSecs),
             presets = listOf(
                 SleepTimerPreset("5", 5),
                 SleepTimerPreset("10", 10),
@@ -131,20 +133,20 @@ fun ReaderScreenOverlaysHost(
                 )
             ),
             onPresetSelected = { minutes: Int ->
-                viewModel.startSleepTimer(minutes)
+                viewModel.sleepTimerManager.startTimer(minutes)
                 onDismissSleepTimerSheet()
             },
             onCancel = {
-                viewModel.cancelSleepTimer()
+                viewModel.sleepTimerManager.cancel()
                 onDismissSleepTimerSheet()
             },
             onDismiss = onDismissSleepTimerSheet
         )
     }
 
-    if (uiState.sleepTimerFinished) {
+    if (sleepTimerUiState.isFinished) {
         SleepTimerOverlay(
-            onDismiss = { viewModel.dismissSleepTimerOverlay() }
+            onDismiss = { viewModel.sleepTimerManager.dismissOverlay() }
         )
     }
 

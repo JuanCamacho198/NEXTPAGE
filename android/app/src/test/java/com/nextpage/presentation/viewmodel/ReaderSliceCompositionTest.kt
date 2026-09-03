@@ -23,7 +23,8 @@ import org.junit.Test
  * Each slice test asserts the VM re-export mirrors the holder-owned state.
  * T2 points the Search assertions at `searchUiState` (slice 1 shipped);
  * T3 points Chrome/Settings at `chromeUiState`/`settingsUiState`;
- * T4-T6 fill in the remaining slices (sleepTimer, session, annotation).
+ * T4 points SleepTimer at `sleepTimerUiState` (glue covered in
+ * ReaderViewModelSleepTimerTest); T5-T6 fill in session + annotation.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderSliceCompositionTest {
@@ -105,7 +106,25 @@ class ReaderSliceCompositionTest {
         assertEquals(message, expectedQuery, reExport.searchQuery)
     }
 
-    // TODO T4: assertSleepTimerMirror (chapter forwarding wiring)
+    @Test
+    fun `sleepTimer slice mirrors holder state through VM re-export`() = runTest {
+        val viewModel = createViewModel(testScheduler)
+
+        assertFalse(viewModel.sleepTimerUiState.value.isActive)
+
+        viewModel.sleepTimerManager.startTimer(
+            com.nextpage.presentation.viewmodel.reader.SleepTimerManager.END_OF_CHAPTER
+        )
+
+        assertTrue(viewModel.sleepTimerUiState.value.isActive)
+        assertTrue(
+            "back-compat uiState must mirror the sleepTimer slice",
+            viewModel.uiState.value.sleepTimerActive
+        )
+        // No cross-slice emission: chrome state untouched.
+        assertFalse(viewModel.uiState.value.isFullscreen)
+    }
+
     // TODO T5: assertSessionMirror (pending-CFI + progress via sessionUiState)
     // TODO T6: assertAnnotationMirror (highlights latest-wins via annotationUiState)
 

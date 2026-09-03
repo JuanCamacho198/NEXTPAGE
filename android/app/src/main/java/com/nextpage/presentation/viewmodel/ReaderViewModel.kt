@@ -476,10 +476,13 @@ class ReaderViewModel(
     )
 
     /**
-     * Sleep timer manager — exposes the timer state and controls.
-     * Most callers should use the convenience functions
-     * ([startSleepTimer], [cancelSleepTimer], etc.) rather than touching
-     * this directly.
+     * Sleep timer manager — timer slice owner (SDD reader-facade-split, slice 3).
+     *
+     * Screens stay VM-scoped: they reach the owner through the VM
+     * (`viewModel.sleepTimerManager`), never via a direct import.
+     * Only this manager holds the timer MutableStateFlow and mutating funs.
+     * The chapter-forwarding glue (`onChapterChanged`) is wired in the
+     * lifecycle holder construction above and stays as the single glue line.
      */
     val sleepTimerManager = SleepTimerManager(viewModelScope)
 
@@ -1256,28 +1259,14 @@ class ReaderViewModel(
     // toggle pass-through delegate was deleted — callers reach the owner
     // through the VM (`viewModel.fullscreenManager`).
 
-    // ── Sleep Timer (delegated to SleepTimerManager) ─────────────────
-
-    /**
-     * Starts a sleep timer that will close the reader (or finish at the
-     * end of the current chapter) after [minutes].
-     *
-     * @param minutes Duration in minutes. Pass `0` for end-of-chapter mode.
-     */
-    fun startSleepTimer(minutes: Int) = sleepTimerManager.startTimer(minutes)
-
-    /** Cancels the active sleep timer. */
-    fun cancelSleepTimer() = sleepTimerManager.cancel()
-
-    /** Dismisses the sleep-timer-finished overlay without cancelling. */
-    fun dismissSleepTimerOverlay() = sleepTimerManager.dismissOverlay()
-
-    /**
-     * Formats the remaining seconds as a `mm:ss` / `h:mm:ss` string.
-     * @param secs Remaining seconds.
-     * @return Human-readable countdown string.
-     */
-    fun formatSleepTimerRemaining(secs: Int): String = sleepTimerManager.formatRemaining(secs)
+    // ── Sleep Timer ────────────────────────────────────────────────
+    // Slice 3 (SDD reader-facade-split, T4): timer state lives in
+    // [sleepTimerManager] and is re-exported as [sleepTimerUiState]. The
+    // start/cancel/dismiss/format pass-through delegates were deleted —
+    // callers reach the owner through the VM
+    // (`viewModel.sleepTimerManager`). The single documented glue line
+    // (session chapter -> `timer.onChapterChanged()`) is kept verbatim in
+    // the lifecycle holder wiring above.
 
     // ── Reader Settings ──────────────────────────────────────────────
     // Slice 2 (SDD reader-facade-split, T3): replaced by [settingsManager].

@@ -17,11 +17,14 @@ import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.SupabaseProgressDataSource
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.DriveColdBackupService
+import com.nextpage.data.remote.sync.OutboxCommit
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.data.session.ReadingGoalPreferences
 import com.nextpage.data.session.SessionManager
+import com.nextpage.data.sync.SessionGateImpl
+import com.nextpage.domain.sync.SessionGate
 import com.nextpage.di.modules.DatabaseModule
 import com.nextpage.di.modules.NetworkModule
 import com.nextpage.di.modules.PreferencesModule
@@ -82,6 +85,15 @@ class AppContainer(context: Context) {
     val supabaseBookCatalogDataSource: SupabaseBookCatalogDataSource by lazy { networkModule.supabaseBookCatalogDataSource }
     val supabaseBookCatalogSync: SupabaseBookCatalogSync by lazy { networkModule.supabaseBookCatalogSync }
     val driveColdBackupService: DriveColdBackupService by lazy { networkModule.driveColdBackupService }
+
+    // ── sync-layer-split PR-1 foundations ────────────────────────────────
+    // SessionGate + OutboxCommit are the two helpers extracted in PR-1; the
+    // SyncOrchestrator that wires them into a per-domain lifecycle arrives in
+    // PR-2. `syncState` is a sealed type, not a singleton, so it is not wired
+    // here — consumers (DebugViewModel) continue reading per-domain states
+    // until the orchestrator exists.
+    val sessionGate: SessionGate by lazy { SessionGateImpl(sessionManager) }
+    val outboxCommit: OutboxCommit by lazy { OutboxCommit(databaseModule.syncOutboxDao) }
 
     internal object ReaderDependencies {
         fun updateReadingProgressUseCase(readerRepository: ReaderRepository) =

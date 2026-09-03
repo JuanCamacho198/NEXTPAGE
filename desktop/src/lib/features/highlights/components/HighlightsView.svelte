@@ -19,6 +19,8 @@
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
   import Skeleton from '$lib/shared/ui/feedback/Skeleton.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
+  import NoteEditorModal from '$lib/features/reader/highlight/NoteEditorModal.svelte';
+  import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
   import { HIGHLIGHT_COLORS, formatDate, resolveHighlightHex, type Props } from '../state.svelte';
   let { books, t, viewerPort: viewerPortProp, deps: depsProp }: Props = $props();
   const viewerPort: ViewerPort = viewerPortProp ?? new TauriViewerAdapter();
@@ -99,6 +101,18 @@
   }
   function handleCopy(text: string): void {
     navigator.clipboard.writeText(text);
+  }
+  let editingHighlight = $state<HighlightDto | null>(null);
+  async function handleSaveNote(note: string | null): Promise<void> {
+    const target = editingHighlight;
+    if (!target) return;
+    const updated = await sync.handleUpdateNote(target, note);
+    if (updated) {
+      highlights = highlights.map((h) => (h.id === updated.id ? updated : h));
+    } else {
+      pushToast('error', t('errors.commandFailure'));
+    }
+    editingHighlight = null;
   }
   const handleKeydown = (e: KeyboardEvent): void => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -375,7 +389,7 @@
             ><DropMenu position="bottom-right"
               >{#snippet trigger()}<button
                   class="w-8 h-8 flex items-center justify-center rounded-md border border-transparent bg-transparent text-(--color-text-muted) text-[1.1rem] cursor-pointer transition-all font-sans hover:bg-(--color-panel-accent) hover:border-(--color-border) hover:text-(--color-primary)"
-                  aria-label="Opciones"><Icon name="more-dot" size="sm" /></button
+                  aria-label={t('home.highlightsOptions')}><Icon name="more-dot" size="sm" /></button
                 >{/snippet}
               <div class="flex flex-col">
                 <button
@@ -388,10 +402,11 @@
                   ><Icon name="book" size="sm" />{t('home.highlightsViewInBook')}</button
                 >{#if highlight.note}<button
                     class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-panel-accent)"
+                    onclick={() => (editingHighlight = highlight)}
                     ><Icon name="edit" size="sm" />{t('home.highlightsEditNote')}</button
                   >{/if}<button
                   class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-error) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-error-bg,rgba(255,123,131,0.14))"
-                  onclick={() => sync.handleDelete(highlight, highlights, (v) => (highlights = v))}
+                  onclick={() => void sync.handleDelete(highlight, highlights, (v) => (highlights = v)).then((ok) => { if (!ok) pushToast('error', t('errors.commandFailure')); })}
                   ><Icon name="trash" size="sm" />{t('home.highlightsDelete')}</button
                 >
               </div></DropMenu
@@ -402,4 +417,12 @@
     {#if filters.totalPages > 1}<div class="flex justify-center mt-6 pb-4">
         <Pagination bind:current={filters.currentPage} total={filters.totalPages} />
       </div>{/if}{/if}
+  <NoteEditorModal
+    open={editingHighlight !== null}
+    note={editingHighlight?.note ?? null}
+    highlightText={editingHighlight?.text ?? null}
+    onSave={(note) => void handleSaveNote(note)}
+    onClose={() => (editingHighlight = null)}
+    {t}
+  />
 </section>

@@ -98,6 +98,39 @@ export function createHighlightsSync(opts: {
     }
   }
 
+  async function handleUpdateNote(
+    highlight: HighlightDto,
+    note: string | null,
+  ): Promise<HighlightDto | null> {
+    try {
+      const updated = await opts.deps.updateHighlight({
+        id: highlight.id,
+        note: note ?? undefined,
+      });
+      if (authState.userId) {
+        const updatedAt = new Date().toISOString();
+        void outboxDao.add(
+          'HIGHLIGHT',
+          highlight.id,
+          'UPSERT',
+          JSON.stringify({
+            userId: authState.userId,
+            bookId: highlight.bookId,
+            cfiRange: highlight.cfi ?? '',
+            textContent: highlight.text,
+            color: highlight.color,
+            page: highlight.pageNumber,
+            note,
+            updatedAt,
+          }),
+        );
+      }
+      return updated;
+    } catch {
+      return null;
+    }
+  }
+
   function cleanup(): void {
     if (syncTimeout) clearTimeout(syncTimeout);
   }
@@ -108,6 +141,7 @@ export function createHighlightsSync(opts: {
     },
     syncHighlightsInBackground,
     handleDelete,
+    handleUpdateNote,
     cleanup,
     sortByUpdatedAtDesc,
     chunkRows,

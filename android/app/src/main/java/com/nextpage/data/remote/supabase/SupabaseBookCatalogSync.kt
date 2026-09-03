@@ -6,6 +6,8 @@ import com.nextpage.data.local.entity.BookEntity
 import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.remote.drive.SyncErrorCodes
+import com.nextpage.data.remote.sync.ApplyOutcome
+import com.nextpage.data.remote.sync.OutboxCommit
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
 import com.nextpage.data.session.SessionManager
 import com.nextpage.debug.DebugLog
@@ -63,6 +65,13 @@ class SupabaseBookCatalogSync(
      * user opens it). Nullable to keep existing callers/DI wiring unchanged.
      */
     private val progressDataSource: SupabaseProgressDataSource? = null,
+    /**
+     * OutboxCommit helper (sync-layer-split PR-3). When non-null, [processBookItem]
+     * delegates ack/retry/poison persistence to it via
+     * `commit(item) { applyRemoteBook() }`. Nullable so legacy callers / unit
+     * tests using direct DAO fakes continue to work without injection.
+     */
+    private val outboxCommit: OutboxCommit? = null,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var processJob: Job? = null
@@ -125,68 +134,113 @@ class SupabaseBookCatalogSync(
             SyncOperation.UPDATE
         }
 
-        try {
-            when (operation) {
-                SyncOperation.DELETE -> {
-                    val localBook = bookDao.getBookById(bookId)
-                    val remoteBook = dataSource.getUserBook(userId, bookId)
-                    val tombstone = (localBook?.toUserBookRow(userId) ?: remoteBook
-                        ?: UserBookRow(
-                            id = bookId, userId = userId, title = "", format = "unknown",
-                            importedAt = dateFormat.format(Date()), updatedAt = dateFormat.format(Date())
-                        )).copy(
-                        lifecycle = "deleted", filePath = null,
-                        catalogVersion = maxOf(localBook?.remoteCatalogVersion ?: 0L,
-                            remoteBook?.catalogVersion ?: 0L) + 1
-                    )
-                    dataSource.upsertBook(tombstone)
-                }
-                else -> {
-                    val localBook = bookDao.getBookById(bookId)
-                    if (localBook == null) {
-                        DebugLog.warn(TAG, "processBookItem: local book $bookId not found — deleting outbox entry")
-                        outboxDao.deleteById(item.id)
-                        return
-                    }
-                    // A locally imported book is only cloud-visible once its file
-                    // actually exists in Drive (remotePath is set by the Drive sync
-                    // push). Registering it without a remote file creates a "ghost"
-                    // catalog row: it appears in "Available from other devices" but
-                    // download fails with REMOTE_NOT_FOUND. Leave the outbox entry
-                    // so the Drive push (which sets remotePath) can complete first;
-                    // reconciliation covers stragglers.
-                    if (localBook.remotePath.isNullOrBlank()) {
-                        DebugLog.info(TAG, "processBookItem: book $bookId has no remote file yet — deferring catalog upsert until Drive push completes")
-                        return
-                    }
-                    val row = localBook.toUserBookRow(userId)
-                    DebugLog.info(TAG, "processBookItem: pushing book '${row.title}' ($bookId) to Supabase — catalogVersion=${row.catalogVersion}, hash=${row.contentHash?.take(16)}…")
-
-                    // Content-hash dedup: skip upsert if the same SHA-256 hash
-                    // already exists in the catalog for this user. An UPDATE of
-                    // the book's OWN row must proceed even when the hash is
-                    // unchanged (metadata edits); the cross-device CREATE dedup
-                    // stays intact.
-                    val contentHash = row.contentHash
-                    if (contentHash != null) {
-                        val existing = dataSource.getUserBookByHash(userId, contentHash)
-                        if (existing != null && existing.id != bookId) {
-                            DebugLog.info(TAG, "processBookItem: duplicate hash ${contentHash.take(16)}… already in catalog — skipping")
-                            outboxDao.deleteById(item.id)
-                            return  // Already in catalog from other device
-                        }
-                    }
-
-                    dataSource.upsertBook(row)
-                    DebugLog.success(TAG, "processBookItem: book '${row.title}' upserted to Supabase OK")
+        // UPDATE short-circuit: when the local book is missing OR has no remote
+        // file yet, ack-via-OutboxCommit (Ok outcome) and return. Both paths
+        // were originally `outboxDao.deleteById(item.id); return` / plain
+        // `return` — wrapping in Ok normalises persistence.
+        if (operation != SyncOperation.DELETE) {
+            val localBook = bookDao.getBookById(bookId)
+            if (localBook == null) {
+                DebugLog.warn(TAG, "processBookItem: local book $bookId not found — deleting outbox entry")
+                commitOutbox(item) { ApplyOutcome.Ok }
+                return
+            }
+            // A locally imported book is only cloud-visible once its file
+            // actually exists in Drive (remotePath is set by the Drive sync
+            // push). Registering it without a remote file creates a "ghost"
+            // catalog row: it appears in "Available from other devices" but
+            // download fails with REMOTE_NOT_FOUND. Leave the outbox entry
+            // so the Drive push (which sets remotePath) can complete first;
+            // reconciliation covers stragglers. (No DAO call here — preserves
+            // the pre-PR-3 "defer until Drive push" semantic.)
+            if (localBook.remotePath.isNullOrBlank()) {
+                DebugLog.info(TAG, "processBookItem: book $bookId has no remote file yet — deferring catalog upsert until Drive push completes")
+                return
+            }
+            // Content-hash dedup: skip upsert if the same SHA-256 hash
+            // already exists in the catalog for this user. An UPDATE of
+            // the book's OWN row must proceed even when the hash is
+            // unchanged (metadata edits); the cross-device CREATE dedup
+            // stays intact.
+            val row = localBook.toUserBookRow(userId)
+            val contentHash = row.contentHash
+            if (contentHash != null) {
+                val existing = dataSource.getUserBookByHash(userId, contentHash)
+                if (existing != null && existing.id != bookId) {
+                    DebugLog.info(TAG, "processBookItem: duplicate hash ${contentHash.take(16)}… already in catalog — skipping")
+                    commitOutbox(item) { ApplyOutcome.Ok }
+                    return
                 }
             }
-            outboxDao.deleteById(item.id)
-        } catch (e: Exception) {
-            DebugLog.error(TAG, "processBookItem: FAILED for book $bookId (${item.operation}) — ${e.javaClass.simpleName}: ${e.message}")
-            runCatching { Log.w(TAG, "processBookItem: failed for book $bookId", e) }
-            outboxDao.incrementRetryCount(item.id, e.message ?: "Unknown error")
-            outboxDao.pruneFailedItems(3)
+            DebugLog.info(TAG, "processBookItem: pushing book '${row.title}' ($bookId) to Supabase — catalogVersion=${row.catalogVersion}, hash=${row.contentHash?.take(16)}…")
+
+            commitOutbox(item) {
+                try {
+                    dataSource.upsertBook(row)
+                    DebugLog.success(TAG, "processBookItem: book '${row.title}' upserted to Supabase OK")
+                    ApplyOutcome.Ok
+                } catch (e: Exception) {
+                    DebugLog.error(TAG, "processBookItem: FAILED for book $bookId (${item.operation}) — ${e.javaClass.simpleName}: ${e.message}")
+                    runCatching { Log.w(TAG, "processBookItem: failed for book $bookId", e) }
+                    // Catalog preserves D4 immediate-401 retry semantics: the
+                    // caller (per-domain retry path / orchestrator) decides
+                    // backoff; the helper returns Retryable without delay.
+                    ApplyOutcome.Retryable(e)
+                }
+            }
+            return
+        }
+
+        // DELETE: tombstones the remote row and acks via OutboxCommit.
+        commitOutbox(item) {
+            try {
+                val localBook = bookDao.getBookById(bookId)
+                val remoteBook = dataSource.getUserBook(userId, bookId)
+                val tombstone = (localBook?.toUserBookRow(userId) ?: remoteBook
+                    ?: UserBookRow(
+                        id = bookId, userId = userId, title = "", format = "unknown",
+                        importedAt = dateFormat.format(Date()), updatedAt = dateFormat.format(Date())
+                    )).copy(
+                    lifecycle = "deleted", filePath = null,
+                    catalogVersion = maxOf(localBook?.remoteCatalogVersion ?: 0L,
+                        remoteBook?.catalogVersion ?: 0L) + 1
+                )
+                dataSource.upsertBook(tombstone)
+                ApplyOutcome.Ok
+            } catch (e: Exception) {
+                DebugLog.error(TAG, "processBookItem: FAILED for book $bookId (${item.operation}) — ${e.javaClass.simpleName}: ${e.message}")
+                runCatching { Log.w(TAG, "processBookItem: failed for book $bookId", e) }
+                ApplyOutcome.Retryable(e)
+            }
+        }
+    }
+
+    /**
+     * Adapter between [processBookItem] and [OutboxCommit].
+     *
+     * When [outboxCommit] is wired (production DI), persistence is delegated to
+     * the helper, which centralises the ack / increment / prune policy. When
+     * null (legacy callers, unit tests using direct DAO fakes), we fall back
+     * to the pre-PR-3 inline behaviour so existing SupabaseBookCatalogSyncTest
+     * assertions on `deleteById` / `incrementRetryCount` / `pruneFailedItems`
+     * continue to pass without DI churn.
+     */
+    private suspend fun commitOutbox(
+        item: com.nextpage.data.local.entity.SyncOutboxEntity,
+        apply: suspend () -> ApplyOutcome,
+    ) {
+        val helper = outboxCommit
+        if (helper != null) {
+            helper.commit(item, apply)
+            return
+        }
+        when (val outcome = apply()) {
+            is ApplyOutcome.Ok -> outboxDao.deleteById(item.id)
+            is ApplyOutcome.Retryable -> {
+                outboxDao.incrementRetryCount(item.id, outcome.cause.message ?: "Unknown error")
+                outboxDao.pruneFailedItems(3)
+            }
+            is ApplyOutcome.Poison -> outboxDao.pruneFailedItems(3)
         }
     }
 

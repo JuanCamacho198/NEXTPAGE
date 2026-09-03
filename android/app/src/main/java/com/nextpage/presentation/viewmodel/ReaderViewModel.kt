@@ -507,15 +507,6 @@ class ReaderViewModel(
      */
     val navigateToLocator: SharedFlow<Locator> = _navigateToLocator.asSharedFlow()
 
-    /**
-     * Pending CFI range to navigate to once the book finishes loading.
-     * Set by [navigateToCfiAfterLoad] (called from NavHost before navigation),
-     * consumed in [loadBook] after the lifecycle holder reports the book is ready.
-     * Cleared after application or on ViewModel destruction.
-     */
-    @VisibleForTesting
-    internal var pendingCfiAfterLoad: String? = null
-
     // ── Cluster C state holders (extracted responsibilities) ──────────
 
     /**
@@ -699,17 +690,12 @@ class ReaderViewModel(
             }
         }
 
-                // Typography -> exact reflow wiring: when fontSize/lineHeight/margins change, recompute footer remaining pages within one frame
-        viewModelScope.launch(mainDispatcher) {
-            settingsManager.state.collect { s ->
-                val rs = s.readerSettings
-                val fontSizeSp = rs.fontSize.sizePx.toFloat()
-                val lineH = rs.lineHeight.value
-                val marginsVal = 16f
-                val density = getApplication<android.app.Application>().resources.displayMetrics.density
-                lifecycleHolder.onTypographyConfigChanged(fontSizeSp, lineH, marginsVal, density)
-            }
-        }
+                // Typography -> exact reflow wiring lives in the lifecycle
+        // owner (SDD reader-facade-split, T5); the VM only supplies density.
+        lifecycleHolder.observeTypographyConfig(
+            settingsManager.state,
+            getApplication<android.app.Application>().resources.displayMetrics.density
+        )
 
 // Derive the split-settings preview text from the current chapter's
         // real content (EPUB only). Refreshes when the book or chapter
@@ -784,21 +770,12 @@ class ReaderViewModel(
 
     /**
      * Stores a CFI range that should be navigated to once the book finishes
-     * loading. Called by the NavHost before navigating to the Reader route.
-     *
-     * The pending CFI survives the [loadBook] call (which starts async loading)
-     * and is applied in [applyPendingCfi] after the lifecycle holder reports
-     * that the publication is ready.
+     * loading. Session-owned state (SDD reader-facade-split, T5) — delegates
+     * to [ReaderLifecycleStateHolder]; called by the NavHost before navigating
+     * to the Reader route.
      */
-    fun navigateToCfiAfterLoad(cfiRange: String) {
-        pendingCfiAfterLoad = cfiRange
-        // If the book is already loaded (same-book highlight tap), apply
-        // the pending CFI immediately instead of waiting for loadBook.
-        val state = lifecycleHolder.state.value
-        if (!state.isLoading && state.readiumPublication != null) {
-            applyPendingCfi()
-        }
-    }
+    fun navigateToCfiAfterLoad(cfiRange: String) =
+        lifecycleHolder.navigateToCfiAfterLoad(cfiRange)
 
     /**
      * Loads a new book into the reader, replacing any current selection.
@@ -827,38 +804,10 @@ class ReaderViewModel(
         lifecycleHolder.loadBook(bookId, filePath, format)
 
         // When loading completes, apply any pending CFI navigation
-        // (set by NavHost via navigateToCfiAfterLoad before navigating).
+        // (session-owned; set by NavHost via navigateToCfiAfterLoad).
         viewModelScope.launch(mainDispatcher) {
             lifecycleHolder.state.first { !it.isLoading }
-            applyPendingCfi()
-        }
-    }
-
-    /**
-     * Applies the pending CFI navigation (if any) after the book has
-     * finished loading. Uses the same logic as [onHighlightSelected]:
-     * - PDF: `cfiRange` is `"pdfpage:<N>"` → [goToPdfPage]
-     * - EPUB: extract chapter index from CFI via `Regex("/6/(\\d+)")` → [goToChapter]
-     *
-     * The pending CFI is cleared after application so it does not re-fire
-     * on subsequent book loads.
-     */
-    @VisibleForTesting
-    internal fun applyPendingCfi() {
-        val cfiRange = pendingCfiAfterLoad ?: return
-        pendingCfiAfterLoad = null
-
-        if (cfiRange.startsWith("pdfpage:")) {
-            val page = cfiRange.removePrefix("pdfpage:").toIntOrNull()
-            if (page != null) goToPdfPage(page)
-        } else {
-            val chapterMatch = Regex("/6/(\\d+)").find(cfiRange)
-            val spineIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()?.minus(1)
-            if (spineIndex != null) {
-                val chapters = lifecycleHolder.state.value.chapters
-                val listPos = chapters.indexOfFirst { it.index == spineIndex }.takeIf { it >= 0 }
-                if (listPos != null) goToChapter(listPos) else goToChapter(spineIndex.coerceIn(chapters.indices))
-            }
+            lifecycleHolder.applyPendingCfi()
         }
     }
 

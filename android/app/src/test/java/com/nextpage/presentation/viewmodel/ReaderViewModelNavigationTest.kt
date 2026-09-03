@@ -41,9 +41,9 @@ class ReaderViewModelNavigationTest {
             mainDispatcher = dispatcher
         )
 
-        viewModel.navigateToCfiAfterLoad("pdfpage:5")
+        viewModel.lifecycleHolder.navigateToCfiAfterLoad("pdfpage:5")
 
-        assertEquals("pdfpage:5", viewModel.pendingCfiAfterLoad)
+        assertEquals("pdfpage:5", viewModel.lifecycleHolder.pendingCfiAfterLoad)
     }
 
     @Test
@@ -63,9 +63,9 @@ class ReaderViewModelNavigationTest {
             BookChapter(2, "ch3", "Chapter 3", "ch3.xhtml")
         )
         viewModel.lifecycleHolder.setEpubStateForTest(chapters = chapters)
-        viewModel.navigateToCfiAfterLoad("epubcfi(/6/3)")
+        viewModel.lifecycleHolder.navigateToCfiAfterLoad("epubcfi(/6/3)")
 
-        viewModel.applyPendingCfi()
+        viewModel.lifecycleHolder.applyPendingCfi()
         advanceUntilIdle()
 
         // CFI /6/3 extracts chapter index 3, which maps to 0-based index 2
@@ -88,9 +88,9 @@ class ReaderViewModelNavigationTest {
             totalPages = 10,
             currentPage = 0
         )
-        viewModel.navigateToCfiAfterLoad("pdfpage:5")
+        viewModel.lifecycleHolder.navigateToCfiAfterLoad("pdfpage:5")
 
-        viewModel.applyPendingCfi()
+        viewModel.lifecycleHolder.applyPendingCfi()
         advanceUntilIdle()
 
         assertEquals("Should navigate to page 5", 5, viewModel.uiState.value.currentPdfPage)
@@ -111,12 +111,12 @@ class ReaderViewModelNavigationTest {
             selectedBookId = "book-42",
             totalPages = 10
         )
-        viewModel.navigateToCfiAfterLoad("pdfpage:3")
+        viewModel.lifecycleHolder.navigateToCfiAfterLoad("pdfpage:3")
 
-        viewModel.applyPendingCfi()
+        viewModel.lifecycleHolder.applyPendingCfi()
         advanceUntilIdle()
 
-        assertNull("Pending CFI should be null after application", viewModel.pendingCfiAfterLoad)
+        assertNull("Pending CFI should be null after application", viewModel.lifecycleHolder.pendingCfiAfterLoad)
     }
 
     @Test
@@ -139,11 +139,11 @@ class ReaderViewModelNavigationTest {
         viewModel.lifecycleHolder.setBookLoadedForTest(publication = mockk(relaxed = true))
         viewModel.lifecycleHolder.setEpubStateForTest(chapters = chapters)
 
-        viewModel.navigateToCfiAfterLoad("epubcfi(/6/3)")
+        viewModel.lifecycleHolder.navigateToCfiAfterLoad("epubcfi(/6/3)")
         advanceUntilIdle()
 
         // applyPendingCfi should fire immediately: pending cleared and chapter navigated
-        assertNull("Pending CFI should be cleared after immediate apply", viewModel.pendingCfiAfterLoad)
+        assertNull("Pending CFI should be cleared after immediate apply", viewModel.lifecycleHolder.pendingCfiAfterLoad)
         assertEquals("Should navigate to chapter index 2 (third chapter)", 2, viewModel.uiState.value.currentChapterIndex)
     }
 

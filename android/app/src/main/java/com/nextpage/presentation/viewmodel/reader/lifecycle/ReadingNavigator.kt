@@ -1,5 +1,6 @@
 package com.nextpage.presentation.viewmodel.reader.lifecycle
 
+import androidx.annotation.VisibleForTesting
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import com.nextpage.presentation.viewmodel.reader.BookChapter
@@ -233,4 +234,60 @@ class ReadingNavigator(
     }
 
     override fun onCleared() {}
+
+    // ── Pending CFI after load ──────────────────────────────────────
+    // SDD reader-facade-split, T5: moved verbatim from ReaderViewModel so
+    // post-load navigation lives in the lifecycle owner, not the VM.
+
+    /**
+     * Pending CFI range to navigate to once the book finishes loading.
+     * Set by [navigateToCfiAfterLoad] (called from NavHost before navigation),
+     * consumed in [applyPendingCfi] after the book reports ready.
+     * Cleared after application or on ViewModel destruction.
+     */
+    @VisibleForTesting
+    internal var pendingCfiAfterLoad: String? = null
+
+    /**
+     * Stores a CFI range that should be navigated to once the book finishes
+     * loading. If the book is already loaded (same-book highlight tap),
+     * applies the pending CFI immediately instead of waiting for loadBook.
+     */
+    fun navigateToCfiAfterLoad(cfiRange: String) {
+        pendingCfiAfterLoad = cfiRange
+        // If the book is already loaded (same-book highlight tap), apply
+        // the pending CFI immediately instead of waiting for loadBook.
+        val state = state.value
+        if (!state.isLoading && state.readiumPublication != null) {
+            applyPendingCfi()
+        }
+    }
+
+    /**
+     * Applies the pending CFI navigation (if any) after the book has
+     * finished loading. Uses the same logic as highlight navigation:
+     * - PDF: `cfiRange` is `"pdfpage:<N>"` → [goToPdfPage]
+     * - EPUB: extract chapter index from CFI via `Regex("/6/(\\d+)")` → [goToChapter]
+     *
+     * The pending CFI is cleared after application so it does not re-fire
+     * on subsequent book loads.
+     */
+    @VisibleForTesting
+    internal fun applyPendingCfi() {
+        val cfiRange = pendingCfiAfterLoad ?: return
+        pendingCfiAfterLoad = null
+
+        if (cfiRange.startsWith("pdfpage:")) {
+            val page = cfiRange.removePrefix("pdfpage:").toIntOrNull()
+            if (page != null) goToPdfPage(page)
+        } else {
+            val chapterMatch = Regex("/6/(\\d+)").find(cfiRange)
+            val spineIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()?.minus(1)
+            if (spineIndex != null) {
+                val chapters = state.value.chapters
+                val listPos = chapters.indexOfFirst { it.index == spineIndex }.takeIf { it >= 0 }
+                if (listPos != null) goToChapter(listPos) else goToChapter(spineIndex.coerceIn(chapters.indices))
+            }
+        }
+    }
 }

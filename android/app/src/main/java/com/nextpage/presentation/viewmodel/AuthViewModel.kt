@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.nextpage.BuildConfig
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
+import com.nextpage.data.remote.sync.SyncOrchestrator
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.repository.SupabaseAuthRepository
 import com.nextpage.domain.error.AppError
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 
 /**
@@ -73,26 +75,34 @@ data class AuthUiState(
  * [uiState] for [com.nextpage.presentation.screen.AuthScreen]. Handles
  * Google One Tap sign-in, email/password sign-up and sign-in, anonymous
  * local continuation, and sign-out. On successful sign-in it bootstraps
- * remote sync via [SyncService].
+ * remote sync via [SyncOrchestrator].
  *
  * @param authRepository Remote auth operations (Google, email, local session).
- * @param syncService Sync bootstrap and pull/push scheduler.
- * @param supabaseProgressSync Outbox-to-Supabase processor for reading progress.
- * @param supabaseBookCatalogSync Catalog sync for pushing local books to Supabase.
+ * @param syncOrchestrator Per-domain sync lifecycle (Drive + Catalog + Progress).
+ *                        Replaces the previous 4-step in-line orchestration in
+ *                        [triggerSyncForSession] and the previous Progress-only
+ *                        [signOut]. See sync-layer-split PR-3.
  * @param isAuthConfigured Build-time flag indicating auth keys are wired in.
  * @param hasAuthWiringIssue Build-time flag indicating a DI wiring problem.
  */
 class AuthViewModel(
     private val authRepository: AuthRepository,
-    private val syncService: SyncService,
-    private val supabaseProgressSync: SupabaseProgressSync? = null,
-    private val supabaseBookCatalogSync: SupabaseBookCatalogSync? = null,
+    private val syncOrchestrator: SyncOrchestrator,
     private val isAuthConfigured: Boolean,
     private val hasAuthWiringIssue: Boolean
 ) : ViewModel() {
 
     companion object {
         private const val AUTH_VM_TAG = "AuthViewModel"
+
+        /**
+         * Maximum wall-clock budget for [SyncOrchestrator.stop] during sign-out.
+         * After this, local session state is cleared regardless of stop progress
+         * so a slow fan-out can never block the UI. 5 s covers the typical
+         * Drive stop + catalog stopRealtime + progress stopRealtime (5 channels
+         * total) with margin for cancellation propagation.
+         */
+        private const val ORCHESTRATOR_STOP_TIMEOUT_MS = 5_000L
     }
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -362,14 +372,23 @@ class AuthViewModel(
      * Signs the user out and clears the local session.
      *
      * Side effects:
-     * 1. Calls [AuthRepository.signOut].
-     * 2. On success: `currentSession` becomes `null`.
-     * 3. On failure: `currentSession` is preserved, `errorMessage` is set,
+     * 1. Calls [SyncOrchestrator.stop] (with a 5 s timeout) BEFORE clearing
+     *    local state. This closes ALL Realtime channels (4 Progress + 1
+     *    Catalog + Drive) and cancels all gated loops — fixing the
+     *    catalog-logout Realtime leak that the previous Progress-only stop
+     *    left open. Local state is cleared AFTER orchestrator.stop returns
+     *    OR after 5 s, whichever comes first, so a slow stop can never
+     *    block sign-out.
+     * 2. Calls [AuthRepository.signOut].
+     * 3. On success: `currentSession` becomes `null`.
+     * 4. On failure: `currentSession` is preserved, `errorMessage` is set,
      *    and a `ShowSnackbar` event is emitted.
      */
     fun signOut() {
         viewModelScope.launch {
-            supabaseProgressSync?.stop()
+            withTimeoutOrNull(ORCHESTRATOR_STOP_TIMEOUT_MS) {
+                runCatching { syncOrchestrator.stop() }
+            }
             val result = authRepository.signOut()
             _uiState.update { it.copy(
                 currentSession = if (result.isSuccess) null else it.currentSession,
@@ -461,34 +480,15 @@ class AuthViewModel(
     }
 
     private suspend fun triggerSyncForSession(session: AuthSession) {
-        // Drive sync only runs when Drive is authorized; a Drive failure here is
-        // NON-FATAL (no early return) — Supabase catalog/progress sync are
-        // independent of Drive and must still run so imported books reach the
-        // catalog even when Drive authorization is pending or missing.
-        var stepStart = System.currentTimeMillis()
-        val bootstrap = syncService.bootstrap(session.userId)
-        logDebug("triggerSync: Drive bootstrap took ${System.currentTimeMillis() - stepStart}ms success=${bootstrap.isSuccess}")
-        if (bootstrap.isSuccess) {
-            stepStart = System.currentTimeMillis()
-            syncService.schedulePull()
-            logDebug("triggerSync: schedulePull took ${System.currentTimeMillis() - stepStart}ms")
-            stepStart = System.currentTimeMillis()
-            syncService.schedulePush()
-            logDebug("triggerSync: schedulePush took ${System.currentTimeMillis() - stepStart}ms")
-        }
-
-        // Start Supabase outbox processing and Realtime subscription
-        // (independent of Drive authorization).
-        stepStart = System.currentTimeMillis()
-        supabaseProgressSync?.startProcessing()
-        supabaseProgressSync?.subscribeToRealtimeChanges()
-        logDebug("triggerSync: progress sync launch took ${System.currentTimeMillis() - stepStart}ms")
-
-        // Push local Android books to Supabase catalog so Desktop discovers them
-        // (independent of Drive authorization).
-        stepStart = System.currentTimeMillis()
-        supabaseBookCatalogSync?.bootstrap()
-        logDebug("triggerSync: catalog bootstrap took ${System.currentTimeMillis() - stepStart}ms")
+        // sync-layer-split PR-3: collapse the previous 4-step in-line
+        // orchestration (Drive bootstrap → Drive pull → Drive push → Progress
+        // startProcessing → Progress subscribe → Catalog bootstrap) into a
+        // single call. The orchestrator preserves Drive-first ordering AND
+        // the Drive-non-fatal semantic, so triggerSyncForSession no longer
+        // needs to know the per-domain shape.
+        val stepStart = System.currentTimeMillis()
+        runCatching { syncOrchestrator.start(session.userId) }
+        logDebug("triggerSync: orchestrator.start took ${System.currentTimeMillis() - stepStart}ms")
     }
 
     /**
@@ -499,9 +499,7 @@ class AuthViewModel(
      */
     class Factory(
         private val authRepository: AuthRepository,
-        private val syncService: SyncService,
-        private val supabaseProgressSync: SupabaseProgressSync?,
-        private val supabaseBookCatalogSync: SupabaseBookCatalogSync?,
+        private val syncOrchestrator: SyncOrchestrator,
         private val isAuthConfigured: Boolean,
         private val hasAuthWiringIssue: Boolean
     ) : ViewModelProvider.Factory {
@@ -509,9 +507,7 @@ class AuthViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return AuthViewModel(
                 authRepository = authRepository,
-                syncService = syncService,
-                supabaseProgressSync = supabaseProgressSync,
-                supabaseBookCatalogSync = supabaseBookCatalogSync,
+                syncOrchestrator = syncOrchestrator,
                 isAuthConfigured = isAuthConfigured,
                 hasAuthWiringIssue = hasAuthWiringIssue
             ) as T

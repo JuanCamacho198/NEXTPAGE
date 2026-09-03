@@ -59,9 +59,7 @@ class MainActivity : AppCompatActivity() {
         val authViewModel: AuthViewModel by viewModels {
             AuthViewModel.Factory(
                 authRepository = appContainer.authRepository,
-                syncService = appContainer.syncService,
-                supabaseProgressSync = appContainer.supabaseProgressSync,
-                supabaseBookCatalogSync = appContainer.supabaseBookCatalogSync,
+                syncOrchestrator = appContainer.syncOrchestrator,
                 isAuthConfigured = !appContainer.isAuthConfigError,
                 hasAuthWiringIssue = false
             )

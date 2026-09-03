@@ -17,7 +17,6 @@ import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.SupabaseProgressDataSource
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.DriveColdBackupService
-import com.nextpage.data.remote.sync.OutboxCommit
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
 import com.nextpage.data.remote.sync.SyncOrchestrator
 import com.nextpage.data.remote.sync.SyncOrchestratorImpl
@@ -89,19 +88,19 @@ class AppContainer(context: Context) {
     val driveColdBackupService: DriveColdBackupService by lazy { networkModule.driveColdBackupService }
 
     // ── sync-layer-split PR-1 foundations ────────────────────────────────
-    // SessionGate + OutboxCommit are the two helpers extracted in PR-1; the
-    // SyncOrchestrator that wires them into a per-domain lifecycle arrives in
-    // PR-2. `syncState` is a sealed type, not a singleton, so it is not wired
-    // here — consumers (DebugViewModel) continue reading per-domain states
-    // until the orchestrator exists.
+    // SessionGate is the domain-sync helper; the SyncOrchestrator that wires
+    // it into a per-domain lifecycle arrives in PR-2 (and AuthViewModel
+    // consumes it in PR-3). `syncState` is a sealed type, not a singleton,
+    // so it is not wired here — consumers (DebugViewModel) continue reading
+    // per-domain states until the orchestrator exists.
     val sessionGate: SessionGate by lazy { SessionGateImpl(sessionManager) }
-    val outboxCommit: OutboxCommit by lazy { OutboxCommit(databaseModule.syncOutboxDao) }
 
     // ── sync-layer-split PR-2: SyncOrchestrator ──────────────────────────
     // Wires Drive (SyncService) + Catalog + Progress + SessionGate + the
-    // shared outbox DAO into a single per-domain lifecycle handle. Not yet
-    // consumed by `AuthViewModel` (PR-3); the orchestrator exists as an
-    // additive singleton so the wiring can be smoke-tested independently.
+    // shared outbox DAO into a single per-domain lifecycle handle. Consumed
+    // by `AuthViewModel` in PR-3 (sign-out closes ALL Realtime channels via
+    // orchestrator.stop, fixing the catalog-logout Realtime leak; sign-in
+    // delegates to orchestrator.start).
     val syncOrchestrator: SyncOrchestrator by lazy {
         SyncOrchestratorImpl(
             drive = syncService,

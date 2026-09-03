@@ -17,6 +17,7 @@ import com.nextpage.data.remote.supabase.SupabaseProgressDataSource
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.DriveColdBackupService
 import com.nextpage.data.remote.sync.GoogleDriveSyncService
+import com.nextpage.data.remote.sync.OutboxCommit
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.repository.SupabaseAuthRepository
@@ -115,7 +116,8 @@ class NetworkModule(
             highlightDao = databaseModule.highlightDao,
             readingSessionDao = databaseModule.readingSessionDao,
             sessionManager = sessionManager,
-            dataSource = supabaseProgressDataSource
+            dataSource = supabaseProgressDataSource,
+            outboxCommit = outboxCommit
         )
     }
 
@@ -132,7 +134,8 @@ class NetworkModule(
             remoteDataSource = driveRemoteDataSource,
             driveTokenRefresher = { driveCoordinator.refreshAccessToken() },
             localBooksDir = context.applicationContext.filesDir.resolve("books"),
-            progressDataSource = supabaseProgressDataSource
+            progressDataSource = supabaseProgressDataSource,
+            outboxCommit = outboxCommit
         )
     }
 
@@ -149,4 +152,9 @@ class NetworkModule(
             sessionManager = sessionManager
         )
     }
+
+    // ── sync-layer-split PR-1: OutboxCommit helper ────────────────────────
+    // Centralised ack/increment/prune policy used by both Supabase syncers.
+    // Lives in NetworkModule alongside the per-domain syncers that consume it.
+    val outboxCommit: OutboxCommit by lazy { OutboxCommit(databaseModule.syncOutboxDao) }
 }

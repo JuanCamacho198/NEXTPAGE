@@ -8,7 +8,6 @@ import com.nextpage.testutil.MainDispatcherRule
 import android.app.Application
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -107,8 +106,7 @@ class ReaderViewModelSearchTest {
                 BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
                 BookChapter(1, "c2", "Ch 2", "ch2.xhtml")
             ),
-            currentChapterIndex = 1,
-            bookFilePath = "/test/book.epub"
+            currentChapterIndex = 1
         )
 
         val result = SearchResult(
@@ -137,22 +135,16 @@ class ReaderViewModelSearchTest {
         )
     }
 
+    // Slice 4 (SDD reader-facade-split, T5): session state is owner-held —
+    // seed it through the session owner, not the VM merge flow.
     private fun setEpubState(
         viewModel: ReaderViewModel,
         chapters: List<BookChapter>,
-        currentChapterIndex: Int,
-        bookFilePath: String
+        currentChapterIndex: Int
     ) {
-        val field = ReaderViewModel::class.java.getDeclaredField("mutableUiState")
-        field.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        val state = field.get(viewModel) as MutableStateFlow<ReaderUiState>
-        state.value = state.value.copy(
-            bookFormat = "epub",
-            bookFilePath = bookFilePath,
+        viewModel.lifecycleHolder.setEpubStateForTest(
             chapters = chapters,
-            currentChapterIndex = currentChapterIndex,
-            totalPdfPages = 0
+            currentChapterIndex = currentChapterIndex
         )
     }
 }

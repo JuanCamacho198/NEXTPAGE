@@ -15,6 +15,7 @@ import com.nextpage.presentation.screen.ReaderFullscreenArrows
 import com.nextpage.presentation.viewmodel.ReaderUiState
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.reader.SearchUiState
+import com.nextpage.presentation.viewmodel.reader.SessionUiState
 import com.nextpage.presentation.viewmodel.reader.SettingsUiState
 import com.nextpage.presentation.viewmodel.reader.SleepTimerUiState
 import com.nextpage.ui.components.molecules.ChaptersSheet
@@ -31,6 +32,7 @@ fun ReaderScreenOverlaysHost(
     searchUiState: SearchUiState,
     settingsUiState: SettingsUiState,
     sleepTimerUiState: SleepTimerUiState,
+    sessionUiState: SessionUiState,
     viewModel: ReaderViewModel,
     showSleepTimerSheet: Boolean,
     onDismissSleepTimerSheet: () -> Unit,
@@ -45,18 +47,18 @@ fun ReaderScreenOverlaysHost(
     isSelectionActive: Boolean,
     onUserInteraction: () -> Unit
 ) {
-    if (!uiState.isLoading && !isSelectionActive &&
-        !(settingsUiState.readerSettings.verticalScroll && uiState.bookFormat == "epub") &&
-        uiState.bookFormat != "pdf"
+    if (!sessionUiState.isLoading && !isSelectionActive &&
+        !(settingsUiState.readerSettings.verticalScroll && sessionUiState.bookFormat == "epub") &&
+        sessionUiState.bookFormat != "pdf"
     ) {
         ReaderFullscreenArrows(
             onPrevious = {
                 onUserInteraction()
-                viewModel.onTapZone(isLeftZone = true)
+                viewModel.lifecycleHolder.onTapZone(isLeftZone = true)
             },
             onNext = {
                 onUserInteraction()
-                viewModel.onTapZone(isLeftZone = false)
+                viewModel.lifecycleHolder.onTapZone(isLeftZone = false)
             }
         )
     }
@@ -74,8 +76,8 @@ fun ReaderScreenOverlaysHost(
             onQueryChange = {
                 viewModel.searchStateHolder.onSearchQuery(
                     it,
-                    uiState.readiumPublication,
-                    uiState.bookFormat
+                    sessionUiState.readiumPublication,
+                    sessionUiState.bookFormat
                 )
             },
             onClearQuery = { viewModel.onClearSearch() },
@@ -92,20 +94,20 @@ fun ReaderScreenOverlaysHost(
         )
     }
 
-    if (uiState.showTocSheet) {
+    if (sessionUiState.showTocSheet) {
         ChaptersSheet(
-            chapters = uiState.chapters,
-            currentChapterIndex = uiState.currentChapterIndex,
-            onChapterSelected = { idx -> viewModel.goToChapter(idx) },
-            onDismiss = { viewModel.onToggleTocSheet() }
+            chapters = sessionUiState.chapters,
+            currentChapterIndex = sessionUiState.currentChapterIndex,
+            onChapterSelected = { idx -> viewModel.lifecycleHolder.goToChapter(idx) },
+            onDismiss = { viewModel.lifecycleHolder.onToggleTocSheet() }
         )
     }
 
-    if (settingsUiState.showSplitSettings && uiState.chapters.isNotEmpty()) {
-        val previewText = remember(uiState.previewText, uiState.selectedText, uiState.currentChapterIndex, uiState.chapters) {
+    if (settingsUiState.showSplitSettings && sessionUiState.chapters.isNotEmpty()) {
+        val previewText = remember(uiState.previewText, uiState.selectedText, sessionUiState.currentChapterIndex, sessionUiState.chapters) {
             uiState.previewText.ifBlank {
                 uiState.selectedText?.takeIf { it.isNotBlank() }
-                    ?: uiState.chapters.getOrNull(uiState.currentChapterIndex)?.title
+                    ?: sessionUiState.chapters.getOrNull(sessionUiState.currentChapterIndex)?.title
                     ?: ""
             }
         }
@@ -162,7 +164,7 @@ fun ReaderScreenOverlaysHost(
         )
     }
 
-    if (showGoToPageDialog && uiState.totalPdfPages > 0) {
+    if (showGoToPageDialog && sessionUiState.totalPdfPages > 0) {
         AlertDialog(
             onDismissRequest = onDismissGoToPage,
             title = { Text(text = stringResource(R.string.reader_go_to_page)) },
@@ -182,7 +184,7 @@ fun ReaderScreenOverlaysHost(
                                 Text(text = error)
                             } else {
                                 Text(
-                                    text = stringResource(R.string.reader_go_to_page_input_hint, uiState.totalPdfPages)
+                                    text = stringResource(R.string.reader_go_to_page_input_hint, sessionUiState.totalPdfPages)
                                 )
                             }
                         }

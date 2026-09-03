@@ -4,6 +4,9 @@ import com.nextpage.domain.model.ReadingProgress
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 
+/** Session slice alias (SDD reader-facade-split, slice 4): VM re-export type. */
+typealias SessionUiState = ReaderLifecycleState
+
 data class ReaderLifecycleState(
     val selectedBookId: String? = null,
     val bookFilePath: String? = null,

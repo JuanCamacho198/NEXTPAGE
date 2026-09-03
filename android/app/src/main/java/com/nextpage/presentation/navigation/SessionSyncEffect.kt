@@ -31,6 +31,6 @@ fun SessionSyncEffect(
     LaunchedEffect(session?.userId, session?.photoUrl) {
         homeViewModel.setActiveSession(session)
         getStatisticsUseCase.setUserId(session?.userId)
-        readerViewModel.setActiveUserId(session?.userId.orEmpty())
+        readerViewModel.lifecycleHolder.setActiveUserId(session?.userId.orEmpty())
     }
 }

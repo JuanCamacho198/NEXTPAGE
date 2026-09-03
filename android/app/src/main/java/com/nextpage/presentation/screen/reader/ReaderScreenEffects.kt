@@ -70,8 +70,8 @@ fun ReaderScreenEffects(
     }
 
     DisposableEffect(selectedBookId) {
-        viewModel.onReaderOpened()
-        onDispose { viewModel.onReaderPaused() }
+        viewModel.lifecycleHolder.onReaderOpened()
+        onDispose { viewModel.lifecycleHolder.onReaderPaused() }
     }
 
     LaunchedEffect(selectedBookId, bookFilePath, bookFormat) {

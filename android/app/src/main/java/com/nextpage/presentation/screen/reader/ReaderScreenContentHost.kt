@@ -25,6 +25,7 @@ import com.nextpage.presentation.screen.readium.buildNavigatorConfig
 import com.nextpage.ui.components.molecules.SelectionOverlay
 import com.nextpage.presentation.viewmodel.ReaderUiState
 import com.nextpage.presentation.viewmodel.ReaderViewModel
+import com.nextpage.presentation.viewmodel.reader.SessionUiState
 import com.nextpage.presentation.viewmodel.reader.SettingsUiState
 import kotlinx.coroutines.flow.MutableSharedFlow
 
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 fun ReaderScreenContentHost(
     uiState: ReaderUiState,
     settingsUiState: SettingsUiState,
+    sessionUiState: SessionUiState,
     viewModel: ReaderViewModel,
     selectionCallbacks: ReaderSelectionCallbacks,
     onShowChrome: () -> Unit,
@@ -43,8 +45,8 @@ fun ReaderScreenContentHost(
 ) {
     val currentOnShowChrome by rememberUpdatedState(onShowChrome)
 
-    val error = uiState.error
-    val readiumPublication = uiState.readiumPublication
+    val error = sessionUiState.error
+    val readiumPublication = sessionUiState.readiumPublication
 
     @Composable
     fun SharedSelectionOverlay() {
@@ -81,13 +83,13 @@ fun ReaderScreenContentHost(
     }
 
     when {
-        uiState.isLoading -> {
-            LoadingContent(loadTimeMs = uiState.loadTimeMs, modifier = modifier)
+        sessionUiState.isLoading -> {
+            LoadingContent(loadTimeMs = sessionUiState.loadTimeMs, modifier = modifier)
         }
         error != null -> {
             ErrorContent(error = error, onRetry = onRetry, modifier = modifier)
         }
-        uiState.bookFormat == "pdf" && readiumPublication != null -> {
+        sessionUiState.bookFormat == "pdf" && readiumPublication != null -> {
             Box(modifier = modifier.fillMaxSize()) {
                 ReadiumPdfReaderContent(
                     publication = readiumPublication,
@@ -100,7 +102,7 @@ fun ReaderScreenContentHost(
                 SharedSelectionOverlay()
             }
         }
-        uiState.chapters.isNotEmpty() && readiumPublication != null -> {
+        sessionUiState.chapters.isNotEmpty() && readiumPublication != null -> {
             Box(modifier = modifier.fillMaxSize()) {
                 ReadiumReaderContent(
                     publication = readiumPublication,
@@ -108,7 +110,7 @@ fun ReaderScreenContentHost(
                     highlights = uiState.highlights,
                     readerSettings = settingsUiState.readerSettings,
                     viewModel = viewModel,
-                    initialLocator = uiState.readiumLocator,
+                    initialLocator = sessionUiState.readiumLocator,
                     inspectHighlightsHtmlTrigger = inspectHighlightsHtmlTrigger,
                     logWebViewTreeTrigger = logWebViewTreeTrigger,
                     onShowChrome = { currentOnShowChrome() },

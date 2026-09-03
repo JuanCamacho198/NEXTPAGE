@@ -63,6 +63,7 @@ fun ReaderScreen(
     val chromeUiState by viewModel.chromeUiState.collectAsStateWithLifecycle()
     val settingsUiState by viewModel.settingsUiState.collectAsStateWithLifecycle()
     val sleepTimerUiState by viewModel.sleepTimerUiState.collectAsStateWithLifecycle()
+    val sessionUiState by viewModel.sessionUiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val view = LocalView.current
 
@@ -85,7 +86,7 @@ fun ReaderScreen(
     val onUserInteraction: () -> Unit = { lastInteractionAt = SystemClock.elapsedRealtime() }
 
     val onShowChrome: () -> Unit = {
-        if (!uiState.isLoading && !isSelectionActive) {
+        if (!sessionUiState.isLoading && !isSelectionActive) {
             controlsVisible = true
             lastInteractionAt = SystemClock.elapsedRealtime()
         }
@@ -124,8 +125,8 @@ fun ReaderScreen(
         bookFilePath = bookFilePath,
         bookFormat = bookFormat,
         lastInteractionAt = lastInteractionAt,
-        currentChapterIndex = uiState.currentChapterIndex,
-        currentPdfPage = uiState.currentPdfPage,
+        currentChapterIndex = sessionUiState.currentChapterIndex,
+        currentPdfPage = sessionUiState.currentPdfPage,
         lastBookmarkTrigger = lastBookmarkTrigger,
         viewModel = viewModel,
         view = view,
@@ -151,27 +152,28 @@ fun ReaderScreen(
                         lastBookmarkTrigger = SystemClock.elapsedRealtime()
                     },
                     onToggleSplitSettings = { viewModel.settingsManager.onToggleSplitSettings() },
-                    onToggleToc = { viewModel.onToggleTocSheet() },
+                    onToggleToc = { viewModel.lifecycleHolder.onToggleTocSheet() },
                     onToggleDebugPanel = { debugPanelVisible = !debugPanelVisible }
                 )
             },
             footer = {
                 ReadingProgressBar(
-                    progressPercent = uiState.progressPercent,
-                    label = uiState.progressLabel,
+                    progressPercent = sessionUiState.progressPercent,
+                    label = sessionUiState.progressLabel,
                     onRotateScreen = {
                         val activity = context as Activity
                         val portrait = activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
                         activity.requestedOrientation = if (portrait) ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                         else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                     },
-                    onProgressChange = { viewModel.onProgressChange(it) }
+                    onProgressChange = { viewModel.lifecycleHolder.onProgressChange(it) }
                 )
             },
             content = {
                 ReaderScreenContentHost(
                     uiState = uiState,
                     settingsUiState = settingsUiState,
+                    sessionUiState = sessionUiState,
                     viewModel = viewModel,
                     selectionCallbacks = selectionCallbacks,
                     onShowChrome = onShowChrome,
@@ -188,6 +190,7 @@ fun ReaderScreen(
                     searchUiState = searchUiState,
                     settingsUiState = settingsUiState,
                     sleepTimerUiState = sleepTimerUiState,
+                    sessionUiState = sessionUiState,
                     viewModel = viewModel,
                     showSleepTimerSheet = showSleepTimerSheet,
                     onDismissSleepTimerSheet = { showSleepTimerSheet = false },
@@ -200,10 +203,10 @@ fun ReaderScreen(
                     },
                     onGoToPageConfirm = {
                         val pageNumber = goToPageInput.toIntOrNull()
-                        if (pageNumber == null || pageNumber !in 1..uiState.totalPdfPages) {
-                            goToPageError = "Enter a value between 1 and ${uiState.totalPdfPages}"
+                        if (pageNumber == null || pageNumber !in 1..sessionUiState.totalPdfPages) {
+                            goToPageError = "Enter a value between 1 and ${sessionUiState.totalPdfPages}"
                         } else {
-                            viewModel.goToPdfPage(pageNumber - 1)
+                            viewModel.lifecycleHolder.goToPdfPage(pageNumber - 1)
                             showGoToPageDialog = false
                             goToPageInput = ""
                             goToPageError = null

@@ -59,7 +59,7 @@ class ReaderViewModelSleepTimerTest {
         viewModel.sleepTimerManager.startTimer(SleepTimerManager.END_OF_CHAPTER)
 
         // Session-owned navigation; the glue forwards the chapter event.
-        viewModel.goToChapter(1)
+        viewModel.lifecycleHolder.goToChapter(1)
 
         assertTrue(viewModel.sleepTimerUiState.value.isFinished)
         assertTrue(viewModel.uiState.value.sleepTimerFinished)
@@ -76,7 +76,7 @@ class ReaderViewModelSleepTimerTest {
             currentChapterIndex = 0
         )
 
-        viewModel.goToChapter(1)
+        viewModel.lifecycleHolder.goToChapter(1)
 
         assertFalse(viewModel.sleepTimerUiState.value.isFinished)
         assertFalse(viewModel.uiState.value.sleepTimerFinished)

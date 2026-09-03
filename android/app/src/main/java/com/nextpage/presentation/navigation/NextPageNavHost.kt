@@ -214,7 +214,7 @@ fun NextPageNavHost(
                 selectedBookId = book.id
                 selectedBookFilePath = book.filePath
                 selectedBookFormat = book.format
-                readerViewModel.navigateToCfiAfterLoad(event.cfiRange)
+                readerViewModel.lifecycleHolder.navigateToCfiAfterLoad(event.cfiRange)
                 navController.navigate(NextPageDestination.Reader.route) {
                     launchSingleTop = true
                 }

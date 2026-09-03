@@ -3,7 +3,6 @@ package com.nextpage.presentation.viewmodel
 import android.app.Application
 import android.graphics.Rect
 import android.graphics.RectF
-import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.compose.runtime.Immutable
@@ -31,11 +30,13 @@ import com.nextpage.presentation.viewmodel.reader.ReaderSettingsManager
 import com.nextpage.presentation.viewmodel.reader.SettingsUiState
 import com.nextpage.presentation.viewmodel.reader.SearchStateHolder
 import com.nextpage.presentation.viewmodel.reader.SearchUiState
+import com.nextpage.presentation.viewmodel.reader.SessionUiState
 import com.nextpage.presentation.viewmodel.reader.SleepTimerManager
 import com.nextpage.presentation.viewmodel.reader.SleepTimerUiState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -443,12 +444,14 @@ class ReaderUiState(
  * `fullscreenManager`, `settingsManager`, `sleepTimerManager`) and merges
  * their state streams into [ReaderUiState] (`init` collectors plus a
  * combine overlay for the migrated slices — see [searchUiState],
- * [chromeUiState], [settingsUiState], [sleepTimerUiState]).
+ * [chromeUiState], [settingsUiState], [sleepTimerUiState],
+ * [sessionUiState]).
  *
  * Public actions are grouped by responsibility — see the section comments
  * throughout this file. The largest public surface is the text-selection
- * flow ([onTextSelection], [onSelectHighlightColor], [onAnnotate], etc.),
- * followed by EPUB/PDF navigation ([goToNextChapter], [goToPdfPage], etc.).
+ * flow ([onTextSelection], [onSelectHighlightColor], [onAnnotate], etc.);
+ * session navigation lives in the session owner, reached via
+ * [lifecycleHolder].
  *
  * @param application Application context (needed for the Android `ViewModel` superclass).
  * @param readerRepository Source of book data, progress, and locator storage.
@@ -519,8 +522,8 @@ class ReaderViewModel(
     val searchStateHolder = SearchStateHolder(
         scope = viewModelScope,
         onNavigateToLocator = { loc -> viewModelScope.launch { _navigateToLocator.emit(loc) } },
-        onGoToChapter = { this.goToChapter(it) },
-        onGoToPdfPage = { this.goToPdfPage(it) }
+        onGoToChapter = { lifecycleHolder.goToChapter(it) },
+        onGoToPdfPage = { lifecycleHolder.goToPdfPage(it) }
     )
     /**
      * Chrome slice owner (SDD reader-facade-split, slice 2).
@@ -541,8 +544,15 @@ class ReaderViewModel(
 
     // ── Cluster A state holder ────────────────────────────────────────
 
-    @VisibleForTesting
-    internal val lifecycleHolder = ReaderLifecycleStateHolder(
+    /**
+     * Session slice owner (SDD reader-facade-split, slice 4).
+     *
+     * Screens stay VM-scoped: they reach the owner through the VM
+     * (`viewModel.lifecycleHolder`), never via a direct holder import.
+     * Only this holder (and its lifecycle collaborators) holds the session
+     * MutableStateFlow and mutating funs.
+     */
+    val lifecycleHolder = ReaderLifecycleStateHolder(
         application = application,
         readerRepository = readerRepository,
         updateReadingProgressUseCase = updateReadingProgressUseCase,
@@ -617,13 +627,23 @@ class ReaderViewModel(
     val sleepTimerUiState: StateFlow<SleepTimerUiState> = sleepTimerManager.state
 
     /**
+     * Session slice re-export (SDD reader-facade-split, slice 4).
+     *
+     * Read-only view of the session owner state — the single source of truth
+     * for book identity, loading state, chapter/position, and progress.
+     * Collect this directly; the session fields on [uiState] are a
+     * back-compat mirror kept until T7 deletes the combined flow.
+     */
+    val sessionUiState: StateFlow<SessionUiState> = lifecycleHolder.state
+
+    /**
      * Aggregate reader UI state consumed by the ReaderScreen.
      *
      * **Emits when**: any underlying state holder (`lifecycleHolder`,
      *                `interactionHolder`) emits a new value, any public action
      *                mutates state directly, or one of the migrated slices
-     *                (search, chrome, settings, sleep timer) emits (overlaid
-     *                via the combine below).
+     *                (search, chrome, settings, sleep timer, session) emits
+     *                (overlaid via the combine below).
      * **Initial value**: [ReaderUiState] with `selectedBookId = defaultBookId`
      *                    and `isLoading = true` (or `false` if no
      *                    `defaultBookId` was supplied).
@@ -632,7 +652,9 @@ class ReaderViewModel(
      *                T7 deletes this flow (a `WhileSubscribed` start would
      *                serve stale initials to them).
      */
-    val uiState: StateFlow<ReaderUiState> = combine(
+    // Phase-A back-compat overlay, slices 1-3 (search, chrome, settings,
+    // sleep timer). Unchanged by T5; the session overlay below stages on top.
+    private val slicesOverlay: Flow<ReaderUiState> = combine(
         searchStateHolder.state,
         fullscreenManager.state,
         settingsManager.state,
@@ -653,6 +675,32 @@ class ReaderViewModel(
             sleepTimerPresetMinutes = timer.presetMinutes,
             sleepTimerEndOfChapterMode = timer.isEndOfChapter
         )
+    }
+
+    val uiState: StateFlow<ReaderUiState> = combine(
+        slicesOverlay,
+        lifecycleHolder.state
+    ) { rest, session ->
+        rest.copy(
+            selectedBookId = session.selectedBookId,
+            bookFilePath = session.bookFilePath,
+            bookFormat = session.bookFormat,
+            chapters = session.chapters,
+            currentChapterIndex = session.currentChapterIndex,
+            currentPdfPage = session.currentPdfPage,
+            totalPdfPages = session.totalPdfPages,
+            readingProgress = session.readingProgress,
+            readiumPublication = session.readiumPublication,
+            readiumLocator = session.readiumLocator,
+            readiumViewportHeight = session.readiumViewportHeight,
+            readiumSelectionLocator = session.readiumSelectionLocator,
+            progressPercent = session.progressPercent,
+            progressLabel = session.progressLabel,
+            showTocSheet = session.showTocSheet,
+            isLoading = session.isLoading,
+            loadTimeMs = session.loadTimeMs,
+            error = session.error
+        )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, ReaderUiState(selectedBookId = defaultBookId))
 
     init {
@@ -662,33 +710,10 @@ class ReaderViewModel(
             mutableUiState.update { it.copy(isLoading = false) }
         }
 
-        // Merge Cluster A lifecycle state into ReaderUiState
-        viewModelScope.launch(mainDispatcher) {
-            lifecycleHolder.state.collect { lifecycle ->
-                mutableUiState.update { current ->
-                    current.copy(
-                        selectedBookId = lifecycle.selectedBookId,
-                        bookFilePath = lifecycle.bookFilePath,
-                        bookFormat = lifecycle.bookFormat,
-                        chapters = lifecycle.chapters,
-                        currentChapterIndex = lifecycle.currentChapterIndex,
-                        currentPdfPage = lifecycle.currentPdfPage,
-                        totalPdfPages = lifecycle.totalPdfPages,
-                        readingProgress = lifecycle.readingProgress,
-                        readiumPublication = lifecycle.readiumPublication,
-                        readiumLocator = lifecycle.readiumLocator,
-                        readiumViewportHeight = lifecycle.readiumViewportHeight,
-                        readiumSelectionLocator = lifecycle.readiumSelectionLocator,
-                        progressPercent = lifecycle.progressPercent,
-                        progressLabel = lifecycle.progressLabel,
-                        showTocSheet = lifecycle.showTocSheet,
-                        isLoading = lifecycle.isLoading,
-                        loadTimeMs = lifecycle.loadTimeMs,
-                        error = lifecycle.error
-                    )
-                }
-            }
-        }
+        // Session slice (SDD reader-facade-split, T5): the lifecycle merge
+        // collector is deleted — session state reaches uiState via the
+        // combine overlay above. The preview collector below stays (T6
+        // annotation) as does the interaction merge and highlights flow.
 
                 // Typography -> exact reflow wiring lives in the lifecycle
         // owner (SDD reader-facade-split, T5); the VM only supplies density.
@@ -768,14 +793,11 @@ class ReaderViewModel(
 
     // ── Book Loading ──────────────────────────────────────────────────
 
-    /**
-     * Stores a CFI range that should be navigated to once the book finishes
-     * loading. Session-owned state (SDD reader-facade-split, T5) — delegates
-     * to [ReaderLifecycleStateHolder]; called by the NavHost before navigating
-     * to the Reader route.
-     */
-    fun navigateToCfiAfterLoad(cfiRange: String) =
-        lifecycleHolder.navigateToCfiAfterLoad(cfiRange)
+    // Slice 4 (SDD reader-facade-split, T5): the navigateToCfiAfterLoad
+    // pass-through delegate was deleted — callers reach the owner through
+    // the VM (`viewModel.lifecycleHolder.navigateToCfiAfterLoad(...)`).
+    // [loadBook] below stays: it orchestrates holders + fullscreen + the
+    // pending-CFI wait, it is not a pass-through.
 
     /**
      * Loads a new book into the reader, replacing any current selection.
@@ -854,24 +876,11 @@ class ReaderViewModel(
         }
     }
 
-    /**
-     * Notifies the ViewModel that the Readium navigator moved to [locator]
-     * (e.g. user paginated, tapped a link). Persists reading progress and
-     * updates [ReaderUiState.readiumLocator].
-     */
-    fun onReadiumLocatorChanged(locator: Locator) {
-        lifecycleHolder.onReadiumLocatorChanged(locator)
-    }
-
-    /** Notifies the ViewModel that the Readium viewport dimensions changed; used for exact reflow calc. */
-    fun onReadiumViewportChanged(height: Int, width: Int = 0) {
-        lifecycleHolder.onReadiumViewportChanged(height, width)
-    }
-
-    /** Notifies the ViewModel that a PDF document finished loading with [pages] total pages. */
-    fun onPdfDocumentLoaded(pages: Int) {
-        lifecycleHolder.onPdfDocumentLoaded(pages)
-    }
+    // ── Readium Bridge ──────────────────────────────────────────────
+    // Slice 4 (SDD reader-facade-split, T5): onReadiumLocatorChanged,
+    // onReadiumViewportChanged and onPdfDocumentLoaded pass-through delegates
+    // were deleted — callers reach the owner through the VM
+    // (`viewModel.lifecycleHolder`).
 
     // ── Search (Gap 3) ──────────────────────────────────────────────
     // Slice 1 (SDD reader-facade-split, T2): search state lives in
@@ -899,16 +908,18 @@ class ReaderViewModel(
      *
      * Side effects:
      * 1. For EPUB: emits a [Locator] on [navigateToLocator] to scroll to the match.
-     * 2. For PDF: calls [goToPdfPage] with the match's page index.
+     * 2. For PDF: navigates via the session owner.
      * 3. Updates `currentChapterIndex` in [uiState] for the EPUB path.
+     *
+     * Session fields come from the session owner (slice 4), not the merge.
      */
     fun onSearchResultSelected(result: SearchResult) {
-        val state = mutableUiState.value
+        val session = lifecycleHolder.state.value
         searchStateHolder.onSearchResultSelected(
             result = result,
-            publication = state.readiumPublication,
-            bookFormat = state.bookFormat,
-            currentChapterIndex = state.currentChapterIndex
+            publication = session.readiumPublication,
+            bookFormat = session.bookFormat,
+            currentChapterIndex = session.currentChapterIndex
         )
     }
 
@@ -942,15 +953,15 @@ class ReaderViewModel(
      * store the position.
      */
     fun onSelectHighlightColor(color: String) {
-        val state = mutableUiState.value
+        val session = lifecycleHolder.state.value
         interactionHolder.onSelectHighlightColor(
             color = color,
-            selectedBookId = state.selectedBookId,
-            readiumSelectionLocator = state.readiumSelectionLocator,
-            selectedText = state.selectedText,
-            bookFormat = state.bookFormat,
-            currentPdfPage = state.currentPdfPage,
-            currentChapterIndex = state.currentChapterIndex
+            selectedBookId = session.selectedBookId,
+            readiumSelectionLocator = session.readiumSelectionLocator,
+            selectedText = mutableUiState.value.selectedText,
+            bookFormat = session.bookFormat,
+            currentPdfPage = session.currentPdfPage,
+            currentChapterIndex = session.currentChapterIndex
         )
     }
 
@@ -1013,13 +1024,13 @@ class ReaderViewModel(
      * or PDF page to anchor the annotation.
      */
     fun onAnnotate() {
-        val state = mutableUiState.value
+        val session = lifecycleHolder.state.value
         interactionHolder.onAnnotate(
-            selectedBookId = state.selectedBookId,
-            bookFormat = state.bookFormat,
-            currentChapterIndex = state.currentChapterIndex,
-            currentPdfPage = state.currentPdfPage,
-            chapters = state.chapters
+            selectedBookId = session.selectedBookId,
+            bookFormat = session.bookFormat,
+            currentChapterIndex = session.currentChapterIndex,
+            currentPdfPage = session.currentPdfPage,
+            chapters = session.chapters
         )
     }
 
@@ -1076,15 +1087,15 @@ class ReaderViewModel(
      * the Readium-native highlight menu.
      */
     fun onReadiumHighlightColorSelected(color: String) {
-        val state = mutableUiState.value
+        val session = lifecycleHolder.state.value
         interactionHolder.onReadiumHighlightColorSelected(
             color = color,
-            selectedBookId = state.selectedBookId,
-            readiumSelectionLocator = state.readiumSelectionLocator,
-            selectedText = state.selectedText,
-            bookFormat = state.bookFormat,
-            currentPdfPage = state.currentPdfPage,
-            currentChapterIndex = state.currentChapterIndex
+            selectedBookId = session.selectedBookId,
+            readiumSelectionLocator = session.readiumSelectionLocator,
+            selectedText = mutableUiState.value.selectedText,
+            bookFormat = session.bookFormat,
+            currentPdfPage = session.currentPdfPage,
+            currentChapterIndex = session.currentChapterIndex
         )
     }
 
@@ -1113,21 +1124,16 @@ class ReaderViewModel(
     /** Toggles the highlights panel sheet visibility. */
     fun onToggleHighlightsPanel() = interactionHolder.onToggleHighlightsPanel()
 
-    /**
-     * Toggles the table-of-contents sheet visibility.
-     *
-     * Delegates to the lifecycle holder so the state is owned by a single
-     * StateFlow. Mutating the merged `mutableUiState` directly caused a
-     * race where the next lifecycle emission would reset the sheet flag.
-     */
-    fun onToggleTocSheet() = lifecycleHolder.onToggleTocSheet()
+    // Slice 4 (SDD reader-facade-split, T5): the onToggleTocSheet
+    // pass-through delegate was deleted — callers reach the owner through
+    // the VM (`viewModel.lifecycleHolder.onToggleTocSheet()`).
 
     /**
      * Navigates to the position of [highlight].
      *
      * Side effects:
      * 1. For PDF highlights (`cfiRange` starts with `pdfpage:`): jumps to the
-     *    stored page via [goToPdfPage].
+     *    stored page via the session owner.
      * 2. For EPUB highlights with a stored Readium locator: emits a
      *    [Locator] on [navigateToLocator] for precise position.
      * 3. For legacy EPUB highlights without a locator: extracts the chapter
@@ -1138,7 +1144,7 @@ class ReaderViewModel(
         val cfi = highlight.cfiRange
         if (cfi.startsWith("pdfpage:")) {
             val page = cfi.removePrefix("pdfpage:").toIntOrNull()
-            if (page != null) goToPdfPage(page)
+            if (page != null) lifecycleHolder.goToPdfPage(page)
         } else {
             // EPUB path: prefer the persisted Readium Locator (precise CFI/position)
             // over the legacy chapter-only CFI fallback.
@@ -1156,7 +1162,7 @@ class ReaderViewModel(
                 if (spineIndex != null) {
                     val chapters = lifecycleHolder.state.value.chapters
                     val listPos = chapters.indexOfFirst { it.index == spineIndex }.takeIf { it >= 0 }
-                    if (listPos != null) goToChapter(listPos) else goToChapter(spineIndex.coerceIn(chapters.indices))
+                    if (listPos != null) lifecycleHolder.goToChapter(listPos) else lifecycleHolder.goToChapter(spineIndex.coerceIn(chapters.indices))
                 }
             }
         }
@@ -1180,14 +1186,14 @@ class ReaderViewModel(
      * active Readium locator (EPUB) or PDF page as the anchor.
      */
     fun createBookmarkFromCurrentPosition() {
-        val state = mutableUiState.value
+        val session = lifecycleHolder.state.value
         interactionHolder.createBookmarkFromCurrentPosition(
-            selectedBookId = state.selectedBookId,
-            bookFormat = state.bookFormat,
-            currentPdfPage = state.currentPdfPage,
-            chapters = state.chapters,
-            currentChapterIndex = state.currentChapterIndex,
-            readiumLocator = state.readiumLocator
+            selectedBookId = session.selectedBookId,
+            bookFormat = session.bookFormat,
+            currentPdfPage = session.currentPdfPage,
+            chapters = session.chapters,
+            currentChapterIndex = session.currentChapterIndex,
+            readiumLocator = session.readiumLocator
         )
     }
 
@@ -1223,85 +1229,9 @@ class ReaderViewModel(
     // (`viewModel.settingsManager.updateReaderSettings(...)`).
 
     // ── Cluster A — Delegated to ReaderLifecycleStateHolder ─────────
-
-    /**
-     * Navigates to the next chapter in the EPUB TOC (no-op if already at the last chapter).
-     */
-    fun goToNextChapter() = lifecycleHolder.goToNextChapter()
-
-    /** Navigates to the previous chapter in the EPUB TOC (no-op if already at the first chapter). */
-    fun goToPreviousChapter() = lifecycleHolder.goToPreviousChapter()
-
-    /**
-     * Navigates to the chapter at [index] in the EPUB TOC (list position, 0..chapters.size-1).
-     * The index is the TOC list position, NOT the spine index, to avoid the +3 offset.
-     * @param index Zero-based TOC list position.
-     */
-    fun goToChapter(index: Int) = lifecycleHolder.goToChapter(index)
-
-    /** Navigates to the next PDF page (no-op if already at the last page). */
-    fun goToNextPdfPage() = lifecycleHolder.goToNextPdfPage()
-
-    /** Navigates to the previous PDF page (no-op if already at the first page). */
-    fun goToPreviousPdfPage() = lifecycleHolder.goToPreviousPdfPage()
-
-    /**
-     * Jumps to [pageNumber] (1-based) in the current book.
-     * For EPUB this is the Readium position; for PDF it is the literal page.
-     */
-    fun goToPage(pageNumber: Int) = lifecycleHolder.goToPage(pageNumber)
-
-    /**
-     * Jumps to [pageIndex] (1-based) in the current PDF.
-     * @param pageIndex 1-based page number.
-     */
-    fun goToPdfPage(pageIndex: Int) = lifecycleHolder.goToPdfPage(pageIndex)
-
-    /**
-     * Handles a tap on a screen-edge tap-zone.
-     * @param isLeftZone `true` for the left third (page back), `false` for the right third (page forward).
-     */
-    fun onTapZone(isLeftZone: Boolean) = lifecycleHolder.onTapZone(isLeftZone)
-
-    /**
-     * Persists reading progress at [percent] (0.0–1.0) without changing the locator.
-     * Used by the slider drag handler.
-     */
-    fun onProgressChange(percent: Float) = lifecycleHolder.onProgressChange(percent)
-
-    /**
-     * Restores the last-saved progress for [bookId] from the repository and
-     * jumps the reader to that position. Called on screen open and on pull-to-refresh.
-     */
-    fun restoreProgressForBook(bookId: String) = lifecycleHolder.restoreProgressForBook(bookId)
-
-    /**
-     * Drives the user id stamped on recorded reading sessions
-     * (REQ-reading-sessions-sync-1). Called from the NavHost session effect
-     * alongside `HomeViewModel.setActiveSession`; blank keeps sessions local-only.
-     */
-    fun setActiveUserId(userId: String) = lifecycleHolder.setActiveUserId(userId)
-
-    /**
-     * Persists the current reading position.
-     * @param bookId Database id of the book.
-     * @param cfiLocation CFI string (EPUB) or `"pdfpage:<n>"` marker.
-     * @param percentage Progress as a 0.0–1.0 float.
-     */
-    fun updateProgress(bookId: String, cfiLocation: String, percentage: Float) =
-        lifecycleHolder.updateProgress(bookId, cfiLocation, percentage)
-
-    /** Notifies the lifecycle holder that the reader screen was opened (starts the reading-time tracker). */
-    fun onReaderOpened() = lifecycleHolder.onReaderOpened()
-
-    /** Notifies the lifecycle holder that the reader screen was paused (resumes the tracker when reopened). */
-    fun onReaderPaused() = lifecycleHolder.onReaderPaused()
-
-    /**
-     * Notifies the lifecycle holder that the app went to background
-     * (flushes pending progress writes immediately).
-     */
-    fun onReaderBackgrounded() = lifecycleHolder.onReaderBackgrounded()
+    // Slice 4 (SDD reader-facade-split, T5): all session pass-through
+    // delegates were deleted — callers reach the owner through the VM
+    // (`viewModel.lifecycleHolder.goToChapter(...)` and friends).
 
     override fun onCleared() {
         lifecycleHolder.onCleared()

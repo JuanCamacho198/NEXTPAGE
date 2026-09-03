@@ -42,7 +42,7 @@ class ReaderViewModelProgressTest {
             mainDispatcher = dispatcher
         )
 
-        viewModel.updateProgress(
+        viewModel.lifecycleHolder.updateProgress(
             bookId = "book-10",
             cfiLocation = "epubcfi(/6/2[chapter-1]!/4/1:0)",
             percentage = 25f
@@ -71,7 +71,7 @@ class ReaderViewModelProgressTest {
         )
 
         setPdfState(viewModel, selectedBookId = "book-42", totalPdfPages = 10)
-        viewModel.goToPage(3)
+        viewModel.lifecycleHolder.goToPage(3)
         advanceUntilIdle()
 
         val saved = repository.lastUpserted
@@ -101,7 +101,7 @@ class ReaderViewModelProgressTest {
         )
 
         setPdfState(viewModel, selectedBookId = "book-42", totalPdfPages = 10)
-        viewModel.goToPdfPage(6)
+        viewModel.lifecycleHolder.goToPdfPage(6)
         advanceUntilIdle()
 
         assertEquals(6, viewModel.uiState.value.currentPdfPage)
@@ -128,11 +128,11 @@ class ReaderViewModelProgressTest {
             currentPdfPage = 4
         )
 
-        viewModel.goToNextPdfPage()
+        viewModel.lifecycleHolder.goToNextPdfPage()
         advanceUntilIdle()
         assertEquals(5, viewModel.uiState.value.currentPdfPage)
 
-        viewModel.goToPreviousPdfPage()
+        viewModel.lifecycleHolder.goToPreviousPdfPage()
         advanceUntilIdle()
         assertEquals(4, viewModel.uiState.value.currentPdfPage)
         assertEquals("pdfpage:4", repository.lastUpserted?.cfiLocation)
@@ -152,8 +152,8 @@ class ReaderViewModelProgressTest {
         )
 
         setPdfState(viewModel, selectedBookId = "book-42", totalPdfPages = 10)
-        viewModel.goToPage(0)
-        viewModel.goToPage(11)
+        viewModel.lifecycleHolder.goToPage(0)
+        viewModel.lifecycleHolder.goToPage(11)
         advanceUntilIdle()
 
         assertEquals(null, repository.lastUpserted)
@@ -175,7 +175,7 @@ class ReaderViewModelProgressTest {
         )
 
         setPdfState(viewModel, selectedBookId = "book-42", totalPdfPages = 10)
-        viewModel.goToPdfPage(2)
+        viewModel.lifecycleHolder.goToPdfPage(2)
         advanceUntilIdle()
 
         assertEquals(2, viewModel.uiState.value.currentPdfPage)

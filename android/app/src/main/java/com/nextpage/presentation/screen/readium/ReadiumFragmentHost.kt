@@ -100,7 +100,7 @@ fun rememberFragmentHost(
             @Suppress("UNCHECKED_CAST")
             val locatorFlow = frag.currentLocator as StateFlow<Locator>
             locatorFlow.collect { locator ->
-                viewModel.onReadiumLocatorChanged(locator)
+                viewModel.lifecycleHolder.onReadiumLocatorChanged(locator)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to collect currentLocator from EpubNavigatorFragment", e)
@@ -144,7 +144,7 @@ fun FragmentHostState.FragmentHostView(
         },
         modifier = modifier.onGloballyPositioned { coordinates ->
             if (!containerReady.value) containerReady.value = true
-            viewModel.onReadiumViewportChanged(coordinates.size.height, coordinates.size.width)
+            viewModel.lifecycleHolder.onReadiumViewportChanged(coordinates.size.height, coordinates.size.width)
         }
     )
 }

@@ -142,7 +142,7 @@ fun ReadiumPdfReaderContent(
             @Suppress("UNCHECKED_CAST")
             val locatorFlow = frag.currentLocator as StateFlow<Locator>
             locatorFlow.collect { locator ->
-                viewModel.onReadiumLocatorChanged(locator)
+                viewModel.lifecycleHolder.onReadiumLocatorChanged(locator)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to collect currentLocator from PdfNavigatorFragment", e)
@@ -256,7 +256,7 @@ fun ReadiumPdfReaderContent(
                 }
             },
             modifier = Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
-                viewModel.onReadiumViewportChanged(coordinates.size.height)
+                viewModel.lifecycleHolder.onReadiumViewportChanged(coordinates.size.height)
             }
         )
 

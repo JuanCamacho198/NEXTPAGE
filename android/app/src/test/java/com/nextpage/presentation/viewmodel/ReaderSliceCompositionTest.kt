@@ -125,7 +125,31 @@ class ReaderSliceCompositionTest {
         assertFalse(viewModel.uiState.value.isFullscreen)
     }
 
-    // TODO T5: assertSessionMirror (pending-CFI + progress via sessionUiState)
+    @Test
+    fun `session slice mirrors holder state through VM re-export`() = runTest {
+        val viewModel = createViewModel(testScheduler)
+
+        viewModel.lifecycleHolder.setEpubStateForTest(
+            chapters = listOf(
+                BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
+                BookChapter(1, "c2", "Ch 2", "ch2.xhtml")
+            ),
+            currentChapterIndex = 1,
+            selectedBookId = "book-9"
+        )
+
+        assertEquals("book-9", viewModel.sessionUiState.value.selectedBookId)
+        assertEquals(1, viewModel.sessionUiState.value.currentChapterIndex)
+        assertEquals(
+            "back-compat uiState must mirror the session slice",
+            "book-9",
+            viewModel.uiState.value.selectedBookId
+        )
+        assertEquals(1, viewModel.uiState.value.currentChapterIndex)
+        // No cross-slice emission: chrome state untouched.
+        assertFalse(viewModel.uiState.value.isFullscreen)
+    }
+
     // TODO T6: assertAnnotationMirror (highlights latest-wins via annotationUiState)
 
     // ── Helpers ─────────────────────────────────────────────────────

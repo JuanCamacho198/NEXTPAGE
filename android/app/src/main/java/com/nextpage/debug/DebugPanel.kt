@@ -47,17 +47,17 @@ import android.os.SystemClock
  *   full [DebugLog] history so the user can diagnose why the custom
  *   color-picker / context menu overlays fail to appear.
  * - All reads come from the annotation slice ([AnnotationUiState]); this file
- *   must not read `ReaderViewModel.uiState` (SDD reader-uiState-cleanup S6).
+ *   must not read the deleted Reader uiState aggregate (SDD reader-uiState-cleanup S6).
  *
  * Product note (S6, same live-fix precedent as the S2 tint decision): the
- * previous `uiState.activeHighlightId` read was dead — the aggregate field has
+ * previous aggregate activeHighlightId read was dead — the aggregate field has
  * zero writers and is always null, so the panel always rendered "—". The id
  * derives live from the coordinator-owned selection
  * (`selectionState as? Existing`), which ACTIVATES the readout: tapping an
  * existing highlight now shows its id. Flag to product if bug-compatible-null
  * (always-"—") is ever preferred.
  *
- * Debounce parity note (S6): the previous `uiState.highlightTapDebounceUntil`
+ * Debounce parity note (S6): the previous aggregate highlightTapDebounceUntil
  * read was likewise dead — the aggregate field has zero writers and is always
  * 0L, so the panel always rendered "0 ms". [highlightTapDebounceUntil] keeps
  * that exact readout via its default; it is a seam for wiring the live

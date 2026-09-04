@@ -149,7 +149,7 @@ fun ReaderScreen(
                     chapters = sessionUiState.chapters,
                     onNavigateBack = onNavigateBack,
                     onToggleSearch = { viewModel.searchStateHolder.onToggleSearch() },
-                    onToggleHighlights = { viewModel.onToggleHighlightsPanel() },
+                    onToggleHighlights = { viewModel.interactionHolder.onToggleHighlightsPanel() },
                     onCreateBookmark = {
                         viewModel.createBookmarkFromCurrentPosition()
                         lastBookmarkTrigger = SystemClock.elapsedRealtime()
@@ -252,8 +252,8 @@ fun ReaderScreen(
                 visible = debugPanelVisible,
                 annotation = annotationUiState,
                 onClose = { debugPanelVisible = false },
-                onForceColorPicker = { viewModel.onDebugForceColorPicker() },
-                onForceContextMenu = { viewModel.onDebugForceMenu() },
+                onForceColorPicker = { viewModel.interactionHolder.onDebugForceColorPicker() },
+                onForceContextMenu = { viewModel.interactionHolder.onDebugForceMenu() },
                 onSimulateHighlightTap = {
                     val first = annotationUiState.highlights.firstOrNull { it.locatorJson != null }
                     if (first == null) {
@@ -266,7 +266,7 @@ fun ReaderScreen(
                             (annotationUiState.selectionRect?.bottom ?: 250).toFloat()
                         )
                         DebugLog.info("Debug", "Simulate-tap: forcing onHighlightTapped for id=${first.id}")
-                        viewModel.onHighlightTapped(first, fakeRect)
+                        viewModel.interactionHolder.onHighlightTapped(first, fakeRect)
                     }
                 },
                 onClearLog = { DebugLog.clear() },

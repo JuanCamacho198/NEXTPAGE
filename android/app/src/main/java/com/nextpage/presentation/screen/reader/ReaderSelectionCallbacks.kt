@@ -35,7 +35,7 @@ data class ReaderSelectionCallbacks(
  * Selection-menu callbacks + active-highlight tint for [SelectionOverlay].
  *
  * All reads come from the annotation slice ([AnnotationUiState]); this file
- * must not read `ReaderViewModel.uiState` (SDD reader-uiState-cleanup S2).
+ * must not read the deleted Reader uiState aggregate (SDD reader-uiState-cleanup S2).
  *
  * Product note (tint decision, S2): the previous `uiState.activeHighlightId`
  * read was dead — the aggregate field has zero writers and is always null, so
@@ -63,10 +63,23 @@ fun rememberReaderSelectionCallbacks(
             }
         }
     }
-    val onColorSelected = remember(viewModel) { { color: String -> viewModel.onReadiumHighlightColorSelected(color) } }
+    val onColorSelected = remember(viewModel) { { color: String ->
+        // S7: inline of the deleted onReadiumHighlightColorSelected delegate —
+        // same session + annotation reads the delegate performed, live at call time.
+        val session = viewModel.sessionUiState.value
+        viewModel.interactionHolder.onReadiumHighlightColorSelected(
+            color = color,
+            selectedBookId = session.selectedBookId,
+            readiumSelectionLocator = session.readiumSelectionLocator,
+            selectedText = viewModel.annotationUiState.value.selectedText,
+            bookFormat = session.bookFormat,
+            currentPdfPage = session.currentPdfPage,
+            currentChapterIndex = session.currentChapterIndex
+        )
+    } }
     val onCopy = remember(viewModel, context) {
         {
-            viewModel.onCopySelectedText()
+            viewModel.interactionHolder.onCopySelectedText()
             annotationUiState.selectedText?.let { text ->
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("highlight", text))
@@ -74,34 +87,45 @@ fun rememberReaderSelectionCallbacks(
             Unit
         }
     }
-    val onDismiss = remember(viewModel) { { viewModel.onDismissContextMenu() } }
+    val onDismiss = remember(viewModel) { { viewModel.interactionHolder.onDismissContextMenu() } }
     val onDelete = remember(viewModel) {
         {
             val currentHighlight = (annotationUiState.selectionState as? ReaderSelectionState.Existing)?.highlight
-            currentHighlight?.let { viewModel.onReadiumDeleteHighlight(it.id) }
+            currentHighlight?.let { viewModel.interactionHolder.onReadiumDeleteHighlight(it.id) }
             Unit
         }
     }
-    val onAddTag = remember(viewModel) { { viewModel.onShowTagInput() } }
-    val onAnnotate = remember(viewModel) { { viewModel.onAnnotate() } }
+    val onAddTag = remember(viewModel) { { viewModel.interactionHolder.onShowTagInput() } }
+    val onAnnotate = remember(viewModel) { {
+        // S7: inline of the deleted onAnnotate delegate — same session reads,
+        // live at call time.
+        val session = viewModel.sessionUiState.value
+        viewModel.interactionHolder.onAnnotate(
+            selectedBookId = session.selectedBookId,
+            bookFormat = session.bookFormat,
+            currentChapterIndex = session.currentChapterIndex,
+            currentPdfPage = session.currentPdfPage,
+            chapters = session.chapters
+        )
+    } }
     val onShare = remember(viewModel) {
         {
             when (val sel = annotationUiState.selectionState) {
-                is ReaderSelectionState.Existing -> viewModel.onShareSelectedText(sel.highlight.textContent)
-                is ReaderSelectionState.New -> viewModel.onShareSelectedText(sel.text)
+                is ReaderSelectionState.Existing -> viewModel.interactionHolder.onShareSelectedText(sel.highlight.textContent)
+                is ReaderSelectionState.New -> viewModel.interactionHolder.onShareSelectedText(sel.text)
                 ReaderSelectionState.None -> Unit
             }
         }
     }
-    val onDictionary = remember(viewModel) { { viewModel.onAddToDictionary() } }
-    val onShowColorPicker = remember(viewModel) { { viewModel.onShowColorPickerPopover() } }
-    val onDismissColorPicker = remember(viewModel) { { viewModel.onDismissColorPickerPopover() } }
-    val onTagTextChanged = remember(viewModel) { { text: String -> viewModel.onTagTextChanged(text) } }
-    val onSaveTag = remember(viewModel) { { viewModel.onSaveTag(annotationUiState.activeTagText) } }
-    val onDismissTag = remember(viewModel) { { viewModel.onDismissTagInput() } }
-    val onDefTextChanged = remember(viewModel) { { text: String -> viewModel.onDefinitionTextChanged(text) } }
-    val onSaveDef = remember(viewModel) { { viewModel.onSaveDefinition(annotationUiState.activeDefinitionText) } }
-    val onDismissDef = remember(viewModel) { { viewModel.onDismissDefinitionInput() } }
+    val onDictionary = remember(viewModel) { { viewModel.interactionHolder.onAddToDictionary() } }
+    val onShowColorPicker = remember(viewModel) { { viewModel.interactionHolder.onShowColorPickerPopover() } }
+    val onDismissColorPicker = remember(viewModel) { { viewModel.interactionHolder.onDismissColorPickerPopover() } }
+    val onTagTextChanged = remember(viewModel) { { text: String -> viewModel.interactionHolder.onTagTextChanged(text) } }
+    val onSaveTag = remember(viewModel) { { viewModel.interactionHolder.onSaveTag(annotationUiState.activeTagText) } }
+    val onDismissTag = remember(viewModel) { { viewModel.interactionHolder.onDismissTagInput() } }
+    val onDefTextChanged = remember(viewModel) { { text: String -> viewModel.interactionHolder.onDefinitionTextChanged(text) } }
+    val onSaveDef = remember(viewModel) { { viewModel.interactionHolder.onSaveDefinition(annotationUiState.activeDefinitionText) } }
+    val onDismissDef = remember(viewModel) { { viewModel.interactionHolder.onDismissDefinitionInput() } }
 
     return ReaderSelectionCallbacks(
         onColorSelected = onColorSelected,

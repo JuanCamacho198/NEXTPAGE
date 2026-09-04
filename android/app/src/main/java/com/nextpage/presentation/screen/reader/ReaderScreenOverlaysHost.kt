@@ -90,7 +90,7 @@ fun ReaderScreenOverlaysHost(
         HighlightsSheet(
             highlights = annotationUiState.highlights,
             onHighlightSelected = { viewModel.onHighlightSelected(it) },
-            onDismiss = { viewModel.onToggleHighlightsPanel() }
+            onDismiss = { viewModel.interactionHolder.onToggleHighlightsPanel() }
         )
     }
 
@@ -159,8 +159,8 @@ fun ReaderScreenOverlaysHost(
             snippetLabelRes = R.string.annotation_snippet_label,
             selectedText = annotationUiState.selectedText,
             initialText = annotationUiState.activeNoteText,
-            onSave = { viewModel.onSaveNote(it) },
-            onDismiss = { viewModel.onDismissNoteModal() }
+            onSave = { viewModel.interactionHolder.onSaveNote(it) },
+            onDismiss = { viewModel.interactionHolder.onDismissNoteModal() }
         )
     }
 

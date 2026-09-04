@@ -569,7 +569,16 @@ class ReaderViewModel(
 
     // ── Cluster B state holder ────────────────────────────────────────
 
-    private val interactionHolder = ReaderInteractionStateHolder(
+    /**
+     * Annotation slice owner (SDD reader-uiState-cleanup, S7).
+     *
+     * Screens stay VM-scoped: they reach the owner through the VM
+     * (`viewModel.interactionHolder`), never via a direct holder import.
+     * Public since S7 deleted the 30 `@Deprecated` VM delegates — callers
+     * invoke holder methods directly for writes and collect
+     * [annotationUiState] for reads.
+     */
+    val interactionHolder = ReaderInteractionStateHolder(
         readerRepository = readerRepository,
         dictionaryRepository = dictionaryRepository,
         scope = viewModelScope,

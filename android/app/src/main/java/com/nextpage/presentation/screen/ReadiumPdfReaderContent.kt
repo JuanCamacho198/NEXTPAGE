@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.setValue
@@ -90,6 +91,10 @@ fun ReadiumPdfReaderContent(
     val navigatorFactory = remember(publication, pdfEngineProvider) {
         PdfNavigatorFactory(publication, pdfEngineProvider)
     }
+
+    // S7: live highlights for the holder call below (the deleted VM delegate
+    // read them live from the aggregate; rememberUpdatedState preserves that).
+    val latestHighlights by rememberUpdatedState(highlights)
 
     var navigatorFragment by remember { mutableStateOf<PdfNavigatorFragment<*, *>?>(null) }
     var containerReady by remember { mutableStateOf(false) }
@@ -175,7 +180,7 @@ fun ReadiumPdfReaderContent(
             }
             if (sel != null) {
                 val selRect = sel.rect ?: run {
-                    if (lastSelection) viewModel.onSelectionCleared()
+                    if (lastSelection) viewModel.interactionHolder.onSelectionCleared()
                     lastSelection = false
                     continue
                 }
@@ -193,15 +198,16 @@ fun ReadiumPdfReaderContent(
                 } catch (_: Throwable) {
                     fallbackText
                 }
-                viewModel.onReadiumSelection(
+                viewModel.interactionHolder.onReadiumSelection(
                     locator = sel.locator,
                     rect = selRect,
-                    text = text
+                    text = text,
+                    existingHighlights = latestHighlights
                 )
                 lastSelection = true
             } else {
                 if (lastSelection) {
-                    viewModel.onSelectionCleared()
+                    viewModel.interactionHolder.onSelectionCleared()
                 }
                 lastSelection = false
             }

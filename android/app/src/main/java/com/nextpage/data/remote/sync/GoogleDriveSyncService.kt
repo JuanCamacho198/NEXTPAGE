@@ -11,6 +11,7 @@ import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncFileMappingEntity
 import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.session.SessionManager
+import com.nextpage.data.sync.ProgressReconciler
 import com.nextpage.debug.DebugLog
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
@@ -39,7 +40,12 @@ class GoogleDriveSyncService(
     private val isEnabled: () -> Boolean = { false },
     private val tokenRefresher: suspend () -> Result<String> = { Result.failure(AppError(ErrorCategory.CONFIG_ERROR, "SYNC_NO_REFRESHER", "Drive token refresher not configured.", COMPONENT)) },
     private val diagnosticError: AppError? = null,
-    private val maxRetries: Int = DEFAULT_MAX_RETRIES
+    private val maxRetries: Int = DEFAULT_MAX_RETRIES,
+    // SDD 3: drive service now owns the auth-gated reconcile seam so the
+    // VMs don't each call reconcileAll() on init. Default-constructed from
+    // the already-injected DAOs to avoid breaking direct test construction
+    // (GoogleDriveSyncServiceTest builds with the bare-args shape).
+    private val progressReconciler: ProgressReconciler = ProgressReconciler(bookDao, readingProgressDao)
 ) : SyncService {
 
     private val state = MutableStateFlow<DriveSyncState>(if (isEnabled()) DriveSyncState.Idle else DriveSyncState.Disabled)
@@ -72,6 +78,11 @@ class GoogleDriveSyncService(
             localBooksDir.mkdirs()
         }
         state.value = DriveSyncState.Idle
+        // SDD 3: reconcile divergent progress once on auth bootstrap.
+        // Fire-and-forget — failures are logged and swallowed so the auth
+        // bootstrap result is not poisoned by reconcile errors.
+        runCatching { progressReconciler.reconcileAll() }
+            .onFailure { DebugLog.warn(COMPONENT, "bootstrap: reconcileAll failed: ${it.message}") }
         return Result.success(Unit)
     }
 

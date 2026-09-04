@@ -4,6 +4,8 @@ import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.ReadingStats
 import com.nextpage.domain.model.Statistics
 import com.nextpage.domain.repository.HomeRepository
+import com.nextpage.domain.repository.ReaderRepository
+import com.nextpage.domain.usecase.GetBookProgressUseCase
 import com.nextpage.domain.usecase.GetStatisticsUseCase
 import com.nextpage.testutil.MainDispatcherRule
 import io.mockk.mockk
@@ -40,7 +42,13 @@ class HomeViewModelTest {
             dailyGoalProvider = { 30 }
         )
 
-        return HomeViewModel(mockRepo, useCase, dailyGoalProvider = { 30 })
+        return HomeViewModel(
+            homeRepository = mockRepo,
+            getStatisticsUseCase = useCase,
+            dailyGoalProvider = { 30 },
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true)
+        )
     }
 
     @Test
@@ -123,7 +131,13 @@ class HomeViewModelTest {
             homeRepository = mockRepo,
             dailyGoalProvider = { 30 }
         )
-        val viewModel = HomeViewModel(mockRepo, statsUseCase, dailyGoalProvider = { 30 })
+        val viewModel = HomeViewModel(
+            homeRepository = mockRepo,
+            getStatisticsUseCase = statsUseCase,
+            dailyGoalProvider = { 30 },
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true)
+        )
         kotlinx.coroutines.delay(100)
 
         val state = viewModel.uiState.value
@@ -154,7 +168,13 @@ class HomeViewModelTest {
             homeRepository = mockRepo,
             dailyGoalProvider = { 30 }
         )
-        val viewModel = HomeViewModel(mockRepo, statsUseCase, dailyGoalProvider = { 30 })
+        val viewModel = HomeViewModel(
+            homeRepository = mockRepo,
+            getStatisticsUseCase = statsUseCase,
+            dailyGoalProvider = { 30 },
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true)
+        )
         kotlinx.coroutines.delay(100)
 
         // No sessions recorded → streak stays 0 (today-anchored).
@@ -179,7 +199,13 @@ class HomeViewModelTest {
             homeRepository = mockRepo,
             dailyGoalProvider = { 30 }
         )
-        val viewModel = HomeViewModel(mockRepo, statsUseCase, dailyGoalProvider = { 45 })
+        val viewModel = HomeViewModel(
+            homeRepository = mockRepo,
+            getStatisticsUseCase = statsUseCase,
+            dailyGoalProvider = { 45 },
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true)
+        )
         kotlinx.coroutines.delay(100)
 
         // Set an active session → the daily-stats flow must be re-collected with

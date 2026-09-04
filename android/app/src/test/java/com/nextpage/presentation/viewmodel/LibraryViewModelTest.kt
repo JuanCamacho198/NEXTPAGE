@@ -8,10 +8,13 @@ import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.repository.LibraryRepository
+import com.nextpage.domain.repository.ReaderRepository
+import com.nextpage.domain.usecase.GetBookProgressUseCase
 import com.nextpage.domain.usecase.ImportEpubBookUseCase
 import com.nextpage.presentation.UiEvent
 import com.nextpage.testutil.MainDispatcherRule
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,7 +50,9 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = catalogSync()
+            catalogSync = catalogSync(),
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true)
         )
 
         var emittedEvent: LibraryImportEvent? = null
@@ -81,7 +86,9 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = catalogSync()
+            catalogSync = catalogSync(),
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true)
         )
 
         var emittedEvent: LibraryImportEvent? = null
@@ -114,7 +121,9 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = catalogSync()
+            catalogSync = catalogSync(),
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true)
         )
 
         assertTrue(viewModel.uiState.value.isLoading)
@@ -148,7 +157,9 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = catalogSync()
+            catalogSync = catalogSync(),
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true)
         )
 
         var emittedEvent: UiEvent? = null
@@ -186,7 +197,9 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = catalogSync()
+            catalogSync = catalogSync(),
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true)
         )
 
         var emittedEvent: UiEvent? = null
@@ -224,7 +237,9 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = catalogSync()
+            catalogSync = catalogSync(),
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true)
         )
 
         repository.emitReadingMinutesByBook(mapOf("book-1" to 42L, "book-2" to 5L))
@@ -244,7 +259,9 @@ class LibraryViewModelTest {
             syncService = FakeSyncService(),
             appContext = mockk<Context>(),
             mainDispatcher = dispatcher,
-            catalogSync = catalogSync()
+            catalogSync = catalogSync(),
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true)
         )
 
         // searchedBooks uses WhileSubscribed(5000) — subscribe in background
@@ -273,6 +290,77 @@ class LibraryViewModelTest {
         assertEquals(2, viewModel.searchedBooks.value.size)
         assertEquals("b1", viewModel.searchedBooks.value[0].id)
         assertEquals("b3", viewModel.searchedBooks.value[1].id)
+    }
+
+    /**
+     * Coverage for the canonical progress map (LibraryViewModel L376-388 in the
+     * pre-cleanup layout): when [GetBookProgressUseCase.observeProgressPercent]
+     * emits, the per-book entry in `progressPercentByBook` must reflect it.
+     *
+     * Covers spec D4 S4.1 (initial 0f), S4.2 (value update), S4.3 (multi-book
+     * isolation), and S4.4 (distinctUntilChanged deduplication of equal
+     * emissions).
+     */
+    @Test
+    fun progressPercentByBook_emitsOnObserveProgressPercentUpdate() = runTest(StandardTestDispatcher()) {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = FakeLibraryRepository()
+        val book1Progress = MutableStateFlow(0f)
+        val book2Progress = MutableStateFlow(0f)
+        val getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true).also {
+            every { it.observeProgressPercent("book-1") } returns book1Progress
+            every { it.observeProgressPercent("book-2") } returns book2Progress
+        }
+        val viewModel = LibraryViewModel(
+            libraryRepository = repository,
+            importEpubBookUseCase = ImportEpubBookUseCase(repository),
+            syncService = FakeSyncService(),
+            appContext = mockk<Context>(),
+            mainDispatcher = dispatcher,
+            catalogSync = catalogSync(),
+            readerRepository = mockk<ReaderRepository>(relaxed = true),
+            getBookProgressUseCase = getBookProgressUseCase
+        )
+
+        // S4.1 — initial state with no books → progress map stays empty.
+        advanceUntilIdle()
+        assertEquals(emptyMap<String, Float>(), viewModel.uiState.value.progressPercentByBook)
+
+        // Emit two books; each progress flow already seeded to 0f.
+        repository.emitBooks(
+            listOf(
+                Book(
+                    id = "book-1", title = "Title 1", author = "Author",
+                    coverPath = null, filePath = "/b1.epub", format = "epub",
+                    updatedAtEpochMillis = 1L
+                ),
+                Book(
+                    id = "book-2", title = "Title 2", author = "Author",
+                    coverPath = null, filePath = "/b2.epub", format = "epub",
+                    updatedAtEpochMillis = 2L
+                )
+            )
+        )
+        advanceUntilIdle()
+
+        // S4.1 — both books have an initial 0f entry.
+        assertEquals(0f, viewModel.uiState.value.progressPercentByBook["book-1"]!!, 0.0001f)
+        assertEquals(0f, viewModel.uiState.value.progressPercentByBook["book-2"]!!, 0.0001f)
+
+        // S4.2 — single-book value update is reflected in the map.
+        book1Progress.value = 0.42f
+        advanceUntilIdle()
+        assertEquals(0.42f, viewModel.uiState.value.progressPercentByBook["book-1"]!!, 0.0001f)
+
+        // S4.3 — only book-1 emitted; book-2 is isolated and stays 0f.
+        assertEquals(0f, viewModel.uiState.value.progressPercentByBook["book-2"]!!, 0.0001f)
+
+        // S4.4 — distinctUntilChanged dedup: re-emitting the same value is a no-op.
+        val beforeSnapshot = viewModel.uiState.value.progressPercentByBook
+        book1Progress.value = 0.42f // same value, should be deduplicated downstream
+        advanceUntilIdle()
+        val afterSnapshot = viewModel.uiState.value.progressPercentByBook
+        assertEquals(beforeSnapshot["book-1"], afterSnapshot["book-1"])
     }
 
     private class FakeLibraryRepository(

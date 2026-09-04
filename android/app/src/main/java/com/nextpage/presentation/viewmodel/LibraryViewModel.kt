@@ -8,9 +8,6 @@ import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.UserBookRow
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.remote.sync.DriveSyncState
-import com.nextpage.data.sync.ProgressReconciler
-import com.nextpage.debug.DebugDual
-import com.nextpage.debug.DebugEvent
 import com.nextpage.debug.DebugLog
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.BookStatus
@@ -190,9 +187,8 @@ class LibraryViewModel(
     private val appContext: Context,
     private val catalogSync: SupabaseBookCatalogSync,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
-    private val readerRepository: ReaderRepository? = null,
-    private val getBookProgressUseCase: GetBookProgressUseCase? = null,
-    private val progressReconciler: ProgressReconciler? = null
+    private val readerRepository: ReaderRepository,
+    private val getBookProgressUseCase: GetBookProgressUseCase
 ) : ViewModel() {
 
     private val mutableUiState = MutableStateFlow(LibraryUiState())
@@ -341,50 +337,17 @@ class LibraryViewModel(
     )
 
     init {
-        // Reconciliation on start (max updatedAt wins) so Home Continuar and Library show same %
-        progressReconciler?.let { reconciler ->
-            viewModelScope.launch {
-                try { reconciler.reconcileAll() } catch (_: Throwable) {}
-            }
-        }
-        // Canonical progress parity: demonstrate shared GetBookProgressUseCase + direct observeProgress
-        // Uses observeProgressPercent merging readingProgressDao and bookDao, canonical wins
-        getBookProgressUseCase?.let { useCase ->
-            viewModelScope.launch {
-                libraryRepository.observeLibrary().collect { books ->
-                    books.forEach { book ->
-                        launch {
-                            try {
-                                useCase.observeProgressPercent(book.id).collect { pct ->
-                                    DebugDual.log(DebugEvent.ProgressEmit(book.id, pct, "library"))
-                                }
-                            } catch (_: Throwable) {}
-                            try {
-                                useCase(book.id).collect { }
-                            } catch (_: Throwable) {}
-                        }
-                    }
-                }
-            }
-            readerRepository?.let { repo ->
-                viewModelScope.launch {
-                    repo.observeProgress("dummy-book-id").collect {}
-                }
-            }
-        }
         // Canonical progress map — live Flow via GetBookProgressUseCase.observeProgressPercent (distinctUntilChanged in use case)
-        getBookProgressUseCase?.let { useCase ->
-            viewModelScope.launch {
-                libraryRepository.observeLibrary()
-                    .flatMapLatest { books ->
-                        if (books.isEmpty()) flowOf(emptyMap())
-                        else combine(books.map { book -> useCase.observeProgressPercent(book.id).map { pct -> book.id to pct } }) { pairs -> pairs.toMap() }
-                    }
-                    .distinctUntilChanged()
-                    .collect { map ->
-                        mutableUiState.update { it.copy(progressPercentByBook = map) }
-                    }
-            }
+        viewModelScope.launch {
+            libraryRepository.observeLibrary()
+                .flatMapLatest { books ->
+                    if (books.isEmpty()) flowOf(emptyMap())
+                    else combine(books.map { book -> getBookProgressUseCase.observeProgressPercent(book.id).map { pct -> book.id to pct } }) { pairs -> pairs.toMap() }
+                }
+                .distinctUntilChanged()
+                .collect { map ->
+                    mutableUiState.update { it.copy(progressPercentByBook = map) }
+                }
         }
         // ── Lifecycle observations (Room flows) ──
         viewModelScope.launch(mainDispatcher) {
@@ -632,11 +595,7 @@ class LibraryViewModel(
      */
     fun onPullToRefresh() {
         mutableUiState.update { it.copy(isRefreshing = true) }
-        progressReconciler?.let { reconciler ->
-            viewModelScope.launch {
-                try { reconciler.reconcileAll() } catch (_: Throwable) {}
-            }
-        }
+        // Reconciliation now lives in SyncService.bootstrap; nothing VM-local to do.
         viewModelScope.launch(mainDispatcher) {
             val result = syncService.schedulePull()
             if (result.isFailure) {
@@ -666,9 +625,8 @@ class LibraryViewModelFactory(
     private val syncService: SyncService,
     private val appContext: Context,
     private val catalogSync: SupabaseBookCatalogSync,
-    private val readerRepository: ReaderRepository? = null,
-    private val getBookProgressUseCase: GetBookProgressUseCase? = null,
-    private val progressReconciler: ProgressReconciler? = null
+    private val readerRepository: ReaderRepository,
+    private val getBookProgressUseCase: GetBookProgressUseCase
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -680,8 +638,7 @@ class LibraryViewModelFactory(
                 appContext = appContext,
                 catalogSync = catalogSync,
                 readerRepository = readerRepository,
-                getBookProgressUseCase = getBookProgressUseCase,
-                progressReconciler = progressReconciler
+                getBookProgressUseCase = getBookProgressUseCase
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

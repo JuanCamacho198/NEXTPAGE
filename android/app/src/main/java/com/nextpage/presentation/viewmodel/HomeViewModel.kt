@@ -3,13 +3,12 @@ package com.nextpage.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nextpage.debug.DebugDual
+import com.nextpage.debug.DebugEvent
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.ReadingStats
 import com.nextpage.domain.model.Statistics
-import com.nextpage.data.sync.ProgressReconciler
-import com.nextpage.debug.DebugDual
-import com.nextpage.debug.DebugEvent
 import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.usecase.GetBookProgressUseCase
@@ -57,9 +56,8 @@ class HomeViewModel(
     private val homeRepository: HomeRepository,
     private val getStatisticsUseCase: GetStatisticsUseCase,
     private val dailyGoalProvider: () -> Int,
-    private val readerRepository: ReaderRepository? = null,
-    private val getBookProgressUseCase: GetBookProgressUseCase? = null,
-    private val progressReconciler: ProgressReconciler? = null
+    private val readerRepository: ReaderRepository,
+    private val getBookProgressUseCase: GetBookProgressUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -80,15 +78,9 @@ class HomeViewModel(
     private val activeUserId = MutableStateFlow<String?>(null)
 
     init {
-        // Reconciliation on start: canonical reading_progress wins via max(updatedAt)
-        progressReconciler?.let { reconciler ->
-            viewModelScope.launch {
-                try { reconciler.reconcileAll() } catch (_: Throwable) {}
-            }
-        }
         // Canonical progress observation via shared use case (Home and Library parity)
         // Demonstrates unified source: reading_progress.percentage via observeProgressPercent merging DAOs
-        getBookProgressUseCase?.let { useCase ->
+        getBookProgressUseCase.let { useCase ->
             viewModelScope.launch {
                 // Observe currentBooks and for each book collect canonical progress to validate parity (debug logging)
                 homeRepository.observeCurrentBooks().collect { books ->
@@ -108,7 +100,7 @@ class HomeViewModel(
                 }
             }
             // Also demonstrate direct ReaderRepository.observeProgress and readingProgressDao usage for spec compliance
-            readerRepository?.let { repo ->
+            readerRepository.let { repo ->
                 viewModelScope.launch {
                     repo.observeProgress("dummy-book-id").collect {}
                 }
@@ -116,14 +108,11 @@ class HomeViewModel(
         }
         // Canonical progress map — live Flow merging reading_progress.percentage (canonical) + book cache fallback
         // Each book's observeProgressPercent already distinctUntilChanged; map-level distinctUntilChanged avoids thrash
-        val progressPercentByBookFlow: kotlinx.coroutines.flow.Flow<Map<String, Float>> = run {
-            val useCase = getBookProgressUseCase
-            if (useCase == null) flowOf(emptyMap())
-            else homeRepository.observeBooks().flatMapLatest { books ->
+        val progressPercentByBookFlow: kotlinx.coroutines.flow.Flow<Map<String, Float>> =
+            homeRepository.observeBooks().flatMapLatest { books ->
                 if (books.isEmpty()) flowOf(emptyMap())
-                else combine(books.map { book -> useCase.observeProgressPercent(book.id).map { pct -> book.id to pct } }) { pairs -> pairs.toMap() }
+                else combine(books.map { book -> getBookProgressUseCase.observeProgressPercent(book.id).map { pct -> book.id to pct } }) { pairs -> pairs.toMap() }
             }.distinctUntilChanged()
-        }
         // Single combine: all domain flows + canonical progress map (distinctUntilChanged)
         viewModelScope.launch {
             val baseCombine = combine(
@@ -170,13 +159,11 @@ class HomeViewModel(
         }
     }
 
-    /** Pull-to-refresh reconciliation (max updatedAt wins). */
+    /** Pull-to-refresh entry point. Reconciliation now lives in [SyncService.bootstrap]. */
     fun onPullToRefresh() {
-        progressReconciler?.let { reconciler ->
-            viewModelScope.launch {
-                try { reconciler.reconcileAll() } catch (_: Throwable) {}
-            }
-        }
+        // No-op: reconcile is auth-gated in SyncService.bootstrap. Kept as a public
+        // surface so existing call sites (NavHost) continue to compile and a future
+        // per-screen refresh can hook in here.
     }
 
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -234,14 +221,13 @@ class HomeViewModelFactory(
     private val homeRepository: HomeRepository,
     private val getStatisticsUseCase: GetStatisticsUseCase,
     private val dailyGoalProvider: () -> Int,
-    private val readerRepository: com.nextpage.domain.repository.ReaderRepository? = null,
-    private val getBookProgressUseCase: GetBookProgressUseCase? = null,
-    private val progressReconciler: ProgressReconciler? = null
+    private val readerRepository: com.nextpage.domain.repository.ReaderRepository,
+    private val getBookProgressUseCase: GetBookProgressUseCase
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
-            return HomeViewModel(homeRepository, getStatisticsUseCase, dailyGoalProvider, readerRepository, getBookProgressUseCase, progressReconciler) as T
+            return HomeViewModel(homeRepository, getStatisticsUseCase, dailyGoalProvider, readerRepository, getBookProgressUseCase) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

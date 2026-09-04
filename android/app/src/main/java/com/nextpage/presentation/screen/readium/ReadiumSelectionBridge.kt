@@ -88,12 +88,12 @@ fun rememberSelectionBridge(
             if (sel != null) {
                 Log.d("SelectionDebug", "sel.rect=${sel.rect}, sel.locator.locations.totalProgression=${sel.locator.locations.totalProgression}")
                 val selRect = sel.rect
-                if (selRect == null) {
-                    Log.w("SelectionDebug", "sel.rect is null — skipping")
-                    if (lastSelection) {
-                        Log.d("SelectionDebug", "Clearing previous selection (rect was null)")
-                        viewModel.onSelectionCleared()
-                    }
+                    if (selRect == null) {
+                        Log.w("SelectionDebug", "sel.rect is null — skipping")
+                        if (lastSelection) {
+                            Log.d("SelectionDebug", "Clearing previous selection (rect was null)")
+                            viewModel.interactionHolder.onSelectionCleared()
+                        }
                     lastSelection = false
                     continue
                 }
@@ -115,22 +115,23 @@ fun rememberSelectionBridge(
                     Log.d("SelectionDebug", "Using locator.text fallback after exception: '$fallback'")
                     fallback
                 }
-                Log.d("SelectionDebug", "Calling viewModel.onReadiumSelection(text='${text.take(50)}', rect=$selRect)")
+                Log.d("SelectionDebug", "Calling interactionHolder.onReadiumSelection(text='${text.take(50)}', rect=$selRect)")
                 try {
-                    viewModel.onReadiumSelection(
+                    viewModel.interactionHolder.onReadiumSelection(
                         locator = sel.locator,
                         rect = selRect,
-                        text = text
+                        text = text,
+                        existingHighlights = latestHighlights
                     )
-                    Log.d("SelectionDebug", "viewModel.onReadiumSelection OK")
+                    Log.d("SelectionDebug", "interactionHolder.onReadiumSelection OK")
                 } catch (e: Throwable) {
-                    Log.e("SelectionDebug", "viewModel.onReadiumSelection THREW: ${e::class.simpleName}: ${e.message}", e)
+                    Log.e("SelectionDebug", "interactionHolder.onReadiumSelection THREW: ${e::class.simpleName}: ${e.message}", e)
                 }
                 lastSelection = true
             } else {
                 if (lastSelection) {
                     Log.d("SelectionDebug", "Selection cleared (user tapped away)")
-                    viewModel.onSelectionCleared()
+                    viewModel.interactionHolder.onSelectionCleared()
                 }
                 lastSelection = false
             }
@@ -189,11 +190,11 @@ fun rememberSelectionBridge(
                             } catch (_: Throwable) {
                                 // Probe failed — fall through and treat as a tap
                             }
-                            viewModel.onHighlightTapped(highlight, rect)
+                            viewModel.interactionHolder.onHighlightTapped(highlight, rect)
                         }
                         return true
                     }
-                    viewModel.onHighlightTapped(highlight, rect)
+                    viewModel.interactionHolder.onHighlightTapped(highlight, rect)
                     return true
                 }
             }

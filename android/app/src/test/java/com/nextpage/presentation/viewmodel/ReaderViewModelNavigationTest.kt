@@ -69,7 +69,7 @@ class ReaderViewModelNavigationTest {
         advanceUntilIdle()
 
         // CFI /6/3 extracts chapter index 3, which maps to 0-based index 2
-        assertEquals("Should navigate to chapter index 2 (third chapter)", 2, viewModel.uiState.value.currentChapterIndex)
+        assertEquals("Should navigate to chapter index 2 (third chapter)", 2, viewModel.sessionUiState.value.currentChapterIndex)
     }
 
     @Test
@@ -93,7 +93,7 @@ class ReaderViewModelNavigationTest {
         viewModel.lifecycleHolder.applyPendingCfi()
         advanceUntilIdle()
 
-        assertEquals("Should navigate to page 5", 5, viewModel.uiState.value.currentPdfPage)
+        assertEquals("Should navigate to page 5", 5, viewModel.sessionUiState.value.currentPdfPage)
     }
 
     @Test
@@ -144,7 +144,7 @@ class ReaderViewModelNavigationTest {
 
         // applyPendingCfi should fire immediately: pending cleared and chapter navigated
         assertNull("Pending CFI should be cleared after immediate apply", viewModel.lifecycleHolder.pendingCfiAfterLoad)
-        assertEquals("Should navigate to chapter index 2 (third chapter)", 2, viewModel.uiState.value.currentChapterIndex)
+        assertEquals("Should navigate to chapter index 2 (third chapter)", 2, viewModel.sessionUiState.value.currentChapterIndex)
     }
 
     // ── Private fakes ────────────────────────────────────────────────

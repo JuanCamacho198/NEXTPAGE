@@ -51,7 +51,7 @@ class ReaderViewModelSettingsTest {
     }
 
     @Test
-    fun `settings update lands on the slice flow and mirrors into back-compat uiState`() = runTest {
+    fun `settings update lands on the slice flow`() = runTest {
         val mockPrefs = mockk<ReaderPreferences>(relaxed = true)
         val viewModel = ReaderViewModel(
             application = mockk<Application>(relaxed = true),
@@ -74,15 +74,10 @@ class ReaderViewModelSettingsTest {
         assertEquals(FontSizePreset.XL, slice.readerSettings.fontSize)
         assertEquals(ReaderTheme.SEPIA, slice.readerSettings.theme)
         assertEquals(LineHeightPreset.COMFORTABLE, slice.readerSettings.lineHeight)
-
-        val state = viewModel.uiState.value
-        assertEquals(FontSizePreset.XL, state.readerSettings.fontSize)
-        assertEquals(ReaderTheme.SEPIA, state.readerSettings.theme)
-        assertEquals(LineHeightPreset.COMFORTABLE, state.readerSettings.lineHeight)
     }
 
     @Test
-    fun `split-settings toggle flips the slice flag and mirrors into back-compat uiState`() = runTest {
+    fun `split-settings toggle flips the slice flag`() = runTest {
         val viewModel = ReaderViewModel(
             application = mockk<Application>(relaxed = true),
             readerRepository = FakeReaderRepository(),
@@ -95,7 +90,6 @@ class ReaderViewModelSettingsTest {
         viewModel.settingsManager.onToggleSplitSettings()
 
         assertEquals(true, viewModel.settingsUiState.value.showSplitSettings)
-        assertEquals(true, viewModel.uiState.value.showSplitSettings)
     }
 
     @Test
@@ -177,10 +171,10 @@ class ReaderViewModelSettingsTest {
             )
         )
 
-        val state = viewModel.uiState.value
-        assertEquals(FontSizePreset.XXL, state.readerSettings.fontSize)
-        assertEquals(ReaderTheme.DARK, state.readerSettings.theme)
-        assertEquals(LineHeightPreset.NORMAL, state.readerSettings.lineHeight)
+        val slice = viewModel.settingsUiState.value
+        assertEquals(FontSizePreset.XXL, slice.readerSettings.fontSize)
+        assertEquals(ReaderTheme.DARK, slice.readerSettings.theme)
+        assertEquals(LineHeightPreset.NORMAL, slice.readerSettings.lineHeight)
     }
 
     private class FakeReaderRepository : ReaderRepository {

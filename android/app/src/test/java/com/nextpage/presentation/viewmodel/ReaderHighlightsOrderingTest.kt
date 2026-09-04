@@ -17,12 +17,14 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * T1 pre-work pin (SDD reader-facade-split, design s5).
+ * Latest-wins pin for highlight observation (SDD reader-facade-split, design s5;
+ * SDD reader-uiState-cleanup S7).
  *
- * The VM observes highlights through exactly one site — a direct
- * `flatMapLatest` over `observeHighlights(bookId)` — giving latest-wins
- * merge timing. These tests pin that guarantee BEFORE the facade split
- * touches any code, so slices T2-T6 (annotation last) cannot regress it.
+ * The VM observes highlights through exactly one site — the annotation owner's
+ * `observeBook` (Room `observeHighlights(bookId)` collected into the
+ * interaction holder, re-exported as `annotationUiState`) — giving latest-wins
+ * timing. These tests pin that guarantee against the slice, with no
+ * back-compat aggregate in the path.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderHighlightsOrderingTest {
@@ -34,6 +36,9 @@ class ReaderHighlightsOrderingTest {
     fun `rapid consecutive highlight updates resolve latest-wins`() = runTest {
         val highlightsFlow = MutableStateFlow<List<Highlight>>(emptyList())
         val viewModel = createViewModel(testScheduler, highlightsFlow)
+        // S7: the holder observes Room directly (wired via onBookLoaded in
+        // production); drive the surviving mechanism.
+        viewModel.interactionHolder.observeBook("book-1")
         runCurrent()
 
         highlightsFlow.value = listOf(highlight("h1"))
@@ -41,22 +46,23 @@ class ReaderHighlightsOrderingTest {
         highlightsFlow.value = listOf(highlight("h1"), highlight("h2"))
         runCurrent()
 
-        assertEquals(listOf("h1", "h2"), viewModel.uiState.value.highlights.map { it.id })
+        assertEquals(listOf("h1", "h2"), viewModel.annotationUiState.value.highlights.map { it.id })
     }
 
     @Test
-    fun `highlight emissions never duplicate across merge paths`() = runTest {
+    fun `highlight emissions never duplicate through the holder observation`() = runTest {
         val highlightsFlow = MutableStateFlow<List<Highlight>>(emptyList())
         val viewModel = createViewModel(testScheduler, highlightsFlow)
+        viewModel.interactionHolder.observeBook("book-1")
         runCurrent()
 
         highlightsFlow.value = listOf(highlight("h1"), highlight("h2"))
         runCurrent()
         runCurrent()
 
-        // Both the Cluster B merge and the direct flatMapLatest write into
-        // uiState — the visible list must equal exactly the latest emission.
-        val visible = viewModel.uiState.value.highlights
+        // Single source: the annotation slice must equal exactly the latest
+        // Room emission — no merge paths, no duplication.
+        val visible = viewModel.annotationUiState.value.highlights
         assertEquals(listOf("h1", "h2"), visible.map { it.id })
     }
 

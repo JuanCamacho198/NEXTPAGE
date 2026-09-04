@@ -80,7 +80,7 @@ class ReaderViewModelProgressTest {
         assertEquals("pdfpage:2", saved?.cfiLocation)
         assertEquals(30f, saved?.percentage ?: 0f, 0.001f)
 
-        val uiState = viewModel.uiState.value
+        val uiState = viewModel.sessionUiState.value
         assertEquals(10, uiState.totalPdfPages)
         assertEquals(2, uiState.currentPdfPage)
         val counterLabel = "Page ${3} of ${uiState.totalPdfPages}"
@@ -104,7 +104,7 @@ class ReaderViewModelProgressTest {
         viewModel.lifecycleHolder.goToPdfPage(6)
         advanceUntilIdle()
 
-        assertEquals(6, viewModel.uiState.value.currentPdfPage)
+        assertEquals(6, viewModel.sessionUiState.value.currentPdfPage)
         assertEquals("pdfpage:6", repository.lastUpserted?.cfiLocation)
     }
 
@@ -130,11 +130,11 @@ class ReaderViewModelProgressTest {
 
         viewModel.lifecycleHolder.goToNextPdfPage()
         advanceUntilIdle()
-        assertEquals(5, viewModel.uiState.value.currentPdfPage)
+        assertEquals(5, viewModel.sessionUiState.value.currentPdfPage)
 
         viewModel.lifecycleHolder.goToPreviousPdfPage()
         advanceUntilIdle()
-        assertEquals(4, viewModel.uiState.value.currentPdfPage)
+        assertEquals(4, viewModel.sessionUiState.value.currentPdfPage)
         assertEquals("pdfpage:4", repository.lastUpserted?.cfiLocation)
     }
 
@@ -178,7 +178,7 @@ class ReaderViewModelProgressTest {
         viewModel.lifecycleHolder.goToPdfPage(2)
         advanceUntilIdle()
 
-        assertEquals(2, viewModel.uiState.value.currentPdfPage)
+        assertEquals(2, viewModel.sessionUiState.value.currentPdfPage)
         assertEquals("pdfpage:2", repository.lastUpserted?.cfiLocation)
     }
 
@@ -206,18 +206,18 @@ class ReaderViewModelProgressTest {
         setEpubStateWithChapters(viewModel, chapters = chapters, currentChapterIndex = 0)
 
         // Chapter 0/5 → 20%
-        assertEquals(20f, viewModel.uiState.value.progressPercent, 0.01f)
-        assertEquals("1 / 5", viewModel.uiState.value.progressLabel)
+        assertEquals(20f, viewModel.sessionUiState.value.progressPercent, 0.01f)
+        assertEquals("1 / 5", viewModel.sessionUiState.value.progressLabel)
 
         // Navigate to chapter 2/5 → 60%
         setEpubStateWithChapters(viewModel, chapters = chapters, currentChapterIndex = 2)
-        assertEquals(60f, viewModel.uiState.value.progressPercent, 0.01f)
-        assertEquals("3 / 5", viewModel.uiState.value.progressLabel)
+        assertEquals(60f, viewModel.sessionUiState.value.progressPercent, 0.01f)
+        assertEquals("3 / 5", viewModel.sessionUiState.value.progressLabel)
 
         // Last chapter 4/5 → 99% (capped — real overall % requires Readium locator)
         setEpubStateWithChapters(viewModel, chapters = chapters, currentChapterIndex = 4)
-        assertEquals(99f, viewModel.uiState.value.progressPercent, 0.01f)
-        assertEquals("5 / 5", viewModel.uiState.value.progressLabel)
+        assertEquals(99f, viewModel.sessionUiState.value.progressPercent, 0.01f)
+        assertEquals("5 / 5", viewModel.sessionUiState.value.progressLabel)
     }
 
     @Test
@@ -235,18 +235,18 @@ class ReaderViewModelProgressTest {
 
         // 10 pages, on page 0 → 10%
         setPdfStateWithPages(viewModel, totalPages = 10, currentPage = 0)
-        assertEquals(10f, viewModel.uiState.value.progressPercent, 0.01f)
-        assertEquals("1 / 10", viewModel.uiState.value.progressLabel)
+        assertEquals(10f, viewModel.sessionUiState.value.progressPercent, 0.01f)
+        assertEquals("1 / 10", viewModel.sessionUiState.value.progressLabel)
 
         // Page 4/10 → 50%
         setPdfStateWithPages(viewModel, totalPages = 10, currentPage = 4)
-        assertEquals(50f, viewModel.uiState.value.progressPercent, 0.01f)
-        assertEquals("5 / 10", viewModel.uiState.value.progressLabel)
+        assertEquals(50f, viewModel.sessionUiState.value.progressPercent, 0.01f)
+        assertEquals("5 / 10", viewModel.sessionUiState.value.progressLabel)
 
         // Last page 9/10 → 100%
         setPdfStateWithPages(viewModel, totalPages = 10, currentPage = 9)
-        assertEquals(100f, viewModel.uiState.value.progressPercent, 0.01f)
-        assertEquals("10 / 10", viewModel.uiState.value.progressLabel)
+        assertEquals(100f, viewModel.sessionUiState.value.progressPercent, 0.01f)
+        assertEquals("10 / 10", viewModel.sessionUiState.value.progressLabel)
     }
 
     @Test
@@ -262,8 +262,8 @@ class ReaderViewModelProgressTest {
             mainDispatcher = dispatcher
         )
 
-        assertEquals(0f, viewModel.uiState.value.progressPercent, 0.01f)
-        assertEquals("", viewModel.uiState.value.progressLabel)
+        assertEquals(0f, viewModel.sessionUiState.value.progressPercent, 0.01f)
+        assertEquals("", viewModel.sessionUiState.value.progressLabel)
     }
 
     private fun setEpubStateWithChapters(

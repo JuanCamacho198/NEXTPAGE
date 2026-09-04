@@ -44,7 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.presentation.viewmodel.AuthViewModel
-import com.nextpage.presentation.viewmodel.ReaderViewModel
+import com.nextpage.presentation.viewmodel.reader.SessionUiState
 import com.nextpage.ui.icons.NextPageIcons
 
 private val DARK_BG = Color(0xFF0D1322)
@@ -58,17 +58,18 @@ private val ACCENT = Color(0xFF64FFDA)
 fun DebugPanel(
     viewModel: DebugViewModel,
     authViewModel: AuthViewModel,
-    readerViewModel: ReaderViewModel?,
+    // Session slice (SDD reader-uiState-cleanup S6): replaces the previous
+    // `readerViewModel: ReaderViewModel?` whose only use was reading
+    // `uiState.bookFormat/currentPdfPage/totalPdfPages/loadTimeMs/bookFilePath`
+    // for the PDF section. Null when no reader is open — the PDF section is
+    // then skipped, exactly as before.
+    session: SessionUiState?,
     syncService: com.nextpage.data.remote.sync.SyncService,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val debugInfo by viewModel.debugInfo.collectAsStateWithLifecycle()
     val authState by authViewModel.uiState.collectAsStateWithLifecycle()
-
-    // readerStateValue is nullable — null when readerViewModel is null (no reader open)
-    val readerStateFlow = readerViewModel?.uiState
-    val readerStateValue = readerStateFlow?.let { state -> state.collectAsStateWithLifecycle().value }
 
     val context = LocalContext.current
 
@@ -80,24 +81,24 @@ fun DebugPanel(
         viewModel.updateSyncInfo(syncService)
 
         // Populate session info
-        val session = authState.currentSession
-        if (session != null) {
+        val sessionInfo = authState.currentSession
+        if (sessionInfo != null) {
             viewModel.updateSessionInfo(
-                userId = session.userId,
-                email = session.email,
-                displayName = session.displayName,
+                userId = sessionInfo.userId,
+                email = sessionInfo.email,
+                displayName = sessionInfo.displayName,
                 isSupabaseConfigured = authState.isConfigured,
                 hasWiringIssue = authState.hasWiringIssue
             )
         }
 
         // Populate PDF info
-        if (readerStateValue != null && readerStateValue.bookFormat == "pdf") {
+        if (session != null && session.bookFormat == "pdf") {
             viewModel.updatePdfInfo(
-                currentPage = readerStateValue.currentPdfPage,
-                totalPages = readerStateValue.totalPdfPages,
-                loadTimeMs = readerStateValue.loadTimeMs,
-                filePath = readerStateValue.bookFilePath
+                currentPage = session.currentPdfPage,
+                totalPages = session.totalPdfPages,
+                loadTimeMs = session.loadTimeMs,
+                filePath = session.bookFilePath
             )
         }
     }

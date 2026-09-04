@@ -69,12 +69,8 @@ class ReaderSliceCompositionTest {
         viewModel.fullscreenManager.onToggleFullscreen()
 
         assertTrue(viewModel.chromeUiState.value.isFullscreen)
-        assertTrue(
-            "back-compat uiState must mirror the chrome slice",
-            viewModel.uiState.value.isFullscreen
-        )
         // No cross-slice emission: annotation-adjacent state untouched.
-        assertFalse(viewModel.uiState.value.showHighlightsSheet)
+        assertFalse(viewModel.annotationUiState.value.showHighlightsSheet)
     }
 
     @Test
@@ -86,12 +82,8 @@ class ReaderSliceCompositionTest {
         viewModel.settingsManager.onToggleSplitSettings()
 
         assertTrue(viewModel.settingsUiState.value.showSplitSettings)
-        assertTrue(
-            "back-compat uiState must mirror the settings slice",
-            viewModel.uiState.value.showSplitSettings
-        )
         // No cross-slice emission: chrome state untouched.
-        assertFalse(viewModel.uiState.value.isFullscreen)
+        assertFalse(viewModel.chromeUiState.value.isFullscreen)
     }
 
     // ── Harness (per-slice mirror assertions; T3-T6 extend here) ────
@@ -118,12 +110,8 @@ class ReaderSliceCompositionTest {
         )
 
         assertTrue(viewModel.sleepTimerUiState.value.isActive)
-        assertTrue(
-            "back-compat uiState must mirror the sleepTimer slice",
-            viewModel.uiState.value.sleepTimerActive
-        )
         // No cross-slice emission: chrome state untouched.
-        assertFalse(viewModel.uiState.value.isFullscreen)
+        assertFalse(viewModel.chromeUiState.value.isFullscreen)
     }
 
     @Test
@@ -141,14 +129,8 @@ class ReaderSliceCompositionTest {
 
         assertEquals("book-9", viewModel.sessionUiState.value.selectedBookId)
         assertEquals(1, viewModel.sessionUiState.value.currentChapterIndex)
-        assertEquals(
-            "back-compat uiState must mirror the session slice",
-            "book-9",
-            viewModel.uiState.value.selectedBookId
-        )
-        assertEquals(1, viewModel.uiState.value.currentChapterIndex)
         // No cross-slice emission: chrome state untouched.
-        assertFalse(viewModel.uiState.value.isFullscreen)
+        assertFalse(viewModel.chromeUiState.value.isFullscreen)
     }
 
     // ── Annotation slice (SDD reader-facade-split, T6) ──────────────
@@ -166,7 +148,7 @@ class ReaderSliceCompositionTest {
             updatedAtEpochMillis = 0L,
             deletedAtEpochMillis = null
         )
-        val holder = interactionHolderOf(viewModel)
+        val holder = viewModel.interactionHolder
         holder.testSetInitialHighlights(listOf(highlight))
         runCurrent()
 
@@ -176,27 +158,9 @@ class ReaderSliceCompositionTest {
             listOf("hl-1"),
             viewModel.annotationUiState.value.highlights.map { it.id }
         )
-        // Back-compat uiState still carries the annotation fields (the
-        // consumer migration that unblocks T7 deletion reads from uiState).
-        assertEquals(
-            "back-compat uiState must mirror annotation highlights",
-            listOf("hl-1"),
-            viewModel.uiState.value.highlights.map { it.id }
-        )
         // No cross-slice emission: chrome / session state untouched.
-        assertFalse(viewModel.uiState.value.isFullscreen)
-        assertNull(viewModel.uiState.value.selectedBookId)
-    }
-
-    // ── Helpers ─────────────────────────────────────────────────────
-
-    @Suppress("UNCHECKED_CAST")
-    private fun interactionHolderOf(
-        viewModel: ReaderViewModel
-    ): com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder {
-        val field = ReaderViewModel::class.java.getDeclaredField("interactionHolder")
-        field.isAccessible = true
-        return field.get(viewModel) as com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder
+        assertFalse(viewModel.chromeUiState.value.isFullscreen)
+        assertNull(viewModel.sessionUiState.value.selectedBookId)
     }
 
     // ── Helpers ─────────────────────────────────────────────────────

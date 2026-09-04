@@ -31,7 +31,7 @@ class ReaderViewModelSleepTimerTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun `timer start lands on the slice flow and mirrors into back-compat uiState`() = runTest {
+    fun `timer start lands on the slice flow`() = runTest {
         val viewModel = createViewModel(testScheduler)
 
         viewModel.sleepTimerManager.startTimer(SleepTimerManager.END_OF_CHAPTER)
@@ -39,10 +39,6 @@ class ReaderViewModelSleepTimerTest {
         val slice = viewModel.sleepTimerUiState.value
         assertTrue(slice.isActive)
         assertTrue(slice.isEndOfChapter)
-
-        val state = viewModel.uiState.value
-        assertTrue(state.sleepTimerActive)
-        assertTrue(state.sleepTimerEndOfChapterMode)
     }
 
     @Test
@@ -62,7 +58,6 @@ class ReaderViewModelSleepTimerTest {
         viewModel.lifecycleHolder.goToChapter(1)
 
         assertTrue(viewModel.sleepTimerUiState.value.isFinished)
-        assertTrue(viewModel.uiState.value.sleepTimerFinished)
     }
 
     @Test
@@ -79,7 +74,6 @@ class ReaderViewModelSleepTimerTest {
         viewModel.lifecycleHolder.goToChapter(1)
 
         assertFalse(viewModel.sleepTimerUiState.value.isFinished)
-        assertFalse(viewModel.uiState.value.sleepTimerFinished)
     }
 
     @Test

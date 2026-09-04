@@ -49,12 +49,12 @@ class ReaderViewModelFullscreenTest {
     }
 
     @Test
-    fun `back-compat uiState mirrors the chrome slice`() = runTest {
+    fun `chrome slice is the single source after aggregate deletion`() = runTest {
         val viewModel = createViewModel(testScheduler)
 
         viewModel.fullscreenManager.onToggleFullscreen()
 
-        assertTrue(viewModel.uiState.value.isFullscreen)
+        assertTrue(viewModel.chromeUiState.value.isFullscreen)
     }
 
     @Test
@@ -107,14 +107,12 @@ class ReaderViewModelFullscreenTest {
 
         // Reader should auto-enter immersive (fullscreen) reading mode.
         assertTrue(viewModel.chromeUiState.value.isFullscreen)
-        assertTrue(viewModel.uiState.value.isFullscreen)
     }
 
     @Test
     fun `default state is not fullscreen`() = runTest {
         val viewModel = createViewModel(testScheduler)
         assertFalse(viewModel.chromeUiState.value.isFullscreen)
-        assertFalse(viewModel.uiState.value.isFullscreen)
     }
 
     // ── Helpers ─────────────────────────────────────────────────────

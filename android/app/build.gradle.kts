@@ -258,6 +258,79 @@ tasks.register("verifyAuthScreenNoHardcodedStrings") {
     }
 }
 
+tasks.register("verifyNoReaderUiStateResidue") {
+    group = "verification"
+    description = "Fails if the deleted Reader uiState aggregate resurfaces (SDD reader-uiState-cleanup S7 gate)"
+
+    // S7 deleted ReaderViewModel.uiState + the 5+1-way combine overlay +
+    // mutableUiState + the 30 annotation delegates + the ReaderUiState type.
+    // This gate fails the build if any of it resurfaces:
+    //  - `ReaderUiState` (the deleted type) anywhere under app/src/main;
+    //  - `.uiState` member access inside reader-owned sources (the six former
+    //    consumers + the VM + holders). Other feature VMs legitimately expose
+    //    their own `uiState` (auth, library, …), so the member-access scan is
+    //    scoped to reader paths instead of an allowlist. Note:
+    //    `presentation/debug/DebugPanel.kt` is intentionally NOT scanned — its
+    //    reader half takes a `session: SessionUiState?` param (no member
+    //    access possible) and its only `.uiState` read belongs to
+    //    AuthViewModel.
+    val readerRoots = listOf(
+        "src/main/java/com/nextpage/presentation/viewmodel/ReaderViewModel.kt",
+        "src/main/java/com/nextpage/presentation/viewmodel/reader",
+        "src/main/java/com/nextpage/presentation/screen/reader",
+        "src/main/java/com/nextpage/presentation/screen/ReaderScreen.kt",
+        "src/main/java/com/nextpage/presentation/screen/ReadiumPdfReaderContent.kt",
+        "src/main/java/com/nextpage/presentation/screen/readium",
+        "src/main/java/com/nextpage/debug/DebugPanel.kt"
+    )
+    val typeBanPattern = Regex("\\bReaderUiState\\b")
+    val memberPattern = Regex("\\.uiState\\b")
+
+    // Resolve plain Files at configuration time (java.io.File is a supported
+    // configuration-cache type; touching Project.layout inside doLast is not —
+    // same pattern as verifyAuthScreenNoHardcodedStrings above).
+    val projectDir = layout.projectDirectory.asFile
+    val mainSrcDir = projectDir.resolve("src/main/java")
+    val readerBases = readerRoots.map { projectDir.resolve(it) }
+
+    doLast {
+        val violations = mutableListOf<String>()
+
+        // 1. Global type ban: no ReaderUiState anywhere in main sources.
+        mainSrcDir.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .forEach { file ->
+                file.readLines().forEachIndexed { index, line ->
+                    if (typeBanPattern.containsMatchIn(line)) {
+                        violations += "${file.relativeTo(projectDir)}:${index + 1}: ${line.trim()}"
+                    }
+                }
+            }
+
+        // 2. Scoped member ban: no `.uiState` access in reader-owned sources.
+        readerBases.forEach { base ->
+            if (!base.exists()) return@forEach
+            val files = if (base.isFile) listOf(base) else base.walkTopDown()
+                .filter { it.isFile && it.extension == "kt" }.toList()
+            files.forEach { file ->
+                file.readLines().forEachIndexed { index, line ->
+                    if (memberPattern.containsMatchIn(line)) {
+                        violations += "${file.relativeTo(projectDir)}:${index + 1}: ${line.trim()}"
+                    }
+                }
+            }
+        }
+
+        if (violations.isNotEmpty()) {
+            throw GradleException(
+                "Deleted Reader uiState aggregate resurfaced (SDD reader-uiState-cleanup S7 gate):\n" +
+                    violations.joinToString("\n")
+            )
+        }
+        logger.lifecycle("verifyNoReaderUiStateResidue: no residue found")
+    }
+}
+
 tasks.register("verifyReleaseMapping") {
     group = "verification"
     description = "Verifies release mapping artifact when minify is enabled"

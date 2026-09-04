@@ -45,6 +45,7 @@ import com.nextpage.presentation.screen.reader.ReaderScreenOverlaysHost
 import com.nextpage.presentation.screen.reader.rememberReaderSelectionCallbacks
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.ReaderViewModel
+import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 import com.nextpage.ui.components.molecules.ReadingProgressBar
 import kotlinx.coroutines.flow.MutableSharedFlow
 
@@ -58,12 +59,14 @@ fun ReaderScreen(
     viewModel: ReaderViewModel,
     onNavigateBack: () -> Unit = {}
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // SDD reader-uiState-cleanup S6: every read below uses slices; the
+    // DebugPanel takes the annotation slice directly, so no uiState collect.
     val searchUiState by viewModel.searchUiState.collectAsStateWithLifecycle()
     val chromeUiState by viewModel.chromeUiState.collectAsStateWithLifecycle()
     val settingsUiState by viewModel.settingsUiState.collectAsStateWithLifecycle()
     val sleepTimerUiState by viewModel.sleepTimerUiState.collectAsStateWithLifecycle()
     val sessionUiState by viewModel.sessionUiState.collectAsStateWithLifecycle()
+    val annotationUiState by viewModel.annotationUiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val view = LocalView.current
 
@@ -78,10 +81,10 @@ fun ReaderScreen(
     var controlsVisible by remember(chromeUiState.isFullscreen) { mutableStateOf(true) }
     var lastInteractionAt by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
 
-    val isSelectionActive = uiState.selectionState != com.nextpage.presentation.viewmodel.reader.ReaderSelectionState.None ||
-        uiState.showTagInput ||
-        uiState.showDefinitionInput ||
-        uiState.showColorPickerPopover
+    val isSelectionActive = annotationUiState.selectionState != ReaderSelectionState.None ||
+        annotationUiState.showTagInput ||
+        annotationUiState.showDefinitionInput ||
+        annotationUiState.showColorPickerPopover
 
     val onUserInteraction: () -> Unit = { lastInteractionAt = SystemClock.elapsedRealtime() }
 
@@ -92,7 +95,7 @@ fun ReaderScreen(
         }
     }
 
-    val selectionCallbacks = rememberReaderSelectionCallbacks(viewModel, context, uiState)
+    val selectionCallbacks = rememberReaderSelectionCallbacks(viewModel, context, annotationUiState)
 
     val inspectHighlightsHtmlTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
     val logWebViewTreeTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
@@ -143,10 +146,10 @@ fun ReaderScreen(
             controlsVisible = controlsVisible,
             header = {
                 ReaderHeader(
-                    uiState = uiState,
+                    chapters = sessionUiState.chapters,
                     onNavigateBack = onNavigateBack,
                     onToggleSearch = { viewModel.searchStateHolder.onToggleSearch() },
-                    onToggleHighlights = { viewModel.onToggleHighlightsPanel() },
+                    onToggleHighlights = { viewModel.interactionHolder.onToggleHighlightsPanel() },
                     onCreateBookmark = {
                         viewModel.createBookmarkFromCurrentPosition()
                         lastBookmarkTrigger = SystemClock.elapsedRealtime()
@@ -171,7 +174,7 @@ fun ReaderScreen(
             },
             content = {
                 ReaderScreenContentHost(
-                    uiState = uiState,
+                    annotationUiState = annotationUiState,
                     settingsUiState = settingsUiState,
                     sessionUiState = sessionUiState,
                     viewModel = viewModel,
@@ -186,7 +189,7 @@ fun ReaderScreen(
             },
             overlays = {
                 ReaderScreenOverlaysHost(
-                    uiState = uiState,
+                    annotationUiState = annotationUiState,
                     searchUiState = searchUiState,
                     settingsUiState = settingsUiState,
                     sleepTimerUiState = sleepTimerUiState,
@@ -247,23 +250,23 @@ fun ReaderScreen(
         if (BuildConfig.DEBUG && DebugPrefs.isEnabled(context)) {
             DebugPanel(
                 visible = debugPanelVisible,
-                state = uiState,
+                annotation = annotationUiState,
                 onClose = { debugPanelVisible = false },
-                onForceColorPicker = { viewModel.onDebugForceColorPicker() },
-                onForceContextMenu = { viewModel.onDebugForceMenu() },
+                onForceColorPicker = { viewModel.interactionHolder.onDebugForceColorPicker() },
+                onForceContextMenu = { viewModel.interactionHolder.onDebugForceMenu() },
                 onSimulateHighlightTap = {
-                    val first = uiState.highlights.firstOrNull { it.locatorJson != null }
+                    val first = annotationUiState.highlights.firstOrNull { it.locatorJson != null }
                     if (first == null) {
                         DebugLog.warn("Debug", "Simulate-tap: no highlights to simulate")
                     } else {
                         val fakeRect = android.graphics.RectF(
-                            uiState.selectionRect?.left?.toFloat() ?: 200f,
-                            uiState.selectionRect?.top?.toFloat() ?: 200f,
-                            (uiState.selectionRect?.right ?: 600).toFloat(),
-                            (uiState.selectionRect?.bottom ?: 250).toFloat()
+                            annotationUiState.selectionRect?.left?.toFloat() ?: 200f,
+                            annotationUiState.selectionRect?.top?.toFloat() ?: 200f,
+                            (annotationUiState.selectionRect?.right ?: 600).toFloat(),
+                            (annotationUiState.selectionRect?.bottom ?: 250).toFloat()
                         )
                         DebugLog.info("Debug", "Simulate-tap: forcing onHighlightTapped for id=${first.id}")
-                        viewModel.onHighlightTapped(first, fakeRect)
+                        viewModel.interactionHolder.onHighlightTapped(first, fakeRect)
                     }
                 },
                 onClearLog = { DebugLog.clear() },

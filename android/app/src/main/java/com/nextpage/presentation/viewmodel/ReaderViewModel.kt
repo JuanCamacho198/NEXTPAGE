@@ -1,19 +1,12 @@
 package com.nextpage.presentation.viewmodel
 
 import android.app.Application
-import android.graphics.Rect
-import android.graphics.RectF
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
-import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nextpage.data.session.ReaderPreferences
-import com.nextpage.debug.DebugLog
-import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
-import com.nextpage.domain.model.ReadingProgress
-import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.domain.model.SearchResult
 import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.domain.repository.ReaderRepository
@@ -26,7 +19,6 @@ import com.nextpage.presentation.viewmodel.reader.ChromeUiState
 import com.nextpage.presentation.viewmodel.reader.FullscreenManager
 import com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder
 import com.nextpage.presentation.viewmodel.reader.ReaderLifecycleStateHolder
-import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 import com.nextpage.presentation.viewmodel.reader.ReaderSettingsManager
 import com.nextpage.presentation.viewmodel.reader.SettingsUiState
 import com.nextpage.presentation.viewmodel.reader.SearchStateHolder
@@ -37,422 +29,35 @@ import com.nextpage.presentation.viewmodel.reader.SleepTimerUiState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Locator
-import org.readium.r2.shared.publication.Publication
 
 typealias BookChapter = com.nextpage.presentation.viewmodel.reader.BookChapter
-
-/**
- * ReaderUiState — Aggregate UI state for the Reader screen.
- *
- * This is the single state object consumed by the Reader composables.
- * It is **not** a `data class` because [selectionRect] is an Android
- * [Rect] whose `equals()` is not available in JVM unit tests — the
- * custom [equals]/[hashCode]/[toString] skip [selectionRect] since
- * it is transient UI-positioning data that should not influence
- * state-flow deduplication.
- *
- * **Used by**: ReaderScreen
- * **Mutated by**: [ReaderViewModel] init block (merges state from
- *                 `lifecycleHolder`, `interactionHolder`, plus a combine
- *                 overlay for the migrated slices — see [searchUiState],
- *                 [chromeUiState], [settingsUiState], [sleepTimerUiState]).
- *
- * Field groups (see constructor below for the full list):
- * - **Book identity & format**: [selectedBookId], [bookFilePath], [bookFormat]
- * - **Pagination**: [chapters], [currentChapterIndex], [previewText],
- *   [currentPdfPage], [totalPdfPages], [readingProgress]
- * - **User data**: [highlights], [bookmarks], [readerSettings]
- * - **Sleep timer**: [sleepTimerActive], [sleepTimerRemainingSecs], [sleepTimerFinished], [sleepTimerPresetMinutes], [sleepTimerEndOfChapterMode]
- * - **Progress**: [progressPercent], [progressLabel]
- * - **Search**: [isSearchActive], [searchQuery], [searchResults], [isSearching]
- * - **Text selection**: [selectionState], [selectedText], [selectionRect],
- *   [activeHighlightId], [highlightTapDebounceUntil], [menuJustClosedAt]
- * - **Sheets / panels**: [showHighlightsSheet], [showTocSheet], [showSplitSettings]
- * - **Fullscreen**: [isFullscreen]
- * - **Readium (EPUB)**: [readiumPublication], [readiumLocator], [readiumSelectionLocator], [readiumViewportHeight]
- * - **Anchored inputs**: [showColorPickerPopover], [showNoteModal], [activeNoteText],
- *   [showTagInput], [activeTagText], [tagSuggestions],
- *   [showDefinitionInput], [activeDefinitionText]
- * - **Load status**: [isLoading], [loadTimeMs], [error]
- */
-@Immutable
-class ReaderUiState(
-    val selectedBookId: String? = null,
-    val bookFilePath: String? = null,
-    val bookFormat: String? = null,
-    val chapters: List<BookChapter> = emptyList(),
-    val currentChapterIndex: Int = 0,
-    val previewText: String = "",
-    val currentPdfPage: Int = 0,
-    val totalPdfPages: Int = 0,
-    val readingProgress: ReadingProgress? = null,
-    val highlights: List<Highlight> = emptyList(),
-    val bookmarks: List<Bookmark> = emptyList(),
-    val readerSettings: ReaderSettings = ReaderSettings(),
-
-    // ── Sleep Timer ────────────────────────────────────────────────
-    val sleepTimerActive: Boolean = false,
-    val sleepTimerRemainingSecs: Int = 0,
-    val sleepTimerFinished: Boolean = false,
-    val sleepTimerPresetMinutes: Int? = null,
-    val sleepTimerEndOfChapterMode: Boolean = false,
-
-    // ── Reading Progress ────────────────────────────────────────────
-    val progressPercent: Float = 0f,
-    val progressLabel: String = "",
-
-    // ── Search (Gap 3) ──────────────────────────────────────────────
-    val isSearchActive: Boolean = false,
-    val searchQuery: String = "",
-    val searchResults: List<SearchResult> = emptyList(),
-    val isSearching: Boolean = false,
-
-    // ── Text Selection (Gap 4) ──────────────────────────────────────
-    val selectionState: ReaderSelectionState = ReaderSelectionState.None,
-    val selectedText: String? = null,
-    val selectionRect: Rect? = null,
-    /** Managed internally by SelectionCoordinator — set to null in combine. */
-    val activeHighlightId: String? = null,
-    /** Managed internally by SelectionCoordinator — set to 0L in combine. */
-    val highlightTapDebounceUntil: Long = 0L,
-    /** Managed internally by SelectionCoordinator — set to 0L in combine. */
-    val menuJustClosedAt: Long = 0L,
-
-    // ── Highlights Panel (Gap 5) ────────────────────────────────────
-    val showHighlightsSheet: Boolean = false,
-
-    // ── Chapters / TOC sheet ────────────────────────────────────────
-    val showTocSheet: Boolean = false,
-
-    // ── aA Settings (Gap 6) ─────────────────────────────────────────
-    val showSplitSettings: Boolean = false,
-
-    // ── Fullscreen (Gap 7) ──────────────────────────────────────────
-    val isFullscreen: Boolean = false,
-
-    // ── Readium (Phase 1+) ─────────────────────────────────────────
-    val readiumPublication: Publication? = null,
-    val readiumLocator: Locator? = null,
-    val readiumSelectionLocator: Locator? = null,
-    val readiumViewportHeight: Int = 0,
-
-    // ── Debug ──────────────────────────────────────────────────────
-    val debugForceMenu: Boolean = false,
-
-    // ── Floating menus / anchored inputs ────────────────────────────
-    val showColorPickerPopover: Boolean = false,
-    val showNoteModal: Boolean = false,
-    val activeNoteText: String = "",
-    val showTagInput: Boolean = false,
-    val activeTagText: String = "",
-    val tagSuggestions: List<String> = emptyList(),
-    val showDefinitionInput: Boolean = false,
-    val activeDefinitionText: String = "",
-
-    val isLoading: Boolean = true,
-    val loadTimeMs: Long? = null,
-    val error: String? = null
-) {
-    fun copy(
-        selectedBookId: String? = this.selectedBookId,
-        bookFilePath: String? = this.bookFilePath,
-        bookFormat: String? = this.bookFormat,
-        chapters: List<BookChapter> = this.chapters,
-        currentChapterIndex: Int = this.currentChapterIndex,
-        previewText: String = this.previewText,
-        currentPdfPage: Int = this.currentPdfPage,
-        totalPdfPages: Int = this.totalPdfPages,
-        readingProgress: ReadingProgress? = this.readingProgress,
-        highlights: List<Highlight> = this.highlights,
-        bookmarks: List<Bookmark> = this.bookmarks,
-        readerSettings: ReaderSettings = this.readerSettings,
-        sleepTimerActive: Boolean = this.sleepTimerActive,
-        sleepTimerRemainingSecs: Int = this.sleepTimerRemainingSecs,
-        sleepTimerFinished: Boolean = this.sleepTimerFinished,
-        sleepTimerPresetMinutes: Int? = this.sleepTimerPresetMinutes,
-        sleepTimerEndOfChapterMode: Boolean = this.sleepTimerEndOfChapterMode,
-        progressPercent: Float = this.progressPercent,
-        progressLabel: String = this.progressLabel,
-        isSearchActive: Boolean = this.isSearchActive,
-        searchQuery: String = this.searchQuery,
-        searchResults: List<SearchResult> = this.searchResults,
-        isSearching: Boolean = this.isSearching,
-        selectionState: ReaderSelectionState = this.selectionState,
-        selectedText: String? = this.selectedText,
-        selectionRect: Rect? = this.selectionRect,
-        activeHighlightId: String? = this.activeHighlightId,
-        highlightTapDebounceUntil: Long = this.highlightTapDebounceUntil,
-        menuJustClosedAt: Long = this.menuJustClosedAt,
-        showHighlightsSheet: Boolean = this.showHighlightsSheet,
-        showTocSheet: Boolean = this.showTocSheet,
-        showSplitSettings: Boolean = this.showSplitSettings,
-        isFullscreen: Boolean = this.isFullscreen,
-        readiumPublication: Publication? = this.readiumPublication,
-        readiumLocator: Locator? = this.readiumLocator,
-        readiumSelectionLocator: Locator? = this.readiumSelectionLocator,
-        readiumViewportHeight: Int = this.readiumViewportHeight,
-        debugForceMenu: Boolean = this.debugForceMenu,
-        showColorPickerPopover: Boolean = this.showColorPickerPopover,
-        showNoteModal: Boolean = this.showNoteModal,
-        activeNoteText: String = this.activeNoteText,
-        showTagInput: Boolean = this.showTagInput,
-        activeTagText: String = this.activeTagText,
-        tagSuggestions: List<String> = this.tagSuggestions,
-        showDefinitionInput: Boolean = this.showDefinitionInput,
-        activeDefinitionText: String = this.activeDefinitionText,
-        isLoading: Boolean = this.isLoading,
-        loadTimeMs: Long? = this.loadTimeMs,
-        error: String? = this.error
-    ): ReaderUiState {
-        return ReaderUiState(
-            selectedBookId = selectedBookId,
-            bookFilePath = bookFilePath,
-            bookFormat = bookFormat,
-            chapters = chapters,
-            currentChapterIndex = currentChapterIndex,
-            previewText = previewText,
-            currentPdfPage = currentPdfPage,
-            totalPdfPages = totalPdfPages,
-            readingProgress = readingProgress,
-            highlights = highlights,
-            bookmarks = bookmarks,
-            readerSettings = readerSettings,
-            sleepTimerActive = sleepTimerActive,
-            sleepTimerRemainingSecs = sleepTimerRemainingSecs,
-            sleepTimerFinished = sleepTimerFinished,
-            sleepTimerPresetMinutes = sleepTimerPresetMinutes,
-            sleepTimerEndOfChapterMode = sleepTimerEndOfChapterMode,
-            progressPercent = progressPercent,
-            progressLabel = progressLabel,
-            isSearchActive = isSearchActive,
-            searchQuery = searchQuery,
-            searchResults = searchResults,
-            isSearching = isSearching,
-            selectionState = selectionState,
-            selectedText = selectedText,
-            selectionRect = selectionRect,
-            activeHighlightId = activeHighlightId,
-            highlightTapDebounceUntil = highlightTapDebounceUntil,
-            menuJustClosedAt = menuJustClosedAt,
-            showHighlightsSheet = showHighlightsSheet,
-            showTocSheet = showTocSheet,
-            showSplitSettings = showSplitSettings,
-            isFullscreen = isFullscreen,
-            readiumPublication = readiumPublication,
-            readiumLocator = readiumLocator,
-            readiumSelectionLocator = readiumSelectionLocator,
-            readiumViewportHeight = readiumViewportHeight,
-            debugForceMenu = debugForceMenu,
-            showColorPickerPopover = showColorPickerPopover,
-            showNoteModal = showNoteModal,
-            activeNoteText = activeNoteText,
-            showTagInput = showTagInput,
-            activeTagText = activeTagText,
-            tagSuggestions = tagSuggestions,
-            showDefinitionInput = showDefinitionInput,
-            activeDefinitionText = activeDefinitionText,
-            isLoading = isLoading,
-            loadTimeMs = loadTimeMs,
-            error = error
-        )
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is ReaderUiState) return false
-        return selectedBookId == other.selectedBookId &&
-            bookFilePath == other.bookFilePath &&
-            bookFormat == other.bookFormat &&
-            chapters == other.chapters &&
-            currentChapterIndex == other.currentChapterIndex &&
-            previewText == other.previewText &&
-            currentPdfPage == other.currentPdfPage &&
-            totalPdfPages == other.totalPdfPages &&
-            readingProgress == other.readingProgress &&
-            highlights == other.highlights &&
-            bookmarks == other.bookmarks &&
-            readerSettings == other.readerSettings &&
-            sleepTimerActive == other.sleepTimerActive &&
-            sleepTimerRemainingSecs == other.sleepTimerRemainingSecs &&
-            sleepTimerFinished == other.sleepTimerFinished &&
-            sleepTimerPresetMinutes == other.sleepTimerPresetMinutes &&
-            sleepTimerEndOfChapterMode == other.sleepTimerEndOfChapterMode &&
-            progressPercent == other.progressPercent &&
-            progressLabel == other.progressLabel &&
-            isSearchActive == other.isSearchActive &&
-            searchQuery == other.searchQuery &&
-            searchResults == other.searchResults &&
-            isSearching == other.isSearching &&
-            selectionState == other.selectionState &&
-            selectedText == other.selectedText &&
-            activeHighlightId == other.activeHighlightId &&
-            highlightTapDebounceUntil == other.highlightTapDebounceUntil &&
-            menuJustClosedAt == other.menuJustClosedAt &&
-            showHighlightsSheet == other.showHighlightsSheet &&
-            showTocSheet == other.showTocSheet &&
-            showSplitSettings == other.showSplitSettings &&
-            isFullscreen == other.isFullscreen &&
-            readiumPublication == other.readiumPublication &&
-            readiumLocator == other.readiumLocator &&
-            readiumSelectionLocator == other.readiumSelectionLocator &&
-            readiumViewportHeight == other.readiumViewportHeight &&
-            debugForceMenu == other.debugForceMenu &&
-            showColorPickerPopover == other.showColorPickerPopover &&
-            showNoteModal == other.showNoteModal &&
-            activeNoteText == other.activeNoteText &&
-            showTagInput == other.showTagInput &&
-            activeTagText == other.activeTagText &&
-            tagSuggestions == other.tagSuggestions &&
-            showDefinitionInput == other.showDefinitionInput &&
-            activeDefinitionText == other.activeDefinitionText &&
-            isLoading == other.isLoading &&
-            loadTimeMs == other.loadTimeMs &&
-            error == other.error
-        // selectionRect intentionally omitted — not mockable in JVM unit tests
-    }
-
-    override fun hashCode(): Int {
-        var result = selectedBookId?.hashCode() ?: 0
-        result = 31 * result + (bookFilePath?.hashCode() ?: 0)
-        result = 31 * result + (bookFormat?.hashCode() ?: 0)
-        result = 31 * result + chapters.hashCode()
-        result = 31 * result + currentChapterIndex
-        result = 31 * result + previewText.hashCode()
-        result = 31 * result + currentPdfPage
-        result = 31 * result + totalPdfPages
-        result = 31 * result + (readingProgress?.hashCode() ?: 0)
-        result = 31 * result + highlights.hashCode()
-        result = 31 * result + bookmarks.hashCode()
-        result = 31 * result + readerSettings.hashCode()
-        result = 31 * result + sleepTimerActive.hashCode()
-        result = 31 * result + sleepTimerRemainingSecs
-        result = 31 * result + sleepTimerFinished.hashCode()
-        result = 31 * result + (sleepTimerPresetMinutes ?: 0)
-        result = 31 * result + sleepTimerEndOfChapterMode.hashCode()
-        result = 31 * result + progressPercent.hashCode()
-        result = 31 * result + progressLabel.hashCode()
-        result = 31 * result + isSearchActive.hashCode()
-        result = 31 * result + searchQuery.hashCode()
-        result = 31 * result + searchResults.hashCode()
-        result = 31 * result + isSearching.hashCode()
-        result = 31 * result + selectionState.hashCode()
-        result = 31 * result + (selectedText?.hashCode() ?: 0)
-        result = 31 * result + (activeHighlightId?.hashCode() ?: 0)
-        result = 31 * result + highlightTapDebounceUntil.hashCode()
-        result = 31 * result + menuJustClosedAt.hashCode()
-        result = 31 * result + showHighlightsSheet.hashCode()
-        result = 31 * result + showTocSheet.hashCode()
-        result = 31 * result + showSplitSettings.hashCode()
-        result = 31 * result + isFullscreen.hashCode()
-        result = 31 * result + (readiumPublication?.hashCode() ?: 0)
-        result = 31 * result + (readiumLocator?.hashCode() ?: 0)
-        result = 31 * result + (readiumSelectionLocator?.hashCode() ?: 0)
-        result = 31 * result + readiumViewportHeight
-        result = 31 * result + debugForceMenu.hashCode()
-        result = 31 * result + showColorPickerPopover.hashCode()
-        result = 31 * result + showNoteModal.hashCode()
-        result = 31 * result + activeNoteText.hashCode()
-        result = 31 * result + showTagInput.hashCode()
-        result = 31 * result + activeTagText.hashCode()
-        result = 31 * result + tagSuggestions.hashCode()
-        result = 31 * result + showDefinitionInput.hashCode()
-        result = 31 * result + activeDefinitionText.hashCode()
-        result = 31 * result + isLoading.hashCode()
-        result = 31 * result + (loadTimeMs?.hashCode() ?: 0)
-        result = 31 * result + (error?.hashCode() ?: 0)
-        return result
-    }
-
-    override fun toString(): String {
-        return "ReaderUiState(" +
-            "selectedBookId='$selectedBookId', " +
-            "bookFilePath='$bookFilePath', " +
-            "bookFormat='$bookFormat', " +
-            "chapters.size=${chapters.size}, " +
-            "currentChapterIndex=$currentChapterIndex, " +
-            "previewText='$previewText', " +
-            "currentPdfPage=$currentPdfPage, " +
-            "totalPdfPages=$totalPdfPages, " +
-            "readingProgress=$readingProgress, " +
-            "highlights.size=${highlights.size}, " +
-            "bookmarks.size=${bookmarks.size}, " +
-            "readerSettings=$readerSettings, " +
-            "sleepTimerActive=$sleepTimerActive, " +
-            "sleepTimerRemainingSecs=$sleepTimerRemainingSecs, " +
-            "sleepTimerFinished=$sleepTimerFinished, " +
-            "sleepTimerPresetMinutes=$sleepTimerPresetMinutes, " +
-            "sleepTimerEndOfChapterMode=$sleepTimerEndOfChapterMode, " +
-            "progressPercent=$progressPercent, " +
-            "progressLabel='$progressLabel', " +
-            "isSearchActive=$isSearchActive, " +
-            "searchQuery='$searchQuery', " +
-            "searchResults.size=${searchResults.size}, " +
-            "isSearching=$isSearching, " +
-            "selectionState=$selectionState, " +
-            "selectedText='$selectedText', " +
-            "selectionRect=$selectionRect, " +
-            "activeHighlightId=$activeHighlightId, " +
-            "highlightTapDebounceUntil=$highlightTapDebounceUntil, " +
-            "menuJustClosedAt=$menuJustClosedAt, " +
-            "showHighlightsSheet=$showHighlightsSheet, " +
-            "showTocSheet=$showTocSheet, " +
-            "showSplitSettings=$showSplitSettings, " +
-            "isFullscreen=$isFullscreen, " +
-            "readiumPublication=$readiumPublication, " +
-            "readiumLocator=$readiumLocator, " +
-            "readiumSelectionLocator=$readiumSelectionLocator, " +
-            "readiumViewportHeight=$readiumViewportHeight, " +
-            "debugForceMenu=$debugForceMenu, " +
-            "showColorPickerPopover=$showColorPickerPopover, " +
-            "showNoteModal=$showNoteModal, " +
-            "activeNoteText='$activeNoteText', " +
-            "showTagInput=$showTagInput, " +
-            "activeTagText='$activeTagText', " +
-            "tagSuggestions=$tagSuggestions, " +
-            "showDefinitionInput=$showDefinitionInput, " +
-            "activeDefinitionText='$activeDefinitionText', " +
-            "isLoading=$isLoading, " +
-            "loadTimeMs=$loadTimeMs, " +
-            "error='$error'" +
-            ")"
-    }
-}
 
 /**
  * ReaderViewModel — Owns the entire state of the Reader screen: book loading,
  * pagination, text selection, highlights, bookmarks, search, sleep timer,
  * settings, and fullscreen. Delegates focused sub-domains to dedicated
  * state holders (`lifecycleHolder`, `interactionHolder`, `searchStateHolder`,
- * `fullscreenManager`, `settingsManager`, `sleepTimerManager`) and merges
- * their state streams into [ReaderUiState] (`init` collectors plus a
- * combine overlay for the migrated slices — see [searchUiState],
+ * `fullscreenManager`, `settingsManager`, `sleepTimerManager`).
+ *
+ * Slice flows are the single source of truth — see [searchUiState],
  * [chromeUiState], [settingsUiState], [sleepTimerUiState],
- * [sessionUiState]).
+ * [sessionUiState], [annotationUiState]. Screens collect slices directly;
+ * writes go through the holder owned by the VM (`viewModel.lifecycleHolder`,
+ * `viewModel.interactionHolder`, …).
  *
  * Public actions are grouped by responsibility — see the section comments
  * throughout this file. The largest public surface is the text-selection
- * flow ([onTextSelection], [onSelectHighlightColor], [onAnnotate], etc.);
- * session navigation lives in the session owner, reached via
- * [lifecycleHolder].
+ * flow on [interactionHolder] (highlight tap, Readium selection, annotate,
+ * tag/definition inputs); session navigation lives in the session owner,
+ * reached via [lifecycleHolder].
  *
  * @param application Application context (needed for the Android `ViewModel` superclass).
  * @param readerRepository Source of book data, progress, and locator storage.
@@ -475,10 +80,6 @@ class ReaderViewModel(
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val supabaseProgressSync: SupabaseProgressSync? = null
 ) : AndroidViewModel(application) {
-    private val mutableUiState = MutableStateFlow(
-        ReaderUiState(selectedBookId = defaultBookId)
-    )
-
     /**
      * Sleep timer manager — timer slice owner (SDD reader-facade-split, slice 3).
      *
@@ -570,7 +171,16 @@ class ReaderViewModel(
 
     // ── Cluster B state holder ────────────────────────────────────────
 
-    private val interactionHolder = ReaderInteractionStateHolder(
+    /**
+     * Annotation slice owner (SDD reader-uiState-cleanup, S7).
+     *
+     * Screens stay VM-scoped: they reach the owner through the VM
+     * (`viewModel.interactionHolder`), never via a direct holder import.
+     * Public since S7 deleted the 30 `@Deprecated` VM delegates — callers
+     * invoke holder methods directly for writes and collect
+     * [annotationUiState] for reads.
+     */
+    val interactionHolder = ReaderInteractionStateHolder(
         readerRepository = readerRepository,
         dictionaryRepository = dictionaryRepository,
         scope = viewModelScope,
@@ -592,9 +202,7 @@ class ReaderViewModel(
      * Search slice re-export (SDD reader-facade-split, slice 1).
      *
      * Read-only view of the search owner state — the single source of truth
-     * for active flag, query, results, and in-flight flag. Collect this
-     * directly; the search fields on [uiState] are a back-compat mirror
-     * kept until T7 deletes the combined flow.
+     * for active flag, query, results, and in-flight flag.
      */
     val searchUiState: StateFlow<SearchUiState> = searchStateHolder.state
 
@@ -602,8 +210,7 @@ class ReaderViewModel(
      * Chrome slice re-export (SDD reader-facade-split, slice 2).
      *
      * Read-only view of the chrome owner state — the single source of truth
-     * for fullscreen. Collect this directly; the fullscreen field on [uiState]
-     * is a back-compat mirror kept until T7 deletes the combined flow.
+     * for fullscreen.
      */
     val chromeUiState: StateFlow<ChromeUiState> = fullscreenManager.state
 
@@ -611,9 +218,7 @@ class ReaderViewModel(
      * Settings slice re-export (SDD reader-facade-split, slice 2).
      *
      * Read-only view of the settings owner state — the single source of truth
-     * for reader settings and the split-settings sheet flag. Collect this
-     * directly; the settings fields on [uiState] are a back-compat mirror
-     * kept until T7 deletes the combined flow.
+     * for reader settings and the split-settings sheet flag.
      */
     val settingsUiState: StateFlow<SettingsUiState> = settingsManager.state
 
@@ -621,9 +226,7 @@ class ReaderViewModel(
      * Sleep-timer slice re-export (SDD reader-facade-split, slice 3).
      *
      * Read-only view of the timer owner state — the single source of truth
-     * for active/remaining/finished/EOC state. Collect this directly; the
-     * timer fields on [uiState] are a back-compat mirror kept until T7
-     * deletes the combined flow.
+     * for active/remaining/finished/EOC state.
      */
     val sleepTimerUiState: StateFlow<SleepTimerUiState> = sleepTimerManager.state
 
@@ -632,8 +235,6 @@ class ReaderViewModel(
      *
      * Read-only view of the session owner state — the single source of truth
      * for book identity, loading state, chapter/position, and progress.
-     * Collect this directly; the session fields on [uiState] are a
-     * back-compat mirror kept until T7 deletes the combined flow.
      */
     val sessionUiState: StateFlow<SessionUiState> = lifecycleHolder.state
 
@@ -642,207 +243,29 @@ class ReaderViewModel(
      *
      * Read-only view of the annotation owner state — the single source of
      * truth for text selection, highlights, bookmarks, note modal, tag
-     * input, highlights panel, and the definition input. Collect this
-     * directly; the corresponding fields on [uiState] are a back-compat
-     * mirror kept until T7 deletes the combined flow.
+     * input, highlights panel, and the definition input.
      *
-     * Owner: `interactionHolder` ([ReaderInteractionStateHolder]) — the
-     * deprecated PR #3 facade. The slice name ([AnnotationUiState]) is
-     * stable; once PR #3 lands and the facade is replaced by direct
-     * `InteractionStateStore` access, this re-export keeps pointing at the
-     * same flow type. Annotation delegates on the VM are `@Deprecated` —
-     * prefer `viewModel.annotationUiState` for reads and
-     * `viewModel.interactionHolder.X` for writes (the holder is reachable
-     * through the VM, never imported directly from screens).
+     * Owner: [interactionHolder] ([ReaderInteractionStateHolder]). Reads via
+     * [annotationUiState]; writes via `viewModel.interactionHolder.X` (the
+     * holder is reachable through the VM, never imported directly from screens).
      */
     val annotationUiState: StateFlow<AnnotationUiState> = interactionHolder.state
-
-    /**
-     * Aggregate reader UI state consumed by the ReaderScreen.
-     *
-     * **Emits when**: any underlying state holder (`lifecycleHolder`,
-     *                `interactionHolder`) emits a new value, any public action
-     * mutates state directly, or one of the migrated slices
-     * (search, chrome, settings, sleep timer, session, annotation) emits
-     * (overlaid via the combine below).
-     * **Initial value**: [ReaderUiState] with `selectedBookId = defaultBookId`
-     *                    and `isLoading = true` (or `false` if no
-     *                    `defaultBookId` was supplied).
-     * **Lifecycle**: hot, lifetime-scoped to the ViewModel. Started eagerly
-     *                so `.value` stays live for non-collecting readers until
-     *                T7 deletes this flow (a `WhileSubscribed` start would
-     *                serve stale initials to them).
-     *
-     * **T7 deletion gate (SDD reader-facade-split, spec requirement 6)**:
-     * this flow stays as a back-compat aggregate until the consumer
-     * migration unblocks deletion. Per the spec: "deletion blocked until
-     * zero usages remain". At PR-D close the live consumers are:
-     *  - `presentation/screen/ReaderScreen.kt` (line 61:
-     *    `val uiState by viewModel.uiState.collectAsStateWithLifecycle()`)
-     *  - `presentation/debug/DebugPanel.kt` (line 70:
-     *    `val readerStateFlow = readerViewModel?.uiState`)
-     *  - `presentation/screen/reader/ReaderScreenContentHost.kt` (reads
-     *    `uiState.selectionState`, `uiState.showColorPickerPopover`,
-     *    `uiState.showTagInput`, `uiState.showDefinitionInput`,
-     *    `uiState.selectionRect`, `uiState.selectedText`,
-     *    `uiState.highlights`)
-     *  - `presentation/screen/reader/ReaderScreenOverlaysHost.kt` (reads
-     *    `uiState.showHighlightsSheet`, `uiState.highlights`,
-     *    `uiState.selectedText`, `uiState.showNoteModal`)
-     *  - `presentation/screen/reader/ReaderSelectionCallbacks.kt` (reads
-     *    `uiState.highlights`, `uiState.activeHighlightId`,
-     *    `uiState.selectedText`, `uiState.selectionState`)
-     *  - `presentation/screen/ReadiumPdfReaderContent.kt` (reads
-     *    `uiState.highlights`)
-     *
-     * Until all six migrate to slice flows (`searchUiState`,
-     * `chromeUiState`, `settingsUiState`, `sleepTimerUiState`,
-     * `sessionUiState`, `annotationUiState`), T7 deletion is blocked and
-     * the 5+1-way combine overlay below MUST stay. Removing it now would
-     * be a spec violation and a hard regression risk for the
-     * annotation/highlights flow (which the panel reads via
-     * `uiState.highlights`). The follow-up PR (after this PR-D) is
-     * responsible for the consumer migration; PR-D only records the gate
-     * state and adds the [ReaderViewModelFinalSweepTest] reflection guard
-     * to keep deletion honest.
-     */
-    // Phase-A back-compat overlay, slices 1-3 (search, chrome, settings,
-    // sleep timer). Unchanged by T5; the session overlay below stages on top.
-    private val slicesOverlay: Flow<ReaderUiState> = combine(
-        searchStateHolder.state,
-        fullscreenManager.state,
-        settingsManager.state,
-        sleepTimerManager.state,
-        mutableUiState
-    ) { search, fs, s, timer, rest ->
-        rest.copy(
-            isSearchActive = search.isSearchActive,
-            searchQuery = search.searchQuery,
-            searchResults = search.searchResults,
-            isSearching = search.isSearching,
-            isFullscreen = fs.isFullscreen,
-            readerSettings = s.readerSettings,
-            showSplitSettings = s.showSplitSettings,
-            sleepTimerActive = timer.isActive,
-            sleepTimerRemainingSecs = timer.remainingSecs,
-            sleepTimerFinished = timer.isFinished,
-            sleepTimerPresetMinutes = timer.presetMinutes,
-            sleepTimerEndOfChapterMode = timer.isEndOfChapter
-        )
-    }
-
-    val uiState: StateFlow<ReaderUiState> = combine(
-        slicesOverlay,
-        lifecycleHolder.state
-    ) { rest, session ->
-        rest.copy(
-            selectedBookId = session.selectedBookId,
-            bookFilePath = session.bookFilePath,
-            bookFormat = session.bookFormat,
-            chapters = session.chapters,
-            currentChapterIndex = session.currentChapterIndex,
-            currentPdfPage = session.currentPdfPage,
-            totalPdfPages = session.totalPdfPages,
-            readingProgress = session.readingProgress,
-            readiumPublication = session.readiumPublication,
-            readiumLocator = session.readiumLocator,
-            readiumViewportHeight = session.readiumViewportHeight,
-            readiumSelectionLocator = session.readiumSelectionLocator,
-            progressPercent = session.progressPercent,
-            progressLabel = session.progressLabel,
-            showTocSheet = session.showTocSheet,
-            isLoading = session.isLoading,
-            loadTimeMs = session.loadTimeMs,
-            error = session.error
-        )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, ReaderUiState(selectedBookId = defaultBookId))
 
     init {
         if (!defaultBookId.isNullOrBlank()) {
             lifecycleHolder.restoreProgressForBook(defaultBookId)
-        } else {
-            mutableUiState.update { it.copy(isLoading = false) }
         }
 
-        // Session slice (SDD reader-facade-split, T5): the lifecycle merge
-        // collector is deleted — session state reaches uiState via the
-        // combine overlay above. The preview collector below stays (T6
-        // annotation) as does the interaction merge and highlights flow.
-
-                // Typography -> exact reflow wiring lives in the lifecycle
+        // S7: no VM-side merge collectors remain. Session state is owned by
+        // the lifecycle holder (previewText included since S4); annotation
+        // state is owned by the interaction holder, whose Room highlights
+        // observation (`observeBook`) feeds annotationUiState directly.
+        // Typography -> exact reflow wiring lives in the lifecycle
         // owner (SDD reader-facade-split, T5); the VM only supplies density.
         lifecycleHolder.observeTypographyConfig(
             settingsManager.state,
             getApplication<android.app.Application>().resources.displayMetrics.density
         )
-
-// Derive the split-settings preview text from the current chapter's
-        // real content (EPUB only). Refreshes when the book or chapter
-        // changes; PDFs have no extractable HTML text, so `previewText`
-        // falls back to blank and the UI shows the selection/title instead.
-        viewModelScope.launch(mainDispatcher) {
-            lifecycleHolder.state
-                .map { Triple(it.bookFormat, it.readiumPublication, it.currentChapterIndex) }
-                .distinctUntilChanged()
-                .collect { (bookFormat, publication, chapterIndex) ->
-                    val excerpt = extractChapterPreviewText(publication, bookFormat, chapterIndex)
-                    mutableUiState.update { current ->
-                        current.copy(previewText = excerpt ?: "")
-                    }
-                }
-        }
-
-        // Merge Cluster B interaction state into ReaderUiState
-        viewModelScope.launch(mainDispatcher) {
-            interactionHolder.state.collect { interaction ->
-                DebugLog.info("ReaderVM", "merge Cluster B: highlights=${interaction.highlights.size}")
-                mutableUiState.update { current ->
-                    current.copy(
-                        highlights = interaction.highlights,
-                        bookmarks = interaction.bookmarks,
-                        selectionState = interaction.selectionState,
-                        selectedText = interaction.selectedText,
-                        selectionRect = interaction.selectionRect,
-                        showColorPickerPopover = interaction.showColorPickerPopover,
-                        showNoteModal = interaction.showNoteModal,
-                        activeNoteText = interaction.activeNoteText,
-                        showTagInput = interaction.showTagInput,
-                        activeTagText = interaction.activeTagText,
-                        tagSuggestions = interaction.tagSuggestions,
-                        showDefinitionInput = interaction.showDefinitionInput,
-                        activeDefinitionText = interaction.activeDefinitionText,
-                        showHighlightsSheet = interaction.showHighlightsSheet,
-                        debugForceMenu = interaction.debugForceMenu
-                    )
-                }
-            }
-        }
-
-        // Direct highlights observation — belt-and-suspenders for the merge
-        // above. The Cluster B merge depends on the interaction holder's
-        // StateFlow updating after observeBook() is called; when the reader
-        // is reopened there is a window where the holder has the list but the
-        // merge has not propagated it (the composable then renders with 0
-        // highlights and the decorations are never applied). This direct
-        // collect guarantees the persisted highlights reach ReaderUiState
-        // regardless of merge timing.
-        //
-        // flatMapLatest restarts the Room highlights flow on EVERY lifecycle
-        // emission of selectedBookId (including reopening the same book),
-        // which the merge path misses.
-        viewModelScope.launch(mainDispatcher) {
-            lifecycleHolder.state
-                .map { it.selectedBookId }
-                .mapNotNull { it }
-                .distinctUntilChanged()
-                .flatMapLatest { bookId ->
-                    readerRepository.observeHighlights(bookId).distinctUntilChanged()
-                }
-                .collect { highlights ->
-                    DebugLog.info("ReaderVM", "direct highlights collect: ${highlights.size}")
-                    mutableUiState.update { it.copy(highlights = highlights) }
-                }
-        }
     }
 
     // ── Book Loading ──────────────────────────────────────────────────
@@ -857,24 +280,20 @@ class ReaderViewModel(
      * Loads a new book into the reader, replacing any current selection.
      *
      * Side effects:
-     * 1. Clears `highlights` and `bookmarks` in [uiState].
+     * 1. Resets the annotation coordinator (clears in-flight selection).
      * 2. Enters immersive (fullscreen) reading mode so the reader opens
      *    with the chrome auto-hidden.
      * 3. Delegates to `lifecycleHolder.loadBook` — the lifecycle state holder
-     *    will emit a new [ReaderUiState] with the book metadata, chapters,
+     *    will emit a new [SessionUiState] with the book metadata, chapters,
      *    publication (EPUB), and `isLoading = true` until the book is ready.
+     *    Highlights for the new book reach [annotationUiState] through the
+     *    interaction holder's `observeBook` (wired via `onBookLoaded`).
      *
      * @param bookId Database id of the book to load.
      * @param filePath Absolute filesystem path to the book file.
      * @param format `"epub"` or `"pdf"`. Defaults to `"epub"`.
      */
     fun loadBook(bookId: String, filePath: String, format: String = "epub") {
-        mutableUiState.update {
-            it.copy(
-                highlights = emptyList(),
-                bookmarks = emptyList()
-            )
-        }
         interactionHolder.resetCoordinator()
         fullscreenManager.enterFullscreen()
         lifecycleHolder.loadBook(bookId, filePath, format)
@@ -888,47 +307,11 @@ class ReaderViewModel(
     }
 
     // ── Readium Bridge ──────────────────────────────────────────────
-
-    /**
-     * Extracts a plain-text excerpt (~600 chars) of the chapter at
-     * [chapterIndex] from the current Readium [Publication], mirroring
-     * [SearchStateHolder]'s extraction pattern (HTML stripped, whitespace
-     * collapsed). Returns `null` for PDFs and any resource that cannot be
-     * read — callers fall back to the selected text / chapter title.
-     */
-    private suspend fun extractChapterPreviewText(
-        publication: Publication?,
-        bookFormat: String?,
-        chapterIndex: Int
-    ): String? {
-        if (publication == null || bookFormat != "epub") return null
-        return withContext(Dispatchers.IO) {
-            try {
-                // chapterIndex is TOC list position, NOT spine index — resolve via chapters mapping
-                val chapters = lifecycleHolder.state.value.chapters
-                val link = if (chapterIndex in chapters.indices) {
-                    val ch = chapters[chapterIndex]
-                    val normFile = ch.href.substringBefore('#').substringBefore('?').substringAfterLast('/').lowercase()
-                    publication.readingOrder.firstOrNull {
-                        it.href.toString().substringAfterLast('/').substringBefore('#').substringBefore('?').lowercase() == normFile
-                    } ?: publication.readingOrder.getOrNull(ch.index)
-                    ?: publication.readingOrder.getOrNull(chapterIndex)
-                } else {
-                    publication.readingOrder.getOrNull(chapterIndex)
-                } ?: return@withContext null
-                val resource = publication.get(link) ?: return@withContext null
-                val readResult = resource.read()
-                val bytes = readResult.getOrNull() ?: return@withContext null
-                bytes.decodeToString()
-                    .replace(Regex("<[^>]*>"), "")
-                    .replace(Regex("\\s+"), " ")
-                    .trim()
-                    .take(CHAPTER_TEXT_LIMIT)
-            } catch (_: Exception) {
-                null
-            }
-        }
-    }
+    // (SDD reader-uiState-cleanup, S4+S7): the VM-side preview collector,
+    // its private extractChapterPreviewText helper, and the S7 aggregate
+    // (uiState + combines + merge collectors + 30 annotation delegates) were
+    // deleted — the session owner (ReaderLifecycleStateHolder) is the single
+    // source of previewText and the interaction holder owns annotation state.
 
     // ── Readium Bridge ──────────────────────────────────────────────
     // Slice 4 (SDD reader-facade-split, T5): onReadiumLocatorChanged,
@@ -951,7 +334,7 @@ class ReaderViewModel(
 
     /**
      * Receives search results from the native PDF layer (JSON-encoded) and
-     * surfaces them as [SearchResult]s in [ReaderUiState.searchResults].
+     * surfaces them as [SearchResult]s in [SearchUiState.searchResults].
      *
      * @param json JSON payload produced by the PDF reader's search API.
      */
@@ -963,7 +346,7 @@ class ReaderViewModel(
      * Side effects:
      * 1. For EPUB: emits a [Locator] on [navigateToLocator] to scroll to the match.
      * 2. For PDF: navigates via the session owner.
-     * 3. Updates `currentChapterIndex` in [uiState] for the EPUB path.
+     * 3. Updates `currentChapterIndex` in the session slice for the EPUB path.
      *
      * Session fields come from the session owner (slice 4), not the merge.
      */
@@ -977,324 +360,11 @@ class ReaderViewModel(
         )
     }
 
-    // ── Text Selection (Gap 4) — delegated to Cluster B ─────────────
-
-    /**
-     * Handles a tap on an existing [highlight], opening the highlight
-     * action menu anchored to [rect].
-     */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onHighlightTapped(...) directly",
-        ReplaceWith("viewModel.interactionHolder.onHighlightTapped(highlight, rect)")
-    )
-    fun onHighlightTapped(highlight: Highlight, rect: RectF) =
-        interactionHolder.onHighlightTapped(highlight, rect)
-
-    /**
-     * Low-level text-selection event from the WebView (coordinates + text).
-     * Prefer [onTextSelection] for new code paths.
-     */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onTextSelectionEvent(...) directly",
-        ReplaceWith("viewModel.interactionHolder.onTextSelectionEvent(text, left, top, right, bottom)")
-    )
-    fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) =
-        interactionHolder.onTextSelectionEvent(text, left, top, right, bottom)
-
-    /**
-     * Handles a text selection in the reader: shows the selection context
-     * menu anchored to [rect] and exposes the selected text via
-     * [ReaderUiState.selectedText].
-     */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onTextSelection(...) directly",
-        ReplaceWith("viewModel.interactionHolder.onTextSelection(text, rect)")
-    )
-    fun onTextSelection(text: String, rect: Rect) =
-        interactionHolder.onTextSelection(text, rect)
-
-    /**
-     * Persists a new highlight with the given [color] for the active
-     * selection. Uses the current locator (Readium) or page (PDF) to
-     * store the position.
-     */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onSelectHighlightColor(...) directly",
-        ReplaceWith("viewModel.interactionHolder.onSelectHighlightColor(...)")
-    )
-    fun onSelectHighlightColor(color: String) {
-        val session = lifecycleHolder.state.value
-        interactionHolder.onSelectHighlightColor(
-            color = color,
-            selectedBookId = session.selectedBookId,
-            readiumSelectionLocator = session.readiumSelectionLocator,
-            selectedText = mutableUiState.value.selectedText,
-            bookFormat = session.bookFormat,
-            currentPdfPage = session.currentPdfPage,
-            currentChapterIndex = session.currentChapterIndex
-        )
-    }
-
-    /** Copies the current [ReaderUiState.selectedText] to the system clipboard. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onCopySelectedText() directly",
-        ReplaceWith("viewModel.interactionHolder.onCopySelectedText()")
-    )
-    fun onCopySelectedText() = interactionHolder.onCopySelectedText()
-
-    /** Dismisses the active selection context menu without committing an action. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onDismissContextMenu() directly",
-        ReplaceWith("viewModel.interactionHolder.onDismissContextMenu()")
-    )
-    fun onDismissContextMenu() = interactionHolder.onDismissContextMenu()
-
-    /**
-     * Handles a Readium-flavoured text selection: stores the [locator] and
-     * [text] in [ReaderUiState.readiumSelectionLocator] / [selectedText]
-     * and shows the context menu anchored to [rect].
-     */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onReadiumSelection(...) directly",
-        ReplaceWith("viewModel.interactionHolder.onReadiumSelection(locator, rect, text, viewModel.uiState.value.highlights)")
-    )
-    fun onReadiumSelection(locator: Locator, rect: RectF, text: String) {
-        interactionHolder.onReadiumSelection(
-            locator = locator,
-            rect = rect,
-            text = text,
-            existingHighlights = mutableUiState.value.highlights
-        )
-    }
-
-    /**
-     * Clears the in-flight text selection (both UI state and any
-     * Readium-side highlight selection). Emits on [clearSelectionEvent]
-     * so the WebView/Readium layer can clear its native selection.
-     */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onSelectionCleared() directly",
-        ReplaceWith("viewModel.interactionHolder.onSelectionCleared()")
-    )
-    fun onSelectionCleared() {
-        interactionHolder.onSelectionCleared()
-    }
-
-    // ── Colour Picker Popover (Phase 2) ───────────────────────────
-
-    /** Shows the color-picker popover anchored near the current selection. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onShowColorPickerPopover() directly",
-        ReplaceWith("viewModel.interactionHolder.onShowColorPickerPopover()")
-    )
-    fun onShowColorPickerPopover() = interactionHolder.onShowColorPickerPopover()
-
-    /** Dismisses the color-picker popover. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onDismissColorPickerPopover() directly",
-        ReplaceWith("viewModel.interactionHolder.onDismissColorPickerPopover()")
-    )
-    fun onDismissColorPickerPopover() = interactionHolder.onDismissColorPickerPopover()
-
-    // ── Note Modal ───────────────────────────────────────────────
-
-    /** Opens the note modal for the active selection. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onShowNoteModal() directly",
-        ReplaceWith("viewModel.interactionHolder.onShowNoteModal()")
-    )
-    fun onShowNoteModal() = interactionHolder.onShowNoteModal()
-
-    /** Dismisses the note modal without saving. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onDismissNoteModal() directly",
-        ReplaceWith("viewModel.interactionHolder.onDismissNoteModal()")
-    )
-    fun onDismissNoteModal() = interactionHolder.onDismissNoteModal()
-
-    /**
-     * Saves the note [text] attached to the current selection and dismisses
-     * the note modal.
-     */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onSaveNote(text) directly",
-        ReplaceWith("viewModel.interactionHolder.onSaveNote(text)")
-    )
-    fun onSaveNote(text: String) = interactionHolder.onSaveNote(text)
-
-    // ── Annotate (unified note/comment) ──────────────────────────
-
-    /**
-     * Persists the current selection as a free-form annotation (highlight
-     * with a note, no specific category). Uses the current Readium locator
-     * or PDF page to anchor the annotation.
-     */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onAnnotate(...) directly"
-    )
-    fun onAnnotate() {
-        val session = lifecycleHolder.state.value
-        interactionHolder.onAnnotate(
-            selectedBookId = session.selectedBookId,
-            bookFormat = session.bookFormat,
-            currentChapterIndex = session.currentChapterIndex,
-            currentPdfPage = session.currentPdfPage,
-            chapters = session.chapters
-        )
-    }
-
-    // ── Anchored Tag Input ───────────────────────────────────────
-
-    /** Opens the tag input anchored near the current selection. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onShowTagInput() directly",
-        ReplaceWith("viewModel.interactionHolder.onShowTagInput()")
-    )
-    fun onShowTagInput() = interactionHolder.onShowTagInput()
-
-    /** Dismisses the tag input. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onDismissTagInput() directly",
-        ReplaceWith("viewModel.interactionHolder.onDismissTagInput()")
-    )
-    fun onDismissTagInput() = interactionHolder.onDismissTagInput()
-
-    /** Updates the in-progress tag text and refreshes tag suggestions. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onTagTextChanged(text) directly",
-        ReplaceWith("viewModel.interactionHolder.onTagTextChanged(text)")
-    )
-    fun onTagTextChanged(text: String) = interactionHolder.onTagTextChanged(text)
-
-    /** Saves the current tag text against the active selection. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onSaveTag(text) directly",
-        ReplaceWith("viewModel.interactionHolder.onSaveTag(text)")
-    )
-    fun onSaveTag(text: String) = interactionHolder.onSaveTag(text)
-
-    // ── Anchored Definition Input ─────────────────────────────────
-
-    /** Opens the dictionary-definition input anchored near the current selection. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onShowDefinitionInput() directly",
-        ReplaceWith("viewModel.interactionHolder.onShowDefinitionInput()")
-    )
-    fun onShowDefinitionInput() = interactionHolder.onShowDefinitionInput()
-
-    /** Dismisses the definition input. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onDismissDefinitionInput() directly",
-        ReplaceWith("viewModel.interactionHolder.onDismissDefinitionInput()")
-    )
-    fun onDismissDefinitionInput() = interactionHolder.onDismissDefinitionInput()
-
-    /** Updates the in-progress definition text. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onDefinitionTextChanged(text) directly",
-        ReplaceWith("viewModel.interactionHolder.onDefinitionTextChanged(text)")
-    )
-    fun onDefinitionTextChanged(text: String) = interactionHolder.onDefinitionTextChanged(text)
-
-    /** Saves the typed definition against the active selection. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onSaveDefinition(definition) directly",
-        ReplaceWith("viewModel.interactionHolder.onSaveDefinition(definition)")
-    )
-    fun onSaveDefinition(definition: String) = interactionHolder.onSaveDefinition(definition)
-
-    /**
-     * Adds the selected word (with its definition) to the user's dictionary.
-     * Requires [dictionaryRepository] to be wired at construction time.
-     */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onAddToDictionary() directly",
-        ReplaceWith("viewModel.interactionHolder.onAddToDictionary()")
-    )
-    fun onAddToDictionary() = interactionHolder.onAddToDictionary()
-
-    // ── Share ────────────────────────────────────────────────────
-
-    /**
-     * Fires a share intent for the currently selected text. Delegates to
-     * the interaction holder, which routes through [uiEvent].
-     */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onShareSelectedText(text) directly",
-        ReplaceWith("viewModel.interactionHolder.onShareSelectedText(text ?: viewModel.uiState.value.selectedText)")
-    )
-    fun onShareSelectedText(text: String? = null) {
-        val shareText = text ?: mutableUiState.value.selectedText
-        interactionHolder.onShareSelectedText(shareText)
-    }
-
-    // ── Readium Highlights (Phase 3+) ──────────────────────────────
-
-    /**
-     * Persists a Readium highlight with the given [color] for the active
-     * EPUB selection. Mirrors [onSelectHighlightColor] but is invoked from
-     * the Readium-native highlight menu.
-     */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onReadiumHighlightColorSelected(...) directly"
-    )
-    fun onReadiumHighlightColorSelected(color: String) {
-        val session = lifecycleHolder.state.value
-        interactionHolder.onReadiumHighlightColorSelected(
-            color = color,
-            selectedBookId = session.selectedBookId,
-            readiumSelectionLocator = session.readiumSelectionLocator,
-            selectedText = mutableUiState.value.selectedText,
-            bookFormat = session.bookFormat,
-            currentPdfPage = session.currentPdfPage,
-            currentChapterIndex = session.currentChapterIndex
-        )
-    }
-
-    /**
-     * Deletes the Readium highlight identified by [highlightId].
-     */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onReadiumDeleteHighlight(highlightId) directly",
-        ReplaceWith("viewModel.interactionHolder.onReadiumDeleteHighlight(highlightId)")
-    )
-    fun onReadiumDeleteHighlight(highlightId: String) =
-        interactionHolder.onReadiumDeleteHighlight(highlightId)
-
-    /**
-     * Updates the color of an existing Readium highlight to [color].
-     */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onReadiumUpdateHighlightColor(highlightId, color) directly",
-        ReplaceWith("viewModel.interactionHolder.onReadiumUpdateHighlightColor(highlightId, color)")
-    )
-    fun onReadiumUpdateHighlightColor(highlightId: String, color: String) =
-        interactionHolder.onReadiumUpdateHighlightColor(highlightId, color)
-
-    // ── Debug: Force menu visibility ──────────────────────────────
-
-    /** Debug-only: forces the selection context menu to open for UI testing. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onDebugForceMenu() directly",
-        ReplaceWith("viewModel.interactionHolder.onDebugForceMenu()")
-    )
-    fun onDebugForceMenu() = interactionHolder.onDebugForceMenu()
-
-    /** Debug-only: forces the color picker popover to open for UI testing. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onDebugForceColorPicker() directly",
-        ReplaceWith("viewModel.interactionHolder.onDebugForceColorPicker()")
-    )
-    fun onDebugForceColorPicker() = interactionHolder.onDebugForceColorPicker()
-
-    // ── Highlights Panel (Gap 5) ────────────────────────────────────
-
-    /** Toggles the highlights panel sheet visibility. */
-    @Deprecated(
-        "Annotation delegate — call viewModel.interactionHolder.onToggleHighlightsPanel() directly",
-        ReplaceWith("viewModel.interactionHolder.onToggleHighlightsPanel()")
-    )
-    fun onToggleHighlightsPanel() = interactionHolder.onToggleHighlightsPanel()
+    // ── Annotation writes (Gap 4+) — owned by Cluster B ────────────
+    // S7: the 30 @Deprecated annotation delegates were deleted — callers
+    // reach the owner through the VM (`viewModel.interactionHolder.*`).
+    // [onHighlightSelected] below stays: it orchestrates holders + sheet
+    // state, it is not a pass-through.
 
     // Slice 4 (SDD reader-facade-split, T5): the onToggleTocSheet
     // pass-through delegate was deleted — callers reach the owner through
@@ -1338,7 +408,10 @@ class ReaderViewModel(
                 }
             }
         }
-        mutableUiState.update { it.copy(showHighlightsSheet = false) }
+        // S7: the aggregate is gone — close the sheet through the annotation
+        // owner. Toggle is the owner's only sheet mutator; gate on the live
+        // slice value so an already-closed sheet is never opened.
+        if (interactionHolder.state.value.showHighlightsSheet) interactionHolder.onToggleHighlightsPanel()
     }
 
     // ── Bookmarks ─────────────────────────────────────────────────
@@ -1371,7 +444,6 @@ class ReaderViewModel(
 
     companion object {
         private const val TAG = "ReaderViewModel"
-        private const val CHAPTER_TEXT_LIMIT = 600
     }
 
     // ── aA Settings ──────────────────────────────────────────────────

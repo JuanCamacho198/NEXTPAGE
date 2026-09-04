@@ -25,27 +25,23 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
 /**
- * Slice 5 tests (SDD reader-facade-split, T6).
+ * Slice 5 tests (SDD reader-facade-split, T6; SDD reader-uiState-cleanup S7).
  *
- * The annotation surface lives in [interactionHolder] (the deprecated PR #3
- * facade, still in place at PR-D time) and is re-exported as
- * [ReaderViewModel.annotationUiState]. These tests pin:
+ * The annotation surface lives in [ReaderViewModel.interactionHolder] and is
+ * re-exported as [ReaderViewModel.annotationUiState]. These tests pin:
  *  - the slice re-export mirrors the holder-owned state;
- *  - the back-compat `uiState` mirror still propagates annotation fields
- *    (required for the consumer migration that T7 deletion is gated on);
+ *  - holder updates reach the slice with no aggregate in the path (S7);
  *  - the highlights-ordering guarantee from T1 (design §5) survives the
- *    slice exposure — the direct `flatMapLatest` site in the VM init block
- *    is untouched by T6 and continues to give latest-wins merge timing;
- *  - the 30+ annotation delegates on the VM carry an `@Deprecated` annotation
- *    with a `ReplaceWith` pointing at the holder (reflection guard against
- *    silent re-introduction of the warning-suppression during the T6/PR #3
- *    handoff).
+ *    slice exposure;
+ *  - the 30 annotation delegates are deleted (reflection guard against
+ *    re-introduction).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderViewModelAnnotationTest {
@@ -74,7 +70,7 @@ class ReaderViewModelAnnotationTest {
     @Test
     fun `annotationUiState re-exports the interactionHolder state`() = runTest {
         val viewModel = createViewModel(testScheduler)
-        val holder = interactionHolderOf(viewModel)
+        val holder = viewModel.interactionHolder
         holder.testSetInitialHighlights(listOf(highlight("a1"), highlight("a2")))
         runCurrent()
 
@@ -84,57 +80,44 @@ class ReaderViewModelAnnotationTest {
     }
 
     @Test
-    fun `annotationUiState back-compat mirror propagates into uiState`() = runTest {
+    fun `holder highlights reach annotationUiState with no aggregate in the path`() = runTest {
         val viewModel = createViewModel(testScheduler)
-        val holder = interactionHolderOf(viewModel)
+        val holder = viewModel.interactionHolder
         holder.testSetInitialHighlights(listOf(highlight("b1")))
         advanceUntilIdle()
 
-        // The 5+1-way combine overlay (search/chrome/settings/timer/session
-        // + base) still carries annotation fields forward into uiState — this
-        // is the bridge the remaining consumer migration depends on while
-        // ReaderScreen.kt:61 and DebugPanel.kt:70 still collect uiState.
-        assertEquals(
-            "back-compat uiState must mirror annotation highlights",
-            1,
-            viewModel.uiState.value.highlights.size
-        )
-        assertEquals("b1", viewModel.uiState.value.highlights.first().id)
+        // S7: the 5+1-way combine overlay is deleted — the slice is the only
+        // path from the holder to readers.
+        assertEquals(1, viewModel.annotationUiState.value.highlights.size)
+        assertEquals("b1", viewModel.annotationUiState.value.highlights.first().id)
     }
 
     // ── Highlights-ordering preservation (T1 regression, still green) ─
 
     @Test
-    fun `annotationUiState and uiState agree on highlights after direct holder update`() = runTest {
+    fun `annotationUiState carries the latest holder highlights`() = runTest {
         // The T1 regression pin (ReaderHighlightsOrderingTest) covers the
-        // flatMapLatest-site latest-wins timing on a Room-backed flow. This
-        // test is the slice-exposure complement: a direct holder update
-        // (testSetInitialHighlights) must reach both the slice re-export
-        // (annotationUiState) and the back-compat uiState mirror. Same
-        // agreement guarantee, simpler fixture.
+        // latest-wins timing on a Room-backed flow. This test is the
+        // slice-exposure complement: a direct holder update
+        // (testSetInitialHighlights) must reach the slice re-export
+        // (annotationUiState). Same agreement guarantee, simpler fixture.
         val viewModel = createViewModel(testScheduler)
-        val holder = interactionHolderOf(viewModel)
+        val holder = viewModel.interactionHolder
         holder.testSetInitialHighlights(listOf(highlight("h1"), highlight("h2")))
         advanceUntilIdle()
 
         val sliceIds = viewModel.annotationUiState.value.highlights.map { it.id }
-        val uiIds = viewModel.uiState.value.highlights.map { it.id }
         assertEquals(listOf("h1", "h2"), sliceIds)
-        assertEquals(
-            "annotationUiState and uiState must agree on highlights after a holder update",
-            sliceIds,
-            uiIds
-        )
     }
 
     @Test
     fun `annotationUiState reflects the latest holder highlights across rapid updates`() = runTest {
-        // T1's flatMapLatest-site latest-wins guarantee relies on the holder
-        // high-water mark; this test pins the same idea through the slice
-        // re-export by issuing two holder updates in succession and asserting
-        // the second one wins in annotationUiState.
+        // T1's latest-wins guarantee relies on the holder observation; this
+        // test pins the same idea through the slice re-export by issuing two
+        // holder updates in succession and asserting the second one wins in
+        // annotationUiState.
         val viewModel = createViewModel(testScheduler)
-        val holder = interactionHolderOf(viewModel)
+        val holder = viewModel.interactionHolder
         holder.testSetInitialHighlights(listOf(highlight("h1")))
         advanceUntilIdle()
         holder.testSetInitialHighlights(listOf(highlight("h1"), highlight("h2")))
@@ -144,11 +127,13 @@ class ReaderViewModelAnnotationTest {
         assertEquals(listOf("h1", "h2"), sliceIds)
     }
 
-    // ── Delegate-deprecation reflection ─────────────────────────────
+    // ── Delegate deletion (S7) ────────────────────────────────────
 
     @Test
-    fun `annotation delegates carry Deprecated annotation pointing at the holder`() {
-        val annotationType = Class.forName("kotlin.Deprecated")
+    fun `annotation delegates are deleted`() {
+        // S7 deleted all 30 annotation delegates — writes go through
+        // viewModel.interactionHolder directly. This reflection guard fails
+        // if any delegate is re-introduced on the VM.
         val names = listOf(
             "onHighlightTapped",
             "onTextSelectionEvent",
@@ -183,10 +168,7 @@ class ReaderViewModelAnnotationTest {
         )
         val methods = ReaderViewModel::class.java.methods.associateBy { it.name }
         for (name in names) {
-            val method = methods[name]
-            assertNotNull("ReaderViewModel.$name must still exist (annotated, not deleted)", method)
-            val annotation = method!!.getAnnotation(annotationType as Class<out Annotation>)
-            assertNotNull("ReaderViewModel.$name must carry @Deprecated", annotation)
+            assertNull("ReaderViewModel.$name must stay deleted (S7)", methods[name])
         }
     }
 
@@ -195,7 +177,7 @@ class ReaderViewModelAnnotationTest {
     @Test
     fun `selectionState updates flow through annotationUiState`() = runTest {
         val viewModel = createViewModel(testScheduler)
-        val holder = interactionHolderOf(viewModel)
+        val holder = viewModel.interactionHolder
         val stateField = holder::class.java.getDeclaredField("_state")
         stateField.isAccessible = true
         @Suppress("UNCHECKED_CAST")
@@ -211,21 +193,9 @@ class ReaderViewModelAnnotationTest {
             viewModel.annotationUiState.value.selectionState is ReaderSelectionState.New
         )
         assertEquals("text", viewModel.annotationUiState.value.selectedText)
-        assertEquals(
-            "back-compat uiState must mirror annotation selectedText",
-            "text",
-            viewModel.uiState.value.selectedText
-        )
     }
 
     // ── Helpers ─────────────────────────────────────────────────────
-
-    @Suppress("UNCHECKED_CAST")
-    private fun interactionHolderOf(viewModel: ReaderViewModel): com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder {
-        val field = ReaderViewModel::class.java.getDeclaredField("interactionHolder")
-        field.isAccessible = true
-        return field.get(viewModel) as com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder
-    }
 
     private fun highlight(id: String): Highlight = Highlight(
         id = id,

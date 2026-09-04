@@ -12,8 +12,8 @@ import com.nextpage.R
 import com.nextpage.presentation.feature.highlights.HighlightsSheet
 import com.nextpage.presentation.screen.BookmarkRibbonOverlay
 import com.nextpage.presentation.screen.ReaderFullscreenArrows
-import com.nextpage.presentation.viewmodel.ReaderUiState
 import com.nextpage.presentation.viewmodel.ReaderViewModel
+import com.nextpage.presentation.viewmodel.reader.AnnotationUiState
 import com.nextpage.presentation.viewmodel.reader.SearchUiState
 import com.nextpage.presentation.viewmodel.reader.SessionUiState
 import com.nextpage.presentation.viewmodel.reader.SettingsUiState
@@ -28,7 +28,7 @@ import com.nextpage.ui.components.molecules.SplitSettingsSheet
 
 @Composable
 fun ReaderScreenOverlaysHost(
-    uiState: ReaderUiState,
+    annotationUiState: AnnotationUiState,
     searchUiState: SearchUiState,
     settingsUiState: SettingsUiState,
     sleepTimerUiState: SleepTimerUiState,
@@ -86,11 +86,11 @@ fun ReaderScreenOverlaysHost(
         )
     }
 
-    if (uiState.showHighlightsSheet) {
+    if (annotationUiState.showHighlightsSheet) {
         HighlightsSheet(
-            highlights = uiState.highlights,
+            highlights = annotationUiState.highlights,
             onHighlightSelected = { viewModel.onHighlightSelected(it) },
-            onDismiss = { viewModel.onToggleHighlightsPanel() }
+            onDismiss = { viewModel.interactionHolder.onToggleHighlightsPanel() }
         )
     }
 
@@ -104,9 +104,9 @@ fun ReaderScreenOverlaysHost(
     }
 
     if (settingsUiState.showSplitSettings && sessionUiState.chapters.isNotEmpty()) {
-        val previewText = remember(uiState.previewText, uiState.selectedText, sessionUiState.currentChapterIndex, sessionUiState.chapters) {
-            uiState.previewText.ifBlank {
-                uiState.selectedText?.takeIf { it.isNotBlank() }
+        val previewText = remember(sessionUiState.previewText, annotationUiState.selectedText, sessionUiState.currentChapterIndex, sessionUiState.chapters) {
+            sessionUiState.previewText.ifBlank {
+                annotationUiState.selectedText?.takeIf { it.isNotBlank() }
                     ?: sessionUiState.chapters.getOrNull(sessionUiState.currentChapterIndex)?.title
                     ?: ""
             }
@@ -152,15 +152,15 @@ fun ReaderScreenOverlaysHost(
         )
     }
 
-    if (uiState.showNoteModal) {
+    if (annotationUiState.showNoteModal) {
         HighlightAnnotationModal(
             titleRes = R.string.note_modal_title,
             hintRes = R.string.annotation_textarea_note_hint,
             snippetLabelRes = R.string.annotation_snippet_label,
-            selectedText = uiState.selectedText,
-            initialText = uiState.activeNoteText,
-            onSave = { viewModel.onSaveNote(it) },
-            onDismiss = { viewModel.onDismissNoteModal() }
+            selectedText = annotationUiState.selectedText,
+            initialText = annotationUiState.activeNoteText,
+            onSave = { viewModel.interactionHolder.onSaveNote(it) },
+            onDismiss = { viewModel.interactionHolder.onDismissNoteModal() }
         )
     }
 

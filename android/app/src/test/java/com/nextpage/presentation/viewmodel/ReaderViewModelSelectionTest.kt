@@ -13,6 +13,7 @@ import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsData
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
+import com.nextpage.presentation.viewmodel.reader.ReaderInteractionState
 import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 import com.nextpage.testutil.MainDispatcherRule
 import io.mockk.every
@@ -38,20 +39,18 @@ import org.junit.Test
 import org.readium.r2.shared.publication.Locator
 
 /**
- * Tests for [ReaderViewModel] selection state transitions.
+ * Tests for [ReaderViewModel] selection state transitions through the
+ * annotation slice.
  *
  * Several production methods call unmocked Android APIs (e.g. `Log.d`,
- * `SystemClock.elapsedRealtime()`, `Rect.toString()`). We handle this
- * in three ways:
+ * `SystemClock.elapsedRealtime()`). `Log` and `SystemClock` are mocked once
+ * for the whole class so that any production call through them works.
  *
- * 1. **`@Before` mock-static**: `Log` and `SystemClock` are mocked once
- *    for the whole class so that any production call through them works.
- * 2. **Reflection for `onTextSelection`**: the string interpolation
- *    `rect=$rect` calls `Rect.toString()` which is not mockable in pure
- *    JVM unit tests. We set state via `mutableUiState` reflection instead.
- * 3. **`ReaderSelectionState.New` / `Existing`**: changed from `data class`
- *    to `class` with custom `equals`/`hashCode` that skip `rect`. This
- *    avoids `Rect.equals()` when `MutableStateFlow` compares old/new values.
+ * State is driven through `viewModel.interactionHolder` (the S7 write path)
+ * and asserted against `viewModel.annotationUiState` (the read path).
+ * `Rect.toString()` is not mockable in pure JVM unit tests, so the one test
+ * that needs a raw selection writes holder state directly via reflection
+ * instead of calling `onTextSelection` (which logs `rect=$rect`).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderViewModelSelectionTest {
@@ -79,19 +78,19 @@ class ReaderViewModelSelectionTest {
     // ── Selection state transitions ──────────────────────────────────
 
     @Test
-    fun `onTextSelection sets New selection state via mutableUiState`() = runTest {
+    fun `selection set on the holder mirrors into annotationUiState`() = runTest {
         val viewModel = createViewModel(testScheduler)
         val rect = Rect(100, 200, 300, 250)
-        val stateFlow = mutableUiStateOf(viewModel)
-        // Cannot call viewModel.onTextSelection() directly because it builds
+        val holderState = holderStateOf(viewModel)
+        // Cannot call holder.onTextSelection() directly because it builds
         // rect=$rect string → Rect.toString() → not mocked.
-        stateFlow.value = stateFlow.value.copy(
+        holderState.value = holderState.value.copy(
             selectedText = "selected text",
             selectionRect = rect,
             selectionState = ReaderSelectionState.New(rect, "selected text", null)
         )
 
-        val state = viewModel.uiState.value
+        val state = viewModel.annotationUiState.value
         assertEquals("selected text", state.selectedText)
         assertNotNull(state.selectionRect)
         assertTrue(state.selectionState is ReaderSelectionState.New)
@@ -100,14 +99,26 @@ class ReaderViewModelSelectionTest {
     @Test
     fun `onSelectHighlightColor on existing highlight clears selection`() = runTest {
         val viewModel = createViewModel(testScheduler, defaultBookId = "book-1")
+        val holder = viewModel.interactionHolder
         val highlight = createHighlight()
         val rectF = RectF(100f, 200f, 300f, 250f)
         // Set up coordinator via highlight tap (needed by interactionHolder)
-        viewModel.onHighlightTapped(highlight, rectF)
+        holder.onHighlightTapped(highlight, rectF)
 
-        viewModel.onSelectHighlightColor(HighlightColor.YELLOW.hex)
+        // Inline of the deleted VM delegate: session reads live, selectedText
+        // from the holder's current state.
+        val session = viewModel.sessionUiState.value
+        holder.onSelectHighlightColor(
+            color = HighlightColor.YELLOW.hex,
+            selectedBookId = session.selectedBookId,
+            readiumSelectionLocator = session.readiumSelectionLocator,
+            selectedText = holder.state.value.selectedText,
+            bookFormat = session.bookFormat,
+            currentPdfPage = session.currentPdfPage,
+            currentChapterIndex = session.currentChapterIndex
+        )
 
-        val state = viewModel.uiState.value
+        val state = viewModel.annotationUiState.value
         assertTrue(state.selectionState is ReaderSelectionState.None)
         assertNull(state.selectedText)
         assertNull(state.selectionRect)
@@ -116,28 +127,40 @@ class ReaderViewModelSelectionTest {
     @Test
     fun `onCopySelectedText clears selection state`() = runTest {
         val viewModel = createViewModel(testScheduler)
+        val holder = viewModel.interactionHolder
         val locator = createLocator()
         val rectF = RectF(100f, 200f, 300f, 250f)
         // Set up coordinator via readium selection
-        viewModel.onReadiumSelection(locator, rectF, "copy this")
+        holder.onReadiumSelection(
+            locator = locator,
+            rect = rectF,
+            text = "copy this",
+            existingHighlights = holder.state.value.highlights
+        )
 
-        viewModel.onCopySelectedText()
+        holder.onCopySelectedText()
 
-        val state = viewModel.uiState.value
+        val state = viewModel.annotationUiState.value
         assertTrue("selectionState should be None", state.selectionState is ReaderSelectionState.None)
     }
 
     @Test
     fun `onDismissContextMenu clears all selection state`() = runTest {
         val viewModel = createViewModel(testScheduler)
+        val holder = viewModel.interactionHolder
         val locator = createLocator()
         val rectF = RectF(100f, 200f, 300f, 250f)
         // Set up coordinator via readium selection
-        viewModel.onReadiumSelection(locator, rectF, "text")
+        holder.onReadiumSelection(
+            locator = locator,
+            rect = rectF,
+            text = "text",
+            existingHighlights = holder.state.value.highlights
+        )
 
-        viewModel.onDismissContextMenu()
+        holder.onDismissContextMenu()
 
-        val state = viewModel.uiState.value
+        val state = viewModel.annotationUiState.value
         assertTrue("selectionState should be None", state.selectionState is ReaderSelectionState.None)
         assertNull("selectedText cleared", state.selectedText)
         assertNull("selectionRect cleared", state.selectionRect)
@@ -146,12 +169,13 @@ class ReaderViewModelSelectionTest {
     @Test
     fun `onHighlightTapped sets Existing selection state`() = runTest {
         val viewModel = createViewModel(testScheduler)
+        val holder = viewModel.interactionHolder
         val highlight = createHighlight()
         val rectF = RectF(100f, 200f, 300f, 250f)
 
-        viewModel.onHighlightTapped(highlight, rectF)
+        holder.onHighlightTapped(highlight, rectF)
 
-        val state = viewModel.uiState.value
+        val state = viewModel.annotationUiState.value
         assertEquals(highlight.textContent, state.selectedText)
         assertNotNull(state.selectionRect)
         assertTrue("selectionState should be Existing", state.selectionState is ReaderSelectionState.Existing)
@@ -167,17 +191,24 @@ class ReaderViewModelSelectionTest {
         // (or a sub-range) and the FloatingContextMenu (Existing) should
         // remain open.
         val viewModel = createViewModel(testScheduler)
+        val holder = viewModel.interactionHolder
         val highlight = createHighlight()
         val highlightRect = RectF(100f, 200f, 300f, 250f)
-        viewModel.onHighlightTapped(highlight, highlightRect)
+        holder.onHighlightTapped(highlight, highlightRect)
 
         val locator = createLocator()
         val selectionRect = RectF(110f, 210f, 310f, 260f)
         // Text matches the highlight's textContent ("highlighted text")
-        viewModel.onReadiumSelection(locator, selectionRect, "highlighted text")
+        holder.onReadiumSelection(
+            locator = locator,
+            rect = selectionRect,
+            text = "highlighted text",
+            existingHighlights = holder.state.value.highlights
+        )
 
-        val state = viewModel.uiState.value
-        // activeHighlightId is managed internally by SelectionCoordinator — not exposed in uiState
+        val state = viewModel.annotationUiState.value
+        // activeHighlightId is managed internally by SelectionCoordinator —
+        // asserted via selectionState; the coordinator id is internal.
         assertTrue("selectionState should remain Existing (debounce active, text matches)",
             state.selectionState is ReaderSelectionState.Existing)
     }
@@ -190,15 +221,21 @@ class ReaderViewModelSelectionTest {
         // would show the FloatingContextMenu (Tag/Delete) instead of the
         // TextSelectionMenu (Dictionary/Copy/Share).
         val viewModel = createViewModel(testScheduler)
+        val holder = viewModel.interactionHolder
         val highlight = createHighlight()
         val highlightRect = RectF(100f, 200f, 300f, 250f)
-        viewModel.onHighlightTapped(highlight, highlightRect)
+        holder.onHighlightTapped(highlight, highlightRect)
 
         val locator = createLocator()
         val selectionRect = RectF(110f, 210f, 310f, 260f)
-        viewModel.onReadiumSelection(locator, selectionRect, "completely different text")
+        holder.onReadiumSelection(
+            locator = locator,
+            rect = selectionRect,
+            text = "completely different text",
+            existingHighlights = holder.state.value.highlights
+        )
 
-        val state = viewModel.uiState.value
+        val state = viewModel.annotationUiState.value
         assertTrue("selectionState should be New (text differs from highlight)",
             state.selectionState is ReaderSelectionState.New)
     }
@@ -206,13 +243,14 @@ class ReaderViewModelSelectionTest {
     @Test
     fun `onSelectionCleared within highlight debounce does not clear`() = runTest {
         val viewModel = createViewModel(testScheduler)
+        val holder = viewModel.interactionHolder
         val highlight = createHighlight()
         val highlightRect = RectF(100f, 200f, 300f, 250f)
-        viewModel.onHighlightTapped(highlight, highlightRect)
+        holder.onHighlightTapped(highlight, highlightRect)
 
-        viewModel.onSelectionCleared()
+        holder.onSelectionCleared()
 
-        val state = viewModel.uiState.value
+        val state = viewModel.annotationUiState.value
         // activeHighlightId is managed internally by SelectionCoordinator
         assertTrue("selectionState should remain Existing (debounce active)",
             state.selectionState is ReaderSelectionState.Existing)
@@ -223,156 +261,53 @@ class ReaderViewModelSelectionTest {
     @Test
     fun `onShowColorPickerPopover updates color picker state`() = runTest {
         val viewModel = createViewModel(testScheduler)
+        val holder = viewModel.interactionHolder
         // This method does not call any Android APIs directly
-        viewModel.onShowColorPickerPopover()
+        holder.onShowColorPickerPopover()
 
-        val state = viewModel.uiState.value
+        val state = viewModel.annotationUiState.value
         assertTrue(state.showColorPickerPopover)
     }
 
     @Test
     fun `onShowTagInput updates tag input state`() = runTest {
         val viewModel = createViewModel(testScheduler)
+        val holder = viewModel.interactionHolder
         val highlight = createHighlight()
         val rectF = RectF(100f, 200f, 300f, 250f)
 
-        // Access internal fields for debugging
-        val vmStateField = ReaderViewModel::class.java.getDeclaredField("mutableUiState")
-        vmStateField.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        val vmState = vmStateField.get(viewModel) as MutableStateFlow<ReaderUiState>
-
-        val holderField = ReaderViewModel::class.java.getDeclaredField("interactionHolder")
-        holderField.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        val holder = holderField.get(viewModel) as com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder
-
-        val holderStateField = com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder::class.java.getDeclaredField("_state")
-        holderStateField.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        val holderState = holderStateField.get(holder) as MutableStateFlow<com.nextpage.presentation.viewmodel.reader.ReaderInteractionState>
-
-        // Step 1: Direct holder update — does the collect work at all?
-        println("=== STEP 1: Direct holder showDefinitionInput update ===")
-        println("Initial vmState.showDefinitionInput: ${vmState.value.showDefinitionInput}")
-        holderState.update { it.copy(showDefinitionInput = true) }
-        println("After direct update, holder showDefinitionInput: ${holderState.value.showDefinitionInput}")
-        println("After direct update, vm showDefinitionInput: ${vmState.value.showDefinitionInput}")
-        println()
-
-        // Step 2: onHighlightTapped
-        println("=== STEP 2: onHighlightTapped ===")
-        println("Before, selectedText: ${vmState.value.selectedText}")
-        viewModel.onHighlightTapped(highlight, rectF)
-        println("After, vm selectedText: ${vmState.value.selectedText}")
-        println("After, vm selectionRect is null? ${vmState.value.selectionRect == null}")
-        println("After, holder selectionRect is null? ${holderState.value.selectionRect == null}")
-        println("Holder selectedText: ${holderState.value.selectedText}")
-        println()
-
-        // Step 3: testSetInitialHighlights
-        println("=== STEP 3: testSetInitialHighlights ===")
-        println("Before, vm highlights size: ${vmState.value.highlights.size}")
+        // Tap the highlight first: onShowTagInput resolves the active
+        // highlight through the selection coordinator.
         holder.testSetInitialHighlights(listOf(highlight))
-        println("After, vm highlights size: ${vmState.value.highlights.size}")
-        println("After, vm showTagInput: ${vmState.value.showTagInput}")
-        println()
+        holder.onHighlightTapped(highlight, rectF)
 
-        // Step 4: Direct holderState.update with showTagInput=true (minimal)
-        println("=== STEP 4a: Direct holderState.update showTagInput=true ===")
-        println("Before, vm showTagInput: ${vmState.value.showTagInput}")
-        println("Before, vm selectionRect is null: ${vmState.value.selectionRect == null}")
-        // Test equals directly
-        val curBefore = vmState.value
-        val r = vmState.value.selectionRect
-        val dup = curBefore.copy(showTagInput = true, selectionRect = r)
-        println("Direct equals check: curBefore == dup? ${curBefore == dup}")
-        println("Direct equals check (manual): showTagInput diff? ${curBefore.showTagInput != dup.showTagInput}")
-        holderState.update { it.copy(showTagInput = true) }
-        println("After direct, vm showTagInput: ${vmState.value.showTagInput}")
-        println()
+        holder.onShowTagInput()
 
-        // Reset holder showTagInput back to false
-        holderState.update { it.copy(showTagInput = false) }
-        // Reset VM state to match holder
-        vmState.value = vmState.value.copy(showTagInput = false)
-
-        // Step 4b: Direct holderState.update with ALL fields onShowTagInput would change
-        println("=== STEP 4b: Direct holderState.update with all fields ===")
-        val tagSuggestions = listOf("cita", "pasaje", "idea", "ficción", "no-ficción", "favoritos")
-        println("Before, vm showTagInput: ${vmState.value.showTagInput}")
-        println("Before, vm showDefinitionInput: ${vmState.value.showDefinitionInput}")
-        println("Before, vm activeTagText: '${vmState.value.activeTagText}'")
-        println("Before, vm tagSuggestions: ${vmState.value.tagSuggestions}")
-        holderState.update { it.copy(
-            showTagInput = true,
-            activeTagText = "",
-            tagSuggestions = tagSuggestions,
-            showNoteModal = false,
-            showDefinitionInput = false
-        ) }
-        println("After direct all, vm showTagInput: ${vmState.value.showTagInput}")
-        println("After direct all, vm showDefinitionInput: ${vmState.value.showDefinitionInput}")
-        println("After direct all, vm activeTagText: '${vmState.value.activeTagText}'")
-        println("After direct all, vm tagSuggestions: ${vmState.value.tagSuggestions}")
-        println()
-
-        // Reset again
-        holderState.update { it.copy(showTagInput = false, showDefinitionInput = true, tagSuggestions = emptyList(), activeTagText = "") }
-
-        // Step 4c: onShowTagInput
-        println("=== STEP 4c: onShowTagInput ===")
-        println("Before, vm showTagInput: ${vmState.value.showTagInput}")
-        println("Before, holder showTagInput: ${holderState.value.showTagInput}")
-        println("Before, holder activeTagText: '${holderState.value.activeTagText}'")
-
-        try {
-            viewModel.onShowTagInput()
-            println("After, holder showTagInput: ${holderState.value.showTagInput}")
-            println("After, vm showTagInput: ${vmState.value.showTagInput}")
-
-            // Try advanceUntilIdle
-            advanceUntilIdle()
-            println("After advanceUntilIdle, vm showTagInput: ${vmState.value.showTagInput}")
-
-            // Also check uiState value
-            println("uiState.showTagInput: ${viewModel.uiState.value.showTagInput}")
-        } catch (e: Throwable) {
-            println("EXCEPTION during onShowTagInput: ${e::class.simpleName}: ${e.message}")
-        }
-        println()
-
-        val state = viewModel.uiState.value
+        val state = viewModel.annotationUiState.value
         assertTrue("showTagInput should be true", state.showTagInput)
     }
 
     @Test
     fun `onShowDefinitionInput updates definition input state`() = runTest {
         val viewModel = createViewModel(testScheduler)
-        val stateFlow = mutableUiStateOf(viewModel)
-        val rect = Rect(100, 200, 300, 250)
+        val holder = viewModel.interactionHolder
         val highlight = createHighlight()
-        stateFlow.value = stateFlow.value.copy(
-            selectionState = ReaderSelectionState.Existing(highlight, rect),
-            selectedText = highlight.textContent,
-            selectionRect = null,
-            activeHighlightId = highlight.id,
-            highlights = listOf(highlight)
-        )
+        val rectF = RectF(100f, 200f, 300f, 250f)
+        holder.onHighlightTapped(highlight, rectF)
 
-        viewModel.onShowDefinitionInput()
+        holder.onShowDefinitionInput()
 
-        val state = viewModel.uiState.value
+        val state = viewModel.annotationUiState.value
         assertTrue(state.showDefinitionInput)
     }
 
     // ── Helpers ─────────────────────────────────────────────────────
 
     @Suppress("UNCHECKED_CAST")
-    private fun mutableUiStateOf(viewModel: ReaderViewModel): MutableStateFlow<ReaderUiState> {
-        val field = ReaderViewModel::class.java.getDeclaredField("mutableUiState")
+    private fun holderStateOf(viewModel: ReaderViewModel): MutableStateFlow<ReaderInteractionState> {
+        val field = viewModel.interactionHolder::class.java.getDeclaredField("_state")
         field.isAccessible = true
-        return field.get(viewModel) as MutableStateFlow<ReaderUiState>
+        return field.get(viewModel.interactionHolder) as MutableStateFlow<ReaderInteractionState>
     }
 
     private fun createHighlight(): Highlight {

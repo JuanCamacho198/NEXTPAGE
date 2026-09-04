@@ -59,6 +59,7 @@ fun ReaderScreen(
     onNavigateBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val searchUiState by viewModel.searchUiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val view = LocalView.current
 
@@ -140,7 +141,7 @@ fun ReaderScreen(
                 ReaderHeader(
                     uiState = uiState,
                     onNavigateBack = onNavigateBack,
-                    onToggleSearch = { viewModel.onToggleSearch() },
+                    onToggleSearch = { viewModel.searchStateHolder.onToggleSearch() },
                     onToggleHighlights = { viewModel.onToggleHighlightsPanel() },
                     onCreateBookmark = {
                         viewModel.createBookmarkFromCurrentPosition()
@@ -180,6 +181,7 @@ fun ReaderScreen(
             overlays = {
                 ReaderScreenOverlaysHost(
                     uiState = uiState,
+                    searchUiState = searchUiState,
                     viewModel = viewModel,
                     showSleepTimerSheet = showSleepTimerSheet,
                     onDismissSleepTimerSheet = { showSleepTimerSheet = false },

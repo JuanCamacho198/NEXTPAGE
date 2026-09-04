@@ -14,8 +14,9 @@ import kotlinx.coroutines.launch
  * Manages the sleep timer state machine used by [ReaderViewModel].
  *
  * Creates a countdown timer (normal mode) or waits for chapter change (EOC mode).
- * Exposes [state] as an observable [StateFlow] that the ViewModel collects
- * and merges into [ReaderUiState].
+ * Exposes [state] as an observable [StateFlow] that the ViewModel re-exports
+ * as `sleepTimerUiState` (the single source of truth since SDD
+ * reader-uiState-cleanup S7 deleted the aggregate).
  *
  * @param scope CoroutineScope for lifecycle-aware timer job (e.g. viewModelScope)
  */

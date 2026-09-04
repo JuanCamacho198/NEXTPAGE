@@ -67,14 +67,14 @@ class ReaderViewModelSearchTest {
     }
 
     @Test
-    fun `back-compat uiState mirrors the search slice`() = runTest {
+    fun `search slice carries query state after toggle and query`() = runTest {
         val viewModel = createViewModel(testScheduler)
         viewModel.searchStateHolder.onToggleSearch()
         viewModel.searchStateHolder.onSearchQuery("odisea", null, null)
         advanceTimeBy(400)
         runCurrent()
 
-        val state = viewModel.uiState.value
+        val state = viewModel.searchUiState.value
         assertTrue(state.isSearchActive)
         assertEquals("odisea", state.searchQuery)
         assertTrue(state.searchResults.isEmpty())
@@ -116,9 +116,8 @@ class ReaderViewModelSearchTest {
         )
         viewModel.onSearchResultSelected(result)
 
-        val state = viewModel.uiState.value
-        assertEquals(1, state.currentChapterIndex)
-        assertFalse(state.isSearchActive)
+        assertEquals(1, viewModel.sessionUiState.value.currentChapterIndex)
+        assertFalse(viewModel.searchUiState.value.isSearchActive)
     }
 
     // ── Helpers ─────────────────────────────────────────────────────

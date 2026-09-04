@@ -11,40 +11,34 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
 /**
- * T8 final-sweep audit (SDD reader-facade-split).
+ * Deletion audit (SDD reader-uiState-cleanup, S7).
  *
- * The PR-D slice stack ships six independent StateFlow re-exports from
- * [ReaderViewModel]: search, chrome, settings, sleep timer, session,
- * annotation. The back-compat [ReaderViewModel.uiState] stays until the
- * consumer migration unblocks T7 deletion (gated by spec requirement 6).
+ * S1–S6 migrated all six consumers to slice flows; S7 deleted the
+ * back-compat aggregate (`uiState` + 5+1-way combine overlay +
+ * `mutableUiState` + merge collectors + 30 annotation delegates +
+ * `ReaderUiState` type). The six slice flows are the single source of truth.
  *
- * This test pins the contract the next PR must hold while it does the
- * consumer migration:
+ * This test pins the post-deletion contract:
  *
  *  1. All six slice flows are present and re-export the owner state
  *     directly (not via a derived transform).
- *  2. The deprecated 5+1-way combine overlay still produces a live
- *     [ReaderViewModel.uiState] for the six remaining consumers.
- *  3. The deprecated `interactionHolder` field is still wired to the
- *     annotation owner (the PR #3 facade removal is out of scope for
- *     PR-D — the 30+ annotation delegates are `@Deprecated` on the VM
- *     but not deleted; deletion waits for PR #3).
- *  4. The [ReaderViewModel] stays as the only public surface for screens:
+ *  2. The aggregate stays deleted: no `uiState` flow, no `slicesOverlay`,
+ *     no `mutableUiState`, no `ReaderUiState` type reference on the VM.
+ *  3. The `interactionHolder` field is wired to the annotation owner and
+ *     reachable through the VM (the write path since the delegates died).
+ *  4. The 30 annotation delegates stay deleted (reflection guard against
+ *     re-introduction).
+ *  5. The [ReaderViewModel] stays as the only public surface for screens:
  *     screens reach slice owners through VM re-exports, never via a
  *     direct import of `reader.interaction.*` or `reader.*Holder` types.
- *
- * Scope-guard audit (per spec requirement 7):
- *  - No extra VMs, no new use-case extraction, no UX/string changes.
- *  - `ViewModelProviders.kt` and the factory wiring are untouched.
- *  - The high-water mark of `mutableUiState` (which the combine overlay
- *    reads) is preserved by all five prior slice merges.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderViewModelFinalSweepTest {
@@ -98,54 +92,53 @@ class ReaderViewModelFinalSweepTest {
         assertNotNull(viewModel::class.java.methods.firstOrNull { it.name == "getAnnotationUiState" })
     }
 
-    // ── Back-compat uiState stays as a live StateFlow ──────────────
+    // ── Aggregate stays deleted ────────────────────────────────────
 
     @Test
-    fun `back-compat uiState stays live while T7 deletion is gated`() = runTest {
-        val viewModel = createViewModel(testScheduler)
-        advanceUntilIdle()
+    fun `back-compat aggregate stays deleted`() {
+        // S7 deletion set: the uiState flow, both combine overlays, the
+        // mutableUiState seed, and the merge/Room collectors are gone.
+        val methods = ReaderViewModel::class.java.methods.map { it.name }
+        assertFalse(
+            "ReaderViewModel.uiState must stay deleted (S7)",
+            methods.contains("getUiState")
+        )
 
-        // The 5+1-way combine overlay is alive (slicesOverlay + session
-        // overlay). T7 deletion is blocked by spec requirement 6 while
-        // any of the six consumers (ReaderScreen, DebugPanel,
-        // ReaderScreenContentHost, ReaderScreenOverlaysHost,
-        // ReaderSelectionCallbacks, ReadiumPdfReaderContent) still
-        // collect from it.
-        val initial = viewModel.uiState.value
-        assertNotNull(initial)
-
-        // The search field of uiState must still mirror the search slice
-        // (T2 invariant; this is the easiest field to flip).
-        viewModel.searchStateHolder.onToggleSearch()
-        advanceUntilIdle()
-        assertTrue(
-            "uiState must continue to mirror search slice through the combine overlay",
-            viewModel.uiState.value.isSearchActive
+        val fields = ReaderViewModel::class.java.declaredFields.map { it.name }
+        assertFalse(
+            "mutableUiState must stay deleted (S7)",
+            fields.contains("mutableUiState")
+        )
+        assertFalse(
+            "slicesOverlay must stay deleted (S7)",
+            fields.contains("slicesOverlay")
         )
     }
 
     // ── Owner wiring (annotation slice stays on the deprecated facade) ─
 
     @Test
-    fun `annotation slice owner is the deprecated interactionHolder facade`() = runTest {
-        // PR-D does not delete the interactionHolder field; PR #3 (out of
-        // scope) replaces it with direct InteractionStateStore access.
-        // Pin: the slice's source is still the facade.
-        val field = ReaderViewModel::class.java.getDeclaredField("interactionHolder")
-        field.isAccessible = true
+    fun `annotation slice owner is the interactionHolder`() = runTest {
+        // S7 exposes the holder as the write path (delegates deleted).
+        // Pin: the slice's source is still the holder, reachable via the VM.
+        val vm = createViewModel(testScheduler)
         assertNotNull(
-            "interactionHolder field must still be wired on the VM until PR #3 lands",
-            field.get(createViewModel(testScheduler))
+            "interactionHolder must be reachable through the VM",
+            vm.interactionHolder
+        )
+        assertSame(
+            "annotationUiState must be the holder state instance",
+            vm.interactionHolder.state,
+            vm.annotationUiState
         )
     }
 
-    // ── Annotation delegates stay (deprecated, not deleted) ────────
+    // ── Annotation delegates stay deleted ─────────────────────────
 
     @Test
-    fun `annotation delegates are present but deprecated`() {
-        // 30+ delegates are required by the existing reader consumers
-        // until PR #3 lands. Deleting them in PR-D would be a spec
-        // violation (T6 ships the deprecation, not the deletion).
+    fun `annotation delegates stay deleted`() {
+        // All 30 delegates were deleted in S7. Re-introducing any of them
+        // would resurrect the pass-through surface the slices replaced.
         val names = listOf(
             "onHighlightTapped", "onTextSelection", "onTextSelectionEvent",
             "onSelectHighlightColor", "onCopySelectedText", "onDismissContextMenu",
@@ -163,7 +156,7 @@ class ReaderViewModelFinalSweepTest {
         )
         val methods = ReaderViewModel::class.java.methods.associateBy { it.name }
         for (name in names) {
-            assertNotNull("ReaderViewModel.$name must still exist (deprecated, not deleted)", methods[name])
+            assertNull("ReaderViewModel.$name must stay deleted (S7)", methods[name])
         }
     }
 

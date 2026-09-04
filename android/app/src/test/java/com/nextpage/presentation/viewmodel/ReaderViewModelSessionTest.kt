@@ -23,7 +23,7 @@ import org.junit.Test
  * The session state lives in [ReaderLifecycleStateHolder] (and its lifecycle
  * collaborators) and is re-exported as `sessionUiState`. The pending-CFI and
  * typography-reflow wiring moved into the lifecycle owner first (C1); this
- * file pins the slice flow, the back-compat mirror, and the delegate
+ * file pins the slice flow and the delegate
  * deletions. `loadBook` stays on the VM: it orchestrates holders +
  * fullscreen + the pending-CFI wait, it is not a pass-through.
  */
@@ -34,7 +34,7 @@ class ReaderViewModelSessionTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun `session state lands on the slice flow and mirrors into back-compat uiState`() = runTest {
+    fun `session state lands on the slice flow`() = runTest {
         val viewModel = createViewModel(testScheduler)
         val chapters = listOf(
             BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
@@ -53,14 +53,9 @@ class ReaderViewModelSessionTest {
         assertEquals(1, slice.currentChapterIndex)
         assertEquals("epub", slice.bookFormat)
 
-        val state = viewModel.uiState.value
-        assertEquals("back-compat uiState must mirror the session slice", "book-7", state.selectedBookId)
-        assertEquals(3, state.chapters.size)
-        assertEquals(1, state.currentChapterIndex)
-
         // No cross-slice emission: chrome/timer state untouched.
-        assertFalse(state.isFullscreen)
-        assertFalse(state.sleepTimerActive)
+        assertFalse(viewModel.chromeUiState.value.isFullscreen)
+        assertFalse(viewModel.sleepTimerUiState.value.isActive)
     }
 
     @Test
@@ -81,11 +76,6 @@ class ReaderViewModelSessionTest {
 
         assertNull(viewModel.lifecycleHolder.pendingCfiAfterLoad)
         assertEquals(2, viewModel.sessionUiState.value.currentChapterIndex)
-        assertEquals(
-            "back-compat uiState must mirror the session slice",
-            2,
-            viewModel.uiState.value.currentChapterIndex
-        )
     }
 
     @Test
@@ -101,7 +91,6 @@ class ReaderViewModelSessionTest {
         advanceUntilIdle()
 
         assertEquals(6, viewModel.sessionUiState.value.currentPdfPage)
-        assertEquals(6, viewModel.uiState.value.currentPdfPage)
         assertEquals(10, viewModel.sessionUiState.value.totalPdfPages)
     }
 

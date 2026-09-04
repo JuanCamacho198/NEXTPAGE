@@ -1,10 +1,26 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
+  createHighlightsSync,
   sortByUpdatedAtDesc,
   chunkRows,
   isSameHighlights,
 } from '$lib/features/highlights/useHighlightsSync.svelte';
+import { createHighlightsViewDeps } from '$lib/features/highlights/highlightsViewDeps';
+import { MockViewerAdapter } from '$lib/shared/ports';
+import type { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 import type { HighlightDto } from '$lib/shared/types';
+
+const { mockAuthState } = vi.hoisted(() => ({
+  mockAuthState: { userId: 'u1', email: null, displayName: null, photoUrl: null },
+}));
+
+vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
+  authState: mockAuthState,
+}));
+
+const makeStubOutbox = (): { add: ReturnType<typeof vi.fn> } => ({
+  add: vi.fn(async () => 'uuid'),
+});
 
 describe('useHighlightsSync pure', () => {
   it('sortByUpdatedAtDesc sorts DESC', () => {
@@ -55,5 +71,95 @@ describe('useHighlightsSync pure', () => {
     const parsed = JSON.parse(payload);
     expect(parsed.userId).toBe('u1');
     expect(parsed.deletedAt).toBeDefined();
+  });
+});
+
+describe('useHighlightsSync note updates', () => {
+  it('handleUpdateNote persists via deps and enqueues outbox UPSERT carrying userId', async () => {
+    const mock = new MockViewerAdapter();
+    await mock.saveHighlight({
+      id: 'h1',
+      bookId: 'b1',
+      text: 'hello',
+      color: '#facc15',
+      pageNumber: 1,
+      rectLeft: 0,
+      rectRight: 10,
+      rectTop: 0,
+      rectBottom: 10,
+      cfi: null,
+      note: null,
+    });
+    const spyUpdate = vi.spyOn(mock, 'updateHighlight');
+    const outbox = makeStubOutbox();
+    const sync = createHighlightsSync({
+      deps: createHighlightsViewDeps(mock),
+      getHighlights: () => [],
+      setHighlights: () => {},
+      outbox: outbox as unknown as SyncOutboxDao,
+    });
+
+    const highlight = (await mock.listHighlights('b1'))[0];
+    const updated = await sync.handleUpdateNote(highlight, 'my note');
+
+    expect(spyUpdate).toHaveBeenCalledWith({ id: 'h1', note: 'my note' });
+    expect(updated?.note).toBe('my note');
+    expect(outbox.add).toHaveBeenCalledTimes(1);
+    const [entityType, entityId, operation, payloadJson] = outbox.add.mock.calls[0] as [
+      string,
+      string,
+      string,
+      string,
+    ];
+    expect(entityType).toBe('HIGHLIGHT');
+    expect(entityId).toBe('h1');
+    expect(operation).toBe('UPSERT');
+    const payload = JSON.parse(payloadJson) as Record<string, unknown>;
+    expect(payload.userId).toBe('u1');
+    expect(payload.note).toBe('my note');
+    expect(payload.updatedAt).toBeDefined();
+  });
+
+  it('handleUpdateNote returns null and enqueues nothing when the backend fails', async () => {
+    const mock = new MockViewerAdapter();
+    const outbox = makeStubOutbox();
+    const sync = createHighlightsSync({
+      deps: createHighlightsViewDeps(mock),
+      getHighlights: () => [],
+      setHighlights: () => {},
+      outbox: outbox as unknown as SyncOutboxDao,
+    });
+
+    const ghost = {
+      id: 'missing',
+      bookId: 'b1',
+      text: 'x',
+      color: '#facc15',
+      pageNumber: 1,
+    } as HighlightDto;
+    const result = await sync.handleUpdateNote(ghost, 'note');
+
+    expect(result).toBeNull();
+    expect(outbox.add).not.toHaveBeenCalled();
+  });
+
+  it('handleDelete reports failure so the view can surface it', async () => {
+    const mock = new MockViewerAdapter();
+    const sync = createHighlightsSync({
+      deps: createHighlightsViewDeps(mock),
+      getHighlights: () => [],
+      setHighlights: () => {},
+      outbox: makeStubOutbox() as unknown as SyncOutboxDao,
+    });
+
+    const ghost = {
+      id: 'missing',
+      bookId: 'b1',
+      text: 'x',
+      color: '#facc15',
+      pageNumber: 1,
+    } as HighlightDto;
+    const ok = await sync.handleDelete(ghost, [ghost], () => {});
+    expect(ok).toBe(false);
   });
 });

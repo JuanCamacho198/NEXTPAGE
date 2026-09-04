@@ -1,17 +1,21 @@
 package com.nextpage.presentation.viewmodel
 
+import com.nextpage.domain.model.Bookmark
+import com.nextpage.domain.model.Highlight
+import com.nextpage.domain.model.ReadingProgress
+import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.domain.model.SearchResult
+import com.nextpage.domain.repository.ReaderRepository
+import com.nextpage.domain.repository.ReadingStatsData
+import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
-import com.nextpage.testutil.FakeReaderRepository
-import com.nextpage.testutil.FakeReadingStatsRepository
 import com.nextpage.testutil.MainDispatcherRule
 import android.app.Application
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -26,27 +30,27 @@ class ReaderViewModelSearchTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun `search toggle flips isSearchActive on the slice flow`() = runTest {
+    fun `onToggleSearch flips isSearchActive`() = runTest {
         val viewModel = createViewModel(testScheduler)
 
-        assertFalse(viewModel.searchUiState.value.isSearchActive)
+        assertFalse(viewModel.uiState.value.isSearchActive)
 
-        viewModel.searchStateHolder.onToggleSearch()
-        assertTrue(viewModel.searchUiState.value.isSearchActive)
+        viewModel.onToggleSearch()
+        assertTrue(viewModel.uiState.value.isSearchActive)
 
-        viewModel.searchStateHolder.onToggleSearch()
-        assertFalse(viewModel.searchUiState.value.isSearchActive)
+        viewModel.onToggleSearch()
+        assertFalse(viewModel.uiState.value.isSearchActive)
     }
 
     @Test
     fun `onClearSearch resets search state`() = runTest {
         val viewModel = createViewModel(testScheduler)
-        viewModel.searchStateHolder.onToggleSearch()
-        viewModel.searchStateHolder.onSearchQuery("test", null, null)
+        viewModel.onToggleSearch()
+        viewModel.onSearchQuery("test")
 
         viewModel.onClearSearch()
 
-        val state = viewModel.searchUiState.value
+        val state = viewModel.uiState.value
         assertEquals("", state.searchQuery)
         assertTrue(state.searchResults.isEmpty())
         assertFalse(state.isSearching)
@@ -55,38 +59,16 @@ class ReaderViewModelSearchTest {
     @Test
     fun `onDismissSearch resets search state and hides sheet`() = runTest {
         val viewModel = createViewModel(testScheduler)
-        viewModel.searchStateHolder.onToggleSearch()
-        viewModel.searchStateHolder.onSearchQuery("test", null, null)
+        viewModel.onToggleSearch()
+        viewModel.onSearchQuery("test")
 
         viewModel.onDismissSearch()
 
-        val state = viewModel.searchUiState.value
+        val state = viewModel.uiState.value
         assertFalse(state.isSearchActive)
         assertEquals("", state.searchQuery)
         assertTrue(state.searchResults.isEmpty())
         assertFalse(state.isSearching)
-    }
-
-    @Test
-    fun `back-compat uiState mirrors the search slice`() = runTest {
-        val viewModel = createViewModel(testScheduler)
-        viewModel.searchStateHolder.onToggleSearch()
-        viewModel.searchStateHolder.onSearchQuery("odisea", null, null)
-        advanceTimeBy(400)
-        runCurrent()
-
-        val state = viewModel.uiState.value
-        assertTrue(state.isSearchActive)
-        assertEquals("odisea", state.searchQuery)
-        assertTrue(state.searchResults.isEmpty())
-        assertFalse(state.isSearching)
-    }
-
-    @Test
-    fun `toggle and query pass-through delegates are deleted`() {
-        val names = ReaderViewModel::class.java.methods.map { it.name }
-        assertFalse(names.contains("onToggleSearch"))
-        assertFalse(names.contains("onSearchQuery"))
     }
 
     @Test
@@ -154,5 +136,32 @@ class ReaderViewModelSearchTest {
             currentChapterIndex = currentChapterIndex,
             totalPdfPages = 0
         )
+    }
+
+    private class FakeReaderRepository : ReaderRepository {
+        override fun observeProgress(bookId: String): Flow<ReadingProgress?> = MutableStateFlow(null)
+        override suspend fun upsertProgress(progress: ReadingProgress) = Unit
+        override suspend fun updateBookReadingState(bookId: String, progressPercent: Float, updatedAt: Long) = Unit
+        override fun observeAllHighlights(): Flow<List<Highlight>> = MutableStateFlow(emptyList())
+        override fun observeAllHighlightsPaged(): Flow<androidx.paging.PagingData<Highlight>> =
+            kotlinx.coroutines.flow.flowOf(androidx.paging.PagingData.empty())
+        override fun observeHighlights(bookId: String): Flow<List<Highlight>> = MutableStateFlow(emptyList())
+        override suspend fun upsertHighlight(highlight: Highlight) = Unit
+        override fun observeAllBookmarks(): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
+        override fun observeBookmarks(bookId: String): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
+        override suspend fun upsertBookmark(bookmark: Bookmark) = Unit
+        override suspend fun getProgressForBook(bookId: String): com.nextpage.domain.model.ReadingProgress? = null
+        override suspend fun getHighlightsForBook(bookId: String): List<com.nextpage.domain.model.Highlight> = emptyList()
+        override suspend fun getBookmarksForBook(bookId: String): List<com.nextpage.domain.model.Bookmark> = emptyList()
+    }
+
+    private class FakeReadingStatsRepository : ReadingStatsRepository {
+        override fun observeStats(bookId: String): Flow<ReadingStatsData?> = MutableStateFlow(null)
+        override fun observeTotalTime(): Flow<Long> = MutableStateFlow(0L)
+        override suspend fun updateReadingTime(bookId: String, additionalMinutes: Long) = Unit
+        override suspend fun deleteStats(bookId: String) = Unit
+        override fun observeBookStats(): kotlinx.coroutines.flow.Flow<List<com.nextpage.domain.repository.ReadingStatsData>> =
+            kotlinx.coroutines.flow.MutableStateFlow(emptyList())
+        override suspend fun getDailyActivity(userId: String?): List<com.nextpage.domain.model.DailyReadingActivity> = emptyList()
     }
 }

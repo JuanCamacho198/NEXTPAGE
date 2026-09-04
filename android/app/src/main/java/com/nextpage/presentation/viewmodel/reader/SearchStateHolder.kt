@@ -20,15 +20,6 @@ import org.readium.r2.shared.publication.Publication
 
 /**
  * UI-level state for the search feature in the reader.
- *
- * Re-exported by the VM as [SearchUiState] — the Search slice of the
- * reader facade split (SDD reader-facade-split, slice 1). Single owner:
- * only this holder holds the search MutableStateFlow and mutating funs.
- */
-typealias SearchUiState = SearchState
-
-/**
- * UI-level state for the search feature in the reader.
  */
 data class SearchState(
     val isSearchActive: Boolean = false,

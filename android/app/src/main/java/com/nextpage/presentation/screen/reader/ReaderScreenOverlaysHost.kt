@@ -14,7 +14,6 @@ import com.nextpage.presentation.screen.BookmarkRibbonOverlay
 import com.nextpage.presentation.screen.ReaderFullscreenArrows
 import com.nextpage.presentation.viewmodel.ReaderUiState
 import com.nextpage.presentation.viewmodel.ReaderViewModel
-import com.nextpage.presentation.viewmodel.reader.SearchUiState
 import com.nextpage.ui.components.molecules.ChaptersSheet
 import com.nextpage.ui.components.molecules.HighlightAnnotationModal
 import com.nextpage.ui.components.molecules.SearchBottomSheet
@@ -26,7 +25,6 @@ import com.nextpage.ui.components.molecules.SplitSettingsSheet
 @Composable
 fun ReaderScreenOverlaysHost(
     uiState: ReaderUiState,
-    searchUiState: SearchUiState,
     viewModel: ReaderViewModel,
     showSleepTimerSheet: Boolean,
     onDismissSleepTimerSheet: () -> Unit,
@@ -62,18 +60,12 @@ fun ReaderScreenOverlaysHost(
         onAnimationEnd = onBookmarkRibbonEnd
     )
 
-    if (searchUiState.isSearchActive) {
+    if (uiState.isSearchActive) {
         SearchBottomSheet(
-            query = searchUiState.searchQuery,
-            results = searchUiState.searchResults,
-            isSearching = searchUiState.isSearching,
-            onQueryChange = {
-                viewModel.searchStateHolder.onSearchQuery(
-                    it,
-                    uiState.readiumPublication,
-                    uiState.bookFormat
-                )
-            },
+            query = uiState.searchQuery,
+            results = uiState.searchResults,
+            isSearching = uiState.isSearching,
+            onQueryChange = { viewModel.onSearchQuery(it) },
             onClearQuery = { viewModel.onClearSearch() },
             onResultSelected = { viewModel.onSearchResultSelected(it) },
             onDismiss = { viewModel.onDismissSearch() }

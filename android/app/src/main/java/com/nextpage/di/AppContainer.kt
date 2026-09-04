@@ -18,10 +18,14 @@ import com.nextpage.data.remote.supabase.SupabaseProgressDataSource
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.DriveColdBackupService
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
+import com.nextpage.data.remote.sync.SyncOrchestrator
+import com.nextpage.data.remote.sync.SyncOrchestratorImpl
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.data.session.ReadingGoalPreferences
 import com.nextpage.data.session.SessionManager
+import com.nextpage.data.sync.SessionGateImpl
+import com.nextpage.domain.sync.SessionGate
 import com.nextpage.di.modules.DatabaseModule
 import com.nextpage.di.modules.NetworkModule
 import com.nextpage.di.modules.PreferencesModule
@@ -82,6 +86,33 @@ class AppContainer(context: Context) {
     val supabaseBookCatalogDataSource: SupabaseBookCatalogDataSource by lazy { networkModule.supabaseBookCatalogDataSource }
     val supabaseBookCatalogSync: SupabaseBookCatalogSync by lazy { networkModule.supabaseBookCatalogSync }
     val driveColdBackupService: DriveColdBackupService by lazy { networkModule.driveColdBackupService }
+
+    // ── sync-layer-split PR-1 foundations ────────────────────────────────
+    // SessionGate is the domain-sync helper; the SyncOrchestrator that wires
+    // it into a per-domain lifecycle arrives in PR-2 (and AuthViewModel
+    // consumes it in PR-3). `syncState` is a sealed type, not a singleton,
+    // so it is not wired here — consumers (DebugViewModel) continue reading
+    // per-domain states until the orchestrator exists.
+    val sessionGate: SessionGate by lazy { SessionGateImpl(sessionManager) }
+
+    // ── sync-layer-split PR-2: SyncOrchestrator ──────────────────────────
+    // Wires Drive (SyncService) + Catalog + Progress + SessionGate + the
+    // shared outbox DAO into a single per-domain lifecycle handle. Consumed
+    // by `AuthViewModel` in PR-3 (sign-out closes ALL Realtime channels via
+    // orchestrator.stop, fixing the catalog-logout Realtime leak; sign-in
+    // delegates to orchestrator.start).
+    val syncOrchestrator: SyncOrchestrator by lazy {
+        SyncOrchestratorImpl(
+            drive = syncService,
+            catalog = supabaseBookCatalogSync,
+            progress = supabaseProgressSync,
+            gate = sessionGate,
+            outboxDao = databaseModule.syncOutboxDao,
+            externalScope = kotlinx.coroutines.CoroutineScope(
+                kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default
+            ),
+        )
+    }
 
     internal object ReaderDependencies {
         fun updateReadingProgressUseCase(readerRepository: ReaderRepository) =

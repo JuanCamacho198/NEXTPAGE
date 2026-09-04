@@ -3,8 +3,8 @@ package com.nextpage.presentation.viewmodel
 import android.content.Context
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.UserBookRow
+import com.nextpage.data.remote.sync.DriveSyncState
 import com.nextpage.data.remote.sync.SyncService
-import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.repository.LibraryRepository
@@ -396,10 +396,11 @@ class LibraryViewModelTest {
     }
 
     private class FakeSyncService : SyncService {
-        override val syncState: Flow<SyncState> = MutableStateFlow(SyncState.Idle)
+        override val syncState: Flow<DriveSyncState> = MutableStateFlow(DriveSyncState.Idle)
         override val pendingCount: Flow<Int> = MutableStateFlow(0)
         override suspend fun bootstrap(userId: String): Result<Unit> = Result.success(Unit)
         override suspend fun schedulePush(): Result<Unit> = Result.success(Unit)
         override suspend fun schedulePull(): Result<Unit> = Result.success(Unit)
+        override suspend fun stop() = Unit
     }
 }

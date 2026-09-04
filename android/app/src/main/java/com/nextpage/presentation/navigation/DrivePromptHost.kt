@@ -114,7 +114,7 @@ fun DrivePromptHost(
     // Sync error collector (previously inline in host; kept here to preserve single drive host ownership)
     LaunchedEffect(syncService) {
         syncService.syncState.collect { state ->
-            if (state is com.nextpage.data.remote.sync.SyncState.Error) {
+            if (state is com.nextpage.data.remote.sync.DriveSyncState.Error) {
                 snackbarHostState.showSnackbar("Sync error: ${state.message}")
             }
         }

@@ -11,6 +11,8 @@ import com.nextpage.data.local.entity.HighlightEntity
 import com.nextpage.data.local.entity.ReadingSessionEntity
 import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncOperation
+import com.nextpage.data.remote.sync.ApplyOutcome
+import com.nextpage.data.remote.sync.OutboxCommit
 import com.nextpage.data.session.SessionManager
 import com.nextpage.data.sync.CanonicalLocator
 import com.nextpage.data.sync.LocatorCodec
@@ -52,6 +54,13 @@ class SupabaseProgressSync(
     private val sessionManager: SessionManager,
     private val dataSource: SupabaseProgressDataSource = SupabaseProgressDataSource(),
     private val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
+    /**
+     * OutboxCommit helper (sync-layer-split PR-3). When non-null, the four
+     * `process*Item` methods delegate ack/retry/poison persistence to it via
+     * `commit(item) { applyRemote*() }`. Nullable so legacy callers (e.g. unit
+     * tests using direct DAO fakes) keep working without injection.
+     */
+    private val outboxCommit: OutboxCommit? = null,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private var processJob: Job? = null
@@ -167,6 +176,40 @@ class SupabaseProgressSync(
     ).apply { timeZone = TimeZone.getTimeZone("UTC") }
 
     /**
+     * Adapter between per-item processors and [OutboxCommit].
+     *
+     * When [outboxCommit] is wired (production DI), persistence is delegated to
+     * the helper, which centralises the ack / increment / prune policy and
+     * preserves the gated-backoff semantic (the helper returns the typed
+     * outcome; this syncer continues processing remaining items — backoff is
+     * handled at the outer [processOutbox] loop via [hasLiveSession] + gated
+     * retry on the next pass).
+     *
+     * When [outboxCommit] is null (legacy callers, unit tests using a direct
+     * DAO fake), we fall back to the pre-PR-3 inline behaviour: Ok → deleteById,
+     * Retryable → incrementRetryCount + pruneFailedItems(3). This keeps the
+     * existing syncer test suite untouched.
+     */
+    private suspend fun commitOutbox(
+        item: com.nextpage.data.local.entity.SyncOutboxEntity,
+        apply: suspend () -> ApplyOutcome,
+    ) {
+        val helper = outboxCommit
+        if (helper != null) {
+            helper.commit(item, apply)
+            return
+        }
+        when (val outcome = apply()) {
+            is ApplyOutcome.Ok -> outboxDao.deleteById(item.id)
+            is ApplyOutcome.Retryable -> {
+                outboxDao.incrementRetryCount(item.id, outcome.cause.message ?: "Unknown error")
+                outboxDao.pruneFailedItems(3)
+            }
+            is ApplyOutcome.Poison -> outboxDao.pruneFailedItems(3)
+        }
+    }
+
+    /**
      * Parses a remote PostgREST timestamp into epoch millis for LWW comparison.
      *
      * PostgREST serializes timestamptz as ISO-8601 with a numeric UTC offset
@@ -272,12 +315,13 @@ class SupabaseProgressSync(
             version = 1
         )
 
-        try {
-            dataSource.upsertProgress(row)
-            outboxDao.deleteById(item.id)
-        } catch (e: Exception) {
-            outboxDao.incrementRetryCount(item.id, e.message ?: "Unknown error")
-            outboxDao.pruneFailedItems(3)
+        commitOutbox(item) {
+            try {
+                dataSource.upsertProgress(row)
+                ApplyOutcome.Ok
+            } catch (e: Exception) {
+                ApplyOutcome.Retryable(e)
+            }
         }
     }
 
@@ -293,13 +337,14 @@ class SupabaseProgressSync(
             SyncOperation.UPDATE
         }
 
-        try {
-            when (operation) {
-                SyncOperation.DELETE -> {
-                    dataSource.softDeleteBookmark(bookmarkId, userId)
-                }
-                else -> {
-                    val localBookmark = bookmarkDao.getBookmarkById(bookmarkId) ?: return
+        // Pre-resolve local row outside the apply lambda. Missing local rows
+        // for UPDATE bypass `commitOutbox` entirely so the outbox entry stays
+        // for the next pass (preserves pre-PR-3 semantics: no delete, no
+        // retry increment — the item just waits for a future pass).
+        if (operation != SyncOperation.DELETE) {
+            val localBookmark = bookmarkDao.getBookmarkById(bookmarkId) ?: return
+            commitOutbox(item) {
+                try {
                     val row = BookmarkRow(
                         id = localBookmark.id,
                         userId = userId,
@@ -313,12 +358,22 @@ class SupabaseProgressSync(
                         updatedAt = dateFormat.format(Date(localBookmark.updatedAtEpochMillis))
                     )
                     dataSource.upsertBookmark(row)
+                    ApplyOutcome.Ok
+                } catch (e: Exception) {
+                    ApplyOutcome.Retryable(e)
                 }
             }
-            outboxDao.deleteById(item.id)
-        } catch (e: Exception) {
-            outboxDao.incrementRetryCount(item.id, e.message ?: "Unknown error")
-            outboxDao.pruneFailedItems(3)
+            return
+        }
+
+        // DELETE: push to Supabase and ack via OutboxCommit.
+        commitOutbox(item) {
+            try {
+                dataSource.softDeleteBookmark(bookmarkId, userId)
+                ApplyOutcome.Ok
+            } catch (e: Exception) {
+                ApplyOutcome.Retryable(e)
+            }
         }
     }
 
@@ -334,74 +389,81 @@ class SupabaseProgressSync(
             SyncOperation.UPDATE
         }
 
-        try {
-            when (operation) {
-                SyncOperation.DELETE -> {
-                    val highlightId = entityId
-                    dataSource.softDeleteHighlight(highlightId, userId)
-                }
-                else -> {
-                    // PR4: HIGHLIGHT per id — atomic enqueue, never coalesced across ids.
-                    // Use only getHighlightById to avoid re-pushing deleted highlights via bookId fallback.
-                    val single = highlightDao.getHighlightById(entityId)
-                    if (single == null) {
-                        // Legacy bookId rows (old outbox where entityId was bookId) are ignored;
-                        // they would re-send deleted rows and cause resurrection. Clean up outbox.
-                        outboxDao.deleteById(item.id)
-                        return
-                    }
-                    val localHighlight = single
-                        // Ensure locatorJson is never null for epubcfi highlights (LocatorCodec fallback)
-                        val resolvedLocatorJson = LocatorCodec.normalizeLocatorJson(localHighlight.locatorJson)
-                            ?: run {
-                                val cfi = localHighlight.cfiRange
-                                if (cfi.startsWith("epubcfi(")) {
-                                    // Fallback for legacy rows where only cfiRange exists — preserve fragment
-                                    val spineIdx = Regex("""epubcfi\(/6/(\d+)""").find(cfi)?.groupValues?.getOrNull(1)?.toIntOrNull()
-                                    val href = if (spineIdx != null && spineIdx > 0) "OEBPS/chapter${spineIdx}.xhtml" else "OEBPS/text.xhtml"
-                                    val fallback = CanonicalLocator(
-                                        href = href,
-                                        type = "application/xhtml+xml",
-                                        locations = LocatorLocations(progression = 0.0, fragment = cfi)
-                                    )
-                                    LocatorCodec.locatorToJson(fallback)
-                                } else null
-                            }
-                        val row = HighlightRow(
-                            id = localHighlight.id,
-                            userId = userId,
-                            bookId = localHighlight.bookId,
-                            cfiRange = localHighlight.cfiRange,
-                            textContent = localHighlight.textContent,
-                            note = localHighlight.note,
-                            color = localHighlight.color,
-                            page = null,
-                            type = localHighlight.type,
-                            locatorJson = resolvedLocatorJson,
-                            deletedAt = localHighlight.deletedAtEpochMillis?.let {
-                                dateFormat.format(Date(it))
-                            },
-                            updatedAt = dateFormat.format(Date(localHighlight.updatedAtEpochMillis))
-                        )
-                        dataSource.upsertHighlight(row)
+        // PR4: HIGHLIGHT per id — atomic enqueue, never coalesced across ids.
+        // Legacy bookId rows (old outbox where entityId was bookId) are ignored:
+        // they would re-send deleted rows and cause resurrection. Clean them up
+        // by ack-via-OutboxCommit (Ok outcome).
+        if (operation != SyncOperation.DELETE) {
+            val localHighlight = highlightDao.getHighlightById(entityId)
+            if (localHighlight == null) {
+                commitOutbox(item) { ApplyOutcome.Ok }
+                return
+            }
 
-                        if (!localHighlight.tag.isNullOrBlank()) {
-                            val tagNames = localHighlight.tag.split(",").map { it.trim() }
-                                .filter { it.isNotBlank() }
-                            for (tagName in tagNames) {
-                                val tag = dataSource.findOrCreateTag(userId, tagName)
-                                dataSource.linkTagToHighlight(
-                                    localHighlight.id,
-                                    requireNotNull(tag.id) { "Supabase tag missing id after findOrCreateTag" }
-                                )
-                            }
+            // Ensure locatorJson is never null for epubcfi highlights (LocatorCodec fallback)
+            val resolvedLocatorJson = LocatorCodec.normalizeLocatorJson(localHighlight.locatorJson)
+                ?: run {
+                    val cfi = localHighlight.cfiRange
+                    if (cfi.startsWith("epubcfi(")) {
+                        // Fallback for legacy rows where only cfiRange exists — preserve fragment
+                        val spineIdx = Regex("""epubcfi\(/6/(\d+)""").find(cfi)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                        val href = if (spineIdx != null && spineIdx > 0) "OEBPS/chapter${spineIdx}.xhtml" else "OEBPS/text.xhtml"
+                        val fallback = CanonicalLocator(
+                            href = href,
+                            type = "application/xhtml+xml",
+                            locations = LocatorLocations(progression = 0.0, fragment = cfi)
+                        )
+                        LocatorCodec.locatorToJson(fallback)
+                    } else null
+                }
+
+            commitOutbox(item) {
+                try {
+                    val row = HighlightRow(
+                        id = localHighlight.id,
+                        userId = userId,
+                        bookId = localHighlight.bookId,
+                        cfiRange = localHighlight.cfiRange,
+                        textContent = localHighlight.textContent,
+                        note = localHighlight.note,
+                        color = localHighlight.color,
+                        page = null,
+                        type = localHighlight.type,
+                        locatorJson = resolvedLocatorJson,
+                        deletedAt = localHighlight.deletedAtEpochMillis?.let {
+                            dateFormat.format(Date(it))
+                        },
+                        updatedAt = dateFormat.format(Date(localHighlight.updatedAtEpochMillis))
+                    )
+                    dataSource.upsertHighlight(row)
+
+                    if (!localHighlight.tag.isNullOrBlank()) {
+                        val tagNames = localHighlight.tag.split(",").map { it.trim() }
+                            .filter { it.isNotBlank() }
+                        for (tagName in tagNames) {
+                            val tag = dataSource.findOrCreateTag(userId, tagName)
+                            dataSource.linkTagToHighlight(
+                                localHighlight.id,
+                                requireNotNull(tag.id) { "Supabase tag missing id after findOrCreateTag" }
+                            )
                         }
+                    }
+                    ApplyOutcome.Ok
+                } catch (e: Exception) {
+                    ApplyOutcome.Retryable(e)
                 }
             }
-            outboxDao.deleteById(item.id)
-        } catch (e: Exception) {
-            outboxDao.incrementRetryCount(item.id, e.message ?: "Unknown error")
-            outboxDao.pruneFailedItems(3)
+            return
+        }
+
+        // DELETE: push to Supabase and ack via OutboxCommit.
+        commitOutbox(item) {
+            try {
+                dataSource.softDeleteHighlight(entityId, userId)
+                ApplyOutcome.Ok
+            } catch (e: Exception) {
+                ApplyOutcome.Retryable(e)
+            }
         }
     }
 
@@ -638,7 +700,9 @@ class SupabaseProgressSync(
         val payload = try {
             JSONObject(item.payloadJson)
         } catch (_: Exception) {
-            outboxDao.deleteById(item.id)
+            // Malformed payload — ack-via-OutboxCommit so the bad row is pruned
+            // instead of getting stuck in a poison-loop.
+            commitOutbox(item) { ApplyOutcome.Ok }
             return
         }
 
@@ -650,7 +714,8 @@ class SupabaseProgressSync(
         val updatedAtEpochMillis = payload.optLong("updatedAtEpochMillis", 0L)
 
         if (id.isBlank() || bookId.isBlank() || durationMinutes <= 0) {
-            outboxDao.deleteById(item.id)
+            // Invalid payload fields — same treatment as malformed JSON above.
+            commitOutbox(item) { ApplyOutcome.Ok }
             return
         }
 
@@ -665,12 +730,13 @@ class SupabaseProgressSync(
             updatedAt = dateFormat.format(Date(updatedAtEpochMillis))
         )
 
-        try {
-            dataSource.upsertReadingSession(row)
-            outboxDao.deleteById(item.id)
-        } catch (e: Exception) {
-            outboxDao.incrementRetryCount(item.id, e.message ?: "Unknown error")
-            outboxDao.pruneFailedItems(3)
+        commitOutbox(item) {
+            try {
+                dataSource.upsertReadingSession(row)
+                ApplyOutcome.Ok
+            } catch (e: Exception) {
+                ApplyOutcome.Retryable(e)
+            }
         }
     }
 

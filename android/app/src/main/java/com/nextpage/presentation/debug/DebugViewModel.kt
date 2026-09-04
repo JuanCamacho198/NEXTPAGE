@@ -98,7 +98,7 @@ class DebugViewModel(
             _debugInfo.update {
                 it.copy(
                     syncDebug = SyncDebugSection(
-                        state = state.toString().removePrefix("SyncState."),
+                        state = state.toString().removePrefix("DriveSyncState."),
                         pendingCount = pending
                     ),
                     supabaseSyncDebug = SupabaseSyncDebugSection(

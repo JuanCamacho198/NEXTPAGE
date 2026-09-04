@@ -20,7 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
-import com.nextpage.data.remote.sync.SyncState
+import com.nextpage.data.remote.sync.DriveSyncState
 import com.nextpage.presentation.theme.NextPageTheme
 
 /**
@@ -34,7 +34,7 @@ import com.nextpage.presentation.theme.NextPageTheme
  * - `Running` → blue (`#60A5FA`) + `R.string.sync_status_syncing`
  * - `Error` → red (`#F87171`) + `R.string.sync_status_error`
  *
- * @param syncState Current sync state. See `data.remote.sync.SyncState`.
+ * @param syncState Current sync state. See `data.remote.sync.DriveSyncState`.
  * @param modifier Modifier applied to the outer `Row`.
  *
  * **Visual**: 8dp circular dot + `labelSmall` label. The pill itself uses
@@ -48,15 +48,15 @@ import com.nextpage.presentation.theme.NextPageTheme
  */
 @Composable
 fun SyncStatusIndicator(
-    syncState: SyncState,
+    syncState: DriveSyncState,
     modifier: Modifier = Modifier
 ) {
     val (dotColor, labelRes) = when (syncState) {
-        is SyncState.Idle -> Color(0xFF4ADE80) to R.string.sync_status_synced
-        is SyncState.Disabled -> Color(0xFF9CA3AF) to R.string.sync_status_off
-        is SyncState.Running -> Color(0xFF60A5FA) to R.string.sync_status_syncing
-        is SyncState.Error -> Color(0xFFF87171) to R.string.sync_status_error
-        is SyncState.AuthorizationNeeded -> Color(0xFFFBBF24) to R.string.sync_status_authorization_needed
+        is DriveSyncState.Idle -> Color(0xFF4ADE80) to R.string.sync_status_synced
+        is DriveSyncState.Disabled -> Color(0xFF9CA3AF) to R.string.sync_status_off
+        is DriveSyncState.Running -> Color(0xFF60A5FA) to R.string.sync_status_syncing
+        is DriveSyncState.Error -> Color(0xFFF87171) to R.string.sync_status_error
+        is DriveSyncState.AuthorizationNeeded -> Color(0xFFFBBF24) to R.string.sync_status_authorization_needed
     }
     val label = stringResource(labelRes)
 
@@ -92,9 +92,9 @@ private fun SyncStatusIndicatorDarkPreview() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            SyncStatusIndicator(syncState = SyncState.Idle)
-            SyncStatusIndicator(syncState = SyncState.Running)
-            SyncStatusIndicator(syncState = SyncState.Error("Sync failed"))
+            SyncStatusIndicator(syncState = DriveSyncState.Idle)
+            SyncStatusIndicator(syncState = DriveSyncState.Running)
+            SyncStatusIndicator(syncState = DriveSyncState.Error("Sync failed"))
         }
     }
 }
@@ -107,9 +107,9 @@ private fun SyncStatusIndicatorLightPreview() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            SyncStatusIndicator(syncState = SyncState.Idle)
-            SyncStatusIndicator(syncState = SyncState.Running)
-            SyncStatusIndicator(syncState = SyncState.Error("Sync failed"))
+            SyncStatusIndicator(syncState = DriveSyncState.Idle)
+            SyncStatusIndicator(syncState = DriveSyncState.Running)
+            SyncStatusIndicator(syncState = DriveSyncState.Error("Sync failed"))
         }
     }
 }

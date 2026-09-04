@@ -1,6 +1,6 @@
 package com.nextpage.presentation.viewmodel
 
-import com.nextpage.data.remote.sync.SyncService
+import com.nextpage.data.remote.sync.SyncOrchestrator
 import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
@@ -8,9 +8,11 @@ import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.repository.AuthRepository
 import com.nextpage.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -40,7 +42,7 @@ class AuthViewModelTest {
 
         val viewModel = AuthViewModel(
             authRepository = repository,
-            syncService = FakeSyncService(),
+            syncOrchestrator = FakeSyncOrchestrator(),
             isAuthConfigured = false,
             hasAuthWiringIssue = false
         )
@@ -59,7 +61,7 @@ class AuthViewModelTest {
         )
         val viewModel = AuthViewModel(
             authRepository = repository,
-            syncService = FakeSyncService(),
+            syncOrchestrator = FakeSyncOrchestrator(),
             isAuthConfigured = true,
             hasAuthWiringIssue = false
         )
@@ -85,7 +87,7 @@ class AuthViewModelTest {
         )
         val viewModel = AuthViewModel(
             authRepository = repository,
-            syncService = FakeSyncService(),
+            syncOrchestrator = FakeSyncOrchestrator(),
             isAuthConfigured = true,
             hasAuthWiringIssue = false
         )
@@ -106,7 +108,7 @@ class AuthViewModelTest {
         )
         val viewModel = AuthViewModel(
             authRepository = repository,
-            syncService = FakeSyncService(),
+            syncOrchestrator = FakeSyncOrchestrator(),
             isAuthConfigured = true,
             hasAuthWiringIssue = true
         )
@@ -123,7 +125,7 @@ class AuthViewModelTest {
         val repository = FakeAuthRepository()
         val viewModel = AuthViewModel(
             authRepository = repository,
-            syncService = FakeSyncService(),
+            syncOrchestrator = FakeSyncOrchestrator(),
             isAuthConfigured = true,
             hasAuthWiringIssue = false
         )
@@ -152,7 +154,7 @@ class AuthViewModelTest {
         )
         val viewModel = AuthViewModel(
             authRepository = repository,
-            syncService = FakeSyncService(),
+            syncOrchestrator = FakeSyncOrchestrator(),
             isAuthConfigured = true,
             hasAuthWiringIssue = false
         )
@@ -181,7 +183,7 @@ class AuthViewModelTest {
         )
         val viewModel = AuthViewModel(
             authRepository = repository,
-            syncService = FakeSyncService(),
+            syncOrchestrator = FakeSyncOrchestrator(),
             isAuthConfigured = true,
             hasAuthWiringIssue = false
         )
@@ -211,7 +213,7 @@ class AuthViewModelTest {
         )
         val viewModel = AuthViewModel(
             authRepository = repository,
-            syncService = FakeSyncService(),
+            syncOrchestrator = FakeSyncOrchestrator(),
             isAuthConfigured = true,
             hasAuthWiringIssue = false
         )
@@ -230,7 +232,7 @@ class AuthViewModelTest {
         )
         val viewModel = AuthViewModel(
             authRepository = repository,
-            syncService = FakeSyncService(),
+            syncOrchestrator = FakeSyncOrchestrator(),
             isAuthConfigured = true,
             hasAuthWiringIssue = false
         )
@@ -258,7 +260,7 @@ class AuthViewModelTest {
         )
         val viewModel = AuthViewModel(
             authRepository = repository,
-            syncService = FakeSyncService(),
+            syncOrchestrator = FakeSyncOrchestrator(),
             isAuthConfigured = true,
             hasAuthWiringIssue = false
         )
@@ -269,6 +271,118 @@ class AuthViewModelTest {
 
         assertEquals("no account", viewModel.uiState.value.errorMessage)
         assertEquals(AuthFailureKind.UNKNOWN, viewModel.uiState.value.failureKind)
+    }
+
+    // ── sync-layer-split PR-3 — AuthViewModel orchestrator wiring ────────
+    // Regression for the catalog-logout Realtime leak. signOut must call
+    // orchestrator.stop() (which closes ALL Realtime channels across Drive,
+    // Catalog and Progress) before clearing local session state.
+
+    @Test
+    fun onLogout_invokesOrchestratorStop() = runTest {
+        val session = AuthSession(userId = "u1", email = "u1@test.com")
+        val repository = FakeAuthRepository(
+            currentSessionResult = Result.success(session)
+        )
+        val orchestrator = FakeSyncOrchestrator()
+        val viewModel = AuthViewModel(
+            authRepository = repository,
+            syncOrchestrator = orchestrator,
+            isAuthConfigured = true,
+            hasAuthWiringIssue = false
+        )
+        advanceUntilIdle()
+
+        viewModel.signOut()
+        advanceUntilIdle()
+
+        // orchestrator.stop() must be invoked exactly once during sign-out.
+        assertEquals(1, orchestrator.stopCount)
+    }
+
+    @Test
+    fun onLogout_clearsAllRealtimeChannels() = runTest {
+        // The FakeSyncOrchestrator records stop() invocations; the real
+        // orchestrator fans out to drive.stop + catalog.stop + progress.stop
+        // (verified separately in SyncOrchestratorTest). This test asserts the
+        // AuthViewModel side of the contract: signOut → orchestrator.stop().
+        val session = AuthSession(userId = "u1", email = "u1@test.com")
+        val repository = FakeAuthRepository(
+            currentSessionResult = Result.success(session)
+        )
+        val orchestrator = FakeSyncOrchestrator()
+        val viewModel = AuthViewModel(
+            authRepository = repository,
+            syncOrchestrator = orchestrator,
+            isAuthConfigured = true,
+            hasAuthWiringIssue = false
+        )
+        advanceUntilIdle()
+
+        viewModel.signOut()
+        advanceUntilIdle()
+
+        // All per-domain stop() calls live behind orchestrator.stop(); the
+        // single invocation here covers Drive + Catalog + Progress.
+        assertEquals(1, orchestrator.stopCount)
+        assertNull(viewModel.uiState.value.currentSession)
+    }
+
+    @Test
+    fun onLogout_orchestratorStopTimeout_stillClearsLocalState() = runTest {
+        val session = AuthSession(userId = "u1", email = "u1@test.com")
+        val repository = FakeAuthRepository(
+            currentSessionResult = Result.success(session)
+        )
+        // Orchestrator that hangs longer than the 5s stop budget.
+        val orchestrator = FakeSyncOrchestrator(stopDelayMs = 10_000L)
+        val viewModel = AuthViewModel(
+            authRepository = repository,
+            syncOrchestrator = orchestrator,
+            isAuthConfigured = true,
+            hasAuthWiringIssue = false
+        )
+        advanceUntilIdle()
+
+        viewModel.signOut()
+        // Advance past the 5s timeout but well before the orchestrator's
+        // 10s simulated delay — local state must be cleared at the 5s mark.
+        advanceTimeBy(5_500L)
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.currentSession)
+        // The orchestrator's stop coroutine is cancelled by withTimeoutOrNull;
+        // it never gets to set stopCount because the function suspends past
+        // the timeout. We only assert the user-visible invariant.
+        assertEquals(0, orchestrator.stopCount)
+    }
+
+    @Test
+    fun triggerSyncForSession_delegatesToOrchestratorStart() = runTest {
+        val session = AuthSession(userId = "user-123", email = "u1@test.com")
+        val repository = FakeAuthRepository(
+            signInWithGoogleResult = Result.success(session)
+        )
+        val orchestrator = FakeSyncOrchestrator()
+        val viewModel = AuthViewModel(
+            authRepository = repository,
+            syncOrchestrator = orchestrator,
+            isAuthConfigured = true,
+            hasAuthWiringIssue = false
+        )
+        advanceUntilIdle()
+
+        viewModel.handleGoogleIdToken("test-id-token")
+        advanceUntilIdle()
+
+        // triggerSyncForSession collapsed into orchestrator.start(userId).
+        assertEquals(listOf("user-123"), orchestrator.startedWith)
+        // No direct per-domain orchestration remains at the AuthViewModel
+        // level — verified by the absence of any SyncService handles here.
+        assertTrue(
+            "handleGoogleIdToken must trigger exactly one orchestrator.start",
+            orchestrator.startedWith.size == 1
+        )
     }
 
     private class FakeAuthRepository(
@@ -317,24 +431,35 @@ class AuthViewModelTest {
         override suspend fun getCurrentSession(): Result<AuthSession?> = currentSessionResult
     }
 
-    private class FakeSyncService : SyncService {
-        override val syncState: Flow<SyncState> = MutableStateFlow(SyncState.Idle)
+    /**
+     * Minimal in-memory [SyncOrchestrator] for AuthViewModel wiring tests.
+     * Records `start` arguments and `stop` invocations so the assertions can
+     * verify the new contract. `stopDelayMs` simulates a hanging orchestrator
+     * (used by the timeout regression test).
+     */
+    private class FakeSyncOrchestrator(
+        private val stopDelayMs: Long = 0L,
+    ) : SyncOrchestrator {
+        val startedWith: MutableList<String> = mutableListOf()
+        var stopCount: Int = 0
+            private set
+
+        override suspend fun start(userId: String) {
+            startedWith += userId
+        }
+
+        override suspend fun stop() {
+            if (stopDelayMs > 0L) delay(stopDelayMs)
+            stopCount += 1
+        }
+
+        override suspend fun schedulePush() {}
+
+        override suspend fun schedulePull() {}
+
+        override val state: kotlinx.coroutines.flow.StateFlow<SyncState> =
+            MutableStateFlow(SyncState.Idle)
+
         override val pendingCount: Flow<Int> = emptyFlow()
-        val events = mutableListOf<String>()
-
-        override suspend fun bootstrap(userId: String): Result<Unit> {
-            events += "bootstrap:$userId"
-            return Result.success(Unit)
-        }
-
-        override suspend fun schedulePush(): Result<Unit> {
-            events += "push"
-            return Result.success(Unit)
-        }
-
-        override suspend fun schedulePull(): Result<Unit> {
-            events += "pull"
-            return Result.success(Unit)
-        }
     }
 }

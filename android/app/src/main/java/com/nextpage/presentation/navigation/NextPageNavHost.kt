@@ -76,7 +76,6 @@ import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModelFactory
-import com.nextpage.data.remote.sync.SyncState
 import com.nextpage.debug.LogViewerScreen
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.debug.DebugPanel
@@ -162,9 +161,7 @@ fun NextPageNavHost(
     val authViewModel: AuthViewModel = viewModel(
         factory = AuthViewModel.Factory(
             authRepository = appContainer.authRepository,
-            syncService = appContainer.syncService,
-            supabaseProgressSync = appContainer.supabaseProgressSync,
-            supabaseBookCatalogSync = appContainer.supabaseBookCatalogSync,
+            syncOrchestrator = appContainer.syncOrchestrator,
             isAuthConfigured = !appContainer.isAuthConfigError,
             hasAuthWiringIssue = false
         )

@@ -92,9 +92,7 @@ internal fun rememberNavHostViewModels(
     val authViewModel: AuthViewModel = viewModel(
         factory = AuthViewModel.Factory(
             authRepository = appContainer.authRepository,
-            syncService = appContainer.syncService,
-            supabaseProgressSync = appContainer.supabaseProgressSync,
-            supabaseBookCatalogSync = appContainer.supabaseBookCatalogSync,
+            syncOrchestrator = appContainer.syncOrchestrator,
             isAuthConfigured = !appContainer.isAuthConfigError,
             hasAuthWiringIssue = false
         )

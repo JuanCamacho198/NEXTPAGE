@@ -16,12 +16,17 @@ import com.nextpage.presentation.viewmodel.reader.lifecycle.ReadingSessionRecord
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 
@@ -54,6 +59,7 @@ class ReaderLifecycleStateHolder(
         private const val MAX_PROGRESS_PERCENT = 99f
         private const val READING_TIME_TICK_MS = 60_000L
         private const val MILLIS_PER_MINUTE = 60_000L
+        private const val CHAPTER_TEXT_LIMIT = 600
     }
 
     data class PaginationInfo(
@@ -121,6 +127,89 @@ class ReaderLifecycleStateHolder(
     // loadEpoch preserved via epubLoader epoch (single source; pdf path increments separately but facade exposes unified)
     private val loadEpoch: Long
         get() = epubLoader.loadEpoch
+
+    /**
+     * Derives the split-settings preview text from the current chapter's
+     * real content (EPUB only) into session-owned [ReaderLifecycleState.previewText].
+     *
+     * Session-side owner of the `previewText` derivation (SDD
+     * reader-uiState-cleanup, gate 1.3): same trigger
+     * (`bookFormat` + `readiumPublication` + `currentChapterIndex`,
+     * distinct) and same extraction as the ViewModel collector it shadows.
+     * PDFs have no extractable HTML text, so `previewText` stays blank and
+     * callers fall back to the selected text / chapter title.
+     *
+     * Scope ownership: the feed runs in a holder-owned [previewScope],
+     * cancelled in [onCleared], instead of the injected [scope] — it is an
+     * app-lifetime reactive feed with no paired stop action (unlike the
+     * ticker/observer jobs started on explicit calls), so it must not
+     * become an uncompletable child of a caller-owned test scope.
+     * PR #2 (facade removal) must carry this feed into the surviving
+     * lifecycle collaborator.
+     *
+     * Interim dual-write: the ViewModel collector feeding
+     * `mutableUiState.previewText` stays until S4 migrates
+     * `ReaderScreenOverlaysHost` to `sessionUiState.previewText` and deletes
+     * it there — both compute the identical excerpt, so values agree.
+     */
+    private val previewScope = CoroutineScope(SupervisorJob() + mainDispatcher)
+
+    init {
+        startPreviewDerivation()
+    }
+
+    private fun startPreviewDerivation() {
+        previewScope.launch(mainDispatcher) {
+            _state
+                .map { Triple(it.bookFormat, it.readiumPublication, it.currentChapterIndex) }
+                .distinctUntilChanged()
+                .collect { (bookFormat, publication, chapterIndex) ->
+                    val excerpt = extractChapterPreviewText(publication, bookFormat, chapterIndex)
+                    _state.update { current ->
+                        current.copy(previewText = excerpt ?: "")
+                    }
+                }
+        }
+    }
+
+    /**
+     * Extracts a plain-text excerpt (~600 chars) of the chapter at
+     * [chapterIndex] from the current Readium [Publication]. Returns `null`
+     * for PDFs and any resource that cannot be read.
+     */
+    private suspend fun extractChapterPreviewText(
+        publication: Publication?,
+        bookFormat: String?,
+        chapterIndex: Int
+    ): String? {
+        if (publication == null || bookFormat != "epub") return null
+        return withContext(Dispatchers.IO) {
+            try {
+                // chapterIndex is TOC list position, NOT spine index — resolve via chapters mapping
+                val chapters = _state.value.chapters
+                val link = if (chapterIndex in chapters.indices) {
+                    val ch = chapters[chapterIndex]
+                    val normFile = ch.href.substringBefore('#').substringBefore('?').substringAfterLast('/').lowercase()
+                    publication.readingOrder.firstOrNull {
+                        it.href.toString().substringAfterLast('/').substringBefore('#').substringBefore('?').lowercase() == normFile
+                    } ?: publication.readingOrder.getOrNull(ch.index)
+                    ?: publication.readingOrder.getOrNull(chapterIndex)
+                } else {
+                    publication.readingOrder.getOrNull(chapterIndex)
+                } ?: return@withContext null
+                val resource = publication.get(link) ?: return@withContext null
+                val readResult = resource.read()
+                val bytes = readResult.getOrNull() ?: return@withContext null
+                bytes.decodeToString()
+                    .replace(Regex("<[^>]*>"), "")
+                    .replace(Regex("\\s+"), " ")
+                    .trim()
+                    .take(CHAPTER_TEXT_LIMIT)
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
 
     @Deprecated("Delegate to ReadingSessionRecorder — to be removed in PR #2")
     fun setActiveUserId(userId: String) {
@@ -288,6 +377,7 @@ class ReaderLifecycleStateHolder(
     fun onReaderBackgrounded() = sessionRecorder.onReaderBackgrounded()
 
     fun onCleared() {
+        previewScope.cancel()
         sessionRecorder.onCleared()
         progressTracker.onCleared()
         epubLoader.onCleared()

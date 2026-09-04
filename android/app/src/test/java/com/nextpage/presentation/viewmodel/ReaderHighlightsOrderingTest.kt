@@ -36,6 +36,9 @@ class ReaderHighlightsOrderingTest {
     fun `rapid consecutive highlight updates resolve latest-wins`() = runTest {
         val highlightsFlow = MutableStateFlow<List<Highlight>>(emptyList())
         val viewModel = createViewModel(testScheduler, highlightsFlow)
+        // S7: the holder observes Room directly (wired via onBookLoaded in
+        // production); drive the surviving mechanism.
+        viewModel.interactionHolder.observeBook("book-1")
         runCurrent()
 
         highlightsFlow.value = listOf(highlight("h1"))
@@ -47,9 +50,10 @@ class ReaderHighlightsOrderingTest {
     }
 
     @Test
-    fun `highlight emissions never duplicate across merge paths`() = runTest {
+    fun `highlight emissions never duplicate through the holder observation`() = runTest {
         val highlightsFlow = MutableStateFlow<List<Highlight>>(emptyList())
         val viewModel = createViewModel(testScheduler, highlightsFlow)
+        viewModel.interactionHolder.observeBook("book-1")
         runCurrent()
 
         highlightsFlow.value = listOf(highlight("h1"), highlight("h2"))

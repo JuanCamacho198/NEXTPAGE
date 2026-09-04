@@ -45,6 +45,7 @@ import com.nextpage.presentation.screen.reader.ReaderScreenOverlaysHost
 import com.nextpage.presentation.screen.reader.rememberReaderSelectionCallbacks
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.ReaderViewModel
+import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 import com.nextpage.ui.components.molecules.ReadingProgressBar
 import kotlinx.coroutines.flow.MutableSharedFlow
 
@@ -58,6 +59,8 @@ fun ReaderScreen(
     viewModel: ReaderViewModel,
     onNavigateBack: () -> Unit = {}
 ) {
+    // SDD reader-uiState-cleanup S5: retained solely for the S6-owned DebugPanel
+    // pass-through below; every chrome/header/content read now uses slices.
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchUiState by viewModel.searchUiState.collectAsStateWithLifecycle()
     val chromeUiState by viewModel.chromeUiState.collectAsStateWithLifecycle()
@@ -79,10 +82,10 @@ fun ReaderScreen(
     var controlsVisible by remember(chromeUiState.isFullscreen) { mutableStateOf(true) }
     var lastInteractionAt by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
 
-    val isSelectionActive = uiState.selectionState != com.nextpage.presentation.viewmodel.reader.ReaderSelectionState.None ||
-        uiState.showTagInput ||
-        uiState.showDefinitionInput ||
-        uiState.showColorPickerPopover
+    val isSelectionActive = annotationUiState.selectionState != ReaderSelectionState.None ||
+        annotationUiState.showTagInput ||
+        annotationUiState.showDefinitionInput ||
+        annotationUiState.showColorPickerPopover
 
     val onUserInteraction: () -> Unit = { lastInteractionAt = SystemClock.elapsedRealtime() }
 
@@ -144,7 +147,7 @@ fun ReaderScreen(
             controlsVisible = controlsVisible,
             header = {
                 ReaderHeader(
-                    uiState = uiState,
+                    chapters = sessionUiState.chapters,
                     onNavigateBack = onNavigateBack,
                     onToggleSearch = { viewModel.searchStateHolder.onToggleSearch() },
                     onToggleHighlights = { viewModel.onToggleHighlightsPanel() },
@@ -253,15 +256,15 @@ fun ReaderScreen(
                 onForceColorPicker = { viewModel.onDebugForceColorPicker() },
                 onForceContextMenu = { viewModel.onDebugForceMenu() },
                 onSimulateHighlightTap = {
-                    val first = uiState.highlights.firstOrNull { it.locatorJson != null }
+                    val first = annotationUiState.highlights.firstOrNull { it.locatorJson != null }
                     if (first == null) {
                         DebugLog.warn("Debug", "Simulate-tap: no highlights to simulate")
                     } else {
                         val fakeRect = android.graphics.RectF(
-                            uiState.selectionRect?.left?.toFloat() ?: 200f,
-                            uiState.selectionRect?.top?.toFloat() ?: 200f,
-                            (uiState.selectionRect?.right ?: 600).toFloat(),
-                            (uiState.selectionRect?.bottom ?: 250).toFloat()
+                            annotationUiState.selectionRect?.left?.toFloat() ?: 200f,
+                            annotationUiState.selectionRect?.top?.toFloat() ?: 200f,
+                            (annotationUiState.selectionRect?.right ?: 600).toFloat(),
+                            (annotationUiState.selectionRect?.bottom ?: 250).toFloat()
                         )
                         DebugLog.info("Debug", "Simulate-tap: forcing onHighlightTapped for id=${first.id}")
                         viewModel.onHighlightTapped(first, fakeRect)

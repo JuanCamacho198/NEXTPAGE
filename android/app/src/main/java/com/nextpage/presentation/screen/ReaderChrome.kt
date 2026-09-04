@@ -54,7 +54,7 @@ import androidx.compose.ui.zIndex
 import com.nextpage.R
 import com.nextpage.debug.DebugPrefs
 import com.nextpage.presentation.theme.NextPageTheme
-import com.nextpage.presentation.viewmodel.ReaderUiState
+import com.nextpage.presentation.viewmodel.reader.BookChapter
 import com.nextpage.ui.icons.NextPageIcons
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -167,7 +167,7 @@ fun ReaderChrome(
 
 @Composable
 fun ReaderHeader(
-    uiState: ReaderUiState,
+    chapters: List<BookChapter>,
     onNavigateBack: () -> Unit,
     onToggleSearch: () -> Unit,
     onToggleHighlights: () -> Unit,
@@ -221,7 +221,7 @@ fun ReaderHeader(
             )
 
             // Index / TOC — hidden for books with no chapter list
-            if (uiState.chapters.isNotEmpty()) {
+            if (chapters.isNotEmpty()) {
                 HeaderActionButton(
                     icon = NextPageIcons.ListBullets,
                     contentDescription = stringResource(R.string.reader_toc),

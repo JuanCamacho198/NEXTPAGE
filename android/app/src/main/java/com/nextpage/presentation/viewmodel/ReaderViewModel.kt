@@ -28,6 +28,7 @@ import com.nextpage.presentation.viewmodel.reader.ReaderLifecycleStateHolder
 import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 import com.nextpage.presentation.viewmodel.reader.ReaderSettingsManager
 import com.nextpage.presentation.viewmodel.reader.SearchStateHolder
+import com.nextpage.presentation.viewmodel.reader.SearchUiState
 import com.nextpage.presentation.viewmodel.reader.SleepTimerManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -35,9 +36,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -45,6 +46,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -435,7 +437,8 @@ class ReaderUiState(
  * settings, and fullscreen. Delegates focused sub-domains to dedicated
  * state holders (`lifecycleHolder`, `interactionHolder`, `searchStateHolder`,
  * `fullscreenManager`, `settingsManager`, `sleepTimerManager`) and merges
- * their state streams into a single [ReaderUiState] in `init`.
+ * their state streams into [ReaderUiState] (`init` collectors plus a
+ * combine overlay for the migrated search slice — see [searchUiState]).
  *
  * Public actions are grouped by responsibility — see the section comments
  * throughout this file. The largest public surface is the text-selection
@@ -466,20 +469,6 @@ class ReaderViewModel(
     private val mutableUiState = MutableStateFlow(
         ReaderUiState(selectedBookId = defaultBookId)
     )
-    /**
-     * Aggregate reader UI state consumed by the ReaderScreen.
-     *
-     * **Emits when**: any underlying state holder (`lifecycleHolder`,
-     *                `interactionHolder`, `searchStateHolder`,
-     *                `fullscreenManager`, `settingsManager`, or
-     *                `sleepTimerManager`) emits a new value, or any
-     *                public action mutates state directly.
-     * **Initial value**: [ReaderUiState] with `selectedBookId = defaultBookId`
-     *                    and `isLoading = true` (or `false` if no
-     *                    `defaultBookId` was supplied).
-     * **Lifecycle**: hot, lifetime-scoped to the ViewModel.
-     */
-    val uiState: StateFlow<ReaderUiState> = mutableUiState.asStateFlow()
 
     /**
      * Sleep timer manager — exposes the timer state and controls.
@@ -521,7 +510,14 @@ class ReaderViewModel(
 
     // ── Cluster C state holders (extracted responsibilities) ──────────
 
-    private val searchStateHolder = SearchStateHolder(
+    /**
+     * Search slice owner (SDD reader-facade-split, slice 1).
+     *
+     * Screens stay VM-scoped: they reach the owner through the VM
+     * (`viewModel.searchStateHolder`), never via a direct holder import.
+     * Only this holder holds the search MutableStateFlow and mutating funs.
+     */
+    val searchStateHolder = SearchStateHolder(
         scope = viewModelScope,
         onNavigateToLocator = { loc -> viewModelScope.launch { _navigateToLocator.emit(loc) } },
         onGoToChapter = { this.goToChapter(it) },
@@ -568,21 +564,55 @@ class ReaderViewModel(
      */
     val clearSelectionEvent: SharedFlow<Unit> = interactionHolder.clearSelectionEvent
 
+    /**
+     * Search slice re-export (SDD reader-facade-split, slice 1).
+     *
+     * Read-only view of the search owner state — the single source of truth
+     * for active flag, query, results, and in-flight flag. Collect this
+     * directly; the search fields on [uiState] are a back-compat mirror
+     * kept until T7 deletes the combined flow.
+     */
+    val searchUiState: StateFlow<SearchUiState> = searchStateHolder.state
+
+    /**
+     * Aggregate reader UI state consumed by the ReaderScreen.
+     *
+     * **Emits when**: any underlying state holder (`lifecycleHolder`,
+     *                `interactionHolder`, `fullscreenManager`,
+     *                `settingsManager`, or `sleepTimerManager`) emits a new
+     *                value, any public action mutates state directly, or the
+     *                search slice emits (overlaid via the combine below).
+     * **Initial value**: [ReaderUiState] with `selectedBookId = defaultBookId`
+     *                    and `isLoading = true` (or `false` if no
+     *                    `defaultBookId` was supplied).
+     * **Lifecycle**: hot, lifetime-scoped to the ViewModel. Started eagerly
+     *                so `.value` stays live for non-collecting readers until
+     *                T7 deletes this flow (a `WhileSubscribed` start would
+     *                serve stale initials to them).
+     */
+    val uiState: StateFlow<ReaderUiState> = combine(
+        searchStateHolder.state,
+        mutableUiState
+    ) { search, rest ->
+        rest.copy(
+            isSearchActive = search.isSearchActive,
+            searchQuery = search.searchQuery,
+            searchResults = search.searchResults,
+            isSearching = search.isSearching
+        )
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, ReaderUiState(selectedBookId = defaultBookId))
+
     init {
-        // Merge Cluster C state holders into ReaderUiState
+        // Merge Cluster C state holders into ReaderUiState (search slice
+        // ships its own re-export now — see searchUiState/uiState combine)
         viewModelScope.launch(mainDispatcher) {
             combine(
-                searchStateHolder.state,
                 fullscreenManager.state,
                 settingsManager.state
-            ) { search, fs, s -> Triple(search, fs, s) }
-                .collect { (search, fs, s) ->
+            ) { fs, s -> Pair(fs, s) }
+                .collect { (fs, s) ->
                     mutableUiState.update { current ->
                         current.copy(
-                            isSearchActive = search.isSearchActive,
-                            searchQuery = search.searchQuery,
-                            searchResults = search.searchResults,
-                            isSearching = search.isSearching,
                             isFullscreen = fs.isFullscreen,
                             readerSettings = s.readerSettings,
                             showSplitSettings = s.showSplitSettings
@@ -866,27 +896,11 @@ class ReaderViewModel(
     }
 
     // ── Search (Gap 3) ──────────────────────────────────────────────
-
-    /**
-     * Toggles the in-reader search panel visibility. Delegates to
-     * [SearchStateHolder]; the resulting [ReaderUiState.isSearchActive]
-     * is merged back into [uiState].
-     */
-    fun onToggleSearch() = searchStateHolder.onToggleSearch()
-
-    /**
-     * Updates the search query and triggers a debounced search.
-     *
-     * Side effects: delegates to [SearchStateHolder.onSearchQuery] which
-     * debounces input and (for EPUB) uses the active [Publication] to
-     * resolve matches; results land in [ReaderUiState.searchResults].
-     *
-     * @param query The new search text.
-     */
-    fun onSearchQuery(query: String) {
-        val state = mutableUiState.value
-        searchStateHolder.onSearchQuery(query, state.readiumPublication, state.bookFormat)
-    }
+    // Slice 1 (SDD reader-facade-split, T2): search state lives in
+    // [searchStateHolder] and is re-exported as [searchUiState]. The
+    // toggle/query pass-through delegates were deleted — callers reach the
+    // owner through the VM (`viewModel.searchStateHolder`). The funs below
+    // are owner-backed actions still routed via the VM, not pass-throughs.
 
     /** Clears the current search query and results without closing the search panel. */
     fun onClearSearch() = searchStateHolder.onClearSearch()

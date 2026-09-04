@@ -172,7 +172,6 @@ fun ReaderScreen(
             },
             content = {
                 ReaderScreenContentHost(
-                    uiState = uiState,
                     annotationUiState = annotationUiState,
                     settingsUiState = settingsUiState,
                     sessionUiState = sessionUiState,

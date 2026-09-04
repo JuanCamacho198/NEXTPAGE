@@ -23,7 +23,6 @@ import com.nextpage.presentation.screen.ReadiumPdfReaderContent
 import com.nextpage.presentation.screen.ReadiumReaderContent
 import com.nextpage.presentation.screen.readium.buildNavigatorConfig
 import com.nextpage.ui.components.molecules.SelectionOverlay
-import com.nextpage.presentation.viewmodel.ReaderUiState
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.reader.AnnotationUiState
 import com.nextpage.presentation.viewmodel.reader.SessionUiState
@@ -33,7 +32,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 
 @Composable
 fun ReaderScreenContentHost(
-    uiState: ReaderUiState,
     annotationUiState: AnnotationUiState,
     settingsUiState: SettingsUiState,
     sessionUiState: SessionUiState,
@@ -53,16 +51,16 @@ fun ReaderScreenContentHost(
     @Composable
     fun SharedSelectionOverlay() {
         SelectionOverlay(
-            selectionState = uiState.selectionState,
-            showColorPickerPopover = uiState.showColorPickerPopover,
-            showTagInput = uiState.showTagInput,
-            tagSuggestions = uiState.tagSuggestions,
-            activeTagText = uiState.activeTagText,
-            showDefinitionInput = uiState.showDefinitionInput,
-            activeDefinitionText = uiState.activeDefinitionText,
-            selectionRect = uiState.selectionRect,
-            selectedText = uiState.selectedText,
-            highlights = uiState.highlights,
+            selectionState = annotationUiState.selectionState,
+            showColorPickerPopover = annotationUiState.showColorPickerPopover,
+            showTagInput = annotationUiState.showTagInput,
+            tagSuggestions = annotationUiState.tagSuggestions,
+            activeTagText = annotationUiState.activeTagText,
+            showDefinitionInput = annotationUiState.showDefinitionInput,
+            activeDefinitionText = annotationUiState.activeDefinitionText,
+            selectionRect = annotationUiState.selectionRect,
+            selectedText = annotationUiState.selectedText,
+            highlights = annotationUiState.highlights,
             activeHighlightColor = selectionCallbacks.activeOverlayHighlightColor.value,
             customHighlightColors = settingsUiState.readerSettings.customHighlightColors,
             onColorSelected = selectionCallbacks.onColorSelected,
@@ -109,7 +107,7 @@ fun ReaderScreenContentHost(
                 ReadiumReaderContent(
                     publication = readiumPublication,
                     navigatorConfig = buildNavigatorConfig(settingsUiState.readerSettings),
-                    highlights = uiState.highlights,
+                    highlights = annotationUiState.highlights,
                     readerSettings = settingsUiState.readerSettings,
                     viewModel = viewModel,
                     initialLocator = sessionUiState.readiumLocator,

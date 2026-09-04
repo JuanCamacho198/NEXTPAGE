@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -150,7 +151,53 @@ class ReaderSliceCompositionTest {
         assertFalse(viewModel.uiState.value.isFullscreen)
     }
 
-    // TODO T6: assertAnnotationMirror (highlights latest-wins via annotationUiState)
+    // ── Annotation slice (SDD reader-facade-split, T6) ──────────────
+
+    @Test
+    fun `annotation slice mirrors holder state through VM re-export`() = runTest {
+        val viewModel = createViewModel(testScheduler)
+        val highlight = com.nextpage.domain.model.Highlight(
+            id = "hl-1",
+            bookId = "book-1",
+            cfiRange = "epubcfi(/6/2!/4/1)",
+            textContent = "highlighted",
+            note = null,
+            color = com.nextpage.domain.model.HighlightColor.YELLOW.hex,
+            updatedAtEpochMillis = 0L,
+            deletedAtEpochMillis = null
+        )
+        val holder = interactionHolderOf(viewModel)
+        holder.testSetInitialHighlights(listOf(highlight))
+        runCurrent()
+
+        // Slice re-export mirrors the annotation owner (interactionHolder).
+        assertEquals(
+            "annotationUiState must mirror interactionHolder.highlights",
+            listOf("hl-1"),
+            viewModel.annotationUiState.value.highlights.map { it.id }
+        )
+        // Back-compat uiState still carries the annotation fields (the
+        // consumer migration that unblocks T7 deletion reads from uiState).
+        assertEquals(
+            "back-compat uiState must mirror annotation highlights",
+            listOf("hl-1"),
+            viewModel.uiState.value.highlights.map { it.id }
+        )
+        // No cross-slice emission: chrome / session state untouched.
+        assertFalse(viewModel.uiState.value.isFullscreen)
+        assertNull(viewModel.uiState.value.selectedBookId)
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────────
+
+    @Suppress("UNCHECKED_CAST")
+    private fun interactionHolderOf(
+        viewModel: ReaderViewModel
+    ): com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder {
+        val field = ReaderViewModel::class.java.getDeclaredField("interactionHolder")
+        field.isAccessible = true
+        return field.get(viewModel) as com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder
+    }
 
     // ── Helpers ─────────────────────────────────────────────────────
 

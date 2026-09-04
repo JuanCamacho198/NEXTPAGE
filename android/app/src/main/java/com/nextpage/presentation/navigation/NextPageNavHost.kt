@@ -127,8 +127,7 @@ fun NextPageNavHost(
             appContext = context.applicationContext,
             catalogSync = appContainer.supabaseBookCatalogSync,
             readerRepository = appContainer.readerRepository,
-            getBookProgressUseCase = appContainer.getBookProgressUseCase,
-            progressReconciler = appContainer.progressReconciler
+            getBookProgressUseCase = appContainer.getBookProgressUseCase
         )
     )
 

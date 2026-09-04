@@ -93,7 +93,7 @@ fun ReaderScreen(
         }
     }
 
-    val selectionCallbacks = rememberReaderSelectionCallbacks(viewModel, context, uiState)
+    val selectionCallbacks = rememberReaderSelectionCallbacks(viewModel, context, annotationUiState)
 
     val inspectHighlightsHtmlTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
     val logWebViewTreeTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }

@@ -662,9 +662,9 @@ class ReaderViewModel(
      *
      * **Emits when**: any underlying state holder (`lifecycleHolder`,
      *                `interactionHolder`) emits a new value, any public action
-     *                mutates state directly, or one of the migrated slices
-     *                (search, chrome, settings, sleep timer, session) emits
-     *                (overlaid via the combine below).
+     * mutates state directly, or one of the migrated slices
+     * (search, chrome, settings, sleep timer, session, annotation) emits
+     * (overlaid via the combine below).
      * **Initial value**: [ReaderUiState] with `selectedBookId = defaultBookId`
      *                    and `isLoading = true` (or `false` if no
      *                    `defaultBookId` was supplied).
@@ -672,6 +672,39 @@ class ReaderViewModel(
      *                so `.value` stays live for non-collecting readers until
      *                T7 deletes this flow (a `WhileSubscribed` start would
      *                serve stale initials to them).
+     *
+     * **T7 deletion gate (SDD reader-facade-split, spec requirement 6)**:
+     * this flow stays as a back-compat aggregate until the consumer
+     * migration unblocks deletion. Per the spec: "deletion blocked until
+     * zero usages remain". At PR-D close the live consumers are:
+     *  - `presentation/screen/ReaderScreen.kt` (line 61:
+     *    `val uiState by viewModel.uiState.collectAsStateWithLifecycle()`)
+     *  - `presentation/debug/DebugPanel.kt` (line 70:
+     *    `val readerStateFlow = readerViewModel?.uiState`)
+     *  - `presentation/screen/reader/ReaderScreenContentHost.kt` (reads
+     *    `uiState.selectionState`, `uiState.showColorPickerPopover`,
+     *    `uiState.showTagInput`, `uiState.showDefinitionInput`,
+     *    `uiState.selectionRect`, `uiState.selectedText`,
+     *    `uiState.highlights`)
+     *  - `presentation/screen/reader/ReaderScreenOverlaysHost.kt` (reads
+     *    `uiState.showHighlightsSheet`, `uiState.highlights`,
+     *    `uiState.selectedText`, `uiState.showNoteModal`)
+     *  - `presentation/screen/reader/ReaderSelectionCallbacks.kt` (reads
+     *    `uiState.highlights`, `uiState.activeHighlightId`,
+     *    `uiState.selectedText`, `uiState.selectionState`)
+     *  - `presentation/screen/ReadiumPdfReaderContent.kt` (reads
+     *    `uiState.highlights`)
+     *
+     * Until all six migrate to slice flows (`searchUiState`,
+     * `chromeUiState`, `settingsUiState`, `sleepTimerUiState`,
+     * `sessionUiState`, `annotationUiState`), T7 deletion is blocked and
+     * the 5+1-way combine overlay below MUST stay. Removing it now would
+     * be a spec violation and a hard regression risk for the
+     * annotation/highlights flow (which the panel reads via
+     * `uiState.highlights`). The follow-up PR (after this PR-D) is
+     * responsible for the consumer migration; PR-D only records the gate
+     * state and adds the [ReaderViewModelFinalSweepTest] reflection guard
+     * to keep deletion honest.
      */
     // Phase-A back-compat overlay, slices 1-3 (search, chrome, settings,
     // sleep timer). Unchanged by T5; the session overlay below stages on top.

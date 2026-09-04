@@ -454,10 +454,12 @@ fun NextPageNavHost(
 
         // ── Debug Panel Sheet ──────────────────────────────────────────
         if (showDebugSheet) {
+            // SDD reader-uiState-cleanup S6: panel takes the session slice, not the VM.
+            val readerSessionUiState by readerViewModel.sessionUiState.collectAsStateWithLifecycle()
             DebugPanel(
                 viewModel = debugViewModel,
                 authViewModel = authViewModel,
-                readerViewModel = readerViewModel,
+                session = readerSessionUiState,
                 syncService = appContainer.syncService,
                 onDismiss = { showDebugSheet = false }
             )

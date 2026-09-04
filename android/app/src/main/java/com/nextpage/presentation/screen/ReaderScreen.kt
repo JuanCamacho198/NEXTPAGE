@@ -59,9 +59,8 @@ fun ReaderScreen(
     viewModel: ReaderViewModel,
     onNavigateBack: () -> Unit = {}
 ) {
-    // SDD reader-uiState-cleanup S5: retained solely for the S6-owned DebugPanel
-    // pass-through below; every chrome/header/content read now uses slices.
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // SDD reader-uiState-cleanup S6: every read below uses slices; the
+    // DebugPanel takes the annotation slice directly, so no uiState collect.
     val searchUiState by viewModel.searchUiState.collectAsStateWithLifecycle()
     val chromeUiState by viewModel.chromeUiState.collectAsStateWithLifecycle()
     val settingsUiState by viewModel.settingsUiState.collectAsStateWithLifecycle()
@@ -251,7 +250,7 @@ fun ReaderScreen(
         if (BuildConfig.DEBUG && DebugPrefs.isEnabled(context)) {
             DebugPanel(
                 visible = debugPanelVisible,
-                state = uiState,
+                annotation = annotationUiState,
                 onClose = { debugPanelVisible = false },
                 onForceColorPicker = { viewModel.onDebugForceColorPicker() },
                 onForceContextMenu = { viewModel.onDebugForceMenu() },

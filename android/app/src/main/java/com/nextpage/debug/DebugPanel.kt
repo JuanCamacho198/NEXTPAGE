@@ -34,7 +34,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
-import com.nextpage.presentation.viewmodel.ReaderUiState
+import com.nextpage.presentation.viewmodel.reader.AnnotationUiState
+import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 import com.nextpage.ui.icons.NextPageIcons
 import android.os.SystemClock
 
@@ -45,11 +46,28 @@ import android.os.SystemClock
  * - Shows real-time selection / ActionMode / highlight-tap state and the
  *   full [DebugLog] history so the user can diagnose why the custom
  *   color-picker / context menu overlays fail to appear.
+ * - All reads come from the annotation slice ([AnnotationUiState]); this file
+ *   must not read `ReaderViewModel.uiState` (SDD reader-uiState-cleanup S6).
+ *
+ * Product note (S6, same live-fix precedent as the S2 tint decision): the
+ * previous `uiState.activeHighlightId` read was dead — the aggregate field has
+ * zero writers and is always null, so the panel always rendered "—". The id
+ * derives live from the coordinator-owned selection
+ * (`selectionState as? Existing`), which ACTIVATES the readout: tapping an
+ * existing highlight now shows its id. Flag to product if bug-compatible-null
+ * (always-"—") is ever preferred.
+ *
+ * Debounce parity note (S6): the previous `uiState.highlightTapDebounceUntil`
+ * read was likewise dead — the aggregate field has zero writers and is always
+ * 0L, so the panel always rendered "0 ms". [highlightTapDebounceUntil] keeps
+ * that exact readout via its default; it is a seam for wiring the live
+ * coordinator value later, not a behavior change today.
  */
 @Composable
 fun DebugPanel(
     visible: Boolean,
-    state: ReaderUiState,
+    annotation: AnnotationUiState,
+    highlightTapDebounceUntil: Long = 0L,
     onClose: () -> Unit,
     onForceColorPicker: () -> Unit,
     onForceContextMenu: () -> Unit,
@@ -67,8 +85,12 @@ fun DebugPanel(
     val highlight by DebugStateHolder.highlight.collectAsStateWithLifecycle()
     val decoration by DebugStateHolder.decoration.collectAsStateWithLifecycle()
 
+    // Live-fix (S6): coordinator-owned selection; the uiState mirror was always null.
+    val activeHighlightId =
+        (annotation.selectionState as? ReaderSelectionState.Existing)?.highlight?.id
+
     val debounceRemainingMs = run {
-        val until = state.highlightTapDebounceUntil
+        val until = highlightTapDebounceUntil
         if (until <= 0L) 0L else (until - SystemClock.elapsedRealtime()).coerceAtLeast(0L)
     }
 
@@ -109,19 +131,19 @@ fun DebugPanel(
             // ── Selection state ───────────────────────────────────
             DebugSectionCard(title = stringResource(R.string.debug_section_selection)) {
                 DebugKeyValue(stringResource(R.string.debug_kv_selected_text),
-                    state.selectedText?.take(50) ?: "—")
+                    annotation.selectedText?.take(50) ?: "—")
                 DebugKeyValue(stringResource(R.string.debug_kv_selection_rect),
-                    state.selectionRect?.toString() ?: "—")
+                    annotation.selectionRect?.toString() ?: "—")
                 DebugKeyValue(
                     "selectionState",
-                    state.selectionState::class.simpleName ?: "—"
+                    annotation.selectionState::class.simpleName ?: "—"
                 )
                 DebugKeyValue(
                     "showColorPickerPopover",
-                    state.showColorPickerPopover.toString()
+                    annotation.showColorPickerPopover.toString()
                 )
                 DebugKeyValue(stringResource(R.string.debug_kv_active_highlight_id),
-                    state.activeHighlightId ?: "—")
+                    activeHighlightId ?: "—")
                 DebugKeyValue(stringResource(R.string.debug_kv_debounce_remaining_ms),
                     "${debounceRemainingMs} ms")
             }

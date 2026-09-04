@@ -21,6 +21,7 @@ import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.presentation.UiEvent
+import com.nextpage.presentation.viewmodel.reader.AnnotationUiState
 import com.nextpage.presentation.viewmodel.reader.ChromeUiState
 import com.nextpage.presentation.viewmodel.reader.FullscreenManager
 import com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder
@@ -637,6 +638,26 @@ class ReaderViewModel(
     val sessionUiState: StateFlow<SessionUiState> = lifecycleHolder.state
 
     /**
+     * Annotation slice re-export (SDD reader-facade-split, slice 5).
+     *
+     * Read-only view of the annotation owner state — the single source of
+     * truth for text selection, highlights, bookmarks, note modal, tag
+     * input, highlights panel, and the definition input. Collect this
+     * directly; the corresponding fields on [uiState] are a back-compat
+     * mirror kept until T7 deletes the combined flow.
+     *
+     * Owner: `interactionHolder` ([ReaderInteractionStateHolder]) — the
+     * deprecated PR #3 facade. The slice name ([AnnotationUiState]) is
+     * stable; once PR #3 lands and the facade is replaced by direct
+     * `InteractionStateStore` access, this re-export keeps pointing at the
+     * same flow type. Annotation delegates on the VM are `@Deprecated` —
+     * prefer `viewModel.annotationUiState` for reads and
+     * `viewModel.interactionHolder.X` for writes (the holder is reachable
+     * through the VM, never imported directly from screens).
+     */
+    val annotationUiState: StateFlow<AnnotationUiState> = interactionHolder.state
+
+    /**
      * Aggregate reader UI state consumed by the ReaderScreen.
      *
      * **Emits when**: any underlying state holder (`lifecycleHolder`,
@@ -929,6 +950,10 @@ class ReaderViewModel(
      * Handles a tap on an existing [highlight], opening the highlight
      * action menu anchored to [rect].
      */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onHighlightTapped(...) directly",
+        ReplaceWith("viewModel.interactionHolder.onHighlightTapped(highlight, rect)")
+    )
     fun onHighlightTapped(highlight: Highlight, rect: RectF) =
         interactionHolder.onHighlightTapped(highlight, rect)
 
@@ -936,6 +961,10 @@ class ReaderViewModel(
      * Low-level text-selection event from the WebView (coordinates + text).
      * Prefer [onTextSelection] for new code paths.
      */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onTextSelectionEvent(...) directly",
+        ReplaceWith("viewModel.interactionHolder.onTextSelectionEvent(text, left, top, right, bottom)")
+    )
     fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) =
         interactionHolder.onTextSelectionEvent(text, left, top, right, bottom)
 
@@ -944,6 +973,10 @@ class ReaderViewModel(
      * menu anchored to [rect] and exposes the selected text via
      * [ReaderUiState.selectedText].
      */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onTextSelection(...) directly",
+        ReplaceWith("viewModel.interactionHolder.onTextSelection(text, rect)")
+    )
     fun onTextSelection(text: String, rect: Rect) =
         interactionHolder.onTextSelection(text, rect)
 
@@ -952,6 +985,10 @@ class ReaderViewModel(
      * selection. Uses the current locator (Readium) or page (PDF) to
      * store the position.
      */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onSelectHighlightColor(...) directly",
+        ReplaceWith("viewModel.interactionHolder.onSelectHighlightColor(...)")
+    )
     fun onSelectHighlightColor(color: String) {
         val session = lifecycleHolder.state.value
         interactionHolder.onSelectHighlightColor(
@@ -966,9 +1003,17 @@ class ReaderViewModel(
     }
 
     /** Copies the current [ReaderUiState.selectedText] to the system clipboard. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onCopySelectedText() directly",
+        ReplaceWith("viewModel.interactionHolder.onCopySelectedText()")
+    )
     fun onCopySelectedText() = interactionHolder.onCopySelectedText()
 
     /** Dismisses the active selection context menu without committing an action. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onDismissContextMenu() directly",
+        ReplaceWith("viewModel.interactionHolder.onDismissContextMenu()")
+    )
     fun onDismissContextMenu() = interactionHolder.onDismissContextMenu()
 
     /**
@@ -976,6 +1021,10 @@ class ReaderViewModel(
      * [text] in [ReaderUiState.readiumSelectionLocator] / [selectedText]
      * and shows the context menu anchored to [rect].
      */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onReadiumSelection(...) directly",
+        ReplaceWith("viewModel.interactionHolder.onReadiumSelection(locator, rect, text, viewModel.uiState.value.highlights)")
+    )
     fun onReadiumSelection(locator: Locator, rect: RectF, text: String) {
         interactionHolder.onReadiumSelection(
             locator = locator,
@@ -990,6 +1039,10 @@ class ReaderViewModel(
      * Readium-side highlight selection). Emits on [clearSelectionEvent]
      * so the WebView/Readium layer can clear its native selection.
      */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onSelectionCleared() directly",
+        ReplaceWith("viewModel.interactionHolder.onSelectionCleared()")
+    )
     fun onSelectionCleared() {
         interactionHolder.onSelectionCleared()
     }
@@ -997,23 +1050,43 @@ class ReaderViewModel(
     // ── Colour Picker Popover (Phase 2) ───────────────────────────
 
     /** Shows the color-picker popover anchored near the current selection. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onShowColorPickerPopover() directly",
+        ReplaceWith("viewModel.interactionHolder.onShowColorPickerPopover()")
+    )
     fun onShowColorPickerPopover() = interactionHolder.onShowColorPickerPopover()
 
     /** Dismisses the color-picker popover. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onDismissColorPickerPopover() directly",
+        ReplaceWith("viewModel.interactionHolder.onDismissColorPickerPopover()")
+    )
     fun onDismissColorPickerPopover() = interactionHolder.onDismissColorPickerPopover()
 
     // ── Note Modal ───────────────────────────────────────────────
 
     /** Opens the note modal for the active selection. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onShowNoteModal() directly",
+        ReplaceWith("viewModel.interactionHolder.onShowNoteModal()")
+    )
     fun onShowNoteModal() = interactionHolder.onShowNoteModal()
 
     /** Dismisses the note modal without saving. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onDismissNoteModal() directly",
+        ReplaceWith("viewModel.interactionHolder.onDismissNoteModal()")
+    )
     fun onDismissNoteModal() = interactionHolder.onDismissNoteModal()
 
     /**
      * Saves the note [text] attached to the current selection and dismisses
      * the note modal.
      */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onSaveNote(text) directly",
+        ReplaceWith("viewModel.interactionHolder.onSaveNote(text)")
+    )
     fun onSaveNote(text: String) = interactionHolder.onSaveNote(text)
 
     // ── Annotate (unified note/comment) ──────────────────────────
@@ -1023,6 +1096,9 @@ class ReaderViewModel(
      * with a note, no specific category). Uses the current Readium locator
      * or PDF page to anchor the annotation.
      */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onAnnotate(...) directly"
+    )
     fun onAnnotate() {
         val session = lifecycleHolder.state.value
         interactionHolder.onAnnotate(
@@ -1037,35 +1113,71 @@ class ReaderViewModel(
     // ── Anchored Tag Input ───────────────────────────────────────
 
     /** Opens the tag input anchored near the current selection. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onShowTagInput() directly",
+        ReplaceWith("viewModel.interactionHolder.onShowTagInput()")
+    )
     fun onShowTagInput() = interactionHolder.onShowTagInput()
 
     /** Dismisses the tag input. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onDismissTagInput() directly",
+        ReplaceWith("viewModel.interactionHolder.onDismissTagInput()")
+    )
     fun onDismissTagInput() = interactionHolder.onDismissTagInput()
 
     /** Updates the in-progress tag text and refreshes tag suggestions. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onTagTextChanged(text) directly",
+        ReplaceWith("viewModel.interactionHolder.onTagTextChanged(text)")
+    )
     fun onTagTextChanged(text: String) = interactionHolder.onTagTextChanged(text)
 
     /** Saves the current tag text against the active selection. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onSaveTag(text) directly",
+        ReplaceWith("viewModel.interactionHolder.onSaveTag(text)")
+    )
     fun onSaveTag(text: String) = interactionHolder.onSaveTag(text)
 
     // ── Anchored Definition Input ─────────────────────────────────
 
     /** Opens the dictionary-definition input anchored near the current selection. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onShowDefinitionInput() directly",
+        ReplaceWith("viewModel.interactionHolder.onShowDefinitionInput()")
+    )
     fun onShowDefinitionInput() = interactionHolder.onShowDefinitionInput()
 
     /** Dismisses the definition input. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onDismissDefinitionInput() directly",
+        ReplaceWith("viewModel.interactionHolder.onDismissDefinitionInput()")
+    )
     fun onDismissDefinitionInput() = interactionHolder.onDismissDefinitionInput()
 
     /** Updates the in-progress definition text. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onDefinitionTextChanged(text) directly",
+        ReplaceWith("viewModel.interactionHolder.onDefinitionTextChanged(text)")
+    )
     fun onDefinitionTextChanged(text: String) = interactionHolder.onDefinitionTextChanged(text)
 
     /** Saves the typed definition against the active selection. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onSaveDefinition(definition) directly",
+        ReplaceWith("viewModel.interactionHolder.onSaveDefinition(definition)")
+    )
     fun onSaveDefinition(definition: String) = interactionHolder.onSaveDefinition(definition)
 
     /**
      * Adds the selected word (with its definition) to the user's dictionary.
      * Requires [dictionaryRepository] to be wired at construction time.
      */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onAddToDictionary() directly",
+        ReplaceWith("viewModel.interactionHolder.onAddToDictionary()")
+    )
     fun onAddToDictionary() = interactionHolder.onAddToDictionary()
 
     // ── Share ────────────────────────────────────────────────────
@@ -1074,6 +1186,10 @@ class ReaderViewModel(
      * Fires a share intent for the currently selected text. Delegates to
      * the interaction holder, which routes through [uiEvent].
      */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onShareSelectedText(text) directly",
+        ReplaceWith("viewModel.interactionHolder.onShareSelectedText(text ?: viewModel.uiState.value.selectedText)")
+    )
     fun onShareSelectedText(text: String? = null) {
         val shareText = text ?: mutableUiState.value.selectedText
         interactionHolder.onShareSelectedText(shareText)
@@ -1086,6 +1202,9 @@ class ReaderViewModel(
      * EPUB selection. Mirrors [onSelectHighlightColor] but is invoked from
      * the Readium-native highlight menu.
      */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onReadiumHighlightColorSelected(...) directly"
+    )
     fun onReadiumHighlightColorSelected(color: String) {
         val session = lifecycleHolder.state.value
         interactionHolder.onReadiumHighlightColorSelected(
@@ -1102,26 +1221,46 @@ class ReaderViewModel(
     /**
      * Deletes the Readium highlight identified by [highlightId].
      */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onReadiumDeleteHighlight(highlightId) directly",
+        ReplaceWith("viewModel.interactionHolder.onReadiumDeleteHighlight(highlightId)")
+    )
     fun onReadiumDeleteHighlight(highlightId: String) =
         interactionHolder.onReadiumDeleteHighlight(highlightId)
 
     /**
      * Updates the color of an existing Readium highlight to [color].
      */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onReadiumUpdateHighlightColor(highlightId, color) directly",
+        ReplaceWith("viewModel.interactionHolder.onReadiumUpdateHighlightColor(highlightId, color)")
+    )
     fun onReadiumUpdateHighlightColor(highlightId: String, color: String) =
         interactionHolder.onReadiumUpdateHighlightColor(highlightId, color)
 
     // ── Debug: Force menu visibility ──────────────────────────────
 
     /** Debug-only: forces the selection context menu to open for UI testing. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onDebugForceMenu() directly",
+        ReplaceWith("viewModel.interactionHolder.onDebugForceMenu()")
+    )
     fun onDebugForceMenu() = interactionHolder.onDebugForceMenu()
 
     /** Debug-only: forces the color picker popover to open for UI testing. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onDebugForceColorPicker() directly",
+        ReplaceWith("viewModel.interactionHolder.onDebugForceColorPicker()")
+    )
     fun onDebugForceColorPicker() = interactionHolder.onDebugForceColorPicker()
 
     // ── Highlights Panel (Gap 5) ────────────────────────────────────
 
     /** Toggles the highlights panel sheet visibility. */
+    @Deprecated(
+        "Annotation delegate — call viewModel.interactionHolder.onToggleHighlightsPanel() directly",
+        ReplaceWith("viewModel.interactionHolder.onToggleHighlightsPanel()")
+    )
     fun onToggleHighlightsPanel() = interactionHolder.onToggleHighlightsPanel()
 
     // Slice 4 (SDD reader-facade-split, T5): the onToggleTocSheet

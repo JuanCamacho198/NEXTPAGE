@@ -5,6 +5,27 @@ import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 
 /**
+ * Annotation slice alias (SDD reader-facade-split, slice 5): VM re-export
+ * type. The annotation owner is [ReaderInteractionStateHolder] (still the
+ * deprecated PR #3 facade at PR-D time; PR-D does not remove it — that
+ * lands with PR #3 itself, after which the slice's owner becomes the
+ * [com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore]
+ * shared across the 5 interaction managers). The typealias keeps the public
+ * slice name stable across that transition.
+ *
+ * Fields map to the design's `AnnotationUiState(selection, highlights,
+ * bookmarks, annotations, noteModal, tagInput, panel, toc)`: `selection*`
+ * covers selectionState/selectedText/selectionRect; `highlights` carries
+ * annotations (note/tag/colour per entry); `bookmarks` is its own stream;
+ * `showNoteModal` / `activeNoteText` / `showTagInput` / `activeTagText` /
+ * `tagSuggestions` cover note modal + tag input; `showHighlightsSheet` is
+ * the panel; `showDefinitionInput` / `activeDefinitionText` cover the
+ * definition input (annotation-adjacent, lives in the same surface for
+ * back-compat). The `toc` field is owned by the session slice, not here.
+ */
+typealias AnnotationUiState = ReaderInteractionState
+
+/**
  * UI state managed by [ReaderInteractionStateHolder].
  *
  * NOTE: [activeHighlightId], [highlightTapDebounceUntil], and

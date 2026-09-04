@@ -64,6 +64,7 @@ fun ReaderScreen(
     val settingsUiState by viewModel.settingsUiState.collectAsStateWithLifecycle()
     val sleepTimerUiState by viewModel.sleepTimerUiState.collectAsStateWithLifecycle()
     val sessionUiState by viewModel.sessionUiState.collectAsStateWithLifecycle()
+    val annotationUiState by viewModel.annotationUiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val view = LocalView.current
 
@@ -172,6 +173,7 @@ fun ReaderScreen(
             content = {
                 ReaderScreenContentHost(
                     uiState = uiState,
+                    annotationUiState = annotationUiState,
                     settingsUiState = settingsUiState,
                     sessionUiState = sessionUiState,
                     viewModel = viewModel,

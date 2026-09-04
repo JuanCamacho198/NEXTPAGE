@@ -25,6 +25,7 @@ import com.nextpage.presentation.screen.readium.buildNavigatorConfig
 import com.nextpage.ui.components.molecules.SelectionOverlay
 import com.nextpage.presentation.viewmodel.ReaderUiState
 import com.nextpage.presentation.viewmodel.ReaderViewModel
+import com.nextpage.presentation.viewmodel.reader.AnnotationUiState
 import com.nextpage.presentation.viewmodel.reader.SessionUiState
 import com.nextpage.presentation.viewmodel.reader.SettingsUiState
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 @Composable
 fun ReaderScreenContentHost(
     uiState: ReaderUiState,
+    annotationUiState: AnnotationUiState,
     settingsUiState: SettingsUiState,
     sessionUiState: SessionUiState,
     viewModel: ReaderViewModel,
@@ -93,7 +95,7 @@ fun ReaderScreenContentHost(
             Box(modifier = modifier.fillMaxSize()) {
                 ReadiumPdfReaderContent(
                     publication = readiumPublication,
-                    highlights = uiState.highlights,
+                    highlights = annotationUiState.highlights,
                     readerSettings = settingsUiState.readerSettings,
                     viewModel = viewModel,
                     onShowChrome = { currentOnShowChrome() },

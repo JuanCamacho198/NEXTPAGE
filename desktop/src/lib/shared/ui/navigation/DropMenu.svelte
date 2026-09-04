@@ -2,6 +2,12 @@
   import type { Snippet } from 'svelte';
 
   type Props = {
+    /**
+     * Should render a native interactive element (button/a) that already
+     * activates on Enter/Space. The wrapper also handles the keys itself,
+     * so a non-interactive trigger stays reachable, but buttons are the
+     * supported pattern (no double-trigger when the button fires its click).
+     */
     trigger: Snippet;
     children?: Snippet;
     position?: 'bottom-left' | 'bottom-right';
@@ -18,6 +24,19 @@
 
   function close(): void {
     isOpen = false;
+  }
+
+  function handleTriggerKeydown(e: KeyboardEvent): void {
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    const target = e.target as HTMLElement | null;
+    const tag = target?.tagName ?? '';
+    // Native interactive triggers synthesize their own click on Enter/Space;
+    // letting it bubble toggles once. Only non-interactive triggers need the
+    // menu itself to handle the key.
+    if (['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(tag)) return;
+    if (target?.isContentEditable) return;
+    e.preventDefault();
+    toggle();
   }
 
   // Click outside handler using $effect instead of use:handleClickOutside
@@ -46,11 +65,10 @@
 </script>
 
 <div bind:this={containerEl} class="relative inline-block">
-  <!-- The trigger snippet owns its own interaction semantics (every usage
-       renders a <button>); the wrapper only forwards clicks so mouse and
-       keyboard activation both open the menu without creating a nested
-       interactive element. -->
-  <div onclickcapture={toggle}>
+  <!-- The wrapper is deliberately inert: the trigger snippet owns its own
+       interaction semantics (see the trigger prop contract above). Clicks and
+       keys forward to toggle without creating a nested interactive element. -->
+  <div role="none" onclickcapture={toggle} onkeydown={handleTriggerKeydown}>
     {@render trigger()}
   </div>
 

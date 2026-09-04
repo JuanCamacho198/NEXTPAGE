@@ -51,7 +51,7 @@
   } = $props();
 
   const collectionDropdownOptions = $derived([
-    { value: '', label: 'All' },
+    { value: '', label: t('app.all') },
     ...collections.map((c) => ({ value: String(c.id), label: c.name })),
   ]);
 

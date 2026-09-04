@@ -71,7 +71,7 @@ export function createHighlightsSync(opts: {
     highlight: HighlightDto,
     currentHighlights: HighlightDto[],
     setHl: (v: HighlightDto[]) => void,
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       await opts.deps.deleteHighlight(highlight.id);
       setHl(currentHighlights.filter((h) => h.id !== highlight.id));
@@ -93,8 +93,9 @@ export function createHighlightsSync(opts: {
           }),
         );
       }
+      return true;
     } catch {
-      /* silent */
+      return false;
     }
   }
 

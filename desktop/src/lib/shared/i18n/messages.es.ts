@@ -4,6 +4,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'app.title': 'NextPage Desktop',
   'app.subtitle':
     'Integracion de paridad desktop: biblioteca, ajustes, estadisticas y busqueda en lector',
+  'app.all': 'Todos',
   'app.importBook': 'Importar libro',
   'app.importing': 'Importando...',
   'app.menu': 'Menu',

@@ -147,10 +147,10 @@ class ReaderLifecycleStateHolder(
      * PR #2 (facade removal) must carry this feed into the surviving
      * lifecycle collaborator.
      *
-     * Interim dual-write: the ViewModel collector feeding
-     * `mutableUiState.previewText` stays until S4 migrates
-     * `ReaderScreenOverlaysHost` to `sessionUiState.previewText` and deletes
-     * it there — both compute the identical excerpt, so values agree.
+      * Single source (SDD reader-uiState-cleanup, S4): the ViewModel
+      * collector feeding `mutableUiState.previewText` was deleted when
+      * `ReaderScreenOverlaysHost` migrated to `sessionUiState.previewText` —
+      * this feed is now the only preview derivation.
      */
     private val previewScope = CoroutineScope(SupervisorJob() + mainDispatcher)
 

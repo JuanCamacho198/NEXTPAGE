@@ -187,7 +187,7 @@ fun ReaderScreen(
             },
             overlays = {
                 ReaderScreenOverlaysHost(
-                    uiState = uiState,
+                    annotationUiState = annotationUiState,
                     searchUiState = searchUiState,
                     settingsUiState = settingsUiState,
                     sleepTimerUiState = sleepTimerUiState,

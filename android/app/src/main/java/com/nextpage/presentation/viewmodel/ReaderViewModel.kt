@@ -54,7 +54,6 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 
@@ -766,8 +765,10 @@ class ReaderViewModel(
 
         // Session slice (SDD reader-facade-split, T5): the lifecycle merge
         // collector is deleted — session state reaches uiState via the
-        // combine overlay above. The preview collector below stays (T6
-        // annotation) as does the interaction merge and highlights flow.
+        // combine overlay above. (SDD reader-uiState-cleanup, S4): the
+        // VM-side preview collector is deleted too — previewText is owned
+        // by the session holder; only the interaction merge and highlights
+        // flow below stay until S7.
 
                 // Typography -> exact reflow wiring lives in the lifecycle
         // owner (SDD reader-facade-split, T5); the VM only supplies density.
@@ -775,22 +776,6 @@ class ReaderViewModel(
             settingsManager.state,
             getApplication<android.app.Application>().resources.displayMetrics.density
         )
-
-// Derive the split-settings preview text from the current chapter's
-        // real content (EPUB only). Refreshes when the book or chapter
-        // changes; PDFs have no extractable HTML text, so `previewText`
-        // falls back to blank and the UI shows the selection/title instead.
-        viewModelScope.launch(mainDispatcher) {
-            lifecycleHolder.state
-                .map { Triple(it.bookFormat, it.readiumPublication, it.currentChapterIndex) }
-                .distinctUntilChanged()
-                .collect { (bookFormat, publication, chapterIndex) ->
-                    val excerpt = extractChapterPreviewText(publication, bookFormat, chapterIndex)
-                    mutableUiState.update { current ->
-                        current.copy(previewText = excerpt ?: "")
-                    }
-                }
-        }
 
         // Merge Cluster B interaction state into ReaderUiState
         viewModelScope.launch(mainDispatcher) {
@@ -888,47 +873,10 @@ class ReaderViewModel(
     }
 
     // ── Readium Bridge ──────────────────────────────────────────────
-
-    /**
-     * Extracts a plain-text excerpt (~600 chars) of the chapter at
-     * [chapterIndex] from the current Readium [Publication], mirroring
-     * [SearchStateHolder]'s extraction pattern (HTML stripped, whitespace
-     * collapsed). Returns `null` for PDFs and any resource that cannot be
-     * read — callers fall back to the selected text / chapter title.
-     */
-    private suspend fun extractChapterPreviewText(
-        publication: Publication?,
-        bookFormat: String?,
-        chapterIndex: Int
-    ): String? {
-        if (publication == null || bookFormat != "epub") return null
-        return withContext(Dispatchers.IO) {
-            try {
-                // chapterIndex is TOC list position, NOT spine index — resolve via chapters mapping
-                val chapters = lifecycleHolder.state.value.chapters
-                val link = if (chapterIndex in chapters.indices) {
-                    val ch = chapters[chapterIndex]
-                    val normFile = ch.href.substringBefore('#').substringBefore('?').substringAfterLast('/').lowercase()
-                    publication.readingOrder.firstOrNull {
-                        it.href.toString().substringAfterLast('/').substringBefore('#').substringBefore('?').lowercase() == normFile
-                    } ?: publication.readingOrder.getOrNull(ch.index)
-                    ?: publication.readingOrder.getOrNull(chapterIndex)
-                } else {
-                    publication.readingOrder.getOrNull(chapterIndex)
-                } ?: return@withContext null
-                val resource = publication.get(link) ?: return@withContext null
-                val readResult = resource.read()
-                val bytes = readResult.getOrNull() ?: return@withContext null
-                bytes.decodeToString()
-                    .replace(Regex("<[^>]*>"), "")
-                    .replace(Regex("\\s+"), " ")
-                    .trim()
-                    .take(CHAPTER_TEXT_LIMIT)
-            } catch (_: Exception) {
-                null
-            }
-        }
-    }
+    // (SDD reader-uiState-cleanup, S4): the VM-side preview collector and
+    // its private extractChapterPreviewText helper were deleted — the
+    // session owner (ReaderLifecycleStateHolder) is the single source of
+    // previewText. The note below stays: it documents surviving delegates.
 
     // ── Readium Bridge ──────────────────────────────────────────────
     // Slice 4 (SDD reader-facade-split, T5): onReadiumLocatorChanged,
@@ -1371,7 +1319,6 @@ class ReaderViewModel(
 
     companion object {
         private const val TAG = "ReaderViewModel"
-        private const val CHAPTER_TEXT_LIMIT = 600
     }
 
     // ── aA Settings ──────────────────────────────────────────────────

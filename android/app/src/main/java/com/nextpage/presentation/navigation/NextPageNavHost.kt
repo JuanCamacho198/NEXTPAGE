@@ -177,8 +177,7 @@ fun NextPageNavHost(
             getStatisticsUseCase = appContainer.getStatisticsUseCase,
             dailyGoalProvider = appContainer.dailyGoalProvider,
             readerRepository = appContainer.readerRepository,
-            getBookProgressUseCase = appContainer.getBookProgressUseCase,
-            progressReconciler = appContainer.progressReconciler
+            getBookProgressUseCase = appContainer.getBookProgressUseCase
         )
     )
 

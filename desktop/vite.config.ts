@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
-import { withSentryConfig } from "@sentry/vite-plugin";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { fileURLToPath, URL } from "node:url";
 import fs from "node:fs";
 import path from "node:path";
@@ -40,6 +40,8 @@ const sentryPluginOptions = {
   authToken: sentryAuthToken,
   release: { name: sentryRelease, inject: true },
   telemetry: false,
+  // Skip the plugin in dev and when no auth token is set.
+  devtool: false,
   disable: !sentryAuthToken,
 };
 
@@ -92,12 +94,18 @@ function cfiLockstepPlugin() {
   };
 }
 
-export default withSentryConfig(
-  defineConfig({
-    // Tauri loads files from local bundle paths in production.
-    // Relative asset URLs avoid a blank window caused by absolute /assets paths.
-    base: "./",
-    plugins: [tailwindcss(), svelte(), cfiLockstepPlugin()],
+// In dev (no auth token / no upload), we pass an empty array to keep `dev`
+// fast. The release name is still injected via `__SENTRY_RELEASE__` so
+// `@sentry/browser` tags events correctly even without source-map upload.
+const plugins = sentryAuthToken
+  ? [tailwindcss(), svelte(), cfiLockstepPlugin(), sentryVitePlugin(sentryPluginOptions)]
+  : [tailwindcss(), svelte(), cfiLockstepPlugin()];
+
+export default defineConfig({
+  // Tauri loads files from local bundle paths in production.
+  // Relative asset URLs avoid a blank window caused by absolute /assets paths.
+  base: "./",
+  plugins,
     clearScreen: false,
     // Load .env from desktop folder (not parent)
     envDir: ".",
@@ -119,17 +127,15 @@ export default withSentryConfig(
         ignored: ["**/src-tauri/**", "**/android/**"]
       }
     },
-    build: {
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes("pdfjs-dist")) {
-              return "pdfjs";
-            }
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("pdfjs-dist")) {
+            return "pdfjs";
           }
         }
       }
     }
-  }),
-  sentryPluginOptions,
-);
+  }
+});

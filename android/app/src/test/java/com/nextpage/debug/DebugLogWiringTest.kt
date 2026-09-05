@@ -4,10 +4,15 @@ import android.util.Log
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
+import io.sentry.Scope
+import io.sentry.ScopeCallback
 import io.sentry.Sentry
 import io.sentry.SentryLevel
+import io.sentry.SentryOptions
+import io.sentry.protocol.SentryId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -146,6 +151,107 @@ class DebugLogWiringTest {
         verify(exactly = 0) {
             Sentry.captureMessage(any<String>(), any<SentryLevel>())
         }
+    }
+
+    // PR2 reader-error-enrichment: typed DebugDual events must reach Sentry via
+    // structured captureException (setExtra/setTag), not concatenated strings.
+    // Runs the event through DebugDual.log, captures the ScopeCallback, applies
+    // it to a real Scope, and returns it for extra/tag assertions. The @After
+    // tearDown calls unmockkAll() per android/AGENTS.md's teardown rule.
+    private fun captureScopeFor(event: DebugEvent): Scope {
+        mockkStatic(Sentry::class)
+        val callbackSlot = slot<ScopeCallback>()
+        every { Sentry.captureException(any<Throwable>(), capture(callbackSlot)) } returns SentryId.EMPTY_ID
+
+        DebugDual.log(event)
+
+        verify(exactly = 1) { Sentry.captureException(any<Throwable>(), any<ScopeCallback>()) }
+        return Scope(SentryOptions()).also { callbackSlot.captured.run(it) }
+    }
+
+    @Test
+    fun `highlightsSkipped captures structured Sentry exception`() {
+        val scope = captureScopeFor(
+            DebugEvent.HighlightsSkipped("hl1", "epubcfi(/6/2)", "bounds_out_of_viewport")
+        )
+
+        assertEquals("hl1", scope.extras["highlightId"])
+        assertEquals("epubcfi(/6/2)", scope.extras["cfi"])
+        assertEquals("bounds_out_of_viewport", scope.extras["reason"])
+        assertEquals("reader", scope.tags["source"])
+        assertEquals("highlight_skipped", scope.tags["event"])
+        // Local source of truth preserved: WARN entry still lands in DebugLog
+        assertTrue(
+            "DebugLog should still hold the local entry",
+            DebugLog.events.value.any { it.message.contains("highlights.skipped") }
+        )
+    }
+
+    @Test
+    fun `highlightsApplied captures structured Sentry exception`() {
+        val scope = captureScopeFor(
+            DebugEvent.HighlightsApplied("hl2", "epubcfi(/6/4)", true)
+        )
+
+        assertEquals("hl2", scope.extras["highlightId"])
+        assertEquals("epubcfi(/6/4)", scope.extras["cfi"])
+        assertEquals("true", scope.extras["viaFallback"])
+        assertEquals("1", scope.extras["count"])
+        assertEquals("reader", scope.tags["source"])
+        assertEquals("highlight_applied", scope.tags["event"])
+    }
+
+    @Test
+    fun `syncOutboxFailed captures structured Sentry exception with truncated error`() {
+        val longError = "x".repeat(250)
+        val scope = captureScopeFor(
+            DebugEvent.SyncOutboxFailed("HIGHLIGHT", "hl1", longError)
+        )
+
+        assertEquals("HIGHLIGHT", scope.extras["entityType"])
+        assertEquals("hl1", scope.extras["entityId"])
+        assertEquals(longError.take(200), scope.extras["error"])
+        assertEquals("reader", scope.tags["source"])
+        assertEquals("sync_outbox_failed", scope.tags["event"])
+    }
+
+    @Test
+    fun `footerMismatch captures structured Sentry exception`() {
+        val scope = captureScopeFor(
+            DebugEvent.FooterMismatch("ch1.html", "Chapter One", "Chapter Two")
+        )
+
+        assertEquals("ch1.html", scope.extras["locatorHref"])
+        assertEquals("Chapter One", scope.extras["computed"])
+        assertEquals("Chapter Two", scope.extras["expected"])
+        assertEquals("reader", scope.tags["source"])
+        assertEquals("footer_mismatch", scope.tags["event"])
+    }
+
+    @Test
+    fun `syncReceive captures structured Sentry exception`() {
+        val scope = captureScopeFor(
+            DebugEvent.SyncReceive("hl3", "epubcfi(/6/6)", true)
+        )
+
+        assertEquals("hl3", scope.extras["highlightId"])
+        assertEquals("epubcfi(/6/6)", scope.extras["cfi"])
+        assertEquals("true", scope.extras["locatorJsonNull"])
+        assertEquals("reader", scope.tags["source"])
+        assertEquals("sync_receive", scope.tags["event"])
+    }
+
+    @Test
+    fun `chapterResolved captures structured Sentry exception`() {
+        val scope = captureScopeFor(
+            DebugEvent.ChapterResolved("ch2.html", "Chapter Two", 3)
+        )
+
+        assertEquals("ch2.html", scope.extras["locatorHref"])
+        assertEquals("Chapter Two", scope.extras["chapterTitle"])
+        assertEquals("3", scope.extras["index"])
+        assertEquals("reader", scope.tags["source"])
+        assertEquals("chapter_resolved", scope.tags["event"])
     }
 }
 

@@ -4,6 +4,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'app.title': 'NextPage Desktop',
   'app.subtitle':
     'Integracion de paridad desktop: biblioteca, ajustes, estadisticas y busqueda en lector',
+  'app.all': 'Todos',
   'app.importBook': 'Importar libro',
   'app.importing': 'Importando...',
   'app.menu': 'Menu',
@@ -121,6 +122,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'home.highlightsCopy': 'Copiar resaltado',
   'home.highlightsViewInBook': 'Ver en el libro',
   'home.highlightsEditNote': 'Editar nota',
+  'home.highlightsOptions': 'Opciones',
   'home.highlightsDelete': 'Eliminar',
   'home.highlightsEmptyTitle': 'Sin resaltados',
   'home.highlightsEmptyDescription': 'No se encontraron resaltados con los filtros actuales.',

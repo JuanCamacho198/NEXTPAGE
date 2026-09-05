@@ -11,6 +11,29 @@ type SentrySeverityLevel = 'fatal' | 'error' | 'warning' | 'info' | 'debug';
 
 const HIGH_SEVERITY = ['high', 'critical'];
 
+/**
+ * Reader-source severity floor (Phase 1 of `reader-error-enrichment`).
+ *
+ * Policy: any `ErrorEvent` with `source === 'reader'` AND a non-empty
+ * `context` has a severity FLOOR of `high` — `low`/`medium` are bumped to
+ * `high`, while `high`/`critical` pass through unchanged. The reader is a
+ * high-signal surface — a missed highlight, a PDF selection glitch, or a
+ * bookmark save failure is actionable for engineering and must not be
+ * dropped by the HIGH_SEVERITY gate.
+ *
+ * Events with empty `context` fall through to the original severity, so the
+ * existing low-severity behavior is preserved when no structured context is
+ * attached (call sites that still use bare `console.error`).
+ */
+export function effectiveSeverity(event: ErrorEvent): ErrorEvent['severity'] {
+  if (event.source === 'reader' && event.context && Object.keys(event.context).length > 0) {
+    if (event.severity === 'low' || event.severity === 'medium') {
+      return 'high';
+    }
+  }
+  return event.severity;
+}
+
 export class SentrySink implements LoggerSink {
   private isEnabled: boolean = false;
 
@@ -52,7 +75,8 @@ export class SentrySink implements LoggerSink {
             maskAllInputs: this.settings.maskAllInputs ?? true,
           }),
         ],
-        beforeSend: (event) => scrubEvent(event as unknown as SentryLikeEvent) as unknown as Sentry.ErrorEvent,
+        beforeSend: (event) =>
+          scrubEvent(event as unknown as SentryLikeEvent) as unknown as Sentry.ErrorEvent,
       });
     } catch (err) {
       // Init failure must NOT crash the app — fall back to no-op. The
@@ -64,12 +88,17 @@ export class SentrySink implements LoggerSink {
   }
 
   log(event: ErrorEvent): void {
-    if (HIGH_SEVERITY.includes(event.severity)) {
+    // Apply the reader-source severity floor BEFORE any gate/decision so
+    // breadcrumbs, alert routing, and the Sentry send all see the same
+    // effective severity. See `effectiveSeverity` JSDoc above.
+    const effective = effectiveSeverity(event);
+
+    if (HIGH_SEVERITY.includes(effective)) {
       captureBreadcrumb('error', this.mapCodeToLabel(event.code), {
         message: event.message,
         code: event.code,
         source: event.source,
-        severity: event.severity,
+        severity: effective,
       });
       routeAlert(event);
     }
@@ -78,7 +107,7 @@ export class SentrySink implements LoggerSink {
       return;
     }
 
-    const level = this.mapSeverity(event.severity);
+    const level = this.mapSeverity(effective);
 
     Sentry.withScope((scope: Sentry.Scope) => {
       scope.setLevel(level);

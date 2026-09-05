@@ -8,6 +8,7 @@ import type { LibraryBookDto } from '$lib/shared/types/library';
 import type { SpineResolver } from './useSpineResolver.svelte';
 import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
 import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
+import { handleError } from '$lib/shared/utils/errors';
 
 type ActiveBook = LibraryBookDto & { filePath: string };
 
@@ -99,7 +100,11 @@ export function createHighlights(deps: HighlightsDeps) {
               if (m) {
                 const idx = parseInt(m[1], 10) - 1;
                 if (idx >= 0 && idx !== pageNumber) {
-                  console.warn('RW: fixing page mismatch', r.id.slice(0, 4), `page ${r.pageNumber} -> ${idx}`);
+                  console.warn(
+                    'RW: fixing page mismatch',
+                    r.id.slice(0, 4),
+                    `page ${r.pageNumber} -> ${idx}`,
+                  );
                   pageNumber = idx;
                   void viewerPort.updateHighlight({ id: r.id, pageNumber }).catch(() => {});
                 }
@@ -146,7 +151,11 @@ export function createHighlights(deps: HighlightsDeps) {
           }
           persistedHighlights = merged;
         } catch (err) {
-          console.error('Failed to load highlights:', err);
+          handleError(err, 'reader', {
+            bookId: bookId,
+            format: book.format ?? null,
+            action: 'load_highlights',
+          });
         }
       } while (highlightReloadQueued);
     } finally {
@@ -167,7 +176,14 @@ export function createHighlights(deps: HighlightsDeps) {
       dbg.epub.colorPickCount++;
       dbg.epub.lastPickedColor = color;
     }
-    console.warn('RW: handleColorSelect data.pageNumber', data.pageNumber, 'cfi', data.cfi?.slice(0, 40) ?? '(null)', 'text', data.text.slice(0, 30));
+    console.warn(
+      'RW: handleColorSelect data.pageNumber',
+      data.pageNumber,
+      'cfi',
+      data.cfi?.slice(0, 40) ?? '(null)',
+      'text',
+      data.text.slice(0, 30),
+    );
 
     const book = untrack(getBook);
     if (data && book) {
@@ -240,7 +256,15 @@ export function createHighlights(deps: HighlightsDeps) {
             dbg3.epub.failedHighlightIds.push(highlightId);
           }
         }
-        console.warn('Failed to save highlight:', err);
+        // PII: pass text LENGTH, never the highlight text.
+        handleError(err, 'reader', {
+          bookId: book.id,
+          highlightId,
+          cfi: cfi ?? null,
+          pageNumber,
+          textLength: data.text.length,
+          action: 'save_highlight',
+        });
       }
     }
 
@@ -252,25 +276,46 @@ export function createHighlights(deps: HighlightsDeps) {
   }
 
   function updateHighlightColor(id: string, color: string): void {
+    const bookId = untrack(getBook)?.id;
     persistedHighlights = persistedHighlights.map((h) => (h.id === id ? { ...h, color } : h));
     viewerPort.updateHighlight({ id, color }).catch((err) => {
-      console.error('Failed to update highlight color:', err);
+      handleError(err, 'reader', {
+        bookId: bookId ?? null,
+        highlightId: id,
+        attemptedColor: color,
+        action: 'update_color',
+      });
     });
     enqueueHighlightUpdate(id, { color });
   }
 
   function updateHighlightNote(id: string, note: string | null): void {
+    const bookId = untrack(getBook)?.id;
     persistedHighlights = persistedHighlights.map((h) => (h.id === id ? { ...h, note } : h));
     viewerPort.updateHighlight({ id, note: note ?? undefined }).catch((err) => {
-      console.error('Failed to update highlight note:', err);
+      // PII: pass note LENGTH, never the note content. The scrubber would also
+      // redact a `note` key, but length is the safest shape (no embedded PII).
+      handleError(err, 'reader', {
+        bookId: bookId ?? null,
+        highlightId: id,
+        noteLength: note?.length ?? 0,
+        action: 'update_note',
+      });
     });
     enqueueHighlightUpdate(id, { note });
   }
 
   function deleteHighlightById(id: string): void {
     const highlight = persistedHighlights.find((item) => item.id === id);
+    const bookId = untrack(getBook)?.id ?? null;
     persistedHighlights = persistedHighlights.filter((h) => h.id !== id);
-    viewerPort.deleteHighlight(id).catch((err) => console.error('Failed to delete highlight:', err));
+    viewerPort.deleteHighlight(id).catch((err) => {
+      handleError(err, 'reader', {
+        bookId: bookId,
+        highlightId: id,
+        action: 'delete',
+      });
+    });
     const uidDel = getUserId();
     if (uidDel && highlight) {
       const book = untrack(getBook);
@@ -294,7 +339,10 @@ export function createHighlights(deps: HighlightsDeps) {
     }
   }
 
-  function enqueueHighlightUpdate(id: string, changes: { color?: string; note?: string | null }): void {
+  function enqueueHighlightUpdate(
+    id: string,
+    changes: { color?: string; note?: string | null },
+  ): void {
     const uid = getUserId();
     if (!uid) return;
     const highlight = persistedHighlights.find((item) => item.id === id);

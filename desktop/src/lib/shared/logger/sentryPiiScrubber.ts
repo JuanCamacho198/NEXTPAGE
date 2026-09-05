@@ -179,9 +179,7 @@ export function scrubEvent<T extends SentryLikeEvent>(event: T): T {
     next.exception = {
       ...event.exception,
       values: event.exception.values.map((v) =>
-        typeof v?.value === 'string'
-          ? { ...v, value: redactStringMessage(v.value) }
-          : v,
+        typeof v?.value === 'string' ? { ...v, value: redactStringMessage(v.value) } : v,
       ),
     };
   }

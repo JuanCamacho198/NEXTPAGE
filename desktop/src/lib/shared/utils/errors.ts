@@ -64,8 +64,22 @@ export class FileSystemError extends AppError {
 /**
  * Centralized error handler for the application.
  * Processes errors, logs them, and updates the global error state for UI feedback.
+ *
+ * @param error - The thrown value. May be an `AppError` subclass, a plain `Error`,
+ *   or any other value (string, number, object) — non-Error values are coerced.
+ * @param source - Where the error originated (`reader`, `library`, `app_shell`,
+ *   …). Defaults to `'app_shell'`.
+ * @param extraContext - Optional structured context merged into the resulting
+ *   `ErrorEvent.context`. Keys here override keys already on the underlying
+ *   `AppError.context` (last-write-wins). Use this to attach call-site locals
+ *   like `bookId`, `highlightId`, `cfi`, `pageNumber`, etc. so the event
+ *   carries queryable context to Sentry.
  */
-export const handleError = (error: unknown, source: ErrorSource = 'app_shell'): ErrorEvent => {
+export const handleError = (
+  error: unknown,
+  source: ErrorSource = 'app_shell',
+  extraContext?: Record<string, unknown>,
+): ErrorEvent => {
   let appError: AppError;
 
   if (error instanceof AppError) {
@@ -91,12 +105,17 @@ export const handleError = (error: unknown, source: ErrorSource = 'app_shell'): 
     );
   }
 
+  // Merge call-site context last so it overrides constructor context.
+  const context: Record<string, unknown> = extraContext
+    ? { ...appError.context, ...extraContext }
+    : appError.context;
+
   const event = createErrorEvent({
     severity: classifyError(appError).severity,
     category: appError.category,
     code: appError.code,
     message: appError.message,
-    context: appError.context,
+    context,
     source: appError.source,
     recoverable: appError.recoverable,
   });

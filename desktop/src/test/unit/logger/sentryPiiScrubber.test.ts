@@ -19,8 +19,7 @@ describe('scrubEvent — Sentry PII scrubber', () => {
   it('redacts `code` and `state` query values inside an OAuth loopback callback URL while preserving the URL', () => {
     const event: SentryLikeEvent = {
       extra: {
-        oauthCallbackUrl:
-          'https://127.0.0.1:54321/callback?code=abc123&state=xyz',
+        oauthCallbackUrl: 'https://127.0.0.1:54321/callback?code=abc123&state=xyz',
       },
     };
 
@@ -153,9 +152,7 @@ describe('scrubEvent — Sentry PII scrubber', () => {
 
     const out = scrubEvent(event);
 
-    expect(out.message).toBe(
-      `OAuth failed: access_token:${REDACTED}, refresh_token:${REDACTED}`,
-    );
+    expect(out.message).toBe(`OAuth failed: access_token:${REDACTED}, refresh_token:${REDACTED}`);
   });
 
   it('returns a NEW object — does not mutate the input event', () => {

@@ -12,6 +12,7 @@ import {
   clampSelectionPoint,
 } from '$lib/features/reader/viewer-pdf/pdfState.svelte';
 import { debugState } from '$lib/shared/debug/debugState.svelte';
+import { handleError } from '$lib/shared/utils/errors';
 
 export { pureBuildSelectionOverlayRects as buildSelectionOverlayRects };
 export type { SelectionOverlayRect };
@@ -123,7 +124,11 @@ export function createPdfSelectionState(deps: PdfSelectionDeps) {
         selectionBounds = { left, top, right, bottom };
       }
     } catch (e) {
-      console.error('Selection state update failed:', e);
+      handleError(e, 'reader', {
+        format: 'pdf',
+        pageNumber: deps.getCurrentPage(),
+        action: 'selection_state_update',
+      });
       overlayRects = [];
     }
 
@@ -140,7 +145,9 @@ export function createPdfSelectionState(deps: PdfSelectionDeps) {
 
       try {
         const range = selection.getRangeAt(0);
-        const rawRects = Array.from(range.getClientRects()).filter((r) => r.width > 0 && r.height > 0);
+        const rawRects = Array.from(range.getClientRects()).filter(
+          (r) => r.width > 0 && r.height > 0,
+        );
         if (rawRects.length === 0) {
           const fallbackRect = range.getBoundingClientRect();
           if (fallbackRect.width > 0 && fallbackRect.height > 0) rawRects.push(fallbackRect);
@@ -152,7 +159,11 @@ export function createPdfSelectionState(deps: PdfSelectionDeps) {
           viewBottom = Math.max(...rawRects.map((r) => r.bottom));
         }
       } catch (err) {
-        console.error('Failed to read raw client rects:', err);
+        handleError(err, 'reader', {
+          format: 'pdf',
+          pageNumber: deps.getCurrentPage(),
+          action: 'read_client_rects',
+        });
       }
 
       const normalizedRects = overlayRects.map((r) => ({

@@ -2,6 +2,7 @@ import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
 import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
+import { handleError } from '$lib/shared/utils/errors';
 
 const defaultOutboxDao = new SyncOutboxDao();
 const defaultViewerPort: ViewerPort = new TauriViewerAdapter();
@@ -14,11 +15,17 @@ export type BookmarkItem = {
   createdAt: string;
 };
 
-export function createBookmarksState(deps: { outboxDao?: SyncOutboxDao; viewerPort?: ViewerPort } = {}): {
+export function createBookmarksState(
+  deps: { outboxDao?: SyncOutboxDao; viewerPort?: ViewerPort } = {},
+): {
   readonly bookmarksList: BookmarkItem[];
   readonly bookmarksLoading: boolean;
   loadBookmarks(bookId: string): Promise<void>;
-  addBookmark(bookId: string, pageNumber: number, location?: { cfiLocation?: string | null; locatorJson?: string | null }): Promise<void>;
+  addBookmark(
+    bookId: string,
+    pageNumber: number,
+    location?: { cfiLocation?: string | null; locatorJson?: string | null },
+  ): Promise<void>;
   removeBookmark(id: string, bookId: string): Promise<void>;
 } {
   const outboxDao = deps.outboxDao ?? defaultOutboxDao;
@@ -31,7 +38,10 @@ export function createBookmarksState(deps: { outboxDao?: SyncOutboxDao; viewerPo
     try {
       bookmarksList = await viewerPort.listBookmarks(bookId);
     } catch (err) {
-      console.error('Failed to load bookmarks:', err);
+      handleError(err, 'reader', {
+        bookId,
+        action: 'load_bookmarks',
+      });
       bookmarksList = [];
     } finally {
       bookmarksLoading = false;
@@ -54,18 +64,27 @@ export function createBookmarksState(deps: { outboxDao?: SyncOutboxDao; viewerPo
         createdAt,
       });
       if (authState.userId) {
-        void outboxDao.add('BOOKMARK', id, 'UPSERT', JSON.stringify({
-          userId: authState.userId,
-          bookId,
-          cfiLocation: location?.cfiLocation ?? `page:${pageNumber}`,
-          locatorJson: location?.locatorJson ?? null,
-          titleSnippet: `Page ${pageNumber}`,
-          updatedAt: createdAt,
-        }));
+        void outboxDao.add(
+          'BOOKMARK',
+          id,
+          'UPSERT',
+          JSON.stringify({
+            userId: authState.userId,
+            bookId,
+            cfiLocation: location?.cfiLocation ?? `page:${pageNumber}`,
+            locatorJson: location?.locatorJson ?? null,
+            titleSnippet: `Page ${pageNumber}`,
+            updatedAt: createdAt,
+          }),
+        );
       }
       await loadBookmarks(bookId);
     } catch (err) {
-      console.error('Failed to save bookmark:', err);
+      handleError(err, 'reader', {
+        bookId,
+        pageNumber,
+        action: 'save_bookmark',
+      });
     }
   }
 
@@ -75,18 +94,27 @@ export function createBookmarksState(deps: { outboxDao?: SyncOutboxDao; viewerPo
       await viewerPort.deleteBookmark(id);
       if (authState.userId && bookmark) {
         const updatedAt = new Date().toISOString();
-        void outboxDao.add('BOOKMARK', id, 'DELETE', JSON.stringify({
-          userId: authState.userId,
-          bookId,
-          cfiLocation: `page:${bookmark.pageNumber}`,
-          titleSnippet: bookmark.title ?? null,
-          deletedAt: updatedAt,
-          updatedAt,
-        }));
+        void outboxDao.add(
+          'BOOKMARK',
+          id,
+          'DELETE',
+          JSON.stringify({
+            userId: authState.userId,
+            bookId,
+            cfiLocation: `page:${bookmark.pageNumber}`,
+            titleSnippet: bookmark.title ?? null,
+            deletedAt: updatedAt,
+            updatedAt,
+          }),
+        );
       }
       await loadBookmarks(bookId);
     } catch (err) {
-      console.error('Failed to delete bookmark:', err);
+      handleError(err, 'reader', {
+        bookId,
+        bookmarkId: id,
+        action: 'delete_bookmark',
+      });
     }
   }
 

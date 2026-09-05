@@ -9,13 +9,18 @@ import { execSync } from "node:child_process";
 
 // Derived once at config-load time. Falls back to "unknown" so `vite dev` and
 // `vite build` don't crash when git isn't available (e.g. Docker scratch image).
+// `--short=12` matches the cross-platform release scheme mandated by spec C1
+// (same sha12 must appear on Rust + Android for a single commit); 12 chars
+// avoid the 7-char collision risk at scale. Truncated to 12 if the repo
+// somehow returns a shorter SHA (e.g. shallow clone).
 let gitShortSha = "unknown";
 try {
-  gitShortSha = execSync("git rev-parse --short HEAD", {
+  gitShortSha = execSync("git rev-parse --short=12 HEAD", {
     stdio: ["ignore", "pipe", "ignore"],
   })
     .toString()
-    .trim();
+    .trim()
+    .slice(0, 12);
 } catch {
   // leave as "unknown"
 }

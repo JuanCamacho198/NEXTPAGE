@@ -1,0 +1,94 @@
+# Sentry debug-files upload for Rust crashes (spec C3).
+#
+# Uploads Tauri's Rust debug artifacts (from the `tauri build` bundle output)
+# to the `nextpage-desktop` Sentry project under the `nextpage-android` org so
+# stack traces resolve to source file:line.
+#
+# Token-gated: when `SENTRY_AUTH_TOKEN` is absent (local dev, fork PRs) the
+# upload step is skipped with an `echo` so the workflow stays green. The
+# release itself can still ship — symbolication is an additive improvement
+# and is not on the critical path for app start.
+name: Sentry debug-files
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upload-rust-debug-files:
+    name: Upload Rust debug files
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Fetch enough history for `git rev-parse --short=12 HEAD` to resolve
+          # and for sentry-cli to associate the upload with the right commit.
+          fetch-depth: 0
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install Tauri CLI
+        working-directory: desktop
+        run: cargo install tauri-cli --version "^2.0" --locked
+
+      - name: Install sentry-cli
+        run: |
+          curl -fsSL https://github.com/getsentry/sentry-cli/releases/latest/download/sentry-cli-Linux-x86_64 -o /usr/local/bin/sentry-cli
+          chmod +x /usr/local/bin/sentry-cli
+          sentry-cli --version
+
+      - name: Build Tauri bundle (debug symbols)
+        working-directory: desktop
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          cargo tauri build --debug
+          # `cargo tauri build --debug` keeps debug info in the binary without
+          # stripping; the resulting `.so` files land under `src-tauri/target/`
+          # and the bundled `.deb`/`.AppImage`/`.dmg` are produced under
+          # `src-tauri/target/release/bundle/`. We upload `.so`/`.dSYM`/`.pdb`
+          # siblings so Rust traces deobfuscate across Linux/macOS/Windows.
+
+      - name: Upload debug files (token-gated)
+        working-directory: desktop
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG || 'nextpage-android' }}
+          SENTRY_PROJECT: nextpage-desktop
+        run: |
+          if [ -z "${SENTRY_AUTH_TOKEN:-}" ]; then
+            echo "::notice::SENTRY_AUTH_TOKEN is empty — skipping debug-files upload (local-green run)."
+            exit 0
+          fi
+
+          set -euo pipefail
+          # `target/*/debug` picks up the per-target debug subdirs produced by
+          # Cargo (`target/debug`, `target/x86_64-unknown-linux-gnu/debug`, …).
+          # `--include-sources` attaches a debuginfo payload that Sentry uses
+          # to resolve Rust frame addresses back to file:line.
+          sentry-cli debug-files upload \
+            --org "${SENTRY_ORG}" \
+            --project "${SENTRY_PROJECT}" \
+            --include-sources \
+            "target/*/debug"

@@ -70,9 +70,16 @@ class NextPageApplication : Application(), ImageLoaderFactory {
         // is a reader app and we must not leak book content to Sentry.
         SentryAndroid.init(this) { options ->
             options.dsn = BuildConfig.SENTRY_DSN.takeIf { it.isNotEmpty() }
-            options.release = BuildConfig.GIT_SHA
+            // Spec C1 — cross-platform release `nextpage-android@<version>+<sha12>`.
+            // GIT_SHA is emitted by `build.gradle.kts` from `git rev-parse --short=12 HEAD`
+            // (or `unknown` fallback) and is identical to the TS web build for the same
+            // commit. See `sdd/sentry-observability-v2/design` data-flow note C.
+            options.release = "nextpage-android@${BuildConfig.VERSION_NAME}+${BuildConfig.GIT_SHA}"
             options.environment = if (BuildConfig.DEBUG) "development" else "production"
             options.tracesSampleRate = TRACES_SAMPLE_RATE
+            // Spec C2 — explicit session tracking (web sets autoSessionTracking=true;
+            // Android must enable it explicitly to prove sessions flow in review).
+            options.isEnableAutoSessionTracking = true
             // No screenshots / view hierarchy: reader app, must not leak book content.
             options.isAttachScreenshot = false
             options.isAttachViewHierarchy = false

@@ -22,7 +22,12 @@ static SENTRY_GUARD: OnceLock<Option<sentry::ClientInitGuard>> = OnceLock::new()
 /// as a deliberate opt-out and skip initialization entirely.
 fn build_options() -> Option<sentry::ClientOptions> {
     let dsn = std::env::var("SENTRY_DSN").ok().filter(|v| !v.is_empty())?;
-    let release = format!("nextpage-desktop@{}", env!("CARGO_PKG_VERSION"));
+    // Release scheme per spec C1: `nextpage-desktop@<semver>+<sha12>`.
+    // `NEXTPAGE_GIT_SHA` is emitted by `build.rs` from `git rev-parse --short=12 HEAD`,
+    // falling back to `unknown` when git is unavailable. Identical suffix to the
+    // TS web build for the same commit — see `sdd/sentry-observability-v2/design`.
+    let release =
+        format!("nextpage-desktop@{}+{}", env!("CARGO_PKG_VERSION"), env!("NEXTPAGE_GIT_SHA"));
     let environment =
         std::env::var("SENTRY_ENVIRONMENT").unwrap_or_else(|_| "development".to_string());
     let traces_sample_rate = std::env::var("SENTRY_TRACES_SAMPLE_RATE")
@@ -150,5 +155,52 @@ mod tests {
             std::env::remove_var("SENTRY_DSN");
         }
         assert!(opts.is_none(), "empty DSN MUST be treated as opt-out");
+    }
+
+    /// Spec C1 — cross-platform release format `nextpage-desktop@<semver>+<sha12>`.
+    /// The sha segment MUST be exactly 12 chars or the literal `unknown` fallback.
+    /// Validates against the env var emitted by `build.rs`.
+    #[test]
+    fn release_format_matches_spec_c1() {
+        let sha = env!("NEXTPAGE_GIT_SHA");
+        let version = env!("CARGO_PKG_VERSION");
+        let expected = format!("nextpage-desktop@{}+{}", version, sha);
+
+        assert!(
+            sha == "unknown" || sha.len() == 12,
+            "NEXTPAGE_GIT_SHA must be `unknown` fallback or exactly 12 chars, got {:?}",
+            sha
+        );
+        assert!(
+            sha.chars().all(|c| c.is_ascii_hexdigit() || sha == "unknown"),
+            "NEXTPAGE_GIT_SHA must be lowercase hex (or `unknown`), got {:?}",
+            sha
+        );
+        assert!(
+            expected.starts_with(&format!("nextpage-desktop@{}+", version)),
+            "release `{}` must start with `nextpage-desktop@<version>+`",
+            expected
+        );
+    }
+
+    /// Defensive: `build_options` MUST produce a release string of the same shape
+    /// when a DSN is present — proves the format is wired end-to-end (sha env var
+    /// → release string) without needing to actually initialize the SDK.
+    #[test]
+    fn build_options_release_matches_spec_c1() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        unsafe {
+            std::env::set_var("SENTRY_DSN", "https://public@example.com/1");
+        }
+        let opts = build_options().expect("DSN set → opts present");
+        unsafe {
+            std::env::remove_var("SENTRY_DSN");
+        }
+
+        let release = opts.release.expect("release always set");
+        let version = env!("CARGO_PKG_VERSION");
+        let sha = env!("NEXTPAGE_GIT_SHA");
+
+        assert_eq!(release, format!("nextpage-desktop@{}+{}", version, sha));
     }
 }

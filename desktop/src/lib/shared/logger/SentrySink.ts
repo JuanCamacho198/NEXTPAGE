@@ -68,7 +68,15 @@ export class SentrySink implements LoggerSink {
         // `maskAllText` / `maskAllInputs` are replay-integration options, not
         // top-level init options in `@sentry/browser` v10. See
         // https://docs.sentry.io/platforms/javascript/session-replay/configuration/
+        //
+        // Spec C2 — explicit session tracking. `@sentry/browser` v10 removed
+        // the `autoSessionTracking` top-level option; session health now
+        // flows via `browserSessionIntegration()` (`lifecycle: 'route'` matches
+        // the desktop SPA's history-instrumentation behavior). Without this,
+        // the crash-free metric in Releases is empty and Phase 3 alerting has
+        // no baseline to gate on.
         integrations: [
+          Sentry.browserSessionIntegration(),
           Sentry.browserTracingIntegration(),
           Sentry.replayIntegration({
             maskAllText: this.settings.maskAllText ?? true,

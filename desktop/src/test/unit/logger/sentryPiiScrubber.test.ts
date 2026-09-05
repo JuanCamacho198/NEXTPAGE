@@ -211,4 +211,19 @@ describe('scrubEvent — Sentry PII scrubber', () => {
 
     expect(out.extra?.['tagName']).toBe(REDACTED);
   });
+
+  // `sentry-observability-v2` PR1 (task 1.4): iframe error context keys.
+  it('reduces extra.iframeSource to basename only', () => {
+    const out = scrubEvent({
+      extra: { iframeSource: '/data/user/0/com.nextpage/files/OEBPS/Text/ch9.xhtml' },
+    });
+
+    expect(out.extra?.['iframeSource']).toBe('ch9.xhtml');
+  });
+
+  it('pattern-redacts sensitive key:value pairs inside an iframe error message', () => {
+    const out = scrubEvent({ message: 'iframe chap9: token:abc123 failed to load note:private' });
+
+    expect(out.message).toBe(`iframe chap9: token:${REDACTED} failed to load note:${REDACTED}`);
+  });
 });

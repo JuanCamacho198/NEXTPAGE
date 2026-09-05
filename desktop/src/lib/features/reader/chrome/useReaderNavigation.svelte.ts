@@ -3,6 +3,8 @@ import type PdfViewer from '../viewer-pdf/PdfViewer.svelte';
 import type EpubNativeViewer from '../viewer-epub/EpubNativeViewer.svelte';
 import type { LibraryBookDto } from '$lib/shared/types/library';
 import type { ViewerHandle } from '../viewer-shared/Viewer';
+import { captureBreadcrumb } from '$lib/shared/logger/BreadcrumbsStore';
+import { BREADCRUMB_LABELS } from '$lib/shared/logger/breadcrumbTypes';
 
 type ActiveBook = LibraryBookDto & { filePath: string };
 
@@ -112,12 +114,21 @@ export function createReaderNavigation(deps: ReaderNavigationDeps) {
   function handlePdfPageChange(page: number, total: number): void {
     currentPdfPage = page;
     totalPdfPages = total;
+    // Journey crumb: ids/counters only.
+    captureBreadcrumb('navigation', BREADCRUMB_LABELS.CHAPTER_CHANGE, {
+      bookId: deps.getActiveBook?.()?.id ?? null,
+      pageNumber: page,
+    });
     deps.onPdfPageChange?.(page, total);
   }
 
   function handleEpubLocationChange(cfi: string, pct: number): void {
     const match = cfi.match(/chapter:(\d+)/);
     if (match) currentEpubChapter = parseInt(match[1], 10);
+    captureBreadcrumb('navigation', BREADCRUMB_LABELS.CHAPTER_CHANGE, {
+      bookId: deps.getActiveBook?.()?.id ?? null,
+      chapterIndex: currentEpubChapter,
+    });
     deps.onEpubLocationChange?.(cfi, pct);
   }
 

@@ -3,6 +3,8 @@ import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
 import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
 import { handleError } from '$lib/shared/utils/errors';
+import { captureBreadcrumb } from '$lib/shared/logger/BreadcrumbsStore';
+import { BREADCRUMB_LABELS } from '$lib/shared/logger/breadcrumbTypes';
 
 const defaultOutboxDao = new SyncOutboxDao();
 const defaultViewerPort: ViewerPort = new TauriViewerAdapter();
@@ -55,6 +57,7 @@ export function createBookmarksState(
   ): Promise<void> {
     const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();
+    captureBreadcrumb('action', BREADCRUMB_LABELS.BOOKMARK_ADD, { bookId, bookmarkId: id });
     try {
       await viewerPort.saveBookmark({
         id,
@@ -90,6 +93,7 @@ export function createBookmarksState(
 
   async function removeBookmark(id: string, bookId: string): Promise<void> {
     const bookmark = bookmarksList.find((item) => item.id === id);
+    captureBreadcrumb('action', BREADCRUMB_LABELS.BOOKMARK_REMOVE, { bookId, bookmarkId: id });
     try {
       await viewerPort.deleteBookmark(id);
       if (authState.userId && bookmark) {

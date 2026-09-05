@@ -9,6 +9,8 @@ import type { SpineResolver } from './useSpineResolver.svelte';
 import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
 import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
 import { handleError } from '$lib/shared/utils/errors';
+import { captureBreadcrumb } from '$lib/shared/logger/BreadcrumbsStore';
+import { BREADCRUMB_LABELS } from '$lib/shared/logger/breadcrumbTypes';
 
 type ActiveBook = LibraryBookDto & { filePath: string };
 
@@ -214,6 +216,13 @@ export function createHighlights(deps: HighlightsDeps) {
           note: null,
         },
       ];
+      // Journey crumb: ids + text LENGTH only, never highlight text.
+      captureBreadcrumb('action', BREADCRUMB_LABELS.HIGHLIGHT_CREATE, {
+        bookId: book.id,
+        highlightId,
+        pageNumber,
+        textLength: data.text.length,
+      });
 
       try {
         const dbg2 = getDbg();
@@ -277,6 +286,10 @@ export function createHighlights(deps: HighlightsDeps) {
 
   function updateHighlightColor(id: string, color: string): void {
     const bookId = untrack(getBook)?.id;
+    captureBreadcrumb('action', BREADCRUMB_LABELS.HIGHLIGHT_UPDATE, {
+      bookId: bookId ?? null,
+      highlightId: id,
+    });
     persistedHighlights = persistedHighlights.map((h) => (h.id === id ? { ...h, color } : h));
     viewerPort.updateHighlight({ id, color }).catch((err) => {
       handleError(err, 'reader', {
@@ -291,6 +304,11 @@ export function createHighlights(deps: HighlightsDeps) {
 
   function updateHighlightNote(id: string, note: string | null): void {
     const bookId = untrack(getBook)?.id;
+    // Journey crumb: ids only — never the note content.
+    captureBreadcrumb('action', BREADCRUMB_LABELS.HIGHLIGHT_NOTE, {
+      bookId: bookId ?? null,
+      highlightId: id,
+    });
     persistedHighlights = persistedHighlights.map((h) => (h.id === id ? { ...h, note } : h));
     viewerPort.updateHighlight({ id, note: note ?? undefined }).catch((err) => {
       // PII: pass note LENGTH, never the note content. The scrubber would also
@@ -308,6 +326,10 @@ export function createHighlights(deps: HighlightsDeps) {
   function deleteHighlightById(id: string): void {
     const highlight = persistedHighlights.find((item) => item.id === id);
     const bookId = untrack(getBook)?.id ?? null;
+    captureBreadcrumb('action', BREADCRUMB_LABELS.HIGHLIGHT_DELETE, {
+      bookId,
+      highlightId: id,
+    });
     persistedHighlights = persistedHighlights.filter((h) => h.id !== id);
     viewerPort.deleteHighlight(id).catch((err) => {
       handleError(err, 'reader', {

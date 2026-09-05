@@ -35,6 +35,13 @@ class CrashDetailActivity : AppCompatActivity() {
     companion object {
         private const val TIMESTAMP_FORMAT = "yyyy-MM-dd HH:mm:ss"
         private const val BODY_TEXT_SIZE = 13f
+
+        /**
+         * PR4 / task 4.3b — delay before forwarding to MainActivity so the
+         * next-launch feedback prompt fires. Long enough for the user to read
+         * the thread + message, short enough not to feel like a dead end.
+         */
+        private const val CRASH_DETAIL_FORWARD_DELAY_MS = 2500L
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -190,5 +197,20 @@ class CrashDetailActivity : AppCompatActivity() {
 
         root.addView(buttonRow)
         setContentView(root)
+
+        // PR4 / task 4.3b — once the crash details are visible, the user has
+        // an opportunity to copy/share the JSON. After a short delay we forward
+        // them to MainActivity so the next-launch feedback prompt fires
+        // automatically (it reads feedback_last_event_id from SharedPreferences,
+        // which NextPageApplication.installCrashHandler persisted before death).
+        // We don't block the user — they can still back-press out at any time.
+        root.postDelayed({
+            runCatching {
+                val intent = android.content.Intent(this, com.nextpage.MainActivity::class.java)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                startActivity(intent)
+                finish()
+            }
+        }, CRASH_DETAIL_FORWARD_DELAY_MS)
     }
 }

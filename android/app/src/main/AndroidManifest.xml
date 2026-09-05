@@ -73,6 +73,15 @@
             android:name=".debug.CrashDetailActivity"
             android:exported="false" />
 
+        <!-- Crash feedback sheet host (PR4 / tasks 4.3-4.4). Launched by MainActivity
+             when a pending crash has a persisted Sentry eventId (next-launch prompt)
+             and from CrashDetailActivity on the in-app KEY_LAST_CRASH path. Not
+             exported — no external entity needs to start this activity. -->
+        <activity
+            android:name=".debug.FeedbackActivity"
+            android:exported="false"
+            android:theme="@style/Theme.NextPage.Splash" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

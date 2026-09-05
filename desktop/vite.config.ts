@@ -1,9 +1,47 @@
 import { defineConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
+import { withSentryConfig } from "@sentry/vite-plugin";
 import { fileURLToPath, URL } from "node:url";
 import fs from "node:fs";
 import path from "node:path";
+import { execSync } from "node:child_process";
+
+// Derived once at config-load time. Falls back to "unknown" so `vite dev` and
+// `vite build` don't crash when git isn't available (e.g. Docker scratch image).
+let gitShortSha = "unknown";
+try {
+  gitShortSha = execSync("git rev-parse --short HEAD", {
+    stdio: ["ignore", "pipe", "ignore"],
+  })
+    .toString()
+    .trim();
+} catch {
+  // leave as "unknown"
+}
+
+const packageJson = JSON.parse(
+  fs.readFileSync(path.resolve("package.json"), "utf-8"),
+) as { version: string };
+
+// `nextpage-desktop@<version>+<git-sha>`. The plugin uploads source maps
+// against the same release name so stack traces deobfuscate correctly.
+// Sourced from `sdd/sentry-cross-platform/design` decision #2.
+const sentryRelease = `nextpage-desktop@${packageJson.version}+${gitShortSha}`;
+
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
+
+// Disable the plugin entirely when no auth token is present (local dev).
+// `vite build` must never fail in CI because someone forgot to set a token
+// they don't have. See `sdd/sentry-cross-platform/design` risk table.
+const sentryPluginOptions = {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: sentryAuthToken,
+  release: { name: sentryRelease, inject: true },
+  telemetry: false,
+  disable: !sentryAuthToken,
+};
 
 function cfiLockstepPlugin() {
   return {
@@ -54,38 +92,44 @@ function cfiLockstepPlugin() {
   };
 }
 
-export default defineConfig({
-  // Tauri loads files from local bundle paths in production.
-  // Relative asset URLs avoid a blank window caused by absolute /assets paths.
-  base: "./",
-  plugins: [tailwindcss(), svelte(), cfiLockstepPlugin()],
-  clearScreen: false,
-  // Load .env from desktop folder (not parent)
-  envDir: ".",
-  define: {
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.1.0')
-  },
-  resolve: {
-    alias: {
-      $lib: fileURLToPath(new URL("./src/lib", import.meta.url))
-    }
-  },
-  server: {
-    port: 1420,
-    strictPort: true,
-    watch: {
-      ignored: ["**/src-tauri/**", "**/android/**"]
-    }
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes("pdfjs-dist")) {
-            return "pdfjs";
+export default withSentryConfig(
+  defineConfig({
+    // Tauri loads files from local bundle paths in production.
+    // Relative asset URLs avoid a blank window caused by absolute /assets paths.
+    base: "./",
+    plugins: [tailwindcss(), svelte(), cfiLockstepPlugin()],
+    clearScreen: false,
+    // Load .env from desktop folder (not parent)
+    envDir: ".",
+    define: {
+      __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.1.0'),
+      // Exposed for `SentrySettings.release` in `sentryConfig.ts` and used
+      // by `@sentry/browser`'s init config.
+      __SENTRY_RELEASE__: JSON.stringify(sentryRelease),
+    },
+    resolve: {
+      alias: {
+        $lib: fileURLToPath(new URL("./src/lib", import.meta.url))
+      }
+    },
+    server: {
+      port: 1420,
+      strictPort: true,
+      watch: {
+        ignored: ["**/src-tauri/**", "**/android/**"]
+      }
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes("pdfjs-dist")) {
+              return "pdfjs";
+            }
           }
         }
       }
     }
-  }
-});
+  }),
+  sentryPluginOptions,
+);

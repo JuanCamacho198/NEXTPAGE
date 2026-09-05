@@ -2,8 +2,12 @@ package com.nextpage.debug
 
 import android.util.Log
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.verify
+import io.sentry.Sentry
+import io.sentry.SentryLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -110,4 +114,38 @@ class DebugLogWiringTest {
         assertEquals(1, fakeWriter.written.size)
         assertTrue(fakeWriter.written.first().contains("InitTest"))
     }
+
+    // PR 3 sentry-cross-platform: DebugLog.error must forward to Sentry.captureMessage.
+    // Static-mocks Sentry via mockkStatic; the @After tearDown calls unmockkAll() per
+    // android/AGENTS.md's "every mockkStatic needs an unmockkAll()" rule.
+    @Test
+    fun `error forwards to Sentry captureMessage when initialized`() {
+        mockkStatic(Sentry::class)
+        every { Sentry.captureMessage(any<String>(), any<SentryLevel>()) } returns mockk(relaxed = true)
+
+        DebugLog.init(scope, fakeWriter)
+        DebugLog.error("TestTag", "boom")
+
+        // Verify Sentry.captureMessage was called with our message + ERROR level
+        verify(exactly = 1) {
+            Sentry.captureMessage("boom", SentryLevel.ERROR)
+        }
+        // Sanity: local persistence path still works
+        assertTrue("Writer should still receive ERROR event", fakeWriter.written.any { it.contains("ERROR") && it.contains("boom") })
+    }
+
+    @Test
+    fun `info does not invoke Sentry captureMessage`() {
+        mockkStatic(Sentry::class)
+        every { Sentry.captureMessage(any<String>(), any<SentryLevel>()) } returns mockk(relaxed = true)
+
+        DebugLog.init(scope, fakeWriter)
+        DebugLog.info("TestTag", "no boom here")
+
+        // No ERROR → Sentry.captureMessage must not be called (only ERROR forwards)
+        verify(exactly = 0) {
+            Sentry.captureMessage(any<String>(), any<SentryLevel>())
+        }
+    }
 }
+

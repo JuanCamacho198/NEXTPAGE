@@ -8,6 +8,10 @@ import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.debug.CrashLogStore
 import com.nextpage.debug.DebugLog
 import com.nextpage.presentation.theme.CoilModule
+import io.sentry.Sentry
+import io.sentry.SentryLevel
+import io.sentry.SentryOptions
+import io.sentry.android.core.SentryAndroid
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,6 +38,13 @@ class NextPageApplication : Application(), ImageLoaderFactory {
         private const val TAG = "NextPageApplication"
         const val PREFS_NAME = "nextpage_debug_crash"
         const val KEY_LAST_CRASH = "last_crash"
+
+        // Sentry capture rates (named constants to keep detekt's MagicNumber rule quiet).
+        // - TRACES_SAMPLE_RATE: 10% of transactions are sampled for performance traces.
+        // - ON_ERROR_REPLAY_RATE: 10% of errors get a 30s session replay attached
+        //   (only when DSN is configured; replay is OFF for sessions, ON only on error).
+        private const val TRACES_SAMPLE_RATE = 0.1
+        private const val ON_ERROR_REPLAY_RATE = 0.1
     }
 
     private lateinit var debugLogScope: CoroutineScope
@@ -50,6 +61,30 @@ class NextPageApplication : Application(), ImageLoaderFactory {
         crashLogStore = CrashLogStore(logDir)
         crashLogStore.cleanup(crashDir)
         DebugLog.init(debugLogScope, crashLogStore)
+
+        // Sentry must be initialized BEFORE installCrashHandler so the chained
+        // UncaughtExceptionHandler can capture to Sentry before the process dies.
+        // SentryAndroid.init is a no-op when DSN is empty (BuildConfig.SENTRY_DSN
+        // comes from local.properties which is gitignored; see app/build.gradle.kts).
+        // We deliberately do NOT attach screenshots or view hierarchy — NextPage
+        // is a reader app and we must not leak book content to Sentry.
+        SentryAndroid.init(this) { options ->
+            options.dsn = BuildConfig.SENTRY_DSN.takeIf { it.isNotEmpty() }
+            options.release = BuildConfig.GIT_SHA
+            options.environment = if (BuildConfig.DEBUG) "development" else "production"
+            options.tracesSampleRate = TRACES_SAMPLE_RATE
+            // No screenshots / view hierarchy: reader app, must not leak book content.
+            options.isAttachScreenshot = false
+            options.isAttachViewHierarchy = false
+            // Replay only on error, with strict PII masking defaults from the SDK.
+            options.sessionReplay.sessionSampleRate = 0.0
+            options.sessionReplay.onErrorSampleRate = ON_ERROR_REPLAY_RATE
+            // Filter out DEBUG-level events to keep event volume down.
+            options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
+                if (event.level == SentryLevel.DEBUG) null else event
+            }
+        }
+
         installCrashHandler()
 
         // Warm the Supabase client on a background thread so the first Activity
@@ -67,6 +102,11 @@ class NextPageApplication : Application(), ImageLoaderFactory {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
+                // Capture to Sentry FIRST so the event has a chance to flush before
+                // the process dies. Sentry.captureException is a no-op when Sentry
+                // is not initialized (DSN empty).
+                Sentry.captureException(throwable)
+
                 val stackTrace = Log.getStackTraceString(throwable)
                 val crashJson = JSONObject().apply {
                     put("timestamp", System.currentTimeMillis())
@@ -103,6 +143,6 @@ class NextPageApplication : Application(), ImageLoaderFactory {
             }
             previous?.uncaughtException(thread, throwable)
         }
-        DebugLog.info("CrashHandler", "Installed")
+        DebugLog.info("CrashHandler", "Installed (Sentry + local)")
     }
 }

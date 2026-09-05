@@ -44,6 +44,7 @@
     "svelte": "5.56.10"
   },
   "devDependencies": {
+    "@sentry/vite-plugin": "^5.0.0",
     "@sveltejs/vite-plugin-svelte": "^7.0.0",
     "@tailwindcss/vite": "^4.3.0",
     "@tauri-apps/cli": "^2.11.0",

@@ -74,12 +74,6 @@ export type ReaderSettings = {
 
 export type TranslationKey = string;
 
-export interface SentrySettings {
-  dsn: string;
-  tracesSampleRate: number;
-  enabled: boolean;
-}
-
 // Reader Layout Settings (margins, spacing, header/footer)
 // Deprecated: These fields are now merged directly into ReaderSettings.
 // Kept for backward compat with AppConfigExport.

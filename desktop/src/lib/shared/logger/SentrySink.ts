@@ -1,7 +1,8 @@
 import * as Sentry from '@sentry/browser';
 import type { LoggerSink } from './Logger';
 import type { ErrorEvent } from '../events/ErrorEvent';
-import type { SentrySettings } from '../types/settings';
+import type { SentrySettings } from './sentryConfig';
+import { scrubEvent, type SentryLikeEvent } from './sentryPiiScrubber';
 import { captureBreadcrumb } from './BreadcrumbsStore';
 import { BREADCRUMB_LABELS } from './breadcrumbTypes';
 import { routeAlert } from './AlertRouter';
@@ -32,12 +33,34 @@ export class SentrySink implements LoggerSink {
       return;
     }
 
-    Sentry.init({
-      dsn: this.settings.dsn,
-      tracesSampleRate: this.settings.tracesSampleRate ?? 0.1,
-      integrations: [],
-      defaultIntegrations: false,
-    });
+    try {
+      Sentry.init({
+        dsn: this.settings.dsn,
+        release: this.settings.release,
+        environment: this.settings.environment,
+        tracesSampleRate: this.settings.tracesSampleRate ?? 0.1,
+        sendDefaultPii: this.settings.sendDefaultPii ?? false,
+        replaysSessionSampleRate: this.settings.replaysSessionSampleRate ?? 0,
+        replaysOnErrorSampleRate: this.settings.replaysOnErrorSampleRate ?? 0.1,
+        // `maskAllText` / `maskAllInputs` are replay-integration options, not
+        // top-level init options in `@sentry/browser` v10. See
+        // https://docs.sentry.io/platforms/javascript/session-replay/configuration/
+        integrations: [
+          Sentry.browserTracingIntegration(),
+          Sentry.replayIntegration({
+            maskAllText: this.settings.maskAllText ?? true,
+            maskAllInputs: this.settings.maskAllInputs ?? true,
+          }),
+        ],
+        beforeSend: (event) => scrubEvent(event as unknown as SentryLikeEvent) as unknown as Sentry.ErrorEvent,
+      });
+    } catch (err) {
+      // Init failure must NOT crash the app — fall back to no-op. The
+      // outer `Logger.broadcast` try/catch would also catch this, but the
+      // sink itself must be defensive so other sinks still fire.
+      console.warn('Sentry init failed', err);
+      this.isEnabled = false;
+    }
   }
 
   log(event: ErrorEvent): void {

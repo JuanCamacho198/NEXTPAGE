@@ -68,6 +68,12 @@ impl Logger {
                 "token".to_string(),
                 "secret".to_string(),
                 "api_key".to_string(),
+                "apikey".to_string(),
+                "accesstoken".to_string(),
+                "refreshtoken".to_string(),
+                "idtoken".to_string(),
+                "authorization".to_string(),
+                "supabase".to_string(),
             ],
         }
     }
@@ -94,7 +100,30 @@ impl Logger {
         Ok(())
     }
 
-    fn redact_event(&self, event: &ErrorEventDto) -> ErrorEventDto {
+    /// Build a stateless Logger bound to an empty path, for callers that only need
+    /// the redaction helpers (e.g. Sentry `before_send`). Does NOT touch the filesystem.
+    pub fn for_redaction_only() -> Self {
+        Self {
+            log_path: PathBuf::new(),
+            redaction_patterns: vec![
+                "password".to_string(),
+                "token".to_string(),
+                "secret".to_string(),
+                "api_key".to_string(),
+                "apikey".to_string(),
+                "accesstoken".to_string(),
+                "refreshtoken".to_string(),
+                "idtoken".to_string(),
+                "authorization".to_string(),
+                "supabase".to_string(),
+            ],
+        }
+    }
+
+    /// Redact PII from an [`ErrorEventDto`]. Single source of truth for the
+    /// `password` / `token` / `secret` / `api_key` patterns. Made `pub` so the
+    /// Sentry `before_send` hook (and any other egress sink) can reuse it.
+    pub fn redact_event(&self, event: &ErrorEventDto) -> ErrorEventDto {
         let redacted_message = self.redact_string(&event.message);
         let redacted_context = self.redact_value(&event.context);
 
@@ -111,6 +140,23 @@ impl Logger {
         }
     }
 
+    /// Redact PII from an arbitrary `serde_json::Value` in place.
+    ///
+    /// Contract: the input `value` is walked recursively. Object keys whose
+    /// lowercased name contains any of `password` / `token` / `secret` /
+    /// `api_key` are replaced with the literal string `"[REDACTED]"`.
+    /// String scalars are scanned for the colon-suffixed patterns
+    /// (`password:xyz`, `token:abc`, …) and redacted to `<pattern>:[REDACTED]`.
+    /// Other shapes pass through.
+    ///
+    /// This is the same contract as [`Self::redact_event`] minus the
+    /// `ErrorEventDto` field copying — designed for sinks that carry raw
+    /// `serde_json::Value` payloads (Sentry `event.extra`, breadcrumbs, etc.).
+    pub fn redact_json_value(value: &mut serde_json::Value) {
+        let logger = Self::for_redaction_only();
+        *value = logger.redact_value_inner(value);
+    }
+
     fn redact_string(&self, input: &str) -> String {
         let mut result = input.to_string();
         for pattern in &self.redaction_patterns {
@@ -124,6 +170,10 @@ impl Logger {
     }
 
     fn redact_value(&self, value: &serde_json::Value) -> serde_json::Value {
+        self.redact_value_inner(value)
+    }
+
+    fn redact_value_inner(&self, value: &serde_json::Value) -> serde_json::Value {
         match value {
             serde_json::Value::Object(map) => {
                 let mut new_map = serde_json::Map::new();
@@ -136,14 +186,14 @@ impl Logger {
                         if should_redact {
                             serde_json::Value::String("[REDACTED]".to_string())
                         } else {
-                            self.redact_value(v)
+                            self.redact_value_inner(v)
                         },
                     );
                 }
                 serde_json::Value::Object(new_map)
             }
             serde_json::Value::Array(arr) => {
-                serde_json::Value::Array(arr.iter().map(|v| self.redact_value(v)).collect())
+                serde_json::Value::Array(arr.iter().map(|v| self.redact_value_inner(v)).collect())
             }
             serde_json::Value::String(s) => serde_json::Value::String(self.redact_string(s)),
             _ => value.clone(),
@@ -254,5 +304,84 @@ pub struct LoggerState {
 impl LoggerState {
     pub fn new(app_data_dir: PathBuf) -> Self {
         Self { logger: Mutex::new(Logger::new(app_data_dir)) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    /// The PII scrubber is the SINGLE SOURCE OF TRUTH for outbound events.
+    /// It MUST redact OAuth-style colon-suffixed secrets, sensitive object
+    /// keys, and EPUB file paths. Any change that weakens these guarantees
+    /// is a PII regression. This is the test required by PR 2 (sentry).
+    #[test]
+    fn redact_event_strips_oauth_token_and_supabase_key() {
+        let logger = Logger::for_redaction_only();
+        let event = ErrorEventDto {
+            timestamp: "2026-09-04T20:00:00Z".to_string(),
+            severity: "error".to_string(),
+            category: "auth".to_string(),
+            code: "OAUTH_FAIL".to_string(),
+            message:
+                "callback failed with password:hunter2 and token:abc123 and api_key:xyz_secret"
+                    .to_string(),
+            context: json!({
+                "supabaseKey": "should-be-redacted",
+                "apiKey": "should-be-redacted",
+                "safe_field": "kept verbatim",
+                "nested": {
+                    "token_header": "should-be-redacted",
+                    "url": "https://oauth.example.com/cb?code=keep_me"
+                }
+            }),
+            correlation_id: "corr-1".to_string(),
+            source: "renderer".to_string(),
+            recoverable: true,
+        };
+
+        let redacted = logger.redact_event(&event);
+
+        // Colon-suffixed patterns are redacted
+        assert!(redacted.message.contains("password:[REDACTED]"), "got: {}", redacted.message);
+        assert!(redacted.message.contains("token:[REDACTED]"), "got: {}", redacted.message);
+        assert!(redacted.message.contains("api_key:[REDACTED]"), "got: {}", redacted.message);
+        // Non-sensitive message fragments remain
+        assert!(redacted.message.contains("callback failed with"), "got: {}", redacted.message);
+
+        // Sensitive object keys are replaced wholesale
+        assert_eq!(redacted.context["supabaseKey"], json!("[REDACTED]"));
+        assert_eq!(redacted.context["nested"]["token_header"], json!("[REDACTED]"));
+        // Non-sensitive keys pass through unchanged
+        assert_eq!(redacted.context["safe_field"], json!("kept verbatim"));
+        assert_eq!(
+            redacted.context["nested"]["url"],
+            json!("https://oauth.example.com/cb?code=keep_me")
+        );
+
+        // Untouched fields are preserved
+        assert_eq!(redacted.code, "OAUTH_FAIL");
+        assert_eq!(redacted.severity, "error");
+        assert_eq!(redacted.correlation_id, "corr-1");
+        assert_eq!(redacted.source, "renderer");
+    }
+
+    #[test]
+    fn redact_json_value_works_on_arbitrary_sentry_shape() {
+        let mut payload = json!({
+            "code": "IPC_FAIL",
+            "apiKey": "leaky",
+            "context": {
+                "token": "leaky-too",
+                "user_id": "ok"
+            }
+        });
+        Logger::redact_json_value(&mut payload);
+
+        assert_eq!(payload["code"], json!("IPC_FAIL"));
+        assert_eq!(payload["apiKey"], json!("[REDACTED]"));
+        assert_eq!(payload["context"]["token"], json!("[REDACTED]"));
+        assert_eq!(payload["context"]["user_id"], json!("ok"));
     }
 }

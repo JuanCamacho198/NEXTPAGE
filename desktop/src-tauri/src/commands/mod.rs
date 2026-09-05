@@ -278,9 +278,7 @@ pub fn getDailyGoalMinutes(
     if !repository.has_desktop_parity_schema().unwrap_or(true) {
         return Ok(20);
     }
-    repository
-        .get_daily_goal_minutes(user_id.as_deref())
-        .map_err(map_command_error)
+    repository.get_daily_goal_minutes(user_id.as_deref()).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -294,9 +292,7 @@ pub fn saveDailyGoalMinutes(
     if !repository.has_desktop_parity_schema().unwrap_or(true) {
         return Ok(());
     }
-    repository
-        .save_daily_goal_minutes(minutes, user_id.as_deref())
-        .map_err(map_command_error)
+    repository.save_daily_goal_minutes(minutes, user_id.as_deref()).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -310,9 +306,7 @@ pub fn getTodayMinutes(
     if !repository.has_desktop_parity_schema().unwrap_or(true) {
         return Ok(0);
     }
-    repository
-        .get_today_minutes(&user_id, book_id.as_deref())
-        .map_err(map_command_error)
+    repository.get_today_minutes(&user_id, book_id.as_deref()).map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -612,7 +606,12 @@ pub fn searchDictionaryWords(
 ) -> Result<Vec<DictionaryWordDto>, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     repository
-        .search_dictionary_words(&payload.query, payload.limit.unwrap_or(20), payload.fuzzy.unwrap_or(false), payload.user_id.as_deref())
+        .search_dictionary_words(
+            &payload.query,
+            payload.limit.unwrap_or(20),
+            payload.fuzzy.unwrap_or(false),
+            payload.user_id.as_deref(),
+        )
         .map_err(map_command_error)
 }
 
@@ -737,7 +736,35 @@ pub fn reportErrorEvent(state: State<'_, AppState>, event: ErrorEventDto) -> Res
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     let max_lines = get_max_log_lines_internal(&repository).unwrap_or(DEFAULT_MAX_LOG_LINES);
     let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
-    logger.log_to_file(&event, max_lines)
+    logger.log_to_file(&event, max_lines)?;
+
+    // Forward to Sentry when initialized. The PII scrubber is already wired
+    // via `before_send` in `sentry_init` (reuses `Logger::redact_json_value`),
+    // so we attach the DTO as raw extras — `before_send` runs before egress.
+    // The severity string is mapped to a Sentry Level; `code` and `source`
+    // become tags for Sentry UI filtering.
+    if crate::sentry_init::is_enabled() {
+        let level = match event.severity.to_lowercase().as_str() {
+            "debug" => sentry::Level::Debug,
+            "info" => sentry::Level::Info,
+            "warning" | "warn" => sentry::Level::Warning,
+            "critical" | "fatal" => sentry::Level::Fatal,
+            _ => sentry::Level::Error,
+        };
+        let mut sentry_event = sentry::protocol::Event::new();
+        sentry_event.level = level;
+        sentry_event.logger = Some(event.source.clone());
+        sentry_event.message = Some(format!("[{}] {}", event.code, event.message));
+        sentry_event.tags.insert("code".to_string(), event.code.clone());
+        sentry_event.tags.insert("source".to_string(), event.source.clone());
+        sentry_event.tags.insert("category".to_string(), event.category.clone());
+        sentry_event.tags.insert("correlation_id".to_string(), event.correlation_id.clone());
+        sentry_event.extra.insert("context".to_string(), event.context.clone());
+        sentry_event.extra.insert("recoverable".to_string(), serde_json::json!(event.recoverable));
+        sentry::capture_event(sentry_event);
+    }
+
+    Ok(())
 }
 
 #[allow(non_snake_case)]
@@ -1254,4 +1281,3 @@ mod outbox_tests {
         .is_err());
     }
 }
-

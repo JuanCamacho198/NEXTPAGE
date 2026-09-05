@@ -87,11 +87,15 @@ android {
         val sentryDsn = (localProperties.getProperty("SENTRY_DSN") ?: "").escapeForBuildConfig()
         buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
 
-        // Git SHA (short) — injected at build time so every APK has a unique fingerprint
+        // Git SHA (short=12) — injected at build time so every APK has a unique
+        // fingerprint and matches the cross-platform release scheme from spec C1
+        // (`nextpage-android@<VERSION_NAME>+<sha12>`). Truncated to 12 chars if a
+        // shallow clone returns a shorter SHA; falls back to `unknown` on git
+        // failure so debug builds never block.
         val gitSha = providers.exec {
-            commandLine("git", "rev-parse", "--short", "HEAD")
+            commandLine("git", "rev-parse", "--short=12", "HEAD")
             workingDir = rootProject.projectDir
-        }.standardOutput.asText.get().trim()
+        }.standardOutput.asText.get().trim().take(12).ifEmpty { "unknown" }
 
         buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
         val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())

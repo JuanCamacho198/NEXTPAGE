@@ -2,14 +2,50 @@
   import { errorState } from '$lib/shared/stores/ErrorState';
   import Button from '../forms/Button.svelte';
   import { i18n, type MessageKey } from '$lib/shared/i18n';
+  import { recordLastEventId } from '$lib/shared/feedback/feedbackStore';
+  import * as Sentry from '@sentry/browser';
 
   let locale = $state(i18n?.DEFAULT_LOCALE ?? 'es');
   $effect(() => {
     if (!i18n?.locale) return;
-    const unsub = i18n.locale.subscribe((l) => { locale = l; });
+    const unsub = i18n.locale.subscribe((l) => {
+      locale = l;
+    });
     return () => unsub();
   });
   const t = (key: MessageKey): string => i18n?.t?.(locale, key) ?? key;
+
+  /**
+   * Spec D3 trigger: when the desktop ErrorFallback shows, persist the
+   * crash's eventId so the next-launch prompt knows which crash to attach
+   * feedback to. We use Sentry.lastEventId() — by the time the fallback
+   * renders, Sentry has already captured the exception and stamped an id.
+   *
+   * If Sentry is uninitialised (no DSN) the value is undefined; we persist
+   * `null` and the dialog will open without an associated eventId.
+   */
+  $effect(() => {
+    if ($errorState.showFallback) {
+      let id: string | undefined;
+      try {
+        id = Sentry.lastEventId();
+      } catch {
+        id = undefined;
+      }
+      recordLastEventId(id ?? null);
+    }
+  });
+
+  function handleOpenFeedback(): void {
+    // Fire a custom event so AppModals can pick it up via window listener.
+    // We deliberately don't import the dialog directly here to avoid
+    // creating a circular dep between AppModals <-> ErrorFallback.
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('np:open-feedback'));
+    }
+    // Dismiss the fallback so the dialog owns the viewport.
+    errorState.clearError();
+  }
 
   const handleReload = (): void => {
     window.location.reload();
@@ -19,6 +55,8 @@
     errorState.clearError();
   };
 </script>
+
+<svelte:window />
 
 {#if $errorState.showFallback && $errorState.currentError}
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" role="alert">
@@ -42,8 +80,11 @@
         </p>
 
         <div class="flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <Button onclick={handleReload}>{t('error.reload')}</Button>
-          <Button variant="secondary" onclick={handleGoHome}>{t('error.tryAgainLater')}</Button>
+          <Button onclick={handleOpenFeedback}>
+            {t('error.sendFeedback')}
+          </Button>
+          <Button variant="secondary" onclick={handleReload}>{t('error.reload')}</Button>
+          <Button variant="ghost" onclick={handleGoHome}>{t('error.tryAgainLater')}</Button>
         </div>
       </div>
     </div>

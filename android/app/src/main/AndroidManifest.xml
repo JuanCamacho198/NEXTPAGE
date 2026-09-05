@@ -82,6 +82,15 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Disable Sentry's auto-init ContentProvider (SentryInitProvider).
+             We init manually in NextPageApplication.onCreate with the DSN
+             from BuildConfig (local.properties, gitignored). Without this,
+             the provider crashes on launch with "DSN is required" when no
+             DSN is set via manifest meta-data. -->
+        <meta-data
+            android:name="io.sentry.auto-init"
+            android:value="false" />
     </application>
 
 </manifest>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
   import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
+  import { handleError } from '$lib/shared/utils/errors';
 
   type BookmarksPanelProps = {
     bookId: string;
@@ -33,7 +34,10 @@
     try {
       bookmarks = await viewerPort.listBookmarks(bookId);
     } catch (err) {
-      console.error('Failed to load bookmarks:', err);
+      handleError(err, 'reader', {
+        bookId,
+        action: 'load_bookmarks',
+      });
       bookmarks = [];
     } finally {
       isLoading = false;
@@ -54,7 +58,11 @@
       });
       await loadBookmarks();
     } catch (err) {
-      console.error('Failed to save bookmark:', err);
+      handleError(err, 'reader', {
+        bookId,
+        pageNumber,
+        action: 'save_bookmark',
+      });
     }
   }
 
@@ -63,7 +71,11 @@
       await viewerPort.deleteBookmark(id);
       await loadBookmarks();
     } catch (err) {
-      console.error('Failed to delete bookmark:', err);
+      handleError(err, 'reader', {
+        bookId,
+        bookmarkId: id,
+        action: 'delete_bookmark',
+      });
     }
   }
 

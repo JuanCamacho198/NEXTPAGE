@@ -4,6 +4,7 @@ import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
 import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
 import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
 import type { HighlightsState } from '../chrome/useHighlights.svelte';
+import { handleError } from '$lib/shared/utils/errors';
 
 export type HighlightMenuState = {
   open: boolean;
@@ -32,7 +33,8 @@ export function createHighlightMenu(deps: HighlightMenuDeps) {
   const createTagFn =
     deps.createTagFn ?? ((args: { name: string; color?: string }) => viewerPort.createTag(args));
   const saveHighlightTagsFn =
-    deps.saveHighlightTagsFn ?? ((args: { highlightId: string; tagIds: string[] }) => viewerPort.saveHighlightTags(args));
+    deps.saveHighlightTagsFn ??
+    ((args: { highlightId: string; tagIds: string[] }) => viewerPort.saveHighlightTags(args));
 
   let highlightMenu = $state<HighlightMenuState>({
     open: false,
@@ -56,7 +58,7 @@ export function createHighlightMenu(deps: HighlightMenuDeps) {
     try {
       allTags = await listTagsFn();
     } catch (err) {
-      console.error('Failed to load tags:', err);
+      handleError(err, 'reader', { action: 'tag_refresh' });
     }
   }
 
@@ -65,7 +67,7 @@ export function createHighlightMenu(deps: HighlightMenuDeps) {
       const tags = await listTagsForHighlightFn(highlightId);
       highlightMenu.assignedTags = tags;
     } catch (err) {
-      console.error('Failed to load highlight tags:', err);
+      handleError(err, 'reader', { highlightId, action: 'tag_refresh_for_highlight' });
     }
   }
 
@@ -79,7 +81,10 @@ export function createHighlightMenu(deps: HighlightMenuDeps) {
       position:
         opts?.x !== undefined && opts?.y !== undefined
           ? { x: opts.x, y: opts.y }
-          : { x: typeof window !== 'undefined' ? window.innerWidth / 2 : 0, y: typeof window !== 'undefined' ? window.innerHeight / 2 : 0 },
+          : {
+              x: typeof window !== 'undefined' ? window.innerWidth / 2 : 0,
+              y: typeof window !== 'undefined' ? window.innerHeight / 2 : 0,
+            },
       assignedTags: [],
     };
     void refreshTags();
@@ -102,7 +107,11 @@ export function createHighlightMenu(deps: HighlightMenuDeps) {
     showNoteModal = false;
   }
 
-  function handleHighlightAction(action: HighlightActionKind, id: string, opts?: HighlightActionOpts): void {
+  function handleHighlightAction(
+    action: HighlightActionKind,
+    id: string,
+    opts?: HighlightActionOpts,
+  ): void {
     if (action === 'open') {
       openHighlightMenu(id, opts);
       return;
@@ -137,7 +146,10 @@ export function createHighlightMenu(deps: HighlightMenuDeps) {
     closeHighlightMenu();
   }
 
-  function enqueueHighlightUpdate(id: string, changes: { color?: string; note?: string | null }): void {
+  function enqueueHighlightUpdate(
+    id: string,
+    changes: { color?: string; note?: string | null },
+  ): void {
     highlights.enqueueHighlightUpdate(id, changes);
   }
 
@@ -184,7 +196,12 @@ export function createHighlightMenu(deps: HighlightMenuDeps) {
         highlightMenu.assignedTags = updated;
       }
     } catch (err) {
-      console.error('Failed to create tag:', err);
+      // PII: pass tag name LENGTH, never the name. The scrubber would also
+      // redact a `tagName` key, but length is the safest shape (no embedded PII).
+      handleError(err, 'reader', {
+        tagNameLength: name?.length ?? 0,
+        action: 'create_tag',
+      });
     }
   }
 
@@ -203,7 +220,11 @@ export function createHighlightMenu(deps: HighlightMenuDeps) {
       });
       highlightMenu.assignedTags = updated;
     } catch (err) {
-      console.error('Failed to save highlight tags:', err);
+      handleError(err, 'reader', {
+        highlightId: highlightMenu.highlightId,
+        tagCount: Array.from(currentIds).length,
+        action: 'save_highlight_tags',
+      });
     }
   }
 

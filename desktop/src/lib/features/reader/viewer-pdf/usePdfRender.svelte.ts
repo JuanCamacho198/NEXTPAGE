@@ -6,6 +6,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { SafeTextLayer } from '$lib/features/reader/viewer-pdf/safeTextLayer';
 import { debugState } from '$lib/shared/debug/debugState.svelte';
+import { handleError } from '$lib/shared/utils/errors';
 
 export type PdfRenderDeps = {
   getPdfDoc: () => pdfjsLib.PDFDocumentProxy | null;
@@ -53,7 +54,9 @@ export function createPdfRenderState(deps: PdfRenderDeps) {
   };
 
   async function renderTextLayer(
-    textContent: { items: Array<{ str: string; transform: number[]; width: number; height: number }> },
+    textContent: {
+      items: Array<{ str: string; transform: number[]; width: number; height: number }>;
+    },
     viewport: pdfjsLib.PageViewport,
     requestId = activeNavigationRequestId,
   ): Promise<void> {
@@ -97,7 +100,11 @@ export function createPdfRenderState(deps: PdfRenderDeps) {
         span.style.pointerEvents = 'auto';
       }
     } catch (err) {
-      console.error('Text layer render error:', err);
+      handleError(err, 'reader', {
+        format: 'pdf',
+        pageNumber: deps.getCurrentPage(),
+        action: 'render_text_layer',
+      });
       textLayerInstance = null;
     }
   }

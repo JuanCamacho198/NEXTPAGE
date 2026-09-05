@@ -8,10 +8,11 @@
 import { invoke } from '@tauri-apps/api/core';
 import { onMount, untrack } from 'svelte';
 import { debugState } from '$lib/shared/debug/debugState.svelte';
-import { setReaderError, clearReaderError } from '$lib/stores/readerErrorState.svelte';
+import { clearReaderError } from '$lib/stores/readerErrorState.svelte';
 import { locatorFromCfi, locatorToJson, normalizeHref } from '$lib/shared/sync/LocatorCodec';
 import { stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 import type { EpubChapterMeta } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
+import { handleError } from '$lib/shared/utils/errors';
 
 export interface EpubMetadataExtract {
   title: string;
@@ -58,7 +59,9 @@ export type EpubBridgeDeps = {
   setLastRenderedChapter: (v: number) => void;
   getLastContinueLocation: () => string | null;
   setLastContinueLocation: (v: string | null) => void;
-  getOnTocReady?: () => ((entries: Array<{ id: string; title: string; depth: number }>) => void) | undefined;
+  getOnTocReady?: () =>
+    | ((entries: Array<{ id: string; title: string; depth: number }>) => void)
+    | undefined;
   onLocationChange?: (cfiLocation: string, percentage: number) => void;
   onLocationContext?: (ctx: { locator: string; percentage: number }) => void;
   onselection?: (event: {
@@ -71,8 +74,21 @@ export type EpubBridgeDeps = {
     cfi: string | null;
   }) => void;
   onselectionclear?: () => void;
-  handleEpubHighlightClick: (msg: { id: string; x: number; y: number; color: string; text?: string; pageNumber: number }) => void;
-  handleEpubHighlightFailed: (msg: { id: string; reason: string; pageNumber: number; cfi?: string; color?: string }) => void;
+  handleEpubHighlightClick: (msg: {
+    id: string;
+    x: number;
+    y: number;
+    color: string;
+    text?: string;
+    pageNumber: number;
+  }) => void;
+  handleEpubHighlightFailed: (msg: {
+    id: string;
+    reason: string;
+    pageNumber: number;
+    cfi?: string;
+    color?: string;
+  }) => void;
   handleEpubHighlightPlaced: (msg: { id: string; pageNumber: number }) => void;
   syncIframeHeight: () => void;
   handleExternalTocNavigate: (id: string | null) => boolean;
@@ -197,7 +213,8 @@ export function createEpubBridge(deps: EpubBridgeDeps) {
     if (!locator) return;
 
     const progression = locator.locations.progression ?? 0;
-    const percentage = ((deps.getCurrentSpineIndex() + progression) / deps.getTotalChapters()) * 100;
+    const percentage =
+      ((deps.getCurrentSpineIndex() + progression) / deps.getTotalChapters()) * 100;
     deps.onLocationChange?.(preciseCfi, percentage);
     deps.onLocationContext?.({ locator: locatorToJson(locator), percentage });
   }
@@ -221,7 +238,16 @@ export function createEpubBridge(deps: EpubBridgeDeps) {
     }
 
     if (event.data.type === 'epub-srcdoc-error') {
-      console.warn('SRC DOC ERROR', event.data.msg, 'line', event.data.line, 'col', event.data.col, 'url', event.data.url);
+      console.warn(
+        'SRC DOC ERROR',
+        event.data.msg,
+        'line',
+        event.data.line,
+        'col',
+        event.data.col,
+        'url',
+        event.data.url,
+      );
       return;
     }
 
@@ -251,8 +277,18 @@ export function createEpubBridge(deps: EpubBridgeDeps) {
     }
 
     {
-      const cfiPreview = typeof event.data.cfi === 'string' ? event.data.cfi.slice(0, 40) : '(null)';
-      console.warn('epub-sel: received page', event.data.pageNumber, 'currentSpine', deps.getCurrentSpineIndex(), 'toc', deps.getCurrentChapterIndex(), 'cfi', cfiPreview);
+      const cfiPreview =
+        typeof event.data.cfi === 'string' ? event.data.cfi.slice(0, 40) : '(null)';
+      console.warn(
+        'epub-sel: received page',
+        event.data.pageNumber,
+        'currentSpine',
+        deps.getCurrentSpineIndex(),
+        'toc',
+        deps.getCurrentChapterIndex(),
+        'cfi',
+        cfiPreview,
+      );
     }
 
     if (
@@ -283,7 +319,9 @@ export function createEpubBridge(deps: EpubBridgeDeps) {
     debugState.epub.rectCount = Array.isArray(event.data.rects) ? event.data.rects.length : 0;
 
     const resolvedPageNumber =
-      typeof event.data.pageNumber === 'number' ? event.data.pageNumber : deps.getCurrentSpineIndex();
+      typeof event.data.pageNumber === 'number'
+        ? event.data.pageNumber
+        : deps.getCurrentSpineIndex();
     const resolvedCfi = typeof event.data.cfi === 'string' ? event.data.cfi : null;
     deps.onselection({
       text: event.data.text,
@@ -317,7 +355,8 @@ export function createEpubBridge(deps: EpubBridgeDeps) {
           deps.getCurrentChapterIndex(),
         );
       }
-      const tocForInit = (meta as EpubMetadataExtract).toc ?? (meta as EpubMetadataExtract).chapters ?? [];
+      const tocForInit =
+        (meta as EpubMetadataExtract).toc ?? (meta as EpubMetadataExtract).chapters ?? [];
       if (initialCfi && initialCfi.startsWith('epubcfi(') && tocForInit.length > 0) {
         const spineMatch = /epubcfi\(\/6\/(\d+)!/.exec(initialCfi);
         if (spineMatch) {
@@ -327,7 +366,14 @@ export function createEpubBridge(deps: EpubBridgeDeps) {
             const mapped = (() => {
               const byIndex = tocForInit.findIndex((c) => c.index === spineIdx);
               if (byIndex !== -1) return byIndex;
-              console.warn('epub-toc: initReader spine', spineIdx, 'not in TOC, fallback to', spineIdx, 'tocLen', tocForInit.length);
+              console.warn(
+                'epub-toc: initReader spine',
+                spineIdx,
+                'not in TOC, fallback to',
+                spineIdx,
+                'tocLen',
+                tocForInit.length,
+              );
               return null;
             })();
             const tocIdx = mapped !== null ? mapped : spineIdx;
@@ -342,26 +388,46 @@ export function createEpubBridge(deps: EpubBridgeDeps) {
           }
         }
       } else if (deps.getInitialPercentage() > 0 && deps.getInitialPercentage() < 100) {
-        const chapterGuess = Math.floor((deps.getInitialPercentage() / 100) * deps.getTotalChapters());
+        const chapterGuess = Math.floor(
+          (deps.getInitialPercentage() / 100) * deps.getTotalChapters(),
+        );
         deps.setCurrentChapterIndex(Math.min(chapterGuess, deps.getTotalChapters() - 1));
       }
 
       const onTocReady = deps.getOnTocReady?.();
       if (onTocReady) {
-        const entries = tocForInit.map((ch) => ({ id: ch.id, title: ch.label, depth: ch.depth ?? 0 }));
+        const entries = tocForInit.map((ch) => ({
+          id: ch.id,
+          title: ch.label,
+          depth: ch.depth ?? 0,
+        }));
         onTocReady(entries);
       }
 
       if (debugState.enabled) {
         invoke('indexEpubText', { bookId: deps.getBookId() }).catch((err: unknown) => {
-          console.warn('Failed to index EPUB text for search', err);
+          handleError(err, 'reader', {
+            format: 'epub',
+            bookId: deps.getBookId(),
+            action: 'index_text',
+          });
         });
       }
       clearReaderError();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       deps.setError(msg);
-      setReaderError(msg);
+      // Phase 1 of `reader-error-enrichment`: route through `handleError` so
+      // the failure reaches Sentry with structured context. `handleError` calls
+      // `errorState.setError(event)` (verified errors.ts:87) which drives the
+      // global toast via ErrorToast. The previous `setReaderError(msg)` is
+      // removed to avoid a double-toast (errorState is the single notification
+      // surface for recoverable reader failures).
+      handleError(err, 'reader', {
+        format: 'epub',
+        bookId: deps.getBookId(),
+        action: 'init_reader',
+      });
     } finally {
       deps.setIsLoading(false);
     }

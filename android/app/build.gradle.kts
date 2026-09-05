@@ -10,6 +10,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
     id("io.gitlab.arturbosch.detekt")
+
+    // Sentry Android Gradle Plugin (declared in the root build.gradle.kts;
+    // applied here so it participates in the app module's variant graph
+    // and can upload R8 mapping artifacts for release builds).
+    id("io.sentry.android.gradle")
 }
 
 ksp {
@@ -75,6 +80,13 @@ android {
         val supabaseAnonKey = (localProperties.getProperty("SUPABASE_ANON_KEY") ?: "").escapeForBuildConfig()
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
 
+        // Sentry DSN — read from local.properties (gitignored). When empty,
+        // SentryAndroid.init becomes a no-op (see NextPageApplication.onCreate).
+        // Sentry auth token is read at Gradle config time from env vars below;
+        // it never enters BuildConfig because it must not be shipped in the APK.
+        val sentryDsn = (localProperties.getProperty("SENTRY_DSN") ?: "").escapeForBuildConfig()
+        buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
+
         // Git SHA (short) — injected at build time so every APK has a unique fingerprint
         val gitSha = providers.exec {
             commandLine("git", "rev-parse", "--short", "HEAD")
@@ -126,6 +138,30 @@ android {
     sourceSets {
         getByName("androidTest").assets.srcDirs("$projectDir/schemas")
     }
+}
+
+// Sentry Android Gradle Plugin extension. Out-of-android block per plugin docs.
+// - autoInstallation: enabled → plugin auto-adds the Sentry Android SDK + a
+//   Sentry OkHttp interceptor to the application.
+// - org/projectName: bound to the Sentry project `nextpage-android` under the
+//   organization slug the user creates in sentry.io before Phase 3.
+// - authToken: read ONLY from env vars. The auth token is NEVER committed;
+//   users set SENTRY_AUTH_TOKEN locally (or in CI secrets). When unset,
+//   release builds will fail `verifySentryMappingUpload` (see below) — this
+//   is intentional: silent mapping-upload failures are not acceptable.
+// - telemetry=false: do not phone home with build-tool analytics.
+//
+// `SENTRY_AUTH_TOKEN` MUST be set for release builds. Documented in the
+// `verifySentryMappingUpload` task below.
+sentry {
+    autoInstallation {
+        enabled.set(true)
+    }
+    org.set(System.getenv("SENTRY_ORG") ?: "nextpage-android")
+    projectName.set("nextpage-android")
+    authToken.set(System.getenv("SENTRY_AUTH_TOKEN") ?: "")
+    // Disable telemetry to avoid phoning home
+    telemetry.set(false)
 }
 
 dependencies {
@@ -207,6 +243,12 @@ dependencies {
     implementation("org.readium.kotlin-toolkit:readium-adapter-pdfium:3.2.0") {
         exclude(group = "androidx.appcompat")
     }
+
+    // Sentry Android SDK (8.54.0 — latest stable on Maven Central at PR 3
+    // landing time). Pinned explicitly so transitive resolution cannot
+    // surprise us. The Gradle plugin's autoInstallation also adds this
+    // dependency; declaring it here makes the version visible to reviewers.
+    implementation("io.sentry:sentry-android:8.54.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
@@ -347,6 +389,38 @@ tasks.register("verifyReleaseMapping") {
         val mappingFile = mappingFileProvider.get().asFile
         if (!mappingFile.exists()) {
             throw GradleException("Release mapping file not found: ${mappingFile.path}")
+        }
+    }
+}
+
+// Mirrors verifyReleaseMapping for the Sentry R8 mapping upload step.
+// We don't read the SAGP upload log to "prove" the upload succeeded (that
+// would be brittle across plugin versions). Instead, we fail release builds
+// when SENTRY_AUTH_TOKEN is missing — because without a token, the upload
+// cannot succeed. Skipped with -PreleaseMinify=false (same convention as
+// verifyReleaseMapping) so debug builds aren't gated by a token requirement.
+//
+// Configuration-cache safe: capture the script-level `releaseMinifyEnabled`
+// provider AND `logger` into task-local vals so the doLast closure doesn't
+// reference the Gradle script object. Same pattern as `verifyReleaseMapping`.
+tasks.register("verifySentryMappingUpload") {
+    group = "verification"
+    description = "Fails if Sentry mapping upload is not configured for release builds"
+
+    val taskLogger = logger
+    val minifyEnabled = releaseMinifyEnabled
+
+    doLast {
+        if (!minifyEnabled) {
+            taskLogger.lifecycle("Skipping Sentry mapping verification because -PreleaseMinify=false")
+            return@doLast
+        }
+        val sentryToken = System.getenv("SENTRY_AUTH_TOKEN") ?: ""
+        if (sentryToken.isEmpty()) {
+            throw GradleException(
+                "SENTRY_AUTH_TOKEN is not set. Release builds require Sentry mapping upload. " +
+                    "Set it as an env var or in gradle.properties (gitignored)."
+            )
         }
     }
 }

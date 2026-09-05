@@ -1,6 +1,8 @@
 package com.nextpage.debug
 
 import android.util.Log
+import io.sentry.Sentry
+import io.sentry.SentryLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -84,6 +86,13 @@ object DebugLog {
                 updated.addAll(keep)
                 updated
             }
+            // Forward to Sentry (no-op if not initialized, i.e. when DSN is empty).
+            // Runs AFTER the in-memory ring-buffer update so local persistence is
+            // the source of truth and Sentry is best-effort egress. We use
+            // captureMessage because DebugLog.log takes a pre-formatted message
+            // string (not a Throwable). Callers that have a Throwable should call
+            // Sentry.captureException directly at the call site.
+            runCatching { Sentry.captureMessage(message, SentryLevel.ERROR) }
         }
         val priority = when (level) {
             Level.INFO -> Log.INFO

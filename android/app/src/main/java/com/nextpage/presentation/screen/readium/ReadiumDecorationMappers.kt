@@ -72,7 +72,6 @@ internal fun highlightsToDecorations(
                     "highlight ${h.id} skipped: locatorJson=${h.locatorJson?.take(80) ?: "null"} cfiRange=${h.cfiRange?.take(80) ?: "null"} jsonParsed=${fromJson != null}"
                 )
                 DebugDual.log(DebugEvent.HighlightsSkipped(h.id, h.cfiRange, reason))
-                DebugDual.logHighlightSkipped(h.id, h.cfiRange, reason)
                 return@mapNotNull null
             }
         // Enrich locator with text highlight when missing: Readium decoration at progression 0 alone

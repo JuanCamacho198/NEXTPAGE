@@ -1,6 +1,7 @@
 package com.nextpage.debug
 
 import android.util.Log
+import io.sentry.Sentry
 
 /**
  * Dual debug helper: logs BOTH to in-app DebugLog/DebugStateHolder AND to adb logcat.
@@ -54,12 +55,10 @@ object DebugDual {
     fun debugError(tag: String, msg: String, throwable: Throwable? = null) = e(tag, msg, throwable)
 
     // ---- Typed event helpers (ensure both DebugLog+DebugStateHolder AND Log fire) ----
+    // Each helper delegates to log(event) so exactly ONE structured Sentry capture
+    // fires per typed event (see captureTypedEvent).
     fun logHighlightSkipped(id: String, cfi: String?, reason: String) {
-        val cfiSafe = cfi?.take(80) ?: "null"
-        val msg = "highlights.skipped highlightId=$id cfi=$cfiSafe reason=$reason"
-        w(TAG_SYNC, msg)
-        // Mirror to DebugStateHolder decoration diagnostics (kept in sync with log(event) path)
-        runCatching { DebugStateHolder.recordDecorationEvent(id, TAG_SYNC, null) }
+        log(DebugEvent.HighlightsSkipped(id, cfi, reason))
     }
 
     fun logHighlightApplied(count: Int) {
@@ -78,15 +77,49 @@ object DebugDual {
     }
 
     fun logSyncFailed(entityType: String, entityId: String?, error: String) {
+        log(DebugEvent.SyncOutboxFailed(entityType, entityId, error))
+        // Keep the SupabaseProgressSync mirror for RLS/empty-body diagnostics.
+        // Local-only: the single structured Sentry capture fires inside log(event).
         val msg = "sync.outboxFailed entityType=$entityType entityId=${entityId ?: "null"} error=${error.take(MAX_ERROR_SNIPPET_LENGTH)}"
-        e(TAG_SYNC, msg)
-        // Also emit under SupabaseProgressSync tag for RLS/empty-body diagnostics
         e(TAG_SUPABASE_SYNC, msg)
     }
 
+    // Legacy (expected, actual) shape carries no locatorHref, so it cannot
+    // delegate to DebugEvent.FooterMismatch. Kept for backward compat; callers
+    // with a locatorHref should prefer log(DebugEvent.FooterMismatch(...)).
     fun logFooterMismatch(expected: String?, actual: String?) {
         val msg = "reader.footerMismatch expected=${expected ?: "null"} actual=${actual ?: "null"}"
         w(TAG_FOOTER, msg)
+    }
+
+    // ---- Structured Sentry egress (reader-error-enrichment PR2) ----
+
+    /**
+     * Sends an error-relevant typed reader event to Sentry as a structured
+     * [Sentry.captureException] (synthesized [RuntimeException] carrying
+     * [message]) with per-event [extras] via `setExtra` and [tags] plus
+     * `event=<eventName>` via `setTag`.
+     *
+     * Ordering contract: callers log locally first (via [d]/[w]/[e] into
+     * [DebugLog], the source of truth) and call this helper after, so Sentry
+     * stays best-effort egress. The Sentry call is wrapped in [runCatching]:
+     * when the SDK is not initialized (empty DSN) `captureException` is a safe
+     * no-op and local entries are unaffected. Exactly one capture fires per
+     * typed event — never call this helper twice for the same event.
+     */
+    private inline fun captureTypedEvent(
+        eventName: String,
+        message: String,
+        extras: Map<String, String> = emptyMap(),
+        tags: Map<String, String> = mapOf("source" to "reader")
+    ) {
+        runCatching {
+            Sentry.captureException(RuntimeException(message)) { scope ->
+                tags.forEach { (key, value) -> scope.setTag(key, value) }
+                scope.setTag("event", eventName)
+                extras.forEach { (key, value) -> scope.setExtra(key, value) }
+            }
+        }
     }
 
     // ---- Typed event entry point ----
@@ -99,6 +132,15 @@ object DebugDual {
                 w(TAG_SYNC, msg)
                 // Mirror to DebugStateHolder decoration diagnostics so both channels fire
                 runCatching { DebugStateHolder.recordDecorationEvent(event.highlightId, TAG_SYNC, null) }
+                captureTypedEvent(
+                    eventName = "highlight_skipped",
+                    message = msg,
+                    extras = mapOf(
+                        "highlightId" to event.highlightId,
+                        "cfi" to (event.cfi ?: "null"),
+                        "reason" to event.reason
+                    )
+                )
             }
             is DebugEvent.HighlightsApplied -> {
                 val cfiSafe = event.cfi?.take(80) ?: "null"
@@ -107,14 +149,42 @@ object DebugDual {
                 d(TAG_SYNC, msg)
                 // Typed helper parity: also bump applied count in holder for per-highlight path
                 // Batch count is handled separately via logHighlightApplied(count)
+                captureTypedEvent(
+                    eventName = "highlight_applied",
+                    message = msg,
+                    extras = mapOf(
+                        "highlightId" to event.highlightId,
+                        "cfi" to (event.cfi ?: "null"),
+                        "viaFallback" to event.viaFallback.toString(),
+                        "count" to "1"
+                    )
+                )
             }
             is DebugEvent.SyncOutboxFailed -> {
                 val msg = "sync.outboxFailed entityType=${event.entityType} entityId=${event.entityId} error=${event.error.take(MAX_ERROR_SNIPPET_LENGTH)}"
                 e(TAG_SYNC, msg)
+                captureTypedEvent(
+                    eventName = "sync_outbox_failed",
+                    message = msg,
+                    extras = mapOf(
+                        "entityType" to event.entityType,
+                        "entityId" to (event.entityId ?: "null"),
+                        "error" to event.error.take(MAX_ERROR_SNIPPET_LENGTH)
+                    )
+                )
             }
             is DebugEvent.FooterMismatch -> {
                 val msg = "reader.footerMismatch locatorHref=${event.locatorHref} computed=${event.computedChapter} expected=${event.expectedChapter}"
                 w(TAG_FOOTER, msg)
+                captureTypedEvent(
+                    eventName = "footer_mismatch",
+                    message = msg,
+                    extras = mapOf(
+                        "locatorHref" to event.locatorHref,
+                        "computed" to (event.computedChapter ?: "null"),
+                        "expected" to (event.expectedChapter ?: "null")
+                    )
+                )
             }
             is DebugEvent.ChromeToggled -> {
                 val msg = "chrome.visibility visible=${event.visible}"
@@ -136,10 +206,28 @@ object DebugDual {
                 val cfiSafe = event.cfi?.take(60) ?: "null"
                 val msg = "sync.receive highlightId=${event.highlightId} cfi=$cfiSafe locatorJsonNull=${event.locatorJsonNull}"
                 d(TAG_SYNC, msg)
+                captureTypedEvent(
+                    eventName = "sync_receive",
+                    message = msg,
+                    extras = mapOf(
+                        "highlightId" to event.highlightId,
+                        "cfi" to (event.cfi ?: "null"),
+                        "locatorJsonNull" to event.locatorJsonNull.toString()
+                    )
+                )
             }
             is DebugEvent.ChapterResolved -> {
                 val msg = "footer.chapterResolved locatorHref=${event.locatorHref} chapterTitle=${event.chapterTitle} index=${event.index}"
                 d(TAG_FOOTER, msg)
+                captureTypedEvent(
+                    eventName = "chapter_resolved",
+                    message = msg,
+                    extras = mapOf(
+                        "locatorHref" to event.locatorHref,
+                        "chapterTitle" to (event.chapterTitle ?: "null"),
+                        "index" to event.index.toString()
+                    )
+                )
             }
         }
     }

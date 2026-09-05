@@ -13,6 +13,10 @@ const captureMessage = vi.fn();
 vi.mock('@sentry/browser', () => ({
   init: (...args: unknown[]) => sentryInit(...args),
   browserTracingIntegration: () => ({ name: 'BrowserTracing' }),
+  // PR2 spec C2 — sink now wires `browserSessionIntegration` in the
+  // `integrations` array. The mock mirrors the real export so `SentrySink`'s
+  // init path stays a no-op-throw-success under test.
+  browserSessionIntegration: () => ({ name: 'BrowserSession' }),
   replayIntegration: () => ({ name: 'Replay' }),
   withScope: (cb: (scope: unknown) => void) => {
     cb({ setLevel: vi.fn(), setExtra: vi.fn(), addBreadcrumb: scopeAddBreadcrumb });

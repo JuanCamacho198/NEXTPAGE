@@ -3,8 +3,9 @@
  *
  * Validates the `sentry-cross-platform` spec scenario "Renderer init failure":
  * `Sentry.init` throwing MUST NOT crash the sink — the sink falls back to
- * a no-op. Also verifies the success path wires `browserTracingIntegration`
- * and `replayIntegration` correctly when init succeeds.
+ * a no-op. Also verifies the success path wires `browserTracingIntegration`,
+ * `browserSessionIntegration` (spec C2 — explicit session tracking), and
+ * `replayIntegration` correctly when init succeeds.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -12,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // success path (init resolves) and the failure path (init throws).
 const sentryInit = vi.fn();
 const browserTracingIntegration = vi.fn((_opts?: unknown) => ({ name: 'BrowserTracing' }));
+const browserSessionIntegration = vi.fn((_opts?: unknown) => ({ name: 'BrowserSession' }));
 const replayIntegration = vi.fn((_opts?: unknown) => ({ name: 'Replay' }));
 const withScope = vi.fn();
 const captureException = vi.fn();
@@ -23,6 +25,7 @@ const addBreadcrumb = vi.fn();
 vi.mock('@sentry/browser', () => ({
   init: (...args: unknown[]) => sentryInit(...args),
   browserTracingIntegration: (opts?: unknown) => browserTracingIntegration(opts),
+  browserSessionIntegration: (opts?: unknown) => browserSessionIntegration(opts),
   replayIntegration: (opts?: unknown) => replayIntegration(opts),
   withScope: (cb: (scope: unknown) => void) =>
     withScope(cb({
@@ -69,6 +72,7 @@ describe('SentrySink', () => {
     breadcrumbsStore.clear();
     sentryInit.mockReset();
     browserTracingIntegration.mockClear();
+    browserSessionIntegration.mockClear();
     replayIntegration.mockClear();
     withScope.mockReset();
     captureException.mockReset();
@@ -97,13 +101,17 @@ describe('SentrySink', () => {
     expect(captureMessage).not.toHaveBeenCalled();
   });
 
-  it('wires browserTracingIntegration + replayIntegration on the success path', () => {
+  it('wires browserTracingIntegration + browserSessionIntegration + replayIntegration on the success path', () => {
     sentryInit.mockImplementation(() => undefined);
 
     const sink = new SentrySink(FULL_SETTINGS);
 
     expect(sentryInit).toHaveBeenCalledTimes(1);
     expect(browserTracingIntegration).toHaveBeenCalledTimes(1);
+    // Spec C2 — explicit session tracking. The session integration MUST be
+    // included in the `integrations` array so session health flows to
+    // Sentry's release-health surface (prerequisite for Phase 3 alerting).
+    expect(browserSessionIntegration).toHaveBeenCalledTimes(1);
     expect(replayIntegration).toHaveBeenCalledTimes(1);
 
     // Replay integration MUST receive the masking config (PII policy).

@@ -370,7 +370,7 @@ export function buildChapterSrcdoc(
   doc.head.appendChild(highlightStyle);
 
   const errorScript = doc.createElement('script');
-  errorScript.textContent = `window.onerror = function(msg, url, line, col, err){ try{ window.parent.postMessage({type:'epub-srcdoc-error', msg: String(msg), line: line, col: col, url: String(url)}, '*'); }catch(e){} };`;
+  errorScript.textContent = `window.onerror = function(msg, url, line, col){ try{ window.parent.postMessage({type:'epub-srcdoc-error', kind:'js', msg: String(msg), line: line, col: col, url: String(url)}, '*'); }catch(e){} }; window.addEventListener('unhandledrejection', function(e){ try{ var m = e.reason && e.reason.message ? e.reason.message : String(e.reason); window.parent.postMessage({type:'epub-srcdoc-error', kind:'rejection', msg: m, line: 0, col: 0, url: location.href}, '*'); }catch(_){} });`;
   doc.head.prepend(errorScript);
   const bridgeScript = doc.createElement('script');
   bridgeScript.textContent = IFRAME_CFI_BRIDGE_SCRIPT;
@@ -536,6 +536,7 @@ export function buildChapterSrcdoc(
     script.remove();
   }
 
+  doc.body.appendChild(errorScript);
   doc.body.appendChild(bridgeScript);
   doc.body.appendChild(spineScript);
   doc.body.appendChild(highlightOverlayScript);

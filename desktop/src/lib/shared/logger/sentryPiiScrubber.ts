@@ -10,7 +10,8 @@
  *   (case-insensitive): `password`, `token`, `secret`, `api_key`,
  *   `access_token`, `refresh_token`, `note`, `noteText`, `tag`, `tagName`.
  *   Value replaced with `[Redacted]`.
- * - For extra path-like fields (`epubPath`, `bookPath`, `filePath`), keep only
+ * - For extra path-like fields (`epubPath`, `bookPath`, `filePath`,
+ *   `iframeSource`), keep only
  *   the basename to avoid leaking user home/library directories.
  * - Redact `127.0.0.1:<port>` substrings in OAuth callback URLs but keep the
  *   surrounding URL/query string so the event is still useful (the access
@@ -46,7 +47,7 @@ const SENSITIVE_KEY_PATTERNS: readonly string[] = [
   'tag',
 ];
 
-const PATH_KEYS: readonly string[] = ['epubPath', 'bookPath', 'filePath'];
+const PATH_KEYS: readonly string[] = ['epubPath', 'bookPath', 'filePath', 'iframeSource'];
 
 // OAuth callback URLs commonly carry access tokens, codes, and states in
 // the query string. These extras are free-form strings, not key:value

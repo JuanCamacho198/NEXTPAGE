@@ -3,7 +3,7 @@ import type { LoggerSink } from './Logger';
 import type { ErrorEvent } from '../events/ErrorEvent';
 import type { SentrySettings } from './sentryConfig';
 import { scrubEvent, type SentryLikeEvent } from './sentryPiiScrubber';
-import { captureBreadcrumb } from './BreadcrumbsStore';
+import { captureBreadcrumb, breadcrumbsStore } from './BreadcrumbsStore';
 import { BREADCRUMB_LABELS } from './breadcrumbTypes';
 import { routeAlert } from './AlertRouter';
 
@@ -111,6 +111,18 @@ export class SentrySink implements LoggerSink {
 
     Sentry.withScope((scope: Sentry.Scope) => {
       scope.setLevel(level);
+      // Journey breadcrumbs (cap 100 FIFO in BreadcrumbsStore): forward the
+      // buffered ids-only crumbs into the Sentry scope so the crash event
+      // carries the ordered open→chapter→highlight journey. Buffered while
+      // Sentry is uninit; flushed here on the single forwarding point.
+      for (const crumb of breadcrumbsStore.getAll()) {
+        scope.addBreadcrumb({
+          category: crumb.label,
+          message: crumb.label,
+          level: 'info',
+          data: crumb.data,
+        });
+      }
       scope.setExtra('category', event.category);
       scope.setExtra('code', event.code);
       scope.setExtra('source', event.source);

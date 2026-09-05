@@ -31,6 +31,8 @@
 import { SyncOutboxDao, isAuthClassError } from './SyncOutboxDao';
 import { recheckLiveSession } from '$lib/services/supabase';
 import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
+import { captureBreadcrumb } from '$lib/shared/logger/BreadcrumbsStore';
+import { BREADCRUMB_LABELS } from '$lib/shared/logger/breadcrumbTypes';
 
 /** Max breaker pause in seconds (D4): pause = min(300, 60·2^(streak−1)). */
 const BREAKER_MAX_PAUSE_SECONDS = 300;
@@ -152,12 +154,23 @@ export class SyncOutboxService {
       const items = await this.dao.listReady();
       let hadAnyFailure = false;
 
+      if (items.length > 0) {
+        // Journey crumb: sync attempted with FIFO queue depth (ids/enums only).
+        captureBreadcrumb('action', BREADCRUMB_LABELS.SYNC_TRIGGER, {
+          queueDepth: items.length,
+        });
+      }
+
       for (const item of items) {
         try {
           await this.handler(item.entityType, item.entityId, item.operation, item.payloadJson);
           await this.dao.delete(item.id);
         } catch (err) {
           hadAnyFailure = true;
+          captureBreadcrumb('action', BREADCRUMB_LABELS.SYNC_FAIL, {
+            entityType: item.entityType,
+            queueDepth: items.length,
+          });
           // SR-3: typed AUTH_REQUIRED/AUTH_EXPIRED must surface to the banner,
           // never be console.error-only. Non-auth failures are left untouched.
           reportAuthError(err);

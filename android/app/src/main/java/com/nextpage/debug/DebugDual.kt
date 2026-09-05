@@ -1,7 +1,9 @@
 package com.nextpage.debug
 
 import android.util.Log
+import io.sentry.Breadcrumb
 import io.sentry.Sentry
+import io.sentry.SentryLevel
 
 /**
  * Dual debug helper: logs BOTH to in-app DebugLog/DebugStateHolder AND to adb logcat.
@@ -122,6 +124,31 @@ object DebugDual {
         }
     }
 
+    // ---- Journey breadcrumb egress (sentry-observability-v2 PR1) ----
+
+    /**
+     * Forwards an allowlisted journey event to Sentry as a breadcrumb.
+     *
+     * Allowlist: ProgressEmit, ChapterResolved, HighlightsApplied,
+     * SyncOutboxFailed, SyncReceive — ids/counters only, never text, titles,
+     * or error bodies. ChromeToggled/FooterRecompute (+ every other event)
+     * are intentionally excluded as noise. Wrapped in [runCatching]: when the
+     * SDK is uninit the call is a safe no-op and local DebugLog entries are
+     * unaffected.
+     */
+    private fun addCrumb(category: String, message: String, data: Map<String, String>) {
+        runCatching {
+            Sentry.addBreadcrumb(
+                Breadcrumb().apply {
+                    setCategory(category)
+                    setMessage(message)
+                    level = SentryLevel.INFO
+                    data.forEach { (key, value) -> setData(key, value) }
+                }
+            )
+        }
+    }
+
     // ---- Typed event entry point ----
 
     fun log(event: DebugEvent) {
@@ -159,6 +186,14 @@ object DebugDual {
                         "count" to "1"
                     )
                 )
+                addCrumb(
+                    category = "highlight",
+                    message = msg,
+                    data = mapOf(
+                        "highlightId" to event.highlightId,
+                        "viaFallback" to event.viaFallback.toString()
+                    )
+                )
             }
             is DebugEvent.SyncOutboxFailed -> {
                 val msg = "sync.outboxFailed entityType=${event.entityType} entityId=${event.entityId} error=${event.error.take(MAX_ERROR_SNIPPET_LENGTH)}"
@@ -170,6 +205,14 @@ object DebugDual {
                         "entityType" to event.entityType,
                         "entityId" to (event.entityId ?: "null"),
                         "error" to event.error.take(MAX_ERROR_SNIPPET_LENGTH)
+                    )
+                )
+                addCrumb(
+                    category = "sync",
+                    message = msg,
+                    data = mapOf(
+                        "entityType" to event.entityType,
+                        "entityId" to (event.entityId ?: "null")
                     )
                 )
             }
@@ -197,6 +240,14 @@ object DebugDual {
             is DebugEvent.ProgressEmit -> {
                 val msg = "progress.emit bookId=${event.bookId} percentage=${event.percentage} source=${event.source}"
                 d(TAG_PROGRESS, msg)
+                addCrumb(
+                    category = "navigation",
+                    message = msg,
+                    data = mapOf(
+                        "bookId" to event.bookId,
+                        "source" to event.source
+                    )
+                )
             }
             is DebugEvent.ProgressReconciled -> {
                 val msg = "progress.reconciled bookId=${event.bookId} winner=${event.winner} localAt=${event.localAt} remoteAt=${event.remoteAt} localPct=${event.localPct} remotePct=${event.remotePct}"
@@ -215,6 +266,11 @@ object DebugDual {
                         "locatorJsonNull" to event.locatorJsonNull.toString()
                     )
                 )
+                addCrumb(
+                    category = "sync",
+                    message = msg,
+                    data = mapOf("highlightId" to event.highlightId)
+                )
             }
             is DebugEvent.ChapterResolved -> {
                 val msg = "footer.chapterResolved locatorHref=${event.locatorHref} chapterTitle=${event.chapterTitle} index=${event.index}"
@@ -225,6 +281,16 @@ object DebugDual {
                     extras = mapOf(
                         "locatorHref" to event.locatorHref,
                         "chapterTitle" to (event.chapterTitle ?: "null"),
+                        "index" to event.index.toString()
+                    )
+                )
+                // Crumb data is ids-only: chapterTitle stays out (titles are
+                // feedback-events-only per the context-attachment policy).
+                addCrumb(
+                    category = "navigation",
+                    message = msg,
+                    data = mapOf(
+                        "locatorHref" to event.locatorHref,
                         "index" to event.index.toString()
                     )
                 )

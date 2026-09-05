@@ -18,6 +18,7 @@ const captureException = vi.fn();
 const captureMessage = vi.fn();
 const setLevel = vi.fn();
 const setExtra = vi.fn();
+const addBreadcrumb = vi.fn();
 
 vi.mock('@sentry/browser', () => ({
   init: (...args: unknown[]) => sentryInit(...args),
@@ -27,12 +28,14 @@ vi.mock('@sentry/browser', () => ({
     withScope(cb({
       setLevel: (...args: unknown[]) => setLevel(...args),
       setExtra: (...args: unknown[]) => setExtra(...args),
+      addBreadcrumb: (...args: unknown[]) => addBreadcrumb(...args),
     })),
   captureException: (...args: unknown[]) => captureException(...args),
   captureMessage: (...args: unknown[]) => captureMessage(...args),
 }));
 
 import { SentrySink } from '$lib/shared/logger/SentrySink';
+import { breadcrumbsStore } from '$lib/shared/logger/BreadcrumbsStore';
 import type { SentrySettings } from '$lib/shared/logger/sentryConfig';
 import type { ErrorEvent } from '$lib/shared/events/ErrorEvent';
 
@@ -63,6 +66,7 @@ const ERROR_EVENT: ErrorEvent = {
 
 describe('SentrySink', () => {
   beforeEach(() => {
+    breadcrumbsStore.clear();
     sentryInit.mockReset();
     browserTracingIntegration.mockClear();
     replayIntegration.mockClear();

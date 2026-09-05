@@ -12,7 +12,7 @@ import { clearReaderError } from '$lib/stores/readerErrorState.svelte';
 import { locatorFromCfi, locatorToJson, normalizeHref } from '$lib/shared/sync/LocatorCodec';
 import { stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 import type { EpubChapterMeta } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
-import { handleError } from '$lib/shared/utils/errors';
+import { handleError, ReaderError } from '$lib/shared/utils/errors';
 
 export interface EpubMetadataExtract {
   title: string;
@@ -97,6 +97,48 @@ export type EpubBridgeDeps = {
     options: { currentChapterIndex: number; totalChapters: number; tocLength: number },
   ) => { navigated: boolean; needsScroll: boolean; chapterIdx: number | null } | null;
 };
+
+export interface EpubIframeErrorData {
+  msg?: unknown;
+  url?: unknown;
+  line?: unknown;
+  col?: unknown;
+  kind?: unknown;
+}
+
+/** Truncate an iframe error message to `max` chars (PII: never forward raw text). */
+export function truncateIframeMsg(s: string, max = 200): string {
+  return s.length > max ? s.slice(0, max) : s;
+}
+
+/** Reduce a path/URL to its basename (mirrors sentryPiiScrubber — no home dirs). */
+export function basename(p: string): string {
+  const idx = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'));
+  return idx >= 0 ? p.slice(idx + 1) : p;
+}
+
+/**
+ * Pure mapper: iframe `epub-srcdoc-error` payload → `ReaderError` with
+ * queryable context. IDs/counters only — never chapter text/HTML.
+ */
+export function mapIframeMessageToError(
+  d: EpubIframeErrorData,
+  bookId: string,
+  chapterIndex: number,
+): ReaderError {
+  const msg = truncateIframeMsg(String(d.msg ?? ''), 200);
+  const src = basename(String(d.url ?? ''));
+  return new ReaderError(msg, 'READER_IFRAME_ERROR').withContext({
+    format: 'epub',
+    action: 'iframe_error',
+    kind: d.kind ?? 'js',
+    iframeSource: src,
+    line: d.line ?? 0,
+    col: d.col ?? 0,
+    bookId,
+    chapterIndex,
+  });
+}
 
 export function createEpubBridge(deps: EpubBridgeDeps) {
   /** Scroll iframe to fragment anchor (preserved #frag in toc.href). 3×rAF ensures layout. */
@@ -238,15 +280,9 @@ export function createEpubBridge(deps: EpubBridgeDeps) {
     }
 
     if (event.data.type === 'epub-srcdoc-error') {
-      console.warn(
-        'SRC DOC ERROR',
-        event.data.msg,
-        'line',
-        event.data.line,
-        'col',
-        event.data.col,
-        'url',
-        event.data.url,
+      handleError(
+        mapIframeMessageToError(event.data, deps.getBookId(), deps.getCurrentChapterIndex()),
+        'reader',
       );
       return;
     }

@@ -31,6 +31,27 @@ export class ReaderError extends AppError {
     super(message, code, 'reader', 'runtime', context, true);
     this.name = 'ReaderError';
   }
+
+  /**
+   * Returns a NEW `ReaderError` whose `context` is the merge of the receiver's
+   * context with `extra`. The receiver is NOT mutated; callers MUST use the
+   * returned error.
+   *
+   * Merge order: `extra` is spread AFTER the receiver's context, so on
+   * conflict `extra` wins (last-write-wins semantics).
+   *
+   * No-op semantics: when `extra` is empty, the returned error carries the
+   * same context shape but is a fresh instance (NOT the same reference).
+   *
+   * PII contract: callers MUST NOT pass user-typed text (notes, tag names,
+   * highlight text) directly. Use length-only fields (`noteLength`,
+   * `tagNameLength`) or rely on `sentryPiiScrubber` to redact the matching
+   * key (`noteText`, `tagName`, `tag`, `note`) before the event reaches
+   * Sentry.
+   */
+  withContext(extra: Record<string, unknown>): ReaderError {
+    return new ReaderError(this.message, this.code, { ...this.context, ...extra });
+  }
 }
 
 export class FileSystemError extends AppError {

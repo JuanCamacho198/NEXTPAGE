@@ -191,4 +191,27 @@ describe('scrubEvent — Sentry PII scrubber', () => {
       `Error while signing in with access_token:${REDACTED} and password:${REDACTED}`,
     );
   });
+
+  // `reader-error-enrichment` Phase 1: tag names and highlight notes are
+  // user-typed text. Even if a caller forgets to use `*Length` fields, the
+  // scrubber MUST redact the raw values before they reach Sentry.
+  it('redacts extra.note values (highlight notes are user-typed text)', () => {
+    const event: SentryLikeEvent = {
+      extra: { note: 'user-typed private note that must not leak' },
+    };
+
+    const out = scrubEvent(event);
+
+    expect(out.extra?.['note']).toBe(REDACTED);
+  });
+
+  it('redacts extra.tagName values (tag names are user-typed text)', () => {
+    const event: SentryLikeEvent = {
+      extra: { tagName: 'my-secret-tag-name' },
+    };
+
+    const out = scrubEvent(event);
+
+    expect(out.extra?.['tagName']).toBe(REDACTED);
+  });
 });

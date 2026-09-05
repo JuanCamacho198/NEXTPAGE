@@ -8,7 +8,8 @@
  * Policy:
  * - Redact any extra field whose KEY contains one of the sensitive patterns
  *   (case-insensitive): `password`, `token`, `secret`, `api_key`,
- *   `access_token`, `refresh_token`. Value replaced with `[Redacted]`.
+ *   `access_token`, `refresh_token`, `note`, `noteText`, `tag`, `tagName`.
+ *   Value replaced with `[Redacted]`.
  * - For extra path-like fields (`epubPath`, `bookPath`, `filePath`), keep only
  *   the basename to avoid leaking user home/library directories.
  * - Redact `127.0.0.1:<port>` substrings in OAuth callback URLs but keep the
@@ -35,6 +36,14 @@ const SENSITIVE_KEY_PATTERNS: readonly string[] = [
   'accesstoken', // camelCase variant
   'refresh_token',
   'refreshtoken', // camelCase variant
+  // Reader-context PII (Phase 1 of `reader-error-enrichment`): tag names,
+  // highlight notes, and similar user-typed text MUST NOT leave the device.
+  // Redact both the singular and plural / `text`-suffixed forms because the
+  // call sites use different shapes (`tag`, `tagName`, `noteText`, `note`).
+  'notetext',
+  'note',
+  'tagname',
+  'tag',
 ];
 
 const PATH_KEYS: readonly string[] = ['epubPath', 'bookPath', 'filePath'];

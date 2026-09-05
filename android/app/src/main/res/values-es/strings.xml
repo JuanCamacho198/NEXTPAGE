@@ -741,4 +741,22 @@
     <string name="performance_report_error">No se pudo generar el reporte</string>
     <string name="performance_report_path">Archivo: %1$s — toca para compartir</string>
     <string name="performance_share_report">Compartir reporte de rendimiento</string>
+
+    <!-- Crash feedback sheet (PR4 / tasks 4.3-4.4) — ES verbatim from feedback-design #2460 (njdtk).
+         These strings are the SOURCE OF TRUTH (spec D1 copy audit gate). Do not edit lightly;
+         any drift from the design contract must update both this block and #2460. -->
+    <string name="feedback_mobile_title">Ayúdanos a arreglar esto</string>
+    <string name="feedback_mobile_subtitle">La app se cerró mientras leías. Tu reporte nos ayuda a que no vuelva a pasar.</string>
+    <string name="feedback_mobile_auto_context_label">Detectamos automáticamente</string>
+    <string name="feedback_mobile_sample_book">La Odisea</string>
+    <string name="feedback_mobile_sample_chapter">Capítulo IX · página 142 de 318</string>
+    <string name="feedback_mobile_input_label">¿Qué estabas haciendo cuando se cerró?</string>
+    <string name="feedback_mobile_helper">Opcional · nos ayuda muchísimo</string>
+    <string name="feedback_mobile_privacy">Solo se envía este reporte, nada de tu biblioteca.</string>
+    <string name="feedback_mobile_close">Cerrar</string>
+    <string name="feedback_mobile_send">Enviar reporte</string>
+    <string name="feedback_mobile_sending">Enviando…</string>
+    <string name="feedback_mobile_sent">Enviado</string>
+    <string name="feedback_mobile_offline_notice">Guardado sin conexión — enviaremos cuando vuelvas a estar online.</string>
+    <string name="feedback_mobile_counter">%1$d / %2$d</string>
 </resources>

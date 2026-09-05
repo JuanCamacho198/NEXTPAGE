@@ -24,6 +24,9 @@ import com.nextpage.debug.CrashNotificationHelper
 import com.nextpage.debug.DebugLog
 import com.nextpage.debug.DebugPrefs
 import com.nextpage.debug.DebugStateHolder
+import com.nextpage.debug.FeedbackActivity
+import com.nextpage.debug.FeedbackEvent
+import com.nextpage.debug.FeedbackPersistence
 import com.nextpage.di.AppContainer
 import com.nextpage.domain.model.ThemeMode
 import com.nextpage.presentation.navigation.NextPageNavHost
@@ -75,6 +78,13 @@ class MainActivity : AppCompatActivity() {
             CrashNotificationHelper.showCrashNotificationIfAny(this)
             maybeRequestNotificationPermission()
         }
+
+        // Next-launch prompt (PR4 / task 4.3b): if the previous run captured
+        // a crash and persisted the Sentry eventId but the user never dismissed
+        // or sent feedback, open the feedback sheet. Runs in BOTH debug and
+        // release builds (no DebugPrefs gate) — the design is that real users
+        // hit this path too. The dismiss-once check lives in FeedbackPersistence.
+        maybeShowFeedbackSheet()
 
         setContent {
             val appThemePrefs = remember { AppThemePreferences(this@MainActivity) }
@@ -134,6 +144,37 @@ class MainActivity : AppCompatActivity() {
                 requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
+    }
+
+    /**
+     * Reads the persisted last Sentry eventId + dismissed set; if there's
+     * a pending crash the user hasn't acted on, launches [FeedbackActivity].
+     * No-op when Sentry is uninitialized (lastEventId would be "unknown" —
+     * we still prompt, since the feedback flow is local-first and only
+     * submits best-effort to Sentry).
+     */
+    private fun maybeShowFeedbackSheet() {
+        val persistence = FeedbackPersistence(this)
+        val lastEventId = persistence.readLastEventId() ?: return
+        if (lastEventId in persistence.readDismissed()) {
+            // Already dismissed by this user; clear the last-event-id so we
+            // don't keep checking on every launch.
+            persistence.clearLastEventId()
+            return
+        }
+        startActivity(
+            FeedbackActivity.intent(
+                context = this,
+                eventId = lastEventId,
+                book = FeedbackEvent.BookMeta(
+                    bookId = "",
+                    title = null,
+                    chapterLabel = null,
+                    chapterIndex = null,
+                    page = null
+                )
+            )
+        )
     }
 
     // ── ActionMode override (debug only) ──────────────────────────────

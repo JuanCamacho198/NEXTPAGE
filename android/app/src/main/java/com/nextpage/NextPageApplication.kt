@@ -7,6 +7,7 @@ import coil.ImageLoaderFactory
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.debug.CrashLogStore
 import com.nextpage.debug.DebugLog
+import com.nextpage.debug.FeedbackPersistence
 import com.nextpage.presentation.theme.CoilModule
 import io.sentry.Sentry
 import io.sentry.SentryLevel
@@ -50,6 +51,7 @@ class NextPageApplication : Application(), ImageLoaderFactory {
     private lateinit var debugLogScope: CoroutineScope
     private lateinit var crashLogStore: CrashLogStore
     private lateinit var crashDir: File
+    private lateinit var feedbackStore: FeedbackPersistence
 
     private val supabaseWarmupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -60,6 +62,7 @@ class NextPageApplication : Application(), ImageLoaderFactory {
         debugLogScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         crashLogStore = CrashLogStore(logDir)
         crashLogStore.cleanup(crashDir)
+        feedbackStore = FeedbackPersistence(this)
         DebugLog.init(debugLogScope, crashLogStore)
 
         // Sentry must be initialized BEFORE installCrashHandler so the chained
@@ -105,14 +108,26 @@ class NextPageApplication : Application(), ImageLoaderFactory {
 
     override fun newImageLoader(): ImageLoader = CoilModule.imageLoader(this)
 
+    /**
+     * Public accessor for the feedback persistence — used by
+     * [CrashDetailActivity] (in-memory trigger) and [MainActivity]
+     * (next-launch prompt) to read/write the queue + dismissed set.
+     */
+    val feedbackPersistence: FeedbackPersistence
+        get() = feedbackStore
+
     private fun installCrashHandler() {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
                 // Capture to Sentry FIRST so the event has a chance to flush before
-                // the process dies. Sentry.captureException is a no-op when Sentry
-                // is not initialized (DSN empty).
-                Sentry.captureException(throwable)
+                // the process dies. Sentry.captureException returns the SentryId
+                // which we persist as `feedback_last_event_id` so the next-launch
+                // feedback sheet can link the report back to the crash (spec D3).
+                val sentryId = Sentry.captureException(throwable)
+                runCatching {
+                    feedbackStore.recordLastEventId(sentryryIdString(sentryId))
+                }
 
                 val stackTrace = Log.getStackTraceString(throwable)
                 val crashJson = JSONObject().apply {
@@ -152,4 +167,13 @@ class NextPageApplication : Application(), ImageLoaderFactory {
         }
         DebugLog.info("CrashHandler", "Installed (Sentry + local)")
     }
+
+    /**
+     * Extract the canonical string id from a [io.sentry.protocol.SentryId].
+     * Falls back to `"unknown"` when Sentry is uninitialized (returns
+     * `SentryId.EMPTY_ID` whose string is `00000000-…`).
+     */
+    private fun sentryryIdString(id: io.sentry.protocol.SentryId): String = runCatching {
+        id.toString()
+    }.getOrDefault("unknown")
 }

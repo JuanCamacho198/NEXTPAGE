@@ -796,4 +796,23 @@
     <string name="performance_report_error">Failed to generate report</string>
     <string name="performance_report_path">File: %1$s — tap to share</string>
     <string name="performance_share_report">Share performance report</string>
+
+    <!-- Crash feedback sheet (PR4 / tasks 4.3-4.4) — mobile contract from feedback-design #2460 (njdtk).
+         The Spanish copy in values-es/strings.xml is the verbatim source of truth per spec D1;
+         English mirrors live here as a fallback for en-US users (the desktop dialog already ships
+         ES-only by design — the mobile sheet matches that convention until i18n is requested). -->
+    <string name="feedback_mobile_title">Help us fix this</string>
+    <string name="feedback_mobile_subtitle">The app closed while you were reading. Your report helps us make sure it doesn\'t happen again.</string>
+    <string name="feedback_mobile_auto_context_label">Detected automatically</string>
+    <string name="feedback_mobile_sample_book">La Odisea</string>
+    <string name="feedback_mobile_sample_chapter">Capítulo IX · página 142 de 318</string>
+    <string name="feedback_mobile_input_label">What were you doing when it closed?</string>
+    <string name="feedback_mobile_helper">Optional · it really helps</string>
+    <string name="feedback_mobile_privacy">Only this report is sent — nothing from your library.</string>
+    <string name="feedback_mobile_close">Close</string>
+    <string name="feedback_mobile_send">Send report</string>
+    <string name="feedback_mobile_sending">Sending…</string>
+    <string name="feedback_mobile_sent">Sent</string>
+    <string name="feedback_mobile_offline_notice">Saved offline — will send when you\'re back online.</string>
+    <string name="feedback_mobile_counter">%1$d / %2$d</string>
 </resources>

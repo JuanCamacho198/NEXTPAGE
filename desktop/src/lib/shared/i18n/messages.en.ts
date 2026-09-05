@@ -176,7 +176,7 @@ export const messagesEn = {
   'settings.color.red': 'Red',
   'settings.color.pink': 'Pink',
   'settings.color.orange': 'Orange',
-'settings.color.purple': 'Purple',
+  'settings.color.purple': 'Purple',
   'settings.page': 'Page',
   'settings.deleteHighlight': 'Delete highlight',
   'settings.deleteBookmark': 'Delete bookmark',
@@ -209,9 +209,9 @@ export const messagesEn = {
   'settings.daily_goal_set': 'Set goal →',
   'stats.goalProgress': 'Daily goal {{current}}/{{goal}} min {{percent}}%',
   'stats.goalProgressHint': '{{percent}}% of your daily goal',
-  'onboarding_goal_title': 'Set your daily goal',
-  'onboarding_goal_description': 'Pick a daily reading time to stay on track',
-  'onboarding_goal_continue': 'Continue',
+  onboarding_goal_title: 'Set your daily goal',
+  onboarding_goal_description: 'Pick a daily reading time to stay on track',
+  onboarding_goal_continue: 'Continue',
   'settings.unknownBook': 'Unknown',
 
   // New Settings Tabs
@@ -707,6 +707,7 @@ export const messagesEn = {
   'error.somethingWrong': 'Something went wrong',
   'error.reload': 'Reload App',
   'error.tryAgainLater': 'Try Again Later',
+  'error.sendFeedback': 'Send feedback',
 
   // Reader Text Settings (PR3b)
   'reader.themePaper': 'Paper',
@@ -803,7 +804,8 @@ export const messagesEn = {
   'settings.connectedDevices.thisDevice': 'This device',
   'settings.connectedDevices.lastActive': 'Last active',
   'settings.connectedDevices.remove': 'Sign out',
-  'settings.connectedDevices.removeConfirm': 'Sign out from {{name}}? It will be removed from your devices.',
+  'settings.connectedDevices.removeConfirm':
+    'Sign out from {{name}}? It will be removed from your devices.',
   'settings.connectedDevices.error': "Couldn't load devices. Check your connection.",
   'settings.connectedDevices.count': '{{count}} connected devices',
   'settings.connectedDevices.notSignedIn': 'Sign in to see your connected devices.',
@@ -838,7 +840,7 @@ export const messagesEn = {
   'welcome.signedInAs': 'Signed in as {{email}}',
   'welcome.signedInFallback': 'your Google account',
   'welcome.signedInToast': 'Signed in successfully',
-'welcome.signedOutToast': 'Signed out successfully',
+  'welcome.signedOutToast': 'Signed out successfully',
   'welcome.loggingIn': 'Logging in...',
   'welcome.devSkipHint': 'Dev mode: a mock local user will be created.',
   'welcome.nav.features': 'Features',

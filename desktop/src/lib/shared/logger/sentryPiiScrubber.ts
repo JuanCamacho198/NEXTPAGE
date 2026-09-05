@@ -72,6 +72,7 @@ const REDACTED_VALUE = '[Redacted]';
 export type SentryLikeEvent = {
   tags?: Record<string, unknown>;
   extra?: Record<string, unknown>;
+  contexts?: Record<string, unknown> & { feedback?: unknown };
   user?: { ip_address?: string | null; email?: string | null; username?: string | null };
   request?: {
     url?: string;
@@ -82,6 +83,28 @@ export type SentryLikeEvent = {
   exception?: { values?: Array<{ value?: string }> };
   [key: string]: unknown;
 };
+
+/**
+ * Keys that are emitted ONLY by the feedback path. The feedback dialog is
+ * the sole writer; the scrubber strips these on every other event so the
+ * PII payload never leaks via breadcrumbs, captureException, or replay.
+ *
+ * Spec D2 — Context-attachment policy. Mirrored on the Android side (PR4).
+ */
+const FEEDBACK_ONLY_EXTRA_KEYS: readonly string[] = ['bookTitle', 'chapterLabel'];
+
+/**
+ * True iff the event being scrubbed is a feedback event. The Sentry SDK
+ * stamps feedback events with `contexts.feedback`; if that namespace is
+ * absent the event is a normal error/breadcrumb and MUST NOT carry book
+ * title or chapter label. Callers can override by passing `isFeedbackEvent`
+ * directly (kept here so tests can exercise both paths without mocking the
+ * Sentry SDK shape).
+ */
+function isFeedbackLikeEvent(event: SentryLikeEvent): boolean {
+  const ctx = event.contexts;
+  return !!(ctx && ctx.feedback);
+}
 
 function shouldRedactKey(key: string): boolean {
   const lower = key.toLowerCase();
@@ -118,9 +141,18 @@ function basename(path: string): string {
   return idx >= 0 ? path.slice(idx + 1) : path;
 }
 
-function redactExtra(extra: Record<string, unknown>): Record<string, unknown> {
+function redactExtra(
+  extra: Record<string, unknown>,
+  isFeedbackEvent: boolean,
+): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(extra)) {
+    // Spec D2 — bookTitle / chapterLabel travel ONLY on feedback events.
+    // On any other event (captureException, breadcrumbs, replay) these keys
+    // must be stripped entirely. The feedback dialog is the sole writer.
+    if (!isFeedbackEvent && FEEDBACK_ONLY_EXTRA_KEYS.includes(key)) {
+      continue;
+    }
     if (shouldRedactKey(key)) {
       result[key] = REDACTED_VALUE;
       continue;
@@ -140,12 +172,16 @@ function redactExtra(extra: Record<string, unknown>): Record<string, unknown> {
 
 /**
  * Returns a redacted copy of a Sentry event. Never mutates the input.
+ *
+ * Detects feedback events via `event.contexts.feedback` and only allows the
+ * feedback-only extra keys (`bookTitle`, `chapterLabel`) on those events.
  */
 export function scrubEvent<T extends SentryLikeEvent>(event: T): T {
   const next: Record<string, unknown> = { ...event };
+  const isFeedback = isFeedbackLikeEvent(event);
 
   if (event.extra && typeof event.extra === 'object') {
-    next.extra = redactExtra(event.extra as Record<string, unknown>);
+    next.extra = redactExtra(event.extra as Record<string, unknown>, isFeedback);
   }
 
   if (event.user && typeof event.user === 'object') {

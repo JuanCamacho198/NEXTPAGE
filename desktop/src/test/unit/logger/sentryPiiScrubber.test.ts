@@ -226,4 +226,37 @@ describe('scrubEvent — Sentry PII scrubber', () => {
 
     expect(out.message).toBe(`iframe chap9: token:${REDACTED} failed to load note:${REDACTED}`);
   });
+
+  // `sentry-observability-v2` PR3 (task 4.2 — spec D2 policy split):
+  // bookTitle / chapterLabel may travel ONLY on feedback events. Every
+  // other event (captureException, breadcrumbs, replay) must strip them.
+  it('STRIPS extra.bookTitle + extra.chapterLabel on a non-feedback event', () => {
+    const out = scrubEvent({
+      extra: {
+        bookTitle: 'La Odisea',
+        chapterLabel: 'Canto III',
+        theme: 'dark',
+      },
+    });
+
+    expect(out.extra).not.toHaveProperty('bookTitle');
+    expect(out.extra).not.toHaveProperty('chapterLabel');
+    // Other keys must still pass through.
+    expect(out.extra?.['theme']).toBe('dark');
+  });
+
+  it('KEEPS extra.bookTitle + extra.chapterLabel when contexts.feedback is set', () => {
+    const out = scrubEvent({
+      contexts: { feedback: { message: 'estaba leyendo' } },
+      extra: {
+        bookTitle: 'La Odisea',
+        chapterLabel: 'Canto III',
+        theme: 'dark',
+      },
+    });
+
+    expect(out.extra?.['bookTitle']).toBe('La Odisea');
+    expect(out.extra?.['chapterLabel']).toBe('Canto III');
+    expect(out.extra?.['theme']).toBe('dark');
+  });
 });

@@ -5,5 +5,6 @@ pub mod logger;
 pub mod models;
 pub mod queue;
 pub mod repository;
+pub mod sentry_init;
 pub mod services;
 pub mod state;

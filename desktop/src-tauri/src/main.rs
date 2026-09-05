@@ -4,6 +4,7 @@ use nextpage_desktop::commands;
 use nextpage_desktop::db::{open_and_migrate, resolve_db_path};
 use nextpage_desktop::queue::repository::QueueRepository;
 use nextpage_desktop::repository::LibraryRepository;
+use nextpage_desktop::sentry_init;
 use nextpage_desktop::state::AppState;
 use rusqlite::Connection;
 use tauri::{AppHandle, Manager};
@@ -21,6 +22,14 @@ fn build_state(app: &AppHandle) -> Result<AppState, String> {
 }
 
 fn main() {
+    // Initialize Sentry BEFORE the Tauri Builder. Init failures are logged
+    // and swallowed; the app boots regardless of Sentry availability.
+    if sentry_init::init_or_log() {
+        eprintln!("[nextpage] Sentry initialized for desktop backend");
+    } else {
+        eprintln!("[nextpage] Sentry disabled (no SENTRY_DSN or init failed)");
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_oauth::init())

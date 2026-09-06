@@ -1,0 +1,56 @@
+# Release notes — release-please driven release PR + draft GitHub release.
+#
+# Triggered on every push to `main` that touches a version-relevant path.
+# release-please-action reads `release-please-config.json` + `.release-please-manifest.json`,
+# opens (or updates) a release PR bumping `desktop/package.json`, `android/app/build.gradle.kts:versionName`,
+# `.release-please-manifest.json`, and `CHANGELOG.md` in a single commit.
+# On release-PR merge, a draft GitHub release is created.
+#
+# Token-gated: `RELEASE_PLEASE_TOKEN` is a Personal Access Token (NOT the default
+# `GITHUB_TOKEN`) because release-please needs `contents: write` + `pull-requests: write`
+# + `issues: write` to open release PRs and manage labels. The default token does not
+# have those scopes. Missing token fails closed — release-please-action exits non-zero.
+name: Release Notes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop/**'
+      - 'android/**'
+      - '.github/workflows/release-notes.yml'
+      - 'release-please-config.json'
+      - '.release-please-manifest.json'
+      - 'docs/devx/**'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+# Single concurrent run on `main` cancels in-flight reruns to avoid
+# race-condition between two release-please passes opening conflicting PRs.
+concurrency:
+  group: release-notes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # release-please needs full history to walk commits since the last tag.
+          fetch-depth: 0
+
+      - name: Run release-please
+        id: release-please
+        uses: googleapis/release-please-action@v4
+        env:
+          RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          publish-target: default

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    "desktop": {
+      "type": "node",
+      "path": "desktop",
+      "releaseType": "node"
+    },
+    "android": {
+      "type": "gradle",
+      "path": "android",
+      "releaseType": "gradle"
+    }
+  },
+  "releaseLabels": ["autorelease: pending", "autorelease: tagged"]
+}

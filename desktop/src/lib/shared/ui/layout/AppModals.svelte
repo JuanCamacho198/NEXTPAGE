@@ -76,7 +76,9 @@
             scope.setTag('feedback.source', 'desktop-modal-flush');
             Sentry.captureFeedback({
               message: item.message,
-              associatedEventId: item.eventId === 'no-event' ? undefined : item.eventId,
+              // eventId is `string | null`; captureFeedback wants `string | undefined`.
+              associatedEventId:
+                item.eventId == null || item.eventId === 'no-event' ? undefined : item.eventId,
             });
           });
           return true;
@@ -89,7 +91,7 @@
     // Best-effort initial flush on mount — covers the case where the
     // browser was already online when the app started.
     void flushFeedbackQueue(transport);
-    return () => handle.cancel();
+    return () => handle();
   });
 </script>
 

@@ -79,7 +79,7 @@ git pull --ff-only
 
 # Tag the current tip with the bootstrap versions.
 git tag desktop-v0.1.0  $(git rev-parse HEAD)
-git tag android-v1.0.0  $(git rev-parse HEAD)
+git tag android-v0.1.0  $(git rev-parse HEAD)
 
 # Push both tags to origin in a single round-trip.
 git push origin --tags

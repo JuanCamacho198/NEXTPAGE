@@ -51,6 +51,9 @@ fixtures/
 # Cross-device continuity golden fixture (committed — design T1 requires it)
 !src/lib/shared/sync/fixtures/
 !src/lib/shared/sync/fixtures/**
+# Discover catalog offline fixtures (committed — discover-catalog-backend-v1 PR1)
+!src/lib/shared/services/catalog/fixtures/
+!src/lib/shared/services/catalog/fixtures/**
 
 # ESlint local rules
 /eslint-local-rules/

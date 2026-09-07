@@ -1,14 +1,18 @@
 package com.nextpage.data.remote.catalog
 
+import kotlinx.serialization.Serializable
+
 /**
  * CatalogProvider port — identical contract on Android (Kotlin) and desktop (TS).
  * Gutendex is metadata/download authority; Open Library enriches + cover fallback.
  */
+@Serializable
 enum class CatalogSource {
     GUTENDEX,
     OPENLIBRARY
 }
 
+@Serializable
 data class CatalogBook(
     val id: String,
     val provider: CatalogSource,
@@ -20,6 +24,7 @@ data class CatalogBook(
     val downloadUrl: String?
 )
 
+@Serializable
 data class PagedResult(
     val results: List<CatalogBook>,
     /** Next 1-based page, or null when the last page was reached. */

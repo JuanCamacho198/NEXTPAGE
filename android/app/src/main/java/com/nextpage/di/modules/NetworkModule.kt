@@ -33,6 +33,7 @@ import com.nextpage.data.remote.catalog.CompositeCatalogProvider
 import com.nextpage.data.remote.catalog.GutendexDataSource
 import com.nextpage.data.remote.catalog.KtorCatalogHttpTransport
 import com.nextpage.data.remote.catalog.OpenLibraryDataSource
+import com.nextpage.data.remote.catalog.RoomDiscoverCache
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
@@ -207,6 +208,10 @@ class NetworkModule(
     }
 
     val catalogProvider: CatalogProvider by lazy {
-        CompositeCatalogProvider(gutendexDataSource, openLibraryDataSource)
+        CompositeCatalogProvider(
+            gutendexDataSource,
+            openLibraryDataSource,
+            cache = RoomDiscoverCache(databaseModule.discoverCacheDao)
+        )
     }
 }

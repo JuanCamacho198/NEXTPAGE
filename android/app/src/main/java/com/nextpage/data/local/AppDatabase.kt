@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.BookmarkDao
 import com.nextpage.data.local.dao.DictionaryWordDao
+import com.nextpage.data.local.dao.DiscoverCacheDao
 import com.nextpage.data.local.dao.HighlightDao
 import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.ReadingSessionDao
@@ -14,6 +15,7 @@ import com.nextpage.data.local.dao.SyncFileMappingDao
 import com.nextpage.data.local.entity.BookEntity
 import com.nextpage.data.local.entity.BookmarkEntity
 import com.nextpage.data.local.entity.DictionaryWordEntity
+import com.nextpage.data.local.entity.DiscoverCacheEntity
 import com.nextpage.data.local.entity.HighlightEntity
 import com.nextpage.data.local.entity.ReadingProgressEntity
 import com.nextpage.data.local.entity.ReadingSessionEntity
@@ -31,9 +33,10 @@ import com.nextpage.data.local.entity.SyncOutboxEntity
         BookmarkEntity::class,
         SyncOutboxEntity::class,
         SyncFileMappingEntity::class,
-        DictionaryWordEntity::class
+        DictionaryWordEntity::class,
+        DiscoverCacheEntity::class
     ],
-    version = 25,
+    version = 26,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -46,4 +49,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun syncOutboxDao(): SyncOutboxDao
     abstract fun syncFileMappingDao(): SyncFileMappingDao
     abstract fun dictionaryWordDao(): DictionaryWordDao
+    abstract fun discoverCacheDao(): DiscoverCacheDao
 }

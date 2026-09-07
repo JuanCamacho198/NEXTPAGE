@@ -9,6 +9,7 @@ import com.nextpage.data.local.AppDatabaseMigrations
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.BookmarkDao
 import com.nextpage.data.local.dao.DictionaryWordDao
+import com.nextpage.data.local.dao.DiscoverCacheDao
 import com.nextpage.data.local.dao.HighlightDao
 import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.ReadingSessionDao
@@ -50,6 +51,7 @@ class DatabaseModule(context: Context) {
     val syncOutboxDao: SyncOutboxDao get() = appDatabase.syncOutboxDao()
     val syncFileMappingDao: SyncFileMappingDao get() = appDatabase.syncFileMappingDao()
     val dictionaryWordDao: DictionaryWordDao get() = appDatabase.dictionaryWordDao()
+    val discoverCacheDao: DiscoverCacheDao get() = appDatabase.discoverCacheDao()
 
     fun clearAllTables() {
         appDatabase.clearAllTables()

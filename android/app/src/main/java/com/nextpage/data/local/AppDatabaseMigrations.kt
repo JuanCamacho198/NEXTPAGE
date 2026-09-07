@@ -366,6 +366,27 @@ object AppDatabaseMigrations {
         }
     }
 
+    /**
+     * Discover catalog cache (PR3): isolated `discover_cache` table keyed by
+     * query+page+provider (24h pages) and id+provider (7d details).
+     * Additive only — user_books/outbox untouched.
+     */
+    val MIGRATION_25_26 = object : Migration(25, 26) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS discover_cache (
+                    `key` TEXT NOT NULL PRIMARY KEY,
+                    payload TEXT NOT NULL,
+                    fetched_at INTEGER NOT NULL,
+                    ttl_s INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_discover_cache_fetched_at ON discover_cache(fetched_at)")
+        }
+    }
+
     val ALL = arrayOf(
         MIGRATION_1_2,
         MIGRATION_2_3,
@@ -390,6 +411,7 @@ object AppDatabaseMigrations {
         MIGRATION_21_22,
         MIGRATION_22_23,
         MIGRATION_23_24,
-        MIGRATION_24_25
+        MIGRATION_24_25,
+        MIGRATION_25_26
     )
 }

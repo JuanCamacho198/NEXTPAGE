@@ -9,7 +9,7 @@ const val OPEN_LIBRARY_BASE_URL = "https://openlibrary.org"
  * Open Library datasource — relevance enrichment + cover fallback.
  * Enforces the 1s anonymous courtesy gap between calls via a rate limiter.
  */
-class OpenLibraryDataSource(
+open class OpenLibraryDataSource(
     private val transport: CatalogHttpTransport,
     private val limiter: RateLimiter = RateLimiter(OL_MIN_GAP_MS),
     private val baseUrl: String = OPEN_LIBRARY_BASE_URL,
@@ -17,7 +17,7 @@ class OpenLibraryDataSource(
 ) {
 
     /** Search usable-public docs only; borrow-restricted docs are dropped. */
-    suspend fun search(
+    open suspend fun search(
         query: String,
         page: Int,
         pageSize: Int = DEFAULT_PAGE_SIZE

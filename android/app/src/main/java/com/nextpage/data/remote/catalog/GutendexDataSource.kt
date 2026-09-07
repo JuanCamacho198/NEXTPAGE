@@ -9,14 +9,14 @@ const val GUTENDEX_BASE_URL = "https://gutendex.com"
  * Gutendex datasource — metadata/download authority (`copyright=false`).
  * Ktor transport + identified UA; PD filtering happens in the mapper.
  */
-class GutendexDataSource(
+open class GutendexDataSource(
     private val transport: CatalogHttpTransport,
     private val baseUrl: String = GUTENDEX_BASE_URL,
     private val json: Json = Json { ignoreUnknownKeys = true }
 ) {
 
     /** Search PD books; in-copyright records are excluded by the mapper. */
-    suspend fun search(
+    open suspend fun search(
         query: String,
         page: Int,
         pageSize: Int = DEFAULT_PAGE_SIZE
@@ -30,7 +30,7 @@ class GutendexDataSource(
     }
 
     /** Fetch one book by numeric id; unknown ids surface NOT_FOUND. */
-    suspend fun getById(numericId: Int): CatalogBook {
+    open suspend fun getById(numericId: Int): CatalogBook {
         val res = transport.getWithRetry("$baseUrl/books/$numericId/")
         val record = json.decodeFromString<GutendexRecord>(res.body)
         return mapGutendexBook(record)

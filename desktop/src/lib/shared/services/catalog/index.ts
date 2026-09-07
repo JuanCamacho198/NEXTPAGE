@@ -6,6 +6,14 @@ export { OpenLibraryDataSource, OPEN_LIBRARY_BASE_URL } from './OpenLibraryDataS
 export { CompositeCatalogProvider } from './CompositeCatalogProvider';
 export type { CompositeOptions } from './CompositeCatalogProvider';
 export {
+  DETAIL_TTL_S,
+  InMemoryDiscoverCache,
+  PAGE_TTL_S,
+  detailCacheKey,
+  pageCacheKey,
+} from './DiscoverCache';
+export type { DiscoverCacheStore } from './DiscoverCache';
+export {
   backoffDelayMs,
   clampPageSize,
   createRateLimiter,

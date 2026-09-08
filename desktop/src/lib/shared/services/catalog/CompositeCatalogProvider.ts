@@ -69,7 +69,12 @@ export class CompositeCatalogProvider implements CatalogProvider {
     ]);
     const results = mergeResults(g.books, o.books);
     const paged = toPagedResult(results, page, resolveTotalCount(g.totalCount, o.totalCount));
-    this.cache?.put(pageCacheKey(query, page), JSON.stringify(paged), this.nowEpochSecs(), PAGE_TTL_S);
+    this.cache?.put(
+      pageCacheKey(query, page),
+      JSON.stringify(paged),
+      this.nowEpochSecs(),
+      PAGE_TTL_S,
+    );
     return paged;
   }
 

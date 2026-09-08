@@ -365,8 +365,8 @@ mod tests {
     #[test]
     fn test_discover_cache_miss_and_expiry_evicts_row() {
         let connection = memory_db_with_cache_table();
-        let miss = discover_cache_get(&connection, "p:composite:missing:1", 1_000)
-            .expect("get succeeds");
+        let miss =
+            discover_cache_get(&connection, "p:composite:missing:1", 1_000).expect("get succeeds");
         assert_eq!(miss, None);
         discover_cache_put(&connection, "d:composite:gutendex:1", "{\"id\":1}", 1_000, 10)
             .expect("put succeeds");
@@ -386,9 +386,8 @@ mod tests {
             .expect("put succeeds");
         discover_cache_put(&connection, "p:composite:pride:1", "{\"n\":2}", 2_000, 86_400)
             .expect("put succeeds");
-        let hit = discover_cache_get(&connection, "p:composite:pride:1", 2_001)
-            .expect("get succeeds");
+        let hit =
+            discover_cache_get(&connection, "p:composite:pride:1", 2_001).expect("get succeeds");
         assert_eq!(hit.as_deref(), Some("{\"n\":2}"));
     }
 }
-

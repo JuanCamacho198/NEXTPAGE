@@ -117,11 +117,15 @@ describe('CompositeCatalogProvider cache read-through', () => {
     }) as typeof fetch;
     const cache = new InMemoryDiscoverCache();
     let now = 5_000;
-    const provider = new CompositeCatalogProvider(new GutendexDataSource(counting), stubbedSources(calls).o, {
-      debounceMs: 0,
-      cache,
-      nowEpochSecs: () => now,
-    });
+    const provider = new CompositeCatalogProvider(
+      new GutendexDataSource(counting),
+      stubbedSources(calls).o,
+      {
+        debounceMs: 0,
+        cache,
+        nowEpochSecs: () => now,
+      },
+    );
     const first = await provider.getDetails('gutendex:1342');
     expect(first.id).toBe('gutendex:1342');
     now += 3_600;

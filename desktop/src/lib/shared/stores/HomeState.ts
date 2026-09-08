@@ -21,6 +21,7 @@ export const resolveReadingState = (
 export type AppRoute =
   | 'home'
   | 'library'
+  | 'discover'
   | 'stats'
   | 'reader'
   | 'highlights'

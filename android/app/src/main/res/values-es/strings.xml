@@ -125,6 +125,7 @@
     <string name="home_search_results">Resultados</string>
     <string name="nav_home">Inicio</string>
     <string name="nav_library">Estantería</string>
+    <string name="nav_discover">Descubrir</string>
     <string name="nav_highlights">Resaltados</string>
     <string name="nav_settings">Ajustes</string>
     <string name="nav_book_detail">Detalle del libro</string>

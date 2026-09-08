@@ -48,6 +48,7 @@ import com.nextpage.data.session.DriveConnectPromptPrefs
 import com.nextpage.di.AppContainer
 import com.nextpage.presentation.navigation.feature.authGraph
 import com.nextpage.presentation.navigation.feature.bookDetailGraph
+import com.nextpage.presentation.navigation.feature.discoverGraph
 import com.nextpage.presentation.navigation.feature.homeGraph
 import com.nextpage.presentation.navigation.feature.libraryGraph
 import com.nextpage.presentation.navigation.feature.onboardingGraph
@@ -346,6 +347,11 @@ fun NextPageNavHost(
                         selectedBookFilePath = path
                         selectedBookFormat = format
                     }
+                )
+
+                discoverGraph(
+                    navController = navController,
+                    contentPadding = innerPadding,
                 )
 
                 libraryGraph(

@@ -332,6 +332,8 @@ export const messagesEs: Record<MessageKey, string> = {
   // Sidebar Navigation
   'sidebar.home': 'Inicio',
   'sidebar.library': 'Estantería',
+  'sidebar.discover': 'Descubrir',
+  'discover.routePlaceholder': 'La búsqueda del catálogo, la cuadrícula y el detalle llegan aquí en el siguiente tramo.',
   'sidebar.stats': 'Estadísticas',
   'sidebar.highlights': 'Notas y resaltados',
   'sidebar.settings': 'Ajustes',

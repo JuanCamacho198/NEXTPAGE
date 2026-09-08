@@ -330,6 +330,8 @@ export const messagesEn = {
   // Sidebar Navigation
   'sidebar.home': 'Home',
   'sidebar.library': 'Library',
+  'sidebar.discover': 'Discover',
+  'discover.routePlaceholder': 'Catalog search, grid, and detail land here in the next slice.',
   'sidebar.stats': 'Stats',
   'sidebar.highlights': 'Highlights',
   'sidebar.settings': 'Settings',

@@ -7,6 +7,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.di.AppContainer
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.debug.DebugViewModel
+import com.nextpage.presentation.viewmodel.DiscoverViewModel
+import com.nextpage.presentation.viewmodel.DiscoverViewModelFactory
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
 import com.nextpage.presentation.viewmodel.HomeViewModel
@@ -33,7 +35,8 @@ internal data class ViewModelProviders(
     val statistics: StatisticsViewModel,
     val auth: AuthViewModel,
     val home: HomeViewModel,
-    val debug: DebugViewModel
+    val debug: DebugViewModel,
+    val discover: DiscoverViewModel
 )
 
 /**
@@ -111,13 +114,21 @@ internal fun rememberNavHostViewModels(
         factory = DebugViewModel.Factory(appContainer)
     )
 
-    return ViewModelProviders(
-        library = libraryViewModel,
-        reader = readerViewModel,
-        highlights = highlightsViewModel,
-        statistics = statisticsViewModel,
-        auth = authViewModel,
-        home = homeViewModel,
-        debug = debugViewModel
+    val discoverViewModel: DiscoverViewModel = viewModel(
+        factory = DiscoverViewModelFactory(
+            catalogProvider = appContainer.catalogProvider
+        )
     )
+
+    return ViewModelProviders(
+            library = libraryViewModel,
+            reader = readerViewModel,
+            highlights = highlightsViewModel,
+            statistics = statisticsViewModel,
+            auth = authViewModel,
+            home = homeViewModel,
+            debug = debugViewModel,
+            discover = discoverViewModel
+        )
+
 }

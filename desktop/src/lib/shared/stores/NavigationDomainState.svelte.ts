@@ -31,6 +31,11 @@ class NavigationDomainState {
     this.shelfDetailsBookId = null;
   };
 
+  navigateToDiscover = (): void => {
+    this.route = 'discover';
+    this.shelfDetailsBookId = null;
+  };
+
   navigateToStats = (): void => {
     this.route = 'stats';
     this.shelfDetailsBookId = null;

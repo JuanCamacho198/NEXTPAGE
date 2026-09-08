@@ -16,6 +16,7 @@ sealed class NextPageDestination(
     data object OnboardingGoal : NextPageDestination("onboarding/goal")
     data object Home : NextPageDestination("home", R.string.nav_home, NextPageIcons.Home)
     data object Library : NextPageDestination("library", R.string.nav_library, NextPageIcons.Library)
+    data object Discover : NextPageDestination("discover", R.string.nav_discover, NextPageIcons.Search)
     data object Reader : NextPageDestination("reader", R.string.tab_reader, NextPageIcons.BookOpen)
     data object Highlights : NextPageDestination("highlights", R.string.nav_highlights, NextPageIcons.Highlights)
     data object Settings : NextPageDestination("settings", R.string.nav_settings, NextPageIcons.Settings)

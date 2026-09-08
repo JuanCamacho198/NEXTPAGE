@@ -12,6 +12,7 @@ import com.nextpage.data.local.dao.ReadingSessionDao
 import com.nextpage.data.remote.drive.DriveCoordinator
 import com.nextpage.data.remote.drive.DriveOAuthSession
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
+import com.nextpage.data.remote.catalog.CatalogProvider
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogDataSource
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.SupabaseProgressDataSource
@@ -85,6 +86,7 @@ class AppContainer(context: Context) {
     val supabaseProgressSync: SupabaseProgressSync by lazy { networkModule.supabaseProgressSync }
     val supabaseBookCatalogDataSource: SupabaseBookCatalogDataSource by lazy { networkModule.supabaseBookCatalogDataSource }
     val supabaseBookCatalogSync: SupabaseBookCatalogSync by lazy { networkModule.supabaseBookCatalogSync }
+    val catalogProvider: CatalogProvider by lazy { networkModule.catalogProvider }
     val driveColdBackupService: DriveColdBackupService by lazy { networkModule.driveColdBackupService }
 
     // ── sync-layer-split PR-1 foundations ────────────────────────────────

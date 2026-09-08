@@ -21,6 +21,7 @@
   import { ReadingStatisticsView } from '$lib/features/stats';
   import WelcomeScreen from '$lib/features/welcome/WelcomeScreen.svelte';
   import DictionaryView from '$lib/features/dictionary/components/DictionaryView.svelte';
+  import DiscoverScreen from '$lib/features/discover/DiscoverScreen.svelte';
 
   const showSidebar = $derived(
     navigationState.route !== 'reader' && navigationState.route !== 'welcome',
@@ -30,6 +31,7 @@
     getNavItems({
       onNavigateHome: () => navigationState.navigateToHome(),
       onNavigateLibrary: () => navigationState.navigateToLibrary(),
+      onNavigateDiscover: () => navigationState.navigateToDiscover(),
       onNavigateStats: () => navigationState.navigateToStats(),
       onNavigateHighlights: () => navigationState.navigateToHighlights(),
       onNavigateSettings: () => navigationState.navigateToSettings(),
@@ -232,6 +234,10 @@
                   void appState.loadLibrary();
                 }}
               />
+            </div>
+          {:else if navigationState.route === 'discover'}
+            <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
+              <DiscoverScreen t={appState.t} />
             </div>
           {:else if navigationState.route === 'stats'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>

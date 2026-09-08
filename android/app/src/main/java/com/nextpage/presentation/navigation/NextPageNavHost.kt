@@ -80,6 +80,8 @@ import com.nextpage.presentation.viewmodel.StatisticsViewModelFactory
 import com.nextpage.debug.LogViewerScreen
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.debug.DebugPanel
+import com.nextpage.presentation.viewmodel.DiscoverViewModel
+import com.nextpage.presentation.viewmodel.DiscoverViewModelFactory
 import com.nextpage.presentation.debug.DebugViewModel
 import com.nextpage.debug.DebugPrefs
 import com.nextpage.ui.icons.NextPageIcons
@@ -191,6 +193,12 @@ fun NextPageNavHost(
     val debugViewModel: DebugViewModel = viewModel(
         factory = DebugViewModel.Factory(appContainer)
     )
+
+        val discoverViewModel: DiscoverViewModel = viewModel(
+            factory = DiscoverViewModelFactory(
+                catalogProvider = appContainer.catalogProvider
+            )
+        )
 
     var showDebugSheet by remember { mutableStateOf(false) }
 
@@ -352,6 +360,7 @@ fun NextPageNavHost(
                 discoverGraph(
                     navController = navController,
                     contentPadding = innerPadding,
+                    discoverViewModel = discoverViewModel,
                 )
 
                 libraryGraph(

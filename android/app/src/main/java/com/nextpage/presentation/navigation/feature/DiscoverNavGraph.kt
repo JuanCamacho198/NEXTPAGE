@@ -8,6 +8,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.nextpage.presentation.feature.discover.DiscoverScreen
 import com.nextpage.presentation.navigation.NextPageDestination
+import com.nextpage.presentation.viewmodel.DiscoverViewModel
 
 /**
  * Feature NavGraph for Discover (PR1 skeleton).
@@ -19,6 +20,7 @@ import com.nextpage.presentation.navigation.NextPageDestination
 fun NavGraphBuilder.discoverGraph(
     navController: NavController,
     contentPadding: PaddingValues,
+    discoverViewModel: DiscoverViewModel,
 ) {
     composable(
         route = NextPageDestination.Discover.route,
@@ -29,6 +31,7 @@ fun NavGraphBuilder.discoverGraph(
     ) {
         DiscoverScreen(
             contentPadding = contentPadding,
+        viewModel = discoverViewModel
         )
     }
 }

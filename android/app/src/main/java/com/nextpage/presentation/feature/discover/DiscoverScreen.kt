@@ -11,14 +11,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.nextpage.R
+import com.nextpage.presentation.viewmodel.DiscoverViewModel
 
 /**
- * PR1 route/nav skeleton. Search grid, covers, and detail arrive in PR2/PR3;
- * this stub only proves the `discover` destination renders inside the NavHost.
+ * PR1 route/nav skeleton. Search grid, covers, and detail arrive in PR3;
+ * PR2 wires the host-owned [DiscoverViewModel]; this stub still renders a
+ * placeholder until the grid lands.
  */
 @Composable
 fun DiscoverScreen(
     contentPadding: PaddingValues,
+    viewModel: DiscoverViewModel,
 ) {
     Box(
         modifier = Modifier

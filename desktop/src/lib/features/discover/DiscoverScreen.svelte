@@ -1,5 +1,6 @@
 <script lang="ts">
   import { discoverState } from './DiscoverDomainState.svelte';
+  import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import DiscoverCard from './DiscoverCard.svelte';
   import DiscoverDetail from './DiscoverDetail.svelte';
 
@@ -70,7 +71,10 @@
     {:else if discoverState.status === 'offline' || discoverState.status === 'error'}
       <div class="flex flex-col items-start gap-2">
         <p class="text-sm text-(--color-text-muted)">
-          {discoverState.status === 'offline' ? t('discover.offline') : t('discover.errorUpstream')}
+          {#if discoverState.errorCode === 'INVALID_PAGE'}{t('discover.errorInvalidPage')}
+          {:else if discoverState.errorCode === 'NOT_FOUND'}{t('discover.errorNotFound')}
+          {:else if discoverState.status === 'offline'}{t('discover.offline')}
+          {:else}{t('discover.errorUpstream')}{/if}
         </p>
         <button
           type="button"

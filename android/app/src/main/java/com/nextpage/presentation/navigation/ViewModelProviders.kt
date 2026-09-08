@@ -115,19 +115,20 @@ internal fun rememberNavHostViewModels(
     )
 
     val discoverViewModel: DiscoverViewModel = viewModel(
-            factory = DiscoverViewModelFactory(
-                catalogProvider = appContainer.catalogProvider
-            )
+        factory = DiscoverViewModelFactory(
+            catalogProvider = appContainer.catalogProvider
+        )
+    )
+
+    return ViewModelProviders(
+            library = libraryViewModel,
+            reader = readerViewModel,
+            highlights = highlightsViewModel,
+            statistics = statisticsViewModel,
+            auth = authViewModel,
+            home = homeViewModel,
+            debug = debugViewModel,
+            discover = discoverViewModel
         )
 
-        return ViewModelProviders(
-        library = libraryViewModel,
-        reader = readerViewModel,
-        highlights = highlightsViewModel,
-        statistics = statisticsViewModel,
-        auth = authViewModel,
-        home = homeViewModel,
-        debug = debugViewModel,
-        discover = discoverViewModel
-    )
 }

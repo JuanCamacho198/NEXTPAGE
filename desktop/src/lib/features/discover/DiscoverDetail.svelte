@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import type { CatalogBook } from '$lib/shared/services/catalog';
   import type { DiscoverDetailStatus } from './DiscoverDomainState.svelte';
 

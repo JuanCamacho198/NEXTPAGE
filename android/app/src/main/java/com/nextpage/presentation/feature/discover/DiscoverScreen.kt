@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nextpage.R
 import com.nextpage.data.remote.catalog.CatalogBook
+import com.nextpage.data.remote.catalog.CatalogErrorCode
 import com.nextpage.presentation.viewmodel.DiscoverDetailStatus
 import com.nextpage.presentation.viewmodel.DiscoverStatus
 import com.nextpage.presentation.viewmodel.DiscoverUiState
@@ -93,10 +94,13 @@ fun DiscoverScreen(
                 DiscoverStatus.EMPTY ->
                     DiscoverStatusText(stringResource(R.string.discover_empty))
                 DiscoverStatus.OFFLINE, DiscoverStatus.ERROR -> {
-                    val message = if (uiState.status == DiscoverStatus.OFFLINE) {
-                        stringResource(R.string.discover_offline)
-                    } else {
-                        stringResource(R.string.discover_error_upstream)
+                    val message = when {
+                        uiState.status == DiscoverStatus.OFFLINE -> stringResource(R.string.discover_offline)
+                        uiState.errorCode == CatalogErrorCode.INVALID_PAGE ->
+                            stringResource(R.string.discover_error_invalid_page)
+                        uiState.errorCode == CatalogErrorCode.NOT_FOUND ->
+                            stringResource(R.string.discover_error_not_found)
+                        else -> stringResource(R.string.discover_error_upstream)
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         DiscoverStatusText(message)

@@ -4,4 +4,12 @@
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">googleapis.com</domain>
     </domain-config>
+    <!-- Discover catalog (PR2): public-domain book sources, HTTPS-only.
+         covers.openlibrary.org is covered by the openlibrary.org entry.
+         No new permissions: INTERNET already declared in the manifest. -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">gutendex.com</domain>
+        <domain includeSubdomains="true">openlibrary.org</domain>
+        <domain includeSubdomains="true">archive.org</domain>
+    </domain-config>
 </network-security-config>

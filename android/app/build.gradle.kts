@@ -223,6 +223,9 @@ dependencies {
     // Ktor HTTP client (v3.x for supabase-kt compatibility)
     implementation("io.ktor:ktor-client-core:3.1.2")
     implementation("io.ktor:ktor-client-okhttp:3.1.2")
+    // CIO engine for the dedicated Discover catalog client (PR2: catalog-only,
+    // keeps catalog traffic off the shared OkHttp stack used by Drive/Supabase).
+    implementation("io.ktor:ktor-client-cio:3.1.2")
     implementation("io.ktor:ktor-client-content-negotiation:3.1.2")
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.1.2")
 
@@ -260,6 +263,7 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("io.ktor:ktor-client-mock:3.1.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     testImplementation("io.mockk:mockk:1.13.12")
     testImplementation("org.json:json:20231013")

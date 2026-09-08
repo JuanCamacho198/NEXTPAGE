@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://asset.localhost data:; style-src 'self' 'unsafe-inline' asset: http://asset.localhost https://asset.localhost; font-src 'self' asset: http://asset.localhost https://asset.localhost; connect-src 'self' asset: http://asset.localhost https://asset.localhost https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://*.supabase.co",
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://asset.localhost data: https://covers.openlibrary.org; style-src 'self' 'unsafe-inline' asset: http://asset.localhost https://asset.localhost; font-src 'self' asset: http://asset.localhost https://asset.localhost; connect-src 'self' asset: http://asset.localhost https://asset.localhost https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://*.supabase.co https://gutendex.com https://openlibrary.org https://covers.openlibrary.org https://*.archive.org",
       "assetProtocol": {
         "enable": true,
         "scope": ["$APPDATA/**/*"]

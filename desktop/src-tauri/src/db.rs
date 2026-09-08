@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
 
-const MIGRATIONS: [(&str, &str); 15] = [
+const MIGRATIONS: [(&str, &str); 16] = [
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_books", include_str!("../migrations/0002_books.sql")),
     ("0003_highlights", include_str!("../migrations/0003_highlights.sql")),
@@ -27,6 +27,7 @@ const MIGRATIONS: [(&str, &str); 15] = [
     ("0013_sync_outbox", include_str!("../migrations/0013_sync_outbox.sql")),
     ("0014_reading_sessions_sync", include_str!("../migrations/0014_reading_sessions_sync.sql")),
     ("0015_dictionary_sync", include_str!("../migrations/0015_dictionary_sync.sql")),
+    ("0016_discover_cache", include_str!("../migrations/0016_discover_cache.sql")),
 ];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {
@@ -244,6 +245,54 @@ pub fn vacuum(connection: &Connection) -> AppResult<()> {
     connection.execute("VACUUM", []).map_err(AppError::Database)?;
     Ok(())
 }
+
+/// Upsert a catalog cache entry. `fetched_at_epoch_secs` is epoch seconds;
+/// expiry is evaluated lazily in [`discover_cache_get`].
+pub fn discover_cache_put(
+    connection: &Connection,
+    key: &str,
+    payload: &str,
+    fetched_at_epoch_secs: i64,
+    ttl_s: i64,
+) -> AppResult<()> {
+    connection
+        .execute(
+            "INSERT INTO discover_cache (key, payload, fetched_at, ttl_s)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(key) DO UPDATE SET payload = excluded.payload,
+                                            fetched_at = excluded.fetched_at,
+                                            ttl_s = excluded.ttl_s",
+            params![key, payload, fetched_at_epoch_secs, ttl_s],
+        )
+        .map_err(AppError::Database)?;
+    Ok(())
+}
+
+/// Read a catalog cache entry. Returns `None` on miss or TTL expiry;
+/// expired rows are deleted eagerly so the table cannot grow unbounded.
+pub fn discover_cache_get(
+    connection: &Connection,
+    key: &str,
+    now_epoch_secs: i64,
+) -> AppResult<Option<String>> {
+    let row: Option<(String, i64, i64)> = connection
+        .query_row(
+            "SELECT payload, fetched_at, ttl_s FROM discover_cache WHERE key = ?1 LIMIT 1",
+            [key],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()?;
+    let Some((payload, fetched_at, ttl_s)) = row else {
+        return Ok(None);
+    };
+    if now_epoch_secs - fetched_at > ttl_s {
+        connection
+            .execute("DELETE FROM discover_cache WHERE key = ?1", [key])
+            .map_err(AppError::Database)?;
+        return Ok(None);
+    }
+    Ok(Some(payload))
+}
 fn has_column(connection: &Connection, table_name: &str, column_name: &str) -> AppResult<bool> {
     let mut statement = connection.prepare(&format!("PRAGMA table_info({})", table_name))?;
     let rows = statement.query_map([], |row| row.get::<_, String>(1))?;
@@ -294,5 +343,51 @@ mod tests {
         };
         assert_eq!(health.status, HealthStatus::Missing);
     }
-}
 
+    fn memory_db_with_cache_table() -> Connection {
+        let connection = Connection::open_in_memory().expect("in-memory db");
+        connection
+            .execute_batch(include_str!("../migrations/0016_discover_cache.sql"))
+            .expect("discover_cache migration applies cleanly");
+        connection
+    }
+
+    #[test]
+    fn test_discover_cache_hit_within_ttl() {
+        let connection = memory_db_with_cache_table();
+        discover_cache_put(&connection, "p:composite:pride:1", "{\"n\":1}", 1_000, 86_400)
+            .expect("put succeeds");
+        let hit = discover_cache_get(&connection, "p:composite:pride:1", 1_000 + 3_600)
+            .expect("get succeeds");
+        assert_eq!(hit.as_deref(), Some("{\"n\":1}"));
+    }
+
+    #[test]
+    fn test_discover_cache_miss_and_expiry_evicts_row() {
+        let connection = memory_db_with_cache_table();
+        let miss =
+            discover_cache_get(&connection, "p:composite:missing:1", 1_000).expect("get succeeds");
+        assert_eq!(miss, None);
+        discover_cache_put(&connection, "d:composite:gutendex:1", "{\"id\":1}", 1_000, 10)
+            .expect("put succeeds");
+        let expired = discover_cache_get(&connection, "d:composite:gutendex:1", 1_000 + 11)
+            .expect("get succeeds");
+        assert_eq!(expired, None);
+        let remaining: i32 = connection
+            .query_row("SELECT COUNT(*) FROM discover_cache", [], |row| row.get(0))
+            .expect("count succeeds");
+        assert_eq!(remaining, 0);
+    }
+
+    #[test]
+    fn test_discover_cache_put_overwrites_existing_key() {
+        let connection = memory_db_with_cache_table();
+        discover_cache_put(&connection, "p:composite:pride:1", "{\"n\":1}", 1_000, 86_400)
+            .expect("put succeeds");
+        discover_cache_put(&connection, "p:composite:pride:1", "{\"n\":2}", 2_000, 86_400)
+            .expect("put succeeds");
+        let hit =
+            discover_cache_get(&connection, "p:composite:pride:1", 2_001).expect("get succeeds");
+        assert_eq!(hit.as_deref(), Some("{\"n\":2}"));
+    }
+}

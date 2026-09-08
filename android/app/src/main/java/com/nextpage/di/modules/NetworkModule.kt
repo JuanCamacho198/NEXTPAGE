@@ -26,7 +26,23 @@ import com.nextpage.data.session.SupabaseSessionManager
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.repository.AuthRepository
+import com.nextpage.data.remote.catalog.ANDROID_USER_AGENT
+import com.nextpage.data.remote.catalog.CatalogHttpTransport
+import com.nextpage.data.remote.catalog.CatalogProvider
+import com.nextpage.data.remote.catalog.CompositeCatalogProvider
+import com.nextpage.data.remote.catalog.GutendexDataSource
+import com.nextpage.data.remote.catalog.KtorCatalogHttpTransport
+import com.nextpage.data.remote.catalog.OpenLibraryDataSource
+import com.nextpage.data.remote.catalog.RoomDiscoverCache
 import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
 
 class NetworkModule(
     private val context: Context,
@@ -157,4 +173,45 @@ class NetworkModule(
     // Centralised ack/increment/prune policy used by both Supabase syncers.
     // Lives in NetworkModule alongside the per-domain syncers that consume it.
     val outboxCommit: OutboxCommit by lazy { OutboxCommit(databaseModule.syncOutboxDao) }
+
+    // ── discover-catalog PR-2: dedicated catalog client ───────────────
+    // Separate CIO stack (timeouts, JSON, identified UA, HTTPS-only by
+    // constant base URLs + network_security_config) so public catalog
+    // traffic never shares the Drive/Supabase client. No user_books or
+    // outbox writes pass through here — search/detail only.
+    val catalogHttpClient: HttpClient by lazy {
+        HttpClient(CIO) {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true; isLenient = true })
+            }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 15_000
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = 15_000
+            }
+            defaultRequest {
+                header(HttpHeaders.UserAgent, ANDROID_USER_AGENT)
+            }
+        }
+    }
+
+    val catalogTransport: CatalogHttpTransport by lazy {
+        KtorCatalogHttpTransport(catalogHttpClient)
+    }
+
+    val gutendexDataSource: GutendexDataSource by lazy {
+        GutendexDataSource(catalogTransport)
+    }
+
+    val openLibraryDataSource: OpenLibraryDataSource by lazy {
+        OpenLibraryDataSource(catalogTransport)
+    }
+
+    val catalogProvider: CatalogProvider by lazy {
+        CompositeCatalogProvider(
+            gutendexDataSource,
+            openLibraryDataSource,
+            cache = RoomDiscoverCache(databaseModule.discoverCacheDao)
+        )
+    }
 }

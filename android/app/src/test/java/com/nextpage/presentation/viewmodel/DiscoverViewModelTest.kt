@@ -163,6 +163,56 @@ class DiscoverViewModelTest {
         assertEquals(preserved, vm.uiState.value.books.size)
     }
 
+
+    @Test
+    fun upstreamErrorMapsToErrorAndRateLimitedMapsToOffline() = runTest {
+        val provider = FakeCatalogProvider()
+        val vm = DiscoverViewModel(provider)
+        vm.onQueryChange("pride")
+        provider.searchError = CatalogErrorCode.UPSTREAM_ERROR
+        vm.searchFirstPage()
+        assertEquals(DiscoverStatus.ERROR, vm.uiState.value.status)
+        assertEquals(CatalogErrorCode.UPSTREAM_ERROR, vm.uiState.value.errorCode)
+        provider.searchError = CatalogErrorCode.RATE_LIMITED
+        vm.retry()
+        assertEquals(DiscoverStatus.OFFLINE, vm.uiState.value.status)
+        assertEquals(CatalogErrorCode.RATE_LIMITED, vm.uiState.value.errorCode)
+    }
+
+    @Test
+    fun retryAfterFailedNextPageRefetchesSamePage() = runTest {
+        val provider = FakeCatalogProvider()
+        val vm = DiscoverViewModel(provider)
+        vm.onQueryChange("pride")
+        vm.searchFirstPage()
+        val page1Calls = provider.searchCalls.size
+        provider.searchError = CatalogErrorCode.UPSTREAM_ERROR
+        vm.loadNextPage()
+        assertEquals(DiscoverStatus.ERROR, vm.uiState.value.status)
+        val callsAfterFailure = provider.searchCalls.size
+        assertTrue(vm.uiState.value.books.isNotEmpty())
+        provider.searchError = null
+        vm.retry()
+        assertEquals(DiscoverStatus.LOADED, vm.uiState.value.status)
+        assertEquals(2, vm.uiState.value.activePage)
+        assertTrue(provider.searchCalls.size > callsAfterFailure)
+        assertEquals(2, provider.searchCalls.last().second)
+        assertEquals(page1Calls, 1)
+    }
+
+    @Test
+    fun successfulDetailLoadPopulatesDetailWithoutTouchingList() = runTest {
+        val provider = FakeCatalogProvider()
+        val vm = DiscoverViewModel(provider)
+        vm.onQueryChange("pride")
+        vm.searchFirstPage()
+        val preserved = vm.uiState.value.books.size
+        vm.openDetail("gutendex:1342")
+        assertEquals(DiscoverDetailStatus.LOADED, vm.uiState.value.detailStatus)
+        assertEquals("Detail of gutendex:1342", vm.uiState.value.detail?.title)
+        assertEquals(preserved, vm.uiState.value.books.size)
+        assertEquals(listOf("gutendex:1342"), provider.detailCalls)
+    }
     @Test
     fun constructorSurfaceTakesOnlyCatalogProvider() {
         val ctor = DiscoverViewModel::class.java.constructors.single()

@@ -158,3 +158,92 @@ describe('DiscoverDomainState (PR2 RED)', () => {
     expect(source).not.toMatch(/\bsync\b/);
   });
 });
+
+describe('DiscoverDomainState (PR3 grid/detail state mapping)', () => {
+  it('UPSTREAM_ERROR maps to error (not offline) and retry recovers', async () => {
+    let failing = true;
+    const { state } = stateWith((url) => {
+      if (failing) return { status: 500, body: { error: 'boom' } };
+      return searchBodies()(url);
+    });
+    state.setQuery('pride');
+    await state.searchFirstPage();
+    expect(state.status).toBe('error');
+    expect(state.errorCode).toBe('UPSTREAM_ERROR');
+    failing = false;
+    await state.retry();
+    expect(state.status).toBe('loaded');
+    expect(state.errorCode).toBeNull();
+  });
+
+  it('RATE_LIMITED maps to offline (retryable)', async () => {
+    const { state } = stateWith(() => ({ status: 429, body: { error: 'slow down' } }));
+    state.setQuery('pride');
+    await state.searchFirstPage();
+    expect(state.status).toBe('offline');
+    expect(state.errorCode).toBe('RATE_LIMITED');
+  });
+
+  it('retry after failed loadNextPage re-requests the failed page', async () => {
+    const page1Records = Array.from({ length: 21 }, (_, i) => ({
+      ...gutendexFixture.results[0],
+      id: 1000 + i,
+      title: `Page One Book ${i}`,
+    }));
+    const page2Records = Array.from({ length: 3 }, (_, i) => ({
+      ...gutendexFixture.results[0],
+      id: 2000 + i,
+      title: `Page Two Book ${i}`,
+    }));
+    let page2Failing = true;
+    const handler = (url: string) => {
+      if (url.includes('gutendex')) {
+        const page2 = url.includes('page=2');
+        if (page2) {
+          if (page2Failing) return { status: 500, body: { error: 'boom' } };
+          return { status: 200, body: { count: 50, results: page2Records } };
+        }
+        return { status: 200, body: { count: 50, results: page1Records } };
+      }
+      if (url.includes('page=2') && page2Failing) {
+        return { status: 500, body: { error: 'boom' } };
+      }
+      return { status: 200, body: { numFound: 50, docs: [] } };
+    };
+    const { state } = stateWith(handler);
+    state.setQuery('pride');
+    await state.searchFirstPage();
+    await state.loadNextPage();
+    expect(state.status).toBe('error');
+    expect(state.errorCode).toBe('UPSTREAM_ERROR');
+    page2Failing = false;
+    await state.retry();
+    expect(state.status).toBe('loaded');
+    expect(state.activePage).toBe(2);
+  });
+
+  it('successful detail load populates detail without touching the list', async () => {
+    const { state } = stateWith(searchBodies());
+    state.setQuery('pride');
+    await state.searchFirstPage();
+    const preserved = state.books.length;
+    await state.openDetail('gutendex:1342');
+    expect(state.detailStatus).toBe('loaded');
+    expect(state.detail?.id).toBe('gutendex:1342');
+    expect(state.detail?.title.length).toBeGreaterThan(0);
+    expect(state.books.length).toBe(preserved);
+  });
+
+  it('UNAVAILABLE_DOWNLOAD detail failure maps to error status (code-only, redacted)', async () => {
+    const { state } = stateWith((url) => {
+      if (url.includes('/books/1342/')) return { status: 500, body: { error: 'boom' } };
+      if (url.includes('gutendex')) return { status: 200, body: gutendexFixture };
+      return { status: 200, body: openLibraryFixture };
+    });
+    state.setQuery('pride');
+    await state.searchFirstPage();
+    await state.openDetail('gutendex:1342');
+    expect(state.detailStatus).toBe('error');
+    expect(state.detail).toBeNull();
+  });
+});

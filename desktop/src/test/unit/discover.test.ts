@@ -247,3 +247,19 @@ describe('DiscoverDomainState (PR3 grid/detail state mapping)', () => {
     expect(state.detail).toBeNull();
   });
 });
+
+describe('DiscoverDomainState (PR4 hardening)', () => {
+  it('INVALID_PAGE (page < 1) rejects before any I/O and maps to error', async () => {
+    const { state, calls } = stateWith(searchBodies());
+    state.setQuery('pride');
+    await state.searchFirstPage();
+    expect(state.status).toBe('loaded');
+    const callsAfterLoad = calls.n;
+    state.nextPage = 0;
+    await state.loadNextPage();
+    expect(state.status).toBe('error');
+    expect(state.errorCode).toBe('INVALID_PAGE');
+    expect(calls.n).toBe(callsAfterLoad);
+  });
+
+});

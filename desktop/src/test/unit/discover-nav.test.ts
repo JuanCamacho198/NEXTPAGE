@@ -1,13 +1,12 @@
-// @ts-nocheck
 import { describe, expect, it } from 'vitest';
 import { NavigationDomainState } from '$lib/shared/stores/NavigationDomainState.svelte';
 import { getNavItems } from '$lib/shared/stores/NavigationState.svelte';
 
-describe('discover navigation (PR1 RED)', () => {
+describe('discover navigation', () => {
   it('exposes navigateToDiscover setting route to discover', () => {
     const nav = new NavigationDomainState();
     nav.shelfDetailsBookId = 'book-1';
-    (nav as unknown as { navigateToDiscover: () => void }).navigateToDiscover();
+    nav.navigateToDiscover();
     expect(nav.route).toBe('discover');
     expect(nav.shelfDetailsBookId).toBeNull();
   });

@@ -214,6 +214,21 @@ class DiscoverViewModelTest {
         assertEquals(listOf("gutendex:1342"), provider.detailCalls)
     }
     @Test
+    fun invalidPageMapsToErrorWithCodeAndListPreserved() = runTest {
+        val provider = FakeCatalogProvider()
+        val vm = DiscoverViewModel(provider)
+        vm.onQueryChange("pride")
+        vm.searchFirstPage()
+        assertEquals(DiscoverStatus.LOADED, vm.uiState.value.status)
+        val preserved = vm.uiState.value.books.size
+        provider.searchError = CatalogErrorCode.INVALID_PAGE
+        vm.loadNextPage()
+        assertEquals(DiscoverStatus.ERROR, vm.uiState.value.status)
+        assertEquals(CatalogErrorCode.INVALID_PAGE, vm.uiState.value.errorCode)
+        assertEquals(preserved, vm.uiState.value.books.size)
+    }
+
+    @Test
     fun constructorSurfaceTakesOnlyCatalogProvider() {
         val ctor = DiscoverViewModel::class.java.constructors.single()
         assertEquals(1, ctor.parameterTypes.size)

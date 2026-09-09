@@ -10,7 +10,11 @@ export type AddonsDeps = {
     install(url: string): Promise<unknown>;
     setEnabled(id: string, enabled: boolean): Promise<void>;
     uninstall(id: string): Promise<void>;
+    /** Registry-mutation hook: fires after install/enable/disable/uninstall. */
+    onChanged?: (listener: (version: number) => void) => () => void;
   };
+  /** Called when the registry mutates so the live Discover composite rebuilds. */
+  onAddonsChanged?: () => void;
   pushToast?: typeof defaultPushToast;
   t?: (key: string, params?: Record<string, string | number>) => string;
 };
@@ -27,6 +31,7 @@ export function createSettingsAddons(deps: AddonsDeps = {}): {
   const registry = deps.registry ?? new DefaultAddonRegistry();
   const pushToast = deps.pushToast ?? defaultPushToast;
   const t = deps.t ?? ((k: string) => k);
+  registry.onChanged?.(() => deps.onAddonsChanged?.());
 
   let url = $state('');
   let installed = $state<InstalledAddonRow[]>([]);

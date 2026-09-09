@@ -181,6 +181,49 @@ describe("validateManifest", () => {
     expect(manifest.catalogs[0].id).toBe("main");
   });
 
+  describe("optional endpoint fields", () => {
+    it("parses https searchUrl/detailsUrl templates when present", () => {
+      const manifest = validateManifest(
+        encode({
+          ...VALID_MANIFEST,
+          searchUrl: "https://example.com/search?q={query}&page={page}",
+          detailsUrl: "https://example.com/book/{bookId}",
+        }),
+        "application/json",
+      );
+      expect(manifest.searchUrl).toBe("https://example.com/search?q={query}&page={page}");
+      expect(manifest.detailsUrl).toBe("https://example.com/book/{bookId}");
+    });
+
+    it("leaves absent endpoint fields undefined", () => {
+      const manifest = validateManifest(encode(VALID_MANIFEST), "application/json");
+      expect(manifest.searchUrl).toBeUndefined();
+      expect(manifest.detailsUrl).toBeUndefined();
+    });
+
+    it("rejects non-https endpoint templates", () => {
+      for (const bad of ["http://example.com/s", "ftp://example.com/s", "not a url"]) {
+        try {
+          validateManifest(encode({ ...VALID_MANIFEST, searchUrl: bad }), "application/json");
+          throw new Error("should have thrown");
+        } catch (err) {
+          expect((err as AddonFetchError).code).toBe(AddonFetchErrorCode.INVALID_MANIFEST);
+        }
+      }
+    });
+
+    it("rejects non-string endpoint templates", () => {
+      for (const bad of [42, null, {}]) {
+        try {
+          validateManifest(encode({ ...VALID_MANIFEST, detailsUrl: bad }), "application/json");
+          throw new Error("should have thrown");
+        } catch (err) {
+          expect((err as AddonFetchError).code).toBe(AddonFetchErrorCode.INVALID_MANIFEST);
+        }
+      }
+    });
+  });
+
   describe("parity fixtures", () => {
     const fixtureNames = [
       "valid",

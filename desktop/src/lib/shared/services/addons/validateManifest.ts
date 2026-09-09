@@ -39,6 +39,10 @@ export interface AddonManifest {
   version: string;
   catalogs: AddonCatalogEntry[];
   resources: string[];
+  /** Optional catalog endpoint template: `{query}`, `{page}` placeholders. */
+  searchUrl?: string;
+  /** Optional detail endpoint template: `{bookId}` placeholder. */
+  detailsUrl?: string;
 }
 
 function addonFetchError(code: AddonFetchErrorCode, detail?: string): AddonFetchError {
@@ -110,6 +114,25 @@ function parseResources(value: unknown): string[] {
   });
 }
 
+const MAX_ENDPOINT_CHARS = 2048;
+
+function parseEndpoint(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (!isNonEmptyString(value) || value.length > MAX_ENDPOINT_CHARS) {
+    throw addonFetchError(AddonFetchErrorCode.INVALID_MANIFEST, "endpoint must be a non-empty https string");
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw addonFetchError(AddonFetchErrorCode.INVALID_MANIFEST, `endpoint must be https: ${value}`);
+  }
+  if (parsed.protocol !== "https:") {
+    throw addonFetchError(AddonFetchErrorCode.INVALID_MANIFEST, `endpoint must be https: ${value}`);
+  }
+  return value;
+}
+
 function parseManifestObject(value: unknown): AddonManifest {
   if (!isPlainObject(value)) {
     throw addonFetchError(AddonFetchErrorCode.INVALID_MANIFEST, "manifest must be a JSON object");
@@ -131,6 +154,8 @@ function parseManifestObject(value: unknown): AddonManifest {
     version: value.version as string,
     catalogs: value.catalogs.map(parseCatalogEntry),
     resources: parseResources(value.resources),
+    searchUrl: parseEndpoint(value.searchUrl),
+    detailsUrl: parseEndpoint(value.detailsUrl),
   };
 }
 

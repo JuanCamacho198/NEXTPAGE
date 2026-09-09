@@ -1,4 +1,8 @@
-import { CompositeCatalogProvider, isCatalogError } from '$lib/shared/services/catalog';
+import {
+  CompositeCatalogProvider,
+  isCatalogError,
+  liveCatalogProvider,
+} from '$lib/shared/services/catalog';
 import type {
   CatalogBook,
   CatalogErrorCode,
@@ -37,7 +41,7 @@ class DiscoverDomainState {
 
   private lastAttemptedPage = 0;
 
-  constructor(private readonly provider: CatalogProvider = new CompositeCatalogProvider()) {}
+  constructor(private readonly provider: CatalogProvider = liveCatalogProvider) {}
 
   setQuery(query: string): void {
     this.query = query;

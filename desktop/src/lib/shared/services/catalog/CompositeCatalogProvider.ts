@@ -51,20 +51,64 @@ function singleSource(provider: CatalogProvider): CatalogSourceInfo | null {
 
 import { CuratedCatalogProvider } from '../addons/CuratedCatalogProvider';
 import { AddonCatalogProvider } from '../addons/AddonCatalogProvider';
-import type { InstalledAddonRow } from '../addons/AddonRegistry';
+import type { AddonTransport, InstalledAddonRow } from '../addons/AddonRegistry';
 
 /** Default provider list: built-ins first, then the curated bundle, then
  * enabled addons in install order (disabled rows are excluded). */
-export function defaultCatalogProviders(installedAddons: InstalledAddonRow[] = []): CatalogProvider[] {
+export function defaultCatalogProviders(
+  installedAddons: InstalledAddonRow[] = [],
+  addonTransport?: AddonTransport,
+): CatalogProvider[] {
   const addonProviders = installedAddons
     .filter((row) => row.enabled)
-    .map((row) => new AddonCatalogProvider(row.manifest, row.id));
+    .map((row) => new AddonCatalogProvider(row.manifest, row.id, addonTransport));
   return [
     new GutendexCatalogProvider(),
     new OpenLibraryCatalogProvider(),
     new CuratedCatalogProvider(),
     ...addonProviders,
   ];
+}
+
+/**
+ * Live composite supplier: rebuilds the ordered provider list from fresh
+ * registry rows whenever it is invalidated (design A1/A4 wiring — install,
+ * enable/disable, and uninstall immediately change the active source set).
+ */
+export interface CatalogProviderSupplier {
+  /** Current composite; rebuilds from registry rows after invalidate(). */
+  current(): Promise<CompositeCatalogProvider>;
+  /** Already-built composite, or null before the first build. */
+  peek(): CompositeCatalogProvider | null;
+  /** Drop the cached composite; the next current() rebuilds from fresh rows. */
+  invalidate(): void;
+}
+
+export function createRebuildingCatalogProvider(
+  loadRows: () => Promise<InstalledAddonRow[]>,
+  addonTransport?: AddonTransport,
+): CatalogProviderSupplier {
+  let current: Promise<CompositeCatalogProvider> | null = null;
+  let built: CompositeCatalogProvider | null = null;
+  let generation = 0;
+  return {
+    current(): Promise<CompositeCatalogProvider> {
+      const gen = generation;
+      return (current ??= loadRows().then((rows) => {
+        const composite = new CompositeCatalogProvider(defaultCatalogProviders(rows, addonTransport));
+        if (gen === generation) built = composite;
+        return composite;
+      }));
+    },
+    peek(): CompositeCatalogProvider | null {
+      return built;
+    },
+    invalidate(): void {
+      generation += 1;
+      current = null;
+      built = null;
+    },
+  };
 }
 
 interface RoutedDetails {

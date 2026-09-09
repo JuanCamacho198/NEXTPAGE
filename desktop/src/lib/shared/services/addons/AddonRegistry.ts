@@ -74,10 +74,27 @@ export interface AddonFetchResult {
 /** Platform network layer seam (desktop: the Rust fetchAddonResource command). */
 export type AddonTransport = (url: string) => Promise<AddonFetchResult>;
 
+/**
+ * Platform network layer seam (desktop: the Rust fetchAddonResource command
+ * - addon hosts are never fetched from the webview). Used by the install
+ * flow and AddonCatalogProvider; tests inject fakes via the constructors.
+ */
+export function defaultAddonTransport(): AddonTransport {
+  return async (url) => {
+    const res = await invoke<{ status: number; contentType: string | null; body: number[] }>(
+      'fetchAddonResource',
+      { url },
+    );
+    return { status: res.status, contentType: res.contentType, body: new Uint8Array(res.body) };
+  };
+}
+
 export class AddonRegistry {
   private readonly store: AddonRegistryStore;
   private readonly transport: AddonTransport;
   private readonly now: () => number;
+  private readonly listeners = new Set<(version: number) => void>();
+  private mutationVersion = 0;
 
   constructor(options: {
     store?: AddonRegistryStore;
@@ -85,15 +102,7 @@ export class AddonRegistry {
     now?: () => number;
   } = {}) {
     this.store = options.store ?? new TauriAddonRegistryStore();
-    this.transport =
-      options.transport ??
-      (async (url) => {
-        const res = await invoke<{ status: number; contentType: string | null; body: number[] }>(
-          'fetchAddonResource',
-          { url },
-        );
-        return { status: res.status, contentType: res.contentType, body: new Uint8Array(res.body) };
-      });
+    this.transport = options.transport ?? defaultAddonTransport();
     this.now = options.now ?? (() => Date.now());
   }
 
@@ -123,11 +132,11 @@ export class AddonRegistry {
       enabled: existing ? existing.enabled : true,
       addedAt: existing ? existing.addedAt : this.now(),
     });
+    this.notifyChanged();
     return manifest;
   }
 
-  async listInstalled(): Promise<InstalledAddonRow[]> {
-    const rows = await this.store.listInstalled();
+  async listInstalled(): Promise<InstalledAddonRow[]> {    const rows = await this.store.listInstalled();
     return rows
       .map((row) => {
         try {
@@ -148,10 +157,41 @@ export class AddonRegistry {
   }
 
   async setEnabled(id: string, enabled: boolean): Promise<void> {
-    await this.store.setEnabled(id, enabled);
+    try {
+      await this.store.setEnabled(id, enabled);
+    } finally {
+      this.notifyChanged();
+    }
   }
 
   async uninstall(id: string): Promise<void> {
-    await this.store.uninstall(id);
+    try {
+      await this.store.uninstall(id);
+    } finally {
+      this.notifyChanged();
+    }
+  }
+
+  /**
+   * Live-composite hook: fires after every registry mutation (install,
+   * enable/disable, uninstall) with a monotonically increasing version.
+   * Returns an unsubscribe function.
+   */
+  onChanged(listener: (version: number) => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notifyChanged(): void {
+    this.mutationVersion += 1;
+    for (const listener of [...this.listeners]) {
+      try {
+        listener(this.mutationVersion);
+      } catch {
+        // listener failures must never break the mutation flow
+      }
+    }
   }
 }

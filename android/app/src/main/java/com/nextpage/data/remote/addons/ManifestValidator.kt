@@ -30,7 +30,11 @@ data class AddonManifest(
     val name: String,
     val version: String,
     val catalogs: List<AddonCatalogEntry>,
-    val resources: List<String>
+    val resources: List<String>,
+    /** Optional catalog endpoint template: `{query}`, `{page}` placeholders. */
+    val searchUrl: String? = null,
+    /** Optional detail endpoint template: `{bookId}` placeholder. */
+    val detailsUrl: String? = null
 )
 
 /** Rules and codes mirror desktop validateManifest.ts byte-for-byte. */
@@ -41,6 +45,13 @@ object ManifestValidator {
     private const val MAX_CATALOG_ENTRY_CHARS = 512
     private const val MAX_RESOURCES = 16
     private const val MAX_RESOURCE_CHARS = 64
+    private const val MAX_ENDPOINT_CHARS = 2048
+
+    internal fun isJsonContentType(contentType: String?): Boolean {
+        if (contentType == null) return false
+        val base = contentType.substringBefore(';').trim().lowercase()
+        return base == "application/json" || base.endsWith("+json")
+    }
 
     /** HTTPS-only install URLs: reject before any network I/O. */
     fun assertHttpsInstallUrl(url: String): Boolean {
@@ -51,13 +62,22 @@ object ManifestValidator {
         return true
     }
 
-    private fun isJsonContentType(contentType: String?): Boolean {
-        if (contentType == null) return false
-        val base = contentType.substringBefore(';').trim().lowercase()
-        return base == "application/json" || base.endsWith("+json")
-    }
+    private fun isJsonContentTypeRemoved(contentType: String?): Boolean = isJsonContentType(contentType)
 
     private fun invalid(detail: String): Nothing = throw AddonFetchException(AddonFetchErrorCode.INVALID_MANIFEST, detail)
+
+    /** Exact-prefix parse of a manifest-declared endpoint: https-only, bounded.
+     * Placeholder braces (`{query}`) are legal in templates, so this is a
+     * scheme-prefix check rather than a strict URI parse (desktop's WHATWG
+     * `new URL` accepts them too). */
+    private fun parseEndpoint(value: Any?): String? {
+        if (value == null) return null
+        if (value !is String || value.isEmpty() || value.length > MAX_ENDPOINT_CHARS) {
+            invalid("endpoint must be a non-empty https string")
+        }
+        if (!value.lowercase().startsWith("https://")) invalid("endpoint must be https: $value")
+        return value
+    }
 
     private fun nonEmptyString(value: Any?): Boolean =
         value is String && value.isNotEmpty()
@@ -103,7 +123,9 @@ object ManifestValidator {
             name = value.getString("name"),
             version = value.getString("version"),
             catalogs = (0 until catalogs.length()).map { parseCatalogEntry(catalogs.opt(it)) },
-            resources = parseResources(value.opt("resources"))
+            resources = parseResources(value.opt("resources")),
+            searchUrl = parseEndpoint(value.opt("searchUrl")),
+            detailsUrl = parseEndpoint(value.opt("detailsUrl"))
         )
     }
 

@@ -42,6 +42,19 @@ class AddonRegistry(
     private val now: () -> Long = { System.currentTimeMillis() }
 ) : AddonRegistryLike {
 
+    private val changeListeners = mutableListOf<(Int) -> Unit>()
+    private var mutationVersion = 0
+
+    /** Live-composite hook: fires after every registry mutation. */
+    fun addOnChangedListener(listener: (Int) -> Unit) {
+        changeListeners.add(listener)
+    }
+
+    private fun notifyChanged() {
+        mutationVersion += 1
+        for (listener in changeListeners.toList()) listener(mutationVersion)
+    }
+
     /** install(url): HTTPS check → fetch → validate → addonId → upsert preserving enabled. */
     override suspend fun install(url: String): AddonManifest {
         ManifestValidator.assertHttpsInstallUrl(url)
@@ -83,11 +96,15 @@ class AddonRegistry(
                         },
                         "resources" to org.json.JSONArray().apply { manifest.resources.forEach { put(it) } }
                     )
-                ).toString(),
+                ).apply {
+                    manifest.searchUrl?.let { put("searchUrl", it) }
+                    manifest.detailsUrl?.let { put("detailsUrl", it) }
+                }.toString(),
                 enabled = existing?.enabled ?: true,
                 addedAt = existing?.addedAt ?: now()
             )
         )
+        notifyChanged()
         return manifest
     }
 
@@ -102,11 +119,19 @@ class AddonRegistry(
             .sortedWith(compareBy({ it.addedAt }, { it.id }))
 
     override suspend fun setEnabled(id: String, enabled: Boolean) {
-        dao.setEnabled(id, enabled)
+        try {
+            dao.setEnabled(id, enabled)
+        } finally {
+            notifyChanged()
+        }
     }
 
     override suspend fun uninstall(id: String) {
-        dao.delete(id)
+        try {
+            dao.delete(id)
+        } finally {
+            notifyChanged()
+        }
     }
 
     private companion object {
@@ -140,6 +165,10 @@ internal object AddonManifestJson {
             }
         )
         .put("resources", org.json.JSONArray().apply { manifest.resources.forEach { put(it) } })
+        .apply {
+            manifest.searchUrl?.let { put("searchUrl", it) }
+            manifest.detailsUrl?.let { put("detailsUrl", it) }
+        }
         .toString()
 }
 
@@ -150,8 +179,9 @@ internal object AddonManifestJson {
 fun catalogProvidersWithAddons(
     builtIns: List<CatalogProvider>,
     curated: CatalogProvider,
-    installedAddons: List<InstalledAddonRow>
+    installedAddons: List<InstalledAddonRow>,
+    addonTransport: AddonHttpTransport? = null
 ): List<CatalogProvider> =
     builtIns + curated + installedAddons
         .filter { it.enabled }
-        .map { AddonCatalogProvider(it.manifest, it.id) }
+        .map { AddonCatalogProvider(it.manifest, it.id, addonTransport) }

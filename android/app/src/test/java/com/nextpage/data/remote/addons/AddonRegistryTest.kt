@@ -271,7 +271,7 @@ class AddonRegistryTest {
     fun `addon catalog provider is browse-only and exposes one addon source`() = runTest {
         val addonId = AddonId.fromUrl("https://example.com/manifest.json")
         val manifest = ManifestValidator.validate(VALID_MANIFEST_JSON.toByteArray(), "application/json")
-        val provider = AddonCatalogProvider(manifest, addonId)
+        val provider = AddonCatalogProvider(manifest, addonId, FakeAddonHttpTransport())
         val sources = provider.listSources()
         assertEquals(1, sources.size)
         assertEquals(addonSource(addonId), sources[0].sourceId)

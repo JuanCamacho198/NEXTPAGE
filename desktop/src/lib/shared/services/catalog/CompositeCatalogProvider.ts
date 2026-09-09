@@ -8,7 +8,6 @@
  * Burst searches are trailing-edge debounced; page < 1 rejects before I/O.
  */
 import { catalogError } from './errors';
-import { bookIdPrefixForSource } from './CatalogProvider';
 import type {
   CatalogBook,
   CatalogProvider,

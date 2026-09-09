@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_logo_initials">NP</string>
     <string name="auth_config_error_google_unavailable">Error de configuracion: el inicio de sesion con Google no esta disponible porque el ID de cliente OAuth no esta configurado. Podes continuar usando funciones de biblioteca local.</string>
     <string name="auth_continue_with_google">Continuar con Google</string>
@@ -779,16 +779,16 @@
     <string name="feedback_mobile_offline_notice">Guardado sin conexión — enviaremos cuando vuelvas a estar online.</string>
     <string name="feedback_mobile_counter">%1$d / %2$d</string>
 
-    <string name="settings_addons_title">Complementos de catálogo</string>
-    <string name="settings_addons_description">Instala catálogos desde una URL de manifiesto (solo HTTPS)</string>
-    <string name="settings_addons_url_label">URL del manifiesto</string>
-    <string name="settings_addons_url_placeholder">https://ejemplo.com/manifest.json</string>
-    <string name="settings_addons_install">Instalar</string>
-    <string name="settings_addons_installing">Instalando…</string>
-    <string name="settings_addons_installed_toast">Complemento instalado</string>
-    <string name="settings_addons_install_failed">Error al instalar el complemento</string>
-    <string name="settings_addons_empty">No hay complementos instalados</string>
-    <string name="settings_addons_enable">Activar</string>
-    <string name="settings_addons_disable">Desactivar</string>
-    <string name="settings_addons_uninstall">Desinstalar</string>
+    <string name="settings_addons_title" tools:ignore="UnusedResources">Complementos de catálogo</string>
+    <string name="settings_addons_description" tools:ignore="UnusedResources">Instala catálogos desde una URL de manifiesto (solo HTTPS)</string>
+    <string name="settings_addons_url_label" tools:ignore="UnusedResources">URL del manifiesto</string>
+    <string name="settings_addons_url_placeholder" tools:ignore="UnusedResources">https://ejemplo.com/manifest.json</string>
+    <string name="settings_addons_install" tools:ignore="UnusedResources">Instalar</string>
+    <string name="settings_addons_installing" tools:ignore="UnusedResources">Instalando…</string>
+    <string name="settings_addons_installed_toast" tools:ignore="UnusedResources">Complemento instalado</string>
+    <string name="settings_addons_install_failed" tools:ignore="UnusedResources">Error al instalar el complemento</string>
+    <string name="settings_addons_empty" tools:ignore="UnusedResources">No hay complementos instalados</string>
+    <string name="settings_addons_enable" tools:ignore="UnusedResources">Activar</string>
+    <string name="settings_addons_disable" tools:ignore="UnusedResources">Desactivar</string>
+    <string name="settings_addons_uninstall" tools:ignore="UnusedResources">Desinstalar</string>
 </resources>

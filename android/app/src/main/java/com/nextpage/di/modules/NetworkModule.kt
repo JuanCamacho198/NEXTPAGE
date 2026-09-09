@@ -36,6 +36,9 @@ import com.nextpage.data.remote.catalog.KtorCatalogHttpTransport
 import com.nextpage.data.remote.catalog.OpenLibraryCatalogProvider
 import com.nextpage.data.remote.catalog.OpenLibraryDataSource
 import com.nextpage.data.remote.addons.CuratedCatalogProvider
+import com.nextpage.data.remote.addons.AddonRegistry
+import com.nextpage.data.remote.addons.KtorAddonHttpTransport
+import com.nextpage.data.remote.addons.catalogProvidersWithAddons
 import com.nextpage.data.remote.catalog.RoomDiscoverCache
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -45,6 +48,7 @@ import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 
 class NetworkModule(
@@ -210,12 +214,22 @@ class NetworkModule(
         OpenLibraryDataSource(catalogTransport)
     }
 
+    val addonRegistry: AddonRegistry by lazy {
+        AddonRegistry(
+            databaseModule.installedAddonDao,
+            KtorAddonHttpTransport(catalogHttpClient)
+        )
+    }
+
     val catalogProvider: CatalogProvider by lazy {
         CompositeCatalogProvider(
-            listOf(
-                GutendexCatalogProvider(gutendexDataSource),
-                OpenLibraryCatalogProvider(openLibraryDataSource),
-                CuratedCatalogProvider(context)
+            catalogProvidersWithAddons(
+                builtIns = listOf(
+                    GutendexCatalogProvider(gutendexDataSource),
+                    OpenLibraryCatalogProvider(openLibraryDataSource)
+                ),
+                curated = CuratedCatalogProvider(context),
+                installedAddons = runBlocking { addonRegistry.listInstalled() }
             ),
             cache = RoomDiscoverCache(databaseModule.discoverCacheDao)
         )

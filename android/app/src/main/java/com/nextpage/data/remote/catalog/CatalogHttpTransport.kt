@@ -62,4 +62,4 @@ suspend fun CatalogHttpTransport.getWithRetry(url: String): CatalogHttpResponse 
     return second
 }
 
-private fun Int.isSuccessLike(): Boolean = this in 200..299
+private fun Int.isSuccessLike(): Boolean = isHttpSuccess()

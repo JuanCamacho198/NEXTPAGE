@@ -102,9 +102,9 @@ fun isCatalogError(err: Throwable): Boolean = err is CatalogException
 
 /** Map an upstream HTTP status to a stable contract code. */
 fun mapHttpStatusToCode(status: Int): CatalogErrorCode = when (status) {
-    404 -> CatalogErrorCode.NOT_FOUND
-    429 -> CatalogErrorCode.RATE_LIMITED
-    in 500..599 -> CatalogErrorCode.UPSTREAM_ERROR
+    HTTP_NOT_FOUND -> CatalogErrorCode.NOT_FOUND
+    HTTP_TOO_MANY_REQUESTS -> CatalogErrorCode.RATE_LIMITED
+    in HTTP_SERVER_ERROR_MIN..HTTP_SERVER_ERROR_MAX -> CatalogErrorCode.UPSTREAM_ERROR
     else -> CatalogErrorCode.UPSTREAM_ERROR
 }
 

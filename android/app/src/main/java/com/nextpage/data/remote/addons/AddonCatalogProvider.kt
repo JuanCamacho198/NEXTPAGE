@@ -10,6 +10,7 @@ import com.nextpage.data.remote.catalog.PagedResult
 import com.nextpage.data.remote.catalog.addonSource
 import com.nextpage.data.remote.catalog.catalogError
 import com.nextpage.data.remote.catalog.computeNextPage
+import com.nextpage.data.remote.catalog.isHttpSuccess
 import com.nextpage.data.remote.catalog.RETRY_BASE_DELAY_MS
 import com.nextpage.data.remote.catalog.shouldRetryStatus
 import kotlinx.coroutines.delay
@@ -88,7 +89,7 @@ class AddonCatalogProvider(
             if (retryDelayMs > 0) delay(retryDelayMs)
             response = callTransport(url)
         }
-        if (response.status < 200 || response.status >= 300) {
+        if (!response.status.isHttpSuccess()) {
             throw catalogError(mapHttpStatusToCode(response.status), "addon payload status ${response.status}")
         }
         if (response.body.size > ManifestValidator.MAX_MANIFEST_BYTES) {

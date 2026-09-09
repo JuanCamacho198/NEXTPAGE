@@ -3,6 +3,7 @@ package com.nextpage.data.remote.addons
 import com.nextpage.data.local.dao.AddonDao
 import com.nextpage.data.local.entity.AddonEntity
 import com.nextpage.data.remote.catalog.CatalogProvider
+import com.nextpage.data.remote.catalog.isHttpSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -59,7 +60,7 @@ class AddonRegistry(
     override suspend fun install(url: String): AddonManifest {
         ManifestValidator.assertHttpsInstallUrl(url)
         val fetched = transport.fetch(url)
-        if (fetched.status < 200 || fetched.status >= 300) {
+        if (!fetched.status.isHttpSuccess()) {
             throw AddonFetchException(AddonFetchErrorCode.NETWORK, "addon fetch status ${fetched.status}")
         }
         val manifest = ManifestValidator.validate(fetched.body, fetched.contentType)

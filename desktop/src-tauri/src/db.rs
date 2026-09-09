@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
 
-const MIGRATIONS: [(&str, &str); 16] = [
+const MIGRATIONS: [(&str, &str); 17] = [
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_books", include_str!("../migrations/0002_books.sql")),
     ("0003_highlights", include_str!("../migrations/0003_highlights.sql")),
@@ -28,6 +28,10 @@ const MIGRATIONS: [(&str, &str); 16] = [
     ("0014_reading_sessions_sync", include_str!("../migrations/0014_reading_sessions_sync.sql")),
     ("0015_dictionary_sync", include_str!("../migrations/0015_dictionary_sync.sql")),
     ("0016_discover_cache", include_str!("../migrations/0016_discover_cache.sql")),
+        (
+            "0017_addon_registry",
+            include_str!("../migrations/0017_addon_registry.sql"),
+        ),
 ];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {
@@ -307,6 +311,119 @@ fn has_column(connection: &Connection, table_name: &str, column_name: &str) -> A
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn migrate_in_memory() -> Connection {
+        let connection = Connection::open_in_memory().expect("in-memory db");
+        connection
+            .execute(
+                "CREATE TABLE IF NOT EXISTS schema_migrations (
+                   name TEXT PRIMARY KEY,
+                   applied_at TEXT NOT NULL
+                 )",
+                [],
+            )
+            .unwrap();
+        for (name, sql) in MIGRATIONS {
+            connection.execute_batch(sql).expect("migration applies cleanly");
+            connection
+                .execute("INSERT INTO schema_migrations (name, applied_at) VALUES (?1, 'test')", [name])
+                .unwrap();
+        }
+        connection
+    }
+
+    fn table_columns(connection: &Connection, table: &str) -> Vec<(String, String)> {
+        let mut statement = connection.prepare(&format!("PRAGMA table_info({})", table)).unwrap();
+        let rows = statement
+            .query_map([], |row| Ok((row.get::<_, String>(1)?, row.get::<_, String>(2)?)));
+        rows.expect("table_info works").map(|r| r.unwrap()).collect()
+    }
+
+    #[test]
+    fn test_installed_addons_schema_after_migration() {
+        let connection = migrate_in_memory();
+        let columns = table_columns(&connection, "installed_addons");
+        let names: Vec<&str> = columns.iter().map(|(n, _)| n.as_str()).collect();
+        assert_eq!(names, vec!["id", "url", "manifest_json", "enabled", "added_at"]);
+        let types: Vec<&str> = columns.iter().map(|(_, t)| t.as_str()).collect();
+        assert_eq!(types, vec!["TEXT", "TEXT", "TEXT", "INTEGER", "INTEGER"]);
+
+        let sql: String = connection
+            .query_row(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name='installed_addons'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(sql.contains("PRIMARY KEY"), "id must be PK: {}", sql);
+        assert!(sql.contains("UNIQUE"), "url must be UNIQUE: {}", sql);
+        assert!(sql.contains("CHECK"), "enabled must be CHECK-constrained: {}", sql);
+    }
+
+    #[test]
+    fn test_installed_addons_reinstall_preserves_enabled_and_updates_manifest() {
+        let connection = migrate_in_memory();
+        connection
+            .execute(
+                "INSERT INTO installed_addons (id, url, manifest_json, enabled, added_at)
+                 VALUES ('aaaaaaaaaaaaaaaa', 'https://example.com/m.json', '{\"v\":1}', 0, 100)",
+                [],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO installed_addons (id, url, manifest_json, enabled, added_at)
+                 VALUES ('aaaaaaaaaaaaaaaa', 'https://example.com/m.json', '{\"v\":2}', 1, 200)
+                 ON CONFLICT(url) DO UPDATE SET manifest_json = excluded.manifest_json,
+                                              added_at = excluded.added_at",
+                [],
+            )
+            .unwrap();
+        let (manifest, enabled): (String, i32) = connection
+            .query_row(
+                "SELECT manifest_json, enabled FROM installed_addons WHERE url = 'https://example.com/m.json'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(manifest, "{\"v\":2}");
+        assert_eq!(enabled, 0, "reinstall must preserve enabled");
+        let count: i32 = connection
+            .query_row("SELECT COUNT(*) FROM installed_addons", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_installed_addons_enabled_check_constraint() {
+        let connection = migrate_in_memory();
+        let result = connection.execute(
+            "INSERT INTO installed_addons (id, url, manifest_json, enabled, added_at)
+             VALUES ('bbbbbbbbbbbbbbbb', 'https://example.com/b.json', '{}', 2, 100)",
+            [],
+        );
+        assert!(result.is_err(), "enabled must be CHECK-constrained to 0/1");
+    }
+
+    #[test]
+    fn test_installed_addons_migration_scope_isolation() {
+        let connection = migrate_in_memory();
+        let foreign: i32 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master
+                 WHERE type IN ('trigger', 'index')
+                   AND tbl_name IN ('user_books', 'sync_outbox')
+                   AND name LIKE '%addon%'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(foreign, 0, "0017 must not add triggers/indexes touching user_books/outbox");
+        let outbox: i32 = connection
+            .query_row("SELECT COUNT(*) FROM sync_outbox", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(outbox, 0, "migration must not write sync_outbox rows");
+    }
 
     #[test]
     fn test_health_status_equality() {

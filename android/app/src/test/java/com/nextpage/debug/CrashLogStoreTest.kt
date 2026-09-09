@@ -81,13 +81,26 @@ class CrashLogStoreTest {
                 }
             }
 
-        store.cleanup(crashDir, maxFiles = 10)
+            val before = crashDir.listFiles()
+                ?.filter { it.name.startsWith("crash_") }
+                ?: error("crash dir not listable")
+            check(before.size == 11) { "expected 11 seed files, got ${before.size}" }
+            val oldestName = before.minBy { it.lastModified() }.name
 
-        val remaining = crashDir.listFiles()
-            ?.filter { it.name.startsWith("crash_") }
-            ?: emptyList()
-        assertEquals("Should have 10 crash files remaining", 10, remaining.size)
-        assertFalse("Oldest crash file should be deleted", File(crashDir, "crash_0.txt").exists())
+            store.cleanup(crashDir, maxFiles = 10)
+
+            val remaining = crashDir.listFiles()
+                ?.filter { it.name.startsWith("crash_") }
+                ?: error("crash dir not listable after cleanup")
+            check(remaining.size == 10) {
+                "Should have 10 crash files remaining, got ${remaining.size}: " +
+                    remaining.joinToString(", ") { "${it.name}@${it.lastModified()}" } +
+                    " (seed: " + before.joinToString(", ") { "${it.name}@${it.lastModified()}" } + ")"
+            }
+            val deleted = before.map { it.name } - remaining.map { it.name }.toSet()
+            check(deleted == listOf(oldestName)) {
+                "Oldest ($oldestName) should be deleted; deleted=$deleted"
+            }
     }
 
     @Test

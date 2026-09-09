@@ -66,3 +66,6 @@ fixtures/
 # Pen sync backup
 design/nextpage-desktop.pen.bak
 design/*.tmp
+# Addon parity fixtures (committed - addon-registry-v1 PR2)
+!src/test/unit/services/addons/fixtures/
+!src/test/unit/services/addons/fixtures/**

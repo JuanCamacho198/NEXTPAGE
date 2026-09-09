@@ -3,6 +3,7 @@
  * Pure functions — fully testable offline with fixture JSON.
  */
 import { catalogError } from './errors';
+import { BUILTIN_GUTENDEX, BUILTIN_OPENLIBRARY } from './CatalogProvider';
 import type { CatalogBook, PagedResult } from './CatalogProvider';
 
 export interface GutendexAuthor {
@@ -48,7 +49,7 @@ export function mapGutendexBook(record: GutendexRecord): CatalogBook | null {
   if (!isGutendexPublicDomain(record)) return null;
   return {
     id: `gutendex:${record.id}`,
-    provider: 'gutendex',
+    provider: BUILTIN_GUTENDEX,
     title: record.title,
     authors: (record.authors ?? []).map((a) => a.name),
     coverUrl: null,
@@ -63,7 +64,7 @@ export function mapOpenLibraryDoc(doc: OpenLibraryDoc): CatalogBook | null {
   if (!isOpenLibraryPublic(doc)) return null;
   return {
     id: `openlibrary:${doc.key}`,
-    provider: 'openlibrary',
+    provider: BUILTIN_OPENLIBRARY,
     title: doc.title,
     authors: doc.author_name ?? [],
     coverUrl: openLibraryCoverUrl(doc.cover_i),

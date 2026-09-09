@@ -4,6 +4,11 @@
  * Burst searches are trailing-edge debounced; page < 1 rejects before I/O.
  */
 import { catalogError } from './errors';
+import {
+  BUILTIN_GUTENDEX,
+  BUILTIN_OPENLIBRARY,
+  type CatalogSourceInfo,
+} from './CatalogProvider';
 import type { CatalogBook, CatalogProvider, PagedResult } from './CatalogProvider';
 import {
   DETAIL_TTL_S,
@@ -107,5 +112,13 @@ export class CompositeCatalogProvider implements CatalogProvider {
 
   resolveDownloadUrl(formats: Record<string, string>, preferEpub: boolean): string {
     return resolveDownloadUrl(formats, preferEpub);
+  }
+
+  /** Interim: widened port surface; the ordered-provider rewrite replaces this class. */
+  listSources(): CatalogSourceInfo[] {
+    return [
+      { sourceId: BUILTIN_GUTENDEX, name: 'Gutendex', kind: 'builtin' },
+      { sourceId: BUILTIN_OPENLIBRARY, name: 'Open Library', kind: 'builtin' },
+    ];
   }
 }

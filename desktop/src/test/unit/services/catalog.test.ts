@@ -101,7 +101,7 @@ describe('merge and pagination', () => {
     const oBooks = olDocs.map(mapOpenLibraryDoc).filter((b) => b !== null);
     const merged = mergeResults(gBooks, oBooks);
     const pride = merged.find((b) => b.id === 'gutendex:1342');
-    expect(pride?.provider).toBe('gutendex');
+    expect(pride?.provider).toBe('builtin:gutendex');
     expect(pride?.coverUrl).toBe('https://covers.openlibrary.org/b/id/6794977-M.jpg');
     // Borrowable OL doc dropped by the mapper, so it never reaches the merge.
     expect(merged.some((b) => b.title === 'Borrow Restricted Title')).toBe(false);

@@ -32,7 +32,11 @@ describe('useSettingsAppearance', () => {
   it('loadAppearance parses theme and fontScale from getSettings', async () => {
     const getSettings = vi.fn().mockResolvedValue([
       { key: 'ui.theme', valueJson: JSON.stringify('dark'), updatedAt: new Date().toISOString() },
-      { key: 'reader.fontScale', valueJson: JSON.stringify(120), updatedAt: new Date().toISOString() },
+      {
+        key: 'reader.fontScale',
+        valueJson: JSON.stringify(120),
+        updatedAt: new Date().toISOString(),
+      },
     ]);
     const getLocaleSetting = vi.fn().mockResolvedValue(null);
     const a = createSettingsAppearance({ getSettings, getLocaleSetting });
@@ -44,7 +48,11 @@ describe('useSettingsAppearance', () => {
 
   it('loadAppearance clamps fontScale', async () => {
     const getSettings = vi.fn().mockResolvedValue([
-      { key: 'reader.fontScale', valueJson: JSON.stringify(999), updatedAt: new Date().toISOString() },
+      {
+        key: 'reader.fontScale',
+        valueJson: JSON.stringify(999),
+        updatedAt: new Date().toISOString(),
+      },
     ]);
     const getLocaleSetting = vi.fn().mockResolvedValue(null);
     const a = createSettingsAppearance({ getSettings, getLocaleSetting });
@@ -71,8 +79,14 @@ describe('useSettingsAppearance', () => {
     const setLocale = vi.fn().mockResolvedValue(undefined);
     const onLocaleChange = vi.fn();
     const toSupportedLocale = (v: string | null): string | null => (v === 'en' ? 'en' : null);
-    const mockedLocale = vi.fn(toSupportedLocale) as unknown as (v: string | null) => 'es' | 'en' | null;
-    const a = createSettingsAppearance({ setLocale, onLocaleChange, toSupportedLocale: mockedLocale } as unknown as Parameters<typeof createSettingsAppearance>[0]);
+    const mockedLocale = vi.fn(toSupportedLocale) as unknown as (
+      v: string | null,
+    ) => 'es' | 'en' | null;
+    const a = createSettingsAppearance({
+      setLocale,
+      onLocaleChange,
+      toSupportedLocale: mockedLocale,
+    } as unknown as Parameters<typeof createSettingsAppearance>[0]);
     await a.handleLocaleSelect('en');
     expect(setLocale).toHaveBeenCalledWith('en');
     expect(onLocaleChange).toHaveBeenCalledWith('en');

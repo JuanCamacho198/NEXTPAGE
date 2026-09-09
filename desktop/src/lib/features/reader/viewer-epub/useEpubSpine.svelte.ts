@@ -1,4 +1,7 @@
-import { createSpineResolver, type ParseEpubFn } from '$lib/features/reader/chrome/useSpineResolver.svelte';
+import {
+  createSpineResolver,
+  type ParseEpubFn,
+} from '$lib/features/reader/chrome/useSpineResolver.svelte';
 import { normalizeHref, stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 import {
   spineIndexForToc as pureSpineIndexForToc,

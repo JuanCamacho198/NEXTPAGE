@@ -36,7 +36,11 @@
 
 <DropMenu position="bottom-right">
   {#snippet trigger()}
-    <button type="button" class={triggerClass} aria-label={t('shelf.bookOptions', { title: book.title })}>
+    <button
+      type="button"
+      class={triggerClass}
+      aria-label={t('shelf.bookOptions', { title: book.title })}
+    >
       <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
         <circle cx="5" cy="12" r="1.8"></circle>
         <circle cx="12" cy="12" r="1.8"></circle>

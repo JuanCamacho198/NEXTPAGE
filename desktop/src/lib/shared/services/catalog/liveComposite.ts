@@ -5,13 +5,23 @@
  * and rows are re-read after restart (design A1/A4 wiring; no Discover UI
  * changes needed — DiscoverDomainState just consumes this provider).
  */
-import { createRebuildingCatalogProvider, type CatalogProviderSupplier } from './CompositeCatalogProvider';
-import type { CatalogBook, CatalogProvider, CatalogSourceInfo, PagedResult } from './CatalogProvider';
+import {
+  createRebuildingCatalogProvider,
+  type CatalogProviderSupplier,
+} from './CompositeCatalogProvider';
+import type {
+  CatalogBook,
+  CatalogProvider,
+  CatalogSourceInfo,
+  PagedResult,
+} from './CatalogProvider';
 import { resolveDownloadUrl } from './mappers';
 import { AddonRegistry } from '../addons/AddonRegistry';
 
 const registry = new AddonRegistry();
-const supplier: CatalogProviderSupplier = createRebuildingCatalogProvider(() => registry.listInstalled());
+const supplier: CatalogProviderSupplier = createRebuildingCatalogProvider(() =>
+  registry.listInstalled(),
+);
 registry.onChanged(() => supplier.invalidate());
 
 class LiveCatalogProvider implements CatalogProvider {
@@ -35,4 +45,3 @@ class LiveCatalogProvider implements CatalogProvider {
 }
 
 export const liveCatalogProvider: CatalogProvider = new LiveCatalogProvider(supplier);
-

@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  AddonRegistry,
-  type AddonRegistryStore,
-} from '$lib/shared/services/addons/AddonRegistry';
+import { AddonRegistry, type AddonRegistryStore } from '$lib/shared/services/addons/AddonRegistry';
 import { createRebuildingCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
 import { addonIdFromUrl } from '$lib/shared/services/addons/addonId';
 import type { AddonManifest } from '$lib/shared/services/addons/validateManifest';
@@ -57,7 +54,9 @@ function fakeStore(seed: FakeRow[] = []): AddonRegistryStore & { rows: FakeRow[]
 }
 
 /** Manifest transport for installs; payload transport for addon catalog fetches. */
-function transportFor(results: Array<{ status?: number; body: unknown }>): AddonTransport & { calls: string[] } {
+function transportFor(
+  results: Array<{ status?: number; body: unknown }>,
+): AddonTransport & { calls: string[] } {
   let call = 0;
   const calls: string[] = [];
   return Object.assign(
@@ -68,7 +67,9 @@ function transportFor(results: Array<{ status?: number; body: unknown }>): Addon
       return {
         status: r.status ?? 200,
         contentType: 'application/json',
-        body: new TextEncoder().encode(typeof r.body === 'string' ? r.body : JSON.stringify(r.body)),
+        body: new TextEncoder().encode(
+          typeof r.body === 'string' ? r.body : JSON.stringify(r.body),
+        ),
       };
     },
     { calls },
@@ -80,7 +81,10 @@ const SPACE_PAYLOAD = { results: [{ id: 'book-1', title: 'Space Book' }], totalC
 describe('AddonRegistry change notifications', () => {
   it('fires onChanged with a monotonically increasing version on every mutation', async () => {
     const store = fakeStore();
-    const registry = new AddonRegistry({ store, transport: transportFor([{ body: ADDON_MANIFEST }]) });
+    const registry = new AddonRegistry({
+      store,
+      transport: transportFor([{ body: ADDON_MANIFEST }]),
+    });
     const versions: number[] = [];
     registry.onChanged((v) => versions.push(v));
 
@@ -95,7 +99,10 @@ describe('AddonRegistry change notifications', () => {
 
   it('unsubscribe stops notifications', async () => {
     const store = fakeStore();
-    const registry = new AddonRegistry({ store, transport: transportFor([{ body: ADDON_MANIFEST }]) });
+    const registry = new AddonRegistry({
+      store,
+      transport: transportFor([{ body: ADDON_MANIFEST }]),
+    });
     const versions: number[] = [];
     const off = registry.onChanged((v) => versions.push(v));
     await registry.install(INSTALL_URL);
@@ -109,7 +116,10 @@ describe('AddonRegistry change notifications', () => {
     const first = new AddonRegistry({ store, transport: transportFor([{ body: ADDON_MANIFEST }]) });
     await first.install(INSTALL_URL);
 
-    const restarted = new AddonRegistry({ store, transport: transportFor([{ body: SPACE_PAYLOAD }]) });
+    const restarted = new AddonRegistry({
+      store,
+      transport: transportFor([{ body: SPACE_PAYLOAD }]),
+    });
     const supplier = createRebuildingCatalogProvider(() => restarted.listInstalled());
     const provider = await supplier.current();
     const addonId = await addonIdFromUrl(INSTALL_URL);
@@ -124,7 +134,10 @@ describe('RebuildingCatalogProvider (live composite)', () => {
     const manifestTransport = transportFor([{ body: ADDON_MANIFEST }]);
     const payloadTransport = transportFor([{ body: { id: 'book-1', title: 'Space Book' } }]);
     const registry = new AddonRegistry({ store, transport: manifestTransport });
-    const supplier = createRebuildingCatalogProvider(() => registry.listInstalled(), payloadTransport);
+    const supplier = createRebuildingCatalogProvider(
+      () => registry.listInstalled(),
+      payloadTransport,
+    );
     registry.onChanged(() => supplier.invalidate());
 
     // Startup: no addons yet — rebuilt on first use.
@@ -133,9 +146,12 @@ describe('RebuildingCatalogProvider (live composite)', () => {
     await registry.install(INSTALL_URL);
     const addonId = store.rows[0].id;
     const built = await supplier.current();
-    expect(built.listSources().filter((s) => s.kind === 'addon').map((s) => s.sourceId)).toEqual([
-      `addon:${addonId}`,
-    ]);
+    expect(
+      built
+        .listSources()
+        .filter((s) => s.kind === 'addon')
+        .map((s) => s.sourceId),
+    ).toEqual([`addon:${addonId}`]);
     const book = await built.getDetails(`addon:${addonId}:book-1`);
     expect(book.title).toBe('Space Book');
     expect(book.provider).toBe(`addon:${addonId}`);
@@ -145,7 +161,9 @@ describe('RebuildingCatalogProvider (live composite)', () => {
     await registry.setEnabled(addonId, false);
     const disabled = await supplier.current();
     expect(disabled.listSources().filter((s) => s.kind === 'addon')).toEqual([]);
-    await expect(disabled.getDetails(`addon:${addonId}:book-1`)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(disabled.getDetails(`addon:${addonId}:book-1`)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
     expect(payloadTransport.calls).toHaveLength(1);
 
     // Uninstall after re-enable: same unroutable guarantee.
@@ -153,7 +171,9 @@ describe('RebuildingCatalogProvider (live composite)', () => {
     await registry.uninstall(addonId);
     const gone = await supplier.current();
     expect(gone.listSources().filter((s) => s.kind === 'addon')).toEqual([]);
-    await expect(gone.getDetails(`addon:${addonId}:book-1`)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(gone.getDetails(`addon:${addonId}:book-1`)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
     expect(payloadTransport.calls).toHaveLength(1);
   });
 });
@@ -161,7 +181,10 @@ describe('RebuildingCatalogProvider (live composite)', () => {
 describe('settings seam drives the live composite', () => {
   it('createSettingsAddons subscribes to registry change notifications', async () => {
     const store = fakeStore();
-    const registry = new AddonRegistry({ store, transport: transportFor([{ body: ADDON_MANIFEST }]) });
+    const registry = new AddonRegistry({
+      store,
+      transport: transportFor([{ body: ADDON_MANIFEST }]),
+    });
     const invalidations = vi.fn();
     const d = createSettingsAddons({ registry, onAddonsChanged: invalidations });
     d.url = INSTALL_URL;

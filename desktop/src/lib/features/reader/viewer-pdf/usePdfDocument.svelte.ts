@@ -77,7 +77,11 @@ export function createPdfDocumentState(deps: PdfDocumentDeps) {
     try {
       let loadedDoc: pdfjsLib.PDFDocumentProxy;
 
-      if (preloadedBytes && preloadedBytes.length > 0 && preloadedBytes.length <= USE_PRELOAD_THRESHOLD) {
+      if (
+        preloadedBytes &&
+        preloadedBytes.length > 0 &&
+        preloadedBytes.length <= USE_PRELOAD_THRESHOLD
+      ) {
         const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(preloadedBytes) });
         loadingTask.onProgress = (progress: { loaded: number; total: number }) => {
           loadProgress = progress.loaded;

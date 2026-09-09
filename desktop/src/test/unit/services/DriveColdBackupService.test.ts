@@ -55,7 +55,19 @@ beforeEach(async () => {
   vi.clearAllMocks();
   mockHasLiveSession.mockReturnValue(true);
   mockUpload.mockResolvedValue('id');
-  mockDownload.mockResolvedValue(new TextEncoder().encode(JSON.stringify({ version: 1, exportedAt: Date.now(), books: [], progress: [], highlights: [], bookmarks: [], sessions: [] })));
+  mockDownload.mockResolvedValue(
+    new TextEncoder().encode(
+      JSON.stringify({
+        version: 1,
+        exportedAt: Date.now(),
+        books: [],
+        progress: [],
+        highlights: [],
+        bookmarks: [],
+        sessions: [],
+      }),
+    ),
+  );
   mockList.mockResolvedValue([]);
   const mod = await import('$lib/shared/services/DriveColdBackupService');
   DriveColdBackupService = mod.DriveColdBackupService;
@@ -74,12 +86,46 @@ describe('DriveColdBackupService — cold export/import', () => {
 
   it('importColdBackup is FK-ordered books→progress→highlights→bookmarks→sessions chunk100 idempotent', async () => {
     const books = Array.from({ length: 250 }, (_, i) => ({
-      id: `b${i}`, userId: 'u1', title: `Book ${i}`, author: null, format: 'epub', importedAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      id: `b${i}`,
+      userId: 'u1',
+      title: `Book ${i}`,
+      author: null,
+      format: 'epub',
+      importedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }));
-    const progress = books.slice(0, 250).map((b) => ({ userId: 'u1', bookId: b.id, cfiLocation: '/6/4', percentage: 42, updatedAt: new Date().toISOString() }));
-    const highlights = Array.from({ length: 5 }, (_, i) => ({ id: `h${i}`, userId: 'u1', bookId: 'b0', cfiRange: '/6/4', textContent: 'x', color: 'yellow', updatedAt: new Date().toISOString() }));
-    const bookmarks = Array.from({ length: 3 }, (_, i) => ({ id: `bm${i}`, userId: 'u1', bookId: 'b0', cfiLocation: '/6/4', updatedAt: new Date().toISOString() }));
-    const backup = { version: 1, exportedAt: Date.now(), books, progress, highlights, bookmarks, sessions: [] };
+    const progress = books.slice(0, 250).map((b) => ({
+      userId: 'u1',
+      bookId: b.id,
+      cfiLocation: '/6/4',
+      percentage: 42,
+      updatedAt: new Date().toISOString(),
+    }));
+    const highlights = Array.from({ length: 5 }, (_, i) => ({
+      id: `h${i}`,
+      userId: 'u1',
+      bookId: 'b0',
+      cfiRange: '/6/4',
+      textContent: 'x',
+      color: 'yellow',
+      updatedAt: new Date().toISOString(),
+    }));
+    const bookmarks = Array.from({ length: 3 }, (_, i) => ({
+      id: `bm${i}`,
+      userId: 'u1',
+      bookId: 'b0',
+      cfiLocation: '/6/4',
+      updatedAt: new Date().toISOString(),
+    }));
+    const backup = {
+      version: 1,
+      exportedAt: Date.now(),
+      books,
+      progress,
+      highlights,
+      bookmarks,
+      sessions: [],
+    };
     mockDownload.mockResolvedValue(new TextEncoder().encode(JSON.stringify(backup)));
 
     const result = await DriveColdBackupService.importColdBackup('u1');
@@ -90,12 +136,40 @@ describe('DriveColdBackupService — cold export/import', () => {
     expect(mockUpsertHighlight).toHaveBeenCalledTimes(5);
     expect(mockUpsertBookmark).toHaveBeenCalledTimes(3);
     // FK order: books first, then progress, etc. Verify first call is book, last is bookmark/highlight
-    expect(mockUpsertBook.mock.invocationCallOrder[0]).toBeLessThan(mockUpsertProgress.mock.invocationCallOrder[0]);
+    expect(mockUpsertBook.mock.invocationCallOrder[0]).toBeLessThan(
+      mockUpsertProgress.mock.invocationCallOrder[0],
+    );
     expect(result.totalImported).toBe(250 + 250 + 5 + 3);
   });
 
   it('importColdBackup second run is idempotent (onConflict) — zero FK errors', async () => {
-    const backup = { version: 1, exportedAt: Date.now(), books: [{ id: 'b1', userId: 'u1', title: 'T', author: null, format: 'epub', importedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }], progress: [{ userId: 'u1', bookId: 'b1', cfiLocation: '/6/4', percentage: 10, updatedAt: new Date().toISOString() }], highlights: [], bookmarks: [], sessions: [] };
+    const backup = {
+      version: 1,
+      exportedAt: Date.now(),
+      books: [
+        {
+          id: 'b1',
+          userId: 'u1',
+          title: 'T',
+          author: null,
+          format: 'epub',
+          importedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      progress: [
+        {
+          userId: 'u1',
+          bookId: 'b1',
+          cfiLocation: '/6/4',
+          percentage: 10,
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      highlights: [],
+      bookmarks: [],
+      sessions: [],
+    };
     mockDownload.mockResolvedValue(new TextEncoder().encode(JSON.stringify(backup)));
     const r1 = await DriveColdBackupService.importColdBackup('u1');
     const r2 = await DriveColdBackupService.importColdBackup('u1');

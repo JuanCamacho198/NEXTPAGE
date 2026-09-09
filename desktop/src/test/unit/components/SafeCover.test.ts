@@ -4,7 +4,9 @@ import { readFile } from '@tauri-apps/plugin-fs';
 import { describe, expect, it, vi } from 'vitest';
 import SafeCover from '$lib/features/library/components/SafeCover.svelte';
 
-vi.mock('@tauri-apps/api/core', () => ({ convertFileSrc: vi.fn((p: string) => `asset://localhost/${p}`) }));
+vi.mock('@tauri-apps/api/core', () => ({
+  convertFileSrc: vi.fn((p: string) => `asset://localhost/${p}`),
+}));
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   readFile: vi.fn(),
@@ -15,8 +17,15 @@ const mockedReadFile = readFile as unknown as ReturnType<typeof vi.fn>;
 
 describe('SafeCover — remote cover references (PR5)', () => {
   it('renders a remote https URL directly without Tauri fs', async () => {
-    render(SafeCover, { props: { path: 'https://cdn.example.com/covers/user-1/book-1/cover.jpg', alt: 'Cover' } });
-    await waitFor(() => expect(screen.getByRole('img')).toHaveAttribute('src', 'https://cdn.example.com/covers/user-1/book-1/cover.jpg'));
+    render(SafeCover, {
+      props: { path: 'https://cdn.example.com/covers/user-1/book-1/cover.jpg', alt: 'Cover' },
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('img')).toHaveAttribute(
+        'src',
+        'https://cdn.example.com/covers/user-1/book-1/cover.jpg',
+      ),
+    );
     expect(mockedReadFile).not.toHaveBeenCalled();
   });
 
@@ -39,7 +48,9 @@ describe('SafeCover — remote cover references (PR5)', () => {
     try {
       render(SafeCover, { props: { path: 'C:/covers/book-1.jpg', alt: 'Cover' } });
       await waitFor(() => expect(mockedReadFile).toHaveBeenCalledWith('C:/covers/book-1.jpg'));
-      await waitFor(() => expect(screen.getByRole('img')).toHaveAttribute('src', 'blob:local-cover'));
+      await waitFor(() =>
+        expect(screen.getByRole('img')).toHaveAttribute('src', 'blob:local-cover'),
+      );
     } finally {
       URL.createObjectURL = originalCreate;
     }
@@ -47,7 +58,9 @@ describe('SafeCover — remote cover references (PR5)', () => {
 
   it('shows the default fallback when the local cover read fails (never blocks rendering)', async () => {
     mockedReadFile.mockRejectedValue(new Error('EACCES'));
-    const { container } = render(SafeCover, { props: { path: 'C:/covers/missing.jpg', alt: 'Cover' } });
+    const { container } = render(SafeCover, {
+      props: { path: 'C:/covers/missing.jpg', alt: 'Cover' },
+    });
     expect(container.querySelector('img')).toBeNull();
     await waitFor(() => expect(screen.getByRole('img', { name: 'Cover' })).toBeTruthy());
   });

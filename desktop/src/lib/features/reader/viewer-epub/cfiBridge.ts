@@ -71,7 +71,9 @@ export function assertLockstep(): void {
   }
   // Also ensure double-escape bug is not present: runtime script must NOT contain \\( or \\d
   if (script.includes('\\\\(') || script.includes('\\\\d')) {
-    throw new Error('CFI lockstep failure: iframe script contains double-escaped regex (\\\\( or \\\\d) — remove extra backslash');
+    throw new Error(
+      'CFI lockstep failure: iframe script contains double-escaped regex (\\\\( or \\\\d) — remove extra backslash',
+    );
   }
 }
 

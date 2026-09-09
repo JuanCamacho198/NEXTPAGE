@@ -93,7 +93,9 @@ describe('AddonCatalogProvider payload flow', () => {
 
   it('clamps results to the shared page size and computes nextPage from totalCount', async () => {
     const many = Array.from({ length: 40 }, (_, i) => ({ id: `b${i}`, title: `Book ${i}` }));
-    const transport = fakeTransport(() => ({ body: jsonBytes({ results: many, totalCount: 100 }) }));
+    const transport = fakeTransport(() => ({
+      body: jsonBytes({ results: many, totalCount: 100 }),
+    }));
     const provider = new AddonCatalogProvider(SPACE_MANIFEST, ADDON_ID, transport);
     const page = await provider.search('x', 1);
     expect(page.results).toHaveLength(32);
@@ -109,21 +111,24 @@ describe('AddonCatalogProvider payload flow', () => {
     for (const host of hosts) {
       const addonId = await addonIdFromUrl(`https://${host}/m.json`);
       payloads[host] = { results: [{ id: 'only', title: `${host} Book` }], totalCount: 1 };
-      manifests.push({ ...SPACE_MANIFEST, searchUrl: `https://${host}/search?q={query}&page={page}` });
+      manifests.push({
+        ...SPACE_MANIFEST,
+        searchUrl: `https://${host}/search?q={query}&page={page}`,
+      });
       ids.push(addonId);
     }
     const transport = payloadTransport(payloads);
     const addonProviders = manifests.map((m, i) => new AddonCatalogProvider(m, ids[i], transport));
     const calls = { g: 0 };
     const gutendex = new GutendexCatalogProvider(
-      new GutendexDataSource(
-        (async () => {
-          calls.g += 1;
-          return new Response(JSON.stringify(gutendexFixture), { status: 200 });
-        }) as typeof fetch,
-      ),
+      new GutendexDataSource((async () => {
+        calls.g += 1;
+        return new Response(JSON.stringify(gutendexFixture), { status: 200 });
+      }) as typeof fetch),
     );
-    const composite = new CompositeCatalogProvider([gutendex, ...addonProviders], { debounceMs: 0 });
+    const composite = new CompositeCatalogProvider([gutendex, ...addonProviders], {
+      debounceMs: 0,
+    });
     const page = await composite.search('dune', 1);
     const providers = page.results.map((b) => b.provider);
     expect(providers[0]).toBe('builtin:gutendex');
@@ -223,15 +228,23 @@ describe('AddonCatalogProvider payload flow', () => {
     const transport = fakeTransport(() => ({ body: jsonBytes(SPACE_PAYLOAD) }));
     const bare: AddonManifest = { ...SPACE_MANIFEST, searchUrl: undefined, detailsUrl: undefined };
     const provider = new AddonCatalogProvider(bare, ADDON_ID, transport);
-    await expect(provider.search('q', 1)).resolves.toEqual({ results: [], nextPage: null, totalCount: 0 });
-    await expect(provider.getDetails(`addon:${ADDON_ID}:x`)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(provider.search('q', 1)).resolves.toEqual({
+      results: [],
+      nextPage: null,
+      totalCount: 0,
+    });
+    await expect(provider.getDetails(`addon:${ADDON_ID}:x`)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
     expect(transport.calls).toHaveLength(0);
   });
 
   it('rejects ids for other addons with NOT_FOUND and no I/O', async () => {
     const transport = fakeTransport(() => ({ body: jsonBytes(SPACE_PAYLOAD) }));
     const provider = new AddonCatalogProvider(SPACE_MANIFEST, ADDON_ID, transport);
-    await expect(provider.getDetails('addon:0123456789abcdef:x')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(provider.getDetails('addon:0123456789abcdef:x')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
     expect(transport.calls).toHaveLength(0);
   });
 });

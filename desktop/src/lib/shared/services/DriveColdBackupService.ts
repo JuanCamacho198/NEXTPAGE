@@ -88,8 +88,12 @@ function chunk<T>(arr: T[], size: number): T[][] {
 export class DriveColdBackupService {
   private static libraryPort: LibraryPort = new TauriLibraryAdapter();
   private static viewerPort: ViewerPort = new TauriViewerAdapter();
-  static setLibraryPort(port: LibraryPort): void { this.libraryPort = port; }
-  static setViewerPort(port: ViewerPort): void { this.viewerPort = port; }
+  static setLibraryPort(port: LibraryPort): void {
+    this.libraryPort = port;
+  }
+  static setViewerPort(port: ViewerPort): void {
+    this.viewerPort = port;
+  }
   private static gdrive = new GDriveProvider();
 
   /**
@@ -104,16 +108,18 @@ export class DriveColdBackupService {
     ]);
 
     // Books: map library DTOs to catalog rows
-    const books: ColdBackupJson['books'] = libraryBooks.map((b: import('$lib/shared/types').LibraryBookDto) => ({
-      id: b.id,
-      userId,
-      title: b.title,
-      author: b.author ?? null,
-      format: b.format,
-      contentHash: null,
-      importedAt: b.createdAt ?? new Date().toISOString(),
-      updatedAt: b.updatedAt ?? new Date().toISOString(),
-    }));
+    const books: ColdBackupJson['books'] = libraryBooks.map(
+      (b: import('$lib/shared/types').LibraryBookDto) => ({
+        id: b.id,
+        userId,
+        title: b.title,
+        author: b.author ?? null,
+        format: b.format,
+        contentHash: null,
+        importedAt: b.createdAt ?? new Date().toISOString(),
+        updatedAt: b.updatedAt ?? new Date().toISOString(),
+      }),
+    );
 
     // Progress: one per book
     const progress: ColdBackupJson['progress'] = [];
@@ -191,7 +197,11 @@ export class DriveColdBackupService {
 
     const jsonBytes = new TextEncoder().encode(JSON.stringify(backup));
     // Reuses GDriveProvider.upload: POST with parents on create, PATCH without parents on update (403 fix)
-    await this.gdrive.upload(COLD_BACKUP_FILE, jsonBytes as unknown as Uint8Array, COLD_BACKUP_FILE);
+    await this.gdrive.upload(
+      COLD_BACKUP_FILE,
+      jsonBytes as unknown as Uint8Array,
+      COLD_BACKUP_FILE,
+    );
   }
 
   /**
@@ -199,7 +209,8 @@ export class DriveColdBackupService {
    * Gated by hasLiveSession — no request fires without live session.
    */
   static async importColdBackup(userId: string): Promise<ImportResult> {
-    if (!hasLiveSession()) return { books: 0, progress: 0, highlights: 0, bookmarks: 0, sessions: 0, totalImported: 0 };
+    if (!hasLiveSession())
+      return { books: 0, progress: 0, highlights: 0, bookmarks: 0, sessions: 0, totalImported: 0 };
     const bytes: Uint8Array = await this.gdrive.download(COLD_BACKUP_FILE);
     const json = new TextDecoder().decode(bytes);
     const backup = JSON.parse(json) as ColdBackupJson;
@@ -212,7 +223,8 @@ export class DriveColdBackupService {
    * otherwise no-op (legacy per-book state.json path already covered by import).
    */
   static async backfillFromDrive(userId: string): Promise<ImportResult> {
-    if (!hasLiveSession()) return { books: 0, progress: 0, highlights: 0, bookmarks: 0, sessions: 0, totalImported: 0 };
+    if (!hasLiveSession())
+      return { books: 0, progress: 0, highlights: 0, bookmarks: 0, sessions: 0, totalImported: 0 };
     try {
       const res = await this.importColdBackup(userId);
       if (res.totalImported > 0) return res;
@@ -221,13 +233,52 @@ export class DriveColdBackupService {
     try {
       const files = await this.gdrive.list('');
       const stateFiles = files.filter((f) => f.endsWith('_state.json'));
-      if (stateFiles.length === 0) return { books: 0, progress: 0, highlights: 0, bookmarks: 0, sessions: 0, totalImported: 0 };
+      if (stateFiles.length === 0)
+        return {
+          books: 0,
+          progress: 0,
+          highlights: 0,
+          bookmarks: 0,
+          sessions: 0,
+          totalImported: 0,
+        };
       // Best-effort: each state.json is BookStateJson with progress/highlights/bookmarks
-      const backup: ColdBackupJson = { version: 1, exportedAt: Date.now(), books: [], progress: [], highlights: [], bookmarks: [], sessions: [] };
+      const backup: ColdBackupJson = {
+        version: 1,
+        exportedAt: Date.now(),
+        books: [],
+        progress: [],
+        highlights: [],
+        bookmarks: [],
+        sessions: [],
+      };
       for (const f of stateFiles) {
         try {
           const b = await this.gdrive.download(f);
-          const j = JSON.parse(new TextDecoder().decode(b)) as { progress: { book_id: string; cfi_location: string; percentage: number; updated_at: number } | null; highlights: Array<{ id: string; book_id: string; cfi_range: string; text_content: string; note: string | null; color: string; updated_at: number }>; bookmarks: Array<{ id: string; book_id: string; cfi_location: string; title_or_snippet: string; updated_at: number }> };
+          const j = JSON.parse(new TextDecoder().decode(b)) as {
+            progress: {
+              book_id: string;
+              cfi_location: string;
+              percentage: number;
+              updated_at: number;
+            } | null;
+            highlights: Array<{
+              id: string;
+              book_id: string;
+              cfi_range: string;
+              text_content: string;
+              note: string | null;
+              color: string;
+              updated_at: number;
+            }>;
+            bookmarks: Array<{
+              id: string;
+              book_id: string;
+              cfi_location: string;
+              title_or_snippet: string;
+              updated_at: number;
+            }>;
+          };
           if (j.progress) {
             backup.progress.push({
               userId,
@@ -261,8 +312,19 @@ export class DriveColdBackupService {
           }
         } catch {}
       }
-      if (backup.progress.length === 0 && backup.highlights.length === 0 && backup.bookmarks.length === 0) {
-        return { books: 0, progress: 0, highlights: 0, bookmarks: 0, sessions: 0, totalImported: 0 };
+      if (
+        backup.progress.length === 0 &&
+        backup.highlights.length === 0 &&
+        backup.bookmarks.length === 0
+      ) {
+        return {
+          books: 0,
+          progress: 0,
+          highlights: 0,
+          bookmarks: 0,
+          sessions: 0,
+          totalImported: 0,
+        };
       }
       return this.importInFkOrder(backup, userId);
     } catch {
@@ -270,7 +332,10 @@ export class DriveColdBackupService {
     }
   }
 
-  private static async importInFkOrder(backup: ColdBackupJson, userId: string): Promise<ImportResult> {
+  private static async importInFkOrder(
+    backup: ColdBackupJson,
+    userId: string,
+  ): Promise<ImportResult> {
     let books = 0;
     let progress = 0;
     let highlights = 0;

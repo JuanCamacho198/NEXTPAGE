@@ -31,7 +31,8 @@ export function filterAndSortShelfBooks(
     if (!matchesSearch) return false;
 
     if (activeFilter === 'all') return true;
-    if (activeFilter === 'favorites') return Boolean(book.collectionIds?.includes(FAVORITES_COLLECTION_ID));
+    if (activeFilter === 'favorites')
+      return Boolean(book.collectionIds?.includes(FAVORITES_COLLECTION_ID));
     if (activeFilter === 'reading') return progress > 0 && progress < 100;
     if (activeFilter === 'completed') return book.readingStatus === 'completed' || progress >= 100;
     return progress === 0;
@@ -39,7 +40,8 @@ export function filterAndSortShelfBooks(
 
   return [...visible].sort((left, right) => {
     if (activeSort === 'title') return left.title.localeCompare(right.title, 'es');
-    if (activeSort === 'progress') return getSafeProgressPercentage(right) - getSafeProgressPercentage(left);
+    if (activeSort === 'progress')
+      return getSafeProgressPercentage(right) - getSafeProgressPercentage(left);
     // dedup: last_read and date_added share identical timestamp logic (updatedAt)
     return getTimestamp(right) - getTimestamp(left);
   });

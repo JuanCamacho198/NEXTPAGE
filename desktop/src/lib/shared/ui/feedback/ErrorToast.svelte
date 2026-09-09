@@ -8,7 +8,9 @@
 
   $effect(() => {
     if (!i18n?.locale) return;
-    const unsub = i18n.locale.subscribe((l) => { locale = l; });
+    const unsub = i18n.locale.subscribe((l) => {
+      locale = l;
+    });
     return () => unsub();
   });
 

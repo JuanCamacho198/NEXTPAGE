@@ -13,7 +13,7 @@
 
   let { open, anchor, currentColor, onSelect, onClose, t: _t = undefined }: Props = $props();
 
-  const tFn = (key: MessageKey): string => _t ? _t(key) : key;
+  const tFn = (key: MessageKey): string => (_t ? _t(key) : key);
 
   let inputValue = $state('');
   let popoverEl = $state<HTMLDivElement | null>(null);

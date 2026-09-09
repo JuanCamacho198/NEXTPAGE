@@ -60,10 +60,20 @@ describe('deepCloneWithNewUUIDs', () => {
       ],
     };
     const preIds = new Set(all);
-    const clone = deepCloneWithNewUUIDs(node as unknown as Parameters<typeof deepCloneWithNewUUIDs>[0], all) as unknown as { id: string; ref?: string; children: unknown[] };
-    expect((clone as unknown as { ref?: string }).ref === undefined || (clone as unknown as { ref?: string }).ref === 'vVEie' ? true : true);
+    const clone = deepCloneWithNewUUIDs(
+      node as unknown as Parameters<typeof deepCloneWithNewUUIDs>[0],
+      all,
+    ) as unknown as { id: string; ref?: string; children: unknown[] };
+    expect(
+      (clone as unknown as { ref?: string }).ref === undefined ||
+        (clone as unknown as { ref?: string }).ref === 'vVEie'
+        ? true
+        : true,
+    );
     // find ref descendant preserved
-    const refChild = (clone.children as unknown[]).find((c: unknown) => (c as { ref?: string }).ref === 'vVEie') as { ref: string } | undefined;
+    const refChild = (clone.children as unknown[]).find(
+      (c: unknown) => (c as { ref?: string }).ref === 'vVEie',
+    ) as { ref: string } | undefined;
     expect(refChild?.ref).toBe('vVEie');
     expect(clone.id).not.toBe('orig1');
     expect(preIds.has(clone.id)).toBe(false);
@@ -85,7 +95,16 @@ describe('validateRefs', () => {
     expect(() => validateRefs(all)).toThrow(/Dangling/);
   });
   it('passes when all refs present', () => {
-    const all = new Set<string>(['AjwyA', 'lii9t', 'AbSdu', 'rq71f', 'WorJo', 'GlOAD', 'vVEie', 'pd8II']);
+    const all = new Set<string>([
+      'AjwyA',
+      'lii9t',
+      'AbSdu',
+      'rq71f',
+      'WorJo',
+      'GlOAD',
+      'vVEie',
+      'pd8II',
+    ]);
     expect(() => validateRefs(all)).not.toThrow();
   });
   it('throws when explicit array missing', () => {
@@ -106,11 +125,27 @@ describe('validateBounds', () => {
       ],
     };
     for (let i = 0; i < 13; i++) {
-      (pen.children as unknown[]).push({ id: `pad${i}`, type: 'frame', x: 10000 + i * 2000, y: 10000, width: 100, height: 100 });
+      (pen.children as unknown[]).push({
+        id: `pad${i}`,
+        type: 'frame',
+        x: 10000 + i * 2000,
+        y: 10000,
+        width: 100,
+        height: 100,
+      });
     }
     // add ellipse to keep total 17 and frames 16
-    (pen.children as unknown[]).push({ id: 'ellipse1', type: 'ellipse', x: 20000, y: 20000, width: 100, height: 100 });
-    expect(() => validateBounds(pen as unknown as Parameters<typeof validateBounds>[0])).toThrow(/overlap/i);
+    (pen.children as unknown[]).push({
+      id: 'ellipse1',
+      type: 'ellipse',
+      x: 20000,
+      y: 20000,
+      width: 100,
+      height: 100,
+    });
+    expect(() => validateBounds(pen as unknown as Parameters<typeof validateBounds>[0])).toThrow(
+      /overlap/i,
+    );
   });
   it('passes for real pen', async () => {
     const fs = await import('node:fs');
@@ -127,8 +162,25 @@ describe('validateBounds', () => {
         { id: '2fbd0', type: 'frame', x: -98, y: -4398, width: 1280, height: 800, fill: '$bgBase' },
       ],
     };
-    for (let i = 0; i < 14; i++) (pen.children as unknown[]).push({ id: `p${i}`, type: 'frame', x: 5000 + i * 2000, y: 5000, width: 100, height: 100 });
-    (pen.children as unknown[]).push({ id: 'ellipse1', type: 'ellipse', x: 60000, y: 60000, width: 100, height: 100 });
-    expect(() => validateBounds(pen as unknown as Parameters<typeof validateBounds>[0])).toThrow(/GImmK.width/);
+    for (let i = 0; i < 14; i++)
+      (pen.children as unknown[]).push({
+        id: `p${i}`,
+        type: 'frame',
+        x: 5000 + i * 2000,
+        y: 5000,
+        width: 100,
+        height: 100,
+      });
+    (pen.children as unknown[]).push({
+      id: 'ellipse1',
+      type: 'ellipse',
+      x: 60000,
+      y: 60000,
+      width: 100,
+      height: 100,
+    });
+    expect(() => validateBounds(pen as unknown as Parameters<typeof validateBounds>[0])).toThrow(
+      /GImmK.width/,
+    );
   });
 });

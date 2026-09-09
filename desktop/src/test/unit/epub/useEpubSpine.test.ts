@@ -50,7 +50,10 @@ describe('useEpubSpine — spine authority + cache guard', () => {
       { index: 2, id: 'a', label: 'A', href: 'a.xhtml' },
       { index: 5, id: 'b', label: 'B', href: 'b.xhtml' },
     ];
-    const spine = createEpubSpine({ getMetadata: () => metaWithToc(['a.xhtml', 'b.xhtml', 'c.xhtml', 'd.xhtml', 'e.xhtml', 'f.xhtml'], toc, 6) });
+    const spine = createEpubSpine({
+      getMetadata: () =>
+        metaWithToc(['a.xhtml', 'b.xhtml', 'c.xhtml', 'd.xhtml', 'e.xhtml', 'f.xhtml'], toc, 6),
+    });
     expect(spine.spineIndexForToc(0)).toBe(2);
     expect(spine.spineIndexForToc(1)).toBe(5);
   });
@@ -60,7 +63,10 @@ describe('useEpubSpine — spine authority + cache guard', () => {
       { index: 2, id: 'a', label: 'A', href: 'OEBPS/Text/a.xhtml' },
       { index: 3, id: 'b', label: 'B', href: 'OEBPS/Text/b.xhtml' },
     ];
-    const spine = createEpubSpine({ getMetadata: () => metaWithToc(['x.xhtml', 'y.xhtml', 'OEBPS/Text/a.xhtml', 'OEBPS/Text/b.xhtml'], toc) });
+    const spine = createEpubSpine({
+      getMetadata: () =>
+        metaWithToc(['x.xhtml', 'y.xhtml', 'OEBPS/Text/a.xhtml', 'OEBPS/Text/b.xhtml'], toc),
+    });
     expect(spine.tocIndexForSpine(2)).toBe(0);
     expect(spine.tocIndexForSpine(0)).toBeNull();
   });

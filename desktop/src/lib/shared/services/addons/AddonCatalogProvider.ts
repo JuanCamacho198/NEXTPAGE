@@ -71,17 +71,17 @@ function parseAddonBook(value: unknown, bookId: string, sourceId: string): Catal
   };
 }
 
-function parseSearchPayload(
-  payload: unknown,
-  sourceId: string,
-  page: number,
-): PagedResult {
+function parseSearchPayload(payload: unknown, sourceId: string, page: number): PagedResult {
   if (!isPlainObject(payload) || !Array.isArray(payload.results)) {
     malformed('payload must be an object with a results array');
   }
   let totalCount = payload.results.length;
   if (payload.totalCount !== undefined) {
-    if (typeof payload.totalCount !== 'number' || !Number.isInteger(payload.totalCount) || payload.totalCount < 0) {
+    if (
+      typeof payload.totalCount !== 'number' ||
+      !Number.isInteger(payload.totalCount) ||
+      payload.totalCount < 0
+    ) {
       malformed('totalCount must be a non-negative integer');
     }
     totalCount = payload.totalCount;
@@ -91,7 +91,11 @@ function parseSearchPayload(
     return parseAddonBook(entry, `${sourceId}:${entry.id as string}`, sourceId);
   });
   const clamped = books.slice(0, MAX_PAGE_SIZE);
-  return { results: clamped, nextPage: computeNextPage(page, clamped.length, totalCount), totalCount };
+  return {
+    results: clamped,
+    nextPage: computeNextPage(page, clamped.length, totalCount),
+    totalCount,
+  };
 }
 
 export class AddonCatalogProvider implements CatalogProvider {

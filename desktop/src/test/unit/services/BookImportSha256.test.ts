@@ -24,9 +24,7 @@ describe('SHA-256 computation — hex output', () => {
     const hash = await computeSha256('Hello, World!');
     // SHA-256 of "Hello, World!" (verified independently):
     // dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f
-    expect(hash).toBe(
-      'sha256:dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f',
-    );
+    expect(hash).toBe('sha256:dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f');
   });
 
   it('prefixes with sha256:', async () => {
@@ -43,10 +41,7 @@ describe('SHA-256 computation — hex output', () => {
 
   it('produces same hash for same content', async () => {
     const content = 'Deterministic content — hash should match';
-    const [hash1, hash2] = await Promise.all([
-      computeSha256(content),
-      computeSha256(content),
-    ]);
+    const [hash1, hash2] = await Promise.all([computeSha256(content), computeSha256(content)]);
     expect(hash1).toBe(hash2);
   });
 
@@ -62,9 +57,7 @@ describe('SHA-256 computation — hex output', () => {
     const hash = await computeSha256('');
     // SHA-256 of empty string:
     // e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-    expect(hash).toBe(
-      'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-    );
+    expect(hash).toBe('sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
   });
 
   it('handles large content', async () => {

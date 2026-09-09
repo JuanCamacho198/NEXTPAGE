@@ -67,13 +67,30 @@ describe('EpubNativeViewer Phase 3 — viewer wiring', () => {
       expect(helpersSrc).toContain("split('/').pop()");
       expect(spineSrc).toContain('spineIndexForToc');
       expect(spineSrc).toContain('tocIndexForSpine');
-      const { spineIndexForToc, tocIndexForSpine } = await import(
-        '$lib/features/reader/viewer-epub/epubViewerHelpers'
-      );
+      const { spineIndexForToc, tocIndexForSpine } =
+        await import('$lib/features/reader/viewer-epub/epubViewerHelpers');
       const toc = [
-        { index: 2, id: 'chapter-0', label: 'HM 1', href: 'OEBPS/Text/HM-colombia-1.html', depth: 0 },
-        { index: 3, id: 'chapter-1', label: 'HM 2', href: 'OEBPS/Text/HM-colombia-2.html', depth: 0 },
-        { index: 4, id: 'chapter-2', label: 'HM 3', href: 'OEBPS/Text/HM-colombia-3.html#_idParaDest-5', depth: 0 },
+        {
+          index: 2,
+          id: 'chapter-0',
+          label: 'HM 1',
+          href: 'OEBPS/Text/HM-colombia-1.html',
+          depth: 0,
+        },
+        {
+          index: 3,
+          id: 'chapter-1',
+          label: 'HM 2',
+          href: 'OEBPS/Text/HM-colombia-2.html',
+          depth: 0,
+        },
+        {
+          index: 4,
+          id: 'chapter-2',
+          label: 'HM 3',
+          href: 'OEBPS/Text/HM-colombia-3.html#_idParaDest-5',
+          depth: 0,
+        },
       ];
       expect(spineIndexForToc(toc as any, 0)).toBe(2);
       expect(tocIndexForSpine(toc as any, 2)).toBe(0);
@@ -81,7 +98,9 @@ describe('EpubNativeViewer Phase 3 — viewer wiring', () => {
       expect(tocIndexForSpine(toc as any, 99, 'OEBPS/Text/HM-colombia-1.html')).toBe(0);
       expect(tocIndexForSpine(toc as any, 99, 'Text/HM-colombia-2.html')).toBe(1);
       expect(tocIndexForSpine(toc as any, 99, 'OEBPS/Text/HM-colombia-3.html')).toBe(2);
-      expect(tocIndexForSpine(toc as any, 99, 'OEBPS/Text/HM-colombia-3.html#_idParaDest-5')).toBe(2);
+      expect(tocIndexForSpine(toc as any, 99, 'OEBPS/Text/HM-colombia-3.html#_idParaDest-5')).toBe(
+        2,
+      );
     });
   });
 
@@ -118,9 +137,8 @@ describe('EpubNativeViewer Phase 3 — viewer wiring', () => {
       // If rewrite not found, at least helpers guarantees sanitize
       if (rewriteIdx !== -1) expect(sanitizeIdx).toBeLessThan(rewriteIdx);
 
-      const { sanitizeEpubHtml } = await import(
-        '$lib/features/reader/viewer-epub/epubViewerHelpers'
-      );
+      const { sanitizeEpubHtml } =
+        await import('$lib/features/reader/viewer-epub/epubViewerHelpers');
       const polluted =
         '<div><p>Hello</p><img id="floatBarImgId" src="chrome-extension://dbkmjjclgbiooljcegcddagnddjedmed/img.png"><p>World <img src="chrome-extension://abc/def.png"></p></div>';
       const sanitized = sanitizeEpubHtml(polluted);
@@ -131,10 +149,10 @@ describe('EpubNativeViewer Phase 3 — viewer wiring', () => {
     });
 
     it('sanitize preserves normal content and handles empty src cleanup', async () => {
-      const { sanitizeEpubHtml } = await import(
-        '$lib/features/reader/viewer-epub/epubViewerHelpers'
-      );
-      const normal = '<p>Keep <img src="images/cover.jpg"> and <a href="chapter2.xhtml">link</a></p>';
+      const { sanitizeEpubHtml } =
+        await import('$lib/features/reader/viewer-epub/epubViewerHelpers');
+      const normal =
+        '<p>Keep <img src="images/cover.jpg"> and <a href="chapter2.xhtml">link</a></p>';
       const sanitized = sanitizeEpubHtml(normal);
       expect(sanitized).toContain('images/cover.jpg');
       expect(sanitized).toContain('chapter2.xhtml');

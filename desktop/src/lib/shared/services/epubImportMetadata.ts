@@ -55,7 +55,12 @@ export function setEpubMetadataLibraryPort(port: LibraryPort): void {
   libraryPort = port;
 }
 
-const EMPTY_METADATA: ImportEpubMetadata = { title: null, author: null, subject: null, subjects: [] };
+const EMPTY_METADATA: ImportEpubMetadata = {
+  title: null,
+  author: null,
+  subject: null,
+  subjects: [],
+};
 
 const trimToNull = (value: unknown): string | null => {
   if (typeof value !== 'string') return null;
@@ -184,7 +189,9 @@ export const parseOpfDirectly = async (filePath: string): Promise<ImportEpubMeta
  * REAL title/author. Never throws: any failure yields nulls and the caller
  * falls back to the catalog/filename title.
  */
-export const extractEpubMetadataFromBytes = async (bytes: Uint8Array): Promise<ImportEpubMetadata> => {
+export const extractEpubMetadataFromBytes = async (
+  bytes: Uint8Array,
+): Promise<ImportEpubMetadata> => {
   const buffer = new Uint8Array(bytes).buffer as ArrayBuffer;
   const epubResult = await parseEpubJsBytes(buffer);
 

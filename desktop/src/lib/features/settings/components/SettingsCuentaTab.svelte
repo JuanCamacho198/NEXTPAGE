@@ -75,21 +75,29 @@
   }: Props = $props();
 
   const profile = $derived(profileState?.profile ?? legacyProfile!);
-  const isProfileLoading = $derived(profileState?.isProfileLoading ?? legacyProfileLoading ?? false);
+  const isProfileLoading = $derived(
+    profileState?.isProfileLoading ?? legacyProfileLoading ?? false,
+  );
   const profileError = $derived(profileState?.profileError ?? legacyProfileError ?? null);
   const locale = $derived((appearanceState?.locale as string) ?? legacyLocale ?? 'es');
-  const localeOptions = $derived(legacyLocaleOptions ?? [
-    { value: 'es', label: t('settings.languageSpanish') },
-    { value: 'en', label: t('settings.languageEnglish') },
-  ]);
+  const localeOptions = $derived(
+    legacyLocaleOptions ?? [
+      { value: 'es', label: t('settings.languageSpanish') },
+      { value: 'en', label: t('settings.languageEnglish') },
+    ],
+  );
   const isSigningOut = $derived(profileState?.isSigningOut ?? legacySigningOut ?? false);
   const devices = $derived(profileState?.devicesState.devices ?? legacyDevices ?? []);
   const devicesError = $derived(profileState?.devicesState.error ?? legacyDevicesError ?? null);
-  const devicesLoading = $derived(profileState?.devicesState.isLoading ?? legacyDevicesLoading ?? false);
+  const devicesLoading = $derived(
+    profileState?.devicesState.isLoading ?? legacyDevicesLoading ?? false,
+  );
   const selectedDailyGoal = $derived(profileState?.selectedDailyGoal ?? legacySelectedGoal ?? 20);
   const dailyGoalCards = $derived(profileState?.dailyGoalCards ?? legacyCards ?? []);
   const isSavingDailyGoal = $derived(profileState?.isSavingDailyGoal ?? legacySavingGoal ?? false);
-  const settingsUnavailable = $derived(appearanceState?.settingsUnavailable ?? legacyUnavailable ?? null);
+  const settingsUnavailable = $derived(
+    appearanceState?.settingsUnavailable ?? legacyUnavailable ?? null,
+  );
   const settingsError = $derived(appearanceState?.settingsError ?? legacyError ?? null);
 
   function handleLocaleChange(value: string): void {
@@ -114,7 +122,12 @@
   }
 </script>
 
-<div role="tabpanel" id="tabpanel-cuenta" aria-labelledby="tab-cuenta" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+<div
+  role="tabpanel"
+  id="tabpanel-cuenta"
+  aria-labelledby="tab-cuenta"
+  class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+>
   <section class="rounded-xl border border-(--color-border) bg-(--color-surface) overflow-visible">
     <div class="p-4 border-b border-(--color-border) last:border-b-0">
       <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
@@ -125,15 +138,26 @@
       </p>
       <GoogleLoginButton {t} />
       {#if authState.isSignedIn}
-        <Button variant="danger" disabled={isSigningOut} onclick={handleSignOut} class="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm mt-4">
+        <Button
+          variant="danger"
+          disabled={isSigningOut}
+          onclick={handleSignOut}
+          class="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm mt-4"
+        >
           {isSigningOut ? t('welcome.signingOut') : t('welcome.signOut')}
         </Button>
       {/if}
       {#if settingsUnavailable}
-        <p class="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">{settingsUnavailable}</p>
+        <p
+          class="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900"
+        >
+          {settingsUnavailable}
+        </p>
       {/if}
       {#if settingsError}
-        <p class="mb-2 rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-900">{settingsError}</p>
+        <p class="mb-2 rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-900">
+          {settingsError}
+        </p>
       {/if}
     </div>
     <div class="p-4 border-b border-(--color-border) last:border-b-0">
@@ -145,7 +169,7 @@
           {t('settings.connectedDevices.title')}
         </h3>
         <ConnectedDevices
-          devices={devices}
+          {devices}
           error={devicesError}
           isLoading={devicesLoading}
           onremove={handleRemoveDevice}
@@ -188,17 +212,24 @@
       {#each dailyGoalCards as card}
         <button
           type="button"
-          class="relative flex flex-col gap-3 rounded-xl border-2 p-8 text-left transition-all duration-200 {selectedDailyGoal === card.value ? 'border-[#d8e2ff] bg-[#d8e2ff]/12' : 'border-[#2a3655] bg-[#161f33]'}"
+          class="relative flex flex-col gap-3 rounded-xl border-2 p-8 text-left transition-all duration-200 {selectedDailyGoal ===
+          card.value
+            ? 'border-[#d8e2ff] bg-[#d8e2ff]/12'
+            : 'border-[#2a3655] bg-[#161f33]'}"
           onclick={() => handleSelectDailyGoal(card.value)}
           aria-pressed={selectedDailyGoal === card.value}
           aria-label={`${card.shortLabel} ${card.minutesLabel}`}
         >
           {#if selectedDailyGoal === card.value}
-            <span class="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#d8e2ff] text-[#161f33]">
+            <span
+              class="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#d8e2ff] text-[#161f33]"
+            >
               <Icon name="check" size="sm" />
             </span>
           {/if}
-          <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#d8e2ff]/10 text-[#d8e2ff]">
+          <span
+            class="flex h-10 w-10 items-center justify-center rounded-full bg-[#d8e2ff]/10 text-[#d8e2ff]"
+          >
             <Icon name={card.icon} size="lg" />
           </span>
           <span class="flex flex-col gap-1">

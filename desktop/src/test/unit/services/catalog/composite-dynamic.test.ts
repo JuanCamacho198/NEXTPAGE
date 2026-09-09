@@ -18,7 +18,11 @@ import {
 } from '$lib/shared/services/catalog/BuiltInCatalogProviders';
 import { GutendexDataSource } from '$lib/shared/services/catalog/GutendexDataSource';
 import { OpenLibraryDataSource } from '$lib/shared/services/catalog/OpenLibraryDataSource';
-import { InMemoryDiscoverCache, PAGE_TTL_S, pageCacheKey } from '$lib/shared/services/catalog/DiscoverCache';
+import {
+  InMemoryDiscoverCache,
+  PAGE_TTL_S,
+  pageCacheKey,
+} from '$lib/shared/services/catalog/DiscoverCache';
 import { resolveDownloadUrl } from '$lib/shared/services/catalog/mappers';
 import gutendexFixture from '$lib/shared/services/catalog/fixtures/gutendex-search.json';
 import openLibraryFixture from '$lib/shared/services/catalog/fixtures/openlibrary-search.json';
@@ -187,10 +191,9 @@ describe('CompositeCatalogProvider (ordered dynamic providers)', () => {
   it('routes getDetails by exact book-id prefix; unroutable ids reject with no I/O', async () => {
     const calls = { g: 0, o: 0 };
     const addon = new FakeAddonProvider();
-    const provider = new CompositeCatalogProvider(
-      [...builtinPair(calls, false), addon],
-      { debounceMs: 0 },
-    );
+    const provider = new CompositeCatalogProvider([...builtinPair(calls, false), addon], {
+      debounceMs: 0,
+    });
     const detail = await provider.getDetails(`addon:${ADDON_ID}:book7`);
     expect(detail.title).toBe('Addon Detail');
     expect(addon.detailCalls).toBe(1);
@@ -286,10 +289,11 @@ describe('CompositeCatalogProvider (ordered dynamic providers)', () => {
     const disabled = new DisabledProvider();
     const cache = new InMemoryDiscoverCache();
     cache.put(pageCacheKey(addonSource(ADDON_ID), 'pride', 1), '{"stale":true}', 1_000, PAGE_TTL_S);
-    const provider = new CompositeCatalogProvider(
-      [...builtinPair(calls), disabled],
-      { debounceMs: 0, cache, nowEpochSecs: () => 2_000 },
-    );
+    const provider = new CompositeCatalogProvider([...builtinPair(calls), disabled], {
+      debounceMs: 0,
+      cache,
+      nowEpochSecs: () => 2_000,
+    });
     const page = await provider.search('pride', 1);
     expect(disabled.searchCalls).toBe(0);
     expect(page.results).toEqual([prideGolden, aliceGolden]);

@@ -118,15 +118,20 @@ export async function importBook(
     // for cross-device catalog visibility.
     try {
       const outboxDao = new SyncOutboxDao();
-      await outboxDao.add('BOOK', book.id, 'UPSERT', JSON.stringify({
-        title: book.title,
-        author: book.author,
-        format: book.format,
-        totalPages: book.totalPages,
-        content_hash: contentHash,
-        importedAt: book.createdAt,
-        updatedAt: book.updatedAt,
-      }));
+      await outboxDao.add(
+        'BOOK',
+        book.id,
+        'UPSERT',
+        JSON.stringify({
+          title: book.title,
+          author: book.author,
+          format: book.format,
+          totalPages: book.totalPages,
+          content_hash: contentHash,
+          importedAt: book.createdAt,
+          updatedAt: book.updatedAt,
+        }),
+      );
     } catch (e) {
       // Non-blocking for the import UX, but must not be silent: if the outbox
       // write fails, the metadata would only reach Supabase via the

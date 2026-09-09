@@ -123,7 +123,10 @@ describe('AddonRegistry.install', () => {
   });
 
   it('rejects non-2xx fetch status as network error', async () => {
-    const registry = new AddonRegistry({ store: fakeStore(), transport: okTransport(VALID_MANIFEST, 404) });
+    const registry = new AddonRegistry({
+      store: fakeStore(),
+      transport: okTransport(VALID_MANIFEST, 404),
+    });
     await expect(registry.install('https://example.com/manifest.json')).rejects.toMatchObject({
       code: AddonFetchErrorCode.NETWORK,
     });
@@ -155,7 +158,10 @@ describe('AddonRegistry.install', () => {
 
   it('rejects manifests whose id collides with a built-in source name', async () => {
     const store = fakeStore();
-    const registry = new AddonRegistry({ store, transport: okTransport({ ...VALID_MANIFEST, id: 'gutendex' }) });
+    const registry = new AddonRegistry({
+      store,
+      transport: okTransport({ ...VALID_MANIFEST, id: 'gutendex' }),
+    });
     await expect(registry.install('https://example.com/manifest.json')).rejects.toMatchObject({
       code: AddonFetchErrorCode.INVALID_MANIFEST,
     });
@@ -256,6 +262,15 @@ describe('AddonCatalogProvider + dynamic composite', () => {
   it('defaultCatalogProviders with zero addons matches the zero-addon parity set', () => {
     const providers = defaultCatalogProviders([]);
     const kinds = providers.flatMap((p) => p.listSources()).map((s) => s.kind);
-    expect(kinds).toEqual(['builtin', 'builtin', 'curated', 'curated', 'curated', 'curated', 'curated', 'curated']);
+    expect(kinds).toEqual([
+      'builtin',
+      'builtin',
+      'curated',
+      'curated',
+      'curated',
+      'curated',
+      'curated',
+      'curated',
+    ]);
   });
 });

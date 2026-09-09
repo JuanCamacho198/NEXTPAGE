@@ -6,7 +6,10 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { loadPdfOutline } from '$lib/features/reader/viewer-pdf/pdfStreaming';
 import { isPageWithinBounds } from '$lib/features/reader/viewer-pdf/pdfNavigation';
-import { isRefLike, flattenOutline as pureFlattenOutline } from '$lib/features/reader/viewer-pdf/pdfSelection';
+import {
+  isRefLike,
+  flattenOutline as pureFlattenOutline,
+} from '$lib/features/reader/viewer-pdf/pdfSelection';
 import type { PdfOutlineItem } from '$lib/shared/types';
 
 export { pureFlattenOutline as flattenOutline };

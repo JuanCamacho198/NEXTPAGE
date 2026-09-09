@@ -185,19 +185,39 @@
         onclick={closePanel}
         aria-label={t('app.backToHome')}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <path d="M19 12H5m7-7l-7 7 7 7" />
         </svg>
       </button>
     </div>
 
-    <SettingsTabs activeTab={router.activeTab} onTabChange={handleTabChange} onKeydown={handleTabKeydown} {t} />
+    <SettingsTabs
+      activeTab={router.activeTab}
+      onTabChange={handleTabChange}
+      onKeydown={handleTabKeydown}
+      {t}
+    />
 
     <form novalidate onsubmit={(e) => e.preventDefault()} class="flex-1 flex flex-col min-h-0">
       {#if router.activeTab === 'cuenta'}
         <SettingsCuentaTab {t} profileState={profile} appearanceState={appearance} />
       {:else if router.activeTab === 'apariencia'}
-        <div role="tabpanel" id="tabpanel-apariencia" aria-labelledby="tab-apariencia" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+        <div
+          role="tabpanel"
+          id="tabpanel-apariencia"
+          aria-labelledby="tab-apariencia"
+          class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+        >
           <SettingsAppearanceTab
             {t}
             preferredTheme={appearance.preferredTheme}
@@ -220,9 +240,14 @@
           />
         </div>
       {:else if router.activeTab === 'reader'}
-        <SettingsReaderTab {t} reader={reader} onOpenResetModal={() => openResetModal('reader')} />
+        <SettingsReaderTab {t} {reader} onOpenResetModal={() => openResetModal('reader')} />
       {:else if router.activeTab === 'datos'}
-        <div role="tabpanel" id="tabpanel-datos" aria-labelledby="tab-datos" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+        <div
+          role="tabpanel"
+          id="tabpanel-datos"
+          aria-labelledby="tab-datos"
+          class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+        >
           <SettingsDataTab
             {t}
             {books}
@@ -239,7 +264,8 @@
             onExportColdBackup={() => void data.handleExportColdBackup()}
             onImportColdBackup={() => void data.handleImportColdBackup()}
             onSelectedExportBookChange={(v: string) => data.handleSelectedExportBookChange(v)}
-            onSelectedExportFormatChange={(v: 'json' | 'markdown') => data.handleSelectedExportFormatChange(v)}
+            onSelectedExportFormatChange={(v: 'json' | 'markdown') =>
+              data.handleSelectedExportFormatChange(v)}
           />
           <SettingsAddonsSection
             {t}
@@ -259,12 +285,22 @@
       {:else if router.activeTab === 'atajos'}
         <SettingsShortcutsTab {t} />
       {:else if router.activeTab === 'acerca'}
-        <div role="tabpanel" id="tabpanel-acerca" aria-labelledby="tab-acerca" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+        <div
+          role="tabpanel"
+          id="tabpanel-acerca"
+          aria-labelledby="tab-acerca"
+          class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+        >
           <SettingsAboutTab {t} />
         </div>
       {/if}
     </form>
 
-    <SettingsResetModal show={showResetModal} {t} onClose={closeResetModal} onConfirm={confirmReset} />
+    <SettingsResetModal
+      show={showResetModal}
+      {t}
+      onClose={closeResetModal}
+      onConfirm={confirmReset}
+    />
   </aside>
 {/if}

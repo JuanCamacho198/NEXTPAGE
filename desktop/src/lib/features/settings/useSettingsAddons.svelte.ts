@@ -78,10 +78,18 @@ export function createSettingsAddons(deps: AddonsDeps = {}): {
   }
 
   return {
-    get url() { return url; },
-    set url(v: string) { url = v; },
-    get installed() { return installed; },
-    get isBusy() { return isBusy; },
+    get url() {
+      return url;
+    },
+    set url(v: string) {
+      url = v;
+    },
+    get installed() {
+      return installed;
+    },
+    get isBusy() {
+      return isBusy;
+    },
     refresh,
     handleInstall,
     handleToggle,

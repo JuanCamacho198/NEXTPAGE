@@ -8,9 +8,9 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
 }));
 
 vi.mock('$lib/features/reader/highlight/highlightColors', async () => {
-  const actual = await vi.importActual<typeof import('$lib/features/reader/highlight/highlightColors')>(
-    '$lib/features/reader/highlight/highlightColors',
-  );
+  const actual = await vi.importActual<
+    typeof import('$lib/features/reader/highlight/highlightColors')
+  >('$lib/features/reader/highlight/highlightColors');
   return actual;
 });
 
@@ -29,11 +29,21 @@ vi.mock('$lib/shared/stores/ReaderDomainState.svelte', () => ({
   readerState: { locatorJson: '', highlightsVersion: 0, cfiLocation: '' },
 }));
 vi.mock('$lib/shared/debug/debugState.svelte', () => ({
-  debugState: { epub: { colorPickCount: 0, lastPickedColor: '', saveHighlightCallCount: 0, saveHighlightLastError: '', failedHighlightIds: [] as string[] } },
+  debugState: {
+    epub: {
+      colorPickCount: 0,
+      lastPickedColor: '',
+      saveHighlightCallCount: 0,
+      saveHighlightLastError: '',
+      failedHighlightIds: [] as string[],
+    },
+  },
 }));
 vi.mock('$lib/shared/stores/AuthState.svelte', () => ({ authState: { userId: null } }));
 vi.mock('$lib/shared/api/tauriClient', async () => {
-  const actual = await vi.importActual<typeof import('$lib/shared/api/tauriClient')>('$lib/shared/api/tauriClient');
+  const actual = await vi.importActual<typeof import('$lib/shared/api/tauriClient')>(
+    '$lib/shared/api/tauriClient',
+  );
   return {
     ...actual,
     saveHighlight: vi.fn().mockResolvedValue(undefined),
@@ -62,7 +72,17 @@ describe('useHighlightMenu', () => {
     const book = { id: 'b1', filePath: 'a.epub', format: 'epub' } as never;
     const h = createHighlights({ getBook: () => book as never, spine, outbox });
     // seed persisted highlight
-    h.persistedHighlights = [{ id: 'h1', color: '#facc15', pageNumber: 0, rects: [], cfi: null, text: 'hello', note: null }];
+    h.persistedHighlights = [
+      {
+        id: 'h1',
+        color: '#facc15',
+        pageNumber: 0,
+        rects: [],
+        cfi: null,
+        text: 'hello',
+        note: null,
+      },
+    ];
     return h;
   }
 
@@ -70,7 +90,11 @@ describe('useHighlightMenu', () => {
     const h = makeHighlights();
     const listTagsMock = vi.fn().mockResolvedValue([{ id: 't1', name: 't1' }]);
     const listForMock = vi.fn().mockResolvedValue([{ id: 't1', name: 't1' }]);
-    const m = createHighlightMenu({ highlights: h, listTagsFn: listTagsMock, listTagsForHighlightFn: listForMock });
+    const m = createHighlightMenu({
+      highlights: h,
+      listTagsFn: listTagsMock,
+      listTagsForHighlightFn: listForMock,
+    });
     m.openHighlightMenu('h1', { x: 100, y: 200, color: '#ff0000', text: 'hello' });
     expect(m.highlightMenu.open).toBe(true);
     expect(m.highlightMenu.highlightId).toBe('h1');
@@ -120,7 +144,10 @@ describe('useHighlightMenu', () => {
 
   it('handleTagToggle and handleTagCreate update assignedTags', async () => {
     const h = makeHighlights();
-    const saveMock = vi.fn().mockResolvedValue([{ id: 't1', name: 't1' }, { id: 't-new', name: 'New' }]);
+    const saveMock = vi.fn().mockResolvedValue([
+      { id: 't1', name: 't1' },
+      { id: 't-new', name: 'New' },
+    ]);
     const createMock = vi.fn().mockResolvedValue({ id: 't-new', name: 'New' });
     const m = createHighlightMenu({
       highlights: h,
@@ -134,7 +161,10 @@ describe('useHighlightMenu', () => {
     // toggle adds tag
     m.highlightMenu.assignedTags = [{ id: 't1', name: 't1' } as never];
     await m.handleTagToggle('t-new');
-    expect(saveMock).toHaveBeenCalledWith({ highlightId: 'h1', tagIds: expect.arrayContaining(['t1', 't-new']) });
+    expect(saveMock).toHaveBeenCalledWith({
+      highlightId: 'h1',
+      tagIds: expect.arrayContaining(['t1', 't-new']),
+    });
     // create new tag
     await m.handleTagCreate('New');
     expect(createMock).toHaveBeenCalledWith({ name: 'New', color: undefined });
@@ -157,7 +187,10 @@ describe('useHighlightMenu', () => {
   it('handleMenuCopy and close reset state', () => {
     const h = makeHighlights();
     const m = createHighlightMenu({ highlights: h });
-    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
     m.openHighlightMenu('h1', { text: 'hello' });
     expect(m.highlightMenu.text).toBe('hello');
     m.handleMenuCopy();

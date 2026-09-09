@@ -461,9 +461,7 @@ describe('SupabaseAuthService — refreshDriveToken layered refresh (DTL-1/DTL-2
     const deferred = new Promise<Response>((r) => {
       resolveExchange = r;
     });
-    vi.mocked(globalThis.fetch).mockReturnValue(
-      deferred as unknown as ReturnType<typeof fetch>,
-    );
+    vi.mocked(globalThis.fetch).mockReturnValue(deferred as unknown as ReturnType<typeof fetch>);
 
     const first = sut.refreshDriveToken();
     const second = sut.refreshDriveToken();

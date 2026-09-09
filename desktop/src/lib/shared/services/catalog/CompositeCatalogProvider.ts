@@ -95,7 +95,9 @@ export function createRebuildingCatalogProvider(
     current(): Promise<CompositeCatalogProvider> {
       const gen = generation;
       return (current ??= loadRows().then((rows) => {
-        const composite = new CompositeCatalogProvider(defaultCatalogProviders(rows, addonTransport));
+        const composite = new CompositeCatalogProvider(
+          defaultCatalogProviders(rows, addonTransport),
+        );
         if (gen === generation) built = composite;
         return composite;
       }));
@@ -160,7 +162,9 @@ export class CompositeCatalogProvider implements CatalogProvider {
     const active = this.activeSourceIds();
     const parts = this.searchableProviders().map((provider) => {
       const cached = this.readPageHit(provider, query, page, active);
-      return cached !== null ? { cached: true as const, value: cached } : { cached: false as const, provider };
+      return cached !== null
+        ? { cached: true as const, value: cached }
+        : { cached: false as const, provider };
     });
     const needsFetch = parts.some((part) => {
       if (part.cached) return false;
@@ -170,7 +174,9 @@ export class CompositeCatalogProvider implements CatalogProvider {
     if (!needsFetch) {
       // Only I/O-free providers (no single routable source) remain to call.
       return Promise.all(
-        parts.map((part) => (part.cached ? Promise.resolve(part.value) : part.provider.search(query, page))),
+        parts.map((part) =>
+          part.cached ? Promise.resolve(part.value) : part.provider.search(query, page),
+        ),
       ).then((pages) => this.mergePaged(pages, page));
     }
     return this.debounced.search(query, page);
@@ -281,7 +287,8 @@ export class CompositeCatalogProvider implements CatalogProvider {
   }
 
   private routeDetails(id: string): RoutedDetails | null {
-    let best: { provider: CatalogProvider; source: CatalogSourceInfo; prefix: string } | null = null;
+    let best: { provider: CatalogProvider; source: CatalogSourceInfo; prefix: string } | null =
+      null;
     for (const provider of this.searchableProviders()) {
       for (const source of provider.listSources()) {
         const prefix = bookIdPrefixForSource(source.sourceId);

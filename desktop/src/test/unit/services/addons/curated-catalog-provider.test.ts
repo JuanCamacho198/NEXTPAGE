@@ -3,12 +3,12 @@ import { validateManifest } from '$lib/shared/services/addons/validateManifest';
 import { CuratedCatalogProvider } from '$lib/shared/services/addons/CuratedCatalogProvider';
 import curatedJson from '$lib/shared/services/addons/curated.json';
 import { CompositeCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
-import { BUILTIN_GUTENDEX, BUILTIN_OPENLIBRARY } from '$lib/shared/services/catalog/CatalogProvider';
-import type { CatalogProvider, PagedResult } from '$lib/shared/services/catalog/CatalogProvider';
 import {
-  DETAIL_TTL_S,
-  PAGE_TTL_S,
-} from '$lib/shared/services/catalog/DiscoverCache';
+  BUILTIN_GUTENDEX,
+  BUILTIN_OPENLIBRARY,
+} from '$lib/shared/services/catalog/CatalogProvider';
+import type { CatalogProvider, PagedResult } from '$lib/shared/services/catalog/CatalogProvider';
+import { DETAIL_TTL_S, PAGE_TTL_S } from '$lib/shared/services/catalog/DiscoverCache';
 import {
   DEBOUNCE_MS,
   DEFAULT_PAGE_SIZE,
@@ -100,7 +100,10 @@ describe('composite integration', () => {
   }
 
   it('curated sources never shadow the built-ins (dedupe keeps first/builtin kind)', () => {
-    const provider = new CompositeCatalogProvider([new EmptyProvider(), new CuratedCatalogProvider()]);
+    const provider = new CompositeCatalogProvider([
+      new EmptyProvider(),
+      new CuratedCatalogProvider(),
+    ]);
     const sources = provider.listSources();
     expect(sources[0]).toEqual({
       sourceId: 'builtin:gutendex',

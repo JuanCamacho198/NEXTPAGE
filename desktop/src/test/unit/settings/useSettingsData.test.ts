@@ -23,8 +23,16 @@ describe('useSettingsData', () => {
     const clearCache = vi.fn().mockResolvedValue({ freedBytes: 123 });
     const pushToast = vi.fn();
     const t = vi.fn((k: string) => k);
-    const storageState = { clearCache } as unknown as Parameters<typeof createSettingsData>[0] extends { storageState?: infer S } ? S : never;
-    const d = createSettingsData({ storageState: storageState as never, pushToast: pushToast as never, t: t as never });
+    const storageState = { clearCache } as unknown as Parameters<
+      typeof createSettingsData
+    >[0] extends { storageState?: infer S }
+      ? S
+      : never;
+    const d = createSettingsData({
+      storageState: storageState as never,
+      pushToast: pushToast as never,
+      t: t as never,
+    });
     await d.handleClearCache();
     expect(clearCache).toHaveBeenCalledWith('temp', false);
     expect(d.cacheCleared).toBe(true);
@@ -34,7 +42,10 @@ describe('useSettingsData', () => {
   it('handleClearCache toasts permission_denied on that error', async () => {
     const clearCache = vi.fn().mockRejectedValue(new Error('storage.permission_denied'));
     const pushToast = vi.fn();
-    const d = createSettingsData({ storageState: { clearCache } as never, pushToast: pushToast as never });
+    const d = createSettingsData({
+      storageState: { clearCache } as never,
+      pushToast: pushToast as never,
+    });
     await d.handleClearCache();
     expect(pushToast).toHaveBeenCalledWith('error', 'storage.permission_denied');
   });
@@ -45,7 +56,12 @@ describe('useSettingsData', () => {
     const t = vi.fn((k: string) => k);
     const authState = { userId: 'user-1' } as never;
     const DriveColdBackupService = { exportColdBackup } as never;
-    const d = createSettingsData({ authState, DriveColdBackupService, pushToast: pushToast as never, t: t as never });
+    const d = createSettingsData({
+      authState,
+      DriveColdBackupService,
+      pushToast: pushToast as never,
+      t: t as never,
+    });
     await d.handleExportColdBackup();
     expect(exportColdBackup).toHaveBeenCalledWith('user-1');
     expect(pushToast).toHaveBeenCalledWith('success', expect.any(String));
@@ -57,7 +73,12 @@ describe('useSettingsData', () => {
     const t = vi.fn((k: string) => k);
     const authState = { userId: 'u1' } as never;
     const DriveColdBackupService = { importColdBackup } as never;
-    const d = createSettingsData({ authState, DriveColdBackupService, pushToast: pushToast as never, t: t as never });
+    const d = createSettingsData({
+      authState,
+      DriveColdBackupService,
+      pushToast: pushToast as never,
+      t: t as never,
+    });
     await d.handleImportColdBackup();
     expect(importColdBackup).toHaveBeenCalledWith('u1');
   });

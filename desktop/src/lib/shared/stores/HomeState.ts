@@ -10,9 +10,10 @@ export const resolveReadingState = (
   explicitState: ReadingState | null | undefined,
   progressPercentage: number | null | undefined,
 ): ReadingState => {
-  const progress = typeof progressPercentage === 'number' && Number.isFinite(progressPercentage)
-    ? Math.min(100, Math.max(0, progressPercentage))
-    : 0;
+  const progress =
+    typeof progressPercentage === 'number' && Number.isFinite(progressPercentage)
+      ? Math.min(100, Math.max(0, progressPercentage))
+      : 0;
   if (explicitState === 'completed' || progress >= 100) return 'completed';
   if (explicitState === 'reading' || progress > 0) return 'reading';
   return 'to_read';

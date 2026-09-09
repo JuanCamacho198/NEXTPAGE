@@ -9,7 +9,9 @@ export type HighlightsViewDeps = {
   listTagsForHighlight: ViewerPort['listTagsForHighlight'];
 };
 
-export function createHighlightsViewDeps(viewerPort: ViewerPort = new TauriViewerAdapter()): HighlightsViewDeps {
+export function createHighlightsViewDeps(
+  viewerPort: ViewerPort = new TauriViewerAdapter(),
+): HighlightsViewDeps {
   return {
     listHighlights: (bookId?: string) => viewerPort.listHighlights(bookId),
     deleteHighlight: (id: string) => viewerPort.deleteHighlight(id),

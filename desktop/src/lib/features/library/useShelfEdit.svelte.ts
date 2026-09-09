@@ -31,24 +31,24 @@ export const KNOWN_GENRES = [
 ] as const;
 
 export const GENRE_LABEL_KEYS: Record<string, string> = {
-  'Novela': 'shelf.genreNovel',
-  'Ficción': 'shelf.genreFiction',
+  Novela: 'shelf.genreNovel',
+  Ficción: 'shelf.genreFiction',
   'No ficción': 'shelf.genreNonFiction',
   'Ciencia ficción': 'shelf.genreSciFi',
-  'Fantasía': 'shelf.genreFantasy',
-  'Terror': 'shelf.genreHorror',
-  'Misterio': 'shelf.genreMystery',
-  'Romance': 'shelf.genreRomance',
-  'Thriller': 'shelf.genreThriller',
+  Fantasía: 'shelf.genreFantasy',
+  Terror: 'shelf.genreHorror',
+  Misterio: 'shelf.genreMystery',
+  Romance: 'shelf.genreRomance',
+  Thriller: 'shelf.genreThriller',
   'Biografía / Memorias': 'shelf.genreBiography',
-  'Historia': 'shelf.genreHistory',
+  Historia: 'shelf.genreHistory',
   'Ciencia / Tecnología': 'shelf.genreScience',
-  'Autoayuda': 'shelf.genreSelfHelp',
-  'Filosofía': 'shelf.genrePhilosophy',
-  'Ensayo': 'shelf.genreEssay',
-  'Poesía': 'shelf.genrePoetry',
-  'Aventura': 'shelf.genreAdventure',
-  'Clásicos': 'shelf.genreClassics',
+  Autoayuda: 'shelf.genreSelfHelp',
+  Filosofía: 'shelf.genrePhilosophy',
+  Ensayo: 'shelf.genreEssay',
+  Poesía: 'shelf.genrePoetry',
+  Aventura: 'shelf.genreAdventure',
+  Clásicos: 'shelf.genreClassics',
   'Sin clasificar': 'shelf.genreUnclassified',
 };
 
@@ -71,7 +71,8 @@ export function resolveGenre(selectedGenre: string | null, customGenre: string):
 
 export function validateGenre(trimmedGenre: string): string | null {
   if (trimmedGenre.length > MAX_GENRE_LENGTH) return 'shelf.genreTooLong';
-  if (trimmedGenre.length > 0 && CONTROL_CHAR_REGEX.test(trimmedGenre)) return 'shelf.genreInvalidChars';
+  if (trimmedGenre.length > 0 && CONTROL_CHAR_REGEX.test(trimmedGenre))
+    return 'shelf.genreInvalidChars';
   return null;
 }
 

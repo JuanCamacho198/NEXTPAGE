@@ -47,9 +47,7 @@ export const getSentryRelease = (): string => {
   // The `__SENTRY_RELEASE__` define is set in `vite.config.ts` from
   // `package.json@<git-sha>`. Falls back to `SENTRY_RELEASE` env var so
   // tests / non-Vite contexts (e.g. Node scripts) still work.
-  const fromDefine = (import.meta.env as Record<string, string | undefined>)[
-    '__SENTRY_RELEASE__'
-  ];
+  const fromDefine = (import.meta.env as Record<string, string | undefined>)['__SENTRY_RELEASE__'];
   if (fromDefine && fromDefine.length > 0) {
     return fromDefine;
   }
@@ -96,8 +94,7 @@ export const getSentrySettings = async (): Promise<SentrySettings> => {
   }
 
   const dsn = (stored.dsn as string | undefined) ?? envDsn ?? '';
-  const enabled =
-    typeof stored.enabled === 'boolean' ? stored.enabled : Boolean(envDsn);
+  const enabled = typeof stored.enabled === 'boolean' ? stored.enabled : Boolean(envDsn);
 
   return {
     dsn,
@@ -109,9 +106,7 @@ export const getSentrySettings = async (): Promise<SentrySettings> => {
     release: getSentryRelease(),
     environment: getSentryEnvironment(),
     sendDefaultPii:
-      typeof stored.sendDefaultPii === 'boolean'
-        ? stored.sendDefaultPii
-        : DEFAULTS.sendDefaultPii,
+      typeof stored.sendDefaultPii === 'boolean' ? stored.sendDefaultPii : DEFAULTS.sendDefaultPii,
     replaysSessionSampleRate:
       typeof stored.replaysSessionSampleRate === 'number'
         ? stored.replaysSessionSampleRate
@@ -121,19 +116,13 @@ export const getSentrySettings = async (): Promise<SentrySettings> => {
         ? stored.replaysOnErrorSampleRate
         : DEFAULTS.replaysOnErrorSampleRate,
     maskAllText:
-      typeof stored.maskAllText === 'boolean'
-        ? stored.maskAllText
-        : DEFAULTS.maskAllText,
+      typeof stored.maskAllText === 'boolean' ? stored.maskAllText : DEFAULTS.maskAllText,
     maskAllInputs:
-      typeof stored.maskAllInputs === 'boolean'
-        ? stored.maskAllInputs
-        : DEFAULTS.maskAllInputs,
+      typeof stored.maskAllInputs === 'boolean' ? stored.maskAllInputs : DEFAULTS.maskAllInputs,
   };
 };
 
-export const createSentrySettings = (
-  overrides?: Partial<SentrySettings>,
-): SentrySettings => {
+export const createSentrySettings = (overrides?: Partial<SentrySettings>): SentrySettings => {
   return {
     dsn: overrides?.dsn ?? getSentryDsn() ?? '',
     enabled: typeof overrides?.enabled === 'boolean' ? overrides.enabled : Boolean(overrides?.dsn),

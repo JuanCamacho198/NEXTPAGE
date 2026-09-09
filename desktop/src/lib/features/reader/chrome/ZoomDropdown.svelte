@@ -44,8 +44,14 @@
     data-testid="zoom-dropdown-trigger"
   >
     <span>{clampedValue}%</span>
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"
-      ><path d="M6 9l6 6 6-6" /></svg
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg
     >
   </button>
 
@@ -64,12 +70,22 @@
             role="option"
             aria-selected={selected}
             onclick={() => selectOption(opt)}
-            class="flex w-full items-center justify-between px-3 py-1.5 text-xs hover:bg-(--color-surface-strong) cursor-pointer {selected ? 'font-semibold text-(--color-primary)' : 'text-(--color-text-muted)'}"
+            class="flex w-full items-center justify-between px-3 py-1.5 text-xs hover:bg-(--color-surface-strong) cursor-pointer {selected
+              ? 'font-semibold text-(--color-primary)'
+              : 'text-(--color-text-muted)'}"
             data-testid="zoom-option-{opt}"
           >
             <span class="flex items-center gap-1.5">
               {#if selected}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg
+                >
               {:else}
                 <span class="w-3 inline-block"></span>
               {/if}

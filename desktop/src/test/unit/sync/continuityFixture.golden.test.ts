@@ -35,7 +35,10 @@ function textNodes(doc: Document): Node[] {
 
 /** Character offset of `needle` within the concatenation of the chapter's text
  * nodes, plus the total chapter char count. Mirrors the fixture generator. */
-function chapterGeometry(doc: Document, needle: string): { charOffset: number; chapterChars: number } {
+function chapterGeometry(
+  doc: Document,
+  needle: string,
+): { charOffset: number; chapterChars: number } {
   const nodes = textNodes(doc);
   const full = nodes.map((n) => (n as CharacterData).data).join('');
   const chapterChars = full.length;
@@ -84,18 +87,24 @@ describe('continuity golden fixture — cross-engine (desktop side)', () => {
     const { charOffset, chapterChars } = chapterGeometry(chapterDoc, golden.paragraphText);
     expect(charOffset).toBeGreaterThan(0);
     expect(chapterChars).toBe(golden.chapterChars);
-    const loc = locatorFromCfi(golden.readingOrder, golden.expectedCfi, { charOffset, chapterChars });
+    const loc = locatorFromCfi(golden.readingOrder, golden.expectedCfi, {
+      charOffset,
+      chapterChars,
+    });
     expect(loc).not.toBeNull();
     expect(loc!.href).toBe(golden.chapterHref);
     expect(loc!.locations.progression).toBeCloseTo(golden.expectedProgression, 3);
-    expect(Math.abs((loc!.locations.progression ?? 0) - golden.expectedProgression)).toBeLessThanOrEqual(
-      golden.tolerance,
-    );
+    expect(
+      Math.abs((loc!.locations.progression ?? 0) - golden.expectedProgression),
+    ).toBeLessThanOrEqual(golden.tolerance);
   });
 
   it('round-trips: precise CFI stored on the locator survives serialize/deserialize', () => {
     const { charOffset, chapterChars } = chapterGeometry(chapterDoc, golden.paragraphText);
-    const loc = locatorFromCfi(golden.readingOrder, golden.expectedCfi, { charOffset, chapterChars });
+    const loc = locatorFromCfi(golden.readingOrder, golden.expectedCfi, {
+      charOffset,
+      chapterChars,
+    });
     expect(cfiFromLocator(loc!)).toBe(golden.expectedCfi);
   });
 

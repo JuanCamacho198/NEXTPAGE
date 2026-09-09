@@ -145,7 +145,9 @@
         </div>
 
         <div class="border-t border-(--color-border) pt-4">
-          <h3 class="text-sm font-medium text-(--color-primary) mb-2">{t('collection.existing')}</h3>
+          <h3 class="text-sm font-medium text-(--color-primary) mb-2">
+            {t('collection.existing')}
+          </h3>
           {#if loading}
             <p class="text-sm text-(--color-text-muted)">{t('collection.loading')}</p>
           {:else if collections.length === 0}
@@ -174,7 +176,8 @@
                     ></span>
                     <span class="flex-1 text-sm text-(--color-primary)">{collection.name}</span>
                     {#if collection.isSystem}
-                      <span class="text-xs text-(--color-text-muted)">{t('collection.system')}</span>
+                      <span class="text-xs text-(--color-text-muted)">{t('collection.system')}</span
+                      >
                     {:else}
                       <button
                         type="button"

@@ -96,11 +96,13 @@ export class AddonRegistry {
   private readonly listeners = new Set<(version: number) => void>();
   private mutationVersion = 0;
 
-  constructor(options: {
-    store?: AddonRegistryStore;
-    transport?: AddonTransport;
-    now?: () => number;
-  } = {}) {
+  constructor(
+    options: {
+      store?: AddonRegistryStore;
+      transport?: AddonTransport;
+      now?: () => number;
+    } = {},
+  ) {
     this.store = options.store ?? new TauriAddonRegistryStore();
     this.transport = options.transport ?? defaultAddonTransport();
     this.now = options.now ?? (() => Date.now());
@@ -110,7 +112,10 @@ export class AddonRegistry {
     assertHttpsInstallUrl(url);
     const fetched = await this.transport(url);
     if (fetched.status < 200 || fetched.status >= 300) {
-      throw new AddonFetchError(AddonFetchErrorCode.NETWORK, `addon fetch status ${fetched.status}`);
+      throw new AddonFetchError(
+        AddonFetchErrorCode.NETWORK,
+        `addon fetch status ${fetched.status}`,
+      );
     }
     const manifest = validateManifest(fetched.body, fetched.contentType);
     if (
@@ -136,7 +141,8 @@ export class AddonRegistry {
     return manifest;
   }
 
-  async listInstalled(): Promise<InstalledAddonRow[]> {    const rows = await this.store.listInstalled();
+  async listInstalled(): Promise<InstalledAddonRow[]> {
+    const rows = await this.store.listInstalled();
     return rows
       .map((row) => {
         try {
@@ -145,7 +151,10 @@ export class AddonRegistry {
           return { row, manifest: null };
         }
       })
-      .filter((entry): entry is { row: RegistryStoreRow; manifest: AddonManifest } => entry.manifest !== null)
+      .filter(
+        (entry): entry is { row: RegistryStoreRow; manifest: AddonManifest } =>
+          entry.manifest !== null,
+      )
       .map(({ row, manifest }) => ({
         id: row.id,
         url: row.url,

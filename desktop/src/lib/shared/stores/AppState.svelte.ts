@@ -10,8 +10,18 @@ import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
 import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
-import { clearPersistedAuth, loadDriveRefreshToken, loadPersistedAuth, type LocalUserProfile } from '$lib/shared/stores/authPersistence';
-import { getSessionClient, setLiveSession, clearLiveSession, getLiveSession } from '$lib/services/supabase';
+import {
+  clearPersistedAuth,
+  loadDriveRefreshToken,
+  loadPersistedAuth,
+  type LocalUserProfile,
+} from '$lib/shared/stores/authPersistence';
+import {
+  getSessionClient,
+  setLiveSession,
+  clearLiveSession,
+  getLiveSession,
+} from '$lib/services/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { signInAnonymously, restoreSession, signOut } from '$lib/shared/services';
 import { SyncService } from '$lib/shared/services/SyncService';
@@ -41,7 +51,8 @@ export class AppState {
 
   isInitialized = $state(false);
 
-  t = (key: MessageKey, params?: Record<string, string | number>): string => i18n.t(this.settings.locale, key, params);
+  t = (key: MessageKey, params?: Record<string, string | number>): string =>
+    i18n.t(this.settings.locale, key, params);
 
   mapCommandError(error: unknown): CommandErrorDto {
     const typed = error as MaybeCommandError;
@@ -80,9 +91,16 @@ export class AppState {
     void this.statsDomain.loadStats(book.id);
   }
 
-  handleEpubLocationChange = async (nextLocation: string, nextPercentage: number): Promise<void> => {
+  handleEpubLocationChange = async (
+    nextLocation: string,
+    nextPercentage: number,
+  ): Promise<void> => {
     if (!this.reader.activeReadingBookId) return;
-    await this.reader.handleEpubLocationChange(this.reader.activeReadingBookId, nextLocation, nextPercentage);
+    await this.reader.handleEpubLocationChange(
+      this.reader.activeReadingBookId,
+      nextLocation,
+      nextPercentage,
+    );
   };
 
   handlePdfPageChange = async (page: number, total: number): Promise<void> => {
@@ -92,7 +110,13 @@ export class AppState {
     await this.reader.handlePdfPageChange(activeId, page, total);
   };
 
-  handlePdfSessionProgress = async (event: { startedAt: string; endedAt?: string; durationSeconds: number; startPercentage?: number; endPercentage?: number }): Promise<void> => {
+  handlePdfSessionProgress = async (event: {
+    startedAt: string;
+    endedAt?: string;
+    durationSeconds: number;
+    startPercentage?: number;
+    endPercentage?: number;
+  }): Promise<void> => {
     if (!this.reader.activeReadingBookId) return;
     await this.reader.handlePdfSessionProgress(this.reader.activeReadingBookId, event);
   };
@@ -104,7 +128,8 @@ export class AppState {
   handleSearch = async (query: string, page: number): Promise<void> => {
     if (!this.reader.activeReadingBookId) return;
     await this.search.handleSearch(this.reader.activeReadingBookId, query, page);
-    if (this.search.searchUnavailableReason) this.navigation.setDomainUnavailable('search', this.search.searchUnavailableReason);
+    if (this.search.searchUnavailableReason)
+      this.navigation.setDomainUnavailable('search', this.search.searchUnavailableReason);
   };
 
   handleSearchJump = (target: import('$lib/shared/types').SearchNavigationTarget): void => {
@@ -148,7 +173,9 @@ export class AppState {
     } catch (error) {
       console.error('Failed to read auth cache during init:', error);
       if (getLiveSession() === null && authState.userId === null) {
-        try { await signInAnonymously(); } catch {}
+        try {
+          await signInAnonymously();
+        } catch {}
       }
     }
     this.navigation.route = initialRoute;
@@ -159,90 +186,168 @@ export class AppState {
         setLiveSession(session);
         SyncService.resetOutboxBreaker();
         this.startAuthenticatedSync();
-        try { SyncService.setupAutoSync(); void syncHealthState.refresh(); syncHealthState.startPoll(); } catch {}
-        try { dictionaryState.subscribeToRemoteChanges(); } catch {}
-        if (this.navigation.route === 'welcome') { this.navigation.route = 'home'; this.loadLibrary(); this.statsDomain.loadStats(undefined); }
+        try {
+          SyncService.setupAutoSync();
+          void syncHealthState.refresh();
+          syncHealthState.startPoll();
+        } catch {}
+        try {
+          dictionaryState.subscribeToRemoteChanges();
+        } catch {}
+        if (this.navigation.route === 'welcome') {
+          this.navigation.route = 'home';
+          this.loadLibrary();
+          this.statsDomain.loadStats(undefined);
+        }
         void this.loadDailyGoalForCurrentUser();
         return;
       }
       if (event === 'SIGNED_OUT') {
-        clearLiveSession(); authState.clearSupabaseSession();
-        try { SyncService.teardownAutoSync(); syncHealthState.stopPoll(); } catch {}
+        clearLiveSession();
+        authState.clearSupabaseSession();
+        try {
+          SyncService.teardownAutoSync();
+          syncHealthState.stopPoll();
+        } catch {}
         this.reader.unsubscribeFromAllRemoteChanges();
-        try { dictionaryState.unsubscribe(); } catch {}
-        this.settings.clearDailyGoal(); this.statsDomain.clearTodayMinutes(); this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
-        this.navigateToWelcome(); return;
+        try {
+          dictionaryState.unsubscribe();
+        } catch {}
+        this.settings.clearDailyGoal();
+        this.statsDomain.clearTodayMinutes();
+        this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
+        this.navigateToWelcome();
+        return;
       }
       if (event === 'TOKEN_REFRESHED' && session) {
-        setLiveSession(session); SyncService.resetOutboxBreaker();
-        this.hydrateAuthState(session, authState.driveRefreshToken ?? session.provider_refresh_token ?? null); return;
+        setLiveSession(session);
+        SyncService.resetOutboxBreaker();
+        this.hydrateAuthState(
+          session,
+          authState.driveRefreshToken ?? session.provider_refresh_token ?? null,
+        );
+        return;
       }
       if (event === 'INITIAL_SESSION') {
-        if (session) { setLiveSession(session); if (authState.userId === null) this.hydrateAuthState(session, session.provider_refresh_token ?? null); }
-        else clearLiveSession();
+        if (session) {
+          setLiveSession(session);
+          if (authState.userId === null)
+            this.hydrateAuthState(session, session.provider_refresh_token ?? null);
+        } else clearLiveSession();
       }
     });
     try {
-      const [nextLocale] = await Promise.all([i18n.initializeLocale(), this.settings.loadReaderSettings(), this.loadLibrary(), this.statsDomain.loadStats(undefined)]);
+      const [nextLocale] = await Promise.all([
+        i18n.initializeLocale(),
+        this.settings.loadReaderSettings(),
+        this.loadLibrary(),
+        this.statsDomain.loadStats(undefined),
+      ]);
       this.settings.locale = nextLocale;
     } catch (error) {
       console.error('Initialization error:', error);
-      try { this.settings.locale = await i18n.initializeLocale(); } catch {}
-      this.settings.loadReaderSettings(); this.loadLibrary(); this.statsDomain.loadStats(undefined);
+      try {
+        this.settings.locale = await i18n.initializeLocale();
+      } catch {}
+      this.settings.loadReaderSettings();
+      this.loadLibrary();
+      this.statsDomain.loadStats(undefined);
     } finally {
       void this.loadDailyGoalForCurrentUser();
       this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
-      try { const uid = authState.userId; if (uid) void this.statsDomain.loadTodayMinutes(uid); } catch {}
+      try {
+        const uid = authState.userId;
+        if (uid) void this.statsDomain.loadTodayMinutes(uid);
+      } catch {}
       this.isInitialized = true;
     }
   }
 
   signOutAndReturnToWelcome = async (): Promise<void> => {
-    authState.clearLocalUser(); authState.clearSupabaseSession();
-    await clearPersistedAuth(); await signOut();
-    try { SyncService.teardownAutoSync(); syncHealthState.stopPoll(); } catch {}
+    authState.clearLocalUser();
+    authState.clearSupabaseSession();
+    await clearPersistedAuth();
+    await signOut();
+    try {
+      SyncService.teardownAutoSync();
+      syncHealthState.stopPoll();
+    } catch {}
     this.reader.unsubscribeFromAllRemoteChanges();
-    try { dictionaryState.unsubscribe(); } catch {}
-    this.settings.clearDailyGoal(); this.statsDomain.clearTodayMinutes(); this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
-    this.navigateToWelcome(); pushToast('success', this.t('welcome.signedOutToast'));
+    try {
+      dictionaryState.unsubscribe();
+    } catch {}
+    this.settings.clearDailyGoal();
+    this.statsDomain.clearTodayMinutes();
+    this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
+    this.navigateToWelcome();
+    pushToast('success', this.t('welcome.signedOutToast'));
   };
 
   private startAuthenticatedSync(): void {
     SyncService.setupOutboxProcessor();
-    try { SyncService.setupAutoSync(); void syncHealthState.refresh(); syncHealthState.startPoll(); } catch {}
+    try {
+      SyncService.setupAutoSync();
+      void syncHealthState.refresh();
+      syncHealthState.startPoll();
+    } catch {}
     this.reader.subscribeToAllRemoteChanges();
-    try { dictionaryState.subscribeToRemoteChanges(); } catch {}
-    void SyncService.syncMetadata().catch((error: unknown) => { console.error('Startup sync failed; continuing offline:', error); });
+    try {
+      dictionaryState.subscribeToRemoteChanges();
+    } catch {}
+    void SyncService.syncMetadata().catch((error: unknown) => {
+      console.error('Startup sync failed; continuing offline:', error);
+    });
   }
 
   private async loadDailyGoalForCurrentUser(): Promise<void> {
     const uid = authState.userId;
-    if (!uid || uid.trim().length === 0) { this.settings.clearDailyGoal(); this.statsDomain.clearTodayMinutes(); this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes); return; }
-    try { await this.settings.loadDailyGoalMinutes(uid); } catch {}
+    if (!uid || uid.trim().length === 0) {
+      this.settings.clearDailyGoal();
+      this.statsDomain.clearTodayMinutes();
+      this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
+      return;
+    }
+    try {
+      await this.settings.loadDailyGoalMinutes(uid);
+    } catch {}
     this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
-    try { await this.statsDomain.loadTodayMinutes(uid); } catch {}
+    try {
+      await this.statsDomain.loadTodayMinutes(uid);
+    } catch {}
   }
 
   async saveDailyGoalMinutes(minutes: number): Promise<void> {
-    const uid = authState.userId; if (!uid || uid.trim().length === 0) return;
+    const uid = authState.userId;
+    if (!uid || uid.trim().length === 0) return;
     await this.settings.saveDailyGoalMinutes(minutes, uid);
     this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
-    try { await this.statsDomain.loadTodayMinutes(uid); } catch {}
+    try {
+      await this.statsDomain.loadTodayMinutes(uid);
+    } catch {}
   }
 
   async refreshTodayMinutes(): Promise<void> {
-    const uid = authState.userId; if (!uid) { this.statsDomain.clearTodayMinutes(); return; }
+    const uid = authState.userId;
+    if (!uid) {
+      this.statsDomain.clearTodayMinutes();
+      return;
+    }
     await this.statsDomain.loadTodayMinutes(uid);
   }
 
   private hydrateAuthState(session: Session, driveRefreshToken: string | null): void {
     authState.setSupabaseSession({
-      accessToken: session.access_token, refreshToken: session.refresh_token,
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token,
       expiresAt: session.expires_at ? session.expires_at * 1000 : null,
-      userId: session.user.id, email: session.user.email ?? null,
-      displayName: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? null,
-      photoUrl: session.user.user_metadata?.avatar_url ?? session.user.user_metadata?.picture ?? null,
-      providerToken: session.provider_token ?? null, driveRefreshToken,
+      userId: session.user.id,
+      email: session.user.email ?? null,
+      displayName:
+        session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? null,
+      photoUrl:
+        session.user.user_metadata?.avatar_url ?? session.user.user_metadata?.picture ?? null,
+      providerToken: session.provider_token ?? null,
+      driveRefreshToken,
     });
   }
 }

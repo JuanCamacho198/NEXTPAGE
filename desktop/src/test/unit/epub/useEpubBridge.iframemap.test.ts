@@ -34,14 +34,26 @@ describe('truncateIframeMsg / basename', () => {
 describe('mapIframeMessageToError', () => {
   it('maps a JS error to ReaderError epub/iframe_error + book context', () => {
     const err = mapIframeMessageToError(
-      { msg: 'Uncaught TypeError: x is null', url: 'OEBPS/Text/ch1.xhtml', line: 12, col: 3, kind: 'js' },
+      {
+        msg: 'Uncaught TypeError: x is null',
+        url: 'OEBPS/Text/ch1.xhtml',
+        line: 12,
+        col: 3,
+        kind: 'js',
+      },
       'book-1',
       4,
     );
     expect(err.code).toBe('READER_IFRAME_ERROR');
     expect(err.context).toMatchObject({
-      format: 'epub', action: 'iframe_error', kind: 'js', iframeSource: 'ch1.xhtml',
-      line: 12, col: 3, bookId: 'book-1', chapterIndex: 4,
+      format: 'epub',
+      action: 'iframe_error',
+      kind: 'js',
+      iframeSource: 'ch1.xhtml',
+      line: 12,
+      col: 3,
+      bookId: 'book-1',
+      chapterIndex: 4,
     });
   });
 
@@ -52,7 +64,12 @@ describe('mapIframeMessageToError', () => {
       0,
     );
     expect(err.message.length).toBeLessThanOrEqual(200);
-    expect(err.context).toMatchObject({ kind: 'rejection', iframeSource: 'ch9.xhtml', line: 0, col: 0 });
+    expect(err.context).toMatchObject({
+      kind: 'rejection',
+      iframeSource: 'ch9.xhtml',
+      line: 0,
+      col: 0,
+    });
     expect(Object.keys(err.context).sort()).toEqual(
       ['action', 'bookId', 'chapterIndex', 'col', 'format', 'iframeSource', 'kind', 'line'].sort(),
     );

@@ -53,7 +53,11 @@ export function createDictionaryState() {
     }
   }
 
-  function queueOutbox(entityId: string, operation: 'UPSERT' | 'DELETE', payload: Record<string, unknown>): void {
+  function queueOutbox(
+    entityId: string,
+    operation: 'UPSERT' | 'DELETE',
+    payload: Record<string, unknown>,
+  ): void {
     if (!syncEnabled || !hasLiveSession() || !authState.userId) return;
     const now = new Date().toISOString();
     const enriched = { ...payload, userId: authState.userId, updatedAt: now };
@@ -66,10 +70,19 @@ export function createDictionaryState() {
     }).catch(() => {});
   }
 
-  async function add(word: string, opts?: { tags?: string[]; isFavorite?: boolean; srsStage?: number }): Promise<DictionaryWordDto> {
+  async function add(
+    word: string,
+    opts?: { tags?: string[]; isFavorite?: boolean; srsStage?: number },
+  ): Promise<DictionaryWordDto> {
     const now = new Date().toISOString();
     const created: DictionaryWordDto = await invoke<DictionaryWordDto>('addDictionaryWord', {
-      payload: { word, tags: opts?.tags, isFavorite: opts?.isFavorite, srsStage: opts?.srsStage, userId: authState.userId ?? undefined },
+      payload: {
+        word,
+        tags: opts?.tags,
+        isFavorite: opts?.isFavorite,
+        srsStage: opts?.srsStage,
+        userId: authState.userId ?? undefined,
+      },
     });
     words = [...words, created].sort((a, b) => (a.word ?? '').localeCompare(b.word ?? ''));
     queueOutbox(created.id, 'UPSERT', {
@@ -84,7 +97,10 @@ export function createDictionaryState() {
     return created;
   }
 
-  async function update(id: string, patch: { word?: string; tags?: string[]; isFavorite?: boolean; srsStage?: number }): Promise<DictionaryWordDto> {
+  async function update(
+    id: string,
+    patch: { word?: string; tags?: string[]; isFavorite?: boolean; srsStage?: number },
+  ): Promise<DictionaryWordDto> {
     const now = new Date().toISOString();
     const updated: DictionaryWordDto = await invoke<DictionaryWordDto>('updateDictionaryWord', {
       payload: { id, ...patch },
@@ -148,12 +164,18 @@ export function createDictionaryState() {
     return await invoke<string>('exportDictionary', { format });
   }
 
-  async function importData(payload: string, format: 'json' | 'csv'): Promise<{ imported: number; errors: { row: number; reason: string }[] }> {
-    const res = await invoke<{ imported: number; errors: { row: number; reason: string }[] }>('importDictionary', {
-      payload,
-      format,
-      userId: authState.userId ?? null,
-    });
+  async function importData(
+    payload: string,
+    format: 'json' | 'csv',
+  ): Promise<{ imported: number; errors: { row: number; reason: string }[] }> {
+    const res = await invoke<{ imported: number; errors: { row: number; reason: string }[] }>(
+      'importDictionary',
+      {
+        payload,
+        format,
+        userId: authState.userId ?? null,
+      },
+    );
     await load();
     return res;
   }
@@ -164,7 +186,9 @@ export function createDictionaryState() {
     dictSync = new SupabaseDictionarySync(authState.userId);
     realtimeUnsub = dictSync.subscribeToDictionary((row) => {
       // LWW: keep newer updatedAt, tie breaker createdAt
-      const local = words.find((w) => w.id === row.id || normalizedForSearch(w.word ?? '') === row.normalizedWord);
+      const local = words.find(
+        (w) => w.id === row.id || normalizedForSearch(w.word ?? '') === row.normalizedWord,
+      );
       if (row.deletedAt) {
         words = words.filter((w) => w.id !== row.id);
         return;
@@ -172,7 +196,18 @@ export function createDictionaryState() {
       if (local) {
         const localUpdated = local.updatedAt ?? local.createdAt;
         if (row.updatedAt > localUpdated) {
-          words = words.map((w) => (w.id === local.id ? { ...w, word: row.word, tags: row.tags, isFavorite: row.isFavorite, srsStage: row.srsStage, updatedAt: row.updatedAt } : w));
+          words = words.map((w) =>
+            w.id === local.id
+              ? {
+                  ...w,
+                  word: row.word,
+                  tags: row.tags,
+                  isFavorite: row.isFavorite,
+                  srsStage: row.srsStage,
+                  updatedAt: row.updatedAt,
+                }
+              : w,
+          );
         } else if (row.updatedAt === localUpdated && row.createdAt > (local.createdAt ?? '')) {
           words = words.map((w) => (w.id === local.id ? { ...w, word: row.word } : w));
         }

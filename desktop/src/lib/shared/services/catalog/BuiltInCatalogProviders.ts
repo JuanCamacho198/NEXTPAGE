@@ -5,10 +5,7 @@
  * `gutendex:<numericId>` / `openlibrary:<key>`.
  */
 import { catalogError } from './errors';
-import {
-  BUILTIN_GUTENDEX,
-  BUILTIN_OPENLIBRARY,
-} from './CatalogProvider';
+import { BUILTIN_GUTENDEX, BUILTIN_OPENLIBRARY } from './CatalogProvider';
 import type {
   CatalogBook,
   CatalogProvider,

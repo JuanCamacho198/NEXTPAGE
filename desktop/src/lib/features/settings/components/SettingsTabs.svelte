@@ -24,8 +24,18 @@
     { id: 'apariencia', icon: 'sun', labelKey: 'settings.tab.appearance', fallback: 'Apariencia' },
     { id: 'reader', icon: 'book', labelKey: 'settings.tab.reader', fallback: 'Reader' },
     { id: 'datos', icon: 'database', labelKey: 'settings.tab.data', fallback: 'Datos' },
-    { id: 'almacenamiento', icon: 'database', labelKey: 'sidebar.storage', fallback: 'Almacenamiento' },
-    { id: 'sincronizacion', icon: 'cloud-sync', labelKey: 'sidebar.sync', fallback: 'Sincronización' },
+    {
+      id: 'almacenamiento',
+      icon: 'database',
+      labelKey: 'sidebar.storage',
+      fallback: 'Almacenamiento',
+    },
+    {
+      id: 'sincronizacion',
+      icon: 'cloud-sync',
+      labelKey: 'sidebar.sync',
+      fallback: 'Sincronización',
+    },
     { id: 'atajos', icon: 'bookmark', labelKey: 'settings.shortcuts.title', fallback: 'Atajos' },
     { id: 'acerca', icon: 'info', labelKey: 'settings.tab.about', fallback: 'Acerca' },
   ];

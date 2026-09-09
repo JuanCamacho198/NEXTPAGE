@@ -6,7 +6,7 @@ import type {
   BookCollectionInput,
   LibraryBookDto,
   UpsertBookCoverInput,
-  ScanFolderResult
+  ScanFolderResult,
 } from '$lib/shared/types';
 import * as tauriClient from '$lib/shared/api/tauriClient';
 
@@ -79,7 +79,11 @@ export class TauriLibraryAdapter implements LibraryPort {
     return tauriClient.getFileBytes(filePath);
   }
 
-  saveBookFile(id: string, data: number[], meta?: { title?: string; author?: string; format?: string }): Promise<void> {
+  saveBookFile(
+    id: string,
+    data: number[],
+    meta?: { title?: string; author?: string; format?: string },
+  ): Promise<void> {
     return tauriClient.saveBookFile(id, data, meta);
   }
 

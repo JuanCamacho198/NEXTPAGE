@@ -4,7 +4,8 @@ const mockChannelOn = vi.fn();
 const mockChannelSubscribe = vi.fn();
 const mockChannelUnsubscribe = vi.fn();
 const mockRemoveChannel = vi.fn();
-let capturedHandler: ((payload: { eventType: string; new: unknown; old: unknown }) => void) | null = null;
+let capturedHandler: ((payload: { eventType: string; new: unknown; old: unknown }) => void) | null =
+  null;
 
 const mockClient = {
   getChannel: vi.fn(),
@@ -33,10 +34,21 @@ vi.mock('$lib/services/supabase', () => ({
 
 // Mock rowToViewModel to be deterministic
 vi.mock('$lib/services/devices', async () => {
-  const actual = await vi.importActual<typeof import('$lib/services/devices')>('$lib/services/devices');
+  const actual =
+    await vi.importActual<typeof import('$lib/services/devices')>('$lib/services/devices');
   return {
     ...actual,
-    rowToViewModel: (row: { id: string; name: string; os: string; hardware_id: string; type: string; last_active: string }, hid: string) => ({
+    rowToViewModel: (
+      row: {
+        id: string;
+        name: string;
+        os: string;
+        hardware_id: string;
+        type: string;
+        last_active: string;
+      },
+      hid: string,
+    ) => ({
       id: row.id,
       name: row.name,
       os: row.os,
@@ -64,11 +76,24 @@ describe('useDeviceRealtime — 4 casos INSERT/UPDATE/DELETE + global checks', (
     const rt = createDeviceRealtime({
       getHardwareId: () => 'hid-1',
       getDevices: () => devices as never,
-      setDevices: (v) => { devices = v as never; },
+      setDevices: (v) => {
+        devices = v as never;
+      },
     });
     rt.subscribe('user-1');
     expect(capturedHandler).not.toBeNull();
-    capturedHandler!({ eventType: 'INSERT', new: { id: 'b', name: 'new', os: 'Win', hardware_id: 'hid-2', type: 'desktop', last_active: new Date().toISOString() }, old: {} });
+    capturedHandler!({
+      eventType: 'INSERT',
+      new: {
+        id: 'b',
+        name: 'new',
+        os: 'Win',
+        hardware_id: 'hid-2',
+        type: 'desktop',
+        last_active: new Date().toISOString(),
+      },
+      old: {},
+    });
     expect(devices.map((d) => d.id)).toContain('b');
     expect(devices[0].id).toBe('b');
     rt.destroy();
@@ -80,10 +105,23 @@ describe('useDeviceRealtime — 4 casos INSERT/UPDATE/DELETE + global checks', (
     const rt = createDeviceRealtime({
       getHardwareId: () => 'hid-1',
       getDevices: () => devices as never,
-      setDevices: (v) => { devices = v as never; },
+      setDevices: (v) => {
+        devices = v as never;
+      },
     });
     rt.subscribe('user-1');
-    capturedHandler!({ eventType: 'UPDATE', new: { id: 'a', name: 'updated', os: 'Win', hardware_id: 'hid-1', type: 'desktop', last_active: new Date().toISOString() }, old: {} });
+    capturedHandler!({
+      eventType: 'UPDATE',
+      new: {
+        id: 'a',
+        name: 'updated',
+        os: 'Win',
+        hardware_id: 'hid-1',
+        type: 'desktop',
+        last_active: new Date().toISOString(),
+      },
+      old: {},
+    });
     expect(devices.find((d) => d.id === 'a')?.name).toBe('updated');
     rt.destroy();
   });
@@ -94,7 +132,9 @@ describe('useDeviceRealtime — 4 casos INSERT/UPDATE/DELETE + global checks', (
     const rt = createDeviceRealtime({
       getHardwareId: () => 'hid-1',
       getDevices: () => devices as never,
-      setDevices: (v) => { devices = v as never; },
+      setDevices: (v) => {
+        devices = v as never;
+      },
     });
     rt.subscribe('user-1');
     capturedHandler!({ eventType: 'DELETE', new: {}, old: { id: 'a' } });
@@ -108,7 +148,9 @@ describe('useDeviceRealtime — 4 casos INSERT/UPDATE/DELETE + global checks', (
     const rt = createDeviceRealtime({
       getHardwareId: () => 'hid-1',
       getDevices: () => devices as never,
-      setDevices: (v) => { devices = v as never; },
+      setDevices: (v) => {
+        devices = v as never;
+      },
     });
     rt.subscribe('user-1');
     const firstCalls = mockClient.channel.mock.calls.length;
@@ -127,7 +169,9 @@ describe('useDeviceRealtime — 4 casos INSERT/UPDATE/DELETE + global checks', (
     const rt = createDeviceRealtime({
       getHardwareId: () => 'hid-1',
       getDevices: () => devices as never,
-      setDevices: (v) => { devices = v as never; },
+      setDevices: (v) => {
+        devices = v as never;
+      },
     });
     rt.subscribe('user-1');
     expect(mockClient.channel).not.toHaveBeenCalled();

@@ -39,7 +39,9 @@
     <header class="mb-3 flex items-center justify-between">
       <h2 class="text-sm font-semibold text-(--color-primary)">
         {t('shelf.availableDevices')}
-        <span class="ml-2 rounded-full bg-(--color-primary)/20 px-2 py-0.5 text-micro text-(--color-primary)">
+        <span
+          class="ml-2 rounded-full bg-(--color-primary)/20 px-2 py-0.5 text-micro text-(--color-primary)"
+        >
           {downloadableCatalog.count}
         </span>
       </h2>
@@ -59,7 +61,13 @@
           }}
           aria-label={t('shelf.closeAria')}
         >
-          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            class="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path d="M18 6L6 18M6 6l12 12"></path>
           </svg>
         </button>
@@ -72,7 +80,9 @@
           <article
             class="flex items-start gap-3 rounded-(--radius-xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-3 shadow-(--shadow-panel)"
           >
-            <div class="h-20 w-14 shrink-0 overflow-hidden rounded-[18px] bg-(--color-surface-subtle)">
+            <div
+              class="h-20 w-14 shrink-0 overflow-hidden rounded-[18px] bg-(--color-surface-subtle)"
+            >
               <SafeCover
                 path={row.coverUrl ?? ''}
                 alt={`Portada de ${row.displayTitle}`}
@@ -107,9 +117,24 @@
             <div class="shrink-0">
               {#if downloadableCatalog.isDownloading.has(row.id)}
                 <div class="flex items-center gap-2">
-                  <svg class="h-4 w-4 animate-spin text-(--color-primary)" viewBox="0 0 24 24" fill="none">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  <svg
+                    class="h-4 w-4 animate-spin text-(--color-primary)"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    />
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
                   </svg>
                   <span class="text-xs text-(--color-text-muted)">{t('shelf.downloading')}</span>
                 </div>

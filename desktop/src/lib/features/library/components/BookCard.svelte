@@ -33,7 +33,9 @@
   }: Props = $props();
 
   const progress = $derived(Math.round(getSafeProgressPercentage(book)));
-  const showProgress = $derived(variant === 'continue-reading' || book.readingStatus === 'completed');
+  const showProgress = $derived(
+    variant === 'continue-reading' || book.readingStatus === 'completed',
+  );
   // The Continue Reading variant consumes the dedicated carousel key
   // (identical copy, AD-5); the shelf keeps its own label.
   const progressLabel = $derived(
@@ -41,9 +43,7 @@
   );
   // The read button reads "Continue" in the Continue Reading context
   // (resuming an in-progress book) and "Read" elsewhere (starting fresh).
-  const readLabel = $derived(
-    variant === 'continue-reading' ? t('app.continue') : t('app.read'),
-  );
+  const readLabel = $derived(variant === 'continue-reading' ? t('app.continue') : t('app.read'));
 
   const containerClass = $derived.by(() => {
     if (variant === 'continue-reading') {
@@ -65,7 +65,11 @@
   class={`${containerClass} transition-all duration-200`}
   aria-label={`${book.title}, ${book.author || t('app.unknownAuthor')}, ${progress}%`}
 >
-  <div class={variant === 'continue-reading' ? 'flex flex-col gap-3' : 'flex items-start justify-between gap-3'}>
+  <div
+    class={variant === 'continue-reading'
+      ? 'flex flex-col gap-3'
+      : 'flex items-start justify-between gap-3'}
+  >
     <button type="button" class="min-w-0 flex-1 text-left" onclick={onSelect}>
       <div class="flex items-start gap-4">
         <SafeCover
@@ -138,7 +142,11 @@
       </div>
     </button>
 
-    <div class={variant === 'continue-reading' ? 'flex items-center gap-2 pt-1' : 'flex shrink-0 items-start gap-2'}>
+    <div
+      class={variant === 'continue-reading'
+        ? 'flex items-center gap-2 pt-1'
+        : 'flex shrink-0 items-start gap-2'}
+    >
       {#if showReadButton}
         <Button size="sm" class="shrink-0 whitespace-nowrap" onclick={onRead}>
           {readLabel}

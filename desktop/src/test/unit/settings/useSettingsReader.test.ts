@@ -76,7 +76,11 @@ describe('useSettingsReader', () => {
   });
 
   it('saveReader calls upsertReaderSettings with draft', async () => {
-    const upsertReaderSettings = vi.fn().mockImplementation(async (draft) => draft as unknown as ReturnType<typeof upsertReaderSettings>);
+    const upsertReaderSettings = vi
+      .fn()
+      .mockImplementation(
+        async (draft) => draft as unknown as ReturnType<typeof upsertReaderSettings>,
+      );
     const getReaderSettings = vi.fn().mockResolvedValue({
       themeMode: 'paper' as const,
       brightness: 100,

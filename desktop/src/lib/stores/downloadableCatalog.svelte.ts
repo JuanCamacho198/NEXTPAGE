@@ -207,14 +207,21 @@ export async function downloadBook(bookId: string): Promise<void> {
             // keep catalog title
           }
         }
-        await libraryPort.saveBookFile(id, Array.from(bytes), { title, author, format: meta.format });
+        await libraryPort.saveBookFile(id, Array.from(bytes), {
+          title,
+          author,
+          format: meta.format,
+        });
       },
       // Catalog upsert only when a live user session exists (no auth → no-op).
       markImported: row.userId
         ? (id, version) =>
             catalogSync.upsertBook({
-              ...row, id, lifecycle: 'imported',
-              catalogVersion: version, updatedAt: new Date().toISOString(),
+              ...row,
+              id,
+              lifecycle: 'imported',
+              catalogVersion: version,
+              updatedAt: new Date().toISOString(),
             })
         : async () => {},
       findByHash: row.userId ? (hash) => catalogSync.findByHash(hash) : undefined,

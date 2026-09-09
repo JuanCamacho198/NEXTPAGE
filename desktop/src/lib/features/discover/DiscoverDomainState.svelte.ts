@@ -1,12 +1,5 @@
-import {
-  isCatalogError,
-  liveCatalogProvider,
-} from '$lib/shared/services/catalog';
-import type {
-  CatalogBook,
-  CatalogErrorCode,
-  CatalogProvider,
-} from '$lib/shared/services/catalog';
+import { isCatalogError, liveCatalogProvider } from '$lib/shared/services/catalog';
+import type { CatalogBook, CatalogErrorCode, CatalogProvider } from '$lib/shared/services/catalog';
 
 export type DiscoverStatus =
   | 'idle'

@@ -24,12 +24,18 @@ const CHAPTER_PATH = 'OEBPS/Text/chapter1.xhtml';
 describe('useEpubRender — pure helpers', () => {
   describe('resolveResourcePath', () => {
     it('resolves relative href against chapter dir', () => {
-      expect(resolveResourcePath('OEBPS/Text/chap.xhtml', '../Images/cover.jpg')).toBe('OEBPS/Images/cover.jpg');
-      expect(resolveResourcePath('OEBPS/Text/chap.xhtml', 'style.css')).toBe('OEBPS/Text/style.css');
+      expect(resolveResourcePath('OEBPS/Text/chap.xhtml', '../Images/cover.jpg')).toBe(
+        'OEBPS/Images/cover.jpg',
+      );
+      expect(resolveResourcePath('OEBPS/Text/chap.xhtml', 'style.css')).toBe(
+        'OEBPS/Text/style.css',
+      );
       expect(resolveResourcePath('chap.xhtml', 'a/b.css')).toBe('a/b.css');
     });
     it('handles dot segments', () => {
-      expect(resolveResourcePath('OEBPS/Text/chap.xhtml', './style.css')).toBe('OEBPS/Text/style.css');
+      expect(resolveResourcePath('OEBPS/Text/chap.xhtml', './style.css')).toBe(
+        'OEBPS/Text/style.css',
+      );
     });
   });
 
@@ -84,7 +90,8 @@ describe('useEpubRender — pure helpers', () => {
       const urls = ['asset://localhost/a.ttf', 'asset://localhost/b.ttf'];
       // @ts-expect-error global fetch mock
       global.fetch = vi.fn((url: string) => {
-        if (String(url).includes('a.ttf')) return Promise.resolve({ ok: false, status: 403 } as Response);
+        if (String(url).includes('a.ttf'))
+          return Promise.resolve({ ok: false, status: 403 } as Response);
         return Promise.resolve({ ok: true, status: 200 } as Response);
       });
       const missing = await probeMissingFontUrls(urls);
@@ -190,13 +197,25 @@ describe('useEpubRender — pure helpers', () => {
     };
 
     it('strips chrome-extension:// and floatBarImgId before rewrite', () => {
-      const srcdoc = buildChapterSrcdoc(chapterData as any, RESOURCES, ['OEBPS/Text/chapter1.xhtml'], 'OEBPS/Text/chapter1.xhtml', 2);
+      const srcdoc = buildChapterSrcdoc(
+        chapterData as any,
+        RESOURCES,
+        ['OEBPS/Text/chapter1.xhtml'],
+        'OEBPS/Text/chapter1.xhtml',
+        2,
+      );
       expect(srcdoc).not.toContain('chrome-extension://');
       expect(srcdoc).not.toContain('floatBarImgId');
     });
 
     it('injects <base href> and rewrites asset URLs via convertFileSrc', () => {
-      const srcdoc = buildChapterSrcdoc(chapterData as any, RESOURCES, ['OEBPS/Text/chapter1.xhtml'], 'OEBPS/Text/chapter1.xhtml', 2);
+      const srcdoc = buildChapterSrcdoc(
+        chapterData as any,
+        RESOURCES,
+        ['OEBPS/Text/chapter1.xhtml'],
+        'OEBPS/Text/chapter1.xhtml',
+        2,
+      );
       // base href
       expect(srcdoc).toContain('<base href="');
       expect(srcdoc).toContain('OEBPS/Text');
@@ -220,7 +239,13 @@ describe('useEpubRender — pure helpers', () => {
     });
 
     it('injects separate nextpage-reader-overrides and nextpage-highlight-styles (::highlight)', () => {
-      const srcdoc = buildChapterSrcdoc(chapterData as any, RESOURCES, ['OEBPS/Text/chapter1.xhtml'], 'OEBPS/Text/chapter1.xhtml', 2);
+      const srcdoc = buildChapterSrcdoc(
+        chapterData as any,
+        RESOURCES,
+        ['OEBPS/Text/chapter1.xhtml'],
+        'OEBPS/Text/chapter1.xhtml',
+        2,
+      );
       expect(srcdoc).toContain('id="nextpage-reader-overrides"');
       expect(srcdoc).toContain('id="nextpage-highlight-styles"');
       expect(srcdoc).toContain('::highlight(epub-hl-yellow)');
@@ -235,7 +260,13 @@ describe('useEpubRender — pure helpers', () => {
 
     it('injects spine + bridge + resize + highlight + selection scripts in order', () => {
       const spine = ['OEBPS/Text/ch1.xhtml', 'OEBPS/Text/ch2.xhtml'];
-      const srcdoc = buildChapterSrcdoc(chapterData as any, RESOURCES, spine, 'OEBPS/Text/chapter1.xhtml', 0);
+      const srcdoc = buildChapterSrcdoc(
+        chapterData as any,
+        RESOURCES,
+        spine,
+        'OEBPS/Text/chapter1.xhtml',
+        0,
+      );
       expect(srcdoc).toContain('__cfiBridge');
       expect(srcdoc).toContain('__epubHighlightOverlay');
       expect(srcdoc).toContain('epub-selection');
@@ -249,7 +280,14 @@ describe('useEpubRender — pure helpers', () => {
       // Instead of guessing exact asset URL, build it via toAssetUrl to get exact missing key
       const neutraUrl = toAssetUrl(RESOURCES, 'OEBPS/Text/fonts/Neutraface.ttf');
       const miss2 = new Set([neutraUrl]);
-      const srcdoc = buildChapterSrcdoc(chapterData as any, RESOURCES, ['OEBPS/Text/chapter1.xhtml'], 'OEBPS/Text/chapter1.xhtml', 2, miss2);
+      const srcdoc = buildChapterSrcdoc(
+        chapterData as any,
+        RESOURCES,
+        ['OEBPS/Text/chapter1.xhtml'],
+        'OEBPS/Text/chapter1.xhtml',
+        2,
+        miss2,
+      );
       // The Neura @font-face rule should be stripped
       // The css after rewrite contains asset URL, so stripped rule disappears
       expect(srcdoc).not.toContain('Neutraface.ttf');
@@ -258,14 +296,26 @@ describe('useEpubRender — pure helpers', () => {
     });
 
     it('returns complete <!DOCTYPE html> document with outerHTML serialization', () => {
-      const srcdoc = buildChapterSrcdoc(chapterData as any, RESOURCES, [], 'OEBPS/Text/chapter1.xhtml', 0);
+      const srcdoc = buildChapterSrcdoc(
+        chapterData as any,
+        RESOURCES,
+        [],
+        'OEBPS/Text/chapter1.xhtml',
+        0,
+      );
       expect(srcdoc.startsWith('<!DOCTYPE html>')).toBe(true);
       expect(srcdoc).toContain('<html');
       expect(srcdoc).toContain('Chapter content');
     });
 
     it('preserves chapter href and spine index in injected script (CHAPTER_HREF / CHAPTER_INDEX)', () => {
-      const srcdoc = buildChapterSrcdoc(chapterData as any, RESOURCES, [], 'OEBPS/Text/chapter1.xhtml', 5);
+      const srcdoc = buildChapterSrcdoc(
+        chapterData as any,
+        RESOURCES,
+        [],
+        'OEBPS/Text/chapter1.xhtml',
+        5,
+      );
       expect(srcdoc).toContain('CHAPTER_HREF');
       expect(srcdoc).toContain('CHAPTER_INDEX');
       expect(srcdoc).toContain('OEBPS/Text/chapter1.xhtml');

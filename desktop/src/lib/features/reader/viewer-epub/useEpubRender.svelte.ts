@@ -51,7 +51,9 @@ export interface EpubMetadataExtract {
 
 // ─── Pure helpers — exported for golden tests ──────────────────
 export function resolveResourcePath(chapterPath: string, href: string): string {
-  const chapterDir = chapterPath.includes('/') ? chapterPath.slice(0, chapterPath.lastIndexOf('/') + 1) : '';
+  const chapterDir = chapterPath.includes('/')
+    ? chapterPath.slice(0, chapterPath.lastIndexOf('/') + 1)
+    : '';
   const parts = `${chapterDir}${href}`.split('/');
   const resolved: string[] = [];
   for (const part of parts) {
@@ -284,7 +286,9 @@ export function buildChapterSrcdoc(
 
   for (const el of doc.querySelectorAll('img, image, video, audio, source, object')) {
     const isSvgImage = el.tagName.toLowerCase() === 'image';
-    const attrs = isSvgImage ? [el.getAttribute('href'), el.getAttribute('xlink:href')] : [el.getAttribute('src')];
+    const attrs = isSvgImage
+      ? [el.getAttribute('href'), el.getAttribute('xlink:href')]
+      : [el.getAttribute('src')];
     const src = attrs.find(
       (s) =>
         s &&
@@ -365,7 +369,8 @@ export function buildChapterSrcdoc(
   const highlightStyle = doc.createElement('style');
   highlightStyle.id = 'nextpage-highlight-styles';
   highlightStyle.textContent = HIGHLIGHT_COLORS.map(
-    (color) => `::highlight(epub-hl-${color.label}) { background-color: ${highlightFillRgba(nearestHighlightHex(color.hex), 0.4)}; }`,
+    (color) =>
+      `::highlight(epub-hl-${color.label}) { background-color: ${highlightFillRgba(nearestHighlightHex(color.hex), 0.4)}; }`,
   ).join('\n');
   doc.head.appendChild(highlightStyle);
 
@@ -699,7 +704,14 @@ export function createEpubRender(deps: EpubRenderDeps) {
       frag ?? '(none)',
     );
     if (spineIndex !== index) {
-      console.warn('epub-toc: renderChapter toc', index, '-> spine', spineIndex, 'href', tocHrefForLog);
+      console.warn(
+        'epub-toc: renderChapter toc',
+        index,
+        '-> spine',
+        spineIndex,
+        'href',
+        tocHrefForLog,
+      );
     }
 
     try {
@@ -727,7 +739,11 @@ export function createEpubRender(deps: EpubRenderDeps) {
       const spineHrefs = deps.getSpineHrefs();
       const tocHrefRaw = deps.getToc()[index]?.href ?? '';
       const chapterHref = normalizeHref(stripFragment(tocHrefRaw) || spineHrefs[spineIndex] || '');
-      const fontUrls = collectFontFaceAssetUrls(chapterData.html, chapterData.chapterPath, metadata.resourcesPath);
+      const fontUrls = collectFontFaceAssetUrls(
+        chapterData.html,
+        chapterData.chapterPath,
+        metadata.resourcesPath,
+      );
       const missingFonts = await probeMissingFontUrls(fontUrls);
       const readerCssOpts = {
         fontSize: deps.getFontSize(),

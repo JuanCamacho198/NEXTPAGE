@@ -7,7 +7,12 @@
   import ShelfList from './ShelfList.svelte';
   import ShelfDownloadsSection from './ShelfDownloadsSection.svelte';
   import { useLibraryShelf } from '$lib/features/library/useLibraryShelf.svelte';
-  import { FILTER_OPTIONS, SORT_OPTIONS, getSafeProgressPercentage, type ShelfBook } from '$lib/features/library/utils';
+  import {
+    FILTER_OPTIONS,
+    SORT_OPTIONS,
+    getSafeProgressPercentage,
+    type ShelfBook,
+  } from '$lib/features/library/utils';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -48,12 +53,18 @@
   }
 
   const sortDropdownOptions = $derived(SORT_OPTIONS.map((o) => ({ value: o.key, label: o.label })));
-  const activeSortLabel = $derived(SORT_OPTIONS.find((o) => o.key === shelf.activeSort)?.label ?? '');
+  const activeSortLabel = $derived(
+    SORT_OPTIONS.find((o) => o.key === shelf.activeSort)?.label ?? '',
+  );
 
   const totalBooks = $derived(books.length);
-  const readingBooks = $derived(books.filter((b) => getSafeProgressPercentage(b) > 0 && getSafeProgressPercentage(b) < 100).length);
+  const readingBooks = $derived(
+    books.filter((b) => getSafeProgressPercentage(b) > 0 && getSafeProgressPercentage(b) < 100)
+      .length,
+  );
   const completedBooks = $derived(
-    books.filter((b) => b.readingStatus === 'completed' || getSafeProgressPercentage(b) >= 100).length,
+    books.filter((b) => b.readingStatus === 'completed' || getSafeProgressPercentage(b) >= 100)
+      .length,
   );
 </script>
 
@@ -64,17 +75,27 @@
     <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
       <div class="space-y-2">
         <div>
-          <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">{t('library.title')}</h1>
-          <p class="mt-1 text-sm text-(--color-text-muted)">Todos tus libros organizados en un solo lugar.</p>
+          <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">
+            {t('library.title')}
+          </h1>
+          <p class="mt-1 text-sm text-(--color-text-muted)">
+            Todos tus libros organizados en un solo lugar.
+          </p>
         </div>
         <div class="flex flex-wrap gap-3 text-xs text-(--color-text-muted)">
-          <div class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-3 py-1.5">
+          <div
+            class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-3 py-1.5"
+          >
             {t('shelf.booksCount', { count: totalBooks })}
           </div>
-          <div class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-3 py-1.5">
+          <div
+            class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-3 py-1.5"
+          >
             {t('shelf.readingCount', { count: readingBooks })}
           </div>
-          <div class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-3 py-1.5">
+          <div
+            class="rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-3 py-1.5"
+          >
             {t('shelf.completedCount', { count: completedBooks })}
           </div>
         </div>
@@ -142,12 +163,24 @@
         <Dropdown options={sortDropdownOptions} bind:value={shelf.activeSort} class="min-w-[130px]">
           {#snippet trigger()}
             <span class="text-sm text-(--color-primary)">{activeSortLabel}</span>
-            <svg class="ml-1 h-4 w-4 text-(--color-text-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            <svg
+              class="ml-1 h-4 w-4 text-(--color-text-muted)"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+              />
             </svg>
           {/snippet}
         </Dropdown>
-        <fieldset class="inline-flex rounded-2xl border-(--color-border) bg-(--color-surface-subtle) p-1 border-0">
+        <fieldset
+          class="inline-flex rounded-2xl border-(--color-border) bg-(--color-surface-subtle) p-1 border-0"
+        >
           <legend class="sr-only">{t('shelf.viewToggleAria')}</legend>
           <button
             type="button"
@@ -202,5 +235,10 @@
 
   <ShelfDownloadsSection {t} onDownloaded={handleDownloaded} />
 
-  <Toast type="success" message={t('shelf.downloadSuccess')} bind:visible={downloadSuccessVisible} onDismiss={() => (downloadSuccessVisible = false)} />
+  <Toast
+    type="success"
+    message={t('shelf.downloadSuccess')}
+    bind:visible={downloadSuccessVisible}
+    onDismiss={() => (downloadSuccessVisible = false)}
+  />
 </section>

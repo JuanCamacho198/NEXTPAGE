@@ -1,6 +1,11 @@
 import { invoke } from '$lib/shared/api/invokeWrapper';
 import { getSessionClient } from '$lib/services/supabase';
-import { renameDevice as renameDeviceSvc, listDevices, isDeviceStale, removeDevice } from '$lib/services/devices';
+import {
+  renameDevice as renameDeviceSvc,
+  listDevices,
+  isDeviceStale,
+  removeDevice,
+} from '$lib/services/devices';
 import type {
   ActivityPoint,
   AppSettingDto,
@@ -903,7 +908,13 @@ export const listTagsForHighlight = async (highlightId: string): Promise<TagDto[
   }
 };
 
-export const addDictionaryWord = async (payload: { word: string; tags?: string[]; isFavorite?: boolean; srsStage?: number; userId?: string }): Promise<DictionaryWordDto> => {
+export const addDictionaryWord = async (payload: {
+  word: string;
+  tags?: string[];
+  isFavorite?: boolean;
+  srsStage?: number;
+  userId?: string;
+}): Promise<DictionaryWordDto> => {
   try {
     return await invoke<DictionaryWordDto>('addDictionaryWord', { payload });
   } catch (error) {
@@ -927,7 +938,13 @@ export const removeDictionaryWord = async (id: string): Promise<void> => {
   }
 };
 
-export const updateDictionaryWord = async (payload: { id: string; word?: string; tags?: string[]; isFavorite?: boolean; srsStage?: number }): Promise<DictionaryWordDto> => {
+export const updateDictionaryWord = async (payload: {
+  id: string;
+  word?: string;
+  tags?: string[];
+  isFavorite?: boolean;
+  srsStage?: number;
+}): Promise<DictionaryWordDto> => {
   try {
     return await invoke<DictionaryWordDto>('updateDictionaryWord', { payload });
   } catch (error) {
@@ -935,7 +952,12 @@ export const updateDictionaryWord = async (payload: { id: string; word?: string;
   }
 };
 
-export const searchDictionaryWords = async (payload: { query: string; limit?: number; fuzzy?: boolean; userId?: string }): Promise<DictionaryWordDto[]> => {
+export const searchDictionaryWords = async (payload: {
+  query: string;
+  limit?: number;
+  fuzzy?: boolean;
+  userId?: string;
+}): Promise<DictionaryWordDto[]> => {
   try {
     return await invoke<DictionaryWordDto[]>('searchDictionaryWords', { payload });
   } catch (error) {
@@ -951,9 +973,16 @@ export const exportDictionary = async (format: 'json' | 'csv'): Promise<string> 
   }
 };
 
-export const importDictionary = async (payload: string, format: 'json' | 'csv', userId?: string | null): Promise<{ imported: number; errors: { row: number; reason: string }[] }> => {
+export const importDictionary = async (
+  payload: string,
+  format: 'json' | 'csv',
+  userId?: string | null,
+): Promise<{ imported: number; errors: { row: number; reason: string }[] }> => {
   try {
-    return await invoke<{ imported: number; errors: { row: number; reason: string }[] }>('importDictionary', { payload, format, userId });
+    return await invoke<{ imported: number; errors: { row: number; reason: string }[] }>(
+      'importDictionary',
+      { payload, format, userId },
+    );
   } catch (error) {
     return attachCommandError(error);
   }
@@ -1183,7 +1212,13 @@ export type SyncHealthDto = {
 export const getSyncHealth = async (): Promise<SyncHealthDto> => {
   // PR3 health is client-derived via SyncService; lazy import without await-import literal to satisfy lint
   try {
-    const mod = (await (Function('s', 'return import(s)') as (s: string) => Promise<{ SyncService: { getSyncHealth: () => Promise<SyncHealthDto> } }>)('$lib/shared/services/SyncService')) as { SyncService: { getSyncHealth: () => Promise<SyncHealthDto> } };
+    const mod = (await (
+      Function('s', 'return import(s)') as (
+        s: string,
+      ) => Promise<{ SyncService: { getSyncHealth: () => Promise<SyncHealthDto> } }>
+    )('$lib/shared/services/SyncService')) as {
+      SyncService: { getSyncHealth: () => Promise<SyncHealthDto> };
+    };
     return await mod.SyncService.getSyncHealth();
   } catch (error) {
     return attachCommandError(error);

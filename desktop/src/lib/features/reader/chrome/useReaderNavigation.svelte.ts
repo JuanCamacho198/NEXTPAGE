@@ -33,10 +33,22 @@ export function createReaderNavigation(deps: ReaderNavigationDeps) {
     const fmtRaw = (book as unknown as { format?: unknown })?.format;
     const fmt = typeof fmtRaw === 'string' ? String(fmtRaw).toLowerCase() : '';
     const kind = fmt === 'epub' ? 'epub' : 'pdf';
-    const pdf = refs.pdf as unknown as { navigateToPage?: (n: number) => Promise<boolean>; getCurrentPage?: () => number; getTotalPages?: () => number } | null;
-    const epub = refs.epub as unknown as { goToPrev?: () => void; goToNext?: () => void; handleGoToPage?: (n: number) => Promise<boolean>; getCurrentPage?: () => number; getTotalForHeader?: () => number } | null;
+    const pdf = refs.pdf as unknown as {
+      navigateToPage?: (n: number) => Promise<boolean>;
+      getCurrentPage?: () => number;
+      getTotalPages?: () => number;
+    } | null;
+    const epub = refs.epub as unknown as {
+      goToPrev?: () => void;
+      goToNext?: () => void;
+      handleGoToPage?: (n: number) => Promise<boolean>;
+      getCurrentPage?: () => number;
+      getTotalForHeader?: () => number;
+    } | null;
     return {
-      get kind() { return kind as ViewerHandle['kind']; },
+      get kind() {
+        return kind as ViewerHandle['kind'];
+      },
       navigatePrev() {
         if (kind === 'pdf') {
           if (!pdf?.navigateToPage) return false;
@@ -64,11 +76,11 @@ export function createReaderNavigation(deps: ReaderNavigationDeps) {
       },
       setScaleOrZoom(_pct: number) {},
       getCurrentPage() {
-        if (kind === 'pdf') return (pdf?.getCurrentPage?.() ?? (currentPdfPage || 1));
-        return (epub?.getCurrentPage?.() ?? (currentEpubChapter + 1 || 1));
+        if (kind === 'pdf') return pdf?.getCurrentPage?.() ?? (currentPdfPage || 1);
+        return epub?.getCurrentPage?.() ?? (currentEpubChapter + 1 || 1);
       },
       getTotalForHeader() {
-        if (kind === 'pdf') return (pdf?.getTotalPages?.() ?? (totalPdfPages || 0));
+        if (kind === 'pdf') return pdf?.getTotalPages?.() ?? (totalPdfPages || 0);
         return ((epub?.getTotalForHeader?.() ?? tocEntries.length) || 0) as number;
       },
     } as ViewerHandle;

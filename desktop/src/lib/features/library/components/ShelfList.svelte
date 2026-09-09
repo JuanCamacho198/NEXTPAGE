@@ -2,7 +2,12 @@
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import SafeCover from './SafeCover.svelte';
   import ShelfBookActions from './ShelfBookActions.svelte';
-  import { formatPercent, getSafeProgressPercentage, getStateLabel, type ShelfBook } from '$lib/features/library/utils';
+  import {
+    formatPercent,
+    getSafeProgressPercentage,
+    getStateLabel,
+    type ShelfBook,
+  } from '$lib/features/library/utils';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -37,7 +42,9 @@
         class="flex flex-col gap-4 rounded-(--radius-xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-4 shadow-(--shadow-panel) md:flex-row md:items-center"
       >
         <div class="flex items-start gap-4 md:min-w-0 md:flex-1">
-          <div class="h-28 w-20 shrink-0 overflow-hidden rounded-[18px] bg-(--color-surface-subtle)">
+          <div
+            class="h-28 w-20 shrink-0 overflow-hidden rounded-[18px] bg-(--color-surface-subtle)"
+          >
             <SafeCover
               path={book.coverPath ?? ''}
               alt={`${t('library.cover')} ${book.title}`}
@@ -76,29 +83,53 @@
               aria-valuemax="100"
             >
               <div class="w-full h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
-                <div class="h-full rounded-full bg-[var(--gradient-accent-h)]" style={`width: ${formatPercent(book)};`}></div>
+                <div
+                  class="h-full rounded-full bg-[var(--gradient-accent-h)]"
+                  style={`width: ${formatPercent(book)};`}
+                ></div>
               </div>
-              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
+              <div
+                class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-(--color-text-muted)"
+              >
                 <span>{t('shelf.percentRead', { percent: formatPercent(book) })}</span>
                 <span>{t('shelf.minutesLogged', { minutes: book.minutesRead })}</span>
-                <span>{t('shelf.pageProgress', { current: book.currentPage, total: book.totalPages || '-' })}</span>
+                <span
+                  >{t('shelf.pageProgress', {
+                    current: book.currentPage,
+                    total: book.totalPages || '-',
+                  })}</span
+                >
               </div>
             </div>
           </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 md:justify-end">
-          <Button variant="secondary" size="sm" class="rounded-xl whitespace-nowrap" onclick={() => onOpenBook?.(book)}
-            >{t('shelf.read')}</Button
+          <Button
+            variant="secondary"
+            size="sm"
+            class="rounded-xl whitespace-nowrap"
+            onclick={() => onOpenBook?.(book)}>{t('shelf.read')}</Button
           >
           <Button
             size="sm"
             class="rounded-xl bg-(--gradient-accent) !text-[#07111d] whitespace-nowrap"
             onclick={() => onContinueReading?.(book)}
           >
-            {getSafeProgressPercentage(book) > 0 ? t('shelf.continueReading') : t('shelf.startReading')}
+            {getSafeProgressPercentage(book) > 0
+              ? t('shelf.continueReading')
+              : t('shelf.startReading')}
           </Button>
-          <ShelfBookActions {book} {t} {onOpenBook} {onToggleFavorite} {onStatusChange} {onViewDetails} {onRemoveBook} variant="list" />
+          <ShelfBookActions
+            {book}
+            {t}
+            {onOpenBook}
+            {onToggleFavorite}
+            {onStatusChange}
+            {onViewDetails}
+            {onRemoveBook}
+            variant="list"
+          />
         </div>
       </article>
     </li>
@@ -110,8 +141,16 @@
       class="flex min-h-[120px] items-center justify-center gap-4 rounded-(--radius-xl) border border-dashed border-(--color-border-strong) bg-(--color-surface-subtle) p-6 text-left text-(--color-text-muted) transition hover:border-[rgba(78,140,255,0.5)] hover:text-(--color-primary)"
       onclick={onImportBook}
     >
-      <div class="flex h-14 w-14 items-center justify-center rounded-full border border-(--color-border) bg-(--color-surface-subtle)">
-        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <div
+        class="flex h-14 w-14 items-center justify-center rounded-full border border-(--color-border) bg-(--color-surface-subtle)"
+      >
+        <svg
+          class="h-5 w-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+        >
           <path d="M12 5V19"></path>
           <path d="M5 12H19"></path>
         </svg>

@@ -14,7 +14,8 @@
     onUninstall: (id: string) => void;
   };
 
-  let { t, url, installed, isBusy, onUrlChange, onInstall, onToggle, onUninstall }: Props = $props();
+  let { t, url, installed, isBusy, onUrlChange, onInstall, onToggle, onUninstall }: Props =
+    $props();
 </script>
 
 <Panel title={t('settings.addons.title')} subtitle={t('settings.addons.description')}>
@@ -29,12 +30,7 @@
         value={url}
         oninput={(e) => onUrlChange((e.currentTarget as HTMLInputElement).value)}
       />
-      <button
-        type="button"
-        class="rounded px-3 py-1"
-        disabled={isBusy}
-        onclick={() => onInstall()}
-      >
+      <button type="button" class="rounded px-3 py-1" disabled={isBusy} onclick={() => onInstall()}>
         {isBusy ? t('settings.addons.installing') : t('settings.addons.install')}
       </button>
     </div>
@@ -51,7 +47,11 @@
             <p class="truncate text-xs opacity-60">{addon.url}</p>
           </div>
           <div class="flex shrink-0 items-center gap-2">
-            <button type="button" class="text-sm" onclick={() => onToggle(addon.id, !addon.enabled)}>
+            <button
+              type="button"
+              class="text-sm"
+              onclick={() => onToggle(addon.id, !addon.enabled)}
+            >
               {addon.enabled ? t('settings.addons.disable') : t('settings.addons.enable')}
             </button>
             <button type="button" class="text-sm" onclick={() => onUninstall(addon.id)}>

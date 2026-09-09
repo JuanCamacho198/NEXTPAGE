@@ -2,7 +2,12 @@
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import SafeCover from './SafeCover.svelte';
   import ShelfBookActions from './ShelfBookActions.svelte';
-  import { formatPercent, getSafeProgressPercentage, getStateLabel, type ShelfBook } from '$lib/features/library/utils';
+  import {
+    formatPercent,
+    getSafeProgressPercentage,
+    getStateLabel,
+    type ShelfBook,
+  } from '$lib/features/library/utils';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -42,11 +47,26 @@
           >
             {getStateLabel(book)}
           </span>
-          <ShelfBookActions {book} {t} {onOpenBook} {onToggleFavorite} {onStatusChange} {onViewDetails} {onRemoveBook} variant="grid" />
+          <ShelfBookActions
+            {book}
+            {t}
+            {onOpenBook}
+            {onToggleFavorite}
+            {onStatusChange}
+            {onViewDetails}
+            {onRemoveBook}
+            variant="grid"
+          />
         </div>
 
-        <div class="relative mb-4 aspect-[0.72] overflow-hidden rounded-[20px] bg-(--color-surface-subtle)">
-          <SafeCover path={book.coverPath ?? ''} alt={`Portada de ${book.title}`} className="h-full w-full object-cover">
+        <div
+          class="relative mb-4 aspect-[0.72] overflow-hidden rounded-[20px] bg-(--color-surface-subtle)"
+        >
+          <SafeCover
+            path={book.coverPath ?? ''}
+            alt={`Portada de ${book.title}`}
+            className="h-full w-full object-cover"
+          >
             {#snippet fallback()}
               <div
                 class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] px-6 text-center text-xs uppercase tracking-[0.18em] text-(--color-primary)"
@@ -74,7 +94,10 @@
           aria-valuemax="100"
         >
           <div class="w-full h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
-            <div class="h-full rounded-full bg-[var(--gradient-accent-h)]" style={`width: ${formatPercent(book)};`}></div>
+            <div
+              class="h-full rounded-full bg-[var(--gradient-accent-h)]"
+              style={`width: ${formatPercent(book)};`}
+            ></div>
           </div>
           <div class="flex items-center justify-between text-xs text-(--color-text-muted)">
             <span>{t('shelf.percentRead', { percent: formatPercent(book) })}</span>
@@ -83,7 +106,12 @@
         </div>
 
         <div class="mt-auto grid grid-cols-2 gap-2 pt-4">
-          <Button variant="secondary" size="sm" class="rounded-xl whitespace-nowrap" onclick={() => onOpenBook?.(book)}>
+          <Button
+            variant="secondary"
+            size="sm"
+            class="rounded-xl whitespace-nowrap"
+            onclick={() => onOpenBook?.(book)}
+          >
             {t('shelf.openBook')}
           </Button>
           <Button
@@ -104,8 +132,16 @@
       class="flex min-h-[360px] flex-col items-center justify-center gap-4 rounded-(--radius-xl) border border-dashed border-(--color-border-strong) bg-(--color-surface-subtle) p-6 text-center text-(--color-text-muted) transition hover:border-[rgba(78,140,255,0.5)] hover:text-(--color-primary)"
       onclick={onImportBook}
     >
-      <div class="flex h-16 w-16 items-center justify-center rounded-full border border-(--color-border) bg-(--color-surface-subtle)">
-        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <div
+        class="flex h-16 w-16 items-center justify-center rounded-full border border-(--color-border) bg-(--color-surface-subtle)"
+      >
+        <svg
+          class="h-6 w-6"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+        >
           <path d="M12 5V19"></path>
           <path d="M5 12H19"></path>
         </svg>

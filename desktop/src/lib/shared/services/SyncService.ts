@@ -38,8 +38,12 @@ export class SyncService {
   private static libraryPort: LibraryPort = new TauriLibraryAdapter();
   private static viewerPort: ViewerPort = new TauriViewerAdapter();
 
-  static setLibraryPort(port: LibraryPort): void { this.libraryPort = port; }
-  static setViewerPort(port: ViewerPort): void { this.viewerPort = port; }
+  static setLibraryPort(port: LibraryPort): void {
+    this.libraryPort = port;
+  }
+  static setViewerPort(port: ViewerPort): void {
+    this.viewerPort = port;
+  }
 
   /** Hot SoT is Supabase only (PR2). Drive hot push/pull removed; cold backup is separate. */
   private static readingProgressSync: ReadingProgressSyncMode = 'supabase';
@@ -269,7 +273,9 @@ export class SyncService {
         if (operation === 'DELETE') {
           await dictSync.delete(entityId);
         } else {
-          const normalized = String(payload.normalizedWord ?? payload.normalized_word ?? '').toLowerCase().trim();
+          const normalized = String(payload.normalizedWord ?? payload.normalized_word ?? '')
+            .toLowerCase()
+            .trim();
           await dictSync.upsert({
             id: entityId,
             userId,
@@ -279,7 +285,8 @@ export class SyncService {
             isFavorite: Boolean(payload.isFavorite ?? payload.is_favorite ?? false),
             srsStage: Number(payload.srsStage ?? payload.srs_stage ?? 0),
             updatedAt: String(payload.updatedAt ?? payload.updated_at ?? new Date().toISOString()),
-            deletedAt: (payload.deletedAt as string | null) ?? (payload.deleted_at as string | null) ?? null,
+            deletedAt:
+              (payload.deletedAt as string | null) ?? (payload.deleted_at as string | null) ?? null,
             createdAt: String(payload.createdAt ?? payload.created_at ?? new Date().toISOString()),
           });
         }
@@ -446,7 +453,12 @@ export class SyncService {
         };
         if (relevant.length > 0) {
           // Overall = worst status: error > closed > connecting > connected
-          const rank: Record<RealtimeStatus, number> = { error: 3, closed: 2, connecting: 1, connected: 0 };
+          const rank: Record<RealtimeStatus, number> = {
+            error: 3,
+            closed: 2,
+            connecting: 1,
+            connected: 0,
+          };
           let worst: RealtimeStatus = 'connected';
           for (const ch of relevant) {
             const st = mapState(ch.state ?? '');
@@ -464,7 +476,9 @@ export class SyncService {
       realtimeStatus = 'closed';
     }
 
-    const nextRetryAt = this.retryTimer ? new Date(Date.now() + 1000 * Math.pow(2, this.retryAttempt)).toISOString() : null;
+    const nextRetryAt = this.retryTimer
+      ? new Date(Date.now() + 1000 * Math.pow(2, this.retryAttempt)).toISOString()
+      : null;
 
     return {
       lastSyncAt: this.lastSyncAt,

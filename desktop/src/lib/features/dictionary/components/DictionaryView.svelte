@@ -50,7 +50,10 @@
   async function handleAdd(): Promise<void> {
     const trimmed = newWord.trim();
     if (!trimmed) return;
-    const tags = newTags.split(',').map((s) => s.trim()).filter(Boolean);
+    const tags = newTags
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     isAdding = true;
     errorMsg = null;
     duplicateWord = null;
@@ -94,7 +97,10 @@
   async function handleEditSave(id: string): Promise<void> {
     const trimmed = editingValue.trim();
     if (!trimmed) return;
-    const tags = editingTags.split(',').map((s) => s.trim()).filter(Boolean);
+    const tags = editingTags
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     try {
       await dictionaryState.update(id, { word: trimmed, tags });
       editingId = null;
@@ -143,7 +149,8 @@
     try {
       const res = await dictionaryState.importData(text, format);
       importResult = `Imported ${res.imported}, errors ${res.errors.length}`;
-      if (res.errors.length) importError = res.errors.map((x) => `row ${x.row}: ${x.reason}`).join('; ');
+      if (res.errors.length)
+        importError = res.errors.map((x) => `row ${x.row}: ${x.reason}`).join('; ');
     } catch (err) {
       importError = err instanceof Error ? err.message : 'Import failed';
     } finally {
@@ -163,13 +170,19 @@
 
 <section class="space-y-5 max-w-3xl">
   <header class="flex flex-col gap-1">
-    <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">{t('dictionary.title')}</h1>
+    <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">
+      {t('dictionary.title')}
+    </h1>
     <p class="text-sm text-(--color-text-muted)">{t('dictionary.subtitle')}</p>
   </header>
 
   <div class="flex gap-2">
     <div class="relative flex-1 flex items-center">
-      <Icon name="search" size="sm" class="pointer-events-none absolute left-3 text-(--color-text-muted)" />
+      <Icon
+        name="search"
+        size="sm"
+        class="pointer-events-none absolute left-3 text-(--color-text-muted)"
+      />
       <input
         type="text"
         class="w-full h-11 pl-10 pr-3 rounded-xl border border-(--color-border) bg-(--color-surface) text-(--color-primary) text-sm placeholder:text-(--color-text-muted) focus:outline-none focus:border-(--color-accent-blue) focus:shadow-[0_0_0_3px_rgba(73,212,255,0.15)]"
@@ -179,10 +192,21 @@
     </div>
     <label class="flex items-center gap-2 text-xs text-(--color-text-muted) cursor-pointer">
       <input type="file" accept=".json,.csv" class="hidden" onchange={handleImportFile} />
-      <span class="px-3 py-2 rounded-xl border border-(--color-border) bg-(--color-surface) hover:bg-(--color-panel-accent) cursor-pointer">Import</span>
+      <span
+        class="px-3 py-2 rounded-xl border border-(--color-border) bg-(--color-surface) hover:bg-(--color-panel-accent) cursor-pointer"
+        >Import</span
+      >
     </label>
-    <button type="button" class="px-3 py-2 rounded-xl border border-(--color-border) bg-(--color-surface) text-xs cursor-pointer hover:bg-(--color-panel-accent)" onclick={() => void handleExport('json')}>Export JSON</button>
-    <button type="button" class="px-3 py-2 rounded-xl border border-(--color-border) bg-(--color-surface) text-xs cursor-pointer hover:bg-(--color-panel-accent)" onclick={() => void handleExport('csv')}>CSV</button>
+    <button
+      type="button"
+      class="px-3 py-2 rounded-xl border border-(--color-border) bg-(--color-surface) text-xs cursor-pointer hover:bg-(--color-panel-accent)"
+      onclick={() => void handleExport('json')}>Export JSON</button
+    >
+    <button
+      type="button"
+      class="px-3 py-2 rounded-xl border border-(--color-border) bg-(--color-surface) text-xs cursor-pointer hover:bg-(--color-panel-accent)"
+      onclick={() => void handleExport('csv')}>CSV</button
+    >
   </div>
   {#if importError}<p class="text-xs text-amber-600">{importError}</p>{/if}
   {#if importResult}<p class="text-xs text-green-600">{importResult}</p>{/if}
@@ -219,19 +243,29 @@
   </div>
 
   {#if dictionaryState.isLoading}
-    <div class="rounded-xl border border-(--color-border) bg-(--color-bg-panel) p-8 text-center text-sm text-(--color-text-muted)">{t('stats.loading')}</div>
+    <div
+      class="rounded-xl border border-(--color-border) bg-(--color-bg-panel) p-8 text-center text-sm text-(--color-text-muted)"
+    >
+      {t('stats.loading')}
+    </div>
   {:else if filteredWords.length === 0}
     <div class="flex min-h-[30vh] items-center justify-center">
       <EmptyState
         icon="search"
-        title={dictionaryState.words.length === 0 ? t('dictionary.emptyTitle') : t('home.highlightsEmptyTitle')}
-        description={dictionaryState.words.length === 0 ? t('dictionary.emptyDescription') : t('home.highlightsEmptyDescription')}
+        title={dictionaryState.words.length === 0
+          ? t('dictionary.emptyTitle')
+          : t('home.highlightsEmptyTitle')}
+        description={dictionaryState.words.length === 0
+          ? t('dictionary.emptyDescription')
+          : t('home.highlightsEmptyDescription')}
       />
     </div>
   {:else}
     <ul class="list-none p-0 m-0 flex flex-col gap-2">
       {#each filteredWords as w (w.id)}
-        <li class="flex items-center justify-between gap-3 rounded-xl border border-(--color-border) bg-(--color-surface) px-4 py-3 hover:border-(--color-border-strong) transition-colors">
+        <li
+          class="flex items-center justify-between gap-3 rounded-xl border border-(--color-border) bg-(--color-surface) px-4 py-3 hover:border-(--color-border-strong) transition-colors"
+        >
           <div class="min-w-0 flex-1">
             {#if editingId === w.id}
               <div class="flex gap-2 items-center">
@@ -241,17 +275,22 @@
                   bind:value={editingValue}
                   onkeydown={(e) => handleEditKeydown(e, w.id)}
                 />
-                <input type="text" class="w-24 h-8 px-2 rounded-lg border border-(--color-border) text-xs" bind:value={editingTags} placeholder="tags" />
+                <input
+                  type="text"
+                  class="w-24 h-8 px-2 rounded-lg border border-(--color-border) text-xs"
+                  bind:value={editingTags}
+                  placeholder="tags"
+                />
                 <button
                   type="button"
                   class="px-2 py-1 rounded-lg bg-(--color-accent-blue) text-white text-xs cursor-pointer hover:opacity-90"
-                  onclick={() => void handleEditSave(w.id)}
-                >{t('highlight.save')}</button>
+                  onclick={() => void handleEditSave(w.id)}>{t('highlight.save')}</button
+                >
                 <button
                   type="button"
                   class="px-2 py-1 rounded-lg border border-(--color-border) text-xs text-(--color-text-muted) cursor-pointer hover:bg-(--color-surface-hover,rgba(25,41,62,0.06))"
-                  onclick={cancelEdit}
-                >{t('highlight.cancel')}</button>
+                  onclick={cancelEdit}>{t('highlight.cancel')}</button
+                >
               </div>
             {:else}
               <div class="flex items-center gap-2">
@@ -259,12 +298,22 @@
                 {#if w.isFavorite}<span class="text-amber-500 text-xs">★</span>{/if}
               </div>
               <div class="flex gap-1 mt-1 flex-wrap">
-                {#each (w.tags ?? []) as tag}
-                  <span class="px-1.5 py-0.5 rounded-full bg-(--color-panel-accent) text-[10px] text-(--color-primary) border border-(--color-border)">{tag}</span>
+                {#each w.tags ?? [] as tag}
+                  <span
+                    class="px-1.5 py-0.5 rounded-full bg-(--color-panel-accent) text-[10px] text-(--color-primary) border border-(--color-border)"
+                    >{tag}</span
+                  >
                 {/each}
-                {#if w.srsStage != null && w.srsStage > 0}<span class="px-1.5 py-0.5 rounded-full bg-blue-50 text-[10px] text-blue-600">SRS {w.srsStage}</span>{/if}
+                {#if w.srsStage != null && w.srsStage > 0}<span
+                    class="px-1.5 py-0.5 rounded-full bg-blue-50 text-[10px] text-blue-600"
+                    >SRS {w.srsStage}</span
+                  >{/if}
               </div>
-              <p class="text-xs text-(--color-text-muted)">{w.updatedAt ? new Date(w.updatedAt).toLocaleDateString() : new Date(w.createdAt).toLocaleDateString()}</p>
+              <p class="text-xs text-(--color-text-muted)">
+                {w.updatedAt
+                  ? new Date(w.updatedAt).toLocaleDateString()
+                  : new Date(w.createdAt).toLocaleDateString()}
+              </p>
             {/if}
           </div>
           {#if editingId !== w.id}

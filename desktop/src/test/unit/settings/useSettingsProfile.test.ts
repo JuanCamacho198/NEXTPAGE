@@ -46,8 +46,20 @@ describe('useSettingsProfile', () => {
   it('destroy and stopHeartbeat do not throw', () => {
     const destroy = vi.fn();
     const stopHeartbeat = vi.fn();
-    const createDevicesState = () => ({ destroy, stopHeartbeat, loadDevices: vi.fn(), remove: vi.fn(), devices: [], error: null, isLoading: false } as never);
-    const p = createSettingsProfile({ createDevicesState: createDevicesState as never, t: (k) => k as never });
+    const createDevicesState = () =>
+      ({
+        destroy,
+        stopHeartbeat,
+        loadDevices: vi.fn(),
+        remove: vi.fn(),
+        devices: [],
+        error: null,
+        isLoading: false,
+      }) as never;
+    const p = createSettingsProfile({
+      createDevicesState: createDevicesState as never,
+      t: (k) => k as never,
+    });
     expect(() => p.destroy()).not.toThrow();
     expect(() => p.stopHeartbeat()).not.toThrow();
   });

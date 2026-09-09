@@ -267,5 +267,4 @@ describe('DiscoverDomainState (PR4 hardening)', () => {
     expect(state.errorCode).toBe('INVALID_PAGE');
     expect(calls.n).toBe(callsAfterLoad);
   });
-
 });

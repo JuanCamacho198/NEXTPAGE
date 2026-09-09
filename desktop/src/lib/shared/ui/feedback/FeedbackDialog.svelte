@@ -48,13 +48,15 @@
 
   let message = $state('');
   let dialogState: DialogState = $state('idle');
-  let context: BookContext = $state(buildBookContext({
-    bookId: 'sample',
-    chapterIndex: 0,
-    page: FEEDBACK_SAMPLE_BOOK.page,
-    title: FEEDBACK_SAMPLE_BOOK.title,
-    chapterLabel: FEEDBACK_SAMPLE_BOOK.chapter,
-  }));
+  let context: BookContext = $state(
+    buildBookContext({
+      bookId: 'sample',
+      chapterIndex: 0,
+      page: FEEDBACK_SAMPLE_BOOK.page,
+      title: FEEDBACK_SAMPLE_BOOK.title,
+      chapterLabel: FEEDBACK_SAMPLE_BOOK.chapter,
+    }),
+  );
 
   $effect(() => {
     if (!open) return;
@@ -164,9 +166,7 @@
             </svg>
           </div>
           <div>
-            <p
-              class="text-[10px] font-bold uppercase tracking-[0.15em] text-(--color-error)"
-            >
+            <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-(--color-error)">
               {FEEDBACK_EYEBROW}
             </p>
             <h2 id="feedback-title" class="text-lg font-bold">{FEEDBACK_TITLE}</h2>
@@ -178,7 +178,13 @@
           aria-label="Cerrar"
           onclick={handleClose}
         >
-          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            class="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
         </button>

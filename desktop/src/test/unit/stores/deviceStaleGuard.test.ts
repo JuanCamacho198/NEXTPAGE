@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { STALE_DAYS, isStaleIso, isRowStale, isViewModelStale } from '$lib/shared/stores/deviceStaleGuard';
+import {
+  STALE_DAYS,
+  isStaleIso,
+  isRowStale,
+  isViewModelStale,
+} from '$lib/shared/stores/deviceStaleGuard';
 import type { DeviceRow, DeviceViewModel } from '$lib/services/devices';
 
 describe('deviceStaleGuard — 30d pure', () => {
@@ -18,7 +23,9 @@ describe('deviceStaleGuard — 30d pure', () => {
   });
 
   it('isRowStale delegates to isDeviceStale with 30d', () => {
-    const row = { last_active: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString() } as DeviceRow;
+    const row = {
+      last_active: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(),
+    } as DeviceRow;
     expect(isRowStale(row)).toBe(true);
     const fresh = { last_active: new Date().toISOString() } as DeviceRow;
     expect(isRowStale(fresh)).toBe(false);

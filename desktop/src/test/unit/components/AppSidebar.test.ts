@@ -15,13 +15,15 @@ function fakeT(key: string): string {
   return labels[key] ?? key;
 }
 
-function makeNavItems(overrides: Partial<{
-  onNavigateHome: () => void;
-  onNavigateLibrary: () => void;
-  onNavigateStats: () => void;
-  onNavigateHighlights: () => void;
-  onNavigateSettings: () => void;
-}> = {}) {
+function makeNavItems(
+  overrides: Partial<{
+    onNavigateHome: () => void;
+    onNavigateLibrary: () => void;
+    onNavigateStats: () => void;
+    onNavigateHighlights: () => void;
+    onNavigateSettings: () => void;
+  }> = {},
+) {
   return getNavItems({
     onNavigateHome: vi.fn(),
     onNavigateLibrary: vi.fn(),

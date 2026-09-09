@@ -7,7 +7,9 @@
   let locale = $state(i18n?.DEFAULT_LOCALE ?? 'es');
   $effect(() => {
     if (!i18n?.locale) return;
-    const unsub = i18n.locale.subscribe((l) => { locale = l; });
+    const unsub = i18n.locale.subscribe((l) => {
+      locale = l;
+    });
     return () => unsub();
   });
   const tFn = (key: MessageKey): string => i18n?.t?.(locale, key) ?? key;
@@ -77,7 +79,12 @@
     >
       <div class="flex items-start gap-3">
         <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={iconPaths[type]} />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d={iconPaths[type]}
+          />
         </svg>
         <div class="flex-1">
           <p class="text-sm font-medium">{message}</p>

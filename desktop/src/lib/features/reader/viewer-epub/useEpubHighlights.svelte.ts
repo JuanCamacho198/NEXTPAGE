@@ -192,7 +192,9 @@ export function createEpubHighlights(deps: EpubHighlightsDeps) {
         if (retries++ < MAX_RETRIES) {
           timer = setTimeout(attemptRender, RETRY_INTERVAL);
           if (retries === 1) {
-            console.warn('epub-hl: render deferred (overlay not mounted on iframe window) - retrying');
+            console.warn(
+              'epub-hl: render deferred (overlay not mounted on iframe window) - retrying',
+            );
           }
         } else {
           console.warn(
@@ -215,7 +217,11 @@ export function createEpubHighlights(deps: EpubHighlightsDeps) {
         chapterHref,
       );
       try {
-        win.__epubHighlightOverlay.render(highlightsSnapshot, chapterHref, deps.getCurrentSpineIndex());
+        win.__epubHighlightOverlay.render(
+          highlightsSnapshot,
+          chapterHref,
+          deps.getCurrentSpineIndex(),
+        );
         lastHighlightRenderKey = renderKey;
       } catch (err) {
         console.warn('epub-hl: render failed', err);

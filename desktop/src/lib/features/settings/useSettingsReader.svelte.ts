@@ -40,7 +40,9 @@ export function createSettingsReader(deps: ReaderDeps = {}): {
 } {
   const settingsPort: SettingsPort = deps.settingsPort ?? new TauriSettingsAdapter();
   const getReaderSettingsFn = deps.getReaderSettings ?? (() => settingsPort.getReaderSettings());
-  const upsertReaderSettingsFn = deps.upsertReaderSettings ?? ((s: Partial<ReaderSettings>) => settingsPort.upsertReaderSettings(s));
+  const upsertReaderSettingsFn =
+    deps.upsertReaderSettings ??
+    ((s: Partial<ReaderSettings>) => settingsPort.upsertReaderSettings(s));
 
   let readerThemeMode = $state<ReaderThemeMode>('paper');
   let readerBrightness = $state(100);
@@ -158,22 +160,54 @@ export function createSettingsReader(deps: ReaderDeps = {}): {
   }
 
   return {
-    get readerThemeMode() { return readerThemeMode; },
-    set readerThemeMode(v: ReaderThemeMode) { readerThemeMode = v; },
-    get readerBrightness() { return readerBrightness; },
-    set readerBrightness(v: number) { readerBrightness = clampInteger(v, 50, 150); },
-    get readerContrast() { return readerContrast; },
-    set readerContrast(v: number) { readerContrast = clampInteger(v, 50, 150); },
-    get readerEpubFontSize() { return readerEpubFontSize; },
-    set readerEpubFontSize(v: number) { readerEpubFontSize = clampInteger(v, 80, 200); },
-    get readerEpubFontFamily() { return readerEpubFontFamily; },
-    set readerEpubFontFamily(v: string) { readerEpubFontFamily = normalizeFontFamily(v); },
-    get isSavingSettings() { return isSavingSettings; },
-    set isSavingSettings(v: boolean) { isSavingSettings = v; },
-    get settingsError() { return settingsError; },
-    set settingsError(v: string | null) { settingsError = v; },
-    get isDirty() { return isDirty; },
-    get isSaving() { return isSaving; },
+    get readerThemeMode() {
+      return readerThemeMode;
+    },
+    set readerThemeMode(v: ReaderThemeMode) {
+      readerThemeMode = v;
+    },
+    get readerBrightness() {
+      return readerBrightness;
+    },
+    set readerBrightness(v: number) {
+      readerBrightness = clampInteger(v, 50, 150);
+    },
+    get readerContrast() {
+      return readerContrast;
+    },
+    set readerContrast(v: number) {
+      readerContrast = clampInteger(v, 50, 150);
+    },
+    get readerEpubFontSize() {
+      return readerEpubFontSize;
+    },
+    set readerEpubFontSize(v: number) {
+      readerEpubFontSize = clampInteger(v, 80, 200);
+    },
+    get readerEpubFontFamily() {
+      return readerEpubFontFamily;
+    },
+    set readerEpubFontFamily(v: string) {
+      readerEpubFontFamily = normalizeFontFamily(v);
+    },
+    get isSavingSettings() {
+      return isSavingSettings;
+    },
+    set isSavingSettings(v: boolean) {
+      isSavingSettings = v;
+    },
+    get settingsError() {
+      return settingsError;
+    },
+    set settingsError(v: string | null) {
+      settingsError = v;
+    },
+    get isDirty() {
+      return isDirty;
+    },
+    get isSaving() {
+      return isSaving;
+    },
     handleReaderThemeModeChange,
     handleReaderBrightnessChange,
     handleReaderContrastChange,

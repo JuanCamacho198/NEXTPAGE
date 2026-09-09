@@ -212,12 +212,12 @@ describe('CompositeCatalogProvider', () => {
       }),
     );
     return {
-          provider: new CompositeCatalogProvider(
-            [new GutendexCatalogProvider(g), new OpenLibraryCatalogProvider(o)],
-            { debounceMs: 0 },
-          ),
-          calls,
-        };
+      provider: new CompositeCatalogProvider(
+        [new GutendexCatalogProvider(g), new OpenLibraryCatalogProvider(o)],
+        { debounceMs: 0 },
+      ),
+      calls,
+    };
   }
 
   it('rejects page < 1 before any I/O', async () => {
@@ -244,8 +244,8 @@ describe('CompositeCatalogProvider', () => {
         : { status: 404, body: {} },
     );
     const provider = new CompositeCatalogProvider([
-          new GutendexCatalogProvider(new GutendexDataSource(fetchFn)),
-        ]);
+      new GutendexCatalogProvider(new GutendexDataSource(fetchFn)),
+    ]);
     await expect(provider.getDetails('gutendex:1342')).resolves.toMatchObject({
       id: 'gutendex:1342',
     });

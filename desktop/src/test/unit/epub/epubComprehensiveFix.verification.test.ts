@@ -73,7 +73,13 @@ function historiaToc() {
   return [
     { index: 2, id: 'chapter-0', label: 'HM 1', href: 'OEBPS/Text/HM-colombia-1.html', depth: 0 },
     { index: 3, id: 'chapter-1', label: 'HM 2', href: 'OEBPS/Text/HM-colombia-2.html', depth: 0 },
-    { index: 4, id: 'chapter-2', label: 'HM 3', href: 'OEBPS/Text/HM-colombia-3.html#_idParaDest-5', depth: 0 },
+    {
+      index: 4,
+      id: 'chapter-2',
+      label: 'HM 3',
+      href: 'OEBPS/Text/HM-colombia-3.html#_idParaDest-5',
+      depth: 0,
+    },
     { index: 5, id: 'chapter-3', label: 'HM 4', href: 'OEBPS/Text/HM-colombia-4.html', depth: 0 },
   ] as const;
 }
@@ -411,7 +417,9 @@ describe('4.7 fragment scrolls + cover chain', () => {
     // ExtractFragment pure: Historia fragment preserved
     expect(extractFragment('OEBPS/Text/part0003.html#_idParaDest-5')).toBe('_idParaDest-5');
     expect(extractFragment('OEBPS/Text/part0003.html')).toBeNull();
-    expect(stripFragment('OEBPS/Text/part0003.html#_idParaDest-5')).toBe('OEBPS/Text/part0003.html');
+    expect(stripFragment('OEBPS/Text/part0003.html#_idParaDest-5')).toBe(
+      'OEBPS/Text/part0003.html',
+    );
 
     // JSDOM anchor scroll target exists
     const doc = loadDoc(FIXTURE_HTML);
@@ -447,10 +455,7 @@ describe('4.7 fragment scrolls + cover chain', () => {
     expect(rustSrc).toContain('guide');
     expect(rustSrc).toContain('heuristic');
     // Also verify repository/mod.rs cover chain consumption
-    const repoSrc = readFileSync(
-      join(process.cwd(), 'src-tauri/src/repository/mod.rs'),
-      'utf8',
-    );
+    const repoSrc = readFileSync(join(process.cwd(), 'src-tauri/src/repository/mod.rs'), 'utf8');
     // Should reference cover handling
     expect(repoSrc.length).toBeGreaterThan(0);
   });
@@ -529,4 +534,3 @@ describe('5.2 no pageNumber conflation — highlight overlay uses spine', () => 
     expect(combined).toContain('getSpineHrefs');
   });
 });
-

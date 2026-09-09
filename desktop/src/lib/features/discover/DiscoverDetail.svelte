@@ -19,15 +19,27 @@
 </script>
 
 {#if detailStatus !== 'closed'}
-  <div class="rounded-lg border border-(--color-border) bg-(--color-surface-subtle) p-4" role="dialog" aria-label={t('sidebar.discover')}>
+  <div
+    class="rounded-lg border border-(--color-border) bg-(--color-surface-subtle) p-4"
+    role="dialog"
+    aria-label={t('sidebar.discover')}
+  >
     {#if detailStatus === 'loading'}
       <p class="text-sm text-(--color-text-muted)">{t('discover.loading')}</p>
     {:else if detailStatus === 'notFound'}
       <p class="text-sm text-(--color-text-muted)">{t('discover.detailNotFound')}</p>
-      <button type="button" class="mt-2 text-sm text-(--color-primary) hover:underline" onclick={onDismiss}>{t('discover.dismiss')}</button>
+      <button
+        type="button"
+        class="mt-2 text-sm text-(--color-primary) hover:underline"
+        onclick={onDismiss}>{t('discover.dismiss')}</button
+      >
     {:else if detailStatus === 'error' || detail === null}
       <p class="text-sm text-(--color-text-muted)">{t('discover.errorUpstream')}</p>
-      <button type="button" class="mt-2 text-sm text-(--color-primary) hover:underline" onclick={onDismiss}>{t('discover.dismiss')}</button>
+      <button
+        type="button"
+        class="mt-2 text-sm text-(--color-primary) hover:underline"
+        onclick={onDismiss}>{t('discover.dismiss')}</button
+      >
     {:else}
       <div class="flex items-start justify-between gap-4">
         <div class="min-w-0">
@@ -48,7 +60,11 @@
             </p>
           {/if}
         </div>
-        <button type="button" class="shrink-0 text-sm text-(--color-primary) hover:underline" onclick={onDismiss}>{t('discover.dismiss')}</button>
+        <button
+          type="button"
+          class="shrink-0 text-sm text-(--color-primary) hover:underline"
+          onclick={onDismiss}>{t('discover.dismiss')}</button
+        >
       </div>
       {#if detail.downloadUrl !== null}
         <a

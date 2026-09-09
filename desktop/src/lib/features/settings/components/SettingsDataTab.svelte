@@ -125,10 +125,7 @@
   </section>
 </Panel>
 
-<Panel
-  title={t('settings.data.coldBackup')}
-  subtitle={t('settings.data.coldBackupDescription')}
->
+<Panel title={t('settings.data.coldBackup')} subtitle={t('settings.data.coldBackupDescription')}>
   <div class="flex gap-2">
     <button
       type="button"
@@ -136,7 +133,11 @@
       onclick={onExportColdBackup}
       disabled={isExportingColdBackup || isImportingColdBackup}
     >
-      <span>{isExportingColdBackup ? t('settings.data.exporting') : t('settings.data.coldExport')}</span>
+      <span
+        >{isExportingColdBackup
+          ? t('settings.data.exporting')
+          : t('settings.data.coldExport')}</span
+      >
     </button>
     <button
       type="button"
@@ -144,7 +145,11 @@
       onclick={onImportColdBackup}
       disabled={isExportingColdBackup || isImportingColdBackup}
     >
-      <span>{isImportingColdBackup ? t('settings.data.importing') : t('settings.data.coldImport')}</span>
+      <span
+        >{isImportingColdBackup
+          ? t('settings.data.importing')
+          : t('settings.data.coldImport')}</span
+      >
     </button>
   </div>
 </Panel>

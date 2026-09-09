@@ -89,7 +89,10 @@
     syncHealthState.setScopeEnabled(scope, !enabled);
   }
 
-  async function handleResolve(conflictId: string, keep: 'keep_local' | 'keep_remote'): Promise<void> {
+  async function handleResolve(
+    conflictId: string,
+    keep: 'keep_local' | 'keep_remote',
+  ): Promise<void> {
     try {
       await syncHealthState.resolveConflict(conflictId, keep);
     } catch (e) {
@@ -153,14 +156,20 @@
         <h3 class="text-sm font-semibold text-(--color-primary) flex items-center gap-2">
           {t('settings.sync.syncNow')}
           {#if health}
-            <span class="inline-flex items-center gap-1.5 rounded-full border border-(--color-border) bg-white px-2 py-0.5 text-xs">
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full border border-(--color-border) bg-white px-2 py-0.5 text-xs"
+            >
               <span class="h-2 w-2 rounded-full {realtimeDot(health.realtimeStatus)}"></span>
               {health.realtimeStatus}
             </span>
             {#if health.pendingCount > 0}
-              <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">pending {health.pendingCount}</span>
+              <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+                >pending {health.pendingCount}</span
+              >
             {:else}
-              <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">pending 0</span>
+              <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700"
+                >pending 0</span
+              >
             {/if}
           {/if}
         </h3>
@@ -180,7 +189,9 @@
           {/if}
         </p>
         <p class="text-xs text-(--color-text-muted)">
-          Dictionary {dictionaryState.words.length} words · Storage {storageState.stats ? `${Math.round((storageState.stats.totalBytes / 1024 / 1024) * 10) / 10} MB` : '—'}
+          Dictionary {dictionaryState.words.length} words · Storage {storageState.stats
+            ? `${Math.round((storageState.stats.totalBytes / 1024 / 1024) * 10) / 10} MB`
+            : '—'}
         </p>
       </div>
       <button
@@ -190,7 +201,9 @@
         onclick={() => void handleSyncNow()}
       >
         {#if isSyncing}
-          <span class="h-4 w-4 animate-spin rounded-full border-2 border-(--color-background) border-t-transparent"></span>
+          <span
+            class="h-4 w-4 animate-spin rounded-full border-2 border-(--color-background) border-t-transparent"
+          ></span>
         {/if}
         {isSyncing ? t('settings.notifications.syncingNow') : t('settings.sync.syncNow')}
       </button>
@@ -207,13 +220,17 @@
       <div class="grid grid-cols-2 gap-3 text-xs">
         <div class="rounded-lg bg-zinc-50 p-3">
           <div class="text-(--color-text-muted)">Last sync</div>
-          <div class="font-medium text-(--color-primary)">{health.lastSyncAt ? formatRelative(health.lastSyncAt) : 'never'}</div>
+          <div class="font-medium text-(--color-primary)">
+            {health.lastSyncAt ? formatRelative(health.lastSyncAt) : 'never'}
+          </div>
           <div class="text-(--color-text-muted) truncate">{health.lastSyncAt ?? '—'}</div>
         </div>
         <div class="rounded-lg bg-zinc-50 p-3">
           <div class="text-(--color-text-muted)">Pending</div>
           <div class="font-medium text-(--color-primary)">{health.pendingCount}</div>
-          <div class="text-(--color-text-muted)">outbox depth {health.outboxDepth ?? health.pendingCount}</div>
+          <div class="text-(--color-text-muted)">
+            outbox depth {health.outboxDepth ?? health.pendingCount}
+          </div>
         </div>
         <div class="rounded-lg bg-zinc-50 p-3">
           <div class="text-(--color-text-muted)">Realtime</div>
@@ -221,18 +238,35 @@
             <span class="h-2 w-2 rounded-full {realtimeDot(health.realtimeStatus)}"></span>
             {health.realtimeStatus}
           </div>
-          <div class="text-(--color-text-muted) text-[11px]">{health.nextRetryAt ? `next retry ${formatRelative(health.nextRetryAt)}` : 'no retry'}</div>
+          <div class="text-(--color-text-muted) text-[11px]">
+            {health.nextRetryAt ? `next retry ${formatRelative(health.nextRetryAt)}` : 'no retry'}
+          </div>
         </div>
         <div class="rounded-lg bg-zinc-50 p-3">
           <div class="text-(--color-text-muted)">Last error</div>
-          <div class="font-medium truncate {health.lastError ? 'text-red-600' : 'text-(--color-primary)'}">{health.lastError ?? '—'}</div>
+          <div
+            class="font-medium truncate {health.lastError
+              ? 'text-red-600'
+              : 'text-(--color-primary)'}"
+          >
+            {health.lastError ?? '—'}
+          </div>
           <div class="text-(--color-text-muted)">{health.lastError ? 'check logs' : 'healthy'}</div>
         </div>
       </div>
       {#if health.realtime && Object.keys(health.realtime).length > 0}
         <div class="flex flex-wrap gap-1.5 pt-1">
           {#each Object.entries(health.realtime) as [topic, st] (topic)}
-            <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] {st === 'connected' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : st === 'connecting' ? 'border-amber-200 bg-amber-50 text-amber-700' : st === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-zinc-200 bg-zinc-50 text-zinc-600'}">
+            <span
+              class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] {st ===
+              'connected'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : st === 'connecting'
+                  ? 'border-amber-200 bg-amber-50 text-amber-700'
+                  : st === 'error'
+                    ? 'border-red-200 bg-red-50 text-red-700'
+                    : 'border-zinc-200 bg-zinc-50 text-zinc-600'}"
+            >
               <span class="h-1.5 w-1.5 rounded-full {realtimeDot(st)}"></span>
               {topic.slice(0, 24)} · {st}
             </span>
@@ -249,7 +283,9 @@
     <h3 class="text-sm font-semibold text-(--color-primary) mb-3">Sync scopes</h3>
     <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
       {#each scopeList as s (s.key)}
-        <label class="flex items-center justify-between gap-3 rounded-lg border border-(--color-border) px-3 py-2 cursor-pointer hover:bg-zinc-50">
+        <label
+          class="flex items-center justify-between gap-3 rounded-lg border border-(--color-border) px-3 py-2 cursor-pointer hover:bg-zinc-50"
+        >
           <span class="text-sm text-(--color-primary)">{s.label}</span>
           <input
             type="checkbox"
@@ -260,7 +296,9 @@
         </label>
       {/each}
     </div>
-    <p class="mt-2 text-xs text-(--color-text-muted)">Disabled scopes stay queued until re-enabled.</p>
+    <p class="mt-2 text-xs text-(--color-text-muted)">
+      Disabled scopes stay queued until re-enabled.
+    </p>
   </div>
 
   <!-- Conflicts -->
@@ -268,14 +306,28 @@
     <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3">
       <h3 class="text-sm font-semibold text-amber-900">Conflicts ({conflicts.length}) — LWW</h3>
       {#each conflicts as c (c.id)}
-        <div class="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-white px-3 py-2">
+        <div
+          class="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-white px-3 py-2"
+        >
           <div class="min-w-0">
-            <div class="truncate text-sm font-medium text-(--color-primary)">{c.word ?? c.localWord ?? c.id.slice(0, 8)}</div>
-            <div class="text-xs text-(--color-text-muted)">local {formatRelative(c.localUpdatedAt)} · remote {formatRelative(c.remoteUpdatedAt)}</div>
+            <div class="truncate text-sm font-medium text-(--color-primary)">
+              {c.word ?? c.localWord ?? c.id.slice(0, 8)}
+            </div>
+            <div class="text-xs text-(--color-text-muted)">
+              local {formatRelative(c.localUpdatedAt)} · remote {formatRelative(c.remoteUpdatedAt)}
+            </div>
           </div>
           <div class="flex shrink-0 gap-1.5">
-            <button type="button" class="rounded-lg border border-(--color-border) bg-white px-2.5 py-1 text-xs hover:bg-zinc-50 cursor-pointer" onclick={() => void handleResolve(c.id, 'keep_local')}>Keep local</button>
-            <button type="button" class="rounded-lg border border-(--color-border) bg-white px-2.5 py-1 text-xs hover:bg-zinc-50 cursor-pointer" onclick={() => void handleResolve(c.id, 'keep_remote')}>Keep remote</button>
+            <button
+              type="button"
+              class="rounded-lg border border-(--color-border) bg-white px-2.5 py-1 text-xs hover:bg-zinc-50 cursor-pointer"
+              onclick={() => void handleResolve(c.id, 'keep_local')}>Keep local</button
+            >
+            <button
+              type="button"
+              class="rounded-lg border border-(--color-border) bg-white px-2.5 py-1 text-xs hover:bg-zinc-50 cursor-pointer"
+              onclick={() => void handleResolve(c.id, 'keep_remote')}>Keep remote</button
+            >
           </div>
         </div>
       {/each}
@@ -299,22 +351,65 @@
                   class="w-full rounded border px-2 py-1 text-sm"
                   bind:value={editingName}
                   placeholder="Device name"
-                  onkeydown={(e) => { if (e.key === 'Enter') void handleRename(d.id); if (e.key === 'Escape') { editingDeviceId = null; editingName = ''; } }}
+                  onkeydown={(e) => {
+                    if (e.key === 'Enter') void handleRename(d.id);
+                    if (e.key === 'Escape') {
+                      editingDeviceId = null;
+                      editingName = '';
+                    }
+                  }}
                 />
               {:else}
-                <div class="truncate text-sm font-medium text-(--color-primary)">{d.name} {#if d.isCurrent}<span class="ml-1 rounded bg-(--color-accent-soft) px-1.5 py-0.5 text-[11px] text-(--color-accent-start)">this device</span>{/if}</div>
-                <div class="truncate text-xs text-(--color-text-muted)">{d.os} · {d.lastActive.unit === 'now' ? 'now' : `${d.lastActive.value} ${d.lastActive.unit} ago`}</div>
+                <div class="truncate text-sm font-medium text-(--color-primary)">
+                  {d.name}
+                  {#if d.isCurrent}<span
+                      class="ml-1 rounded bg-(--color-accent-soft) px-1.5 py-0.5 text-[11px] text-(--color-accent-start)"
+                      >this device</span
+                    >{/if}
+                </div>
+                <div class="truncate text-xs text-(--color-text-muted)">
+                  {d.os} · {d.lastActive.unit === 'now'
+                    ? 'now'
+                    : `${d.lastActive.value} ${d.lastActive.unit} ago`}
+                </div>
               {/if}
             </div>
             <div class="flex shrink-0 gap-1">
               {#if editingDeviceId === d.id}
-                <button type="button" class="rounded border px-2 py-1 text-xs hover:bg-zinc-50 cursor-pointer" onclick={() => void handleRename(d.id)}>Save</button>
-                <button type="button" class="rounded border px-2 py-1 text-xs hover:bg-zinc-50 cursor-pointer" onclick={() => { editingDeviceId = null; editingName=''; renameError=null; }}>Cancel</button>
+                <button
+                  type="button"
+                  class="rounded border px-2 py-1 text-xs hover:bg-zinc-50 cursor-pointer"
+                  onclick={() => void handleRename(d.id)}>Save</button
+                >
+                <button
+                  type="button"
+                  class="rounded border px-2 py-1 text-xs hover:bg-zinc-50 cursor-pointer"
+                  onclick={() => {
+                    editingDeviceId = null;
+                    editingName = '';
+                    renameError = null;
+                  }}>Cancel</button
+                >
               {:else}
-                <button type="button" class="rounded border px-2 py-1 text-xs hover:bg-zinc-50 cursor-pointer" onclick={() => { editingDeviceId = d.id; editingName = d.name; }}>Rename</button>
+                <button
+                  type="button"
+                  class="rounded border px-2 py-1 text-xs hover:bg-zinc-50 cursor-pointer"
+                  onclick={() => {
+                    editingDeviceId = d.id;
+                    editingName = d.name;
+                  }}>Rename</button
+                >
                 {#if !d.isCurrent}
-                  <button type="button" class="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 cursor-pointer" onclick={() => void handleRemoveStale(d.id)}>Remove stale</button>
-                  <button type="button" class="rounded border px-2 py-1 text-xs hover:bg-zinc-50 cursor-pointer" onclick={() => void handleRemove(d.id)}>Remove</button>
+                  <button
+                    type="button"
+                    class="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 cursor-pointer"
+                    onclick={() => void handleRemoveStale(d.id)}>Remove stale</button
+                  >
+                  <button
+                    type="button"
+                    class="rounded border px-2 py-1 text-xs hover:bg-zinc-50 cursor-pointer"
+                    onclick={() => void handleRemove(d.id)}>Remove</button
+                  >
                 {/if}
               {/if}
             </div>

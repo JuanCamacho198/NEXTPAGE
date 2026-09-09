@@ -31,12 +31,22 @@ export function extractFragment(href: string): string | null {
  */
 export function spineIndexForToc(toc: EpubChapterMeta[], tocIndex: number): number {
   if (tocIndex < 0 || tocIndex >= toc.length) {
-    console.warn('epub-toc: spineIndexForToc tocIndex out-of-bounds', tocIndex, 'tocLen', toc.length);
+    console.warn(
+      'epub-toc: spineIndexForToc tocIndex out-of-bounds',
+      tocIndex,
+      'tocLen',
+      toc.length,
+    );
     return tocIndex;
   }
   const entry = toc[tocIndex];
   if (!entry || typeof entry.index !== 'number') {
-    console.warn('epub-toc: spineIndexForToc missing entry for tocIndex', tocIndex, 'fallback to', tocIndex);
+    console.warn(
+      'epub-toc: spineIndexForToc missing entry for tocIndex',
+      tocIndex,
+      'fallback to',
+      tocIndex,
+    );
     return tocIndex;
   }
   if (entry.index < 0 || !Number.isFinite(entry.index)) {
@@ -73,7 +83,14 @@ export function tocIndexForSpine(
     if (byFile !== -1) return byFile;
   }
   if (spineHref) {
-    console.warn('epub-toc: tocIndexForSpine no TOC entry for spineIndex', spineIndex, 'spineHref', spineHref, 'tocLen', toc.length);
+    console.warn(
+      'epub-toc: tocIndexForSpine no TOC entry for spineIndex',
+      spineIndex,
+      'spineHref',
+      spineHref,
+      'tocLen',
+      toc.length,
+    );
   }
   return null;
 }

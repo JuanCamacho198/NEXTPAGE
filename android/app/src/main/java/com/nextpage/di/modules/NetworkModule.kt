@@ -35,6 +35,7 @@ import com.nextpage.data.remote.catalog.GutendexDataSource
 import com.nextpage.data.remote.catalog.KtorCatalogHttpTransport
 import com.nextpage.data.remote.catalog.OpenLibraryCatalogProvider
 import com.nextpage.data.remote.catalog.OpenLibraryDataSource
+import com.nextpage.data.remote.addons.CuratedCatalogProvider
 import com.nextpage.data.remote.catalog.RoomDiscoverCache
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -213,7 +214,8 @@ class NetworkModule(
         CompositeCatalogProvider(
             listOf(
                 GutendexCatalogProvider(gutendexDataSource),
-                OpenLibraryCatalogProvider(openLibraryDataSource)
+                OpenLibraryCatalogProvider(openLibraryDataSource),
+                CuratedCatalogProvider(context)
             ),
             cache = RoomDiscoverCache(databaseModule.discoverCacheDao)
         )

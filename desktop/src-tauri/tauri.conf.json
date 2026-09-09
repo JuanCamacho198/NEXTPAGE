@@ -25,7 +25,9 @@
       "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://asset.localhost data: https://covers.openlibrary.org; style-src 'self' 'unsafe-inline' asset: http://asset.localhost https://asset.localhost; font-src 'self' asset: http://asset.localhost https://asset.localhost; connect-src 'self' asset: http://asset.localhost https://asset.localhost https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://*.supabase.co https://gutendex.com https://openlibrary.org https://covers.openlibrary.org https://*.archive.org",
       "assetProtocol": {
         "enable": true,
-        "scope": ["$APPDATA/**/*"]
+        "scope": [
+          "$APPDATA/**/*"
+        ]
       }
     }
   },
@@ -39,12 +41,14 @@
       }
     },
     "fs": {}
-
   },
   "bundle": {
     "active": true,
     "targets": "all",
     "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
       "icons/icon.ico"
     ],
     "externalBin": []

@@ -238,6 +238,21 @@ describe('AddonCatalogProvider + dynamic composite', () => {
     expect(sources[8].kind).toBe('addon');
   });
 
+  it('uninstall isolates: remaining composite keeps built-ins and other addons', async () => {
+    const store = fakeStore();
+    const registry = new AddonRegistry({ store, transport: okTransport() });
+    await registry.install('https://one.example/m.json');
+    await registry.install('https://two.example/m.json');
+    await registry.uninstall((await registry.listInstalled())[0].id);
+
+    const rows = await registry.listInstalled();
+    const sources = defaultCatalogProviders(rows).flatMap((p) => p.listSources());
+    expect(sources.filter((s) => s.kind === 'builtin')).toHaveLength(2);
+    expect(sources.filter((s) => s.kind === 'curated')).toHaveLength(6);
+    expect(sources.filter((s) => s.kind === 'addon')).toHaveLength(1);
+    expect(sources.some((s) => s.sourceId === 'builtin:gutendex')).toBe(true);
+  });
+
   it('defaultCatalogProviders with zero addons matches the zero-addon parity set', () => {
     const providers = defaultCatalogProviders([]);
     const kinds = providers.flatMap((p) => p.listSources()).map((s) => s.kind);

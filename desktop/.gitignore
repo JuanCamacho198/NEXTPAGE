@@ -55,8 +55,7 @@ fixtures/
 !src/lib/shared/services/catalog/fixtures/
 !src/lib/shared/services/catalog/fixtures/**
 
-# ESlint local rules
-/eslint-local-rules/
+# ESlint local rules (tracked: lint gate needs the rule on CI)
 
 
 # Docs (ENGINEERING-STANDARDS.md is tracked — see AGENTS.md)

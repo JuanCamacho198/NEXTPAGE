@@ -69,12 +69,17 @@ class CrashLogStoreTest {
         val (store, _) = createStore()
         val crashDir = tempFolder.newFolder("crashes")
 
-        // Create 11 crash files with staggered timestamps
-        repeat(11) { i ->
-            val file = File(crashDir, "crash_$i.txt")
-            file.createNewFile()
-            file.setLastModified(1000L + i * 1000) // oldest first
-        }
+            // Create 11 crash files with staggered timestamps (recent past,
+            // distinct minutes - ancient epoch values are unreliable on some
+            // Linux filesystems and made this test flaky on CI).
+            val now = System.currentTimeMillis()
+            repeat(11) { i ->
+                val file = File(crashDir, "crash_$i.txt")
+                check(file.createNewFile()) { "failed to create ${file.name}" }
+                check(file.setLastModified(now - (11 - i) * 60_000L)) {
+                    "failed to set mtime on ${file.name}"
+                }
+            }
 
         store.cleanup(crashDir, maxFiles = 10)
 

@@ -53,6 +53,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Install JS dependencies
+        # tauri build runs `bun run build` (vite) as beforeBuildCommand.
+        working-directory: desktop
+        run: bun install --frozen-lockfile
+
       - name: Install Tauri CLI
         working-directory: desktop
         run: cargo install tauri-cli --version "^2.0" --locked

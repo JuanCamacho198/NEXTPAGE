@@ -26,7 +26,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Fetch enough history for `git rev-parse --short=12 HEAD` to resolve
           # and for sentry-cli to associate the upload with the right commit.
@@ -38,7 +38,7 @@ jobs:
           toolchain: stable
 
       - name: Cache cargo registry and target
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry

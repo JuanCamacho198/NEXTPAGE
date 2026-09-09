@@ -389,7 +389,8 @@
             ><DropMenu position="bottom-right"
               >{#snippet trigger()}<button
                   class="w-8 h-8 flex items-center justify-center rounded-md border border-transparent bg-transparent text-(--color-text-muted) text-[1.1rem] cursor-pointer transition-all font-sans hover:bg-(--color-panel-accent) hover:border-(--color-border) hover:text-(--color-primary)"
-                  aria-label={t('home.highlightsOptions')}><Icon name="more-dot" size="sm" /></button
+                  aria-label={t('home.highlightsOptions')}
+                  ><Icon name="more-dot" size="sm" /></button
                 >{/snippet}
               <div class="flex flex-col">
                 <button
@@ -406,8 +407,12 @@
                     ><Icon name="edit" size="sm" />{t('home.highlightsEditNote')}</button
                   >{/if}<button
                   class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-error) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-error-bg,rgba(255,123,131,0.14))"
-                  onclick={() => void sync.handleDelete(highlight, highlights, (v) => (highlights = v)).then((ok) => { if (!ok) pushToast('error', t('errors.commandFailure')); })}
-                  ><Icon name="trash" size="sm" />{t('home.highlightsDelete')}</button
+                  onclick={() =>
+                    void sync
+                      .handleDelete(highlight, highlights, (v) => (highlights = v))
+                      .then((ok) => {
+                        if (!ok) pushToast('error', t('errors.commandFailure'));
+                      })}><Icon name="trash" size="sm" />{t('home.highlightsDelete')}</button
                 >
               </div></DropMenu
             >

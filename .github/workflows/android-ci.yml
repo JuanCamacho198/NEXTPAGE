@@ -70,3 +70,14 @@ jobs:
             --tests "com.nextpage.debug.*" \
             --tests "com.nextpage.ReleaseFormatTest" \
             detekt
+
+      - name: Print failed test reports
+        if: failure()
+        working-directory: android
+        # The Gradle console only shows the failing test name; the XML report
+        # carries the expected/actual message needed to diagnose without SSH.
+        run: |
+          grep -rl "<failure\|<error" app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | while read -r f; do
+            echo "===== $f ====="
+            grep -A5 '<failure\|<error' "$f" | head -40
+          done

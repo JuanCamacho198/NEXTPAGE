@@ -44,28 +44,6 @@ jobs:
           cache-read-only: false
           add-job-summary: 'on-failure'
 
-      - name: Cache Gradle
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.gradle/caches
-            android/.gradle
-          # Cache invalidation keys: wrapper bump + root + app build files.
-          # Touching any of them forces a fresh dependency cache.
-          key: ${{ runner.os }}-gradle-${{ hashFiles('android/build.gradle.kts', 'android/gradle/wrapper/gradle-wrapper.properties', 'android/app/build.gradle.kts') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Cache Robolectric android-all jars
-        # Robolectric downloads ~100MB of android-all jars on a cold runner;
-        # pin them per Robolectric version so focused unit tests stay warm.
-        uses: actions/cache@v6
-        with:
-          path: ~/.m2/repository/org/robolectric/android
-          key: ${{ runner.os }}-robolectric-${{ hashFiles('android/app/build.gradle.kts') }}
-          restore-keys: |
-            ${{ runner.os }}-robolectric-
-
       - name: Make gradlew executable
         # No-op on the Linux runner, but defensive: if a contributor ever
         # commits gradlew without the executable bit, this step restores it

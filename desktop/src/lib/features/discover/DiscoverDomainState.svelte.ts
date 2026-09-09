@@ -1,5 +1,4 @@
 import {
-  CompositeCatalogProvider,
   isCatalogError,
   liveCatalogProvider,
 } from '$lib/shared/services/catalog';

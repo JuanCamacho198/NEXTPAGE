@@ -56,7 +56,11 @@ class CompositeCatalogProviderTest {
     }
 
     private fun provider(g: FakeGutendex, o: FakeOpenLibrary, scope: CoroutineScope) =
-        CompositeCatalogProvider(g, o, debounceMs = 0L, scope = scope)
+        CompositeCatalogProvider(
+            listOf(GutendexCatalogProvider(g), OpenLibraryCatalogProvider(o)),
+            debounceMs = 0L,
+            scope = scope
+        )
 
     @Test fun search_rejectsPageBelow1BeforeAnyIo() = runTest {
         val g = FakeGutendex()

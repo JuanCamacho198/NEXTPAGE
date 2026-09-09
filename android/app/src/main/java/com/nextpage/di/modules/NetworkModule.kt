@@ -30,8 +30,10 @@ import com.nextpage.data.remote.catalog.ANDROID_USER_AGENT
 import com.nextpage.data.remote.catalog.CatalogHttpTransport
 import com.nextpage.data.remote.catalog.CatalogProvider
 import com.nextpage.data.remote.catalog.CompositeCatalogProvider
+import com.nextpage.data.remote.catalog.GutendexCatalogProvider
 import com.nextpage.data.remote.catalog.GutendexDataSource
 import com.nextpage.data.remote.catalog.KtorCatalogHttpTransport
+import com.nextpage.data.remote.catalog.OpenLibraryCatalogProvider
 import com.nextpage.data.remote.catalog.OpenLibraryDataSource
 import com.nextpage.data.remote.catalog.RoomDiscoverCache
 import io.ktor.client.HttpClient
@@ -209,8 +211,10 @@ class NetworkModule(
 
     val catalogProvider: CatalogProvider by lazy {
         CompositeCatalogProvider(
-            gutendexDataSource,
-            openLibraryDataSource,
+            listOf(
+                GutendexCatalogProvider(gutendexDataSource),
+                OpenLibraryCatalogProvider(openLibraryDataSource)
+            ),
             cache = RoomDiscoverCache(databaseModule.discoverCacheDao)
         )
     }

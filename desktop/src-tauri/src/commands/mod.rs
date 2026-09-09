@@ -2,6 +2,7 @@
 // All snake_case variants and their camelCase aliases have been merged.
 // Internal helpers (_internal suffix) kept as snake_case.
 
+pub mod addon_fetch;
 pub mod bookmarks;
 pub mod collections;
 pub mod epub_reader;
@@ -14,6 +15,8 @@ pub mod search;
 pub mod settings;
 pub mod storage;
 
+#[allow(unused_imports)]
+pub use addon_fetch::*;
 #[allow(unused_imports)]
 pub use bookmarks::*;
 #[allow(unused_imports)]

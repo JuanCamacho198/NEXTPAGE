@@ -125,7 +125,8 @@ fn main() {
             commands::cleanupOrphans,
             commands::getDailyGoalMinutes,
             commands::saveDailyGoalMinutes,
-            commands::getTodayMinutes
+            commands::getTodayMinutes,
+                commands::fetchAddonResource
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

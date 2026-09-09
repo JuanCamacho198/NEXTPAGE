@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { DiscoverDomainState } from '$lib/features/discover/DiscoverDomainState.svelte';
 import { CompositeCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
+import {
+  GutendexCatalogProvider,
+  OpenLibraryCatalogProvider,
+} from '$lib/shared/services/catalog/BuiltInCatalogProviders';
 import { GutendexDataSource } from '$lib/shared/services/catalog/GutendexDataSource';
 import { OpenLibraryDataSource } from '$lib/shared/services/catalog/OpenLibraryDataSource';
 import gutendexFixture from '$lib/shared/services/catalog/fixtures/gutendex-search.json';
@@ -26,8 +30,10 @@ function stateWith(handler: (url: string) => { status: number; body: unknown }):
     return handler(url);
   });
   const provider = new CompositeCatalogProvider(
-    new GutendexDataSource(counting),
-    new OpenLibraryDataSource(counting),
+    [
+      new GutendexCatalogProvider(new GutendexDataSource(counting)),
+      new OpenLibraryCatalogProvider(new OpenLibraryDataSource(counting)),
+    ],
     { debounceMs: 0 },
   );
   return { state: new DiscoverDomainState(provider), calls };

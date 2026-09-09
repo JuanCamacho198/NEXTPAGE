@@ -3,6 +3,7 @@
 // Internal helpers (_internal suffix) kept as snake_case.
 
 pub mod addon_fetch;
+pub mod addon_registry;
 pub mod bookmarks;
 pub mod collections;
 pub mod epub_reader;
@@ -17,6 +18,7 @@ pub mod storage;
 
 #[allow(unused_imports)]
 pub use addon_fetch::*;
+pub use addon_registry::*;
 #[allow(unused_imports)]
 pub use bookmarks::*;
 #[allow(unused_imports)]

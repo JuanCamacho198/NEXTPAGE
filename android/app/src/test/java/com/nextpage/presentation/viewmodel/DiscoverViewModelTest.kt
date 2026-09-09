@@ -4,7 +4,9 @@ import com.nextpage.data.remote.catalog.CatalogBook
 import com.nextpage.data.remote.catalog.CatalogErrorCode
 import com.nextpage.data.remote.catalog.CatalogException
 import com.nextpage.data.remote.catalog.CatalogProvider
-import com.nextpage.data.remote.catalog.CatalogSource
+import com.nextpage.data.remote.catalog.CatalogSourceInfo
+import com.nextpage.data.remote.catalog.BUILTIN_GUTENDEX
+import com.nextpage.data.remote.catalog.BUILTIN_OPENLIBRARY
 import com.nextpage.data.remote.catalog.PagedResult
 import com.nextpage.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -58,10 +60,12 @@ class DiscoverViewModelTest {
                 "no formats"
             )
 
+        override fun listSources(): List<CatalogSourceInfo> = emptyList()
+
         companion object {
             fun book(id: String, title: String) = CatalogBook(
                 id = id,
-                provider = if (id.startsWith("gutendex:")) CatalogSource.GUTENDEX else CatalogSource.OPENLIBRARY,
+                provider = if (id.startsWith("gutendex:")) BUILTIN_GUTENDEX else BUILTIN_OPENLIBRARY,
                 title = title,
                 authors = listOf("Author A"),
                 coverUrl = "https://covers.openlibrary.org/b/id/6794977-M.jpg",

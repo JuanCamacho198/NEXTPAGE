@@ -62,7 +62,7 @@ fun mapGutendexBook(record: GutendexRecord): CatalogBook? {
     if (!isGutendexPublicDomain(record)) return null
     return CatalogBook(
         id = "gutendex:${record.id}",
-        provider = CatalogSource.GUTENDEX,
+        provider = BUILTIN_GUTENDEX,
         title = record.title,
         authors = record.authors.map { it.name },
         coverUrl = null,
@@ -77,7 +77,7 @@ fun mapOpenLibraryDoc(doc: OpenLibraryDoc): CatalogBook? {
     if (!isOpenLibraryPublic(doc)) return null
     return CatalogBook(
         id = "openlibrary:${doc.key}",
-        provider = CatalogSource.OPENLIBRARY,
+        provider = BUILTIN_OPENLIBRARY,
         title = doc.title,
         authors = doc.authorName,
         coverUrl = openLibraryCoverUrl(doc.coverId),

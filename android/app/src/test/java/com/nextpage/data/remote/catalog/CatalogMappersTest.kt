@@ -99,7 +99,7 @@ class CatalogMappersTest {
         val oBooks = olDocs.mapNotNull(::mapOpenLibraryDoc)
         val merged = mergeResults(gBooks, oBooks)
         val pride = merged.first { it.id == "gutendex:1342" }
-        assertEquals(CatalogSource.GUTENDEX, pride.provider)
+        assertEquals(BUILTIN_GUTENDEX, pride.provider)
         assertEquals("https://covers.openlibrary.org/b/id/6794977-M.jpg", pride.coverUrl)
         // Borrowable OL doc dropped by the mapper, so it never reaches the merge.
         assertFalse(merged.any { it.title == "Borrow Restricted Title" })

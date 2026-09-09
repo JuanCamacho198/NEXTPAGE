@@ -4,6 +4,8 @@
   import { createSettingsAppearance } from '../useSettingsAppearance.svelte';
   import { createSettingsReader } from '../useSettingsReader.svelte';
   import { createSettingsData } from '../useSettingsData.svelte';
+  import { createSettingsAddons } from '../useSettingsAddons.svelte';
+  import SettingsAddonsSection from './SettingsAddonsSection.svelte';
   import { createSettingsProfile } from '../useSettingsProfile.svelte';
   import SettingsTabs from './SettingsTabs.svelte';
   import SettingsCuentaTab from './SettingsCuentaTab.svelte';
@@ -61,6 +63,11 @@
   const profile = createSettingsProfile({ t });
   // svelte-ignore state_referenced_locally
   const data = createSettingsData({ t });
+  // svelte-ignore state_referenced_locally
+  const addons = createSettingsAddons({ t });
+  $effect(() => {
+    void addons.refresh();
+  });
 
   // Keep appearance locale in sync if parent changes locale externally
   $effect(() => {
@@ -233,6 +240,16 @@
             onImportColdBackup={() => void data.handleImportColdBackup()}
             onSelectedExportBookChange={(v: string) => data.handleSelectedExportBookChange(v)}
             onSelectedExportFormatChange={(v: 'json' | 'markdown') => data.handleSelectedExportFormatChange(v)}
+          />
+          <SettingsAddonsSection
+            {t}
+            url={addons.url}
+            installed={addons.installed}
+            isBusy={addons.isBusy}
+            onUrlChange={(v: string) => (addons.url = v)}
+            onInstall={() => void addons.handleInstall()}
+            onToggle={(id: string, enabled: boolean) => void addons.handleToggle(id, enabled)}
+            onUninstall={(id: string) => void addons.handleUninstall(id)}
           />
         </div>
       {:else if router.activeTab === 'almacenamiento'}

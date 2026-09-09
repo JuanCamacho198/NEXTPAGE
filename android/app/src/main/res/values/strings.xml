@@ -834,4 +834,17 @@
     <string name="feedback_mobile_sent">Sent</string>
     <string name="feedback_mobile_offline_notice">Saved offline — will send when you\'re back online.</string>
     <string name="feedback_mobile_counter">%1$d / %2$d</string>
+
+    <string name="settings_addons_title">Catalog addons</string>
+    <string name="settings_addons_description">Install catalogs from a manifest URL (HTTPS only)</string>
+    <string name="settings_addons_url_label">Manifest URL</string>
+    <string name="settings_addons_url_placeholder">https://example.com/manifest.json</string>
+    <string name="settings_addons_install">Install</string>
+    <string name="settings_addons_installing">Installing…</string>
+    <string name="settings_addons_installed_toast">Addon installed</string>
+    <string name="settings_addons_install_failed">Addon installation failed</string>
+    <string name="settings_addons_empty">No addons installed</string>
+    <string name="settings_addons_enable">Enable</string>
+    <string name="settings_addons_disable">Disable</string>
+    <string name="settings_addons_uninstall">Uninstall</string>
 </resources>

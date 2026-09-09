@@ -778,4 +778,17 @@
     <string name="feedback_mobile_sent">Enviado</string>
     <string name="feedback_mobile_offline_notice">Guardado sin conexión — enviaremos cuando vuelvas a estar online.</string>
     <string name="feedback_mobile_counter">%1$d / %2$d</string>
+
+    <string name="settings_addons_title">Complementos de catálogo</string>
+    <string name="settings_addons_description">Instala catálogos desde una URL de manifiesto (solo HTTPS)</string>
+    <string name="settings_addons_url_label">URL del manifiesto</string>
+    <string name="settings_addons_url_placeholder">https://ejemplo.com/manifest.json</string>
+    <string name="settings_addons_install">Instalar</string>
+    <string name="settings_addons_installing">Instalando…</string>
+    <string name="settings_addons_installed_toast">Complemento instalado</string>
+    <string name="settings_addons_install_failed">Error al instalar el complemento</string>
+    <string name="settings_addons_empty">No hay complementos instalados</string>
+    <string name="settings_addons_enable">Activar</string>
+    <string name="settings_addons_disable">Desactivar</string>
+    <string name="settings_addons_uninstall">Desinstalar</string>
 </resources>

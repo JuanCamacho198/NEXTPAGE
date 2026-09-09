@@ -19,6 +19,16 @@ data class InstalledAddonRow(
 )
 
 /**
+ * Minimal install-by-URL seam contract (settings ViewModel + rebuild callers).
+ */
+interface AddonRegistryLike {
+    suspend fun listInstalled(): List<InstalledAddonRow>
+    suspend fun install(url: String): AddonManifest
+    suspend fun setEnabled(id: String, enabled: Boolean)
+    suspend fun uninstall(id: String)
+}
+
+/**
  * Install-by-URL service over the [AddonDao] registry (Android mirror of desktop
  * `AddonRegistry.ts`). install(url): HTTPS check → platform transport →
  * ManifestValidator → sha256 addonId → UPSERT preserving enabled. Enable/
@@ -30,10 +40,10 @@ class AddonRegistry(
     private val dao: AddonDao,
     private val transport: AddonHttpTransport,
     private val now: () -> Long = { System.currentTimeMillis() }
-) {
+) : AddonRegistryLike {
 
     /** install(url): HTTPS check → fetch → validate → addonId → upsert preserving enabled. */
-    suspend fun install(url: String): AddonManifest {
+    override suspend fun install(url: String): AddonManifest {
         ManifestValidator.assertHttpsInstallUrl(url)
         val fetched = transport.fetch(url)
         if (fetched.status < 200 || fetched.status >= 300) {
@@ -82,7 +92,7 @@ class AddonRegistry(
     }
 
     /** Rows in install order (addedAt, then id tiebreak) with parsed manifests. */
-    suspend fun listInstalled(): List<InstalledAddonRow> =
+    override suspend fun listInstalled(): List<InstalledAddonRow> =
         withContext(Dispatchers.IO) { dao.getAll() }
             .mapNotNull { row ->
                 runCatching { AddonManifestJson.decode(row.manifestJson) }.getOrNull()?.let { manifest ->
@@ -91,11 +101,11 @@ class AddonRegistry(
             }
             .sortedWith(compareBy({ it.addedAt }, { it.id }))
 
-    suspend fun setEnabled(id: String, enabled: Boolean) {
+    override suspend fun setEnabled(id: String, enabled: Boolean) {
         dao.setEnabled(id, enabled)
     }
 
-    suspend fun uninstall(id: String) {
+    override suspend fun uninstall(id: String) {
         dao.delete(id)
     }
 

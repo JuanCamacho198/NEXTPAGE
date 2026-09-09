@@ -2,7 +2,7 @@
  * CatalogProvider port — identical contract on desktop (TS) and Android (Kotlin).
  * Gutendex is metadata/download authority; Open Library enriches + cover fallback.
  */
-import { catalogError } from './errors';
+import { catalogError, type CatalogErrorCode } from './errors';
 
 /**
  * Strict catalog source ids: 'builtin:<name>' for first-party sources,
